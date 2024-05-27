@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-ab5af4cb6-CHERY_T26-test/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-038c931da-JAC_S811_test/planning-038c931da-JAC_S811/test_1.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 

@@ -140,13 +140,45 @@ bool PerpendicularPathPlanner::Update() {
     DEBUG_PRINT("multi plan success!");
   }
 
+  bool reach_target_pose = false;
   if (CheckReachTargetPose()) {
-    return true;
+    reach_target_pose = true;
+    // when current gear is reverse, only retain the current gear path and
+    // continue to use adjust planning in the future
+    if (output_.gear_cmd_vec.size() > 0 &&
+        output_.gear_cmd_vec[0] == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+      int path_num_gear = 0;
+      int origin_path_size = output_.path_segment_vec.size();
+      for (size_t i = 0; i < output_.gear_cmd_vec.size(); ++i) {
+        if (output_.gear_cmd_vec[i] == output_.gear_cmd_vec[0]) {
+          path_num_gear++;
+        } else {
+          break;
+        }
+      }
+      for (int i = static_cast<int>(output_.gear_cmd_vec.size() - 1);
+           i >= path_num_gear; --i) {
+        output_.gear_cmd_vec.pop_back();
+        output_.path_segment_vec.pop_back();
+        output_.steer_vec.pop_back();
+        output_.length -= output_.path_segment_vec[i].Getlength();
+      }
+
+      if (path_num_gear == origin_path_size) {
+        return true;
+      }
+    } else {
+      return true;
+    }
   }
 
   // adjust step
   if (AdjustPlan()) {
     DEBUG_PRINT("adjust plan success!");
+    return true;
+  }
+  if (reach_target_pose) {
+    DEBUG_PRINT("multi plan is already to target pos!");
     return true;
   }
   output_.Reset();
