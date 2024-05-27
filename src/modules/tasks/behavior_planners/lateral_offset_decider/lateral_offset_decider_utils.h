@@ -2,6 +2,8 @@
 #include "lateral_obstacle.h"
 
 constexpr double MAX_T_EXCEED_AVD_CAR = 6.0;
+constexpr double kSafeDistance = 1.0;
+constexpr double kDefaultLimitLateralDistance = 10.0;
 namespace planning {
 enum AvoidObstacleFlag { INVALID = -1000, LEAD_ONE = -1, NORMAL = 0, SIDE = 1 };
 enum AvoidObstacleUpdateFlag { Update = 1, Past = 2 };
@@ -109,6 +111,48 @@ struct AvoidObstacleInfo {
   int update_flag = AvoidObstacleUpdateFlag::Update;
   double length;
   int num_out_avd_area;  //出避让区域的次数
+};
+
+enum class AvoidWay { None, Left, Right, Center};
+// constexpr int LimitTypeNone = 0;
+// constexpr int LimitTypeNormal = 1 << 1;
+// constexpr int LimitTypeFront = 1 << 2;
+// constexpr int LimitTypeSide = 1 << 3;
+enum class LimitType {None, Normal, Front, Side};
+
+struct AvoidInfo{
+  void Reset() {
+    normal_avoid_threshold = 0.0;
+    desire_lat_offset = 0.0;
+    lat_offset = 0.0;
+    avoid_way = AvoidWay::None;
+    allow_front_max_opposite_offset = kDefaultLimitLateralDistance;
+    allow_front_max_opposite_offset_id = -1;
+    allow_side_max_opposite_offset = kDefaultLimitLateralDistance;
+    allow_side_max_opposite_offset_id = -1;
+    is_use_ego_position = false;
+  }
+  void operator=(const AvoidInfo& avoid_info) {
+    normal_avoid_threshold = avoid_info.normal_avoid_threshold;
+    desire_lat_offset = avoid_info.desire_lat_offset;
+    lat_offset = avoid_info.lat_offset;
+    avoid_way = avoid_info.avoid_way;
+    allow_front_max_opposite_offset = avoid_info.allow_front_max_opposite_offset;
+    allow_front_max_opposite_offset_id = avoid_info.allow_front_max_opposite_offset_id;
+    allow_side_max_opposite_offset = avoid_info.allow_side_max_opposite_offset;
+    allow_side_max_opposite_offset_id = avoid_info.allow_side_max_opposite_offset_id;
+    is_use_ego_position = avoid_info.is_use_ego_position;
+  }
+
+  double normal_avoid_threshold;
+  double desire_lat_offset = 0.0;
+  double lat_offset = 0.0;
+  AvoidWay avoid_way;
+  bool is_use_ego_position = false;
+  double allow_front_max_opposite_offset;
+  int allow_front_max_opposite_offset_id = -1;
+  double allow_side_max_opposite_offset;
+  int allow_side_max_opposite_offset_id = -1;
 };
 
 namespace lateral_offset_decider {

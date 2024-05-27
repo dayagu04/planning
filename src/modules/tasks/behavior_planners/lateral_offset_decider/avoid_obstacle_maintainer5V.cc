@@ -941,7 +941,7 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
         avd_obstacles_[0] = avd_obstacles[0];
       } else if (avd_obstacles_[0].track_id == avd_obstacles[1].track_id) {
         avd_obstacles[1].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
-        TempHack(session_, avd_obstacles_[1], avd_obstacles[1]);
+        TempHack(session_, avd_obstacles_[0], avd_obstacles[1]);
         avd_obstacles_[0] = avd_obstacles[1];
       }
       if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
