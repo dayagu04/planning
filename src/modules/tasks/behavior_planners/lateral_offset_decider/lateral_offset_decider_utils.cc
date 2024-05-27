@@ -243,10 +243,67 @@ bool IsCone(const AvoidObstacleInfo &avoid_obstacle) {
   return avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE;
 }
 
+double GetLimitLateralDistance(const framework::Session *session, int track_id) {
+  const CoarsePlanningInfo &coarse_planning_info =
+      session->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info;
+  const auto fix_ref =
+      session->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
+  const auto frenet_ego_state = fix_ref->get_frenet_ego_state();
+  double ego_s_start = frenet_ego_state.boundary().s_start;
+  double ego_s_end = frenet_ego_state.boundary().s_end;
+  const auto frenet_obstacle_map = fix_ref->get_obstacles_map();
+  double obstacle_s_start, obstacle_s_end;
+  if (frenet_obstacle_map.find(track_id) !=
+      frenet_obstacle_map.end()) {
+    const auto& frenet_obstacle = frenet_obstacle_map.at(track_id);
+    if (frenet_obstacle->b_frenet_valid()) {
+      const auto frenet_obstacle_boundary =
+        frenet_obstacle->frenet_obstacle_boundary();
+      obstacle_s_start = frenet_obstacle_boundary.s_start;
+      obstacle_s_end = frenet_obstacle_boundary.s_end;
+
+      double lon_distance = 0.0;
+      bool is_overlap = obstacle_s_end >= ego_s_start && ego_s_end >= obstacle_s_start;
+      if (is_overlap) {
+        lon_distance = 0.0;
+      } else {
+        if (obstacle_s_start > ego_s_end) {
+          lon_distance = obstacle_s_start - ego_s_end;
+        } else {
+          lon_distance = obstacle_s_end - ego_s_start;
+        }
+      }
+
+      // const double relative_v = frenet_obstacle->frenet_velocity_s() - frenet_ego_state->frenet_velocity_s();
+      // const double t = lon_distance / relative_v;
+      // std::array<double, 3> l_buffer_x{0, 0.05,  0.13, 0.15, 0.20, 0.25};
+      // std::array<double, 3> t_gap_bp{1, 2, 4, 6, 8, 10};
+
+      // // desired t_gap to obstacle_2 when exceed obstacle_1
+      // const double l_buffer = interp(t, t_gap_bp, l_buffer_x);
+    }
+  } else {
+
+  }
+}
+
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,
                     const AvoidObstacleInfo &avoid_obstacle_2) {
-  return avoid_obstacle_1.min_l_to_ref - avoid_obstacle_1.max_l_to_ref > 2.8 ||
-         avoid_obstacle_2.min_l_to_ref - avoid_obstacle_1.max_l_to_ref > 2.8;
+  static bool has_enough_space = false;
+  double lat_buf;
+  if (has_enough_space) {
+    lat_buf = 2.8;
+  } else {
+    lat_buf = 3.0;
+  }
+  has_enough_space = avoid_obstacle_1.min_l_to_ref - avoid_obstacle_2.max_l_to_ref > lat_buf ||
+         avoid_obstacle_2.min_l_to_ref - avoid_obstacle_1.max_l_to_ref > lat_buf;
+
+  return has_enough_space;
 }
 
 }  // namespace lateral_offset_decider

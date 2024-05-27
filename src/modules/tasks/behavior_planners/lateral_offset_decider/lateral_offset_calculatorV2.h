@@ -8,7 +8,7 @@
 #include "virtual_lane_manager.h"
 
 namespace planning {
-enum class AvoidWay { None, Left, Right, Center, Ego };
+
 class LateralOffsetCalculatorV2 {
  public:
   LateralOffsetCalculatorV2() = default;
@@ -20,7 +20,7 @@ class LateralOffsetCalculatorV2 {
                const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle,
                double dist_rblane, bool flag_avd);
 
-  double lat_offset() const { return lat_offset_; }
+  double lat_offset() const { return avoid_info_.lat_offset; }
   void Reset();
 
  private:
@@ -65,8 +65,8 @@ class LateralOffsetCalculatorV2 {
                             bool is_side_way);
   double LateralOffsetCompensate(const AvoidObstacleInfo& avoid_obstacle);
   double DesireLateralOffsetSideWay(const AvoidObstacleInfo& avoid_obstacle,
-                                    bool is_left, double coeff,
-                                    double lat_compensate);
+                                    const AvoidWay &avoid_way, double coeff,
+                                    double lat_compensate, double base_distance);
   double DesireLateralOffsetCenterWay(const AvoidObstacleInfo& avoid_obstacle_1,
                                       const AvoidObstacleInfo& avoid_obstacle_2,
                                       bool is_left, double lat_compensate_1,
@@ -74,19 +74,19 @@ class LateralOffsetCalculatorV2 {
   void CalcMaxOppositeOffset(
       const AvoidObstacleInfo& avoid_obstacle_1, int except_id = -1,
       const AvoidObstacleInfo& avoid_obstacle_2 = AvoidObstacleInfo());
-  double LimitLateralOffset(double lateral_offset, bool is_left,
-                            AvoidWay* avoid_way);
+  void CalcFrontMaxOppositeOffset(const vector<int>& front_ids, bool is_left);
+  double LimitLateralOffset(double lateral_offset, const AvoidWay &avoid_way);
   double SmoothLateralOffset(const AvoidObstacleInfo& avoid_obstacle,
                              double lat_offset, const AvoidWay* avoid_way);
-  void PostProcess();
+  void PostProcess(const std::array<AvoidObstacleInfo, 2> &avd_obstacle);
   void SaveDebugInfo();
 
  private:
   LateralOffsetDeciderConfig config_;
   framework::Session* session_;
 
-  double lat_offset_ = 0.0;
-  double last_lat_offset_ = 0.0;
+  // double lat_offset_ = 0.0;
+  // double last_lat_offset_ = 0.0;
   double curr_time_ = 0;
 
   double lane_width_ = 3.8;
@@ -98,14 +98,18 @@ class LateralOffsetCalculatorV2 {
 
   bool is_on_rightest_lane_ = false;
   bool is_on_leftest_lane_ = false;
-  double normal_avoid_threshold_ = 0.0;
-  AvoidWay avoid_way_;
-  double allow_front_max_opposite_offset_;
-  int allow_front_max_opposite_offset_id_ = -1;
-  double allow_side_max_opposite_offset_;
-  int allow_side_max_opposite_offset_id_ = -1;
-  double last_front_allow_max_opposite_offset_;
-  double last_side_allow_max_opposite_offset_;
+  AvoidInfo avoid_info_;
+  AvoidInfo last_avoid_info_;
+  // double normal_avoid_threshold_ = 0.0;
+  // AvoidWay avoid_way_;
+  // double allow_front_max_opposite_offset_;
+  // int allow_front_max_opposite_offset_id_ = -1;
+  // double allow_side_max_opposite_offset_;
+  // int allow_side_max_opposite_offset_id_ = -1;
+  // double last_front_allow_max_opposite_offset_;
+  // double last_side_allow_max_opposite_offset_;
 };
+
+
 
 }  // namespace planning
