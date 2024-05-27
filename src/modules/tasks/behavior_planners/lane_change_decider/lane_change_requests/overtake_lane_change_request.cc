@@ -1340,10 +1340,12 @@ bool OvertakeRequest::checkFrontSafetyAtPresent(
   if (front_required_space) {
     *front_required_space = safety_threshold;
   }
-  AINFO << "ego v " << ego_v << " front v " << veh_v << " base dis buff "
-        << base_distance_buffer << " thres " << safety_threshold
-        << " long_diff " << long_diff << " ratio " << safety_ratio
-        << " at present";
+  LOG_DEBUG(
+      "ego v: %f, front v: %f "
+      "base dis buff: %f "
+      "safety_threshold: %f "
+      "long_diff: %f \n",
+      ego_v, veh_v, base_distance_buffer, safety_threshold, long_diff);
   if (long_diff < safety_threshold) {
     return false;
   }
