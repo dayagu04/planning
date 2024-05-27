@@ -364,7 +364,7 @@
     "cut_in_desired_distance_step": 1.0,
     "soft_bound_corridor_t": 0.3,
     "acc_start_max_bound" : 1.0,
-    "acc_start" : 2.5,
+    "acc_start" : 1.0,
     "v_target_stop_thrd" : 0.3,
     "acc_stop_max_bound" : 1.5
   },
