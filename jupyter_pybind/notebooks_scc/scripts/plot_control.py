@@ -7,7 +7,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240525/20240525-15-54-05/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-25-15-54-05.bag"
+bag_path = "/data_cold/autoupload/jac_s811_35kw2/trigger/20240522/20240522-09-30-48/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-05-22-09-30-48_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -349,15 +349,14 @@ def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
 
-  ctrl_debug_msg_idx = local_view_data['data_index']['ctrl_debug_msg_idx']
-
-  dx_ref_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dx_ref_mpc_vec']
-  dy_ref_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dy_ref_mpc_vec']
-  dx_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dx_mpc_vec']
-  dy_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dy_mpc_vec']
-  delta_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['delta_mpc_vec']
-  dphi_ref_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dphi_ref_mpc_vec']
-  dphi_mpc_vec = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['dphi_mpc_vec']
+  ctrl_debug_json_msg = local_view_data['data_msg']['ctrl_debug_json_msg']
+  dx_ref_mpc_vec = ctrl_debug_json_msg['dx_ref_mpc_vec']
+  dy_ref_mpc_vec = ctrl_debug_json_msg['dy_ref_mpc_vec']
+  dx_mpc_vec = ctrl_debug_json_msg['dx_mpc_vec']
+  dy_mpc_vec = ctrl_debug_json_msg['dy_mpc_vec']
+  delta_mpc_vec = ctrl_debug_json_msg['delta_mpc_vec']
+  dphi_ref_mpc_vec = ctrl_debug_json_msg['dphi_ref_mpc_vec']
+  dphi_mpc_vec = ctrl_debug_json_msg['dphi_mpc_vec']
 
   t0 = 0
   time_vec = []

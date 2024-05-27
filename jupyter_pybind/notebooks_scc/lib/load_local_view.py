@@ -88,6 +88,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   local_view_data['data_msg']['plan_msg'] = plan_msg
   local_view_data['data_msg']['plan_debug_msg'] = plan_debug_msg
+  local_view_data['data_msg']['planning_hmi_msg'] = planning_hmi_msg
   local_view_data['data_msg']['loc_msg'] = loc_msg
   local_view_data['data_msg']['plan_debug_json_msg'] = plan_debug_json_msg
   local_view_data['data_msg']['ctrl_msg'] = ctrl_msg
