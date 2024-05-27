@@ -645,9 +645,9 @@ void TrackletMaintainer::calc(
   }
   JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
 
-  is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
-                                    borrow_bicycle_lane, rightest_lane,
-                                    dist_intersect, isRedLightStop);
+  // is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
+  //                                   borrow_bicycle_lane, rightest_lane,
+  //                                   dist_intersect, isRedLightStop);
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info =
