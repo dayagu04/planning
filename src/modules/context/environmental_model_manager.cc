@@ -1028,9 +1028,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   trajectory_point.yaw = prediction_object.yaw;
   trajectory_point.speed = prediction_object.speed;
 
-  trajectory_point.theta =
-      std::atan2(fusion_object.common_info().velocity().y(),
-                 fusion_object.common_info().velocity().x());
+  trajectory_point.theta = prediction_object.theta;
   trajectory_point.prob = 1;
   trajectory_point.relative_ego_x = prediction_object.relative_position_x;
   trajectory_point.relative_ego_y = prediction_object.relative_position_y;
