@@ -218,7 +218,7 @@ class LoadCyberbag:
                          "para_tlane_is_front_vacant", "para_tlane_is_rear_vacant", "para_tlane_side_sgn",
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
-                         "slot_replan_jump_dist"]
+                         "slot_replan_jump_dist", "slot_replan_jump_heading"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y",
@@ -1075,6 +1075,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
     replan_flag = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']
     correct_path_for_limiter = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']
     slot_replan_jump_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_replan_jump_dist']
+    slot_replan_jump_heading = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_replan_jump_heading']
 
     local_view_data['data_obs'].data.update({
       'obs_x': obstacle_x,
@@ -1141,6 +1142,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, 
 
       names.append("slot_replan_jump_dist")
       datas.append(str(slot_replan_jump_dist))
+
+      names.append("slot_replan_jump_heading")
+      datas.append(str(slot_replan_jump_heading))
 
       names.append("terminal_error_x")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_x']))
@@ -2690,6 +2694,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctr
 
           names.append("slot_replan_jump_dist")
           datas.append(str(plan_json['slot_replan_jump_dist']))
+
+          names.append("slot_replan_jump_heading")
+          datas.append(str(plan_json['slot_replan_jump_heading']))
 
           names.append("terminal_error_x")
           datas.append(str(plan_json['terminal_error_x']))

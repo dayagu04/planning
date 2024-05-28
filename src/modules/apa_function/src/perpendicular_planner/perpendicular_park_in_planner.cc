@@ -110,6 +110,7 @@ void PerpendicularInPlanner::PlanCore() {
     frame_.ego_slot_info.first_fix_limiter = true;
     frame_.replan_flag = true;
     pt_center_replan_ = frame_.ego_slot_info.slot_center;
+    pt_center_heading_replan_ = frame_.ego_slot_info.slot_origin_heading;
 
     GenTlane();
 
@@ -346,6 +347,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (frame_.is_replan_first) {
     pt_center_ = ego_slot_info.slot_center;
     pt_center_replan_ = ego_slot_info.slot_center;
+    pt_center_heading_replan_ = ego_slot_info.slot_origin_heading;
   }
 
   // trim path according to slot when 1R
@@ -1288,7 +1290,9 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
   update_flag =
       (update_flag && gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE &&
        !apa_world_ptr_->GetMeasurementsPtr()->static_flag) &&
-      pt_center_replan_jump_dist_ < apa_param.GetParam().max_slot_jump_dist;
+      pt_center_replan_jump_dist_ < apa_param.GetParam().max_slot_jump_dist &&
+      pt_center_replan_jump_heading_ <
+          apa_param.GetParam().max_slot_jump_heading;
 
   frame_.is_replan_dynamic = update_flag;
 
@@ -1298,7 +1302,13 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
 const bool PerpendicularInPlanner::CheckReplan() {
   pt_center_replan_jump_dist_ =
       (pt_center_replan_ - frame_.ego_slot_info.slot_center).norm();
+  pt_center_replan_jump_heading_ =
+      std::fabs(pnc::geometry_lib::NormalizeAngle(
+          pt_center_heading_replan_ -
+          frame_.ego_slot_info.slot_origin_heading)) *
+      57.3;
   DEBUG_PRINT("replan slot_jump_dist = " << pt_center_replan_jump_dist_);
+  DEBUG_PRINT("replan slot_jump_heading = " << pt_center_replan_jump_heading_);
 
   if (frame_.is_replan_first == true) {
     DEBUG_PRINT("first plan");
@@ -1894,6 +1904,7 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
   JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
   JSON_DEBUG_VALUE("slot_replan_jump_dist", pt_center_replan_jump_dist_)
+  JSON_DEBUG_VALUE("slot_replan_jump_heading", pt_center_replan_jump_heading_)
 
   const std::vector<Eigen::Vector2d>& obstacles =
       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();

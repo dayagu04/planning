@@ -175,6 +175,7 @@ struct ApaParameters {
   double pose_slot_occupied_ratio_3 = 0.788;
   double pose_min_remain_dis = 0.4;
   double max_slot_jump_dist = 0.088;
+  double max_slot_jump_heading = 0.68;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;
