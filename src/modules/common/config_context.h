@@ -11,7 +11,7 @@
 #include "utils/file.h"
 
 #define PLANNING_ENGINE_CONFIG_PATH \
-  "/asw/planning/res/conf/planning_engine_config.json"
+  "../runtime_service/planning_exec/res/conf/planning_engine_config.json"
 
 namespace planning {
 namespace common {
