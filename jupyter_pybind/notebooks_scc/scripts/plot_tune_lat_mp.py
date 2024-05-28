@@ -1,5 +1,6 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 from lib.load_local_view import *
 from lib.load_tune_lat_mp import *
 sys.path.append('../..')
@@ -18,7 +19,7 @@ frame_dt = 0.1 # sec
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
