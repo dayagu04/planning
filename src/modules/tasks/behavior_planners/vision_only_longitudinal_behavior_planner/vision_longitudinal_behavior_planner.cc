@@ -351,8 +351,9 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
 
   a_limit_cutin_now_.clear();
   for (int i = 0; i < near_cars_sorted.size(); i++) {
-    if (lateral_obstacle->leadone()->track_id ==
-        near_cars_sorted[i]->track_id) {
+    if (lateral_obstacle->leadone() != nullptr &&
+        lateral_obstacle->leadone()->track_id ==
+            near_cars_sorted[i]->track_id) {
       continue;
     }
     nearest_car_track_id[i] = near_cars_sorted[i]->track_id;
