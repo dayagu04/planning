@@ -163,7 +163,8 @@ void TrackletMaintainer::apply_update(
 void TrackletMaintainer::recv_prediction_objects(
     const std::vector<PredictionObject> &predictions,
     std::vector<TrackedObject *> &objects) {
-  std::map<int, TrackedObject *> new_map;
+  const double HALF_FOV = 25.0;
+  std::set<int> id_sets;
 
   double ego_fx = std::cos(ego_state_->ego_pose_raw().theta);
   double ego_fy = std::sin(ego_state_->ego_pose_raw().theta);
@@ -172,16 +173,23 @@ void TrackletMaintainer::recv_prediction_objects(
 
   for (auto &p : predictions) {
     std::cout << "---recv_prediction_objects---" << std::endl;
-    if (p.type == 0) {
+    if (p.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      LOG_DEBUG(
+          "[obstacle_prediction_update] ignore unknown obstacle : [%d] \n",
+          p.id);
       continue;
     }
+    // Ignore the agent which is within the FOV and is fail to fusion with the
+    // camera，or too small, or unknown
+    bool is_in_fov =
+        p.relative_position_x > 0 &&
+        (tan(HALF_FOV) > fabs(p.relative_position_y / p.relative_position_x));
+    bool is_fusion_with_camera = p.fusion_source & OBSTACLE_SOURCE_CAMERA;
+    bool is_ignore_by_fov = is_in_fov && (is_fusion_with_camera == false);
+    bool is_ignore_by_lat = fabs(p.relative_position_y) > 10.0;
+    bool is_ignore_by_size = p.length == 0 || p.width == 0;
 
-    // WB HACK： Only use front obstacles in long time planning
-    if (p.type == 0 ||
-        (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
-            (p.relative_position_x > 0 &&
-             tan(25) > fabs(p.relative_position_y / p.relative_position_x)) ||
-        fabs(p.relative_position_y) > 10 || p.length == 0 || p.width == 0) {
+    if (is_ignore_by_fov || is_ignore_by_lat || is_ignore_by_size) {
       LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
                 p.id);
       continue;
@@ -193,21 +201,25 @@ void TrackletMaintainer::recv_prediction_objects(
     double rel_y = dx * ego_lx + dy * ego_ly;
 
     if (rel_x < -50 || rel_x > 150 || p.trajectory_array.size() == 0) {
+      LOG_DEBUG(
+          "[obstacle_prediction_update] ignore far away obstacle : [%d] \n",
+          p.id);
       continue;
     }
 
     TrackedObject *origin = nullptr;
-
     auto iter = object_map_.find(p.id);
-
     if (iter != object_map_.end()) {
       origin = iter->second;
-      object_map_.erase(iter);
-      new_map.insert(std::make_pair(origin->track_id, origin));
+      // set history results
+      origin->has_history = true;
+      origin->c0_history = origin->c0;
+      origin->d_center_cpath_hostory = origin->d_center_cpath;
     } else {
       origin = new TrackedObject();
       origin->track_id = p.id;
-      new_map.insert(std::make_pair(origin->track_id, origin));
+      object_map_.insert(std::make_pair(origin->track_id, origin));
+      origin->has_history = false;
     }
 
     origin->timestamp = p.timestamp_us / 1000000.0;
@@ -241,7 +253,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->center_x = rel_x;
     origin->center_y = rel_y;
     origin->theta = theta;
-    origin->speed_yaw = speed_yaw;  // p.trajectory_array[0].trajectory[0].theta
+    origin->speed_yaw = speed_yaw;
     origin->y_rel_ori = rel_y;
 
     origin->a = p.acc;
@@ -258,39 +270,27 @@ void TrackletMaintainer::recv_prediction_objects(
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
 
-    int idx = 0;
+    int trajectory_idx = 0;
+    // 障碍物多轨迹，每一条轨迹均作为一个独立障碍物
     for (auto &tr : p.trajectory_array) {
       if (tr.trajectory.empty()) {
-        idx++;
+        trajectory_idx++;
         continue;
       }
       TrackedObject *object = nullptr;
-      int track_id = hash_prediction_id(origin->track_id, idx);
+      int track_id = hash_prediction_id(origin->track_id, trajectory_idx);
 
       iter = object_map_.find(track_id);
       if (iter != object_map_.end()) {
         object = iter->second;
-        object_map_.erase(iter);
-
         if (object != origin) {
           *object = *origin;
           object->track_id = track_id;
         }
-        new_map.insert(std::make_pair(track_id, object));
       } else {
-        iter = new_map.find(track_id);
-        if (iter != new_map.end()) {
-          object = iter->second;
-
-          if (object != origin) {
-            *object = *origin;
-            object->track_id = track_id;
-          }
-        } else {
-          object = new TrackedObject(*origin);
-          object->track_id = track_id;
-          new_map.insert(std::make_pair(track_id, object));
-        }
+        object = new TrackedObject(*origin);
+        object->track_id = track_id;
+        object_map_.insert(std::make_pair(track_id, object));
       }
 
       dx = tr.trajectory[0].x - ego_state_->ego_pose_raw().x;
@@ -363,16 +363,28 @@ void TrackletMaintainer::recv_prediction_objects(
       }
 
       objects.push_back(object);
-      idx++;
+      id_sets.insert(track_id);
+      trajectory_idx++;
     }
   }
+  LOG_DEBUG("1map size= : [%d] \n", object_map_.size());
 
-  for (auto iter = object_map_.begin(); iter != object_map_.end(); ++iter) {
-    delete iter->second;
+  if (id_sets.size() == 0) {
+    for (auto iter = object_map_.begin(); iter != object_map_.end(); ++iter) {
+      delete iter->second;
+    }
+    object_map_.clear();
+  } else {
+    for (auto iter = object_map_.begin(); iter != object_map_.end();) {
+      if (id_sets.find(iter->first) == id_sets.end()) {
+        delete iter->second;
+        iter = object_map_.erase(iter);
+      } else {
+        ++iter;
+      }
+    }
   }
-
-  // object_map_.clear();
-  object_map_.swap(new_map);
+  LOG_DEBUG("2map size= : [%d] \n", object_map_.size());
 }
 
 // use relative interface when hdmap valid is false
@@ -391,10 +403,11 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       LOG_DEBUG("[obstacle_prediction_update] new obstacle: [%d] \n", p.id);
     }
     // 过滤未与相机融合， 且在相机FOV之内的
-    if ((p.type == 0 && p.relative_speed_x + ego_state_->ego_v() < 1.) ||
-        (!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
-            (p.relative_position_x > 0 &&
-             tan(25) > fabs(p.relative_position_y / p.relative_position_x)) ||
+    if ((p.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
+         p.relative_speed_x + ego_state_->ego_v() < 1.) ||
+        ((!(p.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
+         (p.relative_position_x > 0 &&
+          tan(25) > fabs(p.relative_position_y / p.relative_position_x))) ||
         fabs(p.relative_position_y) > 10 || p.length == 0 || p.width == 0) {
       LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
                 p.id);
