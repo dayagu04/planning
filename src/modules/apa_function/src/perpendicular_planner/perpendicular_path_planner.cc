@@ -140,9 +140,8 @@ bool PerpendicularPathPlanner::Update() {
     DEBUG_PRINT("multi plan success!");
   }
 
-  bool reach_target_pose = false;
   if (CheckReachTargetPose()) {
-    reach_target_pose = true;
+    output_.multi_reach_target_pose = true;
     // when current gear is reverse, only retain the current gear path and
     // continue to use adjust planning in the future
     if (output_.gear_cmd_vec.size() > 0 &&
@@ -177,7 +176,7 @@ bool PerpendicularPathPlanner::Update() {
     DEBUG_PRINT("adjust plan success!");
     return true;
   }
-  if (reach_target_pose) {
+  if (output_.multi_reach_target_pose) {
     DEBUG_PRINT("multi plan is already to target pos!");
     return true;
   }
@@ -1290,6 +1289,7 @@ const bool PerpendicularPathPlanner::LineArcPlan(
     return false;
   }
 
+  bool line_arc_success = false;
   // check which center and tang pt is suitable
   for (size_t i = 0; i < centers.size(); ++i) {
     path_seg_vec.clear();
@@ -1328,6 +1328,7 @@ const bool PerpendicularPathPlanner::LineArcPlan(
     }
 
     if (path_seg_vec.size() == 2) {
+      line_arc_success = true;
       break;
     }
 
@@ -1338,6 +1339,7 @@ const bool PerpendicularPathPlanner::LineArcPlan(
           tmp_line.heading - calc_params_.target_line.heading));
       if (dist <= apa_param.GetParam().target_pos_err - 1e-6 &&
           head_err <= apa_param.GetParam().target_heading_err / 57.3 - 1e-6) {
+        line_arc_success = true;
         break;
       }
     }
@@ -1347,9 +1349,13 @@ const bool PerpendicularPathPlanner::LineArcPlan(
       const double heading_err = std::fabs(arc.headingA - tmp_arc.headingA);
       if (dist < apa_param.GetParam().target_pos_err - 1e-6 &&
           heading_err < apa_param.GetParam().target_heading_err / 57.3 - 1e-6) {
+        line_arc_success = true;
         break;
       }
     }
+  }
+  if (!line_arc_success) {
+    path_seg_vec.clear();
   }
   if (path_seg_vec.empty()) {
     DEBUG_PRINT("LineArcPlan fail 1");
@@ -1651,6 +1657,7 @@ const bool PerpendicularPathPlanner::LineArcPlan(
     return false;
   }
 
+  bool line_arc_success = false;
   // check which center and tang pt is suitable
   for (size_t i = 0; i < centers.size(); ++i) {
     path_seg_vec.clear();
@@ -1689,6 +1696,7 @@ const bool PerpendicularPathPlanner::LineArcPlan(
     }
 
     if (path_seg_vec.size() == 2) {
+      line_arc_success = true;
       break;
     }
 
@@ -1699,6 +1707,7 @@ const bool PerpendicularPathPlanner::LineArcPlan(
           tmp_line.heading - calc_params_.target_line.heading));
       if (dist <= apa_param.GetParam().target_pos_err - 1e-6 &&
           head_err <= apa_param.GetParam().target_heading_err / 57.3 - 1e-6) {
+        line_arc_success = true;
         break;
       }
     }
@@ -1709,10 +1718,16 @@ const bool PerpendicularPathPlanner::LineArcPlan(
           std::fabs(current_pose.heading - tmp_arc.headingA);
       if (dist < apa_param.GetParam().target_pos_err - 1e-6 &&
           heading_err < apa_param.GetParam().target_heading_err / 57.3 - 1e-6) {
+        line_arc_success = true;
         break;
       }
     }
   }
+
+  if (!line_arc_success) {
+    path_seg_vec.clear();
+  }
+
   if (path_seg_vec.empty()) {
     DEBUG_PRINT("LineArcPlan fail 1");
     return false;
@@ -2043,6 +2058,10 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     if (i == 0 && tmp_path_seg.seg_gear == current_gear) {
       safe_dist = apa_param.GetParam().col_obs_safe_dist;
       params.lat_inflation = apa_param.GetParam().car_lat_inflation_for_obs;
+      if (output_.multi_reach_target_pose) {
+        safe_dist += 0.0368;
+        params.lat_inflation += 0.0368;
+      }
     }
     collision_detector_ptr_->SetParam(params);
     // PrintSegmentInfo(tmp_path_seg);
