@@ -42,7 +42,7 @@ elseif(ADAPTER STREQUAL "ap")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DAP_ENV")
 endif()
 
-set( PYTHON_EXECUTABLE /root/miniconda3/bin/python)
+set(PYTHON_EXECUTABLE /root/miniconda3/bin/python)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -54,18 +54,28 @@ if (UNIT_TEST_ENABLE)
   add_subdirectory(test)
 endif()
 
-execute_process(COMMAND pip2 install empy
-                  RESULT_VARIABLE result
-                  OUTPUT_VARIABLE output
-                  ERROR_VARIABLE error)
-add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs)
-
 if (PP_ENABLE)
+  execute_process(COMMAND pip install empy==3.3.4
+                    RESULT_VARIABLE result
+                    OUTPUT_VARIABLE output
+                    ERROR_VARIABLE error)
+  if(NOT STRUCT_MSGS_ADDED)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs)
+    set(STRUCT_MSGS_ADDED TRUE CACHE INTERNAL "Flag to indicate that subdir has been added")
+  endif()
   add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/proto_msgs)
   add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/sensor_interface)
   add_subdirectory(tools/planning_player)
 endif()
 
 if (PYBIND_TOOL_ENABLE)
+  execute_process(COMMAND pip install empy==3.3.4
+                    RESULT_VARIABLE result
+                    OUTPUT_VARIABLE output
+                    ERROR_VARIABLE error)
+  if(NOT STRUCT_MSGS_ADDED)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs)
+    set(STRUCT_MSGS_ADDED TRUE CACHE INTERNAL "Flag to indicate that subdir has been added")
+  endif()
   add_subdirectory(jupyter_pybind)
 endif()
