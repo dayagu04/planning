@@ -77,6 +77,7 @@ TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session) {
   vs_ego_ = 0;
   object_map_ = {{-1, nullptr}};
   fusion_object_history_map_ = {{-1, nullptr}};
+  lt_fusion_object_history_map_ = {{-1, nullptr}};
 }
 
 TrackletMaintainer::~TrackletMaintainer() {
@@ -87,9 +88,14 @@ TrackletMaintainer::~TrackletMaintainer() {
        iter != fusion_object_history_map_.end(); ++iter) {
     delete iter->second;
   }
+  for (auto iter = lt_fusion_object_history_map_.begin();
+       iter != lt_fusion_object_history_map_.end(); ++iter) {
+    delete iter->second;
+  }
 
   object_map_.clear();
   fusion_object_history_map_.clear();
+  lt_fusion_object_history_map_.clear();
 }
 
 void TrackletMaintainer::apply_update(
@@ -208,8 +214,8 @@ void TrackletMaintainer::recv_prediction_objects(
     }
 
     TrackedObject *origin = nullptr;
-    auto iter = object_map_.find(p.id);
-    if (iter != object_map_.end()) {
+    auto iter = lt_fusion_object_history_map_.find(p.id);
+    if (iter != lt_fusion_object_history_map_.end()) {
       origin = iter->second;
       // set history results
       origin->has_history = true;
@@ -218,7 +224,8 @@ void TrackletMaintainer::recv_prediction_objects(
     } else {
       origin = new TrackedObject();
       origin->track_id = p.id;
-      object_map_.insert(std::make_pair(origin->track_id, origin));
+      //lt_fusion_object_history_map_.insert(std::make_pair(origin->track_id, origin));
+      lt_fusion_object_history_map_[origin->track_id] = origin;
       origin->has_history = false;
     }
 
@@ -367,24 +374,24 @@ void TrackletMaintainer::recv_prediction_objects(
       trajectory_idx++;
     }
   }
-  LOG_DEBUG("1map size= : [%d] \n", object_map_.size());
+  LOG_DEBUG("1map size= : [%d] \n", lt_fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
-    for (auto iter = object_map_.begin(); iter != object_map_.end(); ++iter) {
+    for (auto iter = lt_fusion_object_history_map_.begin(); iter != lt_fusion_object_history_map_.end(); ++iter) {
       delete iter->second;
     }
-    object_map_.clear();
+    lt_fusion_object_history_map_.clear();
   } else {
-    for (auto iter = object_map_.begin(); iter != object_map_.end();) {
+    for (auto iter = lt_fusion_object_history_map_.begin(); iter != lt_fusion_object_history_map_.end();) {
       if (id_sets.find(iter->first) == id_sets.end()) {
         delete iter->second;
-        iter = object_map_.erase(iter);
+        iter = lt_fusion_object_history_map_.erase(iter);
       } else {
         ++iter;
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", object_map_.size());
+  LOG_DEBUG("2map size= : [%d] \n", lt_fusion_object_history_map_.size());
 }
 
 // use relative interface when hdmap valid is false
