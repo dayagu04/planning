@@ -713,7 +713,7 @@ def findME(data, t):
 def draw_local_view(dataLoader, layer_manager):
     #define figure
     # 定义 local_view fig
-    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=800, match_aspect = True, aspect_scale=1)
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1250, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
@@ -806,7 +806,9 @@ def draw_local_view(dataLoader, layer_manager):
       pos_yn = np.array(pos_yn)[::10]
 
       default_cur_loc = [[0], [0],[0.1]]
-      default_loc = [[],[]]
+      default_loc = [[0.]*len(pos_xn), [0.]*len(pos_yn)]
+      #print(localization_timestamps)
+      #print(dataLoader.loc_msg['timestamp'])
       for localization_timestamp in localization_timestamps:
         loc_msg = find(dataLoader.loc_msg, localization_timestamp)
         if loc_msg == None:
@@ -853,7 +855,7 @@ def draw_local_view(dataLoader, layer_manager):
         # 加载车道线
         if fusion_road_msg != None:
           line_info_list = load_lane_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-        for idx in range(12):
+        for idx in range(20):
           lane_generator_key = 'line_' + str(idx)
           if (lane_generator_key in lane_generator_dict.keys()) == False:
               lane_generator_dict[lane_generator_key] = LineGenerator('line')
@@ -867,9 +869,9 @@ def draw_local_view(dataLoader, layer_manager):
         # 加载车道中心线
         if fusion_road_msg != None:
           center_line_list = load_lane_center_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-        for index in range(6):
+        for index in range(10):
           line_generator_key = 'centerline_' + str(index)
-          fig_index = 12 + index
+          fig_index = 20 + index
           if (line_generator_key in centerline_generator_dict.keys()) == False:
             centerline_generator_dict[line_generator_key] = LineGenerator('center_line')
           if fusion_road_msg == None:
@@ -906,7 +908,7 @@ def draw_local_view(dataLoader, layer_manager):
         fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
         target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
         origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
-        for j in range(6):
+        for j in range(10):
           if center_line_list[j]['relative_id'] == fix_lane_ralative_id:
             fix_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
           if center_line_list[j]['relative_id'] == target_lane_ralative_id:
@@ -1299,7 +1301,7 @@ def draw_local_view(dataLoader, layer_manager):
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         flag, rdg_lane_lines_msg = findME(dataLoader.rdg_lane_lines_msg, fusion_road_timestamps[i])
         loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-        for index in range(12) :
+        for index in range(20) :
           rdg_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
           rdg_lane_generator_key = 'rdg_lane_' + str(index)
           if (rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys()) == False:

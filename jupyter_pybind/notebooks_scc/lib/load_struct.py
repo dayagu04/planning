@@ -197,7 +197,7 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
   reference_line_msg_size = road_msg.reference_line_msg_size
   #print("reference_line_msg_size ", reference_line_msg_size)
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
-  for i in range(6):
+  for i in range(10):
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
@@ -314,7 +314,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   reference_line_msg = road_msg.reference_line_msg
   reference_line_msg_size = road_msg.reference_line_msg_size
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
-  for i in range(6):
+  for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
@@ -340,6 +340,9 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
               car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
               line_x.append(car_point_x[0])
               line_y.append(car_point_y[0]) """
+          else:
+            line_x = default_line_x
+            line_y = default_line_y
         else:
           line_x = [virtual_lane_refline_points[j].car_point.x for j in range(virtual_lane_refline_points_size)]
           line_y = [virtual_lane_refline_points[j].car_point.y for j in range(virtual_lane_refline_points_size)]
