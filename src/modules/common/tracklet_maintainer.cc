@@ -224,8 +224,8 @@ void TrackletMaintainer::recv_prediction_objects(
     } else {
       origin = new TrackedObject();
       origin->track_id = p.id;
-      //lt_fusion_object_history_map_.insert(std::make_pair(origin->track_id, origin));
-      lt_fusion_object_history_map_[origin->track_id] = origin;
+      lt_fusion_object_history_map_.insert(std::make_pair(origin->track_id, origin));
+      // lt_fusion_object_history_map_[origin->track_id] = origin;
       origin->has_history = false;
     }
 

@@ -746,13 +746,13 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
       // TBD: add log
       overlap_min_y = care_overlap_polygon.min_y();
       overlap_max_y = care_overlap_polygon.max_y();
-      LOG_DEBUG("Obstacle[%d] decision, t is: %f, min_y: %f, max_y: %f",
-                obstacle->id(), i * config_.delta_t, overlap_min_y,
-                overlap_max_y);
+      // LOG_DEBUG("Obstacle[%d] decision, t is: %f, min_y: %f, max_y: %f",
+      //           obstacle->id(), i * config_.delta_t, overlap_min_y,
+      //           overlap_max_y);
     } else {
       // TBD: add log
-      LOG_DEBUG("Obstacle[%d] no decision, t is: %f", obstacle->id(),
-                i * config_.delta_t);
+      // LOG_DEBUG("Obstacle[%d] no decision, t is: %f", obstacle->id(),
+      //           i * config_.delta_t);
       continue;
     }
 
