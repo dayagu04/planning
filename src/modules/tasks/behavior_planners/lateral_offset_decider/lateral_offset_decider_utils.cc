@@ -243,6 +243,15 @@ bool IsCone(const AvoidObstacleInfo &avoid_obstacle) {
   return avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE;
 }
 
+bool IsPassive(const AvoidObstacleInfo &avoid_obstacle) {
+  double ttc = avoid_obstacle.first_s_to_ego / (std::max(-avoid_obstacle.vs_lon_relative, 1e-6));
+  bool is_passive = false;
+  if (ttc <= 1.0 || avoid_obstacle.first_s_to_ego < 5 ) {
+    is_passive = true;
+  }
+  return is_passive;
+}
+
 double GetLimitLateralDistance(const framework::Session *session, int track_id) {
   const CoarsePlanningInfo &coarse_planning_info =
       session->planning_context()

@@ -320,7 +320,7 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
               ? &avoid_obstacle_1
               : &avoid_obstacle_2;
     }
-
+    avoid_id_ = nearest_avoid_obstacle->track_id;
     CalcMaxOppositeOffset(avoid_obstacle_1, -1, avoid_obstacle_2);
     lateral_offset = DesireLateralOffsetSideWay(*nearest_avoid_obstacle, avoid_info_.avoid_way,
                                                 0.5, lat_offset_compensate_1, config_.base_nudge_distance);
@@ -416,12 +416,7 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
         coeff * (lane_width_ - half_ego_width - nearest_l_to_ref) +
         lat_compensate;
   } else {
-    double ttc = avoid_obstacle.first_s_to_ego / (-avoid_obstacle.vs_lon_relative);
-    bool is_passive = false;
-    if (ttc <= 1.0 || avoid_obstacle.first_s_to_ego < 3) {
-      is_passive = true;
-    }
-    if (is_passive) {
+    if (avoid_obstacle.is_passive) {
       base_distance = 1.0;
     }
 
@@ -430,7 +425,7 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
     } else if (lateral_offset_decider::IsVRU(avoid_obstacle)) {
       base_distance += 0.1;
     } else if (lateral_offset_decider::IsCone(avoid_obstacle)) {
-
+      base_distance = 0.7;
     }
     const double pred_ts =
         clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
@@ -624,14 +619,6 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
       side_limit_lateral_distance =
           std::max(side_limit_lateral_distance - 2.0, 0.0);
 
-      if (avoid_obstacle_1.min_l_to_ref < 1.8) {
-        if (std::fabs(avoid_obstacle_1.min_l_to_ref - 1.8) >
-            side_limit_lateral_distance) {
-          side_limit_lateral_distance =
-              std::fabs(avoid_obstacle_1.min_l_to_ref - 1.8);
-        }
-      }
-
       if (std::fabs(avoid_info_.allow_front_max_opposite_offset -
                     last_avoid_info_.allow_front_max_opposite_offset) > 0.1) {
         // avoid_info_.allow_front_max_opposite_offset = avoid_info_.allow_front_max_opposite_offset;
@@ -691,15 +678,6 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
       side_limit_lateral_distance =
           std::max(side_limit_lateral_distance - 2.0, 0.0);
 
-      if (avoid_obstacle_1.max_l_to_ref > -1.8 &&
-          avoid_obstacle_1.max_l_to_ref < 0) {
-        if (std::fabs(avoid_obstacle_1.max_l_to_ref + 1.8) >
-            side_limit_lateral_distance) {
-          side_limit_lateral_distance =
-              std::fabs(avoid_obstacle_1.max_l_to_ref + 1.8);
-        }
-      }
-
       if (std::fabs(avoid_info_.allow_front_max_opposite_offset -
                     last_avoid_info_.allow_front_max_opposite_offset) > 0.1) {
         // avoid_info_.allow_front_max_opposite_offset = avoid_info_.allow_front_max_opposite_offset;
@@ -720,8 +698,8 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
   } else {
     avoid_info_.allow_front_max_opposite_offset = kDefaultLimitLateralDistance;
     avoid_info_.allow_side_max_opposite_offset = kDefaultLimitLateralDistance;
-    avoid_info_.allow_front_max_opposite_offset_id = -1;
-    avoid_info_.allow_side_max_opposite_offset_id = -1;
+    avoid_info_.allow_front_max_opposite_offset_id = -1000;
+    avoid_info_.allow_side_max_opposite_offset_id = -1000;
   }
   return;
 }
@@ -733,19 +711,25 @@ void LateralOffsetCalculatorV2::PostProcess(const std::array<AvoidObstacleInfo, 
     if (avoid_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
       is_overlap[0] = lateral_offset_decider::HasOverlap(
           session_, avoid_obstacles[0],
-          std::max(t_buffer * (-avoid_obstacles[0].vs_lon_relative), 3.0), 0.0);
+          std::max(t_buffer * (-avoid_obstacles[0].vs_lon_relative), 3.0), 2.0);
       if (avoid_obstacles[1].flag != AvoidObstacleFlag::INVALID) {
         is_overlap[1] = lateral_offset_decider::HasOverlap(
             session_, avoid_obstacles[1],
-            std::max(t_buffer * (-avoid_obstacles[1].vs_lon_relative), 3.0), 0.0);
+            std::max(t_buffer * (-avoid_obstacles[1].vs_lon_relative), 3.0), 2.0);
       }
     }
 
-    if (is_overlap[0]) {
+    if (is_overlap[0] && (avoid_obstacles[1].flag == AvoidObstacleFlag::INVALID || avoid_id_ != avoid_obstacles[1].track_id)) {
       if ((avoid_info_.avoid_way == AvoidWay::Left && avoid_info_.lat_offset - last_avoid_info_.lat_offset < 0) ||
           (avoid_info_.avoid_way == AvoidWay::Right && avoid_info_.lat_offset - last_avoid_info_.lat_offset > 0)) {
         double lat_offset_compensate = LateralOffsetCompensate(avoid_obstacles[0]);
-        double desire_lat_offset = DesireLateralOffsetSideWay(avoid_obstacles[0],avoid_info_.avoid_way, 0.2, lat_offset_compensate, 1.0);
+        double desire_lat_offset = 0.0;
+        if (avoid_obstacles[0].s_to_ego <= 0.0) {
+          desire_lat_offset = fabs(last_avoid_info_.lat_offset);
+        } else {
+          desire_lat_offset = DesireLateralOffsetSideWay(avoid_obstacles[0],avoid_info_.avoid_way, 0.2, lat_offset_compensate, 1.0);
+        }
+
         double limit_lateral_offset = LimitLateralOffset(desire_lat_offset, avoid_info_.avoid_way);
         avoid_info_.lat_offset = avoid_info_.avoid_way == AvoidWay::Left ? std::max(avoid_info_.lat_offset, -limit_lateral_offset) : std::min(avoid_info_.lat_offset, limit_lateral_offset);
       }
@@ -803,6 +787,7 @@ void LateralOffsetCalculatorV2::CalLaneWidth() {
 
 void LateralOffsetCalculatorV2::Reset() {
   avoid_info_.Reset();
+  avoid_id_ = -1;
   // avoid_info_.lat_offset = 0.0;
   // avoid_info_.avoid_way = AvoidWay::None;
   // avoid_info_.allow_front_max_opposite_offset = kDefaultLimitLateralDistance;
@@ -837,6 +822,7 @@ void LateralOffsetCalculatorV2::SaveDebugInfo() {
   JSON_DEBUG_VALUE("allow_front_max_opposite_offset_id",
                    avoid_info_.allow_front_max_opposite_offset_id)
   JSON_DEBUG_VALUE("ego_l", ego_frenet_state_.l());
+  JSON_DEBUG_VALUE("is_use_ego_position", avoid_info_.is_use_ego_position);
 }
 
 }  // namespace planning

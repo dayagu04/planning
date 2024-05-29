@@ -18,7 +18,7 @@ struct AvoidObstacleInfo {
                     double i_t_exceed_avd_obstacle,
                     double i_allow_max_opposite_offset, uint i_track_id,
                     int i_type, AvoidObstacleUpdateFlag i_update_flag,
-                    double i_length, int i_num_out_avd_area) {
+                    double i_length, int i_num_out_avd_area, bool i_is_passive) {
     flag = i_flag;
     intersection_index = i_intersection_index;
     vs = i_vs;
@@ -38,6 +38,7 @@ struct AvoidObstacleInfo {
     update_flag = i_update_flag;
     length = i_length;
     num_out_avd_area = i_num_out_avd_area;
+    is_passive = i_is_passive;
   }
 
   void Assign(AvoidObstacleFlag i_flag, double i_intersection_index,
@@ -49,7 +50,7 @@ struct AvoidObstacleInfo {
               double i_t_exceed_avd_obstacle,
               double i_allow_max_opposite_offset, uint i_track_id, int i_type,
               AvoidObstacleUpdateFlag i_update_flag, double i_length,
-              int i_num_out_avd_area) {
+              int i_num_out_avd_area, bool i_is_passive) {
     flag = i_flag;
     intersection_index = i_intersection_index;
     vs = i_vs;
@@ -69,6 +70,7 @@ struct AvoidObstacleInfo {
     update_flag = i_update_flag;
     length = i_length;
     num_out_avd_area = i_num_out_avd_area;
+    is_passive = i_is_passive;
   }
 
   void Reset() {
@@ -91,6 +93,7 @@ struct AvoidObstacleInfo {
     update_flag = AvoidObstacleUpdateFlag::Update;
     length = 0;
     num_out_avd_area = 0;
+    is_passive = false;
   };
   int flag = AvoidObstacleFlag::INVALID;
   double intersection_index;
@@ -111,6 +114,7 @@ struct AvoidObstacleInfo {
   int update_flag = AvoidObstacleUpdateFlag::Update;
   double length;
   int num_out_avd_area;  //出避让区域的次数
+  bool is_passive = false;
 };
 
 enum class AvoidWay { None, Left, Right, Center};
@@ -167,6 +171,7 @@ bool IsSideObstacleConsider(const framework::Session *session,
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle);
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle);
 bool IsCone(const AvoidObstacleInfo &avoid_obstacle);
+bool IsPassive(const AvoidObstacleInfo &avoid_obstacle);
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,
                     const AvoidObstacleInfo &avoid_obstacle_2);
 bool HasOverlap(const framework::Session *session,
