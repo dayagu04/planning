@@ -15,6 +15,7 @@ from plot_local_view_html import *
 import logging
 sys.path.append('..')
 sys.path.append('../..')
+sys.path.append('../lib/')
 sys.path.append('../../..')
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from lib.basic_layers import *

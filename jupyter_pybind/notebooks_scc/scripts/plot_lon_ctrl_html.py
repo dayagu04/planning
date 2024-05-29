@@ -21,7 +21,7 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 bag_path = "/share//data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240306/20240306-15-40-10/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-03-06-15-40-10.record"
-html_file = bag_path +".ctrl.html"
+html_file = bag_path +".lon_ctrl.html"
 
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
@@ -341,7 +341,7 @@ def plotMain():
 
     if os.path.isfile(bag_path) and (not os.path.isdir(html_path)):
         print("process one bag ...")
-        html_file = bag_path + ".ctrl" + ".html"
+        html_file = bag_path + ".lon_ctrl" + ".html"
         plotOnce(bag_path, html_file)
         return
 
@@ -360,7 +360,7 @@ def plotMain():
         if (".0000" in bag_name) and (bag_name.find(".html") == -1):
             print("process {} ...".format(bag_name))
             bag_file = os.path.join(bag_path, bag_name)
-            html_file = bag_file + ".ctrl" + ".html"
+            html_file = bag_file + ".lon_ctrl" + ".html"
             try:
                 plotOnce(bag_file, html_file)
                 print("html_file = ", html_file)

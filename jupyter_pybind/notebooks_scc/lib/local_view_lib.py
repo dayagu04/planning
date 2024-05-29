@@ -617,14 +617,13 @@ class LayerManager():
             # 更改车道线类型属性
             if hasattr(gd, 'line'):
               if gd.line == 'line':
+                #layer_append = ""
+                #layer_code = (layer_append) % (layer_code)
+                """layer_code = layer_code"""
                 layer_append = """%s
                 var fig_index = data['{}s'][0][{}_index][3][0];
-                # console.log("hhhhhdw");
-                # console.log(data['{}s'][0]);
-                # console.log(fig_index);
-                # console.log("hhhhhdw2");
-              {}.renderers[fig_index].glyph.line_dash = data['{}s'][0][{}_index][2][0];
-            """.format(data_key,data_key,data_key, layer_label + '_fig', data_key,data_key)
+                {}.renderers[fig_index].glyph.line_dash = data['{}s'][0][{}_index][2][0];
+                """.format( data_key,data_key,layer_label + '_fig', data_key,data_key)
                 layer_code = (layer_append) % (layer_code)
 
             # 更改当前车道中心线的属性
@@ -645,7 +644,7 @@ class LayerManager():
                 {4}.renderers[fig_index].glyph.line_dash = line_dash;
                 {5}.renderers[fig_index].glyph.line_alpha = line_alpha;
                 {6}.renderers[fig_index].glyph.line_width = line_width;
-            """.format( data_key,data_key, \
+                """.format( data_key,data_key, \
                       data_key,data_key, \
                       layer_label + '_fig',layer_label + '_fig', layer_label + '_fig')
                 layer_code = (layer_append) % (layer_code)
@@ -714,7 +713,7 @@ def findME(data, t):
 def draw_local_view(dataLoader, layer_manager):
     #define figure
     # 定义 local_view fig
-    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=800, match_aspect = True, aspect_scale=1)
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1250, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
@@ -751,8 +750,8 @@ def draw_local_view(dataLoader, layer_manager):
       fusion_object_timestamp = input_topic_timestamp.fusion_object
       fusion_road_timestamp = input_topic_timestamp.fusion_road
       if is_new_loc:
-        # localization_timestamp = input_topic_timestamp.localization
-        localization_timestamp = input_topic_timestamp.localization_estimate
+        localization_timestamp = input_topic_timestamp.localization
+        #localization_timestamp = input_topic_timestamp.localization_estimate
       else :
         if is_bag_main:
           localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
@@ -772,6 +771,11 @@ def draw_local_view(dataLoader, layer_manager):
       control_output_timestamps.append(control_output_timestamp)
       ehr_parking_map_timestamps.append(ehr_parking_map_timestamp)
       ground_line_timestamps.append(ground_line_timestamp)
+    #print(vehicle_service_timestamps)
+    #print(control_output_timestamps)
+    #print(localization_timestamps)
+    #print(fusion_road_timestamps)
+    #print(fusion_object_timestamps)
     # else:
     #   print("plan_debug_msg is empty")
     #   for t in range(dataLoader.loc_msg['t'][0], dataLoader.loc_msg['t'][-1], 0.1):
@@ -802,26 +806,31 @@ def draw_local_view(dataLoader, layer_manager):
       pos_yn = np.array(pos_yn)[::10]
 
       default_cur_loc = [[0], [0],[0.1]]
-      default_loc = [[],[]]
-      if g_is_display_enu:
-        for localization_timestamp in localization_timestamps:
-          loc_msg = find(dataLoader.loc_msg, localization_timestamp)
-          if loc_msg == None:
-            print('find loc_msg error')
-            location_generator.xys.append(default_loc)
-            cur_location_point_generator.xys.append(default_cur_loc)
-            continue
+      default_loc = [[0.]*len(pos_xn), [0.]*len(pos_yn)]
+      #print(localization_timestamps)
+      #print(dataLoader.loc_msg['timestamp'])
+      for localization_timestamp in localization_timestamps:
+        loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+        if loc_msg == None:
+          print('find loc_msg error')
+          location_generator.xys.append(default_loc)
+          cur_location_point_generator.xys.append(default_cur_loc)
+          continue
+        if g_is_display_enu:
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_location_point_generator.xys.append([[cur_pos_yn], [cur_pos_xn],[0.1]])
+          ego_local_x, ego_local_y = pos_xn, pos_yn
+        else:
+          #xys = [default_cur_loc for _ in range(len(localization_timestamps))]
+          cur_location_point_generator.xys.append(default_cur_loc)
           cur_pos_xn = loc_msg.position.position_boot.x
           cur_pos_yn = loc_msg.position.position_boot.y
           cur_yaw = loc_msg.orientation.euler_boot.yaw
-          cur_location_point_generator.xys.append(([cur_pos_yn], [cur_pos_xn],[0.1]))
           coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
           ego_local_x, ego_local_y = coord_tf.global_to_local(pos_xn, pos_yn)
-      else:
-        xys = [default_cur_loc for _ in range(len(localization_timestamps))]
-        cur_location_point_generator.xys = xys
-        ego_local_x, ego_local_y = pos_xn, pos_yn
-      location_generator.xys.append((ego_local_y,ego_local_y))
+
+        location_generator.xys.append([ego_local_y, ego_local_x])
       location_generator.ts = np.array(plan_debug_ts)
       location_layer = CurveLayer(fig_local_view, location_params)
       layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
@@ -833,48 +842,52 @@ def draw_local_view(dataLoader, layer_manager):
     # 加载车道线
     lane_generator_dict = {}
     centerline_generator_dict = {}
-    center_line_lists = []
+    center_line_list = []
     if dataLoader.road_msg['enable'] == True:
+      #print(dataLoader.road_msg['timestamp'])
+      #print(dataLoader.loc_msg['timestamp'])
       is_enu_to_car = True
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        #print(fusion_road_timestamps[i])
+        #print(localization_timestamps[i])
         fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
         loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
         # 加载车道线
         if fusion_road_msg != None:
           line_info_list = load_lane_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-        for i in range(10):
-          lane_generator_key = 'line_' + str(i)
+        for idx in range(20):
+          lane_generator_key = 'line_' + str(idx)
           if (lane_generator_key in lane_generator_dict.keys()) == False:
               lane_generator_dict[lane_generator_key] = LineGenerator('line')
 
           if fusion_road_msg == None:
-            lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], [i]))
+            lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], [idx]))
             continue
-          line_info = line_info_list[i]
-          line_info['fig_index'] = [i]
-          lane_generator_dict[lane_generator_key].xys.append((line_info['line_y_vec'] , line_info['line_x_vec'] ,line_info['type'], line_info['fig_index']))
+          line_info = line_info_list[idx]
+          #line_info['fig_index'] = [idx]
+          lane_generator_dict[lane_generator_key].xys.append((line_info['line_y_vec'] , line_info['line_x_vec'] ,line_info['type'], [idx]))
         # 加载车道中心线
-        center_line_list = load_lane_center_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-        # for index in range(5):
-        #   line_generator_key = 'centerline_' + str(index)
-        #   fig_index = 10 + index
-        #   if (line_generator_key in centerline_generator_dict.keys()) == False:
-        #     centerline_generator_dict[line_generator_key] = LineGenerator('center_line')
-        #   if not flag:
-        #     centerline_generator_dict[line_generator_key].xys.append(([] , [] ,[], []))
-        #     continue
-        #   centerline_generator_dict[line_generator_key].xys.append((center_line_list[index]['line_y_vec'], center_line_list[index]['line_x_vec'], [center_line_list[index]['relative_id']], [fig_index]))
+        if fusion_road_msg != None:
+          center_line_list = load_lane_center_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+        for index in range(10):
+          line_generator_key = 'centerline_' + str(index)
+          fig_index = 20 + index
+          if (line_generator_key in centerline_generator_dict.keys()) == False:
+            centerline_generator_dict[line_generator_key] = LineGenerator('center_line')
+          if fusion_road_msg == None:
+            centerline_generator_dict[line_generator_key].xys.append(([] , [] ,[], [fig_index]))
+            continue
+          centerline_generator_dict[line_generator_key].xys.append((center_line_list[index]['line_y_vec'], center_line_list[index]['line_x_vec'], [center_line_list[index]['relative_id']], [fig_index]))
 
-        for lane_generator_key in lane_generator_dict.keys():
-            lane_generator_dict[lane_generator_key].ts = np.array(plan_debug_ts)
-            lane_layer = CurveLayer(fig_local_view, lane_params)
-            layer_manager.AddLayer(lane_layer, lane_generator_key.replace('line_', 'line_layer_'), lane_generator_dict[lane_generator_key], lane_generator_key , 2)
+      for lane_generator_key in lane_generator_dict.keys():
+        lane_generator_dict[lane_generator_key].ts = plan_debug_ts
+        lane_layer = CurveLayer(fig_local_view, lane_params)
+        layer_manager.AddLayer(lane_layer, lane_generator_key.replace('line_', 'line_layer_'), lane_generator_dict[lane_generator_key], lane_generator_key , 2)
 
-        # for line_generator_key in centerline_generator_dict.keys():
-        #     centerline_generator_dict[line_generator_key].ts = np.array(plan_debug_ts)
-        #     lane_layer = CurveLayer(fig_local_view, center_line_params)
-        #     layer_manager.AddLayer(lane_layer, line_generator_key.replace('centerline_', 'centerline_layer_'), centerline_generator_dict[line_generator_key], line_generator_key , 2)
-
+      for line_generator_key in centerline_generator_dict.keys():
+        centerline_generator_dict[line_generator_key].ts = np.array(plan_debug_ts)
+        lane_layer = CurveLayer(fig_local_view, center_line_params)
+        layer_manager.AddLayer(lane_layer, line_generator_key.replace('centerline_', 'centerline_layer_'), centerline_generator_dict[line_generator_key], line_generator_key , 2)
 
     # # 加载planning debug部分信息
     ego_info_generatev2 = TextGenerator()
@@ -884,17 +897,18 @@ def draw_local_view(dataLoader, layer_manager):
     if dataLoader.plan_debug_msg['enable'] == True:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         fusion_road_msg = find(dataLoader.road_msg, fusion_road_timestamps[i])
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
         if fusion_road_msg == None:
           continue
 
-        center_line_list = load_lane_center_lines(fusion_road_msg)
+        center_line_list = load_lane_center_lines(fusion_road_msg, True, loc_msg, False)
         lat_behavior_common = plan_debug.lat_behavior_common
         environment_model_info =plan_debug.environment_model_info
         current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
         fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
         target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
         origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
-        for j in range(5):
+        for j in range(10):
           if center_line_list[j]['relative_id'] == fix_lane_ralative_id:
             fix_lane_xys.append((center_line_list[j]['line_y_vec'], center_line_list[j]['line_x_vec']))
           if center_line_list[j]['relative_id'] == target_lane_ralative_id:
@@ -932,7 +946,7 @@ def draw_local_view(dataLoader, layer_manager):
         loc_msg = find(dataLoader.loc_msg, localization_timestamp)
         if loc_msg == None:
           # print('find loc_msg error')
-          location_generator.xys.append(([],[]))
+          ego_generate.xys.append(([],[]))
           continue
 
         # cur_pos_xn = loc_msg.pose.local_position.x
@@ -985,8 +999,10 @@ def draw_local_view(dataLoader, layer_manager):
       obstacle_snrd_generate = CommonGenerator()
       obstacle_fusion_text_generate = TextGenerator()
       obstacle_snrd_text_generate = TextGenerator()
+      is_enu_to_car = True
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
       # for i, fusion_object_timestamp in enumerate(fusion_object_timestamps):
         # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
         # flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamp)
@@ -997,7 +1013,7 @@ def draw_local_view(dataLoader, layer_manager):
           obstacle_fusion_text_generate.xys.append(([], [], []))
           obstacle_snrd_text_generate.xys.append(([], [], []))
           continue
-        obstacles_info_all = load_obstacle_params(fus_msg, plan_debug.environment_model_info)
+        obstacles_info_all = load_obstacle_params(fus_msg, is_enu_to_car, loc_msg, plan_debug.environment_model_info)
         if g_is_display_enu:
           obstacle_fusion_generate.xys.append((obstacles_info_all[1]['obstacles_y'], obstacles_info_all[1]['obstacles_x']))
           obstacle_snrd_generate.xys.append((obstacles_info_all[4]['obstacles_y'], obstacles_info_all[4]['obstacles_x']))
@@ -1238,16 +1254,18 @@ def draw_local_view(dataLoader, layer_manager):
         tab_debug_layer2, 'tab_debug_layer2', plan_debug_table2, 'plan_debug_table2', 3)
 
     # 加载mobileye车道线
+    coord_tf = coord_transformer()
     mobileye_lane_lines_generator_dict = {}
     if dataLoader.mobileye_lane_lines_msg['enable'] == False:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         flag, mobileye_lane_lines_msg = findME(dataLoader.mobileye_lane_lines_msg, fusion_road_timestamps[i])
-        for index in range(10) :
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+        for index in range(12) :
           mobileye_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
           mobileye_lane_generator_key = 'mobileye_lane_' + str(index)
           if (mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys()) == False:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key] = LineGenerator('mobileye_line')
-          if not flag:
+          if not flag or loc_msg == None:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
             continue
 
@@ -1279,15 +1297,16 @@ def draw_local_view(dataLoader, layer_manager):
 
     # 加载rdg车道线
     rdg_lane_lines_generator_dict = {}
-    if dataLoader.rdg_lane_lines_msg['enable'] == False:
+    if dataLoader.rdg_lane_lines_msg['enable'] == True:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         flag, rdg_lane_lines_msg = findME(dataLoader.rdg_lane_lines_msg, fusion_road_timestamps[i])
-        for index in range(10) :
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+        for index in range(20) :
           rdg_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
           rdg_lane_generator_key = 'rdg_lane_' + str(index)
           if (rdg_lane_generator_key in rdg_lane_lines_generator_dict.keys()) == False:
             rdg_lane_lines_generator_dict[rdg_lane_generator_key] = LineGenerator('rdg_line')
-          if not flag:
+          if not flag or loc_msg == None:
             rdg_lane_lines_generator_dict[rdg_lane_generator_key].xys.append(([] , [] ,[], []))
             continue
           if index >=rdg_lane_lines_msg.lane_line_size:
@@ -1295,7 +1314,24 @@ def draw_local_view(dataLoader, layer_manager):
             continue
           lane = rdg_lane_lines_msg.lane_line[index]
           fig_index = index
-          line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
+          line_x, line_y = [], []
+          if g_is_display_enu:
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            local_points = lane.lane_points_set
+            point_num = lane.lane_points_set_num
+            line_x = [local_points[j].x for j in range(point_num)]
+            line_y = [local_points[j].y for j in range(point_num)]
+            line_x, line_y = coord_tf.local_to_global(line_x, line_y)
+          else:
+            local_points = lane.lane_points_set
+            point_num = lane.lane_points_set_num
+            line_x = [local_points[j].x for j in range(point_num)]
+            line_y = [local_points[j].y for j in range(point_num)]
+
           rdg_lane_info['line_x_vec'] = line_x
           rdg_lane_info['line_y_vec'] = line_y
           tp = lane.marking_segments[0].marking
@@ -1316,7 +1352,7 @@ def draw_local_view(dataLoader, layer_manager):
                                  rdg_lane_generator_key , 2)
 
     # 加载mobileye障碍物
-    if dataLoader.mobileye_objects_msg['enable'] == False:
+    if dataLoader.mobileye_objects_msg['enable'] == True:
       obstacle_mobileye_generate = CommonGenerator()
       obstacle_mobileye_text_generate = TextGenerator()
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
@@ -1337,11 +1373,11 @@ def draw_local_view(dataLoader, layer_manager):
       layer_manager.AddLayer(obstacle_mobileye_text_layer, 'obstacle_mobileye_text_layer', obstacle_mobileye_text_generate, 'obstacle_mobileye_text_generate', 3)
 
     # 加载rdg障碍物
-    # load_obstacle_rdg(dataLoader, layer_manager, fig_local_view)
+    load_obstacle_rdg(dataLoader, layer_manager, fig_local_view)
     # # # 加载lidar 障碍物
-    # load_obstacle_lidar(dataLoader, layer_manager, fig_local_view)
+    load_obstacle_lidar(dataLoader, layer_manager, fig_local_view)
     # # # 加载雷达障碍物
-    # load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
+    load_obstacle_radar(dataLoader, layer_manager, fig_local_view)
 
     # # 加载hpp ehr
     load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display_enu)
@@ -1982,7 +2018,7 @@ def load_ehr_parking_map(dataLoader, layer_manager, fig_local_view, g_is_display
     layer_manager.AddLayer(road_mark_params_layer, 'road_mark_params_layer', road_mark_generate, 'road_mark_generate', 2)
 
 def load_ground_line(dataLoader, layer_manager, fig_local_view, g_is_display_enu = False):
-  if dataLoader.ground_line_msg['enable'] == False:
+  if dataLoader.ground_line_msg['enable'] == True:
     groundline_generate = CommonGenerator()
     for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
       flag, ground_line_msg = find(dataLoader.ground_line_msg, ground_line_timestamps[i])
