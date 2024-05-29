@@ -136,6 +136,7 @@ class TrackletMaintainer {
   LifecycleDict seq_state_;
   std::map<int, TrackedObject *> object_map_;
   std::map<int, TrackedObject *> fusion_object_history_map_;
+  std::map<int, TrackedObject *> lt_fusion_object_history_map_;
   std::shared_ptr<EgoStateManager> ego_state_;
   bool hdmap_valid_{false};
 
