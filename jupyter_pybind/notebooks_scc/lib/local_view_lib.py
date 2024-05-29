@@ -713,7 +713,7 @@ def findME(data, t):
 def draw_local_view(dataLoader, layer_manager):
     #define figure
     # 定义 local_view fig
-    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1250, match_aspect = True, aspect_scale=1)
+    fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=1000, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True
     # toolbar
     fig_local_view.toolbar.active_scroll = fig_local_view.select_one(WheelZoomTool)
