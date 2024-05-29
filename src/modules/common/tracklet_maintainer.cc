@@ -1983,6 +1983,50 @@ bool TrackletMaintainer::is_potential_avoiding_car(
                    : (item.timestamp - item.last_recv_time);
   int count = (int)((gap + 0.01) / planning_cycle_time);
 
+  double lat_dis_thr = lane_width - ego_car_width + 0.8;
+  bool in_lat_near_area =
+      ((item.d_min_cpath > 0 &&
+        item.d_min_cpath - l_ego_ - ego_car_width / 2 < lat_dis_thr) ||
+       (item.d_max_cpath < 0 &&
+        l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
+  bool in_lon_near_area =
+      (item.v_rel < 0 &&
+       ((item.d_rel / (-item.v_rel) < 3) ||
+        ((item.d_rel / (-item.v_rel) < 5 && item.d_rel < 10))));
+
+  // for lead one
+  if (lead_one != nullptr && item.track_id == lead_one->track_id &&
+      (is_in_range || is_about_to_enter_range) &&
+      (!in_lon_near_area || !in_lat_near_area)) {
+    double near_end_pos = 0.5 * lane_width - 0.7 * (lane_width - ego_car_width);
+    double far_end_pos = 0.5 * lane_width + 0.2;
+
+    bool is_in_avoid_range_by_nearest_point =
+        lead_one->d_path >= near_end_pos && lead_one->d_path < far_end_pos;
+
+    bool is_in_avoid_range_by_nearest_line_in_left =
+        lead_one->d_min_cpath >= near_end_pos &&
+        lead_one->d_min_cpath < far_end_pos &&
+        lead_one->d_max_cpath >= near_end_pos;
+
+    bool is_in_avoid_range_by_nearest_line_in_right =
+        lead_one->d_max_cpath > -far_end_pos &&
+        lead_one->d_max_cpath <= -near_end_pos &&
+        lead_one->d_min_cpath <= -near_end_pos;
+
+    if (!((lead_one->is_avd_car) &&
+          (is_in_avoid_range_by_nearest_point ||
+           is_in_avoid_range_by_nearest_line_in_left ||
+           is_in_avoid_range_by_nearest_line_in_right || borrow_bicycle_lane ||
+           scenario == LocationEnum::LOCATION_INTER || rightest_lane ||
+           (dist_intersect - lead_one->d_rel < 50 &&
+            dist_intersect - lead_one->d_rel >= -5 &&
+            (!isRedLightStop || lead_one->type == 14))))) {
+      item.ncar_count =
+          std::max(item.ncar_count - 10 * count * planning_cycle_time, 0.0);
+    };
+  }
+
   if (item.is_ncar) {
     // hack：missing prediction, considering v_lat
     // if (item.trajectory.intersection == 0 ||
@@ -2021,16 +2065,6 @@ bool TrackletMaintainer::is_potential_avoiding_car(
       return true;
     }
   } else {
-    double lat_dis_thr = lane_width - ego_car_width + 0.8;
-    bool in_lat_near_area =
-        ((item.d_min_cpath > 0 &&
-          item.d_min_cpath - l_ego_ - ego_car_width / 2 < lat_dis_thr) ||
-         (item.d_max_cpath < 0 &&
-          l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
-    bool in_lon_near_area =
-        (item.v_rel < 0 &&
-         ((item.d_rel / (-item.v_rel) < 3) ||
-          ((item.d_rel / (-item.v_rel) < 5 && item.d_rel < 10))));
     if (!in_lon_near_area || !in_lat_near_area) {
       item.ncar_count =
           std::max(item.ncar_count - 2 * count * planning_cycle_time, 0.0);
