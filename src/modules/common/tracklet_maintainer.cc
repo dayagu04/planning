@@ -287,8 +287,8 @@ void TrackletMaintainer::recv_prediction_objects(
       TrackedObject *object = nullptr;
       int track_id = hash_prediction_id(origin->track_id, trajectory_idx);
 
-      iter = object_map_.find(track_id);
-      if (iter != object_map_.end()) {
+      iter = lt_fusion_object_history_map_.find(track_id);
+      if (iter != lt_fusion_object_history_map_.end()) {
         object = iter->second;
         if (object != origin) {
           *object = *origin;
@@ -297,7 +297,7 @@ void TrackletMaintainer::recv_prediction_objects(
       } else {
         object = new TrackedObject(*origin);
         object->track_id = track_id;
-        object_map_.insert(std::make_pair(track_id, object));
+        lt_fusion_object_history_map_.insert(std::make_pair(track_id, object));
       }
 
       dx = tr.trajectory[0].x - ego_state_->ego_pose_raw().x;
