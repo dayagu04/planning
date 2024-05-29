@@ -568,6 +568,8 @@ void StGraphGenerator::UpdateSTGraphs(
   double s_ref;
   double s_ref_update;
   std::vector<double> sref_update;
+  // 稳态跟车过程中soft bound和s ref之间增加一个buffer来补偿控制误差
+  double static_soft_bound_buffer = 0.5;
 
   // sref_update.reserve(config_.lon_num_step+1);
   sref_update = sref_vec;
@@ -620,9 +622,11 @@ void StGraphGenerator::UpdateSTGraphs(
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::min(
               hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
-          soft_bound.upper = std::min(
-              0.5 * (hard_bound.upper + s_ref_update),
-              std::max(st.start_s() - st.desired_distance() + s_step, 0.0));
+          soft_bound.upper =
+              std::min(0.5 * (hard_bound.upper + s_ref_update),
+                       std::max(st.start_s() - st.desired_distance() + s_step +
+                                    static_soft_bound_buffer,
+                                0.0));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
@@ -1216,7 +1220,8 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       st_info.set_safe_distance(safe_distance);
       st_info.set_start_time(time_to_entry);  // TBD:使用可配置参数
       st_info.set_end_time(5.0);              // TBD:使用可配置参数
-      st_info.set_start_s(time_to_entry * v_ego + predict_distance);
+      // st_info.set_start_s(time_to_entry * v_ego + predict_distance);
+      st_info.set_start_s(track.d_rel());
       cut_in_st_info.emplace_back(st_info);
       v_target_ = std::min(v_target_, v_target_potential_cutin);
 
@@ -2041,7 +2046,7 @@ void StGraphGenerator::MakeAccBound() {
   // acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
-  acc_bound_.second = (std::fmax(lon_init_state_[2], acc_target_.second));
+  acc_bound_.second = std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
   if (start_stop_info_.state() == common::StartStopInfo::START) {
     acc_bound_.first = -config_.acc_start_max_bound;
     acc_bound_.second = config_.acc_start_max_bound;
