@@ -805,7 +805,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
           DEBUG_PRINT(
               "reverse path stuck by inside, use reverse line and arc "
               "to far from inside.");
-          if (stuck_by_inside_count > 5) {
+          if (stuck_by_inside_count > 10) {
             std::cout << "try reverse line and arc enough, but also failed\n";
             success = false;
             break;
@@ -814,7 +814,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
             DEBUG_PRINT("first multi plan, clear all path.");
             multi_out_put.Reset();
           }
-          double compensate_line_length = 0.1;
+          double compensate_line_length = 0.15;
           if (multi_out_put.path_segment_vec.empty()) {
             current_pose = input_.ego_pose;
             current_gear = input_.ref_gear;
@@ -1637,6 +1637,8 @@ const bool PerpendicularPathPlanner::LineArcPlan(
       current_pose.pos.y() * current_pose.heading < 0.0) {
   } else if (current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
              current_pose.pos.y() * current_pose.heading > 0.0) {
+    DEBUG_PRINT("should no line arc in this case");
+    return false;
   } else {
     DEBUG_PRINT("should no line arc in this case");
     return false;
