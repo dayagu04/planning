@@ -7,6 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 def run_command_by_path(file_path):
     if command == "plot_ctrl_html":
         run_command = ["python", "plot_ctrl_html.py", file_path]
+    elif command == "plot__lon_ctrl_html":
+        run_command = ["python", "plot_lon_ctrl_html.py", file_path]
     elif command == "plot_lat_plan_html":
         run_command = ["python", "plot_lat_plan_html.py", file_path]
     elif command == "plot_lon_plan_html":
