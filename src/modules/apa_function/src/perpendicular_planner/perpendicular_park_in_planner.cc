@@ -1095,6 +1095,41 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   gear_command_ = planner_output.current_gear;
 
+  max_target_velocity_ = apa_param.GetParam().max_velocity;
+  const auto& path_seg_vec = planner_output.path_segment_vec;
+  const auto& steer_vec = planner_output.steer_vec;
+  switch (path_seg_vec.size()) {
+    case 0:
+    case 1:
+      break;
+    default:
+      for (int i = 0; i < path_seg_vec.size() - 1; ++i) {
+        if (path_seg_vec[i].seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+          if (path_seg_vec[i + 1].seg_type ==
+                  pnc::geometry_lib::SEG_TYPE_LINE &&
+              path_seg_vec[i + 1].Getlength() < 1.0) {
+            if (path_seg_vec[i].arc_seg.circle_info.radius <
+                1.1 * apa_param.GetParam().min_turn_radius) {
+              max_target_velocity_ = std::min(max_target_velocity_, 0.45);
+            } else {
+              max_target_velocity_ = std::min(max_target_velocity_, 0.55);
+            }
+          } else if (path_seg_vec[i + 1].seg_type ==
+                         pnc::geometry_lib::SEG_TYPE_ARC &&
+                     steer_vec[i] != steer_vec[i + 1]) {
+            if (path_seg_vec[i].arc_seg.circle_info.radius <
+                1.1 * apa_param.GetParam().min_turn_radius) {
+              max_target_velocity_ = std::min(max_target_velocity_, 0.4);
+            } else {
+              max_target_velocity_ = std::min(max_target_velocity_, 0.5);
+            }
+          }
+        }
+      }
+      break;
+  }
+  DEBUG_PRINT("max_target_velocity_ = " << max_target_velocity_);
+
   // lateral path optimization
   bool is_use_optimizer = true;
 
@@ -1469,7 +1504,7 @@ void PerpendicularInPlanner::GenPlanningPath() {
 
   planning_output_.mutable_trajectory()
       ->mutable_target_reference()
-      ->set_target_velocity(vel_limit);
+      ->set_target_velocity(std::min(vel_limit, max_target_velocity_));
 
   // send uss remain dist to control
   planning_output_.mutable_trajectory()
