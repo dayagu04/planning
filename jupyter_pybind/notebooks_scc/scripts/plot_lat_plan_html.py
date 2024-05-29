@@ -14,14 +14,17 @@ from IPython.core.display import display, HTML
 from plot_local_view_html import *
 import logging
 sys.path.append('..')
+sys.path.append('../lib/')
 sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
-from lib.load_bag import *
-# 先手动写死bag
-bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240223/20240223-14-08-20/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-02-23-14-08-20_no_camera.record.1709812513.plan"
+from lib.load_ros_bag import *
+from lib.local_view_lib import *
 
-html_file = bag_path +".lat_plan.html" 
+# 先手动写死bag
+bag_path = "/docker_share/data/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-05-28-16-02-26_no_camera.bag"
+
+html_file = bag_path +".lat_plan.html"
 # -
 
 # bokeh创建的html在jupyter中显示
@@ -127,7 +130,7 @@ def draw_lat(dataLoader, layer_manager):
         names.append('avoid_dpoly_c0')
       except:
         pass
-      
+
       names.append('avoid_car_id')
       avoid_car_id_str = ""
       for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
@@ -180,7 +183,7 @@ def draw_lat(dataLoader, layer_manager):
   # 每一个障碍物id对应一个 Generator
   global fusion_object_timestamps
   for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-    flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
+    fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
     # if not flag:
     #     # print('find fus_msg error')
     #     obstacle_fusion_generate.xys.append(([], []))
@@ -189,13 +192,13 @@ def draw_lat(dataLoader, layer_manager):
     #     obstacle_snrd_text_generate.xys.append(([], [], []))
     #     continue
     environment_model_info = plan_debug.environment_model_info
-    for obstacle_id in obstacle_ids:   
+    for obstacle_id in obstacle_ids:
       obstacle_generate = obstacle_generates['obstacle_generate_table_' + str(obstacle_id)]
       names  = []
       datas = []
       flag_obj = False
       for obstacle in environment_model_info.obstacle:
-        if obstacle_id == obstacle.id: 
+        if obstacle_id == obstacle.id:
           flag_obj = True
           for name in obj_vars:
             try:
@@ -205,17 +208,17 @@ def draw_lat(dataLoader, layer_manager):
             except:
               pass
           # 加载对应的笛卡尔下的障碍物速度
-          if flag:
+          if fus_msg != None:
             for obj in fus_msg.fusion_object:
               if obstacle_id == obj.additional_info.track_id:
                 names.append('v_x')
                 names.append('v_y')
                 datas.append(obj.common_info.relative_velocity.x)
                 datas.append(obj.common_info.relative_velocity.y)
-                break 
-           
-          obstacle_generate.xys.append((names, datas, [None] * len(names)))    
-          break 
+                break
+
+          obstacle_generate.xys.append((names, datas, [None] * len(names)))
+          break
       if not flag_obj:
         obstacle_generate.xys.append((names, datas, [None] * len(names)))
   tab_attr_list = ['Attr', 'Val']
@@ -233,11 +236,16 @@ def draw_lat(dataLoader, layer_manager):
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+        dataLoader = LoadRosbag(bag_path)
     except:
-        print('load cyber_bag error!')
+        print('load ros_bag error!')
         return
-    max_time = dataLoader.load_all_data(False)
+
+    if isINJupyter():
+        max_time = dataLoader.load_all_data()
+        print("is in jupyter now!")
+    else:
+        max_time = dataLoader.load_all_data(False)
     layer_manager = LayerManager()
 
     fig_local_view, plan_debug_table_view = draw_local_view(dataLoader, layer_manager)
@@ -333,7 +341,7 @@ def plotOnce(bag_path, html_file):
     """)
     car_slider.js_on_change('value', callback)
     obstacle_selector.js_on_change('value',selector_callback)
-    
+
     for gdlabel in layer_manager.gds.keys():
         gd = layer_manager.gds[gdlabel]
         if gdlabel is 'ep_source' or gdlabel is 'ep_source2' or gdlabel.startswith('global'):
