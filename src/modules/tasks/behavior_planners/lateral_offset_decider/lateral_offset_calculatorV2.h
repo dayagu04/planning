@@ -100,6 +100,7 @@ class LateralOffsetCalculatorV2 {
   bool is_on_leftest_lane_ = false;
   AvoidInfo avoid_info_;
   AvoidInfo last_avoid_info_;
+  int avoid_id_ = -1;
   // double normal_avoid_threshold_ = 0.0;
   // AvoidWay avoid_way_;
   // double allow_front_max_opposite_offset_;

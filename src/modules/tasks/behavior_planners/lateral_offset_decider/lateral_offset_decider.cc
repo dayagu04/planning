@@ -68,11 +68,11 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
   if (avoid_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
     is_overlap[0] = lateral_offset_decider::HasOverlap(
         session_, avoid_obstacles[0],
-        std::max(t_buffer * (-avoid_obstacles[0].vs_lon_relative), 3.0), 0.0);
+        std::max(t_buffer * (-avoid_obstacles[0].vs_lon_relative), 3.0), 2.0);
     if (avoid_obstacles[1].flag != AvoidObstacleFlag::INVALID) {
       is_overlap[1] = lateral_offset_decider::HasOverlap(
           session_, avoid_obstacles[1],
-          std::max(t_buffer * (-avoid_obstacles[1].vs_lon_relative), 3.0), 0.0);
+          std::max(t_buffer * (-avoid_obstacles[1].vs_lon_relative), 3.0), 2.0);
     }
   }
 
