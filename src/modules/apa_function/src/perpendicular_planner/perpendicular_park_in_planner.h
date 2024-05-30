@@ -73,6 +73,8 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   double pt_center_replan_jump_dist_ = 0.0;
   double pt_center_replan_jump_heading_ = 0.0;
 
+  bool trim_path_by_obs_ = false;
+
   double max_target_velocity_ = 0.0;
 };
 

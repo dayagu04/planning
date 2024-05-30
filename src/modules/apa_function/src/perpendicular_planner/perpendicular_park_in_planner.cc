@@ -111,6 +111,7 @@ void PerpendicularInPlanner::PlanCore() {
     frame_.replan_flag = true;
     pt_center_replan_ = frame_.ego_slot_info.slot_center;
     pt_center_heading_replan_ = frame_.ego_slot_info.slot_origin_heading;
+    trim_path_by_obs_ = false;
 
     GenTlane();
 
@@ -321,6 +322,13 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     ego_slot_info.slot_occupied_ratio = 0.0;
   }
 
+  if (frame_.is_replan_first) {
+    pt_center_ = ego_slot_info.slot_center;
+    pt_center_replan_ = ego_slot_info.slot_center;
+    pt_center_heading_replan_ = ego_slot_info.slot_origin_heading;
+    trim_path_by_obs_ = false;
+  }
+
   // trim path according to limiter
   if (!frame_.is_replan_first &&
       (perpendicular_path_planner_.GetOutput().is_last_path ||
@@ -336,18 +344,12 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
     DEBUG_PRINT("dist_ego_limiter = " << dist_ego_limiter);
 
-    if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis) {
+    if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis && !trim_path_by_obs_) {
       DEBUG_PRINT("should correct path according limiter");
       ego_slot_info.first_fix_limiter = false;
       PostProcessPathAccordingLimiter();
       frame_.correct_path_for_limiter = true;
     }
-  }
-
-  if (frame_.is_replan_first) {
-    pt_center_ = ego_slot_info.slot_center;
-    pt_center_replan_ = ego_slot_info.slot_center;
-    pt_center_heading_replan_ = ego_slot_info.slot_origin_heading;
   }
 
   // trim path according to slot when 1R
@@ -449,6 +451,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       DEBUG_PRINT("car_remain_dist = " << car_remain_dist);
       if (need_trim_path) {
         PostProcessPathAccordingObs(car_remain_dist);
+        trim_path_by_obs_ = true;
       }
     }
 
