@@ -3460,10 +3460,9 @@ const bool ParallelPathPlanner::OneLinePlanInCSCS(
   const double fixed_y_coor = 0.5 * (start_pose.pos.y() + target_line.pA.y());
   const Eigen::Vector2d fixed_pa(start_pose.pos.x(), fixed_y_coor);
   const Eigen::Vector2d fixed_pb(target_line.pA.x(), fixed_y_coor);
-  const Eigen::Vector2d v_ab = fixed_pb - fixed_pa;
-  const double heading_ab = std::atan2(v_ab.y(), v_ab.x());
+
   line.SetPoints(fixed_pa, fixed_pb);
-  line.heading = heading_ab;
+  line.heading = target_pose.heading;
 
   if (line.length > 0.02) {
     const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
