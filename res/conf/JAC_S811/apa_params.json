@@ -132,7 +132,7 @@
   "obs2slot_max_dist": 10.08,
   "slot_max_jump_dist": 0.068,
   "line_arc_obs_slot_occupied_ratio": 0.168,
-  "line_arc_obs_channel_width": 5.68,
+  "line_arc_obs_channel_width": 6.08,
   "line_arc_obs_channel_length": 5.086,
   "dynamic_col_det_enable": true,
   "car_lat_inflation_for_obs_radical": 0.0286,

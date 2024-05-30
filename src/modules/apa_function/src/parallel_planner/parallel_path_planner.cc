@@ -329,24 +329,29 @@ const bool ParallelPathPlanner::MonoStepPlan() {
     ego_line.SetPoints(input_.ego_pose.pos, arc_2.pB);
     const auto ego_line_gear = pnc::geometry_lib::CalLineSegGear(ego_line);
 
+    if (!CheckParkOutCornerSafeWithObsPin(arc_1)) {
+      continue;
+    }
+
     // make sure first line step length are more than min_leng during dirve gear
     // but not too long
     if (input_.is_replan_first) {
       if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         // avoid driving along the line for long distance when ego heading is
         // large
-        if (std::fabs(input_.ego_pose.heading) > 10.0 / 57.3 &&
-            ego_line.length > 0.5) {
+        if (std::fabs(input_.ego_pose.heading * 57.3) > 10.0 &&
+            ego_line.length > 0.66) {
           continue;
         }
         // prolong the path during preparation, or will not calc success
         // during normal backward step if ego stops early
-        const double min_line_length = 0.15;
         first_line_prolong = true;
-        Eigen::Vector2d v_ego(std::cos(ego_line.heading),
-                              std::sin(ego_line.heading));
+        const Eigen::Vector2d v_ego =
+            pnc::geometry_lib::GenHeadingVec(ego_line.heading);
 
-        ego_line.SetPoints(ego_line.pA, ego_line.pB + min_line_length * v_ego);
+        ego_line.SetPoints(
+            ego_line.pA,
+            ego_line.pB + apa_param.GetParam().min_line_length * v_ego);
         // if ((ego_line.pB.x() > 8.0)) {
         //   first_line_prolong = false;
         //   continue;
@@ -3443,7 +3448,7 @@ const bool ParallelPathPlanner::OneLinePlanInCSCS(
 
   const double lat_dif_mag = std::fabs(start_pose.pos.y() - target_line.pA.y());
   const double heading_dif_mag = std::fabs(pnc::geometry_lib::NormalizeAngle(
-      start_pose.heading - target_line.heading));
+      start_pose.heading - target_pose.heading));
 
   if (lat_dif_mag > apa_param.GetParam().finish_parallel_lat_rac_err ||
       heading_dif_mag >
@@ -3453,10 +3458,12 @@ const bool ParallelPathPlanner::OneLinePlanInCSCS(
   }
 
   const double fixed_y_coor = 0.5 * (start_pose.pos.y() + target_line.pA.y());
-
-  Eigen::Vector2d fixed_pa(start_pose.pos.x(), fixed_y_coor);
-  Eigen::Vector2d fixed_pb(target_line.pA.x(), fixed_y_coor);
+  const Eigen::Vector2d fixed_pa(start_pose.pos.x(), fixed_y_coor);
+  const Eigen::Vector2d fixed_pb(target_line.pA.x(), fixed_y_coor);
+  const Eigen::Vector2d v_ab = fixed_pb - fixed_pa;
+  const double heading_ab = std::atan2(v_ab.y(), v_ab.x());
   line.SetPoints(fixed_pa, fixed_pb);
+  line.heading = heading_ab;
 
   if (line.length > 0.02) {
     const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
