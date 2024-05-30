@@ -335,6 +335,47 @@ void VirtualLaneManager::construct_reference_line_msg(
     x += lane_boundary_delta_x;
   }
 }
+void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
+    const iflyauto::LaneReferenceLine &refline) {
+  planning::common::ReferenceLine refline_to_debug;
+  for (int i = 0; i < NUM_OF_POLYNOMIAL; i++) {
+    refline_to_debug.add_poly_coefficient_car(refline.poly_coefficient_car[i]);
+  }
+
+  for (int i = 0; i < refline.virtual_lane_refline_points_size; i++) {
+    auto virtual_ref_point = refline_to_debug.add_virtual_lane_refline_points();
+    virtual_ref_point->set_track_id(refline.virtual_lane_refline_points[i].track_id);
+    virtual_ref_point->mutable_car_point()->set_x(refline.virtual_lane_refline_points[i].car_point.x);
+    virtual_ref_point->mutable_car_point()->set_y(refline.virtual_lane_refline_points[i].car_point.y);
+    virtual_ref_point->mutable_enu_point()->set_x(refline.virtual_lane_refline_points[i].enu_point.x);
+    virtual_ref_point->mutable_enu_point()->set_y(refline.virtual_lane_refline_points[i].enu_point.y);
+    virtual_ref_point->mutable_enu_point()->set_z(refline.virtual_lane_refline_points[i].enu_point.z);
+    virtual_ref_point->mutable_local_point()->set_x(refline.virtual_lane_refline_points[i].local_point.x);
+    virtual_ref_point->mutable_local_point()->set_y(refline.virtual_lane_refline_points[i].local_point.y);
+    virtual_ref_point->mutable_local_point()->set_z(refline.virtual_lane_refline_points[i].local_point.z);
+    virtual_ref_point->set_curvature(refline.virtual_lane_refline_points[i].curvature);
+    virtual_ref_point->set_car_heading(refline.virtual_lane_refline_points[i].car_heading);
+    virtual_ref_point->set_enu_heading(refline.virtual_lane_refline_points[i].enu_heading);
+    virtual_ref_point->set_local_heading(refline.virtual_lane_refline_points[i].local_heading);
+    virtual_ref_point->set_distance_to_left_road_border(refline.virtual_lane_refline_points[i].distance_to_left_road_border);
+    virtual_ref_point->set_distance_to_right_road_border(refline.virtual_lane_refline_points[i].distance_to_right_road_border);
+    virtual_ref_point->set_distance_to_left_lane_border(refline.virtual_lane_refline_points[i].distance_to_left_lane_border);
+    virtual_ref_point->set_distance_to_right_lane_border(refline.virtual_lane_refline_points[i].distance_to_right_lane_border);
+
+    virtual_ref_point->set_lane_width(refline.virtual_lane_refline_points[i].lane_width);
+    virtual_ref_point->set_speed_limit_max(refline.virtual_lane_refline_points[i].speed_limit_max);
+    virtual_ref_point->set_speed_limit_min(refline.virtual_lane_refline_points[i].speed_limit_min);
+    virtual_ref_point->set_left_road_border_type(planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_right_road_border_type(planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_left_lane_border_type(planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_right_lane_border_type(planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_is_in_intersection(refline.virtual_lane_refline_points[i].is_in_intersection);
+    virtual_ref_point->set_lane_type(planning::common::LaneType::LANETYPE_VIRTUAL);
+    virtual_ref_point->set_s(refline.virtual_lane_refline_points[i].s);
+  }
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug_info_pb->add_generated_refline_info()->CopyFrom(refline_to_debug);
+}
 
 bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
@@ -377,12 +418,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     } else {
       return false;
     }
-
-    auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
-    // @gpxu: 需要重新适配一下
-    // debug_info_pb->add_generated_refline_info()->CopyFrom(
-    //     *((planning::common::ReferenceLine*)
-    //           current_lane_virtual.mutable_lane_reference_line()));
+    SetGeneratedReflineToDebugInfo(current_lane_virtual.lane_reference_line);
 
     // set roads_virtual
     roads_virtual.header = roads.header;
