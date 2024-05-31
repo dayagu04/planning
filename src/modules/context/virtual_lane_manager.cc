@@ -60,7 +60,7 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
   const double ego_steer_angle = session_->environmental_model()
                                      .get_ego_state_manager()
                                      ->ego_steer_angle();
-  
+
   LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v, ego_yaw_rate, ego_steer_angle);
 
   LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v,
@@ -1650,6 +1650,7 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
   bool lane_valid = true;
   bool current_lane_exist = false;
   bool y_interval_valid = true;
+  std::vector<int> y_interval_invalid_idx_vec;
   std::cout << "roads.reference_line_msg_size:" << roads.reference_line_msg_size
             << std::endl;
   if (roads.reference_line_msg_size == 0) {
@@ -1666,18 +1667,20 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
         LOG_ERROR("reflane point num less than 2 \n");
         continue;  // 如果参考点个数小于2个，则跳过此参考线
       }
-      for (int i = 1; i < num_of_reflane_point; i++) {
-        const auto& prev_point = points[i - 1].car_point;
-        const auto& current_point = points[i].car_point;
+      for (int j = 1; j < num_of_reflane_point; j++) {
+        const auto& prev_point = points[j - 1].car_point;
+        const auto& current_point = points[j].car_point;
         current_lane_exist |= (current_point.y < current_lane_y_thrs);
         double y_interval = std::fabs(current_point.y - prev_point.y);
         if (y_interval > max_y_interval) {
           LOG_ERROR("lane_valid is error \n");
-          y_interval_valid = false;
+          //y_interval_valid = false;
+          y_interval_invalid_idx_vec.emplace_back(i);
           break;
         }
       }
     }
+    y_interval_valid = y_interval_invalid_idx_vec.size() < roads.reference_line_msg_size;
   }
 
   // TBD: 校验车道中心线的连续性
