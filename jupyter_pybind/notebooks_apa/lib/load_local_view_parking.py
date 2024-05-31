@@ -41,7 +41,6 @@ vision_slot_timestamps = []
 mobileye_lane_lines_timestamps = []
 mobileye_objects_timestamps = []
 
-car_xb, car_yb = load_car_params_patch_parking()
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
 max_slot_num = 20
@@ -637,7 +636,9 @@ class LoadCyberbag:
     return out
 
 
-def update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, plot_ctrl_flag=False):
+def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag=False):
+
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
 
   ### step 1: timestamp alignment
   loc_msg_idx = 0
@@ -1909,8 +1910,9 @@ dluss_model_params={
   "visible" : False
 }
 
-def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, plot_ctrl_flag=False):
+def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_type, plot_ctrl_flag=False):
     #define figure
+    car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
     # define local_view fig
     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1000, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True

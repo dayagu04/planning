@@ -12,7 +12,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-3821b0e44-JAC_S811_test/planning-3821b0e44-JAC_S811/test_0.00000'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_06826/trigger/20240530/20240530-19-10-47/park_in_data_collection_CHERY_TIGGO9_06826_ALL_FILTER_2024-05-30-19-10-48_no_camera.record'
 frame_dt = 0.1 # sec
 parking_flag = True
 
@@ -106,6 +106,7 @@ fig1.line('y', 'x', source = data_sim_target_line, line_width = 3.0, line_color 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
+    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=1, value=0, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
     self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
@@ -119,6 +120,7 @@ class LocalViewSlider:
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
+                        vehicle_type = self.vehicle_type,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
                         is_path_optimization = self.is_path_optimization_slider,
@@ -131,9 +133,16 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, vehicle_type, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
-  update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
+
+  if vehicle_type == 0:
+    vehicle_type = 'JAC_S811'
+  elif vehicle_type == 1:
+    vehicle_type = 'CHERY_T26'
+
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
   index_map = bag_loader.get_msg_index(bag_time)
 
   plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]

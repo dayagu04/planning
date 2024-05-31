@@ -30,16 +30,11 @@
 
 static const size_t slot_corner_pt_nums = 4;
 
-static const size_t max_slot_window_size =
-    apa_param.GetParam().max_slot_window_size;
-
-static const size_t max_limiter_window_size =
-    apa_param.GetParam().max_limiter_window_size;
 namespace planning {
 class SlotInfoWindow {
  public:
   SlotInfoWindow() {
-    slot_info_vec_.reserve(max_slot_window_size);
+    slot_info_vec_.reserve(apa_param.GetParam().max_slot_window_size);
     fused_slot_info_.set_slot_type(
         Common::ParkingSlotType::PARKING_SLOT_TYPE_INVALID);
     fused_slot_info_.set_id(0);
@@ -47,12 +42,12 @@ class SlotInfoWindow {
     fused_slot_info_.set_is_occupied(true);
   }
   void Add(common::SlotInfo& fused_slot_info) {
-    if (slot_info_vec_.size() < max_slot_window_size) {
+    if (slot_info_vec_.size() < apa_param.GetParam().max_slot_window_size) {
       slot_info_vec_.emplace_back(fused_slot_info);
     } else {
       slot_info_vec_[front_index_] = fused_slot_info;
       front_index_++;
-      if (front_index_ >= max_slot_window_size) {
+      if (front_index_ >= apa_param.GetParam().max_slot_window_size) {
         front_index_ = 0;
       }
     }
@@ -160,7 +155,9 @@ class SlotInfoWindow {
 
 class LimiterPointWindow {
  public:
-  LimiterPointWindow() { limiter_points_vec_.reserve(max_limiter_window_size); }
+  LimiterPointWindow() {
+    limiter_points_vec_.reserve(apa_param.GetParam().max_limiter_window_size);
+  }
 
   ~LimiterPointWindow() = default;
 
@@ -181,13 +178,14 @@ class LimiterPointWindow {
         fusion_slot_tmp.second = p0;
       }
     }
-    if (limiter_points_vec_.size() < max_limiter_window_size) {
+    if (limiter_points_vec_.size() <
+        apa_param.GetParam().max_limiter_window_size) {
       limiter_points_vec_.emplace_back(fusion_slot_tmp);
     } else {
       limiter_points_vec_[front_index_] = fusion_slot_tmp;
       front_index_++;
 
-      if (front_index_ >= max_limiter_window_size) {
+      if (front_index_ >= apa_param.GetParam().max_limiter_window_size) {
         front_index_ = 0;
       }
     }
@@ -402,7 +400,6 @@ class SlotManagement {
       uss_raw_dist_vec.clear();
       released_slot_info_vec.clear();
       slot_info_map.clear();
-      slot_info_map.reserve(max_slot_window_size);
       slot_info_window_vec.clear();
       slot_management_info.Clear();
       limiter_point_window.Reset();

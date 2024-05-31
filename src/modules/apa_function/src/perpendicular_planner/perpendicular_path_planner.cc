@@ -1419,7 +1419,6 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
   pnc::geometry_lib::PathPoint current_pose = input_.ego_pose;
   uint8_t current_gear = input_.ref_gear;
   uint8_t current_arc_steer = input_.ref_arc_steer;
-  bool continue_after_multi = false;
   size_t fail_count = 0;
   if (output_.path_segment_vec.size() > 0 && output_.gear_cmd_vec.size() > 0) {
     const auto& last_seg = output_.path_segment_vec.back();
@@ -1431,7 +1430,6 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
     current_gear = output_.gear_cmd_vec.back();
     current_arc_steer = output_.steer_vec.back();
     current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
-    continue_after_multi = true;
     DEBUG_PRINT("continue to plan after multi");
   }
 
@@ -1468,9 +1466,11 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
     } else {
       DEBUG_PRINT("single path of adjust plan failed!");
       fail_count += 1;
-      if (continue_after_multi && fail_count == 1) {
+      if (fail_count == 1) {
       } else {
-        output_.Reset();
+        if (!output_.multi_reach_target_pose) {
+          output_.Reset();
+        }
         success = false;
         break;
       }
@@ -2297,7 +2297,7 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
     if (insert_case == 0) {
       double min_path_length = apa_param.GetParam().min_one_step_path_length;
-      if (input_.slot_occupied_ratio > 0.886 &&
+      if (input_.slot_occupied_ratio > 0.386 &&
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         min_path_length = apa_param.GetParam().min_one_step_path_length_in_slot;
       }

@@ -85,13 +85,21 @@ if plot_ctrl_flag:
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    ipywidgets.interact(slider_callback, bag_time = self.time_slider)
+    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=1, value=0, step=1)
+    ipywidgets.interact(slider_callback, bag_time = self.time_slider,
+                                         vehicle_type = self.vehicle_type)
 
 
 ### sliders callback
-def slider_callback(bag_time):
+def slider_callback(bag_time, vehicle_type):
   kwargs = locals()
-  update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data, plot_ctrl_flag)
+
+  if vehicle_type == 0:
+    vehicle_type = 'JAC_S811'
+  elif vehicle_type == 1:
+    vehicle_type = 'CHERY_T26'
+
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag)
   index_map = bag_loader.get_msg_index(bag_time)
 
   plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
