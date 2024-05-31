@@ -1,6 +1,7 @@
 from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
+from lib.load_bag import is_match_planning, is_bag_main
 
 import numpy as np
 import time
@@ -35,22 +36,36 @@ def normalize_vector(v):
 # def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound, g_is_display_enu = False):
 def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data, tuned_ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound,
                               safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu = False):
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  road_msg_idx = local_view_data['data_index']['road_msg_idx']
-  fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
-  plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
-  ctrl_msg_idx = local_view_data['data_index']['ctrl_msg_idx']
+  road_msg = find_nearest(bag_loader.road_msg, bag_time)
+  # vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
+  loc_msg = local_view_data['data_msg']['loc_msg']
+  plan_msg = local_view_data['data_msg']['plan_msg']
+  plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
+  plan_debug_json_msg = local_view_data['data_msg']['plan_debug_json_msg']
+  ctrl_msg = local_view_data['data_msg']['ctrl_msg']
+
+  input_topic_timestamp = plan_debug_msg.input_topic_timestamp
+  fusion_road_timestamp = input_topic_timestamp.fusion_road
+  if is_bag_main:
+    localization_timestamp = input_topic_timestamp.localization_estimate
+  else:
+    localization_timestamp = input_topic_timestamp.localization
+
+  if is_match_planning:
+    road_msg_tmp = find(bag_loader.road_msg, fusion_road_timestamp)
+    if road_msg_tmp != None:
+      road_msg = road_msg_tmp
+    loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
+    if loc_msg_tmp != None:
+      loc_msg = loc_msg_tmp
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    planning_json = plan_debug_json_msg
 
-    planning_debug = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+    planning_debug = plan_debug_msg
 
     debug1, debug2 = load_lat_common(planning_debug, planning_json)
     print(debug2)
@@ -119,7 +134,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
       coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
-    lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
+    lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
 
     soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = lat_motion_plan_input.soft_upper_bound_x0_vec, \
       lat_motion_plan_input.soft_upper_bound_y0_vec
@@ -324,7 +339,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
         hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(hard_lower_bound_x0_vec,
                                                                                     hard_lower_bound_y0_vec)
 
-    if len(soft_upper_bound_x0_vec) == 0 or bag_loader.plan_msg['data'][plan_msg_idx].trajectory.target_reference.lateral_maneuver_gear == 2:
+    if len(soft_upper_bound_x0_vec) == 0 or plan_msg.trajectory.target_reference.lateral_maneuver_gear == 2:
       soft_upper_bound_x0_vec = ref_x
       soft_upper_bound_y0_vec = ref_y
       soft_lower_bound_x0_vec = ref_x
@@ -349,7 +364,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
     hard_upper_bound_type_vec = []
     hard_lower_bound_type_vec = []
     try:
-      lat_behavior_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_behavior_debug_info
+      lat_behavior_debug_info = plan_debug_msg.lateral_behavior_debug_info
       for i in range(len(lat_behavior_debug_info.bound_s_vec)):
         bound_t_vec.append(round(i * 0.2, 2))
         bound_s_vec.append(round(lat_behavior_debug_info.bound_s_vec[i], 3))
@@ -430,7 +445,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
       'raw_refline_yn': raw_refline_yn,
     })
 
-    lat_motion_plan_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
+    lat_motion_plan_output = plan_debug_msg.lateral_motion_planning_output
     # if g_is_display_enu:
     #   x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
     # else:
@@ -482,7 +497,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
     print("iLqr_lat_update_time = ", planning_json['iLqr_lat_update_time'], " ms")
 
   if bag_loader.plan_msg['enable'] == True:
-    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    trajectory = plan_msg.trajectory
     if trajectory.trajectory_type == 0: # 实时轨迹
       try:
         planning_polynomial = trajectory.target_reference.polynomial
@@ -512,7 +527,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
     })
 
   # step 3: 加载车道线信息
-  if bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_type == 0: # 实时轨迹
+  if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
     is_enu_to_car = False
   else:
     is_enu_to_car = True
@@ -523,14 +538,12 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
   else:
     not_g_is_display_enu = True
   if bag_loader.road_msg['enable'] == True:
-    road_msg = bag_loader.road_msg['data'][road_msg_idx]
     print("fusion road local point valid: ", road_msg.local_point_valid)
     # load lane info
     try:
-      line_info_list = load_lane_lines(road_msg.reference_line_msg, is_enu_to_car, bag_loader.loc_msg['data'][loc_msg_idx], not_g_is_display_enu)
+      line_info_list = load_lane_lines(road_msg, is_enu_to_car, loc_msg, not_g_is_display_enu)
     except:
-      print("old interface before 2.2.3")
-      line_info_list = load_lane_lines(road_msg.lanes, is_enu_to_car, bag_loader.loc_msg['data'][loc_msg_idx], not_g_is_display_enu)
+      print("vis road_msg error")
 
     # update lane info
     data_lane_dict = {
@@ -583,7 +596,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
         # print('error')
         pass
 
-    center_line_list = load_lane_center_lines(road_msg.reference_line_msg, is_enu_to_car, bag_loader.loc_msg['data'][loc_msg_idx], not_g_is_display_enu)
+    center_line_list = load_lane_center_lines(road_msg, is_enu_to_car, loc_msg, not_g_is_display_enu)
     # print(center_line_list)
 
     for i in range(10):
@@ -602,7 +615,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
 
   # load control
   if bag_loader.ctrl_msg['enable'] == True:
-    mpc_dx, mpc_dy, mpc_dtheta = generate_control(bag_loader.ctrl_msg['data'][ctrl_msg_idx], bag_loader.loc_msg['data'][loc_msg_idx], not g_is_display_enu)
+    mpc_dx, mpc_dy, mpc_dtheta = generate_control(ctrl_msg, loc_msg, not g_is_display_enu)
     lat_plan_data['data_control'].data.update({
         'mpc_dx' : mpc_dx,
         'mpc_dy' : mpc_dy,
