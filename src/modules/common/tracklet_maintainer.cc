@@ -599,7 +599,7 @@ void TrackletMaintainer::calc(
 
       item->frenet_transform_valid =
           fill_info_with_refline(*item, d_poly_offset);
-      if (!hdmap_valid_) {
+      if (!session_->environmental_model().location_valid()) {
         fill_deriv_info(*item);
       }
       // only use obstacle with camera source
