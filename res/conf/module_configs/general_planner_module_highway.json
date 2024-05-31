@@ -117,6 +117,7 @@
   "oversize_veh_addition_buffer": 0.0,
   "traffic_cone_thr": 0.2,
   "static_obs_buffer": 3.0,
+  "near_car_hysteresis": 1.6,
   "base_nudge_distance": 0.8,
   "nudge_value_way" :true,
   "dynamic_obj_safe_buffer": 0.5,

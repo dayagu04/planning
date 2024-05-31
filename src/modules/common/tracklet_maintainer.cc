@@ -1812,6 +1812,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double oversize_veh_addition_buffer = config.oversize_veh_addition_buffer;
   double traffic_cone_thr = config.traffic_cone_thr;
   double static_obs_buffer = config.static_obs_buffer;
+  double near_car_hysteresis = config.near_car_hysteresis;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1836,7 +1837,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
 
   // hysteresis
   if (item.is_avd_car) {
-    near_car_d_lane_thr = near_car_d_lane_thr * 1.3;
+    near_car_d_lane_thr = near_car_d_lane_thr * near_car_hysteresis;
   }
 
   // addition buffer for VRU
