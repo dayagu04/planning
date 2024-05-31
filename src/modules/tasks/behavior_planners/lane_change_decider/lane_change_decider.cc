@@ -1472,6 +1472,8 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
+  std::vector<double> kappa_vec;
+  kappa_vec.resize(point_size);
   float normal_care_spline_length = 50.;
   const float preview_time = 20.;
   const double min_preview_spline_length = 20.;
@@ -1501,12 +1503,14 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y -
                                    ref_point.at(i - 1).path_point.y)
               : 0.;
+    kappa_vec[i] = std::min(std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0), 10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);
       cart_ref_info.y_vec.resize(i);
       cart_ref_info.s_vec.resize(i);
+      kappa_vec.resize(i);
       break;
     }
   }
@@ -1516,6 +1520,8 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
 
   JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_s_vec", cart_ref_info.s_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_k_vec", kappa_vec, 2)
 
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());
@@ -1546,66 +1552,26 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
 
   coarse_planning_info.trajectory_points.clear();
   TrajectoryPoint point;
-  const double ego_vel = session_->environmental_model().get_ego_state_manager()->ego_v();
-  if (config_.ref_vel_set_valid && ((v_ref_cruise- ego_vel) > config_.ref_ego_vel_thr)) {
-    double ref_vel_acc = 0.0;
-    if (ego_vel < (config_.ref_vel_low_thr / 3.6)) {  // 10 kph
-      ref_vel_acc =  config_.ref_vel_acc0;
-    } else if (ego_vel < (config_.ref_vel_high_thr / 3.6)) {  // 36 kph
-      ref_vel_acc = config_.ref_vel_acc1;
-    } else {
-      ref_vel_acc = config_.ref_vel_acc2;
+  for (size_t i = 0; i < N; ++i) {
+    // cart info
+    if (s_ref < cart_ref_info.s_vec.back() + kEps) {
+      point.x = cart_ref_info.x_s_spline(s_ref);
+      point.y = cart_ref_info.y_s_spline(s_ref);
+      point.heading_angle =
+          std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
+                    cart_ref_info.x_s_spline.deriv(1, s_ref));
     }
 
-    std::vector<double> ref_vel_vec;
-    ref_vel_vec.resize(N, 0.0);
-    for (size_t i = 0; i < N; ++i) {
-      ref_vel_vec[i] = std::min(ego_vel + ref_vel_acc * (0.2 * i), v_ref_cruise);
-    }
+    // frenet info
+    Point2D frenet_pt{0.0, 0.0};
+    Point2D cart_pt(point.x, point.y);
+    frenet_coord->XYToSL(cart_pt, frenet_pt);
+    point.s = frenet_pt.x;
+    point.l = frenet_pt.y;
+    point.t = static_cast<double>(i) * delta_time;
 
-    for (size_t i = 0; i < N; ++i) {
-      // cart info
-      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
-        point.x = cart_ref_info.x_s_spline(s_ref);
-        point.y = cart_ref_info.y_s_spline(s_ref);
-        point.heading_angle =
-            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                      cart_ref_info.x_s_spline.deriv(1, s_ref));
-      }
-
-      // frenet info
-      Point2D frenet_pt{0.0, 0.0};
-      Point2D cart_pt(point.x, point.y);
-      frenet_coord->XYToSL(cart_pt, frenet_pt);
-      point.s = frenet_pt.x;
-      point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * delta_time;
-
-      s_ref += v_cruise_scale * ref_vel_vec[i] * delta_time;
-      coarse_planning_info.trajectory_points.emplace_back(point);
-    }
-  } else {
-    for (size_t i = 0; i < N; ++i) {
-      // cart info
-      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
-        point.x = cart_ref_info.x_s_spline(s_ref);
-        point.y = cart_ref_info.y_s_spline(s_ref);
-        point.heading_angle =
-            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                      cart_ref_info.x_s_spline.deriv(1, s_ref));
-      }
-
-      // frenet info
-      Point2D frenet_pt{0.0, 0.0};
-      Point2D cart_pt(point.x, point.y);
-      frenet_coord->XYToSL(cart_pt, frenet_pt);
-      point.s = frenet_pt.x;
-      point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * delta_time;
-
-      s_ref += v_cruise_scale * v_ref_cruise * delta_time;
-      coarse_planning_info.trajectory_points.emplace_back(point);
-    }
+    s_ref += v_cruise_scale * v_ref_cruise * delta_time;
+    coarse_planning_info.trajectory_points.emplace_back(point);
   }
 }
 

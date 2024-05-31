@@ -32,6 +32,7 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
     planning_json = local_view_data['data_msg']['plan_debug_json_msg']
     planning_debug = local_view_data['data_msg']['plan_debug_msg']
+    vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
 
     debug1, debug2 = load_lat_common(planning_debug, planning_json)
     print(debug2)
@@ -275,9 +276,11 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
     steer_dot_deg_upper_bound = []
     steer_dot_deg_lower_bound = []
 
+    delta_bound = 360.0 / 14.5 / 57.3
+    omega_bound = 240.0 / 14.5 / 57.3
     try:
-      delta_bound = min(360.0 / 14.5 / 57.3, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
-      omega_bound = min(240.0 / 14.5 / 57.3, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * lat_motion_plan_input.ref_vel * lat_motion_plan_input.ref_vel))
+      delta_bound = min(delta_bound, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * vs_msg.vehicle_speed * vs_msg.vehicle_speed))
+      omega_bound = min(omega_bound, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * vs_msg.vehicle_speed * vs_msg.vehicle_speed))
     except:
       print("no lat_motion_plan_input!!")
 
