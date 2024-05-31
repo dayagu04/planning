@@ -1,11 +1,14 @@
 #pragma once
 #include "lateral_obstacle.h"
+#include "utils/hysteresis_decision.h"
+#include <variant>
 
 constexpr double MAX_T_EXCEED_AVD_CAR = 6.0;
 constexpr double kSafeDistance = 1.0;
 constexpr double kDefaultLimitLateralDistance = 10.0;
+constexpr int kDefaultLimitId = -1000;
 namespace planning {
-enum AvoidObstacleFlag { INVALID = -1000, LEAD_ONE = -1, NORMAL = 0, SIDE = 1 };
+enum AvoidObstacleFlag { INVALID = kDefaultLimitId, LEAD_ONE = -1, NORMAL = 0, SIDE = 1 };
 enum AvoidObstacleUpdateFlag { Update = 1, Past = 2 };
 struct AvoidObstacleInfo {
   AvoidObstacleInfo() { Reset(); }
@@ -124,6 +127,8 @@ enum class AvoidWay { None, Left, Right, Center};
 // constexpr int LimitTypeSide = 1 << 3;
 enum class LimitType {None, Normal, Front, Side};
 
+enum class HysteresisType {IsInConsiderLateralRangeHysteresis, IsObstacleConsideredHysteresis, EnoughSpaceHysteresis};
+
 struct AvoidInfo{
   void Reset() {
     normal_avoid_threshold = 0.0;
@@ -131,9 +136,9 @@ struct AvoidInfo{
     lat_offset = 0.0;
     avoid_way = AvoidWay::None;
     allow_front_max_opposite_offset = kDefaultLimitLateralDistance;
-    allow_front_max_opposite_offset_id = -1;
+    allow_front_max_opposite_offset_id = kDefaultLimitId;
     allow_side_max_opposite_offset = kDefaultLimitLateralDistance;
-    allow_side_max_opposite_offset_id = -1;
+    allow_side_max_opposite_offset_id = kDefaultLimitId;
     is_use_ego_position = false;
   }
   void operator=(const AvoidInfo& avoid_info) {
@@ -154,20 +159,22 @@ struct AvoidInfo{
   AvoidWay avoid_way;
   bool is_use_ego_position = false;
   double allow_front_max_opposite_offset;
-  int allow_front_max_opposite_offset_id = -1;
+  int allow_front_max_opposite_offset_id = kDefaultLimitId;
   double allow_side_max_opposite_offset;
-  int allow_side_max_opposite_offset_id = -1;
+  int allow_side_max_opposite_offset_id = kDefaultLimitId;
 };
 
 namespace lateral_offset_decider {
 const double kTruckMinLength = 6.5;
+bool IsCameraObstacle(const TrackedObject &tr);
 bool IsInConsiderLateralRange();
 bool IsFrontObstacleConsider(const framework::Session *session,
                              const TrackedObject &tr,
                              const AvoidObstacleInfo &avoid_obstacle,
-                             bool is_left);
+                             bool is_left, const AvoidInfo& avoid_info,
+                             std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps);
 bool IsSideObstacleConsider(const framework::Session *session,
-                            const TrackedObject &tr, bool is_left);
+                            const TrackedObject &tr, bool is_left, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps);
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle);
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle);
 bool IsCone(const AvoidObstacleInfo &avoid_obstacle);
