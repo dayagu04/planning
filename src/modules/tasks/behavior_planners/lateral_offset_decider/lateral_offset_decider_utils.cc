@@ -1,10 +1,14 @@
 #include "lateral_offset_decider_utils.h"
 #include <algorithm>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 #include "environmental_model.h"
 #include "planning_context.h"
+
 namespace planning {
 namespace lateral_offset_decider {
+
 
 bool IsStaticObstacle(const TrackedObject &tr) {
   return tr.v < 0.1;
@@ -25,7 +29,7 @@ bool IsAboutToEnterLonRange(const TrackedObject &tr, bool is_front) {
   }
 }
 
-bool IsFasterObstacle(const TrackedObject &tr) {
+bool IsFasterThanEgo(const TrackedObject &tr) {
   // TODO(clren): consider lon
   std::array<double, 5> drel_x{1, 2, 5, 10, 20};
   std::array<double, 5> vrel_y{4, 2, 1.8, 1, 0.3};
@@ -34,10 +38,14 @@ bool IsFasterObstacle(const TrackedObject &tr) {
   return tr.v_rel > min_desire_v;
 }
 
+bool IsFasterThanAvoidObstacle(const TrackedObject &tr, const AvoidObstacleInfo &avoid_obstacle) {
+  return tr.v_lead > avoid_obstacle.vs;
+}
+
 // is_left: True: left tracked_object
 //          False: right tracked_object
 bool IsInConsiderLateralRange(const framework::Session *session,
-                              const TrackedObject &tr, bool is_left) {
+                              const TrackedObject &tr, bool is_left, bool is_front, double normal_avoid_threshold, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps) {
   const CoarsePlanningInfo &coarse_planning_info =
       session->planning_context()
           .lane_change_decider_output()
@@ -46,20 +54,37 @@ bool IsInConsiderLateralRange(const framework::Session *session,
       session->environmental_model()
           .get_reference_path_manager()
           ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
-  const double ego_position =
+  auto &is_in_consider_lateral_range_hysteresis_map = std::get<std::map<int, HysteresisDecision>>(hysteresis_maps[HysteresisType::IsInConsiderLateralRangeHysteresis]);
+
+  double max_lat_position;
+  if (is_front) {
+    const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+    const double half_ego_width = vehicle_param.width * 0.5 + vehicle_param.width_mirror;
+    const double safe_lat_distance = 0.4;
+    max_lat_position = -normal_avoid_threshold + half_ego_width + safe_lat_distance;
+  } else {
+    const double ego_position =
       is_left ? fix_ref->get_frenet_ego_state().boundary().l_end
               : fix_ref->get_frenet_ego_state().boundary().l_start;
-  double lat_dis =
-      is_left
-          ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
-          : fix_ref->get_frenet_ego_state().boundary().l_start - tr.d_max_cpath;
+    double lat_dis =
+        is_left
+            ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
+            : fix_ref->get_frenet_ego_state().boundary().l_start - tr.d_max_cpath;
 
-  if (lat_dis <= 0) {
-    return false;
+    if (lat_dis <= 0) {
+      return false;
+    }
+    max_lat_position = 1.0;
   }
 
-  bool is_in_lateral_range = is_left ? tr.d_min_cpath > 1: tr.d_max_cpath < -1;
-  if (!is_in_lateral_range) {
+  if (is_left) {
+    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetValue(tr.d_min_cpath - max_lat_position);
+  } else {
+    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetValue(tr.d_max_cpath + max_lat_position);
+  }
+
+  if (!is_in_consider_lateral_range_hysteresis_map[tr.track_id].IsValid()) {
     return false;
   }
   double t_lookforward = 1.0;
@@ -99,14 +124,14 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
   const double kDistanceOffset = 3.5;
   std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
   std::array<double, 3> t_gap_vego_bp{5, 15, 30};
-  const double safety_dist = 2.0 + v_ego * 0.2;
+  const double safety_dist = 2.0;
 
   // desired t_gap to obstacle_2 when exceed obstacle_1
   const double t_gap = interp(v_ego, t_gap_vego_bp, t_gap_vego_v);
 
   // desired distance to obstacle_2 when exceed obstacle_1
   const double desired_distance_to_obstacle_2 =
-      kDistanceOffset + v_obstacle_2 * t_gap;
+      safety_dist + v_obstacle_2 * t_gap;
   double relative_distance_nudge_obstacle =
       tr.tail_rel_s - avoid_obstacle.tail_s_to_ego;
   const double relative_vel_nudge_obstacle =
@@ -133,28 +158,29 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
 
   bool is_side_way =
       relative_distance_nudge_obstacle >=
-      desired_distance_to_obstacle_2 + 5.0 + safety_dist + 0.5 * v_ego;
+      desired_distance_to_obstacle_2 + 0.5 * v_ego;
   return is_side_way;
 }
 
 bool IsFrontObstacle(const TrackedObject &tr) { return tr.d_rel > 0; }
 
-bool IsCutIn(const TrackedObject &tr) { return tr.cutinp > 0.2; }
+bool IsCutIn(const TrackedObject &tr) { return tr.cutinp >= 0.4; }
 
 bool IsFrontObstacleConsider(const framework::Session *session,
                              const TrackedObject &tr,
                              const AvoidObstacleInfo &avoid_obstacle,
-                             bool is_left) {
+                             bool is_left, const AvoidInfo& avoid_info,
+                             std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps) {
   if (!IsCameraObstacle(tr)) {
     return false;
   }
 
   if (IsFrontObstacle(tr) &&
-      (IsCutIn(tr) || tr.is_lead)) {
+      (tr.is_lead)) {
     return false;
   }
 
-  if (!IsInConsiderLateralRange(session, tr, is_left)) {
+  if (!IsInConsiderLateralRange(session, tr, is_left, true, avoid_info.normal_avoid_threshold, hysteresis_maps)) {
     return false;
   }
 
@@ -162,7 +188,7 @@ bool IsFrontObstacleConsider(const framework::Session *session,
     return false;
   }
 
-  if (IsFasterObstacle(tr)) {
+  if (IsFasterThanEgo(tr)) {
     return false;
   }
 
@@ -173,7 +199,7 @@ bool IsFrontObstacleConsider(const framework::Session *session,
 }
 
 bool IsSideObstacleConsider(const framework::Session *session,
-                            const TrackedObject &tr, bool is_left) {
+                            const TrackedObject &tr, bool is_left, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps) {
   if (!IsCameraObstacle(tr)) {
     return false;
   }
@@ -183,7 +209,7 @@ bool IsSideObstacleConsider(const framework::Session *session,
     return false;
   }
 
-  if (!IsInConsiderLateralRange(session, tr, is_left)) {
+  if (!IsInConsiderLateralRange(session, tr, is_left, false, 0.0, hysteresis_maps)) {
     return false;
   }
 
@@ -227,9 +253,8 @@ bool HasOverlap(const framework::Session *session,
 }
 
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle) {
-  return (avoid_obstacle.type == iflyauto::OBJECT_TYPE_BUS ||
-          avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRUCK) &&
-         avoid_obstacle.length > lateral_offset_decider::kTruckMinLength;
+  return (avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_BUS ||
+          avoid_obstacle.type == Common::ObjectType::OBJECT_TYPE_TRUCK);
 }
 
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle) {
@@ -302,17 +327,17 @@ double GetLimitLateralDistance(const framework::Session *session, int track_id) 
 
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,
                     const AvoidObstacleInfo &avoid_obstacle_2) {
-  static bool has_enough_space = false;
-  double lat_buf;
-  if (has_enough_space) {
-    lat_buf = 2.8;
-  } else {
-    lat_buf = 3.0;
+  static HysteresisDecision has_enough_space_hysteresis(3.0, 2.8);
+  static int ids[2];
+  if (!((ids[0] == avoid_obstacle_1.track_id && ids[1] == avoid_obstacle_2.track_id) ||
+      (ids[0] == avoid_obstacle_2.track_id && ids[1] == avoid_obstacle_1.track_id))) {
+    ids[0] = avoid_obstacle_1.track_id;
+    ids[1] = avoid_obstacle_2.track_id;
+    has_enough_space_hysteresis.Reset();
   }
-  has_enough_space = avoid_obstacle_1.min_l_to_ref - avoid_obstacle_2.max_l_to_ref > lat_buf ||
-         avoid_obstacle_2.min_l_to_ref - avoid_obstacle_1.max_l_to_ref > lat_buf;
+  has_enough_space_hysteresis.SetValue(std::max(avoid_obstacle_1.min_l_to_ref - avoid_obstacle_2.max_l_to_ref, avoid_obstacle_2.min_l_to_ref - avoid_obstacle_1.max_l_to_ref));
 
-  return has_enough_space;
+  return has_enough_space_hysteresis.IsValid();
 }
 
 }  // namespace lateral_offset_decider

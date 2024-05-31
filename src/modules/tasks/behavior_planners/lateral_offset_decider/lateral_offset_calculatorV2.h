@@ -74,7 +74,8 @@ class LateralOffsetCalculatorV2 {
   void CalcMaxOppositeOffset(
       const AvoidObstacleInfo& avoid_obstacle_1, int except_id = -1,
       const AvoidObstacleInfo& avoid_obstacle_2 = AvoidObstacleInfo());
-  void CalcFrontMaxOppositeOffset(const vector<int>& front_ids, bool is_left);
+  void CalcFrontMaxOppositeOffset(const vector<int>& front_ids, bool is_left, const AvoidObstacleInfo &avoid_obstacle, std::map<std::pair<int, int>, HysteresisDecision> &hysteresis_map);
+  void CalcSideMaxOppositeOffset(const vector<int>& obstacle_ids, bool is_left);
   double LimitLateralOffset(double lateral_offset, const AvoidWay &avoid_way);
   double SmoothLateralOffset(const AvoidObstacleInfo& avoid_obstacle,
                              double lat_offset, const AvoidWay* avoid_way);
@@ -82,6 +83,8 @@ class LateralOffsetCalculatorV2 {
   void SaveDebugInfo();
 
  private:
+  std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> hysteresis_maps_;
+
   LateralOffsetDeciderConfig config_;
   framework::Session* session_;
 
