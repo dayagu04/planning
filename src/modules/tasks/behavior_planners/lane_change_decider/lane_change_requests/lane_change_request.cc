@@ -85,6 +85,8 @@ bool LaneChangeRequest::IsDashedLineEnough(
   std::cout << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
             << "origin_lane_order_id_: " << origin_lane_virtual_id_
             << std::endl;
+  JSON_DEBUG_VALUE("right_dash_line_len", right_dash_line_len);
+  JSON_DEBUG_VALUE("left_dash_line_len", left_dash_line_len);
   // HACK RUI
   if (virtual_lane_mgr->dis_to_ramp() < 500.) return true;
   if (direction == LEFT_CHANGE && left_dash_line_len > 0.) {

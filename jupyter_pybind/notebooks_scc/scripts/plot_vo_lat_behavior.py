@@ -212,7 +212,7 @@ def update_overtake_request_lc_data (plan_debug_json):
   datas = []
   overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", 
                        "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", 
-                       "trigger_right_overtake", "overtake_vehicle_id"]
+                       "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len"]
   for name in overtake_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))

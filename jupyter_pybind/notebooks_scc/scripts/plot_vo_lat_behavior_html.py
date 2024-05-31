@@ -12,14 +12,16 @@ from IPython.core.display import display, HTML
 from plot_local_view_html import *
 import logging
 sys.path.append('..')
+sys.path.append('../lib/')
 sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
-from lib.load_bag import *
+from lib.load_ros_bag import *
+from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240223/20240223-14-08-20/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-02-23-14-08-20_no_camera.record.1709812513.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240530/20240530-10-53-27/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-30-10-53-27.bag"
 
-html_file = bag_path +".lat_plan.html" 
+html_file = bag_path +".vo_lat_behavior.html" 
 # -
 
 # bokeh创建的html在jupyter中显示
@@ -28,7 +30,6 @@ if isINJupyter():
     display(
         HTML('''<style>.widget-label {min-width: 25ex !important; }</style>'''))
     output_notebook()
-
 
 table_params={
     'width': 300,
@@ -45,6 +46,11 @@ table_params2={
     'height':200,
 }
 
+table_params4={
+    'width': 300,
+    'height':500,
+}
+
 def isINJupyter():
     try:
         __file__
@@ -52,7 +58,6 @@ def isINJupyter():
         return True
     else:
         return False
-
 
 def draw_vo_lat_behavior(dataLoader, layer_manager):
   lat_behavior_table1 = TextGenerator()
@@ -148,7 +153,7 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
   # 每一个障碍物id对应一个 Generator
   global fusion_object_timestamps
   for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-    flag, fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
+    fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
     # if not flag:
     #     # print('find fus_msg error')
     #     obstacle_fusion_generate.xys.append(([], []))
@@ -173,21 +178,21 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
             except:
               pass
           # 加载对应的笛卡尔下的障碍物速度
-          if flag:
+          if fus_msg != None:
             for obj in fus_msg.fusion_object:
               if obstacle_id == obj.additional_info.track_id:
                 names.append('v_x')
                 names.append('v_y')
                 datas.append(obj.common_info.relative_velocity.x)
                 datas.append(obj.common_info.relative_velocity.y)
-                break 
-           
+                break
+
           obstacle_generate.xys.append((names, datas, [None] * len(names)))    
-          break 
+          break
       if not flag_obj:
         obstacle_generate.xys.append((names, datas, [None] * len(names)))
   tab_attr_list = ['Attr', 'Val']
-  tab_lat_rt_obstacle_layer = TableLayerV2(None, tab_attr_list, table_params)
+  tab_lat_rt_obstacle_layer = TableLayerV2(None, tab_attr_list, table_params4)
   lat_rt_obstacle_table = ObjTextGenerator()
   lat_rt_obstacle_table.ts = plan_debug_ts
   names  = ['']
@@ -197,7 +202,6 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
   layer_manager.AddLayer(
       tab_lat_rt_obstacle_layer, 'lat_rt_obstacle_table_source', lat_rt_obstacle_table, 'lat_rt_obstacle_table', 3)
   return tab_rt_layer1.plot, tab_rt_layer2.plot, tab_lat_rt_obstacle_layer.plot, obstacle_generates
-
 
 def draw_mlc_data_view(dataLoader, layer_manager):
   mlc_data_table = TextGenerator()
@@ -246,20 +250,54 @@ def draw_mlc_data_view(dataLoader, layer_manager):
       table_rt_layer2, 'decide_table_source2', noa_info_table, 'noa_info_table', 3)
   return table_rt_layer1.plot, table_rt_layer2.plot
 
+def draw_overtake_lc_data_view(dataLoader, layer_manager):
+  overtake_lc_data_table = TextGenerator()
+  plan_debug_ts = []
+  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['json']):
+      t = dataLoader.plan_debug_msg["t"][i]
+      plan_debug_ts.append(t)
+
+      names = []
+      datas = []
+      vars_lc = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", 
+                 "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", 
+                 "trigger_right_overtake", "overtake_vehicle_id",  "left_dash_line_len", "right_dash_line_len"]
+      for name in vars_lc:
+        try:
+          datas.append((plan_debug[name]))
+          names.append(name)
+        except:
+          pass
+      overtake_lc_data_table.xys.append((names, datas, [None] * len(names)))
+
+  overtake_lc_data_table.ts = plan_debug_ts
+
+  tab_attr_list = ['Attr', 'Val']
+  table_rt_layer3 = TableLayerV2(None, tab_attr_list, table_params4)
+  layer_manager.AddLayer(
+      table_rt_layer3, 'decide_table_source4', overtake_lc_data_table, 'overtake_lc_data_table', 3)
+
+  return table_rt_layer3.plot
 
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+        dataLoader = LoadRosbag(bag_path)
     except:
-        print('load cyber_bag error!')
+        print('load ros_bag error!')
         return
-    max_time = dataLoader.load_all_data(False)
+  
+    if isINJupyter():
+       max_time = dataLoader.load_all_data()
+       print("is in jupter now!")
+    else:
+       max_time = dataLoader.load_all_data(False)
     layer_manager = LayerManager()
 
     fig_local_view, _ = draw_local_view(dataLoader, layer_manager)
     tab_rt1, tab_rt2,tab_lat_rt_obstacle, obstacle_generates = draw_vo_lat_behavior(dataLoader, layer_manager)
     mlc_info_view, noa_info_view = draw_mlc_data_view(dataLoader, layer_manager)
+    overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
     min_t = sys.maxsize
     max_t = 0
     for gdlabel in layer_manager.gds.keys():
@@ -351,7 +389,7 @@ def plotOnce(bag_path, html_file):
     """)
     car_slider.js_on_change('value', callback)
     obstacle_selector.js_on_change('value',selector_callback)
-    
+
     for gdlabel in layer_manager.gds.keys():
         gd = layer_manager.gds[gdlabel]
         if gdlabel is 'ep_source' or gdlabel is 'ep_source2' or gdlabel.startswith('global'):
@@ -382,8 +420,7 @@ def plotOnce(bag_path, html_file):
     # pan_rt = Panel(child=row(tab_rt, column(fig_rtv)), title="Realtime")
     # pans = Tabs(tabs=[ pan_lt, pan_rt ])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector)
-                                                       , tab_lat_rt_obstacle, tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view))))
-
+                                                       , column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view))))
 
 def printHelp():
     print('''\n
@@ -392,7 +429,6 @@ USAGE:
     2. <single file mode>  python3 plot_bag.py bag_file html_file
     3. <folder batch mode> python3 plot_bag.py bag_folder html_folder
 \n''')
-
 
 def plotMain():
     # print('sys.argv = ', sys.argv)
