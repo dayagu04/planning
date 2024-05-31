@@ -26,29 +26,20 @@ void ApaFunction::Init() {
 }
 
 bool ApaFunction::Reset() {
-  // reset apa planner
+  // reset apa planner and sync param
   apa_plan_interface_->Reset();
-
+  apa_plan_interface_->SyncParameters();
   return true;
 }
 
 bool ApaFunction::Plan() {
   const double start_timestamp_ms = IflyTime::Now_ms();
 
-  const bool sync_param_flag =
-      (last_planner_interface_type_ != session_->get_scene_type());
-  last_planner_interface_type_ = session_->get_scene_type();
-
   const bool success = apa_plan_interface_->Update(
       &(session_->environmental_model().get_local_view()));
   // set planning output
   session_->mutable_planning_context()->mutable_planning_output().CopyFrom(
       apa_plan_interface_->GetPlaningOutput());
-
-  // sync param
-  if (sync_param_flag) {
-    apa_plan_interface_->SyncParameters();
-  }
 
   const auto end_timestamp_ms = IflyTime::Now_ms();
   const auto frame_duration = end_timestamp_ms - start_timestamp_ms;

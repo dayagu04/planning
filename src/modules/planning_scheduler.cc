@@ -141,6 +141,9 @@ bool PlanningScheduler::RunOnce(
   bool planning_success = false;
   if (scene_type == common::PARKING_APA) {
     // 泊车规划部分
+    if (g_context.GetStatemachine().apa_reset_flag) {
+      apa_function_->Reset();
+    }
     planning_success = apa_function_->Plan();
     planning_output->CopyFrom(session_.planning_context().planning_output());
     return planning_success;
@@ -148,7 +151,6 @@ bool PlanningScheduler::RunOnce(
 
   // 行车规划部分
   // TODO(xjli32): 功能切换时，reset
-  apa_function_->Reset();
   ClearParkingInfo(planning_output);
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
