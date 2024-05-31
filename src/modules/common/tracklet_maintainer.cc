@@ -1834,6 +1834,11 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     lat_safety_buffer += oversize_veh_addition_buffer;
   }
 
+  // hysteresis
+  if (item.is_avd_car) {
+    near_car_d_lane_thr = near_car_d_lane_thr * 1.3;
+  }
+
   // addition buffer for VRU
   if (is_VRU(item.type)) {
     lat_safety_buffer += 0.2;
