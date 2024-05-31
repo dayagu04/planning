@@ -66,8 +66,15 @@ def plotOnce(bag_path, html_file):
 
     # fig1: local view
     # try:
-
-    fig_local_view, tab_debug_layer = apa_draw_local_view(dataLoader, layer_manager, max_time, fig1_time_step, plot_ctrl_flag = True)
+    vehicle_type = None
+    if len(sys.argv) > 2:
+        if sys.argv[2] == CHERY_T26:
+            vehicle_type = CHERY_T26
+        else:
+            vehicle_type = JAC_S811
+    else:
+        vehicle_type = JAC_S811
+    fig_local_view, tab_debug_layer = apa_draw_local_view(dataLoader, layer_manager, max_time, fig1_time_step, vehicle_type, plot_ctrl_flag = True)
     # except:
     #     print("fig_local_view plot error!")
     #     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=600, height=1000, match_aspect = True, aspect_scale=1)
