@@ -3919,7 +3919,9 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
     double v_target_final =
         session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
-    if (v_target_final <= 16.7) {
+    double ego_minium_cruise_speed =
+        config_.minimum_ego_cruise_speed_for_active_lane_change;
+    if (v_target_final <= ego_minium_cruise_speed) {
       left_alc_car_.clear();
       left_alc_car_cnt_.clear();
       right_alc_car_.clear();
