@@ -8,10 +8,12 @@
 
 namespace planning {
 namespace lateral_offset_decider {
-
-
 bool IsStaticObstacle(const TrackedObject &tr) {
   return tr.v < 0.1;
+}
+
+bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle) {
+  return avoid_obstacle.vs < 3;
 }
 
 bool IsAboutToEnterLonRange(const TrackedObject &tr, bool is_front) {
@@ -44,8 +46,8 @@ bool IsFasterThanAvoidObstacle(const TrackedObject &tr, const AvoidObstacleInfo 
 
 // is_left: True: left tracked_object
 //          False: right tracked_object
-bool IsInConsiderLateralRange(const framework::Session *session,
-                              const TrackedObject &tr, bool is_left, bool is_front, double normal_avoid_threshold, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps) {
+bool IsInConsiderFrontLateralRange(const framework::Session *session,
+                              const TrackedObject &tr, bool is_left, double normal_avoid_threshold, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps) {
   const CoarsePlanningInfo &coarse_planning_info =
       session->planning_context()
           .lane_change_decider_output()
@@ -56,27 +58,11 @@ bool IsInConsiderLateralRange(const framework::Session *session,
           ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
   auto &is_in_consider_lateral_range_hysteresis_map = std::get<std::map<int, HysteresisDecision>>(hysteresis_maps[HysteresisType::IsInConsiderLateralRangeHysteresis]);
 
-  double max_lat_position;
-  if (is_front) {
-    const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-    const double half_ego_width = vehicle_param.width * 0.5 + vehicle_param.width_mirror;
-    const double safe_lat_distance = 0.4;
-    max_lat_position = -normal_avoid_threshold + half_ego_width + safe_lat_distance;
-  } else {
-    const double ego_position =
-      is_left ? fix_ref->get_frenet_ego_state().boundary().l_end
-              : fix_ref->get_frenet_ego_state().boundary().l_start;
-    double lat_dis =
-        is_left
-            ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
-            : fix_ref->get_frenet_ego_state().boundary().l_start - tr.d_max_cpath;
-
-    if (lat_dis <= 0) {
-      return false;
-    }
-    max_lat_position = 1.0;
-  }
+  const auto &vehicle_param =
+    VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double half_ego_width = vehicle_param.width * 0.5 + vehicle_param.width_mirror;
+  const double safe_lat_distance = 0.4;
+  const double max_lat_position = -normal_avoid_threshold + half_ego_width + safe_lat_distance;
 
   if (is_left) {
     is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetValue(tr.d_min_cpath - max_lat_position);
@@ -101,6 +87,44 @@ bool IsInConsiderLateralRange(const framework::Session *session,
   // if (tr.d_path_self &&tr.v_lat < -0.3) {
   //   return false;
   // }
+
+  return true;
+}
+
+bool IsInConsiderSideLateralRange(const framework::Session *session,
+                              const TrackedObject &tr, bool is_left, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps) {
+  const CoarsePlanningInfo &coarse_planning_info =
+      session->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info;
+  const auto fix_ref =
+      session->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
+  auto &is_in_consider_lateral_range_hysteresis_map = std::get<std::map<int, HysteresisDecision>>(hysteresis_maps[HysteresisType::IsInConsiderLateralRangeHysteresis]);
+
+  const double ego_position =
+    is_left ? fix_ref->get_frenet_ego_state().boundary().l_end
+            : fix_ref->get_frenet_ego_state().boundary().l_start;
+  double lat_dis =
+      is_left
+          ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
+          : fix_ref->get_frenet_ego_state().boundary().l_start - tr.d_max_cpath;
+
+  if (lat_dis <= 0) {
+    return false;
+  }
+
+  const double max_lat_position = 1.0;
+  if (is_left) {
+    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetValue(tr.d_min_cpath - max_lat_position);
+  } else {
+    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetValue(tr.d_max_cpath + max_lat_position);
+  }
+
+  if (!is_in_consider_lateral_range_hysteresis_map[tr.track_id].IsValid()) {
+    return false;
+  }
 
   return true;
 }
@@ -180,7 +204,9 @@ bool IsFrontObstacleConsider(const framework::Session *session,
     return false;
   }
 
-  if (!IsInConsiderLateralRange(session, tr, is_left, true, avoid_info.normal_avoid_threshold, hysteresis_maps)) {
+  // 考虑横向速度
+  // 考虑是否静态障碍物
+  if (!IsInConsiderFrontLateralRange(session, tr, is_left, is_left ? avoid_info.normal_left_avoid_threshold : avoid_info.normal_right_avoid_threshold, hysteresis_maps)) {
     return false;
   }
 
@@ -209,7 +235,7 @@ bool IsSideObstacleConsider(const framework::Session *session,
     return false;
   }
 
-  if (!IsInConsiderLateralRange(session, tr, is_left, false, 0.0, hysteresis_maps)) {
+  if (!IsInConsiderSideLateralRange(session, tr, is_left, hysteresis_maps)) {
     return false;
   }
 

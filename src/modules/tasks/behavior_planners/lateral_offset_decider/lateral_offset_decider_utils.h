@@ -121,17 +121,16 @@ struct AvoidObstacleInfo {
 };
 
 enum class AvoidWay { None, Left, Right, Center};
-// constexpr int LimitTypeNone = 0;
-// constexpr int LimitTypeNormal = 1 << 1;
-// constexpr int LimitTypeFront = 1 << 2;
-// constexpr int LimitTypeSide = 1 << 3;
 enum class LimitType {None, Normal, Front, Side};
 
 enum class HysteresisType {IsInConsiderLateralRangeHysteresis, IsObstacleConsideredHysteresis, EnoughSpaceHysteresis};
 
 struct AvoidInfo{
   void Reset() {
-    normal_avoid_threshold = 0.0;
+    normal_left_avoid_threshold = 0.0;
+    normal_right_avoid_threshold = 0.0;
+    // static_left_avoid_threshold = 0.0;
+    // static_right_avoid_threshold = 0.0;
     desire_lat_offset = 0.0;
     lat_offset = 0.0;
     avoid_way = AvoidWay::None;
@@ -142,7 +141,10 @@ struct AvoidInfo{
     is_use_ego_position = false;
   }
   void operator=(const AvoidInfo& avoid_info) {
-    normal_avoid_threshold = avoid_info.normal_avoid_threshold;
+    normal_left_avoid_threshold = avoid_info.normal_left_avoid_threshold;
+    normal_right_avoid_threshold = avoid_info.normal_right_avoid_threshold;
+    // static_left_avoid_threshold = avoid_info.static_left_avoid_threshold;
+    // static_right_avoid_threshold = avoid_info.static_right_avoid_threshold;
     desire_lat_offset = avoid_info.desire_lat_offset;
     lat_offset = avoid_info.lat_offset;
     avoid_way = avoid_info.avoid_way;
@@ -153,7 +155,10 @@ struct AvoidInfo{
     is_use_ego_position = avoid_info.is_use_ego_position;
   }
 
-  double normal_avoid_threshold;
+  double normal_left_avoid_threshold;
+  double normal_right_avoid_threshold;
+  // double static_left_avoid_threshold;
+  // double static_right_avoid_threshold;
   double desire_lat_offset = 0.0;
   double lat_offset = 0.0;
   AvoidWay avoid_way;
@@ -167,6 +172,7 @@ struct AvoidInfo{
 namespace lateral_offset_decider {
 const double kTruckMinLength = 6.5;
 bool IsCameraObstacle(const TrackedObject &tr);
+bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle);
 bool IsInConsiderLateralRange();
 bool IsFrontObstacleConsider(const framework::Session *session,
                              const TrackedObject &tr,

@@ -402,13 +402,57 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "nudge_buffer_road_boundary");
     nudge_buffer_lane_boundary =
         read_json_key<double>(json, "nudge_buffer_lane_boundary");
-    nudge_value_way = read_json_key<bool>(json, "nudge_value_way");
+    static_nudge_buffer_lane_boundary =
+        read_json_key<double>(json, "static_nudge_buffer_lane_boundary");
+    nudge_value_way =
+        read_json_key<bool>(json, "nudge_value_way");
+    avd_lon_distance_1 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_lon_distance_1"},
+        avd_lon_distance_1);
+    avd_lon_distance_2 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_lon_distance_2"},
+        avd_lon_distance_2);
+    avd_lon_distance_3 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_lon_distance_3"},
+        avd_lon_distance_3);
+    avd_lon_distance_4 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_lon_distance_4"},
+        avd_lon_distance_4);
+    avd_lon_distance_5 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_lon_distance_5"},
+        avd_lon_distance_5);
+    avd_vrel_bp_1 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_1"},
+        avd_vrel_bp_1);
+    avd_vrel_bp_2 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_2"},
+        avd_vrel_bp_2);
+    avd_vrel_bp_3 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_3"},
+        avd_vrel_bp_3);
+    avd_vrel_bp_4 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_4"},
+        avd_vrel_bp_4);
+    avd_vrel_bp_5 = read_json_keys<double>(
+        json, std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_5"},
+        avd_vrel_bp_5);
   }
   bool is_valid_lateral_offset = false;
   double nudge_buffer_road_boundary = 0.3;
   double nudge_buffer_lane_boundary = 0.1;
+  double static_nudge_buffer_lane_boundary = 0.1;
   double base_nudge_distance = 0.6;
   bool nudge_value_way = true;
+  double avd_lon_distance_1;
+  double avd_lon_distance_2;
+  double avd_lon_distance_3;
+  double avd_lon_distance_4;
+  double avd_lon_distance_5;
+  double avd_vrel_bp_1;
+  double avd_vrel_bp_2;
+  double avd_vrel_bp_3;
+  double avd_vrel_bp_4;
+  double avd_vrel_bp_5;
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
