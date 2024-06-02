@@ -2046,7 +2046,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         // 可以借用自行车道 || 自车在最右车道
         borrow_bicycle_lane || rightest_lane) {
       // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
-      if ((item.track_id != lead_one->track_id) &&
+      if ((lead_one == nullptr ||
+           (lead_one != nullptr && item.track_id != lead_one->track_id)) &&
           ((item.v_lat > -0.3 && item.v_lat < 0.3 && is_car(item.type)) ||
            (std::fabs(item.v_lat) < 0.3 && !is_car(item.type)))) {
         item.ncar_count =
