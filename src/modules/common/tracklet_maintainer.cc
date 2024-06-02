@@ -1813,6 +1813,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double traffic_cone_thr = config.traffic_cone_thr;
   double static_obs_buffer = config.static_obs_buffer;
   double near_car_hysteresis = config.near_car_hysteresis;
+  double in_range_v = config.in_range_v;
+  double in_range_v_hysteresis = config.in_range_v_hysteresis;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1838,6 +1840,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // hysteresis
   if (item.is_avd_car) {
     near_car_d_lane_thr = near_car_d_lane_thr * near_car_hysteresis;
+    in_range_v = in_range_v * in_range_v_hysteresis;
   }
 
   // addition buffer for VRU
@@ -1846,7 +1849,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   }
 
   bool is_not_full_in_road = (std::fabs(item.y_rel) > 0.0);
-  bool is_in_range = (item.d_rel < 20.0 && item.v_rel < 1.0);
+  bool is_in_range = (item.d_rel < 20.0 && item.v_rel < in_range_v);
   bool is_about_to_enter_range =
       (item.d_rel < std::min(std::fabs(10.0 * item.v_rel), 50.0) &&
        item.v_rel < -2.5);

@@ -360,6 +360,10 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
     near_car_hysteresis =
         read_json_key<double>(json, "near_car_hysteresis", near_car_hysteresis);
+    in_range_v =
+        read_json_key<double>(json, "in_range_v", in_range_v);
+    in_range_v_hysteresis =
+        read_json_key<double>(json, "in_range_v_hysteresis", in_range_v_hysteresis);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -367,6 +371,8 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
   double traffic_cone_thr = 0.15;
   double static_obs_buffer = 3.4;
   double near_car_hysteresis = 1.3;
+  double in_range_v = 1.0;
+  double in_range_v_hysteresis = 1.5;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {

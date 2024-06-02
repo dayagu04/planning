@@ -118,6 +118,8 @@
   "traffic_cone_thr": 0.2,
   "static_obs_buffer": 3.0,
   "near_car_hysteresis": 1.6,
+  "in_range_v": 1.0,
+  "in_range_v_hysteresis": 1.5,
   "base_nudge_distance": 0.8,
   "nudge_value_way" :true,
   "dynamic_obj_safe_buffer": 0.5,
