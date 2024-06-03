@@ -14,6 +14,7 @@
 #include "lateral_motion_planner.pb.h"
 #include "lateral_offset_decider_utils.h"
 #include "planning_context.h"
+#include "utils/pose2d_utils.h"
 namespace planning {
 
 LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
@@ -137,9 +138,9 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
                               ego_width * 0.5;
   // const double static_lane_avoid_threshold = lane_width_ * 0.5 - config_.static_nudge_buffer_lane_boundary -
   //                             ego_width * 0.5;
-
   int right_lane_virtual_id = flane_->get_virtual_id() + 1;
   int left_lane_virtual_id = flane_->get_virtual_id() - 1;
+  int fix_lane_virtual_id = flane_->get_virtual_id();
   bool has_left_lane = virtual_lane_manager_->get_lane_with_virtual_id(left_lane_virtual_id) != nullptr;
   bool has_right_lane = virtual_lane_manager_->get_lane_with_virtual_id(right_lane_virtual_id) != nullptr;
   if (!has_left_lane && !has_right_lane) {
@@ -164,6 +165,19 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
     // avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   }
 
+  auto last_fix_lane_virtual_id = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->get_last_fix_lane_id();
+
+  if (last_fix_lane_virtual_id == fix_lane_virtual_id) {
+    const double change_rate = 0.01;
+    if (last_avoid_info_.normal_left_avoid_threshold > 1e-2) {
+      avoid_info_.normal_left_avoid_threshold = clip(avoid_info_.normal_left_avoid_threshold, last_avoid_info_.normal_left_avoid_threshold + change_rate, last_avoid_info_.normal_left_avoid_threshold - change_rate);
+    }
+    if (last_avoid_info_.normal_right_avoid_threshold > 1e-2) {
+      avoid_info_.normal_right_avoid_threshold = clip(avoid_info_.normal_right_avoid_threshold, last_avoid_info_.normal_right_avoid_threshold + change_rate, last_avoid_info_.normal_right_avoid_threshold - change_rate);
+    }
+  }
 
   avoid_info_.normal_left_avoid_threshold = std::max(avoid_info_.normal_left_avoid_threshold, 0.0);
   avoid_info_.normal_right_avoid_threshold = std::max(avoid_info_.normal_right_avoid_threshold, 0.0);
