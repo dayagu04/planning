@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240525/20240525-15-54-05/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-25-15-54-05_no_camera.bag" #.1688547247.plan
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-32-57/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-32-57_no_camera.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -148,7 +148,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
       names.append(name)
     except:
       pass
-      
+
   behavior_data_1.data.update({
     'name': names,
     'data': datas,
@@ -210,8 +210,8 @@ def update_lc_data (noa_info, plan_debug_json):
 def update_overtake_request_lc_data (plan_debug_json):
   names  = []
   datas = []
-  overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", 
-                       "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", 
+  overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
+                       "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
                        "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len"]
   for name in overtake_lc_vars_:
     try:

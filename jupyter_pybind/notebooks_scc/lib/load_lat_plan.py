@@ -260,6 +260,8 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
       x_vec, y_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)
     time_vec = lat_motion_plan_output.time_vec
 
+    ref_x_vec = []
+    ref_y_vec = []
     ref_theta_deg_vec = []
     theta_deg_vec = []
     steer_deg_vec = []
@@ -280,6 +282,8 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
       print("no lat_motion_plan_input!!")
 
     for i in range(len(time_vec)):
+      ref_x_vec.append(lat_motion_plan_input.ref_x_vec[i])
+      ref_y_vec.append(lat_motion_plan_input.ref_y_vec[i])
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
       steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 15.7)
@@ -293,12 +297,17 @@ def update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g
       steer_dot_deg_upper_bound.append((omega_bound * 57.3 * 15.7))
       steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * 15.7))
 
+    if not g_is_display_enu:
+      ref_x_vec, ref_y_vec = coord_tf.global_to_local(ref_x_vec, ref_y_vec)
+
     acc_vec = lat_motion_plan_output.acc_vec
     jerk_vec = lat_motion_plan_output.jerk_vec
 
     lat_plan_data['data_lat_motion_plan_output'].data.update({
       'time_vec': time_vec,
+      'ref_x_vec': ref_x_vec,
       'x_vec': x_vec,
+      'ref_y_vec': ref_y_vec,
       'y_vec': y_vec,
       'xn_vec': lat_motion_plan_output.x_vec,
       'yn_vec': lat_motion_plan_output.y_vec,
@@ -384,7 +393,7 @@ def load_lateral_offset(bag_loader):
         avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
       frame_num_0 = frame_nums[0]
       frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
-  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=700, height=200)
+  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=800, height=200)
   data_fig.data.update({
     'lateral_offset_1':lateral_offsets,
     'lateral_offset_2':smooth_lateral_offsets,
@@ -433,7 +442,9 @@ def load_lat_plan_figure(fig1):
                                                         })
 
   data_lat_motion_plan_output = ColumnDataSource(data = {'time_vec':[],
+                                                         'ref_x_vec':[],
                                                          'x_vec':[],
+                                                         'ref_y_vec':[],
                                                          'y_vec':[],
                                                          'xn_vec':[],
                                                          'yn_vec':[],
@@ -520,14 +531,17 @@ def load_lat_plan_figure(fig1):
   fig1.circle('hard_upper_bound_y0_vec','hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.5, fill_color = 'red',fill_alpha = 0.5, legend_label = 'hard upper bound')
   fig1.circle('hard_lower_bound_y0_vec','hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.5, fill_color = 'red',fill_alpha = 0.5, legend_label = 'hard lower bound')
 
-  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
-  fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
-  fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=600, height=160)
-  fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=160)
-  fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=600, height=160)
+  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
+  fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)
+  fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=800, height=160)
+  fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=800, height=160)
+  fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=800, height=160)
 
-  fig7 = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=600, match_aspect = True, aspect_scale=1)
+  fig7 = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=800, match_aspect = True, aspect_scale=1)
   fig7.x_range.flipped = True
+
+  fig8 = bkp.figure(x_axis_label='time', y_axis_label='x',x_range = fig2.x_range, width=800, height=160)
+  fig9 = bkp.figure(x_axis_label='time', y_axis_label='y',x_range = fig2.x_range, width=800, height=160)
 
   fig7.line('ref_yn', 'ref_xn', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
   fig7.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
@@ -572,6 +586,11 @@ def load_lat_plan_figure(fig1):
   fig6.triangle ('time_vec', 'steer_dot_deg_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer dot deg corridor')
   fig6.inverted_triangle ('time_vec', 'steer_dot_deg_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer dot deg corridor')
 
+  f8 = fig8.line('time_vec', 'ref_x_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_x')
+  fig8.line('time_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'x')
+  f9 = fig9.line('time_vec', 'ref_y_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_y')
+  fig9.line('time_vec', 'y_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'y')
+
   hover1_1 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 4]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_upper_bound_vec)'),
                                                                                       ('obstacle id', '@soft_upper_bound_id_vec'), ('type', '@soft_upper_bound_type_vec')])
   hover1_2 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 3]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_lower_bound_vec)'),
@@ -585,6 +604,8 @@ def load_lat_plan_figure(fig1):
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('jerk', '@jerk_vec'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('steer', '@steer_deg_vec'), ('|steer deg bound|', '@steer_deg_upper_bound')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('steer dot', '@steer_dot_deg_vec'), ('|steer dot deg bound|', '@steer_dot_deg_upper_bound')], mode='vline')
+  hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time_vec'), ('ref_x', '@ref_x_vec'), ('x', '@x_vec')], mode='vline')
+  hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time_vec'), ('ref_y', '@ref_y_vec'), ('y', '@y_vec')], mode='vline')
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
@@ -595,6 +616,8 @@ def load_lat_plan_figure(fig1):
   fig4.add_tools(hover4)
   fig5.add_tools(hover5)
   fig6.add_tools(hover6)
+  fig8.add_tools(hover8)
+  fig9.add_tools(hover9)
 
   fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
@@ -602,6 +625,8 @@ def load_lat_plan_figure(fig1):
   fig5.toolbar.active_scroll = fig5.select_one(WheelZoomTool)
   fig6.toolbar.active_scroll = fig6.select_one(WheelZoomTool)
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
+  fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
+  fig9.toolbar.active_scroll = fig9.select_one(WheelZoomTool)
 
   fig2.legend.click_policy = 'hide'
   fig3.legend.click_policy = 'hide'
@@ -609,5 +634,7 @@ def load_lat_plan_figure(fig1):
   fig5.legend.click_policy = 'hide'
   fig6.legend.click_policy = 'hide'
   fig7.legend.click_policy = 'hide'
+  fig8.legend.click_policy = 'hide'
+  fig9.legend.click_policy = 'hide'
 
-  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data
+  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data
