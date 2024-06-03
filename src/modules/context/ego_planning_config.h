@@ -1341,6 +1341,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     acc_stop_max_bound = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "acc_stop_max_bound"});
+    enable_jlt = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_jlt"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1398,6 +1401,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   // stop condition judge
   double v_target_stop_thrd = 0.2;
   double acc_stop_max_bound = 1.0;
+  // jlt
+  bool enable_jlt = true;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
