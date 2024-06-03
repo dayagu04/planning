@@ -9,7 +9,7 @@ sys.path.append('../../../')
 
 # +
 # bag path and frame dt
-bag_path = "/share/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240525/20240525-15-57-26/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-25-15-57-26.bag.1716780351.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-45-12/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-45-12_no_camera.bag"
 
 frame_dt = 0.1 # sec
 # -
@@ -25,9 +25,9 @@ max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
-fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
+fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1)
 
-fig8 = load_lateral_offset(bag_loader)
+fig_lat_offset = load_lateral_offset(bag_loader)
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
@@ -44,8 +44,8 @@ def slider_callback(bag_time):
   push_notebook()
 
 if global_fig_plot:
-  bkp.show(row(fig1, fig7, column(fig2, fig3, fig4, fig5, fig6)), notebook_handle=True)
+  bkp.show(row(fig1, fig7, column(fig2, fig9, fig3, fig4, fig5, fig6)), notebook_handle=True)
 else:
-  bkp.show(row(fig1, column(fig2, fig3, fig4, fig5, fig6, fig8)), notebook_handle=True)
+  bkp.show(row(fig1, column(fig2, fig9, fig3, fig4, fig5, fig6, fig_lat_offset)), notebook_handle=True)
 
 slider_class = LocalViewSlider(slider_callback)
