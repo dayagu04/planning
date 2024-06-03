@@ -1815,6 +1815,9 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double near_car_hysteresis = config.near_car_hysteresis;
   double in_range_v = config.in_range_v;
   double in_range_v_hysteresis = config.in_range_v_hysteresis;
+  double potential_near_car_thr = config.potential_near_car_thr;
+  double potential_near_car_v_ub = config.potential_near_car_v_ub;
+  double potential_near_car_v_lb = config.potential_near_car_v_lb;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1898,10 +1901,18 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         bool is_same_side = ((item.d_min_cpath > 0 && item.d_max_cpath > 0) ||
                              (item.d_min_cpath <= 0 && item.d_max_cpath <= 0));
 
+        double potential_dist_limit = lane_width * 0.5 + potential_near_car_thr;
         bool is_need_avoid =
             (item.d_max_cpath < 0 &&
              std::fabs(item.d_max_cpath) < dist_limit) ||
             (item.d_min_cpath > 0 && item.d_min_cpath < dist_limit) ||
+            (item.d_max_cpath < 0 &&
+             std::fabs(item.d_max_cpath) < potential_dist_limit &&
+             item.v_lat < potential_near_car_v_lb &&
+             item.v_lat > potential_near_car_v_ub) ||
+            (item.d_min_cpath > 0 && item.d_min_cpath < potential_dist_limit &&
+             item.v_lat < potential_near_car_v_lb &&
+             item.v_lat > potential_near_car_v_ub) ||
             (borrow_bicycle_lane && item.d_max_cpath > 0 &&
              item.d_min_cpath < 0 && item.v_lead < 0.5);
 
