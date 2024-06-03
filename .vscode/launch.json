@@ -57,7 +57,7 @@
             "args": [
                 "--play",
                 // "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240425/20240425-15-04-11/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-04-25-15-04-11_no_camera.record"
-                "/mnt/00fjw/00test/00caseAnalysis/secondStart_495801/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-05-17-14-19-50.record.1716359598.plan.1716360007.plan"
+                "/data_cold/abu_zone/autoparse/chery_tiggo9_06826/trigger/20240530/20240530-12-19-57/data_collection_CHERY_TIGGO9_06826_EVENT_MANUAL_2024-05-30-12-19-57_no_camera.record"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

@@ -65,6 +65,7 @@ class GapSelectorDecider : public Task {
   GapSelectorStatus EnvHandle(
       const int target_state, const Point2D &ego_cart_pose,
       GapSelectorDeciderOutput &gap_selector_decider_output);
+  bool RecheckQuinticValid(const bool is_left, TrajectoryPoints *traj_points);
 
   void UpdateEnvInfos(const Point2D &ego_cart_pose,
                       PlanningInitPoint &planning_init_point);
@@ -125,7 +126,8 @@ class GapSelectorDecider : public Task {
       const double remaining_lc_duration,
       const pnc::spline::QuinticPolynominalPath &quintic_path,
       const std::shared_ptr<KDPath> coord, GapSelectorPathSpline &path_spline);
-  void GenerateLinearRefTrajectory(TrajectoryPoints &traj_points);
+  void GenerateLinearRefTrajectory(const bool is_left,
+                                   TrajectoryPoints &traj_points);
   void RetentivePathPlan();
   void ResponsivePathPlan();
   void FixedTimeQuinticPathPlan(const double lat_avoid_offset,

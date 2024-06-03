@@ -1,6 +1,6 @@
 {
   "enable_raw_ego_prediction": false,
-  "planner_type": 0,
+  "planner_type": 1,
   "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
@@ -146,6 +146,8 @@
   "lc_back_available_thr": 0.8,
   "lc_back_smooth_thr": 0.3,
   "lc_back_consider_smooth_dpoly_thr": 0.6,
+  "lc_finish_dist_thr": 0.5,
+  "lc_finish_heading_deg_thr":1.0,
   "none_consider_slope_thr": 0.003,
   "enable_none_smooth": true,
   "mrc_condition": {
@@ -367,7 +369,7 @@
     "collision_check_length_threshold":3.5,
     "lc_premove_time":0.1,
     "near_car_ttc": 0.3,
-    "use_ego_v": false,
+    "use_ego_v": true,
     "lb_heading_error_min":0.5,
     "lb_heading_error_max":4.5,
     "lb_t_max": 4.0,
