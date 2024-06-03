@@ -636,8 +636,8 @@ void TrackletMaintainer::calc(
       continue;
     }
     tr->is_avd_car = is_potential_avoiding_car(
-        *tr, lead_cars.lead_one, v_ego, lane_width, scenario,
-        borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
+        *tr, lead_cars.lead_one, lead_cars.lead_two, v_ego, lane_width,
+        scenario, borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
         dist_intersect, intersect_length, isRedLightStop);
     if (tr->is_avd_car) {
       avd_car_id.emplace_back(tr->track_id);
@@ -1798,8 +1798,8 @@ bool TrackletMaintainer::is_potential_temp_lead_two(
 }
 
 bool TrackletMaintainer::is_potential_avoiding_car(
-    TrackedObject &item, TrackedObject *lead_one, double v_ego,
-    double lane_width, int scenario, bool borrow_bicycle_lane,
+    TrackedObject &item, TrackedObject *lead_one, TrackedObject *lead_two,
+    double v_ego, double lane_width, int scenario, bool borrow_bicycle_lane,
     double dist_rblane, bool tleft_lane, bool rightest_lane,
     double dist_intersect, double intersect_length, bool isRedLightStop) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
@@ -1823,6 +1823,38 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // TODO: ego_state relative
   double l_ego = 0.;
   double dist_limit;
+
+  // for Intersection
+  double farthest_distance = DBL_MAX;
+  if (lead_one != nullptr && lead_one->v_lead < 1) {
+    // can not avoid
+    if ((item.d_min_cpath <
+         std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
+                  1.8)) ||
+        (item.d_max_cpath >
+         std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
+                  -1.8))) {
+      farthest_distance = std::min(farthest_distance, lead_one->d_rel);
+    }
+  }
+  if (lead_two != nullptr && lead_two->v_lead < 1) {
+    // can not avoid
+    if ((item.d_min_cpath <
+         std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
+                  1.8)) ||
+        (item.d_max_cpath >
+         std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
+                  -1.8))) {
+      farthest_distance = std::min(farthest_distance, lead_two->d_rel);
+    }
+  }
+  if (item.d_rel > farthest_distance + 5 ||
+      (item.d_rel > farthest_distance &&
+       ((item.d_max_cpath < 0 &&
+         std::fabs(item.d_max_cpath) > lane_width * 0.5) ||
+        (item.d_min_cpath > 0 && item.d_min_cpath > lane_width * 0.5)))) {
+    return false;
+  }
 
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
