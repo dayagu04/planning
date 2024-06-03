@@ -18,9 +18,9 @@ public:
   //   return *this;
   // }
   void SetThreValue(double up_thre, double down_thre);
-  void SetValid();
-  void SetInvalid();
-  void SetValue(double value);
+  void SetValidByCount();
+  void SetInvalidCount();
+  void SetIsValidByValue(double value);
   void Reset();
   bool IsValid();
   int Value();
