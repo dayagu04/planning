@@ -499,11 +499,13 @@ def load_lon_global_figure(bag_loader):
   ego_acc_vec = []
   acc_min_vec = []
   acc_max_vec = []
+  lead_one_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
     acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+    lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -513,6 +515,8 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_acc',color="blue")
   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                               legend_label='acc_max', color="red")
+  acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
+                              legend_label='lead_one_acc', color="green")
 
   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
                 y_axis_label='distance/(m)',width=600,height=300)
@@ -600,9 +604,37 @@ def load_lon_global_figure(bag_loader):
       for one_bound in item.bound:
           if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
             obs_st_ids.append(one_bound.bound_info.id)
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids):
+  # function state machine info plot
+  data_fsm_state_command = ColumnDataSource(data ={
+  'time': [],
+  'fsm_cur_state':[],
+  })
+  
+  t_soc_state = []
+  fsm_cur_state = []
+
+  soc_state_info = bag_loader.soc_state_msg['data']
+  soc_state_t = bag_loader.soc_state_msg['t']
+  for i in range(len(soc_state_info)):
+     t_soc_state.append(soc_state_t[i])
+     fsm_cur_state.append(soc_state_info[i].current_state)
+
+  data_fsm_state_command.data.update({
+    'time': t_soc_state,
+    'fsm_cur_state': fsm_cur_state,
+  })
+
+  fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = [t_soc_state[0], t_soc_state[-1]], width=500, height=200)
+  f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = data_fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
+
+  hover_fsm_state = HoverTool(renderers=[f_fsm_state], tooltips=[('time', '@time'), ('fsm_cur_state', '@fsm_cur_state')], mode='vline')
+  fig_fsm_state.add_tools(hover_fsm_state)
+  fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
+  fig_fsm_state.legend.click_policy = 'hide'
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state
+
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
@@ -772,7 +804,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
+  pan2 = Panel(child=row(column(tab1, fig_fsm_state), column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 
