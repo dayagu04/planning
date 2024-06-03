@@ -7,7 +7,7 @@ void HysteresisDecision::SetThreValue(double up_thre, double down_thre) {
   down_thre_ = down_thre;
 }
 
-void HysteresisDecision::SetValid() {
+void HysteresisDecision::SetValidByCount() {
   if (is_valid_) {
     // is_valid
     count_ = 0;
@@ -20,7 +20,7 @@ void HysteresisDecision::SetValid() {
   }
 }
 
-void HysteresisDecision::SetInvalid() {
+void HysteresisDecision::SetInvalidCount() {
   if (!is_valid_) {
     count_ = 0;
   } else {
@@ -32,7 +32,7 @@ void HysteresisDecision::SetInvalid() {
   }
 }
 
-void HysteresisDecision::SetValue(double value) {
+void HysteresisDecision::SetIsValidByValue(double value) {
   if (is_valid_) {
     if (value <= down_thre_) {
       is_valid_ = false;

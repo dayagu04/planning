@@ -123,7 +123,7 @@ struct AvoidObstacleInfo {
 enum class AvoidWay { None, Left, Right, Center};
 enum class LimitType {None, Normal, Front, Side};
 
-enum class HysteresisType {IsInConsiderLateralRangeHysteresis, IsObstacleConsideredHysteresis, EnoughSpaceHysteresis};
+enum class HysteresisType {IsInConsiderLateralRangeHysteresis, IsObstacleConsideredHysteresis, EnoughSpaceHysteresis, AvoidWaySelect};
 
 struct AvoidInfo{
   void Reset() {
@@ -176,11 +176,13 @@ bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle);
 bool IsInConsiderLateralRange();
 bool IsFrontObstacleConsider(const framework::Session *session,
                              const TrackedObject &tr,
-                             const AvoidObstacleInfo &avoid_obstacle,
                              bool is_left, const AvoidInfo& avoid_info,
                              std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps);
 bool IsSideObstacleConsider(const framework::Session *session,
                             const TrackedObject &tr, bool is_left, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps);
+bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
+                                    const AvoidObstacleInfo &avoid_obstacle,
+                                    const TrackedObject &tr);
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle);
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle);
 bool IsCone(const AvoidObstacleInfo &avoid_obstacle);
