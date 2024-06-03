@@ -642,8 +642,8 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
                   120.0);
             }
           }
-          //如果目标车道上后车的相对车速较自车快2m/s以上,
-          //最小安全距离的阈值再增加2m，以免产生变道恐慌感
+          // 如果目标车道上后车的相对车速较自车快2m/s以上,
+          // 最小安全距离的阈值再增加2m，以免产生变道恐慌感
           if (tr.v_rel > 2.0) {
             mss = mss + 2;
           }
@@ -1213,13 +1213,15 @@ bool LaneChangeDecider::check_lc_change_finish(RequestType direction) {
     return false;
   }
 
-  double dist_threshold = 0.5;
+  double dist_threshold = config_.lc_finish_dist_thr;
   double v_ego =
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
-  std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
-  std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
-  double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
+  // std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
+  // std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
+  // double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 
+  double angle_threshold =
+      config_.lc_finish_heading_deg_thr * 0.01745;  // to rad
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
   std::cout << "check_lc_change_finish: target_lane_virtual_id: "

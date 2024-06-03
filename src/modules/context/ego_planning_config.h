@@ -221,11 +221,16 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     lc_t_actuator_delay = read_json_key<double>(json, "lc_t_actuator_delay");
     lc_back_available_thr =
         read_json_key<double>(json, "lc_back_available_thr");
+    lc_finish_dist_thr = read_json_key<double>(json, "lc_finish_dist_thr");
+    lc_finish_heading_deg_thr =
+        read_json_key<double>(json, "lc_finish_heading_deg_thr");
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
   double delta_t = 0.2;
   int num_point = 26;
+  double lc_finish_dist_thr = 0.5;
+  double lc_finish_heading_deg_thr = 1.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -364,11 +369,11 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "in_range_v", in_range_v);
     in_range_v_hysteresis =
         read_json_key<double>(json, "in_range_v_hysteresis", in_range_v_hysteresis);
-    potential_near_car_thr = 
+    potential_near_car_thr =
         read_json_key<double>(json, "potential_near_car_thr", potential_near_car_thr);
-    potential_near_car_v_ub = 
+    potential_near_car_v_ub =
         read_json_key<double>(json, "potential_near_car_v_ub", potential_near_car_v_ub);
-    potential_near_car_v_lb = 
+    potential_near_car_v_lb =
         read_json_key<double>(json, "potential_near_car_v_lb", potential_near_car_v_lb);
   }
   double near_car_thr = 0.3;
@@ -388,14 +393,13 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
-    base_nudge_distance = read_json_key<double>(
-        json, "base_nudge_distance", base_nudge_distance);
+    base_nudge_distance =
+        read_json_key<double>(json, "base_nudge_distance", base_nudge_distance);
     nudge_buffer_road_boundary =
         read_json_key<double>(json, "nudge_buffer_road_boundary");
     nudge_buffer_lane_boundary =
         read_json_key<double>(json, "nudge_buffer_lane_boundary");
-    nudge_value_way =
-        read_json_key<bool>(json, "nudge_value_way");
+    nudge_value_way = read_json_key<bool>(json, "nudge_value_way");
   }
   bool is_valid_lateral_offset = false;
   double nudge_buffer_road_boundary = 0.3;
