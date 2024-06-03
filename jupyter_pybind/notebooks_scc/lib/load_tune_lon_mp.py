@@ -25,14 +25,6 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  road_msg_idx = local_view_data['data_index']['road_msg_idx']
-  fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
-  plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
-
   planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
@@ -42,7 +34,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                               'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                              'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                              'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
                               "dis_to_ramp", "v_target_ramp", \
                               'gap_v_limit_lc', \
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
@@ -50,19 +42,19 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
 
-  plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-  plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+  plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
+  plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
   # behavior planning
   t_vec = list(plan_debug_info.long_ref_path.t_list)
 
   t_long_vec = []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-     t_long_vec.append(item.t)
+  for item in (local_view_data['data_msg']['plan_msg'].trajectory.trajectory_points):
+    t_long_vec.append(item.t)
   s_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
-     s_plan_vec.append(item.distance)
+  for item in (local_view_data['data_msg']['plan_msg'].trajectory.trajectory_points):
+    s_plan_vec.append(item.distance)
   v_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
+  for item in (local_view_data['data_msg']['plan_msg'].trajectory.trajectory_points):
      v_plan_vec.append(item.v)
 
   s_ref_vec = []
@@ -211,10 +203,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+    cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
+    cur_pos_yn = local_view_data['data_msg']['loc_msg'].position.position_boot.y
+    cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
+    planning_json = local_view_data['data_msg']['plan_debug_json_msg']
 
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
@@ -233,7 +225,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
    #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_msg['enable'] == True:
-    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    trajectory = local_view_data['data_msg']['plan_msg'].trajectory
     if trajectory.trajectory_type == 0: # 实时轨迹
       try:
         planning_polynomial = trajectory.target_reference.polynomial

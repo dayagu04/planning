@@ -101,6 +101,14 @@ struct WeightedLonLeadBound {
 };
 using WeightedLonLeadBounds = std::vector<WeightedLonLeadBound>;
 
+struct LonLeadBound {
+    double s_lead;
+    double v_lead;
+    double a_lead;
+    int lead_id;
+};
+using LonLeadBounds = std::vector<LonLeadBound>;
+
 // dynamic obstacle
 struct DecisionTimePosition {
   double t = 0;

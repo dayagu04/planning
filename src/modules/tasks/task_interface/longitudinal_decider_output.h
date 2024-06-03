@@ -14,7 +14,8 @@ struct LongitudinalDeciderOutput {
 
   std::vector<WeightedBounds> hard_bounds;             // s hard bounds
   std::vector<WeightedBounds> soft_bounds;             // s soft bounds
-  std::vector<WeightedLonLeadBounds> lon_lead_bounds;  // 可以废弃
+  std::vector<WeightedLonLeadBounds> lon_lead_bounds;  // s lead bounds
+  std::vector<LonLeadBounds> lead_bounds;
   std::unordered_map<int, std::vector<LonObstacleOverlapInfo>>
       lon_obstacle_overlap_info;
   std::vector<LonObstalceYieldInfo> lon_obstacle_yield_info;
