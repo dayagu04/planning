@@ -61,13 +61,9 @@ class SccLonBehaviorPlanner : public Task {
 
   void ClearOutput();
 
-  bool GenerateFarSlowCarFollowCurve(
-      std::vector<double> &s_refs,
-      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_plan_input);
+  bool GenerateFarSlowCarFollowCurve(std::vector<double> &s_refs);
 
-  bool GenerateStableFollowSlowCurve(
-      std::vector<double> &s_refs,
-      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_plan_input);
+  bool GenerateStableFollowSlowCurve(std::vector<double> &s_refs);
 
   struct STBound {
     double lower = -1.0e4;
