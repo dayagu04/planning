@@ -9,7 +9,7 @@
 namespace pnc {
 namespace lateral_planning {
 
-enum LateralMotionSceneEnum { LANE_KEEP = 0, AVOID, LANE_CHANGE, BEND };
+enum LateralMotionSceneEnum { LANE_KEEP = 0, AVOID, LANE_CHANGE };
 
 class LateralMotionPlanningWeight {
  public:
@@ -36,6 +36,8 @@ class LateralMotionPlanningWeight {
 
   void SetEgoL(const double ego_l) { ego_l_ = ego_l; }
 
+  void SetLCBackFlag(const bool is_lane_change_back) { is_lane_change_back_ = is_lane_change_back; }
+
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
 
  private:
@@ -53,6 +55,7 @@ class LateralMotionPlanningWeight {
   double concerned_start_q_jerk_;
   double ego_vel_;
   double ego_l_;
+  bool is_lane_change_back_;
 };
 
 }  // namespace lateral_planning

@@ -273,33 +273,6 @@ void LateralMotionPlanner::AssembleInput() {
   planning_input_.set_curv_factor(config_.curv_factor);
 
   // set weights
-  bool bend_scene = false;
-  const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
-  const double preview_length = config_.curvature_preview_length;
-  const double preview_step = config_.curvature_preview_step;
-  double aver_close_kappa = 0.0;
-  double aver_far_kappa = 0.0;
-  ReferencePathPoint close_ref_path_point;
-  ReferencePathPoint far_ref_path_point;
-  for (double preview_distance = ego_s; preview_distance < preview_length;
-       preview_distance += preview_step) {
-    reference_path_ptr->get_reference_point_by_lon((preview_distance),
-                                                   close_ref_path_point);
-    aver_close_kappa += close_ref_path_point.path_point.kappa;
-    reference_path_ptr->get_reference_point_by_lon(
-        (preview_distance + config_.curvature_preview_distance),
-        far_ref_path_point);
-    aver_far_kappa += far_ref_path_point.path_point.kappa;
-  }
-  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-    aver_close_kappa /= (preview_length / preview_step);
-    aver_far_kappa /= (preview_length / preview_step);
-    if (((1.0 / fabs(aver_close_kappa)) < config_.road_curvature_radius) ||
-        ((1.0 / fabs(aver_far_kappa)) < config_.road_curvature_radius)) {
-      bend_scene = true;
-    }
-  }
-
   Point2D cart_ref0(planning_input_.ref_x_vec(0), planning_input_.ref_y_vec(0));
   Point2D frenet_ref0;
   Point2D cart_init(planning_input_.init_state().x(),
@@ -319,17 +292,19 @@ void LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetEgoVel(
       session_->environmental_model().get_ego_state_manager()->ego_v());
   planning_weight_ptr_->SetEgoL(reference_path_ptr->get_frenet_ego_state().l());
+  planning_weight_ptr_->SetLCBackFlag(false);
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
   if (lane_change_scene) {
+    const auto target_state = session_->planning_context().lane_change_decider_output().coarse_planning_info.target_state;
+    if (target_state == ROAD_LC_LBACK || target_state == ROAD_LC_RBACK) {
+      planning_weight_ptr_->SetLCBackFlag(true);
+    }
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
   } else if (lateral_offset_decider_output.is_valid) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
-                                                 planning_input_);
-  } else if (bend_scene) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::BEND,
                                                  planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
