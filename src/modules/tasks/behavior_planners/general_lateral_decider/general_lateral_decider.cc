@@ -467,11 +467,11 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
                         0.5 * vehicle_param.width + config_.buffer2lane,
                     safe_bound.lower);
       path_bound.upper =
-          std::fmin(ref_path_points_[i].distance_to_left_lane_border -
+          std::fmin(ref_path_points_[i].distance_to_left_road_border -
                         0.5 * vehicle_param.width - config_.buffer2border,
                     path_bound.upper);
       path_bound.lower =
-          std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
+          std::fmax(-ref_path_points_[i].distance_to_right_road_border +
                         0.5 * vehicle_param.width + config_.buffer2border,
                     path_bound.lower);
       map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
@@ -479,7 +479,7 @@ void GeneralLateralDecider::ConstructLaneAndBoundaryBounds(
           BoundInfo{-100, BoundType::LANE}});
       map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
           path_bound.lower, path_bound.upper, config_.kHardBoundWeight,
-          BoundInfo{-100, BoundType::LANE}});
+          BoundInfo{-100, BoundType::ROAD_BORDER}});
     } else if (lat_lane_change_info_ ==
                    LatDeciderLaneChangeInfo::LEFT_LANE_CHANGE ||
                (general_lateral_decider_output.lane_change_scene != true &&
