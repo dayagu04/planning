@@ -123,6 +123,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json,
                             "use_overtake_lane_change_request_instead_of_"
                             "active_lane_change_request");
+    minimum_ego_cruise_speed_for_active_lane_change =
+        read_json_key<double>(json, "minimum_ego_cruise_speed_for_active_lane_change");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
@@ -132,6 +134,7 @@ struct EgoPlanningConfig : public Config {
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
       false;
+  double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
