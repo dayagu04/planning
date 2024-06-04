@@ -12,6 +12,8 @@
 #include "log.h"
 #include "session.h"
 #include "virtual_lane.h"
+#include "generated_refline.pb.h"
+
 namespace planning {
 
 #define LANE_BOUNDARY_POINT_SET_NUM 20
@@ -206,6 +208,7 @@ class VirtualLaneManager {
   // void CalculateDistanceToNextSpeedBump(planning::framework::Session
   // *session);
   void ResetForRampInfo();
+  void SetGeneratedReflineToDebugInfo(const iflyauto::LaneReferenceLine &refline);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
