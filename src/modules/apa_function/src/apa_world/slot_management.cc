@@ -2425,7 +2425,6 @@ void SlotManagement::FinishApa() {
           FuncStateMachine::PARK_OUT_COMPLETED ||
       frame_.func_state_ptr->current_state() ==
           FuncStateMachine::PARK_OUT_SECURE) {
-    frame_.Reset();
     DebugInfoManager::GetInstance()
         .GetDebugInfoPb()
         ->clear_slot_management_info();
