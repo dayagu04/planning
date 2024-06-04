@@ -187,6 +187,19 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   const auto measures_ptr = apa_world_ptr_->GetMeasurementsPtr();
   const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
 
+  const auto& select_slot_slm =
+      slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
+
+  if (!select_slot_slm.has_corner_points()) {
+    DEBUG_PRINT("no selected corner pts in slm!");
+    return false;
+  }
+
+  if (select_slot_slm.corner_points().corner_point_size() != 4) {
+    DEBUG_PRINT("select slot in slm corner points size != 4!");
+    return false;
+  }
+
   auto& ego_slot_info = frame_.ego_slot_info;
 
   // notice: get slot from GetEgoSlotInfo.select_slot_filter in slot management
