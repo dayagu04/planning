@@ -14,7 +14,6 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
     const LateralMotionSceneEnum scene,
     planning::common::LateralPlanningInput &planning_input) {
   lateral_motion_scene_ = scene;
-  CalculateConcernedStartRatio();
   // CalculateInitInfo(planning_input);
   // set cost weight by scene
   switch (scene) {
@@ -26,12 +25,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_acc(config_.q_acc);
       planning_input.set_q_jerk(config_.q_jerk);
       SetAccJerkBoundByVelocity(planning_input);
-      if (config_.close_jerk_enable) {
-        SetCloseRangeJerkWeight(planning_input);
-      }
-      if (config_.far_jerk_enable) {
-        SetJerkWeightByBigBias(planning_input);
-      }
+      MakeDynamicWeight(planning_input);
       break;
     }
     case AVOID: {
@@ -42,6 +36,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_acc(config_.q_acc_avoid);
       planning_input.set_q_jerk(config_.q_jerk_avoid);
       SetAccJerkBoundByVelocity(planning_input);
+      concerned_start_q_jerk_ = config_.q_jerk_avoid;
       break;
     }
     case LANE_CHANGE: {
@@ -52,7 +47,21 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
       planning_input.set_q_continuity(config_.q_continuity);
       planning_input.set_q_acc(config_.q_acc_lane_change);
-      planning_input.set_q_jerk(config_.q_jerk_lane_change);
+      if (std::fabs(ego_l_) > config_.lane_change_ego_l_thr) {
+        planning_input.set_q_jerk(config_.q_jerk_lane_change);
+        concerned_start_q_jerk_ = config_.q_jerk_lane_change;
+      } else {
+        planning_input.set_q_jerk(config_.q_jerk_lane_change2);
+        concerned_start_q_jerk_ = config_.q_jerk_lane_change2;
+      }
+      if (config_.use_lk_qxy_in_lc) {
+        if (std::fabs(init_dis_to_ref_) > 0.0) {
+          planning_input.set_q_ref_x(config_.q_ref_x);
+          planning_input.set_q_ref_y(config_.q_ref_y);
+          planning_input.set_q_jerk(config_.q_jerk_lane_change3);
+          concerned_start_q_jerk_ = config_.q_jerk_lane_change3;
+        }
+      }
       break;
     }
     case BEND: {
@@ -64,12 +73,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_continuity(config_.q_continuity);
       planning_input.set_q_acc(config_.q_acc_bend);
       planning_input.set_q_jerk(config_.q_jerk_bend);
-      if (config_.close_jerk_enable) {
-        SetCloseRangeJerkWeight(planning_input);
-      }
-      if (config_.far_jerk_enable) {
-        SetJerkWeightByBigBias(planning_input);
-      }
+      MakeDynamicWeight(planning_input);
       break;
     }
     default: { break; }
@@ -108,7 +112,7 @@ void LateralMotionPlanningWeight::CalculateInitInfo(
 
 void LateralMotionPlanningWeight::SetAccJerkBoundByVelocity(
     planning::common::LateralPlanningInput &planning_input) {
-  const double velocity = real_vel_ * 3.6;
+  const double velocity = ego_vel_ * 3.6;
   const double jerk_bound1 = config_.jerk_bound1;
   const double jerk_bound2 = config_.jerk_bound2;
   const double jerk_bound3 = config_.jerk_bound3;
@@ -121,78 +125,21 @@ void LateralMotionPlanningWeight::SetAccJerkBoundByVelocity(
   planning_input.set_jerk_bound(jerk_bound);
 }
 
-void LateralMotionPlanningWeight::SetCloseRangeJerkWeight(
-    planning::common::LateralPlanningInput &planning_input) {
-  double q_jerk_close = config_.q_jerk_close;
-  double motion_plan_concerned_start_ratio0 = config_.motion_plan_concerned_start_ratio0;
-  double motion_plan_concerned_start_ratio1 = config_.motion_plan_concerned_start_ratio1;
-  if  (lateral_motion_scene_ == BEND) {
-    q_jerk_close = config_.q_jerk_bend_close;
-    motion_plan_concerned_start_ratio0 = config_.motion_plan_concerned_start_ratio_bend0;
-    motion_plan_concerned_start_ratio1 = config_.motion_plan_concerned_start_ratio_bend1;
-  }
-  if (std::fabs(init_dis_to_ref_) < config_.init_ref_dist_close_thr) {
-    // planning_input.set_q_acc(config_.q_acc_close);
-    // planning_input.set_q_jerk(q_jerk_close);
-    concerned_start_ratio_ = motion_plan_concerned_start_ratio0;
-  } else {
-    planning_input.set_q_ref_theta(config_.q_ref_theta_close);
-    planning_input.set_q_jerk(q_jerk_close);
-    concerned_start_ratio_ = motion_plan_concerned_start_ratio1;
-  }
-}
+void LateralMotionPlanningWeight::MakeDynamicWeight(planning::common::LateralPlanningInput &planning_input) {
+  std::array<double, 3> xp_v{5.0, 10.0, 20.0};
+  std::array<double, 3> fp_qxy{config_.map_qxy0, config_.map_qxy1, config_.map_qxy2};
+  double q_xy = planning::interp(ego_vel_, xp_v, fp_qxy);
+  planning_input.set_q_ref_x(q_xy);
+  planning_input.set_q_ref_y(q_xy);
 
-void LateralMotionPlanningWeight::SetJerkWeightByBigBias(
-    planning::common::LateralPlanningInput &planning_input) {
-  double q_jerk_far = config_.q_jerk_far;
-  double motion_plan_concerned_start_ratio2 = config_.motion_plan_concerned_start_ratio2;
-  if  (lateral_motion_scene_ == BEND) {
-    q_jerk_far = config_.q_jerk_bend_far;
-    motion_plan_concerned_start_ratio2 = config_.motion_plan_concerned_start_ratio_bend2;
-  }
-  if ((init_dis_to_ref_ > config_.init_ref_dist_far_thr) &&
-      (init_ref_theta_error_ > config_.init_ref_theta_far_thr)) {
-    planning_input.set_q_jerk(q_jerk_far);
-    concerned_start_ratio_ = motion_plan_concerned_start_ratio2;
-  } else if ((init_dis_to_ref_ < (-config_.init_ref_dist_far_thr)) &&
-             (init_ref_theta_error_ < (-config_.init_ref_theta_far_thr))) {
-    planning_input.set_q_jerk(q_jerk_far);
-    concerned_start_ratio_ = motion_plan_concerned_start_ratio2;
-  }
-}
+  std::array<double, 4> xp_xy{0.1, 0.2, 0.4, 0.8};
+  std::array<double, 4> fp_qjerk0{config_.map1_qjerk0, config_.map1_qjerk1, config_.map1_qjerk2, config_.map1_qjerk3};
+  std::array<double, 4> fp_qjerk1{config_.map2_qjerk0, config_.map2_qjerk1, config_.map2_qjerk2, config_.map2_qjerk3};
+  double q_jerk0 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk0);
+  double q_jerk1 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk1);
 
-void LateralMotionPlanningWeight::SetWeightByEnterAutoTime(const double auto_time, planning::common::LateralPlanningInput &planning_input) {
-  const double q_jerk = planning_input.q_jerk();
-  std::array<double, 3> xp_time{0.1, 1.5, config_.auto_start_time_thr};
-  std::array<double, 3> fp_qjerk{config_.q_jerk_auto, 0.9 * config_.q_jerk_auto, q_jerk};
-  double q_jerk_quto = interp(auto_time, xp_time, fp_qjerk);
-  planning_input.set_q_jerk(q_jerk_quto);
-}
-
-void LateralMotionPlanningWeight::SetPosBoundWeightByLane(bool direction,
-    planning::common::LateralPlanningInput &planning_input) {
-  if (!direction) {
-    if ((init_dis_to_ref_ > 0.0) &&
-        (init_ref_theta_error_ > 0.0)) {
-      planning_input.set_q_soft_corridor(config_.q_soft_corridor);
-      planning_input.set_q_hard_corridor(config_.q_hard_corridor);
-    }
-  } else {
-    if ((init_dis_to_ref_ < 0.0) &&
-              (init_ref_theta_error_ < 0.0)) {
-      planning_input.set_q_soft_corridor(config_.q_soft_corridor);
-      planning_input.set_q_hard_corridor(config_.q_hard_corridor);
-    }
-  }
-}
-
-void LateralMotionPlanningWeight::CalculateConcernedStartRatio() {
-  concerned_start_ratio_ = config_.motion_plan_concerned_start_ratio0;
-  if (lateral_motion_scene_ == BEND) {
-    concerned_start_ratio_ = config_.motion_plan_concerned_start_ratio_bend0;
-  } else if (lateral_motion_scene_ == AVOID) {
-    concerned_start_ratio_ = config_.motion_plan_concerned_start_ratio_avoid;
-  }
+  planning_input.set_q_jerk(q_jerk1);
+  concerned_start_q_jerk_ = q_jerk0;
 }
 
 }  // namespace lateral_planning
