@@ -396,6 +396,8 @@ class SlotManagement {
 
     std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_map;
 
+    bool first_enter_slot_mangement = true;
+
     void Reset() {
       uss_raw_dist_vec.clear();
       released_slot_info_vec.clear();
@@ -410,6 +412,7 @@ class SlotManagement {
       ego_slot_info.Reset();
       obstacle_point_vec.clear();
       obs_pt_map.clear();
+      first_enter_slot_mangement = true;
     }
   };
 
@@ -520,6 +523,8 @@ class SlotManagement {
       const ParkingFusion::ParkingFusionSlot& parking_fusion_slot);
 
   void Log();
+
+  void FinishApa();
 };
 
 }  // namespace planning

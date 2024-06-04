@@ -80,6 +80,9 @@ bool SlotManagement::Update(
       ->mutable_slot_management_info()
       ->CopyFrom(frame_.slot_management_info);
 
+  // apa finish
+  FinishApa();
+
   Log();
 
   return update_slot_in_searching_flag || update_slot_in_parking_flag;
@@ -153,6 +156,14 @@ void SlotManagement::Preprocess() {
 
   measurement.v_ego =
       frame_.localization_ptr->pose().linear_velocity_from_wheel();
+
+  if (frame_.first_enter_slot_mangement) {
+    frame_.first_enter_slot_mangement = false;
+    frame_.slot_info_window_vec.clear();
+    for (size_t i = 0; i < frame_.slot_info_window_vec.size(); ++i) {
+      frame_.slot_info_window_vec[i].SetOccupied(true);
+    }
+  }
 }
 
 bool SlotManagement::IsInSearchingState() const {
@@ -1829,18 +1840,24 @@ bool SlotManagement::UpdateEgoSlotInfo(
     pt[i] << slot_points[i].x(), slot_points[i].y();
   }
 
-  const double slot_length = apa_param.GetParam().car_length +
-                             apa_param.GetParam().slot_compare_to_car_length;
-
   const auto pM01 = 0.5 * (pt[0] + pt[1]);
-  // const auto pM23 = 0.5 * (pt[2] + pt[3]);
+  const auto pM23 = 0.5 * (pt[2] + pt[3]);
+  const double real_slot_length = (pM01 - pM23).norm();
+
+  const double virtual_slot_length =
+      apa_param.GetParam().car_length +
+      apa_param.GetParam().slot_compare_to_car_length;
+
+  const double use_slot_length =
+      std::min(real_slot_length, virtual_slot_length);
+
   const auto t = (pt[1] - pt[0]).normalized();
   // const auto n = (pM01 - pM23).normalized();
   const auto n = Eigen::Vector2d(t.y(), -t.x());
-  ego_slot_info.slot_origin_pos = pM01 - slot_length * n;
+  ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;
-  ego_slot_info.slot_length = slot_length;
+  ego_slot_info.slot_length = use_slot_length;
   ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
 
   ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
@@ -1865,10 +1882,11 @@ bool SlotManagement::UpdateEgoSlotInfo(
     ego_slot_info.limiter.first << limiter.first.x(), limiter.first.y();
     ego_slot_info.limiter.second << limiter.second.x(), limiter.second.y();
   }
+
   // cal target pos
   ego_slot_info.target_ego_pos_slot
-      << (ego_slot_info.limiter.first.x() + ego_slot_info.limiter.second.x()) /
-             2.0,
+      << (ego_slot_info.limiter.first.x() + ego_slot_info.limiter.second.x()) *
+             0.5,
       apa_param.GetParam().terminal_target_y;
 
   ego_slot_info.target_ego_heading_slot =
@@ -2396,6 +2414,22 @@ void SlotManagement::Log() {
   }
   JSON_DEBUG_VECTOR("slm_selected_obs_x", nearby_obs_x_vec, 2)
   JSON_DEBUG_VECTOR("slm_selected_obs_y", nearby_obs_y_vec, 2)
+}
+
+void SlotManagement::FinishApa() {
+  if (frame_.func_state_ptr->current_state() ==
+          FuncStateMachine::PARK_IN_COMPLETED ||
+      frame_.func_state_ptr->current_state() ==
+          FuncStateMachine::PARK_IN_SECURE ||
+      frame_.func_state_ptr->current_state() ==
+          FuncStateMachine::PARK_OUT_COMPLETED ||
+      frame_.func_state_ptr->current_state() ==
+          FuncStateMachine::PARK_OUT_SECURE) {
+    frame_.Reset();
+    DebugInfoManager::GetInstance()
+        .GetDebugInfoPb()
+        ->clear_slot_management_info();
+  }
 }
 
 }  // namespace planning

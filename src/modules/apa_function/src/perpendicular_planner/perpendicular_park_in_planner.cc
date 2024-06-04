@@ -207,10 +207,13 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         apa_param.GetParam().car_length +
         apa_param.GetParam().slot_compare_to_car_length;
 
-    ego_slot_info.slot_origin_pos = pM01 - virtual_slot_length * n;
+    const double use_slot_length =
+        std::min(real_slot_length, virtual_slot_length);
+
+    ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
     ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
     ego_slot_info.slot_origin_heading_vec = n;
-    ego_slot_info.slot_length = virtual_slot_length;
+    ego_slot_info.slot_length = use_slot_length;
     ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
 
     ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
