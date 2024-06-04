@@ -255,6 +255,10 @@ void SccLongitudinalMotionPlanner::AssembleInput() {
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound_startmode);
   } else if (start_stop_info == common::StartStopInfo::STOP ||
              v_refs.front().first < config_.v_target_stop_thrd) {
+    // TODO: config_.v_target_stop_thrd(0.3) doesn't work in e0y, but need to
+    // work in gasoline car; q_ref_vel_stopmode(70) q_acc_stopmode(1.5)
+    // q_jerk_stopmode(0.5) are not applied in e0y, but need to be applied in
+    // gasoline car
     planning_input_.set_q_ref_pos(config_.q_ref_pos_stopmode);
     planning_input_.set_q_ref_vel(config_.q_ref_vel_stopmode);
     planning_input_.set_q_acc(config_.q_acc_stopmode);
