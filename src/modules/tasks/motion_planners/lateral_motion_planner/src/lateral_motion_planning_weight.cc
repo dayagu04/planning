@@ -55,12 +55,16 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         concerned_start_q_jerk_ = config_.q_jerk_lane_change2;
       }
       if (config_.use_lk_qxy_in_lc) {
-        if (std::fabs(init_dis_to_ref_) > 0.0) {
+        if ((std::fabs(init_dis_to_ref_) > 0.0) || (std::fabs(ego_l_) < config_.lane_change_ego_l_thr2)){
           planning_input.set_q_ref_x(config_.q_ref_x);
           planning_input.set_q_ref_y(config_.q_ref_y);
           planning_input.set_q_jerk(config_.q_jerk_lane_change3);
           concerned_start_q_jerk_ = config_.q_jerk_lane_change3;
         }
+      }
+      if ((is_lane_change_back_)) {
+        planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
+        concerned_start_q_jerk_ = config_.q_jerk_lane_change_back;
       }
       break;
     }

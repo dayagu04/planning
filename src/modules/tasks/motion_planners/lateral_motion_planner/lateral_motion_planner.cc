@@ -310,10 +310,15 @@ void LateralMotionPlanner::AssembleInput() {
   }
   planning_weight_ptr_->SetEgoVel(session_->environmental_model().get_ego_state_manager()->ego_v());
   planning_weight_ptr_->SetEgoL(reference_path_ptr->get_frenet_ego_state().l());
+  planning_weight_ptr_->SetLCBackFlag(false);
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
   if (lane_change_scene) {
+    const auto target_state = session_->planning_context().lane_change_decider_output().coarse_planning_info.target_state;
+    if (target_state == ROAD_LC_LBACK || target_state == ROAD_LC_RBACK) {
+      planning_weight_ptr_->SetLCBackFlag(true);
+    }
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
   } else if (lateral_offset_decider_output.is_valid) {
