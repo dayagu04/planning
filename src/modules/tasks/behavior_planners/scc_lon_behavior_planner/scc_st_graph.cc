@@ -847,8 +847,8 @@ void StGraphGenerator::UpdateNearObstacles(
               (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
                (CUIIN_WIDTH + 0.01 * v_ego));
         } else {
-          cutin_car =
-              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH_STATIC);
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <=
+                       CUIIN_WIDTH_STATIC);
           potential_cutin_car_1 =
               (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
                (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
@@ -1917,11 +1917,6 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
         (v_ego < v_start && is_lead_static &&
          std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
     bool cruise_condition = v_ego > v_startmode || (v_last_target_ > v_target_);
-    bool cruise_to_start_condition = false;
-    if (v_ego < v_startmode && (v_last_target_ < v_target_ &&
-                                v_target_ > config_.v_target_stop_thrd)) {
-      cruise_to_start_condition = true;
-    }
     bool lead_one_start =
         (lead_one.v_lead() > obstacle_v_start &&
          (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
@@ -1940,10 +1935,6 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
       LOG_DEBUG("The distance error of STOP is [%f]m \n",
                 lead_one.d_rel() - desire_distance);
-    } else if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
-               cruise_to_start_condition) {
-      // CRUISE --> START
-      start_stop_info_.set_state(common::StartStopInfo::START);
     } else if (start_stop_info_.state() == common::StartStopInfo::STOP &&
                start_condition) {
       // STOP --> START
@@ -2063,7 +2054,10 @@ void StGraphGenerator::MakeAccBound() {
   // acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
-  acc_bound_.second = std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
+  acc_bound_.second =
+      std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
+  // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
+  // in gasoline car
   if (start_stop_info_.state() == common::StartStopInfo::START) {
     acc_bound_.first = -config_.acc_start_max_bound;
     acc_bound_.second = config_.acc_start_max_bound;
