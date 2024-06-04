@@ -38,7 +38,7 @@ static const double kColBufferInSlot = 0.3;
 static const double kSmallColBufferInSlot = 0.1;
 static const double kColBufferOutSlot = 0.5;
 
-static const double kLatColBufferOutSlot = 0.2;
+static const double kLatColBufferOutSlot = 0.25;
 static const double kLatColBufferInSlot = 0.0;
 
 static const size_t kMaxParallelParkInSegmentNums = 15;
@@ -535,6 +535,12 @@ const bool ParallelPathPlanner::MonoStepPlanOnceWithShift(
                             kColBufferInSlot)) {
     std::cout << "calc forward arc limit error!" << std::endl;
     return false;
+  }
+
+  if (!CheckParkOutCornerSafeWithObsPin(forward_arc)) {
+    is_drive_out_safe = false;
+    DEBUG_PRINT("first arc collided with obs Pin!");
+    return true;
   }
 
   if (is_drive_out_safe) {
@@ -1214,6 +1220,11 @@ const bool ParallelPathPlanner::InverseSearchLoopInSlot(
     return true;
   }
   std::cout << "ego can't park out at first!" << std::endl;
+
+  CollisionDetector::Paramters param;
+  param.lat_inflation = 0.25;
+  collision_detector_ptr_->SetParam(param);
+  DEBUG_PRINT("lat inflat = " << param.lat_inflation);
 
   std::cout << "-------------- start loop -----------------------" << std::endl;
   bool loop_success = false;
