@@ -102,7 +102,8 @@ class TrackletMaintainer {
                                   TrackedObject *temp_lead_one);
 
   bool is_potential_avoiding_car(TrackedObject &item, TrackedObject *lead_one,
-                                 double v_ego, double lane_width, int scenario,
+                                 TrackedObject *lead_two, double v_ego,
+                                 double lane_width, int scenario,
                                  bool borrow_bicycle_lane, double dist_rblane,
                                  bool tleft_lane, bool rightest_lane,
                                  double dist_intersect, double intersect_length,

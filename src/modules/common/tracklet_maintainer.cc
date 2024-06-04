@@ -599,7 +599,7 @@ void TrackletMaintainer::calc(
 
       item->frenet_transform_valid =
           fill_info_with_refline(*item, d_poly_offset);
-      if (!hdmap_valid_) {
+      if (!session_->environmental_model().location_valid()) {
         fill_deriv_info(*item);
       }
       // only use obstacle with camera source
@@ -636,8 +636,8 @@ void TrackletMaintainer::calc(
       continue;
     }
     tr->is_avd_car = is_potential_avoiding_car(
-        *tr, lead_cars.lead_one, v_ego, lane_width, scenario,
-        borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
+        *tr, lead_cars.lead_one, lead_cars.lead_two, v_ego, lane_width,
+        scenario, borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
         dist_intersect, intersect_length, isRedLightStop);
     if (tr->is_avd_car) {
       avd_car_id.emplace_back(tr->track_id);
@@ -1798,8 +1798,8 @@ bool TrackletMaintainer::is_potential_temp_lead_two(
 }
 
 bool TrackletMaintainer::is_potential_avoiding_car(
-    TrackedObject &item, TrackedObject *lead_one, double v_ego,
-    double lane_width, int scenario, bool borrow_bicycle_lane,
+    TrackedObject &item, TrackedObject *lead_one, TrackedObject *lead_two,
+    double v_ego, double lane_width, int scenario, bool borrow_bicycle_lane,
     double dist_rblane, bool tleft_lane, bool rightest_lane,
     double dist_intersect, double intersect_length, bool isRedLightStop) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
@@ -1812,6 +1812,12 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double oversize_veh_addition_buffer = config.oversize_veh_addition_buffer;
   double traffic_cone_thr = config.traffic_cone_thr;
   double static_obs_buffer = config.static_obs_buffer;
+  double near_car_hysteresis = config.near_car_hysteresis;
+  double in_range_v = config.in_range_v;
+  double in_range_v_hysteresis = config.in_range_v_hysteresis;
+  double potential_near_car_thr = config.potential_near_car_thr;
+  double potential_near_car_v_ub = config.potential_near_car_v_ub;
+  double potential_near_car_v_lb = config.potential_near_car_v_lb;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1820,6 +1826,38 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // TODO: ego_state relative
   double l_ego = 0.;
   double dist_limit;
+
+  // for Intersection
+  double farthest_distance = DBL_MAX;
+  if (lead_one != nullptr && lead_one->v_lead < 1) {
+    // can not avoid
+    if ((item.d_min_cpath <
+         std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
+                  1.8)) ||
+        (item.d_max_cpath >
+         std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
+                  -1.8))) {
+      farthest_distance = std::min(farthest_distance, lead_one->d_rel);
+    }
+  }
+  if (lead_two != nullptr && lead_two->v_lead < 1) {
+    // can not avoid
+    if ((item.d_min_cpath <
+         std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
+                  1.8)) ||
+        (item.d_max_cpath >
+         std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
+                  -1.8))) {
+      farthest_distance = std::min(farthest_distance, lead_two->d_rel);
+    }
+  }
+  if (item.d_rel > farthest_distance + 5 ||
+      (item.d_rel > farthest_distance &&
+       ((item.d_max_cpath < 0 &&
+         std::fabs(item.d_max_cpath) > lane_width * 0.5) ||
+        (item.d_min_cpath > 0 && item.d_min_cpath > lane_width * 0.5)))) {
+    return false;
+  }
 
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
@@ -1834,13 +1872,19 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     lat_safety_buffer += oversize_veh_addition_buffer;
   }
 
+  // hysteresis
+  if (item.is_avd_car) {
+    near_car_d_lane_thr = near_car_d_lane_thr * near_car_hysteresis;
+    in_range_v = in_range_v * in_range_v_hysteresis;
+  }
+
   // addition buffer for VRU
   if (is_VRU(item.type)) {
     lat_safety_buffer += 0.2;
   }
 
   bool is_not_full_in_road = (std::fabs(item.y_rel) > 0.0);
-  bool is_in_range = (item.d_rel < 20.0 && item.v_rel < 1.0);
+  bool is_in_range = (item.d_rel < 20.0 && item.v_rel < in_range_v);
   bool is_about_to_enter_range =
       (item.d_rel < std::min(std::fabs(10.0 * item.v_rel), 50.0) &&
        item.v_rel < -2.5);
@@ -1857,10 +1901,18 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         bool is_same_side = ((item.d_min_cpath > 0 && item.d_max_cpath > 0) ||
                              (item.d_min_cpath <= 0 && item.d_max_cpath <= 0));
 
+        double potential_dist_limit = lane_width * 0.5 + potential_near_car_thr;
         bool is_need_avoid =
             (item.d_max_cpath < 0 &&
              std::fabs(item.d_max_cpath) < dist_limit) ||
             (item.d_min_cpath > 0 && item.d_min_cpath < dist_limit) ||
+            (item.d_max_cpath < 0 &&
+             std::fabs(item.d_max_cpath) < potential_dist_limit &&
+             item.v_lat < potential_near_car_v_lb &&
+             item.v_lat > potential_near_car_v_ub) ||
+            (item.d_min_cpath > 0 && item.d_min_cpath < potential_dist_limit &&
+             item.v_lat < potential_near_car_v_lb &&
+             item.v_lat > potential_near_car_v_ub) ||
             (borrow_bicycle_lane && item.d_max_cpath > 0 &&
              item.d_min_cpath < 0 && item.v_lead < 0.5);
 
@@ -2040,8 +2092,10 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         // 可以借用自行车道 || 自车在最右车道
         borrow_bicycle_lane || rightest_lane) {
       // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
-      if ((item.v_lat > -0.3 && item.v_lat < 0.3 && is_car(item.type)) ||
-          (std::fabs(item.v_lat) < 0.3 && !is_car(item.type))) {
+      if ((lead_one == nullptr ||
+           (lead_one != nullptr && item.track_id != lead_one->track_id)) &&
+          ((item.v_lat > -0.3 && item.v_lat < 0.3 && is_car(item.type)) ||
+           (std::fabs(item.v_lat) < 0.3 && !is_car(item.type)))) {
         item.ncar_count =
             std::min(item.ncar_count + gap, 100 * planning_cycle_time);
       }
