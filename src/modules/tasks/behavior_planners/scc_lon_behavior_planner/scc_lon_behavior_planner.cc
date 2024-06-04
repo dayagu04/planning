@@ -1,5 +1,6 @@
 #include "scc_lon_behavior_planner.h"
 
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -10,6 +11,30 @@
 #include "trajectory1d/trajectory1d.h"
 #include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
 
+namespace {
+
+// far slow car jlt
+constexpr double check_time = 1.6;
+constexpr double kMinFarTimeGap = 1.8;
+constexpr double kDefaultFollowMinDist = 3.0;
+constexpr double kPreviewTime = 0.5;
+constexpr double kSpeedBuffer = 1.0;
+constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
+constexpr double kFarDistFollowTimeGap = 1.8;
+constexpr double kNearDistFollowTimeGap = 1.2;
+constexpr double kFarDistanceThreshold = 20.0;
+constexpr double kNearDistanceThreshold = 10.0;
+constexpr double kFarPreviewTime = 6.0;
+constexpr double kNearPreviewTime = 2.0;
+constexpr double kSpeedLower = 6.0;
+constexpr double kSpeedUpper = 20.0;
+constexpr double kAccMinLower = -0.7;
+constexpr double kAccMinUpper = -0.3;
+constexpr double kAccMax = 1.5;
+constexpr double kJerkMin = -1.0;
+constexpr double kJerkMax = 0.5;
+constexpr double kPositionPrecision = 0.3;
+}
 namespace planning {
 
 SccLonBehaviorPlanner::SccLonBehaviorPlanner(
@@ -530,7 +555,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   sref_farslow.resize(config_.lon_num_step + 1);
   sref_stable.resize(config_.lon_num_step + 1);
   jlt_status =
-      GenerateFarSlowCarFollowCurve(sref_farslow, lon_behav_plan_input_);
+      GenerateFarSlowCarFollowCurve(sref_farslow);
   if (jlt_status && config_.enable_jlt) {
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       // lon_behav_output_.s_refs[i].first =
@@ -539,16 +564,6 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     }
   }
   JSON_DEBUG_VALUE("jlt_status_farslow", jlt_status)
-  // jlt_status =
-  //     GenerateStableFollowSlowCurve(sref_stable, lon_behav_plan_input_);
-  // if (jlt_status) {
-  //   for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
-  //     // lon_behav_output_.s_refs[i].first =
-  //     //     std::fmin(lon_behav_output_.s_refs[i].first, sref_stable[i]);
-  //     lon_behav_output_.s_refs[i].first = sref_stable[i];
-  //   }
-  // }
-  // JSON_DEBUG_VALUE("jlt_status_stable", jlt_status)
 
   // 10.update sv boundary
   SVBoundary sv_boundary_tmp = sv_boundaries.front();
@@ -693,20 +708,12 @@ void SccLonBehaviorPlanner::UpdateHMI() {
 }
 
 void SccLonBehaviorPlanner::GetHardBounds() {
-  const auto s_bounds = lon_behav_output_.lead_bounds;
-  double size = s_bounds.size();
+  const auto& s_bounds = lon_behav_output_.lead_bounds;
+  size_t size = s_bounds.size();
   hard_bounds_.reserve(s_bounds.size());
   for (size_t i = 0; i < size; ++i) {
     STBound tmp_bound;
     for (auto &bound : s_bounds[i]) {
-      // tmp_bound.lower = std::max(bound.lower, tmp_bound.lower);
-      // if (bound.s_lead > tmp_bound.lower) {
-      //   tmp_bound.lower = bound.lower;
-      //   tmp_bound.vel = bound.vel;
-      //   tmp_bound.acc = bound.acc;
-      //   tmp_bound.id = bound.bound_info.id;
-      // }
-      // tmp_bound.upper = std::min(bound.upper, tmp_bound.upper);
       if (bound.s_lead < tmp_bound.upper) {
         tmp_bound.upper = bound.s_lead;
         tmp_bound.vel = bound.v_lead;
@@ -719,16 +726,12 @@ void SccLonBehaviorPlanner::GetHardBounds() {
 }
 
 bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
-    std::vector<double> &s_refs,
-    std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_plan_input) {
+    std::vector<double> &s_refs) {
   // check far slow car
   const int check_idx = 8;
   const auto& check_st = hard_bounds_[check_idx];
 
-  constexpr double check_time = 1.6;
-  constexpr double kMinFarTimeGap = 1.8;
   constexpr double min_far_distance_threshold = 15.0;
-  constexpr double kDefaultFollowMinDist = 3.0;
   const double add_time_gap = 0.3;
   // const double add_time_gap = std::fmax(0.0, matched_headway - 1.2);
   const double far_time_gap = kMinFarTimeGap + add_time_gap;
@@ -747,27 +750,17 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
     return false;
   }
 
-  constexpr double kPreviewTime = 0.5;
   const double preview_ego_v =
       lon_init_state_[1] + lon_init_state_[2] * kPreviewTime;
-  constexpr double kSpeedBuffer = 5.5;
 
   // check preview_ego_v
   if (preview_ego_v - check_st.vel < kSpeedBuffer) {
     return false;
   }
 
-  constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
   if (lon_init_state_[1] < kEgoSpeedThreshold) {
     return false;
   }
-
-  constexpr double kFarDistFollowTimeGap = 1.8;
-  constexpr double kNearDistFollowTimeGap = 1.2;
-  constexpr double kFarDistanceThreshold = 20.0;
-  constexpr double kNearDistanceThreshold = 10.0;
-  constexpr double kFarPreviewTime = 6.0;
-  constexpr double kNearPreviewTime = 2.0;
 
   const double far_preview_dist = kFarPreviewTime * lon_init_state_[1];
   const double near_preview_dist = kNearPreviewTime * lon_init_state_[1];
@@ -795,14 +788,6 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   coordinate_param.v = vel;
 
   // using jlt to generate s v curve
-  constexpr double kSpeedLower = 6.0;
-  constexpr double kSpeedUpper = 20.0;
-  constexpr double kAccMinLower = -0.7;
-  constexpr double kAccMinUpper = -0.3;
-  constexpr double kAccMax = 1.5;
-  constexpr double kJerkMin = -1.0;
-  constexpr double kJerkMax = 0.5;
-
   double acc_min = planning_math::LerpWithLimit(
       kAccMinLower, kSpeedLower, kAccMinUpper, kSpeedUpper, lon_init_state_[1]);
 
@@ -823,8 +808,6 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   state_limit.j_max = kJerkMax;
 
   // const int32_t kMaxLoopNum = 1;
-  constexpr double kPositionPrecision = 0.3;
-
   double acc_min_lower = -1.5;
   double acc_min_upper = state_limit.a_min;
   double a_min = 0.5 * (acc_min_upper + acc_min_lower);
@@ -834,39 +817,23 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
       VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
           init_state, state_limit, coordinate_param, kPositionPrecision);
 
-  std::vector<std::pair<double, double>> st_path_ego;
-  std::vector<std::pair<double, double>> vt_ego;
   const double delta_time = 0.2;
   s_refs[0] = 0.0;
-  for (double i = 1; i <= 25; i++) {
+  for (int i = 1; i <= 25; i++) {
     double time = i * delta_time;
     double s_ego = far_slow_curve.Evaluate(0, time);
-    st_path_ego.emplace_back(time, s_ego);
-    double v_ego = far_slow_curve.Evaluate(1, time);
-    vt_ego.emplace_back(time, v_ego);
+    // double v_ego = far_slow_curve.Evaluate(1, time);
     s_refs[i] = s_ego;
     // safty check
     if (s_ego > hard_bounds_[i].upper) {
       return false;
     }
   }
-  // for (int loop_num = 0; loop_num < kMaxLoopNum; ++loop_num) {
-  //   if (loop_num == kMaxLoopNum - 1) {
-  //     return;
-  //   }
-  // if (IsSafeFarSlowCurve(far_slow_curve)) {
-  //   acc_min_lower = a_min;
-  // } else {
-  //   acc_min_upper = a_min;
-  // }
-  // a_min = 0.5 * (acc_min_upper + acc_min_lower);
-  // }
   return true;
 }
 
 bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
-    std::vector<double> &s_refs,
-    std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_plan_input) {
+    std::vector<double> &s_refs) {
   // for stable follow trajectory
   const double stable_vehicle_max_acc = 0.3;
   const double stable_vehicle_min_acc = -0.8;
@@ -885,8 +852,8 @@ bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
   }
 
   // check lane change status
-  const auto &lc_request = lon_behav_plan_input->lat_output().lc_request();
-  const auto &lc_status = lon_behav_plan_input->lat_output().lc_status();
+  const auto &lc_request = lon_behav_plan_input_->lat_output().lc_request();
+  const auto &lc_status = lon_behav_plan_input_->lat_output().lc_status();
   const bool is_in_lane_change =
       ((lc_request != "none") && (lc_status != "none"));
   if (is_in_lane_change) {
@@ -961,15 +928,11 @@ bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
       VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
           init_state, state_limit, relative_coordinate_param, p_precision);
 
-  std::vector<std::pair<double, double>> st_path_ego;
-  std::vector<std::pair<double, double>> vt_ego;
   const double delta_time = 0.2;
-  for (double i = 0; i <= 25; i++) {
+  for (int i = 0; i <= 25; i++) {
     double time = i * delta_time;
     double s_ego = follow_stable_target_trajectory.Evaluate(0, time);
-    st_path_ego.emplace_back(time, s_ego);
-    double v_ego = follow_stable_target_trajectory.Evaluate(1, time);
-    vt_ego.emplace_back(time, v_ego);
+    // double v_ego = follow_stable_target_trajectory.Evaluate(1, time);
     s_refs[i] = s_ego;
   }
   return true;

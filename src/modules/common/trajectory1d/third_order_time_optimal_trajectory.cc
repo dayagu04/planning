@@ -1,4 +1,5 @@
 #include "third_order_time_optimal_trajectory.h"
+#include <math.h>
 
 #include <cmath>
 #include <iostream>
@@ -204,7 +205,7 @@ ThirdOrderParam ThirdOrderTimeOptimalTrajectory::PositionTargetSolver(
 
   if (GetSign(pfb - state_limit_pb.p_end) * dp <= 0) {
     constexpr double kEpsilon = 1e-10;
-    if (vc == 0.0) {
+    if (fabs(vc) < kEpsilon) {
       tc = (state_limit_pb.p_end - pfb) / (vc + kEpsilon);
     } else {
       tc = (state_limit_pb.p_end - pfb) / vc;  // incase vc == 0.0;
