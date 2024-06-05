@@ -889,8 +889,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   double relative_v_x = fusion_object.common_info.relative_velocity.x;
   double relative_v_y = fusion_object.common_info.relative_velocity.y;
 
-  // The agent is slow when it's speed < 4km/h (person's speed)
-  object_is_slow = prediction_object.speed < 1.1 ? true : false;
+  // The agent is slow when it's speed < 10km/h (person's speed)
+  object_is_slow = prediction_object.speed < 2.78 ? true : false;
   // For no prediction schemes, use heading angle when obstacles are slow
   if (object_is_slow) {
     prediction_object.relative_theta =
