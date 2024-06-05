@@ -39,7 +39,7 @@ init_info_columns = [
       ]
 tab2 = DataTable(source = init_info, columns = init_info_columns, width = 300, height = 400)
 
-param_name = ["q_ref_xy", "q_ref_theta", "q_ref_theta_real", "q_acc", "q_jerk", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_safe_bound", "q_hard_bound"]
+param_name = ["q_ref_xy", "q_ref_theta", "q_ref_theta_real", "q_acc", "q_jerk", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_safe_bound", "q_hard_bound", "start_q_jerk"]
 param = ColumnDataSource(data = {'name':[], 'origin param':[], 'new param':[]})
 param_columns = [
         TableColumn(field="name", title="name"),
@@ -107,9 +107,11 @@ f11 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
 hover10 = HoverTool(renderers=[f10], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
+hover11 = HoverTool(renderers=[f11], tooltips=[('s', '@refline_s'), ('radius', '@refline_curvature')], mode='vline')
 fig8.add_tools(hover8)
 fig9.add_tools(hover9)
 fig10.add_tools(hover10)
+fig10.add_tools(hover11)
 fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
 fig9.toolbar.active_scroll = fig9.select_one(WheelZoomTool)
 fig10.toolbar.active_scroll = fig10.select_one(WheelZoomTool)
@@ -144,7 +146,7 @@ class LocalViewSlider:
     self.complete_follow = ipywidgets.Checkbox(value=lat_motion_plan_input0.complete_follow, description='complete_follow')
     self.motion_plan_concerned_start_index = ipywidgets.IntText(value=0, description='motion_plan_concerned_start_index:')
     self.motion_plan_concerned_end_index = ipywidgets.IntText(value=lat_motion_plan_input0.motion_plan_concerned_index, description='motion_plan_concerned_end_index:')
-    self.q_start_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_start_jerk",min=0.0, max=200.0, value=0.0, step=0.01)
+    self.q_start_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_start_jerk",min=0.0, max=200.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
     self.curv_factor_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "curv_factor",min=0.0, max=1.0, value=lat_motion_plan_input0.curv_factor, step=0.01)
 
     self.safe_ub_start_idx = ipywidgets.IntText(value=0, description='safe_ub_start_idx:')
@@ -260,6 +262,7 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     origin_param_vec.append(lat_motion_plan_input.jerk_bound)
     origin_param_vec.append(lat_motion_plan_input.q_soft_corridor)
     origin_param_vec.append(lat_motion_plan_input.q_hard_corridor)
+    origin_param_vec.append(planning_json['concerned_start_q_jerk'])
 
     if not use_new_param:
       q_ref_xy = lat_motion_plan_input.q_ref_x
@@ -274,6 +277,8 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
       q_hard_bound = lat_motion_plan_input.q_hard_corridor
       complete_follow = lat_motion_plan_input.complete_follow
       motion_plan_concerned_end_index = lat_motion_plan_input.motion_plan_concerned_index
+      if planning_json['concerned_start_q_jerk'] > 0:
+        q_start_jerk = planning_json['concerned_start_q_jerk']
 
     new_param_vec = []
     new_param_vec.append(q_ref_xy)
@@ -287,6 +292,7 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     new_param_vec.append(jerk_bound)
     new_param_vec.append(q_safe_bound)
     new_param_vec.append(q_hard_bound)
+    new_param_vec.append(q_start_jerk)
 
     param.data.update({
       'name': param_name,

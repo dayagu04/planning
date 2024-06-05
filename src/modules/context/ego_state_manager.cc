@@ -272,8 +272,17 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   //                                      init_point);
   // const auto s_init = projection_spline.GetOutput().s_proj;
   // const double &lon_err = s_init - s_proj;
-  const double theta_err =
-      lat_init_state.theta() - ego_state->ego_pose_raw().theta;
+  const double lat_init_theta = lat_init_state.theta();
+  double theta_err =
+      lat_init_theta - ego_state->ego_pose_raw().theta;
+  const double pi2 = 2.0 * M_PI;
+  if (theta_err > M_PI) {
+    lat_init_state.set_theta(lat_init_theta - pi2);
+    theta_err -= pi2;
+  } else if (theta_err < -M_PI) {
+    lat_init_state.set_theta(lat_init_theta + pi2);
+    theta_err += pi2;
+  }
   const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                   init_point.y() - proj_point.y());
   const double dist_err =
