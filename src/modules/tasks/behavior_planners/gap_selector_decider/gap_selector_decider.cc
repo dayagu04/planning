@@ -362,6 +362,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
     is_lc_back_scene = true;
   }
 
+  gap_selector_decider_output.gap_selector_trustworthy = false;
   if (is_lc_scene) {
     double lc_end_s, remain_lc_time = lc_total_time_ - lc_timer_;
     RefineLCTime(&lc_end_s, &remain_lc_time, avoid_lat_offset);
@@ -377,7 +378,12 @@ GapSelectorStatus GapSelectorDecider::Update() {
     //   GenerateLinearRefTrajectory(is_left, traj_points);
     // }
 
-    gap_selector_decider_output.gap_selector_trustworthy = true;
+    gap_selector_decider_output.gap_selector_trustworthy =
+        remain_lc_time < 1.0 ? false : true;
+    gap_selector_decider_output.gap_selector_trustworthy =
+        config_.use_gs ? true
+                       : gap_selector_decider_output.gap_selector_trustworthy;
+
   } else if (is_lc_back_scene) {
     double lb_end_s, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
@@ -387,6 +393,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
       FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
                                traj_points);
+      gap_selector_decider_output.gap_selector_trustworthy = true;
     }
   }
 

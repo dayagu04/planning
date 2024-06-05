@@ -373,6 +373,7 @@
     "lb_heading_error_min":0.5,
     "lb_heading_error_max":4.5,
     "lb_t_max": 4.0,
-    "lb_t_min":3.5
+    "lb_t_min":3.5,
+    "use_gs": true
   }
 }
