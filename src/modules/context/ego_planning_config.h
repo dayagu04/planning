@@ -339,6 +339,8 @@ struct GapSelectorConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"gap_selector", "lb_heading_error_max"});
     lb_heading_error_min = read_json_keys<double>(
         json, std::vector<std::string>{"gap_selector", "lb_heading_error_min"});
+    use_gs = read_json_keys<bool>(
+        json, std::vector<std::string>{"gap_selector", "use_gs"});
   }
 
   double default_lc_time = 6.0;
@@ -350,6 +352,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double lb_t_max = 5.0;
   double lb_heading_error_min = 4.5;
   double lb_heading_error_max = 0.5;
+  bool use_gs = true;
 };
 
 struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {

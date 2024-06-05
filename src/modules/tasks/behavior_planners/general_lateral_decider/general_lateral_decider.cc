@@ -129,10 +129,11 @@ bool GeneralLateralDecider::Execute() {
 
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
-  if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-      coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-      coarse_planning_info.target_state == ROAD_LC_LBACK ||
-      coarse_planning_info.target_state == ROAD_LC_RBACK) {
+  if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
+       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
+       coarse_planning_info.target_state == ROAD_LC_LBACK ||
+       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+      gap_selector_decider_output.gap_selector_trustworthy) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
   } else {
