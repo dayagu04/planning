@@ -9,6 +9,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 #include "virtual_lane_manager.h"
 
 static double curr_time = 0;
@@ -345,14 +346,14 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
                   tr.d_rel - 3, tr.tail_rel_s - 3, tr.v_lat,
                   tr.d_min_cpath - 0.3, tr.d_max_cpath - 0.3, tr.d_rel,
                   curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr.track_id,
-                  tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0));
+                  tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0, false));
             } else {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
                   AvoidObstacleFlag::NORMAL, 0, tr.v_lead, tr.v_rel, tr.v_rel,
                   tr.d_rel - 3, tr.tail_rel_s - 3, tr.v_lat,
                   tr.d_min_cpath + 0.2, tr.d_max_cpath + 0.2, tr.d_rel,
                   curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr.track_id,
-                  tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0));
+                  tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0, false));
             }
           } else {
             if (tr.type != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
@@ -361,14 +362,14 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
                   tr.d_rel - 3, tr.tail_rel_s - 3, tr.v_lat,
                   tr.d_min_cpath + 0.3, tr.d_max_cpath + 0.3, tr.d_rel,
                   curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr.track_id,
-                  tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0));
+                  tr.type, AvoidObstacleUpdateFlag::Update, 5.0, 0, false));
             } else {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
                   AvoidObstacleFlag::NORMAL, 0, tr.v_lead, tr.v_rel, tr.v_rel,
                   tr.d_rel - 3, tr.tail_rel_s - 3, tr.v_lat,
                   tr.d_min_cpath - 0.2, tr.d_max_cpath - 0.2, tr.d_rel,
                   curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr.track_id,
-                  tr.type, AvoidObstacleUpdateFlag::Update, 0.3, 0));
+                  tr.type, AvoidObstacleUpdateFlag::Update, 0.3, 0, false));
             }
           }
 
@@ -452,7 +453,7 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
                 tr.v_lead, tr.v_rel, tr.v_rel, tr.d_rel, tr.tail_rel_s,
                 tr.v_lat, tr.d_min_cpath, tr.d_max_cpath, tr.d_rel, curr_time,
                 MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr.track_id, tr.type,
-                AvoidObstacleUpdateFlag::Update, tr.length, 0));
+                AvoidObstacleUpdateFlag::Update, tr.length, 0, false));
           }
         }
 
@@ -937,20 +938,24 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
     if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
       if (avd_obstacles_[0].track_id == avd_obstacles[0].track_id) {
         avd_obstacles[0].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
+        avd_obstacles[0].is_passive = avd_obstacles_[0].is_passive;
         TempHack(session_, avd_obstacles_[0], avd_obstacles[0]);
         avd_obstacles_[0] = avd_obstacles[0];
       } else if (avd_obstacles_[0].track_id == avd_obstacles[1].track_id) {
         avd_obstacles[1].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
-        TempHack(session_, avd_obstacles_[1], avd_obstacles[1]);
+        avd_obstacles[1].is_passive = avd_obstacles_[0].is_passive;
+        TempHack(session_, avd_obstacles_[0], avd_obstacles[1]);
         avd_obstacles_[0] = avd_obstacles[1];
       }
       if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
         if (avd_obstacles_[1].track_id == avd_obstacles[0].track_id) {
           avd_obstacles[0].first_s_to_ego = avd_obstacles_[1].first_s_to_ego;
+          avd_obstacles[0].is_passive = avd_obstacles_[1].is_passive;
           TempHack(session_, avd_obstacles_[1], avd_obstacles[0]);
           avd_obstacles_[1] = avd_obstacles[0];
         } else if (avd_obstacles_[1].track_id == avd_obstacles[1].track_id) {
           avd_obstacles[1].first_s_to_ego = avd_obstacles_[1].first_s_to_ego;
+          avd_obstacles[1].is_passive = avd_obstacles_[1].is_passive;
           TempHack(session_, avd_obstacles_[1], avd_obstacles[1]);
           avd_obstacles_[1] = avd_obstacles[1];
         }
@@ -960,12 +965,14 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
     if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
       if (avd_obstacles[0].track_id == avd_obstacles_[0].track_id) {
         avd_obstacles[0].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
+        avd_obstacles[0].is_passive = avd_obstacles_[0].is_passive;
         TempHack(session_, avd_obstacles_[0], avd_obstacles[0]);
         avd_obstacles_[0] = avd_obstacles[0];
       } else {
         if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
           if (avd_obstacles[0].track_id == avd_obstacles_[1].track_id) {
             avd_obstacles[0].first_s_to_ego = avd_obstacles_[1].first_s_to_ego;
+            avd_obstacles[0].is_passive = avd_obstacles_[1].is_passive;
             TempHack(session_, avd_obstacles_[1], avd_obstacles[0]);
             avd_obstacles_[1] = avd_obstacles[0];
           }
@@ -1214,6 +1221,22 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo3() {
       }
     }
   }
+
+  // calculate if avd_obstacle is passive
+  // TODO(clren): cancel passive flag
+  if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
+    if ((avd_obstacles_history_[0].flag == AvoidObstacleFlag::INVALID || avd_obstacles_history_[0].track_id != avd_obstacles_[0].track_id) &&
+        (avd_obstacles_history_[1].flag == AvoidObstacleFlag::INVALID || avd_obstacles_history_[1].track_id != avd_obstacles_[0].track_id)) {
+      avd_obstacles_[0].is_passive = lateral_offset_decider::IsPassive(avd_obstacles_[0]);
+    }
+
+    if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
+      if ((avd_obstacles_history_[0].flag == AvoidObstacleFlag::INVALID && avd_obstacles_history_[0].track_id != avd_obstacles_[1].track_id) &&
+          (avd_obstacles_history_[1].flag == AvoidObstacleFlag::INVALID && avd_obstacles_history_[1].track_id != avd_obstacles_[1].track_id)) {
+        avd_obstacles_[1].is_passive = lateral_offset_decider::IsPassive(avd_obstacles_[1]);
+      }
+    }
+  }
 }
 
 // avd_obstacle1 < avd_obstacle2 : return true
@@ -1287,14 +1310,7 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
 #endif
   curr_time += t_interval;
 
-  std::vector<uint> last_avd_obstacles_track_ids;
-  if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
-    last_avd_obstacles_track_ids.emplace_back(avd_obstacles_[0].track_id);
-    if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
-      last_avd_obstacles_track_ids.emplace_back(avd_obstacles_[1].track_id);
-    }
-  }
-
+  avd_obstacles_history_ = avd_obstacles_;
   if (is_ncar_ == true &&
       avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
   } else {
@@ -1329,7 +1345,7 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
     UpdateAvoidObstacleInfo3();
 
     if (avd_obstacles_[0].flag == AvoidObstacleFlag::INVALID &&
-        last_avd_obstacles_track_ids.size() > 0) {
+        avd_obstacles_history_[0].flag != AvoidObstacleFlag::INVALID) {
       flag_avd_ = true;
       avd_back_start_time_ = curr_time;
     }

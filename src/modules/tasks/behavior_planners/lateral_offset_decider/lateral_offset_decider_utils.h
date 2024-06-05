@@ -1,9 +1,14 @@
 #pragma once
 #include "lateral_obstacle.h"
+#include "utils/hysteresis_decision.h"
+#include <variant>
 
 constexpr double MAX_T_EXCEED_AVD_CAR = 6.0;
+constexpr double kSafeDistance = 1.0;
+constexpr double kDefaultLimitLateralDistance = 10.0;
+constexpr int kDefaultLimitId = -1000;
 namespace planning {
-enum AvoidObstacleFlag { INVALID = -1000, LEAD_ONE = -1, NORMAL = 0, SIDE = 1 };
+enum AvoidObstacleFlag { INVALID = kDefaultLimitId, LEAD_ONE = -1, NORMAL = 0, SIDE = 1 };
 enum AvoidObstacleUpdateFlag { Update = 1, Past = 2 };
 struct AvoidObstacleInfo {
   AvoidObstacleInfo() { Reset(); }
@@ -16,7 +21,7 @@ struct AvoidObstacleInfo {
                     double i_t_exceed_avd_obstacle,
                     double i_allow_max_opposite_offset, uint i_track_id,
                     int i_type, AvoidObstacleUpdateFlag i_update_flag,
-                    double i_length, int i_num_out_avd_area) {
+                    double i_length, int i_num_out_avd_area, bool i_is_passive) {
     flag = i_flag;
     intersection_index = i_intersection_index;
     vs = i_vs;
@@ -36,6 +41,7 @@ struct AvoidObstacleInfo {
     update_flag = i_update_flag;
     length = i_length;
     num_out_avd_area = i_num_out_avd_area;
+    is_passive = i_is_passive;
   }
 
   void Assign(AvoidObstacleFlag i_flag, double i_intersection_index,
@@ -47,7 +53,7 @@ struct AvoidObstacleInfo {
               double i_t_exceed_avd_obstacle,
               double i_allow_max_opposite_offset, uint i_track_id, int i_type,
               AvoidObstacleUpdateFlag i_update_flag, double i_length,
-              int i_num_out_avd_area) {
+              int i_num_out_avd_area, bool i_is_passive) {
     flag = i_flag;
     intersection_index = i_intersection_index;
     vs = i_vs;
@@ -67,6 +73,7 @@ struct AvoidObstacleInfo {
     update_flag = i_update_flag;
     length = i_length;
     num_out_avd_area = i_num_out_avd_area;
+    is_passive = i_is_passive;
   }
 
   void Reset() {
@@ -89,6 +96,7 @@ struct AvoidObstacleInfo {
     update_flag = AvoidObstacleUpdateFlag::Update;
     length = 0;
     num_out_avd_area = 0;
+    is_passive = false;
   };
   int flag = AvoidObstacleFlag::INVALID;
   double intersection_index;
@@ -109,20 +117,76 @@ struct AvoidObstacleInfo {
   int update_flag = AvoidObstacleUpdateFlag::Update;
   double length;
   int num_out_avd_area;  //出避让区域的次数
+  bool is_passive = false;
+};
+
+enum class AvoidWay { None, Left, Right, Center};
+enum class LimitType {None, Normal, Front, Side};
+
+enum class HysteresisType {IsInConsiderLateralRangeHysteresis, IsObstacleConsideredHysteresis, EnoughSpaceHysteresis, AvoidWaySelect};
+
+struct AvoidInfo{
+  void Reset() {
+    normal_left_avoid_threshold = 0.0;
+    normal_right_avoid_threshold = 0.0;
+    // static_left_avoid_threshold = 0.0;
+    // static_right_avoid_threshold = 0.0;
+    desire_lat_offset = 0.0;
+    lat_offset = 0.0;
+    avoid_way = AvoidWay::None;
+    allow_front_max_opposite_offset = kDefaultLimitLateralDistance;
+    allow_front_max_opposite_offset_id = kDefaultLimitId;
+    allow_side_max_opposite_offset = kDefaultLimitLateralDistance;
+    allow_side_max_opposite_offset_id = kDefaultLimitId;
+    is_use_ego_position = false;
+  }
+  void operator=(const AvoidInfo& avoid_info) {
+    normal_left_avoid_threshold = avoid_info.normal_left_avoid_threshold;
+    normal_right_avoid_threshold = avoid_info.normal_right_avoid_threshold;
+    // static_left_avoid_threshold = avoid_info.static_left_avoid_threshold;
+    // static_right_avoid_threshold = avoid_info.static_right_avoid_threshold;
+    desire_lat_offset = avoid_info.desire_lat_offset;
+    lat_offset = avoid_info.lat_offset;
+    avoid_way = avoid_info.avoid_way;
+    allow_front_max_opposite_offset = avoid_info.allow_front_max_opposite_offset;
+    allow_front_max_opposite_offset_id = avoid_info.allow_front_max_opposite_offset_id;
+    allow_side_max_opposite_offset = avoid_info.allow_side_max_opposite_offset;
+    allow_side_max_opposite_offset_id = avoid_info.allow_side_max_opposite_offset_id;
+    is_use_ego_position = avoid_info.is_use_ego_position;
+  }
+
+  double normal_left_avoid_threshold;
+  double normal_right_avoid_threshold;
+  // double static_left_avoid_threshold;
+  // double static_right_avoid_threshold;
+  double desire_lat_offset = 0.0;
+  double lat_offset = 0.0;
+  AvoidWay avoid_way;
+  bool is_use_ego_position = false;
+  double allow_front_max_opposite_offset;
+  int allow_front_max_opposite_offset_id = kDefaultLimitId;
+  double allow_side_max_opposite_offset;
+  int allow_side_max_opposite_offset_id = kDefaultLimitId;
 };
 
 namespace lateral_offset_decider {
 const double kTruckMinLength = 6.5;
+bool IsCameraObstacle(const TrackedObject &tr);
+bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle);
 bool IsInConsiderLateralRange();
 bool IsFrontObstacleConsider(const framework::Session *session,
                              const TrackedObject &tr,
-                             const AvoidObstacleInfo &avoid_obstacle,
-                             bool is_left);
+                             bool is_left, const AvoidInfo& avoid_info,
+                             std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps);
 bool IsSideObstacleConsider(const framework::Session *session,
-                            const TrackedObject &tr, bool is_left);
+                            const TrackedObject &tr, bool is_left, std::map<HysteresisType, std::variant<std::map<int, HysteresisDecision>, std::map<std::pair<int, int>, HysteresisDecision>>> &hysteresis_maps);
+bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
+                                    const AvoidObstacleInfo &avoid_obstacle,
+                                    const TrackedObject &tr);
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle);
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle);
 bool IsCone(const AvoidObstacleInfo &avoid_obstacle);
+bool IsPassive(const AvoidObstacleInfo &avoid_obstacle);
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,
                     const AvoidObstacleInfo &avoid_obstacle_2);
 bool HasOverlap(const framework::Session *session,
