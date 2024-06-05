@@ -87,9 +87,10 @@ GapSelectorDecider::GapSelectorDecider(
   target_lane_s_width_.clear();
   origin_lane_s_width_.clear();
 
-  _LB_T_.emplace_back(config_.lb_t_min, config_.lb_t_max);
-  _LB_HEADING_ERROR_.emplace_back(config_.lb_heading_error_min,
-                                  config_.lb_heading_error_max);
+  _LB_T_.emplace_back(config_.lb_t_min);
+  _LB_T_.emplace_back(config_.lb_t_max);
+  _LB_HEADING_ERROR_.emplace_back(config_.lb_heading_error_min);
+  _LB_HEADING_ERROR_.emplace_back(config_.lb_heading_error_max);
 };
 
 bool GapSelectorDecider::Execute() {
@@ -361,6 +362,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
     is_lc_back_scene = true;
   }
 
+  gap_selector_decider_output.gap_selector_trustworthy = false;
   if (is_lc_scene) {
     double lc_end_s, remain_lc_time = lc_total_time_ - lc_timer_;
     RefineLCTime(&lc_end_s, &remain_lc_time, avoid_lat_offset);
@@ -368,7 +370,20 @@ GapSelectorStatus GapSelectorDecider::Update() {
     FixedTimeQuinticPathPlan(avoid_lat_offset, lc_end_s, remain_lc_time,
                              traj_points);
 
-    gap_selector_decider_output.gap_selector_trustworthy = true;
+    // bool is_left =
+    //     coarse_planning_info.target_state == ROAD_LC_LCHANGE ? true : false;
+
+    // bool is_quintic_valid = RecheckQuinticValid(is_left, &traj_points);
+    // if (!is_quintic_valid) {
+    //   GenerateLinearRefTrajectory(is_left, traj_points);
+    // }
+
+    gap_selector_decider_output.gap_selector_trustworthy =
+        remain_lc_time < 1.0 ? false : true;
+    gap_selector_decider_output.gap_selector_trustworthy =
+        config_.use_gs ? true
+                       : gap_selector_decider_output.gap_selector_trustworthy;
+
   } else if (is_lc_back_scene) {
     double lb_end_s, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
@@ -378,11 +393,29 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
       FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
                                traj_points);
+      gap_selector_decider_output.gap_selector_trustworthy = true;
     }
   }
 
   last_target_state_ = coarse_planning_info.target_state;
   return GapSelectorStatus::DEFAULT;
+}
+
+bool GapSelectorDecider::RecheckQuinticValid(const bool is_left,
+                                             TrajectoryPoints *traj_points) {
+  int max_check_idx = 15;
+  double max_l_threhold = 0.2;
+  bool is_quintic_valid = true;
+  for (auto i = 0; i < max_check_idx; i++) {
+    const auto &traj_point = traj_points->at(i);
+    if (is_left) {
+      is_quintic_valid = traj_point.l < max_l_threhold;
+    } else {
+      is_quintic_valid = traj_point.l > -max_l_threhold;
+    }
+    if (!is_quintic_valid) return false;
+  }
+  return is_quintic_valid;
 }
 
 void GapSelectorDecider::FixedTimeQuinticPathPlan(
@@ -603,7 +636,7 @@ GapSelectorStatus GapSelectorDecider::Update(
 
     status = GapSelectorStatus::LC_LATERAL_PREMOVE;
     gap_selector_state_machine_info_.lc_premove_time += 0.1;
-    GenerateLinearRefTrajectory(*traj_points_ptr_);
+    // GenerateLinearRefTrajectory(*traj_points_ptr_);
     return status;
   }
   // generate candidate lateral path
@@ -2351,16 +2384,10 @@ void GapSelectorDecider::GenerateLHTrajectory(
 }
 
 void GapSelectorDecider::GenerateLinearRefTrajectory(
-    TrajectoryPoints &traj_points) {
+    const bool is_left, TrajectoryPoints &traj_points) {
   // linear generate traj
-  const double lane_direction =
-      gap_selector_state_machine_info_.lc_request_buffer[2] == 1
-          ? 1
-          : gap_selector_state_machine_info_.lc_request_buffer[2] == 2 ? -1
-                                                                       : 0.;
-  const double lat_movd_coef =
-      lane_direction * 0.5 * (origin_lane_width_ + target_lane_width_) /
-      (config_.default_lc_time + config_.lc_premove_time);
+  const double lane_direction = is_left ? 1 : -1;
+  const double lat_movd_coef = lane_direction * 3.8 / config_.default_lc_time;
 
   for (auto i = 0; i < traj_points.size(); i++) {
     auto &traj_point = traj_points[i];
