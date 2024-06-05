@@ -1,3 +1,4 @@
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -1518,12 +1519,13 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 
     std::array<double, 5> xp4{0, 30, 60, 90, 120};
     std::array<double, 5> fp4{1, 1, 1, 5, 10};
+    std::array<double, 5> fp4_1{1, 1, 1, 5, 5};
     std::array<double, 5> fp4_2{1, 1, 1, 1, 1};
     double lead_confidence_thrshld = 1.0;
     if (item.type == 1) {
       lead_confidence_thrshld = interp(item.d_rel, xp4, fp4_2);
     } else {
-      lead_confidence_thrshld = interp(item.d_rel, xp4, fp4);
+      lead_confidence_thrshld = interp(item.d_rel, xp4, fp4_1);
     }
     LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
     item.is_lead = item.leadone_confidence_cnt >=

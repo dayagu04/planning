@@ -12,13 +12,13 @@ from jupyter_pybind import scc_lon_motion_planning_py
 
 # bag path and frame dt
 #bag_path = "/mnt/s811_1_0907/motion_14.00000"
-bag_path = "/data_cold/abu_zone/autoparse/jac_s811_21pt6/trigger/20240419/20240419-10-51-35/data_collection_JAC_S811_21PT6_EVENT_MANUAL_2024-04-19-10-51-35_no_camera.record.1714067217.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-56-24/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-56-24_no_camera.bag"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
@@ -69,10 +69,7 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bo
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-
-  lon_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].longitudinal_motion_planning_input
+  lon_motion_plan_input = local_view_data['data_msg']['plan_debug_msg'].longitudinal_motion_planning_input
 
   input_string = lon_motion_plan_input.SerializeToString()
   scc_lon_motion_planning_py.UpdateByParams(input_string, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bound,
@@ -97,3 +94,5 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bo
 
 bkp.show(row(fig1, pans), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
+
+

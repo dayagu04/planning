@@ -1,4 +1,5 @@
 #include "third_order_time_optimal_trajectory.h"
+#include <math.h>
 
 #include <cmath>
 #include <iostream>
@@ -33,9 +34,9 @@ ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
       (v_min < 0.0 && v_max > 0.0 && acc_min < 0.0 && acc_max > 0.0 &&
        jerk_min < 0.0 && jerk_max > 0.0);
   if (!is_input_valid) {
-    throw SpeedStatus(
-        StatusCode::COMMON_ERROR,
-        "invalid input limit for third order time optimal trajectory");
+    // throw SpeedStatus(
+    //     StatusCode::COMMON_ERROR,
+    //     "invalid input limit for third order time optimal trajectory");
   }
 
   p_precision_ = p_precision;
@@ -71,9 +72,9 @@ ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
        state_limit_.a_min < 0.0 && state_limit_.a_max > 0.0 &&
        state_limit_.j_min < 0.0 && state_limit_.j_max > 0.0);
   if (!is_input_valid) {
-    throw SpeedStatus(
-        StatusCode::COMMON_ERROR,
-        "invalid input limit for third order time optimal trajectory");
+    // throw SpeedStatus(
+    //     StatusCode::COMMON_ERROR,
+    //     "invalid input limit for third order time optimal trajectory");
   }
 
   third_order_param_ = PositionTargetSolver(init_state_, state_limit_pa_,
@@ -95,9 +96,9 @@ ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
   if (!is_input_valid) {
     // std::cout << "invalid input limit for third order time optimal
     // trajectory" << std::endl;
-    throw SpeedStatus(
-        StatusCode::COMMON_ERROR,
-        "invalid input limit for third order time optimal trajectory");
+    // throw SpeedStatus(
+    //     StatusCode::COMMON_ERROR,
+    //     "invalid input limit for third order time optimal trajectory");
   }
 
   third_order_param_ = PositionTargetSolver(init_state_, state_limit_pa_,
@@ -204,7 +205,11 @@ ThirdOrderParam ThirdOrderTimeOptimalTrajectory::PositionTargetSolver(
 
   if (GetSign(pfb - state_limit_pb.p_end) * dp <= 0) {
     constexpr double kEpsilon = 1e-10;
-    tc = (state_limit_pb.p_end - pfb) / (vc + kEpsilon);  // incase vc == 0.0;
+    if (fabs(vc) < kEpsilon) {
+      tc = (state_limit_pb.p_end - pfb) / (vc + kEpsilon);
+    } else {
+      tc = (state_limit_pb.p_end - pfb) / vc;  // incase vc == 0.0;
+    }
     tpb = Pa.t3;
   } else {
     tc = 0.0;

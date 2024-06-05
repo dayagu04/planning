@@ -1,11 +1,40 @@
 #include "scc_lon_behavior_planner.h"
 
+#include <cstddef>
 #include <memory>
+#include <vector>
 
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "task_basic_types.h"
+#include "trajectory1d/trajectory1d.h"
+#include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
 
+namespace {
+
+// far slow car jlt
+constexpr double check_time = 1.6;
+constexpr double kMinFarTimeGap = 1.8;
+constexpr double kDefaultFollowMinDist = 3.0;
+constexpr double kPreviewTime = 0.5;
+constexpr double kSpeedBuffer = 5.5;
+constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
+constexpr double kFarDistFollowTimeGap = 1.8;
+constexpr double kNearDistFollowTimeGap = 1.2;
+constexpr double kFarDistanceThreshold = 20.0;
+constexpr double kNearDistanceThreshold = 10.0;
+constexpr double kFarPreviewTime = 6.0;
+constexpr double kNearPreviewTime = 2.0;
+constexpr double kSpeedLower = 6.0;
+constexpr double kSpeedUpper = 20.0;
+constexpr double kAccMinLower = -0.7;
+constexpr double kAccMinUpper = -0.3;
+constexpr double kAccMax = 1.5;
+constexpr double kJerkMin = -1.0;
+constexpr double kJerkMax = 0.5;
+constexpr double kPositionPrecision = 0.3;
+}
 namespace planning {
 
 SccLonBehaviorPlanner::SccLonBehaviorPlanner(
@@ -106,6 +135,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   ego_info->set_ego_cruise(std::max(ego_state_mgr->ego_v_cruise(), 0.0));
   ego_info->set_ego_acc(ego_state_mgr->ego_acc());
   ego_info->set_ego_steer_angle(ego_state_mgr->ego_steer_angle());
+  lon_init_state_ = {0, ego_info->ego_v(), ego_info->ego_acc()};
 
   auto lon_decision_info_input =
       lon_behav_plan_input_->mutable_lon_decision_info();
@@ -454,6 +484,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   lon_behav_output_.ds_refs.resize(config_.lon_num_step + 1);
   lon_behav_output_.hard_bounds.resize(config_.lon_num_step + 1);
   lon_behav_output_.soft_bounds.resize(config_.lon_num_step + 1);
+  lon_behav_output_.lead_bounds.resize(config_.lon_num_step + 1);
   lon_behav_output_.lon_bound_v.resize(config_.lon_num_step + 1);
   lon_behav_output_.lon_bound_a.resize(config_.lon_num_step + 1);
   lon_behav_output_.lon_bound_jerk.resize(config_.lon_num_step + 1);
@@ -461,6 +492,8 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   s_hard_bounds.emplace_back(WeightedBound{0.0 - 10.0, 150.0, -1.0});
   WeightedBounds s_soft_bounds;
   s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, 150.0, -1.0});
+  LonLeadBounds s_lead_bounds;
+  s_lead_bounds.emplace_back(LonLeadBound{150, 0.0, 0.0, -1});
   Bound lon_v_bound{-0.1, std::min(v_cruise, config_.velocity_upper_bound)};
   Bound lon_a_bound{a_bounds.first, a_bounds.second};
   Bound lon_j_bound{j_bounds.first, j_bounds.second};
@@ -478,7 +511,8 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     // 5.construct default s_soft_bounds
     // hack: 先默认自车s = 0
     lon_behav_output_.soft_bounds[i] = s_soft_bounds;
-
+    // 5*.construct default s_lead_bounds
+    lon_behav_output_.lead_bounds[i] = s_lead_bounds;
     // 6.update v bounds
     lon_behav_output_.lon_bound_v[i] = lon_v_bound;
     // 7.update a bounds
@@ -502,11 +536,34 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
       s_soft_bound.weight = 10;
       s_soft_bound.bound_info.id = st_bound.id;
       s_soft_bound.bound_info.type = BoundType::AGENT;
+      LonLeadBound s_lead_bound;
+      s_lead_bound.s_lead = st_bound.hard_bound.at(i).upper;
+      s_lead_bound.v_lead = st_bound.hard_bound.at(i).vel;
+      s_lead_bound.a_lead = st_bound.hard_bound.at(i).acc;
+      s_lead_bound.lead_id = st_bound.hard_bound.at(i).id;
 
       lon_behav_output_.hard_bounds[i].emplace_back(s_hard_bound);
       lon_behav_output_.soft_bounds[i].emplace_back(s_soft_bound);
+      lon_behav_output_.lead_bounds[i].emplace_back(s_lead_bound);
     }
   }
+  // 10. using JLT to update Sref in farslow and stable car case
+  bool jlt_status = false;
+  GetHardBounds();
+  std::vector<double> sref_farslow;
+  std::vector<double> sref_stable;
+  sref_farslow.resize(config_.lon_num_step + 1);
+  sref_stable.resize(config_.lon_num_step + 1);
+  jlt_status =
+      GenerateFarSlowCarFollowCurve(sref_farslow);
+  if (jlt_status && config_.enable_jlt) {
+    for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+      // lon_behav_output_.s_refs[i].first =
+      //     std::fmin(lon_behav_output_.s_refs[i].first, sref_farslow[i]);
+      lon_behav_output_.s_refs[i].first = sref_farslow[i];
+    }
+  }
+  JSON_DEBUG_VALUE("jlt_status_farslow", jlt_status)
 
   // 10.update sv boundary
   SVBoundary sv_boundary_tmp = sv_boundaries.front();
@@ -650,6 +707,237 @@ void SccLonBehaviorPlanner::UpdateHMI() {
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
 }
 
+void SccLonBehaviorPlanner::GetHardBounds() {
+  const auto& s_bounds = lon_behav_output_.lead_bounds;
+  size_t size = s_bounds.size();
+  hard_bounds_.reserve(s_bounds.size());
+  for (size_t i = 0; i < size; ++i) {
+    STBound tmp_bound;
+    for (auto &bound : s_bounds[i]) {
+      if (bound.s_lead < tmp_bound.upper) {
+        tmp_bound.upper = bound.s_lead;
+        tmp_bound.vel = bound.v_lead;
+        tmp_bound.acc = bound.a_lead;
+        tmp_bound.id = bound.lead_id;
+      }
+    }
+    hard_bounds_.emplace_back(tmp_bound);
+  }
+}
+
+bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
+    std::vector<double> &s_refs) {
+  // check far slow car
+  const int check_idx = 8;
+  const auto& check_st = hard_bounds_[check_idx];
+
+  constexpr double min_far_distance_threshold = 15.0;
+  const double add_time_gap = 0.3;
+  // const double add_time_gap = std::fmax(0.0, matched_headway - 1.2);
+  const double far_time_gap = kMinFarTimeGap + add_time_gap;
+  const double ego_move_dist =
+      std::fmax(lon_init_state_[1] * far_time_gap + kDefaultFollowMinDist,
+                min_far_distance_threshold);
+  const double lead_bound_s_diff =
+      check_st.upper -
+      check_time * check_st.vel;  // + check_idx * 0.2
+  // check lead bound s_diff
+  if (lead_bound_s_diff < ego_move_dist) {
+    return false;
+  }
+
+  if (hard_bounds_.size() < check_idx || check_st.id == -1) {
+    return false;
+  }
+
+  const double preview_ego_v =
+      lon_init_state_[1] + lon_init_state_[2] * kPreviewTime;
+
+  // check preview_ego_v
+  if (preview_ego_v - check_st.vel < kSpeedBuffer) {
+    return false;
+  }
+
+  if (lon_init_state_[1] < kEgoSpeedThreshold) {
+    return false;
+  }
+
+  const double far_preview_dist = kFarPreviewTime * lon_init_state_[1];
+  const double near_preview_dist = kNearPreviewTime * lon_init_state_[1];
+
+  const double far_distance =
+      std::fmax(kFarDistanceThreshold, far_preview_dist);
+  const double near_distance =
+      std::fmax(kNearDistanceThreshold, near_preview_dist);
+  const double init_dist = hard_bounds_.front().upper;
+
+  const double far_slow_follow_time_gap = planning_math::LerpWithLimit(
+      kNearDistFollowTimeGap, near_distance, kFarDistFollowTimeGap,
+      far_distance, init_dist);
+
+  // generate relative coord
+  constexpr double min_follow_distance_m = 3.0;
+  CoordinateParam coordinate_param;
+  const auto& end_bound = hard_bounds_.back();
+  const double vel = end_bound.vel;
+  const double target_distance = std::max(
+      lon_init_state_[1] * far_slow_follow_time_gap + min_follow_distance_m,
+      min_follow_distance_m);
+  const double s_target = end_bound.upper - 5.0 * vel - target_distance;
+  coordinate_param.s_start = s_target;
+  coordinate_param.v = vel;
+
+  // using jlt to generate s v curve
+  double acc_min = planning_math::LerpWithLimit(
+      kAccMinLower, kSpeedLower, kAccMinUpper, kSpeedUpper, lon_init_state_[1]);
+
+  constexpr double AccMinThreshold = -3.0;
+
+  LonState init_state;
+  init_state.p = lon_init_state_[0];
+  init_state.v = lon_init_state_[1];
+  init_state.a = std::fmax(AccMinThreshold, lon_init_state_[2]);
+
+  StateLimit state_limit;
+  state_limit.p_end = 0.0;
+  state_limit.v_min = -0.1;
+  state_limit.v_max = 25.0;
+  state_limit.a_min = acc_min;
+  state_limit.a_max = kAccMax;
+  state_limit.j_min = kJerkMin;
+  state_limit.j_max = kJerkMax;
+
+  // const int32_t kMaxLoopNum = 1;
+  double acc_min_lower = -1.5;
+  double acc_min_upper = state_limit.a_min;
+  double a_min = 0.5 * (acc_min_upper + acc_min_lower);
+
+  state_limit.a_min = a_min;
+  auto far_slow_curve =
+      VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
+          init_state, state_limit, coordinate_param, kPositionPrecision);
+
+  const double delta_time = 0.2;
+  s_refs[0] = 0.0;
+  for (int i = 1; i <= 25; i++) {
+    double time = i * delta_time;
+    double s_ego = far_slow_curve.Evaluate(0, time);
+    // double v_ego = far_slow_curve.Evaluate(1, time);
+    s_refs[i] = s_ego;
+    // safty check
+    if (s_ego > hard_bounds_[i].upper) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
+    std::vector<double> &s_refs) {
+  // for stable follow trajectory
+  const double stable_vehicle_max_acc = 0.3;
+  const double stable_vehicle_min_acc = -0.8;
+  constexpr double v_min = -0.1;
+  constexpr double v_max = 40.0;
+  constexpr double a_min = -1.0;
+  constexpr double a_max = 1.8;
+  constexpr double j_min = -1.0;
+  constexpr double j_max = 1.0;
+  constexpr double p_precision = 0.1;
+
+  // check stable agent
+  const int check_idx = 15;
+  if (hard_bounds_.size() <= check_idx) {
+    return false;
+  }
+
+  // check lane change status
+  const auto &lc_request = lon_behav_plan_input_->lat_output().lc_request();
+  const auto &lc_status = lon_behav_plan_input_->lat_output().lc_status();
+  const bool is_in_lane_change =
+      ((lc_request != "none") && (lc_status != "none"));
+  if (is_in_lane_change) {
+    return false;
+  }
+
+  // check lead id
+  // const double check_front_time = 2.0;
+  // const double dt = 0.2;
+  for (unsigned t = 0; t < config_.lon_num_step; t++) {
+    const auto& current_bound_id = hard_bounds_[t].id;
+    const auto& next_bound_id = hard_bounds_[t + 1].id;
+    if (current_bound_id != next_bound_id) {
+      return false;
+    }
+  }
+
+  const auto& start_bound = hard_bounds_.front();
+  const double init_s_distance = start_bound.upper - lon_init_state_[0];
+  const double front_vel = start_bound.vel;
+  const double front_acc = start_bound.acc;
+  if (front_acc > stable_vehicle_max_acc ||
+      front_acc < stable_vehicle_min_acc) {
+    // front vehicle acc not stable
+    return false;
+  }
+
+  const double vel_diff_threshold = std::min(3.0, lon_init_state_[1] * 0.3);
+  if (std::fabs(front_vel - lon_init_state_[1]) > vel_diff_threshold) {
+    // vel diff too large
+    return false;
+  }
+
+  constexpr double min_follow_distance_m = 3.0;
+  const double follow_time_gap = 1.5;
+  const double target_s_distance =
+      std::max(lon_init_state_[1] * follow_time_gap + min_follow_distance_m,
+               min_follow_distance_m);
+  const double distance_ratio = 0.3;
+
+  if (target_s_distance - init_s_distance >
+      target_s_distance * distance_ratio) {
+    // init_s_distance too small than target_s_distance
+    return false;
+  }
+
+  CoordinateParam relative_coordinate_param;
+  const auto& last_bound = hard_bounds_.back();
+  const double vel = last_bound.vel;
+  const double target_distance =
+      std::max(lon_init_state_[1] * follow_time_gap + min_follow_distance_m,
+               min_follow_distance_m);
+  const double s_target = last_bound.upper - 5.0 * vel - target_distance;
+  relative_coordinate_param.s_start = s_target;
+  relative_coordinate_param.v = vel;
+
+  LonState init_state;
+  init_state.p = lon_init_state_[0];
+  init_state.v = lon_init_state_[1];
+  init_state.a = lon_init_state_[2];
+
+  StateLimit state_limit;
+  state_limit.p_end = 0.0;
+  state_limit.v_min = v_min;
+  state_limit.v_max = v_max;
+  state_limit.a_min = a_min;
+  state_limit.a_max = a_max;
+  state_limit.j_min = j_min;
+  state_limit.j_max = j_max;
+
+  auto follow_stable_target_trajectory =
+      VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
+          init_state, state_limit, relative_coordinate_param, p_precision);
+
+  const double delta_time = 0.2;
+  for (int i = 0; i <= 25; i++) {
+    double time = i * delta_time;
+    double s_ego = follow_stable_target_trajectory.Evaluate(0, time);
+    // double v_ego = follow_stable_target_trajectory.Evaluate(1, time);
+    s_refs[i] = s_ego;
+  }
+  return true;
+}
+
 void SccLonBehaviorPlanner::SaveToSession() {
   // 更新状态信息
   auto &start_stop_state_info =
@@ -690,6 +978,7 @@ void SccLonBehaviorPlanner::ClearOutput() {
   lon_behav_output_.lon_bound_v.clear();
   lon_behav_output_.lon_bound_a.clear();
   lon_behav_output_.lon_bound_jerk.clear();
+  hard_bounds_.clear();
 }
 
 }  // namespace planning
