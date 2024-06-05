@@ -675,10 +675,17 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   //   relative_id_lanes_.emplace_back(virtual_lane_tmp);
   // }
 
+  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
       LOG_DEBUG("create current_lane_\n");
+      double right_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
+          RIGHT_CHANGE, current_lane_->get_virtual_id());
+      double left_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
+          LEFT_CHANGE, current_lane_->get_virtual_id());
+      JSON_DEBUG_VALUE("right_dash_line_len", right_dash_line_len);
+      JSON_DEBUG_VALUE("left_dash_line_len", left_dash_line_len);
     } else if (relative_id_lane->get_relative_id() == -1) {
       left_lane_ = relative_id_lane;
     } else if (relative_id_lane->get_relative_id() == 1) {

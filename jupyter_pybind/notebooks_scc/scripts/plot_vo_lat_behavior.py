@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-32-57/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-32-57_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240604/20240604-16-26-45/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-04-16-26-45.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -74,7 +74,7 @@ columns = [
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=600)
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=350)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=500)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
