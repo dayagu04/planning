@@ -1,6 +1,6 @@
 {
   "enable_raw_ego_prediction": false,
-  "planner_type": 1,
+  "planner_type": 0,
   "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
