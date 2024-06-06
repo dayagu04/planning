@@ -21,6 +21,17 @@ enum SlotSide {
   SLOT_SIDE_RIGHT,
 };
 
+enum PathPlanType {
+  PLAN_TYPE_INVALID,
+  PLAN_TYPE_ONE_ARC,
+  PLAN_TYPE_TWO_ARC,
+  PLAN_TYPE_LINE_ARC,
+  PLAN_TYPE_ONE_LINE,
+  PLAN_TYPE_S_TURN,
+  PLAN_TYPE_ALIGN_BODY,
+  PLAN_TYPE_COUNT,
+};
+
 enum PathSegType {
   SEG_TYPE_INVALID,
   SEG_TYPE_LINE,
@@ -138,6 +149,7 @@ struct PathSegment {
   uint8_t seg_type = SEG_TYPE_LINE;
   uint8_t seg_steer = SEG_STEER_STRAIGHT;
   uint8_t seg_gear = SEG_GEAR_DRIVE;
+  uint8_t plan_type = PLAN_TYPE_INVALID;
 
   bool collision_flag = false;
 

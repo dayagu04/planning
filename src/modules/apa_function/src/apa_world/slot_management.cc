@@ -69,12 +69,18 @@ bool SlotManagement::Update(
     update_slot_in_searching_flag = UpdateSlotsInSearching();
   } else if (IsInParkingState()) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
+  } else {
+    // apa finish or fail
+    Reset();
   }
 
   // for hmi
   UpdateReleasedSlotInfo();
 
   // restore slot management info
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->clear_slot_management_info();
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_slot_management_info()
@@ -367,13 +373,18 @@ bool SlotManagement::GenTLane(
        apa_param.GetParam().virtual_obs_y_pos * pt_10_norm_vec)
           .y();
 
+  bool left_empty = false;
+  bool right_empty = false;
+
   if (left_pq_for_x.empty()) {
     DEBUG_PRINT("left space is empty");
+    left_empty = true;
     left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_pq_for_x.empty()) {
     DEBUG_PRINT("right space is empty");
+    right_empty = true;
     right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
@@ -402,9 +413,13 @@ bool SlotManagement::GenTLane(
   double right_y = right_pq_for_y.top().y();
 
   if (apa_param.GetParam().tmp_no_consider_obs_dy) {
-    left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
-
-    right_y = -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
+    if (!left_empty) {
+      left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
+    }
+    if (!right_empty) {
+      right_y =
+          -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
+    }
   }
 
   DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
@@ -775,19 +790,32 @@ bool SlotManagement::UpdateSlotsInSearching() {
       if (IfUpdateSlot(slot_info, fusion_slot_source_type)) {
         auto slot_idx = frame_.slot_info_map[slot_info.id()];
         frame_.slot_info_window_vec[slot_idx].Add(slot_info);
-      } else {
-        if (fusion_slot.allow_parking() == 1 &&
-            (fusion_slot.type() ==
-                 Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
-             fusion_slot.type() ==
-                 Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING)) {
-          auto slot_idx = frame_.slot_info_map[slot_info.id()];
-          auto slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
-          slot.set_is_release(true);
-          slot.set_is_occupied(false);
-          frame_.slot_info_window_vec[slot_idx].Add(slot);
-        }
       }
+    }
+  }
+
+  // delete slot in window vec when the slot is not exist in fusion slot
+  std::vector<int> del_index_vec;
+  std::vector<int> del_id_vec;
+  for (int i = 0; i < frame_.slot_info_window_vec.size(); ++i) {
+    if (fusion_slot_map.count(
+            frame_.slot_info_window_vec[i].GetFusedInfo().id()) == 0) {
+      del_index_vec.emplace_back(i);
+      del_id_vec.emplace_back(
+          frame_.slot_info_window_vec[i].GetFusedInfo().id());
+    }
+  }
+
+  for (size_t i = 0; i < del_index_vec.size(); ++i) {
+    frame_.slot_info_map.erase(del_id_vec[i]);
+    frame_.slot_info_angle.erase(del_id_vec[i]);
+    frame_.slot_info_direction.erase(del_id_vec[i]);
+    frame_.slot_info_corner_01.erase(del_id_vec[i]);
+    frame_.slot_info_window_vec.erase(frame_.slot_info_window_vec.begin() +
+                                      del_index_vec[i]);
+
+    for (size_t j = 0; j < del_index_vec.size(); ++j) {
+      del_index_vec[j]--;
     }
   }
 
@@ -800,6 +828,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
     // *slot = slot_info;
     *slot = frame_.slot_info_window_vec[j].GetFusedInfo();
 
+    // only extra protect, it can delete to be fast
     if (fusion_slot_map.count(slot->id()) == 0) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
@@ -1691,7 +1720,11 @@ bool SlotManagement::IsInParkingState() const {
   if ((frame_.func_state_ptr->current_state() ==
            FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
        frame_.func_state_ptr->current_state() ==
-           FuncStateMachine::PARK_IN_ACTIVATE_CONTROL) ||
+           FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
+       frame_.func_state_ptr->current_state() ==
+           FuncStateMachine::PARK_IN_SUSPEND_ACTIVATE ||
+       frame_.func_state_ptr->current_state() ==
+           FuncStateMachine::PARK_IN_SUSPEND_CLOSE) ||
       (frame_.param.force_apa_on && frame_.param.is_switch_parking)) {
     return true;
   }

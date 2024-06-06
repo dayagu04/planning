@@ -28,7 +28,8 @@ namespace apa_planner {
 
 static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
-static const size_t kMaxPathNumsInSlot = 4;
+static const size_t kMultiPlanMaxPathNumsInSlot = 3;
+static const size_t kAdjustPlanMaxPathNumsInSlot = 5;
 static const double kMinSingleGearPathLength = 0.4;
 
 void PerpendicularPathPlanner::Reset() {
@@ -168,6 +169,31 @@ bool PerpendicularPathPlanner::Update() {
       }
     } else {
       return true;
+    }
+  } else {
+    // need continue to adjust plan to target pose, and only save multi reverse
+    // path
+    if (output_.gear_cmd_vec.size() > 0 &&
+        output_.gear_cmd_vec[0] == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+      int path_num_gear = 0;
+      for (size_t i = 0; i < output_.gear_cmd_vec.size(); ++i) {
+        if (output_.gear_cmd_vec[i] == output_.gear_cmd_vec[0]) {
+          path_num_gear++;
+        } else {
+          break;
+        }
+      }
+
+      if (CheckAdjustPlanSuitable(
+              output_.path_segment_vec[path_num_gear - 1].GetEndPose())) {
+        for (int i = static_cast<int>(output_.gear_cmd_vec.size() - 1);
+             i >= path_num_gear; --i) {
+          output_.gear_cmd_vec.pop_back();
+          output_.path_segment_vec.pop_back();
+          output_.steer_vec.pop_back();
+          output_.length -= output_.path_segment_vec[i].Getlength();
+        }
+      }
     }
   }
 
@@ -712,30 +738,35 @@ const bool PerpendicularPathPlanner::GenPathOutputByDubins() {
     output_.path_segment_vec.emplace_back(seg_CD);
   }
 
-  DEBUG_PRINT("prepare plan output:");
-  for (size_t i = 0; i < output_.path_segment_vec.size(); ++i) {
-    auto& path_seg = output_.path_segment_vec[i];
-    DEBUG_PRINT(i << "th path seg info:");
-    DEBUG_PRINT("type = " << static_cast<int>(path_seg.seg_type)
-                          << "  length = " << path_seg.Getlength()
-                          << "  gear = " << static_cast<int>(path_seg.seg_gear)
-                          << "  steer = "
-                          << static_cast<int>(path_seg.seg_steer));
-    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-      DEBUG_PRINT("pA = " << path_seg.line_seg.pA.transpose() << "  pB = "
-                          << path_seg.line_seg.pB.transpose() << "  heading = "
-                          << path_seg.line_seg.heading * 57.3);
-    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-      DEBUG_PRINT("pA = " << path_seg.arc_seg.pA.transpose()
-                          << "  pB = " << path_seg.arc_seg.pB.transpose()
-                          << "  headingA = " << path_seg.arc_seg.headingA * 57.3
-                          << "  headingB = " << path_seg.arc_seg.headingB * 57.3
-                          << "  radius = "
-                          << path_seg.arc_seg.circle_info.radius
-                          << "  center = "
-                          << path_seg.arc_seg.circle_info.center.transpose());
-    }
-  }
+  // DEBUG_PRINT("prepare plan output:");
+  // for (size_t i = 0; i < output_.path_segment_vec.size(); ++i) {
+  //   auto& path_seg = output_.path_segment_vec[i];
+  //   DEBUG_PRINT(i << "th path seg info:");
+  //   DEBUG_PRINT("type = " << static_cast<int>(path_seg.seg_type)
+  //                         << "  length = " << path_seg.Getlength()
+  //                         << "  gear = " <<
+  //                         static_cast<int>(path_seg.seg_gear)
+  //                         << "  steer = "
+  //                         << static_cast<int>(path_seg.seg_steer));
+  //   if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+  //     DEBUG_PRINT("pA = " << path_seg.line_seg.pA.transpose() << "  pB = "
+  //                         << path_seg.line_seg.pB.transpose() << "  heading =
+  //                         "
+  //                         << path_seg.line_seg.heading * 57.3);
+  //   } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+  //     DEBUG_PRINT("pA = " << path_seg.arc_seg.pA.transpose()
+  //                         << "  pB = " << path_seg.arc_seg.pB.transpose()
+  //                         << "  headingA = " << path_seg.arc_seg.headingA
+  //                         * 57.3
+  //                         << "  headingB = " << path_seg.arc_seg.headingB
+  //                         * 57.3
+  //                         << "  radius = "
+  //                         << path_seg.arc_seg.circle_info.radius
+  //                         << "  center = "
+  //                         <<
+  //                         path_seg.arc_seg.circle_info.center.transpose());
+  //   }
+  // }
 
   return output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE;
 }
@@ -787,7 +818,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
   double turn_radius = calc_params_.turn_radius;
   size_t stuck_by_inside_count = 0;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
-  for (int i = 0; i < kMaxPathNumsInSlot; ++i) {
+  for (int i = 0; i < kMultiPlanMaxPathNumsInSlot; ++i) {
     DEBUG_PRINT("-- No." << i << "  multi-plan --");
     tmp_path_seg_vec.clear();
     tmp_path_seg_vec.reserve(3);
@@ -1454,7 +1485,7 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
   double steer_change_radius = apa_param.GetParam().max_radius_in_slot;
 
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
-  for (size_t i = 0; i < kMaxPathNumsInSlot; ++i) {
+  for (size_t i = 0; i < kAdjustPlanMaxPathNumsInSlot; ++i) {
     DEBUG_PRINT("-------- No." << i << " in adjust-plan--------");
     tmp_path_seg_vec.clear();
     tmp_path_seg_vec.reserve(3);
@@ -1869,6 +1900,7 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
         // DEBUG_PRINT("steer_1 = " << static_cast<int>(steer_1));
         path_seg_vec.emplace_back(
             pnc::geometry_lib::PathSegment(steer_1, gear_1, arc_s_1));
+        path_seg_vec.back().plan_type = pnc::geometry_lib::PLAN_TYPE_S_TURN;
         arc_s_1_available = true;
       }
     }
@@ -1881,6 +1913,7 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
         // DEBUG_PRINT("steer_2 = " << static_cast<int>(steer_2));
         path_seg_vec.emplace_back(
             pnc::geometry_lib::PathSegment(steer_2, gear_2, arc_s_2));
+        path_seg_vec.back().plan_type = pnc::geometry_lib::PLAN_TYPE_S_TURN;
         arc_s_2_available = true;
       }
     }
@@ -2051,7 +2084,14 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
   apa_param.SetPram().target_heading_err = heading_err;
 
   // collision detect
-  for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
+  bool only_s_turn = false;
+  for (size_t j = 0; j < tmp_path_seg_vec.size(); ++j) {
+    pnc::geometry_lib::PathSegment& tmp_path_seg = tmp_path_seg_vec[j];
+    tmp_path_seg.collision_flag = false;
+    if (j == 0 &&
+        tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN) {
+      only_s_turn = true;
+    }
     // when send ref gear path, more conservative, otherwise more radical
     double safe_dist = apa_param.GetParam().col_obs_safe_dist_radical;
     CollisionDetector::Paramters params;
@@ -2072,7 +2112,22 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     if (path_col_det_res == PATH_COL_NORMAL) {
       path_seg_vec.emplace_back(tmp_path_seg);
     } else if (path_col_det_res == PATH_COL_SHORTEN) {
-      path_seg_vec.emplace_back(tmp_path_seg);
+      // when gear is drive, if there is no only s turn, then when s_turn col,
+      // lose all s turn path
+      if (only_s_turn) {
+        path_seg_vec.emplace_back(tmp_path_seg);
+      } else {
+        if (tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN &&
+            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+          DEBUG_PRINT("s turn col, lose all s turn path.");
+          if (tmp_path_seg_vec[j - 1].plan_type ==
+              pnc::geometry_lib::PLAN_TYPE_S_TURN) {
+            path_seg_vec.pop_back();
+          }
+        } else {
+          path_seg_vec.emplace_back(tmp_path_seg);
+        }
+      }
       break;
     } else if (path_col_det_res == PATH_COL_INVALID) {
       break;
@@ -2093,7 +2148,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
     double length = 0.0;
     bool collision_flag = false;
     for (const auto& path_seg : path_seg_vec) {
-      PrintSegmentInfo(path_seg);
+      // PrintSegmentInfo(path_seg);
       if (path_seg.seg_gear == current_gear) {
         length += path_seg.Getlength();
         collision_flag = path_seg.collision_flag;
@@ -2299,7 +2354,13 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
       double min_path_length = apa_param.GetParam().min_one_step_path_length;
       if (input_.slot_occupied_ratio > 0.386 &&
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-        min_path_length = apa_param.GetParam().min_one_step_path_length_in_slot;
+        const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
+        const std::vector<double> path_length_tab = {
+            1.0 * min_path_length, 2.168 * min_path_length,
+            2.868 * min_path_length, 3.668 * min_path_length,
+            4.168 * min_path_length};
+        min_path_length = pnc::mathlib::Interp1(
+            lat_tab, path_length_tab, std::fabs(path_seg.GetEndPos().y()));
       }
 
       if (length + extend_distance < min_path_length) {
@@ -2308,6 +2369,7 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     } else if (insert_case == 1) {
       extend_distance = apa_param.GetParam().min_one_step_path_length - length;
     }
+    DEBUG_PRINT("extend_distance = " << extend_distance);
 
     if (extend_distance < 0.02168) {
       return;
@@ -2594,9 +2656,10 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
     return PATH_COL_INVALID;
   }
 
-  if (remain_car_dist > safe_remain_dist) {
-    // DEBUG_PRINT("the path will collide, the length need shorten to "
-    //              "safe_remain_dist");
+  if (remain_car_dist > safe_remain_dist + 1e-3) {
+    // DEBUG_PRINT(
+    //     "the path will collide, the length need shorten to "
+    //     "safe_remain_dist");
     if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       auto& line = path_seg.line_seg;
       if (!pnc::geometry_lib::CompleteLineInfo(line, safe_remain_dist)) {
@@ -2658,15 +2721,14 @@ void PerpendicularPathPlanner::PrintSegmentInfo(
 
 void PerpendicularPathPlanner::PrintOutputSegmentsInfo() const {
   DEBUG_PRINT("-------------- OutputSegmentsInfo --------------");
-  const size_t N = std::min(4, int(output_.path_segment_vec.size()));
+  const size_t N = std::min(2, int(output_.path_segment_vec.size()));
   for (size_t i = 0; i < N; i++) {
     const auto& current_seg = output_.path_segment_vec[i];
 
     if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       const auto& line_seg = current_seg.line_seg;
 
-      DEBUG_PRINT("Segment [" << i << "] "
-                              << " LINE_SEGMENT "
+      DEBUG_PRINT("Segment [" << i << "] " << " LINE_SEGMENT "
                               << " length= " << line_seg.length);
 
       DEBUG_PRINT("seg_gear: " << static_cast<int>(current_seg.seg_gear));
@@ -2679,8 +2741,7 @@ void PerpendicularPathPlanner::PrintOutputSegmentsInfo() const {
     } else {
       const auto& arc_seg = current_seg.arc_seg;
 
-      DEBUG_PRINT("Segment [" << i << "] "
-                              << "ARC_SEGMENT "
+      DEBUG_PRINT("Segment [" << i << "] " << "ARC_SEGMENT "
                               << "length= " << arc_seg.length);
 
       DEBUG_PRINT("seg_gear: " << static_cast<int>(current_seg.seg_gear));

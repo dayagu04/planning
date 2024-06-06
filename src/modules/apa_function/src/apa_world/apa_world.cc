@@ -178,6 +178,7 @@ const bool ApaWorld::Update() {
   // preprocess measurements
   DEBUG_PRINT("-- apa_world: run preprocess ---");
   Preprocess();
+  measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
 
   DEBUG_PRINT(
       "current_state = " << static_cast<int>(measures_ptr_->current_state));
@@ -214,7 +215,6 @@ const bool ApaWorld::Update() {
   DEBUG_PRINT(
       "fixed slot type =" << static_cast<int>(measures_ptr_->slot_type));
 
-  measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
   // check park in planner
   if (CheckParkInActivated()) {
     if (measures_ptr_->slot_type ==

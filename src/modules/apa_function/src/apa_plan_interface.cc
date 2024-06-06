@@ -138,9 +138,8 @@ void ApaPlanInterface::AddReleasedSlotInfo(
 
   for (const auto &successful_slot_info :
        apa_world_ptr_->GetSlotManagerPtr()->GetReleasedSlotInfoVec()) {
-    // std::cout << "successful_slot_info = " <<
-    // successful_slot_info.DebugString()
-    //           << std::endl;
+    std::cout << "successful_slot_info = " << successful_slot_info.DebugString()
+              << std::endl;
     const auto slot_info_list = planning_output.add_successful_slot_info_list();
     slot_info_list->CopyFrom(successful_slot_info);
   }

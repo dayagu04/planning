@@ -540,22 +540,22 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   DEBUG_PRINT("frame_.current_arc_steer = "
               << static_cast<int>(frame_.current_arc_steer));
 
-  DEBUG_PRINT(
-      "ego_pos = " << measures_ptr->pos_ego.transpose() << "  ego_heading = "
-                   << measures_ptr->heading_ego * 57.3 << "  ego_pos_slot = "
-                   << ego_slot_info.ego_pos_slot.transpose()
-                   << "  ego_heading_slot = "
-                   << ego_slot_info.ego_heading_slot * 57.3);
+  // DEBUG_PRINT(
+  //     "ego_pos = " << measures_ptr->pos_ego.transpose() << "  ego_heading = "
+  //                  << measures_ptr->heading_ego * 57.3 << "  ego_pos_slot = "
+  //                  << ego_slot_info.ego_pos_slot.transpose()
+  //                  << "  ego_heading_slot = "
+  //                  << ego_slot_info.ego_heading_slot * 57.3);
 
-  DEBUG_PRINT("ego_slot_info.limiter.first = "
-              << ego_slot_info.limiter.first.transpose()
-              << "  ego_slot_info.limiter.second = "
-              << ego_slot_info.limiter.second.transpose());
+  // DEBUG_PRINT("ego_slot_info.limiter.first = "
+  //             << ego_slot_info.limiter.first.transpose()
+  //             << "  ego_slot_info.limiter.second = "
+  //             << ego_slot_info.limiter.second.transpose());
 
-  DEBUG_PRINT("target_ego_pos_slot = "
-              << ego_slot_info.target_ego_pos_slot.transpose()
-              << "  target_ego_heading_slot = "
-              << ego_slot_info.target_ego_heading_slot * 57.3);
+  // DEBUG_PRINT("target_ego_pos_slot = "
+  //             << ego_slot_info.target_ego_pos_slot.transpose()
+  //             << "  target_ego_heading_slot = "
+  //             << ego_slot_info.target_ego_heading_slot * 57.3);
 
   DEBUG_PRINT("terminal x error= " << ego_slot_info.terminal_err.pos.x());
   DEBUG_PRINT("terminal y error= " << ego_slot_info.terminal_err.pos.y());
@@ -673,13 +673,18 @@ void PerpendicularInPlanner::GenTlane() {
        apa_param.GetParam().virtual_obs_y_pos * pt_10_norm_vec)
           .y();
 
+  bool left_empty = false;
+  bool right_empty = false;
+
   if (left_pq_for_x.empty()) {
     DEBUG_PRINT("left space is empty");
+    left_empty = true;
     left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_pq_for_x.empty()) {
     DEBUG_PRINT("right space is empty");
+    right_empty = true;
     right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
@@ -706,9 +711,13 @@ void PerpendicularInPlanner::GenTlane() {
   double right_y = right_pq_for_y.top().y();
 
   if (apa_param.GetParam().tmp_no_consider_obs_dy) {
-    left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
-
-    right_y = -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
+    if (!left_empty) {
+      left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
+    }
+    if (!right_empty) {
+      right_y =
+          -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
+    }
   }
 
   DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
