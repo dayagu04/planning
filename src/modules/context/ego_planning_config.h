@@ -693,6 +693,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     map2_qjerk3 = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "map2_qjerk3"});
+    use_big_qjerk_for_big_theta_error = read_json_keys<bool>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "use_big_qjerk_for_big_theta_error"});
+    big_qjerk0 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "big_qjerk0"});
+    big_qjerk1 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "big_qjerk1"});
   }
 
   bool warm_start_enable = true;
@@ -760,6 +769,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double map2_qjerk1 = 1.0;
   double map2_qjerk2 = 5.0;
   double map2_qjerk3 = 50.0;
+
+  bool use_big_qjerk_for_big_theta_error = false;
+  double big_qjerk0 = 500.0;
+  double big_qjerk1 = 300.0;
 };
 
 struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {

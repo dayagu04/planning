@@ -142,6 +142,12 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(planning::common::LateralPla
   double q_jerk0 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk0);
   double q_jerk1 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk1);
 
+  // for intersection
+  if ((std::fabs(init_ref_theta_error_) > 5.0) && (config_.use_big_qjerk_for_big_theta_error)) {
+    q_jerk0 = config_.big_qjerk0;
+    q_jerk1 = config_.big_qjerk1;
+  }
+
   planning_input.set_q_jerk(q_jerk1);
   concerned_start_q_jerk_ = q_jerk0;
 }

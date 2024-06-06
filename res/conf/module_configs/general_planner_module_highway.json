@@ -305,7 +305,10 @@
     "map2_qjerk0": 10.0,
     "map2_qjerk1": 10.0,
     "map2_qjerk2": 5.0,
-    "map2_qjerk3": 10.0
+    "map2_qjerk3": 10.0,
+    "use_big_qjerk_for_big_theta_error": true,
+    "big_qjerk0": 500.0,
+    "big_qjerk1": 300.0
   },
   "long_motion_ilqr": {
     "q_ref_pos_startmode": 0.5,
