@@ -12,9 +12,11 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_06826/trigger/20240603/20240603-11-26-51/park_in_data_collection_CHERY_TIGGO9_06826_ALL_FILTER_2024-06-03-11-26-52_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-2c53262be-JAC_S811_test/planning-2c53262be-JAC_S811/test_0.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
+global last_plan_pose_
+last_plan_pose_ = []
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -101,12 +103,12 @@ fig1.patches('y_vec', 'x_vec', source = data_simu_car_box, fill_color = "#98FB98
 fig1.patch('car_yn', 'car_xn', source = data_sim_target_pos, fill_color = "blue", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'sim_target_line', visible = False)
 
-
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=1, value=0, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=1, value=0, step=1)
+    self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
     self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
@@ -120,7 +122,8 @@ class LocalViewSlider:
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
-                        vehicle_type = self.vehicle_type,
+                        vehicle_type = self.vehicle_type_slider,
+                        sim_to_target = self.sim_to_target_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
                         is_path_optimization = self.is_path_optimization_slider,
@@ -133,7 +136,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, vehicle_type, sim_to_target, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -183,6 +186,11 @@ def slider_callback(bag_time, vehicle_type, select_id, force_plan, is_path_optim
 
   sim_ego_x = current_ego_x + lon_pos_dif * math.cos(sim_ego_heading) - lat_pos_dif * math.sin(sim_ego_heading)
   sim_ego_y = current_ego_y + lon_pos_dif * math.sin(sim_ego_heading) + lat_pos_dif * math.cos(sim_ego_heading)
+
+  if len(last_plan_pose_) > 0 and sim_to_target == 1:
+    sim_ego_x = last_plan_pose_[0]
+    sim_ego_y = last_plan_pose_[1]
+    sim_ego_heading = last_plan_pose_[2]
 
   loc_msg.pose.local_position.x = sim_ego_x
   loc_msg.pose.local_position.y = sim_ego_y
@@ -243,6 +251,10 @@ def slider_callback(bag_time, vehicle_type, select_id, force_plan, is_path_optim
       last_x = plan_path_x[-1]
       last_y = plan_path_y[-1]
       last_heading = plan_path_heading[-1]
+      last_plan_pose_.clear()
+      last_plan_pose_.append(last_x)
+      last_plan_pose_.append(last_y)
+      last_plan_pose_.append(last_heading)
       for i in range(len(car_xb)):
         tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], last_x, last_y, last_heading)
         car_xn.append(tmp_x)
@@ -270,7 +282,6 @@ def slider_callback(bag_time, vehicle_type, select_id, force_plan, is_path_optim
       car_box_y_vec.append(car_yn)
 
     print("tuned_gear_command = ", tuned_planning_output.gear_command)
-
 
   data_planning_tune.data.update({
     'plan_path_x': plan_path_x,

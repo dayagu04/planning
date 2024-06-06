@@ -11,9 +11,10 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_96tj0/trigger/20240514/20240514-15-50-11/park_in_data_collection_JAC_S811_96TJ0_ALL_FILTER_2024-05-14-15-50-11_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-2c53262be-JAC_S811_test/planning-2c53262be-JAC_S811/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
+vehicle_type = JAC_S811
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -81,7 +82,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   lon_pos_dif = 0.0
   lat_pos_dif = 0.0
   heading_dif = 0.0
-  update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
 
   plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
