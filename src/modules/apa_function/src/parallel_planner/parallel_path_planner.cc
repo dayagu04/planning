@@ -132,6 +132,9 @@ const bool ParallelPathPlanner::Update() {
     }
   } else {
     DEBUG_PRINT("ego is in slot");
+    CollisionDetector::Paramters param;
+    param.lat_inflation = 0.0;
+    collision_detector_ptr_->SetParam(param);
     // ego is in slot, search from ego pose to target pose, or just
     // correct heading
     if (MultiPlan()) {
@@ -1220,11 +1223,6 @@ const bool ParallelPathPlanner::InverseSearchLoopInSlot(
     return true;
   }
   std::cout << "ego can't park out at first!" << std::endl;
-
-  CollisionDetector::Paramters param;
-  param.lat_inflation = 0.25;
-  collision_detector_ptr_->SetParam(param);
-  DEBUG_PRINT("lat inflat = " << param.lat_inflation);
 
   std::cout << "-------------- start loop -----------------------" << std::endl;
   bool loop_success = false;

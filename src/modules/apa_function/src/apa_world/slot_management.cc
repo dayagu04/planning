@@ -86,9 +86,6 @@ bool SlotManagement::Update(
       ->mutable_slot_management_info()
       ->CopyFrom(frame_.slot_management_info);
 
-  // apa finish
-  FinishApa();
-
   Log();
 
   return update_slot_in_searching_flag || update_slot_in_parking_flag;
