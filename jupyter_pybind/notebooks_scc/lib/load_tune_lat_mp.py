@@ -1,7 +1,7 @@
 from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
-from lib.load_bag import is_match_planning, is_bag_main
+from lib.load_ros_bag import is_match_planning, is_bag_main
 
 import numpy as np
 import time
@@ -22,7 +22,6 @@ from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
 from bokeh.models import WheelZoomTool, HoverTool
-from cyber_record.record import Record
 
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
