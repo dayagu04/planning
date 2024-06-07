@@ -122,6 +122,8 @@ bool LaneChangeDecider::Execute() {
   }
 
   UpdateCoarsePlanningInfo();
+  const int cur_state = transition_context_.target_state;
+  JSON_DEBUG_VALUE("cur_state", cur_state)
 
   if (!CheckEgoPosition()) {
     return false;

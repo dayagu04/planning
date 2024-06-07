@@ -295,7 +295,7 @@ bool LaneChangeRequestManager::Update(
   LOG_WARNING(
       "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
       lc_status, gen_turn_signal_);
-  JSON_DEBUG_VALUE("cur_state", lc_status)
+  // JSON_DEBUG_VALUE("cur_state", lc_status)
   return true;
 }
 
