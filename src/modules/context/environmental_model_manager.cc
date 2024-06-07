@@ -12,6 +12,7 @@
 #include "Eigen/src/Core/util/Constants.h"
 #include "agent/agent_manager.h"
 #include "basic_types.pb.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
@@ -566,31 +567,27 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
   // 转向拨杆状态
   if (vehicle_service_output_info.turn_switch_state_available) {
-    if (vehicle_service_output_info.turn_switch_state == 0) {
-      if (vehicle_service_output_info.hazard_light_state &&
-          vehicle_service_output_info.hazard_light_state_available) {
+    //紧急灯
+    if (vehicle_service_output_info.turn_switch_state == NONE && vehicle_service_output_info.hazard_light_state) {
+      if (vehicle_service_output_info.hazard_light_state_available) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
-      } else {
-        vehicle_light->mutable_vehicle_light_data()
-            ->mutable_turn_signal()
-            ->set_value(common::TurnSignalType::NONE);
-      }
+      } 
     } else {
-      if (vehicle_service_output_info.turn_switch_state == 1) {
-        vehicle_light->mutable_vehicle_light_data()
-            ->mutable_turn_signal()
-            ->set_value(common::TurnSignalType::LEFT);
-      } else if (vehicle_service_output_info.turn_switch_state == 2) {
-        vehicle_light->mutable_vehicle_light_data()
-            ->mutable_turn_signal()
-            ->set_value(common::TurnSignalType::RIGHT);
-      }
+      history_lc_source_[0] = history_lc_source_[1];//上上帧
+      history_lc_source_[1] = session_->planning_context().lane_change_decider_output().lc_request_source;//上一帧
+      //根据传入的拨杆信号计算转向
+      RunBlinkState(vehicle_service_output_info);
+      vehicle_light->mutable_vehicle_light_data()
+          ->mutable_turn_signal()
+          ->set_value(current_turn_signal_);
     }
     last_feed_time_[FEED_MISC_REPORT] =
         local_view.vehicle_service_output_info_recv_time;
   }
+  last_frame_turn_sinagl_ = current_turn_signal_;
+  JSON_DEBUG_VALUE("turn_switch_state", vehicle_service_output_info.turn_switch_state)
 
   if (vehicle_service_output_info.auto_light_state_available) {
     vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(
@@ -1164,6 +1161,64 @@ bool EnvironmentalModelManager::InputReady(double current_time,
   }
   return res;
 }
-
+void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info) {
+  const bool active = session_->environmental_model().GetVehicleDbwStatus();
+  const auto& lc_state = session_->planning_context().lane_change_decider_output().curr_state;
+  switch (vehicle_service_output_info.turn_switch_state) {
+    case NONE:
+      if (active) {
+        //如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
+        if (history_lc_source_[0] == INT_REQUEST 
+            && history_lc_source_[1] != INT_REQUEST) {
+          current_turn_signal_ = common::TurnSignalType::NONE;
+        }
+      } else {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      }
+      break;
+    case LEFT_FIRMLY_TOUCH:
+      if (history_lc_source_[0] == INT_REQUEST &&
+           history_lc_source_[1] == INT_REQUEST &&
+          last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT && 
+          lc_state == ROAD_LC_RCHANGE) {
+        //  表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      } else if (lc_state == ROAD_LC_RCHANGE) {
+        //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      } else {
+        current_turn_signal_ = common::TurnSignalType::LEFT;       
+      }
+      break;
+    case RIGHT_FIRMLY_TOUCH:
+      //与上同理
+      if (history_lc_source_[0] == INT_REQUEST && 
+          history_lc_source_[1] == INT_REQUEST &&
+          last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
+          lc_state == ROAD_LC_LCHANGE) {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      } else if (lc_state == ROAD_LC_LCHANGE) {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      } else {
+        current_turn_signal_ = common::TurnSignalType::RIGHT;       
+      }
+      break; 
+    case LEFT_LIGHTLY_TOUCH:
+      //只有在向右变道的过程中才会起作用
+      if (last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT) {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      } 
+      break; 
+    case RIGHT_LIGHTLY_TOUCH:
+      //只有在向左变道的过程中才会起作用
+      if (last_frame_turn_sinagl_ == common::TurnSignalType::LEFT) {
+        current_turn_signal_ = common::TurnSignalType::NONE;
+      }
+      break; 
+    case ERROR:
+      current_turn_signal_ = common::TurnSignalType::NONE;
+      break; 
+  }
+}
 }  // namespace planner
 }  // namespace planning
