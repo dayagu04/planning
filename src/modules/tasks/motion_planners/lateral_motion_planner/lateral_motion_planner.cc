@@ -324,9 +324,9 @@ void LateralMotionPlanner::AssembleInput() {
   } else if (lateral_offset_decider_output.is_valid) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
-  } else if (bend_scene) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::BEND,
-                                                 planning_input_);
+  // } else if (bend_scene) {
+  //   planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::BEND,
+  //                                                planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_KEEP, planning_input_);
