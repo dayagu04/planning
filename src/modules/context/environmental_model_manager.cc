@@ -899,8 +899,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   } else {
     prediction_object.theta = std::atan2(fusion_object.common_info.velocity.y,
                                          fusion_object.common_info.velocity.x);
-    prediction_object.relative_theta =
-        prediction_object.theta - ego_state_manager_ptr_->heading_angle();
+    prediction_object.relative_theta = std::atan2(
+        relative_v_y, relative_v_x + ego_state_manager_ptr_->ego_v());
   }
 
   if ((int)prediction_object.relative_theta == 255) {
