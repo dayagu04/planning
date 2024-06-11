@@ -868,7 +868,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
        ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists[i];
-        fusion_slot_map[fusion_slot.id] = fusion_slot;
+    fusion_slot_map[fusion_slot.id] = fusion_slot;
     common::SlotInfo slot_info;
     if (!ProcessRawSlot(fusion_slot, slot_info)) {
       continue;

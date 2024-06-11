@@ -229,14 +229,13 @@ void PlanningAdapter::Proc() {
   if (is_localization_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     local_view_ptr_->localization = localization_msg_;
-    local_view_ptr_->localization_recv_time =
-        localization_msg_recv_time_;
+    local_view_ptr_->localization_recv_time = localization_msg_recv_time_;
     is_localization_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization(
       local_view_ptr_->localization.header.timestamp);
-  input_topic_latency->set_localization(get_latency(
-      start_time, local_view_ptr_->localization.header.timestamp));
+  input_topic_latency->set_localization(
+      get_latency(start_time, local_view_ptr_->localization.header.timestamp));
 
   if (is_fusion_objects_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);

@@ -7,9 +7,9 @@
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
 #include "task_basic_types.h"
 #include "trajectory1d/trajectory1d.h"
-#include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
 
 namespace {
 
@@ -34,7 +34,7 @@ constexpr double kAccMax = 1.5;
 constexpr double kJerkMin = -1.0;
 constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
-}
+}  // namespace
 namespace planning {
 
 SccLonBehaviorPlanner::SccLonBehaviorPlanner(
@@ -554,8 +554,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   std::vector<double> sref_stable;
   sref_farslow.resize(config_.lon_num_step + 1);
   sref_stable.resize(config_.lon_num_step + 1);
-  jlt_status =
-      GenerateFarSlowCarFollowCurve(sref_farslow);
+  jlt_status = GenerateFarSlowCarFollowCurve(sref_farslow);
   if (jlt_status && config_.enable_jlt) {
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       // lon_behav_output_.s_refs[i].first =
@@ -708,7 +707,7 @@ void SccLonBehaviorPlanner::UpdateHMI() {
 }
 
 void SccLonBehaviorPlanner::GetHardBounds() {
-  const auto& s_bounds = lon_behav_output_.lead_bounds;
+  const auto &s_bounds = lon_behav_output_.lead_bounds;
   size_t size = s_bounds.size();
   hard_bounds_.reserve(s_bounds.size());
   for (size_t i = 0; i < size; ++i) {
@@ -729,7 +728,7 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
     std::vector<double> &s_refs) {
   // check far slow car
   const int check_idx = 8;
-  const auto& check_st = hard_bounds_[check_idx];
+  const auto &check_st = hard_bounds_[check_idx];
 
   constexpr double min_far_distance_threshold = 15.0;
   const double add_time_gap = 0.3;
@@ -739,8 +738,7 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
       std::fmax(lon_init_state_[1] * far_time_gap + kDefaultFollowMinDist,
                 min_far_distance_threshold);
   const double lead_bound_s_diff =
-      check_st.upper -
-      check_time * check_st.vel;  // + check_idx * 0.2
+      check_st.upper - check_time * check_st.vel;  // + check_idx * 0.2
   // check lead bound s_diff
   if (lead_bound_s_diff < ego_move_dist) {
     return false;
@@ -778,7 +776,7 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   // generate relative coord
   constexpr double min_follow_distance_m = 3.0;
   CoordinateParam coordinate_param;
-  const auto& end_bound = hard_bounds_.back();
+  const auto &end_bound = hard_bounds_.back();
   const double vel = end_bound.vel;
   const double target_distance = std::max(
       lon_init_state_[1] * far_slow_follow_time_gap + min_follow_distance_m,
@@ -864,14 +862,14 @@ bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
   // const double check_front_time = 2.0;
   // const double dt = 0.2;
   for (unsigned t = 0; t < config_.lon_num_step; t++) {
-    const auto& current_bound_id = hard_bounds_[t].id;
-    const auto& next_bound_id = hard_bounds_[t + 1].id;
+    const auto &current_bound_id = hard_bounds_[t].id;
+    const auto &next_bound_id = hard_bounds_[t + 1].id;
     if (current_bound_id != next_bound_id) {
       return false;
     }
   }
 
-  const auto& start_bound = hard_bounds_.front();
+  const auto &start_bound = hard_bounds_.front();
   const double init_s_distance = start_bound.upper - lon_init_state_[0];
   const double front_vel = start_bound.vel;
   const double front_acc = start_bound.acc;
@@ -901,7 +899,7 @@ bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
   }
 
   CoordinateParam relative_coordinate_param;
-  const auto& last_bound = hard_bounds_.back();
+  const auto &last_bound = hard_bounds_.back();
   const double vel = last_bound.vel;
   const double target_distance =
       std::max(lon_init_state_[1] * follow_time_gap + min_follow_distance_m,

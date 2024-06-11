@@ -281,16 +281,21 @@ void LateralMotionPlanner::AssembleInput() {
   double aver_far_kappa = 0.0;
   ReferencePathPoint close_ref_path_point;
   ReferencePathPoint far_ref_path_point;
-  for (double preview_distance = ego_s; preview_distance < preview_length; preview_distance += preview_step) {
-    reference_path_ptr->get_reference_point_by_lon((preview_distance), close_ref_path_point);
+  for (double preview_distance = ego_s; preview_distance < preview_length;
+       preview_distance += preview_step) {
+    reference_path_ptr->get_reference_point_by_lon((preview_distance),
+                                                   close_ref_path_point);
     aver_close_kappa += close_ref_path_point.path_point.kappa;
-    reference_path_ptr->get_reference_point_by_lon((preview_distance + config_.curvature_preview_distance), far_ref_path_point);
+    reference_path_ptr->get_reference_point_by_lon(
+        (preview_distance + config_.curvature_preview_distance),
+        far_ref_path_point);
     aver_far_kappa += far_ref_path_point.path_point.kappa;
   }
-  if ((std::fabs(preview_length) > 1e-6) &&(std::fabs(preview_step) > 1e-6)) {
+  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
     aver_close_kappa /= (preview_length / preview_step);
     aver_far_kappa /= (preview_length / preview_step);
-    if (((1.0 / fabs(aver_close_kappa)) < config_.road_curvature_radius) || ((1.0 / fabs(aver_far_kappa)) < config_.road_curvature_radius)) {
+    if (((1.0 / fabs(aver_close_kappa)) < config_.road_curvature_radius) ||
+        ((1.0 / fabs(aver_far_kappa)) < config_.road_curvature_radius)) {
       bend_scene = true;
     }
   }
@@ -304,11 +309,15 @@ void LateralMotionPlanner::AssembleInput() {
       reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref0, frenet_ref0) &&
       reference_path_ptr->get_frenet_coord()->XYToSL(cart_init, frenet_init)) {
     planning_weight_ptr_->SetInitDisToRef((frenet_init.y - frenet_ref0.y));
-    planning_weight_ptr_->SetInitRefThetaError((planning_input_.init_state().theta() - planning_input_.ref_theta_vec(0)) * 57.3);
+    planning_weight_ptr_->SetInitRefThetaError(
+        (planning_input_.init_state().theta() -
+         planning_input_.ref_theta_vec(0)) *
+        57.3);
   } else {
     planning_weight_ptr_->CalculateInitInfo(planning_input_);
   }
-  planning_weight_ptr_->SetEgoVel(session_->environmental_model().get_ego_state_manager()->ego_v());
+  planning_weight_ptr_->SetEgoVel(
+      session_->environmental_model().get_ego_state_manager()->ego_v());
   planning_weight_ptr_->SetEgoL(reference_path_ptr->get_frenet_ego_state().l());
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
@@ -334,13 +343,16 @@ void LateralMotionPlanner::AssembleInput() {
 }
 
 void LateralMotionPlanner::Update() {
-  const double concerned_start_q_jerk =  planning_weight_ptr_->GetConcernedStartQJerk();
+  const double concerned_start_q_jerk =
+      planning_weight_ptr_->GetConcernedStartQJerk();
   JSON_DEBUG_VALUE("concerned_start_q_jerk", concerned_start_q_jerk);
-  const double ego_vel = std::max(session_->environmental_model().get_ego_state_manager()->ego_v(), config_.min_ego_vel);
+  const double ego_vel =
+      std::max(session_->environmental_model().get_ego_state_manager()->ego_v(),
+               config_.min_ego_vel);
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
-      config_.motion_plan_concerned_start_index,
-      concerned_start_q_jerk, ego_vel, planning_input_);
+      config_.motion_plan_concerned_start_index, concerned_start_q_jerk,
+      ego_vel, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);

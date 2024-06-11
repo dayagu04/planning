@@ -1225,15 +1225,21 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo3() {
   // calculate if avd_obstacle is passive
   // TODO(clren): cancel passive flag
   if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
-    if ((avd_obstacles_history_[0].flag == AvoidObstacleFlag::INVALID || avd_obstacles_history_[0].track_id != avd_obstacles_[0].track_id) &&
-        (avd_obstacles_history_[1].flag == AvoidObstacleFlag::INVALID || avd_obstacles_history_[1].track_id != avd_obstacles_[0].track_id)) {
-      avd_obstacles_[0].is_passive = lateral_offset_decider::IsPassive(avd_obstacles_[0]);
+    if ((avd_obstacles_history_[0].flag == AvoidObstacleFlag::INVALID ||
+         avd_obstacles_history_[0].track_id != avd_obstacles_[0].track_id) &&
+        (avd_obstacles_history_[1].flag == AvoidObstacleFlag::INVALID ||
+         avd_obstacles_history_[1].track_id != avd_obstacles_[0].track_id)) {
+      avd_obstacles_[0].is_passive =
+          lateral_offset_decider::IsPassive(avd_obstacles_[0]);
     }
 
     if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
-      if ((avd_obstacles_history_[0].flag == AvoidObstacleFlag::INVALID && avd_obstacles_history_[0].track_id != avd_obstacles_[1].track_id) &&
-          (avd_obstacles_history_[1].flag == AvoidObstacleFlag::INVALID && avd_obstacles_history_[1].track_id != avd_obstacles_[1].track_id)) {
-        avd_obstacles_[1].is_passive = lateral_offset_decider::IsPassive(avd_obstacles_[1]);
+      if ((avd_obstacles_history_[0].flag == AvoidObstacleFlag::INVALID &&
+           avd_obstacles_history_[0].track_id != avd_obstacles_[1].track_id) &&
+          (avd_obstacles_history_[1].flag == AvoidObstacleFlag::INVALID &&
+           avd_obstacles_history_[1].track_id != avd_obstacles_[1].track_id)) {
+        avd_obstacles_[1].is_passive =
+            lateral_offset_decider::IsPassive(avd_obstacles_[1]);
       }
     }
   }

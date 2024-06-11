@@ -107,7 +107,8 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
       avoid_obstacle_maintainer5v_.avd_obstacles_history();
   const auto &avd_obstacles = avoid_obstacle_maintainer5v_.avd_obstacles();
   if (avd_obstacles[0].flag == AvoidObstacleFlag::INVALID) {
-    if (avd_obstacles_history[0].flag != AvoidObstacleFlag::INVALID && avd_obstacles_history[0].s_to_ego >=0) {
+    if (avd_obstacles_history[0].flag != AvoidObstacleFlag::INVALID &&
+        avd_obstacles_history[0].s_to_ego >= 0) {
       overlap_lateral_offset_change_rate = 0.01;
     }
   }

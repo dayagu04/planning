@@ -17,9 +17,8 @@ class LateralMotionPlanningProblem {
   void Init();
 
   uint8_t Update(const size_t motion_plan_concerned_start_index,
-                const double concerned_start_q_jerk,
-                const double ego_vel,
-                planning::common::LateralPlanningInput &planning_input);
+                 const double concerned_start_q_jerk, const double ego_vel,
+                 planning::common::LateralPlanningInput &planning_input);
 
   const planning::common::LateralPlanningOutput &GetOutput() {
     return planning_output_;

@@ -46,9 +46,9 @@ void LateralMotionPlanningProblem::Init() {
       std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
-//   ilqr_core_ptr_->AddCost(
-//       std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor
-                                                      // cost
+                                                  //   ilqr_core_ptr_->AddCost(
+  //       std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor
+  // cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -67,8 +67,7 @@ void LateralMotionPlanningProblem::Init() {
 
 uint8_t LateralMotionPlanningProblem::Update(
     const size_t motion_plan_concerned_start_index,
-    const double concerned_start_q_jerk,
-    const double ego_vel,
+    const double concerned_start_q_jerk, const double ego_vel,
     planning::common::LateralPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
@@ -123,8 +122,7 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
 
-    cost_config_vec.at(i)[W_REF_THETA] =
-        planning_input.q_ref_theta();
+    cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
     cost_config_vec.at(i)[W_CONTINUITY_X] =
         planning_input.q_ref_x() * planning_input.q_continuity();
     cost_config_vec.at(i)[W_CONTINUITY_Y] =
@@ -142,10 +140,14 @@ uint8_t LateralMotionPlanningProblem::Update(
 
     if (!planning_input.complete_follow()) {
       if (i < motion_plan_concerned_start_index) {
-        double start_step = std::max((concerned_start_q_jerk - planning_input.q_jerk()) / motion_plan_concerned_start_index, 0.0);
+        double start_step =
+            std::max((concerned_start_q_jerk - planning_input.q_jerk()) /
+                         motion_plan_concerned_start_index,
+                     0.0);
         cost_config_vec.at(i)[W_JERK] = concerned_start_q_jerk - start_step * i;
       } else if (i > planning_input.motion_plan_concerned_index()) {
-        cost_config_vec.at(i)[W_JERK] = std::min(end_ratio * planning_input.q_jerk(), concerned_start_q_jerk);
+        cost_config_vec.at(i)[W_JERK] = std::min(
+            end_ratio * planning_input.q_jerk(), concerned_start_q_jerk);
         end_ratio *= 1.5;
       }
     }

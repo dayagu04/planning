@@ -223,9 +223,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
 
-  bool curr_direct_exist =
-      (clane->get_lane_marks() ==
-       iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT);
+  bool curr_direct_exist = (clane->get_lane_marks() ==
+                            iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT);
   double v_ego = ego_state->ego_v();
 
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
@@ -611,8 +610,8 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
     }
     // TODO:靠近分流口，分流口类型不是匝道，考虑反方向变道抑制(城区智能驾驶领航)
 
-    if (target_lane->get_lane_merge_split_point()
-            .merge_split_point_data_size > 0) {
+    if (target_lane->get_lane_merge_split_point().merge_split_point_data_size >
+        0) {
       const auto& target_lane_merge_info =
           target_lane->get_lane_merge_split_point().merge_split_point_data[0];
       if (!target_lane_merge_info.is_split) {

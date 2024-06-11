@@ -1505,7 +1505,9 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y -
                                    ref_point.at(i - 1).path_point.y)
               : 0.;
-    kappa_vec[i] = std::min(std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0), 10000.0);
+    kappa_vec[i] = std::min(
+        std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
+        10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
@@ -1561,7 +1563,7 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
       point.y = cart_ref_info.y_s_spline(s_ref);
       point.heading_angle =
           std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                    cart_ref_info.x_s_spline.deriv(1, s_ref));
+                     cart_ref_info.x_s_spline.deriv(1, s_ref));
     }
 
     // frenet info

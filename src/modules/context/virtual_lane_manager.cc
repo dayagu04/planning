@@ -61,7 +61,8 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
                                      .get_ego_state_manager()
                                      ->ego_steer_angle();
 
-  LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v, ego_yaw_rate, ego_steer_angle);
+  LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v,
+            ego_yaw_rate, ego_steer_angle);
 
   LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v,
             ego_yaw_rate, ego_steer_angle);
@@ -218,8 +219,7 @@ void VirtualLaneManager::construct_reference_line_msg(
 
     current_lane_virtual_ref_point->is_in_intersection = false;
 
-    current_lane_virtual_ref_point->lane_type =
-        iflyauto::LANETYPE_VIRTUAL;
+    current_lane_virtual_ref_point->lane_type = iflyauto::LANETYPE_VIRTUAL;
 
     const double delta_x = 2.0;
     if (i == 0) {
@@ -336,7 +336,7 @@ void VirtualLaneManager::construct_reference_line_msg(
   }
 }
 void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
-    const iflyauto::LaneReferenceLine &refline) {
+    const iflyauto::LaneReferenceLine& refline) {
   planning::common::ReferenceLine refline_to_debug;
   for (int i = 0; i < NUM_OF_POLYNOMIAL; i++) {
     refline_to_debug.add_poly_coefficient_car(refline.poly_coefficient_car[i]);
@@ -344,33 +344,59 @@ void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
 
   for (int i = 0; i < refline.virtual_lane_refline_points_size; i++) {
     auto virtual_ref_point = refline_to_debug.add_virtual_lane_refline_points();
-    virtual_ref_point->set_track_id(refline.virtual_lane_refline_points[i].track_id);
-    virtual_ref_point->mutable_car_point()->set_x(refline.virtual_lane_refline_points[i].car_point.x);
-    virtual_ref_point->mutable_car_point()->set_y(refline.virtual_lane_refline_points[i].car_point.y);
-    virtual_ref_point->mutable_enu_point()->set_x(refline.virtual_lane_refline_points[i].enu_point.x);
-    virtual_ref_point->mutable_enu_point()->set_y(refline.virtual_lane_refline_points[i].enu_point.y);
-    virtual_ref_point->mutable_enu_point()->set_z(refline.virtual_lane_refline_points[i].enu_point.z);
-    virtual_ref_point->mutable_local_point()->set_x(refline.virtual_lane_refline_points[i].local_point.x);
-    virtual_ref_point->mutable_local_point()->set_y(refline.virtual_lane_refline_points[i].local_point.y);
-    virtual_ref_point->mutable_local_point()->set_z(refline.virtual_lane_refline_points[i].local_point.z);
-    virtual_ref_point->set_curvature(refline.virtual_lane_refline_points[i].curvature);
-    virtual_ref_point->set_car_heading(refline.virtual_lane_refline_points[i].car_heading);
-    virtual_ref_point->set_enu_heading(refline.virtual_lane_refline_points[i].enu_heading);
-    virtual_ref_point->set_local_heading(refline.virtual_lane_refline_points[i].local_heading);
-    virtual_ref_point->set_distance_to_left_road_border(refline.virtual_lane_refline_points[i].distance_to_left_road_border);
-    virtual_ref_point->set_distance_to_right_road_border(refline.virtual_lane_refline_points[i].distance_to_right_road_border);
-    virtual_ref_point->set_distance_to_left_lane_border(refline.virtual_lane_refline_points[i].distance_to_left_lane_border);
-    virtual_ref_point->set_distance_to_right_lane_border(refline.virtual_lane_refline_points[i].distance_to_right_lane_border);
+    virtual_ref_point->set_track_id(
+        refline.virtual_lane_refline_points[i].track_id);
+    virtual_ref_point->mutable_car_point()->set_x(
+        refline.virtual_lane_refline_points[i].car_point.x);
+    virtual_ref_point->mutable_car_point()->set_y(
+        refline.virtual_lane_refline_points[i].car_point.y);
+    virtual_ref_point->mutable_enu_point()->set_x(
+        refline.virtual_lane_refline_points[i].enu_point.x);
+    virtual_ref_point->mutable_enu_point()->set_y(
+        refline.virtual_lane_refline_points[i].enu_point.y);
+    virtual_ref_point->mutable_enu_point()->set_z(
+        refline.virtual_lane_refline_points[i].enu_point.z);
+    virtual_ref_point->mutable_local_point()->set_x(
+        refline.virtual_lane_refline_points[i].local_point.x);
+    virtual_ref_point->mutable_local_point()->set_y(
+        refline.virtual_lane_refline_points[i].local_point.y);
+    virtual_ref_point->mutable_local_point()->set_z(
+        refline.virtual_lane_refline_points[i].local_point.z);
+    virtual_ref_point->set_curvature(
+        refline.virtual_lane_refline_points[i].curvature);
+    virtual_ref_point->set_car_heading(
+        refline.virtual_lane_refline_points[i].car_heading);
+    virtual_ref_point->set_enu_heading(
+        refline.virtual_lane_refline_points[i].enu_heading);
+    virtual_ref_point->set_local_heading(
+        refline.virtual_lane_refline_points[i].local_heading);
+    virtual_ref_point->set_distance_to_left_road_border(
+        refline.virtual_lane_refline_points[i].distance_to_left_road_border);
+    virtual_ref_point->set_distance_to_right_road_border(
+        refline.virtual_lane_refline_points[i].distance_to_right_road_border);
+    virtual_ref_point->set_distance_to_left_lane_border(
+        refline.virtual_lane_refline_points[i].distance_to_left_lane_border);
+    virtual_ref_point->set_distance_to_right_lane_border(
+        refline.virtual_lane_refline_points[i].distance_to_right_lane_border);
 
-    virtual_ref_point->set_lane_width(refline.virtual_lane_refline_points[i].lane_width);
-    virtual_ref_point->set_speed_limit_max(refline.virtual_lane_refline_points[i].speed_limit_max);
-    virtual_ref_point->set_speed_limit_min(refline.virtual_lane_refline_points[i].speed_limit_min);
-    virtual_ref_point->set_left_road_border_type(planning::common::LineType::OTHER_LINE);
-    virtual_ref_point->set_right_road_border_type(planning::common::LineType::OTHER_LINE);
-    virtual_ref_point->set_left_lane_border_type(planning::common::LineType::OTHER_LINE);
-    virtual_ref_point->set_right_lane_border_type(planning::common::LineType::OTHER_LINE);
-    virtual_ref_point->set_is_in_intersection(refline.virtual_lane_refline_points[i].is_in_intersection);
-    virtual_ref_point->set_lane_type(planning::common::LaneType::LANETYPE_VIRTUAL);
+    virtual_ref_point->set_lane_width(
+        refline.virtual_lane_refline_points[i].lane_width);
+    virtual_ref_point->set_speed_limit_max(
+        refline.virtual_lane_refline_points[i].speed_limit_max);
+    virtual_ref_point->set_speed_limit_min(
+        refline.virtual_lane_refline_points[i].speed_limit_min);
+    virtual_ref_point->set_left_road_border_type(
+        planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_right_road_border_type(
+        planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_left_lane_border_type(
+        planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_right_lane_border_type(
+        planning::common::LineType::OTHER_LINE);
+    virtual_ref_point->set_is_in_intersection(
+        refline.virtual_lane_refline_points[i].is_in_intersection);
+    virtual_ref_point->set_lane_type(
+        planning::common::LaneType::LANETYPE_VIRTUAL);
     virtual_ref_point->set_s(refline.virtual_lane_refline_points[i].s);
   }
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
@@ -589,8 +615,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
           relative_id_lane->get_lane_merge_split_point()
               .merge_split_point_data[0];
       const bool current_lane_is_continue = lane_merge_split_point.is_continue;
-      const bool is_current_lane_normal = relative_id_lane->get_lane_type() ==
-                                          iflyauto::LANETYPE_NORMAL;
+      const bool is_current_lane_normal =
+          relative_id_lane->get_lane_type() == iflyauto::LANETYPE_NORMAL;
       // get right lane
       std::shared_ptr<VirtualLane> right_lane;
       for (const auto& get_relative_id_lane : relative_id_lanes_) {
@@ -608,8 +634,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
               right_lane->get_lane_merge_split_point()
                   .merge_split_point_data[0];
           const bool is_right_lane_accelerate =
-              right_lane->get_lane_type() ==
-              iflyauto::LANETYPE_ACCELERATE;
+              right_lane->get_lane_type() == iflyauto::LANETYPE_ACCELERATE;
           if (current_lane_is_continue && is_current_lane_normal &&
               is_right_lane_accelerate && !right_lane_merge_info.is_split &&
               right_lane_merge_info.orientation == 1 &&
@@ -675,7 +700,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   //   relative_id_lanes_.emplace_back(virtual_lane_tmp);
   // }
 
-  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
@@ -1681,13 +1707,14 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
         double y_interval = std::fabs(current_point.y - prev_point.y);
         if (y_interval > max_y_interval) {
           LOG_ERROR("lane_valid is error \n");
-          //y_interval_valid = false;
+          // y_interval_valid = false;
           y_interval_invalid_idx_vec.emplace_back(i);
           break;
         }
       }
     }
-    y_interval_valid = y_interval_invalid_idx_vec.size() < roads.reference_line_msg_size;
+    y_interval_valid =
+        y_interval_invalid_idx_vec.size() < roads.reference_line_msg_size;
   }
 
   // TBD: 校验车道中心线的连续性

@@ -42,7 +42,8 @@ class LateralMotionPlanningWeight {
   void SetAccJerkBoundByVelocity(
       planning::common::LateralPlanningInput &planning_input);
 
-  void MakeDynamicWeight(planning::common::LateralPlanningInput &planning_input);
+  void MakeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
 
  private:
   planning::LateralMotionPlannerConfig config_;

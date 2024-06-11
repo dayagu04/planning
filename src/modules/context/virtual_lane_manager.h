@@ -7,12 +7,12 @@
 #include "ad_common/hdmap/hdmap.h"
 #include "ego_planning_config.h"
 #include "fusion_road_c.h"
+#include "generated_refline.pb.h"
 #include "intersection.h"
 #include "local_view.h"
 #include "log.h"
 #include "session.h"
 #include "virtual_lane.h"
-#include "generated_refline.pb.h"
 
 namespace planning {
 
@@ -208,7 +208,8 @@ class VirtualLaneManager {
   // void CalculateDistanceToNextSpeedBump(planning::framework::Session
   // *session);
   void ResetForRampInfo();
-  void SetGeneratedReflineToDebugInfo(const iflyauto::LaneReferenceLine &refline);
+  void SetGeneratedReflineToDebugInfo(
+      const iflyauto::LaneReferenceLine &refline);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;

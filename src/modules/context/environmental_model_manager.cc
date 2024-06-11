@@ -854,13 +854,11 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   } else {
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
-  prediction_object.acc =
-      std::hypot(fusion_object.common_info.acceleration.x,
-                 fusion_object.common_info.acceleration.y);
+  prediction_object.acc = std::hypot(fusion_object.common_info.acceleration.x,
+                                     fusion_object.common_info.acceleration.y);
   // judge direction of obj acc
-  auto obj_acc_heading_angle =
-      atan2(fusion_object.common_info.acceleration.y,
-            fusion_object.common_info.acceleration.x);
+  auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
+                                     fusion_object.common_info.acceleration.x);
   Eigen::Vector2f obj_acc_heading_vec(cos(obj_acc_heading_angle),
                                       sin(obj_acc_heading_angle));
   Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),

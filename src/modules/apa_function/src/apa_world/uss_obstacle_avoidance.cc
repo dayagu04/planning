@@ -4,8 +4,8 @@
 #include <utility>
 
 #include "apa_param_setting.h"
-#include "debug_info_log.h"
 #include "common_c.h"
+#include "debug_info_log.h"
 #include "geometry_math.h"
 #include "transform_lib.h"
 
@@ -311,8 +311,7 @@ const bool UssObstacleAvoidance::Preprocess() {
   //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   const auto &uss_dis_info = uss_dis_info_buf[4];
   if (uss_dis_info.obj_pt_cnt != 12) {
-    DEBUG_PRINT("uss dis nums = " << uss_dis_info.obj_pt_cnt
-                                  << " != 12 ");
+    DEBUG_PRINT("uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ");
     return false;
   }
   // raw dist info stored in dis_from_car_to_obj in clockwise direction, the

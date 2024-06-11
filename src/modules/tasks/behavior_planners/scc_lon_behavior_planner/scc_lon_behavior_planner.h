@@ -71,7 +71,7 @@ class SccLonBehaviorPlanner : public Task {
     double vel;
     double acc;
     int id = 0;
-};
+  };
 
  private:
   SccLonBehaviorPlannerConfig config_;

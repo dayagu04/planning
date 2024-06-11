@@ -91,7 +91,7 @@ void LateralMotionPlanningWeight::CalculateInitInfo(
   const double d = Square(a) + Square(b);
   if (d > 1e-8) {
     init_dis_to_ref_ = -(a * planning_input.init_state().x() +
-                        b * planning_input.init_state().y() + c) /
+                         b * planning_input.init_state().y() + c) /
                        d;
   } else {
     double x_error =
@@ -125,18 +125,24 @@ void LateralMotionPlanningWeight::SetAccJerkBoundByVelocity(
   planning_input.set_jerk_bound(jerk_bound);
 }
 
-void LateralMotionPlanningWeight::MakeDynamicWeight(planning::common::LateralPlanningInput &planning_input) {
+void LateralMotionPlanningWeight::MakeDynamicWeight(
+    planning::common::LateralPlanningInput &planning_input) {
   std::array<double, 3> xp_v{5.0, 10.0, 20.0};
-  std::array<double, 3> fp_qxy{config_.map_qxy0, config_.map_qxy1, config_.map_qxy2};
+  std::array<double, 3> fp_qxy{config_.map_qxy0, config_.map_qxy1,
+                               config_.map_qxy2};
   double q_xy = planning::interp(ego_vel_, xp_v, fp_qxy);
   planning_input.set_q_ref_x(q_xy);
   planning_input.set_q_ref_y(q_xy);
 
   std::array<double, 4> xp_xy{0.1, 0.2, 0.4, 0.8};
-  std::array<double, 4> fp_qjerk0{config_.map1_qjerk0, config_.map1_qjerk1, config_.map1_qjerk2, config_.map1_qjerk3};
-  std::array<double, 4> fp_qjerk1{config_.map2_qjerk0, config_.map2_qjerk1, config_.map2_qjerk2, config_.map2_qjerk3};
-  double q_jerk0 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk0);
-  double q_jerk1 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk1);
+  std::array<double, 4> fp_qjerk0{config_.map1_qjerk0, config_.map1_qjerk1,
+                                  config_.map1_qjerk2, config_.map1_qjerk3};
+  std::array<double, 4> fp_qjerk1{config_.map2_qjerk0, config_.map2_qjerk1,
+                                  config_.map2_qjerk2, config_.map2_qjerk3};
+  double q_jerk0 =
+      planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk0);
+  double q_jerk1 =
+      planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk1);
 
   planning_input.set_q_jerk(q_jerk1);
   concerned_start_q_jerk_ = q_jerk0;

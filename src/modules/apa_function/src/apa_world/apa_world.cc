@@ -5,8 +5,8 @@
 
 #include "apa_param_setting.h"
 #include "common.pb.h"
-#include "debug_info_log.h"
 #include "common_c.h"
+#include "debug_info_log.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "geometry_math.h"

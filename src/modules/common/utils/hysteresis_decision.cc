@@ -44,17 +44,13 @@ void HysteresisDecision::SetIsValidByValue(double value) {
   }
 }
 
-bool HysteresisDecision::IsValid() {
-  return is_valid_;
-}
+bool HysteresisDecision::IsValid() { return is_valid_; }
 
-int HysteresisDecision::Value() {
-  return count_;
-}
+int HysteresisDecision::Value() { return count_; }
 
 void HysteresisDecision::Reset() {
   count_ = 0;
   is_valid_ = false;
 }
 
-} // namespace planning
+}  // namespace planning
