@@ -103,44 +103,6 @@ bool GapSelectorDecider::Execute() {
 
   Update();
 
-  //   GapSelectorDeciderOutput &gap_selector_decider_output =
-  //       session_->mutable_planning_context()
-  //           ->mutable_gap_selector_decider_output();
-
-  //   // Preprocess Part:below is the upstream info, these need to be decoupled
-  //   by
-  //   // interface
-  //   // -----------------------------------------
-
-  //   auto start_time = IflyTime::Now_ms();
-
-  //   Preprocessor();
-
-  //   auto preprocessor_end_time = IflyTime::Now_ms();
-  //   JSON_DEBUG_VALUE("GapSelectorPreprocessCostTime",
-  //                    preprocessor_end_time - start_time);
-  //   // update
-  //   GapSelectorStatus gap_status = Update(gap_selector_decider_output);
-
-  // #ifdef __COLLECT_GAP_SELECTOR_DEBUG_INFO__
-  //   gap_selector_interface_.Store(session_,
-  //   gap_selector_state_machine_info_);
-  //   gap_selector_interface_.Store(path_spline_, *traj_points_ptr_);
-  // #endif
-
-  // #ifdef __COLLECT_GAP_SELECTOR_REPLAY_INFO__
-  //   gap_selector_interface_.ReplayCollect(
-  //       *traj_points_ptr_, gap_selector_state_machine_info_, path_spline_,
-  //       gap_list_, nearby_gap_, front_gap_car_st_boundaries_,
-  //       rear_gap_car_st_boundaries_, front_careful_car_st_boundary_,
-  //       front_careful_car_id_origin_lane_, st_time_optimal_, gap_status,
-  //       front_car_dynamic_dis_, rear_car_dynamic_dis_,
-  //       ego_lane_car_dynamic_dis_);
-
-  // #endif
-  //   auto all_task_end_time = IflyTime::Now_ms();
-  //   JSON_DEBUG_VALUE("GapSelectorTaskCostTime", all_task_end_time -
-  //   start_time);
   return true;
 }
 
@@ -380,9 +342,6 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
     gap_selector_decider_output.gap_selector_trustworthy =
         remain_lc_time < 1.0 ? false : true;
-    gap_selector_decider_output.gap_selector_trustworthy =
-        config_.use_gs ? true
-                       : gap_selector_decider_output.gap_selector_trustworthy;
 
   } else if (is_lc_back_scene) {
     double lb_end_s, lb_target_l,
