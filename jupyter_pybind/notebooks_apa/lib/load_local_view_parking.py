@@ -40,6 +40,7 @@ fusion_slot_timestamps = []
 vision_slot_timestamps = []
 mobileye_lane_lines_timestamps = []
 mobileye_objects_timestamps = []
+fus_release_solts_id = []
 
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
@@ -902,6 +903,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     slots_x_vec = []
     slots_y_vec = []
     id_vec = []
+    fus_release_solts_id = []
     id_text_x_vec = []
     id_text_y_vec = []
     for j in range(len(parking_fusion_slot_lists)):
@@ -934,6 +936,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       id_vec.append(slot.id)
       id_text_x_vec.append((slot_plot_x_vec[0] + slot_plot_x_vec[1] + slot_plot_x_vec[2] + slot_plot_x_vec[3]) * 0.25)
       id_text_y_vec.append((slot_plot_y_vec[0] + slot_plot_y_vec[1] + slot_plot_y_vec[2] + slot_plot_y_vec[3]) * 0.25)
+
+      # 4.
+      if slot.allow_parking == 1:
+        fus_release_solts_id.append(slot.id)
+
 
     local_view_data['data_fusion_parking'].data.update({'corner_point_x': slots_x_vec, 'corner_point_y': slots_y_vec,})
     local_view_data['data_fusion_parking_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})
@@ -1023,6 +1030,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   # load plan debug msg
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_all_managed_slot_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
     slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
     select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
     # print("select_slot_id in plan debug", select_slot_id)
@@ -1032,6 +1040,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     all_managed_slot_y_vec = []
     occupied_x_vec = []
     occupied_y_vec = []
+    id_vec = []
+    id_text_x_vec = []
+    id_text_y_vec = []
     # 1. update target managed slot
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
@@ -1052,10 +1063,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
         occupied_x_vec.append(slot_x)
         occupied_y_vec.append(slot_y)
 
+      id_vec.append(maganed_slot_vec.id )
+      id_text_x_vec.append((slot_x[0] + slot_x[1] + slot_x[2] + slot_x[3]) * 0.25)
+      id_text_y_vec.append((slot_y[0] + slot_y[1] + slot_y[2] + slot_y[3]) * 0.25)
+
     local_view_data['data_all_managed_slot'].data.update({
           'corner_point_x': all_managed_slot_x_vec,
           'corner_point_y': all_managed_slot_y_vec,
           })
+
+
+    local_view_data['data_all_managed_slot_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})
+
     local_view_data['data_all_managed_occupied_slot'].data.update({
           'occupied_slot_y': occupied_y_vec,
           'occupied_slot_x': occupied_x_vec,
@@ -1180,8 +1199,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       names.append("slot_width")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_width']))
 
-      names.append("slots_id")
+      names.append("plan_release_slots_id")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
+
+      names.append("fusion_release_slots_id")
+      datas.append(str(fus_release_solts_id))
 
       names.append("plan_gear_cmd")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].gear_command))
@@ -1409,6 +1431,7 @@ def load_local_view_figure_parking():
   })
 
   data_all_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_all_managed_slot_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
   data_all_managed_limiter = ColumnDataSource(data = {'limiter_point_y': [], 'limiter_point_x': [],})
   data_all_managed_occupied_slot = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
 
@@ -1453,6 +1476,7 @@ def load_local_view_figure_parking():
                      'data_wave_min':data_wave_min, \
                      'data_wave_length_text':data_wave_length_text, \
                      'data_all_managed_slot':data_all_managed_slot,\
+                     'data_all_managed_slot_id':data_all_managed_slot_id,\
                      'data_all_managed_limiter':data_all_managed_limiter,\
                      'data_all_managed_occupied_slot':data_all_managed_occupied_slot,\
                      'data_car_target_line':data_car_target_line,\
@@ -1494,6 +1518,8 @@ def load_local_view_figure_parking():
 
   # debug
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_all_managed_slot, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'all managed slot', visible = False)
+  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_all_managed_slot_id, text_color='blue', text_align='center', text_font_size='10pt',legend_label = 'all managed slot', visible = False)
+
   fig1.line('limiter_point_y', 'limiter_point_x', source = data_all_managed_limiter, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'managed limiter')
   fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
 
@@ -1799,6 +1825,13 @@ location_params_apa = {
 }
 slot_id_params_apa = { 'text_color' : "red", 'text_align':"center", 'text_font_size':"10pt", 'legend_label' : 'fusion_parking_slot' }
 
+all_slot_id_params_apa = {
+  'text_color' : "blue",
+  'text_align':"center",
+  'text_font_size':"10pt",
+  'legend_label' : 'all managed slot',
+  'visible' : False}
+
 location_params = {
   'line_width' : 1,
   'line_color' : 'orange',
@@ -1938,6 +1971,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     soc_timestamps = []
     wave_timestamps = []
     uss_percept_timestamps = []
+    fusion_slot_timestamps = []
 
     bag_time = 0.0
     while bag_time <= max_time + time_step / 2:
@@ -2178,6 +2212,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     final_slot_generate = CommonGenerator()
     all_slot_generate = CommonGenerator()
     slot_id_generate = TextGenerator()
+    all_slot_id_generate = TextGenerator()
     all_managed_occupied_slot_generate = CommonGenerator()
     all_managed_limiter_generate = CommonGenerator()
     tlane_generate = CommonGenerator()
@@ -2197,6 +2232,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             temp_slot_id_list = []
             temp_slot_id_x_list = []
             temp_slot_id_y_list = []
+            fus_release_solts_id = []
             for slot in parking_fusion_slot_lists:
                 temp_corner_x = []
                 temp_corner_y = []
@@ -2223,6 +2259,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                 temp_slot_id_list.append(text)
                 temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[2]+temp_corner_x[3]+temp_corner_x[1])/4)
                 temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[2]+temp_corner_y[3]+temp_corner_y[1])/4)
+                #
+                if slot.allow_parking == 1:
+                  fus_release_solts_id.append(slot.id)
             fusion_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
             slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
 
@@ -2232,7 +2271,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             vis_parking_msg_idx = vis_parking_msg_idx + 1
         # vision_slot_msg = dataLoader.vis_parking_msg['data'][vis_parking_msg_idx]
 
-      # final slot
+        # final slot
         if dataLoader.fus_parking_msg['enable'] == True:
           temp_corner_x_list = []
           temp_corner_y_list = []
@@ -2306,6 +2345,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           flag, plan_msg = findrt(dataLoader.plan_debug_msg, plan_debug_timestamps[slot_i])
           if not flag:
             print('find plan_msg error')
+            all_slot_id_generate.xys.append(([], [], []))
           flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[slot_i])
           if not flag:
             print('find plan_msg error')
@@ -2313,7 +2353,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             slot_management_info = plan_msg.slot_management_info
             # select_slot_id = dataLoader.fus_parking_msg['data'][slot_i].select_slot_id
             select_slot_id = fusion_slot_msg.select_slot_id
-
+            all_slot_id_list = []
+            all_slot_id_x_list = []
+            all_slot_id_y_list = []
             # 1. update target managed slot
             for maganed_slot_vec in slot_management_info.slot_info_vec:
               corner_point = maganed_slot_vec.corner_points.corner_point
@@ -2327,6 +2369,12 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               if maganed_slot_vec.is_occupied:
                   occupied_x_vec.append(slot_x)
                   occupied_y_vec.append(slot_y)
+              # add slot id
+              maganed_slot_id = maganed_slot_vec.id
+              text = '{:d}'.format(round(maganed_slot_id, 2))
+              all_slot_id_list.append(text)
+              all_slot_id_x_list.append((slot_x[0]+slot_x[2]+slot_x[3]+slot_x[1]) * 0.25)
+              all_slot_id_y_list.append((slot_y[0]+slot_y[2]+slot_y[3]+slot_y[1]) * 0.25)
 
             for limiter in slot_management_info.limiter_points:
               limiter_x_vec.append(limiter.x)
@@ -2346,6 +2394,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
           target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
           all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
+          all_slot_id_generate.xys.append((all_slot_id_y_list,all_slot_id_x_list,all_slot_id_list))
           all_managed_occupied_slot_generate.xys.append((occupied_y_vec, occupied_x_vec))
           all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
           tlane_generate.xys.append((obstacle_y, obstacle_x))
@@ -2600,17 +2649,20 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     if dataLoader.fus_parking_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
       target_slot_generate.ts = np.array(ctrl_debug_ts)
       all_slot_generate.ts = np.array(ctrl_debug_ts)
+      all_slot_id_generate.ts = np.array(ctrl_debug_ts)
       all_managed_occupied_slot_generate.ts = np.array(ctrl_debug_ts)
       all_managed_limiter_generate.ts = np.array(ctrl_debug_ts)
       tlane_generate.ts = np.array(ctrl_debug_ts)
       target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
       all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
+      all_slot_id_layer = TextLayer(fig_local_view, all_slot_id_params_apa)
       all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
       all_managed_limiter_layer = CurveLayer(fig_local_view, all_managed_limiter_params_apa)
       tlane_layer = DotLayer(fig_local_view, tlane_params)
 
       layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
       layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
+      layer_manager.AddLayer(all_slot_id_layer, 'all_slot_id_layer',all_slot_id_generate,'all_slot_id_generate',3)
       layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
       layer_manager.AddLayer(all_managed_limiter_layer, 'all_managed_limiter_layer',all_managed_limiter_generate,'all_managed_limiter_generate',2)
       layer_manager.AddLayer(tlane_layer, 'tlane_layer',tlane_generate,'tlane_generate',2)
@@ -2733,7 +2785,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           names.append("slot_width")
           datas.append(str(plan_json['slot_width']))
 
-          names.append("slots_id")
+          names.append("plan_release_slots_id")
           datas.append(str(plan_msg.successful_slot_info_list))
 
           names.append("plan_gear_cmd")
@@ -2750,6 +2802,18 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
           names.append("lat_path_opt_cost_time_ms")
           datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
+
+        flag, fusion_msg = findrt(dataLoader.fus_parking_msg, fusion_slot_timestamps[plan_i])
+        if not flag:
+          print('find fusion_msg error')
+        else:
+          names.append("fusion_release_slots_id")
+          parking_fusion_slot_lists = fusion_msg.parking_fusion_slot_lists
+          release_id = []
+          for slot in parking_fusion_slot_lists:
+            if slot.allow_parking == 1:
+              release_id.append(slot.id)
+          datas.append(str(release_id))
 
         flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
         if not flag:

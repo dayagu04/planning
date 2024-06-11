@@ -32,6 +32,8 @@ class ApaPlannerBase {
   struct SimulationParam {
     bool is_complete_path = false;
     bool force_plan = false;
+    bool sim_to_target = false;
+    bool use_slot_in_bag = true;
     bool is_path_optimization = false;
     bool is_cilqr_optimization = false;
     bool is_reset = false;

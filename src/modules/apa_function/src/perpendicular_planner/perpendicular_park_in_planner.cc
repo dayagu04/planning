@@ -183,7 +183,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     std::vector<Eigen::Vector2d> pt;
     pt.resize(4);
     for (size_t i = 0; i < 4; ++i) {
-      if (is_simulation_ && simu_param_.target_managed_slot_x_vec.size() == 4) {
+      if (is_simulation_ && simu_param_.target_managed_slot_x_vec.size() == 4 &&
+          simu_param_.use_slot_in_bag) {
         pt[i] << simu_param_.target_managed_slot_x_vec[i],
             simu_param_.target_managed_slot_y_vec[i];
       } else {
@@ -283,8 +284,12 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.obs_pt_vec_slot =
       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot;
 
-  ego_slot_info.limiter = slot_manager_ptr_->GetEgoSlotInfo().limiter;
-  if (is_simulation_ && simu_param_.target_managed_limiter_x_vec.size() == 2) {
+  if (ego_slot_info.first_fix_limiter) {
+    ego_slot_info.limiter = slot_manager_ptr_->GetEgoSlotInfo().limiter;
+  }
+
+  if (is_simulation_ && simu_param_.target_managed_limiter_x_vec.size() == 2 &&
+      simu_param_.use_slot_in_bag) {
     ego_slot_info.limiter.first << simu_param_.target_managed_limiter_x_vec[0],
         simu_param_.target_managed_limiter_y_vec[0];
     ego_slot_info.limiter.first =
@@ -347,7 +352,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
     DEBUG_PRINT("dist_ego_limiter = " << dist_ego_limiter);
 
-    if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis && !trim_path_by_obs_) {
+    if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis &&
+        !trim_path_by_obs_) {
       DEBUG_PRINT("should correct path according limiter");
       ego_slot_info.first_fix_limiter = false;
       PostProcessPathAccordingLimiter();
@@ -1119,6 +1125,10 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
       break;
     default:
       for (int i = 0; i < path_seg_vec.size() - 1; ++i) {
+        if (planner_output.gear_cmd_vec[i] !=
+            planner_output.gear_cmd_vec[i + 1]) {
+          break;
+        }
         if (path_seg_vec[i].seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
           if (path_seg_vec[i + 1].seg_type ==
                   pnc::geometry_lib::SEG_TYPE_LINE &&
@@ -1384,7 +1394,7 @@ const bool PerpendicularInPlanner::CheckReplan() {
     return true;
   }
 
-  if (CheckDynamicUpdate()) {
+  if (!simu_param_.sim_to_target && CheckDynamicUpdate()) {
     DEBUG_PRINT("replan by dynamic!");
     frame_.replan_reason = DYNAMIC;
     return true;

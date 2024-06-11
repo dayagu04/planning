@@ -12,7 +12,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-2c53262be-JAC_S811_test/planning-2c53262be-JAC_S811/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-a8c9c638-JAC_S811_test/planning-a8c9c638-JAC_S811/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -109,6 +109,7 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=1, value=0, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
+    self.use_slot_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_slot_in_bag",min=0, max=1, value=1, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
     self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
@@ -124,6 +125,7 @@ class LocalViewSlider:
                         bag_time = self.time_slider,
                         vehicle_type = self.vehicle_type_slider,
                         sim_to_target = self.sim_to_target_slider,
+                        use_slot_in_bag = self.use_slot_in_bag_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
                         is_path_optimization = self.is_path_optimization_slider,
@@ -136,7 +138,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, sim_to_target, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -220,7 +222,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, select_id, force_plan
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
                                     uss_perception_msg.SerializeToString(),
-                                    select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sim_to_target, use_slot_in_bag, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
 
