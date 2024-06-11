@@ -6,6 +6,7 @@
 #include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_world.h"
+#include "common/config_context.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
@@ -166,7 +167,9 @@ static std::string ReadFile(const std::string &path) {
 }
 
 void ApaPlanInterface::SyncParameters() {
-  std::string path = "../runtime_service/planning_exec/res/conf/apa_params.json";
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
+  std::string path = engine_config.vehicle_cfg_dir + "/apa_params.json";
 
   std::string config_file = ReadFile(path);
   auto config = mjson::Reader(config_file);

@@ -10,9 +10,6 @@
 #include "scene_type_config.pb.h"
 #include "utils/file.h"
 
-#define PLANNING_ENGINE_CONFIG_PATH \
-  "../runtime_service/planning_exec/res/conf/planning_engine_config.json"
-
 namespace planning {
 namespace common {
 

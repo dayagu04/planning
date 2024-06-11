@@ -37,7 +37,8 @@ bool FemPosDeviationOsqpInterface::Solve() {
   }
 
   if (ref_points_.size() != bounds_around_refs_.size()) {
-    std::cout << "ref_points and bounds size not equal, solver early terminates";
+    std::cout
+        << "ref_points and bounds size not equal, solver early terminates";
     return false;
   }
 

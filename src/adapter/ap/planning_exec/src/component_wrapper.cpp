@@ -172,17 +172,19 @@ bool ComponentWrapper::Init() {
                             RegisterHMIOutputInfoWriter,
                             iflyauto::PlanningHMIOutputInfoStr);
     /*
-    REGISTER_SERVER_HANDLER("IflytekPlanningDebugInfo", "/iflytek/planning/debug_info",
-                            RegisterDebugInfoWriter,
+    REGISTER_SERVER_HANDLER("IflytekPlanningDebugInfo",
+    "/iflytek/planning/debug_info", RegisterDebugInfoWriter,
                             planning::common::PlanningDebugInfo);
     */
 
     {
       auto mviz_pub =
           std::make_shared<ContainerPubChannel>("/iflytek/planning/debug_info");
-      component_ptr_->RegisterDebugInfoWriter([mviz_pub](const std::shared_ptr<iflyauto::StructContainer> msg) {
-          mviz_pub->SendToMviz((const uint8_t *)(msg->payload().c_str()), msg->payload().size());
-      });
+      component_ptr_->RegisterDebugInfoWriter(
+          [mviz_pub](const std::shared_ptr<iflyauto::StructContainer> msg) {
+            mviz_pub->SendToMviz((const uint8_t *)(msg->payload().c_str()),
+                                 msg->payload().size());
+          });
     }
 #undef REGISTER_SERVER_HANDLER
   }

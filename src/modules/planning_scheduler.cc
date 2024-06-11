@@ -12,6 +12,7 @@
 #include "adas_function/tsr_function/traffic_sign_recognition.h"
 #include "apa_function/src/apa_utils.h"
 #include "basic_types.pb.h"
+#include "common/config_context.h"
 #include "config/vehicle_param.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
@@ -76,26 +77,23 @@ static std::string ReadFile(const std::string &path) {
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   std::string path;
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
   switch (scene_type) {
     case planning::common::SceneType::HIGHWAY:
       path =
-          "../runtime_service/planning_exec/res/conf/module_configs/"
-          "general_planner_module_highway.json";
+          engine_config.module_cfg_dir + "/general_planner_module_highway.json";
       break;
     case planning::common::SceneType::PARKING_APA:
       path =
-          "../runtime_service/planning_exec/res/conf/module_configs/"
-          "general_planner_module_parking.json";
+          engine_config.module_cfg_dir + "/general_planner_module_parking.json";
       break;
     case planning::common::SceneType::HPP:
-      path =
-          "../runtime_service/planning_exec/res/conf/module_configs/"
-          "general_planner_module_hpp.json";
+      path = engine_config.module_cfg_dir + "/general_planner_module_hpp.json";
       break;
     default:
       path =
-          "../runtime_service/planning_exec/res/conf/module_configs/"
-          "general_planner_module_highway.json";
+          engine_config.module_cfg_dir + "/general_planner_module_highway.json";
   }
 
   std::string config_file = ReadFile(path);
@@ -240,7 +238,8 @@ void PlanningScheduler::FillPlanningTrajectory(
   auto time_stamp_us = IflyTime::Now_us();
 
   planning_output->meta.plan_timestamp_us = time_stamp_us;
-  iflyauto::strcpy_array(planning_output->meta.plan_strategy_name, "Real Time Planning");
+  iflyauto::strcpy_array(planning_output->meta.plan_strategy_name,
+                         "Real Time Planning");
 
   // 2.Trajectory
   auto trajectory = &planning_output->trajectory;
@@ -478,15 +477,18 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // HMI for alc
   auto alc_output_pb = &(planning_hmi_info->alc_output_info);
 
-  iflyauto::strcpy_array(alc_output_pb->lc_request, lateral_output.lc_request.c_str());
+  iflyauto::strcpy_array(alc_output_pb->lc_request,
+                         lateral_output.lc_request.c_str());
 
-  iflyauto::strcpy_array(alc_output_pb->lc_status, lateral_output.lc_status.c_str());
+  iflyauto::strcpy_array(alc_output_pb->lc_status,
+                         lateral_output.lc_status.c_str());
 
   iflyauto::strcpy_array(alc_output_pb->lc_invalid_reason,
-         lane_change_decider_output.lc_invalid_reason.c_str());
+                         lane_change_decider_output.lc_invalid_reason.c_str());
 
-  iflyauto::strcpy_array(alc_output_pb->lc_back_reason,
-         lane_change_decider_output.lc_back_invalid_reason.c_str());
+  iflyauto::strcpy_array(
+      alc_output_pb->lc_back_reason,
+      lane_change_decider_output.lc_back_invalid_reason.c_str());
 
   // HMI for ldw
   const auto &lkas_info =
@@ -512,8 +514,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->elk_output_info.elk_right_intervention_flag =
       lkas_info->get_elk_right_intervention_flag_info();
   // HMI for ihc
-  const auto &ihc_info =
-      session_.mutable_planning_context()->intelligent_headlight_control_function();
+  const auto &ihc_info = session_.mutable_planning_context()
+                             ->intelligent_headlight_control_function();
   planning_hmi_info->ihc_output_info.ihc_state = ihc_info->get_ihc_state_info();
   planning_hmi_info->ihc_output_info.ihc_request =
       ihc_info->get_ihc_request_info();

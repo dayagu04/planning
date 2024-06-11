@@ -38,7 +38,8 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
   }
 
   if (ref_points_.size() != bounds_around_refs_.size()) {
-    std::cout << "ref_points and bounds size not equal, solver early terminates";
+    std::cout
+        << "ref_points and bounds size not equal, solver early terminates";
     return false;
   }
 
@@ -156,7 +157,7 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
       bool iterative_solve_res = OptimizeWithOsqp(primal_warm_start, &work);
       if (!iterative_solve_res) {
         std::cout << "iteration at " << sub_itr
-               << ", solving fails with max sub iter " << sqp_sub_max_iter_;
+                  << ", solving fails with max sub iter " << sqp_sub_max_iter_;
         weight_curvature_constraint_slack_var_ = original_slack_penalty;
         osqp_cleanup(work);
         c_free(data->A);
@@ -172,9 +173,10 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
       std::cout << "cur_fvalue:" << cur_fvalue << ", ftol:" << ftol;
 
       if (ftol < sqp_ftol_) {
-        std::cout << "merit function value converges at sub iter num " << sub_itr;
+        std::cout << "merit function value converges at sub iter num "
+                  << sub_itr;
         std::cout << "merit function value converges to " << cur_fvalue
-              << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
+                  << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
         fconverged = true;
         break;
       }
@@ -196,8 +198,8 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
 
     ctol = CalculateConstraintViolation(opt_xy_);
 
-    std::cout << "ctol is " << ctol << ", pre_ctol:" << pre_ctol << ", at pen itr "
-          << pen_itr;
+    std::cout << "ctol is " << ctol << ", pre_ctol:" << pre_ctol
+              << ", at pen itr " << pen_itr;
 
     if (ctol < sqp_ctol_) {
       std::cout << "constraint satisfied";

@@ -13,13 +13,13 @@ using autoplt::ADSNode;
 class PlanningComponent final : public autoplt::ADSTimerCoponent {
  public:
   PlanningComponent() = default;
-  ~PlanningComponent();
+  ~PlanningComponent() = default;
 
   bool Init() override;
   bool Proc() override;
 
  private:
-  void InitLogger();
+  // void InitLogger();
   void InitGflags() const;
 
  private:

@@ -7,6 +7,12 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 
+if(ADAPTER STREQUAL "cyber")
+  add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="/asw/planning/res/conf/engine_configs/planning_engine_config_cyber.json")
+elseif (ADAPTER STREQUAL "ap")
+  add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="../runtime_service/planning_exec/res/conf/engine_configs/planning_engine_config_ap.json")
+endif()
+
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 add_subdirectory(context EXCLUDE_FROM_ALL)
@@ -30,6 +36,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
-set(ci_dir ${SYSTEM_INTEGRATION_PROJECT_SOURCE_DIR}/.ci)
-include(${ci_dir}/version.cmake)
+set(ci_dir ${CMAKE_CURRENT_LIST_DIR}/../../.ci)
+include(${CMAKE_CURRENT_LIST_DIR}/../../.ci/version.cmake)
 GenVersionHeaderHere(${ci_dir})

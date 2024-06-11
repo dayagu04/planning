@@ -1,5 +1,6 @@
 #include "lane_keep_assist_manager.h"
 
+#include "common/config_context.h"
 #include "planning_context.h"
 #include "vehicle_config_context.h"
 
@@ -18,9 +19,11 @@ static std::string ReadJsonFile(const std::string &path) {
 
 namespace planning {
 void LaneKeepAssistManager::SyncParameters() {
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
+  std::string path = engine_config.vehicle_cfg_dir + "/adas_params.json";
   // read json file
-  std::string config_file =
-      ReadJsonFile("../runtime_service/planning_exec/res/conf/adas_params.json");
+  std::string config_file = ReadJsonFile(path);
   auto adas_config = mjson::Reader(config_file);
 
   // get params
