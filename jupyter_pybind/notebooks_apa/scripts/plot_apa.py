@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-2c53262be-JAC_S811_test/planning-2c53262be-JAC_S811/test_0.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-a8c9c638-JAC_S811_test/planning-a8c9c638-JAC_S811/test_1.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -104,6 +104,7 @@ def slider_callback(bag_time, vehicle_type):
 
   plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
   # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
+  print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
 
   planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]

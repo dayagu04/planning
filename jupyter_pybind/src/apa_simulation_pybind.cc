@@ -128,7 +128,8 @@ const bool InterfaceUpdateParam(
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
     int select_id, bool force_plan, bool is_path_optimization,
     bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
-    double sample_ds, std::vector<double> target_managed_slot_x_vec,
+    bool sim_to_target, bool use_slot_in_bag, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec) {
@@ -139,6 +140,8 @@ const bool InterfaceUpdateParam(
   param.is_cilqr_optimization = is_cilqr_optimization;
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
+  param.sim_to_target = sim_to_target;
+  param.use_slot_in_bag = use_slot_in_bag;
   param.target_managed_slot_x_vec = target_managed_slot_x_vec;
   param.target_managed_slot_y_vec = target_managed_slot_y_vec;
   param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
@@ -149,7 +152,7 @@ const bool InterfaceUpdateParam(
   for (const auto &planner : apa_planner_stack) {
     planner->SetSimuParam(param);
   }
-  
+
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 

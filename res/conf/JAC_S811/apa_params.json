@@ -158,7 +158,7 @@
   "max_slot_jump_heading": 0.48,
 
   "comment_13": "slot update params when parking",
-  "fix_slot_occupied_ratio": 0.938,
+  "fix_slot_occupied_ratio": 0.908,
 
   "comment_14": "slot update params when replan",
   "uss_slot_occupied_ratio": 0.25,
@@ -213,7 +213,7 @@
   "release_slot_by_prepare": true,
   "slot_update_in_or_out_occupied_ratio": 0.088,
   "slot_update_out_heading_max": 66.8,
-  "slot_update_out_heading_min": 38.68,
+  "slot_update_out_heading_min": 0.68,
   "slot_update_out_lat_max": 2.68,
   "slot_update_out_lat_min": 0.006,
   "slot_update_in_heading": 32.6,

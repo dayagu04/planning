@@ -2327,7 +2327,7 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
   }
 
   int insert_case = -1;
-  if (pnc::mathlib::IsInBound(path_seg.GetEndHeading() * 57.3, -0.1, 0.1)) {
+  if (pnc::mathlib::IsInBound(path_seg.GetEndHeading() * 57.3, -0.208, 0.208)) {
     insert_case = 0;
   } else {
     if (length > apa_param.GetParam().min_one_step_path_length - 0.016) {
