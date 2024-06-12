@@ -142,7 +142,7 @@ bool GeneralLateralDecider::Execute() {
                 // ref
     general_lateral_decider_output.lane_change_scene = false;
     HandleAvoidScene(traj_points);
-    HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
+    // HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
   }
 
   ConstructReferencePathPoints(traj_points);
