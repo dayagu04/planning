@@ -393,24 +393,26 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
         soc_state_msg_dict[msg.header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
-      enter_parking_time_temp = None
+      global enter_parking_time
+      enter_parking_time = 0.0
+      first_enter_apa = False
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['abs_t'].append(t)
         self.soc_state_msg['data'].append(msg)
         # record the start time of fusi_parking_msg
-        if msg.current_state > 1 and enter_parking_time_temp is None:
-          enter_parking_time_temp = t
+        if first_enter_apa == False and msg.current_state >= 23:
+          enter_parking_time = t - self.soc_state_msg['t'][0]
+          first_enter_apa = True
+
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
+      print("enter_parking_time", enter_parking_time)
       if len(self.soc_state_msg['t']) > 0:
         self.soc_state_msg['enable'] = True
       else:
         self.soc_state_msg['enable'] = False
-
-      if enter_parking_time_temp is not None:
-        enter_parking_time = enter_parking_time_temp - self.soc_state_msg['abs_t'][0]
     except:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/system_state/soc_state !!!')
@@ -570,8 +572,11 @@ class LoadCyberbag:
 
     fus_parking_msg_idx = 0
     if self.fus_parking_msg['enable'] == True:
-      while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
-        fus_parking_msg_idx = fus_parking_msg_idx + 1
+      if bag_time - enter_parking_time <= 0.0:
+        fus_parking_msg_idx = 1
+      else:
+        while self.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(self.fus_parking_msg['t'])-1):
+          fus_parking_msg_idx = fus_parking_msg_idx + 1
     out['fus_parking_msg_idx'] = fus_parking_msg_idx
 
     vis_parking_msg_idx = 0
@@ -656,8 +661,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
   fus_parking_msg_idx = 0
   if bag_loader.fus_parking_msg['enable'] == True:
-    while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-1):
-      fus_parking_msg_idx = fus_parking_msg_idx + 1
+    if bag_time - enter_parking_time <= 0.0:
+      fus_parking_msg_idx = 1
+    else:
+      while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-1):
+        fus_parking_msg_idx = fus_parking_msg_idx + 1
   local_view_data['data_index']['fus_parking_msg_idx'] = fus_parking_msg_idx
 
   vis_parking_msg_idx = 0
@@ -940,7 +948,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       # 4.
       if slot.allow_parking == 1:
         fus_release_solts_id.append(slot.id)
-
 
     local_view_data['data_fusion_parking'].data.update({'corner_point_x': slots_x_vec, 'corner_point_y': slots_y_vec,})
     local_view_data['data_fusion_parking_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})

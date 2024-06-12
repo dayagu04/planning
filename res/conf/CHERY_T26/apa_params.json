@@ -119,7 +119,7 @@
   "min_channel_width": 5.2,
   "channel_length": 21.68,
   "max_obs2car_dist_in_slot": 0.0886,
-  "max_obs2car_dist_out_slot": 0.2868,
+  "max_obs2car_dist_out_slot": 0.1868,
   "max_obs2car_dist_slot_occupied_ratio": 0.086,
   "obstacle_ds": 0.3,
   "col_obs_safe_dist": 0.3,
