@@ -309,7 +309,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     lat_replan = true;
   }
 
-  if (fabs(lon_err) > max_replan_lon_err || lon_reset_flag) {
+  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v); /*&&
+                               (ego_state->ego_acc() < config_.kEpsilon_a);*/
+  if (fabs(lon_err) > max_replan_lon_err || lon_reset_flag ||
+      low_speed_replan) {
     lon_replan = true;
   }
 
@@ -338,6 +341,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
     // update lon init state
     lon_init_state.set_s(s_proj);
+    lon_init_state.set_a(ego_state->ego_acc());
 
     if (!session_->is_hpp_scene()) {
       if (lon_init_state.v() - ego_state->ego_v() > 1.0) {
@@ -392,7 +396,7 @@ void EgoStateManager::LongitudinalReset() {
   // s is fakely frenet, cannot be obtained
   lon_init_state.set_s(0.0);
   lon_init_state.set_v(ego_state->ego_v());
-  lon_init_state.set_a(0.0);
+  lon_init_state.set_a(ego_state->ego_acc());
 }
 
 void EgoStateManager::MotionPlanningInfoReset() {
