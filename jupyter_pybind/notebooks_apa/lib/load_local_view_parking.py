@@ -906,10 +906,30 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
     # clear data
     # local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
-    local_view_data['data_fusion_parking'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_fusion_slot1'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_fusion_slot2'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_fusion_slot3'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     local_view_data['data_fusion_parking_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
-    slots_x_vec = []
-    slots_y_vec = []
+
+    # 1 camera; 2 uss; 3 camera and uss;
+    slots_x1_vec = []
+    slots_y1_vec = []
+
+    slots_x2_vec = []
+    slots_y2_vec = []
+
+    slots_x3_vec = []
+    slots_y3_vec = []
+
+    occupied_x1_vec = []
+    occupied_y1_vec = []
+
+    occupied_x2_vec = []
+    occupied_y2_vec = []
+
+    occupied_x3_vec = []
+    occupied_y3_vec = []
+
     id_vec = []
     fus_release_solts_id = []
     id_text_x_vec = []
@@ -927,8 +947,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
         single_slot_y_vec.append(corner_y_global - cur_pos_yn0)
       slot_plot_x_vec = [single_slot_x_vec[0],single_slot_x_vec[2],single_slot_x_vec[3],single_slot_x_vec[1]]
       slot_plot_y_vec = [single_slot_y_vec[0],single_slot_y_vec[2],single_slot_y_vec[3],single_slot_y_vec[1]]
-      slots_x_vec.append(slot_plot_x_vec)
-      slots_y_vec.append(slot_plot_y_vec)
+      if slot.fusion_source == 1:
+        slots_x1_vec.append(slot_plot_x_vec)
+        slots_y1_vec.append(slot_plot_y_vec)
+      elif slot.fusion_source == 2:
+        slots_x2_vec.append(slot_plot_x_vec)
+        slots_y2_vec.append(slot_plot_y_vec)
+      elif slot.fusion_source == 3:
+        slots_x3_vec.append(slot_plot_x_vec)
+        slots_y3_vec.append(slot_plot_y_vec)
       # 1.2 update slots limiter points in same slot_plot_vec
       single_limiter_x_vec = []
       single_limiter_y_vec = []
@@ -937,20 +964,52 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
         single_limiter_x_vec.append(slot.limiter_position[1].x - cur_pos_xn0)
         single_limiter_y_vec.append(slot.limiter_position[0].y - cur_pos_yn0)
         single_limiter_y_vec.append(slot.limiter_position[1].y - cur_pos_yn0)
-      slots_x_vec.append(single_limiter_x_vec)
-      slots_y_vec.append(single_limiter_y_vec)
+      if slot.fusion_source == 1:
+        slots_x1_vec.append(single_limiter_x_vec)
+        slots_y1_vec.append(single_limiter_y_vec)
+      elif slot.fusion_source == 2:
+        slots_x2_vec.append(single_limiter_x_vec)
+        slots_y2_vec.append(single_limiter_y_vec)
+      elif slot.fusion_source == 3:
+        slots_x3_vec.append(single_limiter_x_vec)
+        slots_y3_vec.append(single_limiter_y_vec)
 
       # 3. update slot ids' text with their position
       id_vec.append(slot.id)
       id_text_x_vec.append((slot_plot_x_vec[0] + slot_plot_x_vec[1] + slot_plot_x_vec[2] + slot_plot_x_vec[3]) * 0.25)
       id_text_y_vec.append((slot_plot_y_vec[0] + slot_plot_y_vec[1] + slot_plot_y_vec[2] + slot_plot_y_vec[3]) * 0.25)
+      if slot.allow_parking == 0:
+        if slot.fusion_source == 1:
+          occupied_x1_vec.append(slot_plot_x_vec)
+          occupied_y1_vec.append(slot_plot_y_vec)
+        elif slot.fusion_source == 2:
+          occupied_x2_vec.append(slot_plot_x_vec)
+          occupied_y2_vec.append(slot_plot_y_vec)
+        elif slot.fusion_source == 3:
+          occupied_x3_vec.append(slot_plot_x_vec)
+          occupied_y3_vec.append(slot_plot_y_vec)
 
       # 4.
       if slot.allow_parking == 1:
         fus_release_solts_id.append(slot.id)
 
-    local_view_data['data_fusion_parking'].data.update({'corner_point_x': slots_x_vec, 'corner_point_y': slots_y_vec,})
+    local_view_data['data_fusion_slot1'].data.update({'corner_point_x': slots_x1_vec, 'corner_point_y': slots_y1_vec,})
+    local_view_data['data_fusion_slot2'].data.update({'corner_point_x': slots_x2_vec, 'corner_point_y': slots_y2_vec,})
+    local_view_data['data_fusion_slot3'].data.update({'corner_point_x': slots_x3_vec, 'corner_point_y': slots_y3_vec,})
     local_view_data['data_fusion_parking_id'].data.update({'id':id_vec,'id_text_x':id_text_x_vec,'id_text_y':id_text_y_vec,})
+
+    local_view_data['data_fusion_occupied_slot1'].data.update({
+          'occupied_slot_y': occupied_y1_vec,
+          'occupied_slot_x': occupied_x1_vec,
+          })
+    local_view_data['data_fusion_occupied_slot2'].data.update({
+          'occupied_slot_y': occupied_y2_vec,
+          'occupied_slot_x': occupied_x2_vec,
+          })
+    local_view_data['data_fusion_occupied_slot3'].data.update({
+          'occupied_slot_y': occupied_y3_vec,
+          'occupied_slot_x': occupied_x3_vec,
+          })
 
     parking_fusion_slot_lists = bag_loader.fus_parking_msg['data'][-1].parking_fusion_slot_lists
     select_slot_id = bag_loader.fus_parking_msg['data'][-1].select_slot_id
@@ -1420,7 +1479,12 @@ def load_local_view_figure_parking():
                                           'mpc_dy':[],})
   data_ref_mpc_vec = ColumnDataSource(data = {'dx_ref_mpc_vec':[], 'dy_ref_mpc_vec':[],})
   data_ref_vec = ColumnDataSource(data = {'dx_ref_vec':[], 'dy_ref_vec':[],})
-  data_fusion_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+  data_fusion_slot1 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+  data_fusion_slot2= ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+  data_fusion_slot3 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+  data_fusion_occupied_slot1 = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
+  data_fusion_occupied_slot2 = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
+  data_fusion_occupied_slot3 = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
   data_vision_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_target_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_final_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
@@ -1473,7 +1537,12 @@ def load_local_view_figure_parking():
                      'data_ref_mpc_vec':data_ref_mpc_vec, \
                      'data_ref_vec':data_ref_vec, \
                      'ctrl_debug_data':ctrl_debug_data, \
-                     'data_fusion_parking':data_fusion_parking, \
+                     'data_fusion_slot1':data_fusion_slot1, \
+                     'data_fusion_slot2':data_fusion_slot2, \
+                     'data_fusion_slot3':data_fusion_slot3, \
+                     'data_fusion_occupied_slot1':data_fusion_occupied_slot1,\
+                     'data_fusion_occupied_slot2':data_fusion_occupied_slot2,\
+                     'data_fusion_occupied_slot3':data_fusion_occupied_slot3,\
                      'data_vision_parking':data_vision_parking, \
                      'data_target_managed_slot':data_target_managed_slot, \
                      'data_final_slot':data_final_slot, \
@@ -1505,19 +1574,26 @@ def load_local_view_figure_parking():
   fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='obs')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
-  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc')
+  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc', visible = False)
   # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
-  fig1.line('y', 'x', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target_line')
-  fig1.line('y', 'x', source = data_current_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'current_line')
+  fig1.line('y', 'x', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target_pos')
+  fig1.line('y', 'x', source = data_current_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car')
 
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
-  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_parking, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot1, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot2, line_width = 2, line_color = 'cyan', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot3, line_width = 2, line_color = 'purple', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
+  fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_fusion_occupied_slot1, fill_color = "red", line_color = "red", line_width = 1, fill_alpha = 0.15, legend_label = 'fusion_parking_slot', visible = True)
+  fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_fusion_occupied_slot2, fill_color = "cyan", line_color = "cyan", line_width = 1, fill_alpha = 0.15, legend_label = 'fusion_parking_slot', visible = True)
+  fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_fusion_occupied_slot3, fill_color = "purple", line_color = "purple", line_width = 1, fill_alpha = 0.15, legend_label = 'fusion_parking_slot', visible = True)
+
+
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_managed_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'target_managed_slot')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
-  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='red', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot', visible = True)
+  fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot', visible = True)
 
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave, fill_color="lavender", line_color="black",legend_label = 'uss_wave',alpha = 0.5, visible = False)
   fig1.wedge('wave_x','wave_y', 'radius', 'start_angle', 'end_angle',source = data_wave_min, fill_color="blue", line_color="black",legend_label = 'uss_wave',alpha = 0.8, visible = False)
@@ -1786,11 +1862,51 @@ slot_params_apa = {
   'line_width' : 1,
   'legend_label' : 'slot'
 }
-fusion_slot_params_apa = {
+fusion_slot1_params_apa = {
   'line_dash' : 'solid',
   'line_color' : "red",
   'line_alpha' : 0.6,
   'line_width' : 2,
+  'legend_label' : 'fusion_parking_slot',
+  'visible' : True
+}
+fusion_slot2_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "cyan",
+  'line_alpha' : 0.6,
+  'line_width' : 2,
+  'legend_label' : 'fusion_parking_slot',
+  'visible' : True
+}
+fusion_slot3_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "purple",
+  'line_alpha' : 0.6,
+  'line_width' : 2,
+  'legend_label' : 'fusion_parking_slot',
+  'visible' : True
+}
+fusion_occupied_slot1_params_apa = {
+  'fill_color' : "red",
+  'line_color' : "red",
+  'line_width' : 1,
+  'fill_alpha' : 0.15,
+  'legend_label' : 'fusion_parking_slot',
+  'visible' : True
+}
+fusion_occupied_slot2_params_apa = {
+  'fill_color' : "cyan",
+  'line_color' : "cyan",
+  'line_width' : 1,
+  'fill_alpha' : 0.15,
+  'legend_label' : 'fusion_parking_slot',
+  'visible' : True
+}
+fusion_occupied_slot3_params_apa = {
+  'fill_color' : "purple",
+  'line_color' : "purple",
+  'line_width' : 1,
+  'fill_alpha' : 0.15,
   'legend_label' : 'fusion_parking_slot',
   'visible' : True
 }
@@ -1830,7 +1946,7 @@ location_params_apa = {
   'line_dash' : 'solid',
   'legend_label' : 'ego_pos'
 }
-slot_id_params_apa = { 'text_color' : "red", 'text_align':"center", 'text_font_size':"10pt", 'legend_label' : 'fusion_parking_slot' }
+slot_id_params_apa = { 'text_color' : "black", 'text_align':"center", 'text_font_size':"10pt", 'legend_label' : 'fusion_parking_slot' }
 
 all_slot_id_params_apa = {
   'text_color' : "blue",
@@ -1875,7 +1991,7 @@ plan_params = {
 }
 
 mpc_params = {
-  'line_width' : 3.0, 'line_color' : 'red', 'line_dash' : 'solid', 'line_alpha' : 0.8, 'legend_label' : 'mpc'
+  'line_width' : 3.0, 'line_color' : 'red', 'line_dash' : 'solid', 'line_alpha' : 0.8, 'legend_label' : 'mpc', 'visible' : False
 }
 
 all_managed_occupied_slot_params_apa = {
@@ -1908,7 +2024,7 @@ current_line_params={
   'line_color' : 'black',
   'line_dash' : 'solid',
   'line_alpha' : 0.8,
-  'legend_label' : 'current_line'
+  'legend_label' : 'car'
 }
 
 target_line_params={
@@ -1916,7 +2032,7 @@ target_line_params={
   'line_color' : 'black',
   'line_dash' : 'solid',
   'line_alpha' : 0.8,
-  'legend_label' : 'car_target_line'
+  'legend_label' : 'car_target_pos'
 }
 
 target_pos_params={
@@ -2214,7 +2330,12 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
   # load apa slot
     vision_slot_generate = CommonGenerator()
-    fusion_slot_generate = CommonGenerator()
+    fusion_slot1_generate = CommonGenerator()
+    fusion_slot2_generate = CommonGenerator()
+    fusion_slot3_generate = CommonGenerator()
+    fusion_occupied_slot1_generate = CommonGenerator()
+    fusion_occupied_slot2_generate = CommonGenerator()
+    fusion_occupied_slot3_generate = CommonGenerator()
     target_slot_generate = CommonGenerator()
     final_slot_generate = CommonGenerator()
     all_slot_generate = CommonGenerator()
@@ -2227,19 +2348,30 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         flag, fusion_slot_msg = findrt(dataLoader.fus_parking_msg, slot_timestamp)
         if not flag:
             print('find fusion_slot_msg error')
-            fusion_slot_generate.xys.append(([], []))
+            fusion_slot1_generate.xys.append(([], []))
+            fusion_slot2_generate.xys.append(([], []))
+            fusion_slot3_generate.xys.append(([], []))
             slot_id_generate.xys.append(([], [], []))
         else:
           # fusion slot
             parking_fusion_slot_lists = fusion_slot_msg.parking_fusion_slot_lists
             select_slot_id = fusion_slot_msg.select_slot_id
             # 1. update slots corner points
-            temp_corner_x_list = []
-            temp_corner_y_list = []
+            temp_corner_x1_list = []
+            temp_corner_y1_list = []
+            temp_corner_x2_list = []
+            temp_corner_y2_list = []
+            temp_corner_x3_list = []
+            temp_corner_y3_list = []
             temp_slot_id_list = []
             temp_slot_id_x_list = []
             temp_slot_id_y_list = []
-            fus_release_solts_id = []
+            occupied_x1_list = []
+            occupied_y1_list = []
+            occupied_x2_list = []
+            occupied_y2_list = []
+            occupied_x3_list = []
+            occupied_y3_list = []
             for slot in parking_fusion_slot_lists:
                 temp_corner_x = []
                 temp_corner_y = []
@@ -2248,8 +2380,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                     temp_corner_y.append(corner_point.y)
                 temp_corner_x = [temp_corner_x[0],temp_corner_x[2],temp_corner_x[3],temp_corner_x[1]]
                 temp_corner_y = [temp_corner_y[0],temp_corner_y[2],temp_corner_y[3],temp_corner_y[1]]
-                temp_corner_x_list.append(temp_corner_x)
-                temp_corner_y_list.append(temp_corner_y)
+                if slot.fusion_source == 1:
+                  temp_corner_x1_list.append(temp_corner_x)
+                  temp_corner_y1_list.append(temp_corner_y)
+                elif slot.fusion_source == 2:
+                  temp_corner_x2_list.append(temp_corner_x)
+                  temp_corner_y2_list.append(temp_corner_y)
+                elif slot.fusion_source == 3:
+                  temp_corner_x3_list.append(temp_corner_x)
+                  temp_corner_y3_list.append(temp_corner_y)
                 # 1.2 update slots limiter points in same slot_plot_vec
                 single_limiter_x_vec = []
                 single_limiter_y_vec = []
@@ -2258,8 +2397,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                   single_limiter_x_vec.append(slot.limiter_position[1].x)
                   single_limiter_y_vec.append(slot.limiter_position[0].y)
                   single_limiter_y_vec.append(slot.limiter_position[1].y)
-                temp_corner_x_list.append(single_limiter_x_vec)
-                temp_corner_y_list.append(single_limiter_y_vec)
+                if slot.fusion_source == 1:
+                  temp_corner_x1_list.append(single_limiter_x_vec)
+                  temp_corner_y1_list.append(single_limiter_y_vec)
+                elif slot.fusion_source == 2:
+                  temp_corner_x2_list.append(single_limiter_x_vec)
+                  temp_corner_y2_list.append(single_limiter_y_vec)
+                elif slot.fusion_source == 3:
+                  temp_corner_x3_list.append(single_limiter_x_vec)
+                  temp_corner_y3_list.append(single_limiter_y_vec)
                 # add slot id
                 temp_slot_id = slot.id
                 text = '{:d}'.format(round(temp_slot_id, 2))
@@ -2267,9 +2413,22 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                 temp_slot_id_x_list.append((temp_corner_x[0]+temp_corner_x[2]+temp_corner_x[3]+temp_corner_x[1])/4)
                 temp_slot_id_y_list.append((temp_corner_y[0]+temp_corner_y[2]+temp_corner_y[3]+temp_corner_y[1])/4)
                 #
-                if slot.allow_parking == 1:
-                  fus_release_solts_id.append(slot.id)
-            fusion_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+                if slot.allow_parking == 0:
+                  if slot.fusion_source == 1:
+                    occupied_x1_list.append(temp_corner_x)
+                    occupied_y1_list.append(temp_corner_y)
+                  elif slot.fusion_source == 2:
+                    occupied_x2_list.append(temp_corner_x)
+                    occupied_y2_list.append(temp_corner_y)
+                  elif slot.fusion_source == 3:
+                    occupied_x3_list.append(temp_corner_x)
+                    occupied_y3_list.append(temp_corner_y)
+            fusion_slot1_generate.xys.append((temp_corner_y1_list, temp_corner_x1_list))
+            fusion_slot2_generate.xys.append((temp_corner_y2_list, temp_corner_x2_list))
+            fusion_slot3_generate.xys.append((temp_corner_y3_list, temp_corner_x3_list))
+            fusion_occupied_slot1_generate.xys.append((occupied_y1_list, occupied_x1_list))
+            fusion_occupied_slot2_generate.xys.append((occupied_y2_list, occupied_x2_list))
+            fusion_occupied_slot3_generate.xys.append((occupied_y3_list, occupied_x3_list))
             slot_id_generate.xys.append((temp_slot_id_y_list,temp_slot_id_x_list,temp_slot_id_list))
 
         vis_parking_msg_idx = 0
@@ -2641,11 +2800,26 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       vision_slot_layer = MultiCurveLayer(fig_local_view ,vision_slot_params_apa)
       layer_manager.AddLayer(vision_slot_layer, 'vision_slot_layer',vision_slot_generate,'vision_slot_generate',2)
 
-    fusion_slot_generate.ts = np.array(ctrl_debug_ts)
+    fusion_slot1_generate.ts = np.array(ctrl_debug_ts)
+    fusion_slot2_generate.ts = np.array(ctrl_debug_ts)
+    fusion_slot3_generate.ts = np.array(ctrl_debug_ts)
+    fusion_occupied_slot1_generate.ts = np.array(ctrl_debug_ts)
+    fusion_occupied_slot2_generate.ts = np.array(ctrl_debug_ts)
+    fusion_occupied_slot3_generate.ts = np.array(ctrl_debug_ts)
     slot_id_generate.ts = np.array(ctrl_debug_ts)
-    slot_layer = MultiCurveLayer(fig_local_view ,fusion_slot_params_apa)
+    slot1_layer = MultiCurveLayer(fig_local_view ,fusion_slot1_params_apa)
+    slot2_layer = MultiCurveLayer(fig_local_view ,fusion_slot2_params_apa)
+    slot3_layer = MultiCurveLayer(fig_local_view ,fusion_slot3_params_apa)
+    occupied_slot1_layer = PatchLayer(fig_local_view ,fusion_occupied_slot1_params_apa)
+    occupied_slot2_layer = PatchLayer(fig_local_view ,fusion_occupied_slot2_params_apa)
+    occupied_slot3_layer = PatchLayer(fig_local_view ,fusion_occupied_slot3_params_apa)
     slot_id_layer = TextLayer(fig_local_view,slot_id_params_apa)
-    layer_manager.AddLayer(slot_layer, 'slot_layer', fusion_slot_generate, 'fusion_slot_generate', 2)
+    layer_manager.AddLayer(slot1_layer, 'slot1_layer', fusion_slot1_generate, 'fusion_slot1_generate', 2)
+    layer_manager.AddLayer(slot2_layer, 'slot2_layer', fusion_slot2_generate, 'fusion_slot2_generate', 2)
+    layer_manager.AddLayer(slot3_layer, 'slot3_layer', fusion_slot3_generate, 'fusion_slot3_generate', 2)
+    layer_manager.AddLayer(occupied_slot1_layer, 'occupied_slot1_layer', fusion_occupied_slot1_generate, 'fusion_occupied_slot1_generate', 2)
+    layer_manager.AddLayer(occupied_slot2_layer, 'occupied_slot2_layer', fusion_occupied_slot2_generate, 'fusion_occupied_slot2_generate', 2)
+    layer_manager.AddLayer(occupied_slot3_layer, 'occupied_slot3_layer', fusion_occupied_slot3_generate, 'fusion_occupied_slot3_generate', 2)
     layer_manager.AddLayer(slot_id_layer, 'slot_id_layer',slot_id_generate,'slot_id_generate',3)
 
     if dataLoader.fus_parking_msg['enable'] == True:
