@@ -18,7 +18,7 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.basic_data_generator import *
 from lib.load_struct import *
-from lib.load_ros_bag import is_new_loc, g_is_display_enu, is_bag_main
+from lib.load_ros_bag import is_new_loc, is_bag_main, get_g_is_display_enu
 
 plan_debug_ts = []
 plan_debug_timestamps = []
@@ -129,7 +129,7 @@ location_params_apa = {
   'legend_label' : 'ego_pos'
 }
 slot_id_params_apa = { 'text_color' : "red", 'text_align':"center", 'text_font_size':"10pt", 'legend_label' : 'fusion_parking_slot' }
-ego_pose_params ={
+ego_pose_params = {
   'fill_color' : "palegreen",
   'line_color' : "black",
   'line_width' : 1,
@@ -150,6 +150,14 @@ cur_location_point_params = {
   'line_width' : 2,
   'line_color' : 'purple',
   'fill_alpha' : 1
+}
+
+lat_init_state_params = {
+  'legend_label' : 'init_point',
+  'fill_color' : "deepskyblue",
+  'line_color' : "black",
+  'line_width' : 2,
+  'line_alpha' : 1,
 }
 
 uss_wave_params = {
@@ -497,8 +505,6 @@ table_params={
     'height':500,
 }
 
-
-
 # MeasureTools类,用于在fig中测试距离
 class MeasureTools:
     def __init__(self, fig) -> None:
@@ -711,6 +717,8 @@ def findME(data, t):
 
 
 def draw_local_view(dataLoader, layer_manager):
+    g_is_display_enu = get_g_is_display_enu()
+    print("g_is_display_enu:", g_is_display_enu)
     #define figure
     # 定义 local_view fig
     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=1000, match_aspect = True, aspect_scale=1)
@@ -795,6 +803,80 @@ def draw_local_view(dataLoader, layer_manager):
     #     prediction_timestamps.append(dataLoader.loc_msg['timestamp'][loc_msg_idx])
     #     vehicle_service_timestamps.append(dataLoader.loc_msg['timestamp'][loc_msg_idx])
     #     control_output_timestamps.append(dataLoader.loc_msg['timestamp'][loc_msg_idx])
+    # # 加载自车信息
+    coord_tf = coord_transformer()
+    ego_generate = CommonGenerator()
+    car_xb, car_yb = load_car_params_patch()
+    if g_is_display_enu:
+      for localization_timestamp in localization_timestamps:
+        loc_msg = find(dataLoader.loc_msg, localization_timestamp)
+        if loc_msg == None:
+          # print('find loc_msg error')
+          ego_generate.xys.append(([],[]))
+          continue
+
+        # cur_pos_xn = loc_msg.pose.local_position.x
+        # cur_pos_yn = loc_msg.pose.local_position.y
+        # cur_yaw = loc_msg.pose.euler_angles.yaw
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        ego_local_x, ego_local_y = coord_tf.local_to_global(car_xb, car_yb)
+        ego_generate.xys.append(([ego_local_y],[ego_local_x]))
+    else:
+      for i in range(len(plan_debug_ts)):
+        ego_generate.xys.append(([car_yb],[car_xb]))
+    ego_generate.ts = np.array(plan_debug_ts)
+    ego_pose_layer = PatchLayer(fig_local_view ,ego_pose_params)
+    layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_generate, 'ego_generate', 2)
+
+    ego_text_pos = [0, 0]
+    if dataLoader.vs_msg['enable'] == True:
+      ego_info_generate = TextGenerator()
+      for i,vehicle_service_timestamp in enumerate(vehicle_service_timestamps):
+        vs_msg = find(dataLoader.vs_msg, vehicle_service_timestamp)
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+        if vs_msg == None:
+          # print('find vs_msg error')
+          ego_info_generate.xys.append(([ego_text_pos[0]],[ego_text_pos[1]],['']))
+          continue
+        vel_ego = 0
+        if loc_msg != None:
+          linear_velocity_from_wheel = math.sqrt(loc_msg.velocity.velocity_boot.vx * loc_msg.velocity.velocity_boot.vx + \
+                loc_msg.velocity.velocity_boot.vy * loc_msg.velocity.velocity_boot.vy + \
+                loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
+          vel_ego = linear_velocity_from_wheel
+          if g_is_display_enu:
+            ego_text_pos = [loc_msg.position.position_boot.x, loc_msg.position.position_boot.y]
+        elif vs_msg != None:
+          vel_ego = vs_msg.vehicle_speed
+        steer_deg = vs_msg.steering_wheel_angle * 57.3
+        text = 'v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))
+        ego_info_generate.xys.append(([ego_text_pos[1]],[ego_text_pos[0]], [text]))
+      ego_info_generate.ts = np.array(plan_debug_ts)
+      ego_info_layer = TextLayer(fig_local_view ,ego_info_params)
+      layer_manager.AddLayer(ego_info_layer, 'ego_info_layer', ego_info_generate, 'ego_info_generate', 3)
+
+    # 加载横向规划起点
+    coord_tf = coord_transformer()
+    lat_init_state_generator = CircleGenerator()
+    if dataLoader.plan_debug_msg['enable'] == True:
+      for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
+        lat_motion_plan_input = plan_debug.lateral_motion_planning_input
+        init_state_x, init_state_y = [lat_motion_plan_input.init_state.x], [lat_motion_plan_input.init_state.y]
+        if loc_msg != None and not g_is_display_enu:
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+          init_state_x, init_state_y = coord_tf.global_to_local(init_state_x, init_state_y)
+        lat_init_state_generator.xys.append([init_state_y, init_state_x, [0.1]])
+      lat_init_state_generator.ts = np.array(plan_debug_ts)
+      lat_init_state_layer = CircleLayer(fig_local_view, lat_init_state_params)
+      layer_manager.AddLayer(lat_init_state_layer, 'lat_init_state_layer', lat_init_state_generator, 'lat_init_state_generator', 3)
+
     # 加载定位
     coord_tf = coord_transformer()
     if dataLoader.loc_msg['enable'] == True:
@@ -831,13 +913,14 @@ def draw_local_view(dataLoader, layer_manager):
           ego_local_x, ego_local_y = coord_tf.global_to_local(pos_xn, pos_yn)
 
         location_generator.xys.append([ego_local_y, ego_local_x])
-      location_generator.ts = np.array(plan_debug_ts)
-      location_layer = CurveLayer(fig_local_view, location_params)
-      layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
 
       cur_location_point_generator.ts = np.array(plan_debug_ts)
       cur_location_point_layer = CircleLayer(fig_local_view, cur_location_point_params)
       layer_manager.AddLayer(cur_location_point_layer, 'cur_location_point_layer', cur_location_point_generator, 'cur_location_point_generator', 3)
+
+      location_generator.ts = np.array(plan_debug_ts)
+      location_layer = CurveLayer(fig_local_view, location_params)
+      layer_manager.AddLayer(location_layer, 'location_layer', location_generator, 'location_generator', 2)
 
     # 加载车道线
     lane_generator_dict = {}
@@ -937,61 +1020,6 @@ def draw_local_view(dataLoader, layer_manager):
       ego_info_generatev2.ts = np.array(plan_debug_ts)
       ego_info_layerv2 = TextLayer(fig_local_view ,ego_info_paramsv2)
       layer_manager.AddLayer(ego_info_layerv2, 'ego_info_layerv2', ego_info_generatev2, 'ego_info_generatev2', 3)
-
-    # # 加载自车信息
-    ego_generate = CommonGenerator()
-    car_xb, car_yb = load_car_params_patch()
-    if g_is_display_enu:
-      for localization_timestamp in localization_timestamps:
-        loc_msg = find(dataLoader.loc_msg, localization_timestamp)
-        if loc_msg == None:
-          # print('find loc_msg error')
-          ego_generate.xys.append(([],[]))
-          continue
-
-        # cur_pos_xn = loc_msg.pose.local_position.x
-        # cur_pos_yn = loc_msg.pose.local_position.y
-        # cur_yaw = loc_msg.pose.euler_angles.yaw
-        cur_pos_xn = loc_msg.position.position_boot.x
-        cur_pos_yn = loc_msg.position.position_boot.y
-        cur_yaw = loc_msg.orientation.euler_boot.yaw
-        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        ego_local_x, ego_local_y = coord_tf.local_to_global(car_xb, car_yb)
-        ego_generate.xys.append(([ego_local_y],[ego_local_x]))
-    else:
-      for i in range(len(plan_debug_ts)):
-        ego_generate.xys.append(([car_yb],[car_xb]))
-    ego_generate.ts = np.array(plan_debug_ts)
-    ego_pose_layer = PatchLayer(fig_local_view ,ego_pose_params)
-    layer_manager.AddLayer(ego_pose_layer, 'ego_pose_layer', ego_generate, 'ego_generate', 2)
-
-    ego_text_pos = [0, 0]
-    if dataLoader.vs_msg['enable'] == True:
-      ego_info_generate = TextGenerator()
-      for i,vehicle_service_timestamp in enumerate(vehicle_service_timestamps):
-        vs_msg = find(dataLoader.vs_msg, vehicle_service_timestamp)
-        loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
-        if vs_msg == None:
-          # print('find vs_msg error')
-          ego_info_generate.xys.append(([ego_text_pos[0]],[ego_text_pos[1]],['']))
-          continue
-        vel_ego = 0
-        if loc_msg != None:
-          linear_velocity_from_wheel = math.sqrt(loc_msg.velocity.velocity_boot.vx * loc_msg.velocity.velocity_boot.vx + \
-                loc_msg.velocity.velocity_boot.vy * loc_msg.velocity.velocity_boot.vy + \
-                loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
-          vel_ego = linear_velocity_from_wheel
-          if g_is_display_enu:
-            ego_text_pos = [loc_msg.position.position_boot.x, loc_msg.position.position_boot.y]
-        elif vs_msg != None:
-          vel_ego = vs_msg.vehicle_speed
-        steer_deg = vs_msg.steering_wheel_angle * 57.3
-        text = 'v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))
-        ego_info_generate.xys.append(([ego_text_pos[1]],[ego_text_pos[0]], [text]))
-      ego_info_generate.ts = np.array(plan_debug_ts)
-      ego_info_layer = TextLayer(fig_local_view ,ego_info_params)
-      layer_manager.AddLayer(ego_info_layer, 'ego_info_layer', ego_info_generate, 'ego_info_generate', 3)
-
 
     # # # 加载障碍物
     if dataLoader.fus_msg['enable'] == True:

@@ -34,6 +34,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # bag_time = 1.2
   ### step 1: 时间戳对齐
   loc_msg = find_nearest(bag_loader.loc_msg, bag_time)
+  origin_loc_msg = find_nearest(bag_loader.origin_loc_msg, bag_time)
   road_msg = find_nearest(bag_loader.road_msg, bag_time)
   fus_msg = find_nearest(bag_loader.fus_msg, bag_time)
   mobileye_objects_msg = find_nearest(bag_loader.mobileye_objects_msg, bag_time)
@@ -94,7 +95,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_msg'] = ctrl_msg
   local_view_data['data_msg']['ctrl_debug_msg'] = ctrl_debug_msg
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
-  ### step 2: 加载定位信息
+  ### step 2-1: 加载定位信息
   loc_mode = 0
   cur_pos_xn = 0
   cur_pos_yn = 0
@@ -188,6 +189,44 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'text_yn': [0],
       })
 
+  ### step 2-2: 加载pp原始定位信息
+
+  if bag_loader.origin_loc_msg['enable'] == True:
+    cur_pos_xn = 0
+    cur_pos_yn = 0
+    cur_yaw = 0
+    cur_pos_xn = origin_loc_msg.position.position_boot.x
+    cur_pos_yn = origin_loc_msg.position.position_boot.y
+    cur_yaw = origin_loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+
+    ego_xb, ego_yb = [], []
+    ego_xn, ego_yn = [], []
+    ### global variables
+    # pos offset
+    for i in range(len(bag_loader.origin_loc_msg['data'])):
+      if (i % 10 != 0): # 下采样 10
+        continue
+      # if bag_loader.loc_msg['data'][i].msf_status.msf_status == 2 :
+      #   continue
+      pos_xn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.x
+      pos_yn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.y
+      if g_is_display_enu:
+        ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
+      else:
+        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+      ego_xb.append(ego_local_x)
+      ego_yb.append(ego_local_y)
+      ego_xn.append(pos_xn_i)
+      ego_yn.append(pos_yn_i)
+
+    local_view_data['origin_data_ego'].data.update({
+      'ego_xb': ego_xb,
+      'ego_yb': ego_yb,
+      'ego_xn': ego_xn,
+      'ego_yn': ego_yn,
+    })
 
   is_enu_to_car = False
   if plan_msg != None:
@@ -798,6 +837,7 @@ def load_local_view_figure():
   data_car_traj_mpc = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_lat = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_ego = ColumnDataSource(data = {'ego_yb':[], 'ego_xb':[]})
+  origin_data_ego = ColumnDataSource(data = {'ego_yb':[], 'ego_xb':[]})
   data_ego_pos_point = ColumnDataSource(data = {'ego_pos_point_y':[],
                                                 'ego_pos_point_x':[],
                                                 'ego_pos_point_theta':[]})
@@ -967,6 +1007,7 @@ def load_local_view_figure():
                      'data_car_traj_mpc':data_car_traj_mpc, \
                      'data_car_traj_lat':data_car_traj_lat, \
                      'data_ego':data_ego, \
+                     'origin_data_ego':origin_data_ego, \
                      'data_ego_pos_point': data_ego_pos_point, \
                      'data_init_pos_point': data_init_pos_point, \
                      'data_text':data_text, \
@@ -1090,6 +1131,7 @@ def load_local_view_figure():
   fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
   fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
+  fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
 
 

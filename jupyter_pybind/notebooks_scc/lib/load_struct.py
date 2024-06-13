@@ -1367,6 +1367,30 @@ def load_lat_common(plan_debug, planning_json):
     pass
   return data_dict1, data_dict2
 
+def load_avoid(plan_debug, planning_json):
+
+  data_dict2 = {}
+  avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                        "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
+                        "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l"]
+  for key in avoid_debug_key:
+    try:
+      data_dict2[key] = planning_json[key]
+    except:
+      data_dict2[key] = 'none'
+      pass
+
+  # try:
+  #   data_dict2['lateral_offset'] = planning_json["lateral_offset"]
+  # except:
+  #   data_dict2[key] = 'none'
+  #   pass
+  # try:
+  #   data_dict2['avoid_way'] = planning_json["avoid_way"]
+  # except:
+  #   pass
+  return  data_dict2
 # 障碍物的id选择
 class ObjText:
   def __init__(self,  obj_callback):

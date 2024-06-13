@@ -2,13 +2,17 @@
 
 import sys
 import os
+sys.path.append("..")
+sys.path.append("../lib/")
+sys.path.append('../..')
+sys.path.append('../../../')
 from abc import ABC, abstractmethod
 import bokeh.plotting as bkp
 from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, NumericInput, DataTable, TableColumn, Panel, Tabs
 from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
-
+from lib import load_ros_bag
 import numpy as np
 from IPython.core.display import display, HTML
 from plot_local_view_html import *
@@ -17,7 +21,7 @@ sys.path.append('..')
 sys.path.append('../..')
 sys.path.append('../lib/')
 sys.path.append('../../..')
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
@@ -43,6 +47,14 @@ table_params={
     'height':800,
 }
 
+# 判断是否在jupyter中运行
+def isINJupyter():
+    try:
+        __file__
+    except NameError:
+        return True
+    else:
+        return False
 
 def plotOnce(bag_path, html_file):
     # 加载bag
@@ -53,8 +65,8 @@ def plotOnce(bag_path, html_file):
         return
     max_time = dataLoader.load_all_data(True)
     layer_manager = LayerManager()
-
-    fig_local_view, plan_debug_table_view = draw_local_view(dataLoader, layer_manager)
+    load_ros_bag.g_is_display_enu = True
+    fig_local_view_enu, plan_debug_table_view = draw_local_view(dataLoader, layer_manager)
     min_t = sys.maxsize
     max_t = 0
     for gdlabel in layer_manager.gds.keys():
@@ -168,11 +180,12 @@ def plotOnce(bag_path, html_file):
     if isINJupyter():
         # display in jupyter notebook
         output_notebook()
-
+    # pan_body = Panel(fig_local_view, title="body")
+    # pan_enu = Panel(fig_local_view_enu, title="enu")
     # pan_lt = Panel(child=row(column(fig_local_view, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
     # pan_rt = Panel(child=row(tab_rt, column(fig_rtv)), title="Realtime")
-    # pans = Tabs(tabs=[ pan_lt, pan_rt ])
-    bkp.show(layout(car_slider,fig_local_view))
+    # pans = Tabs(tabs=[ pan_body, pan_enu ])
+    bkp.show(layout(car_slider,fig_local_view_enu))
 
 
 def printHelp():
@@ -200,7 +213,7 @@ def plotMain():
 
     if os.path.isfile(bag_path) and (not os.path.isdir(html_path)):
         print("process one bag ...")
-        html_file = bag_path + ".local_view" + ".html"
+        html_file = bag_path + ".enu_local_view" + ".html"
         plotOnce(bag_path, html_file)
         return
 
@@ -219,7 +232,7 @@ def plotMain():
         if (".0000" in bag_name) and (bag_name.find(".html") == -1):
             print("process {} ...".format(bag_name))
             bag_file = os.path.join(bag_path, bag_name)
-            html_file = bag_file + ".lat_plan" + ".html"
+            html_file = bag_file + ".local_view" + ".html"
             try:
                 plotOnce(bag_file, html_file)
                 print("html_file = ", html_file)
@@ -230,7 +243,7 @@ def plotMain():
     print("{} html files generated\n".format(generated_count))
 
 if __name__ == '__main__':
-    # if isINJupyter():
-    plotOnce(bag_path, html_file)
-    # else:
-    #     plotMain()
+    if isINJupyter():
+        plotOnce(bag_path, html_file)
+    else:
+        plotMain()

@@ -126,7 +126,7 @@ jupyter_pybind/notebooks/scripts
 ```
 python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/long_time_1.00000
 ```
-其中plot_ctrl_html代表脚本类型，目前支持plot_ctrl_html, plot_lat_plan_html, plot_lon_plan_html
+其中plot_ctrl_html代表脚本类型，目前支持plot_local_view_html, plot_ctrl_html, plot_lat_plan_html, plot_lon_plan_html
 
 若想针对某一路径下的所有bag均生成脚本,则可采用如下方式
 ```

@@ -4,14 +4,14 @@ import sys
 import os
 from abc import ABC, abstractmethod
 import bokeh.plotting as bkp
-from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, NumericInput, DataTable, TableColumn, Panel, Tabs
+from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTable, TableColumn, Panel, Tabs
 from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
 
 import numpy as np
 from IPython.core.display import display, HTML
-from plot_local_view_html import *
+
 import logging
 sys.path.append('..')
 sys.path.append('../lib/')
@@ -22,10 +22,8 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/docker_share/data/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-05-28-16-02-26_no_camera.bag"
-
-html_file = bag_path +".lat_plan.html"
-# -
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240607/20240607-16-37-00/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-07-16-37-00_no_camera.bag"
+html_file = bag_path +".latplan.html"
 
 # bokeh创建的html在jupyter中显示
 if isINJupyter():
@@ -34,12 +32,175 @@ if isINJupyter():
         HTML('''<style>.widget-label {min-width: 25ex !important; }</style>'''))
     output_notebook()
 
-
-table_params={
-    'width': 300,
-    'height':800,
+# params 控制fig的样式
+ref_path_params = {
+  'legend_label' : 'ref_path',
+  'line_width' : 5,
+  'line_color' : 'red',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.35
 }
 
+soft_upper_bound_params = {
+  'legend_label' : 'soft_upper_bound',
+  'line_width' : 4,
+  'line_color' : 'darkorange',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.7
+}
+
+soft_lower_bound_params = {
+  'legend_label' : 'soft_lower_bound',
+  'line_width' : 4,
+  'line_color' : 'darkorange',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.7
+}
+
+hard_upper_bound_params = {
+  'legend_label' : 'hard_upper_bound',
+  'line_width' : 4,
+  'line_color' : 'maroon',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.35
+}
+
+hard_lower_bound_params = {
+  'legend_label' : 'hard_lower_bound',
+  'line_width' : 4,
+  'line_color' : 'maroon',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.35,
+}
+
+soft_upper_bound_circle_params = {
+  'legend_label' : 'soft_upper_bound',
+  'line_width' : 4,
+  'line_color' : 'darkorange',
+  'line_alpha' : 0.7,
+  'fill_color' : 'gold',
+  'fill_alpha' : 0.7
+}
+
+soft_lower_bound_circle_params = {
+  'legend_label' : 'soft_lower_bound',
+  'line_width' : 4,
+  'line_color' : 'darkorange',
+  'line_alpha' : 0.7,
+  'fill_color' : 'gold',
+  'fill_alpha' : 0.7
+}
+
+hard_upper_bound_circle_params = {
+  'legend_label' : 'hard_upper_bound',
+  'line_width' : 4,
+  'line_color' : 'maroon',
+  'line_alpha' : 0.5,
+  'fill_color' : 'gold',
+  'fill_alpha' : 0.5
+}
+
+hard_lower_bound_circle_params = {
+  'legend_label' : 'hard_lower_bound',
+  'line_width' : 4,
+  'line_color' : 'maroon',
+  'line_alpha' : 0.5,
+  'fill_color' : 'gold',
+  'fill_alpha' : 0.5
+}
+
+lat_plan_path_params = {
+  'legend_label' : 'lat_plan',
+  'line_width' : 5,
+  'line_color' : 'violet',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.6
+}
+
+lateral_offset_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'lateral_offset'
+}
+smooth_lateral_offset_params = {
+    'line_width' : 1, 'line_color' : 'blue', 'line_dash' : 'solid', 'legend_label' : 'smooth_lateral_offset'
+}
+avoid_way_params = {
+    'line_width' : 1, 'line_color' : 'black', 'line_dash' : 'solid', 'legend_label' : 'avoid_way'
+}
+
+ref_theta_params = {
+    'line_width' : 1, 'line_color' : 'black', 'line_dash' : 'dashed', 'legend_label' : 'ref_theta'
+}
+traj_theta_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'theta'
+}
+ref_y_params = {
+    'line_width' : 1, 'line_color' : 'black', 'line_dash' : 'dashed', 'legend_label' : 'ref_y'
+}
+traj_y_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'y'
+}
+traj_acc_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'lat acc'
+}
+traj_jerk_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'lat jerk'
+}
+traj_steer_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'steer'
+}
+traj_steer_dot_params = {
+    'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'steer dot'
+}
+acc_upper_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'acc bound'
+}
+acc_lower_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'acc bound'
+}
+jerk_upper_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'jerk bound'
+}
+jerk_lower_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'jerk bound'
+}
+steer_upper_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'steer bound'
+}
+steer_lower_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'steer bound'
+}
+steer_dot_upper_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'steer dot bound'
+}
+steer_dot_lower_bound_params = {
+    'line_width' : 1, 'line_color' : 'green', 'line_dash' : 'solid', 'legend_label' : 'steer dot bound'
+}
+acc_upper_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'acc bound'
+}
+acc_lower_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'acc bound'
+}
+jerk_upper_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'jerk bound'
+}
+jerk_lower_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'jerk bound'
+}
+steer_upper_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'steer bound'
+}
+steer_lower_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'steer bound'
+}
+steer_dot_upper_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'steer dot bound'
+}
+steer_dot_lower_bound_triangle_params = {
+    'size': 5, 'fill_color' : 'grey', 'line_color' : 'grey', 'alpha' : 0.5 , 'legend_label' : 'steer dot bound'
+}
+
+# 判断是否在jupyter中运行
 def isINJupyter():
     try:
         __file__
@@ -47,198 +208,478 @@ def isINJupyter():
         return True
     else:
         return False
-# 障碍物id的文本框的回调函数
-def obj_id_handler(dataLoader, id):
-  global obj_id
-  obj_id = id
-  if dataLoader.plan_debug_msg['enable'] == True:
-    environment_model_info = dataLoader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
-    obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
-            'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
-              'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
-              'current_lead_obstacle_to_ego']
 
-    names  = []
-    datas = []
-    is_find = False
-    for obstacle in environment_model_info.obstacle:
-      if obstacle.id == id:
-        is_find = True
-        for name in obj_vars:
-          try:
-            # print(getattr(obstacle,name))
-            datas.append(getattr(obstacle,name))
-            names.append(name)
-          except:
-            pass
-    if not is_find:
-      for obstacle in environment_model_info.obstacle:
-        id = obstacle.id
-        for name in obj_vars:
-          try:
-            datas.append(getattr(obstacle,name))
-            names.append(name)
-          except:
-            pass
-        break
-    # try:
-    names.append('ego_s')
-    names.append('ego_l')
-    datas.append(environment_model_info.ego_s)
-    datas.append(environment_model_info.ego_l)
+def draw_lateral_offset(plan_debug_msg, layer_manager):
+    #define figure
+    hover = HoverTool(tooltips = [('frame_num', '@pts_xs'),
+     ('value', '@pts_ys')
+    ])
 
-def draw_lat(dataLoader, layer_manager):
-  lat_behavior_table1 = TextGenerator()
-  lat_behavior_table2 = TextGenerator()
-  plan_debug_ts = []
-  # 1. 可视化横向状态机debug信息
-  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-      t = dataLoader.plan_debug_msg["t"][i]
-      plan_debug_ts.append(t)
+    lateral_offsets_generate = CommonGenerator()
+    smooth_lateral_offsets_generate = CommonGenerator()
+    avoid_ways_generate = CommonGenerator()
+    global plan_debug_ts
+    if plan_debug_msg['enable'] == True:
+      lateral_offsets = []
+      smooth_lateral_offsets = []
+      frame_nums = []
+      avoid_ways = []
+      # plan_debug_ts =[]
+      for i, plan_json_debug in enumerate(plan_debug_msg['json']):
+        # t = plan_debug_msg["t"][i]
+        # plan_debug_ts.append(t)
+        plan_debug = plan_debug_msg['data'][i]
+        frame_nums.append(plan_debug.frame_info.frame_num)
+        lateral_offsets.append(plan_json_debug['lat_offset'])
+        smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
+        avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
+      frame_num_0 = frame_nums[0]
+      frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
+    fig_lateral_offset = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=800, height=200)
 
-      vo_lat_motion_plan = plan_debug.vo_lat_motion_plan
-      vo_lat_behavior_plan = plan_debug.vo_lat_behavior_plan
-      lat_behavior_common = plan_debug.lat_behavior_common
-      vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
-              'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
-                'is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
-          'lc_valid_back','lc_back_obj_id','lc_back_cnt','lc_back_invalid_reason',\
-            'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
-              'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
-                'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
-                  'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', ]
-      # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
-      names  = []
-      datas = []
-      for name in vars:
+    lateral_offsets_generate.xys.append((frame_nums, lateral_offsets))
+    lateral_offsets_generate.ts = plan_debug_ts
+    smooth_lateral_offsets_generate.xys.append((frame_nums, smooth_lateral_offsets))
+    smooth_lateral_offsets_generate.ts = plan_debug_ts
+    avoid_ways_generate.xys.append((frame_nums, avoid_ways))
+    avoid_ways_generate.ts = plan_debug_ts
+    lateral_offsets_layer = CurveLayer(fig_lateral_offset ,lateral_offset_params)
+    smooth_lateral_offsets_layer = CurveLayer(fig_lateral_offset ,smooth_lateral_offset_params)
+    avoid_ways_layer = CurveLayer(fig_lateral_offset ,avoid_way_params)
+    layer_manager.AddLayer(lateral_offsets_layer, 'lateral_offsets_layer', lateral_offsets_generate)
+    layer_manager.AddLayer(smooth_lateral_offsets_layer, 'smooth_lateral_offsets_layer', smooth_lateral_offsets_generate)
+    layer_manager.AddLayer(avoid_ways_layer, 'avoid_ways_layer', avoid_ways_generate)
+
+    fig_lateral_offset.add_tools(hover)
+    fig_lateral_offset.toolbar.active_scroll = fig_lateral_offset.select_one(WheelZoomTool)
+    fig_lateral_offset.legend.click_policy = "hide"
+    return fig_lateral_offset
+
+def draw_lateral_offset_assist(plan_debug_msg, layer_manager):
+    #define figure
+    global plan_debug_ts
+    lateral_offsets_table_generate = TextGenerator()
+    if plan_debug_msg['enable'] == True:
+      for i, plan_json_debug in enumerate(plan_debug_msg['json']):
+        plan_debug = plan_debug_msg['data'][i]
+        data_dict = load_avoid(plan_debug, plan_json_debug)
+        names = list(data_dict.keys())
+        values = list(data_dict.values())
+        lateral_offsets_table_generate.xys.append((names, values, [None] * len(names)))
+    lateral_offsets_table_generate.ts = plan_debug_ts
+    tab_attr_list = ['Attr', 'Val']
+    tab_lateral_offsets_layer = TableLayerV2(None, tab_attr_list, table_params)
+    layer_manager.AddLayer(
+      tab_lateral_offsets_layer, 'tab_lateral_offsets_layer', lateral_offsets_table_generate, 'lateral_offsets_table_generate', 3)
+    return tab_lateral_offsets_layer.plot
+
+def draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager):
+    # 加载横向plan path、ref path和bound
+    coord_tf = coord_transformer()
+    ref_path_xys = []
+    soft_upper_bound_xys = []
+    soft_lower_bound_xys = []
+    hard_upper_bound_xys = []
+    hard_lower_bound_xys = []
+    soft_upper_bound_circle_xys = []
+    soft_lower_bound_circle_xys = []
+    hard_upper_bound_circle_xys = []
+    hard_lower_bound_circle_xys = []
+    lat_plan_path_xys = []
+    circle_radius = [0.03] * 26
+    if plan_debug_msg['enable'] == True:
+      for i, plan_debug in enumerate(plan_debug_msg['data']):
+        input_topic_timestamp = plan_debug.input_topic_timestamp
+        if is_new_loc:
+          localization_timestamp = input_topic_timestamp.localization
+        else :
+          if is_bag_main:
+            localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+          else:
+            localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
+        match_loc_msg = find(loc_msg, localization_timestamp)
+        lat_motion_plan_input = plan_debug.lateral_motion_planning_input
+        lat_motion_plan_output = plan_debug.lateral_motion_planning_output
+
+        if g_is_display_enu:
+          ref_x = [lat_motion_plan_input.ref_x_vec[j] for j in range(len(lat_motion_plan_input.ref_x_vec))]
+          ref_y = [lat_motion_plan_input.ref_y_vec[j] for j in range(len(lat_motion_plan_input.ref_y_vec))]
+          soft_upper_bound_x0_vec = [lat_motion_plan_input.soft_upper_bound_x0_vec[j] for j in range(len(lat_motion_plan_input.soft_upper_bound_x0_vec))]
+          soft_upper_bound_y0_vec = [lat_motion_plan_input.soft_upper_bound_y0_vec[j] for j in range(len(lat_motion_plan_input.soft_upper_bound_y0_vec))]
+          soft_lower_bound_x0_vec = [lat_motion_plan_input.soft_lower_bound_x0_vec[j] for j in range(len(lat_motion_plan_input.soft_lower_bound_x0_vec))]
+          soft_lower_bound_y0_vec = [lat_motion_plan_input.soft_lower_bound_y0_vec[j] for j in range(len(lat_motion_plan_input.soft_lower_bound_y0_vec))]
+          soft_upper_bound_x1_vec = [lat_motion_plan_input.soft_upper_bound_x1_vec[j] for j in range(len(lat_motion_plan_input.soft_upper_bound_x1_vec))]
+          soft_upper_bound_y1_vec = [lat_motion_plan_input.soft_upper_bound_y1_vec[j] for j in range(len(lat_motion_plan_input.soft_upper_bound_y1_vec))]
+          soft_lower_bound_x1_vec = [lat_motion_plan_input.soft_lower_bound_x1_vec[j] for j in range(len(lat_motion_plan_input.soft_lower_bound_x1_vec))]
+          soft_lower_bound_y1_vec = [lat_motion_plan_input.soft_lower_bound_y1_vec[j] for j in range(len(lat_motion_plan_input.soft_lower_bound_y1_vec))]
+          hard_upper_bound_x0_vec = [lat_motion_plan_input.hard_upper_bound_x0_vec[j] for j in range(len(lat_motion_plan_input.hard_upper_bound_x0_vec))]
+          hard_upper_bound_y0_vec = [lat_motion_plan_input.hard_upper_bound_y0_vec[j] for j in range(len(lat_motion_plan_input.hard_upper_bound_y0_vec))]
+          hard_lower_bound_x0_vec = [lat_motion_plan_input.hard_lower_bound_x0_vec[j] for j in range(len(lat_motion_plan_input.hard_lower_bound_x0_vec))]
+          hard_lower_bound_y0_vec = [lat_motion_plan_input.hard_lower_bound_y0_vec[j] for j in range(len(lat_motion_plan_input.hard_lower_bound_y0_vec))]
+          hard_upper_bound_x1_vec = [lat_motion_plan_input.hard_upper_bound_x1_vec[j] for j in range(len(lat_motion_plan_input.hard_upper_bound_x1_vec))]
+          hard_upper_bound_y1_vec = [lat_motion_plan_input.hard_upper_bound_y1_vec[j] for j in range(len(lat_motion_plan_input.hard_upper_bound_y1_vec))]
+          hard_lower_bound_x1_vec = [lat_motion_plan_input.hard_lower_bound_x1_vec[j] for j in range(len(lat_motion_plan_input.hard_lower_bound_x1_vec))]
+          hard_lower_bound_y1_vec = [lat_motion_plan_input.hard_lower_bound_y1_vec[j] for j in range(len(lat_motion_plan_input.hard_lower_bound_y1_vec))]
+          path_x_vec = [lat_motion_plan_output.x_vec[j] for j in range(len(lat_motion_plan_output.x_vec))]
+          path_y_vec = [lat_motion_plan_output.y_vec[j] for j in range(len(lat_motion_plan_output.y_vec))]
+        else:
+          ref_x, ref_y = [], []
+          soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = [], []
+          soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = [], []
+          soft_upper_bound_x1_vec, soft_upper_bound_y1_vec = [], []
+          soft_lower_bound_x1_vec, soft_lower_bound_y1_vec = [], []
+          hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = [], []
+          hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = [], []
+          hard_upper_bound_x1_vec, hard_upper_bound_y1_vec = [], []
+          hard_lower_bound_x1_vec, hard_lower_bound_y1_vec = [], []
+          path_x_vec, path_y_vec = [], []
+          if match_loc_msg != None: # 长时轨迹
+            cur_pos_xn = match_loc_msg.position.position_boot.x
+            cur_pos_yn = match_loc_msg.position.position_boot.y
+            cur_yaw = match_loc_msg.orientation.euler_boot.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            ref_x, ref_y = coord_tf.global_to_local(lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec)
+            soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x0_vec, \
+              lat_motion_plan_input.soft_upper_bound_y0_vec)
+            soft_lower_bound_x0_vec, soft_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x0_vec, \
+              lat_motion_plan_input.soft_lower_bound_y0_vec)
+            soft_upper_bound_x1_vec, soft_upper_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x1_vec, \
+              lat_motion_plan_input.soft_upper_bound_y1_vec)
+            soft_lower_bound_x1_vec, soft_lower_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x1_vec, \
+              lat_motion_plan_input.soft_lower_bound_y1_vec)
+            hard_upper_bound_x0_vec, hard_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_upper_bound_x0_vec, \
+              lat_motion_plan_input.hard_upper_bound_y0_vec)
+            hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_lower_bound_x0_vec, \
+              lat_motion_plan_input.hard_lower_bound_y0_vec)
+            hard_upper_bound_x1_vec, hard_upper_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_upper_bound_x1_vec, \
+              lat_motion_plan_input.hard_upper_bound_y1_vec)
+            hard_lower_bound_x1_vec, hard_lower_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.hard_lower_bound_x1_vec, \
+              lat_motion_plan_input.hard_lower_bound_y1_vec)
+            path_x_vec, path_y_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)
+
+        if len(soft_upper_bound_x0_vec) > 1:
+          soft_upper_bound_x0_vec[len(soft_upper_bound_x0_vec) - 1] = soft_upper_bound_x1_vec[len(soft_upper_bound_x1_vec) - 1]
+          soft_upper_bound_y0_vec[len(soft_upper_bound_y0_vec) - 1] = soft_upper_bound_y1_vec[len(soft_upper_bound_y1_vec) - 1]
+          soft_lower_bound_x0_vec[len(soft_lower_bound_x0_vec) - 1] = soft_lower_bound_x1_vec[len(soft_lower_bound_x1_vec) - 1]
+          soft_lower_bound_y0_vec[len(soft_lower_bound_y0_vec) - 1] = soft_lower_bound_y1_vec[len(soft_lower_bound_y1_vec) - 1]
+          hard_upper_bound_x0_vec[len(hard_upper_bound_x0_vec) - 1] = hard_upper_bound_x1_vec[len(hard_upper_bound_x1_vec) - 1]
+          hard_upper_bound_y0_vec[len(hard_upper_bound_y0_vec) - 1] = hard_upper_bound_y1_vec[len(hard_upper_bound_y1_vec) - 1]
+          hard_lower_bound_x0_vec[len(hard_lower_bound_x0_vec) - 1] = hard_lower_bound_x1_vec[len(hard_lower_bound_x1_vec) - 1]
+          hard_lower_bound_y0_vec[len(hard_lower_bound_y0_vec) - 1] = hard_lower_bound_y1_vec[len(hard_lower_bound_y1_vec) - 1]
+
+        ref_path_xys.append((ref_y, ref_x))
+        soft_upper_bound_xys.append((soft_upper_bound_y0_vec, soft_upper_bound_x0_vec))
+        soft_lower_bound_xys.append((soft_lower_bound_y0_vec, soft_lower_bound_x0_vec))
+        hard_upper_bound_xys.append((hard_upper_bound_y0_vec, hard_upper_bound_x0_vec))
+        hard_lower_bound_xys.append((hard_lower_bound_y0_vec, hard_lower_bound_x0_vec))
+        soft_upper_bound_circle_xys.append((soft_upper_bound_y0_vec, soft_upper_bound_x0_vec, circle_radius))
+        soft_lower_bound_circle_xys.append((soft_lower_bound_y0_vec, soft_lower_bound_x0_vec, circle_radius))
+        hard_upper_bound_circle_xys.append((hard_upper_bound_y0_vec, hard_upper_bound_x0_vec, circle_radius))
+        hard_lower_bound_circle_xys.append((hard_lower_bound_y0_vec, hard_lower_bound_x0_vec, circle_radius))
+        lat_plan_path_xys.append((path_y_vec, path_x_vec))
+
+      ref_path_generate = CommonGenerator()
+      soft_upper_bound_generate = CommonGenerator()
+      soft_lower_bound_generate = CommonGenerator()
+      hard_upper_bound_generate = CommonGenerator()
+      hard_lower_bound_generate = CommonGenerator()
+      soft_upper_bound_circle_generate = CircleGenerator()
+      soft_lower_bound_circle_generate = CircleGenerator()
+      hard_upper_bound_circle_generate = CircleGenerator()
+      hard_lower_bound_circle_generate = CircleGenerator()
+      lat_plan_path_generate = CommonGenerator()
+      ref_path_generate.xys = ref_path_xys
+      soft_upper_bound_generate.xys = soft_upper_bound_xys
+      soft_lower_bound_generate.xys = soft_lower_bound_xys
+      hard_upper_bound_generate.xys = hard_upper_bound_xys
+      hard_lower_bound_generate.xys = hard_lower_bound_xys
+      soft_upper_bound_circle_generate.xys = soft_upper_bound_circle_xys
+      soft_lower_bound_circle_generate.xys = soft_lower_bound_circle_xys
+      hard_upper_bound_circle_generate.xys = hard_upper_bound_circle_xys
+      hard_lower_bound_circle_generate.xys = hard_lower_bound_circle_xys
+      lat_plan_path_generate.xys = lat_plan_path_xys
+      ref_path_generate.ts = np.array(plan_debug_ts)
+      soft_upper_bound_generate.ts = np.array(plan_debug_ts)
+      soft_lower_bound_generate.ts = np.array(plan_debug_ts)
+      hard_upper_bound_generate.ts = np.array(plan_debug_ts)
+      hard_lower_bound_generate.ts = np.array(plan_debug_ts)
+      soft_upper_bound_circle_generate.ts = np.array(plan_debug_ts)
+      soft_lower_bound_circle_generate.ts = np.array(plan_debug_ts)
+      hard_upper_bound_circle_generate.ts = np.array(plan_debug_ts)
+      hard_lower_bound_circle_generate.ts = np.array(plan_debug_ts)
+      lat_plan_path_generate.ts = np.array(plan_debug_ts)
+      ref_path_layer = CurveLayer(fig_lv, ref_path_params)
+      soft_upper_bound_layer = CurveLayer(fig_lv, soft_upper_bound_params)
+      soft_lower_bound_layer = CurveLayer(fig_lv, soft_lower_bound_params)
+      hard_upper_bound_layer = CurveLayer(fig_lv, hard_upper_bound_params)
+      hard_lower_bound_layer = CurveLayer(fig_lv, hard_lower_bound_params)
+      soft_upper_bound_circle_layer = CircleLayer(fig_lv, soft_upper_bound_circle_params)
+      soft_lower_bound_circle_layer = CircleLayer(fig_lv, soft_lower_bound_circle_params)
+      hard_upper_bound_circle_layer = CircleLayer(fig_lv, hard_upper_bound_circle_params)
+      hard_lower_bound_circle_layer = CircleLayer(fig_lv, hard_lower_bound_circle_params)
+      lat_plan_path_layer = CurveLayer(fig_lv, lat_plan_path_params)
+      layer_manager.AddLayer(ref_path_layer, 'ref_path_layer', ref_path_generate, 'ref_path_generate', 2)
+      layer_manager.AddLayer(soft_upper_bound_layer, 'soft_upper_bound_layer', soft_upper_bound_generate, 'soft_upper_bound_generate', 2)
+      layer_manager.AddLayer(soft_lower_bound_layer, 'soft_lower_bound_layer', soft_lower_bound_generate, 'soft_lower_bound_generate', 2)
+      layer_manager.AddLayer(hard_upper_bound_layer, 'hard_upper_bound_layer', hard_upper_bound_generate, 'hard_upper_bound_generate', 2)
+      layer_manager.AddLayer(hard_lower_bound_layer, 'hard_lower_bound_layer', hard_lower_bound_generate, 'hard_lower_bound_generate', 2)
+      layer_manager.AddLayer(soft_upper_bound_circle_layer, 'soft_upper_bound_circle_layer', soft_upper_bound_circle_generate, 'soft_upper_bound_circle_generate', 3)
+      layer_manager.AddLayer(soft_lower_bound_circle_layer, 'soft_lower_bound_circle_layer', soft_lower_bound_circle_generate, 'soft_lower_bound_circle_generate', 3)
+      layer_manager.AddLayer(hard_upper_bound_circle_layer, 'hard_upper_bound_circle_layer', hard_upper_bound_circle_generate, 'hard_upper_bound_circle_generate', 3)
+      layer_manager.AddLayer(hard_lower_bound_circle_layer, 'hard_lower_bound_circle_layer', hard_lower_bound_circle_generate, 'hard_lower_bound_circle_generate', 3)
+      layer_manager.AddLayer(lat_plan_path_layer, 'lat_plan_path_layer', lat_plan_path_generate, 'lat_plan_path_generate', 2)
+
+def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
+    #define figure
+    fig_lat_traj_info1 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=750, height=160)
+    fig_lat_traj_info2 = bkp.figure(x_axis_label='time', y_axis_label='y',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
+    fig_lat_traj_info3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
+    fig_lat_traj_info4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
+    fig_lat_traj_info5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
+    fig_lat_traj_info6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
+    global plan_debug_ts
+    steer_ratio = 15.7
+    rad_to_deg = 57.3
+    coord_tf = coord_transformer()
+    ref_theta_generate = CommonGenerator()
+    traj_theta_generate = CommonGenerator()
+    ref_y_generate = CommonGenerator()
+    traj_y_generate = CommonGenerator()
+    traj_acc_generate = CommonGenerator()
+    traj_jerk_generate = CommonGenerator()
+    traj_steer_generate = CommonGenerator()
+    traj_steer_dot_generate = CommonGenerator()
+    acc_upper_bound_generate = CommonGenerator()
+    acc_lower_bound_generate = CommonGenerator()
+    jerk_upper_bound_generate = CommonGenerator()
+    jerk_lower_bound_generate = CommonGenerator()
+    steer_upper_bound_generate = CommonGenerator()
+    steer_lower_bound_generate = CommonGenerator()
+    steer_dot_upper_bound_generate = CommonGenerator()
+    steer_dot_lower_bound_generate = CommonGenerator()
+    if plan_debug_msg['enable'] == True:
+      for i, plan_debug in enumerate(plan_debug_msg['data']):
+        lat_motion_plan_input = plan_debug.lateral_motion_planning_input
+        lat_motion_plan_output = plan_debug.lateral_motion_planning_output
+        input_topic_timestamp = plan_debug.input_topic_timestamp
+        if is_new_loc:
+          localization_timestamp = input_topic_timestamp.localization
+          #localization_timestamp = input_topic_timestamp.localization_estimate
+        else :
+          if is_bag_main:
+            localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+          else:
+            localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
+        vehicle_service_timestamp = input_topic_timestamp.vehicle_service
+        match_loc_msg = find(loc_msg, localization_timestamp)
+        match_vs_msg = find(vs_msg, vehicle_service_timestamp)
+        delta_bound = 360.0 / 14.5 / 57.3
+        omega_bound = 240.0 / 14.5 / 57.3
         try:
-          # print(getattr(vo_lat_behavior_plan,name))
-          datas.append(getattr(lat_behavior_common,name))
-          names.append(name)
+          delta_bound = min(delta_bound, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * match_vs_msg.vehicle_speed * match_vs_msg.vehicle_speed))
+          omega_bound = min(omega_bound, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * match_vs_msg.vehicle_speed * match_vs_msg.vehicle_speed))
         except:
-          pass
-      lat_behavior_table1.xys.append((names, datas, [None] * len(names)))
+          print("min delta_bound and min omega_bound")
+        time_vec = []
+        ref_theta_vec = []
+        traj_theta_vec = []
+        ref_x_vec = []
+        ref_y_vec = []
+        traj_x_vec = []
+        traj_y_vec = []
+        traj_acc_vec = []
+        traj_jerk_vec = []
+        traj_steer_vec = []
+        traj_steer_dot_vec = []
+        acc_upper_bound = []
+        acc_lower_bound = []
+        jerk_upper_bound = []
+        jerk_lower_bound = []
+        steer_upper_bound = []
+        steer_lower_bound = []
+        steer_dot_upper_bound = []
+        steer_dot_lower_bound = []
+        for i in range(len(lat_motion_plan_output.time_vec)):
+          time_vec.append(lat_motion_plan_output.time_vec[i])
+          ref_theta_vec.append(lat_motion_plan_input.ref_theta_vec[i] * rad_to_deg)
+          traj_theta_vec.append(lat_motion_plan_output.theta_vec[i] * rad_to_deg)
+          ref_x_vec.append(lat_motion_plan_input.ref_x_vec[i])
+          ref_y_vec.append(lat_motion_plan_input.ref_y_vec[i])
+          traj_x_vec.append(lat_motion_plan_output.x_vec[i])
+          traj_y_vec.append(lat_motion_plan_output.y_vec[i])
+          traj_acc_vec.append(lat_motion_plan_output.acc_vec[i])
+          traj_jerk_vec.append(lat_motion_plan_output.jerk_vec[i])
+          traj_steer_vec.append(lat_motion_plan_output.delta_vec[i] * steer_ratio * rad_to_deg)
+          traj_steer_dot_vec.append(lat_motion_plan_output.omega_vec[i] * steer_ratio * rad_to_deg)
+          acc_upper_bound.append(lat_motion_plan_input.acc_bound)
+          acc_lower_bound.append(-lat_motion_plan_input.acc_bound)
+          jerk_upper_bound.append(lat_motion_plan_input.jerk_bound)
+          jerk_lower_bound.append(-lat_motion_plan_input.jerk_bound)
+          steer_upper_bound.append((delta_bound * steer_ratio * rad_to_deg))
+          steer_lower_bound.append(-(delta_bound * steer_ratio * rad_to_deg))
+          steer_dot_upper_bound.append((omega_bound * steer_ratio * rad_to_deg))
+          steer_dot_lower_bound.append(-(omega_bound * steer_ratio * rad_to_deg))
+        ref_theta_generate.xys.append((time_vec, ref_theta_vec))
+        traj_theta_generate.xys.append((time_vec, traj_theta_vec))
+        if not g_is_display_enu:
+          if match_loc_msg != None: # 长时轨迹
+            cur_pos_xn = match_loc_msg.position.position_boot.x
+            cur_pos_yn = match_loc_msg.position.position_boot.y
+            cur_yaw = match_loc_msg.orientation.euler_boot.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            ref_x_vec, ref_y_vec = coord_tf.global_to_local(ref_x_vec, ref_y_vec)
+            traj_x_vec, traj_y_vec = coord_tf.global_to_local(traj_x_vec, traj_y_vec)
+        ref_y_generate.xys.append((time_vec, ref_y_vec))
+        traj_y_generate.xys.append((time_vec, traj_y_vec))
+        traj_acc_generate.xys.append((time_vec, traj_acc_vec))
+        traj_jerk_generate.xys.append((time_vec, traj_jerk_vec))
+        traj_steer_generate.xys.append((time_vec, traj_steer_vec))
+        traj_steer_dot_generate.xys.append((time_vec, traj_steer_dot_vec))
+        acc_upper_bound_generate.xys.append((time_vec, acc_upper_bound))
+        acc_lower_bound_generate.xys.append((time_vec, acc_lower_bound))
+        jerk_upper_bound_generate.xys.append((time_vec, jerk_upper_bound))
+        jerk_lower_bound_generate.xys.append((time_vec, jerk_lower_bound))
+        steer_upper_bound_generate.xys.append((time_vec, steer_upper_bound))
+        steer_lower_bound_generate.xys.append((time_vec, steer_lower_bound))
+        steer_dot_upper_bound_generate.xys.append((time_vec, steer_dot_upper_bound))
+        steer_dot_lower_bound_generate.xys.append((time_vec, steer_dot_lower_bound))
 
-      names  = []
-      datas = []
-      try:
-      # 横向运动规划offset 可视化
-        basic_dpoly = vo_lat_motion_plan.basic_dpoly
-        datas.append(vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3])
-        names.append('premove_dpoly_c0')
-        datas.append(vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3])
-        names.append('avoid_dpoly_c0')
-      except:
-        pass
+      ref_theta_generate.ts = plan_debug_ts
+      traj_theta_generate.ts = plan_debug_ts
+      ref_y_generate.ts = plan_debug_ts
+      traj_y_generate.ts = plan_debug_ts
+      traj_acc_generate.ts = plan_debug_ts
+      traj_jerk_generate.ts = plan_debug_ts
+      traj_steer_generate.ts = plan_debug_ts
+      traj_steer_dot_generate.ts = plan_debug_ts
+      acc_upper_bound_generate.ts = plan_debug_ts
+      acc_lower_bound_generate.ts = plan_debug_ts
+      jerk_upper_bound_generate.ts = plan_debug_ts
+      jerk_lower_bound_generate.ts = plan_debug_ts
+      steer_upper_bound_generate.ts = plan_debug_ts
+      steer_lower_bound_generate.ts = plan_debug_ts
+      steer_dot_upper_bound_generate.ts = plan_debug_ts
+      steer_dot_lower_bound_generate.ts = plan_debug_ts
 
-      names.append('avoid_car_id')
-      avoid_car_id_str = ""
-      for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
-        avoid_car_id_str = avoid_car_id_str + str(avoid_car_id) + ' '
-      datas.append(avoid_car_id_str)
-      # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
-      names.append('left_alc_car_ids')
-      names.append('right_alc_car_ids')
-      left_alc_car_id_str = ""
-      right_alc_car_id_str = ""
-      for left_alc_car_id in lat_behavior_common.left_alc_car_ids:
-        left_alc_car_id_str = left_alc_car_id_str + str(left_alc_car_id) + ' '
-      for right_alc_car_id in lat_behavior_common.right_alc_car_ids:
-        right_alc_car_id_str = right_alc_car_id_str + str(right_alc_car_id) + ' '
-      datas.append(left_alc_car_id_str)
-      datas.append(right_alc_car_id_str)
-      lat_behavior_table2.xys.append((names, datas, [None] * len(names)))
-  lat_behavior_table1.ts = plan_debug_ts
-  lat_behavior_table2.ts = plan_debug_ts
+      ref_theta_layer = CurveLayer(fig_lat_traj_info1, ref_theta_params)
+      traj_theta_layer = CurveLayer(fig_lat_traj_info1, traj_theta_params)
+      ref_y_layer = CurveLayer(fig_lat_traj_info2, ref_y_params)
+      traj_y_layer = CurveLayer(fig_lat_traj_info2, traj_y_params)
+      traj_acc_layer = CurveLayer(fig_lat_traj_info3, traj_acc_params)
+      traj_jerk_layer = CurveLayer(fig_lat_traj_info4, traj_jerk_params)
+      traj_steer_layer = CurveLayer(fig_lat_traj_info5, traj_steer_params)
+      traj_steer_dot_layer = CurveLayer(fig_lat_traj_info6, traj_steer_dot_params)
+      acc_upper_bound_layer = CurveLayer(fig_lat_traj_info3, acc_upper_bound_params)
+      acc_lower_bound_layer = CurveLayer(fig_lat_traj_info3, acc_lower_bound_params)
+      jerk_upper_bound_layer = CurveLayer(fig_lat_traj_info4, jerk_upper_bound_params)
+      jerk_lower_bound_layer = CurveLayer(fig_lat_traj_info4, jerk_lower_bound_params)
+      steer_upper_bound_layer = CurveLayer(fig_lat_traj_info5, steer_upper_bound_params)
+      steer_lower_bound_layer = CurveLayer(fig_lat_traj_info5, steer_lower_bound_params)
+      steer_dot_upper_bound_layer = CurveLayer(fig_lat_traj_info6, steer_dot_upper_bound_params)
+      steer_dot_lower_bound_layer = CurveLayer(fig_lat_traj_info6, steer_dot_lower_bound_params)
+      acc_upper_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info3, 'inverted_triangle', acc_upper_bound_triangle_params)
+      acc_lower_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info3, 'triangle', acc_lower_bound_triangle_params)
+      jerk_upper_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info4, 'inverted_triangle', jerk_upper_bound_triangle_params)
+      jerk_lower_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info4, 'triangle', jerk_lower_bound_triangle_params)
+      steer_upper_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info5, 'inverted_triangle', steer_upper_bound_triangle_params)
+      steer_lower_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info5, 'triangle', steer_lower_bound_triangle_params)
+      steer_dot_upper_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info6, 'inverted_triangle', steer_dot_upper_bound_triangle_params)
+      steer_dot_lower_bound_triangle_layer = TrianglePointsLayer(fig_lat_traj_info6, 'triangle', steer_dot_lower_bound_triangle_params)
 
+      layer_manager.AddLayer(ref_theta_layer, 'ref_theta_layer', ref_theta_generate, 'ref_theta_generate', 2)
+      layer_manager.AddLayer(traj_theta_layer, 'traj_theta_layer', traj_theta_generate, 'traj_theta_generate', 2)
+      layer_manager.AddLayer(ref_y_layer, 'ref_y_layer', ref_y_generate, 'ref_y_generate', 2)
+      layer_manager.AddLayer(traj_y_layer, 'traj_y_layer', traj_y_generate, 'traj_y_generate', 2)
+      layer_manager.AddLayer(traj_acc_layer, 'traj_acc_layer', traj_acc_generate, 'traj_acc_generate', 2)
+      layer_manager.AddLayer(traj_jerk_layer, 'traj_jerk_layer', traj_jerk_generate, 'traj_jerk_generate', 2)
+      layer_manager.AddLayer(traj_steer_layer, 'traj_steer_layer', traj_steer_generate, 'traj_steer_generate', 2)
+      layer_manager.AddLayer(traj_steer_dot_layer, 'traj_steer_dot_layer', traj_steer_dot_generate, 'traj_steer_dot_generate', 2)
+      layer_manager.AddLayer(acc_upper_bound_layer, 'acc_upper_bound_layer', acc_upper_bound_generate, 'acc_upper_bound_generate', 2)
+      layer_manager.AddLayer(acc_lower_bound_layer, 'acc_lower_bound_layer', acc_lower_bound_generate, 'acc_lower_bound_generate', 2)
+      layer_manager.AddLayer(jerk_upper_bound_layer, 'jerk_upper_bound_layer', jerk_upper_bound_generate, 'jerk_upper_bound_generate', 2)
+      layer_manager.AddLayer(jerk_lower_bound_layer, 'jerk_lower_bound_layer', jerk_lower_bound_generate, 'jerk_lower_bound_generate', 2)
+      layer_manager.AddLayer(steer_upper_bound_layer, 'steer_upper_bound_layer', steer_upper_bound_generate, 'steer_upper_bound_generate', 2)
+      layer_manager.AddLayer(steer_lower_bound_layer, 'steer_lower_bound_layer', steer_lower_bound_generate, 'steer_lower_bound_generate', 2)
+      layer_manager.AddLayer(steer_dot_upper_bound_layer, 'steer_dot_upper_bound_layer', steer_dot_upper_bound_generate, 'steer_dot_upper_bound_generate', 2)
+      layer_manager.AddLayer(steer_dot_lower_bound_layer, 'steer_dot_lower_bound_layer', steer_dot_lower_bound_generate, 'steer_dot_lower_bound_generate', 2)
+      layer_manager.AddLayer(acc_upper_bound_triangle_layer, 'acc_upper_bound_triangle_layer', acc_upper_bound_generate, 'acc_upper_bound_generate', 2)
+      layer_manager.AddLayer(acc_lower_bound_triangle_layer, 'acc_lower_bound_triangle_layer', acc_lower_bound_generate, 'acc_lower_bound_generate', 2)
+      layer_manager.AddLayer(jerk_upper_bound_triangle_layer, 'jerk_upper_bound_triangle_layer', jerk_upper_bound_generate, 'jerk_upper_bound_generate', 2)
+      layer_manager.AddLayer(jerk_lower_bound_triangle_layer, 'jerk_lower_bound_triangle_layer', jerk_lower_bound_generate, 'jerk_lower_bound_generate', 2)
+      layer_manager.AddLayer(steer_upper_bound_triangle_layer, 'steer_upper_bound_triangle_layer', steer_upper_bound_generate, 'steer_upper_bound_generate', 2)
+      layer_manager.AddLayer(steer_lower_bound_triangle_layer, 'steer_lower_bound_triangle_layer', steer_lower_bound_generate, 'steer_lower_bound_generate', 2)
+      layer_manager.AddLayer(steer_dot_upper_bound_triangle_layer, 'steer_dot_upper_bound_triangle_layer', steer_dot_upper_bound_generate, 'steer_dot_upper_bound_generate', 2)
+      layer_manager.AddLayer(steer_dot_lower_bound_triangle_layer, 'steer_dot_lower_bound_triangle_layer', steer_dot_lower_bound_generate, 'steer_dot_lower_bound_generate', 2)
 
-  tab_attr_list = ['Attr', 'Val']
-  tab_rt_layer1 = TableLayerV2(None, tab_attr_list, table_params)
-  layer_manager.AddLayer(
-      tab_rt_layer1, 'rt_table_source1', lat_behavior_table1, 'lat_behavior_table1', 3)
+    hover1 = HoverTool(tooltips = [('time', '@pts_xs'), ('theta', '@pts_ys')])
+    hover2 = HoverTool(tooltips = [('time', '@pts_xs'), ('y', '@pts_ys')])
+    hover3 = HoverTool(tooltips = [('time', '@pts_xs'), ('acc', '@pts_ys')])
+    hover4 = HoverTool(tooltips = [('time', '@pts_xs'), ('jerk', '@pts_ys')])
+    hover5 = HoverTool(tooltips = [('time', '@pts_xs'), ('steer', '@pts_ys')])
+    hover6 = HoverTool(tooltips = [('time', '@pts_xs'), ('steer dot', '@pts_ys')])
 
-  tab_rt_layer2 = TableLayerV2(None, tab_attr_list, table_params)
-  layer_manager.AddLayer(
-      tab_rt_layer2, 'rt_table_source2', lat_behavior_table2, 'lat_behavior_table2', 3)
+    fig_lat_traj_info1.add_tools(hover1)
+    fig_lat_traj_info2.add_tools(hover2)
+    fig_lat_traj_info3.add_tools(hover3)
+    fig_lat_traj_info4.add_tools(hover4)
+    fig_lat_traj_info5.add_tools(hover5)
+    fig_lat_traj_info6.add_tools(hover6)
+    fig_lat_traj_info1.toolbar.active_scroll = fig_lat_traj_info1.select_one(WheelZoomTool)
+    fig_lat_traj_info2.toolbar.active_scroll = fig_lat_traj_info2.select_one(WheelZoomTool)
+    fig_lat_traj_info3.toolbar.active_scroll = fig_lat_traj_info3.select_one(WheelZoomTool)
+    fig_lat_traj_info4.toolbar.active_scroll = fig_lat_traj_info4.select_one(WheelZoomTool)
+    fig_lat_traj_info5.toolbar.active_scroll = fig_lat_traj_info5.select_one(WheelZoomTool)
+    fig_lat_traj_info6.toolbar.active_scroll = fig_lat_traj_info6.select_one(WheelZoomTool)
+    fig_lat_traj_info1.legend.click_policy = "hide"
+    fig_lat_traj_info2.legend.click_policy = "hide"
+    fig_lat_traj_info3.legend.click_policy = "hide"
+    fig_lat_traj_info4.legend.click_policy = "hide"
+    fig_lat_traj_info5.legend.click_policy = "hide"
+    fig_lat_traj_info6.legend.click_policy = "hide"
 
+    return fig_lat_traj_info1, fig_lat_traj_info2, fig_lat_traj_info3, fig_lat_traj_info4, fig_lat_traj_info5, fig_lat_traj_info6
 
-  # 2. 可视化障碍物数据debug信息
-  obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
-            'nearest_l_to_ego','vs_lon',
-              'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
-              'current_lead_obstacle_to_ego','cutin_p']
-  # 'vs_lat_relative','vs_lon_relative'
-  obstacle_ids = set()
-  obstacle_generates = {}
-  # 加载所有障碍物的id
-  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-    environment_model_info = plan_debug.environment_model_info
-    for obstacle in environment_model_info.obstacle:
-      obstacle_ids.add(obstacle.id)
-
-  for obstacle_id in obstacle_ids:
-      obstacle_generates['obstacle_generate_table_' + str(obstacle_id)] = ObjTextGenerator()
-      obstacle_generates['obstacle_generate_table_' + str(obstacle_id)].ts = plan_debug_ts
-
-  # 每一个障碍物id对应一个 Generator
-  global fusion_object_timestamps
-  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
-    fus_msg = find(dataLoader.fus_msg, fusion_object_timestamps[i])
-    # if not flag:
-    #     # print('find fus_msg error')
-    #     obstacle_fusion_generate.xys.append(([], []))
-    #     obstacle_snrd_generate.xys.append(([], []))
-    #     obstacle_fusion_text_generate.xys.append(([], [], []))
-    #     obstacle_snrd_text_generate.xys.append(([], [], []))
-    #     continue
-    environment_model_info = plan_debug.environment_model_info
-    for obstacle_id in obstacle_ids:
-      obstacle_generate = obstacle_generates['obstacle_generate_table_' + str(obstacle_id)]
-      names  = []
-      datas = []
-      flag_obj = False
-      for obstacle in environment_model_info.obstacle:
-        if obstacle_id == obstacle.id:
-          flag_obj = True
-          for name in obj_vars:
-            try:
-              # print(getattr(obstacle,name))
-              datas.append(getattr(obstacle,name))
-              names.append(name)
-            except:
-              pass
-          # 加载对应的笛卡尔下的障碍物速度
-          if fus_msg != None:
-            for obj in fus_msg.fusion_object:
-              if obstacle_id == obj.additional_info.track_id:
-                names.append('v_x')
-                names.append('v_y')
-                datas.append(obj.common_info.relative_velocity.x)
-                datas.append(obj.common_info.relative_velocity.y)
-                break
-
-          obstacle_generate.xys.append((names, datas, [None] * len(names)))
-          break
-      if not flag_obj:
-        obstacle_generate.xys.append((names, datas, [None] * len(names)))
-  tab_attr_list = ['Attr', 'Val']
-  tab_lat_rt_obstacle_layer = TableLayerV2(None, tab_attr_list, table_params)
-  lat_rt_obstacle_table = ObjTextGenerator()
-  lat_rt_obstacle_table.ts = plan_debug_ts
-  names  = ['']
-  datas = ['']
-  for i,_ in enumerate(plan_debug_ts):
-    lat_rt_obstacle_table.xys.append((names, datas, [None] * len(names)))
-  layer_manager.AddLayer(
-      tab_lat_rt_obstacle_layer, 'lat_rt_obstacle_table_source', lat_rt_obstacle_table, 'lat_rt_obstacle_table', 3)
-  return tab_rt_layer1.plot, tab_rt_layer2.plot, tab_lat_rt_obstacle_layer.plot, obstacle_generates
+def draw_lateral_traj_param(plan_debug_msg, layer_manager):
+    #define figure
+    global plan_debug_ts
+    lat_motion_q_table_generate = TextGenerator()
+    if plan_debug_msg['enable'] == True:
+      for i, plan_debug in enumerate(plan_debug_msg['data']):
+        lat_motion_plan_input = plan_debug.lateral_motion_planning_input
+        names = []
+        values = []
+        names.append('ref_vel')
+        names.append('q_xy')
+        names.append('q_theta')
+        names.append('q_acc')
+        names.append('q_jerk')
+        names.append('q_acc_bound')
+        names.append('q_jerk_bound')
+        names.append('q_soft_bound')
+        names.append('q_hard_bound')
+        values.append(lat_motion_plan_input.ref_vel)
+        values.append(lat_motion_plan_input.q_ref_x)
+        values.append(lat_motion_plan_input.q_ref_theta)
+        values.append(lat_motion_plan_input.q_acc)
+        values.append(lat_motion_plan_input.q_jerk)
+        values.append(lat_motion_plan_input.q_acc_bound)
+        values.append(lat_motion_plan_input.q_jerk_bound)
+        values.append(lat_motion_plan_input.q_soft_corridor)
+        values.append(lat_motion_plan_input.q_hard_corridor)
+        lat_motion_q_table_generate.xys.append((names, values, [None] * len(names)))
+    lat_motion_q_table_generate.ts = plan_debug_ts
+    tab_attr_list = ['Attr', 'Val']
+    tab_lat_motion_q_layer = TableLayerV2(None, tab_attr_list, table_params)
+    layer_manager.AddLayer(
+      tab_lat_motion_q_layer, 'tab_lat_motion_q_layer', lat_motion_q_table_generate, 'lat_motion_q_table_generate', 3)
+    return tab_lat_motion_q_layer.plot
 
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
         dataLoader = LoadRosbag(bag_path)
     except:
-        print('load ros_bag error!')
+        print('load cyber_bag error!')
         return
 
     if isINJupyter():
@@ -246,10 +687,21 @@ def plotOnce(bag_path, html_file):
         print("is in jupyter now!")
     else:
         max_time = dataLoader.load_all_data(False)
+
+    #dataLoader = LoadCyberbag(bag_path)
+    #max_time = dataLoader.load_all_data(False)
+    plan_debug_msg = dataLoader.plan_debug_msg
+    loc_msg = dataLoader.loc_msg
+    vs_msg = dataLoader.vs_msg
     layer_manager = LayerManager()
 
-    fig_local_view, plan_debug_table_view = draw_local_view(dataLoader, layer_manager)
-    tab_rt1, tab_rt2,tab_lat_rt_obstacle, obstacle_generates = draw_lat(dataLoader, layer_manager)
+    fig_lv, _ = draw_local_view(dataLoader, layer_manager)
+    draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager)
+    fig_lateral_offset = draw_lateral_offset(plan_debug_msg, layer_manager)
+    fig_lateral_offset_assist = draw_lateral_offset_assist(plan_debug_msg, layer_manager)
+    fig_lat_traj_info1, fig_lat_traj_info2, fig_lat_traj_info3, fig_lat_traj_info4, fig_lat_traj_info5, fig_lat_traj_info6 = draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager)
+    fig_lat_traj_param = draw_lateral_traj_param(plan_debug_msg, layer_manager)
+
     min_t = sys.maxsize
     max_t = 0
     for gdlabel in layer_manager.gds.keys():
@@ -264,11 +716,6 @@ def plotOnce(bag_path, html_file):
         data_label = layer_manager.data_key[gdlabel]
         data_tmp[data_label+'s'] = [gd.xys]
         data_tmp[data_label+'ts'] = [gd.ts]
-
-    for obstacle_generate_key in obstacle_generates.keys():
-      data_tmp[obstacle_generate_key+'s'] = [obstacle_generates[obstacle_generate_key].xys]
-      data_tmp[obstacle_generate_key+'ts'] = [obstacle_generates[obstacle_generate_key].ts]
-
     bag_data = ColumnDataSource(data=data_tmp)
 
     callback_arg = slider_callback_arg(bag_data)
@@ -298,7 +745,7 @@ def plotOnce(bag_path, html_file):
     """
 
     car_slider = Slider(start=0, end=max_time-0,
-                        value=0, step=0.05, title="time")
+                        value=0, step=0.1, title="time")
     code0 = """
     %s
             console.log("cb_objS");
@@ -311,36 +758,13 @@ def plotOnce(bag_path, html_file):
             console.log(Object.keys(bag_source.data));
             const step = cb_obj.value;
             const data = bag_source.data;
-            var obstacle_selector_value=0
-            console.log("obstacle_selector", obstacle_selector.value);
-            obstacle_selector_value = obstacle_selector.value
 
     """
 
     codes = (layer_manager.code) % (code0) % (binary_search)
-    codes +="""
-    let obstacle_generate_table_index = "obstacle_generate_table_"+obstacle_selector_value+"s"
-    if (obstacle_generate_table_index in data){
-      lat_rt_obstacle_table_source.data['pts_xs'] = data[obstacle_generate_table_index][0][lat_rt_obstacle_table_index][0];
-      lat_rt_obstacle_table_source.data['pts_ys'] = data[obstacle_generate_table_index][0][lat_rt_obstacle_table_index][1];
-      lat_rt_obstacle_table_source.change.emit();
-    }else{
-    lat_rt_obstacle_table_source.data["id"]="not exist"
-    }
-  """
     callback = CustomJS(args=callback_arg.arg, code=codes)
-    selector_callback=CustomJS(args=dict(
-       car_slider=car_slider
-    ),code="""
-    console.log("obstacle_selector")
-    console.log(cb_obj)
-    console.log("car_slider",car_slider.value);
-    let val = car_slider.value;
-    car_slider.value=val-1.0;
-    car_slider.value=val;
-    """)
+
     car_slider.js_on_change('value', callback)
-    obstacle_selector.js_on_change('value',selector_callback)
 
     for gdlabel in layer_manager.gds.keys():
         gd = layer_manager.gds[gdlabel]
@@ -368,21 +792,10 @@ def plotOnce(bag_path, html_file):
         # display in jupyter notebook
         output_notebook()
 
-    # pan_lt = Panel(child=row(column(fig_local_view, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
-    # pan_rt = Panel(child=row(tab_rt, column(fig_rtv)), title="Realtime")
-    # pans = Tabs(tabs=[ pan_lt, pan_rt ])
-    bkp.show(layout(car_slider, row(column(fig_local_view,row(plan_debug_table_view[0],plan_debug_table_view[1],obstacle_selector))
-                                                       , tab_lat_rt_obstacle, tab_rt1, tab_rt2)))
-
-
-def printHelp():
-    print('''\n
-USAGE:
-    1. <jupyter mode>      change “bag_path” and "html_file" and run
-    2. <single file mode>  python3 plot_bag.py bag_file html_file
-    3. <folder batch mode> python3 plot_bag.py bag_folder html_folder
-\n''')
-
+    # pan_1 = Panel(child=row(column(fig_lat_traj_info1, fig_lat_traj_info2, fig_lat_traj_info3, fig_lat_traj_info4, fig_lat_traj_info5, fig_lat_traj_info6), column(fig_lateral_offset, fig_lateral_offset_assist, fig_lat_traj_param)), title="1")
+    # pan_2 = Panel(child=row(column(fig_lateral_offset_assist)), title="2")
+    # pans = Tabs(tabs=[ pan_1, pan_2 ])
+    bkp.show(layout(car_slider, row(fig_lv, column(fig_lat_traj_info1, fig_lat_traj_info2, fig_lat_traj_info3, fig_lat_traj_info4, fig_lat_traj_info5, fig_lat_traj_info6), column(fig_lateral_offset, fig_lateral_offset_assist, fig_lat_traj_param))))
 
 def plotMain():
     # print('sys.argv = ', sys.argv)

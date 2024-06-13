@@ -35,12 +35,16 @@ g_is_display_enu = False # True: local_view显示enu坐标系   False: local_vie
 is_new_loc = False #   True:新定位 False:老定位
 is_match_planning = True  #True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
 is_vis_map = False
+
+def get_g_is_display_enu():
+  return g_is_display_enu
 class LoadRosbag:
   def __init__(self, path) -> None:
     self.bag_path = path
     self.bag = rosbag.Bag(path)
     # loclization msg
     self.loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    self.origin_loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     self.old_loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
@@ -238,6 +242,33 @@ class LoadRosbag:
       except:
         self.loc_msg['enable'] = False
         print('missing /iflytek/localization/ego_pose !!!')
+
+      try:
+        origin_loc_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose_origin"):
+          origin_loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        sorted_loc_msg_dict = OrderedDict(sorted(origin_loc_msg_dict.items(), key=lambda ele: ele[0]))
+        for t, msg in sorted_loc_msg_dict.items():
+          self.origin_loc_msg['t'].append(t)
+          self.origin_loc_msg['timestamp'].append(msg.msg_header.timestamp)
+          cvt_msg = OldCvtNewLoc()
+          cvt_msg.position.position_boot.x = msg.pose.local_position.x
+          cvt_msg.position.position_boot.y = msg.pose.local_position.y
+          cvt_msg.orientation.euler_boot.yaw = msg.pose.euler_angles.yaw
+          cvt_msg.velocity.velocity_boot.vx = msg.pose.linear_velocity_from_wheel
+          cvt_msg.status.status_info.mode = 2
+          self.origin_loc_msg['data'].append(cvt_msg)
+
+        self.origin_loc_msg['t'] = [tmp - t0  for tmp in self.origin_loc_msg['t']]
+        max_time = max(max_time, self.origin_loc_msg['t'][-1])
+        print('loc_msg time:',self.origin_loc_msg['t'][-1])
+        if len(self.origin_loc_msg['t']) > 0:
+          self.origin_loc_msg['enable'] = True
+        else:
+          self.origin_loc_msg['enable'] = False
+      except:
+        self.origin_loc_msg['enable'] = False
+        print('missing /iflytek/localization/ego_pose_origin !!!')
 
     # load road_fusion msg
       try:
