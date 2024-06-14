@@ -139,11 +139,15 @@ void StGraphGenerator::Update(
     if (v_ego > v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
+    if (v_last_target_ > v_target_) {
+      accel_vel_filter_.SetState(v_target_);
+    }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   } else if (v_target_ < v_ego &&
              (v_limit_on_turns_and_road_ == v_target_ ||
-              (is_on_ramp && v_limit_on_ramp_ == v_target_))) {
+              (is_on_ramp && v_limit_on_ramp_ == v_target_) ||
+              v_limit_lc_ == v_target_)) {
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   }
@@ -1312,7 +1316,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       lane_changing_decider_->get_lc_safe_dist(lc_buffer, lc_t_gap, v_ego);
   double time_to_lc = 0.0;
   double predict_distance = 0.0;
-  double v_limit_lc = 40.0;
+  v_limit_lc_ = 40.0;
   lane_change_st_info.clear();
 
   std::vector<const planning::common::TrackedObjectInfo *> lane_changing_cars;
@@ -1353,60 +1357,60 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       auto gap = available_gap[0];
       if (gap.base_car_id == gap.front_id) {
         // safe_distance = CalcSafeDistance(gap.v_front, v_ego);
-        v_limit_lc = gap.base_car_vrel -
+        v_limit_lc_ = gap.base_car_vrel -
                      clip((safe_distance - gap.base_car_drel) / safe_distance,
                           2.0, 0.0) -
                      1.0;
-        if (v_limit_lc < 0) {
+        if (v_limit_lc_ < 0) {
           // no need to decel when front car is far away
           const std::vector<double> _V_LIMIT_DISTANCE_BP{
               safe_distance + std::max(-gap.base_car_vrel, 0.0) * 2,
               safe_distance * 2 + std::max(-gap.base_car_vrel, 0.0) * 2};
           const std::vector<double> _V_LIMIT_DISTANCE_V{1.0, 0.0};
-          v_limit_lc =
-              v_limit_lc * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
+          v_limit_lc_ =
+              v_limit_lc_ * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                   _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc = std::max(v_ego - 3.0, v_ego + v_limit_lc);
+        v_limit_lc_ = std::max(v_ego - 3.0, v_ego + v_limit_lc_);
         // a_target_lc = 0.0;
       } else {
         // safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
-        v_limit_lc =
+        v_limit_lc_ =
             gap.base_car_vrel +
             clip((safe_distance + 5.0 + gap.base_car_drel) / safe_distance, 2.0,
                  0.0) +
             1.0;
-        if (v_limit_lc < 0) {
+        if (v_limit_lc_ < 0) {
           // no need to decel when front car is far away
           const std::vector<double> _V_LIMIT_DISTANCE_BP{
               safe_distance + 5.0 + std::max(gap.base_car_vrel, 0.0) * 2,
               safe_distance * 2 + 5.0 + std::max(gap.base_car_vrel, 0.0) * 2};
           const std::vector<double> _V_LIMIT_DISTANCE_V{1.0, 0.0};
-          v_limit_lc =
-              v_limit_lc * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
+          v_limit_lc_ =
+              v_limit_lc_ * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                   _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc = std::max(v_ego - 2.8, v_ego + v_limit_lc);
+        v_limit_lc_ = std::max(v_ego - 2.8, v_ego + v_limit_lc_);
         // a_target_lc = 0.6;
       }
-      if (v_limit_lc < 6.0) {
-        v_limit_lc = 6.0;
+      if (v_limit_lc_ < 6.0) {
+        v_limit_lc_ = 6.0;
         // a_target_lc = 1.0;
       }
-      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
+      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
 
-      double safe_distance_lc_front = CalcSafeDistance(gap.v_front, v_limit_lc);
+      double safe_distance_lc_front = CalcSafeDistance(gap.v_front, v_limit_lc_);
       double lc_front_desired_distance = GetCalibratedDistance(
-          gap.v_front, v_limit_lc, lc_request, false, false, false);
+          gap.v_front, v_limit_lc_, lc_request, false, false, false);
 
       planning::common::TrackedObjectInfo front_obs;
       front_obs.set_track_id(gap.front_id);
-      front_obs.set_v_rel(gap.v_front - v_limit_lc);
+      front_obs.set_v_rel(gap.v_front - v_limit_lc_);
       front_obs.set_d_rel(gap.s_front + gap.v_front * gap.acc_time -
-                          v_limit_lc * gap.acc_time);
+                          v_limit_lc_ * gap.acc_time);
 
       double lc_front_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          front_obs, v_limit_lc, safe_distance_lc_front,
+          front_obs, v_limit_lc_, safe_distance_lc_front,
           lc_front_desired_distance, true);
 
       common::RealTimeLonObstacleSTInfo lc_gap_front_st_info;
@@ -1417,25 +1421,25 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       lc_gap_front_st_info.set_s_lead(gap.s_front);
       lc_gap_front_st_info.set_desired_distance(
           lc_front_desired_distance_filtered);
-      lc_gap_front_st_info.set_desired_velocity(v_limit_lc);
+      lc_gap_front_st_info.set_desired_velocity(v_limit_lc_);
       lc_gap_front_st_info.set_safe_distance(safe_distance_lc_front);
       lc_gap_front_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
       lc_gap_front_st_info.set_end_time(5.0);  // TBD:使用可配置参数
       lc_gap_front_st_info.set_start_s(gap.s_front);
       lane_change_st_info.emplace_back(lc_gap_front_st_info);
 
-      double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc, gap.v_rear);
+      double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc_, gap.v_rear);
       double lc_rear_desired_distance = GetCalibratedDistance(
-          v_limit_lc, gap.v_rear, lc_request, false, false, false);
+          v_limit_lc_, gap.v_rear, lc_request, false, false, false);
 
       planning::common::TrackedObjectInfo rear_obs;
       rear_obs.set_track_id(gap.rear_id);
-      rear_obs.set_v_rel(gap.v_rear - v_limit_lc);
+      rear_obs.set_v_rel(gap.v_rear - v_limit_lc_);
       rear_obs.set_d_rel(gap.s_rear + gap.v_rear * gap.acc_time -
-                         v_limit_lc * gap.acc_time);
+                         v_limit_lc_ * gap.acc_time);
 
       double lc_rear_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          rear_obs, v_limit_lc, safe_distance_lc_rear, lc_rear_desired_distance,
+          rear_obs, v_limit_lc_, safe_distance_lc_rear, lc_rear_desired_distance,
           false);
 
       common::RealTimeLonObstacleSTInfo lc_gap_rear_st_info;
@@ -1448,7 +1452,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       lc_gap_rear_st_info.set_s_lead(gap.s_rear);
       lc_gap_rear_st_info.set_desired_distance(
           lc_rear_desired_distance_filtered);
-      lc_gap_rear_st_info.set_desired_velocity(v_limit_lc);
+      lc_gap_rear_st_info.set_desired_velocity(v_limit_lc_);
       lc_gap_rear_st_info.set_safe_distance(safe_distance_lc_rear);
       lc_gap_rear_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
       lc_gap_rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
@@ -1458,21 +1462,21 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       // decelerate to check next interval
       auto nearest_rear_car = lane_changing_decider_->nearest_rear_car_track();
       lane_changing_nearest_rear_car_track_id = nearest_rear_car.id;
-      v_limit_lc =
+      v_limit_lc_ =
           nearest_rear_car.v_rel -
           clip((safe_distance - nearest_rear_car.d_rel) / safe_distance, 2.0,
                0.0) -
           v_ego / 10.0;
-      v_limit_lc = std::max({v_ego - 3.2, v_ego + v_limit_lc,
+      v_limit_lc_ = std::max({v_ego - 3.2, v_ego + v_limit_lc_,
                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
       // a_target_lc = 0.0;
-      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
+      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
     }
   } else {
     JSON_DEBUG_VALUE("gap_v_limit_lc", 0);
   }
   // acc_target_.second = std::max(acc_target_.second, a_target_lc);
-  v_target_ = std::min(v_target_, v_limit_lc);
+  v_target_ = std::min(v_target_, v_limit_lc_);
 }
 
 std::pair<double, double> StGraphGenerator::CalculateMaxAcc(double ego_v) {

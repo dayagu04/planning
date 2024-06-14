@@ -266,6 +266,7 @@ class StGraphGenerator {
   const double p2min_speed = 3.0;
   double v_limit_on_turns_and_road_;
   double v_limit_on_ramp_;
+  double v_limit_lc_;
   double v_last_target_ = 0.0;
 };
 
