@@ -43,6 +43,8 @@ static double kCurbYMagIdentification = 0.0;
 static double kMaxDistDeleteObsToEgoInSlot = 0.25;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.3;
 
+static double kMinChannelYMagIdentification = 2.5;
+
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
 
@@ -528,7 +530,8 @@ void ParallelParInPlanner::GenTlane() {
     // const bool channel_y_condition =
     //     (obstacle_point_slot.x() > -1.0) &&
     //     (obstacle_point_slot.x() < slot_length + 2.0) &&
-    //     (obstacle_point_slot.y() * side_sgn >= 2.5);
+    //     (obstacle_point_slot.y() * side_sgn >=
+    //     kMinChannelYMagIdentification);
 
     // if (channel_y_condition) {
     //   channel_y_limit =
@@ -894,6 +897,23 @@ void ParallelParInPlanner::GenObstacles() {
                                 point_set.end());
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
+
+  for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
+    // Todo: select channel obs in ROI instead of using obs deciding channel y
+    const bool is_x_in_channel_range = pnc::mathlib::IsInBound(
+        obstacle_point_slot.x(), -kRearDetaXMagWhenFrontOccupiedRearVacant,
+        t_lane_.channel_x_limit);
+
+    const bool is_y_in_channel_range =
+        pnc::mathlib::IsInBound(obstacle_point_slot.y() * t_lane_.slot_side_sgn,
+                                kMinChannelYMagIdentification,
+                                t_lane_.channel_y * t_lane_.slot_side_sgn);
+
+    if (is_x_in_channel_range && is_y_in_channel_range) {
+      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+          obstacle_point_slot);
+    }
+  }
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
