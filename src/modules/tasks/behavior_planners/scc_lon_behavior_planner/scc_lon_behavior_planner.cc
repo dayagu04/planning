@@ -438,6 +438,13 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   lon_behav_plan_input_->set_dis_to_ramp(dis_to_ramp);
   lon_behav_plan_input_->set_dis_to_merge(dis_to_merge);
   lon_behav_plan_input_->set_is_on_ramp(is_on_ramp);
+
+  //set lon_init_state
+  auto lon_init_state_ptr = lon_behav_plan_input_->mutable_lon_init_state();
+  lon_init_state_ptr->set_s(ego_state_mgr->planning_init_point().lon_init_state.s());
+  lon_init_state_ptr->set_v(ego_state_mgr->planning_init_point().lon_init_state.v());
+  lon_init_state_ptr->set_a(ego_state_mgr->planning_init_point().lon_init_state.a());
+  lon_init_state_ptr->set_j(ego_state_mgr->planning_init_point().lon_init_state.j());
 }
 
 void SccLonBehaviorPlanner::SetInput(

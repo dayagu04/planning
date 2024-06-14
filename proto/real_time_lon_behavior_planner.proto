@@ -3,6 +3,7 @@ syntax = "proto2";
 import "basic_types.proto";
 import "task_basic_types.proto";
 import "lon_behavior_planner.proto";
+import "longitudinal_motion_planner.proto";
 
 package planning.common;
 
@@ -123,6 +124,7 @@ message RealTimeLonBehaviorInput {
   optional double dis_to_merge = 11;
   repeated ReferencePathPoint ref_path_points = 12;
   optional bool is_in_intersection = 13;
+  optional LongitudinalInitState lon_init_state = 14;
 }
 
 // The output of real time lon behavior

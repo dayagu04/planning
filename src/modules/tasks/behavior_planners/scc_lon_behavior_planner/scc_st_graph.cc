@@ -36,7 +36,10 @@ void StGraphGenerator::Update(
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double acc_ego = lon_behav_input_->ego_info().ego_acc();
   double steer_angle_ego = lon_behav_input_->ego_info().ego_steer_angle();
-  lon_init_state_ = {0, v_ego, acc_ego};
+  //lon_init_state_ = {0, v_ego, acc_ego};
+  lon_init_state_[0] = lon_behav_input_->lon_init_state().s();
+  lon_init_state_[1] = lon_behav_input_->lon_init_state().v();
+  lon_init_state_[2] = lon_behav_input_->lon_init_state().a();
 
   std::vector<double> d_polys;
   const auto &d_poly_infos = lon_behav_input_->lat_output().d_poly_vec();
@@ -163,15 +166,17 @@ void StGraphGenerator::Update(
 
   // 3. update vref
   UpdateVelRefs();
-  // 4. calculate sref by vref
+
+  // 4. update bound
+  MakeAccBound();
+  MakeJerkBound();
+
+  // 5. calculate sref by vref
   std::vector<double> sref_vec;
   sref_vec.resize(config_.lon_num_step + 1);
   CalculateSrefsByVref(v_ego, vt_refs_, acc_ego, sref_vec);
   // sref_vec.clear();
   // CalculateCruiseSrefs(v_ego, v_cruise, acc_ego, sref_vec);
-  // 5. update bound
-  MakeAccBound();
-  MakeJerkBound();
   // 6. update STboundaries & sref
   UpdateSTGraphs(st_infos, sref_vec);
 }
@@ -1981,8 +1986,8 @@ void StGraphGenerator::CalculateSrefsByVref(const double v_ego,
                                             const double acc_ego,
                                             std::vector<double> &s_refs) {
   LOG_DEBUG("----entering CalculateSrefsByVref--- \n");
-  double one_a = acc_ego;
-  double one_v = v_ego;
+  double one_a = lon_init_state_[2];
+  double one_v = lon_init_state_[1];
   double one_s = 0.0;
   double t = config_.delta_time;
   double t_square = config_.delta_time * config_.delta_time;
@@ -1992,8 +1997,8 @@ void StGraphGenerator::CalculateSrefsByVref(const double v_ego,
   s_refs[0] = one_s;
 
   std::pair<double, double> max_acc_info = CalculateMaxAcc(v_ego);
-  double a_max_accel = std::min(max_acc_info.second, 2.0);
-  double a_max_brake = max_acc_info.first;
+  double a_max_accel = std::min(max_acc_info.second, acc_bound_.second);
+  double a_max_brake = std::max(max_acc_info.first, acc_bound_.first);
 
   if (v_ego <= v_ref) {
     double one_j = _J_MAX;
