@@ -102,23 +102,29 @@ def slider_callback(bag_time, vehicle_type):
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag)
   index_map = bag_loader.get_msg_index(bag_time)
 
-  plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
-  # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
-  print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
+  if bag_loader.plan_msg['enable'] == True:
+    plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
+    # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
+    print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
 
-  planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
-  fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
-  uss_percept_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
+  if bag_loader.plan_debug_msg['enable'] == True:
+    planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
+    print("remain_dist = ", planning_json['remain_dist'])
+    print("remain_dist_uss =", planning_json['remain_dist_uss'])
+    print("path plan time =", planning_json['path_plan_time_ms'])
+
+  if bag_loader.fus_parking_msg['enable'] == True:
+    fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
+    for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
+      slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
+      print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
+            "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
+            "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
+            )
+
+  if bag_loader.uss_percept_msg['enable'] == True:
+    uss_percept_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
   #print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
-  for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
-    slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
-    print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
-          "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
-          "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
-          )
-  print("remain_dist = ", planning_json['remain_dist'])
-  print("remain_dist_uss =", planning_json['remain_dist_uss'])
-
   # replan_time_list, correct_path_for_limiter_list = [],[]
   # if planning_json['replan_flag'] == True:
   #   replan_time_list.append(bag_time)
@@ -129,7 +135,7 @@ def slider_callback(bag_time, vehicle_type):
   # print("replan_time_list = ", replan_time_list)
   # print("correct_path_for_limiter_list = ", correct_path_for_limiter_list)
 
-  print("path plan time =", planning_json['path_plan_time_ms'])
+  # print("path plan time =", planning_json['path_plan_time_ms'])
   # print("tlane_p1 =", planning_json['tlane_p1_x'], ", ", planning_json['tlane_p1_y'])
   # print("tlane_p0 =", planning_json['tlane_p0_x'], ", ", planning_json['tlane_p0_y'])
 

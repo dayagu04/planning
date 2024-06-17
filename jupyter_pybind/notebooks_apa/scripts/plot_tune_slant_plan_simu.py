@@ -135,7 +135,7 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=-1.2, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=-0.6, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=0.2)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value=0.0, step=0.2)
 
     self.is_left = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)

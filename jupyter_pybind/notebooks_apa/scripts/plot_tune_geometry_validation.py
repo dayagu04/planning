@@ -9,6 +9,7 @@ sys.path.append('../../../')
 sys.path.append('python_proto')
 from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import geometry_math_validation_py
+import numpy as np
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -36,18 +37,26 @@ data_res_arc = ColumnDataSource(data = {'cx_vec':[],
                                         'pCx_vec':[],
                                         'pCy_vec':[]})
 
-fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=640, match_aspect = True, aspect_scale=1)
+data_arc = ColumnDataSource(data = {'cx_vec':[],
+                                    'cy_vec':[],
+                                    'radius_vec':[]})
+
+data_text = ColumnDataSource(data = {'function':[]})
+
+fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
 fig1.x_range.flipped = True
 
 # key point of segment
-fig1.line('y_vec', 'x_vec', source = data_start_pose_line, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'start_pose')
-fig1.line('y_vec', 'x_vec', source = data_target_pose_line, line_width = 2, line_color = 'red', line_dash = 'dashed',legend_label = 'target_pose line')
-fig1.circle('y','x', source = data_start_pos, size=8, color='red', legend_label = 'start point')
-fig1.circle('y','x', source = data_tag_pos, size=8, color='green', legend_label = 'tag point')
-fig1.circle(x = 'cy_vec', y = 'cx_vec', radius = 'radius_vec', source = data_res_arc, line_alpha = 1, line_width = 2, line_color = "green",
-            fill_alpha=0, legend_label = 'res arc')
+fig1.line('x_vec', 'y_vec', source = data_start_pose_line, line_width = 2, line_color = 'blue', line_dash = 'solid',legend_label = 'start_pose')
+fig1.line('x_vec', 'y_vec', source = data_target_pose_line, line_width = 2, line_color = 'red', line_dash = 'dashed',legend_label = 'target_pose line')
+fig1.circle('x','y', source = data_start_pos, size=8, color='red', legend_label = 'start point')
+fig1.circle('x','y', source = data_tag_pos, size=8, color='green', legend_label = 'target point')
+fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_arc, line_alpha = 1, line_width = 2, line_color = "green", fill_color=None, legend_label = 'arc')
+
+fig1.text(0.0, -2.0, text = 'function' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
+
 if check_line_arc_line:
-  fig1.circle('y','x', source = data_tag_pos2, size=8, color='blue', legend_label = 'tag point2')
+  fig1.circle('x','y', source = data_tag_pos2, size=8, color='blue', legend_label = 'tag point2')
 
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 fig1.legend.click_policy = 'hide'
@@ -55,6 +64,7 @@ fig1.legend.click_policy = 'hide'
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
+    self.function_id = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "function_id",min=0, max=8, value=0, step=1)
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ego_x",min=-15, max=15, value=0.0, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ego_y",min=-15, max=15, value=0.0, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ego_heading",min=-180, max=180, value=0, step=0.1)
@@ -65,14 +75,12 @@ class LocalViewSlider:
     self.radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "radius",min=0.0, max=20.0, value=5.5, step=0.1)
     self.is_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "is_left",min=0, max=1, value=1, step=1)
     self.is_advance_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "is_advance",min=0, max=1, value=1, step=1)
-    self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ds",min=0.0, max=1.0, value=0.5, step=0.01)
-    self.traj_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "traj_length",min=0.3, max=8.5, value=3.8, step=0.1)
-    self.is_anticlockwise_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='20%'), description= "is_anticlockwise",min=0, max=1, value=1, step=1)
 
     self.obs_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "obs_x",min=-15, max=15.0, value=0.5, step=0.01)
     self.obs_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "obs_y",min=-15, max=15.0, value=0.5, step=0.01)
 
-    ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
+    ipywidgets.interact(slider_callback, function_id = self.function_id,
+                                         ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
                                          target_x =  self.target_x_slider,
@@ -81,263 +89,304 @@ class LocalViewSlider:
                                          radius = self.radius_slider,
                                          is_left = self.is_left_slider,
                                          is_advance = self.is_advance_slider,
-                                         ds = self.ds_slider,
-                                         traj_length = self.traj_length_slider,
-                                         is_anticlockwise= self.is_anticlockwise_slider,
                                          obs_x = self.obs_x_slider,
                                          obs_y = self.obs_y_slider)
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, target_x, target_y, target_heading, radius, is_left, is_advance, ds, traj_length, is_anticlockwise, obs_x, obs_y):
+def slider_callback(function_id, ego_x, ego_y, ego_heading, target_x, target_y, target_heading, radius,
+                    is_left, is_advance, obs_x, obs_y):
   kwargs = locals()
+  ego_heading = - ego_heading
+  target_heading = - target_heading
 
-  # geometry_math_validation_py.UpdateOneStepArcTargetLine(ego_x, ego_y, ego_heading / 57.3, target_x, target_y, target_heading / 57.3)
-  # geometry_math_validation_py.UpdateOneStepArcTargetLineGivenTurn(ego_x, ego_y, ego_heading / 57.3, target_x, target_y, target_heading / 57.3, is_left)
-  # geometry_math_validation_py.UpdateOneStepArcTargetLineByGear(ego_x, ego_y, ego_heading / 57.3, target_x, target_y, target_heading / 57.3, is_advance)
-  # geometry_math_validation_py.UpdateOneStepArcTargetHeading(ego_x, ego_y, ego_heading / 57.3, target_x, target_y, target_heading / 57.3, is_left)
-  # geometry_math_validation_py.UpdateOneStepParallelShift(ego_x, ego_y, ego_heading / 57.3, target_x, target_y, is_advance, radius)
-  geometry_math_validation_py.UpdateLineArcLine(ego_x, ego_y,ego_heading / 57.3, target_x, target_y, target_heading / 57.3, is_advance, is_left, radius)
-  res = geometry_math_validation_py.GetOutput()
-
-  info_len = 5
-  if check_line_arc_line:
-    info_len = 7
-  arc_size = int(len(res) / info_len)
-
-  print("arc info: cx, cy, radius, pBx, pBy")
-  cx_vec = []
-  cy_vec = []
-  radius_vec = []
-  pBx_vec = []
-  pBy_vec = []
-
-  pCx_vec = []
-  pCy_vec = []
-
-  for i in range(arc_size):
-    print(i, ": [", res[info_len * i], res[info_len * i + 1], res[info_len * i + 2], res[info_len * i + 3], res[info_len * i + 4], "]")
-    cx_vec.append(res[info_len * i])
-    cy_vec.append(res[info_len * i + 1])
-    radius_vec.append(res[info_len * i + 2])
-
-    pBx_vec.append(res[info_len * i + 3])
-    pBy_vec.append(res[info_len * i + 4])
-
-    if check_line_arc_line:
-      pCx_vec.append(res[info_len * i + 5])
-      pCy_vec.append(res[info_len * i + 6])
-
-
-  data_res_arc.data.update({
-    'cx_vec':cx_vec,
-    'cy_vec':cy_vec,
+  def GetTangVecByHeading(heading):
+      return np.array([np.cos(heading) * 10, np.sin(heading) * 10])
+  p1 = np.array([ego_x, ego_y])
+  heading1 = ego_heading/57.3  # in radians
+  p1_next = p1 + GetTangVecByHeading(heading1)
+  p1_previous = p1 - GetTangVecByHeading(heading1)
+  p2 = np.array([target_x, target_y])
+  heading2 = target_heading/57.3  # in radians
+  p2_next = p2 + GetTangVecByHeading(heading2)
+  p2_previous = p2 - GetTangVecByHeading(heading2)
+  p0 = np.array([obs_x, obs_y])
+  if function_id == 0:
+    possible_centers = geometry_math_validation_py.CalTangCirOfTwoLine(p1, heading1, p2, heading2, radius)
+    xn = []
+    yn = []
+    radius_vec = []
+    for center in possible_centers:
+      xn.append(center[0])
+      yn.append(center[1])
+      radius_vec.append(radius)
+    data_arc.data.update({
+    'cx_vec':xn,
+    'cy_vec':yn,
     'radius_vec':radius_vec,
-    'pBx_vec':pBx_vec,
-    'pBy_vec':pBy_vec,
-    'pCx_vec':pCx_vec,
-    'pCy_vec':pCy_vec
-  })
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[p1_previous[0], p1_next[0]],
+      'y_vec':[p1_previous[1], p1_next[1]],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p2_previous[0], p2_next[0]],
+      'y_vec':[p2_previous[1], p2_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[p2[0]],
+      'y':[p2[1]],
+    })
+    data_tag_pos2.data.update({
+      'x':[],
+      'y':[],
+    })
+    data_text.data.update({'function':['CalTangCirOfTwoLine']})
+  elif function_id == 1:
+    actual_center_info = geometry_math_validation_py.CalSetTangCirOfTwoLine(p1, heading1, p2, heading2, radius, is_advance, is_left)
 
-  data_start_pos.data.update({
-    'x':[ego_x],
-    'y':[ego_y],
-  })
+    actual_center = actual_center_info[0]
+    data_arc.data.update({
+    'cx_vec':[actual_center[0]],
+    'cy_vec':[actual_center[1]],
+    'radius_vec':[radius],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[p1_previous[0], p1_next[0]],
+      'y_vec':[p1_previous[1], p1_next[1]],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p2_previous[0], p2_next[0]],
+      'y_vec':[p2_previous[1], p2_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    tangent_pt1 = actual_center_info[1]
+    data_tag_pos.data.update({
+      'x':[tangent_pt1[0]],
+      'y':[tangent_pt1[1]],
+    })
+    tangent_pt2 = actual_center_info[2]
+    data_tag_pos2.data.update({
+      'x':[tangent_pt2[0]],
+      'y':[tangent_pt2[1]],
+    })
+    data_text.data.update({'function':['CalSetTangCirOfTwoLine']})
+  elif function_id == 2:
+    circle_info = geometry_math_validation_py.CalTangCircleByPoseAndLine(p1, heading1, p2, heading2, is_advance, is_left)
+    print(circle_info)
 
-  data_tag_pos.data.update({
-    'x':pBx_vec,
-    'y':pBy_vec,
-  })
+    data_arc.data.update({
+    'cx_vec':[circle_info[2]],
+    'cy_vec':[circle_info[3]],
+    'radius_vec':[circle_info[4]],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p2[0], p2_next[0]],
+      'y_vec':[p2[1], p2_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[circle_info[0]],
+      'y':[circle_info[1]],
+    })
+    data_tag_pos2.data.update({
+      'x':[],
+      'y':[],
+    })
+    data_text.data.update({'function':['CalTangCircleByPoseAndLine']})
+  elif function_id == 3:
+    circle_info = geometry_math_validation_py.CalOneArcByTargetHeading(p1, heading1, p2, heading2, radius, is_advance)
+    print(circle_info)
 
-  if check_line_arc_line:
-      data_tag_pos2.data.update({
-    'x':pCx_vec,
-    'y':pCy_vec,
-  })
+    data_arc.data.update({
+    'cx_vec':[circle_info[0]],
+    'cy_vec':[circle_info[1]],
+    'radius_vec':[radius],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    arc_pB = np.array([circle_info[2], circle_info[3]])
+    arc_pB_next = arc_pB + GetTangVecByHeading(heading2)
+    data_target_pose_line.data.update({
+      'x_vec':[arc_pB[0], arc_pB_next[0]],
+      'y_vec':[arc_pB[1], arc_pB_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[circle_info[2]],
+      'y':[circle_info[3]],
+    })
+    data_tag_pos2.data.update({
+      'x':[],
+      'y':[],
+    })
+    data_text.data.update({'function':['CalOneArcByTargetHeading']})
+  elif function_id == 4:
+    circle_info = geometry_math_validation_py.CalTwoArcBySameHeading(p1, heading1, p2, heading2, radius, is_advance)
+    print(circle_info)
 
-  data_start_pose_line.data.update({
-    'x_vec':[ego_x, ego_x + math.cos(ego_heading / 57.3) * 1.0],
-    'y_vec':[ego_y, ego_y + math.sin(ego_heading / 57.3) * 1.0],
-  })
+    data_arc.data.update({
+    'cx_vec':[circle_info[0],circle_info[2]],
+    'cy_vec':[circle_info[1],circle_info[3]],
+    'radius_vec':[radius, radius],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[target_x],
+      'y':[target_y],
+    })
+    data_tag_pos2.data.update({
+      'x':[circle_info[4]],
+      'y':[circle_info[5]],
+    })
+    data_text.data.update({'function':['CalTwoArcBySameHeading']})
+  elif function_id == 5:
+    circle_info = geometry_math_validation_py.CalTwoArcByLine(p1, heading1, p2, heading2, radius, is_advance, is_left)
+    print(circle_info)
 
-  data_target_pose_line.data.update({
-    'x_vec':[target_x - math.cos(target_heading / 57.3) * 8.0, target_x + math.cos(target_heading / 57.3) * 8.0],
-    'y_vec':[target_y - math.sin(target_heading / 57.3) * 8.0, target_y + math.sin(target_heading / 57.3) * 8.0],
-  })
+    data_arc.data.update({
+    'cx_vec':[circle_info[0],circle_info[2]],
+    'cy_vec':[circle_info[1],circle_info[3]],
+    'radius_vec':[radius, radius],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p2_previous[0], p2_next[0]],
+      'y_vec':[p2_previous[1], p2_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[circle_info[7]],
+      'y':[circle_info[8]],
+    })
+    data_tag_pos2.data.update({
+      'x':[circle_info[4]],
+      'y':[circle_info[5]],
+    })
+    data_text.data.update({'function':['CalTwoArcByLine']})
+  elif function_id == 6:
+    circle_info = geometry_math_validation_py.CalTwoArcByLine(p1, heading1, p2, heading2, radius, is_advance, is_left)
+    print(circle_info)
 
-  # point_start = [ego_x, ego_y]
-  # point_end = [target_x, target_y]
-  # point_set = geometry_math_validation_py.UpdateSamplePointSet(point_start, ego_heading / 57.3, point_end, target_heading / 57.3, radius, ds, traj_length, is_anticlockwise)
-  # # print("point_set = ", point_set)
-  # x_set = []
-  # y_set = []
-  # for i in range(len(point_set)):
-  #   x_set.append(point_set[i][0])
-  #   y_set.append(point_set[i][1])
-  # print("x_set = ", x_set)
-  # print("y_set = ", y_set)
-  # data_start_pos.data.update({
-  #   'x':x_set,
-  #   'y':y_set,
-  # })
+    data_arc.data.update({
+    'cx_vec':[circle_info[0],circle_info[2]],
+    'cy_vec':[circle_info[1],circle_info[3]],
+    'radius_vec':[radius, radius],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p2_previous[0], p2_next[0]],
+      'y_vec':[p2_previous[1], p2_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[circle_info[7]],
+      'y':[circle_info[8]],
+    })
+    data_tag_pos2.data.update({
+      'x':[circle_info[4]],
+      'y':[circle_info[5]],
+    })
+    data_text.data.update({'function':['CalTwoArcByLine']})
+  elif function_id == 7:
+    circle_info = geometry_math_validation_py.CalOneArcByLine(p1, heading1, p2, heading2, radius, is_advance, is_left)
+    print(circle_info)
 
-  # length = 20
-  # ego_x = 8.2
-  # ego_y = -1.5
-  # ego_heading = 15
-  # target_y = 0.0
-  # is_left = 0
-  # p1 = [ego_x, ego_y]
-  # heading1_vec = [math.cos(ego_heading / 57.3), math.sin(ego_heading / 57.3)]
-  # heading1_vec = [value * length for value in heading1_vec]
-  # p2 = [p1[0] + heading1_vec[0], p1[1] + heading1_vec[1]]
-  # data_start_pose_line.data.update({
-  #   'x_vec': [p1[0], p2[0]],
-  #   'y_vec': [p1[1], p2[1]],
-  # })
+    data_arc.data.update({
+    'cx_vec':[circle_info[0]],
+    'cy_vec':[circle_info[1]],
+    'radius_vec':[circle_info[2]],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p2_previous[0], p2_next[0]],
+      'y_vec':[p2_previous[1], p2_next[1]],
+    })
+    data_start_pos.data.update({
+      'x':[ego_x],
+      'y':[ego_y],
+    })
+    data_tag_pos.data.update({
+      'x':[circle_info[3]],
+      'y':[circle_info[4]],
+    })
+    data_tag_pos2.data.update({
+      'x':[],
+      'y':[],
+    })
+    data_text.data.update({'function':['CalOneArcByLine']})
+  elif function_id == 8:
+    dis_info = geometry_math_validation_py.CalPoint2LineSegDistPb(p0, p1, p2)
+    print("dis = ", dis_info[4])
 
-  # q1 = [target_x, target_y]
-  # heading2_vec = [math.cos(target_heading / 57.3), math.sin(target_heading / 57.3)]
-  # heading2_vec = [value * length for value in heading2_vec]
-  # q2 = [q1[0] + heading2_vec[0], q1[1] + heading2_vec[1]]
-  # data_target_pose_line.data.update({
-  #   'x_vec': [q1[0], q2[0]],
-  #   'y_vec': [q1[1], q2[1]],
-  # })
-
-
-
-
-  #center_set = geometry_math_validation_py.CalTangCirOfTwoLine(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius)
-  # center_set = geometry_math_validation_py.CalSetTangCirOfTwoLine(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius, is_advance, is_left)
-  # x_set = []
-  # y_set = []
-  # r_set = []
-  # pBx_vec = []
-  # pBy_vec = []
-  # pCx_vec = []
-  # pCy_vec = []
-  # for i in range(len(center_set)):
-  #   x_set.append(center_set[i][0])
-  #   y_set.append(center_set[i][1])
-  #   r_set.append(radius)
-  #   print("x = ", x_set[i], "  y = ", y_set[i], "  r = ", r_set[i])
-  #   pBx_vec.append(0)
-  #   pBy_vec.append(0)
-  #   pCx_vec.append(0)
-  #   pCy_vec.append(0)
-
-  # data_res_arc.data.update({
-  #   'cx_vec':x_set,
-  #   'cy_vec':y_set,
-  #   'radius_vec':r_set,
-  #   'pBx_vec':pBx_vec,
-  #   'pBy_vec':pBy_vec,
-  #   'pCx_vec':pCx_vec,
-  #   'pCy_vec':pCy_vec
-  # })
-
-  # length = 20
-  # # ego_x = 8.2
-  # # ego_y = -1.5
-  # # ego_heading = 15
-  # # target_y = 0.0
-  # # is_left = 0
-  # p1 = [ego_x, ego_y]
-  # heading1_vec = [math.cos(ego_heading / 57.3), math.sin(ego_heading / 57.3)]
-  # heading1_vec = [value * length for value in heading1_vec]
-  # p2 = [p1[0] + heading1_vec[0], p1[1] + heading1_vec[1]]
-  # data_start_pose_line.data.update({
-  #   'x_vec': [p1[0], p2[0]],
-  #   'y_vec': [p1[1], p2[1]],
-  # })
-
-  # q1 = [target_x, target_y]
-  # heading2_vec = [math.cos(target_heading / 57.3), math.sin(target_heading / 57.3)]
-  # heading2_vec = [value * length for value in heading2_vec]
-  # q2 = [q1[0] + heading2_vec[0], q1[1] + heading2_vec[1]]
-  # data_target_pose_line.data.update({
-  #   'x_vec': [q1[0], q2[0]],
-  #   'y_vec': [q1[1], q2[1]],
-  # })
-
-  # # r = geometry_math_validation_py.CalTangCircleByPoseAndLine(p1, ego_heading / 57.3, q1, target_heading / 57.3, is_advance, is_left)
-  # r = radius
-  # # print("r = ", r)
-  # p1_tang_vec = [math.cos(ego_heading / 57.3), math.sin(ego_heading / 57.3)]
-  # p1_norm_vec = []
-  # if is_left == 1:
-  #   p1_norm_vec = [-p1_tang_vec[1], p1_tang_vec[0]]
-  # else:
-  #   p1_norm_vec = [p1_tang_vec[1], -p1_tang_vec[0]]
-  # # r = 44.02
-  # p1o = [r * p1_norm_vec[0], r * p1_norm_vec[1]]
-  # # print("p1_tang_vec = ", p1_tang_vec)
-  # # print("p1_norm_vec = ", p1_norm_vec)
-  # # print("p1o = ", p1o)
-  # o = [p1o[0] + p1[0], p1o[1] + p1[1]]
-  # # print("o = ", o)
-
-
-  # data_start_pos.data.update({
-  #   'x':[ego_x],
-  #   'y':[ego_y],
-  # })
-
-  # p_o_b = geometry_math_validation_py.CalOneArcByTargetHeading(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius, is_advance)
-  # # print("pB = ", p_o_b)
-  # data_tag_pos.data.update({
-  #   'x':[p_o_b[2]],
-  #   'y':[p_o_b[3]],
-  # })
-
-  # data_res_arc.data.update({
-  #   'cx_vec':[p_o_b[0]],
-  #   'cy_vec':[p_o_b[1]],
-  #   'radius_vec':[r],
-  #   'pBx_vec':[0],
-  #   'pBy_vec':[0],
-  #   'pCx_vec':[0],
-  #   'pCy_vec':[0]
-  # })
-
-  # p_o1_o2 = geometry_math_validation_py.CalTwoArcBySameHeading(p1, ego_heading / 57.3, q1, target_heading / 57.3, radius, is_advance)
-  # if p_o1_o2[0] == p_o1_o2[2] and p_o1_o2[1] == p_o1_o2[3]:
-  #   data_res_arc.data.update({
-  #     'cx_vec':[],
-  #     'cy_vec':[],
-  #     'radius_vec':[],
-  #     'pBx_vec':[],
-  #     'pBy_vec':[],
-  #     'pCx_vec':[],
-  #     'pCy_vec':[]
-  #   })
-  # else:
-  #   data_res_arc.data.update({
-  #   'cx_vec':[p_o1_o2[0], p_o1_o2[2]],
-  #   'cy_vec':[p_o1_o2[1], p_o1_o2[3]],
-  #   'radius_vec':[r, r],
-  #   'pBx_vec':[0, 0],
-  #   'pBy_vec':[0, 0],
-  #   'pCx_vec':[0, 0],
-  #   'pCy_vec':[0, 0]
-  #   })
-
-
-  data_start_pos.data.update({
-    'x':[obs_x],
-    'y':[obs_y],
-  })
-
-  data_start_pose_line.data.update({
-    'x_vec': [ego_x, target_x],
-    'y_vec': [ego_y, target_y],
-  })
-
-  p0 = [obs_x, obs_y]
-  p1 = [ego_x, ego_y]
-  p2 = [target_x, target_y]
-  dis = geometry_math_validation_py.CalPoint2LineSegDistPb(p0, p1, p2)
-  print("dis = ", dis)
-
+    data_arc.data.update({
+    'cx_vec':[],
+    'cy_vec':[],
+    'radius_vec':[],
+    })
+    data_start_pose_line.data.update({
+      'x_vec':[],
+      'y_vec':[],
+    })
+    data_target_pose_line.data.update({
+      'x_vec':[p1[0],p2[0]],
+      'y_vec':[p1[1],p2[1]],
+    })
+    data_start_pos.data.update({
+      'x':[obs_x],
+      'y':[obs_y],
+    })
+    data_tag_pos.data.update({
+      'x':[],
+      'y':[],
+    })
+    data_tag_pos2.data.update({
+      'x':[],
+      'y':[],
+    })
 
 
 

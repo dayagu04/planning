@@ -2293,19 +2293,27 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       else:
         vel_ego =  loc_msg.pose.linear_velocity_from_wheel
 
-        flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
-        if not flag:
+        if dataLoader.soc_state_msg['enable'] == True:
+          flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
+          if not flag:
+            print('find soc_msg error')
+            current_state = -1
+          else:
+            current_state = soc_msg.current_state
+        else:
           print('find soc_msg error')
           current_state = -1
-        else:
-          current_state = soc_msg.current_state
 
-        flag, vs_msg = findrt(dataLoader.vs_msg, vehicle_service_timestamps[loc_i])
-        if not flag:
+        if dataLoader.vs_msg['enable'] == True:
+          flag, vs_msg = findrt(dataLoader.vs_msg, vehicle_service_timestamps[loc_i])
+          if not flag:
+            print('find vs_msg error')
+            steer_deg = 600
+          else:
+            steer_deg = vs_msg.steering_wheel_angle * 57.3
+        else:
           print('find vs_msg error')
           steer_deg = 600
-        else:
-          steer_deg = vs_msg.steering_wheel_angle * 57.3
 
         # remain_s_ctrl = -1
         # ctrl_debug_msg_idx = 0
@@ -2313,13 +2321,16 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         #   while dataLoader.ctrl_debug_msg['t'][ctrl_debug_msg_idx] <= localization_timestamp and ctrl_debug_msg_idx < (len(dataLoader.ctrl_debug_msg['t'])-1):
         #       ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
         #   remain_s_ctrl = dataLoader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
-
-        flag, ctrl_debug_msg = findrt_json(dataLoader.ctrl_debug_msg, control_debug_timestamps[loc_i])
-        if not flag:
+        if dataLoader.ctrl_debug_msg['enable'] == True:
+          flag, ctrl_debug_msg = findrt_json(dataLoader.ctrl_debug_msg, control_debug_timestamps[loc_i])
+          if not flag:
+            print('find ctrl_debug_msg error')
+            remain_s_ctrl = -1
+          else:
+            remain_s_ctrl = ctrl_debug_msg['remain_s_ctrl'] * 100
+        else:
           print('find ctrl_debug_msg error')
           remain_s_ctrl = -1
-        else:
-          remain_s_ctrl = ctrl_debug_msg['remain_s_ctrl'] * 100
 
         text = 'v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state)
         vel_text.append(text)
@@ -2893,161 +2904,176 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       for plan_i, plan_timestamp in enumerate(plan_output_timestamps):
         names = []
         datas = []
-        flag, plan_msg = findrt(dataLoader.plan_msg, plan_timestamp)
-        if not flag:
-          print('find plan error')
-        flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
-        if not flag:
-          print('find plan_debug error')
+        if dataLoader.soc_state_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
+          flag, plan_msg = findrt(dataLoader.plan_msg, plan_timestamp)
+          if not flag:
+            print('find plan error')
+          flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
+          if not flag:
+            print('find plan_debug error')
+          else:
+            names.append('apa_planning_status')
+            datas.append(str(plan_msg.planning_status.apa_planning_status))
+
+            names.append("planning_stm")
+            datas.append(str(plan_json['planning_status']))
+
+            names.append("replan_reason")
+            datas.append(str(plan_json['replan_reason']))
+
+            names.append("path_plan_success")
+            datas.append(str(plan_json['path_plan_success']))
+
+            names.append("path_plan_result")
+            datas.append(str(plan_json['pathplan_result']))
+
+            names.append("replan_flag")
+            datas.append(str(plan_json['replan_flag']))
+
+            names.append("replan_time_list")
+            datas.append(str(replan_time_list))
+
+            names.append("correct_path_for_limiter")
+            datas.append(str(plan_json['correct_path_for_limiter']))
+
+            names.append("correct_path_for_limiter_list")
+            datas.append(str(correct_path_for_limiter_time_list))
+
+            names.append("slot_replan_jump_dist")
+            datas.append(str(plan_json['slot_replan_jump_dist']))
+
+            names.append("slot_replan_jump_heading")
+            datas.append(str(plan_json['slot_replan_jump_heading']))
+
+            names.append("terminal_error_x")
+            datas.append(str(plan_json['terminal_error_x']))
+
+            names.append("terminal_error_y")
+            datas.append(str(plan_json['terminal_error_y']))
+
+            names.append("terminal_error_heading (deg)")
+            datas.append(str(plan_json['terminal_error_heading'] * 57.3))
+
+            names.append("stuck_time")
+            datas.append(str(plan_json['stuck_time']))
+
+            names.append("slot_occupied_ratio")
+            datas.append(str(plan_json['slot_occupied_ratio']))
+
+            names.append("current_path_length")
+            datas.append(str(plan_json['current_path_length']))
+
+            names.append("remain_dist")
+            datas.append(str(plan_json['remain_dist']))
+
+            names.append("car_static_timer_by_pos")
+            datas.append(str(plan_json['car_static_timer_by_pos']))
+
+            names.append("car_static_timer_by_vel")
+            datas.append(str(plan_json['car_static_timer_by_vel']))
+
+            names.append("static_flag")
+            datas.append(str(plan_json['static_flag']))
+
+            names.append("slot_width")
+            datas.append(str(plan_json['slot_width']))
+
+            names.append("plan_release_slots_id")
+            datas.append(str(plan_msg.successful_slot_info_list))
+
+            names.append("plan_gear_cmd")
+            datas.append(str(plan_msg.gear_command))
+
+            names.append("plan_traj_available")
+            datas.append(str(plan_msg.trajectory.available))
+
+            names.append("optimization_terminal_pose_error")
+            datas.append(str(plan_json['optimization_terminal_pose_error']))
+
+            names.append("optimization_terminal_heading_error")
+            datas.append(str(plan_json['optimization_terminal_heading_error']))
+
+            names.append("lat_path_opt_cost_time_ms")
+            datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
         else:
-          names.append('apa_planning_status')
-          datas.append(str(plan_msg.planning_status.apa_planning_status))
+          print('find plan or plan_debug error')
 
-          names.append("planning_stm")
-          datas.append(str(plan_json['planning_status']))
-
-          names.append("replan_reason")
-          datas.append(str(plan_json['replan_reason']))
-
-          names.append("path_plan_success")
-          datas.append(str(plan_json['path_plan_success']))
-
-          names.append("path_plan_result")
-          datas.append(str(plan_json['pathplan_result']))
-
-          names.append("replan_flag")
-          datas.append(str(plan_json['replan_flag']))
-
-          names.append("replan_time_list")
-          datas.append(str(replan_time_list))
-
-          names.append("correct_path_for_limiter")
-          datas.append(str(plan_json['correct_path_for_limiter']))
-
-          names.append("correct_path_for_limiter_list")
-          datas.append(str(correct_path_for_limiter_time_list))
-
-          names.append("slot_replan_jump_dist")
-          datas.append(str(plan_json['slot_replan_jump_dist']))
-
-          names.append("slot_replan_jump_heading")
-          datas.append(str(plan_json['slot_replan_jump_heading']))
-
-          names.append("terminal_error_x")
-          datas.append(str(plan_json['terminal_error_x']))
-
-          names.append("terminal_error_y")
-          datas.append(str(plan_json['terminal_error_y']))
-
-          names.append("terminal_error_heading (deg)")
-          datas.append(str(plan_json['terminal_error_heading'] * 57.3))
-
-          names.append("stuck_time")
-          datas.append(str(plan_json['stuck_time']))
-
-          names.append("slot_occupied_ratio")
-          datas.append(str(plan_json['slot_occupied_ratio']))
-
-          names.append("current_path_length")
-          datas.append(str(plan_json['current_path_length']))
-
-          names.append("remain_dist")
-          datas.append(str(plan_json['remain_dist']))
-
-          names.append("car_static_timer_by_pos")
-          datas.append(str(plan_json['car_static_timer_by_pos']))
-
-          names.append("car_static_timer_by_vel")
-          datas.append(str(plan_json['car_static_timer_by_vel']))
-
-          names.append("static_flag")
-          datas.append(str(plan_json['static_flag']))
-
-          names.append("slot_width")
-          datas.append(str(plan_json['slot_width']))
-
-          names.append("plan_release_slots_id")
-          datas.append(str(plan_msg.successful_slot_info_list))
-
-          names.append("plan_gear_cmd")
-          datas.append(str(plan_msg.gear_command))
-
-          names.append("plan_traj_available")
-          datas.append(str(plan_msg.trajectory.available))
-
-          names.append("optimization_terminal_pose_error")
-          datas.append(str(plan_json['optimization_terminal_pose_error']))
-
-          names.append("optimization_terminal_heading_error")
-          datas.append(str(plan_json['optimization_terminal_heading_error']))
-
-          names.append("lat_path_opt_cost_time_ms")
-          datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
-
-        flag, fusion_msg = findrt(dataLoader.fus_parking_msg, fusion_slot_timestamps[plan_i])
-        if not flag:
+        if dataLoader.fus_parking_msg['enable'] == True:
+          flag, fusion_msg = findrt(dataLoader.fus_parking_msg, fusion_slot_timestamps[plan_i])
+          if not flag:
+            print('find fusion_msg error')
+          else:
+            names.append("fusion_release_slots_id")
+            parking_fusion_slot_lists = fusion_msg.parking_fusion_slot_lists
+            release_id = []
+            for slot in parking_fusion_slot_lists:
+              if slot.allow_parking == 1:
+                release_id.append(slot.id)
+            datas.append(str(release_id))
+        else:
           print('find fusion_msg error')
-        else:
-          names.append("fusion_release_slots_id")
-          parking_fusion_slot_lists = fusion_msg.parking_fusion_slot_lists
-          release_id = []
-          for slot in parking_fusion_slot_lists:
-            if slot.allow_parking == 1:
-              release_id.append(slot.id)
-          datas.append(str(release_id))
 
-        flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
-        if not flag:
+        if dataLoader.soc_state_msg['enable'] == True:
+          flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
+          if not flag:
+            print('find soc_msg error')
+          else:
+            names.append("current_state")
+            datas.append(str(soc_msg.current_state))
+        else:
           print('find soc_msg error')
-        else:
-          names.append("current_state")
-          datas.append(str(soc_msg.current_state))
 
-        flag, vs_msg = findrt(dataLoader.vs_msg, vehicle_service_timestamps[plan_i])
-        if not flag:
-          print('find soc_msg error')
+        if dataLoader.vs_msg['enable'] == True:
+          flag, vs_msg = findrt(dataLoader.vs_msg, vehicle_service_timestamps[plan_i])
+          if not flag:
+            print('find vs_msg error')
+          else:
+            names.append("long_control_actuator_status")
+            datas.append(str(vs_msg.parking_long_control_actuator_status))
+            names.append("lat_control_actuator_status")
+            datas.append(str(vs_msg.parking_lat_control_actuator_status))
+            names.append("shift_lever_state")
+            datas.append(str(vs_msg.shift_lever_state))
+            names.append("shift_lever_state_available")
+            datas.append(str(vs_msg.shift_lever_state_available))
         else:
-          names.append("long_control_actuator_status")
-          datas.append(str(vs_msg.parking_long_control_actuator_status))
-          names.append("lat_control_actuator_status")
-          datas.append(str(vs_msg.parking_lat_control_actuator_status))
-          names.append("shift_lever_state")
-          datas.append(str(vs_msg.shift_lever_state))
-          names.append("shift_lever_state_available")
-          datas.append(str(vs_msg.shift_lever_state_available))
+          print('find vs_msg error')
 
-        flag, ctrl_debug_msg = findrt_json(dataLoader.ctrl_debug_msg, control_debug_timestamps[plan_i])
-        if not flag:
+        if dataLoader.ctrl_debug_msg['enable'] == True:
+          flag, ctrl_debug_msg = findrt_json(dataLoader.ctrl_debug_msg, control_debug_timestamps[plan_i])
+          if not flag:
+            print('find ctrl_debug_msg error')
+          else:
+            names.append("lat_mpc_status")
+            datas.append(ctrl_debug_msg['lat_mpc_status'])
+            names.append("remain_s_uss")
+            datas.append(ctrl_debug_msg['remain_s_uss'])
+            names.append("remain_s_ctrl")
+            datas.append(ctrl_debug_msg['remain_s_ctrl'])
+            names.append("vel_ref_gain")
+            datas.append(ctrl_debug_msg['vel_ref_gain'])
+            names.append("acc_vel")
+            datas.append(ctrl_debug_msg['acc_vel'])
+            names.append("slope_acc")
+            datas.append(ctrl_debug_msg['slope_acc'])
+            names.append("apa_enable")
+            datas.append(ctrl_debug_msg['apa_enable'])
+            names.append("vehicle_stationary_flag")
+            datas.append(ctrl_debug_msg['vehicle_stationary_flag'])
+            names.append("apa_finish_flag")
+            datas.append(ctrl_debug_msg['apa_finish_flag'])
+            names.append("emergency_stop_flag")
+            datas.append(ctrl_debug_msg['emergency_stop_flag'])
+            names.append("break_override_flag")
+            datas.append(ctrl_debug_msg['break_override_flag'])
+            names.append("gear_shifting_flag")
+            datas.append(ctrl_debug_msg['gear_shifting_flag'])
+            names.append("gear_cmd")
+            datas.append(ctrl_debug_msg['gear_cmd'])
+            names.append("gear_real")
+            datas.append(ctrl_debug_msg['gear_real'])
+        else:
           print('find ctrl_debug_msg error')
-        else:
-          names.append("lat_mpc_status")
-          datas.append(ctrl_debug_msg['lat_mpc_status'])
-          names.append("remain_s_uss")
-          datas.append(ctrl_debug_msg['remain_s_uss'])
-          names.append("remain_s_ctrl")
-          datas.append(ctrl_debug_msg['remain_s_ctrl'])
-          names.append("vel_ref_gain")
-          datas.append(ctrl_debug_msg['vel_ref_gain'])
-          names.append("acc_vel")
-          datas.append(ctrl_debug_msg['acc_vel'])
-          names.append("slope_acc")
-          datas.append(ctrl_debug_msg['slope_acc'])
-          names.append("apa_enable")
-          datas.append(ctrl_debug_msg['apa_enable'])
-          names.append("vehicle_stationary_flag")
-          datas.append(ctrl_debug_msg['vehicle_stationary_flag'])
-          names.append("apa_finish_flag")
-          datas.append(ctrl_debug_msg['apa_finish_flag'])
-          names.append("emergency_stop_flag")
-          datas.append(ctrl_debug_msg['emergency_stop_flag'])
-          names.append("break_override_flag")
-          datas.append(ctrl_debug_msg['break_override_flag'])
-          names.append("gear_shifting_flag")
-          datas.append(ctrl_debug_msg['gear_shifting_flag'])
-          names.append("gear_cmd")
-          datas.append(ctrl_debug_msg['gear_cmd'])
-          names.append("gear_real")
-          datas.append(ctrl_debug_msg['gear_real'])
         data_ctrl_debug_data.xys.append((names, datas, [None] * len(names)))
       data_ctrl_debug_data.ts = np.array(ctrl_debug_ts)
       tab_attr_list = ['name', 'data']

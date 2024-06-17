@@ -242,13 +242,9 @@ const bool PerpendicularPathPlanner::PreparePlan() {
   }
 
   double heading_offset =
-      (apa_param.GetParam().prepare_line_max_heading_offset_slot_deg +
-       input_.origin_pt_0_heading) /
-      57.3;
+      apa_param.GetParam().prepare_line_max_heading_offset_slot_deg / 57.3;
   while (heading_offset >=
-         (apa_param.GetParam().prepare_line_min_heading_offset_slot_deg +
-          input_.origin_pt_0_heading) /
-             57.3) {
+         apa_param.GetParam().prepare_line_min_heading_offset_slot_deg / 57.3) {
     heading_offset_vec.emplace_back(heading_offset);
     heading_offset -=
         apa_param.GetParam().prepare_line_dheading_offset_slot_deg / 57.3;
@@ -319,8 +315,9 @@ const bool PerpendicularPathPlanner::PreparePlan() {
 const bool PerpendicularPathPlanner::PreparePlanOnce(
     const double& x_offset, const double& heading_offset,
     const double& radius) {
-  double start_heading =
-      calc_params_.slot_side_sgn * (90.0 / 57.3 - heading_offset);
+  const double start_heading =
+      calc_params_.slot_side_sgn *
+      ((90.0 - input_.origin_pt_0_heading) / 57.3 - heading_offset);
 
   pnc::geometry_lib::PathPoint start_pose;
   start_pose.Set(Eigen::Vector2d(x_offset, 0.0), start_heading);
