@@ -347,17 +347,9 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     if (start_stop_state == common::StartStopInfo::CRUISE) {
       lon_init_state.set_a(ego_state->ego_acc());
     } else if (start_stop_state == common::StartStopInfo::START) {
-      if (ego_state->ego_acc() < 0.0) {
-        lon_init_state.set_a(0.0);
-      } else {
-        lon_init_state.set_a(ego_state->ego_acc());
-      }
+      lon_init_state.set_a(std::max(0.0, ego_state->ego_acc()));
     } else if (start_stop_state == common::StartStopInfo::STOP) {
-      if (ego_state->ego_acc() < 0.0) {
-        lon_init_state.set_a(ego_state->ego_acc());
-      } else {
-        lon_init_state.set_a(0.0);
-      }
+      lon_init_state.set_a(std::min(0.0, ego_state->ego_acc()));
     }
 
     if (!session_->is_hpp_scene()) {
@@ -417,20 +409,12 @@ void EgoStateManager::LongitudinalReset() {
       session_->planning_context().start_stop_result().state();
   // deal with ego_acc which has noise
   if (start_stop_state == common::StartStopInfo::CRUISE) {
-    lon_init_state.set_a(ego_state->ego_acc());
-  } else if (start_stop_state == common::StartStopInfo::START) {
-    if (ego_state->ego_acc() < 0.0) {
-      lon_init_state.set_a(0.0);
-    } else {
       lon_init_state.set_a(ego_state->ego_acc());
+    } else if (start_stop_state == common::StartStopInfo::START) {
+      lon_init_state.set_a(std::max(0.0, ego_state->ego_acc()));
+    } else if (start_stop_state == common::StartStopInfo::STOP) {
+      lon_init_state.set_a(std::min(0.0, ego_state->ego_acc()));
     }
-  } else if (start_stop_state == common::StartStopInfo::STOP) {
-    if (ego_state->ego_acc() < 0.0) {
-      lon_init_state.set_a(ego_state->ego_acc());
-    } else {
-      lon_init_state.set_a(0.0);
-    }
-  }
 }
 
 void EgoStateManager::MotionPlanningInfoReset() {
