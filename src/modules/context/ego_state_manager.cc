@@ -334,6 +334,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     motion_planner_output.lat_init_flag = false;
   }
 
+  auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
   if (lon_replan) {
     // update lat init state
     lat_init_state.set_x(motion_planner_output.x_s_spline(s_proj));
@@ -341,7 +343,22 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
     // update lon init state
     lon_init_state.set_s(s_proj);
-    lon_init_state.set_a(ego_state->ego_acc());
+    // deal with ego_acc which has noise
+    if (start_stop_state == common::StartStopInfo::CRUISE) {
+      lon_init_state.set_a(ego_state->ego_acc());
+    } else if (start_stop_state == common::StartStopInfo::START) {
+      if (ego_state->ego_acc() < 0.0) {
+        lon_init_state.set_a(0.0);
+      } else {
+        lon_init_state.set_a(ego_state->ego_acc());
+      }
+    } else if (start_stop_state == common::StartStopInfo::STOP) {
+      if (ego_state->ego_acc() < 0.0) {
+        lon_init_state.set_a(ego_state->ego_acc());
+      } else {
+        lon_init_state.set_a(0.0);
+      }
+    }
 
     if (!session_->is_hpp_scene()) {
       if (lon_init_state.v() - ego_state->ego_v() > 1.0) {
@@ -396,7 +413,24 @@ void EgoStateManager::LongitudinalReset() {
   // s is fakely frenet, cannot be obtained
   lon_init_state.set_s(0.0);
   lon_init_state.set_v(ego_state->ego_v());
-  lon_init_state.set_a(ego_state->ego_acc());
+  auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
+  // deal with ego_acc which has noise
+  if (start_stop_state == common::StartStopInfo::CRUISE) {
+    lon_init_state.set_a(ego_state->ego_acc());
+  } else if (start_stop_state == common::StartStopInfo::START) {
+    if (ego_state->ego_acc() < 0.0) {
+      lon_init_state.set_a(0.0);
+    } else {
+      lon_init_state.set_a(ego_state->ego_acc());
+    }
+  } else if (start_stop_state == common::StartStopInfo::STOP) {
+    if (ego_state->ego_acc() < 0.0) {
+      lon_init_state.set_a(ego_state->ego_acc());
+    } else {
+      lon_init_state.set_a(0.0);
+    }
+  }
 }
 
 void EgoStateManager::MotionPlanningInfoReset() {
