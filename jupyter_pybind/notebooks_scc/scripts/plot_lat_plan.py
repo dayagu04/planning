@@ -13,7 +13,7 @@ bag_path = "/share/data_cold/abu_zone/autoparse/chery_tiggo9_06826/trigger/20240
 frame_dt = 0.1 # sec
 
 # plot global figure?
-global_fig_plot = False
+global_fig_plot = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -37,12 +37,12 @@ class LocalViewSlider:
 def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, g_is_display_enu)
+  update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data, g_is_display_enu)
 
   push_notebook()
 
 if global_fig_plot:
-  bkp.show(row(fig1, fig7, column(fig2, fig9, fig3, fig4, fig5, fig6)), notebook_handle=True)
+  bkp.show(row(fig1, column(fig7, fig_lat_offset), column(fig2, fig9, fig3, fig4, fig5, fig6)), notebook_handle=True)
 else:
   bkp.show(row(fig1, column(fig2, fig9, fig3, fig4, fig5, fig6, fig_lat_offset)), notebook_handle=True)
 

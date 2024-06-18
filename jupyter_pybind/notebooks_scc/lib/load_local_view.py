@@ -97,7 +97,46 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_msg'] = ctrl_msg
   local_view_data['data_msg']['ctrl_debug_msg'] = ctrl_debug_msg
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
-  ### step 2-1: 加载定位信息
+
+  ### step 2-1: 加载pp原始定位信息
+  if bag_loader.origin_loc_msg['enable'] == True:
+    cur_pos_xn = 0
+    cur_pos_yn = 0
+    cur_yaw = 0
+    cur_pos_xn = origin_loc_msg.position.position_boot.x
+    cur_pos_yn = origin_loc_msg.position.position_boot.y
+    cur_yaw = origin_loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+
+    ego_xb, ego_yb = [], []
+    ego_xn, ego_yn = [], []
+    ### global variables
+    # pos offset
+    for i in range(len(bag_loader.origin_loc_msg['data'])):
+      if (i % 10 != 0): # 下采样 10
+        continue
+      # if bag_loader.loc_msg['data'][i].msf_status.msf_status == 2 :
+      #   continue
+      pos_xn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.x
+      pos_yn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.y
+      if g_is_display_enu:
+        ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
+      else:
+        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+      ego_xb.append(ego_local_x)
+      ego_yb.append(ego_local_y)
+      ego_xn.append(pos_xn_i)
+      ego_yn.append(pos_yn_i)
+
+    local_view_data['origin_data_ego'].data.update({
+      'ego_xb': ego_xb,
+      'ego_yb': ego_yb,
+      'ego_xn': ego_xn,
+      'ego_yn': ego_yn,
+    })
+
+  ### step 2-2: 加载定位信息
   loc_mode = 0
   cur_pos_xn = 0
   cur_pos_yn = 0
@@ -190,45 +229,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'text_xn': [-2],
         'text_yn': [0],
       })
-
-  ### step 2-2: 加载pp原始定位信息
-
-  if bag_loader.origin_loc_msg['enable'] == True:
-    cur_pos_xn = 0
-    cur_pos_yn = 0
-    cur_yaw = 0
-    cur_pos_xn = origin_loc_msg.position.position_boot.x
-    cur_pos_yn = origin_loc_msg.position.position_boot.y
-    cur_yaw = origin_loc_msg.orientation.euler_boot.yaw
-    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-
-    ego_xb, ego_yb = [], []
-    ego_xn, ego_yn = [], []
-    ### global variables
-    # pos offset
-    for i in range(len(bag_loader.origin_loc_msg['data'])):
-      if (i % 10 != 0): # 下采样 10
-        continue
-      # if bag_loader.loc_msg['data'][i].msf_status.msf_status == 2 :
-      #   continue
-      pos_xn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.x
-      pos_yn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.y
-      if g_is_display_enu:
-        ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
-      else:
-        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
-
-      ego_xb.append(ego_local_x)
-      ego_yb.append(ego_local_y)
-      ego_xn.append(pos_xn_i)
-      ego_yn.append(pos_yn_i)
-
-    local_view_data['origin_data_ego'].data.update({
-      'ego_xb': ego_xb,
-      'ego_yb': ego_yb,
-      'ego_xn': ego_xn,
-      'ego_yn': ego_yn,
-    })
 
   is_enu_to_car = False
   if plan_msg != None:
@@ -1268,11 +1268,11 @@ def load_local_view_figure():
   fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
   fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
 
-  hover1_1 = HoverTool(renderers=[fig1.renderers[5]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+  hover1_1 = HoverTool(renderers=[fig1.renderers[26]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[fig1.renderers[6]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  hover1_2 = HoverTool(renderers=[fig1.renderers[27]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
   hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
   hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
   hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
