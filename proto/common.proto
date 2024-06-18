@@ -1,0 +1,313 @@
+/*******************************************************************************
+ * 公共结构体
+*******************************************************************************/
+
+syntax = "proto2";
+
+package Common;
+
+// 通用2维点
+message Point2si {
+    optional sint32 x = 1;
+    optional sint32 y = 2;
+};
+
+message Point2f {
+    optional float x = 1;
+    optional float y = 2;
+};
+
+message Point2d {
+    optional double x = 1;
+    optional double y = 2;
+};
+
+// 通用3维点
+message Point3si {
+    optional sint32 x = 1;
+    optional sint32 y = 2;
+    optional sint32 z = 3;
+};
+
+message Point3f {
+    optional float x = 1;
+    optional float y = 2;
+    optional float z = 3;
+};
+
+message Point3d {
+    optional double x = 1;
+    optional double y = 2;
+    optional double z = 3;
+};
+
+// 立方体三维信息
+message Shape3f {
+    optional float length = 1;  // 长   (米)
+    optional float width = 2;   // 宽   (米)
+    optional float height = 3;  // 高   (米)
+};
+
+message Shape3d {
+    optional double length = 1;  // 长  (米)
+    optional double width = 2;   // 宽  (米)
+    optional double height = 3;  // 高  (米)
+};
+
+// ENU信息
+message PointENU {
+    optional double x = 1;  // East from the origin         (米)
+    optional double y = 2;  // North from the origin        (米)
+    optional double z = 3;  // Up from the WGS-84 ellipsoid (米)
+};
+
+// 地图瓦片标识id信息
+message TileId {
+    /** id号
+     *  备注：parking_map地图中只用16位
+    **/
+    optional uint32 id = 1;
+}
+
+// 城市标识id信息
+message UrId {
+    /** id号
+     *  备注：parking_map地图中只用16位
+    **/
+    optional uint32 id = 1;
+}
+
+// LLH信息
+message PointLLH {
+    optional double lon = 1;    // Longitude in degrees     (度)    [-180,180)
+    optional double lat = 2;    // Latitude in degrees      (度)    [-90,90]
+    optional double height = 3; // WGS-84 ellipsoid height in meters    (米)
+};
+
+// 旋转四元数
+message Quaternion {
+    optional double w = 1;  // 四元数的实部，标量部分
+    optional double x = 2;  // 四元数的虚部 i 分量
+    optional double y = 3;  // 四元数的虚部 j 分量
+    optional double z = 4;  // 四元数的虚部 k 分量
+}   
+
+// 时间戳统计信息
+message InputHistoryTimestamp {
+    // 输入数据类型
+    enum InputHistoryTimestampSourceType {
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CAMERA = 0;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_IMU = 1;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_RADAR= 2;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_VIHECLE_SERVICE = 3;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PERCEPTION = 4;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION = 5;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION = 6;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING = 7;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION = 8;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PERCEPTION_ROAD = 9;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CONTROL = 10;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE = 11;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI = 12;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION = 13;
+        INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS = 14;
+    }
+    optional InputHistoryTimestampSourceType input_type = 1;    // 时间戳来源模块
+    optional uint64 in_ts_us = 2;                               // 数据接收时间戳           (微妙)
+    optional uint64 out_ts_us = 3;                              // 数据处理完成时间戳       (微妙)
+};
+
+// 信息头结构
+message Header {
+    optional uint64 timestamp = 1;                  // 仅表示本次消息发送时刻的时间戳，不可表示某项数据产生时间戳     (微秒)
+    optional string version = 2;                    // 模块版本号，最大64
+    repeated InputHistoryTimestamp input_list = 3;  // 输入数据时间戳历史
+
+    /** 信息发送序号
+     *  备注：从0开始，每次发topic计数+1，mcu产生的消息，在soc转发侧计数
+    **/
+    optional uint64 seq = 4;
+};
+
+// 通用障碍物类型
+enum ObjectType {
+    OBJECT_TYPE_UNKNOWN = 0;                // 未知障碍物
+    OBJECT_TYPE_UNKNOWN_MOVABLE = 1;        // 未知可移动障碍物
+    OBJECT_TYPE_UNKNOWN_IMMOVABLE = 2;      // 未知不可移动障碍物
+    OBJECT_TYPE_COUPE = 3;                  // 轿车
+    OBJECT_TYPE_MINIBUS = 4;                // 面包车
+    OBJECT_TYPE_VAN = 5;                    // 厢式轿车
+    OBJECT_TYPE_BUS = 6;                    // 大型客车
+    OBJECT_TYPE_TRUCK = 7;                  // 卡车
+    OBJECT_TYPE_TRAILER = 8;                // 拖车
+    OBJECT_TYPE_BICYCLE = 9;                // 自行车
+    OBJECT_TYPE_MOTORCYCLE = 10;            // 摩托车
+    OBJECT_TYPE_TRICYCLE = 11;              // 三轮车
+    OBJECT_TYPE_PEDESTRIAN = 12;            // 行人
+    OBJECT_TYPE_ANIMAL = 13;                // 动物
+    OBJECT_TYPE_TRAFFIC_CONE = 14;          // 交通锥
+    OBJECT_TYPE_WATER_SAFETY_BARRIER = 15;  // 水马
+    OBJECT_TYPE_CRASH_BARREL = 16;          // 隔离墩
+    OBJECT_TYPE_TRAFFIC_TEM_SIGN = 17;      // 临时指示牌
+    OBJECT_TYPE_FENCE = 18;                 // 栅栏
+};
+
+// 通用障碍物结构
+message Obstacle {
+    optional uint32 id = 1;                         // 障碍物id
+    optional ObjectType type = 2;                   // 障碍物类型
+    optional Shape3d shape = 3;                     // 障碍物尺寸
+    optional Point2f relative_position = 4;         // 障碍物近侧距离自车后轴中心的距离     (米)
+    optional Point2f relative_velocity = 5;         // 障碍物相对自车坐标系相对速度         (米/秒)
+    optional Point2f relative_acceleration = 6;     // 障碍物相对自车坐标系相对加速度       (米/秒^2)
+    optional Point2f relative_center_position = 7;  // 障碍物几何中心距离自车后轴中心的距离 (米)
+
+    /* 障碍物与自车的相对朝向角
+     *  单位：弧度rad
+     *  备注：沿自车坐标系x轴正向逆时针旋转为正（0~Π），顺时针为负（0~-Π）  
+     */
+    optional float relative_heading_angle = 8;
+    optional float relative_heading_angle_rate = 9; // 障碍物与自车的相对朝向角变化率       (弧度rad/秒)
+    optional Point2f position = 10;                 // 障碍物距自车近侧在绝对坐标系中的位置 (米)
+    optional Point2f velocity = 11;                 // 障碍物在绝对坐标系中的速度           (米/秒)
+    optional Point2f acceleration = 12;             // 障碍物在绝对坐标系中的加速度         (米/秒^2)
+    optional Point2f center_position = 13;          // 障碍物几何中心在绝对坐标系的位置     (米)
+    optional float heading_angle = 14;              // 障碍物在绝对坐标系中的朝向角,        (弧度rad)
+    optional float heading_angle_rate = 15;         // 障碍物在绝对坐标系中的朝向角变化率   (弧度rad/秒)
+};
+
+//障碍物运动状态
+enum ObjectMotionType{
+    OBJECT_MOTION_TYPE_UNKNOWN = 0;  // 未知
+    OBJECT_MOTION_TYPE_STATIC = 1;   // 静止
+    OBJECT_MOTION_TYPE_STOPED =2;    // 停止
+    OBJECT_MOTION_TYPE_MOVING =3;    // 同向
+    OBJECT_MOTION_TYPE_ONCOME =4;    // 对向
+    OBJECT_MOTION_TYPE_CROSS =5;     // 横穿
+};
+
+// 通用车位类型
+enum ParkingSlotType {
+    PARKING_SLOT_TYPE_VERTICAL = 0;       // 垂直车位
+    PARKING_SLOT_TYPE_HORIZONTAL = 1;     // 平行车位
+    PARKING_SLOT_TYPE_SLANTING = 2;       // 斜车位
+    PARKING_SLOT_TYPE_INVALID = 3;        // 不合法车位
+};
+
+// 
+enum ParkingSlotPositionType {
+    FUSION_SLOT_POSITION_TYPE_LEFT = 0;         // 左
+    FUSION_SLOT_POSITION_TYPE_RIGHT = 1;        // 右
+}
+
+// 通用传感器类型
+enum SensorType {
+    SENSOR_TYPE_UNKNOWN = 0;                // 未知
+    SENSOR_TYPE_FRONT_CAMERA = 1;           // 前视相机
+    SENSOR_TYPE_REAR_CAMERA = 2;            // 后视相机
+    SENSOR_TYPE_LEFT_FRONT_CAMERA = 3;      // 左前侧视相机
+    SENSOR_TYPE_LEFT_REAR_CAMERA = 4;       // 左后侧视相机
+    SENSOR_TYPE_RIHGT_FRONT_CAMERA = 5;     // 右前侧视相机
+    SENSOR_TYPE_RIGHT_REAR_CAMERA = 6;      // 右后侧视相机
+    SENSOR_TYPE_FRONT_SURROUND_CAMERA = 7;  // 前环视相机
+    SENSOR_TYPE_REAR_SURROUND_CAMERA = 8;   // 后环视相机
+    SENSOR_TYPE_LEFT_SURROUND_CAMERA = 9;   // 左环视相机
+    SENSOR_TYPE_RIGHT_SURROUND_CAMERA = 10; // 右环视相机
+    SENSOR_TYPE_FRONT_RADAR = 11;           // 正前雷达
+    SENSOR_TYPE_LEFT_FRONT_RADAR = 12;      // 左前雷达
+    SENSOR_TYPE_RIGHT_FRONT_RADAR = 13;     // 右前雷达
+    SENSOR_TYPE_LEFT_REAR_RADAR = 14;       // 左后雷达
+    SENSOR_TYPE_RIGHT_REAR_RADAR = 15;      // 右后雷达
+};
+
+// 通用更新标志类型
+enum UpdateFlag {
+    UPDATE_FLAG_INVALID = 0;    // 非法的
+    UPDATE_FLAG_NEW = 1;        // 新创建的(前一帧中不存在，当前帧新出现的)
+    UPDATE_FLAG_MEAS = 2;       // 测量的(前一帧中存在，当前帧也测量到)
+    UPDATE_FLAG_PREDICTED = 3;  // 预测的(之前数帧中测量到，当前帧消失了，使用预测方式跟踪一段时间)
+    UPDATE_FLAG_MERGED = 4;     // 聚类的，或融合的
+};
+
+// 规划轨迹类型
+enum TrajectoryType {
+    TRAJECTORY_TYPE_TARGET_REFERENCE = 0;    // 目标参考值跟踪
+    TRAJECTORY_TYPE_TRAJECTORY_POINTS = 1;   // 规划轨迹点
+};
+
+// 规划期望方向盘转角档位
+enum LateralManeuverGear {
+    LATERAL_MANEUVER_GEAR_SLOW = 0;     // 缓慢
+    LATERAL_MANEUVER_GEAR_NORMAL = 1;   // 正常
+    LATERAL_MANEUVER_GEAR_FAST = 2;     // 快速
+    LATERAL_MANEUVER_GEAR_ACCIDENT = 3; // 原地快速
+}
+
+// 转向灯请求值
+enum TurnSignalType {
+    TURN_SIGNAL_TYPE_NONE = 0;              // 无请求
+    TURN_SIGNAL_TYPE_LEFT = 1;              // 请求左转向
+    TURN_SIGNAL_TYPE_RIGHT = 2;             // 请求右转向
+    TURN_SIGNAL_TYPE_EMERGENCY_FLASH = 3;   // 双闪
+}
+
+// 灯光信号请求值
+enum LightSignalType {
+    LIGHT_SIGNAL_TYPE_NONE = 0;         // 无请求
+    LIGHT_SIGNAL_TYPE_HIGH_BEAM = 1;    // 远光灯
+    LIGHT_SIGNAL_TYPE_LOW_BEAM = 2;     // 近光灯
+}
+
+// 喇叭请求值
+enum HornSignalType {
+    HORN_SIGNAL_TYPE_NONE = 0;      // 无请求
+    HORN_SIGNAL_TYPE_LONG = 1;      // 长鸣
+    HORN_SIGNAL_TYPE_SHORT = 2;     // 短鸣
+    HORN_SIGNAL_TYPE_NARMAL = 3;    // 正常
+    HORN_SIGNAL_TYPE_SEGMENT = 4;   // 分段鸣
+}
+
+// 挡位请求信息
+enum GearCommandValue {
+    GEAR_COMMAND_VALUE_NONE = 0;    // 无挡位信息
+    GEAR_COMMAND_VALUE_PARKING = 1; // 驻车
+    GEAR_COMMAND_VALUE_REVERSE = 2; // 倒车
+    GEAR_COMMAND_VALUE_NEUTRAL = 3; // 空挡
+    GEAR_COMMAND_VALUE_DRIVE = 4;   // 前进挡
+    GEAR_COMMAND_VALUE_LOW = 5;     // 低速挡
+}
+
+//车道线颜色
+enum LaneLineColor {
+    COLOR_UNKNOWN = 0;    // 未知
+    COLOR_WHITE = 1;      // 白色
+    COLOR_YELLOW = 2;     // 黄色
+    COLOR_BLUE = 3;       // 蓝色
+    COLOR_GREEN = 4;      // 绿色
+    COLOR_GRAY = 5;       // 灰色
+    COLOR_ORANGE = 6;     // 橘色
+    COLOR_LEFT_GRAY_RIGHT_YELLOW = 7;     // 左侧车道线灰色，右侧车道线黄色
+    COLOR_LEFT_YELLOW_RIGHT_WHITE = 8;    // 左侧车道线黄色，右侧车道线白色
+}
+//车道线类型
+enum LaneBoundaryType {
+    MARKING_UNKNOWN = 0;        // 未知线型
+    MARKING_DASHED = 1;         // 虚线
+    MARKING_SOLID = 2;          // 实线
+    MARKING_SHORT_DASHED = 3;   // 短虚线
+    MARKING_DOUBLE_DASHED = 4;  // 双虚线
+    MARKING_DOUBLE_SOLID = 5;   // 双实线
+    MARKING_LEFT_DASHED_RIGHT_SOLID = 6;    // 左虚右实线
+    MARKING_LEFT_SOLID_RIGHT_DASHED = 7;    // 左实右虚线
+}
+
+message UtcTime {
+    optional uint32 year =1;            // 年
+    optional uint32 month = 2;          // 月
+    optional uint32 day = 3;            // 日
+    optional uint32 hour = 4;           // 时
+    optional uint32 minute = 5;         // 分
+    optional uint32 second = 6;         // 秒
+    optional uint32 milli_second = 7;   // 毫秒
+    optional uint32 time_accuracy = 8;  // 时间精度     [0-999]
+}

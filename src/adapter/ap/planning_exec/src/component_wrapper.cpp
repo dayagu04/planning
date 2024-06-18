@@ -1,6 +1,7 @@
 #include "component_wrapper.h"
 
 #include "applicationswcexecutable2_manager.h"
+#include "ehr_sdmap.pb.h"
 #include "iflyauto_parse_file.h"
 #include "iflyauto_timer_component.h"
 #include "mdc/applicationswcexecutable2_logger.h"
@@ -42,11 +43,13 @@ void ComponentWrapper::StopHandle() {
 }
 
 void ComponentWrapper::InitClient() {
+  std::cout<<"HHHHHHHH1"<<std::endl;
   auto structContainerInterfaceClientPortVec =
       swc_ptr_->GetStructContainerInterfaceClientVec();
   std::unordered_set<std::string> client_set(
       structContainerInterfaceClientPortVec.begin(),
       structContainerInterfaceClientPortVec.end());
+  std::cout << "client_set size:" << client_set.size() << std::endl;
   while (!client_set.empty()) {
     for (const auto &portName : structContainerInterfaceClientPortVec) {
       auto clientPtr = swc_ptr_->GetStructContainerInterfaceClient(portName);
@@ -77,6 +80,9 @@ void ComponentWrapper::InitClient() {
       REGISTER_CLIENT_HANDLER("IflytekLocalizationEgoPose",
                               FeedLocalizationEstimateOutput,
                               LocalizationEstimate);
+      REGISTER_CLIENT_HANDLER("IflytekLocalizationEgomotion",
+                              FeedLocalizationOutput,
+                              IFLYLocalization);                
       REGISTER_CLIENT_HANDLER("IflytekPredictionPredictionResult",
                               FeedPredictionResult, PredictionResult);
       REGISTER_CLIENT_HANDLER("IflytekVehicleService", FeedVehicleService,
@@ -91,14 +97,22 @@ void ComponentWrapper::InitClient() {
                               FeedFuncStateMachine, FuncStateMachine);
       REGISTER_CLIENT_HANDLER("IflytekUssWaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
-      if (portName == "IflytekEhrStaticMap") {
+      std::cout<<"HHHHHHHH1"<<std::endl;
+      SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
+                  << "RegisterEvent: "<<portName;
+      if (portName == "IflytekEhrSdmapInfo") {
+        SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
+                  << "EEEEEE "<<portName;
+        std::cout << "00000000000000" << std::endl;
         clientPtr->RegisterEventNotifyHandler(
             [this](const struct_container::eventDataType &data) {
               SPL_LOG_SPACE::GetLoggerIns("SPL")->LogInfo()
                   << "received event data";
-              auto map_msg = std::make_shared<Map::StaticMap>();
-              map_msg->ParseFromString(data);
-              component_ptr_->FeedMap(map_msg);
+                  std::cout << "1111111111111" << std::endl;
+              auto sd_map_msg = std::make_shared<SdMapSwtx::SdMap>();
+              sd_map_msg->ParseFromString(data);
+              // std::cout << "sd_map_msg:" << sd_map_msg->ShortDebugString() << std::endl;
+              component_ptr_->FeedSdMap(sd_map_msg);
             });
       }
 

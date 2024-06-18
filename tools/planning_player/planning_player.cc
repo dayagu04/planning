@@ -38,6 +38,7 @@ static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
 static constexpr auto TOPIC_FUNC_STATE_MACHINE =
     "/iflytek/system_state/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
+static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
@@ -99,6 +100,16 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
       } else {
         break;
       }
+    }
+
+    for (const auto& it : msg_cache_[TOPIC_SD_MAP]) {
+      auto sd_map_msg = 
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it.second);
+      SdMapSwtx::SdMap sd_map_info;
+      std::string sd_map_info_str(sd_map_msg->debug_info.begin(),
+                                          sd_map_msg->debug_info.end());
+      sd_map_info.ParseFromString(sd_map_info_str);
+      // auto input_time_list = sd_map_info.input_topic_timestamp();
     }
   } else if (scene_type == "apa") {
     for (const auto& it : msg_cache_[TOPIC_PLANNING_PLAN]) {
@@ -271,6 +282,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
       cache_with_ros_msg_time<struct_msgs::PlanningHMIOutputInfoStr>(msg);
     } else if (msg.getTopic() == TOPIC_HD_MAP) {
       cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
+    } else if (msg.getTopic() == TOPIC_SD_MAP) {
+      //fengwang31:TODO
+      cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
       cache_with_ros_msg_and_header_time<struct_msgs::ParkingInfo>(msg);
     } else if (msg.getTopic() == TOPIC_GROUND_LINE) {
@@ -329,6 +343,10 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
             it_msg.second, TOPIC_FUNC_STATE_MACHINE, bag);
       } else if (it_msg.first == TOPIC_HD_MAP) {
         write_ros_msg<proto_msgs::StaticMap::Ptr>(it_msg.second, TOPIC_HD_MAP,
+                                                  bag);
+      } else if (it_msg.first == TOPIC_SD_MAP) {
+        //fengwang31:TODO
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second, TOPIC_SD_MAP,
                                                   bag);
       } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
         write_ros_msg<struct_msgs::ParkingInfo::Ptr>(
@@ -521,7 +539,30 @@ void PlanningPlayer::PlayOneFrame(
   //   }
   // }
 
+  std::cout << "mark0" << std::endl;
+  if (input_time_list_map_ != input_time_list.map()) {
+    std::cout << "mark1" << std::endl;
+    input_time_list_map_ = input_time_list.map();
+    std::cout << "map msg size:" << msg_cache_[TOPIC_SD_MAP].size() << std::endl;
+    for (auto it = msg_cache_[TOPIC_SD_MAP].begin();
+         it != msg_cache_[TOPIC_SD_MAP].end(); it++) {
+      std::cout << "mark1" << std::endl;
+      auto sd_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string sd_map_str(sd_map_msg_i->debug_info.begin(),
+                                          sd_map_msg_i->debug_info.end());
+      auto sd_map =
+          std::make_shared<SdMapSwtx::SdMap>();
+      sd_map->ParseFromString(sd_map_str);
+      std::cout << "sd_map:" << sd_map->ShortDebugString() << std::endl;
+      if (sd_map->header().timestamp() == input_time_list_map_) {
+        planning_adapter_->FeedSdMap(sd_map);
+        break;
+      }
+    }
+  }
   // TODO: for hpp, need FeedParkingMap() ready
+  // TODO(zkxie2): 等interface就位
   // auto ehr_parking_map_ros_msg =
   //     find_ros_msg_with_header_time<struct_msgs::ParkingInfo>(
   //         TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());

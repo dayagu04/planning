@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 #include "common.pb.h"
 #include "common/config_context.h"
@@ -234,6 +235,17 @@ void PlanningAdapter::Proc() {
       local_view_ptr_->static_map_info.header().timestamp());
   input_topic_latency->set_map(get_latency(
       start_time, local_view_ptr_->static_map_info.header().timestamp()));
+
+  if (is_sd_map_info_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->sd_map_info = sd_map_info_msg_;
+    local_view_ptr_->sd_map_info_recv_time = sd_map_info_msg_recv_time_;
+    is_sd_map_info_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_map(
+      local_view_ptr_->sd_map_info.header().timestamp());
+  input_topic_latency->set_map(get_latency(
+      start_time, local_view_ptr_->sd_map_info.header().timestamp()));
 
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();

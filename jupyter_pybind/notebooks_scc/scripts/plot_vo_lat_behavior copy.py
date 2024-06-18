@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/common_frame/20240626/20240626-14-32-48/data_collection_CHERY_E0Y_04228_ALL_MANUAL_2024-06-26-14-34-48_no_camera.bag"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/common_frame/20240626/20240626-14-32-48/data_collection_CHERY_E0Y_04228_ALL_MANUAL_2024-06-26-14-34-48_no_camera.bag.1719403034.open-loop.plan"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -67,6 +67,10 @@ overtake_lc_data = ColumnDataSource({
   'name':[],
   'data':[]
 })
+cone_lc_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
@@ -76,6 +80,7 @@ data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
 data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=500)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
+data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=400, height=300)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -87,7 +92,7 @@ def obj_id_handler(id):
   if bag_loader.plan_debug_msg['enable'] == True:
     plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
     environment_model_info = plan_debug_msg.environment_model_info
-    obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
+    obj_vars = ['id','type','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
             'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
               'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
               'current_lead_obstacle_to_ego','cutin_p']
@@ -193,7 +198,7 @@ def update_lc_data (noa_info, plan_debug_json):
     except:
       pass
   vars_lc = ['hdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
-             'current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
+             'is_lc_wait_timeout','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'is_solid_left_boundary','is_solid_right_boundary']
   for name in vars_lc:
     try:
@@ -225,6 +230,23 @@ def update_overtake_request_lc_data (plan_debug_json):
   })
   push_notebook()
 
+def update_cone_request_lc_data (plan_debug_json):
+  names  = []
+  datas = []
+  cone_lc_vars_ = ["is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_",
+                   "cone_nums_of_front_objects"]
+  for name in cone_lc_vars_:
+    try:
+      datas.append((plan_debug_json[name]))
+      names.append(name)
+    except:
+      pass
+  cone_lc_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+  push_notebook()
+
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -244,6 +266,7 @@ def slider_callback(bag_time):
       pass
     update_lc_data(noa_info, plan_debug_json_msg)
     update_overtake_request_lc_data(plan_debug_json_msg)
+    update_cone_request_lc_data(plan_debug_json_msg)
 
     lat_behavior_plan = plan_debug_msg.vo_lat_behavior_plan
 
@@ -267,6 +290,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_cone_lc_table, data_behavior_table_2)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 # slider_class = ObjText(obj_id_handler)

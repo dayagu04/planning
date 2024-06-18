@@ -202,6 +202,7 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
+  void CalculateDistanceToRampSplitMergeWithSdMap(planning::framework::Session *session);
   // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
   // void CalculateDistanceToTargetSlot(planning::framework::Session *session);

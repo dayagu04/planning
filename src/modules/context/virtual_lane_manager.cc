@@ -18,10 +18,12 @@
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
+#include "local_view.h"
 #include "localization_c.h"
 #include "log.h"
 // #include "log_glog.h"
 #include "math/box2d.h"
+#include "math/vec2d.h"
 #include "planning_context.h"
 #include "reference_path_manager.h"
 #include "task_basic_types.h"
@@ -459,10 +461,11 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
 
   is_local_valid_ = roads_ptr->local_point_valid;
-  if (session_->environmental_model().function_info().function_mode() ==
-      common::DrivingFunctionInfo::NOA) {
-    CalculateDistanceToRampSplitMerge(session_);
-  }
+  // if (session_->environmental_model().function_info().function_mode() ==
+  //     common::DrivingFunctionInfo::NOA) {
+  //   CalculateDistanceToRampSplitMergeWithSdMap(session_);
+  // }
+  CalculateDistanceToRampSplitMergeWithSdMap(session_);
 
   if (session_->is_hpp_scene() && GetCurrentNearestLane(*session_)) {
     // CalculateHPPInfo(session_);
@@ -480,7 +483,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       "dis_to_ramp: %f, dis_to_first_road_split: %f, "
       "distance_to_first_road_merge_: %f \n",
       dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
-  LOG_DEBUG("is_nearing_ramp:%d \n", is_nearing_ramp);
+  LOG_DEBUG("is_nearing_ramp: %d, ramp_direction_: %d \n", is_nearing_ramp, ramp_direction_);
   LOG_DEBUG("dis to tar slot: %f, distance_to_frist_speed_bump: %f \n",
             distance_to_target_slot_, distance_to_next_speed_bump_);
 
@@ -1441,32 +1444,13 @@ bool VirtualLaneManager::GetCurrentNearestLane(
       const auto& hd_map = session.environmental_model().get_hd_map();
       ad_common::math::Vec2d point;
       // TODO(fengwang31):把noa和hpp的定位需要合在一起
-      if (session_->is_hpp_scene()) {
-        // TODO(xjli32): location_valid含义模糊
-        if (!session_->environmental_model().location_valid()) {
-          return false;
-        }
-        const auto& ego_state =
-            session.environmental_model().get_ego_state_manager();
-        ego_pose_x_ = ego_state->ego_pose_raw().x;
-        ego_pose_y_ = ego_state->ego_pose_raw().y;
-        yaw_ = ego_state->ego_pose_raw().theta;
-        point.set_x(ego_pose_x_);
-        point.set_y(ego_pose_y_);
-        std::cout << "in hpp,"
-                  << "ego_pose_x_:" << ego_pose_x_
-                  << ",ego_pose_y_:" << ego_pose_y_ << std::endl;
-      } else {
-        const auto& pose = local_view.localization_estimate.pose;
-        const double ego_pose_x = pose.local_position.x;
-        const double ego_pose_y = pose.local_position.y;
-        point.set_x(ego_pose_x);
-        point.set_y(ego_pose_y);
-        std::cout << "in NOA,"
-                  << "ego_pose_x:" << point.x() << ",ego_pose_y:" << point.y()
-                  << std::endl;
-      }
-
+      const auto& ego_state =
+        session.environmental_model().get_ego_state_manager();
+      ego_pose_x_ = ego_state->ego_pose_raw().x;
+      ego_pose_y_ = ego_state->ego_pose_raw().y;
+      yaw_ = ego_state->ego_pose_raw().theta;
+      point.set_x(ego_pose_x_);
+      point.set_y(ego_pose_y_);
       // get nearest lane
       ad_common::hdmap::LaneInfoConstPtr nearest_lane;
       double nearest_s = 0.0;
@@ -1538,6 +1522,57 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
   } else {
     ResetForRampInfo();
   }
+}
+
+void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
+    planning::framework::Session* session) {
+  const auto& local_view = session_->environmental_model().get_local_view();
+  if (!session_->environmental_model().get_sdmap_valid()) {
+    ResetForRampInfo();
+    std::cout << "sd_map is invalid!!!" << std::endl;
+    return;
+  }
+  std::cout << "sd_map valid!!!" << std::endl;
+
+  if (local_view.localization_estimate.msf_status.msf_status ==
+      iflyauto::MsfStatusType_ERROR) {
+    std::cout << "localization invalid" << std::endl;
+    return;
+  }
+  
+  ad_common::math::Vec2d current_point;
+  const auto& ego_state =
+    session_->environmental_model().get_ego_state_manager();
+  const auto& pose = local_view.localization_estimate.pose.local_position;
+  ego_pose_x_ = pose.x;
+  ego_pose_y_ = pose.y;
+  std::cout << "ego_pose_x_:" << ego_pose_x_ 
+            << "ego_pose_y_:" << ego_pose_y_ << std::endl;
+  current_point.set_x(ego_pose_x_);
+  current_point.set_y(ego_pose_y_);
+  const auto& sd_map = session_->environmental_model().get_sd_map();
+  const auto& ramp_info = sd_map.GetRampInfo(current_point);
+  if (ramp_info.second > 0) {
+    dis_to_ramp_ = ramp_info.second;
+    distance_to_first_road_split_ = dis_to_ramp_;
+    const auto& previous_seg = sd_map.GetPreviousRoadSegment(ramp_info.first->id());
+    if (previous_seg->direction() == SdMapSwtx::Direction::TURN_RIGHT) {
+      ramp_direction_ = RAMP_ON_RIGHT;
+    } else if (previous_seg->direction() == SdMapSwtx::Direction::TURN_LEFT) {
+      ramp_direction_ = RAMP_ON_LEFT;
+    }
+  } else {
+    dis_to_ramp_ = NL_NMAX;
+    distance_to_first_road_split_ = dis_to_ramp_;
+    ramp_direction_ = RAMP_NONE;
+  }
+  const auto& merge_info = sd_map.GetMergeInfoList(current_point);
+  if (merge_info.begin()->second > 0) {
+    distance_to_first_road_merge_ = merge_info.begin()->second;
+  } else {
+    distance_to_first_road_merge_ = NL_NMAX;
+  }
+
 }
 
 // void VirtualLaneManager::CalculateHPPInfo(
