@@ -227,7 +227,7 @@ data_control_command.data.update({
 fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_mpc, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref', visible=True)
 fig1.line('dy_mpc_vec', 'dx_mpc_vec', source = data_mpc, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'mpc', visible=True)
 fig1.width = 600
-fig1.height = 1000
+fig1.height = 1200
 
 fig2 = bkp.figure(x_axis_label='time', y_axis_label='status',x_range = [t_ctrl_debug[0], t_ctrl_debug[-1]], width=700, height=200)
 fig3 = bkp.figure(x_axis_label='time', y_axis_label='steering angle',x_range = fig2.x_range, width=700, height=200)
@@ -340,6 +340,8 @@ fig9.legend.click_policy = 'hide'
 fig10.legend.click_policy = 'hide'
 fig11.legend.click_policy = 'hide'
 
+coord_tf = coord_transformer()
+
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
@@ -359,6 +361,17 @@ def slider_callback(bag_time):
   delta_mpc_vec = ctrl_debug_json_msg['delta_mpc_vec']
   dphi_ref_mpc_vec = ctrl_debug_json_msg['dphi_ref_mpc_vec']
   dphi_mpc_vec = ctrl_debug_json_msg['dphi_mpc_vec']
+
+  loc_msg = local_view_data['data_msg']['loc_msg']
+  if bag_loader.loc_msg['enable'] == True:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+
+  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+  if g_is_display_enu:
+    dx_ref_mpc_vec, dy_ref_mpc_vec = coord_tf.local_to_global(dx_ref_mpc_vec, dy_ref_mpc_vec)
+    dx_mpc_vec, dy_mpc_vec = coord_tf.local_to_global(dx_mpc_vec, dy_mpc_vec)
 
   t0 = 0
   time_vec = []
