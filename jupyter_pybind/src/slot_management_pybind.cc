@@ -33,7 +33,8 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
                 py::bytes &parking_slot_info_bytes,
                 py::bytes &localization_info_bytes,
                 py::bytes &uss_wave_info_bytes,
-                py::bytes &uss_perception_info_bytes) {
+                py::bytes &uss_perception_info_bytes,
+                py::bytes &ground_line_perception_info_bytes) {
   auto func_statemachine =
       BytesToProto<FuncStateMachine::FuncStateMachine>(func_statemachine_bytes);
 
@@ -50,8 +51,13 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
   auto uss_perception_info =
       BytesToProto<UssPerceptInfo::UssPerceptInfo>(uss_perception_info_bytes);
 
+  auto ground_line_perception_info =
+      BytesToProto<GroundLinePerception::GroundLinePerceptionInfo>(
+          ground_line_perception_info_bytes);
+
   pBase->Update(&func_statemachine, &parking_slot_info, &localization_info,
-                &uss_wave_info, &uss_perception_info);
+                &uss_wave_info, &uss_perception_info,
+                &ground_line_perception_info);
 
   return 0;
 }
@@ -60,8 +66,9 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        py::bytes &parking_slot_info_bytes,
                        py::bytes &localization_info_bytes,
                        py::bytes &uss_wave_info_bytes,
-                       py::bytes &uss_perception_info_bytes, bool force_apa_on,
-                       bool force_clear,
+                       py::bytes &uss_perception_info_bytes,
+                       py::bytes &ground_line_perception_info_bytes,
+                       bool force_apa_on, bool force_clear,
                        double max_slots_update_angle_dis_limit_deg,
                        double max_slot_boundary_line_angle_dif_deg,
                        double outside_lon_dist_max_slot2mirror,
@@ -82,6 +89,10 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   auto uss_perception_info =
       BytesToProto<UssPerceptInfo::UssPerceptInfo>(uss_perception_info_bytes);
 
+  auto ground_line_perception_info =
+      BytesToProto<GroundLinePerception::GroundLinePerceptionInfo>(
+          ground_line_perception_info_bytes);
+
   SlotManagement::Param param;
   param.force_apa_on = force_apa_on;
   param.force_clear = force_clear;
@@ -94,7 +105,8 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
 
   pBase->SetParam(param);
   pBase->Update(&func_statemachine, &parking_slot_info, &localization_info,
-                &uss_wave_info, &uss_perception_info);
+                &uss_wave_info, &uss_perception_info,
+                &ground_line_perception_info);
 
   return 0;
 }

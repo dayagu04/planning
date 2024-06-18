@@ -368,6 +368,7 @@ class SlotManagement {
     // slot state check by uss
     const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr;
     const UssPerceptInfo::UssPerceptInfo* uss_percept_info_ptr;
+    const GroundLinePerception::GroundLinePerceptionInfo *ground_line_perception_info_ptr;
 
     std::vector<double> uss_raw_dist_vec;
     std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec;
@@ -393,8 +394,11 @@ class SlotManagement {
     bool is_side_calc_in_parking = false;
 
     std::vector<Eigen::Vector2d> obstacle_point_vec;
+    std::vector<Eigen::Vector2d> ground_line_point_vec;
 
     std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_map;
+
+    std::unordered_map<size_t, std::vector<Eigen::Vector2d>> ground_line_pt_map;
 
     bool first_enter_slot_mangement = true;
 
@@ -412,6 +416,7 @@ class SlotManagement {
       ego_slot_info.Reset();
       obstacle_point_vec.clear();
       obs_pt_map.clear();
+      ground_line_pt_map.clear();
       first_enter_slot_mangement = true;
     }
   };
@@ -422,11 +427,16 @@ class SlotManagement {
               const ParkingFusion::ParkingFusionInfo* parking_slot_info,
               const LocalizationOutput::LocalizationEstimate* localization_info,
               const UssWaveInfo::UssWaveInfo* uss_wave_info,
-              const UssPerceptInfo::UssPerceptInfo* uss_percept_info);
+              const UssPerceptInfo::UssPerceptInfo* uss_percept_info,
+              const GroundLinePerception::GroundLinePerceptionInfo *ground_line_perception_info);
 
   void AddUssPerceptObstacles();
 
   const bool AddUssPerceptObstacles(const common::SlotInfo& slot_info);
+
+  void AddGroundLineObstacles();
+
+  const bool AddGroundLineObstacles(const common::SlotInfo& slot_info);
 
   const bool SetRealtime();
 

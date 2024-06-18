@@ -36,7 +36,8 @@ bool SlotManagement::Update(const LocalView *local_view_ptr) {
                 &local_view_ptr->parking_fusion_info,
                 &local_view_ptr->localization_estimate,
                 &local_view_ptr->uss_wave_info,
-                &local_view_ptr->uss_percept_info);
+                &local_view_ptr->uss_percept_info,
+                &local_view_ptr->ground_line_perception);
 }
 
 bool SlotManagement::Update(
@@ -44,7 +45,9 @@ bool SlotManagement::Update(
     const ParkingFusion::ParkingFusionInfo *parking_slot_info,
     const LocalizationOutput::LocalizationEstimate *localization_info,
     const UssWaveInfo::UssWaveInfo *uss_wave_info,
-    const UssPerceptInfo::UssPerceptInfo *uss_percept_info) {
+    const UssPerceptInfo::UssPerceptInfo *uss_percept_info,
+    const GroundLinePerception::GroundLinePerceptionInfo
+        *ground_line_perception_info) {
   DEBUG_PRINT("---------- slot management --------------------");
   // set ptrs
   frame_.func_state_ptr = func_statemachine;
@@ -52,6 +55,7 @@ bool SlotManagement::Update(
   frame_.localization_ptr = localization_info;
   frame_.uss_wave_info_ptr = uss_wave_info;
   frame_.uss_percept_info_ptr = uss_percept_info;
+  frame_.ground_line_perception_info_ptr = ground_line_perception_info;
 
   if (!IsInAPAState() || frame_.param.force_clear) {
     DEBUG_PRINT("reset");
@@ -109,6 +113,28 @@ void SlotManagement::AddUssPerceptObstacles() {
   for (const auto &point2d : obj_info_desample.obj_pt()) {
     frame_.obstacle_point_vec.emplace_back(
         Eigen::Vector2d(point2d.x(), point2d.y()));
+  }
+}
+
+void SlotManagement::AddGroundLineObstacles() {
+  if (frame_.ground_line_perception_info_ptr == NULL) {
+    frame_.obstacle_point_vec.clear();
+    return;
+  }
+  if (frame_.ground_line_perception_info_ptr->ground_lines().empty()) {
+    DEBUG_PRINT("ground line is empty");
+    return;
+  }
+  const auto &ground_lines =
+      frame_.ground_line_perception_info_ptr->ground_lines();
+  frame_.obstacle_point_vec.clear();
+  frame_.obstacle_point_vec.reserve(ground_lines.size());
+
+  for (const auto &ground_line : ground_lines) {
+    for (const auto &point_2d : ground_line.points_2d()) {
+      frame_.obstacle_point_vec.emplace_back(
+          Eigen::Vector2d(point_2d.x(), point_2d.y()));
+    }
   }
 }
 
@@ -758,6 +784,72 @@ const bool SlotManagement::AddUssPerceptObstacles(
   return true;
 }
 
+const bool SlotManagement::AddGroundLineObstacles(
+    const common::SlotInfo &slot_info) {
+
+  // tmp: no consider obs point
+  if (apa_param.GetParam().force_both_side_occupied ||
+      frame_.ground_line_perception_info_ptr == NULL) {
+    frame_.ground_line_pt_map.clear();
+    return false;
+  }
+  if (frame_.ground_line_perception_info_ptr->ground_lines().empty()) {
+    DEBUG_PRINT("ground line is empty");
+    frame_.ground_line_pt_map.clear();
+    return false;
+  }
+  const auto &ground_lines =
+      frame_.ground_line_perception_info_ptr->ground_lines();
+
+  const size_t selected_id = slot_info.id();
+  frame_.ground_line_pt_map.erase(selected_id);
+
+  double sin_angle = 1.0;
+  if (slot_info.slot_type() ==
+          Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
+      frame_.slot_info_angle.count(slot_info.id()) != 0) {
+    sin_angle = frame_.slot_info_angle[slot_info.id()].second;
+  }
+
+  const Eigen::Vector2d slot_center(slot_info.center().x(),
+                                    slot_info.center().y());
+
+  double filtered_obs_dis = apa_param.GetParam().obs2slot_max_dist;
+  if (slot_info.slot_type() == Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    filtered_obs_dis = apa_param.GetParam().parallel_obs2slot_max_dist;
+  } else if (slot_info.slot_type() == Common::PARKING_SLOT_TYPE_SLANTING &&
+             frame_.slot_info_angle.count(slot_info.id()) != 0) {
+    filtered_obs_dis = apa_param.GetParam().obs2slot_max_dist /
+                       frame_.slot_info_angle[slot_info.id()].second;
+  }
+
+  Eigen::Vector2d obs_pt;
+  std::vector<Eigen::Vector2d> slot_obs_vec;
+  for (const auto &ground_line : ground_lines) {
+    for (const auto &piound_3d : ground_line.points_3d()) {
+      obs_pt << piound_3d.x(), piound_3d.y();
+      const double dist = (slot_center - obs_pt).norm();
+      slot_obs_vec.emplace_back(obs_pt);
+      // todo: consider dist from ego to obs
+      // if (dist < filtered_obs_dis) {
+      //   slot_obs_vec.emplace_back(obs_pt);
+      // }
+    }
+  }
+
+  // for (const auto &obs_pt : slot_obs_vec) {
+  //   std::cout<< "ground line pt: " << obs_pt.transpose() <<std::endl;
+  // }
+
+  if (!slot_obs_vec.empty()) {
+    DEBUG_PRINT("there are obs around slot " << selected_id);
+  } else {
+    DEBUG_PRINT("there are no obs around slot " << selected_id);
+  }
+  frame_.ground_line_pt_map[selected_id] = slot_obs_vec;
+  return true;
+}
+
 bool SlotManagement::UpdateSlotsInSearching() {
   DEBUG_PRINT("apa state is in searching!");
   // Update slots
@@ -858,6 +950,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
       }
 
       AddUssPerceptObstacles(*slot);
+      // AddGroundLineObstacles(*slot);
 
       const double lon_dist = CalLonDistSlot2Car(*slot);
       DEBUG_PRINT("lon_dist = " << lon_dist);
@@ -941,6 +1034,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
                slot->is_release()) {
       // select nearby obs pt from ori USS pt for given slot
       AddUssPerceptObstacles(*slot);
+      // AddGroundLineObstacles(*slot);
       const double lon_dist = CalLonDistSlot2Car(*slot);
       if (lon_dist <
               apa_param.GetParam().min_slot_release_long_dist_slot2mirror &&
@@ -1804,6 +1898,7 @@ bool SlotManagement::UpdateSlotsInParking() {
       select_slot.slot_type() ==
           Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
     AddUssPerceptObstacles(select_slot);
+    // AddGroundLineObstacles(select_slot);
     if (!UpdateEgoSlotInfo(select_slot_id, select_slot, select_fusion_slot)) {
       return false;
     }
@@ -1815,6 +1910,7 @@ bool SlotManagement::UpdateSlotsInParking() {
   else if (select_slot.slot_type() ==
            Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
     AddUssPerceptObstacles(select_slot);
+    // AddGroundLineObstacles(*slot);
     if (!UpdateEgoParallelSlotInfo(select_slot_id, select_slot,
                                    select_fusion_slot)) {
       return false;

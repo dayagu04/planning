@@ -61,8 +61,8 @@ class PlanningAdapter {
   void FeedGroundLinePerception(
       const std::shared_ptr<GroundLinePerception::GroundLinePerceptionInfo>&
           ground_line_perception_msg) {
-    std::cout << "receive ground_line_perception "
-              << ground_line_perception_msg->header().timestamp() << std::endl;
+    // std::cout << "receive ground_line_perception "
+    //           << ground_line_perception_msg->header().timestamp() << std::endl;
     std::lock_guard<std::mutex> lock(msg_mutex_);
     ground_line_perception_msg_.CopyFrom(*ground_line_perception_msg);
     ground_line_perception_msg_recv_time_ = IflyTime::Now_ms();

@@ -185,6 +185,17 @@ void PlanningAdapter::Proc() {
   input_topic_latency->set_fusion_road(
       get_latency(start_time, local_view_ptr_->road_info.header().timestamp()));
 
+  if (is_ground_line_perception_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->ground_line_perception = ground_line_perception_msg_;
+    local_view_ptr_->ground_line_perception_recv_time = ground_line_perception_msg_recv_time_;
+    is_ground_line_perception_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_ground_line(
+      local_view_ptr_->road_info.header().timestamp());
+  input_topic_latency->set_ground_line(
+      get_latency(start_time, local_view_ptr_->ground_line_perception.header().timestamp()));
+
   if (is_localization_estimate_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     local_view_ptr_->localization_estimate = localization_estimate_msg_;

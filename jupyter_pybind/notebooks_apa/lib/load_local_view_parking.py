@@ -31,6 +31,7 @@ plan_debug_ts = []
 plan_debug_timestamps = []
 fusion_object_timestamps = []
 fusion_road_timestamps = []
+ground_line_timestamps = []
 localization_timestamps = []
 prediction_timestamps = []
 vehicle_service_timestamps = []
@@ -76,8 +77,11 @@ class LoadCyberbag:
     # control debug msg
     self.ctrl_debug_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
 
-    # parking fusion msg
+    # fusion parking msg
     self.fus_parking_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
+
+    # fusion ground line msg
+    self.fus_ground_line_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # visual slot msg
     self.vis_parking_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
@@ -333,7 +337,7 @@ class LoadCyberbag:
       self.ctrl_debug_msg['enable'] = False
       print("missing /iflytek/control/debug_info !!!")
 
-    # load parking fusion msg
+    # load fusion parking msg
     try:
       fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
@@ -356,6 +360,33 @@ class LoadCyberbag:
     except:
       self.fus_parking_msg['enable'] = False
       print('missing /iflytek/fusion/parking_slot !!!')
+
+    # load fusion ground line msg
+    try:
+      fusion_ground_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
+        fusion_ground_line_msg_dict[msg.header.timestamp / 1e6] = msg
+
+      fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fusion_ground_line_msg_dict.items():
+        self.fus_ground_line_msg['t'].append(t)
+        self.fus_ground_line_msg['abs_t'].append(t)
+        self.fus_ground_line_msg['data'].append(msg)
+
+      if (abs(self.fus_ground_line_msg['t'][0]) < 0.0001):
+        self.fus_ground_line_msg['t'] = [tmp - self.fus_ground_line_msg['t'][1]  for tmp in self.fus_ground_line_msg['t']]
+      else:
+        self.fus_ground_line_msg['t'] = [tmp - self.fus_ground_line_msg['t'][0]  for tmp in self.fus_ground_line_msg['t']]
+
+      print('fus_ground_line_msg time:',self.fus_ground_line_msg['t'][-1])
+
+      if len(self.fus_ground_line_msg['t']) > 0:
+        self.fus_ground_line_msg['enable'] = True
+      else:
+        self.fus_ground_line_msg['enable'] = False
+    except:
+      self.fus_ground_line_msg['enable'] = False
+      print('missing /iflytek/fusion/ground_line !!!')
 
 
     # load visual parking msg
@@ -579,6 +610,15 @@ class LoadCyberbag:
           fus_parking_msg_idx = fus_parking_msg_idx + 1
     out['fus_parking_msg_idx'] = fus_parking_msg_idx
 
+    fus_ground_line_msg_idx = 0
+    if self.fus_ground_line_msg['enable'] == True:
+      if bag_time - enter_parking_time <= 0.0:
+        fus_ground_line_msg_idx = 1
+      else:
+        while self.fus_ground_line_msg['t'][fus_ground_line_msg_idx] <= bag_time - enter_parking_time and fus_ground_line_msg_idx < (len(self.fus_ground_line_msg['t'])-1):
+          fus_ground_line_msg_idx = fus_ground_line_msg_idx + 1
+    out['fus_ground_line_msg_idx'] = fus_ground_line_msg_idx
+
     vis_parking_msg_idx = 0
     if self.vis_parking_msg['enable'] == True:
       while self.vis_parking_msg['t'][vis_parking_msg_idx] <= bag_time and vis_parking_msg_idx < (len(self.vis_parking_msg['t'])-1):
@@ -667,6 +707,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       while bag_loader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(bag_loader.fus_parking_msg['t'])-1):
         fus_parking_msg_idx = fus_parking_msg_idx + 1
   local_view_data['data_index']['fus_parking_msg_idx'] = fus_parking_msg_idx
+
+  fus_ground_line_msg_idx = 0
+  if bag_loader.fus_ground_line_msg['enable'] == True:
+    if bag_time - enter_parking_time <= 0.0:
+      fus_ground_line_msg_idx = 1
+    else:
+      while bag_loader.fus_ground_line_msg['t'][fus_ground_line_msg_idx] <= bag_time - enter_parking_time and fus_ground_line_msg_idx < (len(bag_loader.fus_ground_line_msg['t'])-1):
+        fus_ground_line_msg_idx = fus_ground_line_msg_idx + 1
+  local_view_data['data_index']['fus_ground_line_msg_idx'] = fus_ground_line_msg_idx
 
   vis_parking_msg_idx = 0
   if bag_loader.vis_parking_msg['enable'] == True:
@@ -1460,6 +1509,23 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
         'end_angle':[],
       })
 
+  if bag_loader.fus_ground_line_msg['enable'] == True:
+    pos_x, pos_y = [], []
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:
+      points_3d = ground_line.points_3d
+      for point_3d in points_3d:
+        # tmp_x, tmp_y = local2global(point_3d.x, point_3d.y, cur_pos_xn, cur_pos_yn, cur_yaw)
+        pos_x.append(point_3d.x - cur_pos_xn0)
+        pos_y.append(point_3d.y - cur_pos_yn0)
+
+    local_view_data['data_ground_line_obj'].data.update({
+      'yn': pos_y,
+      'xn': pos_x,
+    })
+
   return local_view_data
 
 def load_local_view_figure_parking():
@@ -1495,6 +1561,8 @@ def load_local_view_figure_parking():
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
   data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
+
+  data_ground_line_obj = ColumnDataSource(data = {'yn':[], 'xn':[]})
 
   ctrl_debug_data = ColumnDataSource({
     'name':[],
@@ -1559,6 +1627,7 @@ def load_local_view_figure_parking():
                      'data_dluss_model':data_dluss_model,\
                      'data_dluss_post':data_dluss_post,\
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
+                     'data_ground_line_obj' :data_ground_line_obj,\
                      }
   ### figures config
 
@@ -1610,6 +1679,7 @@ def load_local_view_figure_parking():
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
+  fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
 
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
@@ -2066,6 +2136,13 @@ dluss_model_params={
   "visible" : False
 }
 
+ground_line_params={
+  "size" : 3,
+  "color" : 'black',
+  "legend_label" : 'ground line',
+  "visible" : True
+}
+
 def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_type, plot_ctrl_flag=False):
     #define figure
     car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
@@ -2080,6 +2157,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     target_lane_xys = []
     global plan_debug_ts
     global fusion_object_timestamps
+    global ground_line_timestamps
     global fusion_road_timestamps
     global localization_timestamps
     global prediction_timestamps
@@ -2128,6 +2206,13 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           fus_parking_msg_idx = fus_parking_msg_idx + 1
         slot_timestamp = dataLoader.fus_parking_msg['t'][fus_parking_msg_idx]
         fusion_slot_timestamps.append(slot_timestamp)
+
+      fus_ground_line_msg_idx = 0
+      if dataLoader.fus_ground_line_msg['enable'] == True:
+        while dataLoader.fus_ground_line_msg['t'][fus_ground_line_msg_idx] <= bag_time and fus_ground_line_msg_idx < (len(dataLoader.fus_ground_line_msg['t'])-1):
+            fus_ground_line_msg_idx = fus_ground_line_msg_idx + 1
+        ground_line_timestamp = dataLoader.fus_ground_line_msg['t'][fus_ground_line_msg_idx]
+        ground_line_timestamps.append(ground_line_timestamp)
 
       vis_parking_msg_idx = 0
       if dataLoader.vis_parking_msg['enable'] == True:
@@ -2693,6 +2778,23 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     uss_post_generator.ts = np.array(ctrl_debug_ts)
     uss_model_generator.ts = np.array(ctrl_debug_ts)
 
+  # ground line
+    ground_line_generator = CommonGenerator()
+    for gl_i, ground_line_timestamp in enumerate(ground_line_timestamps):
+      flag, fus_ground_line_msg = findrt(dataLoader.fus_ground_line_msg, ground_line_timestamp)
+      pos_x, pos_y = [], []
+      if not flag:
+        print('find ground line error')
+      else:
+        for ground_line in fus_ground_line_msg.ground_lines:
+          points_3d = ground_line.points_3d
+          for point_3d in points_3d:
+            # tmp_x, tmp_y = local2global(point_3d.x, point_3d.y, cur_pos_xn, cur_pos_yn, cur_yaw)
+            pos_x.append(point_3d.x)
+            pos_y.append(point_3d.y)
+      ground_line_generator.xys.append((pos_y, pos_x))
+    ground_line_generator.ts = np.array(ctrl_debug_ts)
+
     # load cur pose and uss wave
     uss_generator = WedgesGenerator()
     uss_text_generator = TextGenerator()
@@ -2893,6 +2995,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(dluss_post_layer, 'dluss_post_layer', uss_post_generator, 'uss_post_generator', 2)
       dluss_model_layer = DotLayer(fig_local_view ,dluss_model_params)
       layer_manager.AddLayer(dluss_model_layer, 'dluss_model_layer', uss_model_generator, 'uss_model_generator', 2)
+
+    # ground line
+    if dataLoader.uss_percept_msg['enable'] == True:
+      ground_line_layer = DotLayer(fig_local_view ,ground_line_params)
+      layer_manager.AddLayer(ground_line_layer, 'ground_line_layer', ground_line_generator, 'ground_line_generator', 2)
 
   # legend
     fig_local_view.legend.click_policy = 'hide'

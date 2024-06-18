@@ -25,7 +25,7 @@ from lib.local_view_lib import *
 from lib.load_local_view_parking import LoadCyberbag
 from lib.load_local_view_parking import apa_draw_local_view, apa_draw_local_view_parking_ctrl
 
-bag_path = '/data_cold/abu_zone/APA/Vertical/planning-5c8b4aed-JAC_S811_slant_test_01/test_1.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/uss_perception-587e80a18-test/test_1.00000'
 html_file = bag_path +".apa.html"
 plot_ctrl_flag = True
 fig1_time_step = 0.1

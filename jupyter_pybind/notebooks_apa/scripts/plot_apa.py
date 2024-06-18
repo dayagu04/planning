@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/control/s14apa/0612/control_f4ddd9d_chery-test/test_3.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/mega_APA_0618_2/test_3.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -105,22 +105,22 @@ def slider_callback(bag_time, vehicle_type):
   if bag_loader.plan_msg['enable'] == True:
     plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
     # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
-    print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
+    # print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
     print("remain_dist = ", planning_json['remain_dist'])
     print("remain_dist_uss =", planning_json['remain_dist_uss'])
-    print("path plan time =", planning_json['path_plan_time_ms'])
+    # print("path plan time =", planning_json['path_plan_time_ms'])
 
   if bag_loader.fus_parking_msg['enable'] == True:
     fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
-    for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
-      slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
-      print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
-            "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
-            "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
-            )
+    # for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
+    #   slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
+    #   print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,
+    #         "slot_allow_parking = ", slot_info.allow_parking, "slot_fusion_source = ", slot_info.fusion_source,
+    #         "slot_slot_side = ", slot_info.slot_side, "slot_uss_id = ", slot_info.uss_id,
+    #         )
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_percept_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
