@@ -219,11 +219,14 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            local_points = left_line.enu_points
-            point_num = left_line.enu_points_size
-            line_x = [local_points[j].x for j in range(point_num)]
-            line_y = [local_points[j].y for j in range(point_num)]
-            line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+              local_points = left_line.enu_points
+              point_num = left_line.enu_points_size
+              line_x = [local_points[j].x for j in range(point_num)]
+              line_y = [local_points[j].y for j in range(point_num)]
+              line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            else:
+              line_x = default_line_x
+              line_y = default_line_y
             #pt_vec = local_points[:point_num]
             #line_x, line_y = coord_tf.global_to_local(pt_vec)
           else:
@@ -267,11 +270,11 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            local_points = right_line.enu_points
-            point_num = right_line.enu_points_size
-            line_x = [local_points[j].x for j in range(point_num)]
-            line_y = [local_points[j].y for j in range(point_num)]
-            line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+              local_points = right_line.enu_points
+              point_num = right_line.enu_points_size
+              line_x = [local_points[j].x for j in range(point_num)]
+              line_y = [local_points[j].y for j in range(point_num)]
+              line_x, line_y = coord_tf.global_to_local(line_x, line_y)
             #pt_vec = local_points[:point_num]
             #line_x, line_y = coord_tf.global_to_local(pt_vec)
           else:
@@ -487,8 +490,11 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
         coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-      obstacles_x_rel, obstacles_y_rel = coord_tf.global_to_local(obs_x, obs_y)
-      pos_x_rel, pos_y_rel = coord_tf.global_to_local([long_pos], [lat_pos])
+        obstacles_x_rel, obstacles_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([long_pos], [lat_pos])
+      else:
+        obstacles_x_rel, obstacles_y_rel = obs_x_rel, obs_y_rel
+        pos_x_rel, pos_y_rel = long_pos_rel, lat_pos_rel
       obs_info_all[source]['obstacles_x_rel'].append(obstacles_x_rel)
       obs_info_all[source]['obstacles_y_rel'].append(obstacles_y_rel)
       obs_info_all[source]['pos_x_rel'].append(pos_x_rel)

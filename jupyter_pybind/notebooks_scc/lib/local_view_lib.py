@@ -755,6 +755,7 @@ def draw_local_view(dataLoader, layer_manager):
       plan_debug_ts.append(t)
       plan_debug_timestamps.append(dataLoader.plan_debug_msg["timestamp"][i])
       input_topic_timestamp = plan_debug.input_topic_timestamp
+      #print(input_topic_timestamp)
       fusion_object_timestamp = input_topic_timestamp.fusion_object
       fusion_road_timestamp = input_topic_timestamp.fusion_road
       if is_new_loc:
@@ -774,6 +775,7 @@ def draw_local_view(dataLoader, layer_manager):
       fusion_object_timestamps.append(fusion_object_timestamp)
       fusion_road_timestamps.append(fusion_road_timestamp)
       localization_timestamps.append(localization_timestamp)
+      #print("len of loc is " + str(len(localization_timestamps)))
       prediction_timestamps.append(prediction_timestamp)
       vehicle_service_timestamps.append(vehicle_service_timestamp)
       control_output_timestamps.append(control_output_timestamp)
@@ -894,7 +896,7 @@ def draw_local_view(dataLoader, layer_manager):
       for localization_timestamp in localization_timestamps:
         loc_msg = find(dataLoader.loc_msg, localization_timestamp)
         if loc_msg == None:
-          print('find loc_msg error')
+          print('find loc_msg error' + '@@' + str(localization_timestamp))
           location_generator.xys.append(default_loc)
           cur_location_point_generator.xys.append(default_cur_loc)
           continue
@@ -944,7 +946,7 @@ def draw_local_view(dataLoader, layer_manager):
               lane_generator_dict[lane_generator_key] = LineGenerator('line')
 
           if fusion_road_msg == None:
-            lane_generator_dict[lane_generator_key].xys.append(([] , [] ,[], [idx]))
+            lane_generator_dict[lane_generator_key].xys.append(([] , [] ,['dashed'], [idx]))
             continue
           line_info = line_info_list[idx]
           #line_info['fig_index'] = [idx]
