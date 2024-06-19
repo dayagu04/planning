@@ -55,6 +55,7 @@ class PlanningPlayer {
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
                   bool is_close_loop);
   void StoreRosBag(const std::string &bag_path);
+  void GenMileage(const std::string &mileage_path);
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();

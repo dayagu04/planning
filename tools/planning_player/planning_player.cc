@@ -11,6 +11,7 @@
 
 #include "geometry_math.h"
 #include "math_lib.h"
+#include "nlohmann_json.hpp"
 #include "proto_convert.h"
 #include "spline.h"
 #include "transform_lib.h"
@@ -570,7 +571,8 @@ void PlanningPlayer::PlayOneFrame(
   //         TOPIC_GROUND_LINE, input_time_list.ground_line());
   // if (ground_line_ros_msg) {
   //   iflyauto::GroundLinePerceptionInfo ground_line_msg{};
-  //   convert(ground_line_msg, *ground_line_ros_msg, ConvertTypeInfo::TO_STRUCT);
+  //   convert(ground_line_msg, *ground_line_ros_msg,
+  //   ConvertTypeInfo::TO_STRUCT);
   //   planning_adapter_->FeedGroundLinePerception(ground_line_msg);
   // } else {
   //   // std::cerr << "frame_num " << frame_num_
@@ -1124,6 +1126,35 @@ void PlanningPlayer::UpdateVehicleService(
   auto compensation_factor = curvature > 0 ? 1.5 : 1;
   vehi_svc_msg->steering_wheel_angle =
       curvature * 3.33 * 15.7 * compensation_factor;
+}
+
+void PlanningPlayer::GenMileage(const std::string& mileage_path) {
+  if (mileage_path != "") {
+    double pathLength = 0.0;
+    if (scene_type_ == "scc") {
+      auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+      for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1;
+           ++i) {
+        auto loc_msg_i =
+            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(
+                it_loc_esti_msg->second);
+        auto x1 = loc_msg_i->pose.local_position.x;
+        auto y1 = loc_msg_i->pose.local_position.y;
+        it_loc_esti_msg++;
+        auto loc_msg_i_next =
+            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(
+                it_loc_esti_msg->second);
+        auto x2 = loc_msg_i_next->pose.local_position.x;
+        auto y2 = loc_msg_i_next->pose.local_position.y;
+        pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+      }
+    }
+    nlohmann::json j;
+    j["pathLength"] = pathLength;
+    std::ofstream outfile(mileage_path);
+    outfile << std::setw(4) << j << std::endl;
+    outfile.close();
+  }
 }
 
 }  // namespace planning_player
