@@ -19,7 +19,7 @@ def dump_trajectory_points(bag_path, bag_trajectory_points, input_frame_num):
     try:
         bag = rosbag.Bag(bag_path)
     except Exception:
-        print('Cannot open record file %s' % bag_path)
+        print('Cannot open bag file %s' % bag_path)
     else:
         index_map = {}
         first_flag = True

@@ -1,14 +1,13 @@
 #pragma once
 
 #include <google/protobuf/message.h>
-#include <memory>
-
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
 #include <boost/any.hpp>
 #include <cstdint>
+#include <memory>
 
 #include "planning_adapter.h"
 #include "struct.h"
@@ -22,6 +21,9 @@ using TopicHeaderTimeCache =
     std::map<std::string, std::map<uint64_t, boost::any>>;
 using PlanningMsgCache =
     std::map<std::string, std::map<ros::Time, struct_msgs::PlanningOutput>>;
+using PlanningHmiMsgCache =
+    std::map<std::string,
+             std::map<ros::Time, struct_msgs::PlanningHMIOutputInfoStr>>;
 
 class PlanningPlayer {
  public:
@@ -50,22 +52,26 @@ class PlanningPlayer {
   void Init(bool is_close_loop, double auto_time_sec,
             const std::string &scene_type);
   void Clear();
-  bool LoadRosBag(const std::string &bag_path);
+  bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
+                  bool is_close_loop);
   void StoreRosBag(const std::string &bag_path);
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
 
   void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
-  void PerfectControlHPP(const struct_msgs::PlanningOutput &plan_msg,
-                         uint64_t delta_t,
+  void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
+  void PerfectControlHPP(uint64_t delta_t,
                          struct_msgs::IFLYLocalization::Ptr loc_msg);
-  void PerfectControlSCC(const struct_msgs::PlanningOutput &plan_msg,
-                         uint64_t delta_t,
+  void PerfectControlSCC(uint64_t delta_t,
                          struct_msgs::LocalizationEstimate::Ptr loc_msg);
   void PerfectControlAPA(const struct_msgs::PlanningOutput &plan_msg,
                          uint64_t delta_t,
                          struct_msgs::LocalizationEstimate::Ptr loc_msg);
+  void UpdateVehicleService(
+      uint64_t delta_t,
+      struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
+  void UpdateVehicleServiceData();
 
  private:
   DynamicState state_;
@@ -74,10 +80,14 @@ class PlanningPlayer {
   TopicMsgTimeCache msg_cache_{};        // msg cache indexed by msg time(ns)
   PlanningMsgCache
       output_planning_msg_cache_{};  // output cache indexed by msg time(ns)
+  PlanningHmiMsgCache
+      output_planning_hmi_msg_cache_{};  // output cache indexed by msg time(ns)
   std::map<uint64_t, boost::any> msg_cache_ordered_by_time_;
   std::map<std::string, std::string> proto_desc_map_{};
   ros::Time planning_msg_time_s_;
   uint64_t planning_header_time_us_ = 0;
+  ros::Time planning_hmi_msg_time_ns_;
+  uint64_t planning_hmi_header_time_us_ = 0;
   int frame_num_ = 0;
   ros::Time planning_dubug_info_msg_time_s_;
   uint64_t planning_dubug_info_header_time_us_ = 0;
@@ -88,15 +98,31 @@ class PlanningPlayer {
   uint64_t loc_header_time_us_ = 0;
   uint64_t next_loc_esti_header_time_us_ = 0;
   uint64_t loc_esti_header_time_us_ = 0;
+  uint64_t next_vehi_svc_header_time_us_ = 0;
+  uint64_t vehi_svc_header_time_us_ = 0;
   uint64_t planning_dubug_info_frame_num_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
+  iflyauto::FunctionalState last_functional_state =
+      iflyauto::FunctionalState_INIT;
+  pnc::mathlib::spline x_t_spline_;
+  pnc::mathlib::spline y_t_spline_;
+  pnc::mathlib::spline theta_t_spline_;
+  pnc::mathlib::spline v_t_spline_;
+  pnc::mathlib::spline a_t_spline_;
+  pnc::mathlib::spline yaw_rate_t_spline_;
+  pnc::mathlib::spline curvature_t_spline_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);
 
   template <class T>
   void cache_with_ros_msg_and_header_time(const rosbag::MessageInstance &msg);
+
+  template <class T>
+  void cache_with_ros_msg_and_header_time_local(
+      const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+      bool is_close_loop);
 
   template <class T>
   void write_ros_msg(const std::map<ros::Time, boost::any> &write_msg,
@@ -159,6 +185,27 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
     msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
     header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
         obj_msg;  // us
+  }
+}
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
+    const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+    bool is_close_loop) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    std::cout << "msg instantiate error, msg name: " << msg.getTopic()
+              << std::endl;
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
+        obj_msg;  // us
+    if (is_close_loop) {
+      auto origin_topic = msg.getTopic() + "_origin";
+      new_bag.write(origin_topic, msg.getTime(), obj_msg);
+    }
   }
 }
 

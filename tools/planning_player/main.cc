@@ -11,7 +11,7 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         const std::string &scene_type) {
   planning::planning_player::PlanningPlayer player;
 
-  if (!player.LoadRosBag(bag_path)) {
+  if (!player.LoadRosBag(bag_path, out_bag, is_close_loop)) {
     return -1;
   }
   player.Init(is_close_loop, auto_time_sec, scene_type);
@@ -87,7 +87,11 @@ int main(int argc, char **argv) {
                 .time_since_epoch()
                 .count();
   if (out_bag.empty()) {
-    out_bag = bag_path + "." + std::to_string(tp) + ".plan";
+    if (is_close_loop) {
+      out_bag = bag_path + "." + std::to_string(tp) + ".close-loop.plan";
+    } else {
+      out_bag = bag_path + "." + std::to_string(tp) + ".open-loop.plan";
+    }
   }
 
   return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
