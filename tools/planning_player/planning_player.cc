@@ -1123,7 +1123,10 @@ void PlanningPlayer::UpdateVehicleService(
   vehi_svc_msg->yaw_rate = yaw_rate;
 
   // steering_angle = 1/R * L * steering_ratio * 补偿系数
+  // for S811
   auto compensation_factor = curvature > 0 ? 1.5 : 1;
+  // hack: for E0Y   后续根据配置文件选择
+  compensation_factor = 1;
   vehi_svc_msg->steering_wheel_angle =
       curvature * 3.33 * 15.7 * compensation_factor;
 }
