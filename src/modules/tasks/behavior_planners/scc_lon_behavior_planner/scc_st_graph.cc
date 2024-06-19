@@ -574,6 +574,9 @@ void StGraphGenerator::UpdateSTGraphs(
   const double soft_bound_corridor_t = config_.soft_bound_corridor_t;
   // local variables
   double sample_time = 0;
+  double t = config_.delta_time;
+  double t_square = config_.delta_time * config_.delta_time;
+  double t_cube = config_.delta_time * config_.delta_time * config_.delta_time;
   LonBound soft_bound;
   LonBound hard_bound;
   double s_ref;
@@ -608,12 +611,28 @@ void StGraphGenerator::UpdateSTGraphs(
       default:
         st_boundary.boundary_type = scc::BoundaryType::UNKNOWN;
     }
+    
+    double s_step = 0.0;
+    double st_obs_v = st.v_lead();
+    double st_obs_a = st.a_lead();
+    double st_obs_j = 3.0;//_J_MAX
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
-      sample_time = i * config_.delta_time;
+      sample_time = i * t;
+      //考虑前车减速的情况
+      if (st.a_lead() < 0) {
+        //s_step += CalcDeceleratedObstacleST();
+        s_step += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square + 1.0 / 6 * st_obs_j * t_cube, 0.0);
+        st_obs_v = std::max(st_obs_v + st_obs_a * t + 0.5 * st_obs_j * t_square, 0.0);
+        st_obs_a = std::min(st_obs_a + st_obs_j * t, 0.0);
+        if (st_obs_a == 0.0) {
+          st_obs_j = 0.0;
+        }
+      } else {
+        s_step += st.v_lead() * t;
+      }
       // 只更新关注的t区间内
       if (sample_time >= st.start_time() && sample_time <= st.end_time()) {
-        double s_step = st.v_lead() * sample_time;
         // 考虑decision type是overtake的情况
         if (st.decision() == common::RealTimeLonObstacleSTInfo::YIELD) {
           // 没必要区分
@@ -2004,7 +2023,7 @@ void StGraphGenerator::CalculateSrefsByVref(const double v_ego,
     double one_j = _J_MAX;
     for (int i = 1; i <= config_.lon_num_step; i++) {
       one_s +=
-          std::max(one_v * t + 0.5 * one_a * t_square + 1.0 / 6 * t_cube, 0.0);
+          std::max(one_v * t + 0.5 * one_a * t_square + 1.0 / 6 * one_j * t_cube, 0.0);
       one_v = std::max(
           std::min(one_v + one_a * t + 0.5 * one_j * t_square, v_refs[i]), 0.0);
       if (one_v == v_ref) {
