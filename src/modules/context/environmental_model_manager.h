@@ -55,6 +55,9 @@ class EnvironmentalModelManager {
   bool transform_fusion_to_prediction(
       const iflyauto::FusionObject &fusion_object, double timestamp,
       std::vector<PredictionObject> &objects_infos);
+  bool transform_fusion_to_prediction_longtime(
+      const iflyauto::FusionObject &fusion_object, double timestamp,
+      std::vector<PredictionObject> &objects_infos);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);
   bool ground_line_obstacles_update(const LocalView &local_view);

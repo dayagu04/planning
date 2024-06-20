@@ -361,11 +361,11 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
       if (prediction_obj_id_set.find(obj.additional_info.track_id) ==
           prediction_obj_id_set.end()) {
-        transform_fusion_to_prediction(
+        transform_fusion_to_prediction_longtime(
             obj, (double)local_view.fusion_objects_info.header.timestamp,
             prediction_info);
       }
-      transform_fusion_to_prediction(
+      transform_fusion_to_prediction_longtime(
           obj, (double)local_view.fusion_objects_info.header.timestamp,
           fusion_objs_info);
     }
@@ -903,6 +903,145 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
         relative_v_y, relative_v_x + ego_state_manager_ptr_->ego_v());
   }
 
+  if ((int)prediction_object.relative_theta == 255) {
+    prediction_object.relative_theta = 0;
+  }
+
+  PredictionTrajectoryPoint trajectory_point;
+  trajectory_point.relative_time = 0;
+  trajectory_point.x = prediction_object.position_x;
+  trajectory_point.y = prediction_object.position_y;
+  trajectory_point.yaw = prediction_object.yaw;
+  trajectory_point.speed = prediction_object.speed;
+
+  trajectory_point.theta = prediction_object.theta;
+  trajectory_point.prob = 1;
+  trajectory_point.relative_ego_x = prediction_object.relative_position_x;
+  trajectory_point.relative_ego_y = prediction_object.relative_position_y;
+  trajectory_point.relative_ego_yaw = prediction_object.relative_theta;
+  trajectory_point.relative_ego_speed = std::hypot(
+      prediction_object.relative_speed_x, prediction_object.relative_speed_y);
+  PredictionTrajectory tra;
+  tra.trajectory.emplace_back(std::move(trajectory_point));
+  prediction_object.trajectory_array.emplace_back(std::move(tra));
+  objects_infos.emplace_back(std::move(prediction_object));
+  return true;
+}
+
+static inline float32 x_turn(float32 inputx, float32 inputy, float32 theta) {
+  return inputx * cos(theta) - inputy * sin(theta);
+}
+
+static inline float32 y_turn(float32 inputx, float32 inputy, float32 theta) {
+  return inputx * sin(theta) + inputy * cos(theta);
+}
+
+bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
+    const iflyauto::FusionObject &fusion_object, double timestamp,
+    std::vector<PredictionObject> &objects_infos) {
+  assert(session_ != nullptr);
+  if (session_ == nullptr) {
+    return false;
+  }
+  bool object_is_slow = false;
+  auto &ego_state = session_->environmental_model().get_ego_state_manager();
+
+  PredictionObject prediction_object;
+  prediction_object.id = fusion_object.additional_info.track_id;
+  prediction_object.type = fusion_object.common_info.type;
+  prediction_object.fusion_source = fusion_object.additional_info.fusion_source;
+  prediction_object.timestamp_us = timestamp;
+
+  prediction_object.delay_time = 0.0;
+  prediction_object.cutin_score = 0;
+  prediction_object.position_x = fusion_object.common_info.center_position.x;
+  prediction_object.position_y = fusion_object.common_info.center_position.y;
+  prediction_object.length = fusion_object.common_info.shape.length;
+  prediction_object.width = fusion_object.common_info.shape.width;
+  prediction_object.speed = std::hypot(fusion_object.common_info.velocity.x,
+                                       fusion_object.common_info.velocity.y);
+
+  prediction_object.yaw = fusion_object.common_info.heading_angle;
+  if ((int)prediction_object.yaw == 255) {
+    prediction_object.yaw = ego_state->heading_angle();
+  } else {
+    prediction_object.yaw = fusion_object.common_info.heading_angle;
+  }
+  prediction_object.acc = std::hypot(fusion_object.common_info.acceleration.x,
+                                     fusion_object.common_info.acceleration.y);
+  // judge direction of obj acc
+  auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
+                                     fusion_object.common_info.acceleration.x);
+  Eigen::Vector2f obj_acc_heading_vec(cos(obj_acc_heading_angle),
+                                      sin(obj_acc_heading_angle));
+  Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
+                                  sin(prediction_object.yaw));
+  if (obj_acc_heading_vec.dot(obj_heading_vec) < 0.0) {
+    prediction_object.acc *= -1.0;
+  }
+  // add relative info for highway
+  prediction_object.relative_position_x = x_turn(
+      prediction_object.position_x - ego_state->ego_pose().x,
+      prediction_object.position_y - ego_state->ego_pose().y,
+      -1 * ego_state->heading_angle());
+  prediction_object.relative_position_y = y_turn(
+      prediction_object.position_x - ego_state->ego_pose().x,
+      prediction_object.position_y - ego_state->ego_pose().y,
+      -1 * ego_state->heading_angle());
+
+  auto relative_velocity_world_x =
+      fusion_object.common_info.velocity.x -
+      ego_state->ego_v() *
+          cos(ego_state->heading_angle());
+  auto relative_velocity_world_y =
+      fusion_object.common_info.velocity.y -
+      ego_state->ego_v() *
+          sin(ego_state->heading_angle());
+  prediction_object.relative_speed_x =
+      x_turn(relative_velocity_world_x, relative_velocity_world_y,
+             -1 * ego_state->heading_angle());
+  prediction_object.relative_speed_y =
+      y_turn(relative_velocity_world_x, relative_velocity_world_y,
+             -1 * ego_state->heading_angle());
+
+  auto relative_acceleration_world_x =
+      fusion_object.common_info.acceleration.x -
+      ego_state->ego_acc() *
+          cos(ego_state->heading_angle());
+  auto relative_acceleration_world_y =
+      fusion_object.common_info.acceleration.y -
+      ego_state->ego_acc() *
+          sin(ego_state->heading_angle());
+  prediction_object.relative_acceleration_x =
+      x_turn(relative_acceleration_world_x, relative_acceleration_world_y,
+             -1 * ego_state->heading_angle());
+  prediction_object.relative_acceleration_y =
+      y_turn(relative_acceleration_world_x, relative_acceleration_world_y,
+             -1 * ego_state->heading_angle());
+
+  prediction_object.acceleration_relative_to_ground_x =
+      fusion_object.common_info.acceleration.x;
+  prediction_object.acceleration_relative_to_ground_y =
+      fusion_object.common_info.acceleration.y;
+
+  // The agent is slow when it's speed < 10km/h (person's speed)
+  object_is_slow = prediction_object.speed < 2.78 ? true : false;
+  // For no prediction schemes, use heading angle when obstacles are slow
+  if (object_is_slow) {
+    prediction_object.relative_theta = fusion_object.common_info.heading_angle -
+                                       ego_state->heading_angle();
+    prediction_object.theta = fusion_object.common_info.heading_angle;
+  } else {
+    prediction_object.theta = std::atan2(fusion_object.common_info.velocity.y,
+                                         fusion_object.common_info.velocity.x);
+    prediction_object.relative_theta =
+        prediction_object.theta - ego_state->heading_angle();
+  }
+  prediction_object.relative_theta = std::fmod(prediction_object.relative_theta, 2 * M_PI);
+  if (prediction_object.relative_theta > M_PI) {
+      prediction_object.relative_theta -= 2 * M_PI;
+  }
+  
   if ((int)prediction_object.relative_theta == 255) {
     prediction_object.relative_theta = 0;
   }
