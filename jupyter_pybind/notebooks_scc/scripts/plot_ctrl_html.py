@@ -16,7 +16,6 @@ sys.path.append('..')
 sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
-from lib.load_bag import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
