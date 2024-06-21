@@ -205,7 +205,7 @@ struct ApaParameters {
   double radius_eps = 0.01;
   double min_line_length = 0.3;
   double min_path_length = 0.35;
-  double max_line_length_for_third_prepare = 1.2;
+  double insert_line_after_arc = 1.2;
   double min_one_step_path_length = 0.6;
   double min_one_step_path_length_in_slot = 1.2;
   double static_pos_eps = 0.01;

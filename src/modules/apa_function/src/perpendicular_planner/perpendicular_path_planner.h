@@ -221,6 +221,10 @@ class PerpendicularPathPlanner {
       DebugInfo &debuginfo) const;
 
   // for simulation
+  const bool UpdatePb(
+      const Input &input,
+      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
+
   const bool PreparePlanPb();
 
   const bool PreparePlanSecondPb();

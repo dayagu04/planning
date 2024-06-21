@@ -17,7 +17,7 @@ from jupyter_pybind import slant_planning_py
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-car_xb, car_yb = load_car_params_patch_parking()
+car_xb, car_yb = load_car_params_patch_parking(JAC_S811)
 coord_tf = coord_transformer()
 
 data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -38,29 +38,27 @@ data_pt_inside_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_obs_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 
-
-
 data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[],
                                               'plan_path_heading':[],})
 
 fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
-fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
-fig1.patch('car_xn', 'car_yn', source = data_car_target_pos, fill_color = "blue", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target_pos')
-fig1.patch('car_xn', 'car_yn', source = data_car_safe_pos, fill_color = "orange", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_safe_pos')
-fig1.line('x', 'y', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target_line')
-fig1.line('x', 'y', source = data_car_safe_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_safe_line')
+fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car_start_pos')
+fig1.patch('car_xn', 'car_yn', source = data_car_target_pos, fill_color = "blue", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_end_pos')
+fig1.patch('car_xn', 'car_yn', source = data_car_safe_pos, fill_color = "orange", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_safe_pos', visible = False)
+fig1.line('x', 'y', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_end_pos')
+fig1.line('x', 'y', source = data_car_safe_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_safe_pos', visible = False)
 fig1.patches('x_vec', 'y_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
 
-fig1.circle('x','y', source = data_pt_inside_pos, size=8, color='green', legend_label = 'pt_inside_pos')
+fig1.circle('x','y', source = data_pt_inside_pos, size=8, color='green', legend_label = 'pt_inside_pos', visible = False)
 
 fig1.circle('x','y', source = data_obs_pos, size=8, color='green', legend_label = 'obs_pos')
 
 
 fig1.circle('x','y', source = data_car_start_pos, size=8, color='red', legend_label = 'car_start_pos')
 fig1.circle('x','y', source = data_car_end_pos, size=8, color='blue', legend_label = 'car_end_pos')
-fig1.circle('x','y', source = data_safe_circle_tang_pos, size=8, color='black', legend_label = 'safe_circle_tang_pos')
-fig1.multi_line('x_vec', 'y_vec',source = data_safe_circle_tang_line, line_width = 3, line_color = 'black', line_dash = 'solid',legend_label = 'safe_circle_tang_line')
+fig1.circle('x','y', source = data_safe_circle_tang_pos, size=8, color='black', legend_label = 'car_safe_pos', visible = False)
+fig1.multi_line('x_vec', 'y_vec',source = data_safe_circle_tang_line, line_width = 3, line_color = 'black', line_dash = 'solid',legend_label = 'safe_circle_tang_line', visible = False)
 fig1.multi_line('x_vec', 'y_vec',source = data_slot, line_width = 1.5, line_color = 'black', line_dash = 'solid',legend_label = 'slot')
 fig1.multi_line('x_vec', 'y_vec',source = data_rectangle_slot, line_width = 1.5, line_color = 'blue', line_dash = 'solid',legend_label = 'rectangle slot')
 
@@ -135,17 +133,21 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=-1.2, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=-0.6, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value=0.0, step=0.2)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=0.2)
 
-    self.is_left = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
+    self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete",min=0, max=1, value=1, step=1)
+
+    self.is_astar_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_astar",min=0, max=1, value=1, step=1)
+
+    self.is_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
     self.slot_inside_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs",min=0.66, max=9.9, value=8.8, step=0.25)
 
-    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.2, step=0.05)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.8, step=0.05)
     self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
-    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.2, step=0.5)
+    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.8, step=0.5)
     self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
-    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=4.6, step=0.1)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=6.6, step=0.1)
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
     self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
@@ -157,7 +159,9 @@ class LocalViewSlider:
     ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
-                                         is_left = self.is_left,
+                                         is_complete = self.is_complete_slider,
+                                         is_astar = self.is_astar_slider,
+                                         is_left = self.is_left_slider,
                                          slot_phi = self.slot_phi_slider,
                                          slot_inside_obs = self.slot_inside_obs_slider,
                                          right_obj_dx = self.right_obj_dx_slider,
@@ -175,7 +179,7 @@ class LocalViewSlider:
                                        )
 
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, is_left, slot_phi, slot_inside_obs, right_obj_dx,
+def slider_callback(ego_x, ego_y, ego_heading, is_left, is_astar, is_complete, slot_phi, slot_inside_obs, right_obj_dx,
                     right_obj_dy, left_obj_dx, left_obj_dy, channel_width,  slot_pt0_x, slot_pt0_y, slot_width, slot_length, inside_dx, ):
   kwargs = locals()
 
@@ -275,7 +279,7 @@ def slider_callback(ego_x, ego_y, ego_heading, is_left, slot_phi, slot_inside_ob
 
   obs_params = [right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width, slot_inside_obs]
 
-  current_path_point_global_vec_ = slant_planning_py.Update(ego_pose, slot_pt, 0.2, True, inside_dx, obs_params)
+  current_path_point_global_vec_ = slant_planning_py.Update(ego_pose, slot_pt, 0.2, is_complete, is_astar, inside_dx, obs_params)
 
   rectangle_solt_pos_vec_ = slant_planning_py.GetRectangleSoltPos()
 

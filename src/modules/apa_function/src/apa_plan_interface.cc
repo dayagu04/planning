@@ -572,8 +572,8 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().min_path_length, double,
                   "min_path_length");
 
-  JSON_READ_VALUE(apa_param.SetPram().max_line_length_for_third_prepare, double,
-                  "max_line_length_for_third_prepare");
+  JSON_READ_VALUE(apa_param.SetPram().insert_line_after_arc, double,
+                  "insert_line_after_arc");
 
   JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length, double,
                   "min_one_step_path_length");
