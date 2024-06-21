@@ -116,7 +116,7 @@
 
   "comment_11": "construce obstacles params",
   "channel_width": 6.68,
-  "min_channel_width": 5.2,
+  "min_channel_width": 4.8,
   "channel_length": 21.68,
   "max_obs2car_dist_in_slot": 0.0886,
   "max_obs2car_dist_out_slot": 0.1868,
@@ -174,7 +174,7 @@
   "radius_eps": 0.01,
   "min_line_length": 0.3,
   "min_path_length": 0.35,
-  "max_line_length_for_third_prepare": 0.668,
+  "insert_line_after_arc": 0.2268,
   "min_one_step_path_length": 0.6,
   "min_one_step_path_length_in_slot": 1.2,
   "prepare_line_min_x_offset_slot": 2.0,

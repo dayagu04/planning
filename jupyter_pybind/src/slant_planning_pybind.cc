@@ -59,7 +59,7 @@ std::vector<Eigen::Vector2d> obs_pts_;
 std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     std::vector<Eigen::Vector2d> raw_pt,
                                     double ds, bool is_complete_path,
-                                    double inside_dx,
+                                    bool is_astar, double inside_dx,
                                     std::vector<double> obs_params) {
   obs_pts_.clear();
   planning::apa_planner::ApaPlannerBase::Frame frame;
@@ -427,64 +427,9 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane.pt_inside);
 
-  pBase->SetInput(input);
-
-  pBase->SetColPtr(collision_detector_ptr);
-
-  pBase->Preprocess();
+  bool success = pBase->UpdatePb(input, collision_detector_ptr);
 
   current_path_point_global_vec_.clear();
-  bool success = false;
-
-  while (true) {
-    if (pBase->CheckReachTargetPosePb()) {
-      success = true;
-      break;
-    }
-
-    if (pBase->PreparePlanPb()) {
-      std::cout << "prepare plan success\n";
-      // success = true;
-      // break;
-    } else {
-      std::cout << "prepare is complete fail\n\n";
-      success = false;
-      break;
-    }
-
-    if (pBase->CheckReachTargetPosePb()) {
-      success = true;
-      break;
-    }
-
-    if (pBase->PreparePlanSecondPb()) {
-      std::cout << "prepare second plan success\n";
-    } else {
-      std::cout << "prepare second fail\n";
-    }
-
-    if (pBase->CheckReachTargetPosePb()) {
-      success = true;
-      break;
-    }
-    if (pBase->MultiPlanPb()) {
-      std::cout << "multi plan success\n";
-    }
-
-    if (pBase->CheckReachTargetPosePb()) {
-      success = true;
-      break;
-    }
-    if (pBase->AdjustPlanPb()) {
-      std::cout << "adjust plan success\n";
-    }
-    if (pBase->CheckReachTargetPosePb()) {
-      success = true;
-      break;
-    }
-    success = false;
-    break;
-  }
 
   pt_inside_pose_.setZero();
   const Eigen::Vector2d pt_inside_local = pBase->GetCalcParams().pt_inside;
