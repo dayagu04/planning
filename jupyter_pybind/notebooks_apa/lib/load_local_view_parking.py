@@ -2202,14 +2202,14 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
       fus_parking_msg_idx = 0
       if dataLoader.fus_parking_msg['enable'] == True:
-        while dataLoader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time and fus_parking_msg_idx < (len(dataLoader.fus_parking_msg['t'])-1):
+        while dataLoader.fus_parking_msg['t'][fus_parking_msg_idx] <= bag_time - enter_parking_time and fus_parking_msg_idx < (len(dataLoader.fus_parking_msg['t'])-1):
           fus_parking_msg_idx = fus_parking_msg_idx + 1
         slot_timestamp = dataLoader.fus_parking_msg['t'][fus_parking_msg_idx]
         fusion_slot_timestamps.append(slot_timestamp)
 
       fus_ground_line_msg_idx = 0
       if dataLoader.fus_ground_line_msg['enable'] == True:
-        while dataLoader.fus_ground_line_msg['t'][fus_ground_line_msg_idx] <= bag_time and fus_ground_line_msg_idx < (len(dataLoader.fus_ground_line_msg['t'])-1):
+        while dataLoader.fus_ground_line_msg['t'][fus_ground_line_msg_idx] <= bag_time - enter_parking_time and fus_ground_line_msg_idx < (len(dataLoader.fus_ground_line_msg['t'])-1):
             fus_ground_line_msg_idx = fus_ground_line_msg_idx + 1
         ground_line_timestamp = dataLoader.fus_ground_line_msg['t'][fus_ground_line_msg_idx]
         ground_line_timestamps.append(ground_line_timestamp)
@@ -2997,7 +2997,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(dluss_model_layer, 'dluss_model_layer', uss_model_generator, 'uss_model_generator', 2)
 
     # ground line
-    if dataLoader.uss_percept_msg['enable'] == True:
+    if dataLoader.fus_ground_line_msg['enable'] == True:
       ground_line_layer = DotLayer(fig_local_view ,ground_line_params)
       layer_manager.AddLayer(ground_line_layer, 'ground_line_layer', ground_line_generator, 'ground_line_generator', 2)
 
