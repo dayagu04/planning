@@ -45,7 +45,7 @@ void PerpendicularPathPlanner::Preprocess() {
   calc_params_.stuck_by_inside = false;
   calc_params_.multi_plan = false;
   calc_params_.directly_use_ego_pose = false;
-  calc_params_.turn_radius = 1.0268 * apa_param.GetParam().min_turn_radius;
+  calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
 
   // calc slot side by Tlane
   if (input_.tlane.pt_inside.y() > input_.tlane.pt_outside.y()) {
@@ -364,8 +364,10 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       path_seg_vec.emplace_back(path_seg);
     }
     // set virtual arc DE that make sure multi plan success
+    bool use_virtual_arc = false;
     if (dubins_planner_.GetOutput().current_gear_cmd ==
         pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      use_virtual_arc = true;
       pnc::geometry_lib::Arc arc_DE;
       arc_DE.pA = target_pose.pos;
       arc_DE.headingA = target_pose.heading;
@@ -379,7 +381,7 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       if (line_normal_vec.x() > 0.0) {
         line_normal_vec = -1.0 * line_normal_vec;
       }
-      arc_DE.circle_info.radius = calc_params_.turn_radius - 0.1868;
+      arc_DE.circle_info.radius = calc_params_.turn_radius;
       arc_DE.circle_info.center =
           arc_DE.pA + arc_DE.circle_info.radius * line_normal_vec;
       arc_DE.is_anti_clockwise = calc_params_.is_left_side ? false : true;
@@ -388,6 +390,11 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
       path_seg.arc_seg = arc_DE;
       path_seg_vec.emplace_back(path_seg);
+    }
+    if (use_virtual_arc) {
+      CollisionDetector::Paramters param;
+      param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
+      collision_detector_ptr_->SetParam(param);
     }
     for (pnc::geometry_lib::PathSegment& path_seg : path_seg_vec) {
       CollisionDetector::CollisionResult col_res;
@@ -407,6 +414,10 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
         prepare_success = false;
         break;
       }
+    }
+    if (use_virtual_arc) {
+      CollisionDetector::Paramters param;
+      collision_detector_ptr_->SetParam(param);
     }
   }
   return prepare_success;
@@ -2095,7 +2106,8 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
         path_seg_vec.emplace_back(tmp_path_seg);
       } else {
         if (tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN &&
-            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+            input_.slot_occupied_ratio > 0.168) {
           DEBUG_PRINT("s turn col, lose all s turn path.");
           if (tmp_path_seg_vec[j - 1].plan_type ==
               pnc::geometry_lib::PLAN_TYPE_S_TURN) {
@@ -2965,6 +2977,7 @@ const bool PerpendicularPathPlanner::UpdatePb(
 
   if (AdjustPlan()) {
     DEBUG_PRINT("adjust plan success");
+    return true;
   }
   if (CheckReachTargetPose()) {
     DEBUG_PRINT("adjust plan to target pose");

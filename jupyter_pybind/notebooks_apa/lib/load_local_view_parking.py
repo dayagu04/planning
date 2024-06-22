@@ -51,6 +51,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
+load_uss_wave_from_uss_percept_msg = False
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
@@ -1438,7 +1439,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'corner_point_x': [parking_slot_x],
       'corner_point_y': [parking_slot_y],
     })
-    # load uss wave
+
+  if bag_loader.uss_percept_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
+    # load uss wave for uss_percept_msg
     #get cur pose and uss wave
     uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
@@ -1449,8 +1452,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
     text_x, text_y = [], []
     # rs_text = []
-    uss_x, uss_y = load_car_uss_patch()
-    uss_angle = load_uss_angle_patch()
+    uss_x, uss_y = load_car_uss_patch(vehicle_type)
+    uss_angle = load_uss_angle_patch(vehicle_type)
     wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
     m = 0
     for i in range(2):
@@ -1466,6 +1469,77 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
               uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
               x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
           elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+              x_text, y_text = 0, 0
+          text_x.append(x_text)
+          text_y.append(y_text)
+          sector_x.append(ego_local_x)
+          sector_y.append(ego_local_y)
+          # print("rs1:",rs1)
+          rs.append(rs1)
+          # print("rs size:",len(rs))
+          length.append(rs0)
+          start_angle.append(uss_angle_start)
+          end_angle.append(uss_angle_end)
+          m += 1
+    local_view_data['data_wave'].data.update({
+      'wave_x':sector_y,
+      'wave_y':sector_x,
+      'radius':rs,
+      'start_angle':start_angle,
+      'end_angle':end_angle,
+    })
+    local_view_data['data_wave_length_text'].data.update({
+      'wave_text_x':text_y,
+      'wave_text_y':text_x,
+      'length':length,
+    })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
+    # load uss wave for wave_msg
+    #get cur pose and uss wave
+    upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+    text_x, text_y = [], []
+    # rs_text = []
+    uss_x, uss_y = load_car_uss_patch(vehicle_type)
+    uss_angle = load_uss_angle_patch(vehicle_type)
+    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+    m = 0
+    for i in range(2):
+      for j in wdis_index[i]:
+          rs0 = ''
+          rs1 = ''
+          if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+              rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+              rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+          elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
               ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
               x_text, y_text = 0, 0
           text_x.append(x_text)
@@ -2811,7 +2885,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find loc_msg error')
       else:
-        if dataLoader.uss_percept_msg['enable'] == True:
+        if dataLoader.uss_percept_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
           flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamps[loc_i])
           if not flag:
             print('find uss_percept_msg error')
@@ -2822,8 +2896,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             cur_pos_yn = loc_msg.pose.local_position.y
             cur_yaw = loc_msg.pose.euler_angles.yaw
             # rs_text = []
-            uss_x, uss_y = load_car_uss_patch()
-            uss_angle = load_uss_angle_patch()
+            uss_x, uss_y = load_car_uss_patch(vehicle_type)
+            uss_angle = load_uss_angle_patch(vehicle_type)
             wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
             m = 0
             for i in range(2):
@@ -2846,6 +2920,73 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                   sector_x.append(ego_local_x)
                   sector_y.append(ego_local_y)
                   rs.append(rs1)
+                  length.append(rs0)
+                  start_angle.append(uss_angle_start)
+                  end_angle.append(uss_angle_end)
+                  m += 1
+
+            flag, plan_json = findrt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[loc_i])
+            if not flag:
+              print('find plan_msg error')
+            else:
+              uss_available = plan_json['uss_available']
+              uss_available = bool(uss_available)
+              uss_remain_dist = plan_json['uss_remain_dist']
+              uss_index = plan_json['uss_index']
+              uss_index = int(uss_index)
+              uss_car_index = plan_json['uss_car_index']
+              uss_car_index = int(uss_car_index)
+            flag, soc_msg = findrt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
+            if not flag:
+              print('find soc_msg error')
+              current_state = -1
+            else:
+              current_state = soc_msg.current_state
+
+            if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+              sector_y_min, sector_x_min = [sector_y[uss_index]], [sector_x[uss_index]]
+              rs_min, start_angle_min, end_angle_min = [rs[uss_index]], [start_angle[uss_index]], [end_angle[uss_index]]
+        elif dataLoader.wave_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
+          flag, wave_msg = findrt(dataLoader.wave_msg, wave_timestamps[loc_i])
+          if not flag:
+            print('find uss_percept_msg error')
+          else:
+            #get cur pose and uss wave
+            upa_dis_info_bufs = wave_msg.upa_dis_info_buf
+            cur_pos_xn = loc_msg.pose.local_position.x
+            cur_pos_yn = loc_msg.pose.local_position.y
+            cur_yaw = loc_msg.pose.euler_angles.yaw
+
+            sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+            text_x, text_y = [], []
+            # rs_text = []
+            uss_x, uss_y = load_car_uss_patch(vehicle_type)
+            uss_angle = load_uss_angle_patch(vehicle_type)
+            wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+            m = 0
+            for i in range(2):
+              for j in wdis_index[i]:
+                  rs0 = ''
+                  rs1 = ''
+                  if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+                      rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+                      # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+                      rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+                      ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+                      uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+                      uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+                      x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+                  elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+                      ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+                      x_text, y_text = 0, 0
+                  text_x.append(x_text)
+                  text_y.append(y_text)
+                  sector_x.append(ego_local_x)
+                  sector_y.append(ego_local_y)
+                  # print("rs1:",rs1)
+                  rs.append(rs1)
+                  # print("rs size:",len(rs))
                   length.append(rs0)
                   start_angle.append(uss_angle_start)
                   end_angle.append(uss_angle_end)
