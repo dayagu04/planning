@@ -370,13 +370,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
     const double safe_dist =
         perpendicular_path_planner_.GetOutput().is_first_reverse_path
-            ? apa_param.GetParam().col_obs_safe_dist
-            : apa_param.GetParam().col_obs_safe_dist_radical;
-
-    CollisionDetector::Paramters params;
-    params.lat_inflation =
-        apa_param.GetParam().car_lat_inflation_for_obs_radical;
-    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
+            ? apa_param.GetParam().col_obs_safe_dist_strict
+            : apa_param.GetParam().col_obs_safe_dist_normal;
 
     double min_remain_dist = 0.0268;
     if (dist > apa_param.GetParam().slot_max_jump_dist &&
@@ -463,9 +458,6 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         trim_path_by_obs_ = true;
       }
     }
-
-    params.Reset();
-    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
   }
 
   // update stuck uss time
@@ -801,7 +793,7 @@ void PerpendicularInPlanner::GenTlane() {
   slot_t_lane_.pt_lower_boundry_pos.x() =
       slot_t_lane_.pt_lower_boundry_pos.x() -
       apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist - 0.05;
+      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
 
   // construct obstacle_t_lane_
   // for onstacle_t_lane    right is inside, left is outside

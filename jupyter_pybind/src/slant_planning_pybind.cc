@@ -263,7 +263,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   slot_t_lane.pt_lower_boundry_pos.x() =
       slot_t_lane.pt_lower_boundry_pos.x() -
       apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist - 0.05;
+      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
 
   const Eigen::Vector2d pt_0 = ego_slot_info.g2l_tf.GetPos(raw_pt[0]);
   const Eigen::Vector2d pt_1 = ego_slot_info.g2l_tf.GetPos(raw_pt[1]);

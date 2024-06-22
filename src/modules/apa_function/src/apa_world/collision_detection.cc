@@ -290,7 +290,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
 
   result.collision_flag =
       (result.remain_obstacle_dist <=
-       result.remain_car_dist + apa_param.GetParam().col_obs_safe_dist + 1e-3);
+       result.remain_car_dist + apa_param.GetParam().col_obs_safe_dist_normal +
+           1e-3);
 
   result.collision_point = collision_point;
   result.collision_point_global.setZero();
@@ -530,7 +531,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
 
   result.collision_flag =
       (result.remain_obstacle_dist <=
-       result.remain_car_dist + apa_param.GetParam().col_obs_safe_dist + 1e-3);
+       result.remain_car_dist + apa_param.GetParam().col_obs_safe_dist_normal +
+           1e-3);
 
   result.collision_point = collision_point;
   result.collision_point_global.setZero();

@@ -440,13 +440,13 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().max_obs2car_dist_slot_occupied_ratio,
                   double, "max_obs2car_dist_slot_occupied_ratio");
 
-  JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist, double,
-                  "col_obs_safe_dist");
+  JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_normal, double,
+                  "col_obs_safe_dist_normal");
 
   JSON_READ_VALUE(apa_param.SetPram().obstacle_ds, double, "obstacle_ds");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_for_obs, double,
-                  "car_lat_inflation_for_obs");
+  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_normal, double,
+                  "car_lat_inflation_normal");
 
   JSON_READ_VALUE(apa_param.SetPram().tmp_no_consider_obs_dy, bool,
                   "tmp_no_consider_obs_dy");
@@ -492,11 +492,11 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().dynamic_col_det_enable, bool,
                   "dynamic_col_det_enable");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_for_obs_radical, double,
-                  "car_lat_inflation_for_obs_radical");
+  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_strict, double,
+                  "car_lat_inflation_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_radical, double,
-                  "col_obs_safe_dist_radical");
+  JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_strict, double,
+                  "col_obs_safe_dist_strict");
 
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,

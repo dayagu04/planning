@@ -564,7 +564,7 @@ bool SlotManagement::GenTLane(
   // subtrace 0.05 to avoid plan failure due to col det
   slot_tlane.pt_lower_boundry_pos.x() = slot_tlane.pt_lower_boundry_pos.x() -
                                         apa_param.GetParam().rear_overhanging -
-                                        apa_param.GetParam().col_obs_safe_dist -
+                                        apa_param.GetParam().col_obs_safe_dist_normal -
                                         0.05;
 
   // construct obstacle_t_lane_
