@@ -226,9 +226,9 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
   const auto pM01 = 0.5 * (pt[0] + pt[1]);
   const auto pM23 = 0.5 * (pt[2] + pt[3]);
   const double real_slot_length = (pM01 - pM23).norm();
-  const auto t = (pt[1] - pt[0]).normalized();
-  // const auto n = (pM01 - pM23).normalized();
-  const auto n = Eigen::Vector2d(t.y(), -t.x());
+  // const auto t = (pt[1] - pt[0]).normalized();
+  // const auto n = Eigen::Vector2d(t.y(), -t.x());
+  const auto n = (pM01 - pM23).normalized();
   pt[2] = pt[0] - real_slot_length * n;
   pt[3] = pt[1] - real_slot_length * n;
 
@@ -562,10 +562,10 @@ bool SlotManagement::GenTLane(
 
   slot_tlane.pt_lower_boundry_pos = slot_tlane.pt_terminal_pos;
   // subtrace 0.05 to avoid plan failure due to col det
-  slot_tlane.pt_lower_boundry_pos.x() = slot_tlane.pt_lower_boundry_pos.x() -
-                                        apa_param.GetParam().rear_overhanging -
-                                        apa_param.GetParam().col_obs_safe_dist_normal -
-                                        0.05;
+  slot_tlane.pt_lower_boundry_pos.x() =
+      slot_tlane.pt_lower_boundry_pos.x() -
+      apa_param.GetParam().rear_overhanging -
+      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
 
   // construct obstacle_t_lane_
   // for onstacle_t_lane    right is inside, left is outside
@@ -786,7 +786,6 @@ const bool SlotManagement::AddUssPerceptObstacles(
 
 const bool SlotManagement::AddGroundLineObstacles(
     const common::SlotInfo &slot_info) {
-
   // tmp: no consider obs point
   if (apa_param.GetParam().force_both_side_occupied ||
       frame_.ground_line_perception_info_ptr == NULL) {
@@ -1978,9 +1977,9 @@ bool SlotManagement::UpdateEgoSlotInfo(
   const double use_slot_length =
       std::min(real_slot_length, virtual_slot_length);
 
-  const auto t = (pt[1] - pt[0]).normalized();
-  // const auto n = (pM01 - pM23).normalized();
-  const auto n = Eigen::Vector2d(t.y(), -t.x());
+  // const auto t = (pt[1] - pt[0]).normalized();
+  // const auto n = Eigen::Vector2d(t.y(), -t.x());
+  const auto n = (pM01 - pM23).normalized();
   ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;

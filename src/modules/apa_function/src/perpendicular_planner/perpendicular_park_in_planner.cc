@@ -194,9 +194,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     const auto pM01 = 0.5 * (pt[0] + pt[1]);
     const auto pM23 = 0.5 * (pt[2] + pt[3]);
     const double real_slot_length = (pM01 - pM23).norm();
-    const auto t = (pt[1] - pt[0]).normalized();
-    // const auto n = (pM01 - pM23).normalized();
-    const auto n = Eigen::Vector2d(t.y(), -t.x());
+    // const auto t = (pt[1] - pt[0]).normalized();
+    // const auto n = Eigen::Vector2d(t.y(), -t.x());
+    const auto n = (pM01 - pM23).normalized();
     pt[2] = pt[0] - real_slot_length * n;
     pt[3] = pt[1] - real_slot_length * n;
 
