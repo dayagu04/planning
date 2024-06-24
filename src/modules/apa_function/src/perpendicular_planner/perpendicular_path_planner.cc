@@ -947,7 +947,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
       }
 
       if (CheckAdjustPlanSuitable(
-              output_.path_segment_vec[path_num_gear - 1].GetEndPose()) &&
+              multi_out_put.path_segment_vec[path_num_gear - 1].GetEndPose()) &&
           path_num_gear < multi_out_put.gear_cmd_vec.size()) {
         DEBUG_PRINT("lose drive path, continue use reverse gear adjust plan");
         for (int i = static_cast<int>(multi_out_put.gear_cmd_vec.size() - 1);
@@ -1496,10 +1496,13 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
       fail_count += 1;
       if (fail_count == 1) {
       } else {
-        if (!output_.multi_reach_target_pose) {
+        calc_params_.adjust_fail_count += 1;
+        DEBUG_PRINT("adjust_fail_count = " << calc_params_.adjust_fail_count);
+        if (!output_.multi_reach_target_pose &&
+            calc_params_.adjust_fail_count > 4) {
           output_.Reset();
+          success = false;
         }
-        success = false;
         break;
       }
     }
@@ -2351,9 +2354,9 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
         const std::vector<double> path_length_tab = {
-            1.0 * min_path_length, 2.168 * min_path_length,
-            2.868 * min_path_length, 3.668 * min_path_length,
-            4.168 * min_path_length};
+            1.668 * min_path_length, 3.168 * min_path_length,
+            3.868 * min_path_length, 4.268 * min_path_length,
+            4.868 * min_path_length};
         min_path_length = pnc::mathlib::Interp1(
             lat_tab, path_length_tab, std::fabs(path_seg.GetEndPos().y()));
       }

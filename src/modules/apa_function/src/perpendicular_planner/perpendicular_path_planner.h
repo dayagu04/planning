@@ -130,6 +130,8 @@ class PerpendicularPathPlanner {
 
     double turn_radius = 5.5;
 
+    size_t adjust_fail_count = 0;
+
     pnc::geometry_lib::LineSegment target_line;
 
     pnc::geometry_lib::Circle mono_safe_circle;
@@ -154,6 +156,8 @@ class PerpendicularPathPlanner {
       slot_side_sgn = 1.0;
 
       turn_radius = 5.5;
+
+      adjust_fail_count = 0;
 
       should_prepare_second = false;
       should_prepare_third = false;
