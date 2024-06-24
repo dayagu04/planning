@@ -20,6 +20,7 @@
 #include "debug_info_log.h"
 #include "dubins_lib.h"
 #include "func_state_machine.pb.h"
+#include "fusion_objects.pb.h"
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "parking_fusion.pb.h"
@@ -37,7 +38,8 @@ bool SlotManagement::Update(const LocalView *local_view_ptr) {
                 &local_view_ptr->localization_estimate,
                 &local_view_ptr->uss_wave_info,
                 &local_view_ptr->uss_percept_info,
-                &local_view_ptr->ground_line_perception);
+                &local_view_ptr->ground_line_perception,
+                &local_view_ptr->fusion_objects_info);
 }
 
 bool SlotManagement::Update(
@@ -47,7 +49,8 @@ bool SlotManagement::Update(
     const UssWaveInfo::UssWaveInfo *uss_wave_info,
     const UssPerceptInfo::UssPerceptInfo *uss_percept_info,
     const GroundLinePerception::GroundLinePerceptionInfo
-        *ground_line_perception_info) {
+        *ground_line_perception_info,
+    const FusionObjects::FusionObjectsInfo *fusion_objects_info) {
   DEBUG_PRINT("---------- slot management --------------------");
   // set ptrs
   frame_.func_state_ptr = func_statemachine;
@@ -56,6 +59,7 @@ bool SlotManagement::Update(
   frame_.uss_wave_info_ptr = uss_wave_info;
   frame_.uss_percept_info_ptr = uss_percept_info;
   frame_.ground_line_perception_info_ptr = ground_line_perception_info;
+  frame_.fusion_objects_info_ptr = fusion_objects_info;
 
   if (!IsInAPAState() || frame_.param.force_clear) {
     DEBUG_PRINT("reset");
@@ -134,6 +138,29 @@ void SlotManagement::AddGroundLineObstacles() {
     for (const auto &point_2d : ground_line.points_2d()) {
       frame_.obstacle_point_vec.emplace_back(
           Eigen::Vector2d(point_2d.x(), point_2d.y()));
+    }
+  }
+}
+
+void SlotManagement::AddFusionObjects() {
+  if (frame_.fusion_objects_info_ptr == NULL) {
+    frame_.obstacle_point_vec.clear();
+    return;
+  }
+  if (frame_.fusion_objects_info_ptr->fusion_object().empty()) {
+    DEBUG_PRINT("fusion objects is empty");
+    return;
+  }
+  const auto &fusion_objects = frame_.fusion_objects_info_ptr->fusion_object();
+  frame_.obstacle_point_vec.clear();
+  frame_.obstacle_point_vec.reserve(
+      frame_.fusion_objects_info_ptr->fusion_object_num());
+
+  for (const auto &fusion_object : fusion_objects) {
+    const auto &points = fusion_object.additional_info().polygon();
+    for (const auto &point : points.points()) {
+      frame_.obstacle_point_vec.emplace_back(
+          Eigen::Vector2d(point.x(), point.y()));
     }
   }
 }
