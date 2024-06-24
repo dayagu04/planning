@@ -8,7 +8,8 @@
 
 int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
-                        const std::string &scene_type, const std::string mileage_path) {
+                        const std::string &scene_type,
+                        const std::string mileage_path) {
   planning::planning_player::PlanningPlayer player;
 
   if (!player.LoadRosBag(bag_path, out_bag, is_close_loop)) {
