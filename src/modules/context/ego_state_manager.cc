@@ -243,7 +243,6 @@ bool EgoStateManager::update(
   } else {
     RealtimeUpdatePlanningInitState();
   }
-
   return true;
 }
 

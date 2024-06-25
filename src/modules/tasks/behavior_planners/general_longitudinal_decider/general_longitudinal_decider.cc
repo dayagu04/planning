@@ -342,7 +342,7 @@ bool GeneralLongitudinalDecider::Execute() {
           auto &bounds = lon_ref_path.hard_bounds[i];
           for (auto &lon_bound : position_decision.lon_bounds) {
             bounds.push_back(lon_bound);
-            bounds.back().bound_info.type = BoundType::AGENT;
+            bounds.back().bound_info.type = BoundType::DYNAMIC_AGENT;
             bounds.back().bound_info.id = obstacle_decision.second.id_;
           }
 
@@ -1262,7 +1262,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
 
     pos_decision.lon_bounds.emplace_back(WeightedBound{
         std::numeric_limits<double>::min(), yield_upper - distance_safe, -1,
-        BoundInfo{obstacle->id(), BoundType::AGENT}});
+        BoundInfo{obstacle->id(), BoundType::DYNAMIC_AGENT}});
 
     for (size_t i = 0; i < traj_points.size(); ++i) {
       auto t_traj = traj_points[i].t;

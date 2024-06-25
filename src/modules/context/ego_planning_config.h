@@ -505,8 +505,24 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json, "care_area_s_start_buffer", care_area_s_start_buffer);
     max_avoid_edge =
         read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
-    lateral_ref_traj_type = read_json_key<bool>(json, "lateral_ref_traj_type",
-                                                lateral_ref_traj_type);
+    soft_buffer2lane =
+        read_json_key<double>(json, "soft_buffer2lane", soft_buffer2lane);
+    extra_soft_buffer2road =
+        read_json_key<double>(json, "extra_soft_buffer2road", extra_soft_buffer2road);
+    hard_buffer2lane =
+        read_json_key<double>(json, "hard_buffer2lane", hard_buffer2lane);
+    hard_buffer2road =
+        read_json_key<double>(json, "hard_buffer2road", hard_buffer2road);
+    lon_rear_car_filter_buffer =
+        read_json_key<double>(json, "lon_rear_car_filter_buffer", lon_rear_car_filter_buffer);
+    lateral_ref_traj_type =
+        read_json_key<bool>(json, "lateral_ref_traj_type", lateral_ref_traj_type);
+    care_object_t_threshold =
+        read_json_key<double>(json, "care_object_t_threshold", care_object_t_threshold);
+    soft_min_distance_road2center =
+        read_json_key<double>(json, "soft_min_distance_road2center", soft_min_distance_road2center);
+    hard_min_distance_road2center =
+        read_json_key<double>(json, "hard_min_distance_road2center", hard_min_distance_road2center);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -522,22 +538,27 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double kVirtualLaneBoundWeight = 1;
   double kHardBoundWeight = -1.;
   double dynamic_bound_slack_coefficient = 1.;
-  double buffer2border = 0.15;
-  double buffer2lane = 0.3;
+  double soft_buffer2lane = 0.0;
+  double extra_soft_buffer2road = 0.0;
+  double hard_buffer2lane = 0.0;
+  double hard_buffer2road = 0.0;
+  double soft_min_distance_road2center = 0.2;
+  double hard_min_distance_road2center = 0.2;
   double l_offset_limit = 0.1;
   double min_gain_vel = 1.0;
-  double lon_rear_car_filter_buffer = 10.;
+  double lon_rear_car_filter_buffer = 0.;
   double refine_lat_ref_threshold = 0.5;
   double delta_t = 0.2;
   double sample_step = 1.4;
   double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;
-  double care_object_t_threshold = 3.0;
+  double care_object_t_threshold = 3.5;
   double care_area_s_len = 5.0;
   double max_ref_curvature = 0.5;
   double care_area_s_start_buffer = 0.0;
   double max_avoid_edge = 2.0;
   bool lateral_ref_traj_type = false;
+  double max_lateral_ttc = 5.0;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

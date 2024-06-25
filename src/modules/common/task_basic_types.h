@@ -43,9 +43,9 @@ enum class BoundType {
   DEFAULT,
   LANE,
   AGENT,
+  DYNAMIC_AGENT,
   ROAD_BORDER,
   EGO_POSITION,
-
   GROUNDLINE,
   PARKING_SPACE,
 
@@ -67,6 +67,8 @@ static std::string BoundType2String(BoundType in) {
       return "LANE";
     case BoundType::AGENT:
       return "AGENT";
+    case BoundType::DYNAMIC_AGENT:
+      return "DYNAMIC_AGENT";
     case BoundType::ROAD_BORDER:
       return "ROAD_BORDER";
     case BoundType::EGO_POSITION:

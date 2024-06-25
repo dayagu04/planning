@@ -6,7 +6,9 @@
 #include "prediction_object.h"
 #include "tracked_object.h"
 #include "tracklet_maintainer.h"
+#include "task_basic_types.h"
 
+#include <cstdint>
 #include <utility>
 
 namespace planning {
@@ -65,11 +67,14 @@ class LateralObstacle {
 
   bool find_track(int track_id, TrackedObject &dest);
 
+  const std::unordered_map<uint16_t, LatObstacleDecisionType>& lat_obstacle_decision() { return lat_obstacle_decision_; }
  private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
                       const std::vector<PredictionObject> &predictions,
                       bool isRedLightStop, bool hdmap_valid);
   void update_tracks(const std::vector<TrackedObject> &tracked_objects);
+  void LateralObstacleDecision(
+      const std::vector<TrackedObject> &tracked_objects);
 
   double fvf_time_ = 0.0;
   bool fvf_dead_ = true;
@@ -90,6 +95,7 @@ class LateralObstacle {
   std::shared_ptr<planning::TrackletMaintainer> maintainer_ = nullptr;
   planning::framework::Session *session_ = nullptr;
   LateralObstacleConfig config_;
+  std::unordered_map<uint16_t, LatObstacleDecisionType> lat_obstacle_decision_;
 };
 
 class LaneTracksManager {

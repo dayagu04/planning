@@ -47,9 +47,10 @@ void LateralMotionPlanningProblem::Init() {
       std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk bound cost
-                                                  //   ilqr_core_ptr_->AddCost(
-  //       std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor
-  // cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<PathHardCorridorCostTerm>());  // path hard corridor cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -118,6 +119,24 @@ uint8_t LateralMotionPlanningProblem::Update(
         planning_input.soft_lower_bound_x1_vec(i);
     cost_config_vec.at(i)[SOFT_LOWER_BOUND_Y1] =
         planning_input.soft_lower_bound_y1_vec(i);
+
+    cost_config_vec.at(i)[HARD_UPPER_BOUND_X0] =
+        planning_input.hard_upper_bound_x0_vec(i);
+    cost_config_vec.at(i)[HARD_UPPER_BOUND_Y0] =
+        planning_input.hard_upper_bound_y0_vec(i);
+    cost_config_vec.at(i)[HARD_UPPER_BOUND_X1] =
+        planning_input.hard_upper_bound_x1_vec(i);
+    cost_config_vec.at(i)[HARD_UPPER_BOUND_Y1] =
+        planning_input.hard_upper_bound_y1_vec(i);
+
+    cost_config_vec.at(i)[HARD_LOWER_BOUND_X0] =
+        planning_input.hard_lower_bound_x0_vec(i);
+    cost_config_vec.at(i)[HARD_LOWER_BOUND_Y0] =
+        planning_input.hard_lower_bound_y0_vec(i);
+    cost_config_vec.at(i)[HARD_LOWER_BOUND_X1] =
+        planning_input.hard_lower_bound_x1_vec(i);
+    cost_config_vec.at(i)[HARD_LOWER_BOUND_Y1] =
+        planning_input.hard_lower_bound_y1_vec(i);
 
     // weights
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();

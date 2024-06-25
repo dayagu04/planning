@@ -68,6 +68,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
   }
   planning_input.set_q_acc_bound(config_.q_acc_bound);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
+  planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  planning_input.set_q_hard_corridor(config_.q_hard_corridor);
 }
 
 void LateralMotionPlanningWeight::CalculateInitInfo(

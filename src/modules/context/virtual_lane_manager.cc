@@ -228,10 +228,12 @@ void VirtualLaneManager::construct_reference_line_msg(
         current_lane_virtual_ref_point->lane_width * 0.5;
     current_lane_virtual_ref_point->distance_to_right_lane_border =
         current_lane_virtual_ref_point->lane_width * 0.5;
-    current_lane_virtual_ref_point->distance_to_left_road_border =
-        current_lane_virtual_ref_point->lane_width * 0.5;
-    current_lane_virtual_ref_point->distance_to_right_road_border =
-        current_lane_virtual_ref_point->lane_width * 0.5;
+    // current_lane_virtual_ref_point->distance_to_left_road_border =
+    //     current_lane_virtual_ref_point->lane_width * 0.5;
+    // current_lane_virtual_ref_point->distance_to_right_road_border =
+    //     current_lane_virtual_ref_point->lane_width * 0.5;
+    current_lane_virtual_ref_point->distance_to_left_road_border = 20.0;
+    current_lane_virtual_ref_point->distance_to_right_road_border = 20.0;
 
     current_lane_virtual_ref_point->speed_limit_max = 0.0;
     current_lane_virtual_ref_point->speed_limit_min = 0.0;

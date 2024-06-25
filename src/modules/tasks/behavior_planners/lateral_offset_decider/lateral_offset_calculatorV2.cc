@@ -1082,10 +1082,8 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
       }
     }
 
-    CalcFrontMaxOppositeOffset(front_ids, !is_left, avoid_obstacle,
-                               enough_space_hysteresis_map);
-    CalcSideMaxOppositeOffset(side_max_opposite_offset_ids, avoid_obstacle,
-                              !is_left);
+    // CalcFrontMaxOppositeOffset(front_ids, !is_left, avoid_obstacle,  enough_space_hysteresis_map);
+    // CalcSideMaxOppositeOffset(side_max_opposite_offset_ids, avoid_obstacle, !is_left);
 
     if (std::fabs(avoid_info_.allow_front_max_opposite_offset -
                   last_avoid_info_.allow_front_max_opposite_offset) >= 0.0) {
@@ -1250,7 +1248,12 @@ void LateralOffsetCalculatorV2::SaveDebugInfo() {
   lateral_offset_decider_info->set_allow_max_opposite_offset_id(
       avoid_info_.allow_front_max_opposite_offset_id);
 
-  JSON_DEBUG_VALUE("lane_width", flane_->width());
+  if (flane_ != nullptr) {
+    JSON_DEBUG_VALUE("lane_width", flane_->width());
+  } else {
+    JSON_DEBUG_VALUE("lane_width", -1000);
+  }
+
   JSON_DEBUG_VALUE("smooth_lane_width", lane_width_);
   JSON_DEBUG_VALUE("lat_offset", avoid_info_.lat_offset);
   JSON_DEBUG_VALUE("normal_left_avoid_threshold",
