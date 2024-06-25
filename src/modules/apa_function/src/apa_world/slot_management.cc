@@ -857,10 +857,17 @@ bool SlotManagement::UpdateSlotsInSearching() {
   }
 
   // delete slot in window map when the slot is not exist in fusion slot
+  std::vector<size_t> del_id_vec;
   for (const auto &pair : frame_.slot_info_window_map) {
     if (fusion_slot_map.count(pair.first) == 0) {
-      frame_.slot_info_window_map.erase(pair.first);
+      del_id_vec.emplace_back(pair.first);
     }
+  }
+  for (const size_t &id : del_id_vec) {
+    frame_.slot_info_angle.erase(id);
+    frame_.slot_info_direction.erase(id);
+    frame_.slot_info_corner_01.erase(id);
+    frame_.slot_info_window_map.erase(id);
   }
 
   // assemble slot_management_info
@@ -1226,7 +1233,7 @@ const bool SlotManagement::SlotInfoTransfer(
   if (fusion_slot.corner_points_size() < fusion_slots_size) {
     return false;
   }
-  for (auto j = 0; j < fusion_slots_size; j++) {
+  for (int j = 0; j < fusion_slots_size; j++) {
     auto add_point = slot_info.mutable_corner_points()->add_corner_point();
     add_point->set_x(fusion_slot.corner_points(j).x());
     add_point->set_y(fusion_slot.corner_points(j).y());

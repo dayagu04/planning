@@ -967,6 +967,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   // construct input
   const auto& ego_slot_info = frame_.ego_slot_info;
   PerpendicularPathPlanner::Input path_planner_input;
+  path_planner_input.is_simulation = is_simulation_;
   path_planner_input.pt_0 = ego_slot_info.pt_0;
   path_planner_input.pt_1 = ego_slot_info.pt_1;
   path_planner_input.sin_angle = ego_slot_info.sin_angle;

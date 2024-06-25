@@ -413,6 +413,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     pt_inside = obj_pt_1;
   }
   slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(pt_inside).x();
+  input.is_simulation = true;
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
   input.tlane = slot_t_lane;
   input.is_complete_path = is_complete_path;
