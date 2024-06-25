@@ -14,6 +14,7 @@
 #include "basic_types.pb.h"
 #include "common/config_context.h"
 #include "config/vehicle_param.h"
+#include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
@@ -192,7 +193,7 @@ bool PlanningScheduler::RunOnce(
   const auto end_timestamp = IflyTime::Now_ms();
   const double time_consumption = end_timestamp - start_timestamp;
   LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
-
+  JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
   if (session_.is_hpp_scene()) {
