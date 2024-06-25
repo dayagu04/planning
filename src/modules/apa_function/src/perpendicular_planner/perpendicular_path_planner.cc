@@ -28,7 +28,7 @@ namespace apa_planner {
 
 static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
-static const size_t kMultiPlanMaxPathNumsInSlot = 3;
+static const int kMultiPlanMaxPathNumsInSlot = 3;
 static const size_t kAdjustPlanMaxPathNumsInSlot = 5;
 static const double kMinSingleGearPathLength = 0.4;
 
@@ -948,7 +948,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
 
       if (CheckAdjustPlanSuitable(
               multi_out_put.path_segment_vec[path_num_gear - 1].GetEndPose()) &&
-          path_num_gear < multi_out_put.gear_cmd_vec.size()) {
+          path_num_gear < static_cast<int>(multi_out_put.gear_cmd_vec.size())) {
         DEBUG_PRINT("lose drive path, continue use reverse gear adjust plan");
         for (int i = static_cast<int>(multi_out_put.gear_cmd_vec.size() - 1);
              i >= path_num_gear; --i) {
@@ -1146,7 +1146,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
     double safe_dist = apa_param.GetParam().col_obs_safe_dist_normal;
     CollisionDetector::Paramters params;
     params.lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
-    if (calc_params_.first_multi_plan && type == 2 && i == 0 &&
+    if (calc_params_.first_multi_plan && type == 0 && i == 0 &&
         tmp_path_seg.seg_gear == current_gear) {
       // when 1R and two arc, should far from inside obs
       params.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;

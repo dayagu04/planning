@@ -185,14 +185,6 @@ void SlotManagement::Preprocess() {
 
   measurement.v_ego =
       frame_.localization_ptr->pose().linear_velocity_from_wheel();
-
-  if (frame_.first_enter_slot_mangement) {
-    frame_.first_enter_slot_mangement = false;
-    frame_.slot_info_window_vec.clear();
-    for (size_t i = 0; i < frame_.slot_info_window_vec.size(); ++i) {
-      frame_.slot_info_window_vec[i].SetOccupied(true);
-    }
-  }
 }
 
 bool SlotManagement::IsInSearchingState() const {
@@ -746,13 +738,6 @@ const bool SlotManagement::AddUssPerceptObstacles(
   const size_t selected_id = slot_info.id();
   frame_.obs_pt_map.erase(selected_id);
 
-  double sin_angle = 1.0;
-  if (slot_info.slot_type() ==
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
-      frame_.slot_info_angle.count(slot_info.id()) != 0) {
-    sin_angle = frame_.slot_info_angle[slot_info.id()].second;
-  }
-
   const Eigen::Vector2d slot_center(slot_info.center().x(),
                                     slot_info.center().y());
 
@@ -803,13 +788,6 @@ const bool SlotManagement::AddGroundLineObstacles(
   const size_t selected_id = slot_info.id();
   frame_.ground_line_pt_map.erase(selected_id);
 
-  double sin_angle = 1.0;
-  if (slot_info.slot_type() ==
-          Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
-      frame_.slot_info_angle.count(slot_info.id()) != 0) {
-    sin_angle = frame_.slot_info_angle[slot_info.id()].second;
-  }
-
   const Eigen::Vector2d slot_center(slot_info.center().x(),
                                     slot_info.center().y());
 
@@ -830,9 +808,9 @@ const bool SlotManagement::AddGroundLineObstacles(
       const double dist = (slot_center - obs_pt).norm();
       slot_obs_vec.emplace_back(obs_pt);
       // todo: consider dist from ego to obs
-      // if (dist < filtered_obs_dis) {
-      //   slot_obs_vec.emplace_back(obs_pt);
-      // }
+      if (dist < filtered_obs_dis) {
+        slot_obs_vec.emplace_back(obs_pt);
+      }
     }
   }
 
@@ -853,8 +831,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
   DEBUG_PRINT("apa state is in searching!");
   // Update slots
   std::unordered_map<size_t, ParkingFusion::ParkingFusionSlot> fusion_slot_map;
-  for (size_t i = 0;
-       i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size(); ++i) {
+  for (int i = 0; i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size();
+       ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists(i);
     fusion_slot_map[fusion_slot.id()] = fusion_slot;
@@ -863,59 +841,36 @@ bool SlotManagement::UpdateSlotsInSearching() {
       continue;
     }
     const auto fusion_slot_source_type = fusion_slot.fusion_source();
-    const auto slot_info_vec_size = frame_.slot_info_window_vec.size();
-    if (frame_.slot_info_map.count(slot_info.id()) == 0) {  // get new id
+    if (frame_.slot_info_window_map.count(slot_info.id()) == 0) {  // get new id
       if (LonDifUpdateCondition(slot_info, fusion_slot_source_type)) {
         SlotInfoWindow slot_info_window;
         slot_info_window.Add(slot_info);
-
-        frame_.slot_info_window_vec.emplace_back(slot_info_window);
-
-        frame_.slot_info_map.insert(
-            std::make_pair(slot_info.id(), slot_info_vec_size));
+        frame_.slot_info_window_map.insert(
+            std::make_pair((slot_info.id()), slot_info_window));
       }
     } else {  // get old id
       // slot update strategy
       if (IfUpdateSlot(slot_info, fusion_slot_source_type)) {
-        auto slot_idx = frame_.slot_info_map[slot_info.id()];
-        frame_.slot_info_window_vec[slot_idx].Add(slot_info);
+        frame_.slot_info_window_map[slot_info.id()].Add(slot_info);
       }
     }
   }
 
-  // delete slot in window vec when the slot is not exist in fusion slot
-  std::vector<int> del_index_vec;
-  std::vector<int> del_id_vec;
-  for (int i = 0; i < frame_.slot_info_window_vec.size(); ++i) {
-    if (fusion_slot_map.count(
-            frame_.slot_info_window_vec[i].GetFusedInfo().id()) == 0) {
-      del_index_vec.emplace_back(i);
-      del_id_vec.emplace_back(
-          frame_.slot_info_window_vec[i].GetFusedInfo().id());
-    }
-  }
-
-  for (size_t i = 0; i < del_index_vec.size(); ++i) {
-    frame_.slot_info_map.erase(del_id_vec[i]);
-    frame_.slot_info_angle.erase(del_id_vec[i]);
-    frame_.slot_info_direction.erase(del_id_vec[i]);
-    frame_.slot_info_corner_01.erase(del_id_vec[i]);
-    frame_.slot_info_window_vec.erase(frame_.slot_info_window_vec.begin() +
-                                      del_index_vec[i]);
-
-    for (size_t j = 0; j < del_index_vec.size(); ++j) {
-      del_index_vec[j]--;
+  // delete slot in window map when the slot is not exist in fusion slot
+  for (const auto &pair : frame_.slot_info_window_map) {
+    if (fusion_slot_map.count(pair.first) == 0) {
+      frame_.slot_info_window_map.erase(pair.first);
     }
   }
 
   // assemble slot_management_info
   frame_.slot_management_info.mutable_slot_info_vec()->Clear();
-  for (size_t j = 0; j < frame_.slot_info_window_vec.size(); ++j) {
+  for (auto &pair : frame_.slot_info_window_map) {
     auto slot = frame_.slot_management_info.add_slot_info_vec();
     // auto slot_info = frame_.slot_info_window_vec[j].GetFusedInfo();
     // ModifySlot2Rectangle(slot_info);
     // *slot = slot_info;
-    *slot = frame_.slot_info_window_vec[j].GetFusedInfo();
+    *slot = pair.second.GetFusedInfo();
 
     // only extra protect, it can delete to be fast
     if (fusion_slot_map.count(slot->id()) == 0) {
@@ -930,7 +885,6 @@ bool SlotManagement::UpdateSlotsInSearching() {
     if (!apa_param.GetParam().release_slot_by_prepare) {
       continue;
     }
-
     if ((slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
          slot->slot_type() ==
@@ -957,7 +911,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
 
       if (lon_dist <
               apa_param.GetParam().min_slot_release_long_dist_slot2mirror &&
-          frame_.slot_info_window_vec[j].GetOccupied()) {
+          pair.second.GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
         DEBUG_PRINT("CalLonDistSlot2Car slot id = "
@@ -965,7 +919,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
                     << "  is_release = " << slot->is_release());
         continue;
       } else {
-        frame_.slot_info_window_vec[j].SetOccupied(false);
+        pair.second.SetOccupied(false);
       }
 
       EgoSlotInfo ego_slot_info;
@@ -1037,7 +991,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
       const double lon_dist = CalLonDistSlot2Car(*slot);
       if (lon_dist <
               apa_param.GetParam().min_slot_release_long_dist_slot2mirror &&
-          frame_.slot_info_window_vec[j].GetOccupied()) {
+          pair.second.GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
         DEBUG_PRINT("CalLonDistSlot2Car slot id = "
@@ -1045,7 +999,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
                     << "  is_release = " << slot->is_release());
         continue;
       } else {
-        frame_.slot_info_window_vec[j].SetOccupied(false);
+        pair.second.SetOccupied(false);
       }
     }
   }
@@ -1057,7 +1011,10 @@ const bool SlotManagement::ProcessRawSlot(
     const ParkingFusion::ParkingFusionSlot &parking_fusion_slot,
     common::SlotInfo &slot_info) {
   slot_info.Clear();
-  SlotInfoTransfer(parking_fusion_slot, slot_info);
+  if (!SlotInfoTransfer(parking_fusion_slot, slot_info)) {
+    DEBUG_PRINT("fusion slot is err");
+    return false;
+  }
 
   if (!slot_info.has_corner_points()) {
     DEBUG_PRINT("slot doesnot have corner points");
@@ -1265,7 +1222,10 @@ const bool SlotManagement::SlotInfoTransfer(
     common::SlotInfo &slot_info) {
   double accumulated_x = 0.0;
   double accumulated_y = 0.0;
-  static const auto fusion_slots_size = 4;
+  static const int fusion_slots_size = 4;
+  if (fusion_slot.corner_points_size() < fusion_slots_size) {
+    return false;
+  }
   for (auto j = 0; j < fusion_slots_size; j++) {
     auto add_point = slot_info.mutable_corner_points()->add_corner_point();
     add_point->set_x(fusion_slot.corner_points(j).x());
@@ -1462,7 +1422,7 @@ bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info,
        ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_ONLY_USS) ||
       (fusion_slot_source_type ==
        ParkingFusion::ParkingFusionSlot::FUSION_SLOT_SOURCE_TYPE_CAMERA_USS)) {
-    DEBUG_PRINT("it is uss slot");
+    // DEBUG_PRINT("it is uss slot");
     return true;
   }
   // DEBUG_PRINT("it is vision slot");
@@ -1472,13 +1432,6 @@ bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info,
   // update by lon dif between slot center and mirror middle point
   const bool lon_update_condition =
       LonDifUpdateCondition(new_slot_info, fusion_slot_source_type);
-
-  if (new_slot_info.is_release()) {
-    DEBUG_PRINT("angle_update_condition = "
-                << angle_update_condition
-                << "  lon_update_condition = " << lon_update_condition
-                << "  slot id = " << new_slot_info.id());
-  }
 
   return (angle_update_condition && lon_update_condition);
 }
@@ -1829,30 +1782,29 @@ bool SlotManagement::UpdateSlotsInParking() {
     return false;
   }
 
-  google::protobuf::uint32 select_slot_id =
-      frame_.parking_slot_ptr->select_slot_id();
+  const size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id();
   if (select_slot_id == 0) {
     DEBUG_PRINT("select_slot_id = 0, is not valid");
     return false;
   }
   DEBUG_PRINT("select_slot_id:" << select_slot_id);
 
-  if (frame_.slot_info_map.count(select_slot_id) == 0) {
+  if (frame_.slot_info_window_map.count(select_slot_id) == 0) {
     DEBUG_PRINT("select slot is not in slot_info_window_vec");
     return false;
   }
-  DEBUG_PRINT("select slot is in slot_info_window_vec");
-  const uint8_t slot_idx = frame_.slot_info_map[select_slot_id];
-  if (frame_.slot_info_window_vec.empty() ||
-      frame_.slot_info_window_vec[slot_idx].IsEmpty()) {
-    DEBUG_PRINT("slot_info_window_vec is empty!");
+
+  DEBUG_PRINT("select slot is in slot_info_window_map");
+  if (frame_.slot_info_window_map.empty() ||
+      frame_.slot_info_window_map[select_slot_id].IsEmpty()) {
+    DEBUG_PRINT("slot_info_window_map is empty!");
     return false;
   }
 
   ParkingFusion::ParkingFusionSlot select_fusion_slot;
   bool valid_select_slot = false;
-  for (size_t i = 0;
-       i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size(); ++i) {
+  for (int i = 0; i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size();
+       ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists(i);
     if (select_slot_id == fusion_slot.id()) {
@@ -1882,11 +1834,13 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   common::SlotInfo select_slot;
   if (!ProcessRawSlot(select_fusion_slot, select_slot)) {
-    select_slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+    select_slot = frame_.slot_info_window_map[select_slot_id].GetFusedInfo();
     select_slot.set_is_release(true);
     select_slot.set_is_occupied(false);
   }
 
+  // make sure apa is always running when begin, todo, should change according
+  // to fusion current is only put a patch
   if (select_slot.is_release() == false) {
     DEBUG_PRINT("selected slot is not released!");
     return false;
@@ -1931,11 +1885,6 @@ bool SlotManagement::UpdateEgoSlotInfo(
   auto &ego_slot_info = frame_.ego_slot_info;
   auto &ego_pose_info = frame_.measurement;
 
-  if (frame_.slot_info_map.count(select_slot_id) == 0) {
-    // selected slot is not found when seaching, should quit
-    DEBUG_PRINT("slot_info_map doesnot have the select_slot_id");
-    return false;
-  }
   if (selecte_fusion_slot.type() == Common::PARKING_SLOT_TYPE_INVALID) {
     return false;
   }
@@ -1952,10 +1901,8 @@ bool SlotManagement::UpdateEgoSlotInfo(
   ego_slot_info.select_slot_id = select_slot_id;
   ego_slot_info.select_fusion_slot = selecte_fusion_slot;
   ego_slot_info.select_slot = select_slot;
-
-  const size_t slot_idx = frame_.slot_info_map[select_slot_id];
   ego_slot_info.select_slot_filter =
-      frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+      frame_.slot_info_window_map[select_slot_id].GetFusedInfo();
 
   const auto &slot_points =
       ego_slot_info.select_slot_filter.corner_points().corner_point();
@@ -2071,11 +2018,6 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
   auto &ego_slot_info = frame_.ego_slot_info;
   auto &ego_pose_info = frame_.measurement;
 
-  if (frame_.slot_info_map.count(select_slot_id) == 0) {
-    // selected slot is not found when seaching, should quit
-    DEBUG_PRINT("slot_info_map doesnot have the select_slot_id");
-    return false;
-  }
   if (select_fusion_slot.type() == Common::PARKING_SLOT_TYPE_INVALID) {
     return false;
   }
@@ -2091,10 +2033,8 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
   ego_slot_info.select_slot_id = select_slot_id;
   ego_slot_info.select_fusion_slot = select_fusion_slot;
   ego_slot_info.select_slot = select_slot;
-
-  const size_t slot_idx = frame_.slot_info_map[select_slot_id];
   ego_slot_info.select_slot_filter =
-      frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+      frame_.slot_info_window_map[select_slot_id].GetFusedInfo();
 
   const auto &slot_points =
       ego_slot_info.select_slot_filter.corner_points().corner_point();
@@ -2265,10 +2205,10 @@ void SlotManagement::UpdateSlotInfoInParking() {
        std::fabs(ego_slot_info.ego_pos_slot.y()) <
            apa_param.GetParam().slot_update_in_lat);
 
-  DEBUG_PRINT("update_slot_condition_1 = "
-              << update_slot_condition_1
-              << " update_slot_condition_2 = " << update_slot_condition_2
-              << " update_slot_condition_3 = " << update_slot_condition_3);
+  // DEBUG_PRINT("update_slot_condition_1 = "
+  //             << update_slot_condition_1
+  //             << " update_slot_condition_2 = " << update_slot_condition_2
+  //             << " update_slot_condition_3 = " << update_slot_condition_3);
 
   update_slot_flag = update_slot_condition_1 || update_slot_condition_2 ||
                      update_slot_condition_3;
@@ -2283,15 +2223,19 @@ void SlotManagement::UpdateSlotInfoInParking() {
       reset_slot_flag = true;
       frame_.no_update_slot_count = 0;
     }
-    auto slot_idx = frame_.slot_info_map[ego_slot_info.select_slot_id];
+
     if (reset_slot_flag) {
-      frame_.slot_info_window_vec[slot_idx].Reset();
+      frame_.slot_info_window_map[ego_slot_info.select_slot_id].Reset();
     }
-    frame_.slot_info_window_vec[slot_idx].Add(ego_slot_info.select_slot);
-    auto slot = frame_.slot_management_info.mutable_slot_info_vec(slot_idx);
-    *slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+    frame_.slot_info_window_map[ego_slot_info.select_slot_id].Add(
+        ego_slot_info.select_slot);
+
+    // auto slot = frame_.slot_management_info.mutable_slot_info_vec(slot_idx);
+    // *slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+
     ego_slot_info.select_slot_filter =
-        frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+        frame_.slot_info_window_map[ego_slot_info.select_slot_id]
+            .GetFusedInfo();
   }
 }
 
@@ -2307,16 +2251,18 @@ void SlotManagement::UpdateParallelSlotInfoInParking() {
        apa_param.GetParam().car_static_velocity) &&
       (!frame_.parallel_slot_reseted_once)) {
     DEBUG_PRINT("reset parallel slot once!");
-    const auto slot_idx =
-        frame_.slot_info_map[frame_.ego_slot_info.select_slot_id];
-    frame_.slot_info_window_vec[slot_idx].Reset();
 
-    frame_.slot_info_window_vec[slot_idx].Add(frame_.ego_slot_info.select_slot);
-    auto slot = frame_.slot_management_info.mutable_slot_info_vec(slot_idx);
-    *slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
+
+    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
+        frame_.ego_slot_info.select_slot);
+
+    // auto slot = frame_.slot_management_info.mutable_slot_info_vec(slot_idx);
+    // *slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
 
     frame_.ego_slot_info.select_slot_filter =
-        frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+        frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
+            .GetFusedInfo();
 
     frame_.parallel_slot_reseted_once = true;
   }
@@ -2448,24 +2394,22 @@ void SlotManagement::UpdateReleasedSlotInfo() {
 }
 
 const bool SlotManagement::GetSelectedSlot(common::SlotInfo &slot_info,
-                                           const int selected_id) const {
-  if (frame_.slot_info_map.count(selected_id) == 0) {
+                                           const int selected_id) {
+  if (frame_.slot_info_window_map.count(selected_id) == 0) {
     return false;
   } else {
-    slot_info = frame_.slot_management_info.slot_info_vec(
-        frame_.slot_info_map.at(selected_id));
+    slot_info = frame_.slot_info_window_map[selected_id].GetFusedInfo();
     return true;
   }
 }
 
-const bool SlotManagement::GetSelectedSlot(common::SlotInfo &slot_info) const {
+const bool SlotManagement::GetSelectedSlot(common::SlotInfo &slot_info) {
   if (frame_.parking_slot_ptr->has_select_slot_id()) {
-    const auto &selected_id = frame_.parking_slot_ptr->select_slot_id();
-    if (frame_.slot_info_map.count(selected_id) == 0) {
+    const size_t selected_id = frame_.parking_slot_ptr->select_slot_id();
+    if (frame_.slot_info_window_map.count(selected_id) == 0) {
       return false;
     } else {
-      slot_info = frame_.slot_management_info.slot_info_vec(
-          frame_.slot_info_map.at(selected_id));
+      slot_info = frame_.slot_info_window_map[selected_id].GetFusedInfo();
       return true;
     }
   } else {
@@ -2504,13 +2448,11 @@ const bool SlotManagement::SetRealtime() {
     return false;
   }
   // update slot
-  auto slot_idx = frame_.slot_info_map[select_slot_id];
-  auto slot = frame_.slot_management_info.mutable_slot_info_vec(slot_idx);
-  frame_.slot_info_window_vec[slot_idx].Reset();
-  frame_.slot_info_window_vec[slot_idx].Add(select_slot);
-  *slot = frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+  frame_.slot_info_window_map[select_slot_id].Reset();
+  frame_.slot_info_window_map[select_slot_id].Add(select_slot);
 
-  frame_.ego_slot_info.select_slot_filter = *slot;
+  frame_.ego_slot_info.select_slot_filter =
+      frame_.slot_info_window_map[select_slot_id].GetFusedInfo();
 
   return true;
 }

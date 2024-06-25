@@ -11,7 +11,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-2c53262be-JAC_S811_test/planning-2c53262be-JAC_S811/test_1.00000'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_06826/trigger/20240624/20240624-16-05-22/park_in_data_collection_CHERY_TIGGO9_06826_ALL_FILTER_2024-06-24-16-05-22_no_camera.record'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = JAC_S811
@@ -160,7 +160,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
                                     uss_perception_msg.SerializeToString(),
-                                    0, False, False, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    0, False, False, False, False, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
 

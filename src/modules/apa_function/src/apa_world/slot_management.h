@@ -45,11 +45,8 @@ class SlotInfoWindow {
     if (slot_info_vec_.size() < apa_param.GetParam().max_slot_window_size) {
       slot_info_vec_.emplace_back(fused_slot_info);
     } else {
-      slot_info_vec_[front_index_] = fused_slot_info;
-      front_index_++;
-      if (front_index_ >= apa_param.GetParam().max_slot_window_size) {
-        front_index_ = 0;
-      }
+      slot_info_vec_.erase(slot_info_vec_.begin());
+      slot_info_vec_.emplace_back(fused_slot_info);
     }
   }
 
@@ -182,12 +179,8 @@ class LimiterPointWindow {
         apa_param.GetParam().max_limiter_window_size) {
       limiter_points_vec_.emplace_back(fusion_slot_tmp);
     } else {
-      limiter_points_vec_[front_index_] = fusion_slot_tmp;
-      front_index_++;
-
-      if (front_index_ >= apa_param.GetParam().max_limiter_window_size) {
-        front_index_ = 0;
-      }
+      limiter_points_vec_.erase(limiter_points_vec_.begin());
+      limiter_points_vec_.emplace_back(fusion_slot_tmp);
     }
   }
 
@@ -368,18 +361,21 @@ class SlotManagement {
     // slot state check by uss
     const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr;
     const UssPerceptInfo::UssPerceptInfo* uss_percept_info_ptr;
-    const GroundLinePerception::GroundLinePerceptionInfo *ground_line_perception_info_ptr;
+    const GroundLinePerception::GroundLinePerceptionInfo*
+        ground_line_perception_info_ptr;
 
     std::vector<double> uss_raw_dist_vec;
     std::vector<PlanningOutput::SuccessfulSlotsInfo> released_slot_info_vec;
 
-    std::unordered_map<int, size_t> slot_info_map;
-    std::unordered_map<int, std::pair<double, double>> slot_info_angle;
-    std::unordered_map<int, bool> slot_info_direction;
-    std::unordered_map<int, std::pair<Eigen::Vector2d, Eigen::Vector2d>>
+    std::unordered_map<size_t, size_t> slot_info_map;
+    std::unordered_map<size_t, std::pair<double, double>> slot_info_angle;
+    std::unordered_map<size_t, bool> slot_info_direction;
+    std::unordered_map<size_t, std::pair<Eigen::Vector2d, Eigen::Vector2d>>
         slot_info_corner_01;
     std::vector<SlotInfoWindow> slot_info_window_vec;
     common::SlotManagementInfo slot_management_info;
+
+    std::unordered_map<size_t, SlotInfoWindow> slot_info_window_map;
 
     LimiterPointWindow limiter_point_window;
 
@@ -389,7 +385,7 @@ class SlotManagement {
 
     EgoSlotInfo ego_slot_info;
 
-    size_t no_update_slot_count = 0;
+    int no_update_slot_count = 0;
     bool parallel_slot_reseted_once = false;
     bool is_side_calc_in_parking = false;
 
@@ -409,6 +405,7 @@ class SlotManagement {
       slot_info_window_vec.clear();
       slot_management_info.Clear();
       limiter_point_window.Reset();
+      slot_info_window_map.clear();
       param.Reset();
       fusion_order_error_cnt = 0;
       no_update_slot_count = 0;
@@ -428,7 +425,8 @@ class SlotManagement {
               const LocalizationOutput::LocalizationEstimate* localization_info,
               const UssWaveInfo::UssWaveInfo* uss_wave_info,
               const UssPerceptInfo::UssPerceptInfo* uss_percept_info,
-              const GroundLinePerception::GroundLinePerceptionInfo *ground_line_perception_info);
+              const GroundLinePerception::GroundLinePerceptionInfo*
+                  ground_line_perception_info);
 
   void AddUssPerceptObstacles();
 
@@ -445,11 +443,11 @@ class SlotManagement {
   void Reset();
 
   const bool GetSelectedSlot(common::SlotInfo& slot_info,
-                             const int selected_id) const;
+                             const int selected_id);
 
-  const bool GetSelectedSlot(common::SlotInfo& slot_info) const;
+  const bool GetSelectedSlot(common::SlotInfo& slot_info);
 
-  const size_t GetFusedSlotSize() { return frame_.slot_info_window_vec.size(); }
+  const size_t GetFusedSlotSize() { return frame_.slot_info_window_map.size(); }
 
   const std::vector<Eigen::Vector2d> GetSelectedSlotObsVec();
 

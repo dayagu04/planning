@@ -1117,7 +1117,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     case 1:
       break;
     default:
-      for (int i = 0; i < path_seg_vec.size() - 1; ++i) {
+      for (int i = 0; i < static_cast<int>(path_seg_vec.size()) - 1; ++i) {
         if (planner_output.gear_cmd_vec[i] !=
             planner_output.gear_cmd_vec[i + 1]) {
           break;
