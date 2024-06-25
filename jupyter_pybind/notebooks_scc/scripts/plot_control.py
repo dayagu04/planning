@@ -33,7 +33,7 @@ data_control_command = ColumnDataSource(data ={
   # 'vel_out':[],
   # 'lon_err':[],
   'lat_err':[],
-  # 'phi_err':[],
+  'phi_err':[],
   'controller_status': [],
   'lat_enable': [],
   'lon_enable': [],
@@ -131,6 +131,7 @@ axle_torque = []
 throttle_brake = []
 euler_angle_yaw = []
 euler_angle_pitch = []
+phi_err = []
 
 t = 0.0
 
@@ -176,7 +177,7 @@ for i in range(len(ctrl_json_data)):
   throttle_brake.append(tmp_throttle_brake)
   euler_angle_yaw.append(ctrl_json_data[i]['euler_angle_yaw'] * 57.3)
   euler_angle_pitch.append(ctrl_json_data[i]['euler_angle_pitch'] * 57.3)
-
+  phi_err.append(ctrl_json_data[i]['phi_err'] * 57.3)
   t = t + 0.02
 
 data_control_command.data.update({
@@ -194,7 +195,7 @@ data_control_command.data.update({
   # 'vel_out':[],
   # 'lon_err':[],
   'lat_err': lat_err,
-  # 'phi_err':[],
+  'phi_err':phi_err,
   'controller_status': controller_status,
   'lat_enable': lat_enable,
   'lon_enable': lon_enable,
@@ -290,6 +291,7 @@ fig10.line('time', 'euler_angle_pitch', source = data_control_command, line_widt
 
 f11 = fig11.line('time', 'lat_err', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_err')
 fig11.line('time', 'vel_error', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_error')
+fig11.line('time', 'phi_err', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'phi_err')
 fig11.line('x', 'y', source = data_cursor_fig11, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
 
 hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lat_enable', '@lat_enable'), ('lon_enable', '@lon_enable'), ('planning_type', '@planning_type')], mode='vline')
@@ -303,7 +305,7 @@ hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('vel_out', '@ve
     ('vel_KI_term', '@vel_KI_term')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('acc_cmd', '@vel_out'), ('acc_vel', '@acc_vel'), ('acc_ego', '@acc_ego'), ('slope_acc', '@slope_acc'), ('throttle_brake', '@throttle_brake')], mode='vline')
 hover10 = HoverTool(renderers=[f10], tooltips=[('time', '@time'), ('yaw_conti', '@yaw_conti'), ('yaw', '@euler_angle_yaw'), ('pitch', '@euler_angle_pitch')], mode='vline')
-hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('lat_err', '@lat_err'), ('vel_error', '@vel_error')], mode='vline')
+hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('lat_err', '@lat_err'), ('vel_error', '@vel_error'),('phi_err','@phi_err')], mode='vline')
 
 fig2.add_tools(hover2)
 fig3.add_tools(hover3)
