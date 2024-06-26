@@ -434,18 +434,21 @@ bool SlotManagement::GenTLane(
 
   // If the car is parked according to the actual slot, its leftmost and
   // rightmost coordinates which includes rearview mirror are as follows
-  const double car_width_include_mirror =
-      apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
-  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
+  const double max_car_width_with_safe_buffer =
+      apa_param.GetParam().max_car_width +
+      2.0 * apa_param.GetParam().car_lat_inflation_normal;
+
+  const double car_half_width_with_safe_buffer =
+      max_car_width_with_safe_buffer * 0.5;
 
   const double virtual_slot_width =
-      car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
+      max_car_width_with_safe_buffer +
+      apa_param.GetParam().slot_compare_to_car_width;
 
   const double real_slot_width = ego_slot_info.slot_width;
 
-  DEBUG_PRINT("car_width_include_mirror = "
-              << car_width_include_mirror
+  DEBUG_PRINT("max_car_width_with_safe_buffer = "
+              << max_car_width_with_safe_buffer
               << "  virtual slot width = " << virtual_slot_width
               << "  real slot width = " << real_slot_width);
 
@@ -467,9 +470,9 @@ bool SlotManagement::GenTLane(
 
   DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
 
-  const double left_dis_obs_car = left_y - car_y_left_include_mirror;
+  const double left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
 
-  const double right_dis_obs_car = car_y_right_include_mirror - right_y;
+  const double right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
 
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
                                     << "  right_dis_obs_car = "

@@ -25,7 +25,7 @@ struct ApaParameters {
   double wheel_base = 2.7;
   double car_width = 1.89;
   double car_length = 4.88;
-  double mirror_width = 0.2;
+  double max_car_width = 0.2;
   double lon_dist_mirror_to_rear_axle = 1.844;
   double lat_dist_mirror_to_center = 1.135;
   double steer_ratio = 16.5;

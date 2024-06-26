@@ -221,13 +221,16 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     return current_path_point_global_vec_;
   }
 
-  const double car_width_include_mirror =
-      apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror / 2.0;
-  const double car_y_left_include_mirror = car_width_include_mirror / 2.0;
+  const double max_car_width_with_safe_buffer =
+      apa_param.GetParam().max_car_width +
+      2.0 * apa_param.GetParam().car_lat_inflation_normal;
+
+  const double car_half_width_with_safe_buffer =
+      max_car_width_with_safe_buffer * 0.5;
 
   const double virtual_slot_width =
-      car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
+      max_car_width_with_safe_buffer +
+      apa_param.GetParam().slot_compare_to_car_width;
 
   const double real_slot_width = ego_slot_info.slot_width;
 

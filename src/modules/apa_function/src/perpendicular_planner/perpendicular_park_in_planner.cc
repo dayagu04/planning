@@ -373,6 +373,11 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
             ? apa_param.GetParam().col_obs_safe_dist_strict
             : apa_param.GetParam().col_obs_safe_dist_normal;
 
+    const double car_move_dist =
+        frame_.current_path_length - frame_.remain_dist;
+
+    double path_length = 0.0;
+
     double min_remain_dist = 0.0268;
     if (dist > apa_param.GetParam().slot_max_jump_dist &&
         frame_.remain_dist > min_remain_dist) {
@@ -388,7 +393,16 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       double car_remain_dist = 0.0;
       for (const auto& path_seg_global : first_reverse_path_vec_) {
         auto path_seg_local = path_seg_global;
-        pnc::geometry_lib::PrintSegmentInfo(path_seg_global);
+        // pnc::geometry_lib::PrintSegmentInfo(path_seg_global);
+        // check if the vehicle has passed through this section of the path, if
+        // it has already passed, there is no need to perform collision
+        // detection on this section of the path
+        path_length += path_seg_local.Getlength();
+        if (path_length < car_move_dist) {
+          car_remain_dist += path_length;
+          continue;
+        }
+
         CollisionDetector::CollisionResult col_res;
         if (path_seg_global.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
           path_seg_local.line_seg.pA =
@@ -688,18 +702,21 @@ void PerpendicularInPlanner::GenTlane() {
     right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
 
-  const double car_width_include_mirror =
-      apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
-  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
+  const double max_car_width_with_safe_buffer =
+      apa_param.GetParam().max_car_width +
+      2.0 * apa_param.GetParam().car_lat_inflation_normal;
+
+  const double car_half_width_with_safe_buffer =
+      max_car_width_with_safe_buffer * 0.5;
 
   const double virtual_slot_width =
-      car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
+      max_car_width_with_safe_buffer +
+      apa_param.GetParam().slot_compare_to_car_width;
 
   const double real_slot_width = ego_slot_info.slot_width;
 
-  DEBUG_PRINT("car_width_include_mirror = "
-              << car_width_include_mirror
+  DEBUG_PRINT("max_car_width_with_safe_buffer = "
+              << max_car_width_with_safe_buffer
               << "  virtual slot width = " << virtual_slot_width
               << "  real slot width = " << real_slot_width);
 
@@ -721,9 +738,9 @@ void PerpendicularInPlanner::GenTlane() {
 
   DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
 
-  const double left_dis_obs_car = left_y - car_y_left_include_mirror;
+  const double left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
 
-  const double right_dis_obs_car = car_y_right_include_mirror - right_y;
+  const double right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
 
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
                                     << "  right_dis_obs_car = "

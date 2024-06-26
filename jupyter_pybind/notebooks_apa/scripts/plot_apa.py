@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-4116aafb3-JAC_S811-test4/planning-4116aafb3-JAC_S811-test/test_5.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-cda3803ca-CHERY_T26-test/test_0.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -98,6 +98,8 @@ def slider_callback(bag_time, vehicle_type):
     vehicle_type = 'JAC_S811'
   elif vehicle_type == 1:
     vehicle_type = 'CHERY_T26'
+  elif vehicle_type == 2:
+    vehicle_type = 'CHERY_E0X'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag)
   index_map = bag_loader.get_msg_index(bag_time)
