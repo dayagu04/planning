@@ -194,9 +194,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     const auto pM01 = 0.5 * (pt[0] + pt[1]);
     const auto pM23 = 0.5 * (pt[2] + pt[3]);
     const double real_slot_length = (pM01 - pM23).norm();
-    const auto t = (pt[1] - pt[0]).normalized();
-    // const auto n = (pM01 - pM23).normalized();
-    const auto n = Eigen::Vector2d(t.y(), -t.x());
+    // const auto t = (pt[1] - pt[0]).normalized();
+    // const auto n = Eigen::Vector2d(t.y(), -t.x());
+    const auto n = (pM01 - pM23).normalized();
     pt[2] = pt[0] - real_slot_length * n;
     pt[3] = pt[1] - real_slot_length * n;
 
@@ -370,13 +370,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
     const double safe_dist =
         perpendicular_path_planner_.GetOutput().is_first_reverse_path
-            ? apa_param.GetParam().col_obs_safe_dist
-            : apa_param.GetParam().col_obs_safe_dist_radical;
-
-    CollisionDetector::Paramters params;
-    params.lat_inflation =
-        apa_param.GetParam().car_lat_inflation_for_obs_radical;
-    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
+            ? apa_param.GetParam().col_obs_safe_dist_strict
+            : apa_param.GetParam().col_obs_safe_dist_normal;
 
     double min_remain_dist = 0.0268;
     if (dist > apa_param.GetParam().slot_max_jump_dist &&
@@ -463,9 +458,6 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         trim_path_by_obs_ = true;
       }
     }
-
-    params.Reset();
-    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
   }
 
   // update stuck uss time
@@ -801,7 +793,7 @@ void PerpendicularInPlanner::GenTlane() {
   slot_t_lane_.pt_lower_boundry_pos.x() =
       slot_t_lane_.pt_lower_boundry_pos.x() -
       apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist - 0.05;
+      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
 
   // construct obstacle_t_lane_
   // for onstacle_t_lane    right is inside, left is outside
@@ -975,6 +967,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   // construct input
   const auto& ego_slot_info = frame_.ego_slot_info;
   PerpendicularPathPlanner::Input path_planner_input;
+  path_planner_input.is_simulation = is_simulation_;
   path_planner_input.pt_0 = ego_slot_info.pt_0;
   path_planner_input.pt_1 = ego_slot_info.pt_1;
   path_planner_input.sin_angle = ego_slot_info.sin_angle;
@@ -1125,7 +1118,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     case 1:
       break;
     default:
-      for (int i = 0; i < path_seg_vec.size() - 1; ++i) {
+      for (int i = 0; i < static_cast<int>(path_seg_vec.size()) - 1; ++i) {
         if (planner_output.gear_cmd_vec[i] !=
             planner_output.gear_cmd_vec[i + 1]) {
           break;

@@ -263,7 +263,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   slot_t_lane.pt_lower_boundry_pos.x() =
       slot_t_lane.pt_lower_boundry_pos.x() -
       apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist - 0.05;
+      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
 
   const Eigen::Vector2d pt_0 = ego_slot_info.g2l_tf.GetPos(raw_pt[0]);
   const Eigen::Vector2d pt_1 = ego_slot_info.g2l_tf.GetPos(raw_pt[1]);
@@ -413,6 +413,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     pt_inside = obj_pt_1;
   }
   slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(pt_inside).x();
+  input.is_simulation = true;
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
   input.tlane = slot_t_lane;
   input.is_complete_path = is_complete_path;

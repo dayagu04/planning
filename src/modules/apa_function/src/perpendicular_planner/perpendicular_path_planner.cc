@@ -28,7 +28,7 @@ namespace apa_planner {
 
 static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
-static const size_t kMultiPlanMaxPathNumsInSlot = 3;
+static const int kMultiPlanMaxPathNumsInSlot = 5;
 static const size_t kAdjustPlanMaxPathNumsInSlot = 5;
 static const double kMinSingleGearPathLength = 0.4;
 
@@ -45,7 +45,8 @@ void PerpendicularPathPlanner::Preprocess() {
   calc_params_.stuck_by_inside = false;
   calc_params_.multi_plan = false;
   calc_params_.directly_use_ego_pose = false;
-  calc_params_.turn_radius = 1.0268 * apa_param.GetParam().min_turn_radius;
+  calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
+  calc_params_.can_insert_line = true;
 
   // calc slot side by Tlane
   if (input_.tlane.pt_inside.y() > input_.tlane.pt_outside.y()) {
@@ -364,8 +365,10 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       path_seg_vec.emplace_back(path_seg);
     }
     // set virtual arc DE that make sure multi plan success
+    bool use_virtual_arc = false;
     if (dubins_planner_.GetOutput().current_gear_cmd ==
         pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      use_virtual_arc = true;
       pnc::geometry_lib::Arc arc_DE;
       arc_DE.pA = target_pose.pos;
       arc_DE.headingA = target_pose.heading;
@@ -379,7 +382,7 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       if (line_normal_vec.x() > 0.0) {
         line_normal_vec = -1.0 * line_normal_vec;
       }
-      arc_DE.circle_info.radius = calc_params_.turn_radius - 0.1868;
+      arc_DE.circle_info.radius = calc_params_.turn_radius;
       arc_DE.circle_info.center =
           arc_DE.pA + arc_DE.circle_info.radius * line_normal_vec;
       arc_DE.is_anti_clockwise = calc_params_.is_left_side ? false : true;
@@ -388,6 +391,11 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       path_seg.seg_type = pnc::geometry_lib::SEG_TYPE_ARC;
       path_seg.arc_seg = arc_DE;
       path_seg_vec.emplace_back(path_seg);
+    }
+    if (use_virtual_arc) {
+      CollisionDetector::Paramters param;
+      param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
+      collision_detector_ptr_->SetParam(param);
     }
     for (pnc::geometry_lib::PathSegment& path_seg : path_seg_vec) {
       CollisionDetector::CollisionResult col_res;
@@ -398,14 +406,19 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
         auto& arc = path_seg.arc_seg;
         col_res = collision_detector_ptr_->UpdateByObsMap(arc, arc.headingA);
       }
-      const double safe_remain_dist = std::min(
-          col_res.remain_car_dist, col_res.remain_obstacle_dist -
-                                       apa_param.GetParam().col_obs_safe_dist);
+      const double safe_remain_dist =
+          std::min(col_res.remain_car_dist,
+                   col_res.remain_obstacle_dist -
+                       apa_param.GetParam().col_obs_safe_dist_normal);
       if (col_res.remain_car_dist - 1e-3 > safe_remain_dist ||
           safe_remain_dist < 1e-5) {
         prepare_success = false;
         break;
       }
+    }
+    if (use_virtual_arc) {
+      CollisionDetector::Paramters param;
+      collision_detector_ptr_->SetParam(param);
     }
   }
   return prepare_success;
@@ -528,7 +541,7 @@ void PerpendicularPathPlanner::CalMonoSafeCircle() {
   const double deta_x = std::sqrt(
       std::pow(
           (calc_params_.turn_radius - apa_param.GetParam().car_width * 0.5 -
-           apa_param.GetParam().car_lat_inflation_for_obs - 0.0268),
+           apa_param.GetParam().car_lat_inflation_normal - 0.0268),
           2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - pt_inside.y()), 2));
 
@@ -590,7 +603,7 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
   circle_p1.center = pt_inside;
   circle_p1.radius = calc_params_.turn_radius -
                      0.5 * apa_param.GetParam().car_width -
-                     apa_param.GetParam().car_lat_inflation_for_obs - 0.0268;
+                     apa_param.GetParam().car_lat_inflation_normal - 0.0268;
 
   // move down the start line
   const Eigen::Vector2d pt_s =
@@ -818,7 +831,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
           const double safe_remain_dist =
               std::min(col_res.remain_car_dist,
                        col_res.remain_obstacle_dist -
-                           apa_param.GetParam().col_obs_safe_dist);
+                           apa_param.GetParam().col_obs_safe_dist_normal);
 
           if (col_res.remain_car_dist - 1e-3 > safe_remain_dist ||
               safe_remain_dist < 1e-5) {
@@ -933,10 +946,15 @@ const bool PerpendicularPathPlanner::MultiPlan() {
             "continue to use reverse gear adjust plan to reduce change count!");
         output_.multi_reach_target_pose = false;
       }
-
-      if (CheckAdjustPlanSuitable(
-              output_.path_segment_vec[path_num_gear - 1].GetEndPose()) &&
-          path_num_gear < multi_out_put.gear_cmd_vec.size()) {
+      // only to onvenient for simulation use
+      bool continue_to_adjust = true;
+      if (input_.is_simulation) {
+        continue_to_adjust = !output_.multi_reach_target_pose;
+      }
+      if (continue_to_adjust &&
+          path_num_gear < static_cast<int>(multi_out_put.gear_cmd_vec.size()) &&
+          CheckAdjustPlanSuitable(
+              multi_out_put.path_segment_vec[path_num_gear - 1].GetEndPose())) {
         DEBUG_PRINT("lose drive path, continue use reverse gear adjust plan");
         for (int i = static_cast<int>(multi_out_put.gear_cmd_vec.size() - 1);
              i >= path_num_gear; --i) {
@@ -1131,20 +1149,15 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
   apa_param.SetPram().target_heading_err = heading_err;
 
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
-    // when send ref gear path, more conservative, otherwise more radical
-    double safe_dist = apa_param.GetParam().col_obs_safe_dist_radical;
+    double safe_dist = apa_param.GetParam().col_obs_safe_dist_normal;
     CollisionDetector::Paramters params;
-    params.lat_inflation =
-        apa_param.GetParam().car_lat_inflation_for_obs_radical;
-    if (i == 0 && tmp_path_seg.seg_gear == current_gear) {
-      safe_dist = apa_param.GetParam().col_obs_safe_dist;
-      params.lat_inflation = apa_param.GetParam().car_lat_inflation_for_obs;
-      if (calc_params_.first_multi_plan && type == 2) {
-        params.lat_inflation +=
-            apa_param.GetParam().car_lat_inflation_for_obs_radical;
-      }
+    params.lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+    if (calc_params_.first_multi_plan && type == 0 && i == 0 &&
+        tmp_path_seg.seg_gear == current_gear) {
+      // when 1R and two arc, should far from inside obs
+      params.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
+      safe_dist = apa_param.GetParam().col_obs_safe_dist_strict;
     }
-
     collision_detector_ptr_->SetParam(params);
     // PrintSegmentInfo(tmp_path_seg);
     const uint8_t path_col_det_res =
@@ -1158,7 +1171,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       break;
     } else if (path_col_det_res == PATH_COL_INSIDE_STUCK) {
       if (i == 0 || calc_params_.first_multi_plan) {
-        // when stuck by inside pos, can use more big radius to avoid it
+        // when stuck by inside pos, can use line and arc to avoid it
         calc_params_.stuck_by_inside = true;
         return false;
       }
@@ -1286,6 +1299,57 @@ const bool PerpendicularPathPlanner::TwoArcPlan(
   if (path_seg_vec.empty()) {
     DEBUG_PRINT("TwoArcPlan fail 1");
     return false;
+  }
+
+  if (path_seg_vec.size() == 2 &&
+      path_seg_vec[0].seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    pnc::geometry_lib::Arc virtual_arc1 = path_seg_vec[0].arc_seg;
+    pnc::geometry_lib::Arc virtual_arc2 = path_seg_vec[1].arc_seg;
+    const uint8_t arc2_steer = path_seg_vec[1].seg_steer;
+    double tmp_arc_length = virtual_arc1.length;
+    double trim_path_step = 0.108;
+    Eigen::Vector2d t_vec;
+    Eigen::Vector2d n_vec;
+    bool no_use_arc2_flag = false;
+    CollisionDetector::CollisionResult col_res;
+    while (true) {
+      if (tmp_arc_length < apa_param.GetParam().min_one_step_path_length ||
+          virtual_arc1.pA.y() * virtual_arc1.pB.y() > 0.0) {
+        break;
+      }
+      pnc::geometry_lib::CompleteArcInfo(virtual_arc1, tmp_arc_length,
+                                         virtual_arc1.is_anti_clockwise);
+      // constuct virtual_arc2
+      virtual_arc2.pA = virtual_arc1.pB;
+      virtual_arc2.headingA = virtual_arc1.headingB;
+      virtual_arc2.length = 1.68;
+      t_vec = pnc::geometry_lib::GenHeadingVec(virtual_arc2.headingA);
+      if (arc2_steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
+        n_vec << t_vec.y(), -t_vec.x();
+      } else {
+        n_vec << -t_vec.y(), t_vec.x();
+      }
+      virtual_arc2.circle_info.center =
+          virtual_arc2.pA + virtual_arc2.circle_info.radius * n_vec;
+      pnc::geometry_lib::CompleteArcInfo(virtual_arc2, virtual_arc2.length,
+                                         virtual_arc2.is_anti_clockwise);
+      col_res = collision_detector_ptr_->UpdateByObsMap(virtual_arc2,
+                                                        virtual_arc2.headingA);
+      if (std::min(col_res.remain_car_dist,
+                   col_res.remain_obstacle_dist -
+                       apa_param.GetParam().col_obs_safe_dist_normal) < 1e-5) {
+        tmp_arc_length -= trim_path_step;
+        no_use_arc2_flag = true;
+      } else {
+        break;
+      }
+    }
+    if (no_use_arc2_flag) {
+      path_seg_vec.pop_back();
+      DEBUG_PRINT("init arc length = " << path_seg_vec[0].arc_seg.length);
+      path_seg_vec[0].arc_seg = virtual_arc1;
+      calc_params_.can_insert_line = false;
+    }
   }
 
   return true;
@@ -1489,10 +1553,13 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
       fail_count += 1;
       if (fail_count == 1) {
       } else {
-        if (!output_.multi_reach_target_pose) {
+        calc_params_.adjust_fail_count += 1;
+        DEBUG_PRINT("adjust_fail_count = " << calc_params_.adjust_fail_count);
+        if (!output_.multi_reach_target_pose &&
+            calc_params_.adjust_fail_count > 4) {
           output_.Reset();
+          success = false;
         }
-        success = false;
         break;
       }
     }
@@ -1924,6 +1991,19 @@ const bool PerpendicularPathPlanner::STurnParallelPlan(
         success = false;
       }
     }
+
+    if (path_seg_vec.size() == 1 && arc_s_2_available) {
+      const double dist = (arc_s_2.pA - current_pose.pos).norm();
+      const double heading_err =
+          std::fabs(arc_s_2.headingA - current_pose.heading);
+      if (dist < apa_param.GetParam().target_pos_err - 1e-6 &&
+          heading_err < apa_param.GetParam().target_heading_err / 57.3 - 1e-6) {
+        return true;
+      } else {
+        path_seg_vec.clear();
+        return false;
+      }
+    }
   }
 
   if (!success) {
@@ -2082,19 +2162,8 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
         tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN) {
       only_s_turn = true;
     }
-    // when send ref gear path, more conservative, otherwise more radical
-    double safe_dist = apa_param.GetParam().col_obs_safe_dist_radical;
-    CollisionDetector::Paramters params;
-    params.lat_inflation =
-        apa_param.GetParam().car_lat_inflation_for_obs_radical;
-    if (i == 0 && tmp_path_seg.seg_gear == current_gear) {
-      safe_dist = apa_param.GetParam().col_obs_safe_dist;
-      params.lat_inflation = apa_param.GetParam().car_lat_inflation_for_obs;
-    }
-    collision_detector_ptr_->SetParam(params);
     // PrintSegmentInfo(tmp_path_seg);
-    const uint8_t path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg, safe_dist);
+    const uint8_t path_col_det_res = TrimPathByCollisionDetection(tmp_path_seg);
     if (output_.multi_reach_target_pose &&
         path_col_det_res != PATH_COL_NORMAL) {
       // this case should no col, otherwise lose all path
@@ -2110,7 +2179,8 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
         path_seg_vec.emplace_back(tmp_path_seg);
       } else {
         if (tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN &&
-            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+            input_.slot_occupied_ratio > 0.168) {
           DEBUG_PRINT("s turn col, lose all s turn path.");
           if (tmp_path_seg_vec[j - 1].plan_type ==
               pnc::geometry_lib::PLAN_TYPE_S_TURN) {
@@ -2318,6 +2388,11 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     length += output_.path_segment_vec[i].Getlength();
   }
 
+  if (!calc_params_.can_insert_line &&
+      path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    return;
+  }
+
   int insert_case = -1;
   if (pnc::mathlib::IsInBound(path_seg.GetEndHeading() * 57.3, -0.208, 0.208)) {
     insert_case = 0;
@@ -2354,9 +2429,9 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
         const std::vector<double> path_length_tab = {
-            1.0 * min_path_length, 2.168 * min_path_length,
-            2.868 * min_path_length, 3.668 * min_path_length,
-            4.168 * min_path_length};
+            1.668 * min_path_length, 3.168 * min_path_length,
+            3.868 * min_path_length, 4.268 * min_path_length,
+            4.868 * min_path_length};
         min_path_length = pnc::mathlib::Interp1(
             lat_tab, path_length_tab, std::fabs(path_seg.GetEndPos().y()));
       }
@@ -2396,12 +2471,10 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     new_line.line_seg.pB = new_line_vector + new_line.line_seg.pA;
 
     CollisionDetector::Paramters params;
-    params.lat_inflation =
-        apa_param.GetParam().car_lat_inflation_for_obs +
-        apa_param.GetParam().car_lat_inflation_for_obs_radical;
+    params.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
     collision_detector_ptr_->SetParam(params);
     const uint8_t path_col_res = TrimPathByCollisionDetection(
-        new_line, apa_param.GetParam().col_obs_safe_dist + 0.168);
+        new_line, apa_param.GetParam().col_obs_safe_dist_strict);
     params.Reset();
     collision_detector_ptr_->SetParam(params);
 
@@ -2617,8 +2690,8 @@ void PerpendicularPathPlanner::SampleArcSegment(
 // collision detect start
 const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
     pnc::geometry_lib::PathSegment& path_seg) {
-  return TrimPathByCollisionDetection(path_seg,
-                                      apa_param.GetParam().col_obs_safe_dist);
+  return TrimPathByCollisionDetection(
+      path_seg, apa_param.GetParam().col_obs_safe_dist_normal);
 }
 
 const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
@@ -2951,6 +3024,8 @@ const bool PerpendicularPathPlanner::UpdatePb(
   }
 
   if (PreparePlan()) {
+    calc_params_.adjust_fail_count = 0;
+    calc_params_.first_multi_plan = true;
     DEBUG_PRINT("first prepare plan success");
   } else {
     DEBUG_PRINT("first prepare plan fail, quit");
@@ -2982,6 +3057,7 @@ const bool PerpendicularPathPlanner::UpdatePb(
 
   if (AdjustPlan()) {
     DEBUG_PRINT("adjust plan success");
+    return true;
   }
   if (CheckReachTargetPose()) {
     DEBUG_PRINT("adjust plan to target pose");

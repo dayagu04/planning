@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-//#include "apa_plan_base.h"
+// #include "apa_plan_base.h"
 #include "collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
@@ -72,6 +72,7 @@ class PerpendicularPathPlanner {
     double sin_angle = 1.0;
     Eigen::Vector2d pt_0;
     Eigen::Vector2d pt_1;
+    bool is_simulation = false;
 
     void Set(const Tlane &tlane_in,
              const pnc::geometry_lib::PathPoint &ego_pose_in,
@@ -127,8 +128,11 @@ class PerpendicularPathPlanner {
     bool first_multi_plan = true;
     bool stuck_by_inside = false;
     bool multi_plan = false;
+    bool can_insert_line = true;
 
     double turn_radius = 5.5;
+
+    size_t adjust_fail_count = 0;
 
     pnc::geometry_lib::LineSegment target_line;
 
@@ -155,11 +159,14 @@ class PerpendicularPathPlanner {
 
       turn_radius = 5.5;
 
+      adjust_fail_count = 0;
+
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
       stuck_by_inside = false;
       multi_plan = false;
+      can_insert_line = true;
 
       use_mono_tang = false;
       use_multi_tang = false;
