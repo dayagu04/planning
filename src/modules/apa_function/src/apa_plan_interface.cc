@@ -23,9 +23,9 @@
 namespace planning {
 namespace apa_planner {
 
-void ApaPlanInterface::Init() {
+void ApaPlanInterface::Init(const bool is_simulation) {
   // sync parameters
-  SyncParameters();
+  SyncParameters(is_simulation);
 
   // init apa world
   apa_world_ptr_ = std::make_shared<ApaWorld>();
@@ -166,10 +166,13 @@ static std::string ReadFile(const std::string &path) {
   return std::string(content.begin(), content.end());
 }
 
-void ApaPlanInterface::SyncParameters() {
-  auto engine_config =
-      common::ConfigurationContext::Instance()->engine_config();
-  std::string path = engine_config.vehicle_cfg_dir + "/apa_params.json";
+void ApaPlanInterface::SyncParameters(const bool is_simulation) {
+  std::string path = "/asw/planning/res/conf/apa_params.json";
+  if (!is_simulation) {
+    auto engine_config =
+        common::ConfigurationContext::Instance()->engine_config();
+    path = engine_config.vehicle_cfg_dir + "/apa_params.json";
+  }
 
   std::string config_file = ReadFile(path);
   auto config = mjson::Reader(config_file);

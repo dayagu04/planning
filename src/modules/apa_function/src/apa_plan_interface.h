@@ -17,13 +17,13 @@ namespace apa_planner {
 
 class ApaPlanInterface {
  public:
-  void Init();
+  void Init(const bool is_simulation = false);
 
   void Reset();
 
   const bool Update(const LocalView* local_view_ptr);
 
-  void SyncParameters();
+  void SyncParameters(const bool is_simulation = false);
 
   const std::vector<std::shared_ptr<ApaPlannerBase>>& GetPlannerStack() const {
     return apa_planner_stack_;

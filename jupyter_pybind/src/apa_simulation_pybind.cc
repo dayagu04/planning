@@ -46,7 +46,7 @@ static planning::LocalView local_view;
 int Init() {
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
 
-  apa_interface_ptr->Init();
+  apa_interface_ptr->Init(true);
 
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
