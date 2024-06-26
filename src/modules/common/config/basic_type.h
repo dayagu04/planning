@@ -476,6 +476,7 @@ struct PlanningInitPoint {
   double jerk;
   double relative_time;
   double lon_pos_err;
+  double delta;
   FrenetState frenet_state;
 
   planning::common::LateralInitState lat_init_state;

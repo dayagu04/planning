@@ -2,6 +2,8 @@
 #define ZNQC_MODULES_CONTEXT_EGO_STATE_MANAGER_H_
 
 #include <cstdint>
+#include <unordered_set>
+
 #include "config/basic_type.h"
 #include "config/message_type.h"
 #include "config/vehicle_param.h"
@@ -28,6 +30,15 @@ class EgoStateManager {
     LAT_REPLAN,
     LON_REPLAN,
   };
+
+  enum ReplanType {
+  LAT_POSITION_REPLAN = 1,
+  LAT_ANGLE_REPLAN = 2,
+  LON_POSITION_REPLAN = 4,
+  LON_TINY_SPEED_REPLAN = 8,
+  FUCTION_REQUEST_REPLAN = 16,
+  LAT_lON_REST = 32,
+};
 
   bool update(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_carte(const Point2D &ego_carte);
@@ -111,6 +122,9 @@ class EgoStateManager {
   void UpdatePlanningInitState();
   void RealtimeUpdatePlanningInitState();
   uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
+  // new replan
+  uint8_t replan_process(const bool &lat_reset_flag,
+                                                 const bool &lon_reset_flag);
 
   void LateralReset();
   void LongitudinalReset();
@@ -163,6 +177,7 @@ class EgoStateManager {
   planning_math::Polygon2d polygon_;
   PlanningInitPoint planning_init_point_;
   bool planning_init_point_valid_ = false;
+  std::unordered_set<ReplanType> replan_type_;
   pnc::filters::SlopeFilter v_cruise_filter_;  // 对巡航车速变化速率限制
 
   std::vector<PncTrajectoryPoint> stitch_trajectory_;

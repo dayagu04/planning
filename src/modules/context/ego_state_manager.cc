@@ -1,11 +1,13 @@
 #include "ego_state_manager.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 
 #include "../../common/planning_gflags.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "func_state_machine_c.h"
 #include "log.h"
 #include "math_lib.h"
 #include "planning_context.h"
@@ -230,6 +232,146 @@ bool EgoStateManager::update(
   }
 
   return true;
+}
+
+uint8_t EgoStateManager::replan_process(const bool &lat_reset_flag,
+                                        const bool &lon_reset_flag) {
+  // note that lon_reset_flag and lat_reset_flag reserved for acc and override
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  auto &motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
+  double steer_ratio = vehicle_param.steer_ratio;
+
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+  auto &lon_init_state = planning_init_point_.lon_init_state;
+
+  // TODO: monitor location latency
+  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  const auto t = planning_debug_data->location_latency().location_latency();
+  JSON_DEBUG_VALUE("location_latency", t);
+
+  Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x,
+                          ego_state->ego_pose_raw().y);
+  pnc::spline::Projection projection_spline;
+  projection_spline.CalProjectionPoint(
+      motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
+      motion_planner_output.s_lat_vec.front(),
+      motion_planner_output.s_lat_vec.back(), cur_pos);
+
+  const auto &lat_err = projection_spline.GetOutput().dist_proj;
+  const auto &s_proj = projection_spline.GetOutput().s_proj;
+  const auto &proj_point = projection_spline.GetOutput().point_proj;
+  Eigen::Vector2d init_point(lat_init_state.x(), lat_init_state.y());
+  const double lat_init_theta = lat_init_state.theta();
+  double theta_err = lat_init_theta - ego_state->ego_pose_raw().theta;
+  const double pi2 = 2.0 * M_PI;
+  if (theta_err > M_PI) {
+    lat_init_state.set_theta(lat_init_theta - pi2);
+    theta_err -= pi2;
+  } else if (theta_err < -M_PI) {
+    lat_init_state.set_theta(lat_init_theta + pi2);
+    theta_err += pi2;
+  }
+  const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
+                                  init_point.y() - proj_point.y());
+  const double dist_err =
+      std::hypot(lat_init_state.x() - ego_state->ego_pose_raw().x,
+                 lat_init_state.y() - ego_state->ego_pose_raw().y);
+
+  JSON_DEBUG_VALUE("lat_err", lat_err)
+  JSON_DEBUG_VALUE("theta_err", theta_err)
+  JSON_DEBUG_VALUE("lon_err", lon_err)
+  JSON_DEBUG_VALUE("dist_err", dist_err)
+
+  double max_replan_lat_err = max_replan_lat_err_;
+  double max_replan_theta_err = max_replan_theta_err_ / 57.3;
+  double max_replan_lon_err = max_replan_lon_err_;
+  double max_replan_dist_err = max_replan_dist_err_;
+  if (session_->is_hpp_scene()) {
+    max_replan_lat_err = hpp_max_replan_lat_err_;
+    max_replan_theta_err = hpp_max_replan_theta_err_ / 57.3;
+    max_replan_lon_err = hpp_max_replan_lon_err_;
+    max_replan_dist_err = hpp_max_replan_dist_err_;
+  }
+
+  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v); /*&&
+                               (ego_state->ego_acc() < config_.kEpsilon_a);*/
+  // replan type judge
+  int replan_code = 0;
+  if (fabs(lat_err) > max_replan_lat_err) {
+    replan_type_.insert(LAT_POSITION_REPLAN);
+    replan_code += LAT_POSITION_REPLAN;
+  }
+  if (fabs(theta_err) > max_replan_theta_err) {
+    replan_type_.insert(LAT_ANGLE_REPLAN);
+    replan_code += LAT_ANGLE_REPLAN;
+  }
+  if (lat_reset_flag || lon_reset_flag) {
+    replan_type_.insert(FUCTION_REQUEST_REPLAN);
+    replan_code += FUCTION_REQUEST_REPLAN;
+  }
+  if (fabs(lon_err) > max_replan_lon_err) {
+    replan_type_.insert(LON_POSITION_REPLAN);
+    replan_code += LON_POSITION_REPLAN;
+  }
+  if (low_speed_replan) {
+    replan_type_.insert(LON_TINY_SPEED_REPLAN);
+    replan_code += LON_TINY_SPEED_REPLAN;
+  }
+
+  const auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
+  // deal with ego_acc which has noise
+  // TODO: need to recieve linear acceleration from vehicle wheel speed
+  double ego_acc_replan = ego_acc_;
+  if (start_stop_state == common::StartStopInfo::START) {
+    ego_acc_replan = std::max(0.0, ego_acc_replan);
+  } else if (start_stop_state == common::StartStopInfo::STOP) {
+    ego_acc_replan = std::min(0.0, ego_acc_replan);
+  }
+
+  VehicleState cur_vehicle_state;
+  cur_vehicle_state.angular_velocity = ego_yaw_rate_;
+  cur_vehicle_state.linear_velocity = ego_v_;
+  cur_vehicle_state.jerk = jerk_;
+  cur_vehicle_state.linear_acceleration = ego_acc_replan;
+  cur_vehicle_state.delta = ego_steer_angle_ / steer_ratio;
+  cur_vehicle_state.heading = ego_pose_.theta;
+  cur_vehicle_state.kappa = curve_factor * cur_vehicle_state.delta;
+  cur_vehicle_state.x = ego_pose_.x;
+  cur_vehicle_state.y = ego_pose_.y;
+
+  std::vector<PncTrajectoryPoint> reinit_point{};
+  if (!replan_type_.empty()) {
+    if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
+      reinit_point.emplace_back(
+          TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+              cur_vehicle_state));
+    } else {
+      reinit_point = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
+          planning_loop_dt, cur_vehicle_state);
+      assert(!reinit_point.empty());
+    }
+    // assebling init state separately
+    lat_init_state.set_x(reinit_point.front().path_point.x);
+    lat_init_state.set_y(reinit_point.front().path_point.y);
+    lat_init_state.set_theta(reinit_point.front().path_point.theta);
+    // TODO: need estimated delta and omega for large curv condition
+    lat_init_state.set_delta(reinit_point.front().delta);
+    lat_init_state.set_curv(reinit_point.front().path_point.kappa);
+    lat_init_state.set_d_curv(0.0);
+
+    lon_init_state.set_s(0.0);
+    lon_init_state.set_v(reinit_point.front().v);
+    lon_init_state.set_a(reinit_point.front().a);
+    lon_init_state.set_j(reinit_point.front().jerk);
+  }
+
+  return replan_code;
 }
 
 uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
@@ -551,6 +693,9 @@ void EgoStateManager::UpdatePlanningInitState() {
     bool set_lat_replan = false;
     bool set_lon_replan = false;
 
+    auto cur_fsm_state = session_->environmental_model()
+                             .get_local_view()
+                             .function_state_machine_info.current_state;
     if (!session_->environmental_model().GetVehicleDbwStatus()) {
       set_lat_replan = true;
       set_lon_replan = true;
@@ -558,15 +703,19 @@ void EgoStateManager::UpdatePlanningInitState() {
                    .function_info()
                    .function_mode() == common::DrivingFunctionInfo::ACC) {
       set_lat_replan = true;
+    } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE) {
+      set_lat_replan = true;
+      set_lon_replan = true;
     }
-
-    replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
+    replan_type_.clear();
+    replan_status = replan_process(set_lat_replan, set_lon_replan);
+    // replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
   } else {
     stitch_success = false;
     LateralReset();
     LongitudinalReset();
 
-    replan_status = ReplanStatus::LAT_REPLAN + ReplanStatus::LON_REPLAN;
+    replan_status = LAT_lON_REST;
   }
 
   JSON_DEBUG_VALUE("replan_status", replan_status)
