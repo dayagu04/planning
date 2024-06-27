@@ -210,9 +210,9 @@ void PlanningAdapter::Proc() {
     is_ground_line_perception_msg_updated_.store(false);
   }
   input_topic_timestamp->set_ground_line(
-      local_view_ptr_->road_info.header().timestamp());
+      local_view_ptr_->road_info.header.timestamp);
   input_topic_latency->set_ground_line(
-      get_latency(start_time, local_view_ptr_->ground_line_perception.header().timestamp()));
+      get_latency(start_time, local_view_ptr_->ground_line_perception.header.timestamp));
 
   if (is_localization_estimate_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);

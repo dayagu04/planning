@@ -16,6 +16,7 @@
 #include "basic_types.pb.h"
 #include "camera_preception_parking_slot_c.h"
 #include "collision_detection.h"
+#include "common_c.h"
 #include "func_state_machine_c.h"
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
@@ -272,7 +273,7 @@ class SlotManagement {
 
   struct EgoSlotInfo {
     uint8_t select_slot_id = 0;
-    uint8_t slot_type = Common::PARKING_SLOT_TYPE_INVALID;
+    uint8_t slot_type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_INVALID;
     uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     iflyauto::ParkingFusionSlot select_fusion_slot;
     common::SlotInfo select_slot;
@@ -359,11 +360,10 @@ class SlotManagement {
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
     const iflyauto::LocalizationEstimate* localization_ptr;
     // slot state check by uss
-    const UssWaveInfo::UssWaveInfo* uss_wave_info_ptr;
-    const UssPerceptInfo::UssPerceptInfo* uss_percept_info_ptr;
-    const GroundLinePerception::GroundLinePerceptionInfo*
-        ground_line_perception_info_ptr;
-    const FusionObjects::FusionObjectsInfo* fusion_objects_info_ptr;
+    const iflyauto::UssWaveInfo* uss_wave_info_ptr;
+    const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
+    const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
+    const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
 
     std::vector<double> uss_raw_dist_vec;
     std::vector<iflyauto::SuccessfulSlotsInfo> released_slot_info_vec;
@@ -421,14 +421,14 @@ class SlotManagement {
 
   bool Update(const LocalView* local_view_ptr);
 
-  bool Update(const FuncStateMachine::FuncStateMachine* func_statemachine,
-              const ParkingFusion::ParkingFusionInfo* parking_slot_info,
-              const LocalizationOutput::LocalizationEstimate* localization_info,
-              const UssWaveInfo::UssWaveInfo* uss_wave_info,
-              const UssPerceptInfo::UssPerceptInfo* uss_percept_info,
-              const GroundLinePerception::GroundLinePerceptionInfo*
-                  ground_line_perception_info,
-              const FusionObjects::FusionObjectsInfo* fusion_objects_info);
+  bool Update(
+      const iflyauto::FuncStateMachine* func_statemachine,
+      const iflyauto::ParkingFusionInfo* parking_slot_info,
+      const iflyauto::LocalizationEstimate* localization_info,
+      const iflyauto::UssWaveInfo* uss_wave_info,
+      const iflyauto::UssPerceptInfo* uss_percept_info,
+      const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info,
+      const iflyauto::FusionObjectsInfo* fusion_objects_info);
 
   void AddUssPerceptObstacles();
 

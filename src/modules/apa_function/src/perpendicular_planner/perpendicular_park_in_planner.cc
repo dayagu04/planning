@@ -1551,7 +1551,8 @@ void PerpendicularInPlanner::GenPlanningPath() {
   const double vel_limit = pnc::mathlib::Interp1(
       ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
 
-  planning_output_.trajectory.target_reference.target_velocity = vel_limit;
+  planning_output_.trajectory.target_reference.target_velocity =
+      std::min(vel_limit, max_target_velocity_);
 
   // send uss remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
