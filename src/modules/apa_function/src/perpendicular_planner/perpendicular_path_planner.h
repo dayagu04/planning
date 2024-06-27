@@ -198,6 +198,7 @@ class PerpendicularPathPlanner {
   void SetLineSegmentHeading();
   void ExtendCurrentFollowLastPath(double extend_distance);
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
+  const bool CheckCurrentGearLength();
   const bool SampleCurrentPathSeg();
 
   void PrintOutputSegmentsInfo() const;

@@ -125,7 +125,7 @@
   "col_obs_safe_dist_normal": 0.268,
   "col_obs_safe_dist_strict": 0.308,
   "car_lat_inflation_normal": 0.0586,
-  "car_lat_inflation_strict": 0.1086,
+  "car_lat_inflation_strict": 0.1586,
   "tmp_no_consider_obs_dy": true,
   "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.2068,

@@ -156,8 +156,15 @@ bool PerpendicularPathPlanner::Update() {
     DEBUG_PRINT("multi plan is already to target pos!");
     return true;
   }
-  output_.Reset();
-  return false;
+  if (output_.path_segment_vec.size() == 0) {
+    DEBUG_PRINT("no path, plan fail");
+    output_.Reset();
+    return false;
+  } else {
+    DEBUG_PRINT(
+        "there are path, through no plan to target pose, but let car go.");
+    return true;
+  }
 }
 
 bool PerpendicularPathPlanner::Update(
@@ -2523,6 +2530,19 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
   }
 }
 
+const bool PerpendicularPathPlanner::CheckCurrentGearLength() {
+  if (output_.path_segment_vec.size() < 1) {
+    return false;
+  }
+  double length = 0.0;
+  for (size_t i = output_.path_seg_index.first;
+       i <= output_.path_seg_index.second; ++i) {
+    length += output_.path_segment_vec[i].Getlength();
+  }
+
+  return (length > kMinSingleGearPathLength) ? true : false;
+}
+
 void PerpendicularPathPlanner::ExtendCurrentFollowLastPath(
     double extend_distance) {
   if (pnc::mathlib::IsDoubleEqual(extend_distance, 0.0)) {
@@ -2722,6 +2742,10 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
     DEBUG_PRINT(
         "safe_remain_dist is samller than 0.0, the path donot meet "
         "requirements");
+    DEBUG_PRINT("collision_point = "
+                << col_res.collision_point.transpose() << "  obs_pt_global = "
+                << col_res.collision_point_global.transpose()
+                << "  car_line_order = " << col_res.car_line_order);
     return PATH_COL_INVALID;
   }
 
