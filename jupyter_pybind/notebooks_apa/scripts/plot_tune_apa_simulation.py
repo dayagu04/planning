@@ -12,7 +12,7 @@ from python_proto import planning_plan_pb2
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-4116aafb3-CHERY_T26_test/planning-4116aafb3-CHERY_T26/test_18.00000'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-cda3803ca-CHERY_T26-test/test_0.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -145,6 +145,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
     vehicle_type = 'JAC_S811'
   elif vehicle_type == 1:
     vehicle_type = 'CHERY_T26'
+  elif vehicle_type == 2:
+    vehicle_type = 'CHERY_E0X'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
   car_xb, car_yb = load_car_params_patch_parking(vehicle_type)

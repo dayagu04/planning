@@ -20,6 +20,7 @@
 #include "debug_info_log.h"
 #include "dubins_lib.h"
 #include "func_state_machine.pb.h"
+#include "fusion_objects.pb.h"
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "parking_fusion.pb.h"
@@ -37,7 +38,8 @@ bool SlotManagement::Update(const LocalView *local_view_ptr) {
                 &local_view_ptr->localization_estimate,
                 &local_view_ptr->uss_wave_info,
                 &local_view_ptr->uss_percept_info,
-                &local_view_ptr->ground_line_perception);
+                &local_view_ptr->ground_line_perception,
+                &local_view_ptr->fusion_objects_info);
 }
 
 bool SlotManagement::Update(
@@ -47,7 +49,8 @@ bool SlotManagement::Update(
     const UssWaveInfo::UssWaveInfo *uss_wave_info,
     const UssPerceptInfo::UssPerceptInfo *uss_percept_info,
     const GroundLinePerception::GroundLinePerceptionInfo
-        *ground_line_perception_info) {
+        *ground_line_perception_info,
+    const FusionObjects::FusionObjectsInfo *fusion_objects_info) {
   DEBUG_PRINT("---------- slot management --------------------");
   // set ptrs
   frame_.func_state_ptr = func_statemachine;
@@ -56,6 +59,7 @@ bool SlotManagement::Update(
   frame_.uss_wave_info_ptr = uss_wave_info;
   frame_.uss_percept_info_ptr = uss_percept_info;
   frame_.ground_line_perception_info_ptr = ground_line_perception_info;
+  frame_.fusion_objects_info_ptr = fusion_objects_info;
 
   if (!IsInAPAState() || frame_.param.force_clear) {
     DEBUG_PRINT("reset");
@@ -134,6 +138,29 @@ void SlotManagement::AddGroundLineObstacles() {
     for (const auto &point_2d : ground_line.points_2d()) {
       frame_.obstacle_point_vec.emplace_back(
           Eigen::Vector2d(point_2d.x(), point_2d.y()));
+    }
+  }
+}
+
+void SlotManagement::AddFusionObjects() {
+  if (frame_.fusion_objects_info_ptr == NULL) {
+    frame_.obstacle_point_vec.clear();
+    return;
+  }
+  if (frame_.fusion_objects_info_ptr->fusion_object().empty()) {
+    DEBUG_PRINT("fusion objects is empty");
+    return;
+  }
+  const auto &fusion_objects = frame_.fusion_objects_info_ptr->fusion_object();
+  frame_.obstacle_point_vec.clear();
+  frame_.obstacle_point_vec.reserve(
+      frame_.fusion_objects_info_ptr->fusion_object_num());
+
+  for (const auto &fusion_object : fusion_objects) {
+    const auto &points = fusion_object.additional_info().polygon();
+    for (const auto &point : points.points()) {
+      frame_.obstacle_point_vec.emplace_back(
+          Eigen::Vector2d(point.x(), point.y()));
     }
   }
 }
@@ -407,18 +434,21 @@ bool SlotManagement::GenTLane(
 
   // If the car is parked according to the actual slot, its leftmost and
   // rightmost coordinates which includes rearview mirror are as follows
-  const double car_width_include_mirror =
-      apa_param.GetParam().car_width + 2.0 * apa_param.GetParam().mirror_width;
-  const double car_y_right_include_mirror = -car_width_include_mirror * 0.5;
-  const double car_y_left_include_mirror = car_width_include_mirror * 0.5;
+  const double max_car_width_with_safe_buffer =
+      apa_param.GetParam().max_car_width +
+      2.0 * apa_param.GetParam().car_lat_inflation_normal;
+
+  const double car_half_width_with_safe_buffer =
+      max_car_width_with_safe_buffer * 0.5;
 
   const double virtual_slot_width =
-      car_width_include_mirror + apa_param.GetParam().slot_compare_to_car_width;
+      max_car_width_with_safe_buffer +
+      apa_param.GetParam().slot_compare_to_car_width;
 
   const double real_slot_width = ego_slot_info.slot_width;
 
-  DEBUG_PRINT("car_width_include_mirror = "
-              << car_width_include_mirror
+  DEBUG_PRINT("max_car_width_with_safe_buffer = "
+              << max_car_width_with_safe_buffer
               << "  virtual slot width = " << virtual_slot_width
               << "  real slot width = " << real_slot_width);
 
@@ -440,9 +470,9 @@ bool SlotManagement::GenTLane(
 
   DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
 
-  const double left_dis_obs_car = left_y - car_y_left_include_mirror;
+  const double left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
 
-  const double right_dis_obs_car = car_y_right_include_mirror - right_y;
+  const double right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
 
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
                                     << "  right_dis_obs_car = "

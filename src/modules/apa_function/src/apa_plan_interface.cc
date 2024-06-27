@@ -185,7 +185,7 @@ void ApaPlanInterface::SyncParameters() {
   JSON_READ_VALUE(apa_param.SetPram().wheel_base, double, "wheel_base");
   JSON_READ_VALUE(apa_param.SetPram().car_width, double, "car_width");
   JSON_READ_VALUE(apa_param.SetPram().car_length, double, "car_length");
-  JSON_READ_VALUE(apa_param.SetPram().mirror_width, double, "mirror_width");
+  JSON_READ_VALUE(apa_param.SetPram().max_car_width, double, "max_car_width");
   JSON_READ_VALUE(apa_param.SetPram().lon_dist_mirror_to_rear_axle, double,
                   "lon_dist_mirror_to_rear_axle");
 
