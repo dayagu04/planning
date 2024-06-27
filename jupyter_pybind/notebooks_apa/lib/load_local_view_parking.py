@@ -2,6 +2,10 @@ from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
 
+sys.path.append('../../python_proto')
+from planning_debug_info_pb2 import *
+from control_debug_info_pb2 import *
+
 import numpy as np
 import time
 import ipywidgets
@@ -47,6 +51,9 @@ fus_release_solts_id = []
 car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord()
 coord_tf = coord_transformer()
 max_slot_num = 20
+corner_points_size = 4
+NUM_OF_OUTLINE_DATAORI = 4
+NUM_OF_APA_SLOT_OBJ = 800
 replan_flag = False
 correct_path_for_limiter = False
 replan_time_list = []
@@ -235,7 +242,9 @@ class LoadCyberbag:
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
-        plan_debug_msg_dict[msg.timestamp / 1e6] = msg
+        planning_debug_output = PlanningDebugInfo()
+        planning_debug_output.ParseFromString(msg.debug_info)
+        plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
       plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_debug_msg_dict.items():
         self.plan_debug_msg['t'].append(t)
@@ -313,7 +322,9 @@ class LoadCyberbag:
 
       ctrl_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
-        ctrl_debug_msg_dict[msg.timestamp / 1e6] = msg
+        ctrl_debug_output = ControlDebugInfo()
+        ctrl_debug_output.ParseFromString(msg.debug_info)
+        ctrl_debug_msg_dict[ctrl_debug_output.timestamp / 1e6] = ctrl_debug_output
       ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_debug_msg_dict.items():
         self.ctrl_debug_msg['t'].append(t)
@@ -368,7 +379,7 @@ class LoadCyberbag:
     try:
       fusion_ground_line_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
-        fusion_ground_line_msg_dict[msg.header.timestamp / 1e6] = msg
+        fusion_ground_line_msg_dict[msg.msg_header.timestamp / 1e6] = msg
 
       fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fusion_ground_line_msg_dict.items():
@@ -712,6 +723,11 @@ class LoadCyberbag:
           uss_percept_msg_idx = uss_percept_msg_idx + 1
     out['uss_percept_msg_idx'] = uss_percept_msg_idx
 
+    fus_ground_line_msg_idx = 0
+    if self.fus_ground_line_msg['enable'] == True:
+      while self.fus_ground_line_msg['t'][fus_ground_line_msg_idx] <= bag_time and fus_ground_line_msg_idx < (len(self.fus_ground_line_msg['t'])-1):
+          fus_ground_line_msg_idx = fus_ground_line_msg_idx + 1
+    out['fus_ground_line_msg_idx'] = fus_ground_line_msg_idx
     return out
 
 
@@ -1285,6 +1301,160 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
     uss_car_index = int(uss_car_index)
 
+    uss_available = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_available']
+    #print("uss_available = ", uss_available)
+    uss_available = bool(uss_available)
+    #print("uss_available = ", uss_available)
+    uss_remain_dist = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_remain_dist']
+    #print("uss_remain_dist = ", uss_remain_dist)
+    uss_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_index']
+    uss_index = int(uss_index)
+    uss_car_index = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_car_index']
+    uss_car_index = int(uss_car_index)
+
+  if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
+    # load uss wave from uss_percept_msg
+    #get cur pose and uss wave
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+    text_x, text_y = [], []
+    # rs_text = []
+    uss_x, uss_y = load_car_uss_patch(vehicle_type)
+    uss_angle = load_uss_angle_patch(vehicle_type)
+    wdis_index = [[8, 0, 1, 2, 3, 9],[10, 4, 5, 6, 7, 11]]
+    m = 0
+    for i in range(2):
+      for j in wdis_index[i]:
+          rs0 = ''
+          rs1 = ''
+          if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
+              rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
+              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+              rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
+              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+          elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+              x_text, y_text = 0, 0
+          text_x.append(x_text)
+          text_y.append(y_text)
+          sector_x.append(ego_local_x)
+          sector_y.append(ego_local_y)
+          # print("rs1:",rs1)
+          rs.append(rs1)
+          # print("rs size:",len(rs))
+          length.append(rs0)
+          start_angle.append(uss_angle_start)
+          end_angle.append(uss_angle_end)
+          m += 1
+    local_view_data['data_wave'].data.update({
+      'wave_x':sector_y,
+      'wave_y':sector_x,
+      'radius':rs,
+      'start_angle':start_angle,
+      'end_angle':end_angle,
+    })
+    local_view_data['data_wave_length_text'].data.update({
+      'wave_text_x':text_y,
+      'wave_text_y':text_x,
+      'length':length,
+    })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
+  elif bag_loader.wave_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
+    # load uss wave from wave_msg
+    #get cur pose and uss wave
+    upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+
+    sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
+
+    text_x, text_y = [], []
+    # rs_text = []
+    uss_x, uss_y = load_car_uss_patch(vehicle_type)
+    uss_angle = load_uss_angle_patch(vehicle_type)
+    wdis_index = [[0,9,6,3,1,11],[0,1,3,6,9,11]]
+    m = 0
+    for i in range(2):
+      for j in wdis_index[i]:
+          rs0 = ''
+          rs1 = ''
+          if upa_dis_info_bufs[i].wdis[j].wdis_value[0] <= 10 and upa_dis_info_bufs[i].wdis[j].wdis_value[0] != 0:
+              rs1 = round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2)
+              # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
+              rs0 = '{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2))
+              ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
+              uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
+              uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
+              x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
+          elif upa_dis_info_bufs[i].wdis[j].wdis_value[0] == 0 or upa_dis_info_bufs[i].wdis[j].wdis_value[0] > 10:
+              ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
+              x_text, y_text = 0, 0
+          text_x.append(x_text)
+          text_y.append(y_text)
+          sector_x.append(ego_local_x)
+          sector_y.append(ego_local_y)
+          # print("rs1:",rs1)
+          rs.append(rs1)
+          # print("rs size:",len(rs))
+          length.append(rs0)
+          start_angle.append(uss_angle_start)
+          end_angle.append(uss_angle_end)
+          m += 1
+    local_view_data['data_wave'].data.update({
+      'wave_x':sector_y,
+      'wave_y':sector_x,
+      'radius':rs,
+      'start_angle':start_angle,
+      'end_angle':end_angle,
+    })
+    local_view_data['data_wave_length_text'].data.update({
+      'wave_text_x':text_y,
+      'wave_text_y':text_x,
+      'length':length,
+    })
+
+    if uss_available == True and uss_index <= len(sector_x) and current_state >= 29:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[sector_y[uss_index]],
+        'wave_y':[sector_x[uss_index]],
+        'radius':[rs[uss_index]],
+        'start_angle':[start_angle[uss_index]],
+        'end_angle':[end_angle[uss_index]],
+      })
+    else:
+      local_view_data['data_wave_min'].data.update({
+        'wave_x':[],
+        'wave_y':[],
+        'radius':[],
+        'start_angle':[],
+        'end_angle':[],
+      })
+
   if plot_ctrl_flag == True:
     names = []
     datas = []
@@ -1453,7 +1623,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     post_x, post_y = [], []
     parking_slot_x, parking_slot_y = [], []
     for i in range(NUM_OF_OUTLINE_DATAORI):
-      for j in range(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt_cnt):
+      for j in range(NUM_OF_APA_SLOT_OBJ):
         x = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].x
         y = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].y
         if i == 0:
@@ -1471,11 +1641,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'obj_pt_y': model_y,
     })
 
-    for i in range(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots_size):
-      parking_slot = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots[i]
-      for corner_index in [0,3,2,1]:
-        parking_slot_x.append(parking_slot.corner_point[corner_index].x)
-        parking_slot_y.append(parking_slot.corner_point[corner_index].y)
+    if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
+      for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
+        for corner_index in [0,3,2,1]:
+          parking_slot_x.append(parking_slot.corner_point[corner_index].x)
+          parking_slot_y.append(parking_slot.corner_point[corner_index].y)
     local_view_data['data_spatial_parking_slot'].data.update({
       'corner_point_x': [parking_slot_x],
       'corner_point_y': [parking_slot_y],
@@ -1646,13 +1816,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
     for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:
       points_3d = ground_line.points_3d
       for point_3d in points_3d:
-        # tmp_x, tmp_y = local2global(point_3d.x, point_3d.y, cur_pos_xn, cur_pos_yn, cur_yaw)
         pos_x.append(point_3d.x - cur_pos_xn0)
         pos_y.append(point_3d.y - cur_pos_yn0)
 
@@ -1813,7 +1979,7 @@ def load_local_view_figure_parking():
   fig1.patches('occupied_slot_y', 'occupied_slot_x', source = data_all_managed_occupied_slot, fill_color = "blue", line_color = "blue", line_width = 1, fill_alpha = 0.15, legend_label = 'all managed slot', visible = False)
 
   # dluss
-  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = False)
+  fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_obj', visible = True)
@@ -2936,7 +3102,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         for ground_line in fus_ground_line_msg.ground_lines:
           points_3d = ground_line.points_3d
           for point_3d in points_3d:
-            # tmp_x, tmp_y = local2global(point_3d.x, point_3d.y, cur_pos_xn, cur_pos_yn, cur_yaw)
             pos_x.append(point_3d.x)
             pos_y.append(point_3d.y)
       ground_line_generator.xys.append((pos_y, pos_x))
@@ -3042,7 +3207,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         elif dataLoader.wave_msg['enable'] == True and not load_uss_wave_from_uss_percept_msg:
           flag, wave_msg = findrt(dataLoader.wave_msg, wave_timestamps[loc_i])
           if not flag:
-            print('find uss_percept_msg error')
+            print('find wave_msg error')
           else:
             #get cur pose and uss wave
             upa_dis_info_bufs = wave_msg.upa_dis_info_buf
@@ -3114,33 +3279,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     uss_generator.ts = np.array(ctrl_debug_ts)
     uss_text_generator.ts = np.array(ctrl_debug_ts)
     wave_min_generator.ts = np.array(ctrl_debug_ts)
-
-  # uss perception
-    uss_post_generator = CommonGenerator()
-    uss_model_generator = CommonGenerator()
-    for uss_i, uss_percept_timestamp in enumerate(uss_percept_timestamps):
-      flag, uss_percept_msg = findrt(dataLoader.uss_percept_msg, uss_percept_timestamp)
-      model_x, model_y = [], []
-      post_x, post_y = [], []
-      if not flag:
-        print('find uss percept error')
-      else:
-        for i in range(NUM_OF_OUTLINE_DATAORI):
-          for j in range(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt_cnt):
-            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
-            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
-            if i == 0:
-              post_x.append(x)
-              post_y.append(y)
-            elif i == 1:
-              model_x.append(x)
-              model_y.append(y)
-
-      uss_post_generator.xys.append((post_y, post_x))
-      uss_model_generator.xys.append((model_y, model_x))
-    uss_post_generator.ts = np.array(ctrl_debug_ts)
-    uss_model_generator.ts = np.array(ctrl_debug_ts)
-
 
   # move Layer here for manage
     if dataLoader.plan_msg['enable'] == True:
