@@ -274,6 +274,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->a_lead_k = rot_ax;
 
     origin->oncoming = (origin->v_lead < -3.9);
+    origin->motion_pattern_current = p.motion_pattern_current;
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
@@ -651,6 +652,11 @@ void TrackletMaintainer::calc(
     check_prebrk_object(*tr, v_ego, lane_width);
   }
 
+  auto &last_traj_points = session_->planning_context().last_planning_result().traj_points;
+  double farthest_distance = DBL_MAX;
+  if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
+    farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  }
   std::vector<double> avd_car_id;
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
@@ -662,7 +668,7 @@ void TrackletMaintainer::calc(
     tr->is_avd_car = is_potential_avoiding_car(
         *tr, lead_cars.lead_one, lead_cars.lead_two, v_ego, lane_width,
         scenario, borrow_bicycle_lane, dist_rblane, tleft_lane, rightest_lane,
-        dist_intersect, intersect_length, isRedLightStop);
+        dist_intersect, intersect_length, isRedLightStop, farthest_distance);
     if (tr->is_avd_car) {
       avd_car_id.emplace_back(tr->track_id);
     }
@@ -1826,7 +1832,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     TrackedObject &item, TrackedObject *lead_one, TrackedObject *lead_two,
     double v_ego, double lane_width, int scenario, bool borrow_bicycle_lane,
     double dist_rblane, bool tleft_lane, bool rightest_lane,
-    double dist_intersect, double intersect_length, bool isRedLightStop) {
+    double dist_intersect, double intersect_length, bool isRedLightStop, double farthest_distance) {
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
   auto config_builder =
       session_->environmental_model().highway_config_builder();
@@ -1847,37 +1853,15 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
   double ego_car_width = 2.2;
+  double ego_car_length = 5;
   // double l_ego = ego_state_->ego_frenet.y;
   // TODO: ego_state relative
   double l_ego = 0.;
   double dist_limit;
 
   // for Intersection
-  double farthest_distance = DBL_MAX;
-  if (lead_one != nullptr && lead_one->v_lead < 1) {
-    // can not avoid
-    if ((item.d_min_cpath <
-         std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
-                  1.8)) ||
-        (item.d_max_cpath >
-         std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
-                  -1.8))) {
-      farthest_distance = std::min(farthest_distance, lead_one->d_rel);
-    }
-  }
-  if (lead_two != nullptr && lead_two->v_lead < 1) {
-    // can not avoid
-    if ((item.d_min_cpath <
-         std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
-                  1.8)) ||
-        (item.d_max_cpath >
-         std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
-                  -1.8))) {
-      farthest_distance = std::min(farthest_distance, lead_two->d_rel);
-    }
-  }
-  if (item.d_rel > farthest_distance + 5 ||
-      (item.d_rel > farthest_distance &&
+  if (item.d_rel > farthest_distance + ego_car_length ||
+      (item.d_rel > farthest_distance - ego_car_length &&
        ((item.d_max_cpath < 0 &&
          std::fabs(item.d_max_cpath) > lane_width * 0.5) ||
         (item.d_min_cpath > 0 && item.d_min_cpath > lane_width * 0.5)))) {
@@ -1951,10 +1935,17 @@ bool TrackletMaintainer::is_potential_avoiding_car(
             (dist_rblane > 0 &&
              //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
              //    borrow_bicycle_lane && item.v_lead < 0.2) ||
-             ((lane_width / 2 + item.d_min_cpath >= static_obs_buffer &&
-               item.v_lead < 0.2) ||
-              (lane_width / 2 - item.d_max_cpath >= static_obs_buffer &&
-               item.v_lead < 0.2)));
+             item.motion_pattern_current ==
+                 iflyauto::OBJECT_MOTION_TYPE_STATIC &&
+             item.v < 1 &&
+             ((item.d_min_cpath >
+               (ego_car_width + static_obs_buffer) - lane_width / 2) ||
+              (item.d_max_cpath <
+               lane_width / 2 - (ego_car_width + static_obs_buffer))));
+
+        if (is_need_avoid && !can_avoid) {
+          item.can_not_valid = true;
+        }
 
         if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr &&
             !lead_one->is_accident_car) {

@@ -126,7 +126,7 @@
   "lat_safety_buffer": 1.0,
   "oversize_veh_addition_buffer": 0.0,
   "traffic_cone_thr": 0.2,
-  "static_obs_buffer": 3.0,
+  "static_obs_buffer": 0.6,
   "near_car_hysteresis": 1.6,
   "in_range_v": 1.0,
   "in_range_v_hysteresis": 1.5,

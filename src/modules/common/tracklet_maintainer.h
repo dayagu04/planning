@@ -107,7 +107,7 @@ class TrackletMaintainer {
                                  bool borrow_bicycle_lane, double dist_rblane,
                                  bool tleft_lane, bool rightest_lane,
                                  double dist_intersect, double intersect_length,
-                                 bool isRedLightStop);
+                                 bool isRedLightStop, double farthest_distance);
 
   bool is_leadone_potential_avoiding_car(TrackedObject *lead_one, int scenario,
                                          double lane_width,

@@ -1529,6 +1529,19 @@ def load_avoid(plan_debug, planning_json):
   # except:
   #   pass
   return  data_dict2
+
+def load_time_cost(plan_debug, planning_json):
+  time_cost_keys = ["VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost"]
+  data_dict = {}
+  for key in time_cost_keys:
+    try:
+      data_dict[key] = planning_json[key]
+    except:
+      data_dict[key] = 'none'
+      pass
+  print(data_dict)
 # 障碍物的id选择
 class ObjText:
   def __init__(self,  obj_callback):
