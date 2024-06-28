@@ -574,25 +574,29 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
     LOG_DEBUG("lane relative_id:%d, order_id:%d\n", lane.relative_id,
               lane.order_id);
-    if (virtual_lane_tmp->get_lane_type() == iflyauto::LANETYPE_EMERGENCY)
-      break;
+    // if (virtual_lane_tmp->get_lane_type() == iflyauto::LANETYPE_EMERGENCY)
+    //   break;
     relative_id_lanes_.emplace_back(virtual_lane_tmp);
   }
 
   lane_num_ = relative_id_lanes_.size();
-  double lane_num_except_emergency = lane_num_;
-  if (lane_num_ > 0 && relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
-                           iflyauto::LANETYPE_EMERGENCY) {
-    lane_num_except_emergency -= 1;
+  int lane_num_except_emergency = lane_num_;
+  if (lane_num_ > 0) {
+    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
+        iflyauto::LANETYPE_EMERGENCY) {
+      lane_num_except_emergency -= 1;
+    }
   }
-  if (distance_to_first_road_merge_ < 100. || is_lane_merging ||
-      relative_id_lanes_[lane_num_except_emergency - 1]->get_lane_type() ==
-          iflyauto::LANETYPE_ACCELERATE) {
-    is_leaving_ramp_ = true;
-  } else if (lane_num_except_emergency >= 3 &&
-             relative_id_lanes_[lane_num_except_emergency - 1]
-                     ->get_relative_id() >= lane_num_except_emergency - 3) {
-    is_leaving_ramp_ = false;
+  if (lane_num_except_emergency > 0) {
+    if (distance_to_first_road_merge_ < 100. || is_lane_merging ||
+        relative_id_lanes_[lane_num_except_emergency - 1]->get_lane_type() ==
+            iflyauto::LANETYPE_ACCELERATE) {
+      is_leaving_ramp_ = true;
+    } else if (lane_num_except_emergency >= 3 &&
+               relative_id_lanes_[lane_num_except_emergency - 1]
+                       ->get_relative_id() >= lane_num_except_emergency - 3) {
+      is_leaving_ramp_ = false;
+    }
   }
   for (const auto& relative_id_lane : relative_id_lanes_) {
     std::cout << "VirtualLaneManager::update_lane_tasks():: order_id_: "

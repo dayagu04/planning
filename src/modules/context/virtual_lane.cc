@@ -202,7 +202,7 @@ double VirtualLane::width(double x) {
         (p_first_point - 1)->lane_width, (p_first_point - 1)->car_point.x,
         p_first_point->lane_width, p_first_point->car_point.x, x);
   }
-  return std::min(std::max(width, min_width()), max_width());
+  return std::min(std::max(width, kMinLaneWidth), kMaxLaneWidth);
 }
 
 double VirtualLane::width_by_s(double s) {
