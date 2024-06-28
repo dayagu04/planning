@@ -651,8 +651,7 @@ void PerpendicularInPlanner::GenTlane() {
   // sift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
-        std::fabs(obstacle_point_slot.y()) > y_max ||
-        std::fabs(obstacle_point_slot.y()) < ego_slot_info.slot_width * 0.5) {
+        std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {
@@ -1038,6 +1037,12 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
 
   perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
       apa_param.GetParam().path_extend_distance);
+
+  if (!perpendicular_path_planner_.CheckCurrentGearLength()) {
+    DEBUG_PRINT("path plan fail");
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    return plan_result;
+  }
 
   perpendicular_path_planner_.SampleCurrentPathSeg();
 

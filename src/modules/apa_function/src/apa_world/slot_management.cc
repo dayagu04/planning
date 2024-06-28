@@ -381,8 +381,7 @@ bool SlotManagement::GenTLane(
   // sift obstacles that meet requirement
   for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
-        std::fabs(obstacle_point_slot.y()) > y_max ||
-        std::fabs(obstacle_point_slot.y()) < ego_slot_info.slot_width * 0.5) {
+        std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {
