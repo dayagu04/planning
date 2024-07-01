@@ -172,9 +172,9 @@ bool EnvironmentalModelManager::Run() {
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
   bool planner_valid = g_context.GetParam().planner_type ==
-                           planning::context::PlannerType::SCC_PLANNER ||
+                           planning::context::PlannerType::SCC_PLANNER_V2 ||
                        g_context.GetParam().planner_type ==
-                           planning::context::PlannerType::LONGTIME_PLANNER ||
+                           planning::context::PlannerType::SCC_PLANNER_V3 ||
                        g_context.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
   printf("planner_type:%d\n", g_context.GetParam().planner_type);
