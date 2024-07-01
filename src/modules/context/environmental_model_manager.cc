@@ -440,7 +440,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         local_position.y);
     vehicle_status.mutable_location()->mutable_location_enu()->set_z(
         local_position.z);
-
+    vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
+        localization_estimate.header.timestamp);
     auto enu_orientation = localization_estimate.pose.orientation;
     vehicle_status.mutable_location()
         ->mutable_location_enu()
@@ -980,23 +981,21 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
     prediction_object.acc *= -1.0;
   }
   // add relative info for highway
-  prediction_object.relative_position_x = x_turn(
-      prediction_object.position_x - ego_state->ego_pose().x,
-      prediction_object.position_y - ego_state->ego_pose().y,
-      -1 * ego_state->heading_angle());
-  prediction_object.relative_position_y = y_turn(
-      prediction_object.position_x - ego_state->ego_pose().x,
-      prediction_object.position_y - ego_state->ego_pose().y,
-      -1 * ego_state->heading_angle());
+  prediction_object.relative_position_x =
+      x_turn(prediction_object.position_x - ego_state->ego_pose().x,
+             prediction_object.position_y - ego_state->ego_pose().y,
+             -1 * ego_state->heading_angle());
+  prediction_object.relative_position_y =
+      y_turn(prediction_object.position_x - ego_state->ego_pose().x,
+             prediction_object.position_y - ego_state->ego_pose().y,
+             -1 * ego_state->heading_angle());
 
   auto relative_velocity_world_x =
       fusion_object.common_info.velocity.x -
-      ego_state->ego_v() *
-          cos(ego_state->heading_angle());
+      ego_state->ego_v() * cos(ego_state->heading_angle());
   auto relative_velocity_world_y =
       fusion_object.common_info.velocity.y -
-      ego_state->ego_v() *
-          sin(ego_state->heading_angle());
+      ego_state->ego_v() * sin(ego_state->heading_angle());
   prediction_object.relative_speed_x =
       x_turn(relative_velocity_world_x, relative_velocity_world_y,
              -1 * ego_state->heading_angle());
@@ -1006,12 +1005,10 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
 
   auto relative_acceleration_world_x =
       fusion_object.common_info.acceleration.x -
-      ego_state->ego_acc() *
-          cos(ego_state->heading_angle());
+      ego_state->ego_acc() * cos(ego_state->heading_angle());
   auto relative_acceleration_world_y =
       fusion_object.common_info.acceleration.y -
-      ego_state->ego_acc() *
-          sin(ego_state->heading_angle());
+      ego_state->ego_acc() * sin(ego_state->heading_angle());
   prediction_object.relative_acceleration_x =
       x_turn(relative_acceleration_world_x, relative_acceleration_world_y,
              -1 * ego_state->heading_angle());
@@ -1028,8 +1025,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   object_is_slow = prediction_object.speed < 2.78 ? true : false;
   // For no prediction schemes, use heading angle when obstacles are slow
   if (object_is_slow) {
-    prediction_object.relative_theta = fusion_object.common_info.heading_angle -
-                                       ego_state->heading_angle();
+    prediction_object.relative_theta =
+        fusion_object.common_info.heading_angle - ego_state->heading_angle();
     prediction_object.theta = fusion_object.common_info.heading_angle;
   } else {
     prediction_object.theta = std::atan2(fusion_object.common_info.velocity.y,
@@ -1037,11 +1034,12 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
     prediction_object.relative_theta =
         prediction_object.theta - ego_state->heading_angle();
   }
-  prediction_object.relative_theta = std::fmod(prediction_object.relative_theta, 2 * M_PI);
+  prediction_object.relative_theta =
+      std::fmod(prediction_object.relative_theta, 2 * M_PI);
   if (prediction_object.relative_theta > M_PI) {
-      prediction_object.relative_theta -= 2 * M_PI;
+    prediction_object.relative_theta -= 2 * M_PI;
   }
-  
+
   if ((int)prediction_object.relative_theta == 255) {
     prediction_object.relative_theta = 0;
   }
