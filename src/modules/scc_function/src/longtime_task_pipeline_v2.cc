@@ -1,5 +1,9 @@
 #include "longtime_task_pipeline_v2.h"
 
+#include <memory>
+
+#include "behavior_planners/speed_search_decider/speed_adjust_decider.h"
+
 namespace planning {
 
 LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
@@ -7,24 +11,53 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
     : BaseTaskPipeline(config_builder, session) {
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
+  speed_adjust_decider_ =
+      std::make_unique<SpeedAdjustDecider>(config_builder, session);
+  lateral_offset_decider_ =
+      std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
       std::make_unique<GapSelectorDecider>(config_builder, session);
   general_lateral_decider_ =
       std::make_unique<GeneralLateralDecider>(config_builder, session);
+  traffic_light_decider_ =
+      std::make_unique<TrafficLightDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
-  general_longitudinal_decider_ =
-      std::make_unique<GeneralLongitudinalDecider>(config_builder, session);
-  longitudinal_motion_planner_ =
-      std::make_unique<LongitudinalMotionPlanner>(config_builder, session);
+  agent_longitudinal_decider_ =
+      std::make_unique<AgentLongitudinalDecider>(config_builder, session);
+  scc_lon_behavior_planner_ =
+      std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
+  scc_longitudinal_motion_planner_ =
+      std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
+  cipv_lost_prohibit_acceleration_decider_ =
+      std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
+                                                            session);
 }
 
 bool LongTimeTaskPipelineV2::Run() {
-  bool ok = lane_change_decider_->Execute();
+  bool ok = traffic_light_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(traffic_light_decider_->Name());
+    return false;
+  }
+
+  ok = lane_change_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lane_change_decider_->Name());
+    return false;
+  }
+
+  ok = speed_adjust_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(speed_adjust_decider_->Name());
+    return false;
+  }
+
+  ok = lateral_offset_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(lateral_offset_decider_->Name());
     return false;
   }
 
@@ -46,15 +79,27 @@ bool LongTimeTaskPipelineV2::Run() {
     return false;
   }
 
-  ok = general_longitudinal_decider_->Execute();
+  ok = agent_longitudinal_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(general_longitudinal_decider_->Name());
+    AddErrorInfo(agent_longitudinal_decider_->Name());
     return false;
   }
 
-  ok = longitudinal_motion_planner_->Execute();
+  ok = cipv_lost_prohibit_acceleration_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(longitudinal_motion_planner_->Name());
+    AddErrorInfo(cipv_lost_prohibit_acceleration_decider_->Name());
+    return false;
+  }
+
+  ok = scc_lon_behavior_planner_->Execute();
+  if (!ok) {
+    AddErrorInfo(scc_lon_behavior_planner_->Name());
+    return false;
+  }
+
+  ok = scc_longitudinal_motion_planner_->Execute();
+  if (!ok) {
+    AddErrorInfo(scc_longitudinal_motion_planner_->Name());
     return false;
   }
 

@@ -1,8 +1,8 @@
 #include "scc_function.h"
 
-#include "src/longtime_task_pipeline_v1.h"
 #include "src/longtime_task_pipeline_v2.h"
-#include "src/realtime_task_pipeline.h"
+#include "src/longtime_task_pipeline_v3.h"
+#include "src/realtime_task_pipeline_v1.h"
 
 namespace planning {
 
@@ -14,13 +14,13 @@ SccFunction::SccFunction(framework::Session *session) : BaseFunction(session) {
       planning::context::PlannerType::SCC_PLANNER_V3) {
     // SCC_PLANNER_V3: Use agents' prediction info
     task_pipeline_ =
-        std::make_unique<LongTimeTaskPipelineV2>(config_builder, session);
+        std::make_unique<LongTimeTaskPipelineV3>(config_builder, session);
   } else if (ego_config.planner_type ==
              planning::context::PlannerType::SCC_PLANNER_V2) {
     // SCC_PLANNER_V2: Only use localization info without agents' prediction
     // info
     task_pipeline_ =
-        std::make_unique<LongTimeTaskPipelineV1>(config_builder, session);
+        std::make_unique<LongTimeTaskPipelineV2>(config_builder, session);
   } else {
     // Default: No localization info, no agents' prediction info
     task_pipeline_ =

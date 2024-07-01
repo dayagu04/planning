@@ -12,10 +12,10 @@ namespace planning {
 namespace context {
 
 enum PlannerType {
-  REALTIME_PLANNER = 0,
-  SCC_PLANNER_V2 = 1,
-  SCC_PLANNER_V3 = 2,
-  HPP_PLANNER = 3,
+  REALTIME_PLANNER = 0,  // No localization info, no agents' prediction info
+  SCC_PLANNER_V2 = 1,  // Use localization info without agents' prediction info
+  SCC_PLANNER_V3 = 2,  // Use agents' prediction info
+  HPP_PLANNER = 3,     // HPP
 };
 
 struct PlanningPram {
