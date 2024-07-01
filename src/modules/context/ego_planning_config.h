@@ -123,6 +123,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json,
                             "use_overtake_lane_change_request_instead_of_"
                             "active_lane_change_request");
+    minimum_ego_cruise_speed_for_active_lane_change = read_json_key<double>(
+        json, "minimum_ego_cruise_speed_for_active_lane_change");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
@@ -132,6 +134,7 @@ struct EgoPlanningConfig : public Config {
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
       false;
+  double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -218,33 +221,16 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     lc_t_actuator_delay = read_json_key<double>(json, "lc_t_actuator_delay");
     lc_back_available_thr =
         read_json_key<double>(json, "lc_back_available_thr");
-    ref_vel_set_valid =
-        read_json_key<bool>(json, "ref_vel_set_valid");
-    ref_ego_vel_thr =
-        read_json_key<double>(json, "ref_ego_vel_thr");
-    ref_vel_low_thr =
-        read_json_key<double>(json, "ref_vel_low_thr");
-    ref_vel_high_thr =
-        read_json_key<double>(json, "ref_vel_high_thr");
-    ref_vel_acc0 =
-        read_json_key<double>(json, "ref_vel_acc0");
-    ref_vel_acc1 =
-        read_json_key<double>(json, "ref_vel_acc1");
-    ref_vel_acc2 =
-        read_json_key<double>(json, "ref_vel_acc2");
+    lc_finish_dist_thr = read_json_key<double>(json, "lc_finish_dist_thr");
+    lc_finish_heading_deg_thr =
+        read_json_key<double>(json, "lc_finish_heading_deg_thr");
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
   double delta_t = 0.2;
   int num_point = 26;
-
-  bool ref_vel_set_valid = false;
-  double ref_ego_vel_thr = 5.0;
-  double ref_vel_low_thr = 10.0;
-  double ref_vel_high_thr = 36.0;
-  double ref_vel_acc0 = 4.0;
-  double ref_vel_acc1 = 2.0;
-  double ref_vel_acc2 = 1.0;
+  double lc_finish_dist_thr = 0.5;
+  double lc_finish_heading_deg_thr = 1.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -353,6 +339,8 @@ struct GapSelectorConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"gap_selector", "lb_heading_error_max"});
     lb_heading_error_min = read_json_keys<double>(
         json, std::vector<std::string>{"gap_selector", "lb_heading_error_min"});
+    use_gs = read_json_keys<bool>(
+        json, std::vector<std::string>{"gap_selector", "use_gs"});
   }
 
   double default_lc_time = 6.0;
@@ -364,6 +352,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double lb_t_max = 5.0;
   double lb_heading_error_min = 4.5;
   double lb_heading_error_max = 0.5;
+  bool use_gs = true;
 };
 
 struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
@@ -377,32 +366,106 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "traffic_cone_thr", traffic_cone_thr);
     static_obs_buffer =
         read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
+    near_car_hysteresis =
+        read_json_key<double>(json, "near_car_hysteresis", near_car_hysteresis);
+    in_range_v = read_json_key<double>(json, "in_range_v", in_range_v);
+    in_range_v_hysteresis = read_json_key<double>(json, "in_range_v_hysteresis",
+                                                  in_range_v_hysteresis);
+    potential_near_car_thr = read_json_key<double>(
+        json, "potential_near_car_thr", potential_near_car_thr);
+    potential_near_car_v_ub = read_json_key<double>(
+        json, "potential_near_car_v_ub", potential_near_car_v_ub);
+    potential_near_car_v_lb = read_json_key<double>(
+        json, "potential_near_car_v_lb", potential_near_car_v_lb);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
   double oversize_veh_addition_buffer = 0.15;
   double traffic_cone_thr = 0.15;
   double static_obs_buffer = 3.4;
+  double near_car_hysteresis = 1.3;
+  double in_range_v = 1.0;
+  double in_range_v_hysteresis = 1.5;
+  double potential_near_car_thr = 0.5;
+  double potential_near_car_v_ub = -0.2;
+  double potential_near_car_v_lb = -0.03;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
-    base_nudge_distance = read_json_key<double>(
-        json, "base_nudge_distance", base_nudge_distance);
+    base_nudge_distance =
+        read_json_key<double>(json, "base_nudge_distance", base_nudge_distance);
     nudge_buffer_road_boundary =
         read_json_key<double>(json, "nudge_buffer_road_boundary");
     nudge_buffer_lane_boundary =
         read_json_key<double>(json, "nudge_buffer_lane_boundary");
-    nudge_value_way =
-        read_json_key<bool>(json, "nudge_value_way");
+    static_nudge_buffer_lane_boundary =
+        read_json_key<double>(json, "static_nudge_buffer_lane_boundary");
+    nudge_value_way = read_json_key<bool>(json, "nudge_value_way");
+    avd_lon_distance_1 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "avd_lon_distance_1"},
+        avd_lon_distance_1);
+    avd_lon_distance_2 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "avd_lon_distance_2"},
+        avd_lon_distance_2);
+    avd_lon_distance_3 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "avd_lon_distance_3"},
+        avd_lon_distance_3);
+    avd_lon_distance_4 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "avd_lon_distance_4"},
+        avd_lon_distance_4);
+    avd_lon_distance_5 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "avd_lon_distance_5"},
+        avd_lon_distance_5);
+    avd_vrel_bp_1 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_1"},
+        avd_vrel_bp_1);
+    avd_vrel_bp_2 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_2"},
+        avd_vrel_bp_2);
+    avd_vrel_bp_3 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_3"},
+        avd_vrel_bp_3);
+    avd_vrel_bp_4 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_4"},
+        avd_vrel_bp_4);
+    avd_vrel_bp_5 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_5"},
+        avd_vrel_bp_5);
   }
   bool is_valid_lateral_offset = false;
   double nudge_buffer_road_boundary = 0.3;
   double nudge_buffer_lane_boundary = 0.1;
+  double static_nudge_buffer_lane_boundary = 0.1;
   double base_nudge_distance = 0.6;
   bool nudge_value_way = true;
+  double avd_lon_distance_1;
+  double avd_lon_distance_2;
+  double avd_lon_distance_3;
+  double avd_lon_distance_4;
+  double avd_lon_distance_5;
+  double avd_vrel_bp_1;
+  double avd_vrel_bp_2;
+  double avd_vrel_bp_3;
+  double avd_vrel_bp_4;
+  double avd_vrel_bp_5;
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -497,43 +560,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     /* read config from json */
     warm_start_enable = read_json_keys<bool>(
         json, std::vector<std::string>{"lat_motion_ilqr", "warm_start_enable"});
-    close_jerk_enable = read_json_keys<bool>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "close_jerk_enable"});
-    far_jerk_enable = read_json_keys<bool>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "far_jerk_enable"});
     delta_t = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "delta_t"});
     curv_factor = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "curv_factor"});
-    init_ref_dist_close_thr = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "init_ref_dist_close_thr"});
-    init_ref_theta_close_thr = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "init_ref_theta_close_thr"});
-    init_ref_dist_far_thr = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "init_ref_dist_far_thr"});
-    init_ref_theta_far_thr = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "init_ref_theta_far_thr"});
-    auto_start_time_thr = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "auto_start_time_thr"});
-    ref_v_set_valid = read_json_keys<bool>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "ref_v_set_valid"});
-    ref_ego_v_thr = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "ref_ego_v_thr"});
-    ref_v_low_thr = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "ref_v_low_thr"});
-    ref_v_high_thr = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "ref_v_high_thr"});
-    ref_v_acc0 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "ref_v_acc0"});
-    ref_v_acc1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "ref_v_acc1"});
-    ref_v_acc2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "ref_v_acc2"});
+    min_ego_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "min_ego_vel"});
     acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound"});
     jerk_bound1 = read_json_keys<double>(
@@ -554,32 +586,18 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound_bend"});
     jerk_bound_bend = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_bend"});
-    close_jerk_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "close_jerk_bound"});
-    decay_factor = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "decay_factor"});
     q_ref_x = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x"});
     q_ref_y = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y"});
     q_ref_theta = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta"});
-    q_ref_theta_close = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_close"});
     q_continuity = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_continuity"});
     q_acc = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc"});
     q_jerk = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk"});
-    q_acc_close = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_close"});
-    q_jerk_close = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_close"});
-    q_jerk_far = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_far"});
-    q_jerk_auto = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_auto"});
     q_acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bound"});
     q_jerk_bound = read_json_keys<double>(
@@ -598,6 +616,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_avoid"});
     q_jerk_avoid = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid"});
+    use_lk_qxy_in_lc = read_json_keys<bool>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "use_lk_qxy_in_lc"});
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
@@ -612,14 +632,19 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     q_jerk_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change"});
+    q_jerk_lane_change2 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change2"});
+    q_jerk_lane_change3 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change3"});
+    lane_change_ego_l_thr = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "lane_change_ego_l_thr"});
     q_acc_bend = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bend"});
     q_jerk_bend = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bend"});
-    q_jerk_bend_close = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bend_close"});
-    q_jerk_bend_far = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bend_far"});
     road_curvature_radius = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "road_curvature_radius"});
@@ -633,57 +658,42 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "curvature_preview_length"});
     curvature_preview_step = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "curvature_preview_step"});
-    motion_plan_concerned_start_ratio0 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio0"});
-    motion_plan_concerned_start_ratio1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio1"});
-    motion_plan_concerned_start_ratio2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio2"});
-    motion_plan_concerned_end_ratio = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_end_ratio"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "curvature_preview_step"});
     motion_plan_concerned_start_index = read_json_keys<size_t>(
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "motion_plan_concerned_start_index"});
     motion_plan_concerned_end_index = read_json_keys<size_t>(
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "motion_plan_concerned_end_index"});
-    motion_plan_concerned_start_ratio_bend0 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio_bend0"});
-    motion_plan_concerned_start_ratio_bend1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio_bend1"});
-    motion_plan_concerned_start_ratio_bend2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio_bend2"});
-    motion_plan_concerned_start_ratio_avoid = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "motion_plan_concerned_start_ratio_avoid"});
+    map_qxy0 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy0"});
+    map_qxy1 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy1"});
+    map_qxy2 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy2"});
+    map1_qjerk0 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk0"});
+    map1_qjerk1 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk1"});
+    map1_qjerk2 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk2"});
+    map1_qjerk3 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk3"});
+    map2_qjerk0 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk0"});
+    map2_qjerk1 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk1"});
+    map2_qjerk2 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk2"});
+    map2_qjerk3 = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk3"});
   }
 
   bool warm_start_enable = true;
-  bool close_jerk_enable = false;
-  bool far_jerk_enable = false;
   double curv_factor = 0.35;
-  double init_ref_dist_close_thr = 0.2;
-  double init_ref_theta_close_thr = 2.0;
-  double init_ref_dist_far_thr = 0.5;
-  double init_ref_theta_far_thr = 2.0;
   double delta_t = 0.2;
-  double auto_start_time_thr = 0.0;
-  bool ref_v_set_valid = false;
-  double ref_ego_v_thr = 5.0;
-  double ref_v_low_thr = 10.0;
-  double ref_v_high_thr = 36.0;
-  double ref_v_acc0 = 4.0;
-  double ref_v_acc1 = 2.0;
-  double ref_v_acc2 = 1.0;
+  double min_ego_vel = 5.0;
 
   double acc_bound = 1.5;
   double jerk_bound1 = 1.2;
@@ -694,8 +704,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double jerk_bound_lane_change = 5.0;
   double acc_bound_bend = 1.8;
   double jerk_bound_bend = 1.5;
-  double close_jerk_bound = 0.5;
-  double decay_factor = 0.2;
   double q_acc_bound = 200.0;
   double q_jerk_bound = 5000.0;
 
@@ -705,14 +713,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_x = 20.0;
   double q_ref_y = 20.0;
   double q_ref_theta = 15.0;
-  double q_ref_theta_close = 15.0;
   double q_continuity = 0.;
   double q_acc = 0.5;
   double q_jerk = 0.6;
-  double q_acc_close = 0.5;
-  double q_jerk_close = 500.0;
-  double q_jerk_far = 300.0;
-  double q_jerk_auto = 500.0;
 
   double q_ref_x_avoid = 20.0;
   double q_ref_y_avoid = 20.0;
@@ -720,31 +723,36 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_avoid = 0.5;
   double q_jerk_avoid = 2.0;
 
+  bool use_lk_qxy_in_lc = false;
   double q_ref_x_lane_change = 20.0;
   double q_ref_y_lane_change = 20.0;
   double q_ref_theta_lane_change = 15.0;
   double q_acc_lane_change = 0.5;
   double q_jerk_lane_change = 2.0;
+  double q_jerk_lane_change2 = 2.0;
+  double q_jerk_lane_change3 = 2.0;
+  double lane_change_ego_l_thr = 1.0;
 
   double q_acc_bend = 0.5;
   double q_jerk_bend = 2.0;
-  double q_jerk_bend_close = 2.0;
-  double q_jerk_bend_far = 2.0;
   double road_curvature_radius = 750.0;
   size_t curvature_change_index = 15;
   double curvature_preview_distance = 50.0;
   double curvature_preview_length = 20.0;
   double curvature_preview_step = 1.0;
-  double motion_plan_concerned_start_ratio0 = 1.0;
-  double motion_plan_concerned_start_ratio1 = 1.0;
-  double motion_plan_concerned_start_ratio2 = 1.0;
-  double motion_plan_concerned_start_ratio_bend0 = 1.0;
-  double motion_plan_concerned_start_ratio_bend1 = 1.0;
-  double motion_plan_concerned_start_ratio_bend2 = 1.0;
-  double motion_plan_concerned_start_ratio_avoid = 0.0;
-  double motion_plan_concerned_end_ratio = 0.2;
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
+  double map_qxy0 = 1000.0;
+  double map_qxy1 = 500.0;
+  double map_qxy2 = 50.0;
+  double map1_qjerk0 = 5.0;
+  double map1_qjerk1 = 10.0;
+  double map1_qjerk2 = 50.0;
+  double map1_qjerk3 = 150.0;
+  double map2_qjerk0 = 0.5;
+  double map2_qjerk1 = 1.0;
+  double map2_qjerk2 = 5.0;
+  double map2_qjerk3 = 50.0;
 };
 
 struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {
@@ -1385,6 +1393,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     acc_stop_max_bound = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "acc_stop_max_bound"});
+    enable_jlt = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_jlt"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1442,6 +1453,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   // stop condition judge
   double v_target_stop_thrd = 0.2;
   double acc_stop_max_bound = 1.0;
+  // jlt
+  bool enable_jlt = true;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -1657,6 +1670,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+    kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
+    kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
   }
   double parking_cruise_speed = 5.55;
 
@@ -1669,6 +1684,9 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
+
+  double kEpsilon_v = 0.0;
+  double kEpsilon_a = 0.0;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

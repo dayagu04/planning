@@ -1,6 +1,7 @@
 #include "scc_st_graph.h"
 
 #include <algorithm>
+#include <complex>
 
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -35,7 +36,10 @@ void StGraphGenerator::Update(
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double acc_ego = lon_behav_input_->ego_info().ego_acc();
   double steer_angle_ego = lon_behav_input_->ego_info().ego_steer_angle();
-  lon_init_state_ = {0, v_ego, acc_ego};
+  //lon_init_state_ = {0, v_ego, acc_ego};
+  lon_init_state_[0] = lon_behav_input_->lon_init_state().s();
+  lon_init_state_[1] = lon_behav_input_->lon_init_state().v();
+  lon_init_state_[2] = lon_behav_input_->lon_init_state().a();
 
   std::vector<double> d_polys;
   const auto &d_poly_infos = lon_behav_input_->lat_output().d_poly_vec();
@@ -47,7 +51,7 @@ void StGraphGenerator::Update(
     lane_changing_decider_ = std::make_unique<RealTimeLaneChangeDecider>(
         lon_behav_input_->lc_info());
   } else {
-    lane_changing_decider_->update_lc_info(&(lon_behav_input_->lc_info()));
+    lane_changing_decider_->update_lc_info(lon_behav_input_->mutable_lc_info());
   }
 
   st_refs_.clear();
@@ -138,11 +142,15 @@ void StGraphGenerator::Update(
     if (v_ego > v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
+    if (v_last_target_ > v_target_) {
+      accel_vel_filter_.SetState(v_target_);
+    }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   } else if (v_target_ < v_ego &&
              (v_limit_on_turns_and_road_ == v_target_ ||
-              (is_on_ramp && v_limit_on_ramp_ == v_target_))) {
+              (is_on_ramp && v_limit_on_ramp_ == v_target_) ||
+              v_limit_lc_ == v_target_)) {
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   }
@@ -158,13 +166,17 @@ void StGraphGenerator::Update(
 
   // 3. update vref
   UpdateVelRefs();
-  // 4. calculate sref by vref
+
+  // 4. update bound
+  MakeAccBound();
+  MakeJerkBound();
+
+  // 5. calculate sref by vref
   std::vector<double> sref_vec;
   sref_vec.resize(config_.lon_num_step + 1);
   CalculateSrefsByVref(v_ego, vt_refs_, acc_ego, sref_vec);
-  // 5. update bound
-  MakeAccBound();
-  MakeJerkBound();
+  // sref_vec.clear();
+  // CalculateCruiseSrefs(v_ego, v_cruise, acc_ego, sref_vec);
   // 6. update STboundaries & sref
   UpdateSTGraphs(st_infos, sref_vec);
 }
@@ -189,7 +201,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
-      lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN &&
+      lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
       lead_fusion_enable) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
@@ -231,7 +243,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
         lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && is_camera_and_lidar &&
         lead_two.track_id() != 0 &&
-        lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two.track_id(), lead_two.d_rel(), lead_two.v_lead());
@@ -331,7 +343,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
       (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
           1.0 &&
-      temp_lead_one.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),
               temp_lead_one.v_lead());
@@ -376,7 +388,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
         temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && is_camera_and_lidar &&
         temp_lead_two.track_id() != 0 &&
-        temp_lead_two.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
@@ -562,11 +574,13 @@ void StGraphGenerator::UpdateSTGraphs(
   const double soft_bound_corridor_t = config_.soft_bound_corridor_t;
   // local variables
   double sample_time = 0;
-  Bound soft_bound;
-  Bound hard_bound;
+  LonBound soft_bound;
+  LonBound hard_bound;
   double s_ref;
   double s_ref_update;
   std::vector<double> sref_update;
+  // 稳态跟车过程中soft bound和s ref之间增加一个buffer来补偿控制误差
+  double static_soft_bound_buffer = 0.5;
 
   // sref_update.reserve(config_.lon_num_step+1);
   sref_update = sref_vec;
@@ -616,13 +630,20 @@ void StGraphGenerator::UpdateSTGraphs(
           hard_bound.upper =
               std::max(st.start_s() - st.safe_distance() + s_step, 0.1);
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
+          hard_bound.vel = st.v_lead();
+          hard_bound.acc = st.a_lead();
+          hard_bound.id = st.id();
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::min(
               hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
-          soft_bound.upper = std::min(
-              0.5 * (hard_bound.upper + s_ref_update),
-              std::max(st.start_s() - st.desired_distance() + s_step, 0.0));
+          soft_bound.upper =
+              std::min(0.5 * (hard_bound.upper + s_ref_update),
+                       std::max(st.start_s() - st.desired_distance() + s_step +
+                                    static_soft_bound_buffer,
+                                0.0));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
+          soft_bound.vel = st.v_lead();
+          soft_bound.acc = st.a_lead();
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -632,6 +653,9 @@ void StGraphGenerator::UpdateSTGraphs(
           hard_bound.upper = 150;
           hard_bound.lower =
               std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
+          hard_bound.vel = st.v_lead();
+          hard_bound.acc = st.a_lead();
+          hard_bound.id = st.id();
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
@@ -639,6 +663,8 @@ void StGraphGenerator::UpdateSTGraphs(
           soft_bound.upper = 150;
           soft_bound.lower =
               std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref);
+          soft_bound.vel = st.v_lead();
+          soft_bound.acc = st.a_lead();
           st_boundary.soft_bound.emplace_back(soft_bound);
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
@@ -647,9 +673,14 @@ void StGraphGenerator::UpdateSTGraphs(
         // 采用默认值,这个目前太过粗暴
         hard_bound.upper = 150.0;
         hard_bound.lower = -10.0;
+        hard_bound.vel = 0.0;
+        hard_bound.acc = 0.0;
+        hard_bound.id = 0.0;
         st_boundary.hard_bound.emplace_back(hard_bound);
         soft_bound.upper = 150.0;
         soft_bound.lower = -10.0;  // 应该至少使用自车s-10
+        soft_bound.vel = 0.0;
+        soft_bound.acc = 0.0;
         st_boundary.soft_bound.emplace_back(soft_bound);
       }
     }
@@ -680,7 +711,7 @@ void StGraphGenerator::UpdateNearObstacles(
       continue;
     };
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -691,7 +722,7 @@ void StGraphGenerator::UpdateNearObstacles(
       continue;
     };
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
     }
   }
@@ -712,6 +743,10 @@ void StGraphGenerator::UpdateNearObstacles(
   }
 
   for (int i = 0; i < near_cars_sorted.size(); i++) {
+    if (lon_behav_input_->lat_obs_info().lead_one().track_id() ==
+        near_cars_sorted[i]->track_id()) {
+      continue;
+    }
     nearest_car_track_id[i] = near_cars_sorted[i]->track_id();
     double car_length = near_cars_sorted[i]->location_head() -
                         near_cars_sorted[i]->location_tail();
@@ -740,51 +775,96 @@ void StGraphGenerator::UpdateNearObstacles(
     bool cutin_car = false;
     bool potential_cutin_car_1 = false;
     bool potential_cutin_car_2 = false;
+    bool NEAR_CAR_LAT_MOVING = fabs(vy_rel) > 0.1;
     if (near_cars_sorted[i]->y_min() < 0) {
       if (lc_request == "left_lane_change") {
         vy_rel = std::max(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
       }
       if (lc_request == "right_lane_change_wait") {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
-            -CUIIN_WIDTH;
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
-            -CUIIN_WIDTH;
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH);
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >=
+                       -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -CUIIN_WIDTH_STATIC);
+        }
       } else {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
-            -1 * (CUIIN_WIDTH + 0.01 * v_ego);
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
-            -1 * (CUIIN_WIDTH + 0.01 * v_ego);
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >= -CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH + 0.01 * v_ego));
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff >=
+                       -CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff >=
+               -1 * (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+        }
       }
     } else {
       if (lc_request == "right_lane_change") {
         vy_rel = min(vy_rel, (vy_rel + near_cars_sorted[i]->v_lat()) / 2);
       }
       if (lc_request == "left_lane_change_wait") {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
-            CUIIN_WIDTH;
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
-            CUIIN_WIDTH;
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
+               CUIIN_WIDTH);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               CUIIN_WIDTH);
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <=
+                       CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.25 * vy_rel * v_coeff <=
+               CUIIN_WIDTH_STATIC);
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               CUIIN_WIDTH_STATIC);
+        }
       } else {
-        cutin_car =
-            near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH;
-        potential_cutin_car_1 =
-            near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
-            (CUIIN_WIDTH + 0.01 * v_ego);
-        potential_cutin_car_2 =
-            near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
-            (CUIIN_WIDTH + 0.01 * v_ego);
+        if (NEAR_CAR_LAT_MOVING) {
+          cutin_car =
+              (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <= CUIIN_WIDTH);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH + 0.01 * v_ego));
+        } else {
+          cutin_car = (near_cars_sorted[i]->y_min() + vy_rel * v_coeff <=
+                       CUIIN_WIDTH_STATIC);
+          potential_cutin_car_1 =
+              (near_cars_sorted[i]->y_min() + 1.5 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+          potential_cutin_car_2 =
+              (near_cars_sorted[i]->y_min() + 2.0 * vy_rel * v_coeff <=
+               (CUIIN_WIDTH_STATIC + 0.01 * v_ego));
+        }
       }
     }
 
@@ -1106,7 +1186,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     };
     if (!track.is_lead() && track.cutinp() > cutinp_threshold &&
         track.v_lat() < -0.01 &&
-        track.type() != Common::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       cut_in_info->set_has_cutin(true);
 
       front_cut_in_track_id.push_back(track.track_id());
@@ -1166,7 +1246,8 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       st_info.set_safe_distance(safe_distance);
       st_info.set_start_time(time_to_entry);  // TBD:使用可配置参数
       st_info.set_end_time(5.0);              // TBD:使用可配置参数
-      st_info.set_start_s(time_to_entry * v_ego + predict_distance);
+      // st_info.set_start_s(time_to_entry * v_ego + predict_distance);
+      st_info.set_start_s(track.d_rel());
       cut_in_st_info.emplace_back(st_info);
       v_target_ = std::min(v_target_, v_target_potential_cutin);
 
@@ -1240,7 +1321,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       lane_changing_decider_->get_lc_safe_dist(lc_buffer, lc_t_gap, v_ego);
   double time_to_lc = 0.0;
   double predict_distance = 0.0;
-  double v_limit_lc = 40.0;
+  v_limit_lc_ = 40.0;
   lane_change_st_info.clear();
 
   std::vector<const planning::common::TrackedObjectInfo *> lane_changing_cars;
@@ -1281,60 +1362,60 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       auto gap = available_gap[0];
       if (gap.base_car_id == gap.front_id) {
         // safe_distance = CalcSafeDistance(gap.v_front, v_ego);
-        v_limit_lc = gap.base_car_vrel -
+        v_limit_lc_ = gap.base_car_vrel -
                      clip((safe_distance - gap.base_car_drel) / safe_distance,
                           2.0, 0.0) -
                      1.0;
-        if (v_limit_lc < 0) {
+        if (v_limit_lc_ < 0) {
           // no need to decel when front car is far away
           const std::vector<double> _V_LIMIT_DISTANCE_BP{
               safe_distance + std::max(-gap.base_car_vrel, 0.0) * 2,
               safe_distance * 2 + std::max(-gap.base_car_vrel, 0.0) * 2};
           const std::vector<double> _V_LIMIT_DISTANCE_V{1.0, 0.0};
-          v_limit_lc =
-              v_limit_lc * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
+          v_limit_lc_ =
+              v_limit_lc_ * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                   _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc = std::max(v_ego - 3.0, v_ego + v_limit_lc);
+        v_limit_lc_ = std::max(v_ego - 3.0, v_ego + v_limit_lc_);
         // a_target_lc = 0.0;
       } else {
         // safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
-        v_limit_lc =
+        v_limit_lc_ =
             gap.base_car_vrel +
             clip((safe_distance + 5.0 + gap.base_car_drel) / safe_distance, 2.0,
                  0.0) +
             1.0;
-        if (v_limit_lc < 0) {
+        if (v_limit_lc_ < 0) {
           // no need to decel when front car is far away
           const std::vector<double> _V_LIMIT_DISTANCE_BP{
               safe_distance + 5.0 + std::max(gap.base_car_vrel, 0.0) * 2,
               safe_distance * 2 + 5.0 + std::max(gap.base_car_vrel, 0.0) * 2};
           const std::vector<double> _V_LIMIT_DISTANCE_V{1.0, 0.0};
-          v_limit_lc =
-              v_limit_lc * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
+          v_limit_lc_ =
+              v_limit_lc_ * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                   _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc = std::max(v_ego - 2.8, v_ego + v_limit_lc);
+        v_limit_lc_ = std::max(v_ego - 2.8, v_ego + v_limit_lc_);
         // a_target_lc = 0.6;
       }
-      if (v_limit_lc < 6.0) {
-        v_limit_lc = 6.0;
+      if (v_limit_lc_ < 6.0) {
+        v_limit_lc_ = 6.0;
         // a_target_lc = 1.0;
       }
-      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
+      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
 
-      double safe_distance_lc_front = CalcSafeDistance(gap.v_front, v_limit_lc);
+      double safe_distance_lc_front = CalcSafeDistance(gap.v_front, v_limit_lc_);
       double lc_front_desired_distance = GetCalibratedDistance(
-          gap.v_front, v_limit_lc, lc_request, false, false, false);
+          gap.v_front, v_limit_lc_, lc_request, false, false, false);
 
       planning::common::TrackedObjectInfo front_obs;
       front_obs.set_track_id(gap.front_id);
-      front_obs.set_v_rel(gap.v_front - v_limit_lc);
+      front_obs.set_v_rel(gap.v_front - v_limit_lc_);
       front_obs.set_d_rel(gap.s_front + gap.v_front * gap.acc_time -
-                          v_limit_lc * gap.acc_time);
+                          v_limit_lc_ * gap.acc_time);
 
       double lc_front_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          front_obs, v_limit_lc, safe_distance_lc_front,
+          front_obs, v_limit_lc_, safe_distance_lc_front,
           lc_front_desired_distance, true);
 
       common::RealTimeLonObstacleSTInfo lc_gap_front_st_info;
@@ -1345,25 +1426,25 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       lc_gap_front_st_info.set_s_lead(gap.s_front);
       lc_gap_front_st_info.set_desired_distance(
           lc_front_desired_distance_filtered);
-      lc_gap_front_st_info.set_desired_velocity(v_limit_lc);
+      lc_gap_front_st_info.set_desired_velocity(v_limit_lc_);
       lc_gap_front_st_info.set_safe_distance(safe_distance_lc_front);
       lc_gap_front_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
       lc_gap_front_st_info.set_end_time(5.0);  // TBD:使用可配置参数
       lc_gap_front_st_info.set_start_s(gap.s_front);
       lane_change_st_info.emplace_back(lc_gap_front_st_info);
 
-      double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc, gap.v_rear);
+      double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc_, gap.v_rear);
       double lc_rear_desired_distance = GetCalibratedDistance(
-          v_limit_lc, gap.v_rear, lc_request, false, false, false);
+          v_limit_lc_, gap.v_rear, lc_request, false, false, false);
 
       planning::common::TrackedObjectInfo rear_obs;
       rear_obs.set_track_id(gap.rear_id);
-      rear_obs.set_v_rel(gap.v_rear - v_limit_lc);
+      rear_obs.set_v_rel(gap.v_rear - v_limit_lc_);
       rear_obs.set_d_rel(gap.s_rear + gap.v_rear * gap.acc_time -
-                         v_limit_lc * gap.acc_time);
+                         v_limit_lc_ * gap.acc_time);
 
       double lc_rear_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          rear_obs, v_limit_lc, safe_distance_lc_rear, lc_rear_desired_distance,
+          rear_obs, v_limit_lc_, safe_distance_lc_rear, lc_rear_desired_distance,
           false);
 
       common::RealTimeLonObstacleSTInfo lc_gap_rear_st_info;
@@ -1376,7 +1457,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       lc_gap_rear_st_info.set_s_lead(gap.s_rear);
       lc_gap_rear_st_info.set_desired_distance(
           lc_rear_desired_distance_filtered);
-      lc_gap_rear_st_info.set_desired_velocity(v_limit_lc);
+      lc_gap_rear_st_info.set_desired_velocity(v_limit_lc_);
       lc_gap_rear_st_info.set_safe_distance(safe_distance_lc_rear);
       lc_gap_rear_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
       lc_gap_rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
@@ -1386,21 +1467,21 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       // decelerate to check next interval
       auto nearest_rear_car = lane_changing_decider_->nearest_rear_car_track();
       lane_changing_nearest_rear_car_track_id = nearest_rear_car.id;
-      v_limit_lc =
+      v_limit_lc_ =
           nearest_rear_car.v_rel -
           clip((safe_distance - nearest_rear_car.d_rel) / safe_distance, 2.0,
                0.0) -
           v_ego / 10.0;
-      v_limit_lc = std::max({v_ego - 3.2, v_ego + v_limit_lc,
+      v_limit_lc_ = std::max({v_ego - 3.2, v_ego + v_limit_lc_,
                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
       // a_target_lc = 0.0;
-      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc);
+      JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
     }
   } else {
     JSON_DEBUG_VALUE("gap_v_limit_lc", 0);
   }
   // acc_target_.second = std::max(acc_target_.second, a_target_lc);
-  v_target_ = std::min(v_target_, v_limit_lc);
+  v_target_ = std::min(v_target_, v_limit_lc_);
 }
 
 std::pair<double, double> StGraphGenerator::CalculateMaxAcc(double ego_v) {
@@ -1845,11 +1926,6 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
         (v_ego < v_start && is_lead_static &&
          std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
     bool cruise_condition = v_ego > v_startmode || (v_last_target_ > v_target_);
-    bool cruise_to_start_condition = false;
-    if (v_ego < v_startmode && (v_last_target_ < v_target_ &&
-                                v_target_ > config_.v_target_stop_thrd)) {
-      cruise_to_start_condition = true;
-    }
     bool lead_one_start =
         (lead_one.v_lead() > obstacle_v_start &&
          (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
@@ -1868,10 +1944,6 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
       LOG_DEBUG("The distance error of STOP is [%f]m \n",
                 lead_one.d_rel() - desire_distance);
-    } else if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
-               cruise_to_start_condition) {
-      // CRUISE --> START
-      start_stop_info_.set_state(common::StartStopInfo::START);
     } else if (start_stop_info_.state() == common::StartStopInfo::STOP &&
                start_condition) {
       // STOP --> START
@@ -1914,8 +1986,8 @@ void StGraphGenerator::CalculateSrefsByVref(const double v_ego,
                                             const double acc_ego,
                                             std::vector<double> &s_refs) {
   LOG_DEBUG("----entering CalculateSrefsByVref--- \n");
-  double one_a = acc_ego;
-  double one_v = v_ego;
+  double one_a = lon_init_state_[2];
+  double one_v = lon_init_state_[1];
   double one_s = 0.0;
   double t = config_.delta_time;
   double t_square = config_.delta_time * config_.delta_time;
@@ -1925,8 +1997,8 @@ void StGraphGenerator::CalculateSrefsByVref(const double v_ego,
   s_refs[0] = one_s;
 
   std::pair<double, double> max_acc_info = CalculateMaxAcc(v_ego);
-  double a_max_accel = std::min(max_acc_info.second, 2.0);
-  double a_max_brake = max_acc_info.first;
+  double a_max_accel = std::min(max_acc_info.second, acc_bound_.second);
+  double a_max_brake = std::max(max_acc_info.first, acc_bound_.first);
 
   if (v_ego <= v_ref) {
     double one_j = _J_MAX;
@@ -1991,7 +2063,10 @@ void StGraphGenerator::MakeAccBound() {
   // acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
-  acc_bound_.second = (std::fmax(lon_init_state_[2], acc_target_.second));
+  acc_bound_.second =
+      std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
+  // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
+  // in gasoline car
   if (start_stop_info_.state() == common::StartStopInfo::START) {
     acc_bound_.first = -config_.acc_start_max_bound;
     acc_bound_.second = config_.acc_start_max_bound;

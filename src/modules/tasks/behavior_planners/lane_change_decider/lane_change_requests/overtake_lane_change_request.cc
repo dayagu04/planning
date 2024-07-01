@@ -223,9 +223,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
 
-  bool curr_direct_exist =
-      (clane->get_lane_marks() ==
-       FusionRoad::LaneDrivableDirection::DIRECTION_STRAIGHT);
+  bool curr_direct_exist = (clane->get_lane_marks() ==
+                            iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT);
   double v_ego = ego_state->ego_v();
 
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
@@ -520,7 +519,7 @@ void OvertakeRequest::updateOvertakeCount(const TrackedObject* leading_vehicle,
                                           const double reference_speed,
                                           const int max_count_thres) {
   int type_value = kOvertakeUpdateCountCarTypeThreshold;
-  if (leading_vehicle->type == Common::ObjectType::OBJECT_TYPE_TRUCK) {
+  if (leading_vehicle->type == iflyauto::OBJECT_TYPE_TRUCK) {
     type_value = kOvertakeUpdateCountTruckTypeThreshold;
   }
   const int curr_count = round((reference_speed - leading_vehicle->v) *
@@ -611,11 +610,11 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
     }
     // TODO:靠近分流口，分流口类型不是匝道，考虑反方向变道抑制(城区智能驾驶领航)
 
-    if (target_lane->get_lane_merge_split_point()
-            .merge_split_point_data_size() > 0) {
+    if (target_lane->get_lane_merge_split_point().merge_split_point_data_size >
+        0) {
       const auto& target_lane_merge_info =
-          target_lane->get_lane_merge_split_point().merge_split_point_data()[0];
-      if (!target_lane_merge_info.is_split()) {
+          target_lane->get_lane_merge_split_point().merge_split_point_data[0];
+      if (!target_lane_merge_info.is_split) {
         LOG_DEBUG(
             "Not trigger overtake since target route has merge lane, is left "
             "lane: %d",
@@ -779,7 +778,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
   }
 
   for (const auto& obj : ego_front_target_tracks) {
-    if (obj.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       if (std::fabs(obj.l) < kLaneConeRangeThres) {
         current_lane_cone_distribution_set.push_back(obj);
       }
@@ -790,7 +789,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
     }
   }
   for (const auto& obj : left_front_target_tracks) {
-    if (obj.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       if (std::fabs(obj.l - lane_width) < kLaneConeRangeThres) {
         left_lane_cone_distribution_set.push_back(obj);
       }
@@ -909,7 +908,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
   }
 
   for (const auto& obj : ego_front_target_tracks) {
-    if (obj.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       if (std::fabs(obj.l) < kLaneConeRangeThres) {
         current_lane_cone_distribution_set.push_back(obj);
       }
@@ -920,7 +919,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
     }
   }
   for (const auto& obj : right_front_target_tracks) {
-    if (obj.type == Common::ObjectType::OBJECT_TYPE_CONE) {
+    if (obj.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       if (std::fabs(obj.l + lane_width) < kLaneConeRangeThres) {
         right_lane_cone_distribution_set.push_back(obj);
       }
@@ -1003,8 +1002,8 @@ bool OvertakeRequest::checkLaneChangeValidBySuprsSignal(const bool is_left) {
     // 障碍物type为卡车或者轿车的需要抑制变道
     if (tracks_map_[id].v > kStaticVehicleThreshold &&
         dis < kSuppressionDistanceThres &&
-        (tracks_map_[id].type == Common::ObjectType::OBJECT_TYPE_TRUCK ||
-         tracks_map_[id].type == Common::ObjectType::OBJECT_TYPE_COUPE)) {
+        (tracks_map_[id].type == iflyauto::OBJECT_TYPE_TRUCK ||
+         tracks_map_[id].type == iflyauto::OBJECT_TYPE_COUPE)) {
       has_moving_obs = true;
       break;
     }
@@ -1244,7 +1243,7 @@ void OvertakeRequest::selectTargetObstacleIds(
   };
 
   auto isTruck = [&](const TrackedObject& veh) -> bool {
-    return veh.type == Common::ObjectType::OBJECT_TYPE_TRUCK &&
+    return veh.type == iflyauto::OBJECT_TYPE_TRUCK &&
            veh.length > kMinLengthForTruck && veh.width > kMinWidthForTruck;
   };
 
@@ -1340,10 +1339,12 @@ bool OvertakeRequest::checkFrontSafetyAtPresent(
   if (front_required_space) {
     *front_required_space = safety_threshold;
   }
-  AINFO << "ego v " << ego_v << " front v " << veh_v << " base dis buff "
-        << base_distance_buffer << " thres " << safety_threshold
-        << " long_diff " << long_diff << " ratio " << safety_ratio
-        << " at present";
+  LOG_DEBUG(
+      "ego v: %f, front v: %f "
+      "base dis buff: %f "
+      "safety_threshold: %f "
+      "long_diff: %f \n",
+      ego_v, veh_v, base_distance_buffer, safety_threshold, long_diff);
   if (long_diff < safety_threshold) {
     return false;
   }

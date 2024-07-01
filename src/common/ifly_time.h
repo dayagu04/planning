@@ -1,6 +1,8 @@
 #pragma once
-#ifdef CYBER_ENV
+#if defined(CYBER_ENV)
 #include "autoplt/include/ADSTime.h"
+#elif defined(AP_ENV)
+#include "iflyauto_time.h"
 #endif
 #include <stdint.h>
 #include <sys/time.h>
@@ -14,8 +16,11 @@
 namespace IflyTime {
 
 static inline double Now_us() {
-#ifdef CYBER_ENV
+#if defined(CYBER_ENV)
   auto time_now = autoplt::ADSTime::Now();
+  return time_now.ToSecond() * 1000000;  // 转微秒
+#elif defined(AP_ENV)
+  auto time_now = iflyauto::Time::Now();
   return time_now.ToSecond() * 1000000;  // 转微秒
 #else
   struct timeval tval;
@@ -28,10 +33,13 @@ static inline double Now_us() {
 }
 
 static inline double Now_ms() {
-#ifdef CYBER_ENV
+#if defined(CYBER_ENV)
   auto time_now = autoplt::ADSTime::Now();
   // double time_double = time_now.ToSecond() * 1000;  // 转毫秒
   // int64_t time_int = time_now.ToNanosecond() / 1000000; // 转毫秒
+  return time_now.ToSecond() * 1000;  // 转毫秒
+#elif defined(AP_ENV)
+  auto time_now = iflyauto::Time::Now();
   return time_now.ToSecond() * 1000;  // 转毫秒
 #else
   struct timeval tval;
@@ -44,9 +52,11 @@ static inline double Now_ms() {
 }
 
 static inline double Now_s() {
-#ifdef CYBER_ENV
+#if defined(CYBER_ENV)
   auto time_now = autoplt::ADSTime::Now();
   return time_now.ToSecond();
+#elif defined(AP_ENV)
+  return iflyauto::Time::Now().ToSecond();
 #else
   struct timeval tval;
   gettimeofday(&tval, NULL);

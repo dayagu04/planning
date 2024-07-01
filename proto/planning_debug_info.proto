@@ -1,0 +1,102 @@
+/*******************************************************************************
+ * planning调试信息
+ * topic：/iflytek/planning/debug_info
+ * 频率：10Hz
+ *******************************************************************************/
+
+syntax = "proto2";
+
+package planning.common;
+
+import "task_basic_types.proto";
+import "vision_only_lateral_behavior_planner.proto";
+import "vision_only_lateral_motion_planner.proto";
+import "environment_model_debug_info.proto";
+import "lateral_motion_planner.proto";
+import "longitudinal_motion_planner.proto";
+import "lat_behavior_common.proto";
+import "scene_type_config.proto";
+import "slot_management_info.proto";
+import "real_time_lon_behavior_planner.proto";
+import "lateral_behavior_planner.proto";
+import "lateral_path_optimizer.proto";
+import "gap_selector.proto";
+import "basic_types.proto";
+import "generated_refline.proto";
+import "lateral_offset_decider_info.proto";
+
+message TopicTimeList {
+  optional uint64 fusion_object = 1;
+  optional uint64 fusion_road = 2;
+  optional uint64 localization_estimate = 3;
+  optional uint64 prediction = 4;
+  optional uint64 vehicle_service = 5;
+  optional uint64 radar_perception = 6;
+  optional uint64 control_output = 7;
+  optional uint64 hmi = 8;
+  optional uint64 parking_fusion = 9;
+  optional uint64 function_state_machine = 10;
+  optional uint64 map = 11;
+  optional uint64 ehr_parking_map = 12;
+  optional uint64 ground_line = 13;
+  optional uint64 localization = 14;
+}
+
+message FrameInfo {
+  optional uint64 frame_num = 1;
+  optional string version = 2;
+  optional string scene_type = 3;
+  optional uint64 frame_duration_ms = 4;
+  optional bool planning_succ = 5;
+}
+
+message ImageLatency {
+  optional uint64 image_com_latency_ms = 1;       // 相机曝光-感知收到 图像传输耗时
+  optional uint64 perception_latency_ms = 2;      // 感知收到-感知输出 感知耗时
+  optional uint64 perception_com_latency_ms = 3;  // 感知输出-融合收到 感知传输耗时
+  optional uint64 fusion_lantency_ms = 4;         // 融合收到-融合输出 融合耗时
+  optional uint64 fusion_com_lantency_ms = 5;     // 融合输出-规划收到 融合传输耗时
+}
+
+message LocationLatency {
+  optional uint64 sensor_mcu_latency_ms = 1;   // 传感器/底盘-MCU发出 MCU传输耗时
+  optional uint64 sensor_soc_latency_ms = 2;   // MCU发出-SOC收到 片间通讯传输耗时
+  optional uint64 sensor_com_latency_ms = 3;   // SOC发出-定位收到 SOC传输耗时
+  optional uint64 location_latency = 4;        // 定位收到-定位发出 定位耗时
+}
+
+message PlanningDebugInfo {
+  optional uint64 timestamp = 1;  // us
+  // TBD: 存在多条candidates时，应该使用repeated
+  // TBD: lat behavior
+  // TBD: lat motion
+  optional LonRefPath long_ref_path = 2;  // long behavior
+  optional LateralPlanningInput lateral_motion_planning_input = 3;
+  optional LateralPlanningOutput lateral_motion_planning_output = 4;
+  optional LongitudinalPlanningInput longitudinal_motion_planning_input = 5;
+  optional LongitudinalPlanningOutput longitudinal_motion_planning_output = 6;
+  optional LatBehaviorCommon lat_behavior_common = 7;
+  optional VOLatBehaviorPlan vo_lat_behavior_plan = 8;
+  optional VOLatMotionPlan vo_lat_motion_plan = 9;
+  optional EnvironmentModelInfo environment_model_info = 10;
+
+  optional TopicTimeList input_topic_timestamp = 11;
+  optional TopicTimeList input_topic_latency = 12;
+  optional FrameInfo frame_info = 13;
+  optional ImageLatency road_fusion_latency = 14;
+  optional ImageLatency obstacle_fusion_latency = 15;
+  optional LocationLatency location_latency = 16;
+  optional string data_json = 18;
+
+  optional SlotManagementInfo slot_management_info = 19;
+  optional RealTimeLonBehaviorInput real_time_lon_behavior_planning_input = 20;
+
+  optional LateralBehaviorDebugInfo lateral_behavior_debug_info = 21;
+  optional LateralPathOptimizerInput lateral_path_optimizer_input = 22;
+  optional LateralPathOptimizerOutput lateral_path_optimizer_output = 23;
+  optional GapSelectorInput gap_selector_input = 24;
+  optional GapSelectorReplayInfo gap_selector_replay_info = 25;
+  repeated TrajectoryPoint refline_info = 26;
+  repeated ReferenceLine generated_refline_info = 27;
+  optional LateralOffsetDeciderInfo lateral_offset_decider_info = 28;
+}

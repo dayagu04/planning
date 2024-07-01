@@ -4,9 +4,7 @@
 #include <cstdint>
 
 #include "agent_decision.h"
-#include "fusion_objects.pb.h"
 #include "math/box2d.h"
-#include "prediction.pb.h"
 #include "prediction_object.h"
 #include "trajectory/trajectory.h"
 
@@ -52,8 +50,8 @@ class Agent {
   const double accel() const;
   void set_accel(const double accel);
 
-  const Common::ObjectType type() const;
-  void set_type(const Common::ObjectType type);
+  const iflyauto::ObjectType type() const;
+  void set_type(const iflyauto::ObjectType type);
 
   // void set_agent_light_state_info(const AgentLightStateInfo&
   // agent_light_state_info); const AgentLightStateInfo&
@@ -148,7 +146,8 @@ class Agent {
 
  private:
   int32_t agent_id_ = -1;
-  Common::ObjectType type_ = Common::ObjectType::OBJECT_TYPE_UNKNOWN;
+
+  iflyauto::ObjectType type_ = iflyauto::OBJECT_TYPE_UNKNOWN;
 
   double length_ = 0.0;
   double width_ = 0.0;

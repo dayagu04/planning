@@ -38,7 +38,7 @@
 #ifndef PLATFORM_TYPES_H
 #define PLATFORM_TYPES_H
 
-#include "../../../interface/src/mcu_base_interface/icc/soc_common_platform_type.h"
+#include "common_platform_type_soc.h"
 
 /******************************************************************************
 **                      Includes                                             **

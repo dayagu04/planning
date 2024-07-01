@@ -154,5 +154,6 @@ class VisionLongitudinalBehaviorPlanner : public Task {
   // 限制猛加速的滤波器
   pnc::filters::SlopeFilter accel_vel_filter_;
   bool is_on_ramp_ = false;
+  const double CUIIN_WIDTH_STATIC = 1.35;  //静态车辆cutin
 };
 }  // namespace planning

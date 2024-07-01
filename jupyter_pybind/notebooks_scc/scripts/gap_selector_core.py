@@ -8,8 +8,8 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, gap_selector_pb2
+sys.path.append('../../python_proto')
+from python_proto import gap_selector_pb2
 from jupyter_pybind import gap_selector_py
 
 # bag path and frame dt

@@ -40,7 +40,7 @@ bool RealTimeLaneChangeDecider::process() {
   gap_list_.clear();
 
   lc_map_decision_ = lc_info_.lc_map_decision();
-  current_lane_type_ = lc_info_.current_lane_type();
+  current_lane_type_ = (iflyauto::LaneType)lc_info_.current_lane_type();
 
   v_limit_ = lc_info_.v_limit();
 
@@ -230,7 +230,7 @@ GapInfo RealTimeLaneChangeDecider::check_gap_valid(
     double ego_end_dis = lc_end_dis - acc_time * v_ego_ -
                          10 * v_ego_p * std::max(lc_map_decision_ - 1, 0);
     if ((lc_map_decision_ == -1) &&
-        (current_lane_type_ == FusionRoad::LANETYPE_NORMAL)) {
+        (current_lane_type_ == iflyauto::LANETYPE_NORMAL)) {
       ego_end_dis = lc_end_dis - acc_time * v_ego_ - 3.0 * v_ego_p - 20.0;
     }
     l_end_dis = std::min(gap_end_dis, ego_end_dis);

@@ -14,9 +14,7 @@ class LaneDepartWarning {
   void RunOnce();
   bool get_ldw_left_warning_info() { return ldw_left_warning_; }
   bool get_ldw_right_warning_info() { return ldw_right_warning_; }
-  PlanningHMI::LDWOutputInfoStr_LDWFunctionFSMWorkState get_ldw_state() {
-    return ldw_state_;
-  }
+  iflyauto::LDWFunctionFSMWorkState get_ldw_state() { return ldw_state_; }
   ~LaneDepartWarning() = default;
 
  private:
@@ -33,28 +31,25 @@ class LaneDepartWarning {
     // ldw_state_ = measurement_str_.state;
     switch (measurement_str_.state) {
       case 0:
-        ldw_state_ = PlanningHMI::
-            LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        ldw_state_ = iflyauto::LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
         break;
       case 1:
-        ldw_state_ = PlanningHMI::
-            LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_OFF;
+        ldw_state_ = iflyauto::LDW_FUNCTION_FSM_WORK_STATE_OFF;
         break;
       case 2:
-        ldw_state_ = PlanningHMI::
-            LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_STANDBY;
+        ldw_state_ = iflyauto::LDW_FUNCTION_FSM_WORK_STATE_STANDBY;
         break;
       case 3:
-        ldw_state_ = PlanningHMI::
-            LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
+        ldw_state_ =
+            iflyauto::LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
         break;
       case 4:
-        ldw_state_ = PlanningHMI::
-            LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
+        ldw_state_ =
+            iflyauto::LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
         break;
       default:
-        ldw_state_ = PlanningHMI::
-            LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
+        ldw_state_ =
+            iflyauto::LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
         break;
     }
     if (measurement_str_.state == 4) {
@@ -72,9 +67,8 @@ class LaneDepartWarning {
  private:
   planning::MeasurementPoint measurement_str_;
   planning::CalibrationParameter calribration_str_;
-  PlanningHMI::LDWOutputInfoStr_LDWFunctionFSMWorkState ldw_state_{
-      PlanningHMI::
-          LDWOutputInfoStr_LDWFunctionFSMWorkState_LDW_FUNCTION_FSM_WORK_STATE_OFF}; /* LDW功能状态
+  iflyauto::LDWFunctionFSMWorkState ldw_state_{
+      iflyauto::LDW_FUNCTION_FSM_WORK_STATE_OFF}; /* LDW功能状态
 0:Unavailable 1:Off 2:Standby 3:Active(No Intervention) 4:Active(Left
 Intervention) 5:Active(Right Intervention) */
   bool ldw_left_warning_{

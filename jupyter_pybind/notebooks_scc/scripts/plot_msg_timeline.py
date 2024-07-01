@@ -1,5 +1,6 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')

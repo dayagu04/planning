@@ -1,5 +1,6 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 import inspect
 # from lib.load_cyberbag import *
 from lib.load_local_view import *
@@ -7,8 +8,8 @@ sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
-# bag path and frame dt 
-bag_path = "/data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240522/20240522-15-32-19/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-05-22-15-32-19_no_camera.record" #.1688547247.plan
+# bag path and frame dt
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240604/20240604-16-26-45/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-04-16-26-45.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -16,7 +17,7 @@ frame_dt = 0.02 # sec
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
@@ -25,7 +26,7 @@ obj_id = 0
 ### sliders config
 class LatBehaviorSlider:
   def __init__(self,  slider_callback):
-    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%', height='100%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
+    self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider)
 
 # 障碍物的id选择
@@ -73,7 +74,7 @@ columns = [
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=600)
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=350)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=500)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
@@ -84,7 +85,8 @@ def obj_id_handler(id):
   global obj_id
   obj_id = id
   if bag_loader.plan_debug_msg['enable'] == True:
-    environment_model_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].environment_model_info
+    plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
+    environment_model_info = plan_debug_msg.environment_model_info
     obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
             'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
               'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
@@ -146,7 +148,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
       names.append(name)
     except:
       pass
-      
+
   behavior_data_1.data.update({
     'name': names,
     'data': datas,
@@ -208,9 +210,9 @@ def update_lc_data (noa_info, plan_debug_json):
 def update_overtake_request_lc_data (plan_debug_json):
   names  = []
   datas = []
-  overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", 
-                       "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", 
-                       "trigger_right_overtake", "overtake_vehicle_id"]
+  overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
+                       "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
+                       "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len"]
   for name in overtake_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))
@@ -226,38 +228,24 @@ def update_overtake_request_lc_data (plan_debug_json):
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  plan_debug_msg_idx = 0
-  if bag_loader.plan_debug_msg['enable'] == True:
-    while bag_loader.plan_debug_msg['t'][plan_debug_msg_idx] <= bag_time and plan_debug_msg_idx < (len(bag_loader.plan_debug_msg['t'])-2):
-        plan_debug_msg_idx = plan_debug_msg_idx + 1
-  #增加宏观变道决策的信息
-  global plan_hmi_msg_idx
-  plan_hmi_msg_idx = 0
-  if bag_loader.planning_hmi_msg['enable'] == True:
-    while bag_loader.planning_hmi_msg['t'][plan_hmi_msg_idx] <= bag_time and plan_hmi_msg_idx < (len(bag_loader.planning_hmi_msg['t'])-2):
-        plan_hmi_msg_idx = plan_hmi_msg_idx + 1
 
   obj_id_handler(obj_id)
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
-    vo_lat_motion_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_motion_plan
-    # basic_dpoly = vo_lat_motion_plan.basic_dpoly
-    # d_poly_x, d_poly_y = gen_line(basic_dpoly[3], basic_dpoly[2], basic_dpoly[1], basic_dpoly[0], 0,60)
-    # data_d_poly.data.update({
-    #   'd_poly_y':d_poly_y,
-    #   'd_poly_x':d_poly_x
-    # })
+    plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
+    plan_debug_json_msg = local_view_data['data_msg']['plan_debug_json_msg']
+    planning_hmi_msg = local_view_data['data_msg']['planning_hmi_msg']
+    vo_lat_motion_plan = plan_debug_msg.vo_lat_motion_plan
+    lat_behavior_common = plan_debug_msg.lat_behavior_common
 
-    lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
-    plan_debug_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-    noa_info = bag_loader.planning_hmi_msg['data'][plan_hmi_msg_idx].ad_info
+    noa_info = planning_hmi_msg.ad_info
     try:
       update_data(lat_behavior_common, vo_lat_motion_plan)
     except:
       pass
-    update_lc_data(noa_info, plan_debug_json)
-    update_overtake_request_lc_data(plan_debug_json)
+    update_lc_data(noa_info, plan_debug_json_msg)
+    update_overtake_request_lc_data(plan_debug_json_msg)
 
-    lat_behavior_plan = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].vo_lat_behavior_plan
+    lat_behavior_plan = plan_debug_msg.vo_lat_behavior_plan
 
     # 可视化avoid cars
     pos_y_rels = []
@@ -279,7 +267,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
-bkp.show(row(fig1, column(data_behavior_table_1,data_overtake_lc_table), column(data_lc_table_3,data_obstacle_table,data_behavior_table_2)), notebook_handle=True)
-slider_class = ObjText(obj_id_handler)
-
+# slider_class = ObjText(obj_id_handler)

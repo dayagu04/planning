@@ -24,10 +24,6 @@ class LateralMotionPlanningWeight {
       const LateralMotionSceneEnum scene,
       planning::common::LateralPlanningInput &planning_input);
 
-  void SetWeightByEnterAutoTime(const double auto_time, planning::common::LateralPlanningInput &planning_input);
-
-  void SetPosBoundWeightByLane(bool direction, planning::common::LateralPlanningInput &planning_input);
-
   void SetInitDisToRef(const double init_dis_to_ref) {
     init_dis_to_ref_ = init_dis_to_ref;
   }
@@ -36,31 +32,27 @@ class LateralMotionPlanningWeight {
     init_ref_theta_error_ = init_ref_theta_error;
   }
 
-  void SetRealVel(const double real_vel) { real_vel_ = real_vel; }
+  void SetEgoVel(const double ego_vel) { ego_vel_ = ego_vel; }
 
-  size_t CalculateConcernedStartIndex();
+  void SetEgoL(const double ego_l) { ego_l_ = ego_l; }
 
-  double GetConcernedStartRatio() { return concerned_start_ratio_; }
+  double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
 
  private:
   void SetAccJerkBoundByVelocity(
       planning::common::LateralPlanningInput &planning_input);
 
-  void SetCloseRangeJerkWeight(
+  void MakeDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
-
-  void SetJerkWeightByBigBias(
-      planning::common::LateralPlanningInput &planning_input);
-
-  void CalculateConcernedStartRatio();
 
  private:
   planning::LateralMotionPlannerConfig config_;
   LateralMotionSceneEnum lateral_motion_scene_;
   double init_dis_to_ref_;
   double init_ref_theta_error_;
-  double concerned_start_ratio_;
-  double real_vel_;
+  double concerned_start_q_jerk_;
+  double ego_vel_;
+  double ego_l_;
 };
 
 }  // namespace lateral_planning

@@ -1,13 +1,14 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 from lib.load_local_view import *
 from lib.load_tune_lat_mp import *
 sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, lateral_motion_planner_pb2
+sys.path.append('../../python_proto')
+from python_proto import lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
 
 # bag path and frame dt
@@ -18,7 +19,7 @@ frame_dt = 0.1 # sec
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
@@ -38,7 +39,7 @@ init_info_columns = [
       ]
 tab2 = DataTable(source = init_info, columns = init_info_columns, width = 300, height = 400)
 
-param_name = ["q_ref_xy", "q_ref_theta", "q_ref_theta_real", "q_acc", "q_jerk", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_safe_bound", "q_hard_bound", "q_ref_xy_remote", "q_ref_theta_remote", "q_ref_theta_real_remote", "q_safe_bound_remote", "q_hard_bound_remote"]
+param_name = ["q_ref_xy", "q_ref_theta", "q_ref_theta_real", "q_acc", "q_jerk", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_safe_bound", "q_hard_bound", "start_q_jerk"]
 param = ColumnDataSource(data = {'name':[], 'origin param':[], 'new param':[]})
 param_columns = [
         TableColumn(field="name", title="name"),
@@ -101,12 +102,16 @@ fig8.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_col
 f9 = fig9.line('time', 'plan_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_dot_deg')
 fig9.line('time', 'ego_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_dot_deg')
 f10 = fig10.line('center_line_s', 'center_line_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'kappa radius')
+refline_kappa_radius = ColumnDataSource(data = {'refline_s':[], 'refline_curvature':[]})
+f11 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
 hover10 = HoverTool(renderers=[f10], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
+hover11 = HoverTool(renderers=[f11], tooltips=[('s', '@refline_s'), ('radius', '@refline_curvature')], mode='vline')
 fig8.add_tools(hover8)
 fig9.add_tools(hover9)
 fig10.add_tools(hover10)
+fig10.add_tools(hover11)
 fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
 fig9.toolbar.active_scroll = fig9.select_one(WheelZoomTool)
 fig10.toolbar.active_scroll = fig10.select_one(WheelZoomTool)
@@ -121,8 +126,8 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.1, max=max_time, value=0.1, step=frame_dt)
     self.q_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_ref_xy",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_ref_x, step=0.1)
-    self.q_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_ref_theta",min=0.1, max=200.0, value=lat_motion_plan_input0.q_ref_theta, step=0.1)
-    self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.1, max=100.0, value=lat_motion_plan_input0.q_acc, step=0.01)
+    self.q_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_ref_theta",min=0.1, max=20000.0, value=lat_motion_plan_input0.q_ref_theta, step=0.1)
+    self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_acc, step=0.01)
     self.q_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk",min=0.01, max=1000.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
 
     self.q_acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_acc_bound, step=0.1)
@@ -131,6 +136,7 @@ class LocalViewSlider:
     self.jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.1)
     self.q_safe_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_safe_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1)
     self.q_hard_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_hard_corridor, step=0.1)
+
     self.ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ref_xy",min=-10., max=10.0, value=0.0, step=0.1)
     self.upper_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "upper_safe_bound",min=-10., max=10.0, value=0.0, step=0.1)
     self.lower_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "lower_safe_bound",min=-10., max=10.0, value=0.0, step=0.1)
@@ -140,17 +146,8 @@ class LocalViewSlider:
     self.complete_follow = ipywidgets.Checkbox(value=lat_motion_plan_input0.complete_follow, description='complete_follow')
     self.motion_plan_concerned_start_index = ipywidgets.IntText(value=0, description='motion_plan_concerned_start_index:')
     self.motion_plan_concerned_end_index = ipywidgets.IntText(value=lat_motion_plan_input0.motion_plan_concerned_index, description='motion_plan_concerned_end_index:')
-    self.motion_plan_concerned_start_ratio = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "start_ratio",min=0.0, max=10.0, value=1.0, step=0.001)
-    self.motion_plan_concerned_end_ratio = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio",min=0.0, max=10.0, value=0.2, step=0.001)
-    self.close_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.1)
-    self.decay_factor_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "decay_factor",min=0.0, max=2.0, value=1.0, step=0.001)
-    self.q_close_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_close_ref_xy",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_ref_x, step=0.1)
-    self.q_close_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_close_ref_theta",min=0.1, max=200.0, value=lat_motion_plan_input0.q_ref_theta, step=0.1)
-
-    self.ref_vel_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "vel",min=0.0, max=100.0, value=lat_motion_plan_input0.ref_vel, step=0.01)
+    self.q_start_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_start_jerk",min=0.0, max=200.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
     self.curv_factor_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "curv_factor",min=0.0, max=1.0, value=lat_motion_plan_input0.curv_factor, step=0.01)
-    # self.model_dt_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "dt",min=0.0, max=10.0, value=0.2, step=0.01)
-    self.ref_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ref_acc",min=0.0, max=100.0, value=0.0, step=0.01)
 
     self.safe_ub_start_idx = ipywidgets.IntText(value=0, description='safe_ub_start_idx:')
     self.safe_ub_end_idx = ipywidgets.IntText(value=26, description='safe_ub_end_idx:')
@@ -191,38 +188,27 @@ class LocalViewSlider:
                                          complete_follow = self.complete_follow,
                                          motion_plan_concerned_start_index = self.motion_plan_concerned_start_index,
                                          motion_plan_concerned_end_index = self.motion_plan_concerned_end_index,
-                                         motion_plan_concerned_start_ratio = self.motion_plan_concerned_start_ratio,
-                                         motion_plan_concerned_end_ratio = self.motion_plan_concerned_end_ratio,
-                                         close_jerk_bound = self.close_jerk_bound_slider,
-                                         decay_factor = self.decay_factor_slider,
-                                         q_close_ref_xy = self.q_close_ref_xy_slider,
-                                         q_close_ref_theta = self.q_close_ref_theta_slider,
-                                         ref_v = self.ref_vel_slider,
-                                         curv_factor = self.curv_factor_slider,
-                                        #  model_dt = self.model_dt_slider,
-                                         ref_acc = self.ref_acc_slider,
-                                         )
+                                         q_start_jerk = self.q_start_jerk_slider,
+                                         curv_factor = self.curv_factor_slider)
 
 
 ### sliders callback
 def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
                     upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
-                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, motion_plan_concerned_start_ratio, motion_plan_concerned_end_ratio, close_jerk_bound, decay_factor,
-                    q_close_ref_xy, q_close_ref_theta, ref_v, curv_factor, ref_acc):
+                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  # update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound, g_is_display_enu)
   update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data, ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu)
 
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
+  vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
+  plan_msg = local_view_data['data_msg']['plan_msg']
+  plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
+  loc_msg = local_view_data['data_msg']['loc_msg']
+  plan_debug_json_msg = local_view_data['data_msg']['plan_debug_json_msg']
 
-  lat_motion_plan_input = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_input
-  loc_msg = bag_loader.loc_msg['data'][loc_msg_idx]
-  planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
-  vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
-  lat_behavior_common = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lat_behavior_common
+  lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
+  planning_json = plan_debug_json_msg
+  lat_behavior_common = plan_debug_msg.lat_behavior_common
   print("init curv: ",lat_motion_plan_input.init_state.curv)
   print("road curv: ",planning_json["road_radius"])
   print("left_turn_light_state_available: ",vs_msg.left_turn_light_state_available)
@@ -235,6 +221,13 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
   else:
     print("Lane Change")
 
+  try:
+    refline_kappa_radius.data.update({
+      'refline_s': planning_json['raw_refline_s_vec'],
+      'refline_curvature': planning_json['raw_refline_k_vec'],
+    })
+  except:
+    print("no plan debug json: raw_refline_k_vec")
   if len(lat_motion_plan_input.ref_theta_vec) > 0:
     ref_vel = lat_motion_plan_input.ref_vel
     ego_vel = vs_msg.vehicle_speed
@@ -260,7 +253,7 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     origin_param_vec = []
     origin_param_vec.append(lat_motion_plan_input.q_ref_x)
     origin_param_vec.append(lat_motion_plan_input.q_ref_theta)
-    origin_param_vec.append(lat_motion_plan_input.q_ref_theta * (1.0 + ref_vel * ref_vel))
+    origin_param_vec.append(lat_motion_plan_input.q_ref_theta * (1.0 + ego_vel * ego_vel))
     origin_param_vec.append(lat_motion_plan_input.q_acc)
     origin_param_vec.append(lat_motion_plan_input.q_jerk)
     origin_param_vec.append(lat_motion_plan_input.q_acc_bound)
@@ -269,18 +262,7 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     origin_param_vec.append(lat_motion_plan_input.jerk_bound)
     origin_param_vec.append(lat_motion_plan_input.q_soft_corridor)
     origin_param_vec.append(lat_motion_plan_input.q_hard_corridor)
-    if ((not lat_motion_plan_input.complete_follow) and (lat_motion_plan_input.motion_plan_concerned_index < 25)):
-      origin_param_vec.append(0.2 * lat_motion_plan_input.q_ref_x)
-      origin_param_vec.append(0.2 * lat_motion_plan_input.q_ref_theta)
-      origin_param_vec.append(0.2 * lat_motion_plan_input.q_ref_theta * (1.0 + ref_vel * ref_vel))
-      origin_param_vec.append(0.2 * lat_motion_plan_input.q_soft_corridor)
-      origin_param_vec.append(0.2 * lat_motion_plan_input.q_hard_corridor)
-    else:
-      origin_param_vec.append(lat_motion_plan_input.q_ref_x)
-      origin_param_vec.append(lat_motion_plan_input.q_ref_theta)
-      origin_param_vec.append(lat_motion_plan_input.q_ref_theta * (1.0 + ref_vel * ref_vel))
-      origin_param_vec.append(lat_motion_plan_input.q_soft_corridor)
-      origin_param_vec.append(lat_motion_plan_input.q_hard_corridor)
+    origin_param_vec.append(planning_json['concerned_start_q_jerk'])
 
     if not use_new_param:
       q_ref_xy = lat_motion_plan_input.q_ref_x
@@ -295,11 +277,13 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
       q_hard_bound = lat_motion_plan_input.q_hard_corridor
       complete_follow = lat_motion_plan_input.complete_follow
       motion_plan_concerned_end_index = lat_motion_plan_input.motion_plan_concerned_index
+      if planning_json['concerned_start_q_jerk'] > 0:
+        q_start_jerk = planning_json['concerned_start_q_jerk']
 
     new_param_vec = []
     new_param_vec.append(q_ref_xy)
     new_param_vec.append(q_ref_theta)
-    new_param_vec.append(q_ref_theta * (1.0 + ref_vel * ref_vel))
+    new_param_vec.append(q_ref_theta * (1.0 + ego_vel * ego_vel))
     new_param_vec.append(q_acc)
     new_param_vec.append(q_jerk)
     new_param_vec.append(q_acc_bound)
@@ -308,19 +292,7 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     new_param_vec.append(jerk_bound)
     new_param_vec.append(q_safe_bound)
     new_param_vec.append(q_hard_bound)
-
-    if ((not complete_follow) and (motion_plan_concerned_end_index < 25)):
-      new_param_vec.append(0.2 * q_ref_xy)
-      new_param_vec.append(0.2 * q_ref_theta)
-      new_param_vec.append(0.2 * q_ref_theta * (1.0 + ref_vel * ref_vel))
-      new_param_vec.append(0.2 * q_safe_bound)
-      new_param_vec.append(0.2 * q_hard_bound)
-    else:
-      new_param_vec.append(q_ref_xy)
-      new_param_vec.append(q_ref_theta)
-      new_param_vec.append(q_ref_theta * (1.0 + ref_vel * ref_vel))
-      new_param_vec.append(q_safe_bound)
-      new_param_vec.append(q_hard_bound)
+    new_param_vec.append(q_start_jerk)
 
     param.data.update({
       'name': param_name,
@@ -329,39 +301,31 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     })
 
     ref_s = ref_vel * 25.0 * 0.2
-    model_dt = ref_s / ref_v / 25.0
     print("ref_s:", ref_s)
-    print("model_dt:", model_dt)
     input_string = lat_motion_plan_input.SerializeToString()
     start_time = time.time()
-    # lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, upper_safe_bound, lower_safe_bound, 0)
-    # lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound,
-    #                                           safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
-    #                                           motion_plan_concerned_start_index, motion_plan_concerned_end_index, motion_plan_concerned_start_ratio, motion_plan_concerned_end_ratio,
-    #                                           close_jerk_bound, decay_factor, q_close_ref_xy, q_close_ref_theta, ref_v, curv_factor, model_dt)
-    lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound,
-                                              safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
-                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, motion_plan_concerned_start_ratio, motion_plan_concerned_end_ratio,
-                                              close_jerk_bound, decay_factor, q_close_ref_xy, q_close_ref_theta, ref_v, curv_factor, model_dt, ref_acc, ego_vel)
+    lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound,
+                                              ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
+                                              safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
+                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 5.0))
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
     planning_output.ParseFromString(output_string_tmp)
 
-    print("\n------------------------------------------\n")
-    print("ego steering_wheel_angle_available:", vs_msg.steering_wheel_angle_available)
-    print("ego steering_wheel_angle_speed_available:", vs_msg.steering_wheel_angle_speed_available)
-
-    delta_bound = min(360.0 / 14.5 / 57.3, acc_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))
-    omega_bound = min(240.0 / 14.5 / 57.3, jerk_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))
-    close_omega_bound = min(240.0 / 14.5 / 57.3, close_jerk_bound / (lat_motion_plan_input.curv_factor * ref_vel * ref_vel))
+    print("\n ------------------------------------------- \n")
+    delta_bound = 360.0 / 14.5 / 57.3
+    omega_bound = 240.0 / 14.5 / 57.3
+    try:
+      delta_bound = min(delta_bound, acc_bound / (lat_motion_plan_input.curv_factor * ego_vel * ego_vel))
+      omega_bound = min(omega_bound, jerk_bound / (lat_motion_plan_input.curv_factor * ego_vel * ego_vel))
+    except:
+      print("no ego_vel!")
     print("origin complete_follow : ", lat_motion_plan_input.complete_follow)
     print("origin motion_plan_concerned_end_index : ", lat_motion_plan_input.motion_plan_concerned_index)
     print("new complete_follow : ", complete_follow)
     print("new motion_plan_concerned_end_index : ", motion_plan_concerned_end_index)
     print("new motion_plan_concerned_start_index : ", motion_plan_concerned_start_index)
-    print("new motion_plan_concerned_start_ratio : ", motion_plan_concerned_start_ratio)
-    print("new motion_plan_concerned_end_ratio : ", motion_plan_concerned_end_ratio)
 
     theta_error = lat_motion_plan_input.init_state.theta - lat_motion_plan_input.ref_theta_vec[0]
     theta_error1 = loc_msg.orientation.euler_boot.yaw - lat_motion_plan_input.ref_theta_vec[0]
@@ -379,10 +343,9 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
     print("solver condition = ", planning_output.solver_info.solver_condition)
 
     if bag_loader.loc_msg['enable'] == True:
-      cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-      cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-      cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-      planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
 
     try:
       json_pos_x = planning_json['ego_pos_x']
@@ -418,20 +381,12 @@ def slider_callback(bag_time, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jer
       steer_dot_deg_vec.append(planning_output.omega_vec[i] * 57.3 * 15.7)
       acc_upper_bound.append(acc_bound)
       acc_lower_bound.append(-acc_bound)
-      if i < motion_plan_concerned_start_index:
-        jerk_upper_bound.append(close_jerk_bound)
-        jerk_lower_bound.append(-close_jerk_bound)
-        steer_dot_deg_upper_bound.append((close_omega_bound * 57.3 * 15.7))
-        steer_dot_deg_lower_bound.append(-(close_omega_bound * 57.3 * 15.7))
-      else:
-        jerk_upper_bound.append(jerk_bound)
-        jerk_lower_bound.append(-jerk_bound)
-        steer_dot_deg_upper_bound.append((omega_bound * 57.3 * 15.7))
-        steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * 15.7))
+      jerk_upper_bound.append(jerk_bound)
+      jerk_lower_bound.append(-jerk_bound)
+      steer_dot_deg_upper_bound.append((omega_bound * 57.3 * 15.7))
+      steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * 15.7))
       steer_deg_upper_bound.append((delta_bound * 57.3 * 15.7))
       steer_deg_lower_bound.append(-(delta_bound * 57.3 * 15.7))
-#       steer_dot_deg_upper_bound.append((omega_bound * 57.3 * 15.7))
-#       steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * 15.7))
 
     acc_vec = planning_output.acc_vec
     jerk_vec = planning_output.jerk_vec

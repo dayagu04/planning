@@ -6,13 +6,17 @@
 
 #include "ad_common/hdmap/hdmap.h"
 #include "ego_planning_config.h"
-#include "fusion_road.pb.h"
+#include "fusion_road_c.h"
+#include "generated_refline.pb.h"
 #include "intersection.h"
 #include "local_view.h"
 #include "log.h"
 #include "session.h"
 #include "virtual_lane.h"
+
 namespace planning {
+
+#define LANE_BOUNDARY_POINT_SET_NUM 20
 
 using Map::CurrentRouting;
 using ad_common::hdmap::LaneGroupConstPtr;
@@ -112,9 +116,9 @@ class VirtualLaneManager {
 
   std::vector<double> construct_reference_line_acc(void);
   std::vector<double> construct_reference_line_scc(void);
-  bool update(const FusionRoad::RoadInfo &roads);
+  bool update(const iflyauto::RoadInfo &roads);
 
-  bool CheckLaneValid(const FusionRoad::RoadInfo &roads);
+  bool CheckLaneValid(const iflyauto::RoadInfo &roads);
 
   void reset();
 
@@ -171,7 +175,7 @@ class VirtualLaneManager {
 
   void construct_reference_line_msg(
       const std::vector<double> &current_lane_virtual_poly,
-      FusionRoad::ReferenceLineMsg &current_lane_virtual);
+      iflyauto::ReferenceLineMsg &current_lane_virtual);
 
  private:
   LaneChangeStatus is_lane_change();
@@ -198,11 +202,14 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
-  void CalculateHPPInfo(planning::framework::Session *session);
+  // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
-  void CalculateDistanceToTargetSlot(planning::framework::Session *session);
-  void CalculateDistanceToNextSpeedBump(planning::framework::Session *session);
+  // void CalculateDistanceToTargetSlot(planning::framework::Session *session);
+  // void CalculateDistanceToNextSpeedBump(planning::framework::Session
+  // *session);
   void ResetForRampInfo();
+  void SetGeneratedReflineToDebugInfo(
+      const iflyauto::LaneReferenceLine &refline);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -233,7 +240,7 @@ class VirtualLaneManager {
   bool is_on_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   bool in_intersection_ = false;
-  FusionRoad::ReferenceLineMsg intersection_lane_generated_;
+  iflyauto::ReferenceLineMsg intersection_lane_generated_;
   double nearest_s_ = 0.0;
   // HPP
   bool is_on_hpp_lane_ = false;

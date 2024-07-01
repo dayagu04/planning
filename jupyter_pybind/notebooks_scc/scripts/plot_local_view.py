@@ -1,18 +1,19 @@
 import sys, os
 sys.path.append("..")
-# from lib.load_cyberbag import *
-from lib.load_local_view import *
+sys.path.append("../lib/")
 sys.path.append('../..')
 sys.path.append('../../../')
 
+# sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from lib.load_local_view import *
 # bag path and frame dt
-bag_path = "/share/mnt/noa/20231011/noa_10.00000"
+bag_path = "/share/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240612/20240612-16-55-01/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-12-16-55-01_no_camera.bag.1718343840.close-loop.plan"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 

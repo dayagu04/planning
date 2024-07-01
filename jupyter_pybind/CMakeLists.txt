@@ -7,25 +7,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
 set(CMAKE_CXX_FLAGS "-DX86")
-set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks_apa/scripts/")
-set(SH_COMMAND "python proto_gen.py")
-
-execute_process(
-  COMMAND sh -c "${SH_COMMAND}"
-  RESULT_VARIABLE SH_RESULT
-  OUTPUT_VARIABLE SH_OUTPUT
-  WORKING_DIRECTORY ${WORKING_DIRECTORY}
-)
-
-set(WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/notebooks_scc/scripts/")
-execute_process(
-  COMMAND sh -c "${SH_COMMAND}"
-  RESULT_VARIABLE SH_RESULT
-  OUTPUT_VARIABLE SH_OUTPUT
-  WORKING_DIRECTORY ${WORKING_DIRECTORY}
-)
 
 find_package(pybind11 REQUIRED PATHS ~/miniconda3/lib/python3.7/site-packages/pybind11/share/cmake/pybind11)
+
+find_package(catkin REQUIRED COMPONENTS
+  rosbag
+  roscpp
+  rospy
+)
+
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/src
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/type_convert
+  ${CMAKE_CURRENT_LIST_DIR}/../build/devel/include
+)
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../build/devel/lib/python3/dist-packages/struct_msgs
+  DESTINATION ${CMAKE_CURRENT_LIST_DIR}/../jupyter_pybind/notebooks_apa/scripts
+)
 
 pybind11_add_module(lateral_motion_planning_py MODULE src/lateral_motion_planning_pybind.cc)
 target_link_libraries(lateral_motion_planning_py PRIVATE
@@ -50,6 +51,7 @@ target_link_libraries(scc_lon_motion_planning_py PRIVATE
 
 pybind11_add_module(slot_management_py MODULE src/slot_management_pybind.cc)
 target_link_libraries(slot_management_py PRIVATE
+  ${catkin_LIBRARIES}
   autoplt
   modules
   modules_common
@@ -114,6 +116,7 @@ target_link_libraries(uss_obstacle_avoidance_py PRIVATE
 
 pybind11_add_module(apa_simulation_py MODULE src/apa_simulation_pybind.cc)
 target_link_libraries(apa_simulation_py PRIVATE
+ ${catkin_LIBRARIES}
   autoplt
   modules
   modules_common

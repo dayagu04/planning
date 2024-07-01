@@ -72,8 +72,6 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_hard_lower_bound_y1_vec()->Resize(N, 0.0);
 
   planning_input_.mutable_control_vec()->Resize(N, 0.0);
-
-  auto_start_time_ = 0.0;
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -276,23 +274,28 @@ void LateralMotionPlanner::AssembleInput() {
 
   // set weights
   bool bend_scene = false;
-  double preview_distance = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane()->get_frenet_ego_state().s();
-  double preview_length = config_.curvature_preview_length;
-  double preview_step = config_.curvature_preview_step;
-  double close_kappa = 0.0;
-  double far_kappa = 0.0;
-  ReferencePathPoint ref_path_point;
-  for (double preview_s = 0.0; preview_s < preview_length; preview_s += preview_step) {
-    reference_path_ptr->get_reference_point_by_lon((preview_s + preview_distance), ref_path_point);
-    close_kappa += ref_path_point.path_point.kappa;
+  const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
+  const double preview_length = config_.curvature_preview_length;
+  const double preview_step = config_.curvature_preview_step;
+  double aver_close_kappa = 0.0;
+  double aver_far_kappa = 0.0;
+  ReferencePathPoint close_ref_path_point;
+  ReferencePathPoint far_ref_path_point;
+  for (double preview_distance = ego_s; preview_distance < preview_length;
+       preview_distance += preview_step) {
+    reference_path_ptr->get_reference_point_by_lon((preview_distance),
+                                                   close_ref_path_point);
+    aver_close_kappa += close_ref_path_point.path_point.kappa;
+    reference_path_ptr->get_reference_point_by_lon(
+        (preview_distance + config_.curvature_preview_distance),
+        far_ref_path_point);
+    aver_far_kappa += far_ref_path_point.path_point.kappa;
   }
-  for (double preview_s = 0.0; preview_s < preview_length; preview_s += preview_step) {
-    reference_path_ptr->get_reference_point_by_lon((preview_s + preview_distance + config_.curvature_preview_distance), ref_path_point);
-    far_kappa += ref_path_point.path_point.kappa;
-  }
-  if ((preview_length != 0) &&(preview_step != 0)) {
-    close_kappa /= (preview_length / preview_step);
-    if (((1.0 / fabs(close_kappa)) < config_.road_curvature_radius) || ((1.0 / fabs(far_kappa)) < config_.road_curvature_radius)) {
+  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
+    aver_close_kappa /= (preview_length / preview_step);
+    aver_far_kappa /= (preview_length / preview_step);
+    if (((1.0 / fabs(aver_close_kappa)) < config_.road_curvature_radius) ||
+        ((1.0 / fabs(aver_far_kappa)) < config_.road_curvature_radius)) {
       bend_scene = true;
     }
   }
@@ -306,11 +309,16 @@ void LateralMotionPlanner::AssembleInput() {
       reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref0, frenet_ref0) &&
       reference_path_ptr->get_frenet_coord()->XYToSL(cart_init, frenet_init)) {
     planning_weight_ptr_->SetInitDisToRef((frenet_init.y - frenet_ref0.y));
-    planning_weight_ptr_->SetInitRefThetaError((planning_input_.init_state().theta() - planning_input_.ref_theta_vec(0)) * 57.3);
+    planning_weight_ptr_->SetInitRefThetaError(
+        (planning_input_.init_state().theta() -
+         planning_input_.ref_theta_vec(0)) *
+        57.3);
   } else {
     planning_weight_ptr_->CalculateInitInfo(planning_input_);
   }
-  planning_weight_ptr_->SetRealVel(session_->environmental_model().get_ego_state_manager()->ego_v());
+  planning_weight_ptr_->SetEgoVel(
+      session_->environmental_model().get_ego_state_manager()->ego_v());
+  planning_weight_ptr_->SetEgoL(reference_path_ptr->get_frenet_ego_state().l());
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
@@ -323,26 +331,11 @@ void LateralMotionPlanner::AssembleInput() {
   } else if (bend_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::BEND,
                                                  planning_input_);
-    // config_.motion_plan_concerned_start_index = 0;
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
 
-  // if (session_->environmental_model().get_virtual_lane_manager()->get_left_lane() == nullptr) {
-  //   planning_weight_ptr_->SetPosBoundWeightByLane(0, planning_input_);
-  // } else if (session_->environmental_model().get_virtual_lane_manager()->get_right_lane() == nullptr) {
-  //   planning_weight_ptr_->SetPosBoundWeightByLane(1, planning_input_);
-  // }
-
-  if (session_->environmental_model().GetVehicleDbwStatus()) {
-    auto_start_time_ = std::min(auto_start_time_ + 0.1, config_.auto_start_time_thr);
-  } else {
-    auto_start_time_ = 0.0;
-  }
-  if ((auto_start_time_ > 0.0) && (auto_start_time_ < config_.auto_start_time_thr)) {
-    planning_weight_ptr_->SetWeightByEnterAutoTime(auto_start_time_, planning_input_);
-  }
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);
   planning_input_.set_motion_plan_concerned_index(
@@ -350,58 +343,19 @@ void LateralMotionPlanner::AssembleInput() {
 }
 
 void LateralMotionPlanner::Update() {
-  double concerned_start_ratio =  planning_weight_ptr_->GetConcernedStartRatio();
-  const double origin_ref_vel = session_->planning_context().general_lateral_decider_output().v_cruise;
-  const double ego_vel = session_->environmental_model().get_ego_state_manager()->ego_v();
-  if (config_.ref_v_set_valid && ((origin_ref_vel- ego_vel) > config_.ref_ego_v_thr)) {
-    double ref_vel_acc = 0.0;
-    if (ego_vel < (config_.ref_v_low_thr / 3.6)) {
-      ref_vel_acc = config_.ref_v_acc0;
-    } else if (ego_vel < (config_.ref_v_high_thr / 3.6)) {
-      ref_vel_acc = config_.ref_v_acc1;
-    } else {
-      ref_vel_acc = config_.ref_v_acc2;
-    }
-
-    std::vector<double> ref_vel_vec;
-    std::vector<double> model_dt_vec;
-    ref_vel_vec.resize(26, 0.0);
-    model_dt_vec.resize(26, 0.0);
-    double new_ref_s = 0.0;
-    double ref_s = 0.0;
-    for (size_t i = 0; i < 26; ++i) {
-      ref_vel_vec[i] = std::min(origin_ref_vel, ego_vel + ref_vel_acc * (0.2 * i));
-      double new_dt = 0.0;
-      if (i > 0) {
-        ref_s = origin_ref_vel * 0.2 * i;
-        double new_ref_ds = 0.5 * (ref_vel_vec[i] + ref_vel_vec[i - 1]) * 0.2;
-        new_ref_s += new_ref_ds;
-        new_dt = 0.2 * i * (new_ref_s / ref_s);
-      }
-      model_dt_vec[i] = new_dt;
-    }
-
-    auto start_time = IflyTime::Now_ms();
-    auto solver_condition = planning_problem_ptr_->Update(
-        planning_input_, config_.motion_plan_concerned_start_index,
-        concerned_start_ratio,  // config_.motion_plan_concerned_start_ratio,
-        config_.motion_plan_concerned_end_ratio, config_.close_jerk_bound,
-        config_.decay_factor, config_.q_ref_x, config_.q_ref_theta, model_dt_vec, ref_vel_vec);
-    JSON_DEBUG_VALUE("solver_condition", solver_condition)
-    auto end_time = IflyTime::Now_ms();
-    JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
-
-  } else {
-    auto start_time = IflyTime::Now_ms();
-    auto solver_condition = planning_problem_ptr_->Update(
-        planning_input_, config_.motion_plan_concerned_start_index,
-        concerned_start_ratio,  // config_.motion_plan_concerned_start_ratio,
-        config_.motion_plan_concerned_end_ratio, config_.close_jerk_bound,
-        config_.decay_factor, config_.q_ref_x, config_.q_ref_theta, config_.delta_t);
-    JSON_DEBUG_VALUE("solver_condition", solver_condition)
-    auto end_time = IflyTime::Now_ms();
-    JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
-  }
+  const double concerned_start_q_jerk =
+      planning_weight_ptr_->GetConcernedStartQJerk();
+  JSON_DEBUG_VALUE("concerned_start_q_jerk", concerned_start_q_jerk);
+  const double ego_vel =
+      std::max(session_->environmental_model().get_ego_state_manager()->ego_v(),
+               config_.min_ego_vel);
+  auto start_time = IflyTime::Now_ms();
+  auto solver_condition = planning_problem_ptr_->Update(
+      config_.motion_plan_concerned_start_index, concerned_start_q_jerk,
+      ego_vel, planning_input_);
+  JSON_DEBUG_VALUE("solver_condition", solver_condition);
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
 
   // update planning_output
   const auto &planning_output = planning_problem_ptr_->GetOutput();

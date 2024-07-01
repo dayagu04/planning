@@ -8,8 +8,8 @@
 #include "define/geometry.h"
 // #include "define/plan.h"
 // #include "vehicle_status.pb.h"
-#include "common.pb.h"
-#include "planning_plan.pb.h"
+#include "common_c.h"
+#include "planning_plan_c.h"
 
 namespace planning {
 namespace common {
@@ -143,7 +143,7 @@ typedef struct {
   std::unordered_map<int, int> yield_history;
 
   // planning_output
-  PlanningOutput::PlanningOutput planning_output;
+  iflyauto::PlanningOutput planning_output;
 
   std::vector<double> traj_vel_array;
   std::vector<double> traj_acceleration;

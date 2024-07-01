@@ -7,6 +7,12 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 
+if(ADAPTER STREQUAL "cyber")
+  add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="/asw/planning/res/conf/engine_configs/planning_engine_config_cyber.json")
+elseif (ADAPTER STREQUAL "ap")
+  add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="../runtime_service/planning_exec/res/conf/engine_configs/planning_engine_config_ap.json")
+endif()
+
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 add_subdirectory(context EXCLUDE_FROM_ALL)
@@ -21,10 +27,11 @@ add_subdirectory(scc_function EXCLUDE_FROM_ALL)
 add_subdirectory(noa_function EXCLUDE_FROM_ALL)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-  interface_converter
   framework
   modules_context
   modules_apa_function
+  modules_adas_function
+  planning_proto
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

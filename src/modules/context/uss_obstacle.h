@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "geometry_math.h"
 #include "local_view.h"
-#include "planning_plan.pb.h"
-#include "src/library/geometry_lib/include/geometry_math.h"
+#include "planning_plan_c.h"
 namespace planning {
 class UssObstacle {
   enum CarPointMode {
@@ -142,7 +142,7 @@ class UssObstacle {
   Eigen::Vector2d turning_center_ = Eigen::Vector2d::Zero();
 
   const LocalView *local_view_ptr_ = nullptr;
-  PlanningOutput::PlanningOutput *planning_output_;
+  iflyauto::PlanningOutput *planning_output_;
 };
 
 };  // namespace planning

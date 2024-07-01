@@ -2,7 +2,7 @@
 #define __PERFECT_CONTROL_H__
 
 #include "Eigen/Core"
-#include "planning_plan.pb.h"
+#include "planning_plan_c.h"
 namespace planning {
 class PerfectControl {
  public:
@@ -30,7 +30,7 @@ class PerfectControl {
   void Init();
   void SetState(const DynamicState& state) { state_ = state; }
 
-  const bool Update(const PlanningOutput::PlanningOutput& planning_output,
+  const bool Update(const iflyauto::PlanningOutput& planning_output,
                     const double dt);
 
   const DynamicState& GetState() const { return state_; }

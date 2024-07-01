@@ -642,8 +642,8 @@ void LaneChangeDecider::compute_lc_valid_info(RequestType direction) {
                   120.0);
             }
           }
-          //如果目标车道上后车的相对车速较自车快2m/s以上,
-          //最小安全距离的阈值再增加2m，以免产生变道恐慌感
+          // 如果目标车道上后车的相对车速较自车快2m/s以上,
+          // 最小安全距离的阈值再增加2m，以免产生变道恐慌感
           if (tr.v_rel > 2.0) {
             mss = mss + 2;
           }
@@ -839,13 +839,10 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   std::array<double, 3> fp_l{0, 0.4, 0.6};
   double c1 = 0;
 
-  if (direction == LEFT_CHANGE &&
-      target_lane->get_right_lane_boundary().poly_coefficient_size() == 4) {
-    c1 = target_lane->get_right_lane_boundary().poly_coefficient()[1];
-  } else if (direction == RIGHT_CHANGE &&
-             target_lane->get_left_lane_boundary().poly_coefficient_size() ==
-                 4) {
-    c1 = target_lane->get_left_lane_boundary().poly_coefficient()[1];
+  if (direction == LEFT_CHANGE) {
+    c1 = target_lane->get_right_lane_boundary().poly_coefficient[1];
+  } else if (direction == RIGHT_CHANGE) {
+    c1 = target_lane->get_left_lane_boundary().poly_coefficient[1];
   }
 
   double move_thre =
@@ -865,9 +862,8 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   auto left_lane = virtual_lane_manager->get_left_lane();
   if (left_lane != nullptr) {
     for (auto &p : left_lane->lane_points()) {
-      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
-          !p.is_in_intersection()) {
-        left_lane_width = p.lane_width();
+      if (p.car_point.x >= 0 && p.car_point.x <= 20 && !p.is_in_intersection) {
+        left_lane_width = p.lane_width;
         if (left_lane_width < 100) {
           break;
         }
@@ -880,9 +876,8 @@ void LaneChangeDecider::compute_lc_back_info(RequestType direction) {
   auto right_lane = virtual_lane_manager->get_right_lane();
   if (right_lane != nullptr) {
     for (auto &p : right_lane->lane_points()) {
-      if (p.car_point().x() >= 0 && p.car_point().x() <= 20 &&
-          !p.is_in_intersection()) {
-        right_lane_width = p.lane_width();
+      if (p.car_point.x >= 0 && p.car_point.x <= 20 && !p.is_in_intersection) {
+        right_lane_width = p.lane_width;
         if (right_lane_width < 100) {
           break;
         }
@@ -1218,13 +1213,15 @@ bool LaneChangeDecider::check_lc_change_finish(RequestType direction) {
     return false;
   }
 
-  double dist_threshold = 0.5;
+  double dist_threshold = config_.lc_finish_dist_thr;
   double v_ego =
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
-  std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
-  std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
-  double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
+  // std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
+  // std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
+  // double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 
+  double angle_threshold =
+      config_.lc_finish_heading_deg_thr * 0.01745;  // to rad
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
   std::cout << "check_lc_change_finish: target_lane_virtual_id: "
@@ -1250,10 +1247,10 @@ bool LaneChangeDecider::check_lc_change_finish(RequestType direction) {
   }
 
   if (lc_change_finish == true) {
-    auto ad_info = session_->mutable_planning_context()
-                       ->mutable_planning_hmi_info()
-                       ->mutable_ad_info();
-    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::COMPLETED);
+    auto ad_info = &(session_->mutable_planning_context()
+                         ->mutable_planning_hmi_info()
+                         ->ad_info);
+    ad_info->lane_change_status = iflyauto::LC_COMPLETED;
   }
   return lc_change_finish;
 }
@@ -1477,6 +1474,8 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
+  std::vector<double> kappa_vec;
+  kappa_vec.resize(point_size);
   float normal_care_spline_length = 50.;
   const float preview_time = 20.;
   const double min_preview_spline_length = 20.;
@@ -1506,12 +1505,16 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y -
                                    ref_point.at(i - 1).path_point.y)
               : 0.;
+    kappa_vec[i] = std::min(
+        std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
+        10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);
       cart_ref_info.y_vec.resize(i);
       cart_ref_info.s_vec.resize(i);
+      kappa_vec.resize(i);
       break;
     }
   }
@@ -1521,6 +1524,8 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
 
   JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_s_vec", cart_ref_info.s_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_k_vec", kappa_vec, 2)
 
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());
@@ -1551,66 +1556,26 @@ void LaneChangeDecider::UpdateCoarsePlanningInfo() {
 
   coarse_planning_info.trajectory_points.clear();
   TrajectoryPoint point;
-  const double ego_vel = session_->environmental_model().get_ego_state_manager()->ego_v();
-  if (config_.ref_vel_set_valid && ((v_ref_cruise- ego_vel) > config_.ref_ego_vel_thr)) {
-    double ref_vel_acc = 0.0;
-    if (ego_vel < (config_.ref_vel_low_thr / 3.6)) {  // 10 kph
-      ref_vel_acc =  config_.ref_vel_acc0;
-    } else if (ego_vel < (config_.ref_vel_high_thr / 3.6)) {  // 36 kph
-      ref_vel_acc = config_.ref_vel_acc1;
-    } else {
-      ref_vel_acc = config_.ref_vel_acc2;
+  for (size_t i = 0; i < N; ++i) {
+    // cart info
+    if (s_ref < cart_ref_info.s_vec.back() + kEps) {
+      point.x = cart_ref_info.x_s_spline(s_ref);
+      point.y = cart_ref_info.y_s_spline(s_ref);
+      point.heading_angle =
+          std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
+                     cart_ref_info.x_s_spline.deriv(1, s_ref));
     }
 
-    std::vector<double> ref_vel_vec;
-    ref_vel_vec.resize(N, 0.0);
-    for (size_t i = 0; i < N; ++i) {
-      ref_vel_vec[i] = std::min(ego_vel + ref_vel_acc * (0.2 * i), v_ref_cruise);
-    }
+    // frenet info
+    Point2D frenet_pt{0.0, 0.0};
+    Point2D cart_pt(point.x, point.y);
+    frenet_coord->XYToSL(cart_pt, frenet_pt);
+    point.s = frenet_pt.x;
+    point.l = frenet_pt.y;
+    point.t = static_cast<double>(i) * delta_time;
 
-    for (size_t i = 0; i < N; ++i) {
-      // cart info
-      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
-        point.x = cart_ref_info.x_s_spline(s_ref);
-        point.y = cart_ref_info.y_s_spline(s_ref);
-        point.heading_angle =
-            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                      cart_ref_info.x_s_spline.deriv(1, s_ref));
-      }
-
-      // frenet info
-      Point2D frenet_pt{0.0, 0.0};
-      Point2D cart_pt(point.x, point.y);
-      frenet_coord->XYToSL(cart_pt, frenet_pt);
-      point.s = frenet_pt.x;
-      point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * delta_time;
-
-      s_ref += v_cruise_scale * ref_vel_vec[i] * delta_time;
-      coarse_planning_info.trajectory_points.emplace_back(point);
-    }
-  } else {
-    for (size_t i = 0; i < N; ++i) {
-      // cart info
-      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
-        point.x = cart_ref_info.x_s_spline(s_ref);
-        point.y = cart_ref_info.y_s_spline(s_ref);
-        point.heading_angle =
-            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                      cart_ref_info.x_s_spline.deriv(1, s_ref));
-      }
-
-      // frenet info
-      Point2D frenet_pt{0.0, 0.0};
-      Point2D cart_pt(point.x, point.y);
-      frenet_coord->XYToSL(cart_pt, frenet_pt);
-      point.s = frenet_pt.x;
-      point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * delta_time;
-
-      s_ref += v_cruise_scale * v_ref_cruise * delta_time;
-      coarse_planning_info.trajectory_points.emplace_back(point);
-    }
+    s_ref += v_cruise_scale * v_ref_cruise * delta_time;
+    coarse_planning_info.trajectory_points.emplace_back(point);
   }
 }
 
@@ -1666,11 +1631,11 @@ void LaneChangeDecider::UpdateStateMachineDebugInfo() {
       lane_change_decider_output.lc_back_reason);
   lat_behavior_common->set_lc_back_invalid_reason(
       lane_change_decider_output.lc_back_invalid_reason);
-  lat_behavior_common->near_car_ids_origin().Clear();
+  lat_behavior_common->mutable_near_car_ids_origin()->Clear();
   for (auto &near_car_origin : lane_change_decider_output.near_cars_origin) {
     lat_behavior_common->add_near_car_ids_origin(near_car_origin.track_id);
   }
-  lat_behavior_common->near_car_ids_target().Clear();
+  lat_behavior_common->mutable_near_car_ids_target()->Clear();
   for (auto &near_car_target : lane_change_decider_output.near_cars_target) {
     lat_behavior_common->add_near_car_ids_target(near_car_target.track_id);
   }
@@ -1678,11 +1643,11 @@ void LaneChangeDecider::UpdateStateMachineDebugInfo() {
       lane_change_decider_output.left_is_faster);
   lat_behavior_common->set_is_faster_right_lane(
       lane_change_decider_output.right_is_faster);
-  lat_behavior_common->left_alc_car_ids().Clear();
+  lat_behavior_common->mutable_left_alc_car_ids()->Clear();
   for (auto id : lane_change_decider_output.left_alc_car) {
     lat_behavior_common->add_left_alc_car_ids(id);
   }
-  lat_behavior_common->right_alc_car_ids().Clear();
+  lat_behavior_common->mutable_right_alc_car_ids()->Clear();
   for (auto id : lane_change_decider_output.right_alc_car) {
     lat_behavior_common->add_right_alc_car_ids(id);
   }
@@ -1715,32 +1680,28 @@ void LaneChangeDecider::UpdateStateMachineDebugInfo() {
 }
 
 void LaneChangeDecider::UpdateAdInfo() {
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
 
   // feed hmi
-  ad_info->set_lane_change_direction(::PlanningHMI::LaneChangeDirection::OTHER);
+  ad_info->lane_change_direction = iflyauto::LC_OTHER;
   if (transition_context_.target_state == ROAD_LC_LWAIT ||
       transition_context_.target_state == ROAD_LC_RWAIT) {
-    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::WAITING);
+    ad_info->lane_change_status = iflyauto::LC_WAITING;
     if (transition_context_.target_state == ROAD_LC_LWAIT) {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::LEFT);
+      ad_info->lane_change_direction = iflyauto::LC_LEFT;
     } else {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::RIGHT);
+      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
     }
   } else if (transition_context_.target_state == ROAD_LC_LCHANGE ||
              transition_context_.target_state == ROAD_LC_RCHANGE) {
     if (transition_context_.target_state == ROAD_LC_LCHANGE) {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::LEFT);
+      ad_info->lane_change_direction = iflyauto::LC_LEFT;
     } else {
-      ad_info->set_lane_change_direction(
-          ::PlanningHMI::LaneChangeDirection::RIGHT);
+      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
     }
-    ad_info->set_lane_change_status(::PlanningHMI::LaneChangeStatus::STARTING);
+    ad_info->lane_change_status = iflyauto::LC_STARTING;
   } else if (transition_context_.target_state == ROAD_NONE) {
     if (transition_context_.source_state == ROAD_LC_LWAIT ||
         transition_context_.source_state == ROAD_LC_RWAIT ||
@@ -1748,23 +1709,18 @@ void LaneChangeDecider::UpdateAdInfo() {
         transition_context_.source_state == ROAD_LC_RCHANGE ||
         transition_context_.source_state == ROAD_LC_LBACK ||
         transition_context_.source_state == ROAD_LC_RBACK) {
-      if (ad_info->has_lane_change_status() &&
-          ad_info->lane_change_status() ==
-              ::PlanningHMI::LaneChangeStatus::COMPLETED) {
+      if (ad_info->lane_change_status == iflyauto::LC_COMPLETED) {
         // check_lc_change_finish
       } else {
-        ad_info->set_lane_change_status(
-            ::PlanningHMI::LaneChangeStatus::CANCELLED);
+        ad_info->lane_change_status = iflyauto::LC_CANCELLED;
       }
 
       if (transition_context_.source_state == ROAD_LC_LWAIT ||
           transition_context_.source_state == ROAD_LC_LCHANGE ||
           transition_context_.source_state == ROAD_LC_LBACK) {
-        ad_info->set_lane_change_direction(
-            ::PlanningHMI::LaneChangeDirection::LEFT);
+        ad_info->lane_change_direction = iflyauto::LC_LEFT;
       } else {
-        ad_info->set_lane_change_direction(
-            ::PlanningHMI::LaneChangeDirection::RIGHT);
+        ad_info->lane_change_direction = iflyauto::LC_RIGHT;
       }
     }
   }
@@ -1783,12 +1739,10 @@ void LaneChangeDecider::UpdateAdInfo() {
       if (target_reference->get_frenet_coord()->SLToXY(
               Point2D(target_reference->get_frenet_ego_state().s() + 5, 0),
               cart_point)) {
-        ad_info->mutable_landing_point()->mutable_relative_pos()->set_x(
-            cart_point.x);
-        ad_info->mutable_landing_point()->mutable_relative_pos()->set_y(
-            cart_point.y);
-        ad_info->mutable_landing_point()->mutable_relative_pos()->set_z(0);
-        ad_info->mutable_landing_point()->set_heading(0);
+        ad_info->landing_point.relative_pos.x = cart_point.x;
+        ad_info->landing_point.relative_pos.y = cart_point.y;
+        ad_info->landing_point.relative_pos.z = 0;
+        ad_info->landing_point.heading = 0;
       }
     }
   }

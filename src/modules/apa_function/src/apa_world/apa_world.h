@@ -9,13 +9,15 @@
 
 #include "collision_detection.h"
 #include "common.pb.h"
-#include "func_state_machine.pb.h"
+#include "func_state_machine_c.h"
 #include "local_view.h"
 #include "slot_management.h"
 #include "slot_management_info.pb.h"
 #include "spline.h"
 #include "spline_projection.h"
 #include "uss_obstacle_avoidance.h"
+
+#define APA_COMPARE_PLANNING_TRAJ_POINTS_NUM 26
 
 namespace planning {
 namespace apa_planner {
@@ -39,7 +41,7 @@ class ApaWorld {
   struct Measurements {
     // systems states
     uint8_t planner_type = NONE_PLANNER;
-    uint8_t current_state = FuncStateMachine::STANDBY;
+    uint8_t current_state = iflyauto::FunctionalState_STANDBY;
     uint8_t general_apa_function = GeneralApaFunction::NONE_FUNCTION;
 
     // measurements
@@ -69,7 +71,7 @@ class ApaWorld {
       car_static_timer_by_pos = 0.0;
       car_static_timer_by_vel = 0.0;
       static_flag = false;
-      current_state = FuncStateMachine::STANDBY;
+      current_state = iflyauto::FunctionalState_STANDBY;
       is_slot_type_fixed = false;
     }
   };

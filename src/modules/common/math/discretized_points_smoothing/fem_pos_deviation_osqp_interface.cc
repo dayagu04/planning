@@ -24,7 +24,7 @@
 #include <iostream>
 #include <limits>
 
-#include "log_glog.h"
+// #include "log_glog.h"
 
 namespace planning {
 namespace planning_math {
@@ -32,22 +32,23 @@ namespace planning_math {
 bool FemPosDeviationOsqpInterface::Solve() {
   // Sanity Check
   if (ref_points_.empty()) {
-    AERROR << "reference points empty, solver early terminates";
+    std::cout << "reference points empty, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() != bounds_around_refs_.size()) {
-    AERROR << "ref_points and bounds size not equal, solver early terminates";
+    std::cout
+        << "ref_points and bounds size not equal, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() < 3) {
-    AERROR << "ref_points size smaller than 3, solver early terminates";
+    std::cout << "ref_points size smaller than 3, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() > std::numeric_limits<int>::max()) {
-    AERROR << "ref_points size too large, solver early terminates";
+    std::cout << "ref_points size too large, solver early terminates";
     return false;
   }
 
@@ -98,7 +99,7 @@ bool FemPosDeviationOsqpInterface::Solve() {
                               &A_indptr, &lower_bounds, &upper_bounds, &q,
                               &primal_warm_start, data, &work, settings);
   if (res == false || work == nullptr || work->solution == nullptr) {
-    AERROR << "Failed to find solution.";
+    std::cout << "Failed to find solution.";
     // Cleanup
     osqp_cleanup(work);
     c_free(data->A);
@@ -309,12 +310,12 @@ bool FemPosDeviationOsqpInterface::OptimizeWithOsqp(
   auto status = (*work)->info->status_val;
 
   if (status < 0) {
-    AERROR << "failed optimization status:\t" << (*work)->info->status;
+    std::cout << "failed optimization status:\t" << (*work)->info->status;
     return false;
   }
 
   if (status != 1 && status != 2) {
-    AERROR << "failed optimization status:\t" << (*work)->info->status;
+    std::cout << "failed optimization status:\t" << (*work)->info->status;
     return false;
   }
 

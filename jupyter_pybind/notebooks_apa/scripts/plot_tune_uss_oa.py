@@ -8,8 +8,7 @@ sys.path.append('../../../')
 # from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS
 # from bokeh.models import DataTable, DateFormatter, TableColumn
 # from bokeh.models import TextInput
-sys.path.append('python_proto')
-from python_proto import common_pb2, planning_plan_pb2
+sys.path.append('../../python_proto')
 from jupyter_pybind import uss_obstacle_avoidance_py
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

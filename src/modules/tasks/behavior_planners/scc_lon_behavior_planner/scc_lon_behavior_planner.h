@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "debug_info_log.h"
 #include "filters.h"
@@ -52,17 +53,34 @@ class SccLonBehaviorPlanner : public Task {
 
   void UpdateHMI();
 
+  void GetHardBounds();
+
   void SaveToSession();
 
   void SaveToDebugInfo();
 
   void ClearOutput();
 
+  bool GenerateFarSlowCarFollowCurve(std::vector<double> &s_refs);
+
+  bool GenerateStableFollowSlowCurve(std::vector<double> &s_refs);
+
+  struct STBound {
+    double lower = -1.0e4;
+    double upper = 1.0e4;
+    double vel;
+    double acc;
+    int id = 0;
+  };
+
  private:
   SccLonBehaviorPlannerConfig config_;
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_plan_input_;
   std::shared_ptr<scc::StGraphGenerator> st_graph_;
   std::shared_ptr<scc::SvGraphGenerator> sv_graph_;
+
+  std::vector<STBound> hard_bounds_;
+  std::array<double, 3> lon_init_state_;
 
   LongitudinalDeciderOutput lon_behav_output_;
   planning::common::LonRefPath lon_behav_output_pb_;

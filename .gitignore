@@ -3,12 +3,14 @@ install
 bin
 .cache
 tools/pybind/**/python_proto
+jupyter_pybind/notebooks_apa/scripts/struct_msgs
 jupyter_pybind/notebooks_apa/scripts/python_proto/*.py
 jupyter_pybind/notebooks_apa/**/__pycache__
 jupyter_pybind/notebooks_apa/**/.ipynb_checkpoints
 jupyter_pybind/notebooks_scc/scripts/python_proto/*.py
 jupyter_pybind/notebooks_scc/**/__pycache__
 jupyter_pybind/notebooks_scc/**/.ipynb_checkpoints
+jupyter_pybind/python_proto
 target/*.tar
 bags/
 src/modules/version.h

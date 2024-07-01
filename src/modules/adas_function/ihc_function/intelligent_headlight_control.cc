@@ -40,7 +40,7 @@ void IntelligentHeadlightControl::RunOnce() {
 void IntelligentHeadlightControl::Update() {
   // 获取IHC开关状态
   ihc_sys_.input.ihc_main_switch =
-      session_->mutable_environmental_model()->get_hmi_info().ihc_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().ihc_main_switch;
 
   // 获取当前仪表车速
   auto ptr_ego_state_manager =
@@ -192,8 +192,8 @@ bool IntelligentHeadlightControl::IHCRequest() {
   float32 obstacle_x = 255.0F;  // 目标物中心的x坐标 单位:m
   float32 obstacle_y = 255.0F;  // 目标物中心的y坐标 单位:m
   float32 obstacle_v = 255.0F;  // 目标物的速度 单位:m/s
-  Common::ObjectType obstacle_type =
-      Common::ObjectType::OBJECT_TYPE_UNKNOWN;  // 目标物的类型
+  iflyauto::ObjectType obstacle_type =
+      iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;  // 目标物的类型
   uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
                            256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 obstacle_code = 0;
@@ -227,16 +227,16 @@ bool IntelligentHeadlightControl::IHCRequest() {
 
     // condition3
     obstacle_type = obstacle_ptr->type();
-    if ((obstacle_type == Common::ObjectType::OBJECT_TYPE_COUPE) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_MINIBUS) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_VAN) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_BUS) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_TRUCK) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_TRAILER) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_BICYCLE) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_MOTORCYCLE) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_TRICYCLE) ||
-        (obstacle_type == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
+    if ((obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_COUPE) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_VAN) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_BUS) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_BICYCLE) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE) ||
+        (obstacle_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
       obstacle_code += uint16_bit[3];
     } else {
       // do nothing

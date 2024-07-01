@@ -10,17 +10,19 @@
 #include "config/vehicle_param.h"
 #include "dynamic_world/dynamic_world.h"
 #include "ego_planning_config.h"
-#include "fusion_objects.pb.h"
+#include "fusion_objects_c.h"
 #include "groundline_decider.h"
 #include "history_obstacle_manager.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
 #include "parking_slot_manager.h"
-#include "prediction.pb.h"
+// #include "prediction_c.h"
+#include "prediction_c.h"
 #include "prediction_object.h"
 #include "scene_type_config.pb.h"
-#include "vehicle_service.pb.h"
+// #include "vehicle_service_c.h"
+#include "vehicle_service_c.h"
 #include "vehicle_status.pb.h"
 namespace planning {
 
@@ -43,8 +45,9 @@ enum class VirtualObstacleId : int {
 struct ObstacleRawData {
   bool has_prediction{false};
   bool has_fusion{false};
-  FusionObjects::FusionObject *fusion_info;
-  Prediction::PredictionObject *prediction_info;
+  iflyauto::FusionObject *fusion_info;
+  // iflyauto::FusionObject *fusion_info;
+  iflyauto::PredictionObject *prediction_info;
 };
 
 class EgoPlanningConfigBuilder;
@@ -270,7 +273,7 @@ class EnvironmentalModel {
 
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
-  const HmiMcuInner::HmiMcuInner &get_hmi_info() const {
+  const iflyauto::HmiMcuInner &get_hmi_info() const {
     return local_view_->hmi_mcu_inner_info;
   }
 

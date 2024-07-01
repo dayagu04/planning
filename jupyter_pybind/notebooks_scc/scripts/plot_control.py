@@ -1,18 +1,20 @@
 import sys, os
 sys.path.append("..")
+sys.path.append("../lib/")
 # from lib.load_cyberbag import *
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/00fjw/00field_test/plan/0516/s_s_8.00000"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240531/20240531-16-34-04/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-31-16-34-04_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+#bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
@@ -31,7 +33,7 @@ data_control_command = ColumnDataSource(data ={
   # 'vel_out':[],
   # 'lon_err':[],
   'lat_err':[],
-  # 'phi_err':[],
+  'phi_err':[],
   'controller_status': [],
   'lat_enable': [],
   'lon_enable': [],
@@ -129,6 +131,7 @@ axle_torque = []
 throttle_brake = []
 euler_angle_yaw = []
 euler_angle_pitch = []
+phi_err = []
 
 t = 0.0
 
@@ -174,7 +177,7 @@ for i in range(len(ctrl_json_data)):
   throttle_brake.append(tmp_throttle_brake)
   euler_angle_yaw.append(ctrl_json_data[i]['euler_angle_yaw'] * 57.3)
   euler_angle_pitch.append(ctrl_json_data[i]['euler_angle_pitch'] * 57.3)
-
+  phi_err.append(ctrl_json_data[i]['phi_err'] * 57.3)
   t = t + 0.02
 
 data_control_command.data.update({
@@ -192,7 +195,7 @@ data_control_command.data.update({
   # 'vel_out':[],
   # 'lon_err':[],
   'lat_err': lat_err,
-  # 'phi_err':[],
+  'phi_err':phi_err,
   'controller_status': controller_status,
   'lat_enable': lat_enable,
   'lon_enable': lon_enable,
@@ -288,6 +291,7 @@ fig10.line('time', 'euler_angle_pitch', source = data_control_command, line_widt
 
 f11 = fig11.line('time', 'lat_err', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_err')
 fig11.line('time', 'vel_error', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_error')
+fig11.line('time', 'phi_err', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'phi_err')
 fig11.line('x', 'y', source = data_cursor_fig11, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
 
 hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lat_enable', '@lat_enable'), ('lon_enable', '@lon_enable'), ('planning_type', '@planning_type')], mode='vline')
@@ -301,7 +305,7 @@ hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('vel_out', '@ve
     ('vel_KI_term', '@vel_KI_term')], mode='vline')
 hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('acc_cmd', '@vel_out'), ('acc_vel', '@acc_vel'), ('acc_ego', '@acc_ego'), ('slope_acc', '@slope_acc'), ('throttle_brake', '@throttle_brake')], mode='vline')
 hover10 = HoverTool(renderers=[f10], tooltips=[('time', '@time'), ('yaw_conti', '@yaw_conti'), ('yaw', '@euler_angle_yaw'), ('pitch', '@euler_angle_pitch')], mode='vline')
-hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('lat_err', '@lat_err'), ('vel_error', '@vel_error')], mode='vline')
+hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('lat_err', '@lat_err'), ('vel_error', '@vel_error'),('phi_err','@phi_err')], mode='vline')
 
 fig2.add_tools(hover2)
 fig3.add_tools(hover3)
@@ -347,15 +351,14 @@ def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
 
-  json_index = local_view_data['data_index']['ctrl_debug_msg_idx']
-
-  dx_ref_mpc_vec = ctrl_json_data[json_index]['dx_ref_mpc_vec']
-  dy_ref_mpc_vec = ctrl_json_data[json_index]['dy_ref_mpc_vec']
-  dx_mpc_vec = ctrl_json_data[json_index]['dx_mpc_vec']
-  dy_mpc_vec = ctrl_json_data[json_index]['dy_mpc_vec']
-  delta_mpc_vec = ctrl_json_data[json_index]['delta_mpc_vec']
-  dphi_ref_mpc_vec = ctrl_json_data[json_index]['dphi_ref_mpc_vec']
-  dphi_mpc_vec = ctrl_json_data[json_index]['dphi_mpc_vec']
+  ctrl_debug_json_msg = local_view_data['data_msg']['ctrl_debug_json_msg']
+  dx_ref_mpc_vec = ctrl_debug_json_msg['dx_ref_mpc_vec']
+  dy_ref_mpc_vec = ctrl_debug_json_msg['dy_ref_mpc_vec']
+  dx_mpc_vec = ctrl_debug_json_msg['dx_mpc_vec']
+  dy_mpc_vec = ctrl_debug_json_msg['dy_mpc_vec']
+  delta_mpc_vec = ctrl_debug_json_msg['delta_mpc_vec']
+  dphi_ref_mpc_vec = ctrl_debug_json_msg['dphi_ref_mpc_vec']
+  dphi_mpc_vec = ctrl_debug_json_msg['dphi_mpc_vec']
 
   t0 = 0
   time_vec = []

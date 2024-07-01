@@ -1,4 +1,5 @@
 #include "lane_change_request.h"
+#include "debug_info_log.h"
 #include "lateral_obstacle.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"

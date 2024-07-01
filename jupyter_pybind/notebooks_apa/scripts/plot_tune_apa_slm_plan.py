@@ -6,8 +6,9 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, slot_management_info_pb2, planning_plan_pb2
+sys.path.append('../../python_proto')
+from python_proto import slot_management_info_pb2
+from struct_msgs.msg import PlanningOutput
 from jupyter_pybind import diag_slot_planning_py
 
 # bag path and frame dt
@@ -87,7 +88,7 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
   vs_msg_input = bag_loader.vs_msg['data'][vs_msg_idx]
   planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
 
-  planning_output = planning_plan_pb2.PlanningOutput()
+  planning_output = PlanningOutput()
   slot_management_info = slot_management_info_pb2.SlotManagementInfo()
 
   last_seg_name = 0
@@ -103,7 +104,7 @@ def slider_callback(bag_time, selected_id, force_planning,turn_on_force_last_seg
                                       loc_msg_input.SerializeToString(),
                                       vs_msg_input.SerializeToString(), selected_id, force_planning, last_seg_name)
 
-    planning_output.ParseFromString(diag_slot_planning_py.GetOutputBytes())
+    planning_output.deserialize(diag_slot_planning_py.GetOutputBytes())
     slot_management_info.ParseFromString(diag_slot_planning_py.GetSlotManagementOutputBytes())
   except:
     pass

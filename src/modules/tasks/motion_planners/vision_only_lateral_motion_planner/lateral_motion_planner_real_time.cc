@@ -7,7 +7,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
-#include "planning_hmi.pb.h"
+#include "planning_hmi_c.h"
 namespace planning {
 
 VisionLateralMotionPlanner::VisionLateralMotionPlanner(
@@ -107,7 +107,7 @@ bool VisionLateralMotionPlanner::update(
   auto lat_motion_plan = planning_debug_data->mutable_vo_lat_motion_plan();
 
   update_basic_path(status);
-  lat_motion_plan->basic_dpoly().Clear();
+  lat_motion_plan->mutable_basic_dpoly()->Clear();
   for (auto value : d_poly_) {
     lat_motion_plan->add_basic_dpoly(value);
   }
@@ -197,10 +197,10 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
   } else {
     l_prob = 1;
     r_prob = 1;
-    double l_intercept = flane_->get_left_lane_boundary().poly_coefficient(0);
-    double r_intercept = flane_->get_right_lane_boundary().poly_coefficient(0);
-    double l_length = flane_->get_left_lane_boundary().end();
-    double r_length = flane_->get_right_lane_boundary().end();
+    double l_intercept = flane_->get_left_lane_boundary().poly_coefficient[0];
+    double r_intercept = flane_->get_right_lane_boundary().poly_coefficient[0];
+    double l_length = flane_->get_left_lane_boundary().end;
+    double r_length = flane_->get_right_lane_boundary().end;
 
     bool l_reject = false;
     bool r_reject = false;
@@ -2400,11 +2400,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   one_nudge_left_car_ = one_nudge_left_car;
   one_nudge_right_car_ = one_nudge_right_car;
   lane_width_ = lane_width;
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
-  ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::NO_HIDING);
-  ad_info->set_avoiddirect(::PlanningHMI::AvoidObstacleDirection::AVOID_NONE);
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
+  ad_info->avoid_status = iflyauto::AVOID_NO_HIDING;
+  ad_info->avoiddirect = iflyauto::AVOID_NONE;
   if (status == ScenarioStateEnum::ROAD_NONE ||
       status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
       status == ScenarioStateEnum::ROAD_LC_RCHANGE ||
@@ -2414,13 +2414,11 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
       status == ScenarioStateEnum::ROAD_LC_RBACK) {
     if (avd_car_past[0].size() > 0) {
       if (lat_offset > 0.3) {
-        ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::HIDING);
-        ad_info->set_avoiddirect(
-            ::PlanningHMI::AvoidObstacleDirection::AVOID_LEFT);
+        ad_info->avoid_status = iflyauto::AVOID_HIDING;
+        ad_info->avoiddirect = iflyauto::AVOID_LEFT;
       } else if (lat_offset < -0.3) {
-        ad_info->set_avoid_status(::PlanningHMI::AvoidObstacle::HIDING);
-        ad_info->set_avoiddirect(
-            ::PlanningHMI::AvoidObstacleDirection::AVOID_RIGHT);
+        ad_info->avoid_status = iflyauto::AVOID_HIDING;
+        ad_info->avoiddirect = iflyauto::AVOID_RIGHT;
       }
     }
   }
@@ -2804,8 +2802,8 @@ void VisionLateralMotionPlanner::save_to_debug_info() {
   // lat_behavior_plan->set_is_side_borrow_lane(lateral_output.sb_lane);
   // lat_behavior_plan->set_has_origin_lane(lateral_output.sb_blane);
   // lat_behavior_plan->set_has_target_lane(lateral_output.sb_lane);
-  lat_behavior_plan->avoid_car_ids().Clear();
-  lat_behavior_plan->avoid_car_allow_max_opposite_offset().Clear();
+  lat_behavior_plan->mutable_avoid_car_ids()->Clear();
+  lat_behavior_plan->mutable_avoid_car_allow_max_opposite_offset()->Clear();
   for (auto &item : lateral_output.avd_car_past) {
     if (item.size() > 0) {
       lat_behavior_plan->add_avoid_car_ids(item[0]);

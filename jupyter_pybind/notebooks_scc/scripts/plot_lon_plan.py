@@ -1,25 +1,27 @@
 import sys, os
 sys.path.append("..")
-from lib.load_local_view import *
-from lib.load_lon_plan import *
+sys.path.append("../lib/")
+from load_local_view import *
+from load_lon_plan import *
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/mnt/00fjw/00field_test/plan/0516/s_s_8.00000.1715856743.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-39-12/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-39-12_no_camera.bag"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-bag_loader = LoadCyberbag(bag_path)
+#bag_loader = LoadCyberbag(bag_path)
+bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
-velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids = load_lon_global_figure(bag_loader)
+velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state = load_lon_global_figure(bag_loader)
 
 # load lateral planning (behavior and motion)
-pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids)
+pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state)
 
 ### sliders config
 class LocalViewSlider:

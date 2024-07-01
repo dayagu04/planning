@@ -10,16 +10,18 @@
 #include <vector>
 
 #include "basic_types.pb.h"
-#include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
-#include "tasks/behavior_planners/gap_selector_decider/gap_selector_interface.h"
 #include "config/basic_type.h"
 #include "environmental_model.h"
 #include "gap_selector.pb.h"
 #include "planning_debug_info.pb.h"
+#include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
+#include "tasks/behavior_planners/gap_selector_decider/gap_selector_interface.h"
 #include "trajectory1d/trajectory1d.h"
 #include "utils/frenet_coordinate_system.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
+
+#include "serialize_utils.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -36,19 +38,6 @@ int Init() {
   pBase = new GapSelectorDecider(&config_builder, &session);
   pInterface = new GapSelectorInterface();
   return 0;
-}
-
-template <class T>
-inline T BytesToProto(py::bytes &bytes) {
-  T proto_obj;
-  py::buffer buf(bytes);
-  py::buffer_info input_info = buf.request();
-  char *input_ptr = static_cast<char *>(input_info.ptr);
-  std::string input_s(input_ptr, input_info.size);
-
-  T input;
-  input.ParseFromString(input_s);
-  return input;
 }
 
 void Clear() {

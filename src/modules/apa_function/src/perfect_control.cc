@@ -12,8 +12,8 @@ static const double kPie = 3.141592654;
 void PerfectControl::Init() { state_.Reset(); }
 
 const bool PerfectControl::Update(
-    const PlanningOutput::PlanningOutput &planning_output, const double dt) {
-  const auto path_size = planning_output.trajectory().trajectory_points_size();
+    const iflyauto::PlanningOutput &planning_output, const double dt) {
+  const auto path_size = planning_output.trajectory.trajectory_points_size;
 
   if (path_size < 2) {
     std::cout << "planning error: path_size = " << path_size << std::endl;
@@ -33,29 +33,29 @@ const bool PerfectControl::Update(
   double ds = 0.0;
   double angle_offset = 0.0;
   for (int i = 0; i < path_size; ++i) {
-    const auto &traj_point = planning_output.trajectory().trajectory_points(i);
+    const auto &traj_point = planning_output.trajectory.trajectory_points[i];
 
-    path_x_vec.emplace_back(traj_point.x());
-    path_y_vec.emplace_back(traj_point.y());
+    path_x_vec.emplace_back(traj_point.x);
+    path_y_vec.emplace_back(traj_point.y);
     path_s_vec.emplace_back(s);
 
     if (i <= path_size - 2) {
       const auto &traj_point_next =
-          planning_output.trajectory().trajectory_points(i + 1);
+          planning_output.trajectory.trajectory_points[i + 1];
 
-      ds = std::hypot(traj_point_next.x() - traj_point.x(),
-                      traj_point_next.y() - traj_point.y());
+      ds = std::hypot(traj_point_next.x - traj_point.x,
+                      traj_point_next.y - traj_point.y);
       s += std::max(ds, 0.01);
     }
 
-    auto heading = traj_point.heading_yaw();
+    auto heading = traj_point.heading_yaw;
 
     if (i > 0) {
       const auto &traj_point_last =
-          planning_output.trajectory().trajectory_points(i - 1);
+          planning_output.trajectory.trajectory_points[i - 1];
 
       const auto d_heading =
-          traj_point.heading_yaw() - traj_point_last.heading_yaw();
+          traj_point.heading_yaw - traj_point_last.heading_yaw;
 
       if (d_heading > 1.5 * kPie) {
         angle_offset -= 2.0 * kPie;

@@ -11,11 +11,12 @@ import numpy as np
 from IPython.core.display import display, HTML
 
 import logging
+sys.path.append('../lib/')
 sys.path.append('..')
 sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
-from lib.load_bag import *
+from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 bag_path = "/share//data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240306/20240306-15-40-10/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-03-06-15-40-10.record"
@@ -40,7 +41,7 @@ def isINJupyter():
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+        dataLoader =  LoadRosbag(bag_path)
     except:
         print('load cyber_bag error!')
         return
@@ -168,8 +169,8 @@ def plotOnce(bag_path, html_file):
                                          y_axis_label='dy',
                                          width=600,
                                          height=200))
-    # fig7.AddCurv(layer_manager,
-    #              VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
+    fig7.AddCurv(layer_manager,
+                  VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
     fig7.AddCurv(layer_manager,
                  VectorGeneratorFromJson(topic_vector_dict, "dy_mpc_vec", 1.0), "dy_mpc_vec")
 

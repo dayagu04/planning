@@ -272,8 +272,16 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   //                                      init_point);
   // const auto s_init = projection_spline.GetOutput().s_proj;
   // const double &lon_err = s_init - s_proj;
-  const double theta_err =
-      lat_init_state.theta() - ego_state->ego_pose_raw().theta;
+  const double lat_init_theta = lat_init_state.theta();
+  double theta_err = lat_init_theta - ego_state->ego_pose_raw().theta;
+  const double pi2 = 2.0 * M_PI;
+  if (theta_err > M_PI) {
+    lat_init_state.set_theta(lat_init_theta - pi2);
+    theta_err -= pi2;
+  } else if (theta_err < -M_PI) {
+    lat_init_state.set_theta(lat_init_theta + pi2);
+    theta_err += pi2;
+  }
   const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                   init_point.y() - proj_point.y());
   const double dist_err =
@@ -301,7 +309,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     lat_replan = true;
   }
 
-  if (fabs(lon_err) > max_replan_lon_err || lon_reset_flag) {
+  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v); /*&&
+                               (ego_state->ego_acc() < config_.kEpsilon_a);*/
+  if (fabs(lon_err) > max_replan_lon_err || lon_reset_flag ||
+      low_speed_replan) {
     lon_replan = true;
   }
 
@@ -323,6 +334,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     motion_planner_output.lat_init_flag = false;
   }
 
+  auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
   if (lon_replan) {
     // update lat init state
     lat_init_state.set_x(motion_planner_output.x_s_spline(s_proj));
@@ -330,6 +343,14 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
     // update lon init state
     lon_init_state.set_s(s_proj);
+    // deal with ego_acc which has noise
+    if (start_stop_state == common::StartStopInfo::CRUISE) {
+      lon_init_state.set_a(ego_state->ego_acc());
+    } else if (start_stop_state == common::StartStopInfo::START) {
+      lon_init_state.set_a(std::max(0.0, ego_state->ego_acc()));
+    } else if (start_stop_state == common::StartStopInfo::STOP) {
+      lon_init_state.set_a(std::min(0.0, ego_state->ego_acc()));
+    }
 
     if (!session_->is_hpp_scene()) {
       if (lon_init_state.v() - ego_state->ego_v() > 1.0) {
@@ -384,7 +405,16 @@ void EgoStateManager::LongitudinalReset() {
   // s is fakely frenet, cannot be obtained
   lon_init_state.set_s(0.0);
   lon_init_state.set_v(ego_state->ego_v());
-  lon_init_state.set_a(0.0);
+  auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
+  // deal with ego_acc which has noise
+  if (start_stop_state == common::StartStopInfo::CRUISE) {
+    lon_init_state.set_a(ego_state->ego_acc());
+  } else if (start_stop_state == common::StartStopInfo::START) {
+    lon_init_state.set_a(std::max(0.0, ego_state->ego_acc()));
+  } else if (start_stop_state == common::StartStopInfo::STOP) {
+    lon_init_state.set_a(std::min(0.0, ego_state->ego_acc()));
+  }
 }
 
 void EgoStateManager::MotionPlanningInfoReset() {

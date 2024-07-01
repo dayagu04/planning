@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "config/message_type.h"
-#include "fusion_objects.pb.h"
+#include "fusion_objects_c.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
-#include "prediction.pb.h"
+#include "prediction_c.h"
 #include "prediction_object.h"
 #include "vec2d.h"
 
@@ -18,7 +18,7 @@ namespace planning {
 class Obstacle {
  public:
   // explicit Obstacle(int id,
-  //                   const Prediction::PredictionObject &prediction_object,
+  //                   const iflyauto::PredictionObject &prediction_object,
   //                   bool is_static, double start_relative_timestamp);
 
   explicit Obstacle(int id, const PredictionObject &prediction_object,
@@ -27,12 +27,12 @@ class Obstacle {
   explicit Obstacle(const Obstacle *obstacle);
 
   // explicit Obstacle(int id,
-  //                   const FusionObjects::FusionObject &perception_obstacle,
+  //                   const iflyauto::FusionObject &perception_obstacle,
   //                   bool is_static);
 
   // explicit Obstacle(int id, double x, double y, double heading_angle,
   //                   double length, double width, double height,
-  //                   Common::ObjectType type);
+  //                   iflyauto::ObjectType type);
 
   // for ground line
   explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
@@ -69,7 +69,7 @@ class Obstacle {
   // double acceleration_signed() const { return acc_signed_; }
   double velocity_angle() const { return velocity_angle_; }
   bool is_static() const { return is_static_; }
-  Common::ObjectType type() const { return type_; }
+  iflyauto::ObjectType type() const { return type_; }
   bool is_vaild() const { return valid_; }
   bool abnormal_data_dectection(const PredictionObject &prediction_object);
 
@@ -115,7 +115,7 @@ class Obstacle {
   double relative_velocity_angle_ = 0.0;
   double acc_ = 0.0;
   // double acc_signed_ = 0.0;
-  Common::ObjectType type_;
+  iflyauto::ObjectType type_;
   bool valid_ = true;
   bool is_virtual_ = false;
   double prob_;
@@ -125,7 +125,7 @@ class Obstacle {
   double length_;
 
   std::vector<PncTrajectoryPoint> trajectory_{};
-  // FusionObjects::FusionObject perception_obstacle_;
+  // iflyauto::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;
   planning_math::Polygon2d perception_polygon_;
   planning_math::Polygon2d obstacle_ego_polygon_;

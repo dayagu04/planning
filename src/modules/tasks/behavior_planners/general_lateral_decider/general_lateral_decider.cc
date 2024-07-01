@@ -129,10 +129,11 @@ bool GeneralLateralDecider::Execute() {
 
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
-  if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-      coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-      coarse_planning_info.target_state == ROAD_LC_LBACK ||
-      coarse_planning_info.target_state == ROAD_LC_RBACK) {
+  if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
+       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
+       coarse_planning_info.target_state == ROAD_LC_LBACK ||
+       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+      gap_selector_decider_output.gap_selector_trustworthy) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
   } else {
@@ -550,13 +551,13 @@ void GeneralLateralDecider::ConstructLateralObstacleDecisions(
                 obstacle->id());
       continue;
     }
-    if (otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
-        otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
-        otype == Common::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-        otype == Common::ObjectType::OBJECT_TYPE_VAN or
-        otype == Common::ObjectType::OBJECT_TYPE_TRAILER or
-        otype == Common::ObjectType::OBJECT_TYPE_TEMPORY_SIGN) {
+    if (otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
+                                                               // obstacle type
+        otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
+        otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
+        otype == iflyauto::ObjectType::OBJECT_TYPE_VAN or
+        otype == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
+        otype == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
       // add logs;
       continue;
     }
@@ -643,7 +644,7 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
   bool nudge_obj_flag{false};
   bool reset_conflict_decision{false};
 
-  obstacle_decision.rel_pos_type = ObsRelPosType::UNDEFINED;
+  obstacle_decision.rel_pos_type = ObsRelPosType::NONE;
 
   auto care_object_t_threshold = config_.care_object_t_threshold;
   // bool is_approach_to_destination =
@@ -671,10 +672,10 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
   }
 
   auto safe_extra_distance = 0.0;
-  if (obstacle->type() == Common::ObjectType::OBJECT_TYPE_CONE ||
-      obstacle->type() == Common::ObjectType::OBJECT_TYPE_BUS ||
-      obstacle->type() == Common::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
-      obstacle->type() == Common::ObjectType::OBJECT_TYPE_TRUCK) {
+  if (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+      obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+      obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK) {
     safe_extra_distance += 0.2;
   }
 
@@ -745,13 +746,13 @@ void GeneralLateralDecider::ConstructLateralObstacleDecision(
       // TBD: add log
       overlap_min_y = care_overlap_polygon.min_y();
       overlap_max_y = care_overlap_polygon.max_y();
-      LOG_DEBUG("Obstacle[%d] decision, t is: %f, min_y: %f, max_y: %f",
-                obstacle->id(), i * config_.delta_t, overlap_min_y,
-                overlap_max_y);
+      // LOG_DEBUG("Obstacle[%d] decision, t is: %f, min_y: %f, max_y: %f",
+      //           obstacle->id(), i * config_.delta_t, overlap_min_y,
+      //           overlap_max_y);
     } else {
       // TBD: add log
-      LOG_DEBUG("Obstacle[%d] no decision, t is: %f", obstacle->id(),
-                i * config_.delta_t);
+      // LOG_DEBUG("Obstacle[%d] no decision, t is: %f", obstacle->id(),
+      //           i * config_.delta_t);
       continue;
     }
 
@@ -1379,15 +1380,13 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   auto &d_poly = lateral_output.d_poly;
   auto &c_poly = lateral_output.c_poly;
 
-  d_poly.resize(flane->get_center_line().poly_coefficient_car().size());
-  c_poly.resize(flane->get_center_line().poly_coefficient_car().size());
+  d_poly.resize(flane->get_center_line().size());
+  c_poly.resize(flane->get_center_line().size());
 
-  std::reverse_copy(flane->get_center_line().poly_coefficient_car().begin(),
-                    flane->get_center_line().poly_coefficient_car().end(),
-                    d_poly.begin());
-  std::reverse_copy(flane->get_center_line().poly_coefficient_car().begin(),
-                    flane->get_center_line().poly_coefficient_car().end(),
-                    c_poly.begin());
+  std::reverse_copy(flane->get_center_line().begin(),
+                    flane->get_center_line().end(), d_poly.begin());
+  std::reverse_copy(flane->get_center_line().begin(),
+                    flane->get_center_line().end(), c_poly.begin());
 }
 
 }  // namespace planning

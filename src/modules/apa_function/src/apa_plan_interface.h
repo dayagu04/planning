@@ -17,13 +17,13 @@ namespace apa_planner {
 
 class ApaPlanInterface {
  public:
-  void Init();
+  void Init(const bool is_simulation = false);
 
   void Reset();
 
   const bool Update(const LocalView* local_view_ptr);
 
-  void SyncParameters();
+  void SyncParameters(const bool is_simulation = false);
 
   const std::vector<std::shared_ptr<ApaPlannerBase>>& GetPlannerStack() const {
     return apa_planner_stack_;
@@ -45,7 +45,7 @@ class ApaPlanInterface {
     return planning_debug_info_;
   }
 
-  const PlanningOutput::PlanningOutput& GetPlaningOutput() const {
+  const iflyauto::PlanningOutput& GetPlaningOutput() const {
     return planning_output_;
   }
 
@@ -54,13 +54,13 @@ class ApaPlanInterface {
       const uint8_t apa_planner_id);
 
   const bool ApaPlanOnce(const uint8_t planner_type);
-  void AddReleasedSlotInfo(PlanningOutput::PlanningOutput& planning_output);
+  void AddReleasedSlotInfo(iflyauto::PlanningOutput& planning_output);
 
   std::vector<std::shared_ptr<ApaPlannerBase>> apa_planner_stack_;
   std::shared_ptr<ApaWorld> apa_world_ptr_ = nullptr;
   std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;
 
-  PlanningOutput::PlanningOutput planning_output_;
+  iflyauto::PlanningOutput planning_output_;
   std::shared_ptr<plan_interface::PlanData> plan_data_ptr_;
 
   // for simulation

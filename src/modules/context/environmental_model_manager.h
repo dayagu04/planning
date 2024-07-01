@@ -50,10 +50,13 @@ class EnvironmentalModelManager {
   void vehicle_status_adaptor(double current_time, const LocalView &local_view,
                               common::VehicleStatus &vehicle_status);
   void truncate_prediction_info(
-      const Prediction::PredictionResult &prediction_result,
+      const iflyauto::PredictionResult &prediction_result,
       double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set);
   bool transform_fusion_to_prediction(
-      const FusionObjects::FusionObject &fusion_object, double timestamp,
+      const iflyauto::FusionObject &fusion_object, double timestamp,
+      std::vector<PredictionObject> &objects_infos);
+  bool transform_fusion_to_prediction_longtime(
+      const iflyauto::FusionObject &fusion_object, double timestamp,
       std::vector<PredictionObject> &objects_infos);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);

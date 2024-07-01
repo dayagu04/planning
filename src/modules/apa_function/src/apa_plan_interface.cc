@@ -6,9 +6,10 @@
 #include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_world.h"
+#include "common/config_context.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "func_state_machine.pb.h"
+#include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "local_view.h"
 #include "parallel_park_in_planner.h"
@@ -22,9 +23,9 @@
 namespace planning {
 namespace apa_planner {
 
-void ApaPlanInterface::Init() {
+void ApaPlanInterface::Init(const bool is_simulation) {
   // sync parameters
-  SyncParameters();
+  SyncParameters(is_simulation);
 
   // init apa world
   apa_world_ptr_ = std::make_shared<ApaWorld>();
@@ -48,11 +49,10 @@ void ApaPlanInterface::Init() {
 
 void ApaPlanInterface::Reset() {
   // reset planning output
-  planning_output_.Clear();
-  planning_output_.mutable_planning_status()->set_apa_planning_status(
-      PlanningOutput::ApaPlanningStatus::NONE);
+  memset(&planning_output_, 0, sizeof(planning_output_));
+  planning_output_.planning_status.apa_planning_status = iflyauto::APA_NONE;
 
-  planning_output_.mutable_successful_slot_info_list()->Clear();
+  planning_output_.successful_slot_info_list_size = 0;
 
   // reset apa world
   apa_world_ptr_->Reset();
@@ -80,12 +80,12 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
 
   const uint8_t current_state =
-      local_view_ptr->function_state_machine_info.current_state();
+      local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if (last_state == FuncStateMachine::STANDBY &&
-      (current_state >= FuncStateMachine::PARK_IN_APA_IN &&
-       current_state <= FuncStateMachine::PARK_IN_COMPLETED)) {
+  if (last_state == iflyauto::FunctionalState_STANDBY &&
+      (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
+       current_state <= iflyauto::FunctionalState_PARK_IN_COMPLETED)) {
     Reset();
   }
 
@@ -98,9 +98,9 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 #ifdef PERPENDICULAR_SIMULATION
   std::cout << "PERPENDICULAR_SIMULATION\n";
   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
-  // if (current_state == FuncStateMachine::PARK_IN_ACTIVATE_WAIT ||
-  //     current_state == FuncStateMachine::PARK_IN_ACTIVATE_CONTROL ||
-  //     current_state == FuncStateMachine::PARK_IN_SECURE) {
+  // if (current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT ||
+  //     current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL ||
+  //     current_state == iflyauto::FunctionalState_PARK_IN_SECURE) {
   //   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   // }
 #else
@@ -133,15 +133,15 @@ const bool ApaPlanInterface::ApaPlanOnce(const uint8_t planner_type) {
 }
 
 void ApaPlanInterface::AddReleasedSlotInfo(
-    PlanningOutput::PlanningOutput &planning_output) {
-  planning_output.clear_successful_slot_info_list();
+    iflyauto::PlanningOutput &planning_output) {
+  planning_output.successful_slot_info_list_size = 0;
 
   for (const auto &successful_slot_info :
        apa_world_ptr_->GetSlotManagerPtr()->GetReleasedSlotInfoVec()) {
-    std::cout << "successful_slot_info = "
-              << successful_slot_info.DebugString();
-    const auto slot_info_list = planning_output.add_successful_slot_info_list();
-    slot_info_list->CopyFrom(successful_slot_info);
+    auto &slot_info_list =
+        planning_output.successful_slot_info_list
+            [planning_output.successful_slot_info_list_size++];
+    slot_info_list = successful_slot_info;
   }
 }
 
@@ -166,8 +166,13 @@ static std::string ReadFile(const std::string &path) {
   return std::string(content.begin(), content.end());
 }
 
-void ApaPlanInterface::SyncParameters() {
+void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   std::string path = "/asw/planning/res/conf/apa_params.json";
+  if (!is_simulation) {
+    auto engine_config =
+        common::ConfigurationContext::Instance()->engine_config();
+    path = engine_config.vehicle_cfg_dir + "/apa_params.json";
+  }
 
   std::string config_file = ReadFile(path);
   auto config = mjson::Reader(config_file);

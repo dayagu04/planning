@@ -25,15 +25,7 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  loc_msg_idx = local_view_data['data_index']['loc_msg_idx']
-  road_msg_idx = local_view_data['data_index']['road_msg_idx']
-  fus_msg_idx = local_view_data['data_index']['fus_msg_idx']
-  vs_msg_idx = local_view_data['data_index']['vs_msg_idx']
-  plan_msg_idx = local_view_data['data_index']['plan_msg_idx']
-  plan_debug_msg_idx = local_view_data['data_index']['plan_debug_msg_idx']
-  pred_msg_idx = local_view_data['data_index']['pred_msg_idx']
-
-  planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv',\
+  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
@@ -42,7 +34,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                               'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                              'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                              'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', \
                               "dis_to_ramp", "v_target_ramp", \
                               'gap_v_limit_lc', \
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
@@ -53,19 +45,19 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
 
-  plan_debug_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
-  plan_debug_json_info = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+  plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
+  plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
   # behavior planning
   t_vec = list(plan_debug_info.long_ref_path.t_list)
 
   t_long_vec = []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
+  for item in (local_view_data['data_msg']['plan_msg'].trajectory.trajectory_points):
     t_long_vec.append(item.t)
   s_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
+  for item in (local_view_data['data_msg']['plan_msg'].trajectory.trajectory_points):
     s_plan_vec.append(item.distance)
   v_plan_vec =  []
-  for item in (bag_loader.plan_msg['data'][plan_msg_idx].trajectory.trajectory_points):
+  for item in (local_view_data['data_msg']['plan_msg'].trajectory.trajectory_points):
      v_plan_vec.append(item.v)
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
@@ -280,10 +272,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   })
 
   if bag_loader.loc_msg['enable'] == True:
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
-    planning_json = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]
+    cur_pos_xn = local_view_data['data_msg']['loc_msg'].position.position_boot.x
+    cur_pos_yn = local_view_data['data_msg']['loc_msg'].position.position_boot.y
+    cur_yaw = local_view_data['data_msg']['loc_msg'].orientation.euler_boot.yaw
+    planning_json = local_view_data['data_msg']['plan_debug_json_msg']
 
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
@@ -303,7 +295,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
    #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_msg['enable'] == True:
-    trajectory = bag_loader.plan_msg['data'][plan_msg_idx].trajectory
+    trajectory = local_view_data['data_msg']['plan_msg'].trajectory
     try:
       planning_polynomial = trajectory.target_reference.polynomial
       plan_traj_x, plan_traj_y = gen_line(planning_polynomial[3],planning_polynomial[2], planning_polynomial[1], planning_polynomial[0], 0, 50)
@@ -507,13 +499,13 @@ def load_lon_global_figure(bag_loader):
   ego_acc_vec = []
   acc_min_vec = []
   acc_max_vec = []
-  acc_cipv_vec = []
+  lead_one_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
-    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-    acc_cipv_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_low'], 2))
+    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['VisionLonBehavior_a_target_high'], 2))
+    lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -523,8 +515,8 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_acc',color="blue")
   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                               legend_label='acc_max', color="red")
-  acc_fig.line(t_plan_vec, acc_cipv_vec, line_width=1,
-                              legend_label='acc_cipv', color="orange")
+  acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
+                              legend_label='lead_one_acc', color="green")
 
   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
                 y_axis_label='distance/(m)',width=600,height=300)
@@ -612,9 +604,37 @@ def load_lon_global_figure(bag_loader):
       for one_bound in item.bound:
           if(one_bound.bound_info.type == 'obstacle' and one_bound.bound_info.id > 0 and one_bound.bound_info.id not in obs_st_ids):
             obs_st_ids.append(one_bound.bound_info.id)
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids):
+  # function state machine info plot
+  data_fsm_state_command = ColumnDataSource(data ={
+  'time': [],
+  'fsm_cur_state':[],
+  })
+  
+  t_soc_state = []
+  fsm_cur_state = []
+
+  soc_state_info = bag_loader.soc_state_msg['data']
+  soc_state_t = bag_loader.soc_state_msg['t']
+  for i in range(len(soc_state_info)):
+     t_soc_state.append(soc_state_t[i])
+     fsm_cur_state.append(soc_state_info[i].current_state)
+
+  data_fsm_state_command.data.update({
+    'time': t_soc_state,
+    'fsm_cur_state': fsm_cur_state,
+  })
+
+  fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = [t_soc_state[0], t_soc_state[-1]], width=500, height=200)
+  f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = data_fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
+
+  hover_fsm_state = HoverTool(renderers=[f_fsm_state], tooltips=[('time', '@time'), ('fsm_cur_state', '@fsm_cur_state')], mode='vline')
+  fig_fsm_state.add_tools(hover_fsm_state)
+  fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
+  fig_fsm_state.legend.click_policy = 'hide'
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state
+
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
@@ -674,7 +694,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
      ('high_type','@obs_high_type'),
      ('v_limit_type','@v_limit_type')
   ])
-  # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
 
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)
@@ -784,12 +804,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(tab1, column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
+  pan2 = Panel(child=row(column(tab1, fig_fsm_state), column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 
   return pans, lon_plan_data
-
-
-
-

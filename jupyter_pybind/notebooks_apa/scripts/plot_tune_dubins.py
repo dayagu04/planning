@@ -6,8 +6,6 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('python_proto')
-from python_proto import common_pb2, planning_plan_pb2
 from jupyter_pybind import dubins_lib_py
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

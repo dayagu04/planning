@@ -5,11 +5,9 @@
 #include <set>
 
 #include "ego_state_manager.h"
+#include "fusion_objects_c.h"
 #include "prediction_object.h"
 #include "refline.h"
-// #include "path_point.h"
-#include "fusion_objects.pb.h"
-#include "math/filter/mean_filter.h"
 #include "session.h"
 #include "tracked_object.h"
 #include "utils/kd_path.h"
@@ -104,7 +102,8 @@ class TrackletMaintainer {
                                   TrackedObject *temp_lead_one);
 
   bool is_potential_avoiding_car(TrackedObject &item, TrackedObject *lead_one,
-                                 double v_ego, double lane_width, int scenario,
+                                 TrackedObject *lead_two, double v_ego,
+                                 double lane_width, int scenario,
                                  bool borrow_bicycle_lane, double dist_rblane,
                                  bool tleft_lane, bool rightest_lane,
                                  double dist_intersect, double intersect_length,
@@ -136,6 +135,8 @@ class TrackletMaintainer {
   std::shared_ptr<planning_math::KDPath> frenet_coord_;
   LifecycleDict seq_state_;
   std::map<int, TrackedObject *> object_map_;
+  std::map<int, TrackedObject *> fusion_object_history_map_;
+  std::map<int, TrackedObject *> lt_fusion_object_history_map_;
   std::shared_ptr<EgoStateManager> ego_state_;
   bool hdmap_valid_{false};
 

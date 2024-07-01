@@ -217,7 +217,7 @@ void UssObstacle::GenUssArc() {
 bool UssObstacle::Preprocess() {
   // process some measuremnts
   steer_angle_ =
-      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle();
+      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle;
 
   // uint8_t gear_cmd = Common::GearCommandValue::GEAR_COMMAND_VALUE_NONE;
   // if (planning_output_->gear_command().available()) {
@@ -227,32 +227,33 @@ bool UssObstacle::Preprocess() {
   //     (gear_cmd == Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
 
   reverse_flag_ =
-      (local_view_ptr_->vehicle_service_output_info.shift_lever_state() == 1);
+      (local_view_ptr_->vehicle_service_output_info.shift_lever_state == 1);
 
   // std::cout << "reverse_flag = " << reverse_flag_ << std::endl;
 
-  heading_ = local_view_ptr_->localization_estimate.pose().heading();
+  heading_ = local_view_ptr_->localization_estimate.pose.heading;
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_vertex_x_vec.size());
   const auto &upa_dis_info_buf =
-      local_view_ptr_->uss_wave_info.upa_dis_info_buf();
+      local_view_ptr_->uss_wave_info.upa_dis_info_buf;
 
-  if (upa_dis_info_buf.size() < 2) {
-    return false;
-  }
+  // WB: c结构体缺少size判断
+  // if (upa_dis_info_buf.size() < 2) {
+  //   return false;
+  // }
 
   // front uss
   for (size_t i = 0; i < wdis_index_front.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[0].wdis(wdis_index_front[i]).wdis_value(0));
+        upa_dis_info_buf[0].wdis[wdis_index_front[i]].wdis_value[0]);
   }
 
   // back uss
   for (size_t i = 0; i < wdis_index_back.size(); ++i) {
     uss_raw_dist_vec_.emplace_back(
-        upa_dis_info_buf[1].wdis(wdis_index_back[i]).wdis_value(0));
+        upa_dis_info_buf[1].wdis[wdis_index_back[i]].wdis_value[0]);
   }
 
   return true;
@@ -441,9 +442,9 @@ const pnc::geometry_lib::LineSegment UssObstacle::GetMinDistUssLine() const {
 void UssObstacle::Update() {
   const bool gear_available =
       local_view_ptr_->vehicle_service_output_info
-          .shift_lever_state_available() &&
-      (local_view_ptr_->vehicle_service_output_info.shift_lever_state() == 1 ||
-       local_view_ptr_->vehicle_service_output_info.shift_lever_state() == 3);
+          .shift_lever_state_available &&
+      (local_view_ptr_->vehicle_service_output_info.shift_lever_state == 1 ||
+       local_view_ptr_->vehicle_service_output_info.shift_lever_state == 3);
   // const bool gear_available =
   //     planning_output->has_gear_command() &&
   //     (planning_output->gear_command().gear_command_value() ==

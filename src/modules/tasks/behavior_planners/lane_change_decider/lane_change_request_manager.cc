@@ -44,8 +44,11 @@ bool LaneChangeRequestManager::Update(
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const double kOvertakeTriggerEgoSpeedMinThreshold = 5.56;      // 20km/h
-  const double kOvertakeTriggerCruiseSpeedMinThreshold = 16.67;  // 60km/h
+  const double kOvertakeTriggerEgoSpeedMinThreshold = 5.56;  // 20km/h
+  double minimum_ego_cruise_speed_for_active_lane_change =
+      config_.minimum_ego_cruise_speed_for_active_lane_change;
+  // const double kOvertakeTriggerCruiseSpeedMinThreshold = 16.67;  // 60km/h
+  const double intersection_distance_of_suppression_active_lane_change = 90.0;
   bool EnableGenerateOvertakeQequestByFrontSlowVehicle = true;
   bool use_overtake_lane_change_request =
       config_
@@ -64,6 +67,24 @@ bool LaneChangeRequestManager::Update(
     }
     if (location_valid && use_overtake_lane_change_request) {
       // 添加至可运行区域边界的距离小于一定值时overtake_count_ = 0
+      const auto& clane = virtual_lane_mgr_->get_current_lane();
+      const int left_car_point_size =
+          clane->get_left_lane_boundary().car_points_size;
+      const int right_car_points_size =
+          clane->get_right_lane_boundary().car_points_size;
+      if (clane->get_left_lane_boundary()
+                  .car_points[left_car_point_size - 1]
+                  .x <=
+              intersection_distance_of_suppression_active_lane_change &&
+          clane->get_right_lane_boundary()
+                  .car_points[right_car_points_size - 1]
+                  .x <=
+              intersection_distance_of_suppression_active_lane_change) {
+        overtake_request_.Reset();
+        LOG_DEBUG(
+            "cann't generate overtake lane change close to the intersection");
+        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
+      }
 
       if (virtual_lane_mgr_->is_on_ramp()) {
         overtake_request_.Reset();
@@ -74,7 +95,8 @@ bool LaneChangeRequestManager::Update(
       const auto& ego_state =
           session_->environmental_model().get_ego_state_manager();
       if (ego_state->ego_v() < kOvertakeTriggerEgoSpeedMinThreshold ||
-          ego_state->ego_v_cruise() < kOvertakeTriggerCruiseSpeedMinThreshold) {
+          ego_state->ego_v_cruise() <
+              minimum_ego_cruise_speed_for_active_lane_change) {
         LOG_DEBUG(
             "cann't generate overtake lane change since ego speed is less than "
             "min speed threshold");
@@ -291,33 +313,29 @@ void LaneChangeRequestManager::GenerateHMIInfoForOvertake() {
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   }
 
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
-  ad_info->set_lane_change_intent(::PlanningHMI::LaneChangeIntent::NO_INTENT);
-  ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::NONE);
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
+  ad_info->lane_change_intent = iflyauto::NO_INTENT;
+  ad_info->lane_change_source = iflyauto::LC_SOURCE_NONE;
   if (request_source_ == MAP_REQUEST) {
     gen_turn_signal_ = map_request_.turn_signal();
     auto current_lane = virtual_lane_mgr_->get_current_lane();
     int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
     if (lc_map_decision > 0) {
-      ad_info->set_lane_change_intent(
-          ::PlanningHMI::LaneChangeIntent::OUT_INTENT);
+      ad_info->lane_change_intent = iflyauto::OUT_INTENT;
     } else if (lc_map_decision < 0) {
-      ad_info->set_lane_change_intent(
-          ::PlanningHMI::LaneChangeIntent::IN_INTENT);
+      ad_info->lane_change_intent = iflyauto::IN_INTENT;
     }
-    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::MAP);
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_MAP;
   } else if (request_source_ == OVERTAKE_REQUEST) {
     gen_turn_signal_ = overtake_request_.turn_signal();
-    ad_info->set_lane_change_intent(
-        ::PlanningHMI::LaneChangeIntent::SLOWING_INTENT);
-    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::ACT);
+    ad_info->lane_change_intent = iflyauto::SLOWING_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
   } else if (request_source_ == INT_REQUEST) {
     gen_turn_signal_ = NO_CHANGE;
-    ad_info->set_lane_change_intent(
-        ::PlanningHMI::LaneChangeIntent::BLINKSWITCH_INTENT);
-    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::INT);
+    ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
@@ -337,33 +355,29 @@ void LaneChangeRequestManager::GenerateHMIInfo() {
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   }
 
-  auto ad_info = session_->mutable_planning_context()
-                     ->mutable_planning_hmi_info()
-                     ->mutable_ad_info();
-  ad_info->set_lane_change_intent(::PlanningHMI::LaneChangeIntent::NO_INTENT);
-  ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::NONE);
+  auto ad_info = &(session_->mutable_planning_context()
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
+  ad_info->lane_change_intent = iflyauto::NO_INTENT;
+  ad_info->lane_change_source = iflyauto::LC_SOURCE_NONE;
   if (request_source_ == MAP_REQUEST) {
     gen_turn_signal_ = map_request_.turn_signal();
     auto current_lane = virtual_lane_mgr_->get_current_lane();
     int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
     if (lc_map_decision > 0) {
-      ad_info->set_lane_change_intent(
-          ::PlanningHMI::LaneChangeIntent::OUT_INTENT);
+      ad_info->lane_change_intent = iflyauto::OUT_INTENT;
     } else if (lc_map_decision < 0) {
-      ad_info->set_lane_change_intent(
-          ::PlanningHMI::LaneChangeIntent::IN_INTENT);
+      ad_info->lane_change_intent = iflyauto::IN_INTENT;
     }
-    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::MAP);
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_MAP;
   } else if (request_source_ == ACT_REQUEST) {
     gen_turn_signal_ = act_request_.turn_signal();
-    ad_info->set_lane_change_intent(
-        ::PlanningHMI::LaneChangeIntent::SLOWING_INTENT);
-    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::ACT);
+    ad_info->lane_change_intent = iflyauto::SLOWING_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
   } else if (request_source_ == INT_REQUEST) {
     gen_turn_signal_ = NO_CHANGE;
-    ad_info->set_lane_change_intent(
-        ::PlanningHMI::LaneChangeIntent::BLINKSWITCH_INTENT);
-    ad_info->set_lane_change_source(::PlanningHMI::LaneChangeSource::INT);
+    ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }

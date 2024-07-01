@@ -1,5 +1,6 @@
 #include "lane_keep_assist_manager.h"
 
+#include "common/config_context.h"
 #include "planning_context.h"
 #include "vehicle_config_context.h"
 
@@ -18,9 +19,11 @@ static std::string ReadJsonFile(const std::string &path) {
 
 namespace planning {
 void LaneKeepAssistManager::SyncParameters() {
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
+  std::string path = engine_config.vehicle_cfg_dir + "/adas_params.json";
   // read json file
-  std::string config_file =
-      ReadJsonFile("/asw/planning/res/conf/adas_params.json");
+  std::string config_file = ReadJsonFile(path);
   auto adas_config = mjson::Reader(config_file);
 
   // get params
@@ -121,25 +124,25 @@ void LaneKeepAssistManager::Update() {
       auto ptr_current_lane_left_boundary =
           ptr_current_lane->get_left_lane_boundary();
       // 判断边界是路沿还是道线
-      bool left_boundary_existence = ptr_current_lane_left_boundary.existence();
+      bool left_boundary_existence = ptr_current_lane_left_boundary.existence;
       /*
       LineType_LINE_TYPE_UNKNOWN = 0,
       LineType_LINE_TYPE_LANELINE = 1,//车道线
       LineType_LINE_TYPE_BORDERLINE = 2, 路沿，边沿线，物理隔离障碍物统称
       LineType_LINE_TYPE_CENTER = 3
        */
-      FusionRoad::LineType left_boundary_type =
-          ptr_current_lane_left_boundary.type();
-      left_boundary_type = FusionRoad::LineType::LINE_TYPE_LANELINE;
+      iflyauto::LineType left_boundary_type =
+          ptr_current_lane_left_boundary.type;
+      left_boundary_type = iflyauto::LINE_TYPE_LANELINE;
 
-      if ((left_boundary_type == FusionRoad::LineType::LINE_TYPE_LANELINE) &&
+      if ((left_boundary_type == iflyauto::LineType::LINE_TYPE_LANELINE) &&
           left_boundary_existence == true) {
         lkas_input_.road_info.left_line_existence = true;
       } else {
         lkas_input_.road_info.left_line_existence = false;
       }
 
-      if (left_boundary_type == FusionRoad::LineType::LINE_TYPE_BORDERLINE &&
+      if (left_boundary_type == iflyauto::LINE_TYPE_BORDERLINE &&
           left_boundary_existence == true) {
         lkas_input_.road_info.left_roadedge_existence = true;
       } else {
@@ -157,51 +160,42 @@ void LaneKeepAssistManager::Update() {
         // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
         // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线*/
         // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线*/
-        if (ptr_current_lane_left_boundary.type_segments_size() > 0) {
-          auto left_line_type =
-              ptr_current_lane_left_boundary.type_segments(0).type();
-          if (left_line_type == Common::LaneBoundaryType::MARKING_DASHED ||
-              left_line_type ==
-                  Common::LaneBoundaryType::MARKING_SHORT_DASHED ||
-              left_line_type ==
-                  Common::LaneBoundaryType::MARKING_DOUBLE_DASHED ||
-              left_line_type ==
-                  Common::LaneBoundaryType::MARKING_LEFT_SOLID_RIGHT_DASHED) {
-            lkas_input_.road_info.left_line_type = 0;  // 可跨越道线
-          } else {
-            lkas_input_.road_info.left_line_type = 1;  // 不可跨越道线
-          }
+
+        auto left_line_type =
+            ptr_current_lane_left_boundary.type_segments[0].type;
+        if (left_line_type == Common::LaneBoundaryType::MARKING_DASHED ||
+            left_line_type == Common::LaneBoundaryType::MARKING_SHORT_DASHED ||
+            left_line_type == Common::LaneBoundaryType::MARKING_DOUBLE_DASHED ||
+            left_line_type ==
+                Common::LaneBoundaryType::MARKING_LEFT_SOLID_RIGHT_DASHED) {
+          lkas_input_.road_info.left_line_type = 0;  // 可跨越道线
         } else {
-          lkas_input_.road_info.left_line_valid = false;
+          lkas_input_.road_info.left_line_type = 1;  // 不可跨越道线
         }
-        if (ptr_current_lane_left_boundary.poly_coefficient_size() > 3) {
-          lkas_input_.road_info.left_line_c0 =
-              ptr_current_lane_left_boundary.poly_coefficient(0);
-          lkas_input_.road_info.left_line_c1 =
-              ptr_current_lane_left_boundary.poly_coefficient(1);
-          lkas_input_.road_info.left_line_c2 =
-              ptr_current_lane_left_boundary.poly_coefficient(2);
-          lkas_input_.road_info.left_line_c3 =
-              ptr_current_lane_left_boundary.poly_coefficient(3);
-        } else {
-          lkas_input_.road_info.left_line_valid = false;
-        }
+
+        lkas_input_.road_info.left_line_c0 =
+            ptr_current_lane_left_boundary.poly_coefficient[0];
+        lkas_input_.road_info.left_line_c1 =
+            ptr_current_lane_left_boundary.poly_coefficient[1];
+        lkas_input_.road_info.left_line_c2 =
+            ptr_current_lane_left_boundary.poly_coefficient[2];
+        lkas_input_.road_info.left_line_c3 =
+            ptr_current_lane_left_boundary.poly_coefficient[3];
+
       } else if (lkas_input_.road_info.left_roadedge_existence ==
                  true)  // 判断为路沿
       {
         lkas_input_.road_info.left_roadedge_valid = true;
-        if (ptr_current_lane_left_boundary.poly_coefficient_size() > 3) {
-          lkas_input_.road_info.left_roadedge_c0 =
-              ptr_current_lane_left_boundary.poly_coefficient(0);
-          lkas_input_.road_info.left_roadedge_c1 =
-              ptr_current_lane_left_boundary.poly_coefficient(1);
-          lkas_input_.road_info.left_roadedge_c2 =
-              ptr_current_lane_left_boundary.poly_coefficient(2);
-          lkas_input_.road_info.left_roadedge_c3 =
-              ptr_current_lane_left_boundary.poly_coefficient(3);
-        } else {
-          lkas_input_.road_info.left_roadedge_valid = false;
-        }
+
+        lkas_input_.road_info.left_roadedge_c0 =
+            ptr_current_lane_left_boundary.poly_coefficient[0];
+        lkas_input_.road_info.left_roadedge_c1 =
+            ptr_current_lane_left_boundary.poly_coefficient[1];
+        lkas_input_.road_info.left_roadedge_c2 =
+            ptr_current_lane_left_boundary.poly_coefficient[2];
+        lkas_input_.road_info.left_roadedge_c3 =
+            ptr_current_lane_left_boundary.poly_coefficient[3];
+
       } else {
         lkas_input_.road_info.left_line_valid = false;
         lkas_input_.road_info.left_roadedge_valid = false;
@@ -209,26 +203,25 @@ void LaneKeepAssistManager::Update() {
       // 右侧边界
       auto ptr_current_lane_right_boundary =
           ptr_current_lane->get_right_lane_boundary();
-      bool right_boundary_existence =
-          ptr_current_lane_right_boundary.existence();
+      bool right_boundary_existence = ptr_current_lane_right_boundary.existence;
       /*
       LineType_LINE_TYPE_UNKNOWN = 0,
       LineType_LINE_TYPE_LANELINE = 1,//车道线
       LineType_LINE_TYPE_BORDERLINE = 2, 路沿，边沿线，物理隔离障碍物统称
       LineType_LINE_TYPE_CENTER = 3
        */
-      FusionRoad::LineType right_boundary_type =
-          ptr_current_lane_right_boundary.type();
-      right_boundary_type = FusionRoad::LineType::LINE_TYPE_LANELINE;
+      iflyauto::LineType right_boundary_type =
+          ptr_current_lane_right_boundary.type;
+      right_boundary_type = iflyauto::LINE_TYPE_LANELINE;
 
-      if ((right_boundary_type == FusionRoad::LineType::LINE_TYPE_LANELINE) &&
+      if ((right_boundary_type == iflyauto::LINE_TYPE_LANELINE) &&
           right_boundary_existence == true) {
         lkas_input_.road_info.right_line_existence = true;
       } else {
         lkas_input_.road_info.right_line_existence = false;
       }
 
-      if (right_boundary_type == FusionRoad::LineType::LINE_TYPE_BORDERLINE &&
+      if (right_boundary_type == iflyauto::LINE_TYPE_BORDERLINE &&
           right_boundary_existence == true) {
         lkas_input_.road_info.right_roadedge_existence = true;
       } else {
@@ -245,51 +238,44 @@ void LaneKeepAssistManager::Update() {
         // LaneBoundaryType_MARKING_DOUBLE_SOLID = 5, /* 双实线 */
         // LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6, /* 左虚右实线*/
         // LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7 /* 左实右虚线*/
-        if (ptr_current_lane_right_boundary.type_segments_size() > 0) {
-          auto right_line_type =
-              ptr_current_lane_right_boundary.type_segments(0).type();
-          if ((right_line_type == Common::LaneBoundaryType::MARKING_DASHED) ||
-              (right_line_type ==
-               Common::LaneBoundaryType::MARKING_SHORT_DASHED) ||
-              (right_line_type ==
-               Common::LaneBoundaryType::MARKING_DOUBLE_DASHED) ||
-              (right_line_type ==
-               Common::LaneBoundaryType::MARKING_LEFT_DASHED_RIGHT_SOLID)) {
-            lkas_input_.road_info.right_line_type = 0;
-          } else {
-            lkas_input_.road_info.right_line_type = 1;
-          }
+
+        auto right_line_type =
+            ptr_current_lane_right_boundary.type_segments[0].type;
+        if ((right_line_type == Common::LaneBoundaryType::MARKING_DASHED) ||
+            (right_line_type ==
+             Common::LaneBoundaryType::MARKING_SHORT_DASHED) ||
+            (right_line_type ==
+             Common::LaneBoundaryType::MARKING_DOUBLE_DASHED) ||
+            (right_line_type ==
+             Common::LaneBoundaryType::MARKING_LEFT_DASHED_RIGHT_SOLID)) {
+          lkas_input_.road_info.right_line_type = 0;
         } else {
-          lkas_input_.road_info.right_line_valid = false;
+          lkas_input_.road_info.right_line_type = 1;
         }
-        if (ptr_current_lane_right_boundary.poly_coefficient_size() > 3) {
-          lkas_input_.road_info.right_line_c0 =
-              ptr_current_lane_right_boundary.poly_coefficient(0) +
-              lkas_input_.param.ldp_c0_right_offset;
-          lkas_input_.road_info.right_line_c1 =
-              ptr_current_lane_right_boundary.poly_coefficient(1);
-          lkas_input_.road_info.right_line_c2 =
-              ptr_current_lane_right_boundary.poly_coefficient(2);
-          lkas_input_.road_info.right_line_c3 =
-              ptr_current_lane_right_boundary.poly_coefficient(3);
-        } else {
-          lkas_input_.road_info.right_line_valid = false;
-        }
+
+        lkas_input_.road_info.right_line_c0 =
+            ptr_current_lane_right_boundary.poly_coefficient[0] +
+            lkas_input_.param.ldp_c0_right_offset;
+        lkas_input_.road_info.right_line_c1 =
+            ptr_current_lane_right_boundary.poly_coefficient[1];
+        lkas_input_.road_info.right_line_c2 =
+            ptr_current_lane_right_boundary.poly_coefficient[2];
+        lkas_input_.road_info.right_line_c3 =
+            ptr_current_lane_right_boundary.poly_coefficient[3];
+
       } else if (lkas_input_.road_info.right_roadedge_existence == true) {
         lkas_input_.road_info.right_roadedge_valid = true;
-        if (ptr_current_lane_right_boundary.poly_coefficient_size() > 3) {
-          lkas_input_.road_info.right_roadedge_c0 =
-              ptr_current_lane_right_boundary.poly_coefficient(0) +
-              lkas_input_.param.ldp_c0_right_offset;
-          lkas_input_.road_info.right_roadedge_c1 =
-              ptr_current_lane_right_boundary.poly_coefficient(1);
-          lkas_input_.road_info.right_roadedge_c2 =
-              ptr_current_lane_right_boundary.poly_coefficient(2);
-          lkas_input_.road_info.right_roadedge_c3 =
-              ptr_current_lane_right_boundary.poly_coefficient(3);
-        } else {
-          lkas_input_.road_info.right_roadedge_valid = false;
-        }
+
+        lkas_input_.road_info.right_roadedge_c0 =
+            ptr_current_lane_right_boundary.poly_coefficient[0] +
+            lkas_input_.param.ldp_c0_right_offset;
+        lkas_input_.road_info.right_roadedge_c1 =
+            ptr_current_lane_right_boundary.poly_coefficient[1];
+        lkas_input_.road_info.right_roadedge_c2 =
+            ptr_current_lane_right_boundary.poly_coefficient[2];
+        lkas_input_.road_info.right_roadedge_c3 =
+            ptr_current_lane_right_boundary.poly_coefficient[3];
+
       } else {
         lkas_input_.road_info.right_line_valid = false;
         lkas_input_.road_info.right_roadedge_valid = false;
@@ -310,7 +296,7 @@ void LaneKeepAssistManager::Update() {
   // 车辆信息初始化、参数初始化
   lkas_input_.function_state = session_->environmental_model()
                                    .get_local_view()
-                                   .function_state_machine_info.current_state();
+                                   .function_state_machine_info.current_state;
   auto ptr_ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   lkas_input_.vehicle_info.veh_actual_speed = ptr_ego_state_manager->ego_v();
@@ -339,18 +325,18 @@ void LaneKeepAssistManager::Update() {
   }
   // ldw switch
   lkas_input_.vehicle_info.ldw_main_switch =
-      session_->mutable_environmental_model()->get_hmi_info().ldw_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().ldw_main_switch;
   // ldp switch
   lkas_input_.vehicle_info.ldp_main_switch =
-      session_->mutable_environmental_model()->get_hmi_info().ldp_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().ldp_main_switch;
   // elk switch
   lkas_input_.vehicle_info.elk_main_switch =
-      session_->mutable_environmental_model()->get_hmi_info().elk_main_switch();
+      session_->mutable_environmental_model()->get_hmi_info().elk_main_switch;
   // ldw sensitvity set
   lkas_input_.vehicle_info.ldw_tlc_level =
       session_->mutable_environmental_model()
           ->get_hmi_info()
-          .ldw_set_sensitivity_level();
+          .ldw_set_sensitivity_level;
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();

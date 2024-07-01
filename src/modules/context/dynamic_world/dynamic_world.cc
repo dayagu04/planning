@@ -6,7 +6,6 @@
 #include "agent/agent_manager.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "fusion_road.pb.h"
 #include "log.h"
 // #include "trajectory/path_point.h"
 #include "trajectory/trajectory_point.h"

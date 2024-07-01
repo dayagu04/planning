@@ -2,7 +2,7 @@
 #define MSQUARE_REAL_TIME_DECISION_PLANNING_PLANNER_LANE_CHANGE_DECIDER_H_
 
 #include "environmental_model.h"
-#include "fusion_road.pb.h"
+#include "fusion_road_c.h"
 #include "lateral_obstacle.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "session.h"
@@ -85,7 +85,7 @@ class RealTimeLaneChangeDecider {
   std::vector<RefPointFrenet> cur_lane_, target_lane_;
   double dis_to_change_point_;
   int lc_map_decision_;
-  FusionRoad::LaneType current_lane_type_;
+  iflyauto::LaneType current_lane_type_;
 
   int target_lane_id_;
   int current_lane_id_;

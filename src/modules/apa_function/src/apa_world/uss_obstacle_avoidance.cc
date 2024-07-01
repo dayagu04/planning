@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "apa_param_setting.h"
+#include "common_c.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "transform_lib.h"
@@ -270,46 +271,47 @@ const bool UssObstacleAvoidance::Preprocess() {
   }
 
   car_motion_info_.steer_angle =
-      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle();
+      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle;
 
   const bool trajectory_available =
-      planning_output_->has_trajectory() &&
-      planning_output_->trajectory().trajectory_points_size() > 1;
+      planning_output_->trajectory.available &&
+      planning_output_->trajectory.trajectory_points_size > 1;
 
   const bool gear_available =
-      planning_output_->has_gear_command() &&
-      (planning_output_->gear_command().gear_command_value() ==
-           Common::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE ||
-       planning_output_->gear_command().gear_command_value() ==
-           Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+      planning_output_->gear_command.available &&
+      (planning_output_->gear_command.gear_command_value ==
+           iflyauto::GEAR_COMMAND_VALUE_DRIVE ||
+       planning_output_->gear_command.gear_command_value ==
+           iflyauto::GEAR_COMMAND_VALUE_REVERSE);
 
   if (gear_available == false || trajectory_available == false) {
     return false;
   }
 
-  uint8_t gear_cmd = Common::GearCommandValue::GEAR_COMMAND_VALUE_NONE;
-  if (planning_output_->gear_command().available()) {
-    gear_cmd = planning_output_->gear_command().gear_command_value();
+  uint8_t gear_cmd = iflyauto::GEAR_COMMAND_VALUE_NONE;
+  if (planning_output_->gear_command.available) {
+    gear_cmd = planning_output_->gear_command.gear_command_value;
   }
   car_motion_info_.reverse_flag =
-      (gear_cmd == Common::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE);
+      (gear_cmd == iflyauto::GEAR_COMMAND_VALUE_REVERSE);
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
   const auto &uss_dis_info_buf =
-      local_view_ptr_->uss_percept_info.out_line_dataori();
+      local_view_ptr_->uss_percept_info.out_line_dataori;
 
-  // uss info is stored in the fifth buf, if the size is smaller than 5, the
-  // data is abnormal, quit directly
-  if (uss_dis_info_buf.size() < 5) {
-    return false;
-  }
-
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // TODO(xjli32): NOTE
+  // uss info is stored in the fifth buf,
+  // uss_dis_info_buf size is 4 in c struct definition now, need to
+  // confirm interface with xuliu15;
+  // disable uss_dis_info temporarily;
+  return false;
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   const auto &uss_dis_info = uss_dis_info_buf[4];
-  if (uss_dis_info.dis_from_car_to_obj_size() != 12) {
-    DEBUG_PRINT("uss dis nums = " << uss_dis_info.dis_from_car_to_obj_size()
-                                  << " != 12 ");
+  if (uss_dis_info.obj_pt_cnt != 12) {
+    DEBUG_PRINT("uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ");
     return false;
   }
   // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
@@ -319,14 +321,14 @@ const bool UssObstacleAvoidance::Preprocess() {
   //  upa, fr apa
   for (const auto &front_uss_idx : apa_param.GetParam().uss_wdis_index_front) {
     uss_raw_dist_vec_.emplace_back(
-        0.001 * uss_dis_info.dis_from_car_to_obj(front_uss_idx));
+        0.001 * uss_dis_info.dis_from_car_to_obj[front_uss_idx]);
   }
 
   // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4 upa,
   // rl apa
   for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
     uss_raw_dist_vec_.emplace_back(
-        0.001 * uss_dis_info.dis_from_car_to_obj(rear_uss_idx));
+        0.001 * uss_dis_info.dis_from_car_to_obj[rear_uss_idx]);
   }
 
   return true;
@@ -377,7 +379,7 @@ void UssObstacleAvoidance::CalRemainDist() {
 }
 
 void UssObstacleAvoidance::Update(
-    PlanningOutput::PlanningOutput *const planning_output,
+    iflyauto::PlanningOutput *const planning_output,
     const LocalView *local_view_ptr) {
   // update local_view
   local_view_ptr_ = local_view_ptr;

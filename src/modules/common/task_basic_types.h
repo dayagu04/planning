@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <limits>
 #include <map>
 #include <string>
@@ -19,7 +20,7 @@ enum class LatIngoreType {
   IGNORE_NONE
 };
 
-enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, UNDEFINED };
+enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, NONE };
 
 enum class LatDeciderLaneChangeInfo {
   NONE,
@@ -100,6 +101,14 @@ struct WeightedLonLeadBound {
   double weight;
 };
 using WeightedLonLeadBounds = std::vector<WeightedLonLeadBound>;
+
+struct LonLeadBound {
+  double s_lead;
+  double v_lead;
+  double a_lead;
+  int lead_id;
+};
+using LonLeadBounds = std::vector<LonLeadBound>;
 
 // dynamic obstacle
 struct DecisionTimePosition {

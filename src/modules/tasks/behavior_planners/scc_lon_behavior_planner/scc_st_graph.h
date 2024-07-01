@@ -260,11 +260,13 @@ class StGraphGenerator {
   const double _J_MIN = -3.0;
 
   // cutin calibration value
-  const double CUIIN_WIDTH = 1.6;  // 类似半个车道宽，取窄
+  const double CUIIN_WIDTH = 1.6;          // 类似半个车道宽，取窄
+  const double CUIIN_WIDTH_STATIC = 1.35;  //静态车辆cutin
   const double p1min_speed = 2.0;
   const double p2min_speed = 3.0;
   double v_limit_on_turns_and_road_;
   double v_limit_on_ramp_;
+  double v_limit_lc_;
   double v_last_target_ = 0.0;
 };
 

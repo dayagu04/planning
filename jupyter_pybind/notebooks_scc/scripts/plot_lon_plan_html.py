@@ -14,14 +14,15 @@ from IPython.core.display import display, HTML
 
 import logging
 sys.path.append('..')
+sys.path.append('../lib/')
 sys.path.append('../..')
 sys.path.append('../../..')
 from lib.basic_layers import *
-from lib.load_bag import *
+from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/share//data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240305/20240305-13-56-14/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-03-05-13-56-14.record"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-39-12/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-39-12_no_camera.bag"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -283,6 +284,12 @@ acc_max_params = {
     'legend_label': 'acc_max'
 }
 
+leadone_acc_params = {
+    'line_width': 1,
+    'color': 'green',
+    'legend_label': 'leadone_acc'
+}
+
 lead_one_dis_params = {
     'line_width': 1,
     'color': 'red',
@@ -378,16 +385,16 @@ class ScalarGenerator(DataGeneratorBase):
                 ts.append(data["t"][i])
                 xs.append(data["t"][i])
                 if val_type == 'target_velocity':
-                    ys.append(round(v['VisionLonBehavior_v_target'], 2))
+                    ys.append(round(v['v_target'], 2))
 
                 elif val_type == 'ego_velocity':
-                    ys.append(round(v['VisionLonBehavior_v_target']-2, 2))
+                    ys.append(round(v['v_ego']-2, 2))
 
                 elif val_type == 'leadone_velocity':
-                    ys.append(round(v['RealTime_lead_one_velocity'], 2))
+                    ys.append(round(v['lead_one_vel'], 2))
 
                 elif val_type == 'leadtwo_velocity':
-                    ys.append(round(v['RealTime_lead_two_velocity'], 2))
+                    ys.append(round(v['lead_two_vel'], 2))
 
                 elif val_type == 'acc_min':
                     ys.append(round(v['acc_target_low'], 2))
@@ -396,16 +403,19 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['acc_target_high'], 2))
 
                 elif val_type == 'lead_one_dis':
-                    ys.append(round(v['RealTime_lead_one_distance'], 2))
+                    ys.append(round(v['lead_one_dis'], 2))
+                
+                elif val_type == 'acc_cipv':
+                    ys.append(round(v['acc_cipv'], 2))
 
                 elif val_type == 'lead_two_dis':
-                    ys.append(round(v['RealTime_lead_two_distance'], 2))
+                    ys.append(round(v['lead_two_dis'], 2))
 
                 elif val_type == 'temp_lead_one_dis':
-                    ys.append(round(v['RealTime_temp_lead_one_distance'], 2))
+                    ys.append(round(v['temp_lead_one_dis'], 2))
 
                 elif val_type == 'temp_lead_two_dis':
-                    ys.append(round(v['RealTime_temp_lead_two_distance'], 2))
+                    ys.append(round(v['temp_lead_two_dis'], 2))
 
                 elif val_type == 'des_dis_rss':
                     ys.append(round(v['RealTime_desired_distance_rss'], 2))
@@ -414,14 +424,14 @@ class ScalarGenerator(DataGeneratorBase):
                     ys.append(round(v['RealTime_desired_distance_calibrate'], 2))
 
                 elif val_type == 'behav_cost':
-                    ys.append(round(v['RealTimeLonBehaviorCostTime'], 2))
+                    ys.append(round(v['SccLonBehaviorCostTime'], 2))
 
                 elif val_type == 'motion_cost':
-                    ys.append(round(v['RealTimeLonMotionCostTime'], 2))
+                    ys.append(round(v['SccLonMotionCostTime'], 2))
 
                 elif val_type == 'target_velocity_start_stop':
-                    if hasattr(v, 'VisionLonBehavior_v_target_start_stop'):
-                        ys.append(round(v['VisionLonBehavior_v_target_start_stop'], 2))
+                    if hasattr(v, 'v_target_start_stop'):
+                        ys.append(round(v['v_target_start_stop'], 2))
                     else:
                         ys.append(0)
                 else:
@@ -637,23 +647,25 @@ class TextGenerator4Lon(DataGeneratorBase):
         ts = []
         xys = []
         if text_type == "real_time_json_value":
-            planning_json_value_list = ['acc_target_high', 'acc_target_low', \
-                          'VisionLonBehavior_v_limit_road', 'VisionLonBehavior_v_limit_in_turns','VisionLonBehavior_v_target', \
-                          'VisionLonBehavior_lead_one_id', 'VisionLonBehavior_lead_one_dis', 'VisionLonBehavior_lead_one_vel', "VisionLonBehavior_v_target_lead_one", \
-                          'VisionLonBehavior_lead_two_id', 'VisionLonBehavior_lead_two_dis', 'VisionLonBehavior_lead_two_vel', "VisionLonBehavior_v_target_lead_two", \
-                          'VisionLonBehavior_temp_lead_one_id', 'VisionLonBehavior_temp_lead_one_dis', 'VisionLonBehavior_temp_lead_one_vel', "VisionLonBehavior_v_target_temp_lead_one", \
-                          'VisionLonBehavior_temp_lead_two_id', 'VisionLonBehavior_temp_lead_two_dis', 'VisionLonBehavior_temp_lead_two_vel', "VisionLonBehavior_v_target_temp_lead_two", \
-                          'VisionLonBehavior_potental_cutin_track_id', 'VisionLonBehavior_potental_cutin_v_target', "VisionLonBehavior_cutin_v_target", \
-                          'VisionLonBehavior_stop_start_state', 'VisionLonBehavior_v_target_start_stop', \
-                          'RealTime_v_ego', 'RealTime_gap_v_limit_lc', \
-                          'RealTime_lead_one_id', 'RealTime_lead_one_distance', 'RealTime_lead_one_velocity', 'RealTime_lead_one_desire_vel', \
-                          'RealTime_lead_two_id', 'RealTime_lead_two_distance', 'RealTime_lead_two_velocity', 'RealTime_lead_two_desire_vel', \
-                          'RealTime_temp_lead_one_id', 'RealTime_temp_lead_one_distance', 'RealTime_temp_lead_one_velocity', 'RealTime_temp_lead_one_desire_vel', \
-                          'RealTime_temp_lead_two_id', 'RealTime_temp_lead_two_distance', 'RealTime_temp_lead_two_velocity', 'RealTime_temp_lead_two_desire_vel', \
-                          'RealTime_potential_cutin_track_id', 'RealTime_potential_cutin_v_target', \
-                          "REALTIME_fast_lead_id", "REALTIME_slow_lead_id", "REALTIME_fast_car_cut_in_id", "REALTIME_slow_lead_id", \
-                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", "RealTimeLonBehaviorCostTime", "RealTimeLonMotionCostTime", \
-                          "RealTime_stop_start_state", "RealTime_v_target_start_stop", "RealTime_STANDSTILL"]
+            planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+                              "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+                              "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
+                              'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
+                              'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
+                              'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
+                              'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
+                              'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                              'stop_start_state', 'v_target_start_stop', 'STANDSTILL', \
+                              "dis_to_ramp", "v_target_ramp", \
+                              'gap_v_limit_lc', \
+                              "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                              "dynamic_world_cost", "front_node_id", "rear_node_id", \
+                              "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
+                              "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
+                              "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                              'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                              "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
 
             for i, v in enumerate(data["json"]):
                 ts.append(data["t"][i])
@@ -1016,14 +1028,17 @@ def draw_rt_acc(plan_debug_msg, vs_msg, layer_manager):
     rt_ego_acc = ScalarGenerator(vs_msg, 'ego_acc', accu=True, name="rt_ego_acc")
     rt_acc_min = ScalarGenerator(plan_debug_msg, 'acc_min', accu=True, name="rt_acc_min")
     rt_acc_max = ScalarGenerator(plan_debug_msg, 'acc_max', accu=True, name="rt_acc_max")
+    rt_leadone_acc = ScalarGenerator(plan_debug_msg, 'acc_cipv', accu=True, name="rt_leadone_acc")
 
     ego_acc_layer = CurveLayer(fig_rta, ego_acc_params)
     acc_min_layer = CurveLayer(fig_rta, acc_min_params)
     acc_max_layer = CurveLayer(fig_rta, acc_max_params)
+    leadone_acc_layer = CurveLayer(fig_rta, leadone_acc_params)
 
     layer_manager.AddLayer(ego_acc_layer, 'global_ego_acc', rt_ego_acc)
     layer_manager.AddLayer(acc_min_layer, 'global_acc_min', rt_acc_min)
     layer_manager.AddLayer(acc_max_layer, 'global_acc_max', rt_acc_max)
+    layer_manager.AddLayer(leadone_acc_layer, 'global_leadone_acc', rt_leadone_acc)
 
     fig_rta.toolbar.active_scroll = fig_rta.select_one(WheelZoomTool)
     fig_rta.legend.click_policy = "hide"
@@ -1092,10 +1107,40 @@ def draw_rt_table(plan_debug_msg, layer_manager):
 
     return tab_rt_layer.plot
 
+def draw_fsm_state(soc_state_msg): 
+    data_fsm_state_command = ColumnDataSource(data ={
+    'time': [],
+    'fsm_cur_state':[],
+    })
+  
+    t_soc_state = []
+    fsm_cur_state = []
+
+    soc_state_info = soc_state_msg['data']
+    soc_state_t = soc_state_msg['t']
+    for i in range(len(soc_state_info)):
+       t_soc_state.append(soc_state_t[i])
+       fsm_cur_state.append(soc_state_info[i].current_state)
+
+    data_fsm_state_command.data.update({
+    'time': t_soc_state,
+    'fsm_cur_state': fsm_cur_state,
+    })
+
+    fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = [t_soc_state[0], t_soc_state[-1]], width=500, height=200)
+    f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = data_fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
+
+    hover_fsm_state = HoverTool(renderers=[f_fsm_state], tooltips=[('time', '@time'), ('fsm_cur_state', '@fsm_cur_state')], mode='vline')
+    fig_fsm_state.add_tools(hover_fsm_state)
+    fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
+    fig_fsm_state.legend.click_policy = 'hide'
+    
+    return fig_fsm_state
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
-        dataLoader = LoadCyberbag(bag_path)
+        dataLoader = LoadRosbag(bag_path)
     except:
         print('load cyber_bag error!')
         return
@@ -1111,6 +1156,7 @@ def plotOnce(bag_path, html_file):
     plan_debug_msg = dataLoader.plan_debug_msg
     loc_msg = dataLoader.loc_msg
     vs_msg = dataLoader.vs_msg
+    soc_state_msg = dataLoader.soc_state_msg
     layer_manager = LayerManager()
 
     fig_lv, _ = draw_local_view(dataLoader, layer_manager)
@@ -1124,6 +1170,7 @@ def plotOnce(bag_path, html_file):
     fig_rta = draw_rt_acc(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_dis = draw_rt_distance(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_cost = draw_rt_cost(plan_debug_msg, vs_msg, layer_manager)
+    fig_fsm = draw_fsm_state(soc_state_msg)
 
     tab_rt = draw_rt_table(plan_debug_msg, layer_manager)
 
@@ -1219,7 +1266,7 @@ def plotOnce(bag_path, html_file):
 
     #pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
     pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
-    pan_rt = Panel(child=row(tab_rt, column(fig_rtv, fig_rta, fig_rt_dis, fig_rt_cost)), title="Realtime")
+    pan_rt = Panel(child=row(column(tab_rt, fig_fsm), column(fig_rtv, fig_rta, fig_rt_dis, fig_rt_cost)), title="Realtime")
     #pan_rt = Panel(child=row(tab_rt), title="Realtime")
     pans = Tabs(tabs=[ pan_lt, pan_rt ])
     #pans = Tabs(tabs=[ pan_rt ])
