@@ -25,7 +25,7 @@ from lib.local_view_lib import *
 from lib.load_local_view_parking import LoadCyberbag
 from lib.load_local_view_parking import apa_draw_local_view, apa_draw_local_view_parking_ctrl
 
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-404d7d2c5-JAC_S811-test/test_0.00000'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_48160/trigger/20240701/20240701-20-20-17/park_in_data_collection_CHERY_E0Y_48160_ALL_FILTER_2024-07-01-20-20-18_no_camera.bag'
 html_file = bag_path +".apa.html"
 plot_ctrl_flag = True
 fig1_time_step = 0.1
@@ -70,6 +70,8 @@ def plotOnce(bag_path, html_file):
     if len(sys.argv) > 2:
         if sys.argv[2] == CHERY_T26:
             vehicle_type = CHERY_T26
+        elif sys.argv[2] == CHERY_E0X:
+            vehicle_type = CHERY_E0X
         else:
             vehicle_type = JAC_S811
     else:

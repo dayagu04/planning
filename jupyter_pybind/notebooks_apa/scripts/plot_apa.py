@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Vertical/planning-cda3803ca-CHERY_T26-test/test_0.00000'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_48160/trigger/20240703/20240703-11-25-48/park_in_data_collection_CHERY_E0Y_48160_ALL_FILTER_2024-07-03-11-25-49_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -85,7 +85,7 @@ if plot_ctrl_flag:
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=1, value=0, step=1)
+    self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          vehicle_type = self.vehicle_type)
 
