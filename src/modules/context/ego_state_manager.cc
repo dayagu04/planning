@@ -249,11 +249,6 @@ uint8_t EgoStateManager::replan_process(const bool &lat_reset_flag,
   auto &lat_init_state = planning_init_point_.lat_init_state;
   auto &lon_init_state = planning_init_point_.lon_init_state;
 
-  // TODO: monitor location latency
-  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  const auto t = planning_debug_data->location_latency().location_latency();
-  JSON_DEBUG_VALUE("location_latency", t);
-
   Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x,
                           ego_state->ego_pose_raw().y);
   pnc::spline::Projection projection_spline;
@@ -345,30 +340,28 @@ uint8_t EgoStateManager::replan_process(const bool &lat_reset_flag,
   cur_vehicle_state.x = ego_pose_.x;
   cur_vehicle_state.y = ego_pose_.y;
 
-  std::vector<PncTrajectoryPoint> reinit_point{};
+  PncTrajectoryPoint reinit_point;
   if (!replan_type_.empty()) {
     if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
-      reinit_point.emplace_back(
-          TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
-              cur_vehicle_state));
+      reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+          cur_vehicle_state);
     } else {
       reinit_point = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
           planning_loop_dt, cur_vehicle_state);
-      assert(!reinit_point.empty());
     }
     // assebling init state separately
-    lat_init_state.set_x(reinit_point.front().path_point.x);
-    lat_init_state.set_y(reinit_point.front().path_point.y);
-    lat_init_state.set_theta(reinit_point.front().path_point.theta);
+    lat_init_state.set_x(reinit_point.path_point.x);
+    lat_init_state.set_y(reinit_point.path_point.y);
+    lat_init_state.set_theta(reinit_point.path_point.theta);
     // TODO: need estimated delta and omega for large curv condition
-    lat_init_state.set_delta(reinit_point.front().delta);
-    lat_init_state.set_curv(reinit_point.front().path_point.kappa);
+    lat_init_state.set_delta(reinit_point.delta);
+    lat_init_state.set_curv(reinit_point.path_point.kappa);
     lat_init_state.set_d_curv(0.0);
 
     lon_init_state.set_s(0.0);
-    lon_init_state.set_v(reinit_point.front().v);
-    lon_init_state.set_a(reinit_point.front().a);
-    lon_init_state.set_j(reinit_point.front().jerk);
+    lon_init_state.set_v(reinit_point.v);
+    lon_init_state.set_a(reinit_point.a);
+    lon_init_state.set_j(reinit_point.jerk);
   }
 
   return replan_code;

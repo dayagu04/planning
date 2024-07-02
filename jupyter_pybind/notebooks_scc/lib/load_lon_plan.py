@@ -614,7 +614,6 @@ def load_lon_global_figure(bag_loader):
   plan_debug_multi = ColumnDataSource(data ={
   'time': [],
   'replan_status':[],
-  'location_latency': [],
   })
 
   t_soc_state = []
@@ -633,22 +632,19 @@ def load_lon_global_figure(bag_loader):
 
   replan_status = []
   t_plan_debug = []
-  location_latency = []
 
   plan_debug_info = bag_loader.plan_debug_msg['json']
   for i in range(len(plan_debug_info)):
      t_plan_debug.append(bag_loader.plan_debug_msg['t'][i])
      replan_status.append(plan_debug_info[i]['replan_status'])
-     location_latency.append(plan_debug_info[i]['location_latency'])
 
   plan_debug_multi.data.update({
     'time': t_plan_debug,
     'replan_status': replan_status,
-    'location_latency': location_latency,
   })
 
 
-  fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = [t_soc_state[0], t_soc_state[-1]], width=500, height=200)
+  fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = [t_soc_state[0], t_soc_state[-1]], width=600, height=300)
   f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
   fig_fsm_state.text(x=t_soc_state[10], y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=t_soc_state[10], y=10, text=['SCC_ACTIVE:12'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
@@ -658,9 +654,9 @@ def load_lon_global_figure(bag_loader):
   fig_fsm_state.text(x=t_soc_state[10], y=2, text=['SCC_STAND_OVERRIDE:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=t_soc_state[10], y=0, text=['SCC_STAND_SECURE:17'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
 
-  fig_replan_status = bkp.figure(x_axis_label='time', y_axis_label='plan debug multi',x_range = [t_plan_debug[0], t_plan_debug[-1]], width=500, height=200)
+  fig_replan_status = bkp.figure(x_axis_label='time', y_axis_label='plan debug multi',x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600, height=300)
   f_replan_status = fig_replan_status.line('time', 'replan_status', source = plan_debug_multi, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'replan_status')
-  fig_replan_status.line('time', 'location_latency', source = plan_debug_multi, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'location_latency')
+  # fig_replan_status.line('time', 'location_latency', source = plan_debug_multi, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'location_latency')
   # 在fig_replan_status画的图中添加相关标签注释：图的左侧竖直排列添加如下所有文字注释
   # LAT_POSITION_REPLAN:1,LAT_ANGLE_REPLAN:2,lON_POSITION_REPLAN:4,LON_TINY_SPEED_REPLAN:8,FUNCTION_REQUEST_REPLAN:16,LAT_LON_REST:32
   fig_replan_status.text(x=t_plan_debug[10], y=12, text=['LAT_POSITION_REPLAN:1'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
@@ -852,7 +848,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(column(tab1, fig_fsm_state, fig_replan_status), column(velocity_fig, acc_fig, lead_fig), column(cost_time_fig, cutin_fig)), title="Realtime")
+  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 

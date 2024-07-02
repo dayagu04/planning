@@ -22,7 +22,7 @@ PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
   return point;
 }
 
-std::vector<PncTrajectoryPoint>
+PncTrajectoryPoint
 TrajectoryStitcher::ComputeReinitStitchingTrajectory(
     const double planning_cycle_time, const VehicleState& vehicle_state,
     const bool enable_vehi_state_predict) {
@@ -44,7 +44,7 @@ TrajectoryStitcher::ComputeReinitStitchingTrajectory(
     reinit_point = ComputeTrajectoryPointFromVehicleState(vehicle_state);
   }
 
-  return std::vector<PncTrajectoryPoint>(1, reinit_point);
+  return reinit_point;
 }
 
 }  // namespace planning
