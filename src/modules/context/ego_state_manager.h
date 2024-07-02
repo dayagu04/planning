@@ -121,9 +121,9 @@ class EgoStateManager {
   void update_transform();
   void UpdatePlanningInitState();
   void RealtimeUpdatePlanningInitState();
-  uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
+  // uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
   // new replan
-  uint8_t replan_process(const bool &lat_reset_flag,
+  uint8_t ReplanProcess(const bool &lat_reset_flag,
                                                  const bool &lon_reset_flag);
 
   void LateralReset();
