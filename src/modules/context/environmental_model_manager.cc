@@ -183,18 +183,11 @@ bool EnvironmentalModelManager::Run() {
   // Step 1) update vehicleDbwStatus
   auto fsm_state = local_view.function_state_machine_info.current_state;
   bool acc_mode = (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_STAND_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_STAND_WAIT) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_SECURE);
+                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE);
   bool scc_mode = (fsm_state == iflyauto::FunctionalState_SCC_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_SCC_STAND_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_SCC_STAND_WAIT) ||
-                  (fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE) ||
-                  (fsm_state == iflyauto::FunctionalState_SCC_SECURE);
+                  (fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE);
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) ||
-                  (fsm_state == iflyauto::FunctionalState_NOA_SECURE);
+                  (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
   bool dbw_status = acc_mode || scc_mode || noa_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
@@ -205,9 +198,10 @@ bool EnvironmentalModelManager::Run() {
       fsm_state == iflyauto::FunctionalState_SCC_ACTIVATE ||
       fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) {
     function_state = common::DrivingFunctionInfo::ACTIVATE;
-  } else if (fsm_state == iflyauto::FunctionalState_ACC_STAND_WAIT ||
-             fsm_state == iflyauto::FunctionalState_SCC_STAND_WAIT) {
-    function_state = common::DrivingFunctionInfo::STANDSTILL;
+  } else if (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
+             fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
+             fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) {
+    function_state = common::DrivingFunctionInfo::OVERRIDE;
   }
 
   if (scc_mode) {

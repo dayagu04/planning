@@ -616,9 +616,9 @@ uint16 EmergencyLaneKeep::RightKickDownCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_ACC_OVERRIDE) &&
       (lkas_input_->function_state <
-       iflyauto::FunctionalState_PARK_IN_APA_IN)) {
+       iflyauto::FunctionalState_PARK_STANDBY)) {
     elk_right_kickdown_code_temp += uint16_bit[4];
   }
 
