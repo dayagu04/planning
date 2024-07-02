@@ -671,7 +671,7 @@ def load_lon_global_figure(bag_loader):
   fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
   fig_fsm_state.legend.click_policy = 'hide'
 
-  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status'), ('location_latency', '@location_latency')], mode='vline')
+  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status')], mode='vline')
   fig_replan_status.add_tools(hover_replan_status)
   fig_replan_status.toolbar.active_scroll = fig_replan_status.select_one(WheelZoomTool)
   fig_replan_status.legend.click_policy = 'hide'
