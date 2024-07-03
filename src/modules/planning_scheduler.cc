@@ -150,6 +150,7 @@ bool PlanningScheduler::RunOnce(
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.timestamp = start_timestamp;
+  planning_output->meta.plan_timestamp_us = start_timestamp;
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -238,7 +239,6 @@ void PlanningScheduler::FillPlanningTrajectory(
   // 更新输出
   auto time_stamp_us = IflyTime::Now_us();
 
-  planning_output->meta.plan_timestamp_us = time_stamp_us;
   iflyauto::strcpy_array(planning_output->meta.plan_strategy_name,
                          "Real Time Planning");
 

@@ -14,31 +14,37 @@ PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
   point.path_point.z = vehicle_state.z;
   point.path_point.theta = vehicle_state.heading;
   point.path_point.kappa = vehicle_state.kappa;
+  point.delta = vehicle_state.delta;
   point.v = vehicle_state.linear_velocity;
   point.a = vehicle_state.linear_acceleration;
+  point.jerk = vehicle_state.jerk;
   point.relative_time = 0.0;
   return point;
 }
 
-std::vector<PncTrajectoryPoint>
+PncTrajectoryPoint
 TrajectoryStitcher::ComputeReinitStitchingTrajectory(
-    const double planning_cycle_time, const VehicleState& vehicle_state) {
+    const double planning_cycle_time, const VehicleState& vehicle_state,
+    const bool enable_vehi_state_predict) {
   PncTrajectoryPoint reinit_point;
-  static constexpr double kEpsilon_v = 0.1;
-  static constexpr double kEpsilon_a = 0.4;
-  if (std::abs(vehicle_state.linear_velocity) < kEpsilon_v &&
-      std::abs(vehicle_state.linear_acceleration) < kEpsilon_a) {
-    reinit_point = ComputeTrajectoryPointFromVehicleState(vehicle_state);
-  } else {
-    VehicleState predicted_vehicle_state;
+  // static constexpr double kEpsilon_v = 0.1;
+  // static constexpr double kEpsilon_a = 0.4;
+  // if (std::abs(vehicle_state.linear_velocity) < kEpsilon_v &&
+  //     std::abs(vehicle_state.linear_acceleration) < kEpsilon_a) {
+  //   reinit_point = ComputeTrajectoryPointFromVehicleState(vehicle_state);
+  // } else {
+  VehicleState predicted_vehicle_state;
+  if (enable_vehi_state_predict) {
     predicted_vehicle_state =
         common::VehicleModel::Predict(planning_cycle_time, vehicle_state);
     reinit_point =
         ComputeTrajectoryPointFromVehicleState(predicted_vehicle_state);
     reinit_point.relative_time += planning_cycle_time;
+  } else {
+    reinit_point = ComputeTrajectoryPointFromVehicleState(vehicle_state);
   }
 
-  return std::vector<PncTrajectoryPoint>(1, reinit_point);
+  return reinit_point;
 }
 
 }  // namespace planning

@@ -50,7 +50,7 @@ try:
     subprocess.run(command, shell=True, text=True, check=True)
 except subprocess.CalledProcessError as e:
     print(f"Runing PP error: {e.output}")
-    # sys.exit(1)
+    sys.exit(1)
 print("Run PP successfully !")
 
 # 运行checker
@@ -59,7 +59,7 @@ try:
     subprocess.run(command, shell=True, text=True, check=True)
 except subprocess.CalledProcessError as e:
     print(f"Pulling common_tools error: {e.output}")
-    # sys.exit(1)
+    sys.exit(1)
 print("Pulling common_tools successfully !")
 
 checker_path = "/root/common_tools/checker_scc/task"
@@ -81,7 +81,7 @@ try:
     subprocess.run(command, shell=True, text=True, check=True)
 except subprocess.CalledProcessError as e:
     print(f"Runing checker error: {e.output}")
-    # sys.exit(1)
+    sys.exit(1)
 print("Run checker successfully !")
 
 # 生成html
@@ -93,8 +93,8 @@ command_local_view = export_command + f"cd {script_path} && /root/miniconda3/bin
 try:
     subprocess.run(command_lat, shell=True, text=True, check=True)
     subprocess.run(command_lon, shell=True, text=True, check=True)
-    subprocess.run(command_behavior, shell=True, text=True, check=True)
     subprocess.run(command_local_view, shell=True, text=True, check=True)
+    subprocess.run(command_behavior, shell=True, text=True, check=True)
 except subprocess.CalledProcessError as e:
     print(f"Creating html error: {e.output}")
     sys.exit(1)

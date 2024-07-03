@@ -50,6 +50,8 @@ struct PncTrajectoryPoint {
   // linear acceleration
   double a;
   double s;
+  double jerk;
+  double delta;
   // relative time from beginning of the trajectory
   double relative_time;
   // probability only for prediction trajectory point
@@ -93,6 +95,8 @@ struct VehicleState {
   double linear_velocity{0.0};
   double angular_velocity{0.0};
   double linear_acceleration{0.0};
+  double delta{0.0};
+  double jerk{0.0};
   DrivingMode driving_mode{DrivingMode::AUTO};
   int gear_position{0};
   double steering_percentage{0.0};

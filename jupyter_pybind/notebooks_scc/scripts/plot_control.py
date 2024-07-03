@@ -7,7 +7,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240531/20240531-16-34-04/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-31-16-34-04_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240701/20240701-18-12-17/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-07-01-18-12-17_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -291,7 +291,7 @@ fig10.line('time', 'euler_angle_pitch', source = data_control_command, line_widt
 
 f11 = fig11.line('time', 'lat_err', source = data_control_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lat_err')
 fig11.line('time', 'vel_error', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_error')
-fig11.line('time', 'phi_err', source = data_control_command, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'phi_err')
+fig11.line('time', 'phi_err', source = data_control_command, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'phi_err')
 fig11.line('x', 'y', source = data_cursor_fig11, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'cursor')
 
 hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lat_enable', '@lat_enable'), ('lon_enable', '@lon_enable'), ('planning_type', '@planning_type')], mode='vline')

@@ -68,6 +68,8 @@ void VehicleModel::RearCenteredKinematicBicycleModel(
   predicted_vehicle_state->linear_velocity = next_v;
   predicted_vehicle_state->linear_acceleration =
       cur_vehicle_state.linear_acceleration;
+  predicted_vehicle_state->delta = cur_vehicle_state.delta;
+  predicted_vehicle_state->jerk = cur_vehicle_state.jerk;
 }
 
 VehicleState VehicleModel::Predict(const double predicted_time_horizon,
