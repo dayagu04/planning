@@ -19,7 +19,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
-bag_path = "/share//data_cold/abu_zone/autoparse/jac_s811_72kx6/trigger/20240306/20240306-15-40-10/data_collection_JAC_S811_72KX6_EVENT_MANUAL_2024-03-06-15-40-10.record"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240701/20240701-18-12-17/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-07-01-18-12-17_no_camera.bag"
 html_file = bag_path +".lon_ctrl.html"
 
 # bokeh创建的html在jupyter中显示
@@ -42,8 +42,8 @@ def plotOnce(bag_path, html_file):
     # 加载bag
     try:
         dataLoader =  LoadRosbag(bag_path)
-    except:
-        print('load cyber_bag error!')
+    except Exception as e:
+        print('load ros_bag error: ', e)
         return
 
     if isINJupyter():
@@ -169,10 +169,13 @@ def plotOnce(bag_path, html_file):
                                          y_axis_label='dy',
                                          width=600,
                                          height=200))
-    fig7.AddCurv(layer_manager,
-                  VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
-    fig7.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(topic_vector_dict, "dy_mpc_vec", 1.0), "dy_mpc_vec")
+    if all(len(item) == 0 for item in topic_vector_dict["dy_ref_mpc_vec"]):
+        print("dy_ref_mpc_vec列表中的所有元素都是空的。")
+    else :
+        fig7.AddCurv(layer_manager,
+                    VectorGeneratorFromJson(topic_vector_dict, "dy_ref_mpc_vec", 1.0), "dy_ref_mpc_vec")
+        fig7.AddCurv(layer_manager,
+                    VectorGeneratorFromJson(topic_vector_dict, "dy_mpc_vec", 1.0), "dy_mpc_vec")
 
     # fig8: mpc dphi
     fig8 = DynamicFigureLayer(bkp.figure(x_axis_label='time',
@@ -180,10 +183,13 @@ def plotOnce(bag_path, html_file):
                                          width=600,
                                          x_range = fig7.fig.x_range,
                                          height=200))
-    fig8.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(topic_vector_dict, "dphi_ref_mpc_vec", 57.3), "dphi_ref_mpc_vec")
-    fig8.AddCurv(layer_manager,
-                 VectorGeneratorFromJson(topic_vector_dict, "dphi_mpc_vec", 57.3), "dphi_mpc_vec")
+    if all(len(item) == 0 for item in topic_vector_dict["dphi_ref_mpc_vec"]):
+        print("dphi_ref_mpc_vec列表中的所有元素都是空的。")
+    else :
+        fig8.AddCurv(layer_manager,
+                    VectorGeneratorFromJson(topic_vector_dict, "dphi_ref_mpc_vec", 57.3), "dphi_ref_mpc_vec")
+        fig8.AddCurv(layer_manager,
+                    VectorGeneratorFromJson(topic_vector_dict, "dphi_mpc_vec", 57.3), "dphi_mpc_vec")
 
     # fig9: mpc delta (steer angle)
     fig9 = DynamicFigureLayer(bkp.figure(x_axis_label='time',
@@ -191,7 +197,10 @@ def plotOnce(bag_path, html_file):
                                          width=600,
                                          x_range = fig7.fig.x_range,
                                          height=200))
-    fig9.AddCurv(layer_manager,
+    if all(len(item) == 0 for item in topic_vector_dict["delta_mpc_vec"]):
+        print("dphi_ref_mpc_vec列表中的所有元素都是空的。")
+    else :
+        fig9.AddCurv(layer_manager,
                  VectorGeneratorFromJson(topic_vector_dict, "delta_mpc_vec", 57.3 * 15.7), "delta_mpc_vec")
 
 
