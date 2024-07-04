@@ -207,7 +207,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
         struct_msgs::PlanningHMIOutputInfoStr planning_hmi_output_ros_msg{};
         convert(planning_hmi_ouput_info_struct, planning_hmi_output_ros_msg,
                 ConvertTypeInfo::TO_ROS);
-        output_planning_hmi_msg_cache_[TOPIC_PLANNING_PLAN][ros_time] =
+        output_planning_hmi_msg_cache_[TOPIC_PLANNING_HMI][ros_time] =
             planning_hmi_output_ros_msg;
       });
 }
@@ -375,7 +375,7 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
 void PlanningPlayer::PlayOneFrame(
     int frame_num, const planning::common::TopicTimeList& input_time_list) {
   std::cout << "************************************** frame " << frame_num
-            << "**************************************" << std::endl;
+            << " **************************************" << std::endl;
   auto fusion_object_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::FusionObjectsInfo>(
           TOPIC_FUSION_OBJECTS, input_time_list.fusion_object());
@@ -384,74 +384,6 @@ void PlanningPlayer::PlayOneFrame(
     convert(fusion_object_msg, *fusion_object_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
     planning_adapter_->FeedFusionObjects(fusion_object_msg);
-
-    // for update relative info
-    bool find_local = false;
-    uint64_t find_loc_time = 0;
-    for (auto i : fusion_object_ros_msg->msg_header.input_list) {
-      if (i.input_type ==
-          InputHistoryTimestampSourceType::
-              INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION) {
-        for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-             it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
-          auto loc_msg_i =
-              boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(
-                  it->second);
-          auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
-          if (loc_header_time_i == i.in_ts_us) {
-            Eigen::Vector3d ego_pose(loc_msg_i->pose.local_position.x,
-                                     loc_msg_i->pose.local_position.y,
-                                     loc_msg_i->pose.local_position.z);
-            SimulationContext::Instance()->set_ego_pose(ego_pose);
-            Eigen::Vector4d ego_orientation(
-                loc_msg_i->pose.orientation.x, loc_msg_i->pose.orientation.y,
-                loc_msg_i->pose.orientation.z, loc_msg_i->pose.orientation.w);
-            SimulationContext::Instance()->set_ego_orientation(ego_orientation);
-            SimulationContext::Instance()->set_ego_yaw(
-                loc_msg_i->pose.euler_angles.yaw);
-            SimulationContext::Instance()->set_ego_speed(
-                loc_msg_i->pose.linear_velocity_from_wheel);
-            SimulationContext::Instance()->set_ego_acc(
-                loc_msg_i->pose.linear_acceleration.x);
-            find_local = true;
-            break;
-          }
-        }
-      }
-    }
-    // 找到时间最近的定位信息
-    if (!find_local) {
-      std::cerr << "Can not find localization for fusion object !" << std::endl;
-      for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-           it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
-        auto loc_msg_i =
-            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
-        if (loc_header_time_i > fusion_object_ros_msg->msg_header.timestamp) {
-          it--;
-          auto selected_loc_msg_i =
-              boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(
-                  it->second);
-          Eigen::Vector3d ego_pose(selected_loc_msg_i->pose.local_position.x,
-                                   selected_loc_msg_i->pose.local_position.y,
-                                   selected_loc_msg_i->pose.local_position.z);
-          SimulationContext::Instance()->set_ego_pose(ego_pose);
-          Eigen::Vector4d ego_orientation(
-              selected_loc_msg_i->pose.orientation.x,
-              selected_loc_msg_i->pose.orientation.y,
-              selected_loc_msg_i->pose.orientation.z,
-              selected_loc_msg_i->pose.orientation.w);
-          SimulationContext::Instance()->set_ego_orientation(ego_orientation);
-          SimulationContext::Instance()->set_ego_yaw(
-              selected_loc_msg_i->pose.euler_angles.yaw);
-          SimulationContext::Instance()->set_ego_speed(
-              loc_msg_i->pose.linear_velocity_from_wheel);
-          SimulationContext::Instance()->set_ego_acc(
-              loc_msg_i->pose.linear_acceleration.x);
-          break;
-        }
-      }
-    }
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
@@ -569,22 +501,23 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing /iflytek/fusion/parking_slot" << std::endl;
   }
 
-  // TODO(zkxie2): 待完善
+  // 不再使用，注释掉
   // 由于static map的频率比planning低，为了避免重复feed同一帧static
   // map导致对map更新频率的误判而做对应判断
-  if (input_time_list_map_ != input_time_list.map()) {
-    input_time_list_map_ = input_time_list.map();
-    auto hd_map_ros_msg = find_ros_msg_with_header_time<proto_msgs::StaticMap>(
-        TOPIC_HD_MAP, input_time_list.map());
-    if (hd_map_ros_msg) {
-      std::shared_ptr<Map::StaticMap> hd_map_msg;
-      StaticMapToProto(*hd_map_msg, *hd_map_ros_msg);
-      planning_adapter_->FeedMap(hd_map_msg);
-    } else {
-      std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/ehr/static_map" << std::endl;
-    }
-  }
+  // if (input_time_list_map_ != input_time_list.map()) {
+  //   input_time_list_map_ = input_time_list.map();
+  //   auto hd_map_ros_msg =
+  //   find_ros_msg_with_header_time<proto_msgs::StaticMap>(
+  //       TOPIC_HD_MAP, input_time_list.map());
+  //   if (hd_map_ros_msg) {
+  //     std::shared_ptr<Map::StaticMap> hd_map_msg;
+  //     StaticMapToProto(*hd_map_msg, *hd_map_ros_msg);
+  //     planning_adapter_->FeedMap(hd_map_msg);
+  //   } else {
+  //     std::cerr << "frame_num " << frame_num_
+  //               << " missing /iflytek/ehr/static_map" << std::endl;
+  //   }
+  // }
 
   // TODO: for hpp, need FeedParkingMap() ready
   // auto ehr_parking_map_ros_msg =

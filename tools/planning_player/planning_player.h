@@ -175,7 +175,8 @@ void PlanningPlayer::cache_with_ros_msg_time(
     const rosbag::MessageInstance &msg) {
   typename T::Ptr obj_msg = msg.instantiate<T>();
   if (obj_msg == nullptr) {
-    std::cout << "msg instantiate error, msg name: " << msg.getTopic()
+    std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
               << std::endl;
   } else {
     // auto time = msg.getTime();
@@ -189,7 +190,8 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
     const rosbag::MessageInstance &msg) {
   typename T::Ptr obj_msg = msg.instantiate<T>();
   if (obj_msg == nullptr) {
-    std::cout << "msg instantiate error, msg name: " << msg.getTopic()
+    std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
               << std::endl;
   } else {
     // auto time = msg.getTime();
@@ -206,7 +208,8 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
     bool is_close_loop) {
   typename T::Ptr obj_msg = msg.instantiate<T>();
   if (obj_msg == nullptr) {
-    std::cout << "msg instantiate error, msg name: " << msg.getTopic()
+    std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
               << std::endl;
   } else {
     // auto time = msg.getTime();
