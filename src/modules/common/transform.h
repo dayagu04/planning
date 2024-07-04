@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#ifdef MDC
+#ifdef MDC510
 #include <Eigen/Dense>
 #else
 #include <eigen3/Eigen/Dense>

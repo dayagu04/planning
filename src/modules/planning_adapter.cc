@@ -422,6 +422,7 @@ void PlanningAdapter::Proc() {
     auto &header = planning_output.meta.header;
     header.timestamp = output_time_us;
     iflyauto::strcpy_array(header.version, __version_str__);
+    header.seq = frame_num_;
     // TODO
     // header->input_list_size =
     // local_view_ptr_->fusion_objects_info.header.input_list_size; for (int i =
