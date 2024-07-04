@@ -9,14 +9,18 @@
 int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type,
-                        const std::string mileage_path) {
+                        const std::string mileage_path, bool no_debug) {
   planning::planning_player::PlanningPlayer player;
 
-  if (!player.LoadRosBag(bag_path, out_bag, is_close_loop)) {
+  if (!player.LoadRosBag(bag_path, out_bag, is_close_loop, no_debug)) {
     return -1;
   }
-  player.Init(is_close_loop, auto_time_sec, scene_type);
-  player.PlayAllFrames();
+  player.Init(is_close_loop, auto_time_sec, scene_type, no_debug);
+  if (no_debug) {
+    player.NoDebugInfoMode();
+  } else {
+    player.PlayAllFrames();
+  }
   player.GenMileage(mileage_path);
   player.StoreRosBag(out_bag);
   return 0;
@@ -25,6 +29,7 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
 int main(int argc, char **argv) {
   std::string bag_path, out_bag, log_file;
   bool is_close_loop = false;
+  bool no_debug = false;
   std::string mileage_path = "";
   double auto_time_sec = 1.5;
   std::string scene_type = "scc";
@@ -38,7 +43,8 @@ int main(int argc, char **argv) {
       {"out-bag", required_argument, &lopt, 4},
       {"auto-time", required_argument, &lopt, 5},
       {"scene-type", required_argument, &lopt, 6},
-      {"mileage-path", required_argument, &lopt, 7}};
+      {"mileage-path", required_argument, &lopt, 7},
+      {"no-debug", no_argument, &lopt, 8}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -60,6 +66,8 @@ int main(int argc, char **argv) {
         std::cout << "--auto-time        time when enter auto, default 1.5"
                   << std::endl;
         std::cout << "--scene-type       acc/apa" << std::endl;
+        std::cout << "--no-debug         play without planning debug info"
+                  << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);
@@ -83,6 +91,9 @@ int main(int argc, char **argv) {
       case 7:
         mileage_path = std::string(optarg);
         break;
+      case 8:
+        no_debug = true;
+        break;
       default:
         std::cerr << "unknown option " << opt << std::endl;
         return -1;
@@ -102,5 +113,5 @@ int main(int argc, char **argv) {
   }
 
   return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
-                             scene_type, mileage_path);
+                             scene_type, mileage_path, no_debug);
 }

@@ -24,6 +24,8 @@ using PlanningMsgCache =
 using PlanningHmiMsgCache =
     std::map<std::string,
              std::map<ros::Time, struct_msgs::PlanningHMIOutputInfoStr>>;
+using PlanningDebugMsgCache =
+    std::map<std::string, std::map<ros::Time, sensor_interface::DebugInfo>>;
 
 class PlanningPlayer {
  public:
@@ -50,12 +52,13 @@ class PlanningPlayer {
   ~PlanningPlayer() = default;
 
   void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type);
+            const std::string &scene_type, bool no_debug);
   void Clear();
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
-                  bool is_close_loop);
+                  bool is_close_loop, bool no_debug);
   void StoreRosBag(const std::string &bag_path);
   void GenMileage(const std::string &mileage_path);
+  void NoDebugInfoMode();
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list);
   void PlayAllFrames();
@@ -83,6 +86,9 @@ class PlanningPlayer {
       output_planning_msg_cache_{};  // output cache indexed by msg time(ns)
   PlanningHmiMsgCache
       output_planning_hmi_msg_cache_{};  // output cache indexed by msg time(ns)
+  PlanningDebugMsgCache
+      output_planning_debug_msg_cache_{};  // output cache indexed by msg
+                                           // time(ns)
   std::map<uint64_t, boost::any> msg_cache_ordered_by_time_;
   std::map<std::string, std::string> proto_desc_map_{};
   ros::Time planning_msg_time_s_;
@@ -102,6 +108,7 @@ class PlanningPlayer {
   uint64_t next_vehi_svc_header_time_us_ = 0;
   uint64_t vehi_svc_header_time_us_ = 0;
   uint64_t planning_dubug_info_frame_num_ = 0;
+  uint64_t local_time_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
   iflyauto::FunctionalState last_functional_state =
@@ -132,6 +139,10 @@ class PlanningPlayer {
   template <class T>
   typename T::Ptr find_ros_msg_with_header_time(const std::string &topic,
                                                 uint64_t time);
+
+  template <class T>
+  typename T::Ptr find_ros_msg_with_header_time_upper_bound(
+      const std::string &topic, uint64_t time);
 
   inline bool check_msg_exist(TopicMsgTimeCache &msg_cache,
                               const std::string &topic_name) {
@@ -230,6 +241,21 @@ typename T::Ptr PlanningPlayer::find_ros_msg_with_header_time(
       // typename T::Ptr msg = it_time->second->instantiate<T>();
       typename T::Ptr msg = boost::any_cast<typename T::Ptr>(it_time->second);
 
+      return msg;
+    }
+  }
+  return nullptr;
+}
+
+template <class T>
+typename T::Ptr PlanningPlayer::find_ros_msg_with_header_time_upper_bound(
+    const std::string &topic, uint64_t time) {
+  auto it_topic = header_cache_.find(topic);
+  if (it_topic != header_cache_.end()) {
+    auto it_time = it_topic->second.lower_bound(time);
+    if (it_time != it_topic->second.end()) {
+      // typename T::Ptr msg = it_time->second->instantiate<T>();
+      typename T::Ptr msg = boost::any_cast<typename T::Ptr>(it_time->second);
       return msg;
     }
   }
