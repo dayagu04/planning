@@ -621,7 +621,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
       apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL) {
+          iflyauto::FunctionalState_PARK_GUIDANCE) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -632,7 +632,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
       apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL) {
+          iflyauto::FunctionalState_PARK_GUIDANCE) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -2040,9 +2040,7 @@ const bool PerpendicularInPlanner::CheckPlanSkip() const {
 
 const bool PerpendicularInPlanner::CheckPaused() {
   if (apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_SUSPEND_ACTIVATE ||
-      apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_SUSPEND_CLOSE) {
+      iflyauto::FunctionalState_PARK_SUSPEND) {
     return true;
   } else {
     return false;

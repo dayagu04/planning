@@ -195,17 +195,16 @@ void PlanningAdapter::Proc() {
   input_topic_latency->set_control_output(get_latency(
       start_time, local_view_ptr_->control_output.header.timestamp));
 
-  if (is_hmi_mcu_inner_info_msg_updated_) {
+  if (is_hmi_inner_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
-    local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
-    local_view_ptr_->hmi_mcu_inner_info_recv_time =
-        hmi_mcu_inner_info_msg_recv_time_;
-    is_hmi_mcu_inner_info_msg_updated_.store(false);
+    local_view_ptr_->hmi_inner_info = hmi_inner_info_msg_;
+    local_view_ptr_->hmi_inner_info_recv_time = hmi_inner_info_msg_recv_time_;
+    is_hmi_inner_info_msg_updated_.store(false);
   }
   input_topic_timestamp->set_hmi(
-      local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
+      local_view_ptr_->hmi_inner_info.header.timestamp);
   input_topic_latency->set_hmi(get_latency(
-      start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
+      start_time, local_view_ptr_->hmi_inner_info.header.timestamp));
 
   if (is_parking_fusion_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -285,9 +284,9 @@ void PlanningAdapter::Proc() {
 
   const auto &last_state = g_context.GetStatemachine().current_state;
 
-  if (last_state == iflyauto::FunctionalState_STANDBY &&
-      (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
-       current_state <= iflyauto::FunctionalState_PARK_IN_COMPLETED)) {
+  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+      (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+       current_state <= iflyauto::FunctionalState_PARK_COMPLETED)) {
     state_machine_g.apa_reset_flag = true;
   } else {
     state_machine_g.apa_reset_flag = false;
@@ -295,9 +294,10 @@ void PlanningAdapter::Proc() {
 
   // APA plan once when state machine changes from no ready to other parking in
   // state
-  if (last_state == iflyauto::FunctionalState_PARK_IN_NO_READY &&
-      (current_state == iflyauto::FunctionalState_PARK_IN_READY ||
-       current_state >= iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL)) {
+  // 泊车状态机改动太大，待确认：
+  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+      (current_state == iflyauto::FunctionalState_PARK_IN_SEARCHING ||
+       current_state >= iflyauto::FunctionalState_PARK_GUIDANCE)) {
     state_machine_g.apa_start_plan_once_flag = true;
   } else {
     state_machine_g.apa_start_plan_once_flag = false;

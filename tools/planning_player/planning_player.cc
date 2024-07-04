@@ -59,20 +59,13 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
       auto current_state = fsm_msg->current_state;
       bool acc_mode =
           (current_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_ACC_STAND_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_ACC_STAND_WAIT) ||
-          (current_state == iflyauto::FunctionalState_ACC_OVERRIDE) ||
-          (current_state == iflyauto::FunctionalState_ACC_SECURE);
+          (current_state == iflyauto::FunctionalState_ACC_OVERRIDE);
       bool scc_mode =
           (current_state == iflyauto::FunctionalState_SCC_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_SCC_STAND_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_SCC_STAND_WAIT) ||
-          (current_state == iflyauto::FunctionalState_SCC_OVERRIDE) ||
-          (current_state == iflyauto::FunctionalState_SCC_SECURE);
+          (current_state == iflyauto::FunctionalState_SCC_OVERRIDE);
       bool noa_mode =
           (current_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_NOA_OVERRIDE) ||
-          (current_state == iflyauto::FunctionalState_NOA_SECURE);
+          (current_state == iflyauto::FunctionalState_NOA_OVERRIDE);
       bool hpp_mode =
           (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY) ||
           (current_state ==
@@ -533,12 +526,12 @@ void PlanningPlayer::PlayOneFrame(
   }
 
   auto hmi_mcu_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs::HmiMcuInner>(
+      find_ros_msg_with_header_time<struct_msgs::HmiInner>(
           TOPIC_HMI_MCU_INNER, input_time_list.hmi());
   if (hmi_mcu_ros_msg) {
-    iflyauto::HmiMcuInner hmi_mcu_msg{};
-    convert(hmi_mcu_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
+    iflyauto::HmiInner hmi_inner_msg{};
+    convert(hmi_inner_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedHmiInner(hmi_inner_msg);
   } else {
     // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
   }
@@ -637,7 +630,7 @@ void PlanningPlayer::PlayOneFrame(
     if (scene_type_ == "acc") {
       functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
     } else if (scene_type_ == "apa") {
-      functional_state = iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL;
+      functional_state = iflyauto::FunctionalState_PARK_GUIDANCE;
     } else if (scene_type_ == "scc" || scene_type_ == "noa") {
       if (find_function_state_machine) {
         if (is_close_loop) {

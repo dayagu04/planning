@@ -253,9 +253,9 @@ void SlotManagement::AddUssPerceptObstacles() {
 
 bool SlotManagement::IsInAPAState() const {
   if ((frame_.func_state_ptr->current_state >=
-           iflyauto::FunctionalState_PARK_IN_APA_IN &&
+           iflyauto::FunctionalState_PARK_IN_SEARCHING &&
        frame_.func_state_ptr->current_state <=
-           iflyauto::FunctionalState_PARK_IN_COMPLETED) ||
+           iflyauto::FunctionalState_PARK_COMPLETED) ||
       frame_.param.force_apa_on) {
     DEBUG_PRINT("apa in at present");
     return true;
@@ -300,9 +300,7 @@ void SlotManagement::Preprocess() {
 
 bool SlotManagement::IsInSearchingState() const {
   if ((frame_.func_state_ptr->current_state >=
-           iflyauto::FunctionalState_PARK_IN_APA_IN &&
-       frame_.func_state_ptr->current_state <=
-           iflyauto::FunctionalState_PARK_IN_NO_READY) ||
+           iflyauto::FunctionalState_PARK_IN_SEARCHING) ||
       (frame_.param.force_apa_on && (!frame_.param.is_switch_parking))) {
     return true;
   }
@@ -2345,13 +2343,11 @@ const double SlotManagement::CalAngleSlot2Car(
 
 bool SlotManagement::IsInParkingState() const {
   if ((frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT ||
+           iflyauto::FunctionalState_PARK_IN_SEARCHING ||
        frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL ||
+           iflyauto::FunctionalState_PARK_GUIDANCE ||
        frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_IN_SUSPEND_ACTIVATE ||
-       frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_IN_SUSPEND_CLOSE) ||
+           iflyauto::FunctionalState_PARK_SUSPEND) ||
       (frame_.param.force_apa_on && frame_.param.is_switch_parking)) {
     return true;
   }
@@ -3136,13 +3132,13 @@ void SlotManagement::Log() {
 
 void SlotManagement::FinishApa() {
   if (frame_.func_state_ptr->current_state ==
-          iflyauto::FunctionalState_PARK_IN_COMPLETED ||
+          iflyauto::FunctionalState_PARK_COMPLETED ||
+      // frame_.func_state_ptr->current_state ==
+      //     iflyauto::FunctionalState_PARK_IN_SECURE ||
+      // frame_.func_state_ptr->current_state ==
+      //     iflyauto::FunctionalState_PARK_OUT_COMPLETED ||
       frame_.func_state_ptr->current_state ==
-          iflyauto::FunctionalState_PARK_IN_SECURE ||
-      frame_.func_state_ptr->current_state ==
-          iflyauto::FunctionalState_PARK_OUT_COMPLETED ||
-      frame_.func_state_ptr->current_state ==
-          iflyauto::FunctionalState_PARK_OUT_SECURE) {
+          iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
     DebugInfoManager::GetInstance()
         .GetDebugInfoPb()
         ->clear_slot_management_info();

@@ -90,9 +90,9 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
       local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if (last_state == iflyauto::FunctionalState_STANDBY &&
-      (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
-       current_state <= iflyauto::FunctionalState_PARK_IN_COMPLETED)) {
+  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+      (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+       current_state <= iflyauto::FunctionalState_PARK_COMPLETED)) {
     Reset();
   }
 
@@ -106,7 +106,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "PERPENDICULAR_SIMULATION\n";
   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   // if (current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT ||
-  //     current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL ||
+  //     current_state == iflyauto::FunctionalState_PARK_GUIDANCE ||
   //     current_state == iflyauto::FunctionalState_PARK_IN_SECURE) {
   //   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   // }

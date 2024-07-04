@@ -41,7 +41,7 @@ class ApaWorld {
   struct Measurements {
     // systems states
     uint8_t planner_type = NONE_PLANNER;
-    uint8_t current_state = iflyauto::FunctionalState_STANDBY;
+    uint8_t current_state = iflyauto::FunctionalState_PARK_STANDBY;
     uint8_t general_apa_function = GeneralApaFunction::NONE_FUNCTION;
 
     // measurements
@@ -75,7 +75,7 @@ class ApaWorld {
       car_static_timer_by_vel_strict = 0.0;
       car_static_timer_by_vel_normal = 0.0;
       static_flag = false;
-      current_state = iflyauto::FunctionalState_STANDBY;
+      current_state = iflyauto::FunctionalState_PARK_STANDBY;
       is_slot_type_fixed = false;
     }
   };

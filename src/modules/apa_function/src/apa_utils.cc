@@ -16,9 +16,9 @@ bool IsSlotSelected(framework::Session* session) {
                                        .function_state_machine_info;
 
   if (func_state_machine.current_state >=
-          iflyauto::FunctionalState_PARK_IN_SELECT &&
+          iflyauto::FunctionalState_PARK_GUIDANCE &&
       func_state_machine.current_state <=
-          iflyauto::FunctionalState_PARK_OUT_SECURE) {
+          iflyauto::FunctionalState_PARK_COMPLETED) {
     return true;
   }
 
@@ -27,9 +27,11 @@ bool IsSlotSelected(framework::Session* session) {
 
 bool IsReplanEachFrame(const iflyauto::FuncStateMachine& func_state_machine) {
   if (func_state_machine.current_state >=
-          iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-      func_state_machine.current_state <=
-          iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT) {
+      iflyauto::FunctionalState_PARK_IN_SEARCHING
+      //     &&
+      // func_state_machine.current_state <=
+      //     iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT
+  ) {
     return true;
   }
 
@@ -39,7 +41,7 @@ bool IsReplanEachFrame(const iflyauto::FuncStateMachine& func_state_machine) {
 bool IsReplanNecessary(const iflyauto::FuncStateMachine& func_state_machine) {
   return IsReplanEachFrame(func_state_machine) ||
          func_state_machine.current_state ==
-             iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL;
+             iflyauto::FunctionalState_PARK_GUIDANCE;
 }
 
 void SetStoppingPlanningOutput(iflyauto::PlanningOutput& planning_output,
@@ -93,8 +95,8 @@ void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
 bool IsValidParkingState(const iflyauto::FunctionalState& current_state) {
   std::cout << "current_state:" << current_state << std::endl;
 
-  if (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
-      current_state <= iflyauto::FunctionalState_PARK_OUT_COMPLETED) {
+  if (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+      current_state <= iflyauto::FunctionalState_PARK_COMPLETED) {
     return true;
   }
   return false;

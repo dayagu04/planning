@@ -422,7 +422,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
       local_view.vehicle_service_output_info;
   const auto &localization_estimate = local_view.localization_estimate;
   const auto &localization = local_view.localization;
-  const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
+  // const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
+  // const auto &hmi_inner_info = local_view.hmi_inner_info;
+  const auto &function_state_machine_info = local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(
       vehicle_service_output_info.header.timestamp);
 
@@ -497,7 +499,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
-      hmi_mcu_inner_info.acc_set_real_speed);
+      function_state_machine_info.pilot_req.acc_curise_real_spd);
 
   if (vehicle_service_output_info.yaw_rate_available) {
     vehicle_status.mutable_angular_velocity()->set_available(true);

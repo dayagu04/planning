@@ -174,30 +174,35 @@ const bool ApaWorld::CheckSelectedSlot() const {
 
 const bool ApaWorld::CheckParkInState() const {
   return (local_view_ptr_->function_state_machine_info.current_state >=
-              iflyauto::FunctionalState_PARK_IN_APA_IN &&
+              iflyauto::FunctionalState_PARK_IN_SEARCHING &&
           local_view_ptr_->function_state_machine_info.current_state <=
-              iflyauto::FunctionalState_PARK_IN_COMPLETED);
+              iflyauto::FunctionalState_PARK_COMPLETED);
 }
 
 const bool ApaWorld::CheckParkInActivated() const {
   return (local_view_ptr_->function_state_machine_info.current_state >=
-              iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT &&
+              iflyauto::FunctionalState_PARK_IN_SEARCHING &&
           local_view_ptr_->function_state_machine_info.current_state <=
-              iflyauto::FunctionalState_PARK_IN_COMPLETED);
+              iflyauto::FunctionalState_PARK_COMPLETED);
 }
 
 const bool ApaWorld::CheckParkOutState() const {
-  return (local_view_ptr_->function_state_machine_info.current_state >=
-              iflyauto::FunctionalState_PARK_OUT_SEARCHING &&
-          local_view_ptr_->function_state_machine_info.current_state <=
-              iflyauto::FunctionalState_PARK_OUT_COMPLETED);
+  // 状态机大改，需要重新梳理
+  return (local_view_ptr_->function_state_machine_info.current_state ==
+          iflyauto::FunctionalState_PARK_OUT_SEARCHING
+          //     &&
+          // local_view_ptr_->function_state_machine_info.current_state <=
+          //     iflyauto::FunctionalState_PARK_OUT_COMPLETED
+  );
 }
 
 const bool ApaWorld::CheckParkOutActivated() const {
-  return (local_view_ptr_->function_state_machine_info.current_state >=
-              iflyauto::FunctionalState_PARK_OUT_ACTIVATE &&
-          local_view_ptr_->function_state_machine_info.current_state <=
-              iflyauto::FunctionalState_PARK_OUT_COMPLETED);
+  // 状态机大改，需要重新梳理
+  // return (local_view_ptr_->function_state_machine_info.current_state >=
+  //             iflyauto::FunctionalState_PARK_OUT_ACTIVATE &&
+  //         local_view_ptr_->function_state_machine_info.current_state <=
+  //             iflyauto::FunctionalState_PARK_OUT_COMPLETED);
+  return false;
 }
 const bool ApaWorld::Update() {
   // preprocess measurements

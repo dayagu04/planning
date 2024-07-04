@@ -6,7 +6,6 @@
 #include "ehr_sdmap.pb.h"
 #include "gflags/gflags.h"
 #include "log.h"
-
 #include "struct_container.pb.h"
 
 namespace planning {
@@ -134,11 +133,10 @@ bool PlanningComponent::Init() {
   auto hmi_reader_ = planning_node_->CreateReader<iflyauto::StructContainer>(
       "/iflytek/hmi/mcu_inner",
       [this](const std::shared_ptr<iflyauto::StructContainer>
-                 &hmi_mcu_inner_info_msg) {
+                 &hmi_inner_info_msg) {
         const auto &hmi_mcu_inner_struct =
-            *iflyauto::struct_cast<iflyauto::HmiMcuInner>(
-                hmi_mcu_inner_info_msg);
-        planning_adapter_->FeedHmiMcuInner(hmi_mcu_inner_struct);
+            *iflyauto::struct_cast<iflyauto::HmiInner>(hmi_inner_info_msg);
+        planning_adapter_->FeedHmiInner(hmi_mcu_inner_struct);
       });
 
   auto parking_fusion_info_reader_ =

@@ -5,11 +5,13 @@ namespace planning {
 void TrafficSignRecognition::Update() {
   // 获取TSR开关状态
   tsr_sys_.input.tsr_main_switch =
-      session_->mutable_environmental_model()->get_hmi_info().tsr_main_switch;
+      session_->environmental_model()
+          .get_local_view()
+          .function_state_machine_info.switch_sts.tsr_main_switch;
 
   // 当前车道的限速值 缺少接口
-  auto ptr_current_lane = session_->mutable_environmental_model()
-                              ->get_virtual_lane_manager()
+  auto ptr_current_lane = session_->environmental_model()
+                              .get_virtual_lane_manager()
                               ->get_current_lane();
   tsr_sys_.input.tsr_speed_limit = ptr_current_lane->get_ego_lateral_offset();
 
