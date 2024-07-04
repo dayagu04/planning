@@ -555,6 +555,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lon_rear_car_filter_buffer = 0.;
   double refine_lat_ref_threshold = 0.5;
   double delta_t = 0.2;
+  double num_step = 25;
   double sample_step = 1.4;
   double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;

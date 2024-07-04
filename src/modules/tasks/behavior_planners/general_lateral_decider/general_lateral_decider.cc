@@ -1,4 +1,5 @@
 #include "general_lateral_decider.h"
+#include "frenet_ego_state.h"
 #include "general_lateral_decider_utils.h"
 #include <assert.h>
 
@@ -178,27 +179,26 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     double ego_v = planning_init_point.v;
     double cruise_v = CalCruiseVelByCurvature(ego_v, flane->get_center_line());
     double s = 0.0;
-    double plan_t = 5.0;
+    double span_t = config_.delta_t * config_.num_step;
     if (ego_v < cruise_v) {
       double t = (cruise_v - ego_v) / kMaxAcc;
-      if (t > plan_t) {
-        s = ego_v * plan_t + 0.5 * kMaxAcc * plan_t * plan_t;
+      if (t > span_t) {
+        s = ego_v * span_t + 0.5 * kMaxAcc * span_t * span_t;
       } else {
         s = ego_v * t + 0.5 * kMaxAcc * t * t;
-        s += (plan_t - t) * cruise_v;
+        s += (span_t - t) * cruise_v;
       }
     } else {
       double t = (cruise_v - ego_v) / kMinAcc;
-      if (t > plan_t) {
-        s = ego_v * plan_t + 0.5 * kMinAcc * plan_t * plan_t;
+      if (t > span_t) {
+        s = ego_v * span_t + 0.5 * kMinAcc * span_t * span_t;
       } else {
         s = ego_v * t + 0.5 * kMinAcc * t * t;
-        s += (plan_t - t) * cruise_v;
+        s += (span_t - t) * cruise_v;
       }
     }
-    double avg_cruise_v = s / plan_t;
-    double delta_time = 0.2;
-    double delta_s = avg_cruise_v * delta_time;
+    double avg_cruise_v = s / span_t;
+    double delta_s = avg_cruise_v * config_.delta_t;
     Point2D cart_init_point(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());
     const auto &frenet_coord =
@@ -214,7 +214,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     traj_points.clear();
     TrajectoryPoint point;
     constexpr double kEps = 1e-4;
-    for (size_t i = 0; i < 26; ++i) {
+    for (size_t i = 0; i < config_.num_step + 1; ++i) {
       // cart info
       if (s_ref < cart_ref_info.s_vec.back() + kEps) {
         point.x = cart_ref_info.x_s_spline(s_ref);
@@ -230,7 +230,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       frenet_coord->XYToSL(cart_pt, frenet_pt);
       point.s = frenet_pt.x;
       point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * delta_time;
+      point.t = static_cast<double>(i) * config_.delta_t;
 
       s_ref += delta_s;
       traj_points.emplace_back(point);
@@ -304,6 +304,8 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   const auto &frenet_coord =
       session_->planning_context().lane_change_decider_output().coarse_planning_info.reference_path->get_frenet_coord();
   auto &last_traj_points = session_->mutable_planning_context()->mutable_last_planning_result().raw_traj_points;
+
+  TrajectoryPoints plan_history_traj_tmp;
   for (size_t i = 0; i < last_traj_points.size(); ++i) {
     // frenet info
     Point2D frenet_pt{0.0, 0.0};
@@ -311,14 +313,52 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     frenet_coord->XYToSL(cart_pt, frenet_pt);
     last_traj_points[i].s = frenet_pt.x;
     last_traj_points[i].l = frenet_pt.y;
-    last_traj_points[i].t = last_traj_points[i].t;
-    // TODO(clren):可能存在一帧时间差异
-    plan_history_traj_.emplace_back(last_traj_points[i]);
+    plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+  }
+  if (plan_history_traj_tmp.empty()) {
+    return false;
+  }
+  auto ego_s = ego_frenet_state_.s();
+  if (ego_s <= plan_history_traj_tmp.front().s || ego_s >= plan_history_traj_tmp.back().s) {
+
+  } else {
+    int index = 1;
+    while(index < plan_history_traj_tmp.size()) {
+      if (plan_history_traj_tmp[index].s >= ego_s) {
+        break;
+      }
+      index ++;
+    }
+    const auto &traj_1 = plan_history_traj_tmp[index - 1];
+    const auto &traj_2 = plan_history_traj_tmp[index];
+
+    const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
+    const double weight1 = 1.0 - weight0;
+    const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
+    for (double t = base_t; t <= plan_history_traj_tmp.back().t; t += config_.delta_t) {
+      TrajectoryPoint pt = general_lateral_decider_utils::GetTrajectoryPointAtTime(plan_history_traj_tmp, t);
+      plan_history_traj_.emplace_back(std::move(pt));
+    }
+
+    for (auto &traj : plan_history_traj_) {
+      traj.t -= base_t;
+    }
+
+    if (plan_history_traj_.size() == 0) {
+    } else {
+      for (int point_num = plan_history_traj_.size(); point_num < config_.num_step + 1; point_num ++) {
+        TrajectoryPoint pt = plan_history_traj_.back();
+        // For now, only s and t are modified
+        pt.s += pt.v * config_.delta_t;
+        pt.t += config_.delta_t;
+        plan_history_traj_.emplace_back(std::move(pt));
+      }
+    }
   }
 
   for (int i = 0; i < plan_history_traj_.size(); i++) {
-    double plan_history_traj__point_s = plan_history_traj_[i].s;
-    std::vector<int> match_indexes = general_lateral_decider_utils::match_ref_traj_points(plan_history_traj__point_s, ref_traj_points_);
+    double plan_history_traj_point_s = plan_history_traj_[i].s;
+    std::vector<int> match_indexes = general_lateral_decider_utils::MatchRefTrajPoints(plan_history_traj_point_s, ref_traj_points_);
     match_index_map_[i] = std::move(match_indexes);
   }
   return true;

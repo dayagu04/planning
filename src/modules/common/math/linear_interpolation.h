@@ -90,6 +90,10 @@ planning::PredictionTrajectoryPoint InterpolateUsingLinearApproximation(
 iflyauto::TrajectoryPoint InterpolateUsingLinearApproximation(
     const iflyauto::TrajectoryPoint &p0, const iflyauto::TrajectoryPoint &p1,
     const double s);
+
+TrajectoryPoint InterpolateUsingLinearApproximation(
+    const TrajectoryPoint &p0, const TrajectoryPoint &p1,
+    const double t);
 }  // namespace planning_math
 }  // namespace planning
 

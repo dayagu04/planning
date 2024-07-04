@@ -1,4 +1,5 @@
 #include "general_lateral_decider_utils.h"
+#include "common/math/linear_interpolation.h"
 #include <cassert>
 
 namespace planning {
@@ -45,7 +46,7 @@ int GetBoundTypePriority(BoundType type) {
 }
 
 
-std::vector<int> match_ref_traj_points(int s, const TrajectoryPoints &ref_traj_points) {
+std::vector<int> MatchRefTrajPoints(int s, const TrajectoryPoints &ref_traj_points) {
   assert(ref_traj_points.size() >= 1);
   int left_index = 0;
   int right_index = ref_traj_points.size() - 1;
@@ -83,5 +84,29 @@ std::vector<int> match_ref_traj_points(int s, const TrajectoryPoints &ref_traj_p
 
 }
 
+TrajectoryPoint GetTrajectoryPointAtTime(const TrajectoryPoints trajectory_points,
+    const double relative_time) {
+  const auto &points = trajectory_points;
+  if (trajectory_points.size() == 0) {
+
+  } else if (trajectory_points.size() == 1) {
+
+  } else {
+    auto comp = [](const TrajectoryPoint &p, const double time) {
+      return p.t < time;
+    };
+
+    auto it_lower =
+        std::lower_bound(points.begin(), points.end(), relative_time, comp);
+
+    if (it_lower == points.begin()) {
+      return *points.begin();
+    } else if (it_lower == points.end()) {
+      return *points.rbegin();
+    }
+    return planning_math::InterpolateUsingLinearApproximation(
+        *(it_lower - 1), *it_lower, relative_time);
+  }
+  }
 }
 }

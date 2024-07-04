@@ -14,6 +14,9 @@ double CalDesireLonDistance(double ego_vel, double agent_vel);
 
 int GetBoundTypePriority(BoundType type);
 
-std::vector<int> match_ref_traj_points(int s, const TrajectoryPoints &ref_traj_points);
+std::vector<int> MatchRefTrajPoints(int s, const TrajectoryPoints &ref_traj_points);
+
+TrajectoryPoint GetTrajectoryPointAtTime(const TrajectoryPoints trajectory_points,
+    const double relative_time);
 }
 }
