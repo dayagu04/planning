@@ -3,6 +3,7 @@
 namespace planning {
 namespace planning_player {
 
+/*
 void StaticMapToProto(Map::StaticMap &obj, proto_msgs::StaticMap &msg) {
   // static start
   // header
@@ -256,6 +257,7 @@ void StaticMapToProto(Map::StaticMap &obj, proto_msgs::StaticMap &msg) {
 
   // static end
 }
+*/
 
 }  // namespace planning_player
 }  // namespace planning
