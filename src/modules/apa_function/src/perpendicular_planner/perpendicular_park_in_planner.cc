@@ -76,6 +76,7 @@ void PerpendicularInPlanner::PlanCore() {
     SetParkingStatus(PARKING_PAUSED);
     if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
       SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
     }
     return;
   }
@@ -87,6 +88,7 @@ void PerpendicularInPlanner::PlanCore() {
   if (!UpdateEgoSlotInfo()) {
     DEBUG_PRINT("update ego slot info");
     SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
     return;
   }
 
@@ -101,6 +103,7 @@ void PerpendicularInPlanner::PlanCore() {
   if (CheckStuckFailed()) {
     DEBUG_PRINT("check stuck failed!");
     SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 
@@ -1017,6 +1020,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   if (!path_plan_success && !is_simulation_ && !frame_.is_replan_dynamic) {
     DEBUG_PRINT("path plan fail");
     plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = PATH_PLAN_FAILED;
     return plan_result;
   }
 
@@ -1031,6 +1035,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   if (!perpendicular_path_planner_.SetCurrentPathSegIndex()) {
     DEBUG_PRINT("path plan fail");
     plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = SET_SEG_INDEX;
     return plan_result;
   }
 
@@ -1042,6 +1047,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   if (!perpendicular_path_planner_.CheckCurrentGearLength()) {
     DEBUG_PRINT("path plan fail");
     plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = CHECK_GEAR_LENGTH;
     return plan_result;
   }
 
@@ -1529,9 +1535,9 @@ void PerpendicularInPlanner::GenPlanningPath() {
   trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
 
   size_t N = current_path_point_global_vec_.size();
-  if (N > PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM) {
+  if (N > PLANNING_TRAJ_POINTS_NUM - 1) {
     std::cout << "sample ds is possible err\n";
-    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+    N = PLANNING_TRAJ_POINTS_NUM - 1;
   }
   trajectory->trajectory_points_size = N;
 
@@ -1903,6 +1909,7 @@ const bool PerpendicularInPlanner::PostProcessPath() {
   if (origin_trajectory_size < 2) {
     frame_.spline_success = false;
     DEBUG_PRINT("error: origin_trajectory_size = " << origin_trajectory_size);
+    frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
     return false;
   }
 
@@ -1950,6 +1957,7 @@ const bool PerpendicularInPlanner::PostProcessPath() {
   if (success == false) {
     frame_.spline_success = false;
     DEBUG_PRINT("fit line by spline error!");
+    frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SAME;
     return false;
   }
 
@@ -2072,6 +2080,7 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("static_flag",
                    apa_world_ptr_->GetMeasurementsPtr()->static_flag)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
+  JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
   JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
   JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
 

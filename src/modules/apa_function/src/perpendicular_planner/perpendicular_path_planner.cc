@@ -2621,9 +2621,12 @@ const bool PerpendicularPathPlanner::SampleCurrentPathSeg() {
   }
   size_t N = std::ceil(length / input_.sample_ds);
   double sample_ds = input_.sample_ds;
-  if (N >= PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM) {
-    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
-    sample_ds = length / N;
+  const size_t max_seg_count = 7;
+  if (N >= PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM -
+               max_seg_count) {
+    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM -
+        max_seg_count;
+    sample_ds = length / static_cast<double>(N);
   }
 
   pnc::geometry_lib::PathPoint path_point;
@@ -2640,6 +2643,10 @@ const bool PerpendicularPathPlanner::SampleCurrentPathSeg() {
       output_.path_point_vec.pop_back();
     }
   }
+
+  JSON_DEBUG_VALUE("current_gear_length", length);
+  JSON_DEBUG_VALUE("current_gear_pt_size", output_.path_point_vec.size());
+  JSON_DEBUG_VALUE("sample_ds", sample_ds);
 
   return true;
 }
@@ -2669,10 +2676,14 @@ void PerpendicularPathPlanner::SampleLineSegment(
       s += ds;
     }
   }
-
-  // get last point
-  path_point.Set(cur_line_seg.pB, cur_line_seg.heading);
-  output_.path_point_vec.emplace_back(path_point);
+  // check the dist of the last point and end point
+  const double dist =
+      (output_.path_point_vec.back().pos - cur_line_seg.pB).norm();
+  if (dist > 1e-2) {
+    // get end point
+    path_point.Set(cur_line_seg.pB, cur_line_seg.heading);
+    output_.path_point_vec.emplace_back(path_point);
+  }
 }
 
 void PerpendicularPathPlanner::SampleArcSegment(
@@ -2712,11 +2723,14 @@ void PerpendicularPathPlanner::SampleArcSegment(
     }
   }
 
-  // get last point
-  path_point.Set(current_arc_seg.pB,
-                 pnc::geometry_lib::NormalizeAngle(current_arc_seg.headingB));
-
-  output_.path_point_vec.emplace_back(path_point);
+  // check the dist of the last point and end point
+  const double dist =
+      (output_.path_point_vec.back().pos - current_arc_seg.pB).norm();
+  if (dist > 1e-2) {
+    // get end point
+    path_point.Set(current_arc_seg.pB, current_arc_seg.headingB);
+    output_.path_point_vec.emplace_back(path_point);
+  }
 }
 // sample path end
 

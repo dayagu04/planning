@@ -737,6 +737,16 @@ def findrt(data, t):
 
   return False, ""
 
+def findt_json(data, t):
+  '''
+  find data based on absolute t
+  '''
+  for index, timestamp in enumerate(data['abs_t']):
+    if t == timestamp:
+      return True, data['json'][index]
+
+  return False, ""
+
 def findrt_json(data, t):
   '''
   find data based on relative t (sub the 0 time)
@@ -2005,7 +2015,7 @@ def GenerateJsonValueData(json_data, json_time_list, json_value_list):
                 scale = 1.0
                 if json_value_list[i] == "throttle_brake":
                     if json_data[j][json_value_list[i]]>0:
-                       scale = 0.001
+                       scale = 1.0
                     else:
                        scale = 1.0
                 tmp.append(json_data[j][json_value_list[i]] * scale)
