@@ -411,6 +411,7 @@ class SlotManagement {
       fusion_order_error_cnt = 0;
       no_update_slot_count = 0;
       parallel_slot_reseted_once = false;
+      is_side_calc_in_parking = false;
       ego_slot_info.Reset();
       obstacle_point_vec.clear();
       obs_pt_map.clear();
