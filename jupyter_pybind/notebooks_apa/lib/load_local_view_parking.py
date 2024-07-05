@@ -1532,7 +1532,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       datas.append(str(fus_release_solts_id))
 
       names.append("plan_gear_cmd")
-      datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].gear_command))
+      gear_command = bag_loader.plan_msg['data'][plan_msg_idx].gear_command.gear_command_value
+      gear_command_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+      gear = gear_command_dict.get(gear_command, 'UNKNOWN')
+      datas.append(str(gear_command) + ": " + str(gear))
 
       names.append("plan_traj_available")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
@@ -1607,10 +1610,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['break_override_flag'])
       names.append("gear_shifting_flag")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_shifting_flag'])
+
       names.append("gear_cmd")
-      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_cmd'])
+      ctrl_gear_cmd = ctrl_json_data[ctrl_debug_msg_idx]['gear_cmd']
+      ctrl_gear_cmd_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+      ctrl_gear = ctrl_gear_cmd_dict.get(ctrl_gear_cmd, 'UNKNOWN')
+      datas.append(str(ctrl_gear_cmd) + ": " + str(ctrl_gear))
+
       names.append("gear_real")
-      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['gear_real'])
+      ctrl_gear_real = ctrl_json_data[ctrl_debug_msg_idx]['gear_real']
+      ctrl_gear_real_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+      ctrl_gear = ctrl_gear_real_dict.get(ctrl_gear_real, 'UNKNOWN')
+      datas.append(str(ctrl_gear_real) + ": " + str(ctrl_gear))
 
     local_view_data['ctrl_debug_data'].data.update({
       'name': names,
@@ -1981,7 +1992,7 @@ def load_local_view_figure_parking():
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_post, size=3, color='orange', legend_label = 'dluss_post', visible = True)
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
-  fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_obj', visible = True)
+  fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
 
   # toolbar
@@ -2448,8 +2459,8 @@ ground_line_params={
 
 fus_objects_params={
   "size" : 3,
-  "color" : 'green',
-  "legend_label" : 'fus objects',
+  "color" : 'blue',
+  "legend_label" : 'fusion_objects',
   "visible" : True
 }
 
@@ -3516,7 +3527,10 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             datas.append(str(plan_msg.successful_slot_info_list))
 
             names.append("plan_gear_cmd")
-            datas.append(str(plan_msg.gear_command))
+            gear_command = plan_msg.gear_command.gear_command_value
+            gear_command_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+            gear = gear_command_dict.get(gear_command, 'UNKNOWN')
+            datas.append(str(gear_command) + ": " + str(gear))
 
             names.append("plan_traj_available")
             datas.append(str(plan_msg.trajectory.available))
@@ -3602,10 +3616,18 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             datas.append(ctrl_debug_msg['break_override_flag'])
             names.append("gear_shifting_flag")
             datas.append(ctrl_debug_msg['gear_shifting_flag'])
+
             names.append("gear_cmd")
-            datas.append(ctrl_debug_msg['gear_cmd'])
+            ctrl_gear_cmd = ctrl_debug_msg['gear_cmd']
+            ctrl_gear_cmd_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+            ctrl_gear = ctrl_gear_cmd_dict.get(ctrl_gear_cmd, 'UNKNOWN')
+            datas.append(str(ctrl_gear_cmd) + ": " + str(ctrl_gear))
+
             names.append("gear_real")
-            datas.append(ctrl_debug_msg['gear_real'])
+            ctrl_gear_real = ctrl_debug_msg['gear_real']
+            ctrl_gear_real_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+            ctrl_gear = ctrl_gear_real_dict.get(ctrl_gear_real, 'UNKNOWN')
+            datas.append(str(ctrl_gear_real) + ": " + str(ctrl_gear))
         else:
           print('find ctrl_debug_msg error')
         data_ctrl_debug_data.xys.append((names, datas, [None] * len(names)))
