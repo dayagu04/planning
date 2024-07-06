@@ -22,7 +22,7 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-39-12/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-39-12_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240704/20240704-03-30-34/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-04-03-30-34_no_camera.bag"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -404,7 +404,7 @@ class ScalarGenerator(DataGeneratorBase):
 
                 elif val_type == 'lead_one_dis':
                     ys.append(round(v['lead_one_dis'], 2))
-                
+
                 elif val_type == 'acc_cipv':
                     ys.append(round(v['acc_cipv'], 2))
 
@@ -1107,12 +1107,12 @@ def draw_rt_table(plan_debug_msg, layer_manager):
 
     return tab_rt_layer.plot
 
-def draw_fsm_state(soc_state_msg): 
+def draw_fsm_state(soc_state_msg):
     data_fsm_state_command = ColumnDataSource(data ={
     'time': [],
     'fsm_cur_state':[],
     })
-  
+
     t_soc_state = []
     fsm_cur_state = []
 
@@ -1134,7 +1134,7 @@ def draw_fsm_state(soc_state_msg):
     fig_fsm_state.add_tools(hover_fsm_state)
     fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
     fig_fsm_state.legend.click_policy = 'hide'
-    
+
     return fig_fsm_state
 
 def plotOnce(bag_path, html_file):

@@ -313,7 +313,7 @@ class LoadRosbag:
     except:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines topic !!!')
-
+    print('mobileye_lane_lines_msg[enable]:', self.mobileye_lane_lines_msg['enable'])
     # load rdg lane_lines msg
     try:
       rdg_lane_lines_msg_dict = {}

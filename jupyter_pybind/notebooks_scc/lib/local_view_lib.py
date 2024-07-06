@@ -1286,33 +1286,34 @@ def draw_local_view(dataLoader, layer_manager):
     # 加载mobileye车道线
     coord_tf = coord_transformer()
     mobileye_lane_lines_generator_dict = {}
-    if dataLoader.mobileye_lane_lines_msg['enable'] == False:
+    if dataLoader.mobileye_lane_lines_msg['enable'] == True:
       for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
         flag, mobileye_lane_lines_msg = findME(dataLoader.mobileye_lane_lines_msg, fusion_road_timestamps[i])
         loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
         for index in range(12) :
+          if index >= mobileye_lane_lines_msg.lane_line_size:
+            break
           mobileye_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
-          mobileye_lane_generator_key = 'mobileye_lane_' + str(index)
+          mobileye_lane_generator_key = f'mobileye_lane_{index}'
           if (mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys()) == False:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key] = LineGenerator('mobileye_line')
           if not flag or loc_msg == None:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
             continue
 
-          if index >= mobileye_lane_lines_msg.num:
-            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
-            continue
-
           lane = mobileye_lane_lines_msg.lane_line[index]
+          try:
+            line_segment = lane.line_segments[0]
+          except:
+            print('mobileye_lane_lines_msg.lane_line.line_segments are empty!')
+            break
           fig_index = lane.pos_type
-          line_x, line_y = gen_line(lane.a0, lane.a1, lane.a2, lane.a3, lane.start, lane.end)
+          line_x, line_y = gen_line(line_segment.a0, line_segment.a1, line_segment.a2,
+                                    line_segment.a3, line_segment.start, line_segment.end)
           mobileye_lane_info['line_x_vec'] = line_x
           mobileye_lane_info['line_y_vec'] = line_y
-          tp = lane.marking_segments[0].marking
-          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-            mobileye_lane_info['type'] = ['dashed']
-          else:
-            mobileye_lane_info['type'] = ['solid']
+          line_type = lane.marking_segments[0].marking
+          mobileye_lane_info['type'] = ['dashed'] if line_type in {0, 1, 3, 4} else ['solid']
           mobileye_lane_info['fix_index'] = [fig_index]
           mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append((mobileye_lane_info['line_y_vec'] , \
                                                                                       mobileye_lane_info['line_x_vec'] , \
