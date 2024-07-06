@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
 #include "apa_plan_base.h"
 #include "collision_detection.h"
 #include "dubins_lib.h"
@@ -158,6 +159,12 @@ class ParallelPathPlanner {
     pnc::geometry_lib::LineSegment prepare_line;  // pA is tag point
     Eigen::Vector2d v_target_line = Eigen::Vector2d::Zero();
     Eigen::Vector2d v_prepare_line = Eigen::Vector2d::Zero();
+
+    double min_outer_front_corner_radius = 5.5;
+    double min_inner_rear_corner_radius = 5.5;
+    Eigen::Vector2d v_ego_farest_front_corner = Eigen::Vector2d::Zero();
+    Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
+
     std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
     std::vector<pnc::geometry_lib::PathSegment> inversed_park_out_path;
     std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
@@ -182,6 +189,10 @@ class ParallelPathPlanner {
       triple_step_path.reserve(6);
       valid_target_pt_vec.clear();
       valid_target_pt_vec.reserve(20);
+      min_outer_front_corner_radius = 5.5;
+      min_inner_rear_corner_radius = 5.5;
+      v_ego_farest_front_corner = Eigen::Vector2d::Zero();
+      v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
     }
   };
 
@@ -191,6 +202,8 @@ class ParallelPathPlanner {
   const bool Update();
   const bool Update(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
+
+  const bool CheckTlaneAvailable() const;
 
   const bool SetCurrentPathSegIndex();
   void SetLineSegmentHeading();
@@ -249,17 +262,35 @@ class ParallelPathPlanner {
 
   void GenPathOutputByDubins();
 
+  void GetPathSegVecByDubins(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+
   // normal plan
-  const bool MonoStepPlan();
+  const bool PlanFromTargetToEgoLine();
+
+  const bool PlanFromTargetToLine(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose);
+
   const bool MonoStepPlanWithShift();
   const bool MonoStepPlanOnceWithShift(
       bool &is_drive_out_safe, pnc::geometry_lib::PathPoint &target_pose);
   const bool BackwardNormalPlan();
+
+  const bool BackwardNormalPlan(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose);
   const bool BackWardTripleStepPlan();
   const bool BackWardTripleStepPlanOnce(
       std::vector<pnc::geometry_lib::PathSegment> &inversed_park_out_path,
       const double arc_length, const double line_length,
       const double park_out_target_heading);
+
+  const bool OneStepDubinsTryInTripplePlan(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose);
+  // optimized prepare plan
+  const bool OutsideSlotPlan();
 
   const bool CheckEgoInSlot() const;
   const bool CalMinSafeCircle();
@@ -479,6 +510,8 @@ class ParallelPathPlanner {
 
   const bool CheckSamePose(const pnc::geometry_lib::PathPoint &pose1,
                            const pnc::geometry_lib::PathPoint &pose2) const;
+
+  void CalcEgoParams();
 
   Input input_;
   Output output_;

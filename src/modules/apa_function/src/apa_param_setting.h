@@ -257,6 +257,7 @@ struct ApaParameters {
   double inside_lon_dist_max_slot2mirror = 4.54;
   double inside_lon_dist_min_slot2mirror = 3.5;
   double min_slot_release_long_dist_slot2mirror = 3.86;
+  double min_parallel_slot_release_long_dist_slot2mirror = 3.86;
 
   double terminal_length = 1.2;
   double limiter_length = 0.0;

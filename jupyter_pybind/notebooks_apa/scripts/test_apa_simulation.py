@@ -11,7 +11,7 @@ from struct_msgs.msg import PlanningOutput
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_06826/trigger/20240624/20240624-16-05-22/park_in_data_collection_CHERY_TIGGO9_06826_ALL_FILTER_2024-06-24-16-05-22_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA_data/Parallel/good_case_both_side_vehicle/planning-ae6d658cb-JAC_S811/test_1.00000'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = JAC_S811
