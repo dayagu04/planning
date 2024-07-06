@@ -499,6 +499,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json, "care_area_s_start_buffer", care_area_s_start_buffer);
     max_avoid_edge =
         read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
+    lateral_ref_traj_type =
+        read_json_key<bool>(json, "lateral_ref_traj_type", lateral_ref_traj_type);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -529,6 +531,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double max_ref_curvature = 0.5;
   double care_area_s_start_buffer = 0.0;
   double max_avoid_edge = 2.0;
+  bool lateral_ref_traj_type = false;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

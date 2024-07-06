@@ -133,6 +133,7 @@
   "nudge_value_way" :false,
   "static_obj_safe_buffer": 0.8,
   "dynamic_obj_safe_buffer": 0.5,
+  "lateral_ref_traj_type":false,
   "curv_threshold": 0.1,
   "max_ref_curvature": 0.5,
   "ego_near_bound_s0":-10.0,
