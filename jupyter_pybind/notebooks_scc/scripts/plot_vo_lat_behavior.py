@@ -68,6 +68,10 @@ overtake_lc_data = ColumnDataSource({
   'name':[],
   'data':[]
 })
+cone_lc_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
@@ -76,7 +80,8 @@ data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
 data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=600)
-data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=400)
+data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
+data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=400, height=300)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -88,7 +93,7 @@ def obj_id_handler(id):
   if bag_loader.plan_debug_msg['enable'] == True:
     plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
     environment_model_info = plan_debug_msg.environment_model_info
-    obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
+    obj_vars = ['id','type','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
             'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
               'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
               'current_lead_obstacle_to_ego','cutin_p']
@@ -183,6 +188,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
     'data': datas,
   })
   push_notebook()
+
 def update_lc_data (noa_info, plan_debug_json):
   vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge','virtual_lane_relative_id_switch_flag',
               'is_exist_split_on_ramp','is_exist_ramp_on_road','current_segment_passed_distance']
@@ -228,6 +234,23 @@ def update_overtake_request_lc_data (plan_debug_json):
   })
   push_notebook()
 
+def update_cone_request_lc_data (plan_debug_json):
+  names  = []
+  datas = []
+  cone_lc_vars_ = ["is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_",
+                   "cone_nums_of_front_objects"]
+  for name in cone_lc_vars_:
+    try:
+      datas.append((plan_debug_json[name]))
+      names.append(name)
+    except:
+      pass
+  cone_lc_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+  push_notebook()
+
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -247,6 +270,7 @@ def slider_callback(bag_time):
       pass
     update_lc_data(noa_info, plan_debug_json_msg)
     update_overtake_request_lc_data(plan_debug_json_msg)
+    update_cone_request_lc_data(plan_debug_json_msg)
 
     lat_behavior_plan = plan_debug_msg.vo_lat_behavior_plan
 
@@ -270,6 +294,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_cone_lc_table, data_behavior_table_2)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
 # slider_class = ObjText(obj_id_handler)

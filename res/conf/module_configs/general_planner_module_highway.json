@@ -12,6 +12,8 @@
   "replanning_with_navi": false,
   "use_ego_prediction_model_in_planning": true,
   "dump_mdebug": false,
+  "enable_use_emergency_avoidence_lane_change_request": false,
+  "enable_use_cone_change_request": true,
   "active_lane_change_min_duration_threshold": 100,
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
   "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,
