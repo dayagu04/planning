@@ -1959,7 +1959,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                             v_left_front < v_ego + 2 ||
                             tr.v_rel > temp_attenuation ||
                             use_lateral_distance_to_judge_cutout_in_active_lane_change
-                        ? tr.l > olane->width_by_s(tr.s)
+                        ? tr.l > 1.75
                         : std::fabs(tr.v_lat) > 0.3 ||
                               ((status != ROAD_LC_LCHANGE &&
                                 status != ROAD_LC_RCHANGE &&
@@ -2070,7 +2070,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                               v_front_lb + interp(v_front_lb, xp2, fp2) ||
                           v_left_front < v_ego + 2 || tr.v_rel > 2.5 ||
                           use_lateral_distance_to_judge_cutout_in_active_lane_change
-                      ? tr.l > olane->width_by_s(tr.s)
+                      ? tr.l > 1.75
                       : std::fabs(tr.v_lat) > 0.3 ||
                             ((status != ROAD_LC_LCHANGE &&
                               status != ROAD_LC_RCHANGE &&
@@ -3478,7 +3478,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                 std::min(v_ego + 2, tr.v_lead + 3) ||
                             tr.v_rel > temp_attenuation ||
                             use_lateral_distance_to_judge_cutout_in_active_lane_change
-                        ? tr.l < -olane->width_by_s(tr.s)
+                        ? tr.l < -1.75
                         : std::fabs(tr.v_lat) > 0.3 ||
                               (((status != ROAD_LC_LCHANGE &&
                                  status != ROAD_LC_RCHANGE &&
@@ -3596,7 +3596,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                               v_front_lb + interp(v_front_lb, xp2, fp2) ||
                           v_right_front < v_ego + 2 || tr.v_rel > 2.5 ||
                           use_lateral_distance_to_judge_cutout_in_active_lane_change
-                      ? tr.l > olane->width_by_s(tr.s)
+                      ? tr.l > 1.75
                       : std::fabs(tr.v_lat) > 0.3 ||
                             ((status != ROAD_LC_LCHANGE &&
                               status != ROAD_LC_RCHANGE &&
