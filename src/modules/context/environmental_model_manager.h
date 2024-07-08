@@ -32,6 +32,15 @@ enum FeedType {
   FEED_TYPE_MAX,
 };
 
+enum TurnSwitchState {
+  NONE = 0,
+  LEFT_FIRMLY_TOUCH = 1,
+  RIGHT_FIRMLY_TOUCH = 2,
+  LEFT_LIGHTLY_TOUCH = 3,
+  RIGHT_LIGHTLY_TOUCH = 4,
+  ERROR = 5,
+};
+
 class EnvironmentalModelManager {
  public:
   EnvironmentalModelManager();
@@ -67,6 +76,7 @@ class EnvironmentalModelManager {
       const double relative_time) const;
 
   EgoPlanningConfigBuilder *load_config_builder(const char *file_name);
+  void RunBlinkState(const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -92,6 +102,9 @@ class EnvironmentalModelManager {
       nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
   EgoPlanningConfig ego_config_;
+  int current_turn_signal_ = 0;
+  int last_frame_turn_sinagl_ = 0;
+  std::vector<int> history_lc_source_ = {0,0};//0表示none，1表示ilc.
 };
 
 }  // namespace planner
