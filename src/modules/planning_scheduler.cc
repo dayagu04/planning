@@ -108,6 +108,7 @@ bool PlanningScheduler::RunOnce(
     iflyauto::PlanningOutput *const planning_output,
     iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   double start_timestamp = IflyTime::Now_ms();
+  double start_timestamp_us = IflyTime::Now_us();
 
   LOG_ERROR("PlanningScheduler::RunOnce \n");
 
@@ -150,7 +151,7 @@ bool PlanningScheduler::RunOnce(
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.timestamp = start_timestamp;
-  planning_output->meta.plan_timestamp_us = start_timestamp;
+  planning_output->meta.plan_timestamp_us = start_timestamp_us;
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
