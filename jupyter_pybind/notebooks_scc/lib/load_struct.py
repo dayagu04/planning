@@ -167,7 +167,7 @@ def load_sd_map_ramp_segments(segments,x,y,yaw,Max_sdmap_segment_size):
     ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
     if i < len(segments):
       segment = segments[i]
-      if (segment.usage == 3):
+      if (segment.usage == 3 or segment.usage == 5):
         line_x = []
         line_y = []
         cur_line_first_point = segment.enu_points[0]

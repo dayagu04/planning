@@ -554,7 +554,7 @@ void PlanningPlayer::PlayOneFrame(
       auto sd_map =
           std::make_shared<SdMapSwtx::SdMap>();
       sd_map->ParseFromString(sd_map_str);
-      std::cout << "sd_map:" << sd_map->ShortDebugString() << std::endl;
+      // std::cout << "sd_map:" << sd_map->ShortDebugString() << std::endl;
       if (sd_map->header().timestamp() == input_time_list_map_) {
         planning_adapter_->FeedSdMap(sd_map);
         break;

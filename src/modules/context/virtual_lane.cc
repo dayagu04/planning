@@ -387,7 +387,6 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
     } else {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
-        // std::cout << "9999999999999999999999999999999999999999" << std::endl;
       }
     }
   } else {

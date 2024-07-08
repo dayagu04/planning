@@ -28,6 +28,7 @@
 #include "reference_path_manager.h"
 #include "task_basic_types.h"
 #include "vehicle_config_context.h"
+#include "virtual_lane.h"
 
 namespace planning {
 
@@ -489,7 +490,12 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   std::vector<iflyauto::ReferenceLineMsg> lane_msg;
   lane_msg.reserve(roads_ptr->reference_line_msg_size);
+  int relative_id_zero_nums = 0;
+  bool is_update_relative_id_zero_lane = false;
   for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
+    if (roads_ptr->reference_line_msg[i].relative_id == 0) {
+      relative_id_zero_nums = relative_id_zero_nums + 1;
+    }
     lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
   }
 
@@ -503,7 +509,23 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
     if (lane.lane_merge_split_point.merge_split_point_data_size == 0) {
-      virtual_lane_tmp->update_data(lane);
+      //fengwang31:temp hack
+      if (lane.relative_id == 0) {
+        if (relative_id_zero_nums == 2 && ramp_direction_ == RAMP_ON_LEFT) {
+          if (!is_update_relative_id_zero_lane) {
+            virtual_lane_tmp->update_data(lane);
+            is_update_relative_id_zero_lane = true;
+            std::cout << "当前车道1分为2,分叉在左边时,选择左边分叉作为当前车道" << std::endl;
+          } else {
+            std::cout << "舍弃右分叉" << std::endl;
+            continue;
+          }
+        } else {
+          virtual_lane_tmp->update_data(lane);
+        }
+      } else if (lane.relative_id != 0) {
+        virtual_lane_tmp->update_data(lane);
+      }
       LOG_DEBUG("this lane has no merge_split info\n");
     } else {
       const auto& lane_merge_split_point_data =
@@ -597,6 +619,18 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
                        ->get_relative_id() >= lane_num_except_emergency - 3) {
       is_leaving_ramp_ = false;
     }
+  }
+  //fengwang31:temp hack :自车当前不在匝道上，且距离匝道较远,距离上一个merge较近，那么不走最右边车道；
+  //即需要产生一个向左的变道请求
+  bool have_right_lane = false;
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_relative_id() > 0) {
+      have_right_lane = true;
+      break;
+    } 
+  }
+  if (dis_to_ramp_ > 1300 && !have_right_lane && !is_on_ramp_ && !is_accumulate_dis_to_last_merge_point_more_than_threshold_) {
+    is_leaving_ramp_ = true;
   }
   for (const auto& relative_id_lane : relative_id_lanes_) {
     std::cout << "VirtualLaneManager::update_lane_tasks():: order_id_: "
@@ -1554,29 +1588,108 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
             << "ego_pose_y_:" << ego_pose_y_ << std::endl;
   current_point.set_x(ego_pose_x_);
   current_point.set_y(ego_pose_y_);
+  //计算ramp信息
   const auto& sd_map = session_->environmental_model().get_sd_map();
   const auto& ramp_info = sd_map.GetRampInfo(current_point);
   if (ramp_info.second > 0) {
     dis_to_ramp_ = ramp_info.second;
-    distance_to_first_road_split_ = dis_to_ramp_;
-    const auto& previous_seg = sd_map.GetPreviousRoadSegment(ramp_info.first->id());
-    if (previous_seg->direction() == SdMapSwtx::Direction::TURN_RIGHT) {
-      ramp_direction_ = RAMP_ON_RIGHT;
-    } else if (previous_seg->direction() == SdMapSwtx::Direction::TURN_LEFT) {
-      ramp_direction_ = RAMP_ON_LEFT;
+    const auto previous_seg = sd_map.GetPreviousRoadSegment(ramp_info.first->id());
+    if (previous_seg) {
+      ramp_direction_ = MakesureSplitDirection(*previous_seg, sd_map);
+      // if (previous_seg->direction() == SdMapSwtx::Direction::TURN_RIGHT) {
+      //   ramp_direction_ = RAMP_ON_RIGHT;
+      // } else if (previous_seg->direction() == SdMapSwtx::Direction::TURN_LEFT) {
+      //   ramp_direction_ = RAMP_ON_LEFT;
+      // }
+    } else {
+      std::cout << "previous_seg is nullprt!!!!!" << std::endl;
+      ramp_direction_ = RAMP_NONE;
     }
+
   } else {
     dis_to_ramp_ = NL_NMAX;
-    distance_to_first_road_split_ = dis_to_ramp_;
     ramp_direction_ = RAMP_NONE;
   }
+  //计算merge信息
   const auto& merge_info = sd_map.GetMergeInfoList(current_point);
-  if (merge_info.begin()->second > 0) {
-    distance_to_first_road_merge_ = merge_info.begin()->second;
+  if (!merge_info.empty()) {
+    if (merge_info.begin()->second > 0) {
+      distance_to_first_road_merge_ = merge_info.begin()->second;
+    } else {
+      distance_to_first_road_merge_ = NL_NMAX;
+    }
   } else {
-    distance_to_first_road_merge_ = NL_NMAX;
+    std::cout << "merge_info.empty()!!!!!!!" << std::endl;
   }
 
+  double nearest_s = 0;
+  double nearest_l = 0;
+  const auto current_segment = sd_map.GetNearestRoad(current_point,nearest_s,nearest_l);
+  if (!current_segment) {
+    return;
+  }
+  is_on_ramp_ = current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
+  //计算split信息
+  const auto& split_info = sd_map.GetSplitInfoList(current_point);
+  if (!split_info.empty()) {
+    const auto split_segment = split_info.begin()->first;
+    if (split_info.begin()->second > 0 && split_segment) {
+        distance_to_first_road_split_ = split_info.begin()->second;
+        if (is_on_ramp_) {
+          //fengwang31:temp hack 在匝道上，选择分叉时，距离匝道小于288m时才选择分叉
+          if (distance_to_first_road_split_ < 288) {
+            dis_to_ramp_ = distance_to_first_road_split_;
+            ramp_direction_ = MakesureSplitDirection(*split_segment, sd_map);
+          }
+          // const SdMapSwtx::Segment * last_ramp_seg = sd_map.GetPreviousRoadSegment(current_segment->id());
+          // bool is_more_threshold_value = false;
+          // double sum_dis = nearest_s;
+          // while(last_ramp_seg->out_link().size() == 1 ) {
+          //   if (sum_dis > 200) {
+          //     break;
+          //   } else {
+          //     last_ramp_seg = sd_map.GetPreviousRoadSegment(last_ramp_seg->id());
+          //     //判断是否为nullptr
+          //     if (!last_ramp_seg) {
+          //       break;
+          //     } else {
+          //       sum_dis = sum_dis + last_ramp_seg->dis();
+          //     }
+          //   }
+          // }
+          // if (sum_dis > 200) {
+          //   dis_to_ramp_ = distance_to_first_road_split_;
+          //   ramp_direction_ = MakesureSplitDirection(*split_segment, sd_map);
+          // }
+        }
+    } else {
+      distance_to_first_road_split_ = NL_NMAX;
+    }
+  } else {
+    std::cout << "split_info.empty()!!!!!!!" << std::endl;
+  }
+  //计算距离上一个merge点的信息
+  const SdMapSwtx::Segment * last_merge_seg = current_segment;
+  is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
+  double sum_dis_to_last_merge_point = nearest_s;
+  if (!is_on_ramp_) {
+    while(last_merge_seg->in_link().size() == 1 ) {
+      if (sum_dis_to_last_merge_point > 700) {
+        break;
+      } else {
+        last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
+        //判断是否为nullptr
+        if (!last_merge_seg) {
+          break;
+        } else {
+          sum_dis_to_last_merge_point = sum_dis_to_last_merge_point + last_merge_seg->dis();
+        }
+      }
+    }
+    if (sum_dis_to_last_merge_point > 700) {
+      is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
+    }
+  }
 }
 
 // void VirtualLaneManager::CalculateHPPInfo(
@@ -1767,5 +1880,44 @@ void VirtualLaneManager::ResetForRampInfo() {
   ramp_direction_ = RampDirection::RAMP_NONE;
   distance_to_first_road_merge_ = NL_NMAX;
   distance_to_first_road_split_ = NL_NMAX;
+}
+RampDirection VirtualLaneManager::MakesureSplitDirection (const ::SdMapSwtx::Segment& split_segment,const ad_common::sdmap::SDMap& sd_map) {
+  const auto out_link_size = split_segment.out_link_size();
+  RampDirection ramp_direction = RAMP_NONE;
+    const auto& out_link = split_segment.out_link();
+    //fengwang31(TODO):暂时假设在匝道上的分叉口只有两个方向
+    if (out_link_size == 2) {              
+      const auto split_next_segment = sd_map.GetNextRoadSegment(split_segment.id());
+      ad_common::math::Vec2d segment_in_route_dir_vec;
+      ad_common::math::Vec2d segment_not_in_route_dir_vec;
+      std::cout << "out_link[0].id():" << out_link[0].id() << std::endl;
+      std::cout << "out_link[1].id():" << out_link[1].id() << std::endl;
+      std::cout << "split_next_segment->id()" << split_next_segment->id() << std::endl;
+
+      auto other_segment = out_link[0].id() == split_next_segment->id() ? out_link[1] : out_link[0];
+      // const auto other_segment = sd_map.GetRoadSegmentById(other_segment_id);
+      if (!split_next_segment) {
+        std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
+        return ramp_direction;
+      }
+      const auto& split_next_segment_enu_point = split_next_segment->enu_points();
+      const auto& other_segment_enu_point = other_segment.enu_points();
+      if (split_next_segment_enu_point.size() > 1 && other_segment_enu_point.size() > 1) {
+        segment_in_route_dir_vec.set_x(split_next_segment_enu_point.rbegin()->x() - split_next_segment_enu_point.begin()->x());
+        segment_in_route_dir_vec.set_y(split_next_segment_enu_point.rbegin()->y() - split_next_segment_enu_point.begin()->y());
+        segment_not_in_route_dir_vec.set_x(other_segment_enu_point.rbegin()->x() - other_segment_enu_point.begin()->x());
+        segment_not_in_route_dir_vec.set_y(other_segment_enu_point.rbegin()->y() - other_segment_enu_point.begin()->y());
+        if (segment_in_route_dir_vec.CrossProd(segment_not_in_route_dir_vec) > 0.0) {
+          ramp_direction = RampDirection::RAMP_ON_RIGHT;
+        } else {
+          ramp_direction = RampDirection::RAMP_ON_LEFT;
+        }
+      } else {
+        std::cout << "enu points error!!!!!!!!!!" << std::endl;
+      }
+    } else {
+      std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
+    }
+  return ramp_direction;
 }
 }  // namespace planning

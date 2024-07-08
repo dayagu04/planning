@@ -3,6 +3,7 @@
 #include "adas_function/mrc_condition.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "ego_planning_config.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 
 namespace planning {
@@ -53,6 +54,8 @@ bool LaneChangeRequestManager::Update(
   bool use_overtake_lane_change_request =
       config_
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
+  double kMinDistanceNearbyRampToSurpressOvretakeLC =
+      config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -86,7 +89,8 @@ bool LaneChangeRequestManager::Update(
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->is_on_ramp()) {
+      if (virtual_lane_mgr_->is_on_ramp() || 
+          virtual_lane_mgr_->dis_to_ramp() <= kMinDistanceNearbyRampToSurpressOvretakeLC) {
         overtake_request_.Reset();
         LOG_DEBUG("cann't generate overtake lane change in ramp");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
