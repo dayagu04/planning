@@ -2187,8 +2187,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
         path_seg_vec.emplace_back(tmp_path_seg);
       } else {
         if (tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN &&
-            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-            input_.slot_occupied_ratio > 0.168) {
+            j > 0) {
           DEBUG_PRINT("s turn col, lose all s turn path.");
           if (tmp_path_seg_vec[j - 1].plan_type ==
               pnc::geometry_lib::PLAN_TYPE_S_TURN) {
@@ -2433,15 +2432,29 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
     if (insert_case == 0) {
       double min_path_length = apa_param.GetParam().min_one_step_path_length;
-      if (input_.slot_occupied_ratio > 0.386 &&
+      if (input_.slot_occupied_ratio > 0.086 &&
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
         const std::vector<double> path_length_tab = {
             1.668 * min_path_length, 3.168 * min_path_length,
             3.868 * min_path_length, 4.268 * min_path_length,
             4.868 * min_path_length};
+
         min_path_length = pnc::mathlib::Interp1(
             lat_tab, path_length_tab, std::fabs(path_seg.GetEndPos().y()));
+
+        const std::vector<double> max_x_tab = {5.086, 5.286, 5.486, 5.686,
+                                               5.886};
+
+        const double max_x = pnc::mathlib::Interp1(
+            lat_tab, max_x_tab, std::fabs(path_seg.GetEndPos().y()));
+
+        const double init_x =
+            output_.path_segment_vec[output_.path_seg_index.first]
+                .GetStartPos()
+                .x();
+
+        min_path_length = std::min(min_path_length, max_x - init_x);
       }
 
       if (length + extend_distance < min_path_length) {
@@ -2478,13 +2491,8 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     Eigen::Vector2d new_line_vector = extend_distance * unit_tangent;
     new_line.line_seg.pB = new_line_vector + new_line.line_seg.pA;
 
-    CollisionDetector::Paramters params;
-    params.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
-    collision_detector_ptr_->SetParam(params);
     const uint8_t path_col_res = TrimPathByCollisionDetection(
         new_line, apa_param.GetParam().col_obs_safe_dist_strict);
-    params.Reset();
-    collision_detector_ptr_->SetParam(params);
 
     if (new_line.Getlength() < 0.02168) {
       return;

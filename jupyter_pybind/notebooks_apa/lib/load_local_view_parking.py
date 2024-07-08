@@ -570,7 +570,7 @@ class LoadCyberbag:
         self.adas_debug_msg['enable'] = False
     except:
       self.adas_debug_msg['enable'] = False
-      print("/iflytek/adas_function_debug !!!")
+      print("missing /iflytek/adas_function_debug !!!")
 
     # load wave_debug_info msg
     try:

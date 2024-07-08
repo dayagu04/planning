@@ -1,4 +1,5 @@
 
+#include <gflags/gflags.h>
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -23,6 +24,10 @@ static planning::apa_planner::PerpendicularPathPlanner *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
+  const std::string flag_file_path =
+      "/asw/planning/res/conf/planning_gflags.conf";
+  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+
   pBase = new PerpendicularPathPlanner();
   pBase->Reset();
 
