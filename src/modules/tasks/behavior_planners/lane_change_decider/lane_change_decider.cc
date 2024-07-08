@@ -68,9 +68,9 @@ bool LaneChangeDecider::Execute() {
     reset_state_machine();
   }
 
-  if (!UpdateObjectSelector(active)) {
-    return false;
-  }
+  // if (!UpdateObjectSelector(active)) {
+  //   return false;
+  // }
 
   if (active) {
     LOG_DEBUG("[scenario_state_machine] active\n");
