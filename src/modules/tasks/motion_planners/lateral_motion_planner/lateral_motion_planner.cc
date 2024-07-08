@@ -15,6 +15,7 @@
 #include "src/lateral_motion_planning_cost.h"
 #include "src/lateral_motion_planning_weight.h"
 #include "virtual_lane_manager.h"
+#include "lateral_obstacle.h"
 
 static const double pi_const = 3.141592654;
 static const double planning_loop_dt = 0.1;
@@ -304,6 +305,9 @@ void LateralMotionPlanner::AssembleInput() {
     }
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
+  } else if (session_->environmental_model().get_lateral_obstacle()->is_static_avoid_scene()) {
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::STATIC_AVOID,
+                                                 planning_input_);
   } else if (lateral_offset_decider_output.is_valid) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);

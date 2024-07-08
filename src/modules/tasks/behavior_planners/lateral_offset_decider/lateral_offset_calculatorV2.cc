@@ -145,13 +145,12 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_width = vehicle_param.width + vehicle_param.width_mirror;
 
-  const double road_avoid_threshold =
-      lane_width_ * 0.5 - config_.nudge_buffer_road_boundary - ego_width * 0.5;
-  const double lane_avoid_threshold =
-      lane_width_ * 0.5 - config_.nudge_buffer_lane_boundary - ego_width * 0.5;
-  // const double static_lane_avoid_threshold = lane_width_ * 0.5 -
-  // config_.static_nudge_buffer_lane_boundary -
-  //                             ego_width * 0.5;
+  const double road_avoid_threshold = lane_width_ * 0.5 - config_.nudge_buffer_road_boundary -
+                              ego_width * 0.5;
+  const double lane_avoid_threshold = lane_width_ * 0.5 - config_.nudge_buffer_lane_boundary -
+                              ego_width * 0.5;
+  const double static_lane_avoid_threshold = lane_width_ * 0.5 - config_.static_nudge_buffer_lane_boundary -
+                              ego_width * 0.5;
   int right_lane_virtual_id = flane_->get_virtual_id() + 1;
   int left_lane_virtual_id = flane_->get_virtual_id() - 1;
   int fix_lane_virtual_id = flane_->get_virtual_id();
@@ -162,23 +161,23 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   if (!has_left_lane && !has_right_lane) {
     avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-    // avoid_info_.static_left_avoid_threshold = road_avoid_threshold;
-    // avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
+    avoid_info_.static_left_avoid_threshold = road_avoid_threshold;
+    avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
   } else if (!has_right_lane) {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-    // avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-    // avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
+    avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
+    avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
   } else if (!has_left_lane) {
     avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-    // avoid_info_.static_left_avoid_threshold = lane_avoid_threshold;
-    // avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
+    avoid_info_.static_left_avoid_threshold = lane_avoid_threshold;
+    avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   } else {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-    // avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-    // avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
+    avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
+    avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   }
 
   auto last_fix_lane_virtual_id = session_->environmental_model()
@@ -201,14 +200,10 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
     }
   }
 
-  avoid_info_.normal_left_avoid_threshold =
-      std::max(avoid_info_.normal_left_avoid_threshold, 0.0);
-  avoid_info_.normal_right_avoid_threshold =
-      std::max(avoid_info_.normal_right_avoid_threshold, 0.0);
-  // avoid_info_.static_left_avoid_threshold =
-  // std::max(avoid_info_.static_left_avoid_threshold, 0.0);
-  // avoid_info_.static_right_avoid_threshold =
-  // std::max(avoid_info_.static_right_avoid_threshold, 0.0);
+  avoid_info_.normal_left_avoid_threshold = std::max(avoid_info_.normal_left_avoid_threshold, 0.0);
+  avoid_info_.normal_right_avoid_threshold = std::max(avoid_info_.normal_right_avoid_threshold, 0.0);
+  avoid_info_.static_left_avoid_threshold = std::max(avoid_info_.static_left_avoid_threshold, 0.0);
+  avoid_info_.static_right_avoid_threshold = std::max(avoid_info_.static_right_avoid_threshold, 0.0);
 }
 
 void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
@@ -653,20 +648,16 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetCenterWay(
   return lat_offset;
 }
 
-double LateralOffsetCalculatorV2::LimitLateralOffset(
-    const AvoidObstacleInfo &avoid_obstacle, double lateral_offset,
-    const AvoidWay &avoid_way) {
-  // if (lateral_offset_decider::IsStaticObstacle(avoid_obstacle)) {
-  //   lateral_offset = avoid_way == AvoidWay::Left ? std::min(lateral_offset,
-  //   avoid_info_.static_right_avoid_threshold) :
-  //                               std::min(lateral_offset,
-  //                               avoid_info_.static_left_avoid_threshold);
-  // } else {
-  lateral_offset =
-      avoid_way == AvoidWay::Left
-          ? std::min(lateral_offset, avoid_info_.normal_right_avoid_threshold)
-          : std::min(lateral_offset, avoid_info_.normal_left_avoid_threshold);
-  // }
+double LateralOffsetCalculatorV2::LimitLateralOffset(const AvoidObstacleInfo &avoid_obstacle, double lateral_offset,
+                                                     const AvoidWay &avoid_way) {
+  bool is_static_avoid_scene = session_->environmental_model().get_lateral_obstacle()->is_static_avoid_scene();
+  if(is_static_avoid_scene) {
+    lateral_offset = avoid_way == AvoidWay::Left ? std::min(lateral_offset, avoid_info_.static_right_avoid_threshold) :
+                                std::min(lateral_offset, avoid_info_.static_left_avoid_threshold);
+  } else {
+    lateral_offset = avoid_way == AvoidWay::Left ? std::min(lateral_offset, avoid_info_.normal_right_avoid_threshold) :
+                              std::min(lateral_offset, avoid_info_.normal_left_avoid_threshold);
+  }
 
   if (avoid_info_.allow_front_max_opposite_offset <
       avoid_info_.allow_side_max_opposite_offset) {

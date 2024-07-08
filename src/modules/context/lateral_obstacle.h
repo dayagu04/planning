@@ -68,6 +68,7 @@ class LateralObstacle {
   bool find_track(int track_id, TrackedObject &dest);
 
   const std::unordered_map<uint16_t, LatObstacleDecisionType>& lat_obstacle_decision() { return lat_obstacle_decision_; }
+  bool is_static_avoid_scene() const { return is_static_avoid_scene_; };
  private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
                       const std::vector<PredictionObject> &predictions,
@@ -82,6 +83,7 @@ class LateralObstacle {
   bool svf_dead_ = true;
   double warning_timer_[5];
   bool prediction_update_ = false;
+  bool is_static_avoid_scene_ = false;
 
   std::vector<TrackedObject> front_tracks_;
   std::vector<TrackedObject> front_tracks_copy_;

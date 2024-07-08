@@ -406,9 +406,10 @@ void GeneralLateralDecider::ConstructLaneSoftBoundary() {
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
   const auto& lc_request_direction = session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_lane_change = coarse_planning_info.target_state == kLaneChangeExecution ||
-                        coarse_planning_info.target_state == kLaneChangeComplete ||
-                        coarse_planning_info.target_state == kLaneChangeCancel;
+  bool is_lane_change = coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
+                        coarse_planning_info.target_state == ROAD_LC_RCHANGE  ||
+                        coarse_planning_info.target_state == ROAD_LC_LBACK ||
+                        coarse_planning_info.target_state == ROAD_LC_RBACK ;
   const double kDefaultDistanceToRoad = 10.0;
   const double half_ego_width = 0.5 * vehicle_param.width;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {

@@ -52,7 +52,7 @@ bool LateralObstacle::update_sensors(
                               lead_cars_, isRedLightStop, hdmap_valid);
     LateralObstacleDecision(tracked_objects);
     update_tracks(tracked_objects);
-
+    is_static_avoid_scene_ = maintainer_->is_static_scene();
     prediction_update_ = false;
     fvf_time_ = curr_time;
     svf_time_ = curr_time;

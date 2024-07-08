@@ -403,6 +403,10 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         json, "potential_near_car_v_ub", potential_near_car_v_ub);
     potential_near_car_v_lb = read_json_key<double>(
         json, "potential_near_car_v_lb", potential_near_car_v_lb);
+    use_lat_offset_in_tracklet_maintainer =
+        read_json_key<bool>(json, "use_lat_offset_in_tracklet_maintainer", use_lat_offset_in_tracklet_maintainer);
+    enable_static_scene =
+        read_json_key<bool>(json, "enable_static_scene", enable_static_scene);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -415,6 +419,8 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
   double potential_near_car_thr = 0.5;
   double potential_near_car_v_ub = -0.2;
   double potential_near_car_v_lb = -0.03;
+  bool use_lat_offset_in_tracklet_maintainer = false;
+  bool enable_static_scene = false;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
@@ -663,6 +669,19 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_middle"});
     q_jerk_avoid_vel = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_vel"});
+    q_ref_x_static_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_static_avoid"});
+    q_ref_y_static_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y_static_avoid"});
+    q_ref_theta_static_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_static_avoid"});
+    q_acc_static_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_static_avoid"});
+    q_jerk_static_avoid_close = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_static_avoid_close"});
+    q_jerk_static_avoid_middle = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_static_avoid_middle"});
+
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
@@ -749,6 +768,13 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_avoid_close = 2.0;
   double q_jerk_avoid_middle = 2.0;
   double q_jerk_avoid_vel = 25.0;
+
+  double q_ref_x_static_avoid = 20.0;
+  double q_ref_y_static_avoid = 20.0;
+  double q_ref_theta_static_avoid = 15.0;
+  double q_acc_static_avoid = 0.5;
+  double q_jerk_static_avoid_close = 2.0;
+  double q_jerk_static_avoid_middle = 2.0;
 
   double q_ref_x_lane_change = 20.0;
   double q_ref_y_lane_change = 20.0;
