@@ -1047,7 +1047,9 @@ bool SlotManagement::UpdateSlotsInSearching() {
       AddUssPerceptObstacles(*slot);
       // AddGroundLineObstacles(*slot);
       const double lon_dist = CalLonDistSlot2Car(*slot);
-      if (lon_dist < 3.968 && pair.second.GetOccupied()) {
+      if (lon_dist < apa_param.GetParam()
+                         .min_parallel_slot_release_long_dist_slot2mirror &&
+          pair.second.GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
         DEBUG_PRINT("CalLonDistSlot2Car slot id = "
