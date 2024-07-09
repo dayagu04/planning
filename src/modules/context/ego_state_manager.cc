@@ -235,7 +235,7 @@ bool EgoStateManager::update(
 }
 
 uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
-                                        const bool &lon_reset_flag) {
+                                       const bool &lon_reset_flag) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
   const auto &vehicle_param =
@@ -328,6 +328,13 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
   } else if (start_stop_state == common::StartStopInfo::STOP) {
     ego_acc_replan = std::min(0.0, ego_acc_replan);
   }
+  // avoid dramatic acc in ACC mode
+  const bool is_acc_mode =
+      session_->environmental_model().function_info().function_mode() ==
+      common::DrivingFunctionInfo::ACC;
+  if (is_acc_mode && ego_acc_replan > 1.0) {
+    ego_acc_replan = 1.0;
+  }
 
   VehicleState cur_vehicle_state;
   cur_vehicle_state.angular_velocity = ego_yaw_rate_;
@@ -369,7 +376,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
 // uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 //                                        const bool &lon_reset_flag) {
-//   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
+//   // note that lon_reset_flag and lat_reset_flag reserved for acc and
+//   override
 
 //   const auto &vehicle_param =
 //       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -379,7 +387,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 //       session_->mutable_planning_context()->mutable_motion_planner_output();
 //   double steer_ratio = vehicle_param.steer_ratio;
 //   // const auto &traj_points =
-//   // session_->mutable_planning_context()->mutable_planning_result().traj_points;
+//   //
+//   session_->mutable_planning_context()->mutable_planning_result().traj_points;
 
 //   auto &lat_init_state = planning_init_point_.lat_init_state;
 //   auto &lon_init_state = planning_init_point_.lon_init_state;
@@ -402,8 +411,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 //   // TODO: maybe more solid
 //   // projection_spline.CalProjectionPoint(motion_planner_output.x_s_spline,
 //   // motion_planner_output.y_s_spline,
-//   //                                      motion_planner_output.s_lat_vec.front(),
-//   //                                      motion_planner_output.s_lat_vec.back(),
+//   // motion_planner_output.s_lat_vec.front(),
+//   // motion_planner_output.s_lat_vec.back(),
 //   //                                      init_point);
 //   // const auto s_init = projection_spline.GetOutput().s_proj;
 //   // const double &lon_err = s_init - s_proj;
@@ -696,6 +705,7 @@ void EgoStateManager::UpdatePlanningInitState() {
                    .function_info()
                    .function_mode() == common::DrivingFunctionInfo::ACC) {
       set_lat_replan = true;
+      set_lon_replan = true;
     } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE) {
       set_lat_replan = true;
       set_lon_replan = true;
