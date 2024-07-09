@@ -93,7 +93,7 @@ void read_json_vec(const Json &json, const std::string &key,
                    std::vector<T> &vec,
                    const std::vector<T> &default_vec = {}) {
   if (json.find(key) != json.end() && json[key].is_array()) {
-    vec.clear(); 
+    vec.clear();
     for (size_t i = 0; i < json[key].size(); i++) {
       vec.push_back(json[key][i]);
     }
@@ -1683,6 +1683,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
+    steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_speed",
                           replan_longitudinal_distance_threshold_speed);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_value",
@@ -1704,6 +1705,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
 
   double kEpsilon_v = 0.0;
   double kEpsilon_a = 0.0;
+
+  double steer_ratio = 16.5;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {

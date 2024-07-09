@@ -33,6 +33,7 @@
   "parking_cruise_speed": 1.5,
   "kEpsilon_v": -10.1,
   "kEpsilon_a": 0.4,
+  "steer_ratio": 13.0,
   "max_replan_lat_err" : 0.6,
   "max_replan_theta_err" : 5.0,
   "max_replan_lon_err" : 1.0,
