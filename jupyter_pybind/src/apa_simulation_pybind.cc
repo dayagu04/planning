@@ -134,6 +134,7 @@ const bool InterfaceUpdateParam(
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes,
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &ground_line_info_bytes, py::bytes &fus_obj_info_bytes,
     int select_id, bool force_plan, bool is_path_optimization,
     bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
     bool sim_to_target, bool use_slot_in_bag, double sample_ds,
@@ -187,12 +188,21 @@ const bool InterfaceUpdateParam(
   //   struct_msgs::UssPerceptInfo>(uss_perception_info_bytes);
   iflyauto::UssPerceptInfo uss_perception_info;
 
+  auto ground_line_info =
+      BytesToProto<GroundLinePerception::GroundLinePerceptionInfo>(
+          ground_line_info_bytes);
+
+  auto fus_obj_info =
+      BytesToProto<FusionObjects::FusionObjectsInfo>(fus_obj_info_bytes);
+
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
+  local_view.ground_line_perception = ground_line_info;
+  local_view.fusion_objects_info = fus_obj_info;
 
   if (force_plan) {
     local_view.function_state_machine_info.current_state =

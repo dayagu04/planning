@@ -7,7 +7,7 @@ sys.path.append('../../../build')
 sys.path.append('../../../')
 
 sys.path.append('../../python_proto')
-from struct_msgs.msg import PlanningOutput
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
@@ -90,10 +90,18 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
   vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
   soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
-  try:
+  if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
-  except Exception:
-    uss_perception_msg = soc_state_msg
+  else:
+    uss_perception_msg = UssPerceptInfo()
+  if bag_loader.fus_ground_line_msg['enable'] == True:
+    gl_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
+  else:
+    gl_msg = GroundLinePerceptionInfo()
+  if bag_loader.fus_objects_msg['enable'] == True:
+    fus_obj_msg = bag_loader.fus_objects_msg['data'][index_map['fus_objects_msg_idx']]
+  else:
+    fus_obj_msg = FusionObjectsInfo()
   loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
@@ -160,6 +168,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     vs_msg.SerializeToString(),
                                     wave_msg.SerializeToString(),
                                     uss_perception_msg.SerializeToString(),
+                                    gl_msg.SerializeToString(),
+                                    fus_obj_msg.SerializeToString(),
                                     0, False, False, False, False, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 

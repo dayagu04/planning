@@ -95,6 +95,8 @@ class ApaPlannerBase {
 
     double channel_width;
 
+    bool fus_obj_valid_flag = false;
+
     void Reset() {
       target_managed_slot.Clear();
       selected_slot_id = 0;
@@ -136,6 +138,8 @@ class ApaPlannerBase {
       pt_1.setZero();
 
       channel_width = apa_param.GetParam().channel_width;
+
+      fus_obj_valid_flag = false;
     }
   };
 

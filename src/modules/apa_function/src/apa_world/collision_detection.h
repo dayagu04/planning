@@ -20,6 +20,7 @@ class CollisionDetector {
     CHANNEL_OBS,
     TLANE_OBS,
     LINEARC_OBS,
+    FUSION_OBS,
     COUNT_OBS,
   };
 

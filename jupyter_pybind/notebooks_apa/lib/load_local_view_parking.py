@@ -1817,7 +1817,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     for i in range(len(bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object)):
       obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
       polygon =  obj.additional_info.polygon
-
       for j in range(len(polygon.points)):
         x = polygon.points[j].x
         y = polygon.points[j].y

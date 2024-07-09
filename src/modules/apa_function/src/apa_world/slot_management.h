@@ -311,6 +311,8 @@ class SlotManagement {
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
+    bool fus_obj_valid_flag = false;
+
     double origin_pt_0_heading = 0.0;
     double sin_angle = 1.0;
     Eigen::Vector2d pt_0;
@@ -352,6 +354,8 @@ class SlotManagement {
       pt_1.setZero();
 
       channel_width = apa_param.GetParam().channel_width;
+
+      fus_obj_valid_flag = false;
     }
   };
 
@@ -390,7 +394,7 @@ class SlotManagement {
     bool parallel_slot_reseted_once = false;
     bool is_side_calc_in_parking = false;
 
-    std::vector<Eigen::Vector2d> obstacle_point_vec;
+    std::vector<Eigen::Vector2d> obs_pt_vec;
     std::vector<Eigen::Vector2d> ground_line_point_vec;
 
     std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_map;
@@ -398,6 +402,8 @@ class SlotManagement {
     std::unordered_map<size_t, std::vector<Eigen::Vector2d>> ground_line_pt_map;
 
     bool first_enter_slot_mangement = true;
+
+    bool fus_obj_valid_flag = false;
 
     void Reset() {
       uss_raw_dist_vec.clear();
@@ -413,10 +419,11 @@ class SlotManagement {
       parallel_slot_reseted_once = false;
       is_side_calc_in_parking = false;
       ego_slot_info.Reset();
-      obstacle_point_vec.clear();
+      obs_pt_vec.clear();
       obs_pt_map.clear();
       ground_line_pt_map.clear();
       first_enter_slot_mangement = true;
+      fus_obj_valid_flag = false;
     }
   };
 
@@ -436,8 +443,6 @@ class SlotManagement {
   const bool AddUssPerceptObstacles(const common::SlotInfo& slot_info);
 
   void AddGroundLineObstacles();
-
-  const bool AddGroundLineObstacles(const common::SlotInfo& slot_info);
 
   void AddFusionObjects();
 
@@ -479,6 +484,7 @@ class SlotManagement {
 
   bool IsInAPAState() const;
   void Preprocess();
+  void AddObstacles();
 
   bool IsInSearchingState() const;
   bool UpdateSlotsInSearching();

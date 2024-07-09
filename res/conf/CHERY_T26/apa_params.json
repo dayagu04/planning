@@ -1,9 +1,7 @@
 {
   "car_type": "cherry_t26",
-
   "comment_1": "schedule params",
   "plan_time": 0.1,
-
   "comment_2": "car params",
   "front_overhanging": 0.922,
   "rear_overhanging": 1.085,
@@ -17,18 +15,48 @@
   "lat_dist_mirror_to_center": 1.1095,
   "arc_line_shift_steer_angle_deg": 2.5,
   "c1": 0.3576,
-  "car_vertex_x_vec": [3.518, 3.718, 3.718, 3.518, 2.092, 2.092, 1.906, 1.906,
-                      -0.885, -1.085, -1.085, -0.885, 1.906, 1.906, 2.092, 2.092],
-  "car_vertex_y_vec": [0.9595, 0.7595, -0.7595, -0.9595, -0.9595, -1.092, -1.092,
-                      -0.9595, -0.9595, -0.7595, 0.7595, 0.9595, 0.9595, 1.092, 1.092, 0.9595],
-
+  "car_vertex_x_vec": [
+    3.518,
+    3.718,
+    3.718,
+    3.518,
+    2.092,
+    2.092,
+    1.906,
+    1.906,
+    -0.885,
+    -1.085,
+    -1.085,
+    -0.885,
+    1.906,
+    1.906,
+    2.092,
+    2.092
+  ],
+  "car_vertex_y_vec": [
+    0.9595,
+    0.7595,
+    -0.7595,
+    -0.9595,
+    -0.9595,
+    -1.092,
+    -1.092,
+    -0.9595,
+    -0.9595,
+    -0.7595,
+    0.7595,
+    0.9595,
+    0.9595,
+    1.092,
+    1.092,
+    0.9595
+  ],
   "comment_3": "slot params",
   "normal_slot_length": 5.115,
   "normal_slot_width": 2.419,
   "slot_compare_to_car_length": 0.3,
   "slot_compare_to_car_width": 0.16,
   "car2line_dist_threshold": 0.02,
-
   "comment_4": "terminal pose params",
   "terminal_target_x": 1.2,
   "terminal_target_y": 0.0,
@@ -36,7 +64,6 @@
   "terminal_target_x_to_limiter": 0.15,
   "terminal_parallel_y_offset": 0.0,
   "terminal_parallel_y_offset_with_curb": 0.3,
-
   "comment_5": "check finish params",
   "finish_lat_err": 0.108,
   "finish_lat_err_strict": 0.108,
@@ -49,17 +76,14 @@
   "finish_parallel_lon_err": 0.4,
   "finish_parallel_heading_err": 1.66,
   "finish_parallel_rear_stop_buffer": 0.45,
-
   "comment_6": "check fail params",
   "stuck_failed_time": 12.0,
   "pause_failed_time": 16.68,
-
   "comment_7": "check static params",
   "car_static_pos_err": 0.005,
   "car_static_velocity": 0.01,
   "car_static_keep_time_by_pos": 1.5,
   "car_static_keep_time_by_vel": 0.5,
-
   "comment_8": "uss params",
   "lat_inflation": 0.0,
   "detection_distance": 2.5,
@@ -72,20 +96,71 @@
   "enable_corner_uss_process": true,
   "uss_corner_scan_angle_gain": 0.948,
   "uss_face_scan_angle_gain": 1.088,
-  "uss_vertex_x_vec": [3.298241,  3.580141,  3.667435, 3.667435, 3.580141,  3.298241,
-                      -0.602483, -0.997449, -1.06219, -1.06219, -0.997449, -0.602483],
-  "uss_vertex_y_vec": [0.935328,  0.680863,  0.334976,  -0.334976, -0.680863, -0.935328,
-                      -0.935328, -0.669815, -0.299949, 0.299949,  0.699815,  0.935328],
-  "uss_normal_angle_deg_vec": [169.998, 125.019, 97.046,  82.954,  54.981,   10.002,
-                               354.78,   298.086, 277.369, 262.631, 241.9914, 185.22],
-  "uss_wdis_index_front": [8, 0, 1, 2, 3, 9],
-  "uss_wdis_index_back": [10, 4, 5, 6, 7, 11],
-  "uss_directly_behind_index": [8, 9],
-
+  "uss_vertex_x_vec": [
+    3.298241,
+    3.580141,
+    3.667435,
+    3.667435,
+    3.580141,
+    3.298241,
+    -0.602483,
+    -0.997449,
+    -1.06219,
+    -1.06219,
+    -0.997449,
+    -0.602483
+  ],
+  "uss_vertex_y_vec": [
+    0.935328,
+    0.680863,
+    0.334976,
+    -0.334976,
+    -0.680863,
+    -0.935328,
+    -0.935328,
+    -0.669815,
+    -0.299949,
+    0.299949,
+    0.699815,
+    0.935328
+  ],
+  "uss_normal_angle_deg_vec": [
+    169.998,
+    125.019,
+    97.046,
+    82.954,
+    54.981,
+    10.002,
+    354.78,
+    298.086,
+    277.369,
+    262.631,
+    241.9914,
+    185.22
+  ],
+  "uss_wdis_index_front": [
+    8,
+    0,
+    1,
+    2,
+    3,
+    9
+  ],
+  "uss_wdis_index_back": [
+    10,
+    4,
+    5,
+    6,
+    7,
+    11
+  ],
+  "uss_directly_behind_index": [
+    8,
+    9
+  ],
   "comment_9": "check replan params",
   "stuck_replan_time": 8.8,
   "max_replan_remain_dist": 0.2,
-
   "comment_10": "construct t_lane params",
   "vacant_pt_outside_dx": 0.5,
   "vacant_pt_outside_dy": 0.3,
@@ -113,7 +188,6 @@
   "obs_consider_lat_threshold": 1.568,
   "max_pt_inside_drop_dx_mono": 1.68,
   "max_pt_inside_drop_dx_multi": 0.368,
-
   "comment_11": "construce obstacles params",
   "channel_width": 6.68,
   "min_channel_width": 5.68,
@@ -127,6 +201,7 @@
   "car_lat_inflation_normal": 0.0586,
   "car_lat_inflation_strict": 0.1586,
   "tmp_no_consider_obs_dy": true,
+  "believe_in_fus_obs": true,
   "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.2068,
   "obs_safe_dx": 0.0668,
@@ -141,7 +216,6 @@
   "parallel_channel_x_mag": 20.0,
   "parallel_ego_side_to_obs_in_buffer": 0.25,
   "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
-
   "comment_12": "dynamic update path params",
   "car_to_limiter_dis": 1.0,
   "pose_y_err": 0.15,
@@ -156,16 +230,13 @@
   "pose_min_remain_dis": 0.688,
   "max_slot_jump_dist": 0.088,
   "max_slot_jump_heading": 0.48,
-
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.908,
-
   "comment_14": "slot update params when replan",
   "uss_slot_occupied_ratio": 0.25,
   "path_heading_slot": 55.5,
   "path_pos_err": 6.6,
   "last_update_slot_occupied_ratio": 0.836,
-
   "comment_15": "path planner params",
   "min_turn_radius": 5.7,
   "max_radius_in_slot": 12.66,
@@ -180,7 +251,7 @@
   "prepare_line_min_x_offset_slot": 2.0,
   "prepare_line_dx_offset_slot": 0.1,
   "prepare_line_max_x_offset_slot": 4.5,
-  "prepare_line_max_heading_offset_slot_deg": 12.8,
+  "prepare_line_max_heading_offset_slot_deg": 26.8,
   "prepare_line_dheading_offset_slot_deg": 1.0,
   "prepare_line_min_heading_offset_slot_deg": -6.8,
   "prepare_directly_use_tangent_pos_err": 0.168,
@@ -195,7 +266,7 @@
   "target_radius_err": 0.0468,
   "path_extend_distance": 0.3,
   "mono_plan_enable": true,
-  "conservative_mono_enable": true,
+  "conservative_mono_enable": false,
   "multi_plan_min_lat_err": 0.668,
   "multi_plan_min_heading_err": 8.68,
   "multi_plan_max_occupied_ratio": 0.8,
@@ -209,7 +280,6 @@
   "min_opt_path_length": 0.9,
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,
-
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
   "slot_update_in_or_out_occupied_ratio": 0.088,
@@ -239,7 +309,6 @@
   "slot_occupied_ratio_max_heading_err": 76.8,
   "max_slot_window_size": 3,
   "max_limiter_window_size": 6,
-
   "comment_17": "gen output params",
   "max_velocity": 0.6
 }

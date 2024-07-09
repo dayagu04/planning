@@ -429,6 +429,11 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
       collision_detector_ptr_->SetParam(param);
     }
   }
+  if (prepare_success) {
+    DEBUG_PRINT("use_mono_tang = " << calc_params_.use_mono_tang
+                                   << "  use_multi_tang = "
+                                   << calc_params_.use_multi_tang);
+  }
   return prepare_success;
 }
 

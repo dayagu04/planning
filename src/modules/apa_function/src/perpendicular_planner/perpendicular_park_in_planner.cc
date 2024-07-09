@@ -284,6 +284,8 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       << std::cos(ego_slot_info.ego_heading_slot),
       std::sin(ego_slot_info.ego_heading_slot);
 
+  ego_slot_info.fus_obj_valid_flag =
+      slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
   ego_slot_info.obs_pt_vec_slot.clear();
   ego_slot_info.obs_pt_vec_slot =
       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot;
@@ -612,30 +614,36 @@ void PerpendicularInPlanner::GenTlane() {
           .y());
 
   // construct channel width and length
-  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
-      channel_width_pq_for_x(Compare(1));
-  for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-    if (obstacle_point_slot.x() < x_max ||
-        std::fabs(obstacle_point_slot.y()) > y_max) {
-      continue;
+  if (!ego_slot_info.fus_obj_valid_flag) {
+    // use uss obs
+    std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
+        channel_width_pq_for_x(Compare(1));
+    for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
+      if (obstacle_point_slot.x() < x_max ||
+          std::fabs(obstacle_point_slot.y()) > y_max) {
+        continue;
+      }
+      channel_width_pq_for_x.emplace(obstacle_point_slot);
     }
-    channel_width_pq_for_x.emplace(obstacle_point_slot);
+
+    if (channel_width_pq_for_x.empty()) {
+      channel_width_pq_for_x.emplace(Eigen::Vector2d(
+          apa_param.GetParam().channel_width +
+              ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x(),
+          0.0));
+    }
+
+    const double channel_width =
+        channel_width_pq_for_x.top().x() -
+        ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x();
+
+    ego_slot_info.channel_width = pnc::mathlib::DoubleConstrain(
+        channel_width, apa_param.GetParam().min_channel_width,
+        apa_param.GetParam().channel_width);
+  } else {
+    // use fus obs
+    ego_slot_info.channel_width = 10.68;
   }
-
-  if (channel_width_pq_for_x.empty()) {
-    channel_width_pq_for_x.emplace(Eigen::Vector2d(
-        apa_param.GetParam().channel_width +
-            ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x(),
-        0.0));
-  }
-
-  const double channel_width =
-      channel_width_pq_for_x.top().x() -
-      ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5).x();
-
-  ego_slot_info.channel_width = pnc::mathlib::DoubleConstrain(
-      channel_width, apa_param.GetParam().min_channel_width,
-      apa_param.GetParam().channel_width);
 
   DEBUG_PRINT("channel_width = " << ego_slot_info.channel_width);
 
@@ -727,9 +735,18 @@ void PerpendicularInPlanner::GenTlane() {
 
   double left_y = left_pq_for_y.top().y();
 
+  const double real_left_y = left_y;
+
+  double left_x = left_pq_for_x.top().x();
+
   double right_y = right_pq_for_y.top().y();
 
-  if (apa_param.GetParam().tmp_no_consider_obs_dy) {
+  const double real_right_y = right_y;
+
+  double right_x = right_pq_for_x.top().x();
+
+  if (apa_param.GetParam().tmp_no_consider_obs_dy &&
+      !ego_slot_info.fus_obj_valid_flag) {
     if (!left_empty) {
       left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
     }
@@ -739,15 +756,31 @@ void PerpendicularInPlanner::GenTlane() {
     }
   }
 
-  DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y);
+  const double threshold = 0.368;
+  if (ego_slot_info.fus_obj_valid_flag) {
+    left_y = std::max(left_y, car_half_width_with_safe_buffer + threshold);
+    left_x = std::min(left_x, ego_slot_info.pt_1.x() - 2.0 * threshold);
+    right_y = std::min(right_y, -car_half_width_with_safe_buffer - threshold);
+    right_x = std::min(right_x, ego_slot_info.pt_0.x() - 2.0 * threshold);
+  }
 
-  const double left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
+  DEBUG_PRINT("real_left_y = " << real_left_y
+                               << "  real_right_y = " << real_right_y);
 
-  const double right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
+  DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y << "left_x = "
+                          << left_x << "  right_x = " << right_x);
 
-  DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
-                                    << "  right_dis_obs_car = "
-                                    << right_dis_obs_car);
+  // todo: consider actual obs pos to let slot release or not release or move
+  // target pose
+  double left_dis_obs_car = 0.0;
+  double right_dis_obs_car = 0.0;
+  if (apa_param.GetParam().believe_in_fus_obs) {
+    left_dis_obs_car = real_left_y - car_half_width_with_safe_buffer;
+    right_dis_obs_car = car_half_width_with_safe_buffer - real_right_y;
+  } else {
+    left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
+    right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
+  }
 
   bool left_obs_meet_safe_require = false;
   bool right_obs_meet_safe_require = false;
@@ -759,6 +792,8 @@ void PerpendicularInPlanner::GenTlane() {
   bool need_move_slot = false;
   double move_slot_dist = 0.0;
 
+  // if two side is all no safe, the slot would not release in slot managment,
+  // and should not move target pose
   if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
     // left side is dangerous, should move toward right
     need_move_slot = true;
@@ -785,16 +820,14 @@ void PerpendicularInPlanner::GenTlane() {
     slot_t_lane_.corner_inside_slot = corner_right_slot;
     slot_t_lane_.pt_outside = corner_left_slot;
     slot_t_lane_.pt_inside = corner_right_slot;
-    slot_t_lane_.pt_inside.x() =
-        right_pq_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
+    slot_t_lane_.pt_inside.x() = right_x + apa_param.GetParam().tlane_safe_dx;
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // outside is right, inside is left
     slot_t_lane_.corner_outside_slot = corner_right_slot;
     slot_t_lane_.corner_inside_slot = corner_left_slot;
     slot_t_lane_.pt_outside = corner_right_slot;
     slot_t_lane_.pt_inside = corner_left_slot;
-    slot_t_lane_.pt_inside.x() =
-        left_pq_for_x.top().x() + apa_param.GetParam().tlane_safe_dx;
+    slot_t_lane_.pt_inside.x() = left_x + apa_param.GetParam().tlane_safe_dx;
   }
 
   slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
@@ -806,7 +839,8 @@ void PerpendicularInPlanner::GenTlane() {
     slot_t_lane_.pt_terminal_pos.y() += move_slot_dist;
     slot_t_lane_.pt_inside.y() += move_slot_dist;
     slot_t_lane_.pt_outside.y() += move_slot_dist;
-    DEBUG_PRINT("should move slot according to obs pt");
+    DEBUG_PRINT(
+        "should move slot according to obs pt, move dist = " << move_slot_dist);
   }
 
   slot_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_terminal_pos;
@@ -819,18 +853,15 @@ void PerpendicularInPlanner::GenTlane() {
   // for onstacle_t_lane    right is inside, left is outside
   obstacle_t_lane_.slot_side = slot_side;
   if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-    obstacle_t_lane_.pt_inside.x() =
-        right_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obstacle_t_lane_.pt_inside.x() = right_x + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_inside.y() = right_y;
-    obstacle_t_lane_.pt_outside.x() =
-        left_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obstacle_t_lane_.pt_outside.x() = left_x + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_outside.y() = left_y;
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    obstacle_t_lane_.pt_inside.x() =
-        left_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+    obstacle_t_lane_.pt_inside.x() = left_x + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_inside.y() = left_y;
     obstacle_t_lane_.pt_outside.x() =
-        right_pq_for_x.top().x() + apa_param.GetParam().obs_safe_dx;
+        right_x + apa_param.GetParam().obs_safe_dx;
     obstacle_t_lane_.pt_outside.y() = right_y;
   }
 
@@ -965,20 +996,57 @@ void PerpendicularInPlanner::GenObstacles() {
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
 
-  // temp hack, only increase plan success ratio
-  double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
-  if (frame_.ego_slot_info.slot_occupied_ratio >
-          apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
-      std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
-    safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
+  if (!ego_slot_info.fus_obj_valid_flag) {
+    // when no fus obj, temp hack, only increase plan success ratio
+    double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
+    if (frame_.ego_slot_info.slot_occupied_ratio >
+            apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
+        std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
+      safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
+    }
+    for (const auto& obs_pos : tlane_obstacle_vec) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs_pos, ego_pose, safe_dist)) {
+        apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+            obs_pos, CollisionDetector::TLANE_OBS);
+      }
+    }
   }
 
-  for (const auto& obs_pos : tlane_obstacle_vec) {
-    if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
-            obs_pos, ego_pose, safe_dist)) {
-      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-          obs_pos, CollisionDetector::TLANE_OBS);
+  else {
+    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+        tlane_obstacle_vec, CollisionDetector::TLANE_OBS);
+
+    // add actual fus obs
+    Eigen::Vector2d pt_left = obstacle_t_lane_.pt_outside;
+    Eigen::Vector2d pt_right = obstacle_t_lane_.pt_inside;
+    if (obstacle_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+      std::swap(pt_left, pt_right);
     }
+    std::vector<Eigen::Vector2d> fus_obs_vec;
+    for (const auto& obs_pos : ego_slot_info.obs_pt_vec_slot) {
+      if (!apa_param.GetParam().believe_in_fus_obs &&
+          std::fabs(obs_pos.y()) < 0.5 * ego_slot_info.slot_width &&
+          obs_pos.x() < 5.368) {
+        // obs is in slot, temp hack, lose it
+        continue;
+      }
+
+      if (obs_pos.y() > pt_left.y() && obs_pos.x() < pt_left.x()) {
+        // obs is in the lower left T-lane area, lose it
+        continue;
+      }
+
+      if (obs_pos.y() < pt_right.y() && obs_pos.x() < pt_right.x()) {
+        // obs is in the lower right T-lane area, lose it
+        continue;
+      }
+
+      fus_obs_vec.emplace_back(obs_pos);
+    }
+
+    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+        fus_obs_vec, CollisionDetector::FUSION_OBS);
   }
 }
 

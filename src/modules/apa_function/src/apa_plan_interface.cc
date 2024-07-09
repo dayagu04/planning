@@ -456,6 +456,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().tmp_no_consider_obs_dy, bool,
                   "tmp_no_consider_obs_dy");
 
+  JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
+                  "believe_in_fus_obs");
+
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
 
