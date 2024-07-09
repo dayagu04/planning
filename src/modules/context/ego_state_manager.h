@@ -137,6 +137,7 @@ class EgoStateManager {
  private:
   framework::Session *session_ = nullptr;
   EgoPlanningEgoStateManagerConfig config_;
+  double steer_ratio_;  // hack
   double parking_cruise_speed_;
   double max_replan_lat_err_;
   double max_replan_theta_err_;

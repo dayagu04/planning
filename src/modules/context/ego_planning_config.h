@@ -1670,6 +1670,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
+    steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
   }
   double parking_cruise_speed = 5.55;
 
@@ -1685,6 +1686,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
 
   double kEpsilon_v = 0.0;
   double kEpsilon_a = 0.0;
+
+  double steer_ratio = 16.5;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
