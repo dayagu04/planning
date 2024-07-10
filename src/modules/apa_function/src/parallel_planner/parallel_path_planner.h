@@ -222,33 +222,17 @@ class ParallelPathPlanner {
 
   // pybind simulation
   const std::vector<double> GetPathEle(size_t index) const;
-  const std::vector<double> GetMinSafeCircle() const;
 
  private:
-  // prepare plan
-  const bool PreparePlan();
-  const bool PlanFromEgoToParkOutRootPose(const bool is_prepare_step);
-
   const bool PrepareStepFromEgo(
       const std::vector<pnc::geometry_lib::PathSegment>
           &inversed_park_out_path);
-
-  const bool ConstructParkOutArcLengthVec(
-      std::vector<double> &first_arc_length_vec, pnc::geometry_lib::Arc &arc);
-
-  const bool ConstructParkOutLineLengthVec(
-      std::vector<double> &line_length_vec,
-      pnc::geometry_lib::LineSegment &line);
 
   const bool CalcParkOutPath(
       std::vector<pnc::geometry_lib::PathSegment> &reversed_park_out_path,
       const pnc::geometry_lib::Arc &first_arc,
       const pnc::geometry_lib::LineSegment &line,
       const double park_out_target_heading);
-
-  const bool PlanFromEgoToParkOutEndPose(
-      const Eigen::Vector2d &park_out_end_pos,
-      const double park_out_end_heading, const bool is_prepare_step);
 
   // use dubins
   const bool OneStepDubinsPlan(const pnc::geometry_lib::PathPoint &start_pose,
@@ -357,7 +341,6 @@ class ParallelPathPlanner {
   // adjust plan
   const bool AdjustPlan();
   const bool ParallelAdjustPlan();
-  const bool CSCSAdjustPlan();
 
   const bool CheckAdjustPlanSuitable(
       const pnc::geometry_lib::PathPoint &current_pose) const;
@@ -371,24 +354,6 @@ class ParallelPathPlanner {
   const bool CalcLineDirAllValidPose(
       std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
       const pnc::geometry_lib::LineSegment &target_line);
-
-  const bool SameSteerCSCToLine(
-      std::vector<pnc::geometry_lib::PathPoint> &target_tan_pose_vec,
-      const uint8_t start_steer, const uint8_t start_gear,
-      const pnc::geometry_lib::PathPoint &start_pose,
-      const pnc::geometry_lib::LineSegment &terminal_line,
-      const double shift_ratio = 1.0);
-
-  const bool SameSteerCSCPlan(const pnc::geometry_lib::PathPoint &start_pose,
-                              const pnc::geometry_lib::PathPoint &target_pose,
-                              const uint8_t start_steer,
-                              const uint8_t start_gear);
-
-  const bool CSCSInclinedStepPlan(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const pnc::geometry_lib::LineSegment &target_line,
-      const uint8_t current_gear);
 
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -487,19 +452,6 @@ class ParallelPathPlanner {
   const Eigen::Vector2d CalEgoTurningCenter(
       const pnc::geometry_lib::PathPoint &ego_pose, const double radius,
       const uint8_t steer) const;
-
-  const bool CheckTwoPoseInCircle(const Eigen::Vector2d &ego_pos0,
-                                  const double ego_heading0,
-                                  const Eigen::Vector2d &ego_pos1,
-                                  const double ego_heading1,
-                                  const Eigen::Vector2d &center) const;
-
-  const bool IsRightCircle(const pnc::geometry_lib::PathPoint &ego_pose,
-                           const Eigen::Vector2d &center) const;
-
-  const bool IsRightCircle(const Eigen::Vector2d &ego_pos,
-                           const double ego_heading,
-                           const Eigen::Vector2d &center) const;
 
   const bool IsOnTarget(const pnc::geometry_lib::PathPoint &current_pose) const;
 
