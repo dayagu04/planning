@@ -17,9 +17,9 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
   }
   player.Init(is_close_loop, auto_time_sec, scene_type, no_debug);
   if (no_debug) {
-    player.NoDebugInfoMode();
+    player.NoDebugInfoMode(is_close_loop);
   } else {
-    player.PlayAllFrames();
+    player.PlayAllFrames(is_close_loop);
   }
   player.GenMileage(mileage_path);
   player.StoreRosBag(out_bag);
