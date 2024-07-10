@@ -1291,13 +1291,14 @@ def draw_local_view(dataLoader, layer_manager):
         flag, mobileye_lane_lines_msg = findME(dataLoader.mobileye_lane_lines_msg, fusion_road_timestamps[i])
         loc_msg = find(dataLoader.loc_msg, localization_timestamps[i])
         for index in range(12) :
-          if index >= mobileye_lane_lines_msg.lane_line_size:
-            break
           mobileye_lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
           mobileye_lane_generator_key = f'mobileye_lane_{index}'
           if (mobileye_lane_generator_key in mobileye_lane_lines_generator_dict.keys()) == False:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key] = LineGenerator('mobileye_line')
           if not flag or loc_msg == None:
+            mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
+            continue
+          if index >= mobileye_lane_lines_msg.lane_line_size:
             mobileye_lane_lines_generator_dict[mobileye_lane_generator_key].xys.append(([] , [] ,[], []))
             continue
 
