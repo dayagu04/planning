@@ -34,6 +34,7 @@ class ApaPlannerBase {
     bool force_plan = false;
     bool sim_to_target = false;
     bool use_slot_in_bag = true;
+    bool use_obs_in_bag = true;
     bool is_path_optimization = false;
     bool is_cilqr_optimization = false;
     bool is_reset = false;
@@ -42,6 +43,8 @@ class ApaPlannerBase {
     std::vector<double> target_managed_slot_y_vec;
     std::vector<double> target_managed_limiter_x_vec;
     std::vector<double> target_managed_limiter_y_vec;
+    std::vector<double> obs_x_vec;
+    std::vector<double> obs_y_vec;
 
     double q_ref_xy = 100.0;
     double q_ref_theta = 100.0;

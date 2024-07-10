@@ -170,7 +170,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     uss_perception_msg.SerializeToString(),
                                     gl_msg.SerializeToString(),
                                     fus_obj_msg.SerializeToString(),
-                                    0, False, False, False, False, False, False, False, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    0, False, False, False, False, False, False, True, True, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec)
 
 

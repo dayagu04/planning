@@ -385,8 +385,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
     double path_length = 0.0;
 
     double min_remain_dist = 0.0268;
-    if (dist > apa_param.GetParam().slot_max_jump_dist &&
-        frame_.remain_dist > min_remain_dist) {
+    if (apa_param.GetParam().dynamic_col_det_enable ||
+        (dist > apa_param.GetParam().slot_max_jump_dist &&
+         frame_.remain_dist > min_remain_dist)) {
       // record pt_center_
       pt_center_ =
           (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1] +
@@ -397,6 +398,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       GenObstacles();
       bool need_trim_path = false;
       double car_remain_dist = 0.0;
+      DEBUG_PRINT("car_move_dist = " << car_move_dist);
       for (const auto& path_seg_global : first_reverse_path_vec_) {
         auto path_seg_local = path_seg_global;
         // pnc::geometry_lib::PrintSegmentInfo(path_seg_global);
@@ -437,7 +439,6 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
           col_res = apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
               path_seg_local.arc_seg, path_seg_local.arc_seg.headingA);
         }
-        pnc::geometry_lib::PrintSegmentInfo(path_seg_local);
         DEBUG_PRINT(
             "remain_obstacle_dist = "
             << col_res.remain_obstacle_dist << "  remain_car_dist = "
@@ -459,19 +460,37 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
             break;
           }
         }
-        if (col_res.remain_obstacle_dist - safe_dist <
-            col_res.remain_car_dist) {
-          // this path is dangerous, should trim path length, and lose
-          // subsequent path
-          need_trim_path = true;
-          car_remain_dist += col_res.remain_obstacle_dist - safe_dist;
-          break;
+
+        const double single_path_remain_obstacle_dist =
+            col_res.remain_obstacle_dist - safe_dist;
+
+        const double single_path_remain_car_dist = col_res.remain_car_dist;
+
+        if (single_path_remain_obstacle_dist < single_path_remain_car_dist) {
+          // this single path will collide with obs if the car is still at the
+          // start point of the path
+          // car_remain_dist represents the length of the path that car has been
+          // safely passed before
+          if (car_move_dist - car_remain_dist >
+              single_path_remain_obstacle_dist) {
+            // but if car has passed through the obstacle area, Regarded as
+            // unlikely to collide
+            car_remain_dist += single_path_remain_car_dist;
+          } else {
+            // this path is dangerous, should trim path length, and lose
+            // subsequent path
+            need_trim_path = true;
+            car_remain_dist += single_path_remain_obstacle_dist;
+            DEBUG_PRINT("this path is dangerous, car_remain_dist = "
+                        << car_remain_dist);
+            break;
+          }
+        } else {
+          car_remain_dist += single_path_remain_car_dist;
         }
-        car_remain_dist += col_res.remain_car_dist;
       }
 
-      car_remain_dist = std::max(
-          frame_.current_path_length - frame_.remain_dist, car_remain_dist);
+      car_remain_dist = std::max(car_move_dist, car_remain_dist);
       DEBUG_PRINT("car_remain_dist = " << car_remain_dist);
       if (need_trim_path) {
         PostProcessPathAccordingObs(car_remain_dist);
@@ -663,6 +682,7 @@ void PerpendicularInPlanner::GenTlane() {
   // sift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
+        obstacle_point_slot.x() < 0.0 ||
         std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;
     }
@@ -767,8 +787,9 @@ void PerpendicularInPlanner::GenTlane() {
   DEBUG_PRINT("real_left_y = " << real_left_y
                                << "  real_right_y = " << real_right_y);
 
-  DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y << "left_x = "
-                          << left_x << "  right_x = " << right_x);
+  DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y
+                          << "  left_x = " << left_x
+                          << "  right_x = " << right_x);
 
   // todo: consider actual obs pos to let slot release or not release or move
   // target pose
@@ -776,10 +797,10 @@ void PerpendicularInPlanner::GenTlane() {
   double right_dis_obs_car = 0.0;
   if (apa_param.GetParam().believe_in_fus_obs) {
     left_dis_obs_car = real_left_y - car_half_width_with_safe_buffer;
-    right_dis_obs_car = car_half_width_with_safe_buffer - real_right_y;
+    right_dis_obs_car = -car_half_width_with_safe_buffer - real_right_y;
   } else {
     left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
-    right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
+    right_dis_obs_car = -car_half_width_with_safe_buffer - right_y;
   }
 
   bool left_obs_meet_safe_require = false;
@@ -841,6 +862,10 @@ void PerpendicularInPlanner::GenTlane() {
     slot_t_lane_.pt_outside.y() += move_slot_dist;
     DEBUG_PRINT(
         "should move slot according to obs pt, move dist = " << move_slot_dist);
+
+    ego_slot_info.terminal_err.Set(
+        ego_slot_info.ego_pos_slot - slot_t_lane_.pt_terminal_pos,
+        ego_slot_info.ego_heading_slot - slot_t_lane_.pt_terminal_heading);
   }
 
   slot_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_terminal_pos;
@@ -996,6 +1021,21 @@ void PerpendicularInPlanner::GenObstacles() {
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
 
+  if (is_simulation_ && simu_param_.use_obs_in_bag &&
+      simu_param_.obs_x_vec.size() > 0) {
+    std::vector<Eigen::Vector2d> obs_vec;
+    obs_vec.reserve(simu_param_.obs_x_vec.size());
+    Eigen::Vector2d obs;
+    for (size_t i = 0; i < simu_param_.obs_x_vec.size(); ++i) {
+      obs = ego_slot_info.g2l_tf.GetPos(
+          Eigen::Vector2d(simu_param_.obs_x_vec[i], simu_param_.obs_y_vec[i]));
+      obs_vec.emplace_back(obs);
+    }
+    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+        obs_vec, CollisionDetector::RECORD_OBS);
+    return;
+  }
+
   if (!ego_slot_info.fus_obj_valid_flag) {
     // when no fus obj, temp hack, only increase plan success ratio
     double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
@@ -1039,6 +1079,11 @@ void PerpendicularInPlanner::GenObstacles() {
 
       if (obs_pos.y() < pt_right.y() && obs_pos.x() < pt_right.x()) {
         // obs is in the lower right T-lane area, lose it
+        continue;
+      }
+
+      if (obs_pos.x() < obstacle_t_lane_.pt_lower_boundry_pos.x()) {
+        // obs is in the lower boundry, lose it
         continue;
       }
 

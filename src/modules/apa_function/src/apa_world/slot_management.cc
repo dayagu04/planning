@@ -464,6 +464,7 @@ bool SlotManagement::GenTLane(
   // sift obstacles that meet requirement
   for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
+        obstacle_point_slot.x() < 0.0 ||
         std::fabs(obstacle_point_slot.y()) > y_max) {
       continue;
     }
@@ -580,10 +581,10 @@ bool SlotManagement::GenTLane(
   double right_dis_obs_car = 0.0;
   if (apa_param.GetParam().believe_in_fus_obs) {
     left_dis_obs_car = real_left_y - car_half_width_with_safe_buffer;
-    right_dis_obs_car = car_half_width_with_safe_buffer - real_right_y;
+    right_dis_obs_car = -car_half_width_with_safe_buffer - real_right_y;
   } else {
     left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
-    right_dis_obs_car = car_half_width_with_safe_buffer - right_y;
+    right_dis_obs_car = -car_half_width_with_safe_buffer - right_y;
   }
 
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car

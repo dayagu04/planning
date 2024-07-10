@@ -21,6 +21,7 @@ class CollisionDetector {
     TLANE_OBS,
     LINEARC_OBS,
     FUSION_OBS,
+    RECORD_OBS,
     COUNT_OBS,
   };
 

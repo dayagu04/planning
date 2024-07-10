@@ -137,11 +137,12 @@ const bool InterfaceUpdateParam(
     py::bytes &ground_line_info_bytes, py::bytes &fus_obj_info_bytes,
     int select_id, bool force_plan, bool is_path_optimization,
     bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
-    bool sim_to_target, bool use_slot_in_bag, double sample_ds,
-    std::vector<double> target_managed_slot_x_vec,
+    bool sim_to_target, bool use_slot_in_bag, bool use_obs_in_bag,
+    double sample_ds, std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
-    std::vector<double> target_managed_limiter_y_vec) {
+    std::vector<double> target_managed_limiter_y_vec,
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
@@ -151,10 +152,13 @@ const bool InterfaceUpdateParam(
   param.is_reset = is_reset;
   param.sim_to_target = sim_to_target;
   param.use_slot_in_bag = use_slot_in_bag;
+  param.use_obs_in_bag = use_obs_in_bag;
   param.target_managed_slot_x_vec = target_managed_slot_x_vec;
   param.target_managed_slot_y_vec = target_managed_slot_y_vec;
   param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
   param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
+  param.obs_x_vec = obs_x_vec;
+  param.obs_y_vec = obs_y_vec;
 
   const auto &apa_planner_stack = apa_interface_ptr->GetPlannerStack();
 
