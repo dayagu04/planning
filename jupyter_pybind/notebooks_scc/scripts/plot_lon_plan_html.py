@@ -370,10 +370,11 @@ class ScalarGenerator(DataGeneratorBase):
             for i, v in enumerate(data["data"]):
                 ts.append(data["t"][i])
                 xs.append(data["t"][i])
-                linear_velocity_from_wheel = math.sqrt(v.velocity.velocity_boot.vx * v.velocity.velocity_boot.vx + \
+                """ linear_velocity_from_wheel = math.sqrt(v.velocity.velocity_boot.vx * v.velocity.velocity_boot.vx + \
                 v.velocity.velocity_boot.vy * v.velocity.velocity_boot.vy + \
                 v.velocity.velocity_boot.vz * v.velocity.velocity_boot.vz)
-                ys.append(round(linear_velocity_from_wheel, 2))
+                ys.append(round(linear_velocity_from_wheel, 2)) """
+                ys.append(round(v.vehicle_speed, 2))
                 # ys.append(round(v.pose.linear_velocity_from_wheel, 2))
         elif val_type == 'ego_acc':
             for i, v in enumerate(data["data"]):
@@ -988,7 +989,7 @@ def draw_lon_tj(plan_debug_msg, layer_manager):
     fig_tj.legend.click_policy = "hide"
     return fig_tj
 
-def draw_rt_vel(plan_debug_msg, loc_msg, layer_manager):
+def draw_rt_vel(plan_debug_msg, vs_msg, layer_manager):
     #define figure
     fig_rtv = bkp.figure(title='车速',
                          x_axis_label='time/s',
@@ -996,7 +997,7 @@ def draw_rt_vel(plan_debug_msg, loc_msg, layer_manager):
                          width=600,height=225)
 
     rt_target_vel = ScalarGenerator(plan_debug_msg, 'target_velocity', accu=True, name="rt_target_vel")
-    rt_ego_vel = ScalarGenerator(loc_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
+    rt_ego_vel = ScalarGenerator(vs_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
     rt_leadone_vel = ScalarGenerator(plan_debug_msg, 'leadone_velocity', accu=True, name="rt_leadone_vel")
     rt_leadtwo_vel = ScalarGenerator(plan_debug_msg, 'leadtwo_velocity', accu=True, name="rt_leadtwo_vel")
     rt_target_vel_start_stop = ScalarGenerator(plan_debug_msg, 'target_velocity_start_stop', accu=True, name="rt_target_vel_start_stop")
@@ -1166,7 +1167,7 @@ def plotOnce(bag_path, html_file):
     fig_tv = draw_lon_tv(plan_debug_msg, layer_manager)
     fig_ta = draw_lon_ta(plan_debug_msg, layer_manager)
     fig_tj = draw_lon_tj(plan_debug_msg, layer_manager)
-    fig_rtv = draw_rt_vel(plan_debug_msg, loc_msg, layer_manager)
+    fig_rtv = draw_rt_vel(plan_debug_msg, vs_msg, layer_manager)
     fig_rta = draw_rt_acc(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_dis = draw_rt_distance(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_cost = draw_rt_cost(plan_debug_msg, vs_msg, layer_manager)

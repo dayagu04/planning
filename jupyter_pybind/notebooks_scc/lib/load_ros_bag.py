@@ -123,7 +123,7 @@ class LoadRosbag:
     start_time = time.time()
     max_time = 0.0
     t0 = 0
-    try:
+    """ try:
       loc_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
@@ -143,7 +143,7 @@ class LoadRosbag:
         self.loc_msg['enable'] = False
     except:
       self.loc_msg['enable'] = False
-      print('missing /iflytek/localization/egomotion !!!')
+      print('missing /iflytek/localization/egomotion !!!') """
     # load localization msg
     if is_new_loc:
       try:
