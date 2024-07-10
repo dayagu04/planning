@@ -58,10 +58,11 @@ class PlanningPlayer {
                   bool is_close_loop, bool no_debug);
   void StoreRosBag(const std::string &bag_path);
   void GenMileage(const std::string &mileage_path);
-  void NoDebugInfoMode();
+  void NoDebugInfoMode(bool is_close_loop);
   void PlayOneFrame(int frame_num,
-                    const planning::common::TopicTimeList &input_time_list);
-  void PlayAllFrames();
+                    const planning::common::TopicTimeList &input_time_list,
+                    bool is_close_loop);
+  void PlayAllFrames(bool is_close_loop);
 
   void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
   void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
@@ -111,8 +112,7 @@ class PlanningPlayer {
   uint64_t local_time_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
-  iflyauto::FunctionalState last_functional_state =
-      iflyauto::FunctionalState_INIT;
+  uint8_t last_functional_state = iflyauto::FunctionalState_INIT;
   pnc::mathlib::spline x_t_spline_;
   pnc::mathlib::spline y_t_spline_;
   pnc::mathlib::spline theta_t_spline_;
