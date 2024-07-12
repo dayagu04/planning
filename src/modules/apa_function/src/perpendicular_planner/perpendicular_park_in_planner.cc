@@ -825,6 +825,29 @@ void PerpendicularInPlanner::GenTlane() {
     move_slot_dist = safe_threshold - right_dis_obs_car;
   }
 
+  if (need_move_slot) {
+    // cal max_move_slot_dist to avoid car press line
+    // no consider mirror
+    const double half_car_width = apa_param.GetParam().car_width * 0.5;
+    const double half_slot_width = ego_slot_info.slot_width * 0.5;
+    const double car2line_dist_threshold =
+        apa_param.GetParam().car2line_dist_threshold;
+
+    // first sure if car is parked in the center, does it meet the slot line
+    // distance requirement
+    const double max_move_slot_dist =
+        half_slot_width - half_car_width - car2line_dist_threshold;
+    if (max_move_slot_dist > 0.0 &&
+        (std::fabs(move_slot_dist) > max_move_slot_dist)) {
+      if (move_slot_dist > 0.0) {
+        move_slot_dist = max_move_slot_dist;
+      }
+      if (move_slot_dist < 0.0) {
+        move_slot_dist = -max_move_slot_dist;
+      }
+    }
+  }
+
   // construct slot_t_lane_, left is positive, right is negative
   const double slot_width = std::min(virtual_slot_width, real_slot_width);
 

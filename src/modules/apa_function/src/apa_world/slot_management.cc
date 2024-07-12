@@ -617,14 +617,24 @@ bool SlotManagement::GenTLane(
 
   if (need_move_slot) {
     // cal max_move_slot_dist to avoid car press line
+    // no consider mirror
+    const double half_car_width = apa_param.GetParam().car_width * 0.5;
+    const double half_slot_width = ego_slot_info.slot_width * 0.5;
     const double car2line_dist_threshold =
         apa_param.GetParam().car2line_dist_threshold;
-    const double max_move_slot_dist = ego_slot_info.slot_width * 0.5 -
-                                      apa_param.GetParam().car_width * 0.5 -
-                                      car2line_dist_threshold;
 
-    if (std::fabs(move_slot_dist) > max_move_slot_dist) {
-      return false;
+    // first sure if car is parked in the center, does it meet the slot line
+    // distance requirement
+    const double max_move_slot_dist =
+        half_slot_width - half_car_width - car2line_dist_threshold;
+    if (max_move_slot_dist > 0.0 &&
+        (std::fabs(move_slot_dist) > max_move_slot_dist)) {
+      if (move_slot_dist > 0.0) {
+        move_slot_dist = max_move_slot_dist;
+      }
+      if (move_slot_dist < 0.0) {
+        move_slot_dist = -max_move_slot_dist;
+      }
     }
   }
 
@@ -2493,7 +2503,7 @@ void SlotManagement::UpdateLimiterInfoInParking() {
 
     } else {
       // there is no limiter in slot
-      //std::cout << "fus has not limiter\n";
+      // std::cout << "fus has not limiter\n";
       limiter_global.first
           << select_slot_filter.corner_points().corner_point(2).x(),
           select_slot_filter.corner_points().corner_point(2).y();
