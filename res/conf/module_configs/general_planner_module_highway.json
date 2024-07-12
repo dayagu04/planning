@@ -36,6 +36,8 @@
   "max_replan_lat_err" : 0.6,
   "max_replan_theta_err" : 5.0,
   "max_replan_lon_err" : 1.0,
+  "replan_longitudinal_distance_threshold_speed": [11.111, 22.222],
+  "replan_longitudinal_distance_threshold_value": [1.0, 2.0],
   "max_replan_dist_err" : 1.5,
   "hpp_max_replan_lat_err" : 0.4,
   "hpp_max_replan_theta_err" : 10,

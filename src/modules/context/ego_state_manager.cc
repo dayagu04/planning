@@ -11,6 +11,7 @@
 #include "log.h"
 #include "math_lib.h"
 #include "planning_context.h"
+#include "refline.h"
 #include "spline_projection.h"
 #include "trajectory/trajectory_stitcher.h"
 #include "utils/pose2d_utils.h"
@@ -28,7 +29,6 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
   parking_cruise_speed_ = config_.parking_cruise_speed;
   max_replan_lat_err_ = config_.max_replan_lat_err;
   max_replan_theta_err_ = config_.max_replan_theta_err;
-  max_replan_lon_err_ = config_.max_replan_lon_err;
   max_replan_dist_err_ = config_.max_replan_dist_err;
   hpp_max_replan_lat_err_ = config_.hpp_max_replan_lat_err;
   hpp_max_replan_theta_err_ = config_.hpp_max_replan_theta_err;
@@ -284,6 +284,9 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
 
   double max_replan_lat_err = max_replan_lat_err_;
   double max_replan_theta_err = max_replan_theta_err_ / 57.3;
+  max_replan_lon_err_ =
+      interp(ego_v_, config_.replan_longitudinal_distance_threshold_speed,
+             config_.replan_longitudinal_distance_threshold_value);
   double max_replan_lon_err = max_replan_lon_err_;
   double max_replan_dist_err = max_replan_dist_err_;
   if (session_->is_hpp_scene()) {
@@ -305,9 +308,13 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     replan_type_.insert(LAT_ANGLE_REPLAN);
     replan_code += LAT_ANGLE_REPLAN;
   }
-  if (lat_reset_flag || lon_reset_flag) {
-    replan_type_.insert(FUCTION_REQUEST_REPLAN);
-    replan_code += FUCTION_REQUEST_REPLAN;
+  if (lat_reset_flag && lon_reset_flag) {
+    replan_type_.insert(LAT_LON_REPLAN);
+    replan_code += LAT_LON_REPLAN;
+  }
+  if (lat_reset_flag && !lon_reset_flag) {
+    replan_type_.insert(LAT_REPLAN);
+    replan_code += LAT_REPLAN;
   }
   if (fabs(lon_err) > max_replan_lon_err) {
     replan_type_.insert(LON_POSITION_REPLAN);
@@ -352,6 +359,15 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
       reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
           cur_vehicle_state);
+    } else if (replan_type_.find(LAT_REPLAN) != replan_type_.end()) {
+      if (replan_type_.find(LON_POSITION_REPLAN) != replan_type_.end()) {
+        reinit_point =
+            TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+                cur_vehicle_state);
+      } else {
+        LateralReset();
+        return replan_code;
+      }
     } else {
       reinit_point = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
           planning_loop_dt, cur_vehicle_state);
@@ -705,7 +721,6 @@ void EgoStateManager::UpdatePlanningInitState() {
                    .function_info()
                    .function_mode() == common::DrivingFunctionInfo::ACC) {
       set_lat_replan = true;
-      set_lon_replan = true;
     } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE) {
       set_lat_replan = true;
       set_lon_replan = true;

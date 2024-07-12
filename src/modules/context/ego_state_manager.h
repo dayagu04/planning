@@ -25,20 +25,21 @@ class EgoStateManager {
                   framework::Session *session);
   ~EgoStateManager() = default;
 
-  enum ReplanStatus {
-    NONE,
-    LAT_REPLAN,
-    LON_REPLAN,
-  };
+  // enum ReplanStatus {
+  //   NONE,
+  //   LAT_REPLAN,
+  //   LON_REPLAN,
+  // };
 
   enum ReplanType {
-  LAT_POSITION_REPLAN = 1,
-  LAT_ANGLE_REPLAN = 2,
-  LON_POSITION_REPLAN = 4,
-  LON_TINY_SPEED_REPLAN = 8,
-  FUCTION_REQUEST_REPLAN = 16,
-  LAT_lON_REST = 32,
-};
+    LAT_POSITION_REPLAN = 1,
+    LAT_ANGLE_REPLAN = 2,
+    LON_POSITION_REPLAN = 4,
+    LON_TINY_SPEED_REPLAN = 8,
+    LAT_LON_REPLAN = 16,
+    LAT_REPLAN = 32,
+    LAT_lON_REST = 64,
+  };
 
   bool update(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_carte(const Point2D &ego_carte);
@@ -121,10 +122,9 @@ class EgoStateManager {
   void update_transform();
   void UpdatePlanningInitState();
   void RealtimeUpdatePlanningInitState();
-  // uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
-  // new replan
-  uint8_t ReplanProcess(const bool &lat_reset_flag,
-                                                 const bool &lon_reset_flag);
+  // uint8_t ReplanProcess(const bool &lat_reset_flag, const bool
+  // &lon_reset_flag); new replan
+  uint8_t ReplanProcess(const bool &lat_reset_flag, const bool &lon_reset_flag);
 
   void LateralReset();
   void LongitudinalReset();
