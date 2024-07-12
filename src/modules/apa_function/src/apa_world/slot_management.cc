@@ -2484,6 +2484,7 @@ void SlotManagement::UpdateLimiterInfoInParking() {
       // there is limiter in slot
       limiter_global.first << select_fusion_slot.limiter_position[0].x,
           select_fusion_slot.limiter_position[0].y;
+      //std::cout << "fus has limiter\n";
 
       limiter_global.second << select_fusion_slot.limiter_position[1].x,
           select_fusion_slot.limiter_position[1].y;
@@ -2492,6 +2493,7 @@ void SlotManagement::UpdateLimiterInfoInParking() {
 
     } else {
       // there is no limiter in slot
+      //std::cout << "fus has not limiter\n";
       limiter_global.first
           << select_slot_filter.corner_points().corner_point(2).x(),
           select_slot_filter.corner_points().corner_point(2).y();

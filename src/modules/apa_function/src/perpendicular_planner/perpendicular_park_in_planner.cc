@@ -368,9 +368,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   }
 
   // trim path according to slot when 1R
-  if ((perpendicular_path_planner_.GetOutput().is_first_reverse_path ||
-       apa_param.GetParam().dynamic_col_det_enable) &&
-      !first_reverse_path_vec_.empty()) {
+  if (apa_param.GetParam().dynamic_col_det_enable ||
+      (perpendicular_path_planner_.GetOutput().is_first_reverse_path &&
+       !first_reverse_path_vec_.empty())) {
     const double dist = (ego_slot_info.slot_center - pt_center_).norm();
     DEBUG_PRINT("slot jump dist = " << dist);
 
@@ -494,7 +494,6 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       DEBUG_PRINT("car_remain_dist = " << car_remain_dist);
       if (need_trim_path) {
         PostProcessPathAccordingObs(car_remain_dist);
-        trim_path_by_obs_ = true;
       }
     }
   }
@@ -1602,6 +1601,15 @@ const bool PerpendicularInPlanner::CheckFinished() {
                      enter_slot_condition && remain_uss_condition;
   }
 
+  if (parking_finish) {
+    return true;
+  }
+
+  // trim path by obs
+  parking_finish = lat_condition && static_condition && trim_path_by_obs_ &&
+                   enter_slot_condition &&
+                   (gear_command_ == pnc::geometry_lib::SEG_GEAR_REVERSE);
+
   return parking_finish;
 }
 
@@ -1961,6 +1969,7 @@ const bool PerpendicularInPlanner::PostProcessPathAccordingObs(
     }
     if (s > car_remain_dist) {
       DEBUG_PRINT("path shoule be shorten because of obs");
+      trim_path_by_obs_ = true;
       if (car_remain_dist - s_vec.back() > 0.036 && frame_.spline_success) {
         x_vec.emplace_back(frame_.x_s_spline(car_remain_dist));
         y_vec.emplace_back(frame_.y_s_spline(car_remain_dist));

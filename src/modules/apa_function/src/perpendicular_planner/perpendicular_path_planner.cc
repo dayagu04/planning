@@ -402,7 +402,7 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
     }
     if (use_virtual_arc) {
       CollisionDetector::Paramters param;
-      param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
+      param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict + 0.0168;
       collision_detector_ptr_->SetParam(param);
     }
     for (pnc::geometry_lib::PathSegment& path_seg : path_seg_vec) {
