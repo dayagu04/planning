@@ -402,7 +402,8 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
     }
     if (use_virtual_arc) {
       CollisionDetector::Paramters param;
-      param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict + 0.0168;
+      param.lat_inflation =
+          apa_param.GetParam().car_lat_inflation_strict + 0.0168;
       collision_detector_ptr_->SetParam(param);
     }
     for (pnc::geometry_lib::PathSegment& path_seg : path_seg_vec) {
@@ -2782,9 +2783,9 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
     DEBUG_PRINT(
         "safe_remain_dist is samller than 0.0, the path donot meet "
         "requirements");
-    DEBUG_PRINT("collision_point = "
-                << col_res.collision_point.transpose() << "  obs_pt_global = "
-                << col_res.collision_point_global.transpose()
+    DEBUG_PRINT("col_pt_ego_global = "
+                << col_res.col_pt_ego_global.transpose()
+                << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose()
                 << "  car_line_order = " << col_res.car_line_order);
     return PATH_COL_INVALID;
   }
@@ -2793,9 +2794,11 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
     // DEBUG_PRINT(
     //     "the path will collide, the length need shorten to "
     //     "safe_remain_dist");
-    DEBUG_PRINT("collision_point = "
-                << col_res.collision_point.transpose() << "  obs_pt_global = "
-                << col_res.collision_point_global.transpose()
+    DEBUG_PRINT("col_pt_ego_global = "
+                << col_res.col_pt_ego_global.transpose()
+                << "  col_pt_ego_local = "
+                << col_res.col_pt_ego_local.transpose()
+                << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose()
                 << "  car_line_order = " << col_res.car_line_order);
     if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       auto& line = path_seg.line_seg;
@@ -2811,18 +2814,21 @@ const uint8_t PerpendicularPathPlanner::TrimPathByCollisionDetection(
     }
     path_seg.collision_flag = true;
     if (calc_params_.multi_plan &&
-        (col_res.collision_point_global.x() >
-             input_.tlane.pt_inside.x() - 0.368 &&
-         col_res.collision_point_global.x() <
+        (col_res.col_pt_obs_global.x() > input_.tlane.pt_inside.x() - 0.368 &&
+         col_res.col_pt_obs_global.x() <
              (input_.pt_0.x() + input_.pt_1.x()) * 0.5 + 2.68) &&
         (calc_params_.first_multi_plan ||
          path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE)) {
-      if ((calc_params_.is_left_side &&
-           col_res.collision_point_global.y() > 0.0) ||
-          (!calc_params_.is_left_side &&
-           col_res.collision_point_global.y() < 0.0)) {
+      if ((calc_params_.is_left_side && col_res.col_pt_obs_global.y() > 0.0) ||
+          (!calc_params_.is_left_side && col_res.col_pt_obs_global.y() < 0.0)) {
         return PATH_COL_INSIDE_STUCK;
       }
+    }
+
+    if (calc_params_.multi_plan && calc_params_.first_multi_plan &&
+        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+        col_res.col_pt_ego_local.x() > 1.68 && safe_remain_dist < 2.68) {
+      return PATH_COL_INSIDE_STUCK;
     }
 
     return PATH_COL_SHORTEN;

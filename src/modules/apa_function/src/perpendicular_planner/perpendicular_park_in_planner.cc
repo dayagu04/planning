@@ -443,9 +443,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
             "remain_obstacle_dist = "
             << col_res.remain_obstacle_dist << "  remain_car_dist = "
             << col_res.remain_car_dist << "  collision_point_local"
-            << col_res.collision_point_global.transpose()
+            << col_res.col_pt_obs_global.transpose()
             << "  collision_point_global = "
-            << ego_slot_info.l2g_tf.GetPos(col_res.collision_point_global)
+            << ego_slot_info.l2g_tf.GetPos(col_res.col_pt_obs_global)
                    .transpose()
             << "  pt_outside = "
             << ego_slot_info.l2g_tf.GetPos(slot_t_lane_.pt_outside).transpose()
@@ -453,9 +453,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
         if (perpendicular_path_planner_.GetOutput().is_first_reverse_path) {
           if ((slot_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT &&
-               col_res.collision_point_global.y() > 0.0) ||
+               col_res.col_pt_obs_global.y() > 0.0) ||
               (slot_t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT &&
-               col_res.collision_point_global.y() < 0.0)) {
+               col_res.col_pt_obs_global.y() < 0.0)) {
             DEBUG_PRINT("no consider inner stuck in dynamic trim path when 1R");
             break;
           }

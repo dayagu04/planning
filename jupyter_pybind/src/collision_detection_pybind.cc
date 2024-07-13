@@ -22,7 +22,9 @@ typedef Eigen::Matrix<double, 5, 1> Vector5d;
 
 static CollisionDetector* pBaseColDetAir = nullptr;
 static CollisionDetector::CollisionResult collision_result;
-static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
+static std::vector<Eigen::Vector3d> pt_vec;
+static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
+static double length = 0.0;
 
 int Init() {
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
@@ -67,9 +69,10 @@ void SetParam(const double lat_inflation) {
 void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
                        const Eigen::Vector3d ego_pos_end,
                        const int is_line_obs) {
+  pt_vec.clear();
   pnc::geometry_lib::LineSegment line_seg(
       Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
-      Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]));
+      Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]), ego_pos_start[2]);
   if (is_line_obs == 0) {
     collision_result =
         pBaseColDetAir->UpdateByObsMap(line_seg, ego_pos_start[2]);
@@ -77,12 +80,19 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
     collision_result =
         pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
   }
+  std::vector<pnc::geometry_lib::PathPoint> pose_vec;
+  pnc::geometry_lib::SamplePointSetInLineSeg(pose_vec, line_seg, 0.5);
+  for (size_t i = 0; i < pose_vec.size(); ++i) {
+    pt_vec.emplace_back(pose_vec[i].pos.x(), pose_vec[i].pos.y(),
+                        pose_vec[i].heading);
+  }
 }
 
 void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
                       const Eigen::Vector3d ego_pos_end,
                       const Eigen::Vector5d ego_turn_circle,
                       bool is_anti_clockwise, const int is_line_obs) {
+  pt_vec.clear();
   pnc::geometry_lib::Arc arc;
   arc.pA = Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]);
   arc.pB = Eigen::Vector2d(ego_pos_end[0], ego_pos_end[1]);
@@ -90,10 +100,19 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
       Eigen::Vector2d(ego_turn_circle[0], ego_turn_circle[1]);
   arc.circle_info.radius = ego_turn_circle[2];
   arc.is_anti_clockwise = is_anti_clockwise;
+  arc.headingA = ego_pos_start[2];
+  arc.headingB = ego_pos_end[2];
+  arc.length = length;
   if (!is_line_obs) {
     collision_result = pBaseColDetAir->UpdateByObsMap(arc, ego_pos_start[2]);
   } else {
     collision_result = pBaseColDetAir->UpdateByLineObs(arc, ego_pos_start[2]);
+  }
+  std::vector<pnc::geometry_lib::PathPoint> pose_vec;
+  pnc::geometry_lib::SamplePointSetInArc(pose_vec, arc, 0.5);
+  for (size_t i = 0; i < pose_vec.size(); ++i) {
+    pt_vec.emplace_back(pose_vec[i].pos.x(), pose_vec[i].pos.y(),
+                        pose_vec[i].heading);
   }
 }
 
@@ -107,15 +126,15 @@ const double GetRemainObstacleDist() {
   return float(collision_result.remain_obstacle_dist);
 }
 
-const int GetCarLineOrder() {
-  return collision_result.car_line_order;
-}
+const int GetCarLineOrder() { return collision_result.car_line_order; }
 
 const bool GetCollisionFlag() { return collision_result.collision_flag; }
 
-const Eigen::Vector2d GetCollisionPoint() {
-  return collision_result.collision_point;
+const Eigen::Vector2d GetCollisionPointEgoGlobal() {
+  return collision_result.col_pt_ego_global;
 }
+
+const std::vector<Eigen::Vector3d> GetSamplePt() { return pt_vec; }
 
 const Eigen::Vector2d GetTrunCenterCoord(
     const Eigen::Vector3d ego_pos_start,
@@ -126,6 +145,7 @@ const Eigen::Vector2d GetTrunCenterCoord(
   // ego_turn_circle: x, y, radius, rotation_angle, rotation_direction
   const double sign = (ego_turn_circle[4] == true ? 1.0 : -1.0);
   const double rot_angle = sign * pnc::mathlib::Deg2Rad(90);
+  length = std::fabs(rot_angle * ego_turn_circle[2]);
   const auto rot_m = pnc::geometry_lib::GetRotm2dFromTheta(rot_angle);
   const Eigen::Vector2d normal_unit_vector = rot_m * tangent_unit_vector;
   const Eigen::Vector2d AO = ego_turn_circle[2] * normal_unit_vector;
@@ -159,9 +179,10 @@ PYBIND11_MODULE(collision_detection_py, m) {
       .def("GetEgoPosCoord", &GetEgoPosCoord)
       .def("GetRemainDist", &GetRemainDist)
       .def("GetCollisionFlag", &GetCollisionFlag)
-      .def("GetCollisionPoint", &GetCollisionPoint)
+      .def("GetCollisionPointEgoGlobal", &GetCollisionPointEgoGlobal)
       .def("GetRemainCarDist", &GetRemainCarDist)
       .def("GetRemainObstacleDist", &GetRemainObstacleDist)
       .def("GetCarLineOrder", &GetCarLineOrder)
-      .def("SetParam", &SetParam);
+      .def("SetParam", &SetParam)
+      .def("GetSamplePt", &GetSamplePt);
 }

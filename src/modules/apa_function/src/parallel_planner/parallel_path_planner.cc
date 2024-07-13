@@ -2776,7 +2776,7 @@ const uint8_t ParallelPathPlanner::TrimPathByCollisionDetection(
     // std::cout << "the distance between obstacle and ego is smaller than "
     //    "min_safe_distance, collided! "
     // << std::endl;
-    std::cout << col_res.collision_point.transpose() << std::endl;
+    std::cout << col_res.col_pt_ego_global.transpose() << std::endl;
     return PATH_COL_INVALID;
   }
 
@@ -2858,7 +2858,7 @@ const uint8_t ParallelPathPlanner::TrimPathByCollisionDetection(
       return PATH_COL_INVALID;
     }
   }
-  collision_pt = col_res.collision_point_global;
+  collision_pt = col_res.col_pt_obs_global;
   return PATH_COL_SHORTEN;
 }
 // collision detect end

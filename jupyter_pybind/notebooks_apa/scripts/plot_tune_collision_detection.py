@@ -32,7 +32,7 @@ data_obstacle_line = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_obstacle_turn_circle = ColumnDataSource(data = {'x':[], 'y':[], 'r':[]})
 
-data_collision_point_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+data_col_pt_ego = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_remain_dist_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_car_collision_line = ColumnDataSource(data = {'x':[], 'y':[]})
@@ -56,9 +56,12 @@ fig1.line('x', 'y', source = data_obstacle_line, line_width = 1.5, line_color = 
 fig1.circle('x','y', source = data_obstacle_turn_circle, size=8, color='yellow', legend_label = 'obstacle_turn_circle', visible = False)
 fig1.circle(x ='x', y ='y', radius = 'r', source=data_obstacle_turn_circle, line_alpha = 0.5, line_width = 1, line_color = "black", fill_alpha=0, legend_label = 'obstacle_turn_circle', visible = False)
 
-fig1.circle('x','y', source = data_collision_point_pos, size=8, color='orange', legend_label = 'collision_point_pos')
+fig1.circle('x','y', source = data_col_pt_ego, size=8, color='orange', legend_label = 'col_pt_ego')
 
-fig1.line('x', 'y', source = data_remain_dist_line, line_width = 5.0, line_color = 'green', line_dash = 'solid', legend_label = 'remain_dist', visible = False)
+# fig1.line('x', 'y', source = data_remain_dist_line, line_width = 5.0, line_color = 'green', line_dash = 'solid', legend_label = 'remain_dist', visible = False)
+
+data_simu_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+fig1.patches('x_vec', 'y_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
 
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 fig1.legend.click_policy = 'hide'
@@ -232,24 +235,28 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
     'car_yn': car_yn,
   })
 
-  car_line_order = collision_detection_py.GetCarLineOrder()
-  print("car_line_order", car_line_order)
-  if car_line_order != -1:
-    if car_line_order < len(car_xb) - 1:
-      data_car_collision_line.data.update({
-        'x': [car_xn[car_line_order], car_xn[car_line_order + 1]],
-        'y': [car_yn[car_line_order], car_yn[car_line_order + 1]],
-      })
-    else:
-      data_car_collision_line.data.update({
-        'x': [car_xn[car_line_order], car_xn[0]],
-        'y': [car_yn[car_line_order], car_yn[0]],
-      })
-  else:
-    data_car_collision_line.data.update({
-      'x': [],
-      'y': [],
-    })
+  # update ego end pos
+  data_car_end_pos.data.update({
+    'x': [ego_pos_end[0]],
+    'y': [ego_pos_end[1]],
+  })
+
+  car_xn = []
+  car_yn = []
+  for i in range(len(car_xb)):
+      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_end[0], ego_pos_end[1], ego_pos_end[2])
+      car_xn.append(tmp_x)
+      car_yn.append(tmp_y)
+  data_car_end.data.update({
+    'car_xn': car_xn,
+    'car_yn': car_yn,
+  })
+
+  # update obstacle pos
+  data_obstacle_pos.data.update({
+    'x': [obstacle_x],
+    'y': [obstacle_y],
+  })
 
   # update ego turn center pos and circle
   # update obstacle turn center pos and circle
@@ -276,33 +283,8 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
       'r': [obstacle_turn_circle[2]],
     })
 
-  # update ego end pos
-  data_car_end_pos.data.update({
-    'x': [ego_pos_end[0]],
-    'y': [ego_pos_end[1]],
-  })
-
-  car_xn = []
-  car_yn = []
-  for i in range(len(car_xb)):
-      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_end[0], ego_pos_end[1], ego_pos_end[2])
-      car_xn.append(tmp_x)
-      car_yn.append(tmp_y)
-  data_car_end.data.update({
-    'car_xn': car_xn,
-    'car_yn': car_yn,
-  })
-
-  # update obstacle pos
-  data_obstacle_pos.data.update({
-    'x': [obstacle_x],
-    'y': [obstacle_y],
-  })
-
   obs_pos_start = [obstacle_x, obstacle_y, normalize_angle(obstacle_heading / 57.2958)]
-
   obs_pos_end = [0.0, 0.0, 0.0]
-
   obs_pos_end[0] = obs_pos_start[0] + obstacle_length * math.cos(obs_pos_start[2])
   obs_pos_end[1] = obs_pos_start[1] + obstacle_length * math.sin(obs_pos_start[2])
 
@@ -330,32 +312,106 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
   remain_dist = collision_detection_py.GetRemainDist()
   car_remain_dist = collision_detection_py.GetRemainCarDist()
   obstacle_remain_dist = collision_detection_py.GetRemainObstacleDist()
-  car_line_order1 = collision_detection_py.GetCarLineOrder()
-  print("car_line_order1 = ", car_line_order1)
+  car_line_order = collision_detection_py.GetCarLineOrder()
+  pt_vec = collision_detection_py.GetSamplePt()
+  col_pt_ego = collision_detection_py.GetCollisionPointEgoGlobal()
+
+  if car_remain_dist < obstacle_remain_dist:
+    collision_flag = False
+    car_line_order = -1
+  else:
+    collision_flag = True
+
+  # update car sample car_box
+  plan_path_x = []
+  plan_path_y = []
+  plan_path_heading = []
+
+  for i in range(len(pt_vec)):
+    plan_path_x.append(pt_vec[i][0])
+    plan_path_y.append(pt_vec[i][1])
+    plan_path_heading.append(pt_vec[i][2])
+
+  car_box_x_vec = []
+  car_box_y_vec = []
+  for k in range(len(plan_path_x)):
+    car_xn = []
+    car_yn = []
+    for i in range(len(car_xb)):
+      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
+      car_xn.append(tmp_x)
+      car_yn.append(tmp_y)
+    car_box_x_vec.append(car_xn)
+    car_box_y_vec.append(car_yn)
+
+  data_simu_car_box.data.update({
+    'x_vec': car_box_x_vec,
+    'y_vec': car_box_y_vec,
+  })
 
   names = []
   datas = []
+  names.append("ego_pos_start")
+  round_ego_pos_start = round_list([ego_pos_start[0], ego_pos_start[1], ego_pos_start[2] * 57.3], 3)
+  datas.append(round_ego_pos_start)
+  names.append("ego_pos_end")
+  round_ego_pos_end = round_list([ego_pos_end[0], ego_pos_end[1], ego_pos_end[2] * 57.3], 3)
+  datas.append(round_ego_pos_end)
+  # update collision_flag
   names.append("collision_flag")
   datas.append(collision_flag)
+
+  # update car_remain_dist
   names.append("car_remain_dist")
   datas.append(round(car_remain_dist, 3))
 
-  print("collision_flag = ", collision_flag)
+  names.append("obstacle_remain_dist")
+  datas.append(round(obstacle_remain_dist, 3))
 
-  ego_pos_collision = [0.0, 0.0, 0.0]
-  if collision_flag == True:
-    collision_point = collision_detection_py.GetCollisionPoint()
-    data_collision_point_pos.data.update({
-      'x': [collision_point[0]],
-      'y': [collision_point[1]],
+  names.append("remain_dist")
+  datas.append(round(remain_dist, 3))
+
+  # update car line
+  names.append("car_line_order")
+  datas.append(car_line_order)
+  data_car_collision_line.data.update({
+    'x': [],
+    'y': [],
+  })
+  car_xn = []
+  car_yn = []
+  for i in range(len(car_xb)):
+    tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_start[0], ego_pos_start[1], ego_pos_start[2])
+    car_xn.append(tmp_x)
+    car_yn.append(tmp_y)
+  if car_line_order != -1:
+    if car_line_order < len(car_xb) - 1:
+      data_car_collision_line.data.update({
+        'x': [car_xn[car_line_order], car_xn[car_line_order + 1]],
+        'y': [car_yn[car_line_order], car_yn[car_line_order + 1]],
+      })
+    else:
+      data_car_collision_line.data.update({
+        'x': [car_xn[car_line_order], car_xn[0]],
+        'y': [car_yn[car_line_order], car_yn[0]],
+      })
+
+  # update car col ego point
+  names.append("col_pt_ego")
+  datas.append(round_list(col_pt_ego, 3))
+  data_col_pt_ego.data.update({
+    'x': [],
+    'y': [],
+  })
+  if car_line_order != -1:
+    data_col_pt_ego.data.update({
+      'x': [col_pt_ego[0]],
+      'y': [col_pt_ego[1]],
     })
-    names.append("obstacle_remain_dist")
-    datas.append(round(obstacle_remain_dist, 3))
-    names.append("remain_dist")
-    datas.append(round(remain_dist, 3))
-    names.append("collision_point")
-    round_collision_point = round_list(collision_point, 3)
-    datas.append(round_collision_point)
+
+  # update car col pos
+  ego_pos_collision = [0.0, 0.0, 0.0]
+  if collision_flag:
     if straight_left_right == 0:
       # go straight
       if forward_back == 0:
@@ -380,30 +436,28 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
         ego_pos_collision[2] = ego_pos_start[2] + ego_rot_angle_collision
       else:
         ego_pos_collision[2] = ego_pos_start[2] - ego_rot_angle_collision
+  names.append("ego_pos_collision")
+  round_collision_point = round_list(ego_pos_collision, 3)
+  datas.append(round_collision_point)
 
-      names.append("ego_rotate_angle")
-      datas.append(round(ego_rot_angle*57.2958,3))
-      names.append("ego_rot_angle_collision")
-      datas.append(round(ego_rot_angle_collision*57.2958,3))
+  data_car_collision.data.update({
+    'car_xn': [],
+    'car_yn': [],
+  })
 
-    names.append("ego_pos_start")
-    round_ego_pos_start = round_list(ego_pos_start, 3)
-    datas.append(round_ego_pos_start)
+  data_car_collision_pos.data.update({
+    'x': [],
+    'y': [],
+  })
 
-    names.append("ego_pos_end")
-    round_ego_pos_end = round_list(ego_pos_end, 3)
-    datas.append(round_ego_pos_end)
-
-    names.append("ego_pos_collision")
-    round_ego_pos_collision = round_list(ego_pos_collision, 3)
-    datas.append(round_ego_pos_collision)
-
+  if collision_flag:
     car_xn = []
     car_yn = []
     for i in range(len(car_xb)):
       tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_collision[0], ego_pos_collision[1], ego_pos_collision[2])
       car_xn.append(tmp_x)
       car_yn.append(tmp_y)
+
     data_car_collision.data.update({
       'car_xn': car_xn,
       'car_yn': car_yn,
@@ -414,276 +468,10 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
       'y': [ego_pos_collision[1]],
     })
 
-    data_remain_dist_line.data.update({
-    'x': [ego_pos_start[0], ego_pos_collision[0]],
-    'y': [ego_pos_start[1], ego_pos_collision[1]],
-    })
-
-  else:
-    data_collision_point_pos.data.update({
-      'x': [],
-      'y': [],
-    })
-    data_car_collision_pos.data.update({
-      'x': [],
-      'y': [],
-    })
-    data_car_collision.data.update({
-      'car_xn': [],
-      'car_yn': [],
-    })
-    data_remain_dist_line.data.update({
-      'x': [],
-      'y': [],
-    })
-
   debug_data.data.update({
     'names': names,
     'datas': datas,
   })
-
-  #   data_collision_point_pos.data.update({
-  #     'x': [collision_point[0]],
-  #     'y': [collision_point[1]],
-  #   })
-  #   if straight_left_right != 0:
-  #     obstacle_turn_x = ego_turn_center_x
-  #     obstacle_turn_y = ego_turn_center_y
-  #     obstacle_turn_radius = math.sqrt((obstacle_x - obstacle_turn_x)*(obstacle_x - obstacle_turn_x)+(obstacle_y - obstacle_turn_y)*(obstacle_y - obstacle_turn_y))
-  #     data_obstacle_turn_circle.data.update({
-  #       'x': [ego_turn_center_x],
-  #       'y': [ego_turn_center_y],
-  #       'r': [obstacle_turn_radius],
-  #     })
-  #     # 畫出剛好碰撞時的車輛  根據剩餘距離畫出車輛
-  #     ego_rot_angle_collision = obstacle_remain_dist / turn_radius
-  #     ego_heading_collision = 0.0
-  #     if is_anticlockwise_rotation == True:
-  #       ego_heading_collision = ego_heading_start + ego_rot_angle_collision
-  #     else:
-  #       ego_heading_collision = ego_heading_start - ego_rot_angle_collision
-
-  #     ego_pos_collision = collision_detection_py.GetEgoPosCoord(ego_pos_start, ego_turn_center_pos, ego_rot_angle_collision, is_anticlockwise_rotation)
-
-  #     car_xn = []
-  #     car_yn = []
-  #     for i in range(len(car_xb)):
-  #         tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_collision[0], ego_pos_collision[1], ego_heading_collision)
-  #         car_xn.append(tmp_x)
-  #         car_yn.append(tmp_y)
-  #     data_car_collision.data.update({
-  #       'car_xn': car_xn,
-  #       'car_yn': car_yn,
-  #     })
-
-  #     data_car_collision_pos.data.update({
-  #       'x': [ego_pos_collision[0]],
-  #       'y': [ego_pos_collision[1]],
-  #     })
-
-
-
-
-
-
-
-
-  #   else:
-  #     data_obstacle_turn_circle.data.update({
-  #       'x': [],
-  #       'y': [],
-  #       'r': [],
-  #     })
-
-  # else:
-  #   data_collision_point_pos.data.update({
-  #     'x': [],
-  #     'y': [],
-  #   })
-
-  #   data_obstacle_turn_circle.data.update({
-  #       'x': [],
-  #       'y': [],
-  #       'r': [],
-  #   })
-
-
-
-
-  # # get and update obstacle end pos
-  # obstacles_end = collision_detection_py.GetObstaclesEnd()
-  # obstacles_end_x = []
-  # obstacles_end_y = []
-  # for i in range(len(obstacles_end)):
-  #   obstacles_end_x.append(obstacles_end[i][0])
-  #   obstacles_end_y.append(obstacles_end[i][1])
-
-  # data_obstacle_end_pos.data.update({
-  #   'x': obstacles_end_x,
-  #   'y': obstacles_end_y,
-  # })
-
-  # # get and update obstacles center pos
-  # obstacles_turn_center = collision_detection_py.GetObstaclesCenter()
-  # obstacles_turn_center_x = []
-  # obstacles_turn_center_y = []
-  # obstacles_turn_radius = []
-  # for i in range(len(obstacles_turn_center)):
-  #   obstacles_turn_center_x.append(obstacles_turn_center[i][0])
-  #   obstacles_turn_center_y.append(obstacles_turn_center[i][1])
-  #   obstacles_turn_radius.append(turn_radius)
-
-  # data_obstacle_turn_circle.data.update({
-  #   'x': obstacles_turn_center_x,
-  #   'y': obstacles_turn_center_y,
-  #   'r': obstacles_turn_radius,
-  # })
-
-
-
-  # x_start = ego_x_start
-  # y_start = ego_y_start
-
-  # heading_start = 0.0
-  # if forward_back == 0:
-  #   # forward
-  #   heading_start = ego_heading_start / 57.2958
-  # elif forward_back == 1:
-  #   # back
-  #   vel_heading = ego_heading_start + 180
-  #   if vel_heading > 360:
-  #     vel_heading = vel_heading - 360
-  #   heading_start = (vel_heading) / 57.2958
-
-  # x_end = 0.0
-  # y_end = 0.0
-  # center_x = 0.0
-  # center_y = 0.0
-  # if straight_left_right == 0:
-  #   # go straight
-  #   x_end = x_start + traj_length * math.cos(heading_start)
-  #   y_end = y_start + traj_length * math.sin(heading_start)
-  #   turn_radius = 0.0
-  # else:
-  #   point_start = [x_start, y_start]
-  #   point_center = collision_detection_py.GetTrunCenterCoord(point_start, heading_start, turn_radius, straight_left_right, forward_back)
-  #   center_x = point_center[0]
-  #   center_y = point_center[1]
-  #   arc_AB_theta = traj_length / turn_radius
-  #   point_end = collision_detection_py.GetTrunPointEndCoord(point_start, point_center, arc_AB_theta, straight_left_right, forward_back)
-  #   x_end = point_end[0]
-  #   y_end = point_end[1]
-
-  # obstacles_x = 5.4
-  # obstacles_y = 1.22511
-  # # update obstacle pos
-  # obstacles_x = [obstacle_x]
-  # obstacles_y = [obstacle_y]
-  # data_obstacle_pos.data.update({
-  #   'x': [obstacle_x],
-  #   'y': [obstacle_y],
-  # })
-
-  # # set obstacle start pos
-  # collision_detection_py.SetObstacles(obstacles_x, obstacles_y)
-
-
-  # x_start = 5.53048
-  # x_end = 6.71119
-  # y_start = 0.16552
-  # y_end = -0.797519
-  # center_x = 9.56367
-  # center_y = 3.90496
-  # # collision detection
-  # car_start = [x_start, y_start]
-  # car_end = [x_end, y_end]
-  # car_turn_center = [center_x, center_y]
-
-  # # if straight_left_right == 0:
-  # #   collision_detection_py.UpdateRefTrajLine(car_start, car_end, heading_start)
-  # # else:
-  # #   collision_detection_py.UpdateRefTrajArc(car_start, car_end, heading_start, car_turn_center, turn_radius)
-  # car_start = [5.53048, 0.16552]
-  # car_end = [6.71119, -0.797519]
-  # car_turn_center = [9.56367, 3.90496]
-  # heading_start = -0.823174
-  # turn_radius = 5.5
-  # collision_detection_py.UpdateRefTrajArc(car_start, car_end, heading_start, car_turn_center, turn_radius)
-
-  # collision_flag = collision_detection_py.GetCollisionFlag()
-  # remain_dist = collision_detection_py.GetRamainDist()
-
-  #   # update start point pos
-  # data_car_start_pos.data.update({
-  #   'x': [x_start],
-  #   'y': [y_start],
-  # })
-
-  # # update center point pos
-  # data_car_turn_circle.data.update({
-  #   'x': [center_x],
-  #   'y': [center_y],
-  #   'r': [turn_radius],
-  # })
-
-  # # update end point pos
-  # data_car_end_pos.data.update({
-  #   'x': [x_end],
-  #   'y': [y_end],
-  # })
-
-  # # update ego car pos
-  # car_xn = []
-  # car_yn = []
-  # for i in range(len(car_xb)):
-  #     tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], x_start, y_start, heading_start)
-  #     car_xn.append(tmp_x)
-  #     car_yn.append(tmp_y)
-  # data_car_start.data.update({
-  #   'car_xn': car_xn,
-  #   'car_yn': car_yn,
-  # })
-
-  # names = []
-  # datas = []
-  # names.append("collision_flag")
-  # datas.append(collision_flag)
-  # names.append("remain_dist")
-  # datas.append(remain_dist)
-  # debug_data.data.update({
-  #   'names': names,
-  #   'datas': datas,
-  # })
-
-  # # get obstacle end pos
-  # obstacles_end = collision_detection_py.GetObstaclesEnd()
-  # obstacles_end_x = []
-  # obstacles_end_y = []
-  # for i in range(len(obstacles_end)):
-  #   obstacles_end_x.append(obstacles_end[i][0])
-  #   obstacles_end_y.append(obstacles_end[i][1])
-
-  # data_obstacle_end_pos.data.update({
-  #   'x': obstacles_end_x,
-  #   'y': obstacles_end_y,
-  # })
-
-  # # get obstacles center pos
-  # obstacles_turn_center = collision_detection_py.GetObstaclesCenter()
-  # obstacles_turn_center_x = []
-  # obstacles_turn_center_y = []
-  # obstacles_turn_radius = []
-  # for i in range(len(obstacles_turn_center)):
-  #   obstacles_turn_center_x.append(obstacles_turn_center[i][0])
-  #   obstacles_turn_center_y.append(obstacles_turn_center[i][1])
-  #   obstacles_turn_radius.append(turn_radius)
-
-  # data_obstacle_turn_circle.data.update({
-  #   'x': obstacles_turn_center_x,
-  #   'y': obstacles_turn_center_y,
-  #   'r': obstacles_turn_radius,
-  # })
-
 
   push_notebook()
 

@@ -39,8 +39,9 @@ class CollisionDetector {
     double remain_dist = 25.0;
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
-    Eigen::Vector2d collision_point;
-    Eigen::Vector2d collision_point_global;
+    Eigen::Vector2d col_pt_ego_global;
+    Eigen::Vector2d col_pt_ego_local;
+    Eigen::Vector2d col_pt_obs_global;
     int car_line_order = -1;
     CarMoveBound car_move_bound;
   };
