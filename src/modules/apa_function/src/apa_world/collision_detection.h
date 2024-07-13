@@ -45,6 +45,9 @@ class CollisionDetector {
 
   struct Paramters {
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+    Paramters() = default;
+    Paramters(const double lat_inf) { lat_inflation = lat_inf; }
+
     void Reset() {
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     }

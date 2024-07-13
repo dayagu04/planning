@@ -40,8 +40,8 @@ static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.3;
 static double kCurbYMagIdentification = 0.0;
 
-static double kMaxDistDeleteObsToEgoInSlot = 0.25;
-static double kMaxDistDeleteObsToEgoOutSlot = 0.3;
+static double kMaxDistDeleteObsToEgoInSlot = 0.3;
+static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 
 static double kMinChannelYMagIdentification = 2.5;
 
@@ -222,25 +222,16 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.slot_corner = pt;
 
   // calc slot side once at first
-  if (frame_.is_replan_first == true) {
-    const Eigen::Vector2d v_ego_to_pt3 = pt[3] - measures_ptr->pos_ego;
-
-    const double cross_ego_to_pt3 = pnc::geometry_lib::GetCrossFromTwoVec2d(
-        measures_ptr->heading_ego_vec, v_ego_to_pt3);
-
-    // judge slot side via slot pt3
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
-    if (cross_ego_to_pt3 < 0.0) {
+  if (frame_.is_replan_first) {
+    t_lane_.slot_side = slot_manager_ptr->GetEgoSlotInfo().slot_side;
+    if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       t_lane_.slot_side_sgn = 1.0;
-      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
-    } else if (cross_ego_to_pt3 > 0.0) {
+    } else if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       t_lane_.slot_side_sgn = -1.0;
-      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
     } else {
       t_lane_.slot_side_sgn = 0.0;
-      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       std::cout << "calculate parallel slot side error " << std::endl;
@@ -826,7 +817,8 @@ void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
 
     const Eigen::Vector2d upa_pos_slot = ego2slot.GetPos(upa_pos_ego);
 
-    const int half_upa_size = std::floor(0.5 * upa_idx_vec.size());
+    const auto half_upa_size =
+        static_cast<size_t>(std::floor(0.5 * upa_idx_vec.size()));
     // front
     if (i < half_upa_size) {
       const double upa_obs_x = upa_pos_slot.x() + upa_dist;
@@ -899,17 +891,16 @@ void ParallelParInPlanner::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
 
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
-    // Todo: select channel obs in ROI instead of using obs deciding channel y
-    const bool is_x_in_channel_range = pnc::mathlib::IsInBound(
-        obstacle_point_slot.x(), -kRearDetaXMagWhenFrontOccupiedRearVacant,
-        t_lane_.channel_x_limit);
+    // Todo: select obs in ROI instead of using obs deciding channel y
+    const bool channel_condition =
+        (obstacle_point_slot.x() > -kRearDetaXMagWhenFrontOccupiedRearVacant) &&
+        (obstacle_point_slot.x() < t_lane_.channel_x_limit) &&
+        (pnc::mathlib::IsInBound(
+            obstacle_point_slot.y(),
+            kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
+            t_lane_.channel_y));
 
-    const bool is_y_in_channel_range =
-        pnc::mathlib::IsInBound(obstacle_point_slot.y() * t_lane_.slot_side_sgn,
-                                kMinChannelYMagIdentification,
-                                t_lane_.channel_y * t_lane_.slot_side_sgn);
-
-    if (is_x_in_channel_range && is_y_in_channel_range) {
+    if (channel_condition) {
       apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
           obstacle_point_slot);
     }

@@ -177,6 +177,7 @@ class ApaPlannerBase {
       current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       replan_reason = NOT_REPLAN;
+      plan_fail_reason = NOT_FAILED;
       need_update_slot = true;
       correct_path_for_limiter = false;
       replan_flag = false;
@@ -189,6 +190,7 @@ class ApaPlannerBase {
     bool is_dynamic_replan_first = true;
     uint8_t dynamic_replan_count = 0;
     uint8_t replan_reason = NOT_REPLAN;
+    uint8_t plan_fail_reason = NOT_FAILED;
     uint8_t total_plan_count = 0;
     uint8_t in_slot_plan_count = 0;
     bool is_finished = false;
@@ -233,6 +235,18 @@ class ApaPlannerBase {
     PARKING_FINISHED,    // parking successful
     PARKING_FAILED,      // parking failed
     PARKING_PAUSED,      // parking paused
+  };
+
+  enum ParkingFailReason {
+    NOT_FAILED,
+    PAUSE_FAILED_TIME,
+    STUCK_FAILED_TIME,
+    UPDATE_EGO_SLOT_INFO,
+    POST_PROCESS_PATH_POINT_SIZE,
+    POST_PROCESS_PATH_POINT_SAME,
+    SET_SEG_INDEX,
+    CHECK_GEAR_LENGTH,
+    PATH_PLAN_FAILED,
   };
 
  public:

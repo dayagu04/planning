@@ -12,21 +12,24 @@ import subprocess
 from datetime import datetime, timedelta
 
 def add_seconds(time_str, seconds):
-    time_format = "%Y-%m-%d %H:%M:%S"
+    time_format = "%b %d %Y %H:%M:%S.%f"
     time_obj = datetime.strptime(time_str, time_format)
     new_time_obj = time_obj + timedelta(seconds=seconds)
     new_time_str = new_time_obj.strftime(time_format)
     return new_time_str
 def split_bag(bag_path, start_second, end_second):
-  process = subprocess.Popen(["cyber_recorder", "info", bag_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  process = subprocess.Popen(["rosbag", "info", bag_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   for line in process.stdout:
     str_out = line.decode("utf-8").strip()
-    if str_out.startswith("begin_time"):
-      str_out = str_out.split(" "*5)
-      time_str = str_out[1]
-      start_time_str = add_seconds(time_str, int(start_second))
-      end_time_str = add_seconds(time_str, int(end_second))
-      subprocess.Popen(["cyber_recorder", "split", "-f", bag_path, "-b", start_time_str, "-e", end_time_str, "-o",  bag_path + '.' + start_second + '-' + end_second +'.split'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if str_out.startswith("start"):
+      str_out = str_out.split(" "*7)
+      time_str = float(str_out[1].rsplit(" ", 1)[1].strip('(').strip(')'))
+      start_time_str = str(time_str + float(start_second))
+      end_time_str = str(time_str + float(end_second))
+      # start_time_str = add_seconds(time_str, int(start_second))
+      # end_time_str = add_seconds(time_str, int(end_second))
+      cmd = f"rosbag filter {bag_path} {bag_path + '.' + start_second + '-' + end_second +'.split'}  't.to_sec() >=  {start_time_str}  and t.to_sec() <= {end_time_str}'"
+      subprocess.call(cmd, shell=True)
 if __name__ == "__main__":
   txt_path = "/docker_share/planning/test.txt"
   if len(sys.argv) == 1:

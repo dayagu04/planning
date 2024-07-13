@@ -2187,8 +2187,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
         path_seg_vec.emplace_back(tmp_path_seg);
       } else {
         if (tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN &&
-            j > 0 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-            input_.slot_occupied_ratio > 0.168) {
+            j > 0) {
           DEBUG_PRINT("s turn col, lose all s turn path.");
           if (tmp_path_seg_vec[j - 1].plan_type ==
               pnc::geometry_lib::PLAN_TYPE_S_TURN) {
@@ -2433,15 +2432,29 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
 
     if (insert_case == 0) {
       double min_path_length = apa_param.GetParam().min_one_step_path_length;
-      if (input_.slot_occupied_ratio > 0.386 &&
+      if (input_.slot_occupied_ratio > 0.086 &&
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
         const std::vector<double> path_length_tab = {
             1.668 * min_path_length, 3.168 * min_path_length,
             3.868 * min_path_length, 4.268 * min_path_length,
             4.868 * min_path_length};
+
         min_path_length = pnc::mathlib::Interp1(
             lat_tab, path_length_tab, std::fabs(path_seg.GetEndPos().y()));
+
+        const std::vector<double> max_x_tab = {5.086, 5.286, 5.486, 5.686,
+                                               5.886};
+
+        const double max_x = pnc::mathlib::Interp1(
+            lat_tab, max_x_tab, std::fabs(path_seg.GetEndPos().y()));
+
+        const double init_x =
+            output_.path_segment_vec[output_.path_seg_index.first]
+                .GetStartPos()
+                .x();
+
+        min_path_length = std::min(min_path_length, max_x - init_x);
       }
 
       if (length + extend_distance < min_path_length) {
@@ -2478,13 +2491,8 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     Eigen::Vector2d new_line_vector = extend_distance * unit_tangent;
     new_line.line_seg.pB = new_line_vector + new_line.line_seg.pA;
 
-    CollisionDetector::Paramters params;
-    params.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
-    collision_detector_ptr_->SetParam(params);
     const uint8_t path_col_res = TrimPathByCollisionDetection(
         new_line, apa_param.GetParam().col_obs_safe_dist_strict);
-    params.Reset();
-    collision_detector_ptr_->SetParam(params);
 
     if (new_line.Getlength() < 0.02168) {
       return;
@@ -2621,9 +2629,12 @@ const bool PerpendicularPathPlanner::SampleCurrentPathSeg() {
   }
   size_t N = std::ceil(length / input_.sample_ds);
   double sample_ds = input_.sample_ds;
-  if (N >= PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM) {
-    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
-    sample_ds = length / N;
+  const size_t max_seg_count = 7;
+  if (N >= PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM -
+               max_seg_count) {
+    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM -
+        max_seg_count;
+    sample_ds = length / static_cast<double>(N);
   }
 
   pnc::geometry_lib::PathPoint path_point;
@@ -2640,6 +2651,10 @@ const bool PerpendicularPathPlanner::SampleCurrentPathSeg() {
       output_.path_point_vec.pop_back();
     }
   }
+
+  JSON_DEBUG_VALUE("current_gear_length", length);
+  JSON_DEBUG_VALUE("current_gear_pt_size", output_.path_point_vec.size());
+  JSON_DEBUG_VALUE("sample_ds", sample_ds);
 
   return true;
 }
@@ -2669,10 +2684,14 @@ void PerpendicularPathPlanner::SampleLineSegment(
       s += ds;
     }
   }
-
-  // get last point
-  path_point.Set(cur_line_seg.pB, cur_line_seg.heading);
-  output_.path_point_vec.emplace_back(path_point);
+  // check the dist of the last point and end point
+  const double dist =
+      (output_.path_point_vec.back().pos - cur_line_seg.pB).norm();
+  if (dist > 1e-2) {
+    // get end point
+    path_point.Set(cur_line_seg.pB, cur_line_seg.heading);
+    output_.path_point_vec.emplace_back(path_point);
+  }
 }
 
 void PerpendicularPathPlanner::SampleArcSegment(
@@ -2712,11 +2731,14 @@ void PerpendicularPathPlanner::SampleArcSegment(
     }
   }
 
-  // get last point
-  path_point.Set(current_arc_seg.pB,
-                 pnc::geometry_lib::NormalizeAngle(current_arc_seg.headingB));
-
-  output_.path_point_vec.emplace_back(path_point);
+  // check the dist of the last point and end point
+  const double dist =
+      (output_.path_point_vec.back().pos - current_arc_seg.pB).norm();
+  if (dist > 1e-2) {
+    // get end point
+    path_point.Set(current_arc_seg.pB, current_arc_seg.headingB);
+    output_.path_point_vec.emplace_back(path_point);
+  }
 }
 // sample path end
 

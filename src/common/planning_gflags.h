@@ -2,7 +2,5 @@
 
 // #include "gflags/gflags.h"
 
-// DECLARE_string(vehicle_param_config_file);
-// DECLARE_int32(planning_loop_rate);
-
 #define FLAGS_planning_loop_rate 10
+#define FLAGS_enable_apa_debug_print true

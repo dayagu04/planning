@@ -318,13 +318,13 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
   // D = | AB.x  -CD.x |
   //     | AB.y  -CD.y |
   double t1 = 0.0;
-  double t2 = 0.0;
+  // double t2 = 0.0;
   double determinant = AB.x() * (-CD.y()) - (-CD.x()) * AB.y();
   if (IsDoubleEqual(determinant, 0.0)) {
     return LogErr(__func__, 2);
   } else {
     t1 = (AC.x() * (-CD.y()) - (-CD.x() * AC.y())) / determinant;
-    t2 = (AB.x() * AC.y() - AC.x() * AB.y()) / determinant;
+    // t2 = (AB.x() * AC.y() - AC.x() * AB.y()) / determinant;
   }
 
   intersection = line1.pA + t1 * AB;
@@ -1497,6 +1497,12 @@ const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
   // arc1 must be intersected with the line
   const auto dist = CalPoint2LineDist(arc1.circle_info.center, line);
   if (dist > arc1.circle_info.radius - 1e-6) {
+    // std::cout << "dist = " << dist << std::endl;
+    // std::cout << "center = " << arc1.circle_info.center.transpose()
+    //           << std::endl;
+    // std::cout << "line pa = " << line.pA.transpose()
+    //           << ", pb = " << line.pB.transpose() << std::endl;
+
     return LogErr(__func__, 1);
   }
 

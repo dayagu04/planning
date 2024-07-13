@@ -10,6 +10,7 @@
 #include "macro.h"
 #include "mjson/mjson.hpp"
 #include "planning_debug_info.pb.h"
+#include "planning_gflags.h"
 namespace planning {
 
 /**
@@ -62,7 +63,10 @@ class DebugInfoManager : public planning::common::Arena {
   var_name = config.get<type>(json_name, false, var_name)
 
 #ifdef DEBUG_PRINT_ENABLE
-#define DEBUG_PRINT(content) std::cout << content << std::endl
+#define DEBUG_PRINT(content)           \
+  if (FLAGS_enable_apa_debug_print) {  \
+    std::cout << content << std::endl; \
+  }
 #else
 #define DEBUG_PRINT(content)
 #endif

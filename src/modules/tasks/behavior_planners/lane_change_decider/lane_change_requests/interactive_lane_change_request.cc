@@ -73,7 +73,7 @@ void IntRequest::Update(int lc_status) {
       "origin_lane_virtual_id_: %d, target_lane_virtual_id_: %d \n",
       current_lane_virtual_id, origin_lane_virtual_id_,
       target_lane_virtual_id_);
-
+  count_threshold_ = -1;
   if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT &&
       request_type_ != LEFT_CHANGE && is_lever_status_valid_) {
     counter_right_ = 0;

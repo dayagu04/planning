@@ -22,7 +22,7 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240601/20240601-10-39-12/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-01-10-39-12_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240704/20240704-03-30-34/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-04-03-30-34_no_camera.bag"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -370,10 +370,11 @@ class ScalarGenerator(DataGeneratorBase):
             for i, v in enumerate(data["data"]):
                 ts.append(data["t"][i])
                 xs.append(data["t"][i])
-                linear_velocity_from_wheel = math.sqrt(v.velocity.velocity_boot.vx * v.velocity.velocity_boot.vx + \
+                """ linear_velocity_from_wheel = math.sqrt(v.velocity.velocity_boot.vx * v.velocity.velocity_boot.vx + \
                 v.velocity.velocity_boot.vy * v.velocity.velocity_boot.vy + \
                 v.velocity.velocity_boot.vz * v.velocity.velocity_boot.vz)
-                ys.append(round(linear_velocity_from_wheel, 2))
+                ys.append(round(linear_velocity_from_wheel, 2)) """
+                ys.append(round(v.vehicle_speed, 2))
                 # ys.append(round(v.pose.linear_velocity_from_wheel, 2))
         elif val_type == 'ego_acc':
             for i, v in enumerate(data["data"]):
@@ -404,7 +405,7 @@ class ScalarGenerator(DataGeneratorBase):
 
                 elif val_type == 'lead_one_dis':
                     ys.append(round(v['lead_one_dis'], 2))
-                
+
                 elif val_type == 'acc_cipv':
                     ys.append(round(v['acc_cipv'], 2))
 
@@ -988,7 +989,7 @@ def draw_lon_tj(plan_debug_msg, layer_manager):
     fig_tj.legend.click_policy = "hide"
     return fig_tj
 
-def draw_rt_vel(plan_debug_msg, loc_msg, layer_manager):
+def draw_rt_vel(plan_debug_msg, vs_msg, layer_manager):
     #define figure
     fig_rtv = bkp.figure(title='车速',
                          x_axis_label='time/s',
@@ -996,7 +997,7 @@ def draw_rt_vel(plan_debug_msg, loc_msg, layer_manager):
                          width=600,height=225)
 
     rt_target_vel = ScalarGenerator(plan_debug_msg, 'target_velocity', accu=True, name="rt_target_vel")
-    rt_ego_vel = ScalarGenerator(loc_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
+    rt_ego_vel = ScalarGenerator(vs_msg, 'ego_velocity', accu=True, name="rt_ego_vel")
     rt_leadone_vel = ScalarGenerator(plan_debug_msg, 'leadone_velocity', accu=True, name="rt_leadone_vel")
     rt_leadtwo_vel = ScalarGenerator(plan_debug_msg, 'leadtwo_velocity', accu=True, name="rt_leadtwo_vel")
     rt_target_vel_start_stop = ScalarGenerator(plan_debug_msg, 'target_velocity_start_stop', accu=True, name="rt_target_vel_start_stop")
@@ -1107,12 +1108,12 @@ def draw_rt_table(plan_debug_msg, layer_manager):
 
     return tab_rt_layer.plot
 
-def draw_fsm_state(soc_state_msg): 
+def draw_fsm_state(soc_state_msg):
     data_fsm_state_command = ColumnDataSource(data ={
     'time': [],
     'fsm_cur_state':[],
     })
-  
+
     t_soc_state = []
     fsm_cur_state = []
 
@@ -1134,7 +1135,7 @@ def draw_fsm_state(soc_state_msg):
     fig_fsm_state.add_tools(hover_fsm_state)
     fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
     fig_fsm_state.legend.click_policy = 'hide'
-    
+
     return fig_fsm_state
 
 def plotOnce(bag_path, html_file):
@@ -1166,7 +1167,7 @@ def plotOnce(bag_path, html_file):
     fig_tv = draw_lon_tv(plan_debug_msg, layer_manager)
     fig_ta = draw_lon_ta(plan_debug_msg, layer_manager)
     fig_tj = draw_lon_tj(plan_debug_msg, layer_manager)
-    fig_rtv = draw_rt_vel(plan_debug_msg, loc_msg, layer_manager)
+    fig_rtv = draw_rt_vel(plan_debug_msg, vs_msg, layer_manager)
     fig_rta = draw_rt_acc(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_dis = draw_rt_distance(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_cost = draw_rt_cost(plan_debug_msg, vs_msg, layer_manager)

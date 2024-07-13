@@ -84,9 +84,6 @@ if (ADAPTER STREQUAL "cyber")
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res)
   install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res/conf)
-  install(FILES
-    ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/apa_params.json
-    DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res)
   install(DIRECTORY ${PROJECT_SOURCE_DIR}/install/planning
     DESTINATION /asw)
 elseif (ADAPTER STREQUAL "ap")
@@ -98,6 +95,4 @@ elseif (ADAPTER STREQUAL "ap")
     DESTINATION res)
   install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/
     DESTINATION res/conf)
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/apa_params.json
-    DESTINATION res)
 endif()

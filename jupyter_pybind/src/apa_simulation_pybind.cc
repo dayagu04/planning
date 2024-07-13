@@ -1,3 +1,4 @@
+#include <gflags/gflags.h>
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -44,6 +45,10 @@ static PerfectControl *perfect_control_ptr;
 static planning::LocalView local_view;
 
 int Init() {
+  const std::string flag_file_path =
+      "/asw/planning/res/conf/planning_gflags.conf";
+  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
 
   apa_interface_ptr->Init(true);

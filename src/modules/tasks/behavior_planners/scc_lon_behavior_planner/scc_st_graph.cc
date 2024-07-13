@@ -1008,7 +1008,7 @@ void StGraphGenerator::UpdateNearObstacles(
       //                                0);
       cutin_condition[i] = "lead_car";
     } else {
-      v_limit_cutin[i] = clip(v_limit_cutin[i] + 0.2, 40.0, v_ego);
+      v_limit_cutin[i] = clip(v_limit_cutin[i] + 0.2, std::max(40.0, v_ego + 0.2), v_ego);
       a_limit_cutin[i] = a_limit_cutin[i] + 0.1;
       cutin_condition[i] = "stage other";
     }
@@ -1046,7 +1046,7 @@ void StGraphGenerator::UpdateNearObstacles(
   for (int i = 0; i < (3 - near_cars_sorted.size()); i++) {
     nearest_car_track_id[i + near_cars_sorted.size()] = 0;
     v_limit_cutin[i + near_cars_sorted.size()] =
-        clip(v_limit_cutin[i + near_cars_sorted.size()] + 0.2, 40.0, v_ego);
+        clip(v_limit_cutin[i + near_cars_sorted.size()] + 0.2, std::max(40.0, v_ego + 0.2), v_ego);
     a_limit_cutin[i + near_cars_sorted.size()] =
         clip(a_limit_cutin[i + near_cars_sorted.size()] + 0.1, 0.0, -4.0);
     cutin_condition[i + near_cars_sorted.size()] = "near_cars_sorted None";

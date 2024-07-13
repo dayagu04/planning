@@ -123,7 +123,7 @@ class LoadRosbag:
     start_time = time.time()
     max_time = 0.0
     t0 = 0
-    try:
+    """ try:
       loc_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
@@ -143,7 +143,7 @@ class LoadRosbag:
         self.loc_msg['enable'] = False
     except:
       self.loc_msg['enable'] = False
-      print('missing /iflytek/localization/egomotion !!!')
+      print('missing /iflytek/localization/egomotion !!!') """
     # load localization msg
     if is_new_loc:
       try:
@@ -313,7 +313,7 @@ class LoadRosbag:
     except:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines topic !!!')
-
+    print('mobileye_lane_lines_msg[enable]:', self.mobileye_lane_lines_msg['enable'])
     # load rdg lane_lines msg
     try:
       rdg_lane_lines_msg_dict = {}
@@ -573,7 +573,7 @@ class LoadRosbag:
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
-                         "select_avoid_car_ids_1", "select_avoid_car_ids_2"]
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 

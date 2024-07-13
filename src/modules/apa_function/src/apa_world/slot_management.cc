@@ -1047,8 +1047,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
       AddUssPerceptObstacles(*slot);
       // AddGroundLineObstacles(*slot);
       const double lon_dist = CalLonDistSlot2Car(*slot);
-      if (lon_dist <
-              apa_param.GetParam().min_slot_release_long_dist_slot2mirror &&
+      if (lon_dist < apa_param.GetParam()
+                         .min_parallel_slot_release_long_dist_slot2mirror &&
           pair.second.GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
@@ -1491,7 +1491,7 @@ bool SlotManagement::IfUpdateSlot(const common::SlotInfo &new_slot_info,
   const bool lon_update_condition =
       LonDifUpdateCondition(new_slot_info, fusion_slot_source_type);
 
-  return (angle_update_condition && lon_update_condition);
+  return true || (angle_update_condition && lon_update_condition);
 }
 
 bool SlotManagement::LonDifUpdateCondition(
@@ -1681,7 +1681,7 @@ bool SlotManagement::LonDifUpdateCondition(
     lon_dif_update_condition = outside_case || inside_case;
   }
 
-  return lon_dif_update_condition;
+  return true || lon_dif_update_condition;
 }
 
 const double SlotManagement::CalLonDistSlot2Car(
@@ -2101,21 +2101,28 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
 
   std::vector<Eigen::Vector2d> pt;
   pt.resize(4);
+  // DEBUG_PRINT("pt in select_slot_filter");
   for (size_t i = 0; i < 4; ++i) {
     pt[i] << slot_points[i].x(), slot_points[i].y();
+    // DEBUG_PRINT("no. " << i << " pt : " << pt[i].transpose());
   }
 
   if (!frame_.is_side_calc_in_parking) {
-    const Eigen::Vector2d v_ego_to_pt3 = pt[3] - ego_pose_info.ego_pos;
+    const Eigen::Vector2d v_10_unit = (pt[0] - pt[1]).normalized();
+    // DEBUG_PRINT("v10_unit = " << v_10_unit.transpose());
+    // DEBUG_PRINT(
+    //     "ego heading vec = " << ego_pose_info.ego_heading_vec.transpose());
 
-    const double cross_ego_to_pt3 = pnc::geometry_lib::GetCrossFromTwoVec2d(
-        ego_pose_info.ego_heading_vec, v_ego_to_pt3);
+    const double dot_ego_to_v10 = ego_pose_info.ego_heading_vec.dot(v_10_unit);
+    // DEBUG_PRINT("dot ego to v10 = " << dot_ego_to_v10);
 
     // judge slot side via slot pt3
-    if (cross_ego_to_pt3 < -1e-8) {
-      frame_.ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
-    } else if (cross_ego_to_pt3 > 1e-8) {
+    if (dot_ego_to_v10 < -1e-8) {
       frame_.ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+      DEBUG_PRINT("left!");
+    } else if (dot_ego_to_v10 > 1e-8) {
+      frame_.ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+      DEBUG_PRINT("right!");
     } else {
       frame_.ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
       DEBUG_PRINT("calculate parallel slot side error ");
@@ -2129,6 +2136,9 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
 
   ego_slot_info.slot_length = (pt[0] - pt[1]).norm();
   pnc::geometry_lib::LineSegment line_01(pt[0], pt[1]);
+
+  DEBUG_PRINT("slot side in slm = "
+              << static_cast<int>(frame_.ego_slot_info.slot_side));
 
   // note: slot points' order is corrected in slot management
   if (frame_.ego_slot_info.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
@@ -2270,8 +2280,8 @@ void SlotManagement::UpdateSlotInfoInParking() {
   //             << " update_slot_condition_2 = " << update_slot_condition_2
   //             << " update_slot_condition_3 = " << update_slot_condition_3);
 
-  update_slot_flag = update_slot_condition_1 || update_slot_condition_2 ||
-                     update_slot_condition_3;
+  update_slot_flag = true || update_slot_condition_1 ||
+                     update_slot_condition_2 || update_slot_condition_3;
 
   if (!update_slot_flag) {
     frame_.no_update_slot_count++;

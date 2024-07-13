@@ -1057,7 +1057,7 @@ def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
       for i in range(len(mpc_dtheta)):
         mpc_dtheta[i] = mpc_dtheta[i] + cur_yaw
   else:
-    print("control_status available is false")
+    # print("control_status available is false")
     pass
   return mpc_dx, mpc_dy, mpc_dtheta
 
