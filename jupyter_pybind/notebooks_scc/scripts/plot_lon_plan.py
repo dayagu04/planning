@@ -7,7 +7,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240704/20240704-03-30-34/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-04-03-30-34_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240703/20240703-17-25-55/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-07-03-17-25-55_no_camera.bag"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -18,10 +18,10 @@ bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
 
-velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status = load_lon_global_figure(bag_loader)
+velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig= load_lon_global_figure(bag_loader)
 
 # load lateral planning (behavior and motion)
-pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status)
+pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig)
 
 ### sliders config
 class LocalViewSlider:
