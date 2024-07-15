@@ -676,9 +676,48 @@ def load_lon_global_figure(bag_loader):
   fig_replan_status.toolbar.active_scroll = fig_replan_status.select_one(WheelZoomTool)
   fig_replan_status.legend.click_policy = 'hide'
 
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status):
+  topic_latency_fig = bkp.figure(title='各topic延时',x_axis_label='time/s',
+                y_axis_label='time/(ms)',width=600,height=300)
+
+  t_plan_vec = bag_loader.plan_debug_msg['t']
+
+  fusion_object_latency=[]
+  fusion_road_latency=[]
+  vehicle_service_latency=[]
+  control_output_latency=[]
+  hmi_latency=[]
+  function_state_machine_latency=[]
+  localization_latency=[]
+
+  for ind in range(len(bag_loader.plan_debug_msg['data'])):
+    fusion_object_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_object, 2))
+    fusion_road_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_road, 2))
+    vehicle_service_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.vehicle_service, 2))
+    control_output_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.control_output, 2))
+    hmi_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.hmi, 2))
+    function_state_machine_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.function_state_machine, 2))
+    localization_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.localization, 2))
+
+  topic_latency_fig.line(t_plan_vec, fusion_object_latency, line_width=1,
+                              legend_label='fusion_object', color="green")
+  topic_latency_fig.line(t_plan_vec, fusion_road_latency, line_width=1,
+                                legend_label='fusion_road',color="blue")
+  topic_latency_fig.line(t_plan_vec, vehicle_service_latency, line_width=1,
+                             legend_label='vehicle_service', color="red")
+  topic_latency_fig.line(t_plan_vec, control_output_latency, line_width=1,
+                               legend_label='control_output',color="purple")
+  topic_latency_fig.line(t_plan_vec, hmi_latency, line_width=1,
+                               legend_label='hmi_latency',color="brown")
+  topic_latency_fig.line(t_plan_vec, function_state_machine_latency, line_width=1,
+                               legend_label='function_state_machine',color="yellow")
+  topic_latency_fig.line(t_plan_vec, localization_latency, line_width=1,
+                               legend_label='localization',color="orange")
+
+
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig
+
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
@@ -848,7 +887,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status)), title="Realtime")
+  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status,topic_latency_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 
