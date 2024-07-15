@@ -539,14 +539,10 @@ void PlanningPlayer::PlayOneFrame(
   //   }
   // }
 
-  std::cout << "mark0" << std::endl;
   if (input_time_list_map_ != input_time_list.map()) {
-    std::cout << "mark1" << std::endl;
     input_time_list_map_ = input_time_list.map();
-    std::cout << "map msg size:" << msg_cache_[TOPIC_SD_MAP].size() << std::endl;
     for (auto it = msg_cache_[TOPIC_SD_MAP].begin();
          it != msg_cache_[TOPIC_SD_MAP].end(); it++) {
-      std::cout << "mark1" << std::endl;
       auto sd_map_msg_i =
           boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
       std::string sd_map_str(sd_map_msg_i->debug_info.begin(),
@@ -554,7 +550,6 @@ void PlanningPlayer::PlayOneFrame(
       auto sd_map =
           std::make_shared<SdMapSwtx::SdMap>();
       sd_map->ParseFromString(sd_map_str);
-      // std::cout << "sd_map:" << sd_map->ShortDebugString() << std::endl;
       if (sd_map->header().timestamp() == input_time_list_map_) {
         planning_adapter_->FeedSdMap(sd_map);
         break;

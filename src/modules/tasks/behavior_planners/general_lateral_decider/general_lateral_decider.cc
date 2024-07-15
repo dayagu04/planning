@@ -82,13 +82,13 @@ bool GeneralLateralDecider::Execute() {
   // @liucai: this agent node mgr update function can be moved to gap selector
   // task
   // ----------------------------------
-  // const auto &coarse_planning_info = session_->planning_context()
-  //                                        .lane_change_decider_output()
-  //                                        .coarse_planning_info;
-  // int target_state =
-  //     coarse_planning_info.target_state == ROAD_LC_LCHANGE
-  //         ? 1
-  //         : (coarse_planning_info.target_state == ROAD_LC_RCHANGE ? 2 : 0);
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  int target_state =
+      coarse_planning_info.target_state == ROAD_LC_LCHANGE
+          ? 1
+          : (coarse_planning_info.target_state == ROAD_LC_RCHANGE ? 2 : 0);
   // shared_ptr<VirtualLane> target_lane =
   //     target_state == 1 ? session_
   //                             ->environmental_model()
@@ -120,31 +120,30 @@ bool GeneralLateralDecider::Execute() {
                           ->mutable_planning_result()
                           .traj_points;
 
-  // traj_points = coarse_planning_info.trajectory_points;
+  traj_points = coarse_planning_info.trajectory_points;
 
-  // auto &general_lateral_decider_output =
-  //     session_->mutable_planning_context()
-  //         ->mutable_general_lateral_decider_output();
-  // general_lateral_decider_output.v_cruise = cruise_vel_;
+  auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
+  general_lateral_decider_output.v_cruise = cruise_vel_;
 
-  // const auto &gap_selector_decider_output =
-  //     session_->planning_context().gap_selector_decider_output();
-  // if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-  //      coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-  //      coarse_planning_info.target_state == ROAD_LC_LBACK ||
-  //      coarse_planning_info.target_state == ROAD_LC_RBACK) &&
-  //     gap_selector_decider_output.gap_selector_trustworthy) {
-  //   general_lateral_decider_output.complete_follow = true;
-  //   general_lateral_decider_output.lane_change_scene = true;
-  // } else {
-  //   general_lateral_decider_output.complete_follow =
-  //       false;  // fusion is unsteady, lane keep weight need decay in end of
-  //               // ref
-  //   general_lateral_decider_output.lane_change_scene = false;
-  //   HandleAvoidScene(traj_points);
-  //   HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
-  // }
-  ConstructTrajPoints(traj_points);
+  const auto &gap_selector_decider_output =
+      session_->planning_context().gap_selector_decider_output();
+  if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
+       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
+       coarse_planning_info.target_state == ROAD_LC_LBACK ||
+       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+      gap_selector_decider_output.gap_selector_trustworthy) {
+    general_lateral_decider_output.complete_follow = true;
+    general_lateral_decider_output.lane_change_scene = true;
+  } else {
+    general_lateral_decider_output.complete_follow =
+        false;  // fusion is unsteady, lane keep weight need decay in end of
+                // ref
+    general_lateral_decider_output.lane_change_scene = false;
+    HandleAvoidScene(traj_points);
+    HandleLaneChangeScene(traj_points);  // TODO:handle the lane change info;
+  }
   ConstructReferencePathPoints(traj_points);
 
   ObstacleDecisions obstacle_decisions;
@@ -159,10 +158,6 @@ bool GeneralLateralDecider::Execute() {
 
   ExtractBoundary(map_obstacle_decisions, obstacle_decisions,
                   frenet_safe_bounds, frenet_path_bounds);
-
-  auto &general_lateral_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
           
   GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
                             general_lateral_decider_output);
@@ -182,162 +177,6 @@ bool GeneralLateralDecider::Execute() {
 bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
   // pipeline test
   return true;
-}
-
-double GeneralLateralDecider::CalCruiseVelByCurvature(const double ego_v, const std::vector<double>& d_poly) {
-  double cruise_v = ego_cart_state_manager_->ego_v_cruise();
-  const double preview_length = 5.0;
-  const double preview_step = 1.0;
-  double aver_close_kappa = 0.0;
-  double aver_far_kappa = 0.0;
-  std::vector<double> d_polys;
-  d_polys.resize(d_poly.size());
-  std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
-  for (double preview_distance = 0.0; preview_distance < preview_length;
-       preview_distance += preview_step) {
-    aver_close_kappa += std::fabs(2 * d_polys[0] * preview_distance + d_polys[1]) /
-                std::pow(std::pow(2 * d_polys[0] * preview_distance + d_polys[1], 2) + 1, 1.5);
-    aver_far_kappa += std::fabs(2 * d_polys[0] * (preview_distance + 50.0) + d_polys[1]) /
-                std::pow(std::pow(2 * d_polys[0] * (preview_distance + 50.0) + d_polys[1], 2) + 1, 1.5);
-  }
-
-  if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-    aver_close_kappa /= (preview_length / preview_step);
-    aver_far_kappa /= (preview_length / preview_step);
-    double close_kappa_radius = 1.0 / std::max(aver_close_kappa, 0.0001);
-    double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
-    if ((close_kappa_radius < 750.0) || (far_kappa_radius < 750.0)) {
-      double road_radius = close_kappa_radius < far_kappa_radius ? close_kappa_radius : far_kappa_radius;
-      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 650.0};
-      std::array<double, 4> fp_acc{1.8, 1.4, 1.0, 0.8};
-      double acc_max = interp(road_radius, xp_radius, fp_acc);
-      cruise_v = std::min(std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
-    }
-  }
-  return cruise_v;
-}
-
-void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
-  const auto &gap_selector_decider_output =
-      session_->planning_context().gap_selector_decider_output();
-  const auto &coarse_planning_info = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
-  const std::shared_ptr<VirtualLane> flane =
-    session_->environmental_model()
-        .get_virtual_lane_manager()
-        ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
-
-  if (config_.lateral_ref_traj_type || ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_LBACK ||
-       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
-      gap_selector_decider_output.gap_selector_trustworthy)) {
-    traj_points = coarse_planning_info.trajectory_points;
-  } else {
-    const auto &planning_init_point = ego_cart_state_manager_->planning_init_point();
-    const double kMaxAcc = 2;
-    const double kMinAcc = -5.5;
-    double ego_v = planning_init_point.v;
-    double cruise_v = CalCruiseVelByCurvature(ego_v, flane->get_center_line());
-    double s = 0.0;
-    double plan_t = 5.0;
-    if (ego_v < cruise_v) {
-      double t = (cruise_v - ego_v) / kMaxAcc;
-      if (t > plan_t) {
-        s = ego_v * plan_t + 0.5 * kMaxAcc * plan_t * plan_t;
-      } else {
-        s = ego_v * t + 0.5 * kMaxAcc * t * t;
-        s += (plan_t - t) * cruise_v;
-      }
-    } else {
-      double t = (cruise_v - ego_v) / kMinAcc;
-      if (t > plan_t) {
-        s = ego_v * plan_t + 0.5 * kMinAcc * plan_t * plan_t;
-      } else {
-        s = ego_v * t + 0.5 * kMinAcc * t * t;
-        s += (plan_t - t) * cruise_v;
-      }
-    }
-    double avg_cruise_v = s / plan_t;
-    double delta_time = 0.2;
-    double delta_s = avg_cruise_v * delta_time;
-    Point2D cart_init_point(planning_init_point.lat_init_state.x(),
-                           planning_init_point.lat_init_state.y());
-    const auto &frenet_coord =
-      coarse_planning_info.reference_path->get_frenet_coord();
-    Point2D frenet_init_point;
-    double s_ref = 0;
-    if (!frenet_coord->XYToSL(cart_init_point, frenet_init_point)) {
-      printf("frenet error!");
-    } else {
-      s_ref = frenet_init_point.x;
-    }
-    const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
-    traj_points.clear();
-    TrajectoryPoint point;
-    constexpr double kEps = 1e-6;
-    for (size_t i = 0; i < 26; ++i) {
-      // cart info
-      if (s_ref < cart_ref_info.s_vec.back() + kEps) {
-        point.x = cart_ref_info.x_s_spline(s_ref);
-        point.y = cart_ref_info.y_s_spline(s_ref);
-        point.heading_angle =
-            std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                      cart_ref_info.x_s_spline.deriv(1, s_ref));
-      }
-
-      // frenet info
-      Point2D frenet_pt{0.0, 0.0};
-      Point2D cart_pt(point.x, point.y);
-      frenet_coord->XYToSL(cart_pt, frenet_pt);
-      point.s = frenet_pt.x;
-      point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * delta_time;
-
-      s_ref += delta_s;
-      traj_points.emplace_back(point);
-    }
-    // for (size_t i = 0; i < 26; ++i) {
-    //   // frenet info
-    //   point.s = s_ref;
-    //   point.l = 0.0;
-    //   Point2D frenet_pt{s_ref, 0.0};
-    //   Point2D cart_pt(0.0, 0.0);
-    //   if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
-    //     printf("frenet error!");
-    //   }
-    //   point.heading_angle = frenet_coord->GetPathCurveHeading(s_ref);
-    //   // point.heading_angle =
-    //   //     std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-    //   //               cart_ref_info.x_s_spline.deriv(1, s_ref));
-    //   point.x = cart_pt.x;
-    //   point.y = cart_pt.y;
-    //   point.t = static_cast<double>(i) * delta_time;
-    //   s_ref += delta_s;
-    //   traj_points.emplace_back(point);
-    // }
-  }
-  auto &general_lateral_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
-  // general_lateral_decider_output.v_cruise = cruise_vel_;
-
-
-  if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_LBACK ||
-       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
-      gap_selector_decider_output.gap_selector_trustworthy) {
-    general_lateral_decider_output.complete_follow = true;
-    general_lateral_decider_output.lane_change_scene = true;
-  } else {
-    general_lateral_decider_output.complete_follow =
-        false;  // fusion is unsteady, lane keep weight need decay in end of
-                // ref
-    general_lateral_decider_output.lane_change_scene = false;
-    HandleAvoidScene(traj_points);
-  }
 }
 
 void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points) {

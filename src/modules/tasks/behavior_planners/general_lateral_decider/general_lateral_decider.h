@@ -35,10 +35,6 @@ class GeneralLateralDecider : public Task {
   bool InitInfo();
 
  private:
-  double CalCruiseVelByCurvature(const double ego_v, const std::vector<double>& d_poly);
-
-  void ConstructTrajPoints(TrajectoryPoints &traj_points);
-
   // // 1. construct the trajectory of reference and bind the obstacle info on
   bool ConstructReferencePathPoints(const TrajectoryPoints &traj_points);
 

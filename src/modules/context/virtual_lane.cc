@@ -364,57 +364,44 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(double dis_to_ramp, bool is_nearing_ramp,
-                                    RampDirection ramp_direction,
-                                    bool is_leaving_ramp, uint lane_num) {
-  int reverse_task_num =
-      lane_num > 3 ? std::max((int)std::floor((lane_num - 1) * 0.5), 0)
-                   : 0;  // clren: hack
+void VirtualLane::update_lane_tasks(double dis_to_ramp, double dis_to_first_merge, double dis_to_first_split, 
+                                    bool is_nearing_ramp, RampDirection ramp_direction, RampDirection first_split_direction,
+                                    bool is_leaving_ramp, uint lane_num, bool is_on_ramp) {
   current_tasks_.clear();
-  auto lane_type = get_lane_type();
-
   if (order_id_ + 1 > lane_num) return;
-  if (is_nearing_ramp && !is_leaving_ramp) {
+  if (!is_on_ramp && dis_to_ramp < 3000 && !is_leaving_ramp) {
     if (ramp_direction == RAMP_ON_RIGHT) {
-      if (lane_type == iflyauto::LANETYPE_DECELERATE && order_id_ > 0 &&
-          lane_num > 3) {
-        // std::cout << "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN" << std::endl;
-        return;
-      }
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
+      }
+    } else if (ramp_direction == RAMP_ON_LEFT) {
+      for (int i = order_id_; i > 0; i--) {
+        current_tasks_.emplace_back(-1);
+      }
+    }
+  } else if (is_on_ramp ) {
+    //首先处理匝道上的分叉口
+    if (dis_to_first_merge > dis_to_first_split) {
+      if (dis_to_first_split < 266) {
+        if (first_split_direction == RAMP_ON_RIGHT) {
+          for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+            current_tasks_.emplace_back(1);
+          }
+        } else if (first_split_direction == RAMP_ON_LEFT) {
+          for (int i = order_id_; i > 0; i--) {
+            current_tasks_.emplace_back(-1);
+          }
+        }
       }
     } else {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);
       }
     }
-  } else {
-    if (lane_num < reverse_task_num + order_id_ + 1) {
-      for (int i = 0; i + (lane_num - reverse_task_num) < (order_id_ + 1);
-           i++) {
-        current_tasks_.emplace_back(-1);
-      }
-    } else {
-      if (dis_to_ramp < 3000.0 && !is_leaving_ramp) {  // TODO:clren
-        // 后续考虑安全性，根据距离，车流量，对task做调整
-        for (int i = 0; i + order_id_ + 1 + reverse_task_num < lane_num; i++) {
-          current_tasks_.emplace_back(1);
-        }
-      } else if (is_in_merge_area_) {
-        if (dis_to_ramp < 2000.0) {
-          std::cout << "is on merge area,but is nearing ramp!!" << std::endl;
-        } else {
-          current_tasks_.emplace_back(-1);
-          std::cout << "is on merge area,generate 1 left lc task!!!"
-                    << std::endl;
-        }
-      } else if (is_leaving_ramp) {
-        if (order_id_ + 1 == lane_num) {
-          current_tasks_.emplace_back(-1);
-          std::cout << "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS" << std::endl;
-        }
-      }
+  } else if (is_leaving_ramp) {
+    if (order_id_ + 1 == lane_num) {
+      current_tasks_.emplace_back(-1);
+      std::cout << "在最右侧车道上时,向左产生一个变道任务" << std::endl;
     }
   }
 }
