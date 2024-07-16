@@ -159,7 +159,7 @@
   "max_slot_jump_heading": 0.48,
 
   "comment_13": "slot update params when parking",
-  "fix_slot_occupied_ratio": 0.908,
+  "fix_slot_occupied_ratio": 0.868,
 
   "comment_14": "slot update params when replan",
   "uss_slot_occupied_ratio": 0.25,
@@ -168,7 +168,7 @@
   "last_update_slot_occupied_ratio": 0.836,
 
   "comment_15": "path planner params",
-  "min_turn_radius": 5.6,
+  "min_turn_radius": 5.608,
   "max_radius_in_slot": 12.66,
   "min_radius_out_slot": 7.8,
   "max_one_step_arc_radius": 8.5,

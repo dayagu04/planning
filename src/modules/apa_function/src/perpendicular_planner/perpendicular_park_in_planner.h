@@ -52,6 +52,9 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   const bool CheckPaused();
 
   const bool CheckSegCompleted();
+  const bool CheckUssStucked();
+  const bool CheckColDetStucked();
+
   const bool CheckDynamicUpdate();
   const uint8_t CheckParkingStatus();
 
@@ -65,15 +68,12 @@ class PerpendicularInPlanner : public ApaPlannerBase {
 
   uint8_t gear_command_ = 0;
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
+  std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
 
-  std::vector<pnc::geometry_lib::PathSegment> first_reverse_path_vec_;
-  Eigen::Vector2d pt_center_;
   Eigen::Vector2d pt_center_replan_;
   double pt_center_heading_replan_;
   double pt_center_replan_jump_dist_ = 0.0;
   double pt_center_replan_jump_heading_ = 0.0;
-
-  bool trim_path_by_obs_ = false;
 
   double max_target_velocity_ = 0.0;
 };

@@ -28,6 +28,7 @@ class ApaPlannerBase {
     SEG_COMPLETED_USS,
     STUCKED,
     DYNAMIC,
+    SEG_COMPLETED_COL_DET,
   };
   struct SimulationParam {
     bool is_complete_path = false;
@@ -87,7 +88,7 @@ class ApaPlannerBase {
     pnc::geometry_lib::GlobalToLocalTf g2l_tf;
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
-    bool first_fix_limiter = true;
+    bool fix_limiter = false;
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
@@ -131,7 +132,7 @@ class ApaPlannerBase {
       terminal_err.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
       slot_occupied_ratio = 0.0;
 
-      first_fix_limiter = true;
+      fix_limiter = false;
 
       obs_pt_vec_slot.clear();
 
@@ -174,6 +175,7 @@ class ApaPlannerBase {
       pause_time = 0.0;
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
+      remain_dist_col_det = 5.01;
       spline_success = false;
       current_path_length = 0.0;
       path_extended_dist = 1.0;
@@ -213,6 +215,7 @@ class ApaPlannerBase {
     double pause_time = 0.0;
     double remain_dist = 5.01;
     double remain_dist_uss = 5.01;
+    double remain_dist_col_det = 5.01;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
 

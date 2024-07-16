@@ -363,6 +363,9 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
           frame_.slot_info_corner_01[slot_info->id()].second);
     }
   }
+  if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
+    std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
+  }
 
   ego_slot_info.obs_pt_vec_slot.clear();
   ego_slot_info.fus_obj_valid_flag = frame_.fus_obj_valid_flag;
@@ -464,8 +467,9 @@ bool SlotManagement::GenTLane(
   // sift obstacles that meet requirement
   for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
-        obstacle_point_slot.x() < 0.0 ||
-        std::fabs(obstacle_point_slot.y()) > y_max) {
+        obstacle_point_slot.x() < 1.068 ||
+        std::fabs(obstacle_point_slot.y()) > y_max ||
+        std::fabs(obstacle_point_slot.y()) < 0.868) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {
@@ -539,13 +543,13 @@ bool SlotManagement::GenTLane(
 
   double left_y = left_pq_for_y.top().y();
 
-  const double real_left_y = left_y;
+  double real_left_y = left_y;
 
   double left_x = left_pq_for_x.top().x();
 
   double right_y = right_pq_for_y.top().y();
 
-  const double real_right_y = right_y;
+  double real_right_y = right_y;
 
   double right_x = right_pq_for_x.top().x();
 
@@ -579,10 +583,16 @@ bool SlotManagement::GenTLane(
   // move target pose
   double left_dis_obs_car = 0.0;
   double right_dis_obs_car = 0.0;
-  if (apa_param.GetParam().believe_in_fus_obs) {
+  if (ego_slot_info.fus_obj_valid_flag) {
+    // use fus obj
+    if (!apa_param.GetParam().believe_in_fus_obs) {
+      real_left_y = std::min(real_left_y, ego_slot_info.pt_1.y());
+      real_right_y = std::max(real_right_y, ego_slot_info.pt_0.y());
+    }
     left_dis_obs_car = real_left_y - car_half_width_with_safe_buffer;
     right_dis_obs_car = -car_half_width_with_safe_buffer - real_right_y;
   } else {
+    // use uss
     left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
     right_dis_obs_car = -car_half_width_with_safe_buffer - right_y;
   }
@@ -770,10 +780,13 @@ bool SlotManagement::GenObstacles(
   // add tlane obstacle
   //  B is always outside
   int slot_side = 1;
+  bool is_left_side = false;
   if (obs_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     slot_side = -1;
+    is_left_side = false;
   } else if (obs_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     slot_side = 1;
+    is_left_side = true;
   }
   Eigen::Vector2d B(obs_tlane.pt_outside);
   const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
@@ -877,11 +890,22 @@ bool SlotManagement::GenObstacles(
       std::swap(pt_left, pt_right);
     }
     std::vector<Eigen::Vector2d> fus_obs_vec;
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
+        std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
     for (const auto &obs_pos : ego_slot_info.obs_pt_vec_slot) {
-      if (!apa_param.GetParam().believe_in_fus_obs &&
-          std::fabs(obs_pos.y()) < 0.5 * ego_slot_info.slot_width &&
-          obs_pos.x() < 5.368) {
-        // obs is in slot, temp hack, lose it
+      CollisionDetector::ObsSlotType obs_slot_type =
+          collision_detector_ptr->GetObsSlotType(obs_pos, slot_pt,
+                                                 is_left_side);
+
+      if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
+          !apa_param.GetParam().believe_in_fus_obs) {
+        // obs is in slot, temp hack, lose it, todo, should not del obs
+        continue;
+      }
+
+      if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS) {
+        // obs is slot entrance, when replan, no conside it, but when dynamic
+        // move and col det, conside it
         continue;
       }
 
@@ -2135,6 +2159,9 @@ bool SlotManagement::UpdateEgoSlotInfo(
       ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(
           frame_.slot_info_corner_01[select_slot.id()].second);
     }
+  }
+  if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
+    std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
   }
 
   ego_slot_info.fus_obj_valid_flag = frame_.fus_obj_valid_flag;

@@ -3,7 +3,9 @@
 #include <math.h>
 
 #include <cmath>
+#include <type_traits>
 
+#include "Eigen/src/Core/Matrix.h"
 #include "apa_param_setting.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
@@ -302,6 +304,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   if (col_flag && result.collision_flag) {
     result.col_pt_obs_global = obs_pt_global_map_[col_obs_type][col_obs_index];
     result.car_line_order = col_car_line_order;
+    result.obs_type = col_obs_type;
   }
   result.car_move_bound = car_move_bound;
   return result;
@@ -548,6 +551,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   if (col_flag && result.collision_flag) {
     result.col_pt_obs_global = obs_pt_global_map_[col_obs_type][col_obs_index];
     result.car_line_order = col_car_line_order;
+    result.obs_type = col_obs_type;
   }
   result.car_move_bound = car_move_bound;
   return result;
@@ -903,6 +907,56 @@ const bool CollisionDetector::CalCarMoveBound(
   car_move_bound.max_y += car_expand;
 
   return true;
+}
+
+const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
+    const Eigen::Vector2d &obs,
+    const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
+    const bool is_left_side, const bool is_vertical_slot) {
+  if (is_vertical_slot) {
+    Eigen::Vector2d slot_left_pt = slot_pt.first;
+    Eigen::Vector2d slot_right_pt = slot_pt.second;
+    if (slot_left_pt.y() < slot_right_pt.y()) {
+      std::swap(slot_left_pt, slot_right_pt);
+    }
+    const double slot_x = ((slot_left_pt + slot_right_pt) * 0.5).x();
+    const double upper_x = 3.68;
+    const double lower_x = 0.608;
+    const double offset_y = 0.668;
+    if (obs.x() > slot_x + lower_x && obs.x() < slot_x + upper_x &&
+        obs.y() > slot_right_pt.y() - offset_y &&
+        obs.y() < slot_left_pt.y() + offset_y) {
+      return ObsSlotType::SLOT_ENTRANCE_OBS;
+    }
+
+    if (obs.x() > slot_x - 5.468 && obs.x() < slot_x + lower_x &&
+        obs.y() > slot_right_pt.y() + 0.328 &&
+        obs.y() < slot_left_pt.y() - 0.328) {
+      return ObsSlotType::SLOT_ENTRANCE_OBS;
+    }
+
+    if (obs.x() < slot_x + lower_x && obs.y() > slot_right_pt.y() &&
+        obs.y() < slot_left_pt.y()) {
+      return ObsSlotType::SLOT_IN_OBS;
+    }
+
+    if (obs.x() < slot_x + lower_x) {
+      if ((is_left_side && obs.y() > slot_left_pt.y() &&
+           obs.y() < slot_left_pt.y() + offset_y) ||
+          (!is_left_side && obs.y() < slot_right_pt.y() &&
+           obs.y() > slot_right_pt.y() - offset_y)) {
+        return ObsSlotType::SLOT_INSIDE_OBS;
+      }
+      if ((is_left_side && obs.y() < slot_right_pt.y()) ||
+          (!is_left_side && obs.y() > slot_left_pt.y())) {
+        return ObsSlotType::SLOT_OUTSIDE_OBS;
+      }
+    }
+
+    return ObsSlotType::SLOT_OUT_OBS;
+  }
+
+  return ObsSlotType::OBS_INVALID;
 }
 
 }  // namespace planning

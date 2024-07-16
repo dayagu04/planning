@@ -41,12 +41,13 @@ class PerpendicularPathPlanner {
     }
   };
 
-  enum PathColDetRes {
-    PATH_COL_INVALID,
-    PATH_COL_SHORTEN,
-    PATH_COL_INSIDE_STUCK,
-    PATH_COL_NORMAL,
-    PATH_COL_COUNT,
+  enum class PathColDetRes : uint8_t {
+    INVALID,
+    NORMAL,
+    SINGLE_PLAN_AGAIN,
+    COMPLETE_PLAN_AGAIN,
+    SHORTEN,
+    COUNT,
   };
 
   enum class PathPlanMethod {
@@ -126,7 +127,8 @@ class PerpendicularPathPlanner {
     bool should_prepare_second = false;
     bool should_prepare_third = false;
     bool first_multi_plan = true;
-    bool stuck_by_inside = false;
+    bool complete_plan_again = false;
+    bool single_plan_again = false;
     bool multi_plan = false;
     bool can_insert_line = true;
 
@@ -164,7 +166,8 @@ class PerpendicularPathPlanner {
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
-      stuck_by_inside = false;
+      complete_plan_again = false;
+      single_plan_again = false;
       multi_plan = false;
       can_insert_line = true;
 
@@ -346,9 +349,9 @@ class PerpendicularPathPlanner {
   // sample path end
 
   // collision detect start
-  const uint8_t TrimPathByCollisionDetection(
+  const PathColDetRes TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg);
-  const uint8_t TrimPathByCollisionDetection(
+  const PathColDetRes TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg, const double safe_dist);
   // collision detect end
 
