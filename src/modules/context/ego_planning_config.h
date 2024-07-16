@@ -92,13 +92,14 @@ template <typename T>
 void read_json_vec(const Json &json, const std::string &key,
                    std::vector<T> &vec,
                    const std::vector<T> &default_vec = {}) {
-  if (json.find(key) != json.end()) {
+  if (json.find(key) != json.end() && json[key].is_array()) {
+    vec.clear(); 
     for (size_t i = 0; i < json[key].size(); i++) {
       vec.push_back(json[key][i]);
     }
-    return;
+  } else {
+    vec = default_vec;
   }
-  vec = default_vec;
 }
 
 template <typename T>
@@ -1691,8 +1692,6 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
-    replan_longitudinal_distance_threshold_speed.resize(2);
-    replan_longitudinal_distance_threshold_value.resize(2);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_speed",
                           replan_longitudinal_distance_threshold_speed);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_value",

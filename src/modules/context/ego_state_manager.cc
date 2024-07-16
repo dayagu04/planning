@@ -234,8 +234,8 @@ bool EgoStateManager::update(
   return true;
 }
 
-uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
-                                       const bool &lon_reset_flag) {
+uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
+                                       const bool &set_lon_replan) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
   const auto &vehicle_param =
@@ -308,11 +308,11 @@ uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
     replan_type_.insert(LAT_ANGLE_REPLAN);
     replan_code += LAT_ANGLE_REPLAN;
   }
-  if (lat_reset_flag && lon_reset_flag) {
+  if (set_lat_replan && set_lon_replan) {
     replan_type_.insert(LAT_LON_REPLAN);
     replan_code += LAT_LON_REPLAN;
   }
-  if (lat_reset_flag && !lon_reset_flag) {
+  if (set_lat_replan && !set_lon_replan) {
     replan_type_.insert(LAT_REPLAN);
     replan_code += LAT_REPLAN;
   }
