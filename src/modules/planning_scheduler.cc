@@ -151,7 +151,7 @@ bool PlanningScheduler::RunOnce(
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.timestamp = start_timestamp;
-  planning_output->meta.plan_timestamp_us = start_timestamp_us;
+  planning_output->header.start_timestamp = start_timestamp_us;
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -444,7 +444,7 @@ void PlanningScheduler::FillPlanningTrajectory(
 void PlanningScheduler::GenerateStopTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 更新输出
-  planning_output->meta.plan_timestamp_us = IflyTime::Now_ms();
+  planning_output->header.start_timestamp = IflyTime::Now_ms();
 
   auto trajectory = &(planning_output->trajectory);
   // Hack: 长时规划
