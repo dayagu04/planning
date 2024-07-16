@@ -22,7 +22,7 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240704/20240704-03-30-34/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-04-03-30-34_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240711/20240711-09-53-56/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-11-09-53-56_no_camera.bag"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -332,6 +332,48 @@ behav_cost_params = {
     'legend_label': 'behav_cost'
 }
 
+fusion_object_latency_params={
+    'line_width': 1,
+    'color': 'green',
+    'legend_label': 'fusion_object'
+}
+
+fusion_road_latency_params={
+    'line_width': 1,
+    'color': 'blue',
+    'legend_label': 'fusion_road'
+}
+
+fusion_vehicle_service_latency_params={
+    'line_width': 1,
+    'color': 'red',
+    'legend_label': 'vehicle_service'
+}
+
+fusion_control_output_latency_params={
+    'line_width': 1,
+    'color': 'purple',
+    'legend_label': 'control_output'
+}
+
+fusion_hmi_latency_params={
+    'line_width': 1,
+    'color': 'brown',
+    'legend_label': 'hmi_latency'
+}
+
+fusion_function_state_machine_latency_params={
+    'line_width': 1,
+    'color': 'yellow',
+    'legend_label': 'function_state_machine'
+}
+
+fusion_localization_latency_params={
+    'line_width': 1,
+    'color': 'orange',
+    'legend_label': 'localization'
+}
+
 motion_cost_params = {
     'line_width': 1,
     'color': 'blue',
@@ -381,6 +423,41 @@ class ScalarGenerator(DataGeneratorBase):
                 ts.append(data["t"][i])
                 xs.append(data["t"][i])
                 ys.append(round(v.long_acceleration, 2))
+        elif val_type == 'fusion_object_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.fusion_object, 2))
+        elif val_type == 'fusion_road_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.fusion_road, 2))
+        elif val_type == 'vehicle_service_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.vehicle_service, 2))
+        elif val_type == 'control_output_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.control_output, 2))
+        elif val_type == 'hmi_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.hmi, 2))
+        elif val_type == 'function_state_machine_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.function_state_machine, 2))
+        elif val_type == 'localization_latency':
+            for i, v in enumerate(data["data"]):
+                ts.append(data["t"][i])
+                xs.append(data["t"][i])
+                ys.append(round(v.input_topic_latency.localization, 2))
         else:
             for i, v in enumerate(data["json"]):
                 ts.append(data["t"][i])
@@ -1138,6 +1215,43 @@ def draw_fsm_state(soc_state_msg):
 
     return fig_fsm_state
 
+def draw_rt_topic_latency(plan_debug_msg, layer_manager):
+    fig_rt_topic_latency = bkp.figure(title='各topic延时',
+                         x_axis_label='time/s',
+                         y_axis_label='time/(ms)',
+                         width=600,height=300)
+
+    rt_fusion_object_latency = ScalarGenerator(plan_debug_msg, 'fusion_object_latency', accu=True, name="fusion_object_latency")
+    rt_fusion_road_latency = ScalarGenerator(plan_debug_msg, 'fusion_road_latency', accu=True, name="fusion_road_latency")
+    rt_vehicle_service_latency = ScalarGenerator(plan_debug_msg, 'vehicle_service_latency', accu=True, name="vehicle_service_latency")
+    rt_control_output_latency = ScalarGenerator(plan_debug_msg, 'control_output_latency', accu=True, name="control_output_latency")
+    rt_hmi_latency = ScalarGenerator(plan_debug_msg, 'hmi_latency', accu=True, name="hmi_latency")
+    rt_function_state_machine_latency = ScalarGenerator(plan_debug_msg, 'function_state_machine_latency', accu=True, name="function_state_machine_latency")
+    rt_localization_latency = ScalarGenerator(plan_debug_msg, 'localization_latency', accu=True, name="localization_latency")
+
+
+    fusion_object_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_object_latency_params)
+    fusion_road_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_road_latency_params)
+    fusion_vehicle_service_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_vehicle_service_latency_params)
+    fusion_control_output_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_control_output_latency_params)
+    fusion_hmi_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_hmi_latency_params)
+    fusion_function_state_machine_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_function_state_machine_latency_params)
+    fusion_localization_latency_layer = CurveLayer(fig_rt_topic_latency, fusion_localization_latency_params)
+
+
+    layer_manager.AddLayer(fusion_object_latency_layer, 'global_fusion_object_latency', rt_fusion_object_latency)
+    layer_manager.AddLayer(fusion_road_latency_layer, 'global_fusion_road_latency', rt_fusion_road_latency)
+    layer_manager.AddLayer(fusion_vehicle_service_latency_layer, 'global_fusion_vehicle_service_latency', rt_vehicle_service_latency)
+    layer_manager.AddLayer(fusion_control_output_latency_layer, 'global_fusion_control_output_latency', rt_control_output_latency)
+    layer_manager.AddLayer(fusion_hmi_latency_layer, 'global_fusion_hmi_latency', rt_hmi_latency)
+    layer_manager.AddLayer(fusion_function_state_machine_latency_layer, 'global_fusion_function_state_machine_latency', rt_function_state_machine_latency)
+    layer_manager.AddLayer(fusion_localization_latency_layer, 'global_fusion_localization_latency', rt_localization_latency)
+
+    fig_rt_topic_latency.toolbar.active_scroll = fig_rt_topic_latency.select_one(WheelZoomTool)
+    fig_rt_topic_latency.legend.click_policy = "hide"
+
+    return fig_rt_topic_latency
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
@@ -1172,6 +1286,7 @@ def plotOnce(bag_path, html_file):
     fig_rt_dis = draw_rt_distance(plan_debug_msg, vs_msg, layer_manager)
     fig_rt_cost = draw_rt_cost(plan_debug_msg, vs_msg, layer_manager)
     fig_fsm = draw_fsm_state(soc_state_msg)
+    fig_topic_latency = draw_rt_topic_latency(plan_debug_msg, layer_manager)
 
     tab_rt = draw_rt_table(plan_debug_msg, layer_manager)
 
@@ -1267,7 +1382,7 @@ def plotOnce(bag_path, html_file):
 
     #pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
     pan_lt = Panel(child=row(column(fig_st, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
-    pan_rt = Panel(child=row(column(tab_rt, fig_fsm), column(fig_rtv, fig_rta, fig_rt_dis, fig_rt_cost)), title="Realtime")
+    pan_rt = Panel(child=row(column(tab_rt, fig_fsm), column(fig_rtv, fig_rta, fig_rt_dis, fig_rt_cost,fig_topic_latency)), title="Realtime")
     #pan_rt = Panel(child=row(tab_rt), title="Realtime")
     pans = Tabs(tabs=[ pan_lt, pan_rt ])
     #pans = Tabs(tabs=[ pan_rt ])
