@@ -245,9 +245,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
   double steer_ratio = vehicle_param.steer_ratio;
-
   auto &lat_init_state = planning_init_point_.lat_init_state;
-  auto &lon_init_state = planning_init_point_.lon_init_state;
 
   Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x,
                           ego_state->ego_pose_raw().y);
@@ -359,35 +357,84 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
       reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
           cur_vehicle_state);
+      LateralInitStateReset(reinit_point);
+      LongitudinalInitStateReset(reinit_point);
     } else if (replan_type_.find(LAT_REPLAN) != replan_type_.end()) {
       if (replan_type_.find(LON_POSITION_REPLAN) != replan_type_.end()) {
         reinit_point =
             TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
                 cur_vehicle_state);
+        LateralInitStateReset(reinit_point);
+        LongitudinalInitStateReset(reinit_point);
       } else {
-        LateralReset();
-        return replan_code;
+        LateralInitStateResetToEgoState();
       }
     } else {
       reinit_point = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
           planning_loop_dt, cur_vehicle_state);
+      LateralInitStateReset(reinit_point);
+      LongitudinalInitStateReset(reinit_point);
     }
-    // assebling init state separately
-    lat_init_state.set_x(reinit_point.path_point.x);
-    lat_init_state.set_y(reinit_point.path_point.y);
-    lat_init_state.set_theta(reinit_point.path_point.theta);
-    // TODO: need estimated delta and omega for large curv condition
-    lat_init_state.set_delta(reinit_point.delta);
-    lat_init_state.set_curv(reinit_point.path_point.kappa);
-    lat_init_state.set_d_curv(0.0);
-
-    lon_init_state.set_s(0.0);
-    lon_init_state.set_v(reinit_point.v);
-    lon_init_state.set_a(reinit_point.a);
-    lon_init_state.set_j(reinit_point.jerk);
   }
-
   return replan_code;
+}
+
+void EgoStateManager::LateralInitStateReset(const PncTrajectoryPoint &point) {
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+  lat_init_state.set_x(point.path_point.x);
+  lat_init_state.set_y(point.path_point.y);
+  lat_init_state.set_theta(point.path_point.theta);
+  // TODO: need estimated delta and omega for large curv condition
+  lat_init_state.set_delta(point.delta);
+  lat_init_state.set_curv(point.path_point.kappa);
+  lat_init_state.set_d_curv(0.0);
+}
+
+void EgoStateManager::LongitudinalInitStateReset(const PncTrajectoryPoint &point) {
+  auto &lon_init_state = planning_init_point_.lon_init_state;
+  lon_init_state.set_s(0.0);
+  lon_init_state.set_v(point.v);
+  lon_init_state.set_a(point.a);
+  lon_init_state.set_j(point.jerk);
+}
+
+void EgoStateManager::LateralInitStateResetToEgoState() {
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double steer_ratio = vehicle_param.steer_ratio;
+
+  auto &lat_init_state = planning_init_point_.lat_init_state;
+
+  lat_init_state.set_x(ego_state->ego_pose_raw().x);
+  lat_init_state.set_y(ego_state->ego_pose_raw().y);
+  lat_init_state.set_theta(ego_state->ego_pose_raw().theta);
+
+  // TODO: need estimated delta and omega for large curv condition
+  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+  lat_init_state.set_curv(curve_factor * lat_init_state.delta());
+  lat_init_state.set_d_curv(0.0);
+}
+
+void EgoStateManager::LongitudinalInitStateResetToEgoState() {
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  auto &lon_init_state = planning_init_point_.lon_init_state;
+
+  // s is fakely frenet, cannot be obtained
+  lon_init_state.set_s(0.0);
+  lon_init_state.set_v(ego_state->ego_v());
+  auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
+  // deal with ego_acc which has noise
+  if (start_stop_state == common::StartStopInfo::CRUISE) {
+    lon_init_state.set_a(ego_state->ego_acc());
+  } else if (start_stop_state == common::StartStopInfo::START) {
+    lon_init_state.set_a(std::max(0.0, ego_state->ego_acc()));
+  } else if (start_stop_state == common::StartStopInfo::STOP) {
+    lon_init_state.set_a(std::min(0.0, ego_state->ego_acc()));
+  }
 }
 
 // uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
@@ -537,45 +584,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
 
 //   return out;
 // }
-
-void EgoStateManager::LateralReset() {
-  const auto &ego_state =
-      session_->environmental_model().get_ego_state_manager();
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double steer_ratio = vehicle_param.steer_ratio;
-
-  auto &lat_init_state = planning_init_point_.lat_init_state;
-
-  lat_init_state.set_x(ego_state->ego_pose_raw().x);
-  lat_init_state.set_y(ego_state->ego_pose_raw().y);
-  lat_init_state.set_theta(ego_state->ego_pose_raw().theta);
-
-  // TODO: need estimated delta and omega for large curv condition
-  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
-  lat_init_state.set_curv(curve_factor * lat_init_state.delta());
-  lat_init_state.set_d_curv(0.0);
-}
-
-void EgoStateManager::LongitudinalReset() {
-  const auto &ego_state =
-      session_->environmental_model().get_ego_state_manager();
-  auto &lon_init_state = planning_init_point_.lon_init_state;
-
-  // s is fakely frenet, cannot be obtained
-  lon_init_state.set_s(0.0);
-  lon_init_state.set_v(ego_state->ego_v());
-  auto start_stop_state =
-      session_->planning_context().start_stop_result().state();
-  // deal with ego_acc which has noise
-  if (start_stop_state == common::StartStopInfo::CRUISE) {
-    lon_init_state.set_a(ego_state->ego_acc());
-  } else if (start_stop_state == common::StartStopInfo::START) {
-    lon_init_state.set_a(std::max(0.0, ego_state->ego_acc()));
-  } else if (start_stop_state == common::StartStopInfo::STOP) {
-    lon_init_state.set_a(std::min(0.0, ego_state->ego_acc()));
-  }
-}
 
 void EgoStateManager::MotionPlanningInfoReset() {
   auto &motion_planner_output =
@@ -729,9 +737,8 @@ void EgoStateManager::UpdatePlanningInitState() {
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
   } else {
     stitch_success = false;
-    LateralReset();
-    LongitudinalReset();
-
+    LateralInitStateResetToEgoState();
+    LongitudinalInitStateResetToEgoState();
     replan_status = LAT_lON_REST;
   }
 
