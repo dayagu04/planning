@@ -663,8 +663,9 @@ def load_lon_global_figure(bag_loader):
   fig_replan_status.text(x=t_plan_debug[10], y=10, text=['LAT_ANGLE_REPLAN:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_replan_status.text(x=t_plan_debug[10], y=8, text=['LON_POSITION_REPLAN:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_replan_status.text(x=t_plan_debug[10], y=6, text=['LON_TINY_SPEED_REPLAN:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=4, text=['FUNCTION_REQUEST_REPLAN:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=2, text=['LAT_LON_REST:32'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=4, text=['LAT_LON_REPLAN:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=2, text=['LAT_REPLAN:32'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=0, text=['LAT_LON_REST:64'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
 
   hover_fsm_state = HoverTool(renderers=[f_fsm_state], tooltips=[('time', '@time'), ('fsm_cur_state', '@fsm_cur_state')], mode='vline')
   fig_fsm_state.add_tools(hover_fsm_state)
