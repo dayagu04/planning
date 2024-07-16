@@ -149,11 +149,11 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
             *iflyauto::struct_cast<iflyauto::PlanningOutput>(planning_output);
         ros::Time ros_time;
         if (no_debug) {
-          planning_output_struct.meta.header.timestamp = local_time_;
+          planning_output_struct.header.timestamp = local_time_;
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_output_struct.meta.header.timestamp =
+          planning_output_struct.header.timestamp =
               planning_header_time_us_;
           ros_time = planning_msg_time_s_;
         }
@@ -658,12 +658,12 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
   auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
       it_planning_msg->second);
   if (planning_debug_info->timestamp() >
-      planning_msg->meta.msg_header.timestamp) {
+      planning_msg->msg_header.timestamp) {
     it_planning_msg++;
     auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
         it_planning_msg->second);
     if (planning_debug_info->timestamp() >
-        planning_msg->meta.msg_header.timestamp) {
+        planning_msg->msg_header.timestamp) {
       std::cerr << "timestamp error!!!!!" << std::endl;
       return;
     }
@@ -733,7 +733,7 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
-    planning_header_time_us_ = planning_msg->meta.msg_header.timestamp;
+    planning_header_time_us_ = planning_msg->msg_header.timestamp;
     planning_msg_time_s_ = it_planning_msg->first;
     it_planning_msg++;
 
