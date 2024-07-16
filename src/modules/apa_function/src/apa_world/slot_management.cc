@@ -1156,21 +1156,54 @@ bool SlotManagement::UpdateSlotsInSearching() {
     } else if (slot->slot_type() ==
                    Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
                slot->is_release()) {
-      // select nearby obs pt from ori USS pt for given slot
-      AddUssPerceptObstacles(*slot);
       const double lon_dist = CalLonDistSlot2Car(*slot);
-      if (lon_dist < apa_param.GetParam()
-                         .min_parallel_slot_release_long_dist_slot2mirror &&
-          pair.second.GetOccupied()) {
-        slot->set_is_release(false);
-        slot->set_is_occupied(true);
-        DEBUG_PRINT("CalLonDistSlot2Car slot id = "
-                    << slot->id() << "  slot type = " << slot->slot_type()
-                    << "  is_release = " << slot->is_release());
-        continue;
+      const double parallel_pre_release_lon_dist = 0.36;
+
+      if (frame_.fus_obj_valid_flag) {
+        DEBUG_PRINT("use fusion obs, lon_dist = " << lon_dist);
+        const size_t slot_id = static_cast<size_t>(slot->id());
+        // if slot released by fusion is too late, just add nearby obs once.
+        if (frame_.obs_pt_map[slot_id].size() == 0) {
+          frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
+        }
+
+        // then use lon dist to update relatively accurate obs
+        if (std::fabs(lon_dist) < parallel_pre_release_lon_dist) {
+          DEBUG_PRINT("frame_.obs_pt_vec size = " << frame_.obs_pt_vec.size());
+          frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
+        }
+
+        DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
+                    << frame_.obs_pt_map[slot_id].size());
+        if (lon_dist < parallel_pre_release_lon_dist &&
+            pair.second.GetOccupied()) {
+          slot->set_is_release(false);
+          slot->set_is_occupied(true);
+        } else {
+          pair.second.SetOccupied(false);
+          slot->set_is_release(true);
+          slot->set_is_occupied(false);
+        }
+
       } else {
-        pair.second.SetOccupied(false);
+        DEBUG_PRINT("use uss obs");
+        // select nearby obs pt from ori USS pt for given slot
+        AddUssPerceptObstacles(*slot);
+        if (lon_dist < apa_param.GetParam()
+                           .min_parallel_slot_release_long_dist_slot2mirror &&
+            pair.second.GetOccupied()) {
+          slot->set_is_release(false);
+          slot->set_is_occupied(true);
+        } else {
+          pair.second.SetOccupied(false);
+          slot->set_is_release(true);
+          slot->set_is_occupied(false);
+        }
       }
+
+      DEBUG_PRINT("Parallel slot id = "
+                  << slot->id() << "  is_release = " << slot->is_release()
+                  << "  is_occupied = " << slot->is_occupied());
     }
   }
 
@@ -2030,7 +2063,7 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   else if (select_slot.slot_type() ==
            Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
-    AddUssPerceptObstacles(select_slot);
+    // AddUssPerceptObstacles(select_slot);
     if (!UpdateEgoParallelSlotInfo(select_slot_id, select_slot,
                                    select_fusion_slot)) {
       return false;
