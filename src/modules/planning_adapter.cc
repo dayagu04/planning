@@ -58,94 +58,6 @@ static uint64_t get_latency(double now, uint64_t input_time) {
   return (now - input_time) / US_PER_MS;
 }
 
-static inline void calc_fusion_latency(
-    uint64 planning_in_time_us, const iflyauto::Header &header,
-    planning::common::ImageLatency *latency) {
-  constexpr uint64_t US_PER_MS = 1000;
-
-  u_int64_t image_expose_time_us = 0;
-  u_int64_t perception_in_time_us = 0;
-  u_int64_t perception_out_time_us = 0;
-  u_int64_t fusion_in_time_us = 0;
-  u_int64_t fusion_out_time_us = 0;
-
-  for (int i = 0; i < header.input_list_size; i++) {
-    const auto &input = header.input_list[i];
-    switch (input.input_type) {
-      case Common::InputHistoryTimestamp::
-          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CAMERA: {
-        perception_in_time_us = input.in_ts_us;
-        break;
-      }
-      case Common::InputHistoryTimestamp::
-          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PERCEPTION: {
-        perception_in_time_us = input.in_ts_us;
-        perception_out_time_us = input.out_ts_us;
-        break;
-      }
-      case Common::InputHistoryTimestamp::
-          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION: {
-        fusion_in_time_us = input.in_ts_us;
-        fusion_out_time_us = input.out_ts_us;
-        break;
-      }
-      case Common::InputHistoryTimestamp::
-          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_ROAD_FUSION: {
-        fusion_in_time_us = input.in_ts_us;
-        fusion_out_time_us = input.out_ts_us;
-        break;
-      }
-      default: { break; }
-    }
-  }
-
-  latency->set_image_com_latency_ms(
-      (perception_in_time_us - image_expose_time_us) / US_PER_MS);
-  latency->set_perception_latency_ms(
-      (perception_out_time_us - perception_in_time_us) / US_PER_MS);
-  latency->set_perception_com_latency_ms(
-      (fusion_in_time_us - perception_out_time_us) / US_PER_MS);
-  latency->set_fusion_lantency_ms((fusion_out_time_us - fusion_in_time_us) /
-                                  US_PER_MS);
-  latency->set_fusion_com_lantency_ms(
-      (planning_in_time_us - fusion_out_time_us) / US_PER_MS);
-}
-
-static void calc_location_latency(uint64 planning_in_time_us,
-                                  const iflyauto::Header &header,
-                                  planning::common::LocationLatency *latency) {
-  constexpr uint64_t US_PER_MS = 1000;
-
-  u_int64_t sensor_time_us = 0;
-  u_int64_t location_in_time_us = 0;
-  u_int64_t location_out_time_us = 0;
-
-  for (int i = 0; i < header.input_list_size; i++) {
-    const auto &input = header.input_list[i];
-    switch (input.input_type) {
-      case Common::InputHistoryTimestamp::
-          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_IMU: {
-        sensor_time_us = input.in_ts_us;
-        break;
-      }
-      case Common::InputHistoryTimestamp::
-          INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION: {
-        location_in_time_us = input.in_ts_us;
-        location_out_time_us = input.out_ts_us;
-        break;
-      }
-      default: { break; }
-    }
-  }
-
-  latency->set_sensor_mcu_latency_ms(0);
-  latency->set_sensor_soc_latency_ms(0);
-  latency->set_sensor_com_latency_ms((location_in_time_us - sensor_time_us) /
-                                     US_PER_MS);
-  latency->set_location_latency((location_out_time_us - location_in_time_us) /
-                                US_PER_MS);
-}
-
 void PlanningAdapter::Proc() {
   LOG_DEBUG("PlanningScheduler::RunOnce \n");
   double start_time = IflyTime::Now_us();
@@ -223,7 +135,7 @@ void PlanningAdapter::Proc() {
   }
   input_topic_timestamp->set_localization_estimate(
       local_view_ptr_->localization_estimate.header.timestamp);
-  input_topic_latency->set_localization(get_latency(
+  input_topic_latency->set_localization_estimate(get_latency(
       start_time, local_view_ptr_->localization_estimate.header.timestamp));
 
   if (is_fusion_objects_info_msg_updated_) {
@@ -380,13 +292,6 @@ void PlanningAdapter::Proc() {
     const auto &debug_info_json =
         *DebugInfoManager::GetInstance().GetDebugJson();
     planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
-    calc_fusion_latency(start_time, local_view_ptr_->road_info.header,
-                        planning_debug_data->mutable_road_fusion_latency());
-    calc_fusion_latency(start_time, local_view_ptr_->fusion_objects_info.header,
-                        planning_debug_data->mutable_obstacle_fusion_latency());
-    calc_location_latency(start_time,
-                          local_view_ptr_->localization_estimate.header,
-                          planning_debug_data->mutable_location_latency());
 
     auto frame_info = planning_debug_data->mutable_frame_info();
     frame_info->set_frame_num(frame_num_);
@@ -408,7 +313,7 @@ void PlanningAdapter::Proc() {
       planning_output = last_planning_output_;
       LOG_WARNING("planning failed, use last planning output\n");
     }
-    auto &header = planning_output.meta.header;
+    auto &header = planning_output.header;
     header.timestamp = output_time_us;
     iflyauto::strcpy_array(header.version, __version_str__);
     header.seq = frame_num_;

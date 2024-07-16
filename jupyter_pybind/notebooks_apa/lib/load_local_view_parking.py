@@ -598,7 +598,7 @@ class LoadCyberbag:
     # load uss perception msg
     try:
       uss_percept_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/UssPerceptInfo"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
         uss_percept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in uss_percept_msg_dict.items():
@@ -617,7 +617,7 @@ class LoadCyberbag:
         self.uss_percept_msg['enable'] = False
     except:
       self.uss_percept_msg['enable'] = False
-      print("missing /iflytek/UssPerceptInfo !!!")
+      print("missing /iflytek/uss/uss_perception_info !!!")
 
     time_array = time.localtime(smallest_abs_t)
     time_string = time.strftime("%Y-%m-%d %H:%M:%S", time_array)

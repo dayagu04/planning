@@ -174,7 +174,7 @@ bool PlanningComponent::Init() {
 
   auto uss_percept_info_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
-          "/iflytek/UssPerceptInfo",
+          "/iflytek/uss/uss_perception_info",
           [this](const std::shared_ptr<iflyauto::StructContainer>
                      uss_percept_info_struct_msg) {
             const auto &uss_percept_info_struct =
