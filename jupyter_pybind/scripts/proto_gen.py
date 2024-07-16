@@ -17,7 +17,7 @@ def proto_gen_py():
         if ".proto" in proto_lists[i]:
           command = f"protoc --python_out={new_dir} {proto_lists[i]}"
           os.system(command)
-    
+    # add ehr_sdmap.proto
     os.chdir(current_dir)
     if os.path.exists("../../interface"):
       if "ehr_sdmap.proto" in os.listdir("../../interface/src/proto/"):
@@ -32,7 +32,21 @@ def proto_gen_py():
         command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
         os.system(command)
         proto_lists.append("ehr_sdmap.proto")
-
+    # add common.proto
+    os.chdir(current_dir)
+    if os.path.exists("../../interface"):
+      if "common.proto" in os.listdir("../../interface/src/proto/"):
+        os.chdir("../../interface/src/proto/")
+        proto_lists.append("common.proto")
+        command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
+        os.system(command)
+    elif os.path.exists("../../../interface"):
+      if "common.proto" in os.listdir("../../../interface/src/proto/"):
+        os.chdir("../../../interface/src/proto/")
+        proto_lists.append("common.proto")
+        command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
+        os.system(command)
+        proto_lists.append("common.proto")
     return 0
 
 if __name__ == "__main__":
