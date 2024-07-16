@@ -38,7 +38,8 @@ class EgoStateManager {
     LON_TINY_SPEED_REPLAN = 8,
     LAT_LON_REPLAN = 16,
     LAT_REPLAN = 32,
-    LAT_lON_REST = 64,
+    LAT_lON_REST =
+        64,  // lateral and longitudinal states reset when stitch fails
   };
 
   bool update(const planning::common::VehicleStatus &vehicle_status);
@@ -126,8 +127,10 @@ class EgoStateManager {
   // &lon_reset_flag); new replan
   uint8_t ReplanProcess(const bool &set_lat_replan, const bool &set_lon_replan);
 
-  void LateralReset();
-  void LongitudinalReset();
+  void LateralInitStateResetToEgoState();
+  void LongitudinalInitStateResetToEgoState();
+  void LateralInitStateReset(const PncTrajectoryPoint& point);
+  void LongitudinalInitStateReset(const PncTrajectoryPoint& point);
   void MotionPlanningInfoReset();
   bool LateralStitch();
   bool LongitudinalStitch();
