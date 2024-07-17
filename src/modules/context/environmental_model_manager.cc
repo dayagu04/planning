@@ -231,8 +231,11 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("ego_state_update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("ego_state_update_cost", time_end - time_start)
 
-  // Step 3) update static map info
-  environmental_model->UpdateStaticMap(local_view);
+  // // Step 3) update static map info
+  // environmental_model->UpdateStaticMap(local_view);
+
+  //  Step 3) update static map info
+  environmental_model->UpdateSdMap(local_view);
 
   // Step 4) update virtual_lane
   time_start = IflyTime::Now_ms();

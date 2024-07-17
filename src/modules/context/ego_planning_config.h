@@ -123,6 +123,9 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json,
                             "use_overtake_lane_change_request_instead_of_"
                             "active_lane_change_request");
+    minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
+        read_json_key<double>(
+        json, "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change");
     minimum_ego_cruise_speed_for_active_lane_change = read_json_key<double>(
         json, "minimum_ego_cruise_speed_for_active_lane_change");
   }
@@ -134,6 +137,7 @@ struct EgoPlanningConfig : public Config {
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
       false;
+  double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
 };
 
@@ -509,6 +513,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double max_ref_curvature = 0.5;
   double care_area_s_start_buffer = 0.0;
   double max_avoid_edge = 2.0;
+  bool lateral_ref_traj_type = false;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

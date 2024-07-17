@@ -159,7 +159,7 @@ bool GeneralLateralDecider::Execute() {
 
   ExtractBoundary(map_obstacle_decisions, obstacle_decisions,
                   frenet_safe_bounds, frenet_path_bounds);
-
+         
   GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
                             general_lateral_decider_output);
 

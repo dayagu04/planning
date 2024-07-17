@@ -3,6 +3,7 @@
 // #include "logger/async_logger.h"
 #include "common/config_context.h"
 #include "cyber/scheduler/scheduler.h"
+#include "ehr_sdmap.pb.h"
 #include "gflags/gflags.h"
 #include "log.h"
 
@@ -188,7 +189,13 @@ bool PlanningComponent::Init() {
       [this](const std::shared_ptr<Map::StaticMap> &map_msg) {
         planning_adapter_->FeedMap(map_msg);
       });
-
+      
+  auto sd_map_reader_ = planning_node_->CreateReader<SdMapSwtx::SdMap>(
+    "/iflytek/ehr/sdmap",
+    [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
+      planning_adapter_->FeedSdMap(sd_map_msg);
+    });
+    
   // -------------- writter topics --------------
   planning_writer_ = planning_node_->CreateWriter<iflyauto::StructContainer>(
       "/iflytek/planning/plan");

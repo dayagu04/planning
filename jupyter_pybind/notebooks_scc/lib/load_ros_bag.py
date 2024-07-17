@@ -5,6 +5,7 @@ from lib.load_json import *
 sys.path.append('../../python_proto')
 from planning_debug_info_pb2 import *
 from control_debug_info_pb2 import *
+from ehr_sdmap_pb2 import *
 
 import numpy as np
 import time
@@ -35,6 +36,7 @@ g_is_display_enu = False # True: local_view显示enu坐标系   False: local_vie
 is_new_loc = False #   True:新定位 False:老定位
 is_match_planning = True  #True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
 is_vis_map = False
+is_vis_sdmap = True
 
 def get_g_is_display_enu():
   return g_is_display_enu
@@ -102,6 +104,9 @@ class LoadRosbag:
 
     # ehr static map msg
     self.ehr_static_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # ehr sd map msg
+    self.ehr_sd_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     # ehr parking map msg
     self.ehr_parking_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
@@ -737,6 +742,28 @@ class LoadRosbag:
     except:
       self.ehr_static_map_msg['enable'] = False
       print('missing /iflytek/ehr/static_map topic !!!')
+
+    # load ehr sd map msg
+    try:
+      ehr_sd_map_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap"):
+        sdmap = SdMap()
+        sdmap.ParseFromString(msg.debug_info)
+        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e3] = sdmap
+      ehr_sd_map_msg_dict = {key: val for key, val in sorted(ehr_sd_map_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ehr_sd_map_msg_dict.items():
+        self.ehr_sd_map_msg['t'].append(t)
+        self.ehr_sd_map_msg['data'].append(msg)
+        self.ehr_sd_map_msg['timestamp'].append(msg.header.timestamp)
+      self.ehr_sd_map_msg['t'] = [tmp - t0  for tmp in self.ehr_sd_map_msg['t']]
+      print('ehr_sd_map_msg time:',self.ehr_sd_map_msg['t'][-1])
+      if len(self.ehr_sd_map_msg['t']) > 0:
+        self.ehr_sd_map_msg['enable'] = True
+      else:
+        self.ehr_sd_map_msg['enable'] = False
+    except:
+      self.ehr_sd_map_msg['enable'] = False
+      print('missing /iflytek/ehr/sdmap topic !!!')
 
     # load ehr parking map msg
     try:

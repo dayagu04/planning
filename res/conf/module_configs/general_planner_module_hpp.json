@@ -15,6 +15,7 @@
   "active_lane_change_min_duration_threshold": 100,
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
   "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,
+  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 1500,
   "minimum_ego_cruise_speed_for_active_lane_change": 19.45,
   "enable_bbox_mode": true,
   "max_speed_static_obstacle": 0.5,

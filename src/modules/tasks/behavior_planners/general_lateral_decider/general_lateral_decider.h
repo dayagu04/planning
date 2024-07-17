@@ -37,7 +37,7 @@ class GeneralLateralDecider : public Task {
  private:
   // bool process(ObstacleDecisions &obstacle_decisions,
   //              TrajectoryPoints &traj_points);
-
+  
   // // 1. construct the trajectory of reference and bind the obstacle info on
   bool ConstructReferencePathPoints(const TrajectoryPoints &traj_points);
 
