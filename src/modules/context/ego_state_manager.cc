@@ -26,6 +26,7 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
     : session_(session) {
   config_ = config_builder->cast<EgoPlanningEgoStateManagerConfig>();
+  steer_ratio_ = config_.steer_ratio;
   parking_cruise_speed_ = config_.parking_cruise_speed;
   max_replan_lat_err_ = config_.max_replan_lat_err;
   max_replan_theta_err_ = config_.max_replan_theta_err;
@@ -244,7 +245,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
       session_->environmental_model().get_ego_state_manager();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-  double steer_ratio = vehicle_param.steer_ratio;
+  // double steer_ratio = vehicle_param.steer_ratio;
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
   Eigen::Vector2d cur_pos(ego_state->ego_pose_raw().x,
@@ -346,7 +347,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   cur_vehicle_state.linear_velocity = ego_v_;
   cur_vehicle_state.jerk = jerk_;
   cur_vehicle_state.linear_acceleration = ego_acc_replan;
-  cur_vehicle_state.delta = ego_steer_angle_ / steer_ratio;
+  cur_vehicle_state.delta = ego_steer_angle_ / steer_ratio_;
   cur_vehicle_state.heading = ego_pose_.theta;
   cur_vehicle_state.kappa = curve_factor * cur_vehicle_state.delta;
   cur_vehicle_state.x = ego_pose_.x;
@@ -403,7 +404,7 @@ void EgoStateManager::LateralInitStateResetToEgoState() {
       session_->environmental_model().get_ego_state_manager();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double steer_ratio = vehicle_param.steer_ratio;
+  // double steer_ratio = vehicle_param.steer_ratio;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
@@ -412,7 +413,7 @@ void EgoStateManager::LateralInitStateResetToEgoState() {
   lat_init_state.set_theta(ego_state->ego_pose_raw().theta);
 
   // TODO: need estimated delta and omega for large curv condition
-  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio_);
   lat_init_state.set_curv(curve_factor * lat_init_state.delta());
   lat_init_state.set_d_curv(0.0);
 }
@@ -534,7 +535,7 @@ void EgoStateManager::LongitudinalInitStateResetToEgoState() {
 //     lat_init_state.set_x(ego_state->ego_pose_raw().x);
 //     lat_init_state.set_y(ego_state->ego_pose_raw().y);
 //     lat_init_state.set_theta(ego_state->ego_pose().theta);
-//     lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+//     lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio_);
 
 //     // lon use stitch result when lat replan
 //     out = ReplanStatus::LAT_REPLAN;
@@ -648,7 +649,7 @@ void EgoStateManager::RealtimeUpdatePlanningInitState() {
   // apply current pose, delta uses current delta
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double steer_ratio = vehicle_param.steer_ratio;
+  // double steer_ratio = vehicle_param.steer_ratio;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
   const auto &ego_state =
@@ -656,7 +657,7 @@ void EgoStateManager::RealtimeUpdatePlanningInitState() {
   lat_init_state.set_x(0.0);
   lat_init_state.set_y(0.0);
   lat_init_state.set_theta(0.0);
-  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio_);
 
   // longitudinal stitch: ignore s, but v & a really stitch
   auto &lon_init_state = planning_init_point_.lon_init_state;

@@ -33,7 +33,7 @@ def normalize_vector(v):
     return v / norm
 
 # def update_tune_lat_plan_data(bag_loader, bag_time, local_view_data, lat_plan_data, upper_safe_bound, lower_safe_bound, g_is_display_enu = False):
-def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data, tuned_ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound,
+def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_view_data, lat_plan_data, tuned_ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound,
                               safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu = False):
   road_msg = find_nearest(bag_loader.road_msg, bag_time)
   # vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
@@ -57,6 +57,17 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
     loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
     if loc_msg_tmp != None:
       loc_msg = loc_msg_tmp
+  try:
+    next_plan_debug_msg = find_nearest(bag_loader.plan_debug_msg, next_bag_time)
+    next_road_msg = find_nearest(bag_loader.road_msg, next_bag_time)
+    next_input_topic_timestamp = next_plan_debug_msg.input_topic_timestamp
+    next_fusion_road_timestamp = next_input_topic_timestamp.fusion_road
+    if is_match_planning:
+      next_road_msg_tmp = find(bag_loader.road_msg, next_fusion_road_timestamp)
+      if next_road_msg_tmp != None:
+        next_road_msg = next_road_msg_tmp
+  except:
+    print("no next msg!")
 
   if bag_loader.loc_msg['enable'] == True:
     cur_pos_xn = loc_msg.position.position_boot.x
@@ -459,8 +470,15 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
-      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 15.7)
-      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 15.7)
+      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 13.0)
+      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 13.0)
+
+    next_ref_theta_deg_vec = []
+    try:
+      for i in range(len(time_vec)):
+        next_ref_theta_deg_vec.append(next_plan_debug_msg.lateral_motion_planning_input.ref_theta_vec[i] * 57.3)
+    except:
+      print("no next_plan_debug_msg")
 
     acc_vec = lat_motion_plan_output.acc_vec
     jerk_vec = lat_motion_plan_output.jerk_vec
@@ -474,6 +492,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
       'xn_vec': xn_vec,
       'yn_vec': yn_vec,
       'ref_theta_deg_vec': ref_theta_deg_vec,
+      'next_ref_theta_deg_vec': next_ref_theta_deg_vec,
       'theta_deg_vec': theta_deg_vec,
       'steer_deg_vec': steer_deg_vec,
       'steer_dot_deg_vec': steer_dot_deg_vec,
@@ -612,6 +631,74 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_p
           'center_line_curvature' :  center_line_list[i]['curvature_vec']
         })
 
+  try:
+    # load lane info
+    try:
+      next_line_info_list = load_lane_lines(next_road_msg, is_enu_to_car, loc_msg, not_g_is_display_enu)
+    except:
+      print("vis road_msg error")
+
+    # update lane info
+    next_data_lane_dict = {
+      0:lat_plan_data['data_lane_20'],
+      1:lat_plan_data['data_lane_21'],
+      2:lat_plan_data['data_lane_22'],
+      3:lat_plan_data['data_lane_23'],
+      4:lat_plan_data['data_lane_24'],
+      5:lat_plan_data['data_lane_25'],
+      6:lat_plan_data['data_lane_26'],
+      7:lat_plan_data['data_lane_27'],
+      8:lat_plan_data['data_lane_28'],
+      9:lat_plan_data['data_lane_29'],
+      10:lat_plan_data['data_lane_30'],
+      11:lat_plan_data['data_lane_31'],
+      12:lat_plan_data['data_lane_32'],
+      13:lat_plan_data['data_lane_33'],
+      14:lat_plan_data['data_lane_34'],
+      15:lat_plan_data['data_lane_35'],
+      16:lat_plan_data['data_lane_36'],
+      17:lat_plan_data['data_lane_37'],
+      18:lat_plan_data['data_lane_38'],
+      19:lat_plan_data['data_lane_39'],
+    }
+    next_data_center_line_dict = {
+      0:lat_plan_data['data_center_line_10'],
+      1:lat_plan_data['data_center_line_11'],
+      2:lat_plan_data['data_center_line_12'],
+      3:lat_plan_data['data_center_line_13'],
+      4:lat_plan_data['data_center_line_14'],
+      5:lat_plan_data['data_center_line_15'],
+      6:lat_plan_data['data_center_line_16'],
+      7:lat_plan_data['data_center_line_17'],
+      8:lat_plan_data['data_center_line_18'],
+      9:lat_plan_data['data_center_line_19'],
+    }
+
+    for i in range(20):
+      try:
+        if next_line_info_list[i]['type'] == ['dashed']:
+          fig7.renderers[20 + i].glyph.line_dash = 'dashed'
+        else:
+          fig7.renderers[20 + i].glyph.line_dash = 'solid'
+        next_data_lane = next_data_lane_dict[i]
+        next_data_lane.data.update({
+          'line_{}_x'.format(20 + i): next_line_info_list[i]['line_x_vec'],
+          'line_{}_y'.format(20 + i): next_line_info_list[i]['line_y_vec'],
+        })
+      except:
+        pass
+
+    next_center_line_list = load_lane_center_lines(next_road_msg, is_enu_to_car, loc_msg, not_g_is_display_enu)
+
+    for i in range(10):
+        next_data_center_line = next_data_center_line_dict[i]
+        next_data_center_line.data.update({
+          'center_line_{}_x'.format(10 + i): next_center_line_list[i]['line_x_vec'],
+          'center_line_{}_y'.format(10 + i): next_center_line_list[i]['line_y_vec'],
+        })
+  except:
+    print("no next road!")
+
   # load control
   if bag_loader.ctrl_msg['enable'] == True:
     mpc_dx, mpc_dy, mpc_dtheta = generate_control(ctrl_msg, loc_msg, not g_is_display_enu)
@@ -642,6 +729,27 @@ def load_lat_plan_figure(fig1):
   data_lane_18 = ColumnDataSource(data = {'line_18_y':[], 'line_18_x':[]})
   data_lane_19 = ColumnDataSource(data = {'line_19_y':[], 'line_19_x':[]})
 
+  data_lane_20 = ColumnDataSource(data = {'line_20_y':[], 'line_20_x':[]})
+  data_lane_21 = ColumnDataSource(data = {'line_21_y':[], 'line_21_x':[]})
+  data_lane_22 = ColumnDataSource(data = {'line_22_y':[], 'line_22_x':[]})
+  data_lane_23 = ColumnDataSource(data = {'line_23_y':[], 'line_23_x':[]})
+  data_lane_24 = ColumnDataSource(data = {'line_24_y':[], 'line_24_x':[]})
+  data_lane_25 = ColumnDataSource(data = {'line_25_y':[], 'line_25_x':[]})
+  data_lane_26 = ColumnDataSource(data = {'line_26_y':[], 'line_26_x':[]})
+  data_lane_27 = ColumnDataSource(data = {'line_27_y':[], 'line_27_x':[]})
+  data_lane_28 = ColumnDataSource(data = {'line_28_y':[], 'line_28_x':[]})
+  data_lane_29 = ColumnDataSource(data = {'line_29_y':[], 'line_29_x':[]})
+  data_lane_30 = ColumnDataSource(data = {'line_30_y':[], 'line_30_x':[]})
+  data_lane_31 = ColumnDataSource(data = {'line_31_y':[], 'line_31_x':[]})
+  data_lane_32 = ColumnDataSource(data = {'line_32_y':[], 'line_32_x':[]})
+  data_lane_33 = ColumnDataSource(data = {'line_33_y':[], 'line_33_x':[]})
+  data_lane_34 = ColumnDataSource(data = {'line_34_y':[], 'line_34_x':[]})
+  data_lane_35 = ColumnDataSource(data = {'line_35_y':[], 'line_35_x':[]})
+  data_lane_36 = ColumnDataSource(data = {'line_36_y':[], 'line_36_x':[]})
+  data_lane_37 = ColumnDataSource(data = {'line_37_y':[], 'line_37_x':[]})
+  data_lane_38 = ColumnDataSource(data = {'line_38_y':[], 'line_38_x':[]})
+  data_lane_39 = ColumnDataSource(data = {'line_39_y':[], 'line_39_x':[]})
+
   data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
   data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
   data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[]})
@@ -652,6 +760,17 @@ def load_lat_plan_figure(fig1):
   data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[]})
   data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[]})
   data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[]})
+
+  data_center_line_10 = ColumnDataSource(data = {'center_line_10_y':[], 'center_line_10_x':[]})
+  data_center_line_11 = ColumnDataSource(data = {'center_line_11_y':[], 'center_line_11_x':[]})
+  data_center_line_12 = ColumnDataSource(data = {'center_line_12_y':[], 'center_line_12_x':[]})
+  data_center_line_13 = ColumnDataSource(data = {'center_line_13_y':[], 'center_line_13_x':[]})
+  data_center_line_14 = ColumnDataSource(data = {'center_line_14_y':[], 'center_line_14_x':[]})
+  data_center_line_15 = ColumnDataSource(data = {'center_line_15_y':[], 'center_line_15_x':[]})
+  data_center_line_16 = ColumnDataSource(data = {'center_line_16_y':[], 'center_line_16_x':[]})
+  data_center_line_17 = ColumnDataSource(data = {'center_line_17_y':[], 'center_line_17_x':[]})
+  data_center_line_18 = ColumnDataSource(data = {'center_line_18_y':[], 'center_line_18_x':[]})
+  data_center_line_19 = ColumnDataSource(data = {'center_line_19_y':[], 'center_line_19_x':[]})
 
   data_center_line_curvature = ColumnDataSource(data = {'center_line_s':[], 'center_line_curvature':[]})
 
@@ -695,6 +814,7 @@ def load_lat_plan_figure(fig1):
                                                          'xn_vec':[],
                                                          'yn_vec':[],
                                                          'ref_theta_deg_vec':[],
+                                                         'next_ref_theta_deg_vec':[],
                                                          'theta_deg_vec':[],
                                                          'steer_deg_vec':[],
                                                          'steer_dot_deg_vec':[],
@@ -760,6 +880,26 @@ def load_lat_plan_figure(fig1):
                    'data_lane_17':data_lane_17, \
                    'data_lane_18':data_lane_18, \
                    'data_lane_19':data_lane_19, \
+                   'data_lane_20':data_lane_20, \
+                   'data_lane_21':data_lane_21, \
+                   'data_lane_22':data_lane_22, \
+                   'data_lane_23':data_lane_23, \
+                   'data_lane_24':data_lane_24, \
+                   'data_lane_25':data_lane_25, \
+                   'data_lane_26':data_lane_26, \
+                   'data_lane_27':data_lane_27, \
+                   'data_lane_28':data_lane_28, \
+                   'data_lane_29':data_lane_29, \
+                   'data_lane_30':data_lane_30, \
+                   'data_lane_31':data_lane_31, \
+                   'data_lane_32':data_lane_32, \
+                   'data_lane_33':data_lane_33, \
+                   'data_lane_34':data_lane_34, \
+                   'data_lane_35':data_lane_35, \
+                   'data_lane_36':data_lane_36, \
+                   'data_lane_37':data_lane_37, \
+                   'data_lane_38':data_lane_38, \
+                   'data_lane_39':data_lane_39, \
                    'data_center_line_0':data_center_line_0, \
                    'data_center_line_1':data_center_line_1, \
                    'data_center_line_2':data_center_line_2, \
@@ -770,6 +910,16 @@ def load_lat_plan_figure(fig1):
                    'data_center_line_7':data_center_line_7, \
                    'data_center_line_8':data_center_line_8, \
                    'data_center_line_9':data_center_line_9, \
+                   'data_center_line_10':data_center_line_10, \
+                   'data_center_line_11':data_center_line_11, \
+                   'data_center_line_12':data_center_line_12, \
+                   'data_center_line_13':data_center_line_13, \
+                   'data_center_line_14':data_center_line_14, \
+                   'data_center_line_15':data_center_line_15, \
+                   'data_center_line_16':data_center_line_16, \
+                   'data_center_line_17':data_center_line_17, \
+                   'data_center_line_18':data_center_line_18, \
+                   'data_center_line_19':data_center_line_19, \
                    'data_center_line_curvature':data_center_line_curvature, \
                    'data_control':data_control
   }
@@ -830,12 +980,37 @@ def load_lat_plan_figure(fig1):
   fig7.line('line_17_y', 'line_17_x', source = data_lane_17, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig7.line('line_18_y', 'line_18_x', source = data_lane_18, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig7.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+  fig7.line('line_20_y', 'line_20_x', source = data_lane_20, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_21_y', 'line_21_x', source = data_lane_21, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_22_y', 'line_22_x', source = data_lane_22, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_23_y', 'line_23_x', source = data_lane_23, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_24_y', 'line_24_x', source = data_lane_24, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_25_y', 'line_25_x', source = data_lane_25, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_26_y', 'line_26_x', source = data_lane_26, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_27_y', 'line_27_x', source = data_lane_27, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_28_y', 'line_28_x', source = data_lane_28, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_29_y', 'line_29_x', source = data_lane_29, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_30_y', 'line_30_x', source = data_lane_30, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_31_y', 'line_31_x', source = data_lane_31, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_32_y', 'line_32_x', source = data_lane_32, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_33_y', 'line_33_x', source = data_lane_33, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_34_y', 'line_34_x', source = data_lane_34, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_35_y', 'line_35_x', source = data_lane_35, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_36_y', 'line_36_x', source = data_lane_36, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_37_y', 'line_37_x', source = data_lane_37, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_38_y', 'line_38_x', source = data_lane_38, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
+  fig7.line('line_39_y', 'line_39_x', source = data_lane_39, line_width = 1.5, line_color = 'gray', line_dash = 'dashed', legend_label = 'next_lane')
   fig7.patch('car_yn2', 'car_xn2', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig7.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig7.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig7.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig7.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig7.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig7.line('center_line_10_y', 'center_line_10_x', source = data_center_line_10, line_width = 2, line_color = 'brown', line_dash = 'dotted', line_alpha = 1, legend_label = 'next_center_line')
+  fig7.line('center_line_11_y', 'center_line_11_x', source = data_center_line_11, line_width = 2, line_color = 'brown', line_dash = 'dotted', line_alpha = 1, legend_label = 'next_center_line')
+  fig7.line('center_line_12_y', 'center_line_12_x', source = data_center_line_12, line_width = 2, line_color = 'brown', line_dash = 'dotted', line_alpha = 1, legend_label = 'next_center_line')
+  fig7.line('center_line_13_y', 'center_line_13_x', source = data_center_line_13, line_width = 1, line_color = 'brown', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'next_center_line')
+  fig7.line('center_line_14_y', 'center_line_14_x', source = data_center_line_14, line_width = 1, line_color = 'brown', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'next_center_line')
   fig7.line('ref_yn', 'ref_xn', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path')
   fig7.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig7.line('yn_vec', 'xn_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
@@ -846,6 +1021,7 @@ def load_lat_plan_figure(fig1):
   f2 = fig2.line('time_vec', 'ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'black', line_dash = 'dashed', legend_label = 'ref_theta')
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin theta')
   fig2.line('time_vec', 'theta_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned theta')
+  fig2.line('time_vec', 'next_ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'next ref_theta')
 
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat acc')
   fig3.line('time_vec', 'acc_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat acc')
@@ -883,7 +1059,7 @@ def load_lat_plan_figure(fig1):
                                                                                     ('obstacle id', '@hard_upper_bound_id_vec'), ('type', '@hard_upper_bound_type_vec')])
   hover1_4 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 1]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_lower_bound_vec)'),
                                                                                      ('obstacle id', '@hard_lower_bound_id_vec'), ('type', '@hard_lower_bound_type_vec')])
-  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t')], mode='vline')
+  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t'), ('next_ref_theta', '@next_ref_theta_deg_vec')], mode='vline')
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t'), ('|acc bound|', '@acc_upper_bound')], mode='vline')
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound')], mode='vline')

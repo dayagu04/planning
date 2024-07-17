@@ -40,7 +40,7 @@ py::bytes GetOutputBytes() {
 }
 
 int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
-                   double q_ref_theta, double q_acc, double q_jerk,
+                   double q_ref_theta, double q_acc, double q_jerk, double q_continuity,
                    double q_acc_bound, double q_jerk_bound, double acc_bound,
                    double jerk_bound, double q_safe_bound, double q_hard_bound,
                    double ref_xy,
@@ -66,6 +66,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   planning_input.set_q_ref_theta(q_ref_theta);
   planning_input.set_q_acc(q_acc);
   planning_input.set_q_jerk(q_jerk);
+  planning_input.set_q_continuity(q_continuity);
   planning_input.set_q_acc_bound(q_acc_bound);
   planning_input.set_q_jerk_bound(q_jerk_bound);
   planning_input.set_q_soft_corridor(q_safe_bound);
