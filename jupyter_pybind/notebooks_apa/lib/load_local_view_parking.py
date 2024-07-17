@@ -59,7 +59,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = False
+load_uss_wave_from_uss_percept_msg = True
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 4
 smallest_abs_t = 0.0
@@ -734,6 +734,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
         fus_parking_msg_idx = fus_parking_msg_idx + 1
   local_view_data['data_index']['fus_parking_msg_idx'] = fus_parking_msg_idx
 
+  fus_ground_line_msg_idx = 0
+  if bag_loader.fus_ground_line_msg['enable'] == True:
+    while bag_loader.fus_ground_line_msg['abs_t'][fus_ground_line_msg_idx] <= abs_t and fus_ground_line_msg_idx < (len(bag_loader.fus_ground_line_msg['abs_t'])-1):
+        fus_ground_line_msg_idx = fus_ground_line_msg_idx + 1
+  local_view_data['fus_ground_line_msg_idx'] = fus_ground_line_msg_idx
+
   fus_objects_msg_idx = 0
   if bag_loader.fus_objects_msg['enable'] == True:
     while bag_loader.fus_objects_msg['abs_t'][fus_objects_msg_idx] <= abs_t and fus_objects_msg_idx < (len(bag_loader.fus_objects_msg['abs_t'])-1):
@@ -1287,7 +1293,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
     # load uss wave from uss_percept_msg
     #get cur pose and uss wave
-    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
@@ -1304,15 +1310,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       for j in wdis_index[i]:
           rs0 = ''
           rs1 = ''
-          if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
-              rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
+          if uss_dis_info[j] * 0.001 <= 10 and uss_dis_info[i] * 0.001 != 0:
+              rs1 = round(uss_dis_info[j] * 0.001, 2)
               # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-              rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
+              rs0 = '{:.2f}'.format(round(uss_dis_info[j] * 0.001, 2))
               ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
               uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
               uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
               x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-          elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+          elif uss_dis_info[j] * 0.001 == 0 or uss_dis_info * 0.001 > 10:
               ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
               x_text, y_text = 0, 0
           text_x.append(x_text)
@@ -1664,7 +1670,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   if bag_loader.uss_percept_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
     # load uss wave for uss_percept_msg
     #get cur pose and uss wave
-    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[4]
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
@@ -1681,15 +1687,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       for j in wdis_index[i]:
           rs0 = ''
           rs1 = ''
-          if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
-              rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
+          if uss_dis_info[j] * 0.001 <= 10 and uss_dis_info[i] * 0.001 != 0:
+              rs1 = round(uss_dis_info[j] * 0.001, 2)
               # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-              rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
+              rs0 = '{:.2f}'.format(round(uss_dis_info[j] * 0.001, 2))
               ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
               uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
               uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
               x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-          elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+          elif uss_dis_info[j] * 0.001 == 0 or uss_dis_info[j] * 0.001 > 10:
               ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
               x_text, y_text = 0, 0
           text_x.append(x_text)
