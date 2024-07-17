@@ -124,9 +124,9 @@ void PerpendicularInPlanner::PlanCore() {
     // path plan
     const auto pathplan_result = PathPlanOnce();
 
-    DEBUG_PRINT("plan_consume_time = " << IflyTime::Now_ms() - start_time
+    DEBUG_PRINT("replan_consume_time = " << IflyTime::Now_ms() - start_time
                                        << " ms");
-    JSON_DEBUG_VALUE("plan_consume_time", IflyTime::Now_ms() - start_time)
+    JSON_DEBUG_VALUE("replan_consume_time", IflyTime::Now_ms() - start_time)
 
     frame_.pathplan_result = pathplan_result;
 

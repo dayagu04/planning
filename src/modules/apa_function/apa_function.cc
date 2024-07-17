@@ -45,6 +45,7 @@ bool ApaFunction::Plan() {
   const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
 
   DEBUG_PRINT("time_consumption = " << frame_duration << "ms");
+  JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
   return true;
 }

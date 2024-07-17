@@ -206,7 +206,7 @@ class LoadCyberbag:
       json_value_list = ["tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "slot_side",
                          "terminal_error_x", "terminal_error_y", "terminal_error_heading",
                          "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason", "plan_fail_reason",
-                         "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_uss", "stuck_time",
+                         "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_uss", "stuck_time", "replan_consume_time", "total_plan_consume_time",
                          "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "ego_heading_slot",
                          "selected_slot_id", "slot_length", "slot_width", "slot_origin_pos_x", "slot_origin_pos_y", "slot_origin_heading",
                          "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
@@ -1452,7 +1452,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("replan_reason")
       replan_reason = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_reason']
-      replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC'}
+      replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET'}
       reason = replan_reason_dict.get(replan_reason, 'UNKNOWN')
       datas.append(str(replan_reason) + ": " + str(reason))
 
@@ -1507,8 +1507,14 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       names.append("terminal_error_heading (deg)")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_heading'] * 57.3))
 
-      names.append("stuck_time")
+      names.append("stuck_time (s)")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['stuck_time']))
+
+      names.append("replan_consume_time (ms)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_consume_time']))
+
+      names.append("total_plan_consume_time (ms)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['total_plan_consume_time']))
 
       names.append("slot_occupied_ratio")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_occupied_ratio']))
@@ -1518,6 +1524,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("remain_dist")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist']))
+
+      names.append("remain_dist_col_det")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_col_det']))
 
       names.append("car_static_timer_by_pos")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos']))
@@ -3449,7 +3458,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("replan_reason")
             replan_reason = plan_json['replan_reason']
-            replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC'}
+            replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET'}
             reason = replan_reason_dict.get(replan_reason, 'UNKNOWN')
             datas.append(str(replan_reason) + ": " + str(reason))
 
@@ -3504,8 +3513,14 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             names.append("terminal_error_heading (deg)")
             datas.append(str(plan_json['terminal_error_heading'] * 57.3))
 
-            names.append("stuck_time")
+            names.append("stuck_time (s)")
             datas.append(str(plan_json['stuck_time']))
+
+            names.append("replan_consume_time (ms)")
+            datas.append(str(plan_json['replan_consume_time']))
+
+            names.append("total_plan_consume_time (ms)")
+            datas.append(str(plan_json['total_plan_consume_time']))
 
             names.append("slot_occupied_ratio")
             datas.append(str(plan_json['slot_occupied_ratio']))
@@ -3515,6 +3530,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("remain_dist")
             datas.append(str(plan_json['remain_dist']))
+
+            names.append("remain_dist_col_det")
+            datas.append(str(plan_json['remain_dist_col_det']))
 
             names.append("car_static_timer_by_pos")
             datas.append(str(plan_json['car_static_timer_by_pos']))
