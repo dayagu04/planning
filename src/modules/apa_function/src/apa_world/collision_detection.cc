@@ -930,8 +930,8 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     }
 
     if (obs.x() > slot_x - 5.468 && obs.x() < slot_x + lower_x &&
-        obs.y() > slot_right_pt.y() + 0.328 &&
-        obs.y() < slot_left_pt.y() - 0.328) {
+        obs.y() > slot_right_pt.y() + 0.128 &&
+        obs.y() < slot_left_pt.y() - 0.128) {
       return ObsSlotType::SLOT_ENTRANCE_OBS;
     }
 

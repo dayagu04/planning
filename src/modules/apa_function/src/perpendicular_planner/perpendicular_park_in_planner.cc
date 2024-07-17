@@ -125,7 +125,7 @@ void PerpendicularInPlanner::PlanCore() {
     const auto pathplan_result = PathPlanOnce();
 
     DEBUG_PRINT("replan_consume_time = " << IflyTime::Now_ms() - start_time
-                                       << " ms");
+                                         << " ms");
     JSON_DEBUG_VALUE("replan_consume_time", IflyTime::Now_ms() - start_time)
 
     frame_.pathplan_result = pathplan_result;
@@ -447,7 +447,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         // considered safe
         const double single_car_already_move_dist =
             car_already_move_dist - car_safe_move_dist;
-        car_safe_move_dist += single_car_already_move_dist;
+
+        car_safe_move_dist += std::max(single_car_already_move_dist,
+                                       single_path_remain_obstacle_dist);
         break;
       } else {
         // the path would not col by obs
@@ -633,12 +635,18 @@ void PerpendicularInPlanner::GenTlane() {
   std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
       right_pq_for_x(Compare(0));
 
+  // only hack for obs is not accurate
+  const double y_min = ego_slot_info.slot_width * 0.5 - 0.128;
+  const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
+                        4.28 * pt_01_norm_down_vec)
+                           .x();
+
   // sift obstacles that meet requirement
   for (const auto& obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
-        obstacle_point_slot.x() < 1.068 ||
+        obstacle_point_slot.x() < x_min ||
         std::fabs(obstacle_point_slot.y()) > y_max ||
-        std::fabs(obstacle_point_slot.y()) < 0.868) {
+        std::fabs(obstacle_point_slot.y()) < y_min) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {
@@ -1175,30 +1183,28 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     for (size_t i = planner_output.path_seg_index.first;
          i <= planner_output.path_seg_index.second; ++i) {
       const auto& path_seg_local = planner_output.path_segment_vec[i];
-      if (path_seg_local.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-        pnc::geometry_lib::PathSegment path_seg_global = path_seg_local;
-        if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-          path_seg_global.line_seg.pA =
-              ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pA);
-          path_seg_global.line_seg.pB =
-              ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pB);
-          path_seg_global.line_seg.heading = ego_slot_info.l2g_tf.GetHeading(
-              path_seg_local.GetLineSeg().heading);
-        } else if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-          path_seg_global.arc_seg.pA =
-              ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pA);
-          path_seg_global.arc_seg.pB =
-              ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pB);
-          path_seg_global.arc_seg.circle_info.center =
-              ego_slot_info.l2g_tf.GetPos(
-                  path_seg_local.GetArcSeg().circle_info.center);
-          path_seg_global.arc_seg.headingA = ego_slot_info.l2g_tf.GetHeading(
-              path_seg_local.GetArcSeg().headingA);
-          path_seg_global.arc_seg.headingB = ego_slot_info.l2g_tf.GetHeading(
-              path_seg_local.GetArcSeg().headingB);
-        }
-        current_plan_path_vec_.emplace_back(std::move(path_seg_global));
+      pnc::geometry_lib::PathSegment path_seg_global = path_seg_local;
+      if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+        path_seg_global.line_seg.pA =
+            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pA);
+        path_seg_global.line_seg.pB =
+            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pB);
+        path_seg_global.line_seg.heading = ego_slot_info.l2g_tf.GetHeading(
+            path_seg_local.GetLineSeg().heading);
+      } else if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+        path_seg_global.arc_seg.pA =
+            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pA);
+        path_seg_global.arc_seg.pB =
+            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pB);
+        path_seg_global.arc_seg.circle_info.center =
+            ego_slot_info.l2g_tf.GetPos(
+                path_seg_local.GetArcSeg().circle_info.center);
+        path_seg_global.arc_seg.headingA = ego_slot_info.l2g_tf.GetHeading(
+            path_seg_local.GetArcSeg().headingA);
+        path_seg_global.arc_seg.headingB = ego_slot_info.l2g_tf.GetHeading(
+            path_seg_local.GetArcSeg().headingB);
       }
+      current_plan_path_vec_.emplace_back(std::move(path_seg_global));
     }
   }
 
@@ -1401,7 +1407,7 @@ const bool PerpendicularInPlanner::CheckSegCompleted() {
     if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
         apa_world_ptr_->GetMeasurementsPtr()->static_flag) {
       DEBUG_PRINT("close to target, need wait a certain time!");
-      if (frame_.stuck_time > 0.068) {
+      if (frame_.stuck_uss_time > 0.068) {
         DEBUG_PRINT("wait a certain time, start plan");
         is_seg_complete = true;
       }
@@ -1415,7 +1421,8 @@ const bool PerpendicularInPlanner::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag) {
     DEBUG_PRINT("close to obstacle by uss!, need wait a certain time!");
-    if (frame_.stuck_time > apa_param.GetParam().uss_stuck_replan_wait_time) {
+    if (frame_.stuck_uss_time >
+        apa_param.GetParam().uss_stuck_replan_wait_time) {
       DEBUG_PRINT("wait a certain time, start plan");
       frame_.is_replan_by_uss = true;
       return true;
@@ -1430,7 +1437,8 @@ const bool PerpendicularInPlanner::CheckColDetStucked() {
           apa_param.GetParam().max_replan_remain_dist &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag) {
     DEBUG_PRINT("close to obstacle by col det!, need wait a certain time!");
-    if (frame_.stuck_time > apa_param.GetParam().uss_stuck_replan_wait_time) {
+    if (frame_.stuck_uss_time >
+        apa_param.GetParam().uss_stuck_replan_wait_time) {
       DEBUG_PRINT("wait a certain time, start plan");
       return true;
     }

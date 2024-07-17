@@ -464,12 +464,18 @@ bool SlotManagement::GenTLane(
   std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>, Compare>
       right_pq_for_x(Compare(0));
 
+  // only hack for obs is not accurate
+  const double y_min = ego_slot_info.slot_width * 0.5 - 0.128;
+  const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
+                        4.28 * pt_01_norm_down_vec)
+                           .x();
+
   // sift obstacles that meet requirement
   for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
     if (std::fabs(obstacle_point_slot.x()) > x_max ||
-        obstacle_point_slot.x() < 1.068 ||
+        obstacle_point_slot.x() < x_min ||
         std::fabs(obstacle_point_slot.y()) > y_max ||
-        std::fabs(obstacle_point_slot.y()) < 0.868) {
+        std::fabs(obstacle_point_slot.y()) < y_min) {
       continue;
     }
     if (obstacle_point_slot.y() > 1e-6) {

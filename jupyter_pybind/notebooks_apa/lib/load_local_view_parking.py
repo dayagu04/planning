@@ -1528,10 +1528,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       names.append("remain_dist_col_det")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_col_det']))
 
-      names.append("car_static_timer_by_pos")
+      names.append("car_static_timer_by_pos (s)")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos']))
 
-      names.append("car_static_timer_by_vel")
+      names.append("car_static_timer_by_vel (s)")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel']))
 
       names.append("static_flag")
@@ -2748,7 +2748,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           print('find ctrl_debug_msg error')
           remain_s_ctrl = -1
 
-        abs_t_string = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(abs_t))
+        abs_t_string = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(localization_timestamp))
         text = 'v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}, time = {:s}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state, abs_t_string)
         vel_text.append(text)
         vel_x.append(-2)
@@ -3534,10 +3534,10 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             names.append("remain_dist_col_det")
             datas.append(str(plan_json['remain_dist_col_det']))
 
-            names.append("car_static_timer_by_pos")
+            names.append("car_static_timer_by_pos (s)")
             datas.append(str(plan_json['car_static_timer_by_pos']))
 
-            names.append("car_static_timer_by_vel")
+            names.append("car_static_timer_by_vel (s)")
             datas.append(str(plan_json['car_static_timer_by_vel']))
 
             names.append("static_flag")
