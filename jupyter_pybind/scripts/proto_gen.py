@@ -17,36 +17,22 @@ def proto_gen_py():
         if ".proto" in proto_lists[i]:
           command = f"protoc --python_out={new_dir} {proto_lists[i]}"
           os.system(command)
-    # add ehr_sdmap.proto
+    # add ehr_sdmap.proto\common.proto
     os.chdir(current_dir)
     if os.path.exists("../../interface"):
-      if "ehr_sdmap.proto" in os.listdir("../../interface/src/proto/"):
+      if "ehr_sdmap.proto" and  "common.proto" in os.listdir("../../interface/src/proto/"):
         os.chdir("../../interface/src/proto/")
-        proto_lists.append("ehr_sdmap.proto")
-        command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
+        command = f"protoc --python_out={new_dir} {'ehr_sdmap.proto'}"
+        os.system(command)
+        command = f"protoc --python_out={new_dir} {'common.proto'}"
         os.system(command)
     elif os.path.exists("../../../interface"):
       if "ehr_sdmap.proto" in os.listdir("../../../interface/src/proto/"):
         os.chdir("../../../interface/src/proto/")
-        proto_lists.append("ehr_sdmap.proto")
-        command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
+        command = f"protoc --python_out={new_dir} {'ehr_sdmap.proto'}"
         os.system(command)
-        proto_lists.append("ehr_sdmap.proto")
-    # add common.proto
-    os.chdir(current_dir)
-    if os.path.exists("../../interface"):
-      if "common.proto" in os.listdir("../../interface/src/proto/"):
-        os.chdir("../../interface/src/proto/")
-        proto_lists.append("common.proto")
-        command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
+        command = f"protoc --python_out={new_dir} {'common.proto'}"
         os.system(command)
-    elif os.path.exists("../../../interface"):
-      if "common.proto" in os.listdir("../../../interface/src/proto/"):
-        os.chdir("../../../interface/src/proto/")
-        proto_lists.append("common.proto")
-        command = f"protoc --python_out={new_dir} {proto_lists[-1]}"
-        os.system(command)
-        proto_lists.append("common.proto")
     return 0
 
 if __name__ == "__main__":

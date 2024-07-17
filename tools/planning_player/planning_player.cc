@@ -102,15 +102,6 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
       }
     }
 
-    for (const auto& it : msg_cache_[TOPIC_SD_MAP]) {
-      auto sd_map_msg = 
-          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it.second);
-      SdMapSwtx::SdMap sd_map_info;
-      std::string sd_map_info_str(sd_map_msg->debug_info.begin(),
-                                          sd_map_msg->debug_info.end());
-      sd_map_info.ParseFromString(sd_map_info_str);
-      // auto input_time_list = sd_map_info.input_topic_timestamp();
-    }
   } else if (scene_type == "apa") {
     for (const auto& it : msg_cache_[TOPIC_PLANNING_PLAN]) {
       auto plan_msg =
@@ -283,7 +274,6 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
     } else if (msg.getTopic() == TOPIC_HD_MAP) {
       cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
     } else if (msg.getTopic() == TOPIC_SD_MAP) {
-      //fengwang31:TODO
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
       cache_with_ros_msg_and_header_time<struct_msgs::ParkingInfo>(msg);
@@ -345,7 +335,6 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
         write_ros_msg<proto_msgs::StaticMap::Ptr>(it_msg.second, TOPIC_HD_MAP,
                                                   bag);
       } else if (it_msg.first == TOPIC_SD_MAP) {
-        //fengwang31:TODO
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second, TOPIC_SD_MAP,
                                                   bag);
       } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {

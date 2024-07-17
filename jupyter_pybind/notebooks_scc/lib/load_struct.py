@@ -4,6 +4,8 @@ import math
 from scipy.interpolate import interp1d
 from scipy.misc import derivative
 from lib.load_rotate import *
+sys.path.append('../../python_proto')
+from ehr_sdmap_pb2 import *
 from bokeh.models import TextInput
 import ipywidgets
 
@@ -127,7 +129,7 @@ def load_sd_map_segments(segments,x,y,yaw,Max_sdmap_segment_size):
     ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
     if i < len(segments):
       segment = segments[i]
-      if (segment.usage != 3):
+      if (segment.usage != RoadUsage.RAMP):
         line_x = []
         line_y = []
         cur_line_first_point = segment.enu_points[0]

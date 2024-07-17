@@ -191,7 +191,7 @@ bool PlanningComponent::Init() {
       });
       
   auto sd_map_reader_ = planning_node_->CreateReader<SdMapSwtx::SdMap>(
-    "/iflytek/ehr/sd_map",
+    "/iflytek/ehr/sdmap",
     [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
       planning_adapter_->FeedSdMap(sd_map_msg);
     });

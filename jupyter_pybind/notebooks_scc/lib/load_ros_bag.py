@@ -746,7 +746,6 @@ class LoadRosbag:
     # load ehr sd map msg
     try:
       ehr_sd_map_msg_dict = {}
-      print('1111111111')
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap"):
         sdmap = SdMap()
         sdmap.ParseFromString(msg.debug_info)

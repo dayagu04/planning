@@ -281,6 +281,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
   const bool use_lateral_distance_to_judge_cutout_in_active_lane_change =
       config_.use_lateral_distance_to_judge_cutout_in_active_lane_change;
+  
+  const double half_car_width = 1.75;
 
   const std::vector<TrackedObject> &front_tracks =
       lateral_obstacle->front_tracks();
@@ -1959,7 +1961,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                             v_left_front < v_ego + 2 ||
                             tr.v_rel > temp_attenuation ||
                             use_lateral_distance_to_judge_cutout_in_active_lane_change
-                        ? tr.l > 1.75
+                        ? tr.l > half_car_width
                         : std::fabs(tr.v_lat) > 0.3 ||
                               ((status != ROAD_LC_LCHANGE &&
                                 status != ROAD_LC_RCHANGE &&
@@ -2070,7 +2072,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                               v_front_lb + interp(v_front_lb, xp2, fp2) ||
                           v_left_front < v_ego + 2 || tr.v_rel > 2.5 ||
                           use_lateral_distance_to_judge_cutout_in_active_lane_change
-                      ? tr.l > 1.75
+                      ? tr.l > half_car_width
                       : std::fabs(tr.v_lat) > 0.3 ||
                             ((status != ROAD_LC_LCHANGE &&
                               status != ROAD_LC_RCHANGE &&
@@ -3478,7 +3480,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                 std::min(v_ego + 2, tr.v_lead + 3) ||
                             tr.v_rel > temp_attenuation ||
                             use_lateral_distance_to_judge_cutout_in_active_lane_change
-                        ? tr.l < -1.75
+                        ? tr.l < -half_car_width
                         : std::fabs(tr.v_lat) > 0.3 ||
                               (((status != ROAD_LC_LCHANGE &&
                                  status != ROAD_LC_RCHANGE &&
@@ -3596,7 +3598,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                               v_front_lb + interp(v_front_lb, xp2, fp2) ||
                           v_right_front < v_ego + 2 || tr.v_rel > 2.5 ||
                           use_lateral_distance_to_judge_cutout_in_active_lane_change
-                      ? tr.l > 1.75
+                      ? tr.l > half_car_width
                       : std::fabs(tr.v_lat) > 0.3 ||
                             ((status != ROAD_LC_LCHANGE &&
                               status != ROAD_LC_RCHANGE &&

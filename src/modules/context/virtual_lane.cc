@@ -368,8 +368,10 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, double dis_to_first_merg
                                     bool is_nearing_ramp, RampDirection ramp_direction, RampDirection first_split_direction,
                                     bool is_leaving_ramp, uint lane_num, bool is_on_ramp) {
   current_tasks_.clear();
+  const double trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp = 266;
+  const double trigger_mlc_distance_threshold_to_first_ramp_when_ego_on_expressway = 3000;
   if (order_id_ + 1 > lane_num) return;
-  if (!is_on_ramp && dis_to_ramp < 3000 && !is_leaving_ramp) {
+  if (!is_on_ramp && dis_to_ramp < trigger_mlc_distance_threshold_to_first_ramp_when_ego_on_expressway && !is_leaving_ramp) {
     if (ramp_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
@@ -382,7 +384,7 @@ void VirtualLane::update_lane_tasks(double dis_to_ramp, double dis_to_first_merg
   } else if (is_on_ramp ) {
     //首先处理匝道上的分叉口
     if (dis_to_first_merge > dis_to_first_split) {
-      if (dis_to_first_split < 266) {
+      if (dis_to_first_split < trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp) {
         if (first_split_direction == RAMP_ON_RIGHT) {
           for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
             current_tasks_.emplace_back(1);

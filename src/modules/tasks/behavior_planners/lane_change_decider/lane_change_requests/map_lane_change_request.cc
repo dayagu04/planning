@@ -18,7 +18,7 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   int lc_map_decision = current_lane != nullptr
                             ? virtual_lane_mgr_->lc_map_decision(current_lane)
                             : 0;
-  //fengwang31:temp hack
+  //TODO(fengwang31):目前自车在最左侧车道上时，无法确认到最右边有几条车道，因此hack一下，判断自车在左侧，提前产生变道任务
   bool is_current_lane_on_leftmost = false;
   auto right_lane = virtual_lane_mgr_->get_right_lane();
   if (right_lane) {
