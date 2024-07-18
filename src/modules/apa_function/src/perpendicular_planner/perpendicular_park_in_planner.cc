@@ -1647,6 +1647,14 @@ const bool PerpendicularInPlanner::CheckFinished() {
     return true;
   }
 
+  // stucked by dynamic col det
+  const bool remain_dist_col_det_condition =
+      frame_.remain_dist_col_det < apa_param.GetParam().max_replan_remain_dist;
+
+  parking_finish = lat_condition && static_condition && enter_slot_condition &&
+                   remain_dist_col_det_condition &&
+                   (ego_slot_info.terminal_err.pos.x() < 0.4001);
+
   return parking_finish;
 }
 
