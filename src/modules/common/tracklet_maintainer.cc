@@ -275,6 +275,9 @@ void TrackletMaintainer::recv_prediction_objects(
 
     origin->oncoming = (origin->v_lead < -3.9);
     origin->motion_pattern_current = p.motion_pattern_current;
+    origin->is_static =
+        (p.motion_pattern_current == iflyauto::OBJECT_MOTION_TYPE_STATIC &&
+         p.speed < 4);
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
@@ -663,10 +666,7 @@ void TrackletMaintainer::calc(
   if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
     farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
   }
-  auto temp_lead_one = lead_cars.lead_one;
-  auto temp_lead_two = lead_cars.lead_two;
-  lead_cars.lead_one = nullptr;
-  lead_cars.lead_two = nullptr;
+
   std::vector<double> avd_car_id;
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
@@ -683,8 +683,7 @@ void TrackletMaintainer::calc(
       avd_car_id.emplace_back(tr->track_id);
     }
   }
-  lead_cars.lead_one = temp_lead_one;
-  lead_cars.lead_two = temp_lead_two;
+
   JSON_DEBUG_VECTOR("avoid_car_id", avd_car_id, 0);
 
   // is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
@@ -1874,9 +1873,6 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double dist_limit;
 
   // for Intersection
-
-  lead_one = nullptr;
-  lead_two = nullptr;
   if (item.d_rel > farthest_distance + ego_car_length ||
       (item.d_rel > farthest_distance - ego_car_length &&
        ((item.d_max_cpath < 0 &&
@@ -1956,9 +1952,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
             (dist_rblane > 0 &&
              //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
              //    borrow_bicycle_lane && item.v_lead < 0.2) ||
-             item.motion_pattern_current ==
-                 iflyauto::OBJECT_MOTION_TYPE_STATIC &&
-             item.v < 4 &&
+             item.is_static &&
              ((item.d_min_cpath >
                (ego_car_width + static_obs_buffer) - lane_width / 2) ||
               (item.d_max_cpath <
@@ -2140,7 +2134,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         borrow_bicycle_lane || rightest_lane) {
       // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
       if ((lead_one == nullptr ||
-           (lead_one != nullptr && item.track_id != lead_one->track_id)) &&
+           (lead_one != nullptr &&
+            (item.track_id != lead_one->track_id || item.is_static))) &&
           ((item.v_lat > -0.3 && item.v_lat < 0.3 && is_car(item.type)) ||
            (std::fabs(item.v_lat) < 0.3 && !is_car(item.type)))) {
         item.ncar_count =
