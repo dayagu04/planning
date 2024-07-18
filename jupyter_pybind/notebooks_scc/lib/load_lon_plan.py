@@ -631,16 +631,19 @@ def load_lon_global_figure(bag_loader):
   })
 
   replan_status = []
+  lon_err = []
   t_plan_debug = []
 
   plan_debug_info = bag_loader.plan_debug_msg['json']
   for i in range(len(plan_debug_info)):
      t_plan_debug.append(bag_loader.plan_debug_msg['t'][i])
      replan_status.append(plan_debug_info[i]['replan_status'])
+     lon_err.append(plan_debug_info[i]['lon_err']) 
 
   plan_debug_multi.data.update({
     'time': t_plan_debug,
     'replan_status': replan_status,
+    'lon_err': lon_err,
   })
 
 
@@ -656,6 +659,7 @@ def load_lon_global_figure(bag_loader):
 
   fig_replan_status = bkp.figure(x_axis_label='time', y_axis_label='plan debug multi',x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600, height=300)
   f_replan_status = fig_replan_status.line('time', 'replan_status', source = plan_debug_multi, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'replan_status')
+  fig_replan_status.line('time', 'lon_err', source = plan_debug_multi, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lon_station_err')
   # fig_replan_status.line('time', 'location_latency', source = plan_debug_multi, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'location_latency')
   # 在fig_replan_status画的图中添加相关标签注释：图的左侧竖直排列添加如下所有文字注释
   # LAT_POSITION_REPLAN:1,LAT_ANGLE_REPLAN:2,lON_POSITION_REPLAN:4,LON_TINY_SPEED_REPLAN:8,FUNCTION_REQUEST_REPLAN:16,LAT_LON_REST:32
@@ -671,7 +675,7 @@ def load_lon_global_figure(bag_loader):
   fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
   fig_fsm_state.legend.click_policy = 'hide'
 
-  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status')], mode='vline')
+  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status'), ('lon_station_err', '@lon_station_err')], mode='vline')
   fig_replan_status.add_tools(hover_replan_status)
   fig_replan_status.toolbar.active_scroll = fig_replan_status.select_one(WheelZoomTool)
   fig_replan_status.legend.click_policy = 'hide'
