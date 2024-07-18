@@ -4,12 +4,15 @@
 #include <vector>
 
 #include "config/basic_type.h"
+#include "task_basic_types.h"
 #include "define/geometry.h"
 #include "lateral_motion_planner.pb.h"
 
 namespace planning {
 struct GeneralLateralDeciderOutput {
   planning::common::LateralInitState init_state;
+  std::vector<WeightedBounds> soft_bounds;
+  std::vector<WeightedBounds> hard_bounds;
   std::vector<std::pair<double, double>> enu_ref_path;
   std::vector<std::pair<double, double>> last_enu_ref_path;
   std::vector<std::pair<Point2D, Point2D>> path_bounds;

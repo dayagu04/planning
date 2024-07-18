@@ -63,13 +63,14 @@ bool GeneralLateralDecider::InitInfo() {
     // add logs
     return false;
   }
-  map_obstacle_decisions_.clear();
   static_obstacle_decisions_.clear();
   dynamic_obstacle_decisions_.clear();
   ref_traj_points_.clear();
   plan_history_traj_.clear();
   match_index_map_.clear();
   ref_path_points_.clear();
+  soft_bounds_.clear();
+  hard_bounds_.clear();
   return true;
 }
 
@@ -94,9 +95,9 @@ bool GeneralLateralDecider::Execute() {
   ConstructTrajPoints(traj_points);
   ConstructReferencePathPoints(traj_points);
 
-  ConstructRoadAndLaneBoundary();
+  GenerateRoadAndLaneBoundary();
 
-  ConstructObstacleDecisions();
+  GenerateObstaclesBoundary();
 
   std::vector<std::pair<double, double>> frenet_safe_bounds;
   std::vector<std::pair<double, double>> frenet_path_bounds;
@@ -106,13 +107,8 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-
-  GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
+  GenerateLateralDeciderOutput(frenet_safe_bounds, frenet_path_bounds,
                             general_lateral_decider_output);
-
-  GenerateEnuReferenceTheta(general_lateral_decider_output);
-
-  GenerateEnuReferenceTraj(general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
@@ -298,6 +294,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     }
     ref_path_points_.emplace_back(refpath_pt);
   }
+
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
@@ -390,13 +387,13 @@ void GeneralLateralDecider::UpdateDistanceToRoadBorder() {
     }
   }
 }
-void GeneralLateralDecider::ConstructRoadAndLaneBoundary() {
+void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
   UpdateDistanceToRoadBorder();
-  ConstructRoadHardSoftBoundary();
-  ConstructLaneSoftBoundary();
+  GenerateRoadHardSoftBoundary();
+  GenerateLaneSoftBoundary();
 }
 
-void GeneralLateralDecider::ConstructRoadHardSoftBoundary() {
+void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
@@ -404,6 +401,8 @@ void GeneralLateralDecider::ConstructRoadHardSoftBoundary() {
   GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
 
   const double kDefaultDistanceToRoad = 10.0;
+  hard_bounds_.resize(ref_traj_points_.size());
+  soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound safe_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
     Bound path_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
@@ -428,18 +427,16 @@ void GeneralLateralDecider::ConstructRoadHardSoftBoundary() {
         std::fmax(std::min( -config_.soft_min_distance_road2center, path_bound_road.lower + right_road_extra_buffer),
                   safe_bound_road.lower);
 
-    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
-        safe_bound_road.lower, safe_bound_road.upper, config_.kPhysicalBoundWeight,
-        BoundInfo{-100, BoundType::ROAD_BORDER}});
-    map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+    hard_bounds_[i].emplace_back(WeightedBound{
         path_bound_road.lower, path_bound_road.upper, config_.kHardBoundWeight,
         BoundInfo{-100, BoundType::ROAD_BORDER}});
-
-    map_obstacle_decisions_.emplace_back(std::move(map_obstacle_decision));
+    soft_bounds_[i].emplace_back(WeightedBound{
+        safe_bound_road.lower, safe_bound_road.upper, config_.kPhysicalBoundWeight,
+        BoundInfo{-100, BoundType::ROAD_BORDER}});
   }
 }
 
-void GeneralLateralDecider::ConstructLaneSoftBoundary() {
+void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &coarse_planning_info = session_->planning_context()
@@ -454,8 +451,6 @@ void GeneralLateralDecider::ConstructLaneSoftBoundary() {
   const double half_ego_width = 0.5 * vehicle_param.width;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound safe_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    auto &map_obstacle_decision = map_obstacle_decisions_[i];
-
     safe_bound_lane.upper =
         std::fmin(ref_path_points_[i].distance_to_left_lane_border - half_ego_width - config_.soft_buffer2lane,
                   safe_bound_lane.upper);
@@ -465,32 +460,32 @@ void GeneralLateralDecider::ConstructLaneSoftBoundary() {
     const auto& ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
     if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
       if (ego_init_sl_info.min_l + half_ego_width < safe_bound_lane.lower) {
-        map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        soft_bounds_[i].emplace_back(WeightedBound{
           ego_init_sl_info.min_l + half_ego_width, kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::EGO_POSITION}});
-        map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        soft_bounds_[i].emplace_back(WeightedBound{
           -kDefaultDistanceToRoad, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       } else {
-        map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        soft_bounds_[i].emplace_back(WeightedBound{
           safe_bound_lane.lower, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       }
     } else if (is_lane_change && lc_request_direction == RequestType::RIGHT_CHANGE){
       if (ego_init_sl_info.max_l - half_ego_width > safe_bound_lane.upper) {
-        map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        soft_bounds_[i].emplace_back(WeightedBound{
           -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::EGO_POSITION}});
-        map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        soft_bounds_[i].emplace_back(WeightedBound{
           safe_bound_lane.lower, kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       } else {
-        map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+        soft_bounds_[i].emplace_back(WeightedBound{
           safe_bound_lane.lower, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       }
     } else {
-      map_obstacle_decision.lat_bounds.emplace_back(WeightedBound{
+      soft_bounds_[i].emplace_back(WeightedBound{
           safe_bound_lane.lower, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
     }
@@ -571,7 +566,7 @@ void GeneralLateralDecider::GetLateralTTCToRoad(double* const left_collision_t, 
   }
 }
 
-void GeneralLateralDecider::ConstructObstacleDecisions() {
+void GeneralLateralDecider::GenerateObstaclesBoundary() {
 
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
@@ -597,11 +592,11 @@ void GeneralLateralDecider::ConstructObstacleDecisions() {
     }
   }
 
-  ConstructStaticObstacleDecision(static_obstacles, static_obstacle_decisions_);
-  ConstructDynamicObstacleDecision(dynamic_obstacles, dynamic_obstacle_decisions_);
+  GenerateStaticObstaclesBoundary(static_obstacles, static_obstacle_decisions_);
+  GenerateDynamicObstaclesBoundary(dynamic_obstacles, dynamic_obstacle_decisions_);
 }
 
-void GeneralLateralDecider::ConstructStaticObstacleDecision(const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec, ObstacleDecisions &obstacle_decisions) {
+void GeneralLateralDecider::GenerateStaticObstaclesBoundary(const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec, ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForStaticObstacle(obstacle)) {
@@ -613,8 +608,9 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(const std::vector<st
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    ConstructStaticObstacleDecision(obstacle, obstacle_decision);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision);
 
+    ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
     if (obstacle_potential_decision.extend_decisions.extended) {
       obstacle_potential_decisions[obstacle_id] =
@@ -623,7 +619,7 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(const std::vector<st
   }
 }
 
-void GeneralLateralDecider::ConstructStaticObstacleDecision(
+void GeneralLateralDecider::GenerateStaticObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     ObstacleDecision &obstacle_decision) {
   using namespace planning_math;
@@ -640,9 +636,6 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
   const double ego_cur_s_start = ego_cur_s - vehicle_param.back_edge_to_rear_axis;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double half_ego_width = vehicle_param.width * 0.5;
-  auto collision_center_distance = half_ego_width;
-
   const double front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
   const double rear_lon_buf_dis = 1.0;
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
@@ -650,14 +643,7 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
   const bool init_lon_no_overlap =
       (obstacle->frenet_obstacle_boundary().s_end < ego_cur_s_start ||
        obstacle->frenet_obstacle_boundary().s_start > ego_cur_s_end);
-  // const bool init_lat_overlap = !(obstacle->frenet_obstacle_boundary().l_end <
-  //                                     ego_cur_l - half_ego_width ||
-  //                                 obstacle->frenet_obstacle_boundary().l_start >
-  //                                     ego_cur_l + half_ego_width);
 
-  // double dynamic_bound_gain_vel = std::max(config_.min_gain_vel, ego_velocity);
-  // double dynamic_bound_slack_coefficient =
-  //     1.0 / dynamic_bound_gain_vel / dynamic_bound_gain_vel;
   bool reset_conflict_decision{false};
 
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::RIGHT;
@@ -675,13 +661,12 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
-    if (t > config_.care_object_t_threshold) {
+    if (t > config_.care_static_object_t_threshold) {
       continue;
     }
 
     const double ego_s = traj_point.s;
     const double ego_l = traj_point.l;
-    const double heading_angle = traj_point.heading_angle;
 
     const double care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis - rear_lon_buf_dis;
     const double care_area_s_end = ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
@@ -689,7 +674,7 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
     const auto care_polygon =  // @cai: consider the heading
-        Polygon2d(Box2d(care_area_center, heading_angle, care_area_length, l_care_width));
+        Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
 
 
     Polygon2d care_overlap_polygon;
@@ -697,13 +682,6 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
     // default: invalid value
     double overlap_min_y = 100.0;
     double overlap_max_y = -100.0;
-    // frenet_length is larger than raw length when obj is in lagre curvature
-    // road
-
-    /*@cailiu:
-      ComputeOverlap heavily depends on objs predication,
-      Obstacle lat avoidance and bypassing is not currently being considered
-    */
 
     b_overlap_with_care =
         obstacle_sl_polygon.ComputeOverlap(care_polygon, &care_overlap_polygon);
@@ -711,19 +689,12 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
       // TBD: add log
       overlap_min_y = care_overlap_polygon.min_y();
       overlap_max_y = care_overlap_polygon.max_y();
-      // LOG_DEBUG("Obstacle[%d] decision, t is: %f, min_y: %f, max_y: %f",
-      //           obstacle->id(), i * config_.delta_t, overlap_min_y,
-      //           overlap_max_y);
     } else {
-      // TBD: add log
-      // LOG_DEBUG("Obstacle[%d] no decision, t is: %f", obstacle->id(),
-      //           i * config_.delta_t);
       continue;
     }
 
     const double lat_buf_dis = general_lateral_decider_utils::CalDesireLateralDistance(ego_cart_state_manager_->ego_v(), t, 0, false, is_nudge_left);
-    // todo: high speed vehicle
-    // do decision
+
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
 
@@ -735,27 +706,19 @@ void GeneralLateralDecider::ConstructStaticObstacleDecision(
     bool b_overlap_side = std::max(s_side_range.first, ego_side_range.first) <
                           std::min(s_side_range.second, ego_side_range.second);
 
-    if (CheckObstacleCrossingCondition(obstacle, is_cross_obj)) {
-      // TBD:add logs
-    }
 
-    const auto &indexes = match_index_map_[i];
-    for (auto index : indexes) {
-      GenerateObstaclePreliminaryDecision(ego_l, ref_path_points_[index].distance_to_right_lane_border,
-                                        ref_path_points_[index].distance_to_left_lane_border,
-                                        overlap_min_y, overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_cross_obj, pre_lateral_decision,
-                                        reset_conflict_decision, obstacle_decision,
-                                        lat_decision, lon_decision);
-      has_lat_decision =
-        has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
-      has_lon_decision =
-          has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
-    }
+    GenerateObstaclePreliminaryDecision(ego_l, ref_path_points_[i].distance_to_right_lane_border,
+                                      ref_path_points_[i].distance_to_left_lane_border,
+                                      overlap_min_y, overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_cross_obj, pre_lateral_decision,
+                                      reset_conflict_decision, obstacle_decision,
+                                      lat_decision, lon_decision);
+    has_lat_decision = has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
+    has_lon_decision = has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
     AddObstacleDecisionBound(obstacle->id(), t, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision, obstacle_decision);
   }
 }
 
-void GeneralLateralDecider::ConstructDynamicObstacleDecision(const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec, ObstacleDecisions &obstacle_decisions) {
+void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec, ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForDynamicObstacle(obstacle)) {
@@ -767,8 +730,8 @@ void GeneralLateralDecider::ConstructDynamicObstacleDecision(const std::vector<s
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    ConstructDynamicObstacleDecision(obstacle, obstacle_decision);
-
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision);
+    ExtractDynamicObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
     if (obstacle_potential_decision.extend_decisions.extended) {
       obstacle_potential_decisions[obstacle_id] =
@@ -777,7 +740,7 @@ void GeneralLateralDecider::ConstructDynamicObstacleDecision(const std::vector<s
   }
 }
 
-void GeneralLateralDecider::ConstructDynamicObstacleDecision(
+void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     ObstacleDecision &obstacle_decision) {
   using namespace planning_math;
@@ -819,17 +782,16 @@ void GeneralLateralDecider::ConstructDynamicObstacleDecision(
   bool is_cross_obj{false};
   bool has_lat_decision{false};
   bool has_lon_decision{false};
-  // Step 5) calculate safe_bound, path_bound
+
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
-    if (t > config_.care_object_t_threshold) {
+    if (t > config_.care_dynamic_object_t_threshold) {
       continue;
     }
 
     const double ego_s = traj_point.s;
     const double ego_l = traj_point.l;
-    const double heading_angle = traj_point.heading_angle;
 
     const double care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis - rear_lon_buf_dis;
     const double care_area_s_end = ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
@@ -837,7 +799,7 @@ void GeneralLateralDecider::ConstructDynamicObstacleDecision(
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
     const auto care_polygon =  // @cai: consider the heading
-        Polygon2d(Box2d(care_area_center, heading_angle, care_area_length, l_care_width));
+        Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
 
     Polygon2d obstacle_sl_polygon;
     auto ok = obstacle->get_polygon_at_time_tmp(
@@ -851,27 +813,13 @@ void GeneralLateralDecider::ConstructDynamicObstacleDecision(
     // default: invalid value
     double overlap_min_y = 100.0;
     double overlap_max_y = -100.0;
-    // frenet_length is larger than raw length when obj is in lagre curvature
-    // road
-
-    /*@cailiu:
-      ComputeOverlap heavily depends on objs predication,
-      Obstacle lat avoidance and bypassing is not currently being considered
-    */
 
     b_overlap_with_care =
         obstacle_sl_polygon.ComputeOverlap(care_polygon, &care_overlap_polygon);
     if (b_overlap_with_care) {
-      // TBD: add log
       overlap_min_y = care_overlap_polygon.min_y();
       overlap_max_y = care_overlap_polygon.max_y();
-      // LOG_DEBUG("Obstacle[%d] decision, t is: %f, min_y: %f, max_y: %f",
-      //           obstacle->id(), i * config_.delta_t, overlap_min_y,
-      //           overlap_max_y);
     } else {
-      // TBD: add log
-      // LOG_DEBUG("Obstacle[%d] no decision, t is: %f", obstacle->id(),
-      //           i * config_.delta_t);
       continue;
     }
 
@@ -1082,24 +1030,6 @@ void GeneralLateralDecider::RefineConflictLatDecisions(
   }
 }
 
-void GeneralLateralDecider::HandleMapBound(
-    const MapObstacleDecision &map_obstacle_decision,
-    std::vector<WeightedBounds> &path_bounds,
-    std::vector<WeightedBounds> &safe_bounds) {
-  for (size_t i = 0; i < map_obstacle_decision.size(); i++) {
-    auto &map_obstacle_position_lat_bounds =
-        map_obstacle_decision[i].lat_bounds;
-    for (size_t j = 0; j < map_obstacle_position_lat_bounds.size(); j++) {
-      if (map_obstacle_position_lat_bounds[j].weight < 0.) {
-        path_bounds[i].emplace_back(map_obstacle_position_lat_bounds[j]);
-      } else {
-        safe_bounds[i].emplace_back(map_obstacle_position_lat_bounds[j]);
-      }
-    }
-    lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
-  }
-}
-
 void GeneralLateralDecider::ExtractPathBound(
     std::vector<WeightedBounds> &path_bounds,
     std::vector<std::pair<double, double>> &frenet_path_bounds) {
@@ -1264,7 +1194,6 @@ void GeneralLateralDecider::ExtractSafeBound(
 
 void GeneralLateralDecider::ExtractBoundary(std::vector<std::pair<double, double>> &frenet_safe_bounds,
     std::vector<std::pair<double, double>> &frenet_path_bounds) {
-  assert(map_obstacle_decisions_.size() == ref_traj_points_.size());
   lat_debug_info_.Clear();
   lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
   lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
@@ -1276,19 +1205,9 @@ void GeneralLateralDecider::ExtractBoundary(std::vector<std::pair<double, double
   lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
 
-  std::vector<WeightedBounds> path_bounds;
-  std::vector<WeightedBounds> safe_bounds;
-  path_bounds.resize(ref_traj_points_.size());
-  safe_bounds.resize(ref_traj_points_.size());
+  ExtractPathBound(hard_bounds_, frenet_path_bounds);
 
-  HandleMapBound(map_obstacle_decisions_, path_bounds, safe_bounds);
-
-  HandleStaticObstacleBound(static_obstacle_decisions_, path_bounds, safe_bounds);
-  HandleDynamicObstacleBound(dynamic_obstacle_decisions_, path_bounds, safe_bounds);
-
-  ExtractPathBound(path_bounds, frenet_path_bounds);
-
-  ExtractSafeBound(safe_bounds, frenet_safe_bounds);
+  ExtractSafeBound(soft_bounds_, frenet_safe_bounds);
 
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
@@ -1298,28 +1217,48 @@ void GeneralLateralDecider::ExtractBoundary(std::vector<std::pair<double, double
   assert(frenet_safe_bounds.size() == ref_traj_points_.size());
 }
 
-void GeneralLateralDecider::HandleDynamicObstacleBound(const ObstacleDecisions &obstacle_decisions, std::vector<WeightedBounds> &path_bounds, std::vector<WeightedBounds> &safe_bounds) {
+void GeneralLateralDecider::ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision) {
   if (plan_history_traj_.size() <= 0 || ref_traj_points_.size() <= 0) {
     return;
   }
 
-  for (auto &obstacle_decision : obstacle_decisions) {
-    for (auto &obstacle_position_decision :
-         obstacle_decision.second.position_decisions) {
-      for (size_t i = 0; i < plan_history_traj_.size(); i++) {
-        if (std::fabs(obstacle_position_decision.tp.t - plan_history_traj_[i].t) <
-            1e-2) {
-          auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
-          for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
-            if (obstacle_pos_bound.weight < 0.) {
-              for (auto index : match_index_map_[i]) {
-                path_bounds[index].emplace_back(obstacle_pos_bound);
-              }
-            } else {
-              for (auto index : match_index_map_[i]) {
-                safe_bounds[index].emplace_back(obstacle_pos_bound);
-              }
+  for (auto &obstacle_position_decision : obstacle_decision.position_decisions) {
+    for (size_t i = 0; i < plan_history_traj_.size(); i++) {
+      if (std::fabs(obstacle_position_decision.tp.t - plan_history_traj_[i].t) <
+          1e-2) {
+        auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
+        for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
+          if (obstacle_pos_bound.weight < 0.) {
+            for (auto index : match_index_map_[i]) {
+              hard_bounds_[index].emplace_back(obstacle_pos_bound);
             }
+          } else {
+            for (auto index : match_index_map_[i]) {
+              soft_bounds_[index].emplace_back(obstacle_pos_bound);
+            }
+          }
+        }
+      }
+    }
+  }
+
+}
+
+void GeneralLateralDecider::ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision) {
+  if (ref_traj_points_.size() <= 0) {
+    return;
+  }
+
+  for (auto &obstacle_position_decision : obstacle_decision.position_decisions) {
+    for (size_t i = 0; i < ref_traj_points_.size(); i++) {
+      if (std::fabs(obstacle_position_decision.tp.t - ref_traj_points_[i].t) <
+          1e-2) {
+        auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
+        for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
+          if (obstacle_pos_bound.weight < 0.) {
+            hard_bounds_[i].emplace_back(obstacle_pos_bound);
+          } else {
+            soft_bounds_[i].emplace_back(obstacle_pos_bound);
           }
         }
       }
@@ -1327,29 +1266,18 @@ void GeneralLateralDecider::HandleDynamicObstacleBound(const ObstacleDecisions &
   }
 }
 
-void GeneralLateralDecider::HandleStaticObstacleBound(const ObstacleDecisions &obstacle_decisions, std::vector<WeightedBounds> &path_bounds, std::vector<WeightedBounds> &safe_bounds) {
-  if (ref_traj_points_.size() <= 0) {
-    return;
-  }
+void GeneralLateralDecider::GenerateLateralDeciderOutput(const std::vector<std::pair<double, double>> &frenet_safe_bounds,
+      const std::vector<std::pair<double, double>> &frenet_path_bounds,
+      GeneralLateralDeciderOutput &general_lateral_decider_output) {
+  general_lateral_decider_output.soft_bounds = std::move(soft_bounds_);
+  general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
 
-  for (auto &obstacle_decision : obstacle_decisions) {
-    for (auto &obstacle_position_decision :
-         obstacle_decision.second.position_decisions) {
-      for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-        if (std::fabs(obstacle_position_decision.tp.t - ref_traj_points_[i].t) <
-            1e-2) {
-          auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
-          for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
-            if (obstacle_pos_bound.weight < 0.) {
-              path_bounds[i].emplace_back(obstacle_pos_bound);
-            } else {
-              safe_bounds[i].emplace_back(obstacle_pos_bound);
-            }
-          }
-        }
-      }
-    }
-  }
+  GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
+                            general_lateral_decider_output);
+
+  GenerateEnuReferenceTheta(general_lateral_decider_output);
+
+  GenerateEnuReferenceTraj(general_lateral_decider_output);
 }
 
 void GeneralLateralDecider::GenerateEnuBoundaryPoints(

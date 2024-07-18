@@ -1073,8 +1073,10 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
       }
     }
 
-    // CalcFrontMaxOppositeOffset(front_ids, !is_left, avoid_obstacle,  enough_space_hysteresis_map);
-    // CalcSideMaxOppositeOffset(side_max_opposite_offset_ids, avoid_obstacle, !is_left);
+    if (config_.care_dynamic_object_t_threshold < 0.0 || config_.care_static_object_t_threshold < 0.0) {
+      CalcFrontMaxOppositeOffset(front_ids, !is_left, avoid_obstacle,  enough_space_hysteresis_map);
+      CalcSideMaxOppositeOffset(side_max_opposite_offset_ids, avoid_obstacle, !is_left);
+    }
 
     if (std::fabs(avoid_info_.allow_front_max_opposite_offset -
                   last_avoid_info_.allow_front_max_opposite_offset) >= 0.0) {

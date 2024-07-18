@@ -800,7 +800,7 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
 
   obstacle_decision.rel_pos_type = ObsRelPosType::NONE;
 
-  auto care_object_t_threshold = config_.care_object_t_threshold;
+  auto care_dynamic_object_t_threshold = config_.care_dynamic_object_t_threshold;
   // bool is_approach_to_destination =
   //     distance_to_destination <
   //     route_extend_length +
@@ -875,7 +875,7 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
                                          obstacle_sl_polygon);
       static_obstacle_loop_flag = false;
     } else if (not obstacle->obstacle()->is_static()) {
-      if (t > care_object_t_threshold) {
+      if (t > care_dynamic_object_t_threshold) {
         continue;
       }
       ok = obstacle->get_polygon_at_time(

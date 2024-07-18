@@ -481,6 +481,10 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
         json,
         std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_5"},
         avd_vrel_bp_5);
+    care_dynamic_object_t_threshold =
+        read_json_key<double>(json, "care_dynamic_object_t_threshold", care_dynamic_object_t_threshold);
+    care_static_object_t_threshold =
+        read_json_key<double>(json, "care_static_object_t_threshold", care_static_object_t_threshold);
   }
   bool is_valid_lateral_offset = false;
   double nudge_buffer_road_boundary = 0.3;
@@ -498,6 +502,8 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   double avd_vrel_bp_3;
   double avd_vrel_bp_4;
   double avd_vrel_bp_5;
+  double care_dynamic_object_t_threshold = 0.0;
+  double care_static_object_t_threshold = 0.0;
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -523,8 +529,10 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "lon_rear_car_filter_buffer", lon_rear_car_filter_buffer);
     lateral_ref_traj_type =
         read_json_key<bool>(json, "lateral_ref_traj_type", lateral_ref_traj_type);
-    care_object_t_threshold =
-        read_json_key<double>(json, "care_object_t_threshold", care_object_t_threshold);
+    care_dynamic_object_t_threshold =
+        read_json_key<double>(json, "care_dynamic_object_t_threshold", care_dynamic_object_t_threshold);
+    care_static_object_t_threshold =
+        read_json_key<double>(json, "care_static_object_t_threshold", care_static_object_t_threshold);
     soft_min_distance_road2center =
         read_json_key<double>(json, "soft_min_distance_road2center", soft_min_distance_road2center);
     hard_min_distance_road2center =
@@ -559,7 +567,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double sample_step = 1.4;
   double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;
-  double care_object_t_threshold = 3.5;
+  double care_dynamic_object_t_threshold = 3.5;
+  double care_static_object_t_threshold = 4.5;
   double care_area_s_len = 5.0;
   double max_ref_curvature = 0.5;
   double care_area_s_start_buffer = 0.0;
@@ -604,7 +613,7 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double sample_step = 1.4;
   double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;
-  double care_object_t_threshold = 3.0;
+  double care_dynamic_object_t_threshold = 3.0;
   double care_area_s_len = 5.0;
   double max_ref_curvature = 0.5;
   double care_area_s_start_buffer = 0.0;
