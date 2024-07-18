@@ -465,7 +465,7 @@ bool SlotManagement::GenTLane(
       right_pq_for_x(Compare(0));
 
   // only hack for obs is not accurate
-  const double y_min = ego_slot_info.slot_width * 0.5 - 0.128;
+  const double y_min = ego_slot_info.slot_width * 0.5 - 0.068;
   const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
                         4.28 * pt_01_norm_down_vec)
                            .x();

@@ -608,8 +608,24 @@ const double CollisionDetector::CalMinDistObs2Car(
 const bool CollisionDetector::IsObstacleInCar(
     const Eigen::Vector2d &obs_pos,
     const pnc::geometry_lib::PathPoint &ego_pose) {
-  return IsObstacleInCar(obs_pos, ego_pose,
-                         apa_param.GetParam().max_obs2car_dist_in_slot);
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.clear();
+  car_polygon.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+    car_polygon.emplace_back(car_line_global.pA);
+  }
+
+  return pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pos);
 }
 
 const bool CollisionDetector::IsObstacleInCar(
@@ -930,8 +946,8 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     }
 
     if (obs.x() > slot_x - 5.468 && obs.x() < slot_x + lower_x &&
-        obs.y() > slot_right_pt.y() + 0.128 &&
-        obs.y() < slot_left_pt.y() - 0.128) {
+        obs.y() > slot_right_pt.y() + 0.068 &&
+        obs.y() < slot_left_pt.y() - 0.068) {
       return ObsSlotType::SLOT_ENTRANCE_OBS;
     }
 

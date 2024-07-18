@@ -315,6 +315,7 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
   car_line_order = collision_detection_py.GetCarLineOrder()
   pt_vec = collision_detection_py.GetSamplePt()
   col_pt_ego = collision_detection_py.GetCollisionPointEgoGlobal()
+  is_obs_in_car = collision_detection_py.GetObsIsInCar()
 
   if car_remain_dist < obstacle_remain_dist:
     collision_flag = False
@@ -360,6 +361,9 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
   # update collision_flag
   names.append("collision_flag")
   datas.append(collision_flag)
+
+  names.append("is_obs_in_car")
+  datas.append(is_obs_in_car)
 
   # update car_remain_dist
   names.append("car_remain_dist")

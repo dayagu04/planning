@@ -933,11 +933,11 @@ const bool PerpendicularPathPlanner::MultiPlan() {
 
   // if multi path current gear is not correct, lost all path and use adjust to
   // plan
-  if (multi_out_put.path_segment_vec.size() > 0 &&
-      multi_out_put.gear_cmd_vec.front() != input_.ref_gear) {
-    multi_out_put.Reset();
-    success = false;
-  }
+  // if (multi_out_put.path_segment_vec.size() > 0 &&
+  //     multi_out_put.gear_cmd_vec.front() != input_.ref_gear) {
+  //   multi_out_put.Reset();
+  //   success = false;
+  // }
 
   if (multi_out_put.path_segment_vec.size() > 0) {
     success = true;

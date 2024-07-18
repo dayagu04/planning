@@ -636,7 +636,7 @@ void PerpendicularInPlanner::GenTlane() {
       right_pq_for_x(Compare(0));
 
   // only hack for obs is not accurate
-  const double y_min = ego_slot_info.slot_width * 0.5 - 0.128;
+  const double y_min = ego_slot_info.slot_width * 0.5 - 0.068;
   const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
                         4.28 * pt_01_norm_down_vec)
                            .x();
@@ -1059,7 +1059,7 @@ void PerpendicularInPlanner::GenObstacles() {
       std::swap(pt_left, pt_right);
     }
     std::vector<Eigen::Vector2d> fus_obs_vec;
-
+    const double safe_dist = 0.0268;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
     for (const auto& obs_pos : ego_slot_info.obs_pt_vec_slot) {
@@ -1067,9 +1067,18 @@ void PerpendicularInPlanner::GenObstacles() {
           apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
               obs_pos, slot_pt, is_left_side);
 
+      if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs_pos, ego_pose, safe_dist)) {
+        // temp hack, when obs is in car, lose it, only increase plan success
+        // ratio, To Do, when obs change accurately, should not del any obs
+        DEBUG_PRINT("obs is in car, lost it, obs = " << obs_pos.transpose())
+        continue;
+      }
+
       if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
           !apa_param.GetParam().believe_in_fus_obs) {
-        // obs is in slot, temp hack, lose it, todo, should not del obs
+        // obs is in slot, temp hack, when believe_in_fus_obs is false, lose it,
+        // To Do, should not del obs
         continue;
       }
 

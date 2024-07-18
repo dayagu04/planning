@@ -24,6 +24,8 @@ static CollisionDetector* pBaseColDetAir = nullptr;
 static CollisionDetector::CollisionResult collision_result;
 static std::vector<Eigen::Vector3d> pt_vec;
 static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
+static bool is_obs_in_car = false;
+static Eigen::Vector2d obs;
 static double length = 0.0;
 
 int Init() {
@@ -41,6 +43,8 @@ void SetObstacle(const double obstacles_x, const double obstacles_y) {
   Eigen::Vector2d obstacle_global(obstacles_x, obstacles_y);
 
   obstacle_global_vec.emplace_back(obstacle_global);
+
+  obs = obstacle_global;
 
   pBaseColDetAir->SetObstacles(obstacle_global_vec,
                                planning::CollisionDetector::TLANE_OBS);
@@ -86,6 +90,13 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
     pt_vec.emplace_back(pose_vec[i].pos.x(), pose_vec[i].pos.y(),
                         pose_vec[i].heading);
   }
+
+  is_obs_in_car = pBaseColDetAir->IsObstacleInCar(
+      obs,
+      pnc::geometry_lib::PathPoint(
+          Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
+          ego_pos_start[2]),
+      0.02);
 }
 
 void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
@@ -114,6 +125,13 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
     pt_vec.emplace_back(pose_vec[i].pos.x(), pose_vec[i].pos.y(),
                         pose_vec[i].heading);
   }
+
+  is_obs_in_car = pBaseColDetAir->IsObstacleInCar(
+      obs,
+      pnc::geometry_lib::PathPoint(
+          Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
+          ego_pos_start[2]),
+      0.02);
 }
 
 const double GetRemainDist() { return float(collision_result.remain_dist); }
@@ -135,6 +153,8 @@ const Eigen::Vector2d GetCollisionPointEgoGlobal() {
 }
 
 const std::vector<Eigen::Vector3d> GetSamplePt() { return pt_vec; }
+
+const bool GetObsIsInCar() { return is_obs_in_car; }
 
 const Eigen::Vector2d GetTrunCenterCoord(
     const Eigen::Vector3d ego_pos_start,
@@ -184,5 +204,6 @@ PYBIND11_MODULE(collision_detection_py, m) {
       .def("GetRemainObstacleDist", &GetRemainObstacleDist)
       .def("GetCarLineOrder", &GetCarLineOrder)
       .def("SetParam", &SetParam)
-      .def("GetSamplePt", &GetSamplePt);
+      .def("GetSamplePt", &GetSamplePt)
+      .def("GetObsIsInCar", &GetObsIsInCar);
 }

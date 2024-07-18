@@ -1308,26 +1308,46 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
 
 const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
                             const Eigen::Vector2d &point) {
-  int crossProductSign = 0;
+  // int crossProductSign = 0;
 
-  for (size_t i = 0; i < polygon.size(); i++) {
-    Eigen::Vector2d vertex1 = polygon[i];
-    Eigen::Vector2d vertex2 = polygon[(i + 1) % polygon.size()];
+  // for (size_t i = 0; i < polygon.size(); i++) {
+  //   Eigen::Vector2d vertex1 = polygon[i];
+  //   Eigen::Vector2d vertex2 = polygon[(i + 1) % polygon.size()];
 
-    const double crossProduct =
-        (vertex2.x() - vertex1.x()) * (point.y() - vertex1.y()) -
-        (point.x() - vertex1.x()) * (vertex2.y() - vertex1.y());
+  //   const double crossProduct =
+  //       (vertex2.x() - vertex1.x()) * (point.y() - vertex1.y()) -
+  //       (point.x() - vertex1.x()) * (vertex2.y() - vertex1.y());
 
-    if (std::fabs(crossProduct) < 1.0e-4) {
-      return true;
-    } else if (crossProductSign == 0) {
-      crossProductSign = (crossProduct > 0) ? 1 : -1;
-    } else if (crossProductSign != ((crossProduct > 0.0) ? 1 : -1)) {
-      return false;
+  //   if (std::fabs(crossProduct) < 1.0e-4) {
+  //     return true;
+  //   } else if (crossProductSign == 0) {
+  //     crossProductSign = (crossProduct > 0) ? 1 : -1;
+  //   } else if (crossProductSign != ((crossProduct > 0.0) ? 1 : -1)) {
+  //     return false;
+  //   }
+  // }
+
+  // return true;
+
+  int numVertices = polygon.size();
+  if (numVertices < 3) {
+    return false;
+  }
+  bool inside = false;
+
+  // traverse every edge of the polygon
+  for (int i = 0, j = numVertices - 1; i < numVertices; j = i++) {
+    // Check the intersection of rays and polygon edges
+    if (((polygon[i](1) > point(1)) != (polygon[j](1) > point(1))) &&
+        (point(0) < (polygon[j](0) - polygon[i](0)) *
+                            (point(1) - polygon[i](1)) /
+                            (polygon[j](1) - polygon[i](1)) +
+                        polygon[i](0))) {
+      inside = !inside;
     }
   }
 
-  return true;
+  return inside;
 }
 
 const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err) {
@@ -2246,6 +2266,9 @@ const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
   if (cos_OAB > 1e-6 && cos_OAB < 1 - 1e-6 && cos_OBA > 1e-6 &&
       cos_OBA < 1 - 1e-6) {
     dist = CalPoint2LineDist(pO, line);
+  } else if (mathlib::IsDoubleEqual(cos_OAB, -1.0)) {
+    // pO is on line seg
+    dist = 0.0;
   } else {
     dist = std::min((line.pB - pO).norm(), (line.pA - pO).norm());
   }
