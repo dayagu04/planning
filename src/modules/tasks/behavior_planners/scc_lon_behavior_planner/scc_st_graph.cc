@@ -78,7 +78,7 @@ void StGraphGenerator::Update(
   double distance_to_ramp = lon_behav_input_->dis_to_ramp();
   double distance_to_merge = lon_behav_input_->dis_to_merge();
   bool is_on_ramp = lon_behav_input_->is_on_ramp();
-  double ramp_v_limit = 50 / 3.6;
+  double ramp_v_limit = config_.v_limit_ramp;
   double acc_to_ramp = -1.0;
   CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp,
                     ramp_v_limit, acc_to_ramp, v_ego);
@@ -539,7 +539,7 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > 50) {
-      v_target_ramp = 50 / 3.6;
+      v_target_ramp = ramp_v_limit;
     }
     v_target_ = std::min(v_target_ramp, v_target_);
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
