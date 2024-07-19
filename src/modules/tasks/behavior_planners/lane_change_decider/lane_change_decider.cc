@@ -1860,10 +1860,16 @@ void LaneChangeDecider::ProcessWaitState() {
   std::cout << " normal road state dis_to_ramp: " << dis_to_ramp
             << " delay_time: " << delay_time << std::endl;
   const double curr_time = IflyTime::Now_ms();  // 注意
+  const double current_time_s = IflyTime::Now_s();
+  const double lane_change_wait_time_threshold = 20.0;
   std::vector<int> overtake_obstacles;
   std::vector<int> yield_obstacles;
   LaneChangeStageInfo lane_change_info;
-  if (lc_request != NO_CHANGE && lc_request == transition_context_.direction) {
+  if (current_time_s - lc_tstart > lane_change_wait_time_threshold) {
+    std::cout << "lane change wait time more than 20s,cancel the lc_req!!!" << std::endl;
+    PrepareForNoneState();
+    lc_req_mgr_->FinishRequest();
+  } else if (lc_request != NO_CHANGE && lc_request == transition_context_.direction) {
     int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
     if (!lc_lane_mgr_->has_target_lane() ||
         lc_lane_mgr_->target_lane_virtual_id() != target_lane_virtual_id) {
