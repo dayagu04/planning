@@ -13,9 +13,9 @@
 using namespace ilqr_solver;
 
 static const double kMaxWheelAngle =
-    360.0 / 14.5 / 57.3;  // 360 deg steering angle for scc
+    360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc
 static const double kMaxWheelAngleRate =
-    240.0 / 14.5 / 57.3;  // 240 deg/s steering angle rate for scc
+    240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc
 namespace pnc {
 namespace lateral_planning {
 void LateralMotionPlanningProblem::Init() {
@@ -26,7 +26,7 @@ void LateralMotionPlanningProblem::Init() {
   solver_config.input_size = INPUT_SIZE;
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = false;
-  solver_config.du_tol = 0.01 / 57.3 / 14.5;
+  solver_config.du_tol = 0.01 / 57.3 / 13.0;
   init_state_.resize(STATE_SIZE);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();

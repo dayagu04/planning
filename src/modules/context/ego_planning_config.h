@@ -483,6 +483,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json, "care_area_s_start_buffer", care_area_s_start_buffer);
     max_avoid_edge =
         read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
+    lateral_ref_traj_type =
+        read_json_key<bool>(json, "lateral_ref_traj_type", lateral_ref_traj_type);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -621,8 +623,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_avoid"});
     q_jerk_avoid = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid"});
-    use_lk_qxy_in_lc = read_json_keys<bool>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "use_lk_qxy_in_lc"});
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
@@ -640,16 +640,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     q_jerk_lane_change2 = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change2"});
-    q_jerk_lane_change3 = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change3"});
     lane_change_ego_l_thr = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "lane_change_ego_l_thr"});
-    q_acc_bend = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bend"});
-    q_jerk_bend = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bend"});
+    q_jerk_lane_change_back = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change_back"});
     road_curvature_radius = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "road_curvature_radius"});
@@ -728,18 +724,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_avoid = 0.5;
   double q_jerk_avoid = 2.0;
 
-  bool use_lk_qxy_in_lc = false;
   double q_ref_x_lane_change = 20.0;
   double q_ref_y_lane_change = 20.0;
   double q_ref_theta_lane_change = 15.0;
   double q_acc_lane_change = 0.5;
   double q_jerk_lane_change = 2.0;
   double q_jerk_lane_change2 = 2.0;
-  double q_jerk_lane_change3 = 2.0;
   double lane_change_ego_l_thr = 1.0;
+  double q_jerk_lane_change_back = 10.0;
 
-  double q_acc_bend = 0.5;
-  double q_jerk_bend = 2.0;
   double road_curvature_radius = 750.0;
   size_t curvature_change_index = 15;
   double curvature_preview_distance = 50.0;
@@ -1677,6 +1670,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
+    steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
   }
   double parking_cruise_speed = 5.55;
 
@@ -1692,6 +1686,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
 
   double kEpsilon_v = 0.0;
   double kEpsilon_a = 0.0;
+
+  double steer_ratio = 16.5;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
