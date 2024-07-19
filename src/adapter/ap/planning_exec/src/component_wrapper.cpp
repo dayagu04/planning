@@ -108,6 +108,7 @@ void ComponentWrapper::InitClient() {
               sd_map_msg->ParseFromString(data);
               component_ptr_->FeedSdMap(sd_map_msg);
             });
+        client_set.erase(portName);
       }
 
 #undef REGISTER_CLIENT_HANDLER
