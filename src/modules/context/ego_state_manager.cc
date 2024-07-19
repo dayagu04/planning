@@ -404,7 +404,7 @@ void EgoStateManager::LateralInitStateResetToEgoState() {
       session_->environmental_model().get_ego_state_manager();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double steer_ratio = vehicle_param.steer_ratio;
+  // double steer_ratio = vehicle_param.steer_ratio;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
@@ -413,7 +413,7 @@ void EgoStateManager::LateralInitStateResetToEgoState() {
   lat_init_state.set_theta(ego_state->ego_pose_raw().theta);
 
   // TODO: need estimated delta and omega for large curv condition
-  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio);
+  lat_init_state.set_delta(ego_state->ego_steer_angle() / steer_ratio_);
   lat_init_state.set_curv(curve_factor * lat_init_state.delta());
   lat_init_state.set_d_curv(0.0);
 }
