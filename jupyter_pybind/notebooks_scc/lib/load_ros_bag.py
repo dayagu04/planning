@@ -508,12 +508,12 @@ class LoadRosbag:
     try:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
-        plan_msg_dict[msg.meta.msg_header.timestamp / 1e6] = msg
+        plan_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
         self.plan_msg['t'].append(t)
         self.plan_msg['data'].append(msg)
-        self.plan_msg['timestamp'].append(msg.meta.msg_header.timestamp)
+        self.plan_msg['timestamp'].append(msg.msg_header.timestamp)
       self.plan_msg['t'] = [tmp - t0  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
