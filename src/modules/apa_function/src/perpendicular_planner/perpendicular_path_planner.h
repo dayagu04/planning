@@ -89,7 +89,6 @@ class PerpendicularPathPlanner {
     bool is_first_path = true;
     bool is_last_path = false;
     bool gear_shift = false;
-    bool is_first_reverse_path = false;
     bool multi_reach_target_pose = false;
     double length = 0.0;
     uint8_t gear_change_count = 0;
@@ -107,7 +106,6 @@ class PerpendicularPathPlanner {
       is_last_path = false;
       gear_shift = false;
       multi_reach_target_pose = false;
-      is_first_reverse_path = false;
       length = 0.0;
       gear_change_count = 0;
       path_seg_index = std::make_pair(0, 0);

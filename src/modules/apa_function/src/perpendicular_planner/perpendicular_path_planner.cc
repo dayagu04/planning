@@ -137,9 +137,6 @@ bool PerpendicularPathPlanner::Update() {
 
   // multi step
   if (MultiPlan()) {
-    if (calc_params_.first_multi_plan) {
-      output_.is_first_reverse_path = true;
-    }
     calc_params_.first_multi_plan = false;
     DEBUG_PRINT("multi plan success!");
   }
@@ -556,7 +553,7 @@ void PerpendicularPathPlanner::CalMonoSafeCircle() {
   const double deta_x = std::sqrt(
       std::pow(
           (calc_params_.turn_radius - apa_param.GetParam().car_width * 0.5 -
-           apa_param.GetParam().car_lat_inflation_normal - 0.0268),
+           apa_param.GetParam().car_lat_inflation_strict),
           2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - pt_inside.y()), 2));
 
@@ -618,7 +615,7 @@ bool PerpendicularPathPlanner::CalMultiSafeCircle() {
   circle_p1.center = pt_inside;
   circle_p1.radius = calc_params_.turn_radius -
                      0.5 * apa_param.GetParam().car_width -
-                     apa_param.GetParam().car_lat_inflation_normal - 0.0268;
+                     apa_param.GetParam().car_lat_inflation_strict;
 
   // move down the start line
   const Eigen::Vector2d pt_s =
@@ -792,8 +789,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
   double turn_radius = calc_params_.turn_radius;
   size_t plan_again_count = 0;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
-  int plan_total_count = kMultiPlanMaxPathNumsInSlot;
-  for (int i = 0; i < plan_total_count; ++i) {
+  for (int i = 0; i < kMultiPlanMaxPathNumsInSlot; ++i) {
     DEBUG_PRINT("-- No." << i << "  multi-plan --");
     tmp_path_seg_vec.clear();
     tmp_path_seg_vec.reserve(3);
@@ -805,7 +801,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
       DEBUG_PRINT("single path of multi-plan failed!");
 
       if (calc_params_.single_plan_again || calc_params_.complete_plan_again) {
-        plan_total_count++;
+        i = -1;
         plan_again_count++;
         DEBUG_PRINT(
             "reverse path stuck by inside or channel, need use reverse line "
@@ -826,7 +822,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
           DEBUG_PRINT("single plan again from last plan end pose.");
         }
 
-        double compensate_line_length = 0.15;
+        double compensate_line_length = 0.268;
         if (multi_out_put.path_segment_vec.empty()) {
           current_pose = input_.ego_pose;
           current_gear = input_.ref_gear;
@@ -835,6 +831,7 @@ const bool PerpendicularPathPlanner::MultiPlan() {
         } else {
           current_pose = multi_out_put.path_segment_vec.back().GetEndPose();
         }
+        DEBUG_PRINT("compensate_line_length = " << compensate_line_length);
 
         pnc::geometry_lib::PathPoint target_pose = current_pose;
 
@@ -1045,8 +1042,9 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
     }
   }
 
-  // second: try two arc(0), one arc(1) or line arc(2) plan to target line
-  int type = -1;
+  // second: try two arc, one arc or line arc plan to target line
+  using namespace pnc::geometry_lib;
+  PathPlanType play_type = PLAN_TYPE_INVALID;
   if (!CheckReachTargetPose(temp_pose)) {
     const double current_turn_radius = turn_radius;
     const Eigen::Vector2d current_tang_vec =
@@ -1078,7 +1076,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       if (TwoArcPlan(current_arc, tmp_path_seg_vec, current_gear,
                      current_arc_steer)) {
         DEBUG_PRINT("TwoArcPlan success");
-        type = 0;
+        play_type = PLAN_TYPE_TWO_ARC;
       } else {
         DEBUG_PRINT("TwoArcPlan fail");
       }
@@ -1092,7 +1090,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       if (OneArcPlan(current_arc, tmp_path_seg_vec, current_gear,
                      current_arc_steer)) {
         DEBUG_PRINT("OneArcPlan success");
-        type = 1;
+        play_type = PLAN_TYPE_ONE_ARC;
       } else {
         DEBUG_PRINT("OneArcPlan fail");
       }
@@ -1103,7 +1101,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
       if (LineArcPlan(current_arc, tmp_path_seg_vec, current_gear,
                       current_arc_steer)) {
         DEBUG_PRINT("LineArcPlan success");
-        type = 2;
+        play_type = PLAN_TYPE_LINE_ARC;
       } else {
         DEBUG_PRINT("LineArcPlan fail");
       }
@@ -1136,7 +1134,8 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
   }
 
   // avoid line arc length too length whicl let car go too far
-  if (type == 2 && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+  if (play_type == PLAN_TYPE_LINE_ARC &&
+      current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     const double channel_width =
         apa_param.GetParam().line_arc_obs_channel_width;
     const double channel_length =
@@ -1174,12 +1173,17 @@ const bool PerpendicularPathPlanner::CalSinglePathInMulti(
     double safe_dist = apa_param.GetParam().col_obs_safe_dist_normal;
     CollisionDetector::Paramters params;
     params.lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
-    if (calc_params_.first_multi_plan && type == 0 && i == 0 &&
-        tmp_path_seg.seg_gear == current_gear) {
+    if (calc_params_.first_multi_plan &&
+        (play_type == PLAN_TYPE_TWO_ARC || play_type == PLAN_TYPE_ONE_ARC ||
+         play_type == PLAN_TYPE_LINE_ARC) &&
+        i == 0 && tmp_path_seg.seg_gear == current_gear) {
       // when 1R and two arc, should far from inside obs
       params.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
       safe_dist = apa_param.GetParam().col_obs_safe_dist_strict;
     }
+
+    DEBUG_PRINT("lat_lat_inflation = " << params.lat_inflation);
+
     collision_detector_ptr_->SetParam(params);
     // PrintSegmentInfo(tmp_path_seg);
     const PathColDetRes path_col_det_res =

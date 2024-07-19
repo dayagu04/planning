@@ -527,23 +527,19 @@ bool SlotManagement::GenTLane(
 
   // If the car is parked according to the actual slot, its leftmost and
   // rightmost coordinates which includes rearview mirror are as follows
-  const double max_car_width_with_safe_buffer =
-      apa_param.GetParam().max_car_width +
-      2.0 * apa_param.GetParam().car_lat_inflation_normal;
-
-  const double car_half_width_with_safe_buffer =
-      max_car_width_with_safe_buffer * 0.5;
+  const double car_half_width_with_mirror =
+      apa_param.GetParam().max_car_width * 0.5;
 
   const double virtual_slot_width =
-      max_car_width_with_safe_buffer +
+      apa_param.GetParam().max_car_width +
       apa_param.GetParam().slot_compare_to_car_width;
 
   const double real_slot_width = ego_slot_info.slot_width;
 
-  DEBUG_PRINT("max_car_width_with_safe_buffer = "
-              << max_car_width_with_safe_buffer
-              << "  virtual slot width = " << virtual_slot_width
-              << "  real slot width = " << real_slot_width);
+  DEBUG_PRINT("max_car_width = " << apa_param.GetParam().max_car_width
+                                 << "  virtual slot width = "
+                                 << virtual_slot_width
+                                 << "  real slot width = " << real_slot_width);
 
   const double safe_threshold = apa_param.GetParam().safe_threshold;
 
@@ -553,11 +549,15 @@ bool SlotManagement::GenTLane(
 
   double left_x = left_pq_for_x.top().x();
 
+  double real_left_x = left_x;
+
   double right_y = right_pq_for_y.top().y();
 
   double real_right_y = right_y;
 
   double right_x = right_pq_for_x.top().x();
+
+  double real_right_x = right_x;
 
   if (apa_param.GetParam().tmp_no_consider_obs_dy &&
       !ego_slot_info.fus_obj_valid_flag) {
@@ -570,12 +570,12 @@ bool SlotManagement::GenTLane(
     }
   }
 
-  const double threshold = 0.368;
+  const double threshold = 0.4268;
   if (ego_slot_info.fus_obj_valid_flag) {
-    left_y = std::max(left_y, car_half_width_with_safe_buffer + threshold);
-    left_x = std::min(left_x, ego_slot_info.pt_1.x() - 2.0 * threshold);
-    right_y = std::min(right_y, -car_half_width_with_safe_buffer - threshold);
-    right_x = std::min(right_x, ego_slot_info.pt_0.x() - 2.0 * threshold);
+    left_y = std::max(left_y, car_half_width_with_mirror + threshold);
+    left_x = std::min(left_x, ego_slot_info.pt_1.x() - 1.68 * threshold);
+    right_y = std::min(right_y, -car_half_width_with_mirror - threshold);
+    right_x = std::min(right_x, ego_slot_info.pt_0.x() - 1.68 * threshold);
   }
 
   DEBUG_PRINT("real_left_y = " << real_left_y
@@ -595,12 +595,12 @@ bool SlotManagement::GenTLane(
       real_left_y = std::min(real_left_y, ego_slot_info.pt_1.y());
       real_right_y = std::max(real_right_y, ego_slot_info.pt_0.y());
     }
-    left_dis_obs_car = real_left_y - car_half_width_with_safe_buffer;
-    right_dis_obs_car = -car_half_width_with_safe_buffer - real_right_y;
+    left_dis_obs_car = real_left_y - car_half_width_with_mirror;
+    right_dis_obs_car = -car_half_width_with_mirror - real_right_y;
   } else {
     // use uss
-    left_dis_obs_car = left_y - car_half_width_with_safe_buffer;
-    right_dis_obs_car = -car_half_width_with_safe_buffer - right_y;
+    left_dis_obs_car = left_y - car_half_width_with_mirror;
+    right_dis_obs_car = -car_half_width_with_mirror - right_y;
   }
 
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
@@ -697,14 +697,20 @@ bool SlotManagement::GenTLane(
     slot_tlane.corner_inside_slot = corner_right_slot;
     slot_tlane.pt_outside = corner_left_slot;
     slot_tlane.pt_inside = corner_right_slot;
-    slot_tlane.pt_inside.x() = right_x + apa_param.GetParam().tlane_safe_dx;
+    slot_tlane.pt_inside.x() = std::min(real_right_x, ego_slot_info.pt_0.x()) +
+                               apa_param.GetParam().tlane_safe_dx;
+    slot_tlane.pt_inside.y() =
+        std::max(real_right_y, ego_slot_info.pt_0.y() + 0.05);
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // outside is right, inside is left
     slot_tlane.corner_outside_slot = corner_right_slot;
     slot_tlane.corner_inside_slot = corner_left_slot;
     slot_tlane.pt_outside = corner_right_slot;
     slot_tlane.pt_inside = corner_left_slot;
-    slot_tlane.pt_inside.x() = left_x + apa_param.GetParam().tlane_safe_dx;
+    slot_tlane.pt_inside.x() = std::min(real_left_x, ego_slot_info.pt_1.x()) +
+                               apa_param.GetParam().tlane_safe_dx;
+    slot_tlane.pt_inside.y() =
+        std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
   }
 
   slot_tlane.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
@@ -2633,6 +2639,15 @@ void SlotManagement::UpdateReleasedSlotInfo() {
       memset(&released_slot_info, 0, sizeof(released_slot_info));
       released_slot_info.id = slot_info.id();
       frame_.released_slot_info_vec.emplace_back(released_slot_info);
+    } else {
+      // if in parking, force set the slot release and send to hmi
+      if (IsInParkingState() &&
+          (static_cast<int>(slot_info.id()) ==
+           static_cast<int>(frame_.ego_slot_info.select_slot_id))) {
+        released_slot_info.Clear();
+        released_slot_info.set_id(slot_info.id());
+        frame_.released_slot_info_vec.emplace_back(released_slot_info);
+      }
     }
   }
 }

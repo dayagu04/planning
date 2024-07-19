@@ -301,6 +301,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   if res == True:
     tuned_planning_output = PlanningOutput()
     tuned_planning_output.deserialize(apa_simulation_py.GetPlanningOutput())
+    print("plan release slot id = ", tuned_planning_output.successful_slot_info_list)
 
     tuned_planning_debug_info = planning_debug_info_pb2.PlanningDebugInfo()
     tuned_planning_debug_info.ParseFromString(apa_simulation_py.GetPlanningDebugInfo())

@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_19cp2/trigger/20240711/20240711-10-12-58/park_in_data_collection_JAC_S811_19CP2_ALL_FILTER_2024-07-11-10-12-58_no_camera.record'
+bag_path = '/data_cold/abu_zone/APA_data/Vertical/test_2.00000'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 
@@ -107,7 +107,7 @@ def slider_callback(bag_time, vehicle_type):
   if bag_loader.plan_msg['enable'] == True:
     plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
     # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
-    # print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
+    print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
