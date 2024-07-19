@@ -45,7 +45,7 @@ print("Creat out_dir successfully !")
 # 运行PP
 PP_bag = f"{out_dir}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 mileage_path = f"{out_dir}/case_result.json"
-command = export_command + f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {mileage_path} --close-loop'"
+command = export_command + f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {mileage_path} --close-loop --no-interface-check'"
 try:
     subprocess.run(command, shell=True, text=True, check=True)
 except subprocess.CalledProcessError as e:
