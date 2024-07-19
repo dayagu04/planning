@@ -92,9 +92,29 @@ template <typename T>
 void read_json_vec(const Json &json, const std::string &key,
                    std::vector<T> &vec,
                    const std::vector<T> &default_vec = {}) {
-  if (json.find(key) != json.end()) {
+  if (json.find(key) != json.end() && json[key].is_array()) {
+    vec.clear(); 
     for (size_t i = 0; i < json[key].size(); i++) {
       vec.push_back(json[key][i]);
+    }
+  } else {
+    vec = default_vec;
+  }
+}
+
+template <typename T>
+void read_json_vec(const Json &json, const std::vector<std::string> &keys,
+                   std::vector<T> &vec,
+                   const std::vector<T> &default_vec = {}) {
+  Json json_new = json;
+  for (int i = 0; i < (int)keys.size() - 1; i++) {
+    if (json_new.find(keys[i]) != json_new.end()) {
+      json_new = json_new[keys[i]];
+    }
+  }
+  if (json_new.find(keys.back()) != json_new.end()) {
+    for (size_t i = 0; i < json_new[keys.back()].size(); i++) {
+      vec.emplace_back(json_new[keys.back()][i]);
     }
     return;
   }
@@ -1671,6 +1691,10 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
     steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
+    read_json_vec<double>(json, "replan_longitudinal_distance_threshold_speed",
+                          replan_longitudinal_distance_threshold_speed);
+    read_json_vec<double>(json, "replan_longitudinal_distance_threshold_value",
+                          replan_longitudinal_distance_threshold_value);
   }
   double parking_cruise_speed = 5.55;
 
@@ -1678,7 +1702,9 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double max_replan_theta_err = 10.0;
   double max_replan_lon_err = 1.0;
   double max_replan_dist_err = 1.5;
-
+  std::vector<double> replan_longitudinal_distance_threshold_speed{11.111,
+                                                                   27.778};
+  std::vector<double> replan_longitudinal_distance_threshold_value{1.0, 1.1};
   double hpp_max_replan_lat_err = 0.45;
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
