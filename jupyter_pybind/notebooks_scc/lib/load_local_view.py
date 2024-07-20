@@ -1,7 +1,7 @@
 from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
-from lib.load_ros_bag import LoadRosbag, g_is_display_enu, is_match_planning, is_vis_map, is_bag_main
+from lib.load_ros_bag import LoadRosbag, g_is_display_enu, is_match_planning, is_vis_map, is_bag_main, is_vis_sdmap
 import numpy as np
 
 from bokeh.io import output_notebook, push_notebook
@@ -27,6 +27,7 @@ coord_tf = coord_transformer()
 Max_line_size = 200
 Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
+Max_sdmap_segment_size = 100
 
 first_frame_num = 0
 
@@ -58,6 +59,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ctrl_debug_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time)
   ctrl_debug_json_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time,True)
   ehr_static_map_msg = find_nearest(bag_loader.ehr_static_map_msg, bag_time)
+  ehr_sd_map_msg = find_nearest(bag_loader.ehr_sd_map_msg, bag_time)
   ehr_parking_map_msg = find_nearest(bag_loader.ehr_parking_map_msg, bag_time)
   ground_line_msg = find_nearest(bag_loader.ground_line_msg, bag_time)
   planning_hmi_msg = find_nearest(bag_loader.planning_hmi_msg, bag_time)
@@ -95,7 +97,46 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_msg'] = ctrl_msg
   local_view_data['data_msg']['ctrl_debug_msg'] = ctrl_debug_msg
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
-  ### step 2-1: 加载定位信息
+
+  ### step 2-1: 加载pp原始定位信息
+  if bag_loader.origin_loc_msg['enable'] == True:
+    cur_pos_xn = 0
+    cur_pos_yn = 0
+    cur_yaw = 0
+    cur_pos_xn = origin_loc_msg.position.position_boot.x
+    cur_pos_yn = origin_loc_msg.position.position_boot.y
+    cur_yaw = origin_loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+
+    ego_xb, ego_yb = [], []
+    ego_xn, ego_yn = [], []
+    ### global variables
+    # pos offset
+    for i in range(len(bag_loader.origin_loc_msg['data'])):
+      if (i % 10 != 0): # 下采样 10
+        continue
+      # if bag_loader.loc_msg['data'][i].msf_status.msf_status == 2 :
+      #   continue
+      pos_xn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.x
+      pos_yn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.y
+      if g_is_display_enu:
+        ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
+      else:
+        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
+
+      ego_xb.append(ego_local_x)
+      ego_yb.append(ego_local_y)
+      ego_xn.append(pos_xn_i)
+      ego_yn.append(pos_yn_i)
+
+    local_view_data['origin_data_ego'].data.update({
+      'ego_xb': ego_xb,
+      'ego_yb': ego_yb,
+      'ego_xn': ego_xn,
+      'ego_yn': ego_yn,
+    })
+
+  ### step 2-2: 加载定位信息
   loc_mode = 0
   cur_pos_xn = 0
   cur_pos_yn = 0
@@ -188,45 +229,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'text_xn': [-2],
         'text_yn': [0],
       })
-
-  ### step 2-2: 加载pp原始定位信息
-
-  if bag_loader.origin_loc_msg['enable'] == True:
-    cur_pos_xn = 0
-    cur_pos_yn = 0
-    cur_yaw = 0
-    cur_pos_xn = origin_loc_msg.position.position_boot.x
-    cur_pos_yn = origin_loc_msg.position.position_boot.y
-    cur_yaw = origin_loc_msg.orientation.euler_boot.yaw
-    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-
-    ego_xb, ego_yb = [], []
-    ego_xn, ego_yn = [], []
-    ### global variables
-    # pos offset
-    for i in range(len(bag_loader.origin_loc_msg['data'])):
-      if (i % 10 != 0): # 下采样 10
-        continue
-      # if bag_loader.loc_msg['data'][i].msf_status.msf_status == 2 :
-      #   continue
-      pos_xn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.x
-      pos_yn_i = bag_loader.origin_loc_msg['data'][i].position.position_boot.y
-      if g_is_display_enu:
-        ego_local_x, ego_local_y = pos_xn_i, pos_yn_i
-      else:
-        ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
-
-      ego_xb.append(ego_local_x)
-      ego_yb.append(ego_local_y)
-      ego_xn.append(pos_xn_i)
-      ego_yn.append(pos_yn_i)
-
-    local_view_data['origin_data_ego'].data.update({
-      'ego_xb': ego_xb,
-      'ego_yb': ego_yb,
-      'ego_xn': ego_xn,
-      'ego_yn': ego_yn,
-    })
 
   is_enu_to_car = False
   if plan_msg != None:
@@ -785,6 +787,44 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'ehr_lane_boundary_{}_y'.format(i): ehr_lane_boundary_info_list[i]['ehr_lane_boundary_y_vec'],
           })
 
+  # 加载sdmap info
+  if is_vis_sdmap and bag_loader.ehr_sd_map_msg['enable'] == True:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    print("road_map.lanes len:",len(ehr_sd_map_msg.route_map.segms))
+    ehr_line_info_list = load_sd_map_segments(ehr_sd_map_msg.route_map.segms,
+                                          cur_pos_xn,cur_pos_yn,cur_yaw,Max_sdmap_segment_size)
+    ehr_data_lane_dict = {}
+    for i in range(Max_sdmap_segment_size):
+      ehr_data_lane_dict[i] = local_view_data['sdmap_data_segment_{}'.format(i)]
+    for i in range(len(ehr_line_info_list)):
+      if ehr_line_info_list[i]['ehr_relative_id'] == 1000: #车道不存在
+        ehr_line_info_list[i]['ehr_line_x_vec'] = []
+        ehr_line_info_list[i]['ehr_line_y_vec'] = []
+      ehr_data_line = ehr_data_lane_dict[i]
+      # print("ehr_line_info_list:",len(ehr_line_info_list))
+      ehr_data_line.data.update({
+            'sdmap_segment_{}_x'.format(i): ehr_line_info_list[i]['ehr_line_x_vec'],
+            'sdmap_segment_{}_y'.format(i): ehr_line_info_list[i]['ehr_line_y_vec'],
+          })
+
+    ehr_ramp_line_info_list = load_sd_map_ramp_segments(ehr_sd_map_msg.route_map.segms,
+                                      cur_pos_xn,cur_pos_yn,cur_yaw,Max_sdmap_segment_size)
+    ehr_ramp_data_lane_dict = {}
+    for i in range(Max_sdmap_segment_size):
+      ehr_ramp_data_lane_dict[i] = local_view_data['sdmap_ramp_data_segment_{}'.format(i)]
+    for i in range(len(ehr_ramp_line_info_list)):
+      if ehr_ramp_line_info_list[i]['ehr_relative_id'] == 1000: #车道不存在
+        ehr_ramp_line_info_list[i]['ehr_line_x_vec'] = []
+        ehr_ramp_line_info_list[i]['ehr_line_y_vec'] = []
+      ehr_ramp_data_line = ehr_ramp_data_lane_dict[i]
+      # print("ehr_line_info_list:",len(ehr_line_info_list))
+      ehr_ramp_data_line.data.update({
+            'sdmap_ramp_segment_{}_x'.format(i): ehr_ramp_line_info_list[i]['ehr_line_x_vec'],
+            'sdmap_ramp_segment_{}_y'.format(i): ehr_ramp_line_info_list[i]['ehr_line_y_vec'],
+          })
+
   # 加载ehr_parking_map
   if bag_loader.ehr_parking_map_msg['enable'] == True:
     parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y = generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu)
@@ -887,6 +927,15 @@ def load_local_view_figure():
     ehr_lane_boundary_lanes = []
     for i in range(Lane_boundary_max_line_size):
       ehr_lane_boundary_lanes.append(ColumnDataSource(data={'ehr_lane_boundary_{}_y'.format(i): [], 'ehr_lane_boundary_{}_x'.format(i): []}))
+  ## add plot sdmap info
+  if is_vis_sdmap:
+    sdmap_data_segments = []
+    for i in range(Max_sdmap_segment_size):
+      sdmap_data_segments.append(ColumnDataSource(data={'sdmap_segment_{}_y'.format(i): [], 'sdmap_segment_{}_x'.format(i): []}))
+    
+    sdmap_ramp_data_segments = []
+    for i in range(Max_sdmap_segment_size):
+      sdmap_ramp_data_segments.append(ColumnDataSource(data={'sdmap_ramp_segment_{}_y'.format(i): [], 'sdmap_ramp_segment_{}_x'.format(i): []}))
 
   data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
   data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
@@ -990,6 +1039,7 @@ def load_local_view_figure():
                 'ctrl_debug_msg_idx': 0,
                 'ehr_static_map_msg_idx': 0,
                 'planning_hmi_msg_idx': 0,
+                'ehr_sd_map_msg_idx': 0,
                }
 
   data_msg = {'plan_msg': None,
@@ -1092,7 +1142,16 @@ def load_local_view_figure():
       key = 'ehr_lane_boundary_' + str(i)
       value = ehr_lane_boundary_lanes[i]
       local_view_data[key] = value
+  if is_vis_sdmap:
+    for i in range(len(sdmap_data_segments)):
+      key = "sdmap_data_segment_" + str(i)
+      value = sdmap_data_segments[i]
+      local_view_data[key] = value
 
+    for i in range(len(sdmap_ramp_data_segments)):
+      key = "sdmap_ramp_data_segment_" + str(i)
+      value = sdmap_ramp_data_segments[i]
+      local_view_data[key] = value
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1250, match_aspect = True, aspect_scale=1)
 
@@ -1150,8 +1209,16 @@ def load_local_view_figure():
       keyy = 'ehr_lane_boundary_{}_y'.format(i)
       keyx = 'ehr_lane_boundary_{}_x'.format(i)
       fig1.line(keyy,keyx,source = ehr_lane_boundary_lanes[i], line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'ehr_lane_boundary')
-
-
+  if is_vis_sdmap:
+    for i in range (len(sdmap_data_segments)):
+      keyy = 'sdmap_segment_{}_y'.format(i)
+      keyx = 'sdmap_segment_{}_x'.format(i)
+      fig1.line(keyy,keyx,source = sdmap_data_segments[i], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'sdmap_segment')
+    for i in range (len(sdmap_ramp_data_segments)):
+      keyy = 'sdmap_ramp_segment_{}_y'.format(i)
+      keyx = 'sdmap_ramp_segment_{}_x'.format(i)
+      fig1.line(keyy,keyx,source = sdmap_ramp_data_segments[i], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdmap_ramp_segment')
+  
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -1201,11 +1268,11 @@ def load_local_view_figure():
   fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
   fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
 
-  hover1_1 = HoverTool(renderers=[fig1.renderers[5]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+  hover1_1 = HoverTool(renderers=[fig1.renderers[26]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[fig1.renderers[6]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  hover1_2 = HoverTool(renderers=[fig1.renderers[27]], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
   hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
   hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
   hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])

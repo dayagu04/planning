@@ -5,6 +5,7 @@
 #include "camera_preception_groundline_c.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
+#include "ehr_sdmap.pb.h"
 #include "func_state_machine_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_parking_slot_c.h"
@@ -64,6 +65,9 @@ struct LocalView {
 
   Map::StaticMap static_map_info;
   double static_map_info_recv_time = 0.0;
+
+  SdMapSwtx::SdMap sd_map_info;
+  double sd_map_info_recv_time = 0.0;
 
   // iflyauto::ParkingInfo parking_map_info;
   // double parking_map_info_recv_time = 0.0;

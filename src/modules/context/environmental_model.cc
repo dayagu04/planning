@@ -49,4 +49,27 @@ void EnvironmentalModel::UpdateStaticMap(const LocalView &local_view) {
   JSON_DEBUG_VALUE("hdmap_valid_", hdmap_valid_)
 }
 
+void EnvironmentalModel::UpdateSdMap(const LocalView &local_view) {
+  const auto sd_map_info_current_timestamp =
+      local_view.sd_map_info.header().timestamp();
+  if (sd_map_info_current_timestamp != sd_map_info_updated_timestamp_) {
+    ad_common::sdmap::SDMap sd_map_temp;
+    const int res =
+        sd_map_temp.LoadMapFromProto(local_view.sd_map_info);
+    if (res == 0) {
+      sd_map_ = std::move(sd_map_temp);
+      sdmap_valid_ = true;
+      sd_map_info_updated_timestamp_ = sd_map_info_current_timestamp;
+    }
+  }
+  if (sd_map_info_current_timestamp - sd_map_info_updated_timestamp_ >
+      kStaticMapOvertimeThreshold) {
+    //距离上一次更新时间超过阈值，则认为无效报错
+    sdmap_valid_ = false;
+    std::cout << "error!!! because more than 20s no update hdmap!!!"
+              << std::endl;
+  }
+  JSON_DEBUG_VALUE("sdmap_valid_", sdmap_valid_)
+}
+
 }  // namespace planning

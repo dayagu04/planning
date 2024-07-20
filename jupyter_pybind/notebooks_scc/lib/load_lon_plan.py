@@ -631,16 +631,19 @@ def load_lon_global_figure(bag_loader):
   })
 
   replan_status = []
+  lon_err = []
   t_plan_debug = []
 
   plan_debug_info = bag_loader.plan_debug_msg['json']
   for i in range(len(plan_debug_info)):
      t_plan_debug.append(bag_loader.plan_debug_msg['t'][i])
      replan_status.append(plan_debug_info[i]['replan_status'])
+     lon_err.append(plan_debug_info[i]['lon_err']) 
 
   plan_debug_multi.data.update({
     'time': t_plan_debug,
     'replan_status': replan_status,
+    'lon_err': lon_err,
   })
 
 
@@ -656,6 +659,7 @@ def load_lon_global_figure(bag_loader):
 
   fig_replan_status = bkp.figure(x_axis_label='time', y_axis_label='plan debug multi',x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600, height=300)
   f_replan_status = fig_replan_status.line('time', 'replan_status', source = plan_debug_multi, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'replan_status')
+  fig_replan_status.line('time', 'lon_err', source = plan_debug_multi, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lon_station_err')
   # fig_replan_status.line('time', 'location_latency', source = plan_debug_multi, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'location_latency')
   # 在fig_replan_status画的图中添加相关标签注释：图的左侧竖直排列添加如下所有文字注释
   # LAT_POSITION_REPLAN:1,LAT_ANGLE_REPLAN:2,lON_POSITION_REPLAN:4,LON_TINY_SPEED_REPLAN:8,FUNCTION_REQUEST_REPLAN:16,LAT_LON_REST:32
@@ -663,22 +667,62 @@ def load_lon_global_figure(bag_loader):
   fig_replan_status.text(x=t_plan_debug[10], y=10, text=['LAT_ANGLE_REPLAN:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_replan_status.text(x=t_plan_debug[10], y=8, text=['LON_POSITION_REPLAN:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_replan_status.text(x=t_plan_debug[10], y=6, text=['LON_TINY_SPEED_REPLAN:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=4, text=['FUNCTION_REQUEST_REPLAN:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_replan_status.text(x=t_plan_debug[10], y=2, text=['LAT_LON_REST:32'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=4, text=['LAT_LON_REPLAN:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=2, text=['LAT_REPLAN:32'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_replan_status.text(x=t_plan_debug[10], y=0, text=['LAT_LON_REST:64'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
 
   hover_fsm_state = HoverTool(renderers=[f_fsm_state], tooltips=[('time', '@time'), ('fsm_cur_state', '@fsm_cur_state')], mode='vline')
   fig_fsm_state.add_tools(hover_fsm_state)
   fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
   fig_fsm_state.legend.click_policy = 'hide'
 
-  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status')], mode='vline')
+  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status'), ('lon_station_err', '@lon_station_err')], mode='vline')
   fig_replan_status.add_tools(hover_replan_status)
   fig_replan_status.toolbar.active_scroll = fig_replan_status.select_one(WheelZoomTool)
   fig_replan_status.legend.click_policy = 'hide'
 
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status):
+  topic_latency_fig = bkp.figure(title='各topic延时',x_axis_label='time/s',
+                y_axis_label='time/(ms)',width=600,height=300)
+
+  t_plan_vec = bag_loader.plan_debug_msg['t']
+
+  fusion_object_latency=[]
+  fusion_road_latency=[]
+  vehicle_service_latency=[]
+  control_output_latency=[]
+  hmi_latency=[]
+  function_state_machine_latency=[]
+  localization_latency=[]
+
+  for ind in range(len(bag_loader.plan_debug_msg['data'])):
+    fusion_object_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_object, 2))
+    fusion_road_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_road, 2))
+    vehicle_service_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.vehicle_service, 2))
+    control_output_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.control_output, 2))
+    hmi_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.hmi, 2))
+    function_state_machine_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.function_state_machine, 2))
+    localization_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.localization, 2))
+
+  topic_latency_fig.line(t_plan_vec, fusion_object_latency, line_width=1,
+                              legend_label='fusion_object', color="green")
+  topic_latency_fig.line(t_plan_vec, fusion_road_latency, line_width=1,
+                                legend_label='fusion_road',color="blue")
+  topic_latency_fig.line(t_plan_vec, vehicle_service_latency, line_width=1,
+                             legend_label='vehicle_service', color="red")
+  topic_latency_fig.line(t_plan_vec, control_output_latency, line_width=1,
+                               legend_label='control_output',color="purple")
+  topic_latency_fig.line(t_plan_vec, hmi_latency, line_width=1,
+                               legend_label='hmi_latency',color="brown")
+  topic_latency_fig.line(t_plan_vec, function_state_machine_latency, line_width=1,
+                               legend_label='function_state_machine',color="yellow")
+  topic_latency_fig.line(t_plan_vec, localization_latency, line_width=1,
+                               legend_label='localization',color="orange")
+
+
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig
+
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
@@ -848,7 +892,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status)), title="Realtime")
+  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status,topic_latency_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 

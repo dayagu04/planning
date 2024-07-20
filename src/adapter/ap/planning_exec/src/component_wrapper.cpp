@@ -1,6 +1,7 @@
 #include "component_wrapper.h"
 
 #include "applicationswcexecutable2_manager.h"
+#include "ehr_sdmap.pb.h"
 #include "iflyauto_parse_file.h"
 #include "iflyauto_timer_component.h"
 #include "mdc/applicationswcexecutable2_logger.h"
@@ -77,6 +78,9 @@ void ComponentWrapper::InitClient() {
       REGISTER_CLIENT_HANDLER("IflytekLocalizationEgoPose",
                               FeedLocalizationEstimateOutput,
                               LocalizationEstimate);
+      REGISTER_CLIENT_HANDLER("IflytekLocalizationEgomotion",
+                              FeedLocalizationOutput,
+                              IFLYLocalization);                
       REGISTER_CLIENT_HANDLER("IflytekPredictionPredictionResult",
                               FeedPredictionResult, PredictionResult);
       REGISTER_CLIENT_HANDLER("IflytekVehicleService", FeedVehicleService,
@@ -91,15 +95,20 @@ void ComponentWrapper::InitClient() {
                               FeedFuncStateMachine, FuncStateMachine);
       REGISTER_CLIENT_HANDLER("IflytekUssWaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
-      if (portName == "IflytekEhrStaticMap") {
+      SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
+                  << "RegisterEvent: "<<portName;
+      if (portName == "IflytekEhrSdmapInfo") {
+        SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
+                  << "EEEEEE "<<portName;
         clientPtr->RegisterEventNotifyHandler(
             [this](const struct_container::eventDataType &data) {
               SPL_LOG_SPACE::GetLoggerIns("SPL")->LogInfo()
                   << "received event data";
-              auto map_msg = std::make_shared<Map::StaticMap>();
-              map_msg->ParseFromString(data);
-              component_ptr_->FeedMap(map_msg);
+              auto sd_map_msg = std::make_shared<SdMapSwtx::SdMap>();
+              sd_map_msg->ParseFromString(data);
+              component_ptr_->FeedSdMap(sd_map_msg);
             });
+        client_set.erase(portName);
       }
 
 #undef REGISTER_CLIENT_HANDLER

@@ -54,26 +54,10 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         planning_input.set_q_jerk(config_.q_jerk_lane_change2);
         concerned_start_q_jerk_ = config_.q_jerk_lane_change2;
       }
-      if (config_.use_lk_qxy_in_lc) {
-        if (std::fabs(init_dis_to_ref_) > 0.0) {
-          planning_input.set_q_ref_x(config_.q_ref_x);
-          planning_input.set_q_ref_y(config_.q_ref_y);
-          planning_input.set_q_jerk(config_.q_jerk_lane_change3);
-          concerned_start_q_jerk_ = config_.q_jerk_lane_change3;
-        }
+      if ((is_lane_change_back_)) {
+        planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
+        concerned_start_q_jerk_ = config_.q_jerk_lane_change_back;
       }
-      break;
-    }
-    case BEND: {
-      planning_input.set_acc_bound(config_.acc_bound_bend);
-      planning_input.set_jerk_bound(config_.jerk_bound_bend);
-      planning_input.set_q_ref_x(config_.q_ref_x);
-      planning_input.set_q_ref_y(config_.q_ref_y);
-      planning_input.set_q_ref_theta(config_.q_ref_theta);
-      planning_input.set_q_continuity(config_.q_continuity);
-      planning_input.set_q_acc(config_.q_acc_bend);
-      planning_input.set_q_jerk(config_.q_jerk_bend);
-      MakeDynamicWeight(planning_input);
       break;
     }
     default: { break; }
