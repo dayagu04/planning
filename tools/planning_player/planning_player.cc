@@ -38,7 +38,7 @@ static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
 static constexpr auto TOPIC_FUNC_STATE_MACHINE =
     "/iflytek/system_state/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
-static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap";
+static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
