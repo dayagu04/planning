@@ -671,8 +671,16 @@ void TrackletMaintainer::calc(
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
-        !tr->frenet_transform_valid || tr->d_rel <= 0) {  // hack(clren)
+        !tr->frenet_transform_valid) {
       tr->is_avd_car = false;
+      continue;
+    }
+    if (tr->d_rel <= 0) {
+      tr->is_avd_car = false;
+      if (tr->d_rel <= -1 * (tr->length + 5)) {
+        tr->ncar_count = 0;
+        tr->ncar_count_in = false;
+      }
       continue;
     }
     tr->is_avd_car = is_potential_avoiding_car(
