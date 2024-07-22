@@ -36,6 +36,7 @@ constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
 constexpr double kOverSpeed = 1.2;
 constexpr double kDefaultSBoundUpper = 30;
+constexpr double kLowAgentSpeed = 20.0 / 3.6;
 }  // namespace
 namespace planning {
 
@@ -767,6 +768,10 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   }
 
   if (lon_init_state_[1] < kEgoSpeedThreshold) {
+    return false;
+  }
+
+  if (check_st.vel > kLowAgentSpeed) {
     return false;
   }
 

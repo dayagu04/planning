@@ -241,7 +241,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // 对lead two进行类似的计算
     bool is_camera_and_lidar =
         lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
-    if (config_.enable_lead_two && is_camera_and_lidar &&
+    if (config_.enable_lead_two &&
         lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
@@ -386,7 +386,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     // 对lead two进行类似的计算
     bool is_camera_and_lidar =
         temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
-    if (config_.enable_lead_two && is_camera_and_lidar &&
+    if (config_.enable_lead_two &&
         temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
