@@ -83,9 +83,9 @@ message PlanningDebugInfo {
   optional TopicTimeList input_topic_timestamp = 11;
   optional TopicTimeList input_topic_latency = 12;
   optional FrameInfo frame_info = 13;
-  optional ImageLatency road_fusion_latency = 14;
-  optional ImageLatency obstacle_fusion_latency = 15;
-  optional LocationLatency location_latency = 16;
+  optional ImageLatency road_fusion_latency = 14 [deprecated = true];
+  optional ImageLatency obstacle_fusion_latency = 15 [deprecated = true];
+  optional LocationLatency location_latency = 16 [deprecated = true];
   optional string data_json = 18;
 
   optional SlotManagementInfo slot_management_info = 19;

@@ -11,6 +11,7 @@
 #include "intersection.h"
 #include "local_view.h"
 #include "log.h"
+#include "sdmap/sdmap.h"
 #include "session.h"
 #include "virtual_lane.h"
 
@@ -202,6 +203,8 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
+  void CalculateDistanceToRampSplitMergeWithSdMap(planning::framework::Session *session);
+  RampDirection MakesureSplitDirection(const ::SdMapSwtx::Segment& split_segment,const ad_common::sdmap::SDMap& sd_map);
   // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
   // void CalculateDistanceToTargetSlot(planning::framework::Session *session);
@@ -230,6 +233,7 @@ class VirtualLaneManager {
   // Ramp ramp_;
   double dis_to_ramp_ = NL_NMAX;
   RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
+  RampDirection first_split_direction_ = RampDirection::RAMP_NONE;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
@@ -251,6 +255,8 @@ class VirtualLaneManager {
   // target slot
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
+  bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
+  double sum_dis_to_last_merge_point_ = 0.0;
 };
 }  // namespace planning
 #endif

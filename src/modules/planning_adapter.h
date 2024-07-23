@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 
+#include "ehr_sdmap.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "planning_scheduler.h"
@@ -132,6 +133,14 @@ class PlanningAdapter {
     is_map_info_msg_updated_.store(true);
   }
 
+  void FeedSdMap(const std::shared_ptr<SdMapSwtx::SdMap>& sd_map_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    sd_map_info_msg_.CopyFrom(*sd_map_msg);
+    std::cout << "feed sd_map_info_msg_ end" << std::endl;
+    sd_map_info_msg_recv_time_ = IflyTime::Now_ms();
+    is_sd_map_info_msg_updated_.store(true);
+  }
+
   void RegisterOutputWriter(
       const std::function<
           void(const std::shared_ptr<iflyauto::StructContainer>&)>&
@@ -213,6 +222,10 @@ class PlanningAdapter {
   Map::StaticMap map_info_msg_;
   int64_t map_info_msg_recv_time_;
   std::atomic<bool> is_map_info_msg_updated_{false};
+
+  SdMapSwtx::SdMap sd_map_info_msg_;
+  int64_t sd_map_info_msg_recv_time_;
+  std::atomic<bool> is_sd_map_info_msg_updated_{false};
 
   std::function<void(const std::shared_ptr<iflyauto::StructContainer>&)>
       planning_writer_ = nullptr;

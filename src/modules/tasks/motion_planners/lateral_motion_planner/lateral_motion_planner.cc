@@ -383,7 +383,7 @@ void LateralMotionPlanner::Update() {
       session_->mutable_planning_context()->mutable_motion_planner_output();
 
   // append the planning traj anti-direction for decoupling lat & lon replan
-  const static double appended_length = 1.5;
+  const static double appended_length = 2.5;
   Eigen::Vector2d unit_vector(x_vec[1] - x_vec[2], y_vec[1] - y_vec[2]);
   unit_vector.normalize();
 

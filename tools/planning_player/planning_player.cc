@@ -38,6 +38,7 @@ static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
 static constexpr auto TOPIC_FUNC_STATE_MACHINE =
     "/iflytek/system_state/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
+static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
@@ -100,6 +101,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
         break;
       }
     }
+
   } else if (scene_type == "apa") {
     for (const auto& it : msg_cache_[TOPIC_PLANNING_PLAN]) {
       auto plan_msg =
@@ -138,11 +140,11 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
             *iflyauto::struct_cast<iflyauto::PlanningOutput>(planning_output);
         ros::Time ros_time;
         if (no_debug) {
-          planning_output_struct.meta.header.timestamp = local_time_;
+          planning_output_struct.header.timestamp = local_time_;
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_output_struct.meta.header.timestamp =
+          planning_output_struct.header.timestamp =
               planning_header_time_us_;
           ros_time = planning_msg_time_s_;
         }
@@ -271,6 +273,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
       cache_with_ros_msg_time<struct_msgs::PlanningHMIOutputInfoStr>(msg);
     } else if (msg.getTopic() == TOPIC_HD_MAP) {
       cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
+    } else if (msg.getTopic() == TOPIC_SD_MAP) {
+      cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
       cache_with_ros_msg_and_header_time<struct_msgs::ParkingInfo>(msg);
     } else if (msg.getTopic() == TOPIC_GROUND_LINE) {
@@ -348,6 +352,9 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
             it_msg.second, TOPIC_FUNC_STATE_MACHINE, bag);
       } else if (it_msg.first == TOPIC_HD_MAP) {
         write_ros_msg<proto_msgs::StaticMap::Ptr>(it_msg.second, TOPIC_HD_MAP,
+                                                  bag);
+      } else if (it_msg.first == TOPIC_SD_MAP) {
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second, TOPIC_SD_MAP,
                                                   bag);
       } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
         write_ros_msg<struct_msgs::ParkingInfo::Ptr>(
@@ -540,7 +547,25 @@ void PlanningPlayer::PlayOneFrame(
   //   }
   // }
 
+  if (input_time_list_map_ != input_time_list.map()) {
+    input_time_list_map_ = input_time_list.map();
+    for (auto it = msg_cache_[TOPIC_SD_MAP].begin();
+         it != msg_cache_[TOPIC_SD_MAP].end(); it++) {
+      auto sd_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string sd_map_str(sd_map_msg_i->debug_info.begin(),
+                                          sd_map_msg_i->debug_info.end());
+      auto sd_map =
+          std::make_shared<SdMapSwtx::SdMap>();
+      sd_map->ParseFromString(sd_map_str);
+      if (sd_map->header().timestamp() == input_time_list_map_) {
+        planning_adapter_->FeedSdMap(sd_map);
+        break;
+      }
+    }
+  }
   // TODO: for hpp, need FeedParkingMap() ready
+  // TODO(zkxie2): 等interface就位
   // auto ehr_parking_map_ros_msg =
   //     find_ros_msg_with_header_time<struct_msgs::ParkingInfo>(
   //         TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
@@ -641,12 +666,12 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
   auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
       it_planning_msg->second);
   if (planning_debug_info->timestamp() >
-      planning_msg->meta.msg_header.timestamp) {
+      planning_msg->msg_header.timestamp) {
     it_planning_msg++;
     auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
         it_planning_msg->second);
     if (planning_debug_info->timestamp() >
-        planning_msg->meta.msg_header.timestamp) {
+        planning_msg->msg_header.timestamp) {
       std::cerr << "timestamp error!!!!!" << std::endl;
       return;
     }
@@ -716,7 +741,7 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
-    planning_header_time_us_ = planning_msg->meta.msg_header.timestamp;
+    planning_header_time_us_ = planning_msg->msg_header.timestamp;
     planning_msg_time_s_ = it_planning_msg->first;
     it_planning_msg++;
 

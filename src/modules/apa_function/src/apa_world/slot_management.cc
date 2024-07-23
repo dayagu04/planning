@@ -121,8 +121,9 @@ void SlotManagement::AddUssPerceptObstacles() {
   frame_.obstacle_point_vec.reserve(obj_info_desample.obj_pt_cnt);
 
   for (int i = 0; i < obj_info_desample.obj_pt_cnt; ++i) {
-    frame_.obstacle_point_vec.emplace_back(Eigen::Vector2d(
-        obj_info_desample.obj_pt[i].x, obj_info_desample.obj_pt[i].y));
+    frame_.obstacle_point_vec.emplace_back(
+        Eigen::Vector2d(obj_info_desample.obj_pt_global[i].x,
+                        obj_info_desample.obj_pt_global[i].y));
   }
 }
 
@@ -797,7 +798,8 @@ const bool SlotManagement::AddUssPerceptObstacles(
   Eigen::Vector2d obs_pt;
   std::vector<Eigen::Vector2d> slot_obs_vec;
   for (int i = 0; i < obj_info_desample.obj_pt_cnt; ++i) {
-    obs_pt << obj_info_desample.obj_pt[i].x, obj_info_desample.obj_pt[i].y;
+    obs_pt << obj_info_desample.obj_pt_global[i].x,
+        obj_info_desample.obj_pt_global[i].y;
     const double dist = (slot_center - obs_pt).norm();
     // todo: consider dist from ego to obs
     if (dist < filtered_obs_dis) {
