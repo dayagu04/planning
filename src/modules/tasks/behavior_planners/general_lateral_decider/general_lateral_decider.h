@@ -58,7 +58,7 @@ class GeneralLateralDecider : public Task {
       ObstacleDecisions &obstacle_decisions);
   void GenerateStaticObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision);
+      ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
   void GenerateDynamicObstaclesBoundary(
       const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
       ObstacleDecisions &obstacle_decisions);
@@ -90,7 +90,7 @@ class GeneralLateralDecider : public Task {
                                            bool &reset_conflict_decision,
                                            ObstacleDecision &obstacle_decision,
                                            LatObstacleDecisionType &lat_decision, LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t, Polygon2d &care_overlap_polygon, double lat_buf_dis, LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision);
+  void AddObstacleDecisionBound(int id, double t, Polygon2d &care_overlap_polygon, double lat_buf_dis, LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision, bool is_update_hard_bound = false);
   void GenerateLateralDeciderOutput(const std::vector<std::pair<double, double>> &frenet_safe_bounds,
       const std::vector<std::pair<double, double>> &frenet_path_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);

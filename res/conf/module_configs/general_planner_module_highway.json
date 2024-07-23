@@ -138,7 +138,7 @@
   "base_nudge_distance": 1.2,
   "nudge_value_way" :false,
   "static_obj_safe_buffer": 0.8,
-  "dynamic_obj_safe_buffer": 1.2,
+  "hard_buffer2static_agent": 0.35,
   "hard_buffer2lane":-10,
   "soft_buffer2lane":-10,
   "hard_buffer2road":0.4,

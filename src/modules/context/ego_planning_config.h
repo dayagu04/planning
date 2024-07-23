@@ -511,8 +511,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     dynamic_obj_safe_buffer = read_json_key<double>(
         json, "dynamic_obj_safe_buffer", dynamic_obj_safe_buffer);
-    static_obj_safe_buffer = read_json_key<double>(
-        json, "static_obj_safe_buffer", static_obj_safe_buffer);
+    hard_buffer2static_agent = read_json_key<double>(
+        json, "hard_buffer2static_agent", hard_buffer2static_agent);
     care_area_s_start_buffer = read_json_key<double>(
         json, "care_area_s_start_buffer", care_area_s_start_buffer);
     max_avoid_edge =
@@ -543,7 +543,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double l_care_width = 10.;                     // TBD: more beautiful
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
   double care_obj_lon_distance_threshold = 60.;  // TBD: more beautiful
-  double static_obj_safe_buffer = 0.15;
+  double hard_buffer2static_agent = 0.15;
   double dynamic_obj_safe_buffer = 0.8;      //
   double min_obstacle_avoid_distance = 0.2;  // check it
   double lateral_bound_converge_speed = 1.0;

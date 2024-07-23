@@ -608,7 +608,8 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(const std::vector<st
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision, true);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision, false);
 
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
@@ -620,8 +621,7 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(const std::vector<st
 }
 
 void GeneralLateralDecider::GenerateStaticObstacleDecision(
-    const std::shared_ptr<FrenetObstacle> obstacle,
-    ObstacleDecision &obstacle_decision) {
+    const std::shared_ptr<FrenetObstacle> obstacle, ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -636,8 +636,11 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   const double ego_cur_s_start = ego_cur_s - vehicle_param.back_edge_to_rear_axis;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
-  const double rear_lon_buf_dis = 1.0;
+  double front_lon_buf_dis = 1.0;
+  double rear_lon_buf_dis = 1.0;
+  if (!is_update_hard_bound) {
+    front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
+  }
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
   const bool init_lon_no_overlap =
@@ -693,7 +696,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
       continue;
     }
 
-    const double lat_buf_dis = general_lateral_decider_utils::CalDesireLateralDistance(ego_cart_state_manager_->ego_v(), t, 0, false, is_nudge_left);
+    double lat_buf_dis = general_lateral_decider_utils::CalDesireStaticLateralDistance(config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(), ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound);
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -714,7 +717,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
                                       lat_decision, lon_decision);
     has_lat_decision = has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
     has_lon_decision = has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
-    AddObstacleDecisionBound(obstacle->id(), t, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision, obstacle_decision);
+    
+    AddObstacleDecisionBound(obstacle->id(), t, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision, obstacle_decision, is_update_hard_bound);
   }
 }
 
@@ -823,7 +827,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       continue;
     }
 
-    const double lat_buf_dis = general_lateral_decider_utils::CalDesireLateralDistance(ego_cart_state_manager_->ego_v(), t, 0, false, is_nudge_left);
+    const double lat_buf_dis = general_lateral_decider_utils::CalDesireLateralDistance(ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(), is_nudge_left);
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -934,40 +938,31 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(double ego_l, do
   }
 }
 
-void GeneralLateralDecider::AddObstacleDecisionBound(int id, double t, Polygon2d &care_overlap_polygon, double lat_buf_dis, LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision) {
+void GeneralLateralDecider::AddObstacleDecisionBound(int id, double t, Polygon2d &care_overlap_polygon, double lat_buf_dis, LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   const double l_offset_limit = 10.0;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.width * 0.5;
 
-  BoundInfo path_bound_info;
-  BoundInfo safe_bound_info;
-  Bound path_bound{-l_offset_limit, l_offset_limit};
-  Bound safe_bound{-l_offset_limit, l_offset_limit};
+  BoundInfo bound_info;
+  Bound bound{-l_offset_limit, l_offset_limit};
   BoundType type = BoundType::DYNAMIC_AGENT;
   const auto &obs_map = reference_path_ptr_->get_obstacles_map();
   if (obs_map.find(id) != obs_map.end()) {
     type = obs_map.at(id)->obstacle()->is_static() ? BoundType::AGENT : BoundType::DYNAMIC_AGENT;
   }
   if (lat_decision == LatObstacleDecisionType::LEFT) {
-    path_bound.lower = care_overlap_polygon.max_y() + half_ego_width;
-    safe_bound.lower = care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width;
+    bound.lower = care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width;
     // safe_bound.lower = is_rear_obstacle ? std::max(0.0, care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width) :
     //                                       care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width;
-    path_bound_info.type = type;
-    safe_bound_info.type = type;
-    path_bound_info.id = id;
-    safe_bound_info.id = id;
+    bound_info.type = type;
+    bound_info.id = id;
   } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
-    path_bound.upper =
-        care_overlap_polygon.min_y() - half_ego_width;
-    safe_bound.upper = care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width;
+    bound.upper = care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width;
     // safe_bound.upper = is_rear_obstacle ? std::min(0.0, care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width) :
     //                                       care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width;
-    path_bound_info.type = type;
-    safe_bound_info.type = type;
-    path_bound_info.id = id;
-    safe_bound_info.id = id;
+    bound_info.type = type;
+    bound_info.id = id;
   } else {
     // assert(lon_decision != LonObstacleDecisionType::IGNORE);
   }
@@ -976,14 +971,16 @@ void GeneralLateralDecider::AddObstacleDecisionBound(int id, double t, Polygon2d
   position_decision.tp.t = t;
   // position_decision.tp.s = ego_s;
   // position_decision.tp.l = ego_l;
+  if (is_update_hard_bound) {
+    position_decision.lat_bounds.push_back(
+      WeightedBound{bound.lower, bound.upper,
+                    config_.kHardBoundWeight, bound_info});
+  } else {
+    position_decision.lat_bounds.push_back(
+      WeightedBound{bound.lower, bound.upper,
+                    config_.dynamic_bound_slack_coefficient * config_.kPhysicalBoundWeight, bound_info});
+  }
 
-  position_decision.lat_bounds.push_back(
-      WeightedBound{path_bound.lower, path_bound.upper,
-                    config_.kHardBoundWeight, path_bound_info});
-  position_decision.lat_bounds.push_back(WeightedBound{
-      safe_bound.lower, safe_bound.upper,
-      config_.dynamic_bound_slack_coefficient * config_.kPhysicalBoundWeight,
-      safe_bound_info});
   position_decision.lat_decision = lat_decision;
   position_decision.lon_decision = lon_decision;
 
@@ -1044,7 +1041,7 @@ void GeneralLateralDecider::ExtractPathBound(
     double min_lower = std::max(bounds.front().lower, tmp_bound.first);
     double max_upper = std::min(bounds.front().upper, tmp_bound.second);
     for (auto &bound : bounds) {
-      if (bound.bound_info.type == BoundType::ROAD_BORDER) {
+      if (bound.bound_info.type == BoundType::ROAD_BORDER || bound.bound_info.type == BoundType::AGENT) {
         double lower = bound.lower;
         double upper = bound.upper;
         const int bound_priority = general_lateral_decider_utils::GetBoundTypePriority(bound.bound_info.type);
