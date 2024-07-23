@@ -48,8 +48,10 @@ bool GeneralLateralDecider::InitInfo() {
           ->mutable_general_lateral_decider_output();
   general_lateral_decider_output.enu_ref_path.clear();
   general_lateral_decider_output.last_enu_ref_path.clear();
-  general_lateral_decider_output.path_bounds.clear();
-  general_lateral_decider_output.safe_bounds.clear();
+  general_lateral_decider_output.soft_bounds.clear();
+  general_lateral_decider_output.hard_bounds.clear();
+  general_lateral_decider_output.soft_bounds_cart_point.clear();
+  general_lateral_decider_output.hard_bounds_cart_point.clear();
   general_lateral_decider_output.enu_ref_theta.clear();
   general_lateral_decider_output.last_enu_ref_theta.clear();
 
@@ -99,18 +101,22 @@ bool GeneralLateralDecider::Execute() {
 
   GenerateObstaclesBoundary();
 
-  std::vector<std::pair<double, double>> frenet_safe_bounds;
-  std::vector<std::pair<double, double>> frenet_path_bounds;
+  std::vector<std::pair<double, double>> frenet_soft_bounds;
+  std::vector<std::pair<double, double>> frenet_hard_bounds;
+  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info;
+  std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
 
-  ExtractBoundary(frenet_safe_bounds, frenet_path_bounds);
+  ExtractBoundary(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info, hard_bounds_info);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  GenerateLateralDeciderOutput(frenet_safe_bounds, frenet_path_bounds,
+  GenerateLateralDeciderOutput(frenet_soft_bounds, frenet_hard_bounds,
                             general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
+
+  SaveLatDebugInfo(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info, hard_bounds_info);
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("GeneralLateralDeciderCostTime", end_time - start_time);
@@ -161,6 +167,10 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
+  const std::shared_ptr<VirtualLane> flane =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
   if (config_.lateral_ref_traj_type || ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
        coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
        coarse_planning_info.target_state == ROAD_LC_LBACK ||
@@ -404,34 +414,34 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   hard_bounds_.resize(ref_traj_points_.size());
   soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound safe_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    Bound path_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    Bound soft_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    Bound hard_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
     MapObstaclePositionDecision map_obstacle_decision;
 
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;
     map_obstacle_decision.tp.s = ref_traj_points_[i].s;
     map_obstacle_decision.tp.l = ref_traj_points_[i].l;
 
-    path_bound_road.upper =
+    hard_bound_road.upper =
         std::fmin(std::max(config_.hard_min_distance_road2center, ref_path_points_[i].distance_to_left_road_border -
                       0.5 * vehicle_param.width - config_.hard_buffer2road),
-                  path_bound_road.upper);
-    path_bound_road.lower =
+                  hard_bound_road.upper);
+    hard_bound_road.lower =
         std::fmax(std::min( -config_.hard_min_distance_road2center, -ref_path_points_[i].distance_to_right_road_border +
                       0.5 * vehicle_param.width + config_.hard_buffer2road),
-                  path_bound_road.lower);
-    safe_bound_road.upper =
-        std::fmin(std::max(config_.soft_min_distance_road2center, path_bound_road.upper - left_road_extra_buffer),
-                  safe_bound_road.upper);
-    safe_bound_road.lower =
-        std::fmax(std::min( -config_.soft_min_distance_road2center, path_bound_road.lower + right_road_extra_buffer),
-                  safe_bound_road.lower);
+                  hard_bound_road.lower);
+    soft_bound_road.upper =
+        std::fmin(std::max(config_.soft_min_distance_road2center, hard_bound_road.upper - left_road_extra_buffer),
+                  soft_bound_road.upper);
+    soft_bound_road.lower =
+        std::fmax(std::min( -config_.soft_min_distance_road2center, hard_bound_road.lower + right_road_extra_buffer),
+                  soft_bound_road.lower);
 
     hard_bounds_[i].emplace_back(WeightedBound{
-        path_bound_road.lower, path_bound_road.upper, config_.kHardBoundWeight,
+        hard_bound_road.lower, hard_bound_road.upper, config_.kHardBoundWeight,
         BoundInfo{-100, BoundType::ROAD_BORDER}});
     soft_bounds_[i].emplace_back(WeightedBound{
-        safe_bound_road.lower, safe_bound_road.upper, config_.kPhysicalBoundWeight,
+        soft_bound_road.lower, soft_bound_road.upper, config_.kPhysicalBoundWeight,
         BoundInfo{-100, BoundType::ROAD_BORDER}});
   }
 }
@@ -450,43 +460,43 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   const double kDefaultDistanceToRoad = 10.0;
   const double half_ego_width = 0.5 * vehicle_param.width;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound safe_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    safe_bound_lane.upper =
+    Bound soft_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    soft_bound_lane.upper =
         std::fmin(ref_path_points_[i].distance_to_left_lane_border - half_ego_width - config_.soft_buffer2lane,
-                  safe_bound_lane.upper);
-    safe_bound_lane.lower =
+                  soft_bound_lane.upper);
+    soft_bound_lane.lower =
         std::fmax(-ref_path_points_[i].distance_to_right_lane_border + half_ego_width + config_.soft_buffer2lane,
-                  safe_bound_lane.lower);
+                  soft_bound_lane.lower);
     const auto& ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
     if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
-      if (ego_init_sl_info.min_l + half_ego_width < safe_bound_lane.lower) {
+      if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
         soft_bounds_[i].emplace_back(WeightedBound{
           ego_init_sl_info.min_l + half_ego_width, kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::EGO_POSITION}});
         soft_bounds_[i].emplace_back(WeightedBound{
-          -kDefaultDistanceToRoad, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
+          -kDefaultDistanceToRoad, soft_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       } else {
         soft_bounds_[i].emplace_back(WeightedBound{
-          safe_bound_lane.lower, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
+          soft_bound_lane.lower, soft_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       }
     } else if (is_lane_change && lc_request_direction == RequestType::RIGHT_CHANGE){
-      if (ego_init_sl_info.max_l - half_ego_width > safe_bound_lane.upper) {
+      if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
         soft_bounds_[i].emplace_back(WeightedBound{
           -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::EGO_POSITION}});
         soft_bounds_[i].emplace_back(WeightedBound{
-          safe_bound_lane.lower, kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+          soft_bound_lane.lower, kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       } else {
         soft_bounds_[i].emplace_back(WeightedBound{
-          safe_bound_lane.lower, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
+          soft_bound_lane.lower, soft_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
       }
     } else {
       soft_bounds_[i].emplace_back(WeightedBound{
-          safe_bound_lane.lower, safe_bound_lane.upper, config_.kPhysicalBoundWeight,
+          soft_bound_lane.lower, soft_bound_lane.upper, config_.kPhysicalBoundWeight,
           BoundInfo{-100, BoundType::LANE}});
     }
   }
@@ -654,7 +664,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   bool is_cross_obj{false};
   bool has_lat_decision{false};
   bool has_lon_decision{false};
-  // Step 5) calculate safe_bound, path_bound
+  // Step 5) calculate soft_bound, hard_bound
   Polygon2d obstacle_sl_polygon;
   auto ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_, obstacle_sl_polygon);
   if (!ok) {
@@ -717,7 +727,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
                                       lat_decision, lon_decision);
     has_lat_decision = has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
     has_lon_decision = has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
-    
+
     AddObstacleDecisionBound(obstacle->id(), t, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision, obstacle_decision, is_update_hard_bound);
   }
 }
@@ -953,13 +963,13 @@ void GeneralLateralDecider::AddObstacleDecisionBound(int id, double t, Polygon2d
   }
   if (lat_decision == LatObstacleDecisionType::LEFT) {
     bound.lower = care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width;
-    // safe_bound.lower = is_rear_obstacle ? std::max(0.0, care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width) :
+    // soft_bound.lower = is_rear_obstacle ? std::max(0.0, care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width) :
     //                                       care_overlap_polygon.max_y() + lat_buf_dis + half_ego_width;
     bound_info.type = type;
     bound_info.id = id;
   } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
     bound.upper = care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width;
-    // safe_bound.upper = is_rear_obstacle ? std::min(0.0, care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width) :
+    // soft_bound.upper = is_rear_obstacle ? std::min(0.0, care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width) :
     //                                       care_overlap_polygon.min_y() - lat_buf_dis - half_ego_width;
     bound_info.type = type;
     bound_info.id = id;
@@ -1027,191 +1037,29 @@ void GeneralLateralDecider::RefineConflictLatDecisions(
   }
 }
 
-void GeneralLateralDecider::ExtractPathBound(
-    std::vector<WeightedBounds> &path_bounds,
-    std::vector<std::pair<double, double>> &frenet_path_bounds) {
-  auto compare_bound_priority = [&](WeightedBound bound1, WeightedBound bound2) {
-    return general_lateral_decider_utils::GetBoundTypePriority(bound1.bound_info.type) > general_lateral_decider_utils::GetBoundTypePriority(bound2.bound_info.type);
-  };
-  for (auto &bounds : path_bounds) {
-    std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper>
-    BoundInfo path_lower_bound_info;
-    BoundInfo path_upper_bound_info;
-    std::sort(bounds.begin(), bounds.end(), compare_bound_priority);
-    double min_lower = std::max(bounds.front().lower, tmp_bound.first);
-    double max_upper = std::min(bounds.front().upper, tmp_bound.second);
-    for (auto &bound : bounds) {
-      if (bound.bound_info.type == BoundType::ROAD_BORDER || bound.bound_info.type == BoundType::AGENT) {
-        double lower = bound.lower;
-        double upper = bound.upper;
-        const int bound_priority = general_lateral_decider_utils::GetBoundTypePriority(bound.bound_info.type);
-        const int lower_bound_priority = general_lateral_decider_utils::GetBoundTypePriority(path_lower_bound_info.type);
-        const int upper_bound_priority = general_lateral_decider_utils::GetBoundTypePriority(path_upper_bound_info.type);
-        if (bound_priority < lower_bound_priority) {
-          min_lower = tmp_bound.first;
-        }
-        if (bound_priority < upper_bound_priority) {
-          max_upper = tmp_bound.second;
-        }
-        //处理同一类型bound的lower和upper
-        if (lower > upper) {
-          double mid_bound = 0.5 * (lower + upper);
-          lower = mid_bound;
-          upper = mid_bound;
-        }
-        //处理不同类型bound的lower和upper
-        if (lower > tmp_bound.second) {
-          if (bound_priority < upper_bound_priority) {
-            lower = tmp_bound.second;
-          } else if (bound_priority == upper_bound_priority) {
-            double mid_bound = std::min(std::max(0.5 * (lower + tmp_bound.second), min_lower), max_upper);
-            lower = mid_bound;
-            tmp_bound.second = mid_bound;
-          }
-        }
-        if (upper < tmp_bound.first) {
-          if (bound_priority < lower_bound_priority) {
-            upper = tmp_bound.first;
-          } else if (bound_priority == lower_bound_priority) {
-            double mid_bound = std::min(std::max(0.5 * (upper + tmp_bound.first), min_lower), max_upper);
-            upper = mid_bound;
-            tmp_bound.first = mid_bound;
-          }
-        }
-        //选取最值
-        if (bound.lower > tmp_bound.first) {
-          tmp_bound.first = bound.lower;
-          path_lower_bound_info.id = bound.bound_info.id;
-          path_lower_bound_info.type = bound.bound_info.type;
-        }
-        if (bound.upper < tmp_bound.second) {
-          tmp_bound.second = bound.upper;
-          path_upper_bound_info.id = bound.bound_info.id;
-          path_upper_bound_info.type = bound.bound_info.type;
-        }
-      }
-    }
-    frenet_path_bounds.emplace_back(tmp_bound);
-    auto hard_upper_bound_info =
-        lat_debug_info_.mutable_hard_upper_bound_info_vec()->Add();
-    hard_upper_bound_info->set_upper(tmp_bound.second);
-    hard_upper_bound_info->mutable_bound_info()->set_id(
-        path_upper_bound_info.id);
-    hard_upper_bound_info->mutable_bound_info()->set_type(
-        BoundType2String(path_upper_bound_info.type));
-    auto hard_lower_bound_info =
-        lat_debug_info_.mutable_hard_lower_bound_info_vec()->Add();
-    hard_lower_bound_info->set_lower(tmp_bound.first);
-    hard_lower_bound_info->mutable_bound_info()->set_id(
-        path_lower_bound_info.id);
-    hard_lower_bound_info->mutable_bound_info()->set_type(
-        BoundType2String(path_lower_bound_info.type));
+void GeneralLateralDecider::ExtractBoundary(std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    std::vector<std::pair<double, double>> &frenet_hard_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
+
+  for (auto &bounds : hard_bounds_) {
+    std::pair<double, double> hard_bound{-10., 10.};  // <lower ,upper>
+    std::pair<BoundInfo, BoundInfo> hard_bound_info;  // <lower ,upper>
+    PostProcessBound(bounds, hard_bound, hard_bound_info);
+    frenet_hard_bounds.emplace_back(hard_bound);
+    hard_bounds_info.emplace_back(hard_bound_info);
   }
-}
 
-void GeneralLateralDecider::ExtractSafeBound(
-    std::vector<WeightedBounds> &safe_bounds,
-    std::vector<std::pair<double, double>> &frenet_safe_bounds) {
-  auto compare_bound_priority = [&](WeightedBound bound1, WeightedBound bound2) {
-    return general_lateral_decider_utils::GetBoundTypePriority(bound1.bound_info.type) > general_lateral_decider_utils::GetBoundTypePriority(bound2.bound_info.type);
-  };
-  for (auto &bounds : safe_bounds) {
-    std::pair<double, double> tmp_bound{-10., 10.};  // <lower ,upper>
-    BoundInfo safe_lower_bound_info;
-    BoundInfo safe_upper_bound_info;
-    std::sort(bounds.begin(), bounds.end(), compare_bound_priority);
-    double min_lower = std::max(bounds.front().lower, tmp_bound.first);
-    double max_upper = std::min(bounds.front().upper, tmp_bound.second);
-    for (auto &bound : bounds) {
-      double lower = bound.lower;
-      double upper = bound.upper;
-      const int bound_priority = general_lateral_decider_utils::GetBoundTypePriority(bound.bound_info.type);
-      const int lower_bound_priority = general_lateral_decider_utils::GetBoundTypePriority(safe_lower_bound_info.type);
-      const int upper_bound_priority = general_lateral_decider_utils::GetBoundTypePriority(safe_upper_bound_info.type);
-      if (bound_priority < lower_bound_priority) {
-        min_lower = tmp_bound.first;
-      }
-      if (bound_priority < upper_bound_priority) {
-        max_upper = tmp_bound.second;
-      }
-      //处理同一类型bound的lower和upper
-      if (lower > upper) {
-        double mid_bound = 0.5 * (lower + upper);
-        lower = mid_bound;
-        upper = mid_bound;
-      }
-      //根据优先级处理不同类型bound的lower和upper
-      if (lower > tmp_bound.second) {
-        if (bound_priority < upper_bound_priority) {
-          lower = tmp_bound.second;
-        } else if (bound_priority == upper_bound_priority) {
-          double mid_bound = std::min(std::max(0.5 * (lower + tmp_bound.second), min_lower), max_upper);
-          lower = mid_bound;
-          tmp_bound.second = mid_bound;
-        }
-      }
-      if (upper < tmp_bound.first) {
-        if (bound_priority < lower_bound_priority) {
-          upper = tmp_bound.first;
-        } else if (bound_priority == lower_bound_priority) {
-          double mid_bound = std::min(std::max(0.5 * (upper + tmp_bound.first), min_lower), max_upper);
-          upper = mid_bound;
-          tmp_bound.first = mid_bound;
-        }
-      }
-      //选取最值
-      if (lower > tmp_bound.first) {
-        tmp_bound.first = lower;
-        safe_lower_bound_info.id = bound.bound_info.id;
-        safe_lower_bound_info.type = bound.bound_info.type;
-      }
-      if (upper < tmp_bound.second) {
-        tmp_bound.second = upper;
-        safe_upper_bound_info.id = bound.bound_info.id;
-        safe_upper_bound_info.type = bound.bound_info.type;
-      }
-    }
-    frenet_safe_bounds.emplace_back(tmp_bound);
-    auto soft_upper_bound_info =
-        lat_debug_info_.mutable_soft_upper_bound_info_vec()->Add();
-    soft_upper_bound_info->set_upper(tmp_bound.second);
-    soft_upper_bound_info->mutable_bound_info()->set_id(
-        safe_upper_bound_info.id);
-    soft_upper_bound_info->mutable_bound_info()->set_type(
-        BoundType2String(safe_upper_bound_info.type));
-    auto soft_lower_bound_info =
-        lat_debug_info_.mutable_soft_lower_bound_info_vec()->Add();
-    soft_lower_bound_info->set_lower(tmp_bound.first);
-    soft_lower_bound_info->mutable_bound_info()->set_id(
-        safe_lower_bound_info.id);
-    soft_lower_bound_info->mutable_bound_info()->set_type(
-        BoundType2String(safe_lower_bound_info.type));
+  for (auto &bounds : soft_bounds_) {
+    std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
+    std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
+    PostProcessBound(bounds, soft_bound, soft_bound_info);
+    frenet_soft_bounds.emplace_back(soft_bound);
+    soft_bounds_info.emplace_back(soft_bound_info);
   }
-}
 
-void GeneralLateralDecider::ExtractBoundary(std::vector<std::pair<double, double>> &frenet_safe_bounds,
-    std::vector<std::pair<double, double>> &frenet_path_bounds) {
-  lat_debug_info_.Clear();
-  lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
-  lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
-      ref_traj_points_.size());
-  lat_debug_info_.mutable_hard_upper_bound_info_vec()->Reserve(
-      ref_traj_points_.size());
-  lat_debug_info_.mutable_soft_lower_bound_info_vec()->Reserve(
-      ref_traj_points_.size());
-  lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
-      ref_traj_points_.size());
-
-  ExtractPathBound(hard_bounds_, frenet_path_bounds);
-
-  ExtractSafeBound(soft_bounds_, frenet_safe_bounds);
-
-  DebugInfoManager::GetInstance()
-      .GetDebugInfoPb()
-      ->mutable_lateral_behavior_debug_info()
-      ->CopyFrom(lat_debug_info_);
-  assert(frenet_path_bounds.size() == ref_traj_points_.size());
-  assert(frenet_safe_bounds.size() == ref_traj_points_.size());
+  assert(frenet_hard_bounds.size() == ref_traj_points_.size());
+  assert(frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
 void GeneralLateralDecider::ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision) {
@@ -1263,13 +1111,135 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(const ObstacleDecision &o
   }
 }
 
-void GeneralLateralDecider::GenerateLateralDeciderOutput(const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      const std::vector<std::pair<double, double>> &frenet_path_bounds,
+void GeneralLateralDecider::PostProcessBound(std::vector<WeightedBound>& bounds_input, std::pair<double, double>& bound_output, std::pair<BoundInfo, BoundInfo>& bound_info) {
+  auto compare_bound_priority = [&](WeightedBound bound1, WeightedBound bound2) {
+    return general_lateral_decider_utils::GetBoundTypePriority(bound1.bound_info.type) > general_lateral_decider_utils::GetBoundTypePriority(bound2.bound_info.type);
+  };
+  BoundInfo tmp_lower_bound_info;
+  BoundInfo tmp_upper_bound_info;
+  std::sort(bounds_input.begin(), bounds_input.end(), compare_bound_priority);
+  double min_lower = std::max(bounds_input.front().lower, bound_output.first);
+  double max_upper = std::min(bounds_input.front().upper, bound_output.second);
+  for (auto &bound : bounds_input) {
+    if ((bound.weight < 0.0) && ((bound.bound_info.type != BoundType::ROAD_BORDER) && (bound.bound_info.type != BoundType::AGENT))) {  // hack: only road border in hard bounds
+      continue;
+    }
+    double lower = bound.lower;
+    double upper = bound.upper;
+    const int bound_priority = general_lateral_decider_utils::GetBoundTypePriority(bound.bound_info.type);
+    const int lower_bound_priority = general_lateral_decider_utils::GetBoundTypePriority(tmp_lower_bound_info.type);
+    const int upper_bound_priority = general_lateral_decider_utils::GetBoundTypePriority(tmp_upper_bound_info.type);
+    if (bound_priority < lower_bound_priority) {
+      min_lower = bound_output.first;
+    }
+    if (bound_priority < upper_bound_priority) {
+      max_upper = bound_output.second;
+    }
+    //处理同一类型bound的lower和upper
+    if (lower > upper) {
+      double mid_bound = 0.5 * (lower + upper);
+      lower = mid_bound;
+      upper = mid_bound;
+    }
+    //处理不同类型bound的lower和upper
+    if (lower > bound_output.second) {
+      if (bound_priority < upper_bound_priority) {
+        lower = bound_output.second;
+      } else if (bound_priority == upper_bound_priority) {
+        double mid_bound = std::min(std::max(0.5 * (lower + bound_output.second), min_lower), max_upper);
+        lower = mid_bound;
+        bound_output.second = mid_bound;
+      }
+    }
+    if (upper < bound_output.first) {
+      if (bound_priority < lower_bound_priority) {
+        upper = bound_output.first;
+      } else if (bound_priority == lower_bound_priority) {
+        double mid_bound = std::min(std::max(0.5 * (upper + bound_output.first), min_lower), max_upper);
+        upper = mid_bound;
+        bound_output.first = mid_bound;
+      }
+    }
+    //选取最值
+    if (bound.lower > bound_output.first) {
+      bound_output.first = lower;
+      tmp_lower_bound_info.id = bound.bound_info.id;
+      tmp_lower_bound_info.type = bound.bound_info.type;
+    }
+    if (bound.upper < bound_output.second) {
+      bound_output.second = upper;
+      tmp_upper_bound_info.id = bound.bound_info.id;
+      tmp_upper_bound_info.type = bound.bound_info.type;
+    }
+  }
+  bound_info.first = tmp_lower_bound_info;
+  bound_info.second = tmp_upper_bound_info;
+}
+
+void GeneralLateralDecider::SaveLatDebugInfo(const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
+  lat_debug_info_.Clear();
+  lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
+  lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_hard_upper_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_soft_lower_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
+
+    auto hard_lower_bound_info =
+        lat_debug_info_.mutable_hard_lower_bound_info_vec()->Add();
+    hard_lower_bound_info->set_lower(frenet_hard_bounds[i].first);
+    hard_lower_bound_info->mutable_bound_info()->set_id(
+        hard_bounds_info[i].first.id);
+    hard_lower_bound_info->mutable_bound_info()->set_type(
+        BoundType2String(hard_bounds_info[i].first.type));
+
+    auto hard_upper_bound_info =
+        lat_debug_info_.mutable_hard_upper_bound_info_vec()->Add();
+    hard_upper_bound_info->set_upper(frenet_hard_bounds[i].second);
+    hard_upper_bound_info->mutable_bound_info()->set_id(
+        hard_bounds_info[i].second.id);
+    hard_upper_bound_info->mutable_bound_info()->set_type(
+        BoundType2String(hard_bounds_info[i].second.type));
+
+    auto soft_lower_bound_info =
+        lat_debug_info_.mutable_soft_lower_bound_info_vec()->Add();
+    soft_lower_bound_info->set_lower(frenet_soft_bounds[i].first);
+    soft_lower_bound_info->mutable_bound_info()->set_id(
+        soft_bounds_info[i].first.id);
+    soft_lower_bound_info->mutable_bound_info()->set_type(
+        BoundType2String(soft_bounds_info[i].first.type));
+
+    auto soft_upper_bound_info =
+        lat_debug_info_.mutable_soft_upper_bound_info_vec()->Add();
+    soft_upper_bound_info->set_upper(frenet_soft_bounds[i].second);
+    soft_upper_bound_info->mutable_bound_info()->set_id(
+        soft_bounds_info[i].second.id);
+    soft_upper_bound_info->mutable_bound_info()->set_type(
+        BoundType2String(soft_bounds_info[i].second.type));
+  }
+
+  DebugInfoManager::GetInstance()
+    .GetDebugInfoPb()
+    ->mutable_lateral_behavior_debug_info()
+    ->CopyFrom(lat_debug_info_);
+}
+
+void GeneralLateralDecider::GenerateLateralDeciderOutput(const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output) {
   general_lateral_decider_output.soft_bounds = std::move(soft_bounds_);
   general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
 
-  GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
+  GenerateEnuBoundaryPoints(frenet_soft_bounds, frenet_hard_bounds,
                             general_lateral_decider_output);
 
   GenerateEnuReferenceTheta(general_lateral_decider_output);
@@ -1278,51 +1248,51 @@ void GeneralLateralDecider::GenerateLateralDeciderOutput(const std::vector<std::
 }
 
 void GeneralLateralDecider::GenerateEnuBoundaryPoints(
-    const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-    const std::vector<std::pair<double, double>> &frenet_path_bounds,
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
-  auto &safe_bounds_output = general_lateral_decider_output.safe_bounds;
-  auto &path_bounds_output = general_lateral_decider_output.path_bounds;
+  auto &soft_bounds_output = general_lateral_decider_output.soft_bounds_cart_point;
+  auto &hard_bounds_output = general_lateral_decider_output.hard_bounds_cart_point;
 
   const std::shared_ptr<KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
-  Point2D tmp_safe_lower_point;
-  Point2D tmp_safe_upper_point;
-  Point2D tmp_path_lower_point;
-  Point2D tmp_path_upper_point;
+  Point2D tmp_soft_lower_point;
+  Point2D tmp_soft_upper_point;
+  Point2D tmp_hard_lower_point;
+  Point2D tmp_hard_upper_point;
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     if (!frenet_coord->SLToXY(
-            Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].first),
-            tmp_safe_lower_point))  // safe lower
+            Point2D(ref_traj_points_[i].s, frenet_soft_bounds[i].first),
+            tmp_soft_lower_point))  // soft lower
     {
       // TODO: add logs
     }
 
     if (!frenet_coord->SLToXY(
-            Point2D(ref_traj_points_[i].s, frenet_safe_bounds[i].second),
-            tmp_safe_upper_point))  // safe upper
+            Point2D(ref_traj_points_[i].s, frenet_soft_bounds[i].second),
+            tmp_soft_upper_point))  // soft upper
     {
       // TODO: add logs
     }
-    safe_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
-        tmp_safe_lower_point, tmp_safe_upper_point));
+    soft_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
+        tmp_soft_lower_point, tmp_soft_upper_point));
 
     if (!frenet_coord->SLToXY(
-            Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].first),
-            tmp_path_lower_point))  // path lower
+            Point2D(ref_traj_points_[i].s, frenet_hard_bounds[i].first),
+            tmp_hard_lower_point))  // hard lower
     {
       // TODO: add logs
     }
 
     if (!frenet_coord->SLToXY(
-            Point2D(ref_traj_points_[i].s, frenet_path_bounds[i].second),
-            tmp_path_upper_point))  // path upper
+            Point2D(ref_traj_points_[i].s, frenet_hard_bounds[i].second),
+            tmp_hard_upper_point))  // hard upper
     {
       // TODO: add logs
     }
 
-    path_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
-        tmp_path_lower_point, tmp_path_upper_point));
+    hard_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
+        tmp_hard_lower_point, tmp_hard_upper_point));
   }
 };
 

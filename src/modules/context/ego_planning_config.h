@@ -691,7 +691,6 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_static_avoid_close"});
     q_jerk_static_avoid_middle = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_static_avoid_middle"});
-
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});

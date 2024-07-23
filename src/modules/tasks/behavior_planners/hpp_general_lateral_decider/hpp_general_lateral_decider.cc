@@ -51,7 +51,7 @@ bool HppGeneralLateralDecider::InitInfo() {
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
+          ->mutable_hpp_general_lateral_decider_output();
   general_lateral_decider_output.enu_ref_path.clear();
   general_lateral_decider_output.last_enu_ref_path.clear();
   general_lateral_decider_output.path_bounds.clear();
@@ -147,7 +147,7 @@ bool HppGeneralLateralDecider::Execute() {
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
+          ->mutable_hpp_general_lateral_decider_output();
   general_lateral_decider_output.complete_follow =
       false;  // fusion is unsteady, lane keep weight need decay in end of ref
   general_lateral_decider_output.v_cruise = cruise_vel_;
@@ -1185,7 +1185,7 @@ void HppGeneralLateralDecider::ExtractBoundary(
     const ObstacleDecisions &obstacle_decisions,
     std::vector<std::pair<double, double>> &frenet_safe_bounds,
     std::vector<std::pair<double, double>> &frenet_path_bounds,
-    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+    HppGeneralLateralDeciderOutput &general_lateral_decider_output) {
   assert(map_obstacle_decision.size() == ref_traj_points_.size());
 
   // auto &path_bounds = general_lateral_decider_output.path_bounds;
@@ -1315,7 +1315,7 @@ void HppGeneralLateralDecider::ExtractBoundary(
 void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     const std::vector<std::pair<double, double>> &frenet_safe_bounds,
     const std::vector<std::pair<double, double>> &frenet_path_bounds,
-    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+    HppGeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &safe_bounds_output = general_lateral_decider_output.safe_bounds;
   auto &path_bounds_output = general_lateral_decider_output.path_bounds;
   const auto &reference_path_ptr = session_->planning_context()
@@ -1365,7 +1365,7 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
 };
 
 void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
-    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+    HppGeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());
 
@@ -1382,7 +1382,7 @@ void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
 }
 
 void HppGeneralLateralDecider::GenerateEnuReferenceTheta(
-    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+    HppGeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
 
   for (size_t i = 0; i < ref_path_points_.size(); i++) {

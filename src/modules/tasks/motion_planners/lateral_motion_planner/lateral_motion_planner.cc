@@ -207,65 +207,65 @@ void LateralMotionPlanner::AssembleInput() {
     }
   }
 
-  // set safe (hard) and path (soft) bound
-  const auto &safe_bounds = general_lateral_decider_output.safe_bounds;
-  const auto &path_bounds = general_lateral_decider_output.path_bounds;
-  assert(safe_bounds.size() == path_bounds.size());
+  // set soft and hard bound
+  const auto &soft_bounds = general_lateral_decider_output.soft_bounds_cart_point;
+  const auto &hard_bounds = general_lateral_decider_output.hard_bounds_cart_point;
+  assert(soft_bounds.size() == hard_bounds.size());
 
-  for (size_t i = 0; i < safe_bounds.size(); ++i) {
+  for (size_t i = 0; i < soft_bounds.size(); ++i) {
     size_t index = i;
     size_t next_index = i + 1;
 
-    if (i == safe_bounds.size() - 1) {
+    if (i == soft_bounds.size() - 1) {
       index = i - 1;
       next_index = i;
     }
 
-    const auto &safe_lower_bound = safe_bounds[index].first;
-    const auto &safe_upper_bound = safe_bounds[index].second;
-    const auto &next_safe_lower_bound = safe_bounds[next_index].first;
-    const auto &next_safe_upper_bound = safe_bounds[next_index].second;
+    const auto &soft_lower_bound = soft_bounds[index].first;
+    const auto &soft_upper_bound = soft_bounds[index].second;
+    const auto &next_soft_lower_bound = soft_bounds[next_index].first;
+    const auto &next_soft_upper_bound = soft_bounds[next_index].second;
 
     planning_input_.mutable_soft_lower_bound_x0_vec()->Set(i,
-                                                           safe_lower_bound.x);
+                                                           soft_lower_bound.x);
     planning_input_.mutable_soft_lower_bound_y0_vec()->Set(i,
-                                                           safe_lower_bound.y);
+                                                           soft_lower_bound.y);
     planning_input_.mutable_soft_lower_bound_x1_vec()->Set(
-        i, next_safe_lower_bound.x);
+        i, next_soft_lower_bound.x);
     planning_input_.mutable_soft_lower_bound_y1_vec()->Set(
-        i, next_safe_lower_bound.y);
+        i, next_soft_lower_bound.y);
 
     planning_input_.mutable_soft_upper_bound_x0_vec()->Set(i,
-                                                           safe_upper_bound.x);
+                                                           soft_upper_bound.x);
     planning_input_.mutable_soft_upper_bound_y0_vec()->Set(i,
-                                                           safe_upper_bound.y);
+                                                           soft_upper_bound.y);
     planning_input_.mutable_soft_upper_bound_x1_vec()->Set(
-        i, next_safe_upper_bound.x);
+        i, next_soft_upper_bound.x);
     planning_input_.mutable_soft_upper_bound_y1_vec()->Set(
-        i, next_safe_upper_bound.y);
+        i, next_soft_upper_bound.y);
 
-    const auto &path_lower_bound = path_bounds[index].first;
-    const auto &path_upper_bound = path_bounds[index].second;
-    const auto &next_path_lower_bound = path_bounds[next_index].first;
-    const auto &next_path_upper_bound = path_bounds[next_index].second;
+    const auto &hard_lower_bound = hard_bounds[index].first;
+    const auto &hard_upper_bound = hard_bounds[index].second;
+    const auto &next_hard_lower_bound = hard_bounds[next_index].first;
+    const auto &next_hard_upper_bound = hard_bounds[next_index].second;
 
     planning_input_.mutable_hard_lower_bound_x0_vec()->Set(i,
-                                                           path_lower_bound.x);
+                                                           hard_lower_bound.x);
     planning_input_.mutable_hard_lower_bound_y0_vec()->Set(i,
-                                                           path_lower_bound.y);
+                                                           hard_lower_bound.y);
     planning_input_.mutable_hard_lower_bound_x1_vec()->Set(
-        i, next_path_lower_bound.x);
+        i, next_hard_lower_bound.x);
     planning_input_.mutable_hard_lower_bound_y1_vec()->Set(
-        i, next_path_lower_bound.y);
+        i, next_hard_lower_bound.y);
 
     planning_input_.mutable_hard_upper_bound_x0_vec()->Set(i,
-                                                           path_upper_bound.x);
+                                                           hard_upper_bound.x);
     planning_input_.mutable_hard_upper_bound_y0_vec()->Set(i,
-                                                           path_upper_bound.y);
+                                                           hard_upper_bound.y);
     planning_input_.mutable_hard_upper_bound_x1_vec()->Set(
-        i, next_path_upper_bound.x);
+        i, next_hard_upper_bound.x);
     planning_input_.mutable_hard_upper_bound_y1_vec()->Set(
-        i, next_path_upper_bound.y);
+        i, next_hard_upper_bound.y);
   }
 
   static const double min_v_cruise = 0.5;
