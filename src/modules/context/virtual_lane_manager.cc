@@ -2,6 +2,7 @@
 
 // #include <cyber/common/log.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -464,136 +465,34 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
 
   //(2)、根据地图信息，计算需要的超视距信息
-  is_local_valid_ = roads_ptr->local_point_valid;
-  // if (session_->environmental_model().function_info().function_mode() ==
-  //     common::DrivingFunctionInfo::NOA) {
-  //   CalculateDistanceToRampSplitMergeWithSdMap(session_);
-  // }
   CalculateDistanceToRampSplitMergeWithSdMap(session_);
 
-  if (session_->is_hpp_scene() && GetCurrentNearestLane(*session_)) {
+  // if (session_->is_hpp_scene() && GetCurrentNearestLane(*session_)) {
     // CalculateHPPInfo(session_);
     // CalculateDistanceToTargetSlot(session_);
     // CalculateDistanceToNextSpeedBump(session_);
-  }
-  double dis_to_first_road_split = distance_to_first_road_split();
+  // }
+
   double dis_between_first_road_split_and_ramp =
-      dis_to_first_road_split - dis_to_ramp_;
-  bool is_nearing_ramp =
+      distance_to_first_road_split_ - dis_to_ramp_;
+  is_nearing_ramp_ =
       fabs(dis_between_first_road_split_and_ramp) < allow_error &&
       dis_to_ramp_ < 3000.;
   LOG_DEBUG(
       "dis_to_ramp: %f, dis_to_first_road_split: %f, "
       "distance_to_first_road_merge_: %f \n",
-      dis_to_ramp_, dis_to_first_road_split, distance_to_first_road_merge_);
-  LOG_DEBUG("is_nearing_ramp: %d, ramp_direction_: %d \n", is_nearing_ramp, ramp_direction_);
+      dis_to_ramp_, distance_to_first_road_split_, distance_to_first_road_merge_);
+  LOG_DEBUG("is_nearing_ramp: %d, ramp_direction_: %d \n", is_nearing_ramp_, ramp_direction_);
   LOG_DEBUG("dis to tar slot: %f, distance_to_frist_speed_bump: %f \n",
             distance_to_target_slot_, distance_to_next_speed_bump_);
-
+  
   //(3)、根据计算的超视距信息，更新需要的lane信息
-  std::vector<iflyauto::ReferenceLineMsg> lane_msg;
-  lane_msg.reserve(roads_ptr->reference_line_msg_size);
-  int relative_id_zero_nums = 0;
-  bool is_update_relative_id_zero_lane = false;
-  for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
-    if (roads_ptr->reference_line_msg[i].relative_id == 0) {
-      relative_id_zero_nums = relative_id_zero_nums + 1;
-    }
-    lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
-  }
+  relative_id_lanes_ = UpdateLanes(roads_ptr);
+  
+  //(4)生成导航变道的任务
+  GenerateLaneChangeTasksForNOA();
 
-  auto compare_order_id = [&](iflyauto::ReferenceLineMsg lane1,
-                              iflyauto::ReferenceLineMsg lane2) {
-    return lane1.order_id < lane2.order_id;
-  };
-  std::sort(lane_msg.begin(), lane_msg.end(), compare_order_id);
-
-  for (auto& lane : lane_msg) {
-    std::shared_ptr<VirtualLane> virtual_lane_tmp =
-        std::make_shared<VirtualLane>();
-    //fengwang31 temp decison:当前车道出现1分2的case时，如果split的方向是左边，选择左边的lane，否则选右边的lane。
-    if (lane.relative_id == 0) {
-      if (relative_id_zero_nums == 2 && (ramp_direction_ == RAMP_ON_LEFT || first_split_direction_ == RAMP_ON_LEFT)) {
-        if (!is_update_relative_id_zero_lane) {
-          virtual_lane_tmp->update_data(lane);
-          is_update_relative_id_zero_lane = true;
-          std::cout << "当前车道1分为2,分叉在左边时,选择左边分叉作为当前车道" << std::endl;
-        } else {
-          std::cout << "舍弃右分叉" << std::endl;
-          continue;
-        }
-      } else {
-        virtual_lane_tmp->update_data(lane);
-      }
-    } else if (lane.relative_id != 0) {
-      virtual_lane_tmp->update_data(lane);
-    }
-    LOG_DEBUG("lane relative_id:%d, order_id:%d\n", lane.relative_id,
-              lane.order_id);
-    // if (virtual_lane_tmp->get_lane_type() == iflyauto::LANETYPE_EMERGENCY)
-    //   break;
-    relative_id_lanes_.emplace_back(virtual_lane_tmp);
-  }
-
-  //(4)、根据更新道路信息和超视距信息，判断是否在匝道汇入主路的场景
-  lane_num_ = relative_id_lanes_.size();
-  int lane_num_except_emergency = lane_num_;
-  if (lane_num_ > 0) {
-    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
-        iflyauto::LANETYPE_EMERGENCY) {
-      lane_num_except_emergency -= 1;
-    }
-  }
-  if (lane_num_except_emergency > 0) {
-    if (distance_to_first_road_merge_ < 100) {
-      is_leaving_ramp_ = true;
-    } else if (sum_dis_to_last_merge_point_ > 500 && !is_on_ramp_) {
-      is_leaving_ramp_ = false;
-    }
-  }
-  //fengwang31:temp hack :自车当前不在匝道上，且距离匝道较远,距离上一个merge较近，那么不走最右边车道；
-  //即需要产生一个向左的变道请求
-  bool have_right_lane = false;
-  for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (relative_id_lane->get_relative_id() > 0) {
-      have_right_lane = true;
-      break;
-    } 
-  }
-  if (dis_to_ramp_ > 1300 && !have_right_lane && !is_on_ramp_ && !is_accumulate_dis_to_last_merge_point_more_than_threshold_) {
-    is_leaving_ramp_ = true;
-  }
-
-  //(5)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
-  for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (dis_to_ramp_ < 3000.0 || is_leaving_ramp_ ||(is_on_ramp_ && distance_to_first_road_merge_ > distance_to_first_road_split_)) {
-      relative_id_lane->update_lane_tasks(dis_to_ramp_,
-      distance_to_first_road_merge_,distance_to_first_road_split_, is_nearing_ramp,
-                                          ramp_direction_, first_split_direction_, is_leaving_ramp_,
-                                          lane_num_except_emergency,is_on_ramp_);
-    }
-    if (relative_id_lane->get_relative_id() == 0) {
-      auto left_boundary_type =
-          relative_id_lane->get_left_lane_boundary().type_segments_size > 0
-              ? relative_id_lane->get_left_lane_boundary().type_segments[0].type
-              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
-      bool is_solid_left_boundary =
-          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
-
-      auto right_boundary_type =
-          relative_id_lane->get_right_lane_boundary().type_segments_size > 0
-              ? relative_id_lane->get_right_lane_boundary()
-                    .type_segments[0]
-                    .type
-              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
-      bool is_solid_right_boundary =
-          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
-      JSON_DEBUG_VALUE("is_solid_left_boundary", is_solid_left_boundary);
-      JSON_DEBUG_VALUE("is_solid_right_boundary", is_solid_right_boundary);
-    }
-  }
-
-  //(6)、根据relative_id，判断current_lane_、left_lane_、right_lane_
+  //(5)、根据relative_id，判断current_lane_、left_lane_、right_lane_
   auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
                                  std::shared_ptr<VirtualLane> lane2) {
     return lane1->get_relative_id() < lane2->get_relative_id();
@@ -641,7 +540,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     return false;
   }
 
-  //(7)、更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
+  //(6)、更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
   update_virtual_id();
   LOG_DEBUG("input lane:");
   auto& debug_info_manager = DebugInfoManager::GetInstance();
@@ -1778,4 +1677,126 @@ RampDirection VirtualLaneManager::MakesureSplitDirection (const ::SdMapSwtx::Seg
     }
   return ramp_direction;
 }
+
+std::vector<std::shared_ptr<VirtualLane>> 
+VirtualLaneManager::UpdateLanes(const iflyauto::RoadInfo* roads_ptr) {
+  std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes;
+  //(1)按照order_id的顺序排序输入lanes
+  std::vector<iflyauto::ReferenceLineMsg> lane_msg;
+  lane_msg.reserve(roads_ptr->reference_line_msg_size);
+  int relative_id_zero_nums = 0;
+  for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
+    if (roads_ptr->reference_line_msg[i].relative_id == 0) {
+      relative_id_zero_nums = relative_id_zero_nums + 1;
+    }
+    lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
+  }
+  auto compare_order_id = [&](iflyauto::ReferenceLineMsg lane1,
+                              iflyauto::ReferenceLineMsg lane2) {
+    return lane1.order_id < lane2.order_id;
+  };
+  std::sort(lane_msg.begin(),lane_msg.end(),compare_order_id);
+
+  //(2)更新来自道路融合模块的lanes，
+  bool is_update_relative_id_zero_lane = false;
+  for (auto& lane : lane_msg) {
+    std::shared_ptr<VirtualLane> virtual_lane_tmp =
+        std::make_shared<VirtualLane>();
+    //fengwang31 temp decison:当前车道出现1分2的case时，如果split的方向是左边，选择左边的lane，否则选右边的lane。
+    if (lane.relative_id == 0) {
+      if (relative_id_zero_nums == 2 && (ramp_direction_ == RAMP_ON_LEFT || first_split_direction_ == RAMP_ON_LEFT)) {
+        if (!is_update_relative_id_zero_lane) {
+          virtual_lane_tmp->update_data(lane);
+          is_update_relative_id_zero_lane = true;
+          std::cout << "if navigate split on left,select left split when one lane split to two lanes" << std::endl;
+        } else {
+          std::cout << "abandon right split lane!!!" << std::endl;
+          continue;
+        }
+      } else {
+        virtual_lane_tmp->update_data(lane);
+      }
+    } else if (lane.relative_id != 0) {
+      virtual_lane_tmp->update_data(lane);
+    }
+    LOG_DEBUG("lane relative_id:%d, order_id:%d\n", lane.relative_id,
+              lane.order_id);
+    // if (virtual_lane_tmp->get_lane_type() == iflyauto::LANETYPE_EMERGENCY)
+    //   break;
+    relative_id_lanes.emplace_back(virtual_lane_tmp);
+  }
+  return relative_id_lanes;
+}
+
+void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
+  lane_num_ = relative_id_lanes_.size();
+  int lane_num_except_emergency = lane_num_;
+  if (lane_num_ > 0) {
+    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
+        iflyauto::LANETYPE_EMERGENCY) {
+      lane_num_except_emergency -= 1;
+    }
+  }
+  //(1)判断是否在匝道汇入主路场景，2个条件满足一个即可：
+  //1、在匝道上接近汇入点100米以内；
+  //2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
+  if (lane_num_except_emergency > 0) {
+    if (distance_to_first_road_merge_ < 100) {
+      is_leaving_ramp_ = true;
+    } else if (sum_dis_to_last_merge_point_ > 500 && !is_on_ramp_) {
+      is_leaving_ramp_ = false;
+    }
+  }
+
+  //判断ego是否在最右边车道上
+  bool is_ego_on_rightest_lane = true;
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_relative_id() > 0) {
+      is_ego_on_rightest_lane = false;
+      break;
+    } 
+  }
+  //为了临时hack处理在匝道延长车道上的case，使得自车能在匝道延长车道上也能变道至lane上。
+  //同时满足以下4个条件则认为，还在匝道延长线上：
+  //1、自车当前不在匝道上；
+  //2、且距离下一个匝道距离在1300m以上,距离上一个merge点在700m以内；
+  //3、当前在最右边车道上；
+  //4、当前是在expressway上。
+  if (!is_on_ramp_ &&
+      dis_to_ramp_ > 1300 && !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
+      is_ego_on_rightest_lane &&
+      is_ego_on_expressway_) {
+    is_leaving_ramp_ = true;
+  }
+
+  //(2)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (dis_to_ramp_ < 3000.0 || is_leaving_ramp_ ||(is_on_ramp_ && distance_to_first_road_merge_ > distance_to_first_road_split_)) {
+      relative_id_lane->update_lane_tasks(dis_to_ramp_,
+      distance_to_first_road_merge_,distance_to_first_road_split_, is_nearing_ramp_,
+                                          ramp_direction_, first_split_direction_, is_leaving_ramp_,
+                                          lane_num_except_emergency,is_on_ramp_);
+    }
+    if (relative_id_lane->get_relative_id() == 0) {
+      auto left_boundary_type =
+          relative_id_lane->get_left_lane_boundary().type_segments_size > 0
+              ? relative_id_lane->get_left_lane_boundary().type_segments[0].type
+              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+      bool is_solid_left_boundary =
+          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
+
+      auto right_boundary_type =
+          relative_id_lane->get_right_lane_boundary().type_segments_size > 0
+              ? relative_id_lane->get_right_lane_boundary()
+                    .type_segments[0]
+                    .type
+              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+      bool is_solid_right_boundary =
+          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
+      JSON_DEBUG_VALUE("is_solid_left_boundary", is_solid_left_boundary);
+      JSON_DEBUG_VALUE("is_solid_right_boundary", is_solid_right_boundary);
+    }
+  }
+}
+
 }  // namespace planning

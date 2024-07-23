@@ -213,6 +213,8 @@ class VirtualLaneManager {
   void ResetForRampInfo();
   void SetGeneratedReflineToDebugInfo(
       const iflyauto::LaneReferenceLine &refline);
+  std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(const iflyauto::RoadInfo* roads_ptr);
+  void GenerateLaneChangeTasksForNOA();
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -241,6 +243,7 @@ class VirtualLaneManager {
   std::unordered_set<uint64_t> lane_group_set_;
   std::vector<uint64_t> sorted_lane_groups_in_route_;
   bool is_leaving_ramp_ = false;
+  bool is_nearing_ramp_ = false;
   bool is_on_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   bool in_intersection_ = false;
