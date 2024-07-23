@@ -72,6 +72,10 @@ class Obstacle {
   iflyauto::ObjectType type() const { return type_; }
   bool is_vaild() const { return valid_; }
   bool abnormal_data_dectection(const PredictionObject &prediction_object);
+  bool is_oversize_vehicle() const { return is_oversize_vehicle_; }
+  bool is_VRU() const { return is_VRU_; }
+  bool is_traffic_facilities() const { return is_traffic_facilities_; }
+  bool is_car() const { return is_car_; }
 
   const std::vector<PncTrajectoryPoint> &trajectory() const {
     return trajectory_;
@@ -123,6 +127,10 @@ class Obstacle {
   // double speed_direction_ = 0.0;
   double width_;
   double length_;
+  bool is_oversize_vehicle_ = false;
+  bool is_VRU_ = false;
+  bool is_traffic_facilities_ = false;
+  bool is_car_ = false;
 
   std::vector<PncTrajectoryPoint> trajectory_{};
   // iflyauto::FusionObject perception_obstacle_;

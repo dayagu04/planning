@@ -855,6 +855,14 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   prediction_object.width = fusion_object.common_info.shape.width;
   prediction_object.speed = std::hypot(fusion_object.common_info.velocity.x,
                                        fusion_object.common_info.velocity.y);
+  prediction_object.motion_pattern_current =
+      fusion_object.additional_info.motion_pattern_current;
+  prediction_object.is_oversize_vehicle =
+      CheckIfOversizeVehicle(prediction_object.type);
+  prediction_object.is_VRU = CheckIfVru(prediction_object.type);
+  prediction_object.is_traffic_facilities =
+      CheckIfTrafficFacilities(prediction_object.type);
+  prediction_object.is_car = CheckIfCar(prediction_object.type);
 
   prediction_object.yaw = fusion_object.common_info.heading_angle;
   if ((int)prediction_object.yaw == 255) {
@@ -968,6 +976,12 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
                                        fusion_object.common_info.velocity.y);
   prediction_object.motion_pattern_current =
       fusion_object.additional_info.motion_pattern_current;
+  prediction_object.is_oversize_vehicle =
+      CheckIfOversizeVehicle(prediction_object.type);
+  prediction_object.is_VRU = CheckIfVru(prediction_object.type);
+  prediction_object.is_traffic_facilities =
+      CheckIfTrafficFacilities(prediction_object.type);
+  prediction_object.is_car = CheckIfCar(prediction_object.type);
 
   prediction_object.yaw = fusion_object.common_info.heading_angle;
   if ((int)prediction_object.yaw == 255) {
@@ -1249,5 +1263,53 @@ void EnvironmentalModelManager::RunBlinkState(
       break;
   }
 }
+
+bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool EnvironmentalModelManager::CheckIfVru(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_BICYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_ANIMAL ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool EnvironmentalModelManager::CheckIfTrafficFacilities(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_BARREL ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_FENCE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// TODO(zkxie): 包含UNKNOWN障碍物,确认感知什么时候会给UNKNOWN障碍物
+bool EnvironmentalModelManager::CheckIfCar(const int type) {
+  if (type <= iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 }  // namespace planner
 }  // namespace planning
