@@ -163,7 +163,7 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-
+          
   GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
                             general_lateral_decider_output);
 

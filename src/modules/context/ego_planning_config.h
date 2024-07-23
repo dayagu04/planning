@@ -93,7 +93,7 @@ void read_json_vec(const Json &json, const std::string &key,
                    std::vector<T> &vec,
                    const std::vector<T> &default_vec = {}) {
   if (json.find(key) != json.end() && json[key].is_array()) {
-    vec.clear(); 
+    vec.clear();
     for (size_t i = 0; i < json[key].size(); i++) {
       vec.push_back(json[key][i]);
     }

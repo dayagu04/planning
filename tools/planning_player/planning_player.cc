@@ -227,7 +227,7 @@ void PlanningPlayer::Clear() {
 
 bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
                                 const std::string& out_bag, bool is_close_loop,
-                                bool no_debug) {
+                                bool no_debug, bool no_interface_check) {
   std::cout << "=========== Start Load RosBag ===========" << std::endl;
   rosbag::Bag bag;
   rosbag::Bag new_bag;
@@ -286,6 +286,25 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
   }
   bag.close();
   new_bag.close();
+
+  if (!no_interface_check && instant_error_) {
+    std::cout << std::endl;
+    std::cout << "********************************************************"
+              << std::endl;
+    std::cout << "bag与算法的interface版本不匹配, 导致以上topic无法正常读取"
+              << std::endl;
+    std::cout << "按回车键继续执行(缺少以上topic), Ctrl + c 退出程序"
+              << std::endl;
+    std::cout << "********************************************************"
+              << std::endl;
+    char ch = std::cin.get();
+    // 检查输入是否为回车键
+    if (ch == '\n') {
+      return true;
+    } else {
+      return false;
+    }
+  }
   return true;
 }
 

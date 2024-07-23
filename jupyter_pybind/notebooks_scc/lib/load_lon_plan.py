@@ -492,6 +492,8 @@ def load_lon_global_figure(bag_loader):
                               legend_label='leadone_velocity', color="red")
   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
                                 legend_label='leadtwo_velocity',color="orange")
+  velocity_fig.legend.click_policy = 'hide'
+
 
   acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
                 y_axis_label='acc/(m/s2)',width=600,height=300)
@@ -517,6 +519,7 @@ def load_lon_global_figure(bag_loader):
                               legend_label='acc_max', color="red")
   acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
                               legend_label='lead_one_acc', color="green")
+  acc_fig.legend.click_policy = 'hide'
 
   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
                 y_axis_label='distance/(m)',width=600,height=300)
@@ -559,12 +562,14 @@ def load_lon_global_figure(bag_loader):
   lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
   lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
   lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
+  lead_fig.legend.click_policy = 'hide'
 
   cost_time_fig.line(t_plan_vec, SccLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
   cost_time_fig.line(t_plan_vec, SccLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime_vec', color="blue")
   cost_time_fig.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime_vec', color="orange")
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime_vec', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+  cost_time_fig.legend.click_policy = 'hide'
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
 
@@ -579,6 +584,7 @@ def load_lon_global_figure(bag_loader):
                                   legend_label='Pre-deceleration cutin',color="blue")
   cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
                                 legend_label='Speed regulation cutin', color="red")
+  cutin_fig.legend.click_policy = 'hide'
   # cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
   #                               legend_label='cutin_status', color="black")
 
@@ -638,7 +644,7 @@ def load_lon_global_figure(bag_loader):
   for i in range(len(plan_debug_info)):
      t_plan_debug.append(bag_loader.plan_debug_msg['t'][i])
      replan_status.append(plan_debug_info[i]['replan_status'])
-     lon_err.append(plan_debug_info[i]['lon_err']) 
+     lon_err.append(plan_debug_info[i]['lon_err'])
 
   plan_debug_multi.data.update({
     'time': t_plan_debug,
@@ -718,6 +724,7 @@ def load_lon_global_figure(bag_loader):
                                legend_label='function_state_machine',color="yellow")
   topic_latency_fig.line(t_plan_vec, localization_latency, line_width=1,
                                legend_label='localization',color="orange")
+  topic_latency_fig.legend.click_policy = 'hide'
 
 
   return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig
