@@ -1376,6 +1376,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
     ResetForRampInfo();
     return;
+  } else {
+    is_ego_on_expressway_ = true;
   }
   //计算ramp信息
   const auto& ramp_info = sd_map.GetRampInfo(current_point);
@@ -1637,6 +1639,8 @@ void VirtualLaneManager::ResetForRampInfo() {
   ramp_direction_ = RampDirection::RAMP_NONE;
   distance_to_first_road_merge_ = NL_NMAX;
   distance_to_first_road_split_ = NL_NMAX;
+  is_ego_on_expressway_ = false;
+  first_split_direction_ = RampDirection::RAMP_NONE;
 }
 RampDirection VirtualLaneManager::MakesureSplitDirection (const ::SdMapSwtx::Segment& split_segment,const ad_common::sdmap::SDMap& sd_map) {
   const auto out_link_size = split_segment.out_link_size();
