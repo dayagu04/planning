@@ -746,7 +746,7 @@ class LoadRosbag:
     # load ehr sd map msg
     try:
       ehr_sd_map_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap_info"):
         sdmap = SdMap()
         sdmap.ParseFromString(msg.debug_info)
         ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e3] = sdmap
