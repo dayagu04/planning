@@ -415,6 +415,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   left_lane_ = nullptr;
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
+  is_ego_on_expressway_ = false;
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_generated_refline_info()
@@ -485,12 +486,16 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("is_nearing_ramp: %d, ramp_direction_: %d \n", is_nearing_ramp_, ramp_direction_);
   LOG_DEBUG("dis to tar slot: %f, distance_to_frist_speed_bump: %f \n",
             distance_to_target_slot_, distance_to_next_speed_bump_);
-  
+  JSON_DEBUG_VALUE("is_ego_on_expressway",is_ego_on_expressway_);
   //(3)、根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
   
   //(4)生成导航变道的任务
-  GenerateLaneChangeTasksForNOA();
+  if (is_ego_on_expressway_) {
+    GenerateLaneChangeTasksForNOA();
+  } else {
+    ResetForRampInfo();
+  }
 
   //(5)、根据relative_id，判断current_lane_、left_lane_、right_lane_
   auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
@@ -1351,6 +1356,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   if (local_view.localization_estimate.msf_status.msf_status ==
       iflyauto::MsfStatusType_ERROR) {
     std::cout << "localization invalid" << std::endl;
+    ResetForRampInfo();
     return;
   }
   
@@ -1641,6 +1647,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   distance_to_first_road_split_ = NL_NMAX;
   is_ego_on_expressway_ = false;
   first_split_direction_ = RampDirection::RAMP_NONE;
+  is_leaving_ramp_ = false;
 }
 RampDirection VirtualLaneManager::MakesureSplitDirection (const ::SdMapSwtx::Segment& split_segment,const ad_common::sdmap::SDMap& sd_map) {
   const auto out_link_size = split_segment.out_link_size();
@@ -1744,11 +1751,11 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //(1)判断是否在匝道汇入主路场景，2个条件满足一个即可：
   //1、在匝道上接近汇入点100米以内；
   //2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
+  is_leaving_ramp_ = false;
   if (lane_num_except_emergency > 0) {
-    if (distance_to_first_road_merge_ < 100) {
+    if (distance_to_first_road_merge_ < 100 || 
+        (sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ && is_ego_on_expressway_)) {
       is_leaving_ramp_ = true;
-    } else if (sum_dis_to_last_merge_point_ > 500 && !is_on_ramp_) {
-      is_leaving_ramp_ = false;
     }
   }
 

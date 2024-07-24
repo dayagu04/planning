@@ -193,7 +193,7 @@ def update_lc_data (noa_info, plan_debug_json):
     except:
       pass
   vars_lc = ['hdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
-             'current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
+             'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'is_solid_left_boundary','is_solid_right_boundary']
   for name in vars_lc:
     try:
