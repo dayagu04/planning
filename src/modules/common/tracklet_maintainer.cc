@@ -1888,11 +1888,15 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double near_car_d_lane_thr = interp(item.d_rel, xp, fp);
   // addition buffer for oversize vehicle
   if (is_oversize_vehicle(item.type)) {
-    std::array<double, 2> xp_oversize_veh{2.7, 5.6};
-    std::array<double, 2> fp_oversize_veh{1, 2.5};
-    double factor_oversize_veh =
-        interp(ego_state_->ego_v(), xp_oversize_veh, fp_oversize_veh);
-    near_car_d_lane_thr = near_car_d_lane_thr * factor_oversize_veh;
+    std::array<double, 2> vel_xp_oversize_veh{2.7, 5.6};
+    std::array<double, 2> vel_fp_oversize_veh{1, 2.5};
+    double vel_factor_for_oversize_veh =
+        interp(ego_state_->ego_v(), vel_xp_oversize_veh, vel_fp_oversize_veh);
+    std::array<double, 3> dis_fp_oversize_veh{1, 1.5, 2};
+    double dis_factor_for_oversize_veh =
+        interp(item.d_rel, xp, dis_fp_oversize_veh);
+    near_car_d_lane_thr = near_car_d_lane_thr * vel_factor_for_oversize_veh *
+                          dis_factor_for_oversize_veh;
     lat_safety_buffer += oversize_veh_addition_buffer;
   }
 
