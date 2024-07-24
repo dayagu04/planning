@@ -700,6 +700,7 @@ def load_lon_global_figure(bag_loader):
   hmi_latency=[]
   function_state_machine_latency=[]
   localization_latency=[]
+  localization_estimate_latency=[]
 
   for ind in range(len(bag_loader.plan_debug_msg['data'])):
     fusion_object_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_object, 2))
@@ -709,6 +710,7 @@ def load_lon_global_figure(bag_loader):
     hmi_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.hmi, 2))
     function_state_machine_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.function_state_machine, 2))
     localization_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.localization, 2))
+    localization_estimate_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.localization_estimate, 2))
 
   topic_latency_fig.line(t_plan_vec, fusion_object_latency, line_width=1,
                               legend_label='fusion_object', color="green")
@@ -724,6 +726,8 @@ def load_lon_global_figure(bag_loader):
                                legend_label='function_state_machine',color="yellow")
   topic_latency_fig.line(t_plan_vec, localization_latency, line_width=1,
                                legend_label='localization',color="orange")
+  topic_latency_fig.line(t_plan_vec, localization_estimate_latency, line_width=1,
+                               legend_label='localization_estimate',color="black")
   topic_latency_fig.legend.click_policy = 'hide'
 
 
