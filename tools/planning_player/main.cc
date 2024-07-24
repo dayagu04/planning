@@ -10,11 +10,11 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type,
                         const std::string mileage_path, bool no_debug,
-                        bool no_interface_check) {
+                        bool interface_check) {
   planning::planning_player::PlanningPlayer player;
 
   if (!player.LoadRosBag(bag_path, out_bag, is_close_loop, no_debug,
-                         no_interface_check)) {
+                         interface_check)) {
     return -1;
   }
   player.Init(is_close_loop, auto_time_sec, scene_type, no_debug);
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
   std::string bag_path, out_bag, log_file;
   bool is_close_loop = false;
   bool no_debug = false;
-  bool no_interface_check = false;
+  bool interface_check = false;
   std::string mileage_path = "";
   double auto_time_sec = 1.5;
   std::string scene_type = "scc";
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
       {"scene-type", required_argument, &lopt, 6},
       {"mileage-path", required_argument, &lopt, 7},
       {"no-debug", no_argument, &lopt, 8},
-      {"no-interface-check", no_argument, &lopt, 9}};
+      {"interface-check", no_argument, &lopt, 9}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
         std::cout << "--scene-type       acc/apa" << std::endl;
         std::cout << "--no-debug         play without planning debug info"
                   << std::endl;
-        std::cout << "--no-interface-check   do not check interface version"
+        std::cout << "--interface-check   exit when interface version check failed"
                   << std::endl;
         break;
       case 2:
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
         no_debug = true;
         break;
       case 9:
-        no_interface_check = true;
+        interface_check = true;
         break;
       default:
         std::cerr << "unknown option " << opt << std::endl;
@@ -123,5 +123,5 @@ int main(int argc, char **argv) {
 
   return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
                              scene_type, mileage_path, no_debug,
-                             no_interface_check);
+                             interface_check);
 }

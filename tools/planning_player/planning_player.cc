@@ -227,7 +227,7 @@ void PlanningPlayer::Clear() {
 
 bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
                                 const std::string& out_bag, bool is_close_loop,
-                                bool no_debug, bool no_interface_check) {
+                                bool no_debug, bool interface_check) {
   std::cout << "=========== Start Load RosBag ===========" << std::endl;
   rosbag::Bag bag;
   rosbag::Bag new_bag;
@@ -287,7 +287,10 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
   bag.close();
   new_bag.close();
 
-  if (!no_interface_check && instant_error_) {
+  if (instant_error_) {
+    if (interface_check) {
+      return false;
+    }
     std::cout << std::endl;
     std::cout << "********************************************************"
               << std::endl;
