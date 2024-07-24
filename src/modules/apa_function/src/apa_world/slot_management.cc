@@ -449,7 +449,7 @@ bool SlotManagement::GenTLane(
     ego_slot_info.channel_width = 10.68;
   }
 
-  DEBUG_PRINT("channel_width = " << ego_slot_info.channel_width);
+  // DEBUG_PRINT("channel_width = " << ego_slot_info.channel_width);
 
   // construct tlane pq
   // left y is positive, right y is negative
@@ -513,13 +513,13 @@ bool SlotManagement::GenTLane(
   bool right_empty = false;
 
   if (left_pq_for_x.empty()) {
-    DEBUG_PRINT("left space is empty");
+    // DEBUG_PRINT("left space is empty");
     left_empty = true;
     left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_pq_for_x.empty()) {
-    DEBUG_PRINT("right space is empty");
+    // DEBUG_PRINT("right space is empty");
     right_empty = true;
     right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
@@ -578,12 +578,12 @@ bool SlotManagement::GenTLane(
     right_x = std::min(right_x, ego_slot_info.pt_0.x() - 1.68 * threshold);
   }
 
-  DEBUG_PRINT("real_left_y = " << real_left_y
-                               << "  real_right_y = " << real_right_y);
+  // DEBUG_PRINT("real_left_y = " << real_left_y
+  //                              << "  real_right_y = " << real_right_y);
 
-  DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y
-                          << "  left_x = " << left_x
-                          << "  right_x = " << right_x);
+  // DEBUG_PRINT("left_y = " << left_y << "  right_y = " << right_y
+  //                         << "  left_x = " << left_x
+  //                         << "  right_x = " << right_x);
 
   // todo: consider actual obs pos to let slot release or not release or
   // move target pose
@@ -722,8 +722,9 @@ bool SlotManagement::GenTLane(
     slot_tlane.pt_terminal_pos.y() += move_slot_dist;
     slot_tlane.pt_inside.y() += move_slot_dist;
     slot_tlane.pt_outside.y() += move_slot_dist;
-    DEBUG_PRINT(
-        "should move slot according to obs pt, move dist = " << move_slot_dist);
+    // DEBUG_PRINT(
+    //     "should move slot according to obs pt, move dist = " <<
+    //     move_slot_dist);
   }
 
   slot_tlane.pt_lower_boundry_pos = slot_tlane.pt_terminal_pos;
@@ -995,7 +996,7 @@ const bool SlotManagement::AddUssPerceptObstacles(
 }
 
 bool SlotManagement::UpdateSlotsInSearching() {
-  DEBUG_PRINT("apa state is in searching!");
+  // DEBUG_PRINT("apa state is in searching!");
   // Update slots
   std::unordered_map<size_t, iflyauto::ParkingFusionSlot> fusion_slot_map;
   for (int i = 0; i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size;
@@ -1082,8 +1083,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
       }
 
       const double lon_dist = CalLonDistSlot2Car(*slot);
-      DEBUG_PRINT("lon_dist = " << lon_dist);
-      DEBUG_PRINT("angle = " << CalAngleSlot2Car(*slot) * 57.3);
+      // DEBUG_PRINT("lon_dist = " << lon_dist);
+      // DEBUG_PRINT("angle = " << CalAngleSlot2Car(*slot) * 57.3);
 
       if (!frame_.fus_obj_valid_flag &&
           lon_dist <
@@ -1163,7 +1164,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
                    Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
                slot->is_release()) {
       const double lon_dist = CalLonDistSlot2Car(*slot);
-      const double parallel_pre_release_lon_dist = 0.36;
+      const double parallel_pre_release_lon_dist = 1.3;
 
       if (frame_.fus_obj_valid_flag) {
         DEBUG_PRINT("use fusion obs, lon_dist = " << lon_dist);
@@ -1174,13 +1175,15 @@ bool SlotManagement::UpdateSlotsInSearching() {
         }
 
         // then use lon dist to update relatively accurate obs
-        if (std::fabs(lon_dist) < parallel_pre_release_lon_dist) {
-          DEBUG_PRINT("frame_.obs_pt_vec size = " << frame_.obs_pt_vec.size());
+        if (pnc::mathlib::IsInBound(lon_dist, 0.0,
+                                    parallel_pre_release_lon_dist)) {
+          // DEBUG_PRINT("frame_.obs_pt_vec size = " <<
+          // frame_.obs_pt_vec.size());
           frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
         }
 
-        DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
-                    << frame_.obs_pt_map[slot_id].size());
+        // DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
+        //             << frame_.obs_pt_map[slot_id].size());
         if (lon_dist < parallel_pre_release_lon_dist &&
             pair.second.GetOccupied()) {
           slot->set_is_release(false);

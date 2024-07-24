@@ -11,7 +11,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 from jupyter_pybind import apa_simulation_py
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Parallel/good_case_both_side_vehicle/planning-ae6d658cb-JAC_S811/test_1.00000'
+bag_path = '/data_cold/abu_zone/autoparse/jac_s811_19cp2/trigger/20240719/20240719-16-28-44/park_in_data_collection_JAC_S811_19CP2_ALL_FILTER_2024-07-19-16-28-44_no_camera.record'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = JAC_S811
@@ -119,11 +119,15 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   target_managed_slot_y_vec = []
   target_managed_limiter_x_vec = []
   target_managed_limiter_y_vec = []
+  obs_x_vec = []
+  obs_y_vec = []
   if soc_state_msg.current_state >= 26:
     target_managed_slot_x_vec = plan_debug_msg['slot_corner_X']
     target_managed_slot_y_vec = plan_debug_msg['slot_corner_Y']
     target_managed_limiter_x_vec = plan_debug_msg['limiter_corner_X']
     target_managed_limiter_y_vec = plan_debug_msg['limiter_corner_Y']
+    obs_x_vec = plan_debug_msg['obstaclesX']
+    obs_y_vec = plan_debug_msg['obstaclesY']
 
   current_ego_x = loc_msg.pose.local_position.x
   current_ego_y = loc_msg.pose.local_position.y
@@ -171,7 +175,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     gl_msg.SerializeToString(),
                                     fus_obj_msg.SerializeToString(),
                                     0, False, False, False, False, False, False, True, True, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
-                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec)
+                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec,obs_x_vec, obs_y_vec)
 
 
   data_planning_tune.data = {'plan_path_x': [],

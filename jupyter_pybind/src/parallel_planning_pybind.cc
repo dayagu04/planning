@@ -235,6 +235,18 @@ std::vector<double> GetInverseArcVec() {
       res.emplace_back(arc.pB.y());
     }
   }
+
+  for (const auto &arc : pBase->GetDebugInfo().debug_arc_vec) {
+    res.emplace_back(arc.circle_info.center.x());
+    res.emplace_back(arc.circle_info.center.y());
+    res.emplace_back(arc.circle_info.radius);
+
+    res.emplace_back(arc.pA.x());
+    res.emplace_back(arc.pA.y());
+
+    res.emplace_back(arc.pB.x());
+    res.emplace_back(arc.pB.y());
+  }
   return res;
 }
 
