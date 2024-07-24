@@ -33,20 +33,11 @@ bool ApaFunction::Reset() {
 }
 
 bool ApaFunction::Plan() {
-  const double start_timestamp_ms = IflyTime::Now_ms();
-
   const bool success = apa_plan_interface_->Update(
       &(session_->environmental_model().get_local_view()));
   // set planning output
   session_->mutable_planning_context()->mutable_planning_output() =
       apa_plan_interface_->GetPlaningOutput();
-
-  const auto end_timestamp_ms = IflyTime::Now_ms();
-  const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
-
-  DEBUG_PRINT("time_consumption = " << frame_duration << "ms");
-  JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
-
   return true;
 }
 

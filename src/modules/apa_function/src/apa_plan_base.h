@@ -176,6 +176,7 @@ class ApaPlannerBase {
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
       remain_dist_col_det = 5.01;
+      car_already_move_dist = 0.0;
       spline_success = false;
       current_path_length = 0.0;
       path_extended_dist = 1.0;
@@ -216,6 +217,7 @@ class ApaPlannerBase {
     double remain_dist = 5.01;
     double remain_dist_uss = 5.01;
     double remain_dist_col_det = 5.01;
+    double car_already_move_dist = 0.0;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
 

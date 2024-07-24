@@ -1176,7 +1176,7 @@ const bool IsLineAdvance(const LineSegment &line_seg) {
 }
 
 const bool SamplePointSetInLineSeg(std::vector<Eigen::Vector2d> &point_set,
-                                   const LineSegment &line, const double &ds) {
+                                   const LineSegment &line, const double ds) {
   if (!IsDoublePositive(line.length) || !IsDoublePositive(ds)) {
     return LogErr(__func__, 0);
   }
@@ -1202,7 +1202,7 @@ const bool SamplePointSetInLineSeg(std::vector<Eigen::Vector2d> &point_set,
 }
 
 const bool SamplePointSetInArc(std::vector<Eigen::Vector2d> &point_set,
-                               const Arc &arc, const double &ds) {
+                               const Arc &arc, const double ds) {
   if (!IsDoublePositive(arc.length) || !IsDoublePositive(ds) ||
       !IsDoublePositive(arc.circle_info.radius)) {
     return LogErr(__func__, 0);
@@ -1239,8 +1239,20 @@ const bool SamplePointSetInArc(std::vector<Eigen::Vector2d> &point_set,
   return true;
 }
 
+const bool SamplePointSetInPathSeg(std::vector<Eigen::Vector2d> &point_set,
+                                   const PathSegment &path_seg,
+                                   const double ds) {
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    return SamplePointSetInLineSeg(point_set, path_seg.line_seg, ds);
+  } else if (path_seg.seg_type == SEG_TYPE_ARC) {
+    return SamplePointSetInArc(point_set, path_seg.arc_seg, ds);
+  } else {
+    return false;
+  }
+}
+
 const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
-                                   const LineSegment &line, const double &ds) {
+                                   const LineSegment &line, const double ds) {
   if (!IsDoublePositive(line.length) || !IsDoublePositive(ds)) {
     return LogErr(__func__, 0);
   }
@@ -1267,7 +1279,7 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
 }
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
-                               const Arc &arc, const double &ds) {
+                               const Arc &arc, const double ds) {
   if (!IsDoublePositive(arc.length) || !IsDoublePositive(ds) ||
       !IsDoublePositive(arc.circle_info.radius)) {
     return LogErr(__func__, 0);
@@ -1304,6 +1316,18 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
   point_set.emplace_back(pn);
 
   return true;
+}
+
+const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
+                                   const PathSegment &path_seg,
+                                   const double ds) {
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    return SamplePointSetInLineSeg(point_set, path_seg.line_seg, ds);
+  } else if (path_seg.seg_type == SEG_TYPE_ARC) {
+    return SamplePointSetInArc(point_set, path_seg.arc_seg, ds);
+  } else {
+    return false;
+  }
 }
 
 const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
@@ -1872,7 +1896,7 @@ const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer) {
 }
 
 const bool CompleteArcInfo(Arc &arc, const double length,
-                           bool is_anti_clockwise) {
+                           const bool is_anti_clockwise) {
   // arc(A->B  O:turn center)
   // known: pA, headingA, radius, pO, length, is_anti_clockwise
   // unknown: pB, headingB
@@ -1881,6 +1905,31 @@ const bool CompleteArcInfo(Arc &arc, const double length,
   arc.length = length;
   arc.is_anti_clockwise = is_anti_clockwise;
   return CompleteArcInfo(arc, rot_angle);
+}
+
+const bool CompleteArcInfo(Arc &arc, const double length,
+                           const bool is_anti_clockwise,
+                           const bool save_start_pt) {
+  arc.length = length;
+  double rot_angle = length / arc.circle_info.radius;
+  if (save_start_pt) {
+    rot_angle = is_anti_clockwise ? rot_angle : -rot_angle;
+    const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+    const double tmp_rot_angle = NormalizeAngle(rot_angle);
+    const auto rot_m = GetRotm2dFromTheta(tmp_rot_angle);
+    const auto OB = rot_m * OA;
+    arc.pB = arc.circle_info.center + OB;
+    arc.headingB = NormalizeAngle(arc.headingA + rot_angle);
+  } else {
+    rot_angle = is_anti_clockwise ? -rot_angle : rot_angle;
+    const Eigen::Vector2d OB = arc.pB - arc.circle_info.center;
+    const double tmp_rot_angle = NormalizeAngle(rot_angle);
+    const auto rot_m = GetRotm2dFromTheta(tmp_rot_angle);
+    const auto OA = rot_m * OB;
+    arc.pA = arc.circle_info.center + OA;
+    arc.headingA = NormalizeAngle(arc.headingB + rot_angle);
+  }
+  return true;
 }
 
 const bool CompleteLineInfo(LineSegment &line, const double length) {
@@ -1904,6 +1953,34 @@ const bool CompleteLineInfo(LineSegment &line, const double length,
   const auto unit_line_vec = GetUnitTangVecByHeading(heading);
   line.pB = length * unit_line_vec + line.pA;
   line.length = length;
+  return true;
+}
+
+const bool CompleteLineInfo(LineSegment &line, const double length,
+                            const bool save_start_pt) {
+  line.length = length;
+  const Eigen::Vector2d unit_vec = (line.pB - line.pA).normalized();
+  if (save_start_pt) {
+    line.pB = line.pA + length * unit_vec;
+  } else {
+    line.pA = line.pB - length * unit_vec;
+  }
+  return true;
+}
+
+const bool CompletePathSeg(PathSegment &path_seg, const double length,
+                           const bool save_start_pt) {
+  if (length < 0.0168) {
+    return true;
+  }
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    CompleteLineInfo(path_seg.line_seg, length, save_start_pt);
+  } else if (path_seg.seg_type == SEG_TYPE_ARC) {
+    CompleteArcInfo(path_seg.arc_seg, length,
+                    path_seg.arc_seg.is_anti_clockwise, save_start_pt);
+  } else {
+    return false;
+  }
   return true;
 }
 

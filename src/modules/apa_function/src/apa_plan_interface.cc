@@ -75,7 +75,7 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
                "------------------------\n";
-
+  const double start_timestamp_ms = IflyTime::Now_ms();
   const uint8_t last_state =
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
 
@@ -115,6 +115,12 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   }
 
   AddReleasedSlotInfo(planning_output_);
+
+  const auto end_timestamp_ms = IflyTime::Now_ms();
+  const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
+
+  DEBUG_PRINT("time_consumption = " << frame_duration << "ms");
+  JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
   return success;
 }

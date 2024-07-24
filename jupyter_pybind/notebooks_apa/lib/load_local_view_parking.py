@@ -237,7 +237,7 @@ class LoadCyberbag:
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y",
-                          "limiter_corner_X", "limiter_corner_Y", "obstacles_x_slot", "obstacles_y_slot",
+                          "limiter_corner_X", "limiter_corner_Y", "obstacles_x_slot", "obstacles_y_slot", "col_det_path_x", "col_det_path_y", "col_det_path_phi",
                           "tlane_front_que_x","tlane_front_que_y", "tlane_rear_que_x", "tlane_rear_que_y",
                           "para_tlane_obs_pt_before_uss"]
 
@@ -1304,6 +1304,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'obs_y': obstacle_y,
     })
 
+    local_view_data['data_col_det_path'].data.update({
+      'x': bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['col_det_path_x'],
+      'y': bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['col_det_path_y'],
+    })
+
     slot_corner_X = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_corner_X']
     slot_corner_Y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_corner_Y']
     limiter_corner_X = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['limiter_corner_X']
@@ -1944,6 +1949,7 @@ def load_local_view_figure_parking():
   data_ego = ColumnDataSource(data = {'ego_yn':[], 'ego_xn':[]})
   data_current_line = ColumnDataSource(data = {'y':[], 'x':[]})
   data_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
+  data_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[]})
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -2007,6 +2013,7 @@ def load_local_view_figure_parking():
                      'data_ego':data_ego, \
                      'data_current_line':data_current_line, \
                      'data_obs':data_obs, \
+                     'data_col_det_path': data_col_det_path, \
                      'data_text':data_text, \
                      'data_planning':data_planning,\
                      'data_control':data_control,\
@@ -2052,6 +2059,8 @@ def load_local_view_figure_parking():
   fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='obs')
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
+  # fig1.circle('y', 'x', source = data_col_det_path, size=4, color='red', legend_label = 'col_det_path')
+  fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc', visible = False)
   # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
@@ -2494,6 +2503,10 @@ tlane_params = {
   'size' : 8, 'color' : 'green', 'legend_label' : 'obs'
 }
 
+col_det_path_params = {
+  'line_width' : 2.0, 'line_color' : 'green', 'line_dash' : 'solid', 'line_alpha' : 0.4, 'legend_label' : 'col_det_path'
+}
+
 table_params={
     'width': 600,
     'height':520,
@@ -2862,6 +2875,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     all_managed_occupied_slot_generate = CommonGenerator()
     all_managed_limiter_generate = CommonGenerator()
     tlane_generate = CommonGenerator()
+    col_det_path_generate = CommonGenerator()
     for slot_i, slot_timestamp in enumerate(fusion_slot_timestamps):
         flag, fusion_slot_msg = findt(dataLoader.fus_parking_msg, slot_timestamp)
         if not flag:
@@ -3068,6 +3082,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             obstacle_x = plan_json['obstaclesX']
             obstacle_y = plan_json['obstaclesY']
+            col_det_path_x = plan_json['col_det_path_x']
+            col_det_path_y = plan_json['col_det_path_y']
             # tmp
             slot_corner_X = plan_json['slot_corner_X']
             slot_corner_Y = plan_json['slot_corner_Y']
@@ -3084,6 +3100,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           all_managed_occupied_slot_generate.xys.append((occupied_y_vec, occupied_x_vec))
           all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
           tlane_generate.xys.append((obstacle_y, obstacle_x))
+          col_det_path_generate.xys.append((col_det_path_y, col_det_path_x))
 
   # load planning traj
     plan_generator = CommonGenerator()
@@ -3486,12 +3503,14 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       all_managed_occupied_slot_generate.ts = np.array(ctrl_debug_ts)
       all_managed_limiter_generate.ts = np.array(ctrl_debug_ts)
       tlane_generate.ts = np.array(ctrl_debug_ts)
+      col_det_path_generate.ts = np.array(ctrl_debug_ts)
       target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
       all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
       all_slot_id_layer = TextLayer(fig_local_view, all_slot_id_params_apa)
       all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
       all_managed_limiter_layer = CurveLayer(fig_local_view, all_managed_limiter_params_apa)
       tlane_layer = DotLayer(fig_local_view, tlane_params)
+      col_det_path_layer = CurveLayer(fig_local_view, col_det_path_params)
 
       layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
       layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
@@ -3499,6 +3518,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
       layer_manager.AddLayer(all_managed_limiter_layer, 'all_managed_limiter_layer',all_managed_limiter_generate,'all_managed_limiter_generate',2)
       layer_manager.AddLayer(tlane_layer, 'tlane_layer',tlane_generate,'tlane_generate',2)
+      layer_manager.AddLayer(col_det_path_layer, 'col_det_path_layer',col_det_path_generate,'col_det_path_generate',2)
 
     # planning traj
     if dataLoader.plan_msg['enable'] == True:

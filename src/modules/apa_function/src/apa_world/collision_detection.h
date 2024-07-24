@@ -143,6 +143,8 @@ class CollisionDetector {
 
   void SetParam(Paramters param);
 
+  const Paramters GetParam() { return param_; }
+
   void SetLatInflation();
 
   const double CalMinDistObs2Car(const Eigen::Vector2d &obs,

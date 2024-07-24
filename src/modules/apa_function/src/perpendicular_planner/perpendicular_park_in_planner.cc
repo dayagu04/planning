@@ -37,7 +37,18 @@ namespace apa_planner {
 void PerpendicularInPlanner::Reset() {
   frame_.Reset();
   slot_t_lane_.Reset();
+  obstacle_t_lane_.Reset();
   perpendicular_path_planner_.Reset();
+  gear_command_ = 0;
+  current_path_point_global_vec_.clear();
+  current_plan_path_vec_.clear();
+
+  pt_center_replan_.setZero();
+  pt_center_heading_replan_ = 0.0;
+  pt_center_replan_jump_dist_ = 0.0;
+  pt_center_replan_jump_heading_ = 0.0;
+
+  max_target_velocity_ = 0.0;
 }
 
 void PerpendicularInPlanner::SetParkingStatus(uint8_t status) {
@@ -114,6 +125,7 @@ void PerpendicularInPlanner::PlanCore() {
     frame_.replan_flag = true;
     pt_center_replan_ = frame_.ego_slot_info.slot_center;
     pt_center_heading_replan_ = frame_.ego_slot_info.slot_origin_heading;
+    frame_.car_already_move_dist = 0.0;
 
     const double start_time = IflyTime::Now_ms();
 
@@ -335,6 +347,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (frame_.is_replan_first) {
     pt_center_replan_ = ego_slot_info.slot_center;
     pt_center_heading_replan_ = ego_slot_info.slot_origin_heading;
+    frame_.car_already_move_dist = 0.0;
 
     const auto pM01 =
         0.5 * (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1]);
@@ -372,30 +385,112 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
   // real time dynamic col det
   frame_.remain_dist_col_det = frame_.remain_dist;
-  if (apa_param.GetParam().dynamic_col_det_enable) {
+  if (apa_param.GetParam().dynamic_col_det_enable &&
+      !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
     // construct real time obs
     GenTlane();
     GenObstacles();
 
-    // the dist that car can move
-    double car_safe_move_dist = 0.0;
     const double car_already_move_dist =
         frame_.current_path_length - frame_.remain_dist;
 
-    double path_length = 0.0;
-    // col det to current plan path
+    // distance of vehicle motion in adjacent frames
+    const double dmove_dist =
+        car_already_move_dist - frame_.car_already_move_dist;
+
+    DEBUG_PRINT("car real move dist = "
+                << car_already_move_dist
+                << "  last frame car_already_move_dist = "
+                << frame_.car_already_move_dist
+                << "  this frame car_already_move_dist = " << dmove_dist);
+
+    frame_.car_already_move_dist = car_already_move_dist;
+
+    // trim path real time according to dmove_dist
+    double length = 0.0;
+    std::vector<size_t> trim_id_vec;
+    std::vector<size_t> lose_id_vec;
+    for (size_t i = 0; i < current_plan_path_vec_.size(); ++i) {
+      const pnc::geometry_lib::PathSegment& path_seg_global =
+          current_plan_path_vec_[i];
+      length += path_seg_global.Getlength();
+      if (length > dmove_dist) {
+        trim_id_vec.emplace_back(i);
+        break;
+      } else if (pnc::mathlib::IsDoubleEqual(length, dmove_dist)) {
+        lose_id_vec.emplace_back(i);
+        break;
+      } else if (length < dmove_dist) {
+        lose_id_vec.emplace_back(i);
+      }
+    }
+
+    // first lose and then trim
+    while (!lose_id_vec.empty()) {
+      current_plan_path_vec_.erase(current_plan_path_vec_.begin() +
+                                   lose_id_vec.front());
+      lose_id_vec.erase(lose_id_vec.begin());
+      for (size_t i = 0; i < lose_id_vec.size(); ++i) {
+        if (lose_id_vec[i] > 0) {
+          lose_id_vec[i]--;
+        }
+      }
+      for (size_t i = 0; i < trim_id_vec.size(); ++i) {
+        if (trim_id_vec[i] > 0) {
+          trim_id_vec[i]--;
+        }
+      }
+    }
+    while (!trim_id_vec.empty()) {
+      const size_t trim_id = trim_id_vec.front();
+      trim_id_vec.erase(trim_id_vec.begin());
+      for (size_t i = 0; i < trim_id_vec.size(); ++i) {
+        if (trim_id_vec[i] > 0) {
+          trim_id_vec[i]--;
+        }
+      }
+      for (size_t i = 0; i < current_plan_path_vec_.size(); ++i) {
+        if (i == trim_id) {
+          const double save_path = length - dmove_dist;
+          pnc::geometry_lib::CompletePathSeg(current_plan_path_vec_[i],
+                                             save_path, false);
+        }
+      }
+    }
+
+    // only for debug
+    std::vector<double> x_vec;
+    std::vector<double> y_vec;
+    std::vector<double> phi_vec;
+    std::vector<pnc::geometry_lib::PathPoint> pt_vec;
+    length = 0.0;
     for (const pnc::geometry_lib::PathSegment& path_seg_global :
          current_plan_path_vec_) {
-      // check if the car has passed through this section of the path, if
-      // it has already passed, there is no need to perform collision
-      // detection on this section of the path
-      path_length += path_seg_global.Getlength();
-      if (path_length < car_already_move_dist) {
-        car_safe_move_dist += path_length;
-        continue;
-      }
+      length += path_seg_global.Getlength();
+      std::vector<pnc::geometry_lib::PathPoint> temp_pt_vec;
+      pnc::geometry_lib::SamplePointSetInPathSeg(temp_pt_vec, path_seg_global,
+                                                 0.02);
+      pt_vec.insert(pt_vec.end(), temp_pt_vec.begin(), temp_pt_vec.end());
+    }
+    DEBUG_PRINT("current_plan_path_vec_ length  = " << length);
 
+    for (const pnc::geometry_lib::PathPoint& pt : pt_vec) {
+      x_vec.emplace_back(pt.pos.x());
+      y_vec.emplace_back(pt.pos.y());
+      phi_vec.emplace_back(pt.heading);
+    }
+
+    JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 8)
+    JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 8)
+    JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 8)
+
+    // the dist that car can move
+    double car_safe_move_dist = 0.0;
+    // col det to current plan path
+    // the start pt is ego pose
+    for (const pnc::geometry_lib::PathSegment& path_seg_global :
+         current_plan_path_vec_) {
       // this path is global, need to transform to local to col det
       CollisionDetector::CollisionResult col_res;
       pnc::geometry_lib::PathSegment path_seg_local = path_seg_global;
@@ -425,16 +520,20 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
             path_seg_local.arc_seg, path_seg_local.arc_seg.headingA);
       }
 
-      DEBUG_PRINT(
-          "this path col det res: "
-          << "remain_obstacle_dist = " << col_res.remain_obstacle_dist
-          << "  remain_car_dist = " << col_res.remain_car_dist
-          << "  collision_point_local = "
-          << col_res.col_pt_obs_global.transpose()
-          << "  collision_point_global = "
-          << ego_slot_info.l2g_tf.GetPos(col_res.col_pt_obs_global).transpose()
-          << "  car_line_order = " << col_res.car_line_order
-          << "  obs_type = " << static_cast<int>(col_res.obs_type));
+      // DEBUG_PRINT(
+      //     "this path col det res: "
+      //     << "remain_obstacle_dist = " << col_res.remain_obstacle_dist
+      //     << "  remain_car_dist = " << col_res.remain_car_dist
+      //     << "  collision_point_local = "
+      //     << col_res.col_pt_obs_global.transpose()
+      //     << "  collision_point_global = "
+      //     << ego_slot_info.l2g_tf.GetPos(col_res.col_pt_obs_global).transpose()
+      //     << "  col_ego_pt slot = " << col_res.col_pt_ego_global.transpose()
+      //     << "  col_ego_pt global = "
+      //     << ego_slot_info.l2g_tf.GetPos(col_res.col_pt_ego_global).transpose()
+      //     << "  col_ego_pt car = " << col_res.col_pt_ego_local.transpose()
+      //     << "  car_line_order = " << col_res.car_line_order
+      //     << "  obs_type = " << static_cast<int>(col_res.obs_type));
 
       const double single_path_remain_obstacle_dist =
           col_res.remain_obstacle_dist -
@@ -444,13 +543,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
       if (single_path_remain_obstacle_dist < single_path_remain_car_dist) {
         // the path would col by obs
-        // the path that the car may have traveled a certain distance, which is
-        // considered safe
-        const double single_car_already_move_dist =
-            car_already_move_dist - car_safe_move_dist;
-
-        car_safe_move_dist += std::max(single_car_already_move_dist,
-                                       single_path_remain_obstacle_dist);
+        car_safe_move_dist += single_path_remain_obstacle_dist;
         break;
       } else {
         // the path would not col by obs
@@ -458,9 +551,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       }
     }
 
-    car_safe_move_dist = std::max(car_safe_move_dist, car_already_move_dist);
-
-    frame_.remain_dist_col_det = car_safe_move_dist - car_already_move_dist;
+    frame_.remain_dist_col_det = car_safe_move_dist;
 
     frame_.remain_dist_col_det =
         std::min(frame_.remain_dist_col_det, frame_.remain_dist);
@@ -982,6 +1073,9 @@ void PerpendicularInPlanner::GenObstacles() {
   channel_point_3 = F;
   channel_line.SetPoints(channel_point_2, channel_point_3);
   channel_line_vec.emplace_back(channel_line);
+  channel_point_3 = A;
+  channel_line.SetPoints(channel_point_1, channel_point_3);
+  channel_line_vec.emplace_back(channel_line);
 
   const double ds = apa_param.GetParam().obstacle_ds;
   std::vector<Eigen::Vector2d> point_set;
@@ -1094,6 +1188,13 @@ void PerpendicularInPlanner::GenObstacles() {
           frame_.replan_flag) {
         // obs is slot entrance, when replan, no conside it, but when dynamic
         // move and col det, conside it
+        continue;
+      }
+
+      if (std::fabs(obs_pos.y()) > std::fabs(A.y()) ||
+          std::fabs(obs_pos.y()) > std::fabs(F.y()) ||
+          obs_pos.x() > channel_point_1.x()) {
+        // obs is outside channel, lose it
         continue;
       }
 

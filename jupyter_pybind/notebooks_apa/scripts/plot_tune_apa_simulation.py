@@ -97,7 +97,10 @@ data_sim_target_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_simu_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_sim_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
+data_sim_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
 
+fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
+fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
 fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_tune, size=4, color='yellow', legend_label = 'sim_tuned_plan')
 fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
@@ -309,6 +312,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   car_box_y_vec = []
   obstacle_x = []
   obstacle_y = []
+  col_det_path_x = []
+  col_det_path_y = []
+  col_det_path_phi = []
   if res == True:
     tuned_planning_output = PlanningOutput()
     tuned_planning_output.deserialize(apa_simulation_py.GetPlanningOutput())
@@ -319,6 +325,12 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     date_planning_debug = json.loads(tuned_planning_debug_info.data_json)
     obstacle_x = date_planning_debug["obstaclesX"]
     obstacle_y = date_planning_debug["obstaclesY"]
+
+    col_det_path_x = date_planning_debug["col_det_path_x"]
+    col_det_path_y = date_planning_debug["col_det_path_y"]
+    col_det_path_phi = date_planning_debug["col_det_path_phi"]
+
+    # print("obstaclesX = ",date_planning_debug["obstaclesX"])
 
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
       plan_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
@@ -396,6 +408,23 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   data_sim_obs.data.update({
     'obs_x': obstacle_x_list,
     'obs_y': obstacle_y_list,
+  })
+
+  col_det_path_x_list = []
+  col_det_path_y_list = []
+  if isinstance(col_det_path_x, str):
+    col_det_path_x_list = [float(x) for x in col_det_path_x.split(',')]
+  else:
+    col_det_path_x_list = col_det_path_x
+
+  if isinstance(col_det_path_y, str):
+    col_det_path_y_list = [float(y) for y in col_det_path_y.split(',')]
+  else:
+    col_det_path_y_list = col_det_path_y
+
+  data_sim_col_det_path.data.update({
+    'x': col_det_path_x_list,
+    'y': col_det_path_y_list,
   })
 
   push_notebook()

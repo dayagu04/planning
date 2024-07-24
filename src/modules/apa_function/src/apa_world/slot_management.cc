@@ -857,6 +857,9 @@ bool SlotManagement::GenObstacles(
   channel_point_3 = F;
   channel_line.SetPoints(channel_point_2, channel_point_3);
   channel_line_vec.emplace_back(channel_line);
+  channel_point_3 = A;
+  channel_line.SetPoints(channel_point_1, channel_point_3);
+  channel_line_vec.emplace_back(channel_line);
 
   const double ds = apa_param.GetParam().obstacle_ds;
   std::vector<Eigen::Vector2d> point_set;
@@ -942,6 +945,13 @@ bool SlotManagement::GenObstacles(
       if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS) {
         // obs is slot entrance, when replan, no conside it, but when dynamic
         // move and col det, conside it
+        continue;
+      }
+
+      if (std::fabs(obs_pos.y()) > std::fabs(A.y()) ||
+          std::fabs(obs_pos.y()) > std::fabs(F.y()) ||
+          obs_pos.x() > channel_point_1.x()) {
+        // obs is outside channel, lose it
         continue;
       }
 
