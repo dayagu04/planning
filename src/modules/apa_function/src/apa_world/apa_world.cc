@@ -103,6 +103,10 @@ void ApaWorld::UpdateEgoState() {
   JSON_DEBUG_VALUE("static_flag", measures_ptr_->static_flag)
 }
 
+const bool ApaWorld::CheckIfSlotSelectedInFusion() const {
+  return ((local_view_ptr_->parking_fusion_info.select_slot_id != 0));
+}
+
 const bool ApaWorld::CheckSelectedSlot() const {
   // check selected slot id
   if (local_view_ptr_->parking_fusion_info.select_slot_id == 0) {
@@ -173,36 +177,43 @@ const bool ApaWorld::CheckSelectedSlot() const {
 }
 
 const bool ApaWorld::CheckParkInState() const {
-  return (local_view_ptr_->function_state_machine_info.current_state >=
-              iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-          local_view_ptr_->function_state_machine_info.current_state <=
-              iflyauto::FunctionalState_PARK_COMPLETED);
+  const bool park_in_search_stm =
+      local_view_ptr_->function_state_machine_info.current_state ==
+      iflyauto::FunctionalState_PARK_IN_SEARCHING;
+
+  const bool park_in_activated_stm =
+      (local_view_ptr_->function_state_machine_info.current_state >=
+           iflyauto::FunctionalState_PARK_GUIDANCE &&
+       local_view_ptr_->function_state_machine_info.current_state <=
+           iflyauto::FunctionalState_PARK_COMPLETED) &&
+      measures_ptr_->history_apa_function ==
+          GeneralApaFunction::PARK_IN_FUNCTION;
+
+  return park_in_search_stm || park_in_activated_stm;
 }
 
 const bool ApaWorld::CheckParkInActivated() const {
-  return (local_view_ptr_->function_state_machine_info.current_state >=
-              iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-          local_view_ptr_->function_state_machine_info.current_state <=
-              iflyauto::FunctionalState_PARK_COMPLETED);
+  return CheckParkInState() && CheckIfSlotSelectedInFusion();
 }
 
 const bool ApaWorld::CheckParkOutState() const {
-  // 状态机大改，需要重新梳理
-  return (local_view_ptr_->function_state_machine_info.current_state ==
-          iflyauto::FunctionalState_PARK_OUT_SEARCHING
-          //     &&
-          // local_view_ptr_->function_state_machine_info.current_state <=
-          //     iflyauto::FunctionalState_PARK_OUT_COMPLETED
-  );
+  const bool park_out_search_stm =
+      local_view_ptr_->function_state_machine_info.current_state ==
+      iflyauto::FunctionalState_PARK_OUT_SEARCHING;
+
+  const bool park_out_activated_stm =
+      (local_view_ptr_->function_state_machine_info.current_state >=
+           iflyauto::FunctionalState_PARK_GUIDANCE &&
+       local_view_ptr_->function_state_machine_info.current_state <=
+           iflyauto::FunctionalState_PARK_COMPLETED) &&
+      measures_ptr_->history_apa_function ==
+          GeneralApaFunction::PARK_OUT_FUNCTION;
+
+  return park_out_search_stm || park_out_activated_stm;
 }
 
 const bool ApaWorld::CheckParkOutActivated() const {
-  // 状态机大改，需要重新梳理
-  // return (local_view_ptr_->function_state_machine_info.current_state >=
-  //             iflyauto::FunctionalState_PARK_OUT_ACTIVATE &&
-  //         local_view_ptr_->function_state_machine_info.current_state <=
-  //             iflyauto::FunctionalState_PARK_OUT_COMPLETED);
-  return false;
+  return CheckParkOutState() && CheckIfSlotSelectedInFusion();
 }
 const bool ApaWorld::Update() {
   // preprocess measurements
@@ -212,6 +223,16 @@ const bool ApaWorld::Update() {
 
   DEBUG_PRINT(
       "current_state = " << static_cast<int>(measures_ptr_->current_state));
+
+  if (measures_ptr_->current_state == iflyauto::FunctionalState_PARK_STANDBY) {
+    measures_ptr_->history_apa_function = GeneralApaFunction::NONE_FUNCTION;
+  } else if (measures_ptr_->current_state ==
+             iflyauto::FunctionalState_PARK_IN_SEARCHING) {
+    measures_ptr_->history_apa_function = GeneralApaFunction::PARK_IN_FUNCTION;
+  } else if (measures_ptr_->current_state ==
+             iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
+    measures_ptr_->history_apa_function = GeneralApaFunction::PARK_OUT_FUNCTION;
+  }
 
   // check parking scenarios
   if (CheckParkInState()) {
@@ -228,7 +249,8 @@ const bool ApaWorld::Update() {
   }
 
   // run slot manager
-  // path planning only starts when the current state machines are 29 and 30
+  // currently path planning starts once id is selected in searching state
+
   DEBUG_PRINT("-- apa_world: run slot_management ---");
   if (!slot_manager_ptr_->Update(local_view_ptr_)) {
     DEBUG_PRINT("shouldn't have entered the parking function at that time");

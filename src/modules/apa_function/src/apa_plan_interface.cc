@@ -66,7 +66,7 @@ void ApaPlanInterface::Reset() {
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
     const uint8_t apa_planner_id) {
-  if (apa_planner_id <= apa_planner_stack_.size()) {
+  if (apa_planner_id < apa_planner_stack_.size()) {
     return apa_planner_stack_[apa_planner_id];
   } else {
     return nullptr;
@@ -92,7 +92,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   // just used for pybind simulation to clear previous state varible
   if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
       (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-       current_state <= iflyauto::FunctionalState_PARK_COMPLETED)) {
+       current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     Reset();
   }
 

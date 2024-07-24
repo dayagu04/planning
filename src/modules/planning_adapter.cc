@@ -9,6 +9,7 @@
 #include "common.pb.h"
 #include "common/config_context.h"
 #include "debug_info_log.h"
+#include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
 #include "version.h"
@@ -282,28 +283,33 @@ void PlanningAdapter::Proc() {
   const auto &current_state =
       local_view_ptr_->function_state_machine_info.current_state;
 
+  const auto &current_fusion_select_id =
+      local_view_ptr_->parking_fusion_info.select_slot_id;
+
   const auto &last_state = g_context.GetStatemachine().current_state;
+
+  auto &last_fusion_select_id = g_context.GetStatemachine().fusion_select_id;
 
   if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
       (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-       current_state <= iflyauto::FunctionalState_PARK_COMPLETED)) {
+       current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     state_machine_g.apa_reset_flag = true;
   } else {
     state_machine_g.apa_reset_flag = false;
   }
 
-  // APA plan once when state machine changes from no ready to other parking in
+  // APA plan once when select id change from 0 to other value during searching
   // state
-  // 泊车状态机改动太大，待确认：
-  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
-      (current_state == iflyauto::FunctionalState_PARK_IN_SEARCHING ||
-       current_state >= iflyauto::FunctionalState_PARK_GUIDANCE)) {
+  if (last_state == iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+      current_state == iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+      last_fusion_select_id == 0 && current_fusion_select_id != 0) {
     state_machine_g.apa_start_plan_once_flag = true;
   } else {
     state_machine_g.apa_start_plan_once_flag = false;
   }
 
   state_machine_g.current_state = current_state;
+  state_machine_g.fusion_select_id = current_fusion_select_id;
 
   // 2.planning run
   auto planning_output_container =

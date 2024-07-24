@@ -95,8 +95,8 @@ void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
 bool IsValidParkingState(const iflyauto::FunctionalState& current_state) {
   std::cout << "current_state:" << current_state << std::endl;
 
-  if (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-      current_state <= iflyauto::FunctionalState_PARK_COMPLETED) {
+  if (current_state >= iflyauto::FunctionalState_PARK_STANDBY &&
+      current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
     return true;
   }
   return false;
