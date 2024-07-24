@@ -386,7 +386,8 @@
     "acc_start" : 1.0,
     "v_target_stop_thrd" : -10.0,
     "acc_stop_max_bound" : 1.5,
-    "enable_jlt" : true
+    "enable_jlt" : true,
+    "enable_narrow_agent_limit" : true
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false

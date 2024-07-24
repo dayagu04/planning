@@ -1450,6 +1450,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     enable_jlt = read_json_keys<bool>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "enable_jlt"});
+    enable_narrow_agent_limit = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_narrow_agent_limit"});
     v_limit_ramp = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "v_limit_ramp"});
@@ -1500,7 +1503,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double high_speed_threshold_with_acc_upper_bound = 16.67;
   double lane_change_low_speed_acc_upper_bound = 2.0;
   double lane_change_high_speed_acc_upper_bound = 1.2;
-  double acc_lower_bound = -7.0;
+  double acc_lower_bound = -4.5;
   // vel
   double kSpeedBoundFactor = 1.1;
   // jerk
@@ -1512,6 +1515,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double acc_stop_max_bound = 1.0;
   // jlt
   bool enable_jlt = true;
+  // narrow agent
+  bool enable_narrow_agent_limit = true;
   double v_limit_ramp = 40.0;
 };
 

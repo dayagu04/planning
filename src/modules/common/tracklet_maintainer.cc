@@ -1528,12 +1528,13 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
             item.track_id, item.d_rel, item.v_lat);
   LOG_DEBUG("item.d_path_pos is: [%f], lat_corr is: [%f], d_path is : [%f]\n",
             item.d_path_pos, lat_corr, d_path);
-  if (item.type < 10000 && item.v_lead > 0.2) {
+  if (item.v_lead > 2.0) {
     lead_d_path_thr = result;
-  } else if (item.type < 10000) {
-    lead_d_path_thr = result - 0.25;
+  } else if (item.v_lead <= 2.0 && item.motion_pattern_current ==
+                                       iflyauto::OBJECT_MOTION_TYPE_STATIC) {
+    lead_d_path_thr = 1.15;
   } else {
-    lead_d_path_thr = result - 0.2;
+    lead_d_path_thr = 1.2;
   }
 
   if (item.oncoming && item.d_rel > 50) {
@@ -1734,12 +1735,13 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
   std::array<double, 5> fp3{1.28, 1.28, 1.21, 1.19, 1.1};
   double result = interp(item.d_rel, xp3, fp3);
 
-  if (item.type < 10000 && item.v_lead > 0.2) {
-    lead_d_path_thr = result - 0.15;
-  } else if (item.type < 10000) {
-    lead_d_path_thr = result - 0.25;
+  if (item.v_lead > 2.0) {
+    lead_d_path_thr = result;
+  } else if (item.v_lead <= 2.0 && item.motion_pattern_current ==
+                                       iflyauto::OBJECT_MOTION_TYPE_STATIC) {
+    lead_d_path_thr = 1.15;
   } else {
-    lead_d_path_thr = result - 0.2;
+    lead_d_path_thr = 1.2;
   }
 
   if (item.oncoming && item.d_rel > 50) {

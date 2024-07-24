@@ -122,6 +122,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   const auto lane_tracks_mgr = environmental_model.get_lane_tracks_manager();
   const auto &lateral_behavior_planner_output =
       session_->planning_context().lateral_behavior_planner_output();
+  const auto &lateral_motion_planner_output =
+      session_->planning_context().motion_planner_output();
   const auto start_stop_state_info =
       session_->planning_context().start_stop_result();
   auto &lon_decision_info =
@@ -138,8 +140,9 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   ego_info->set_ego_cruise(std::max(ego_state_mgr->ego_v_cruise(), 0.0));
   ego_info->set_ego_acc(ego_state_mgr->ego_acc());
   ego_info->set_ego_steer_angle(ego_state_mgr->ego_steer_angle());
+  ego_info->set_ego_pose_x(ego_state_mgr->ego_pose().x);
+  ego_info->set_ego_pose_y(ego_state_mgr->ego_pose().y);
   lon_init_state_ = {0, ego_info->ego_v(), ego_info->ego_acc()};
-
   auto lon_decision_info_input =
       lon_behav_plan_input_->mutable_lon_decision_info();
   lon_decision_info_input->CopyFrom(lon_decision_info);
@@ -154,6 +157,16 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
 
   for (auto coeff : lateral_behavior_planner_output.d_poly) {
     lat_output->add_d_poly_vec(coeff);
+  }
+
+  const auto &s_lat_vec = lateral_motion_planner_output.s_lat_vec;
+  lat_output->clear_spline_x_vec();
+  lat_output->clear_spline_y_vec();
+  for (int i = 1; i <= config_.lon_num_step + 1; ++i) {
+    lat_output->add_spline_x_vec(
+        lateral_motion_planner_output.x_s_spline(s_lat_vec[i]));
+    lat_output->add_spline_y_vec(
+        lateral_motion_planner_output.y_s_spline(s_lat_vec[i]));
   }
 
   // 3. set lateral obstacles
@@ -442,12 +455,16 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   lon_behav_plan_input_->set_dis_to_merge(dis_to_merge);
   lon_behav_plan_input_->set_is_on_ramp(is_on_ramp);
 
-  //set lon_init_state
+  // set lon_init_state
   auto lon_init_state_ptr = lon_behav_plan_input_->mutable_lon_init_state();
-  lon_init_state_ptr->set_s(ego_state_mgr->planning_init_point().lon_init_state.s());
-  lon_init_state_ptr->set_v(ego_state_mgr->planning_init_point().lon_init_state.v());
-  lon_init_state_ptr->set_a(ego_state_mgr->planning_init_point().lon_init_state.a());
-  lon_init_state_ptr->set_j(ego_state_mgr->planning_init_point().lon_init_state.j());
+  lon_init_state_ptr->set_s(
+      ego_state_mgr->planning_init_point().lon_init_state.s());
+  lon_init_state_ptr->set_v(
+      ego_state_mgr->planning_init_point().lon_init_state.v());
+  lon_init_state_ptr->set_a(
+      ego_state_mgr->planning_init_point().lon_init_state.a());
+  lon_init_state_ptr->set_j(
+      ego_state_mgr->planning_init_point().lon_init_state.j());
 }
 
 void SccLonBehaviorPlanner::SetInput(
@@ -460,7 +477,12 @@ bool SccLonBehaviorPlanner::Update() {
   // 1.ST
   const auto &last_traj =
       session_->planning_context().last_planning_result().traj_points;
-  st_graph_->Update(lon_behav_plan_input_, last_traj);
+  const auto &dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto &current_lane = session_->environmental_model()
+                                 .get_virtual_lane_manager()
+                                 ->get_current_lane();
+  st_graph_->Update(lon_behav_plan_input_, last_traj, dynamic_world, current_lane);
 
   // 2.SV
   sv_graph_->Update(lon_behav_plan_input_);

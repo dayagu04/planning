@@ -35,7 +35,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                               'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                               'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', \
-                              "dis_to_ramp", "v_target_ramp", \
+                              "dis_to_ramp", "v_target_ramp", "narrow_agent_id", "narrow_agent_v_limit",\
                               'gap_v_limit_lc', \
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
