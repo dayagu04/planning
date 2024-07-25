@@ -141,6 +141,13 @@ class PlanningAdapter {
     sd_map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_sd_map_info_msg_updated_.store(true);
   }
+  
+  void FeedPerceptionTsrInfo(const iflyauto::CameraPerceptionTsrInfo& tsr_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    perception_tsr_msg_ = tsr_msg;
+    perception_tsr_msg_recv_time_ = IflyTime::Now_ms();
+    is_perception_tsr_msg_updated_.store(true);
+  }
 
   void RegisterOutputWriter(
       const std::function<
@@ -237,6 +244,9 @@ class PlanningAdapter {
   SdMapSwtx::SdMap sd_map_info_msg_;
   int64_t sd_map_info_msg_recv_time_;
   std::atomic<bool> is_sd_map_info_msg_updated_{false};
+  iflyauto::CameraPerceptionTsrInfo perception_tsr_msg_;
+  int64_t perception_tsr_msg_recv_time_;
+  std::atomic<bool> is_perception_tsr_msg_updated_{false};
 
   std::function<void(const std::shared_ptr<iflyauto::StructContainer>&)>
       planning_writer_ = nullptr;

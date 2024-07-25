@@ -20,6 +20,7 @@ struct AgentStInfo {
 
 class Agent {
  public:
+  Agent();
   Agent(const PredictionObject& prediction_object, bool is_static,
         double start_relative_timestamp);
 

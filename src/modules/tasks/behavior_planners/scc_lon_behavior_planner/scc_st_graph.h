@@ -140,6 +140,12 @@ class StGraphGenerator {
       std::vector<planning::common::RealTimeLonObstacleSTInfo>
           &lane_change_st_info);
 
+  bool CalcSpeedInfoWithVirtualObstacle(
+    const std::shared_ptr<planning::planning_data::DynamicWorld>& dynamic_world,
+    std::vector<planning::common::RealTimeLonObstacleSTInfo>& virtual_obs_st_info);
+
+  bool CalcSpeedInfoWithIntersection();
+
   double DesiredDistanceFilter(
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, double safe_distance, double desired_distance);
@@ -281,6 +287,9 @@ class StGraphGenerator {
   double v_limit_on_ramp_;
   double v_limit_lc_;
   double v_last_target_ = 0.0;
+  double v_limit_with_intersection_ = 0.0;
+  planning::common::IntersectionState last_intersection_state_ = planning::common::UNKNOWN;
+  planning::common::IntersectionState current_intersection_state_ = planning::common::UNKNOWN;
 };
 
 }  // namespace scc

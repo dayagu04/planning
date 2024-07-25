@@ -189,10 +189,20 @@ bool PlanningComponent::Init() {
       });
 
   auto sd_map_reader_ = planning_node_->CreateReader<SdMapSwtx::SdMap>(
-      "/iflytek/ehr/sdmap",
-      [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
-        planning_adapter_->FeedSdMap(sd_map_msg);
-      });
+    "/iflytek/ehr/sdmap",
+    [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
+      planning_adapter_->FeedSdMap(sd_map_msg);
+    });
+  auto perception_tsr_info_reader_ =
+      planning_node_->CreateReader<iflyauto::StructContainer>(
+          "/iflytek/camera_perception/traffic_sign_recognition",
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     perception_tsr_info_struct_msg) {
+            const auto &perception_tsr_info_struct =
+                *iflyauto::struct_cast<iflyauto::CameraPerceptionTsrInfo>(
+                    perception_tsr_info_struct_msg);
+            planning_adapter_->FeedPerceptionTsrInfo(perception_tsr_info_struct);
+          });
 
   // -------------- writter topics --------------
   planning_writer_ = planning_node_->CreateWriter<iflyauto::StructContainer>(

@@ -293,6 +293,18 @@ void PlanningAdapter::Proc() {
   input_topic_latency->set_map(get_latency(
       start_time, local_view_ptr_->sd_map_info.header().timestamp()));
 
+  if (is_perception_tsr_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->perception_tsr_info = perception_tsr_msg_;
+    local_view_ptr_->perception_tsr_info_recv_time =
+        perception_tsr_msg_recv_time_;
+    is_perception_tsr_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_perception_tsr(
+      local_view_ptr_->perception_tsr_info.header.timestamp);
+  input_topic_latency->set_perception_tsr(
+      get_latency(start_time, local_view_ptr_->perception_tsr_info.header.timestamp));
+
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();
 

@@ -248,6 +248,14 @@ enum TrafficLightState {  // origin: CurrentState
   INTO_WAIT_ZONE = 6;
 }
 
+enum IntersectionState {
+  NO_INTERSECTION = 0;
+  APPROACH_INTERSECTION = 1;
+  IN_INTERSECTION = 2;
+  OFF_INTERSECTION = 3;
+  UNKNOWN = 4;
+}
+
 message FrenetState {
   optional double s = 1;
   optional double r = 2;

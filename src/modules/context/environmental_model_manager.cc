@@ -95,6 +95,11 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_virtual_lane_manager(
       virtual_lane_manager_ptr_);
 
+  traffic_light_decision_manager_ptr_ =
+      std::make_shared<planning::TrafficLightDecisionManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_traffic_light_decision_manager(
+      traffic_light_decision_manager_ptr_);
+
   obstacle_manager_ptr_ =
       std::make_shared<planning::ObstacleManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_obstacle_manager(
@@ -250,6 +255,12 @@ bool EnvironmentalModelManager::Run() {
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
+
+  //update traffic lights info
+  if (!traffic_light_decision_manager_ptr_->Update(local_view.perception_tsr_info)) {
+    LOG_ERROR("traffic_light_decision_manager update failed\n");
+    return false;
+  }
 
   // Step 5) update obstacle
   time_start = IflyTime::Now_ms();

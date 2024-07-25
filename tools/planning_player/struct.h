@@ -16,6 +16,7 @@
 #include "interface/src/c/planning_plan_c.h"
 #include "interface/src/c/prediction_c.h"
 #include "interface/src/c/vehicle_service_c.h"
+#include "interface/src/c/camera_preception_tsr_c.h"
 // #include "interface/src/c/ehr_c.h"
 // #include "interface/src/c/adas_function_debug_c.h"
 // #include "interface/src/c/avm_output_image_info_c.h"
@@ -60,6 +61,7 @@
 #include "struct_msgs/PredictionResult.h"
 #include "struct_msgs/RoadInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
+#include "struct_msgs/CameraPerceptionTsrInfo.h"
 // #include "proto_msgs/PredictionDebugInfo.h"
 // #include "proto_msgs/LocalizationDebugInfo.h"
 // #include "proto_msgs/ControlDebugInfo.h"
@@ -135,6 +137,7 @@
 #include "interface/type_convert/struct_convert/planning_plan_c.h"
 #include "interface/type_convert/struct_convert/prediction_c.h"
 #include "interface/type_convert/struct_convert/vehicle_service_c.h"
+#include "interface/type_convert/struct_convert/camera_preception_tsr_c.h"
 // #include "interface/type_convert/struct_convert/adas_function_debug_c.h"
 // #include "interface/type_convert/struct_convert/avm_output_image_info_c.h"
 // #include

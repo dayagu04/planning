@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "camera_preception_groundline_c.h"
+#include "camera_preception_tsr_c.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
@@ -68,6 +69,8 @@ struct LocalView {
 
   SdMapSwtx::SdMap sd_map_info;
   double sd_map_info_recv_time = 0.0;
+  iflyauto::CameraPerceptionTsrInfo perception_tsr_info;
+  double perception_tsr_info_recv_time = 0.0;
 
   // iflyauto::ParkingInfo parking_map_info;
   // double parking_map_info_recv_time = 0.0;

@@ -1810,7 +1810,11 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    stop_dis_to_stopline =
+        read_json_key<double>(json, "stop_dis_to_stopline");
   }
+
+  double stop_dis_to_stopline = 1.0;
 };
 
 struct MapRequestConfig : public EgoPlanningConfig {
@@ -1912,6 +1916,16 @@ struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
         json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
   }
   bool is_select_split_nearing_ramp = true;
+};
+
+struct EgoPlanningTrafficLightDecisionManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    enable_traffic_light = read_json_key<bool>(
+        json, "enable_traffic_light", enable_traffic_light);
+  }
+  bool enable_traffic_light = true;
 };
 
 struct EgoPlanningMapInfoManagerConfig : public EgoPlanningConfig {

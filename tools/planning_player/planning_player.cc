@@ -44,6 +44,8 @@ static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 
+static constexpr auto TOPIC_TRAFFIC_SIGN = "/iflytek/camera_perception/traffic_sign_recognition";
+
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
                           const std::string& scene_type, bool no_debug) {
   std::cout << "===========planning player init, is_close_loop="
@@ -280,6 +282,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
           msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_TRAFFIC_SIGN) {
+      cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionTsrInfo>(
+          msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.getTopic() << std::endl;
     }
@@ -369,6 +374,9 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
       } else if (it_msg.first == TOPIC_GROUND_LINE) {
         write_ros_msg<struct_msgs::GroundLinePerceptionInfo::Ptr>(
             it_msg.second, TOPIC_GROUND_LINE, bag);
+      } else if (it_msg.first == TOPIC_TRAFFIC_SIGN) {
+        write_ros_msg<struct_msgs::CameraPerceptionTsrInfo::Ptr>(
+            it_msg.second, TOPIC_TRAFFIC_SIGN, bag);
       } else {
         // std::cerr << "unsupported channel:" << msg.channel_name << std::endl;
       }
@@ -547,6 +555,19 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/fusion/parking_slot" << std::endl;
+  }
+
+  auto perception_tsr_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs::CameraPerceptionTsrInfo>(
+          TOPIC_TRAFFIC_SIGN, input_time_list.perception_tsr());
+  if (perception_tsr_ros_msg) {
+    iflyauto::CameraPerceptionTsrInfo perception_tsr_msg{};
+    convert(perception_tsr_msg, *perception_tsr_ros_msg,
+            ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedPerceptionTsrInfo(perception_tsr_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/camera_perception/traffic_sign_recognition" << std::endl;
   }
 
   // 不再使用，注释掉
