@@ -57,7 +57,7 @@ bool KDPath::InitData(const bool need_reset_s, bool head_mono,
     return false;
   }
   if (need_reset_s) {
-    KDPath::ResetCurveCalculate(&path_points_);
+    KDPath::ResetCurveCalculate(path_points_);
   }
   length_ = path_points_.back().s() - path_points_.front().s();
   min_x_ = std::numeric_limits<double>::max();

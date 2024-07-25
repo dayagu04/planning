@@ -123,6 +123,32 @@ class VirtualLaneManager {
 
   void reset();
 
+  void CalculateVirtualLaneAttributes();
+
+  void UpdateAllVirtualLaneInfo();
+
+  void TrackEgoLane();
+
+  void PreprocessRoadSplit(std::vector<int>& order_ids);
+
+  void PreprocessRampSplit(std::vector<int>& order_ids);
+
+  void SelectEgoLaneWithoutPlan();
+
+  void SelectEgoLaneWithPlan(int zero_relative_id_nums);
+
+  bool CalcCrosslaneStatus(
+      const std::shared_ptr<VirtualLane> lane,
+      const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints);
+
+  std::shared_ptr<planning_math::KDPath> MakeBoundaryPath(
+      const iflyauto::LaneBoundary &boundary);
+
+  void CalcBoundaryCross(
+      const planning_math::KDPath &lane_boundary_path,
+      const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
+      bool *cross_lane);
+
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
   double get_distance_to_final_dash_line(const RequestType direction,
@@ -180,7 +206,7 @@ class VirtualLaneManager {
 
  private:
   LaneChangeStatus is_lane_change();
-  void update_virtual_id();
+  void UpdateLaneVirtualId();
 
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
@@ -245,6 +271,7 @@ class VirtualLaneManager {
   bool is_leaving_ramp_ = false;
   bool is_nearing_ramp_ = false;
   bool is_on_ramp_ = false;
+  bool is_on_highway_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   bool in_intersection_ = false;
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
@@ -261,6 +288,10 @@ class VirtualLaneManager {
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point_ = 0.0;
   bool is_ego_on_expressway_ = false;
+  bool virtual_lane_relative_id_switch_flag_ = false;
+  bool is_exist_split_on_ramp_ = false;
+  bool is_exist_ramp_on_road_ = false;
+  double current_segment_passed_distance_ = 0.0;
 };
 }  // namespace planning
 #endif

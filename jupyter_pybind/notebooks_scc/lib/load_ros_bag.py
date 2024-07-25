@@ -565,6 +565,8 @@ class LoadRosbag:
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
                          "dis_to_ramp", "v_target_ramp", \
+                         'virtual_lane_relative_id_switch_flag', \
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
                          'gap_v_limit_lc', \
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \

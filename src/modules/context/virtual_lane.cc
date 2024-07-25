@@ -1,4 +1,5 @@
 #include "virtual_lane.h"
+#include "environmental_model.h"
 
 #include <cassert>
 

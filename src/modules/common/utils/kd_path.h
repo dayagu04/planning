@@ -102,35 +102,35 @@ class KDPath {
     }
     return angle;
   }
-  template <class T>
-  static void ResetSCalculte(T* const points) {
+  // template <class T>
+  static void ResetSCalculte(std::vector<PathPoint>& points) {
     double distance = 0.0;
-    points->at(0).set_s(distance);
-    for (size_t i = 1; i < points->size(); ++i) {
-      double curr_x = points->at(i).x();
-      double curr_y = points->at(i).y();
-      double prev_x = points->at(i - 1).x();
-      double prev_y = points->at(i - 1).y();
+    points.at(0).set_s(distance);
+    for (size_t i = 1; i < points.size(); ++i) {
+      double curr_x = points.at(i).x();
+      double curr_y = points.at(i).y();
+      double prev_x = points.at(i - 1).x();
+      double prev_y = points.at(i - 1).y();
       distance += std::hypotf(prev_x - curr_x, prev_y - curr_y);
-      points->at(i).set_s(distance);
+      points.at(i).set_s(distance);
     }
   }
 
-  template <class T>
-  static bool PointsToPathPoints(const T& points,
-                                 std::vector<PathPoint>* const path_points) {
-    path_points->resize(points.size());
+  // template <class T>
+  static bool PointsToPathPoints(const std::vector<Vec2d>& points,
+                                 std::vector<PathPoint>& path_points) {
+    path_points.resize(points.size());
     for (int32_t i = 0; i < points.size(); ++i) {
-      path_points->at(i).set_x(points[i].x());
-      path_points->at(i).set_y(points[i].y());
+      path_points.at(i).set_x(points[i].x());
+      path_points.at(i).set_y(points[i].y());
     }
     ResetCurveCalculate(path_points);
     return true;
   }
 
-  template <class T>
-  static void ResetCurveCalculate(T* const points) {
-    if (points->size() < 2) {
+  // template <class T>
+  static void ResetCurveCalculate(std::vector<PathPoint>& points) {
+    if (points.size() < 2) {
       return;
     }
     // cal s
@@ -138,84 +138,82 @@ class KDPath {
     ResetSCalculte(points);
 
     // cal heading
-    for (int32_t i = 0; i < points->size(); ++i) {
+    for (int32_t i = 0; i < points.size(); ++i) {
       double theta = 0.0;
       double dx_theta = 0.0;
       double dy_theta = 0.0;
       if (i == 0) {
-        dx_theta = points->at(i + 1).x() - points->at(i).x();
-        dy_theta = points->at(i + 1).y() - points->at(i).y();
-      } else if (i == points->size() - 1) {
-        dx_theta = points->at(i).x() - points->at(i - 1).x();
-        dy_theta = points->at(i).y() - points->at(i - 1).y();
+        dx_theta = points.at(i + 1).x() - points.at(i).x();
+        dy_theta = points.at(i + 1).y() - points.at(i).y();
+      } else if (i == points.size() - 1) {
+        dx_theta = points.at(i).x() - points.at(i - 1).x();
+        dy_theta = points.at(i).y() - points.at(i - 1).y();
       } else {
-        dx_theta = points->at(i + 1).x() - points->at(i - 1).x();
-        dy_theta = points->at(i + 1).y() - points->at(i - 1).y();
+        dx_theta = points.at(i + 1).x() - points.at(i - 1).x();
+        dy_theta = points.at(i + 1).y() - points.at(i - 1).y();
       }
 
       theta = std::atan2(dy_theta, dx_theta);
-      points->at(i).set_theta(theta);
+      points.at(i).set_theta(theta);
     }
     // calc kappa
-    for (int32_t i = 0; i < points->size(); ++i) {
+    for (int32_t i = 0; i < points.size(); ++i) {
       double kappa = 0.0;
       double delta_s = 0.0;
       if (i == 0) {
-        delta_s = points->at(i + 1).s() - points->at(i).s();
-        kappa = LimitAngle(points->at(i + 1).theta() - points->at(i).theta()) /
+        delta_s = points.at(i + 1).s() - points.at(i).s();
+        kappa = LimitAngle(points.at(i + 1).theta() - points.at(i).theta()) /
                 delta_s;
-      } else if (i == points->size() - 1) {
-        delta_s = points->at(i).s() - points->at(i - 1).s();
-        kappa = LimitAngle(points->at(i).theta() - points->at(i - 1).theta()) /
+      } else if (i == points.size() - 1) {
+        delta_s = points.at(i).s() - points.at(i - 1).s();
+        kappa = LimitAngle(points.at(i).theta() - points.at(i - 1).theta()) /
                 delta_s;
       } else {
-        delta_s = points->at(i + 1).s() - points->at(i - 1).s();
+        delta_s = points.at(i + 1).s() - points.at(i - 1).s();
         kappa =
-            LimitAngle(points->at(i + 1).theta() - points->at(i - 1).theta()) /
+            LimitAngle(points.at(i + 1).theta() - points.at(i - 1).theta()) /
             delta_s;
       }
-      points->at(i).set_kappa(kappa);
+      points.at(i).set_kappa(kappa);
     }
     // calc dkappa
-    for (int32_t i = 0; i < points->size(); ++i) {
+    for (int32_t i = 0; i < points.size(); ++i) {
       double dkappa = 0.0;
       double delta_s = 0.0;
       if (i == 0) {
-        delta_s = points->at(i + 1).s() - points->at(i).s();
-        dkappa = (points->at(i + 1).kappa() - points->at(i).kappa()) / delta_s;
-      } else if (i == points->size() - 1) {
-        delta_s = points->at(i).s() - points->at(i - 1).s();
-        dkappa = (points->at(i).kappa() - points->at(i - 1).kappa()) / delta_s;
+        delta_s = points.at(i + 1).s() - points.at(i).s();
+        dkappa = (points.at(i + 1).kappa() - points.at(i).kappa()) / delta_s;
+      } else if (i == points.size() - 1) {
+        delta_s = points.at(i).s() - points.at(i - 1).s();
+        dkappa = (points.at(i).kappa() - points.at(i - 1).kappa()) / delta_s;
       } else {
-        delta_s = points->at(i + 1).s() - points->at(i - 1).s();
+        delta_s = points.at(i + 1).s() - points.at(i - 1).s();
         dkappa =
-            (points->at(i + 1).kappa() - points->at(i - 1).kappa()) / delta_s;
+            (points.at(i + 1).kappa() - points.at(i - 1).kappa()) / delta_s;
       }
-      points->at(i).set_dkappa(dkappa);
+      points.at(i).set_dkappa(dkappa);
     }
     // calc ddkappa
-    for (int32_t i = 0; i < points->size(); ++i) {
+    for (int32_t i = 0; i < points.size(); ++i) {
       double ddkappa = 0.0;
       double delta_s = 0.0;
       if (i == 0) {
-        delta_s = points->at(i + 1).s() - points->at(i).s();
-        ddkappa =
-            (points->at(i + 1).dkappa() - points->at(i).dkappa()) / delta_s;
-      } else if (i == points->size() - 1) {
-        delta_s = points->at(i).s() - points->at(i - 1).s();
-        ddkappa =
-            (points->at(i).dkappa() - points->at(i - 1).dkappa()) / delta_s;
+        delta_s = points.at(i + 1).s() - points.at(i).s();
+        ddkappa = (points.at(i + 1).dkappa() - points.at(i).dkappa()) / delta_s;
+      } else if (i == points.size() - 1) {
+        delta_s = points.at(i).s() - points.at(i - 1).s();
+        ddkappa = (points.at(i).dkappa() - points.at(i - 1).dkappa()) / delta_s;
       } else {
-        delta_s = points->at(i + 1).s() - points->at(i - 1).s();
+        delta_s = points.at(i + 1).s() - points.at(i - 1).s();
         ddkappa =
-            (points->at(i + 1).dkappa() - points->at(i - 1).dkappa()) / delta_s;
+            (points.at(i + 1).dkappa() - points.at(i - 1).dkappa()) / delta_s;
       }
-      points->at(i).set_ddkappa(ddkappa);
+      points.at(i).set_ddkappa(ddkappa);
     }
   }
 
-  template <class T>
-  static void RemoveDuplicates(std::vector<T>* const raw_points,
+  // template <class T>
+  static void RemoveDuplicates(std::vector<Vec2d>* raw_points,
                                const double threshold) {
     int count = 0;
     for (size_t i = 0; i < raw_points->size(); ++i) {
