@@ -35,6 +35,7 @@ import rosbag
 plan_debug_ts = []
 plan_debug_timestamps = []
 fusion_object_timestamps = []
+fus_occupancy_objects_timestamps = []
 fusion_road_timestamps = []
 ground_line_timestamps = []
 localization_timestamps = []
@@ -60,6 +61,8 @@ replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
 load_uss_wave_from_uss_percept_msg = True
+load_fusion_object_from_occupancy = True
+version_245 = True
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 4
 smallest_abs_t = 0.0
@@ -94,6 +97,9 @@ class LoadCyberbag:
 
     # fusion object msg
     self.fus_objects_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
+    # fusion occupancy object msg
+    self.fus_occupancy_objects_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # visual slot msg
     self.vis_parking_msg = {'abs_t':[], 't':[], 'data':[], 'json':[], 'enable':[]}
@@ -419,6 +425,32 @@ class LoadCyberbag:
       self.fus_objects_msg['enable'] = False
       print('missing /iflytek/fusion/objects !!!')
 
+
+    # load fusion objects msg
+    try:
+      fus_occupancy_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
+        if version_245:
+          fus_occupancy_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        else:
+          fus_occupancy_objects_msg_dict[msg.header.timestamp / 1e6] = msg
+
+      fus_occupancy_objects_msg_dict = {key: val for key, val in sorted(fus_occupancy_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_occupancy_objects_msg_dict.items():
+        self.fus_occupancy_objects_msg['t'].append(t)
+        self.fus_occupancy_objects_msg['abs_t'].append(t)
+        self.fus_occupancy_objects_msg['data'].append(msg)
+      smallest_abs_t = min(smallest_abs_t, self.fus_occupancy_objects_msg['t'][0])
+      self.fus_occupancy_objects_msg['t'] = [tmp - t0  for tmp in self.fus_occupancy_objects_msg['t']]
+      print('fus_occupancy_objects_msg time:',self.fus_occupancy_objects_msg['t'][-1])
+      if len(self.fus_occupancy_objects_msg['t']) > 0:
+        self.fus_occupancy_objects_msg['enable'] = True
+      else:
+        self.fus_occupancy_objects_msg['enable'] = False
+    except:
+      self.fus_occupancy_objects_msg['enable'] = False
+      print('missing /iflytek/fusion/occupancy/objects !!!')
+
     # load visual parking msg
     try:
       vis_parking_msg_dict = {}
@@ -652,6 +684,12 @@ class LoadCyberbag:
           fus_objects_msg_idx = fus_objects_msg_idx + 1
     out['fus_objects_msg_idx'] = fus_objects_msg_idx
 
+    fus_occupancy_objects_msg_idx = 0
+    if self.fus_occupancy_objects_msg['enable'] == True:
+      while self.fus_occupancy_objects_msg['abs_t'][fus_occupancy_objects_msg_idx] <= abs_t and fus_occupancy_objects_msg_idx < (len(self.fus_occupancy_objects_msg['abs_t'])-1):
+        fus_occupancy_objects_msg_idx = fus_occupancy_objects_msg_idx + 1
+    out['fus_occupancy_objects_msg_idx'] = fus_occupancy_objects_msg_idx
+
     vis_parking_msg_idx = 0
     if self.vis_parking_msg['enable'] == True:
       while self.vis_parking_msg['abs_t'][vis_parking_msg_idx] <= abs_t and vis_parking_msg_idx < (len(self.vis_parking_msg['abs_t'])-1):
@@ -745,6 +783,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     while bag_loader.fus_objects_msg['abs_t'][fus_objects_msg_idx] <= abs_t and fus_objects_msg_idx < (len(bag_loader.fus_objects_msg['abs_t'])-1):
         fus_objects_msg_idx = fus_objects_msg_idx + 1
   local_view_data['data_index']['fus_objects_msg_idx'] = fus_objects_msg_idx
+
+  fus_occupancy_objects_msg_idx = 0
+  if bag_loader.fus_occupancy_objects_msg['enable'] == True:
+    while bag_loader.fus_occupancy_objects_msg['abs_t'][fus_occupancy_objects_msg_idx] <= abs_t and fus_occupancy_objects_msg_idx < (len(bag_loader.fus_occupancy_objects_msg['abs_t'])-1):
+      fus_occupancy_objects_msg_idx = fus_occupancy_objects_msg_idx + 1
+  local_view_data['data_index']['fus_occupancy_objects_msg_idx'] = fus_occupancy_objects_msg_idx
 
   vis_parking_msg_idx = 0
   if bag_loader.vis_parking_msg['enable'] == True:
@@ -1293,7 +1337,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
     # load uss wave from uss_percept_msg
     #get cur pose and uss wave
-    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
+    if version_245:
+      uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
+    else:
+      uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[0].dis_from_car_to_obj
+
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
     cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
@@ -1318,7 +1366,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
               uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
               uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
               x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-          elif uss_dis_info[j] * 0.001 == 0 or uss_dis_info * 0.001 > 10:
+          elif uss_dis_info[j] * 0.001 == 0 or uss_dis_info[j] * 0.001 > 10:
               ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
               x_text, y_text = 0, 0
           text_x.append(x_text)
@@ -1648,15 +1696,27 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     post_x, post_y = [], []
     parking_slot_x, parking_slot_y = [], []
     for i in range(NUM_OF_OUTLINE_DATAORI):
-      for j in range(NUM_OF_APA_SLOT_OBJ):
-        x = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].x
-        y = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i].obj_pt[j].y
+      single_out_line_dataori = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i]
+      if version_245:
+        obj_count = single_out_line_dataori.obj_pt_cnt
+      else:
+        obj_count = NUM_OF_APA_SLOT_OBJ
+
+      for j in range(obj_count):
+        if version_245:
+          x = single_out_line_dataori.obj_pt_global[j].x
+          y = single_out_line_dataori.obj_pt_global[j].y
+        else:
+          x = single_out_line_dataori.obj_pt[j].x
+          y = single_out_line_dataori.obj_pt[j].y
+
         if i == 0:
           post_x.append(x)
           post_y.append(y)
         elif i == 1:
           model_x.append(x)
           model_y.append(y)
+
     local_view_data['data_dluss_post'].data.update({
       'obj_pt_x': post_x,
       'obj_pt_y': post_y,
@@ -1819,16 +1879,17 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
         'end_angle':[],
       })
 
-  if bag_loader.fus_objects_msg['enable'] == True:
+  if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
     print('fus_objects_msg_idx', fus_objects_msg_idx)
 
-    for i in range(len(bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object)):
-      obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
-      polygon =  obj.additional_info.polygon
-      for j in range(len(polygon.points)):
-        x = polygon.points[j].x
-        y = polygon.points[j].y
+    for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_num):
+      obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]
+      polygon_points =  obj.additional_occupancy_info.polygon_points
+
+      for point in polygon_points:
+        x = point.x
+        y = point.y
         pos_x.append(x)
         pos_y.append(y)
 
@@ -1836,6 +1897,24 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'y': pos_y,
       'x': pos_x,
     })
+  elif bag_loader.fus_objects_msg['enable'] == True and not load_fusion_object_from_occupancy:
+    pos_x, pos_y = [], []
+    print('fus_objects_msg_idx', fus_objects_msg_idx)
+
+    for i in range(bag_loader.fus_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_num):
+      obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
+      polygon_points =  obj.additional_info.polygon_points
+
+      for point in polygon_points:
+        x = point.x
+        y = point.y
+        pos_x.append(x)
+        pos_y.append(y)
+
+      local_view_data['data_fusion_obj'].data.update({
+        'y': pos_y,
+        'x': pos_x,
+      })
 
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
@@ -2492,6 +2571,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     target_lane_xys = []
     global plan_debug_ts
     global fusion_object_timestamps
+    global fus_occupancy_objects_timestamps
     global ground_line_timestamps
     global fusion_road_timestamps
     global localization_timestamps
@@ -2550,6 +2630,13 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             fus_objects_msg_idx = fus_objects_msg_idx + 1
         fusion_object_timestamp = dataLoader.fus_objects_msg['abs_t'][fus_objects_msg_idx]
         fusion_object_timestamps.append(fusion_object_timestamp)
+
+      fus_occupancy_objects_msg_idx = 0
+      if dataLoader.fus_occupancy_objects_msg['enable'] == True:
+        while dataLoader.fus_occupancy_objects_msg['abs_t'][fus_occupancy_objects_msg_idx] <= abs_t and fus_occupancy_objects_msg_idx < (len(dataLoader.fus_occupancy_objects_msg['abs_t'])-1):
+            fus_occupancy_objects_msg_idx = fus_occupancy_objects_msg_idx + 1
+        fus_occupancy_objects_timestamp = dataLoader.fus_occupancy_objects_msg['abs_t'][fus_occupancy_objects_msg_idx]
+        fus_occupancy_objects_timestamps.append(fus_occupancy_objects_timestamp)
 
       vis_parking_msg_idx = 0
       if dataLoader.vis_parking_msg['enable'] == True:
@@ -3096,10 +3183,21 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find uss percept error')
       else:
-        for i in range(len(uss_percept_msg.out_line_dataori)):
-          for j in range(len(uss_percept_msg.out_line_dataori[i].obj_pt)):
-            x = uss_percept_msg.out_line_dataori[i].obj_pt[j].x
-            y = uss_percept_msg.out_line_dataori[i].obj_pt[j].y
+        for i in range(NUM_OF_OUTLINE_DATAORI):
+          single_out_line_dataori = dataLoader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i]
+          if version_245:
+            obj_count = single_out_line_dataori.obj_pt_cnt
+          else:
+            obj_count = NUM_OF_APA_SLOT_OBJ
+
+          for j in range(obj_count):
+            if version_245:
+              x = single_out_line_dataori.obj_pt_global[j].x
+              y = single_out_line_dataori.obj_pt_global[j].y
+            else:
+              x = single_out_line_dataori.obj_pt[j].x
+              y = single_out_line_dataori.obj_pt[j].y
+
             if i == 0:
               post_x.append(x)
               post_y.append(y)
@@ -3130,21 +3228,37 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
   # fus objects
     fus_objects_generator = CommonGenerator()
-    for fus_obj_i, fusion_object_timestamp in enumerate(fusion_object_timestamps):
-      flag, fus_objects_msg = findt(dataLoader.fus_objects_msg, fusion_object_timestamp)
-      pos_x, pos_y = [], []
-      if not flag:
-        print('find fus objects  error')
-      else:
-        for i in range(len(fus_objects_msg.fusion_object)):
-          obj  =  fus_objects_msg.fusion_object[i]
-          polygon = obj.additional_info.polygon
+    for fus_obj_i, fus_occupancy_objects_timestamp in enumerate(fus_occupancy_objects_timestamps):
+      if dataLoader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
+        flag, fus_occupancy_objects_msg = findt(dataLoader.fus_occupancy_objects_msg, fus_occupancy_objects_timestamp)
+        pos_x, pos_y = [], []
+        if not flag:
+          print('find fus occupancy objects  error')
+        else:
+          for i in range(fus_occupancy_objects_msg.fusion_object_num):
+            obj  =  fus_occupancy_objects_msg.fusion_object[i]
+            polygon_points =  obj.additional_occupancy_info.polygon_points
 
-          for j in range(len(polygon.points)):
-            x = polygon.points[j].x
-            y = polygon.points[j].y
-            pos_x.append(x)
-            pos_y.append(y)
+            for point in polygon_points:
+              x = point.x
+              y = point.y
+              pos_x.append(x)
+              pos_y.append(y)
+      elif dataLoader.fus_objects_msg['enable'] == True and not load_fusion_object_from_occupancy:
+        flag, fus_objects_msg = findt(dataLoader.fus_objects_msg, fusion_object_timestamps[fus_obj_i])
+        pos_x, pos_y = [], []
+        if not flag:
+          print('find fus objects  error')
+        else:
+          for i in range(len(fus_objects_msg.fusion_object_num)):
+            obj  =  fus_objects_msg.fusion_object[i]
+            polygon_points = obj.additional_info.polygon_points
+            for point in polygon_points:
+              x = point.x
+              y = point.y
+              pos_x.append(x)
+              pos_y.append(y)
+
       fus_objects_generator.xys.append((pos_y, pos_x))
     fus_objects_generator.ts = np.array(ctrl_debug_ts)
 
@@ -3170,7 +3284,10 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             print('find uss_percept_msg error')
           else:
             #get cur pose and uss wave
-            uss_dis_info = uss_percept_msg.out_line_dataori[4]
+            if version_245:
+              uss_dis_info = uss_percept_msg.dis_from_car_to_obj
+            else:
+              uss_dis_info = uss_percept_msg.out_line_dataori[0].dis_from_car_to_obj
             cur_pos_xn = loc_msg.pose.local_position.x
             cur_pos_yn = loc_msg.pose.local_position.y
             cur_yaw = loc_msg.pose.euler_angles.yaw
@@ -3183,15 +3300,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               for j in wdis_index[i]:
                   rs0 = ''
                   rs1 = ''
-                  if uss_dis_info.dis_from_car_to_obj[j] * 0.001 <= 10 and uss_dis_info.dis_from_car_to_obj[i] * 0.001 != 0:
-                      rs1 = round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2)
+                  if uss_dis_info[j] * 0.001 <= 10 and uss_dis_info[i] * 0.001 != 0:
+                      rs1 = round(uss_dis_info[j] * 0.001, 2)
                       # rs0 = '{:.2f}\n{:.2f}'.format(round(upa_dis_info_bufs[i].wdis[j].wdis_value[0], 2), round(upa_dis_info_bufs[i].wtype[j].wtype_value[0]))
-                      rs0 = '{:.2f}'.format(round(uss_dis_info.dis_from_car_to_obj[j] * 0.001, 2))
+                      rs0 = '{:.2f}'.format(round(uss_dis_info[j] * 0.001, 2))
                       ego_local_x, ego_local_y= local2global(uss_x[m], uss_y[m], cur_pos_xn, cur_pos_yn, cur_yaw)
                       uss_angle_start = math.radians(uss_angle[m] - 30) + cur_yaw
                       uss_angle_end = math.radians(uss_angle[m] +30) + cur_yaw
                       x_text, y_text = one_echo_text_local(ego_local_x, ego_local_y, math.radians(uss_angle[m] - 90) + cur_yaw, rs1 - 0.5)
-                  elif uss_dis_info.dis_from_car_to_obj[j] * 0.001 == 0 or uss_dis_info.dis_from_car_to_obj[j] * 0.001 > 10:
+                  elif uss_dis_info[j] * 0.001 == 0 or uss_dis_info[j] * 0.001 > 10:
                       ego_local_x, ego_local_y, uss_angle_start, uss_angle_end = '', '', '', ''
                       x_text, y_text = 0, 0
                   text_x.append(x_text)
@@ -3422,7 +3539,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(ground_line_layer, 'ground_line_layer', ground_line_generator, 'ground_line_generator', 2)
 
     # fus objects
-    if dataLoader.fus_objects_msg['enable'] == True:
+    if dataLoader.fus_objects_msg['enable'] == True or dataLoader.fus_occupancy_objects_msg['enable'] == True:
       fus_objects_layer = DotLayer(fig_local_view ,fus_objects_params)
       layer_manager.AddLayer(fus_objects_layer, 'fus_objects_layer', fus_objects_generator, 'fus_objects_generator', 2)
 

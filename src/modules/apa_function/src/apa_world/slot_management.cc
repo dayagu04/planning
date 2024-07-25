@@ -36,6 +36,7 @@ namespace planning {
 namespace {
 constexpr double kPie = 3.141592653589793;
 constexpr double kEps = 1e-6;
+const static bool kUseFusionoccupancyObjects = true;
 }  // namespace
 
 bool SlotManagement::Update(const LocalView *local_view_ptr) {
@@ -45,7 +46,8 @@ bool SlotManagement::Update(const LocalView *local_view_ptr) {
                 &local_view_ptr->uss_wave_info,
                 &local_view_ptr->uss_percept_info,
                 &local_view_ptr->ground_line_perception,
-                &local_view_ptr->fusion_objects_info);
+                &local_view_ptr->fusion_objects_info,
+                &local_view_ptr->fusion_occupancy_objects_info);
 }
 
 bool SlotManagement::Update(
@@ -55,7 +57,8 @@ bool SlotManagement::Update(
     const iflyauto::UssWaveInfo *uss_wave_info,
     const iflyauto::UssPerceptInfo *uss_percept_info,
     const iflyauto::GroundLinePerceptionInfo *ground_line_perception_info,
-    const iflyauto::FusionObjectsInfo *fusion_objects_info) {
+    const iflyauto::FusionObjectsInfo *fusion_objects_info,
+    const iflyauto::FusionOccupancyObjectsInfo *fusion_occupancy_objects_info) {
   DEBUG_PRINT("---------- slot management --------------------");
   // set ptrs
   frame_.func_state_ptr = func_statemachine;
@@ -65,6 +68,7 @@ bool SlotManagement::Update(
   frame_.uss_percept_info_ptr = uss_percept_info;
   frame_.ground_line_perception_info_ptr = ground_line_perception_info;
   frame_.fusion_objects_info_ptr = fusion_objects_info;
+  frame_.fusion_occupancy_objects_info_ptr = fusion_occupancy_objects_info;
 
   if (!IsInAPAState() || frame_.param.force_clear) {
     DEBUG_PRINT("reset");
@@ -133,8 +137,13 @@ void SlotManagement::AddFusionObjects() {
     return;
   }
 
-  const uint8 fusion_object_num =
-      frame_.fusion_objects_info_ptr->fusion_object_num;
+  uint8 fusion_object_num;
+  if (kUseFusionoccupancyObjects) {
+    fusion_object_num =
+        frame_.fusion_occupancy_objects_info_ptr->fusion_object_num;
+  } else {
+    fusion_object_num = frame_.fusion_objects_info_ptr->fusion_object_num;
+  }
 
   if (fusion_object_num == 0) {
     DEBUG_PRINT("fusion objects is empty");
@@ -146,14 +155,28 @@ void SlotManagement::AddFusionObjects() {
   const size_t N_begin = frame_.obs_pt_vec.size();
 
   Eigen::Vector2d fs_pt;
-  iflyauto::FusionObject fusion_object;
-  for (uint8 i = 0; i < fusion_object_num; ++i) {
-    fusion_object = frame_.fusion_objects_info_ptr->fusion_object[i];
-    for (uint32 j = 0; j < fusion_object.additional_info.polygon_points_num;
-         ++j) {
-      fs_pt << fusion_object.additional_info.polygon_points[j].x,
-          fusion_object.additional_info.polygon_points[j].y;
-      frame_.obs_pt_vec.emplace_back(fs_pt);
+  if (kUseFusionoccupancyObjects) {
+    iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
+    for (uint8 i = 0; i < fusion_object_num; ++i) {
+      fusion_occupancy_object =
+          frame_.fusion_occupancy_objects_info_ptr->fusion_object[i]
+              .additional_occupancy_info;
+      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_num; ++j) {
+        fs_pt << fusion_occupancy_object.polygon_points[j].x,
+            fusion_occupancy_object.polygon_points[j].y;
+        frame_.obs_pt_vec.emplace_back(fs_pt);
+      }
+    }
+  } else {
+    iflyauto::FusionObjectsAdditional fusion_object;
+    for (uint8 i = 0; i < fusion_object_num; ++i) {
+      fusion_object =
+          frame_.fusion_objects_info_ptr->fusion_object[i].additional_info;
+      for (uint32 j = 0; j < fusion_object.polygon_points_num; ++j) {
+        fs_pt << fusion_object.polygon_points[j].x,
+            fusion_object.polygon_points[j].y;
+        frame_.obs_pt_vec.emplace_back(fs_pt);
+      }
     }
   }
 

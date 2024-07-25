@@ -27,6 +27,14 @@ class PlanningAdapter {
     is_fusion_objects_info_msg_updated_.store(true);
   }
 
+  void FeedFusionOccupancyObjects(
+      const iflyauto::FusionOccupancyObjectsInfo& fusion_occupancy_objects_info_msg) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    fusion_occupancy_objects_info_msg_ = fusion_occupancy_objects_info_msg;
+    fusion_occupancy_objects_info_msg_recv_time_ = IflyTime::Now_ms();
+    is_fusion_occupancy_objects_info_msg_updated_.store(true);
+  }
+
   void FeedFusionRoad(const iflyauto::RoadInfo& road_info_msg) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     road_info_msg_ = road_info_msg;
@@ -186,6 +194,10 @@ class PlanningAdapter {
   iflyauto::FusionObjectsInfo fusion_objects_info_msg_;
   int64_t fusion_objects_info_msg_recv_time_;
   std::atomic<bool> is_fusion_objects_info_msg_updated_{false};
+
+  iflyauto::FusionOccupancyObjectsInfo fusion_occupancy_objects_info_msg_;
+  int64_t fusion_occupancy_objects_info_msg_recv_time_;
+  std::atomic<bool> is_fusion_occupancy_objects_info_msg_updated_{false};
 
   iflyauto::VehicleServiceOutputInfo vehicle_service_output_info_msg_;
   int64_t vehicle_service_output_info_msg_recv_time_;

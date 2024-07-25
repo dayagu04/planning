@@ -18,6 +18,7 @@
 #include "collision_detection.h"
 #include "common_c.h"
 #include "func_state_machine_c.h"
+#include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
 #include "local_view.h"
@@ -368,6 +369,8 @@ class SlotManagement {
     const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
     const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
     const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
+    const iflyauto::FusionOccupancyObjectsInfo*
+        fusion_occupancy_objects_info_ptr;
 
     std::vector<double> uss_raw_dist_vec;
     std::vector<iflyauto::SuccessfulSlotsInfo> released_slot_info_vec;
@@ -436,7 +439,9 @@ class SlotManagement {
       const iflyauto::UssWaveInfo* uss_wave_info,
       const iflyauto::UssPerceptInfo* uss_percept_info,
       const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info,
-      const iflyauto::FusionObjectsInfo* fusion_objects_info);
+      const iflyauto::FusionObjectsInfo* fusion_objects_info,
+      const iflyauto::FusionOccupancyObjectsInfo*
+          fusion_occupancy_objects_info);
 
   void AddUssPerceptObstacles();
 

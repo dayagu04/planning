@@ -40,6 +40,18 @@ bool PlanningComponent::Init() {
             planning_adapter_->FeedFusionObjects(fusion_objects_info_msg);
           });
 
+  auto fusion_occupancy_objects_reader_ =
+      planning_node_->CreateReader<iflyauto::StructContainer>(
+          "/iflytek/fusion/occupancy/objects",
+          [this](const std::shared_ptr<iflyauto::StructContainer>
+                     &fusion_occupancy_objects_info_container) {
+            const auto &fusion_occupancy_objects_info_msg =
+                *iflyauto::struct_cast<iflyauto::FusionOccupancyObjectsInfo>(
+                    fusion_occupancy_objects_info_container);
+            planning_adapter_->FeedFusionOccupancyObjects(
+                fusion_occupancy_objects_info_msg);
+          });
+
   auto fusion_road_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/fusion/road_fusion",
@@ -189,13 +201,13 @@ bool PlanningComponent::Init() {
       [this](const std::shared_ptr<Map::StaticMap> &map_msg) {
         planning_adapter_->FeedMap(map_msg);
       });
-      
+
   auto sd_map_reader_ = planning_node_->CreateReader<SdMapSwtx::SdMap>(
     "/iflytek/ehr/sdmap",
     [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
       planning_adapter_->FeedSdMap(sd_map_msg);
     });
-    
+
   // -------------- writter topics --------------
   planning_writer_ = planning_node_->CreateWriter<iflyauto::StructContainer>(
       "/iflytek/planning/plan");
