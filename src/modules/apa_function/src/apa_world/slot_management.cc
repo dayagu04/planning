@@ -1110,6 +1110,28 @@ bool SlotManagement::UpdateSlotsInSearching() {
         }
       }
 
+      Eigen::Vector2d car_center = frame_.measurement.ego_pos +
+                                   frame_.measurement.ego_heading_vec *
+                                       (apa_param.GetParam().car_length * 0.5 -
+                                        apa_param.GetParam().rear_overhanging);
+
+      const double dist =
+          (car_center - Eigen::Vector2d(slot->center().x(), slot->center().y()))
+              .norm();
+
+      if (dist > apa_param.GetParam().max_dist_from_slot2car_release) {
+        slot->set_is_release(false);
+        slot->set_is_occupied(true);
+        DEBUG_PRINT("the slot is so far to list slot id = "
+                    << slot->id() << "  slot type = " << slot->slot_type()
+                    << "  is_release = " << slot->is_release());
+        DEBUG_PRINT("car center = "
+                    << car_center.transpose() << "  slot center = "
+                    << Eigen::Vector2d(slot->center().x(), slot->center().y())
+                           .transpose());
+        continue;
+      }
+
       if (!frame_.fus_obj_valid_flag) {
         // no fus obs, should consider uss obs
         AddUssPerceptObstacles(*slot);

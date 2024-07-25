@@ -215,7 +215,8 @@ const bool PerpendicularPathPlanner::PreparePlan() {
       const double& x_offset = x_offset_vec[j];
       if (PreparePlanOnce(x_offset, heading_offset, calc_params_.turn_radius)) {
         prepare_success = true;
-        DEBUG_PRINT("  x_offset = " << x_offset << "  heading_offset = "
+        DEBUG_PRINT("  x_offset = " << (x_offset - pt_01_x) * input_.sin_angle
+                                    << "  heading_offset = "
                                     << heading_offset * 57.3);
       } else {
         // decide if can directly use ego pose to plan

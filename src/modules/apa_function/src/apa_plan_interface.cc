@@ -11,6 +11,7 @@
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
+#include "ifly_time.h"
 #include "local_view.h"
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_in_planner.h"
@@ -767,6 +768,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().min_parallel_vis_slot_release_long_dist_slot2mirror,
       double, "min_parallel_vis_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_dist_from_slot2car_release, double,
+                  "max_dist_from_slot2car_release");
 
   JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
                   "terminal_length");
