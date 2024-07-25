@@ -43,7 +43,7 @@ static double kCurbYMagIdentification = 0.0;
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 
-static double kMinChannelYMagIdentification = 2.5;
+static double kMinChannelYMagIdentification = 2.1;
 
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
@@ -891,6 +891,9 @@ void ParallelParInPlanner::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
 
   double channel_obs_lim = channel_y;
+  DEBUG_PRINT("frame_.ego_slot_info.obs_pt_vec_slot size = "
+              << frame_.ego_slot_info.obs_pt_vec_slot.size());
+
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
     // Todo: select obs in ROI instead of using obs deciding channel y
     // const bool channel_y_condition =
@@ -902,7 +905,7 @@ void ParallelParInPlanner::GenObstacles() {
     //         t_lane_.channel_y));
     const bool channel_y_condition =
         (obstacle_point_slot.x() > t_lane_.slot_length) &&
-        (obstacle_point_slot.x() < t_lane_.slot_length + 3.0) &&
+        (obstacle_point_slot.x() < t_lane_.slot_length + 6.0) &&
         (pnc::mathlib::IsInBound(
             obstacle_point_slot.y(),
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
@@ -916,7 +919,6 @@ void ParallelParInPlanner::GenObstacles() {
       }
       DEBUG_PRINT("channel to pt_y = " << std::fabs(obstacle_point_slot.y() -
                                                     t_lane_.obs_pt_inside.y()));
-
       apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
           obstacle_point_slot);
     }

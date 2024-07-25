@@ -755,8 +755,12 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   double, "min_slot_release_long_dist_slot2mirror");
 
   JSON_READ_VALUE(
-      apa_param.SetPram().min_parallel_slot_release_long_dist_slot2mirror,
-      double, "min_parallel_slot_release_long_dist_slot2mirror");
+      apa_param.SetPram().min_parallel_uss_slot_release_long_dist_slot2mirror,
+      double, "min_parallel_uss_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().min_parallel_vis_slot_release_long_dist_slot2mirror,
+      double, "min_parallel_vis_slot_release_long_dist_slot2mirror");
 
   JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
                   "terminal_length");

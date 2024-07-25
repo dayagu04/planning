@@ -1164,27 +1164,18 @@ bool SlotManagement::UpdateSlotsInSearching() {
                    Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
                slot->is_release()) {
       const double lon_dist = CalLonDistSlot2Car(*slot);
-      const double parallel_pre_release_lon_dist = 1.3;
 
       if (frame_.fus_obj_valid_flag) {
         DEBUG_PRINT("use fusion obs, lon_dist = " << lon_dist);
         const size_t slot_id = static_cast<size_t>(slot->id());
-        // if slot released by fusion is too late, just add nearby obs once.
-        if (frame_.obs_pt_map[slot_id].size() == 0) {
-          frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
-        }
+        frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
 
-        // then use lon dist to update relatively accurate obs
-        if (pnc::mathlib::IsInBound(lon_dist, 0.0,
-                                    parallel_pre_release_lon_dist)) {
-          // DEBUG_PRINT("frame_.obs_pt_vec size = " <<
-          // frame_.obs_pt_vec.size());
-          frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
-        }
+        DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
+                    << frame_.obs_pt_map[slot_id].size());
 
-        // DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
-        //             << frame_.obs_pt_map[slot_id].size());
-        if (lon_dist < parallel_pre_release_lon_dist &&
+        if (lon_dist <
+                apa_param.GetParam()
+                    .min_parallel_vis_slot_release_long_dist_slot2mirror &&
             pair.second.GetOccupied()) {
           slot->set_is_release(false);
           slot->set_is_occupied(true);
@@ -1198,8 +1189,9 @@ bool SlotManagement::UpdateSlotsInSearching() {
         DEBUG_PRINT("use uss obs");
         // select nearby obs pt from ori USS pt for given slot
         AddUssPerceptObstacles(*slot);
-        if (lon_dist < apa_param.GetParam()
-                           .min_parallel_slot_release_long_dist_slot2mirror &&
+        if (lon_dist <
+                apa_param.GetParam()
+                    .min_parallel_uss_slot_release_long_dist_slot2mirror &&
             pair.second.GetOccupied()) {
           slot->set_is_release(false);
           slot->set_is_occupied(true);
@@ -2395,12 +2387,16 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
   if (frame_.obs_pt_map.count(select_slot.id()) == 0) {
     return true;
   }
-  const auto &obs_pt_vec = frame_.obs_pt_map[select_slot.id()];
-  ego_slot_info.obs_pt_vec_slot.reserve(obs_pt_vec.size());
-  for (const auto &obs_pt : obs_pt_vec) {
-    const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-  }
+
+  frame_.obs_pt_map[select_slot.id()] = frame_.obs_pt_vec;
+
+  // const auto &obs_pt_vec = frame_.obs_pt_map[select_slot.id()];
+  // ego_slot_info.obs_pt_vec_slot.reserve(obs_pt_vec.size());
+
+  // for (const auto &obs_pt : obs_pt_vec) {
+  //   const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+  //   ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+  // }
 
   return true;
 }
