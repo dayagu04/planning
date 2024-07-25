@@ -6,6 +6,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -95,8 +96,10 @@ void LateralObstacle::LateralObstacleDecision(
                          .GetDebugInfoPb()
                          ->environment_model_info()
                          .ego_l();
-  const auto ego_car_width = 2.3;
-  const auto ego_car_length = 5;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto ego_car_width = vehicle_param.width;
+  const auto ego_car_length = vehicle_param.length;
   const auto &lateral_output =
       session_->planning_context().lateral_behavior_planner_output();
   auto lane_width = lateral_output.flane_width;
@@ -109,8 +112,7 @@ void LateralObstacle::LateralObstacleDecision(
       continue;
     }
 
-    bool lat_overlap =
-        fabs(ego_l - item.l) < (ego_car_width + item.width) / 2;
+    bool lat_overlap = fabs(ego_l - item.l) < (ego_car_width + item.width) / 2;
     // 前方车辆
     if (item.is_avd_car) {
       if (item.d_max_cpath > 0 && item.d_min_cpath < 0) {
@@ -122,33 +124,26 @@ void LateralObstacle::LateralObstacleDecision(
       }
     } else if (item.d_rel > 0) {
       if (item.d_max_cpath < 0 &&
-               std::fabs(item.d_max_cpath) > lane_width * 0.5) {
+          std::fabs(item.d_max_cpath) > lane_width * 0.5) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
       } else if (item.d_min_cpath > lane_width * 0.5) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       } else {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
       }
-    // 平行车辆
+      // 平行车辆
     } else if (item.d_rel < 0 && item.d_rel > -(ego_car_length + item.length)) {
-      if (item.d_min_cpath > 0 &&
-          !lat_overlap) {
+      if (ego_l < item.l) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
-      } else if (item.d_max_cpath < 0 &&
-                 !lat_overlap) {
-        lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
       } else {
-        lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
-      }
-    // 后方车辆
-    } else {
-      if (item.d_max_cpath < 0 &&
-                !lat_overlap &&
-                item.d_max_cpath < -ref_dis) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
-      } else if (item.d_min_cpath > 0 &&
-                !lat_overlap &&
-                item.d_max_cpath > ref_dis) {
+      }
+      // 后方车辆
+    } else {
+      if (item.d_max_cpath < 0 && !lat_overlap && item.d_max_cpath < -ref_dis) {
+        lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
+      } else if (item.d_min_cpath > 0 && !lat_overlap &&
+                 item.d_min_cpath > ref_dis) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       } else {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
