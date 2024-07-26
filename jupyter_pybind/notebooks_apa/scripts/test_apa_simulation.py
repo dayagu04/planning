@@ -2,16 +2,18 @@ import sys, os, copy
 sys.path.append("..")
 # from lib.load_cyberbag import *
 from lib.load_local_view_parking import *
+from io import BytesIO
 sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
 sys.path.append('../../python_proto')
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo
+from python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/jac_s811_19cp2/trigger/20240719/20240719-16-28-44/park_in_data_collection_JAC_S811_19CP2_ALL_FILTER_2024-07-19-16-28-44_no_camera.record'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240724/20240724-10-49-02/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-24-10-49-03_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = JAC_S811
@@ -78,6 +80,10 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   is_path_optimization = False
   is_reset = False
   is_complete_path = False
+  is_cilqr_enable = False
+  sim_to_target = False
+  use_slot_in_bag = False
+  use_obs_in_bag = False
   sample_ds = 0.02
   lon_pos_dif = 0.0
   lat_pos_dif = 0.0
@@ -102,6 +108,11 @@ for bag_time in np.arange(0.0, max_time, 0.1):
     fus_obj_msg = bag_loader.fus_objects_msg['data'][index_map['fus_objects_msg_idx']]
   else:
     fus_obj_msg = FusionObjectsInfo()
+  if bag_loader.fus_occupancy_objects_msg['enable'] == True:
+    fus_occ_obj_msg = bag_loader.fus_occupancy_objects_msg['data'][index_map['fus_occupancy_objects_msg_idx']]
+  else:
+    fus_occ_obj_msg = FusionOccupancyObjectsInfo()
+
   loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
@@ -158,24 +169,58 @@ for bag_time in np.arange(0.0, max_time, 0.1):
     'car_yn': car_yn,
   })
 
-  # res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg.SerializeToString(),
-  #                                   fus_parking_msg.SerializeToString(),
-  #                                   loc_msg.SerializeToString(),
-  #                                   vs_msg.SerializeToString(),
-  #                                   wave_msg.SerializeToString(),
-  #                                   select_id, force_plan, is_path_optimization, is_reset, is_complete_path, sample_ds, target_managed_slot_x_vec, target_managed_slot_y_vec,
-  #                                   target_managed_limiter_x_vec, target_managed_limiter_y_vec)
+  soc_state_msg_buff = BytesIO()
+  soc_state_msg.serialize(soc_state_msg_buff)
+  soc_state_msg_bytes = soc_state_msg_buff.getvalue()
 
-  res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg.SerializeToString(),
-                                    fus_parking_msg.SerializeToString(),
-                                    loc_msg.SerializeToString(),
-                                    vs_msg.SerializeToString(),
-                                    wave_msg.SerializeToString(),
-                                    uss_perception_msg.SerializeToString(),
-                                    gl_msg.SerializeToString(),
-                                    fus_obj_msg.SerializeToString(),
-                                    0, False, False, False, False, False, False, True, True, 0.02, target_managed_slot_x_vec, target_managed_slot_y_vec,
-                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec,obs_x_vec, obs_y_vec)
+  fus_parking_msg_buff = BytesIO()
+  fus_parking_msg.serialize(fus_parking_msg_buff)
+  fus_parking_msg_bytes = fus_parking_msg_buff.getvalue()
+
+  loc_msg_buff = BytesIO()
+  loc_msg.serialize(loc_msg_buff)
+  loc_msg_bytes = loc_msg_buff.getvalue()
+
+  vs_msg_buff = BytesIO()
+  vs_msg.serialize(vs_msg_buff)
+  vs_msg_bytes = vs_msg_buff.getvalue()
+
+  wave_msg_buff = BytesIO()
+  wave_msg.serialize(wave_msg_buff)
+  wave_msg_bytes = wave_msg_buff.getvalue()
+
+  uss_perception_msg_buff = BytesIO()
+  uss_perception_msg.serialize(uss_perception_msg_buff)
+  uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
+
+  ground_line_perception_msg_buff = BytesIO()
+  gl_msg.serialize(ground_line_perception_msg_buff)
+  ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
+
+  fus_obj_msg_buff = BytesIO()
+  fus_obj_msg.serialize(fus_obj_msg_buff)
+  fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
+
+  fus_occ_obj_msg_buff = BytesIO()
+  fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
+  fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
+
+  res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg_bytes,
+                                    fus_parking_msg_bytes,
+                                    loc_msg_bytes,
+                                    vs_msg_bytes,
+                                    wave_msg_bytes,
+                                    uss_perception_msg_bytes,
+                                    ground_line_perception_msg_bytes,
+                                    fus_obj_msg_bytes,
+                                    fus_occ_obj_msg_bytes,
+                                    select_id, force_plan, is_path_optimization,
+                                    is_cilqr_enable, is_reset, is_complete_path,
+                                    sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,
+                                    target_managed_slot_x_vec, target_managed_slot_y_vec,
+                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec,
+                                    obs_x_vec, obs_y_vec,
+                                    gl_msg.ground_lines_size, fus_obj_msg.fusion_object_num, fus_occ_obj_msg.fusion_object_num)
 
 
   data_planning_tune.data = {'plan_path_x': [],

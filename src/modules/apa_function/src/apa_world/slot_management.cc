@@ -1000,7 +1000,7 @@ const bool SlotManagement::AddUssPerceptObstacles(
 
   Eigen::Vector2d obs_pt;
   std::vector<Eigen::Vector2d> slot_obs_vec;
-  for (int i = 0; i < obj_info_desample.obj_pt_cnt; ++i) {
+  for (uint32 i = 0; i < obj_info_desample.obj_pt_cnt; ++i) {
     obs_pt << obj_info_desample.obj_pt_global[i].x,
         obj_info_desample.obj_pt_global[i].y;
     const double dist = (slot_center - obs_pt).norm();
@@ -1022,8 +1022,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
   // DEBUG_PRINT("apa state is in searching!");
   // Update slots
   std::unordered_map<size_t, iflyauto::ParkingFusionSlot> fusion_slot_map;
-  for (int i = 0; i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size;
-       ++i) {
+  for (uint32 i = 0;
+       i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size; ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists[i];
     fusion_slot_map[fusion_slot.id] = fusion_slot;
@@ -2031,8 +2031,8 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   iflyauto::ParkingFusionSlot select_fusion_slot;
   bool valid_select_slot = false;
-  for (int i = 0; i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size;
-       ++i) {
+  for (uint32 i = 0;
+       i < frame_.parking_slot_ptr->parking_fusion_slot_lists_size; ++i) {
     const auto &fusion_slot =
         frame_.parking_slot_ptr->parking_fusion_slot_lists[i];
     if (select_slot_id == fusion_slot.id) {
@@ -2482,7 +2482,7 @@ void SlotManagement::UpdateSlotInfoInParking() {
 
   if (update_slot_flag) {
     if (frame_.no_update_slot_count >
-        static_cast<size_t>(apa_param.GetParam().slot_reset_threshold)) {
+        apa_param.GetParam().slot_reset_threshold) {
       reset_slot_flag = true;
       frame_.no_update_slot_count = 0;
     }
@@ -2666,8 +2666,8 @@ void SlotManagement::UpdateReleasedSlotInfo() {
       if (IsInParkingState() &&
           (static_cast<int>(slot_info.id()) ==
            static_cast<int>(frame_.ego_slot_info.select_slot_id))) {
-        released_slot_info.Clear();
-        released_slot_info.set_id(slot_info.id());
+        memset(&released_slot_info, 0, sizeof(released_slot_info));
+        released_slot_info.id = slot_info.id();
         frame_.released_slot_info_vec.emplace_back(released_slot_info);
       }
     }

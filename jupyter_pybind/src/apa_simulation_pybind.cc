@@ -14,7 +14,11 @@
 
 #include "apa_plan_base.h"
 #include "apa_plan_interface.h"
+#include "camera_preception_groundline_c.h"
+#include "debug_info_log.h"
 #include "func_state_machine_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -29,6 +33,9 @@
 #include "struct_convert/uss_wave_info_c.h"
 #include "struct_convert/vehicle_service_c.h"
 #include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionObjectsInfo.h"
+#include "struct_msgs/FusionOccupancyObjectsInfo.h"
+#include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/LocalizationEstimate.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
@@ -45,9 +52,9 @@ static PerfectControl *perfect_control_ptr;
 static planning::LocalView local_view;
 
 int Init() {
-  const std::string flag_file_path =
-      "/asw/planning/res/conf/planning_gflags.conf";
-  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+  // const std::string flag_file_path =
+  //     "/asw/planning/res/conf/planning_gflags.conf";
+  // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
 
@@ -135,14 +142,16 @@ const bool InterfaceUpdateParam(
     py::bytes &vehicle_service_output_info_bytes,
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
     py::bytes &ground_line_info_bytes, py::bytes &fus_obj_info_bytes,
-    int select_id, bool force_plan, bool is_path_optimization,
-    bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
-    bool sim_to_target, bool use_slot_in_bag, bool use_obs_in_bag,
-    double sample_ds, std::vector<double> target_managed_slot_x_vec,
+    py::bytes &fus_occ_obj_info_bytes, int select_id, bool force_plan,
+    bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
+    bool is_complete_path, bool sim_to_target, bool use_slot_in_bag,
+    bool use_obs_in_bag, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec,
-    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec) {
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec, int gl_size,
+    int fus_obj_num, int fus_occ_obj_num) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
@@ -187,17 +196,27 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
           uss_wave_info_bytes);
 
-  // iflyauto::UssPerceptInfo uss_perception_info =
-  //   BytesToStruct<iflyauto::UssPerceptInfo,
-  //   struct_msgs::UssPerceptInfo>(uss_perception_info_bytes);
-  iflyauto::UssPerceptInfo uss_perception_info;
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
 
-  auto ground_line_info =
-      BytesToProto<GroundLinePerception::GroundLinePerceptionInfo>(
+  iflyauto::GroundLinePerceptionInfo ground_line_info =
+      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+                    struct_msgs::GroundLinePerceptionInfo>(
           ground_line_info_bytes);
 
-  auto fus_obj_info =
-      BytesToProto<FusionObjects::FusionObjectsInfo>(fus_obj_info_bytes);
+  iflyauto::FusionObjectsInfo fus_obj_info =
+      BytesToStruct<iflyauto::FusionObjectsInfo,
+                    struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+                    struct_msgs::FusionOccupancyObjectsInfo>(
+          fus_occ_obj_info_bytes);
+
+  ground_line_info.ground_lines_size = gl_size;
+  fus_obj_info.fusion_object_num = fus_obj_num;
+  fus_occ_obj_info.fusion_object_num = fus_occ_obj_num;
 
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
@@ -207,6 +226,16 @@ const bool InterfaceUpdateParam(
   local_view.uss_percept_info = uss_perception_info;
   local_view.ground_line_perception = ground_line_info;
   local_view.fusion_objects_info = fus_obj_info;
+  local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
+
+  DEBUG_PRINT(
+      "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
+
+  DEBUG_PRINT(
+      "c++ fus_obj_num = " << static_cast<int>(fus_obj_info.fusion_object_num));
+
+  DEBUG_PRINT("c++ fus_occ_obj_num = "
+              << static_cast<int>(fus_occ_obj_info.fusion_object_num));
 
   if (force_plan) {
     local_view.function_state_machine_info.current_state =

@@ -120,10 +120,9 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
           uss_wave_info_bytes);
 
-  // iflyauto::UssPerceptInfo uss_perception_info =
-  //   BytesToStruct<iflyauto::UssPerceptInfo,
-  //   struct_msgs::UssPerceptInfo>(uss_perception_info_bytes);
-  iflyauto::UssPerceptInfo uss_perception_info;
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
 
   iflyauto::GroundLinePerceptionInfo ground_line_perception_info =
       BytesToStruct<iflyauto::GroundLinePerceptionInfo,

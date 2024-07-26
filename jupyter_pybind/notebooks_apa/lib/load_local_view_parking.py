@@ -187,18 +187,27 @@ class LoadCyberbag:
     try:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
-        plan_msg_dict[msg.meta.msg_header.timestamp / 1e6] = msg
+        if hasattr(msg.meta, 'msg_header'):
+          plan_msg_timestamp = msg.meta.msg_header.timestamp
+        else:
+          plan_msg_timestamp = msg.msg_header.timestamp
+        plan_msg_dict[plan_msg_timestamp / 1e6] = msg
       plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
         self.plan_msg['t'].append(t)
         self.plan_msg['abs_t'].append(t)
         self.plan_msg['data'].append(msg)
+
       smallest_abs_t = min(smallest_abs_t, self.plan_msg['t'][0])
       t0_plan = self.plan_msg['t'][0]
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
-      print('plan version:', self.plan_msg['data'][0].meta.msg_header.version)
+      if hasattr(self.plan_msg['data'][0].meta, 'msg_header'):
+        print('plan version:', self.plan_msg['data'][0].meta.msg_header.version)
+      else:
+        print('plan version:', self.plan_msg['data'][0].msg_header.version)
+
       if len(self.plan_msg['t']) > 0:
         self.plan_msg['enable'] = True
       else:
@@ -400,23 +409,21 @@ class LoadCyberbag:
 
     # load fusion objects msg
     try:
-      fusion_objects_msg_dict = {}
+      fus_objects_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
-        fusion_objects_msg_dict[msg.header.timestamp / 1e6] = msg
+        if version_245:
+          fus_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        else:
+          fus_objects_msg_dict[msg.header.timestamp / 1e6] = msg
 
-      fusion_objects_msg_dict = {key: val for key, val in sorted(fusion_objects_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in fusion_objects_msg_dict.items():
+      fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_objects_msg_dict.items():
         self.fus_objects_msg['t'].append(t)
         self.fus_objects_msg['abs_t'].append(t)
         self.fus_objects_msg['data'].append(msg)
       smallest_abs_t = min(smallest_abs_t, self.fus_objects_msg['t'][0])
-      if (abs(self.fus_objects_msg['t'][0]) < 0.0001):
-        self.fus_objects_msg['t'] = [tmp - self.fus_objects_msg['t'][1]  for tmp in self.fus_objects_msg['t']]
-      else:
-        self.fus_objects_msg['t'] = [tmp - self.fus_objects_msg['t'][0]  for tmp in self.fus_objects_msg['t']]
-
+      self.fus_objects_msg['t'] = [tmp - t0  for tmp in self.fus_objects_msg['t']]
       print('fus_objects_msg time:',self.fus_objects_msg['t'][-1])
-
       if len(self.fus_objects_msg['t']) > 0:
         self.fus_objects_msg['enable'] = True
       else:
@@ -1881,15 +1888,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
   if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
-    print('fus_objects_msg_idx', fus_objects_msg_idx)
 
     for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_num):
       obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]
       polygon_points =  obj.additional_occupancy_info.polygon_points
-
-      for point in polygon_points:
-        x = point.x
-        y = point.y
+      for j in range(obj.additional_occupancy_info.polygon_points_num):
+        x = polygon_points[j].x
+        y = polygon_points[j].y
         pos_x.append(x)
         pos_y.append(y)
 
@@ -1899,15 +1904,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     })
   elif bag_loader.fus_objects_msg['enable'] == True and not load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
-    print('fus_objects_msg_idx', fus_objects_msg_idx)
 
     for i in range(bag_loader.fus_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_num):
       obj  =  bag_loader.fus_objects_msg['data'][fus_objects_msg_idx].fusion_object[i]
       polygon_points =  obj.additional_info.polygon_points
-
-      for point in polygon_points:
-        x = point.x
-        y = point.y
+      for j in range(obj.additional_info.polygon_points_num):
+        x = polygon_points[j].x
+        y = polygon_points[j].y
         pos_x.append(x)
         pos_y.append(y)
 
@@ -3238,10 +3241,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           for i in range(fus_occupancy_objects_msg.fusion_object_num):
             obj  =  fus_occupancy_objects_msg.fusion_object[i]
             polygon_points =  obj.additional_occupancy_info.polygon_points
-
-            for point in polygon_points:
-              x = point.x
-              y = point.y
+            for j in range(obj.additional_occupancy_info.polygon_points_num):
+              x = polygon_points[j].x
+              y = polygon_points[j].y
               pos_x.append(x)
               pos_y.append(y)
       elif dataLoader.fus_objects_msg['enable'] == True and not load_fusion_object_from_occupancy:
@@ -3253,9 +3255,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           for i in range(len(fus_objects_msg.fusion_object_num)):
             obj  =  fus_objects_msg.fusion_object[i]
             polygon_points = obj.additional_info.polygon_points
-            for point in polygon_points:
-              x = point.x
-              y = point.y
+            for j in range(obj.additional_info.polygon_points_num):
+              x = polygon_points[j].x
+              y = polygon_points[j].y
               pos_x.append(x)
               pos_y.append(y)
 

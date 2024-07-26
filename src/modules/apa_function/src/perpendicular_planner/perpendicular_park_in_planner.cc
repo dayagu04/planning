@@ -1748,12 +1748,10 @@ void PerpendicularInPlanner::GenPlanningPath() {
 
   // send remain dist col det to uss
   // only set a flag let control can use it
-  planning_output_.mutable_trajectory()
-      ->mutable_trajectory_points(3)
-      ->set_distance(static_cast<double>(1.0));
-  planning_output_.mutable_trajectory()
-      ->mutable_trajectory_points(4)
-      ->set_distance(frame_.remain_dist_col_det);
+  planning_output_.trajectory.trajectory_points[3].distance =
+      static_cast<double>(1.0);
+  planning_output_.trajectory.trajectory_points[4].distance =
+      frame_.remain_dist_col_det;
 
   // set plan gear cmd
   auto gear_command = &(planning_output_.gear_command);
