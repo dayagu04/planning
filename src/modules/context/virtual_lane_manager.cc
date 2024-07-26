@@ -595,52 +595,79 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   int last_ego_lane_order_id = 0;
   int current_ego_lane_order_id = last_ego_lane_order_id;
   int order_id_diff = 0;
-
-  auto iter = virtual_id_mapped_lane_.find(current_lane_virtual_id_);
-  if (iter != virtual_id_mapped_lane_.end()) {
-    last_ego_lane_order_id = iter->second->get_order_id();
-    for (const auto& lane : relative_id_lanes_) {
-      if (lane->get_relative_id() == 0) {
-        current_ego_lane_order_id = lane->get_order_id();
-      }
-    }
-
-    if (last_ego_lane_order_id != current_ego_lane_order_id) {
-      order_id_diff = current_ego_lane_order_id - last_ego_lane_order_id;
-    }
-  } else {
-    order_id_diff = 0;
-  }
-  
-  // auto lc_last_state = coarse_planning_info.source_state;
+  auto lc_last_state = coarse_planning_info.source_state;
   auto lc_state = coarse_planning_info.target_state;
   auto lc_request = lane_change_decider_output.lc_request;
+  int target_lane_vitrual_id = lane_change_decider_output.target_lane_virtual_id;
+  int target_lane_order_id = 0;
+  int order_and_virtual_diff = 0;
+  double lane_maping_diff_total = std::numeric_limits<double>::max();
 
-  if (virtual_lane_relative_id_switch_flag_) {
-    if (lc_request == LEFT_CHANGE && order_id_diff != 0) {
-      if (lc_state == ROAD_LC_LCHANGE) {
-        lane_virtual_id = current_lane_virtual_id_ - 1;
-      } else if (lc_state == ROAD_LC_LBACK) {
-        lane_virtual_id = current_lane_virtual_id_ + order_id_diff;
+  if ((lc_request == LEFT_CHANGE || lc_request == RIGHT_CHANGE) && (lc_state != ROAD_NONE)) {
+    auto iter = virtual_id_mapped_lane_.find(target_lane_vitrual_id);
+    if (iter != virtual_id_mapped_lane_.end()) {
+      auto target_lane_frenet_coord= iter->second->get_lane_frenet_coord();
+      if (target_lane_frenet_coord != nullptr) {
+        for (const auto& relative_id_lane : relative_id_lanes_) {
+          auto& lane_points = relative_id_lane->lane_points();
+          if (lane_points.size() <= 2) {
+            continue;
+          }
+          int default_point_nums = 20;
+          int point_nums = 0;
+          double lane_mapping_cost = 0.0;
+          double total_lateral_offset = 0.0; 
+          for (const auto &point : lane_points) {
+            if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
+              LOG_ERROR("update_lane_points: skip NaN point");
+              continue;
+            }
+            double lateral_offset = 0.0;
+            double ego_s, ego_l;
+            if (!target_lane_frenet_coord->XYToSL(point.local_point.x, point.local_point.y, &ego_s,
+                                      &ego_l)) {
+              lateral_offset = 10.0;
+            } else {
+              lateral_offset = ego_l;
+            }
+            total_lateral_offset += lateral_offset;
+            point_nums += 1;
+            if (point_nums >= default_point_nums) {
+              break;
+            }
+          }
+          lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
+
+          if (lane_mapping_cost < lane_maping_diff_total) {
+            lane_maping_diff_total = lane_mapping_cost;
+            target_lane_order_id = relative_id_lane->get_order_id();
+          }
+        }
+        order_and_virtual_diff = target_lane_vitrual_id - target_lane_order_id;
+
+        virtual_id_mapped_lane_.clear();
+        for (auto& lane : relative_id_lanes_) {
+          auto lane_virtual_id = lane->get_order_id() + order_and_virtual_diff;
+          virtual_id_mapped_lane_[lane_virtual_id] = lane;
+          lane->set_virtual_id(lane_virtual_id);
+          if (lane->get_relative_id() == 0) {
+            current_lane_virtual_id_ = lane_virtual_id;
+          }
+        }
+        return;
       } else {
-        lane_virtual_id = current_lane_virtual_id_;
+        virtual_id_mapped_lane_.clear();
+        for (auto& lane : relative_id_lanes_) {
+          auto lane_virtual_id = lane->get_relative_id() + current_lane_virtual_id_;
+          virtual_id_mapped_lane_[lane_virtual_id] = lane;
+          lane->set_virtual_id(lane_virtual_id);
+        }
+        return;
       }
-    } else if (lc_request == RIGHT_CHANGE && order_id_diff != 0) {
-      if (lc_state == ROAD_LC_RCHANGE) {
-        lane_virtual_id = current_lane_virtual_id_ + 1;
-      } else if (lc_state == ROAD_LC_RBACK) {
-        lane_virtual_id = current_lane_virtual_id_ + order_id_diff;
-      } else {
-        lane_virtual_id = current_lane_virtual_id_;
-      }
-    } else {
-      lane_virtual_id = current_lane_virtual_id_;
     }
-  } else {
-    lane_virtual_id = current_lane_virtual_id_;
-  }
-  
-  current_lane_virtual_id_ = lane_virtual_id;
+  } 
+
+  lane_virtual_id = current_lane_virtual_id_;
   // update fixlane id
   const auto& lateral_outputs =
       session_->planning_context().lateral_behavior_planner_output();
@@ -650,7 +677,7 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   }
 
   virtual_id_mapped_lane_.clear();
-  for (const auto& lane : relative_id_lanes_) {
+  for (auto& lane : relative_id_lanes_) {
     auto lane_virtual_id = lane->get_relative_id() + current_lane_virtual_id_;
     virtual_id_mapped_lane_[lane_virtual_id] = lane;
     lane->set_virtual_id(lane_virtual_id);
@@ -1852,7 +1879,7 @@ void VirtualLaneManager::TrackEgoLane() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  const bool lane_keep_status = lane_change_status == ROAD_NONE ? true :false;
+  const bool lane_keep_status = lane_change_status == ROAD_NONE;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& function_info = session_->environmental_model().function_info();
@@ -1927,8 +1954,7 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
   for (auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
-        std::shared_ptr<KDPath> frenet_coord;
-        frenet_coord = relative_id_lane->get_lane_frenet_coord();
+        std::shared_ptr<KDPath> frenet_coord = relative_id_lane->get_lane_frenet_coord();
         double ego_s, ego_l;
         if (!frenet_coord->XYToSL(ego_state->ego_pose().x,
                                   ego_state->ego_pose().y, &ego_s, &ego_l)) {
@@ -2295,7 +2321,7 @@ void VirtualLaneManager::CalcBoundaryCross(
   return;
 }
 
-void VirtualLaneManager::PreprocessRoadSplit(std::vector<int>& order_ids) {
+void VirtualLaneManager::PreprocessRoadSplit(const std::vector<int>& order_ids) {
   const double kSameLaneThresholdRange = 0.2;
   const double kDefaultWidth = 3.75;
   const int lane_nums = relative_id_lanes_.size();
@@ -2327,7 +2353,7 @@ void VirtualLaneManager::PreprocessRoadSplit(std::vector<int>& order_ids) {
   return;
 }
 
-void VirtualLaneManager::PreprocessRampSplit(std::vector<int>& order_ids) {
+void VirtualLaneManager::PreprocessRampSplit(const std::vector<int>& order_ids) {
   int origin_order_id = 0;
   if (order_ids.size() < 2) {
     return;

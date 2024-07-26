@@ -129,9 +129,9 @@ class VirtualLaneManager {
 
   void TrackEgoLane();
 
-  void PreprocessRoadSplit(std::vector<int>& order_ids);
+  void PreprocessRoadSplit(const std::vector<int>& order_ids);
 
-  void PreprocessRampSplit(std::vector<int>& order_ids);
+  void PreprocessRampSplit(const std::vector<int>& order_ids);
 
   void SelectEgoLaneWithoutPlan();
 

@@ -100,11 +100,7 @@ class VirtualLane {
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
 
   void set_lane_frenet_coord(std::shared_ptr<KDPath> frenet_coord) {
-    if (frenet_coord == nullptr) {
-      lane_frenet_coord_ = nullptr;
-    } else {
-      lane_frenet_coord_ = frenet_coord;
-    }
+    lane_frenet_coord_ = frenet_coord;
   };
 
   const std::shared_ptr<KDPath> get_lane_frenet_coord() {
