@@ -381,7 +381,7 @@ void GeneralLateralDecider::UpdateDistanceToRoadBorder() {
     size_t lower_truncation_idx = 0;
     size_t upper_truncation_idx = 0;
     if (ref_path_points_[i].distance_to_left_lane_border >
-        0.5 * vehicle_param.width + config_.soft_buffer2lane) {
+        0.5 * vehicle_param.max_width + config_.soft_buffer2lane) {
       upper_truncation_idx = i;
     } else {
       ref_path_points_[i].distance_to_left_lane_border =
@@ -389,7 +389,7 @@ void GeneralLateralDecider::UpdateDistanceToRoadBorder() {
     }
 
     if (ref_path_points_[i].distance_to_right_lane_border >
-        0.5 * vehicle_param.width + config_.soft_buffer2lane) {
+        0.5 * vehicle_param.max_width + config_.soft_buffer2lane) {
       lower_truncation_idx = i;
     } else {
       ref_path_points_[i].distance_to_right_lane_border =
@@ -424,11 +424,11 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
 
     hard_bound_road.upper =
         std::fmin(std::max(config_.hard_min_distance_road2center, ref_path_points_[i].distance_to_left_road_border -
-                      0.5 * vehicle_param.width - config_.hard_buffer2road),
+                      0.5 * vehicle_param.max_width - config_.hard_buffer2road),
                   hard_bound_road.upper);
     hard_bound_road.lower =
         std::fmax(std::min( -config_.hard_min_distance_road2center, -ref_path_points_[i].distance_to_right_road_border +
-                      0.5 * vehicle_param.width + config_.hard_buffer2road),
+                      0.5 * vehicle_param.max_width + config_.hard_buffer2road),
                   hard_bound_road.lower);
     soft_bound_road.upper =
         std::fmin(std::max(config_.soft_min_distance_road2center, hard_bound_road.upper - left_road_extra_buffer),
@@ -458,7 +458,7 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                         coarse_planning_info.target_state == ROAD_LC_LBACK ||
                         coarse_planning_info.target_state == ROAD_LC_RBACK ;
   const double kDefaultDistanceToRoad = 10.0;
-  const double half_ego_width = 0.5 * vehicle_param.width;
+  const double half_ego_width = 0.5 * vehicle_param.max_width;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_lane{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
     soft_bound_lane.upper =
@@ -548,7 +548,7 @@ void GeneralLateralDecider::GetLateralTTCToRoad(double* const left_collision_t, 
 
     const double heading_angle = planning_math::NormalizeAngle(
       ego_theta - frenet_coord->GetPathCurveHeading(ego_center_point.x()));
-    const auto ego_box = Box2d(ego_center_point, heading_angle, vehicle_param.length, vehicle_param.width);
+    const auto ego_box = Box2d(ego_center_point, heading_angle, vehicle_param.length, vehicle_param.max_width);
 
     for (size_t i = 1; i < ref_path_points_.size(); i++) {
       if (!is_left_overlap) {
@@ -771,7 +771,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const double ego_cur_s_start = ego_cur_s - vehicle_param.back_edge_to_rear_axis;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double half_ego_width = vehicle_param.width * 0.5;
+  const double half_ego_width = vehicle_param.max_width * 0.5;
   auto collision_center_distance = half_ego_width;
 
   const double front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
@@ -878,7 +878,7 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(double ego_l, do
                                                                 LatObstacleDecisionType &lat_decision, LonObstacleDecisionType &lon_decision) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width = vehicle_param.width * 0.5;
+  const double half_ego_width = vehicle_param.max_width * 0.5;
   constexpr double kMaxAvoidEdgeL{2.0};  // m
   auto avoid_cross_lane = 0.2;
 
@@ -952,7 +952,7 @@ void GeneralLateralDecider::AddObstacleDecisionBound(int id, double t, Polygon2d
   const double l_offset_limit = 10.0;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width = vehicle_param.width * 0.5;
+  const double half_ego_width = vehicle_param.max_width * 0.5;
 
   BoundInfo bound_info;
   Bound bound{-l_offset_limit, l_offset_limit};
