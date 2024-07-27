@@ -54,6 +54,7 @@ class EgoStateManager {
   void set_ego_steer_angle(
       const planning::common::VehicleStatus &vehicle_status);
   void set_ego_acc(const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_jerk();
   void set_ego_v_cruise(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_t_distance(
       const planning::common::VehicleStatus &vehicle_status);
@@ -90,6 +91,7 @@ class EgoStateManager {
   double ego_yaw_rate() const { return ego_yaw_rate_; }
   double ego_v_cruise() const { return ego_v_cruise_; };
   double ego_acc() const { return ego_acc_; };
+  double ego_jerk() const { return jerk_; };
   double ego_hmi_v() const { return ego_hmi_v_; }
   double ego_steer_angle() const { return ego_steer_angle_; };
   uint ego_blinker() const { return ego_blinker_; };
@@ -126,11 +128,9 @@ class EgoStateManager {
   // uint8_t ReplanProcess(const bool &lat_reset_flag, const bool
   // &lon_reset_flag); new replan
   uint8_t ReplanProcess(const bool &set_lat_replan, const bool &set_lon_replan);
-
-  void LateralInitStateResetToEgoState();
-  void LongitudinalInitStateResetToEgoState();
   void LateralInitStateReset(const PncTrajectoryPoint& point);
   void LongitudinalInitStateReset(const PncTrajectoryPoint& point);
+  void CompensateEgoStateForLocalizationLatency();
   void MotionPlanningInfoReset();
   bool LateralStitch();
   bool LongitudinalStitch();
@@ -178,6 +178,8 @@ class EgoStateManager {
   bool is_auto_ = false;
   bool flag_is_replan_ = false;
   bool throttle_override_ = false;
+  bool enable_delta_stitch_in_replan_ = true;
+  bool enable_ego_state_compensation_ = false;
   planning_math::Polygon2d polygon_;
   PlanningInitPoint planning_init_point_;
   bool planning_init_point_valid_ = false;
@@ -185,6 +187,7 @@ class EgoStateManager {
   pnc::filters::SlopeFilter v_cruise_filter_;  // 对巡航车速变化速率限制
 
   std::vector<PncTrajectoryPoint> stitch_trajectory_;
+  VehicleState cur_vehicle_state_process_;
 
   define::Transform car2enu_;
   define::Transform enu2car_;

@@ -20,6 +20,13 @@ class SimulationContext {
     prediction_relative_time_ = prediction_relative_time;
   }
 
+  const double localizatoin_latency() const {
+    return localizatoin_latency_;
+  }
+  void set_localizatoin_latency(double localizatoin_latency) {
+    localizatoin_latency_ = localizatoin_latency;
+  }
+
   const Eigen::Vector3d ego_pose() const { return ego_pose_; }
   void set_ego_pose(Eigen::Vector3d ego_pose) { ego_pose_ = ego_pose; }
 
@@ -46,6 +53,7 @@ class SimulationContext {
 
   double planning_loop_dt_ = 0.1;
   double prediction_relative_time_ = 0;
+  double localizatoin_latency_ = 0;
   Eigen::Vector3d ego_pose_;
   Eigen::Vector4d ego_orientation_;
   double ego_yaw_ = 0;

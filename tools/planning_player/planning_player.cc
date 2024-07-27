@@ -714,6 +714,17 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       SimulationContext::Instance()->set_prediction_relative_time(
           stod(prediction_relative_time));
     }
+    auto localizatoin_latency_start =
+        debug_data_json.find("localizatoin_latency_inEgoStateManager");
+    if (localizatoin_latency_start != std::string::npos) {
+      auto localizatoin_latency_end =
+          debug_data_json.find(',', localizatoin_latency_start);
+      auto localizatoin_latency = debug_data_json.substr(
+          localizatoin_latency_start + 42,
+          localizatoin_latency_end - localizatoin_latency_start - 42);
+      SimulationContext::Instance()->set_localizatoin_latency(
+          stod(localizatoin_latency));
+    }
 
     planning_dubug_info_header_time_us_ = planning_debug_info->timestamp();
     planning_dubug_info_frame_num_ =

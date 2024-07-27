@@ -145,7 +145,8 @@ struct EgoPlanningConfig : public Config {
                             "active_lane_change_request");
     minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
         read_json_key<double>(
-        json, "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change");
+            json,
+            "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change");
     minimum_ego_cruise_speed_for_active_lane_change = read_json_key<double>(
         json, "minimum_ego_cruise_speed_for_active_lane_change");
   }
@@ -503,8 +504,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json, "care_area_s_start_buffer", care_area_s_start_buffer);
     max_avoid_edge =
         read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
-    lateral_ref_traj_type =
-        read_json_key<bool>(json, "lateral_ref_traj_type", lateral_ref_traj_type);
+    lateral_ref_traj_type = read_json_key<bool>(json, "lateral_ref_traj_type",
+                                                lateral_ref_traj_type);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -1690,7 +1691,14 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
+    enable_constanct_velocity_in_predicted_vehicle_state = read_json_key<bool>(
+        json, "enable_constanct_velocity_in_predicted_vehicle_state",
+        enable_constanct_velocity_in_predicted_vehicle_state);
     steer_ratio = read_json_key<double>(json, "steer_ratio", steer_ratio);
+    enable_delta_stitch_in_replan = read_json_key<bool>(
+        json, "enable_delta_stitch_in_replan", enable_delta_stitch_in_replan);
+    enable_ego_state_compensation = read_json_key<bool>(
+        json, "enable_ego_state_compensation", enable_ego_state_compensation);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_speed",
                           replan_longitudinal_distance_threshold_speed);
     read_json_vec<double>(json, "replan_longitudinal_distance_threshold_value",
@@ -1702,6 +1710,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double max_replan_theta_err = 10.0;
   double max_replan_lon_err = 1.0;
   double max_replan_dist_err = 1.5;
+  bool enable_delta_stitch_in_replan = false;
   std::vector<double> replan_longitudinal_distance_threshold_speed{11.111,
                                                                    27.778};
   std::vector<double> replan_longitudinal_distance_threshold_value{1.0, 1.1};
@@ -1714,6 +1723,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double kEpsilon_a = 0.0;
 
   double steer_ratio = 16.5;
+  bool enable_constanct_velocity_in_predicted_vehicle_state = false;
+  bool enable_ego_state_compensation = false;
 };
 
 struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
