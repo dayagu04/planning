@@ -128,6 +128,7 @@
   "car_lat_inflation_strict": 0.1586,
   "tmp_no_consider_obs_dy": true,
   "believe_in_fus_obs": true,
+  "use_fus_occ_obj": true,
   "tmp_virtual_obs_dy": 0.0768,
   "tlane_safe_dx": 0.1068,
   "obs_safe_dx": 0.0668,

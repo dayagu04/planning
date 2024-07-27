@@ -125,7 +125,7 @@ void PerpendicularInPlanner::PlanCore() {
     frame_.replan_flag = true;
     pt_center_replan_ = frame_.ego_slot_info.slot_center;
     pt_center_heading_replan_ = frame_.ego_slot_info.slot_origin_heading;
-    frame_.car_already_move_dist = 0.0;
+    frame_.dynamic_plan_fail_flag = false;
 
     const double start_time = IflyTime::Now_ms();
 
@@ -135,6 +135,12 @@ void PerpendicularInPlanner::PlanCore() {
 
     // path plan
     const auto pathplan_result = PathPlanOnce();
+
+    if (!frame_.dynamic_plan_fail_flag) {
+      frame_.car_already_move_dist = 0.0;
+    }
+
+    JSON_DEBUG_VALUE("dynamic_plan_fail_flag", frame_.dynamic_plan_fail_flag)
 
     DEBUG_PRINT("replan_consume_time = " << IflyTime::Now_ms() - start_time
                                          << " ms");
@@ -1269,6 +1275,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   if (!path_plan_success && frame_.is_replan_dynamic) {
     DEBUG_PRINT("path dynamic plan fail, save last plan path.");
     plan_result = PathPlannerResult::PLAN_UPDATE;
+    frame_.dynamic_plan_fail_flag = true;
     return plan_result;
   }
 

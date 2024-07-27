@@ -146,6 +146,7 @@ struct ApaParameters {
   double car_lat_inflation_normal = 0.0;
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = true;
+  bool use_fus_occ_obj = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;

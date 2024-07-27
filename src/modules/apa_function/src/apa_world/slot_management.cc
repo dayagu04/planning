@@ -36,7 +36,6 @@ namespace planning {
 namespace {
 constexpr double kPie = 3.141592653589793;
 constexpr double kEps = 1e-6;
-const static bool kUseFusionoccupancyObjects = true;
 }  // namespace
 
 bool SlotManagement::Update(const LocalView *local_view_ptr) {
@@ -132,13 +131,18 @@ void SlotManagement::AddObstacles() {
 }
 
 void SlotManagement::AddFusionObjects() {
-  if (frame_.fusion_objects_info_ptr == nullptr) {
+  const bool use_fus_occ_obj = apa_param.GetParam().use_fus_occ_obj;
+  if (use_fus_occ_obj && frame_.fusion_occupancy_objects_info_ptr == nullptr) {
+    DEBUG_PRINT("fusion_occ_objects_info_ptr is nullptr");
+    return;
+  }
+  if (!use_fus_occ_obj && frame_.fusion_objects_info_ptr == nullptr) {
     DEBUG_PRINT("fusion_objects_info_ptr is nullptr");
     return;
   }
 
   uint8 fusion_object_num;
-  if (kUseFusionoccupancyObjects) {
+  if (use_fus_occ_obj) {
     fusion_object_num =
         frame_.fusion_occupancy_objects_info_ptr->fusion_object_num;
   } else {
@@ -155,7 +159,7 @@ void SlotManagement::AddFusionObjects() {
   const size_t N_begin = frame_.obs_pt_vec.size();
 
   Eigen::Vector2d fs_pt;
-  if (kUseFusionoccupancyObjects) {
+  if (use_fus_occ_obj) {
     iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
     for (uint8 i = 0; i < fusion_object_num; ++i) {
       fusion_occupancy_object =
@@ -2620,7 +2624,7 @@ void SlotManagement::UpdateLimiterInfoInParking() {
       // there is limiter in slot
       limiter_global.first << select_fusion_slot.limiter_position[0].x,
           select_fusion_slot.limiter_position[0].y;
-      //std::cout << "fus has limiter\n";
+      // std::cout << "fus has limiter\n";
 
       limiter_global.second << select_fusion_slot.limiter_position[1].x,
           select_fusion_slot.limiter_position[1].y;

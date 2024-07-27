@@ -76,6 +76,11 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
                "------------------------\n";
+  if (local_view_ptr == nullptr) {
+    std::cout << "\nlocal_view_ptr is nullptr, quit apa\n";
+  }
+  RecordNodeReceiveTime(local_view_ptr);
+
   const double start_timestamp_ms = IflyTime::Now_ms();
   const uint8_t last_state =
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
@@ -158,6 +163,25 @@ void ApaPlanInterface::UpdateDebugInfo() {
   planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
 
   planning_debug_info_ = *planning_debug_data;
+}
+
+void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
+  JSON_DEBUG_VALUE("statemachine_timestamp",
+                   local_view_ptr->function_state_machine_info_recv_time)
+  JSON_DEBUG_VALUE("fusion_slot_timestamp",
+                   local_view_ptr->parking_fusion_info_recv_time)
+  JSON_DEBUG_VALUE("localiztion_timestamp",
+                   local_view_ptr->localization_estimate_recv_time)
+  JSON_DEBUG_VALUE("uss_wave_timestamp",
+                   local_view_ptr->uss_wave_info_recv_time)
+  JSON_DEBUG_VALUE("uss_per_timestamp",
+                   local_view_ptr->uss_percept_info_recv_time)
+  JSON_DEBUG_VALUE("ground_line_timestamp",
+                   local_view_ptr->ground_line_perception_recv_time)
+  JSON_DEBUG_VALUE("fusion_objects_timestamp",
+                   local_view_ptr->fusion_objects_info_recv_time)
+  JSON_DEBUG_VALUE("fusion_occupancy_objects_timestamp",
+                   local_view_ptr->fusion_occupancy_objects_info_recv_time)
 }
 
 static std::string ReadFile(const std::string &path) {
@@ -465,6 +489,8 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
                   "believe_in_fus_obs");
+
+  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
 
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
