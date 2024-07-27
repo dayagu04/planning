@@ -63,6 +63,7 @@ enter_parking_time = 0.0
 load_uss_wave_from_uss_percept_msg = True
 load_fusion_object_from_occupancy = True
 version_245 = True
+read_uss_per_msg = True
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 4
 smallest_abs_t = 0.0
@@ -635,28 +636,33 @@ class LoadCyberbag:
       print("missing /iflytek/uss/ussdriver_debug_info !!!")
 
     # load uss perception msg
-    try:
-      uss_percept_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
-        uss_percept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
-      uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in uss_percept_msg_dict.items():
-        self.uss_percept_msg['t'].append(t)
-        self.uss_percept_msg['abs_t'].append(t)
-        self.uss_percept_msg['data'].append(msg)
-      t0 = self.uss_percept_msg['t'][0]
-      smallest_abs_t = min(smallest_abs_t, self.uss_percept_msg['t'][0])
-      self.uss_percept_msg['t'] = [tmp - t0  for tmp in self.uss_percept_msg['t']]
-      self.uss_percept_msg['enable'] = True
-      print('uss_percept time:',self.uss_percept_msg['t'][-1])
-      # max_time = max(max_time, self.uss_percept_msg['t'][-1])
-      if len(self.uss_percept_msg['t']) > 0:
+    if read_uss_per_msg == True:
+      try:
+        uss_percept_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
+          uss_percept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
+        for t, msg in uss_percept_msg_dict.items():
+          self.uss_percept_msg['t'].append(t)
+          self.uss_percept_msg['abs_t'].append(t)
+          self.uss_percept_msg['data'].append(msg)
+        t0 = self.uss_percept_msg['t'][0]
+        smallest_abs_t = min(smallest_abs_t, self.uss_percept_msg['t'][0])
+        self.uss_percept_msg['t'] = [tmp - t0  for tmp in self.uss_percept_msg['t']]
         self.uss_percept_msg['enable'] = True
-      else:
+        print('uss_percept time:',self.uss_percept_msg['t'][-1])
+        # max_time = max(max_time, self.uss_percept_msg['t'][-1])
+        if len(self.uss_percept_msg['t']) > 0:
+          self.uss_percept_msg['enable'] = True
+        else:
+          self.uss_percept_msg['enable'] = False
+      except:
         self.uss_percept_msg['enable'] = False
-    except:
+        print("missing /iflytek/uss/uss_perception_info !!!")
+    else:
       self.uss_percept_msg['enable'] = False
-      print("missing /iflytek/uss/uss_perception_info !!!")
+      print("no read /iflytek/uss/uss_perception_info !!!")
+
 
     time_array = time.localtime(smallest_abs_t)
     time_string = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
@@ -1584,6 +1590,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("remain_dist")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist']))
+
+      names.append("remain_dist_uss")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_uss']))
 
       names.append("remain_dist_col_det")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_col_det']))
@@ -3669,6 +3678,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("remain_dist")
             datas.append(str(plan_json['remain_dist']))
+
+            names.append("remain_dist_uss")
+            datas.append(str(plan_json['remain_dist_uss']))
 
             names.append("remain_dist_col_det")
             datas.append(str(plan_json['remain_dist_col_det']))

@@ -13,7 +13,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240724/20240724-10-49-02/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-24-10-49-03_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240726/20240726-16-37-55/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-26-16-37-55_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = JAC_S811
@@ -196,14 +196,38 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   ground_line_perception_msg_buff = BytesIO()
   gl_msg.serialize(ground_line_perception_msg_buff)
   ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
+  gl_coord = []
+  for i in range(gl_msg.ground_lines_size):
+    num = gl_msg.ground_lines[i].points_3d_size
+    polygon_points = fus_obj_msg.ground_lines[i].points_3d
+    single_gl_coord = []
+    for j in range(num):
+      single_gl_coord.append([polygon_points[j].x, polygon_points[j].y])
+    gl_coord.append(single_gl_coord)
 
   fus_obj_msg_buff = BytesIO()
   fus_obj_msg.serialize(fus_obj_msg_buff)
   fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
+  fus_obj_coord = []
+  for i in range(fus_obj_msg.fusion_object_num):
+    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_num
+    polygon_points = fus_obj_msg.fusion_object[i].additional_info.polygon_points
+    single_fus_obj_coord = []
+    for j in range(num):
+      single_fus_obj_coord.append([polygon_points[j].x, polygon_points[j].y])
+    fus_obj_coord.append(single_fus_obj_coord)
 
   fus_occ_obj_msg_buff = BytesIO()
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
+  fus_occ_obj_coord = []
+  for i in range(fus_occ_obj_msg.fusion_object_num):
+    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_num
+    polygon_points = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points
+    single_fus_occ_obj_coord = []
+    for j in range(num):
+      single_fus_occ_obj_coord.append([polygon_points[j].x, polygon_points[j].y])
+    fus_occ_obj_coord.append(single_fus_occ_obj_coord)
 
   res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg_bytes,
                                     fus_parking_msg_bytes,
@@ -220,8 +244,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
                                     obs_x_vec, obs_y_vec,
-                                    gl_msg.ground_lines_size, fus_obj_msg.fusion_object_num, fus_occ_obj_msg.fusion_object_num)
-
+                                    gl_coord, fus_obj_coord, fus_occ_obj_coord)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

@@ -150,8 +150,10 @@ const bool InterfaceUpdateParam(
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec,
-    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec, int gl_size,
-    int fus_obj_num, int fus_occ_obj_num) {
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
+    std::vector<std::vector<Eigen::Vector2d>> gl_coord,
+    std::vector<std::vector<Eigen::Vector2d>> fus_obj_coord,
+    std::vector<std::vector<Eigen::Vector2d>> fus_occ_obj_coord) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
@@ -214,9 +216,44 @@ const bool InterfaceUpdateParam(
                     struct_msgs::FusionOccupancyObjectsInfo>(
           fus_occ_obj_info_bytes);
 
-  ground_line_info.ground_lines_size = gl_size;
-  fus_obj_info.fusion_object_num = fus_obj_num;
-  fus_occ_obj_info.fusion_object_num = fus_occ_obj_num;
+  ground_line_info.ground_lines_size = gl_coord.size();
+  for (size_t i = 0; i < ground_line_info.ground_lines_size; ++i) {
+    ground_line_info.ground_lines[i].points_3d_size = gl_coord[i].size();
+    for (size_t j = 0; j < ground_line_info.ground_lines[i].points_3d_size;
+         ++j) {
+      ground_line_info.ground_lines[i].points_3d[j].x = gl_coord[i][j].x();
+      ground_line_info.ground_lines[i].points_3d[j].y = gl_coord[i][j].y();
+    }
+  }
+  fus_obj_info.fusion_object_num = fus_obj_coord.size();
+  for (size_t i = 0; i < fus_obj_info.fusion_object_num; ++i) {
+    fus_obj_info.fusion_object[i].additional_info.polygon_points_num =
+        fus_obj_coord[i].size();
+    for (size_t j = 0;
+         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_num;
+         ++j) {
+      fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
+          fus_obj_coord[i][j].x();
+      fus_obj_info.fusion_object[i].additional_info.polygon_points[j].y =
+          fus_obj_coord[i][j].y();
+    }
+  }
+  fus_occ_obj_info.fusion_object_num = fus_occ_obj_coord.size();
+  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_num; ++i) {
+    fus_occ_obj_info.fusion_object[i]
+        .additional_occupancy_info.polygon_points_num =
+        fus_occ_obj_coord[i].size();
+    for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
+                               .additional_occupancy_info.polygon_points_num;
+         ++j) {
+      fus_occ_obj_info.fusion_object[i]
+          .additional_occupancy_info.polygon_points[j]
+          .x = fus_occ_obj_coord[i][j].x();
+      fus_occ_obj_info.fusion_object[i]
+          .additional_occupancy_info.polygon_points[j]
+          .y = fus_occ_obj_coord[i][j].y();
+    }
+  }
 
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
@@ -228,14 +265,14 @@ const bool InterfaceUpdateParam(
   local_view.fusion_objects_info = fus_obj_info;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
-  DEBUG_PRINT(
-      "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
+  // DEBUG_PRINT(
+  //     "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
 
-  DEBUG_PRINT(
-      "c++ fus_obj_num = " << static_cast<int>(fus_obj_info.fusion_object_num));
+  // DEBUG_PRINT(
+  //     "c++ fus_obj_num = " << static_cast<int>(fus_obj_info.fusion_object_num));
 
-  DEBUG_PRINT("c++ fus_occ_obj_num = "
-              << static_cast<int>(fus_occ_obj_info.fusion_object_num));
+  // DEBUG_PRINT("c++ fus_occ_obj_num = "
+  //             << static_cast<int>(fus_occ_obj_info.fusion_object_num));
 
   if (force_plan) {
     local_view.function_state_machine_info.current_state =

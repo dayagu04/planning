@@ -527,10 +527,12 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       //     << "  collision_point_local = "
       //     << col_res.col_pt_obs_global.transpose()
       //     << "  collision_point_global = "
-      //     << ego_slot_info.l2g_tf.GetPos(col_res.col_pt_obs_global).transpose()
+      //     <<
+      //     ego_slot_info.l2g_tf.GetPos(col_res.col_pt_obs_global).transpose()
       //     << "  col_ego_pt slot = " << col_res.col_pt_ego_global.transpose()
       //     << "  col_ego_pt global = "
-      //     << ego_slot_info.l2g_tf.GetPos(col_res.col_pt_ego_global).transpose()
+      //     <<
+      //     ego_slot_info.l2g_tf.GetPos(col_res.col_pt_ego_global).transpose()
       //     << "  col_ego_pt car = " << col_res.col_pt_ego_local.transpose()
       //     << "  car_line_order = " << col_res.car_line_order
       //     << "  obs_type = " << static_cast<int>(col_res.obs_type));
@@ -1173,7 +1175,8 @@ void PerpendicularInPlanner::GenObstacles() {
               obs_pos, ego_pose, safe_dist)) {
         // temp hack, when obs is in car, lose it, only increase plan success
         // ratio, To Do, when obs change accurately, should not del any obs
-        DEBUG_PRINT("obs is in car, lost it, obs = " << obs_pos.transpose())
+        DEBUG_PRINT("obs is in car, lost it, obs = "
+                    << ego_slot_info.l2g_tf.GetPos(obs_pos).transpose())
         continue;
       }
 

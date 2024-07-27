@@ -4,6 +4,7 @@
 #include "ehr_sdmap.pb.h"
 #include "iflyauto_parse_file.h"
 #include "iflyauto_timer_component.h"
+#include "interface/src/c/fusion_occupancy_objects_c.h"
 #include "mdc/applicationswcexecutable2_logger.h"
 
 namespace iflyauto {
@@ -73,6 +74,9 @@ void ComponentWrapper::InitClient() {
 
       REGISTER_CLIENT_HANDLER("IflytekFusionObjects", FeedFusionObjects,
                               FusionObjectsInfo);
+      REGISTER_CLIENT_HANDLER("IflytekFusionOccupancyObjects",
+                              FeedFusionOccupancyObjects,
+                              FusionOccupancyObjectsInfo);
       REGISTER_CLIENT_HANDLER("IflytekFusionRoadFusion", FeedFusionRoad,
                               RoadInfo);
       REGISTER_CLIENT_HANDLER("IflytekLocalizationEgoPose",
@@ -80,7 +84,7 @@ void ComponentWrapper::InitClient() {
                               LocalizationEstimate);
       REGISTER_CLIENT_HANDLER("IflytekLocalizationEgomotion",
                               FeedLocalizationOutput,
-                              IFLYLocalization);                
+                              IFLYLocalization);
       REGISTER_CLIENT_HANDLER("IflytekPredictionPredictionResult",
                               FeedPredictionResult, PredictionResult);
       REGISTER_CLIENT_HANDLER("IflytekVehicleService", FeedVehicleService,
@@ -93,8 +97,11 @@ void ComponentWrapper::InitClient() {
                               ParkingFusionInfo);
       REGISTER_CLIENT_HANDLER("IflytekSystemStateSocState",
                               FeedFuncStateMachine, FuncStateMachine);
-      REGISTER_CLIENT_HANDLER("IflytekUssWaveInfo", FeedUssWaveInfo,
+      REGISTER_CLIENT_HANDLER("IflytekUssUsswaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
+      REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptInfo", FeedUssPerceptInfo,
+                              UssPerceptInfo);
+
       SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
                   << "RegisterEvent: "<<portName;
       if (portName == "IflytekEhrSdmapInfo") {
