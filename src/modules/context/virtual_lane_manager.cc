@@ -1373,7 +1373,11 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   const auto& sd_map = session_->environmental_model().get_sd_map();
   double nearest_s = 0;
   double nearest_l = 0;
-  const auto current_segment = sd_map.GetNearestRoad(current_point,nearest_s,nearest_l);
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto current_segment = sd_map.GetNearestRoadWithHeading(current_point,search_distance,ego_heading_angle,max_heading_diff,nearest_s,nearest_l);
+  // const auto current_segment = sd_map.GetNearestRoad(current_point,nearest_s,nearest_l);
   if (!current_segment) {
     ResetForRampInfo();
     return;
