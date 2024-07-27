@@ -200,8 +200,6 @@ class StGraphGenerator {
   std::pair<double, double> acc_bound_;
   // jerk bound
   std::pair<double, double> jerk_bound_;
-  // s bound
-  // std::pair<double, double> s_bound_;
   // 为计算lc st时前车和后车期望距离，添加以下变量
   int lc_front_id_ = -10;
   int lc_rear_id_ = -20;

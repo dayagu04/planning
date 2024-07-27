@@ -19,11 +19,11 @@ namespace scc {
 StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
     : config_(config) {
   lead_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step, 0.0,
-                                     150.0, 0.1);
+                                     200, 0.1);
   lead_two_desired_distance_filter_.Init(-0.2, config_.fast_lead_distance_step,
-                                         0.0, 150.0, 0.1);
+                                         0.0, 200, 0.1);
   cut_in_desired_distance_filter_.Init(
-      -0.2, config_.cut_in_desired_distance_step, 0.0, 150.0, 0.1);
+      -0.2, config_.cut_in_desired_distance_step, 0.0, 200, 0.1);
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
 }
 
@@ -241,7 +241,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // 对lead two进行类似的计算
     bool is_camera_and_lidar =
         lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
-    if (config_.enable_lead_two && is_camera_and_lidar &&
+    if (config_.enable_lead_two &&
         lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
@@ -386,7 +386,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     // 对lead two进行类似的计算
     bool is_camera_and_lidar =
         temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
-    if (config_.enable_lead_two && is_camera_and_lidar &&
+    if (config_.enable_lead_two &&
         temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
@@ -577,6 +577,11 @@ void StGraphGenerator::UpdateSTGraphs(
   double t = config_.delta_time;
   double t_square = config_.delta_time * config_.delta_time;
   double t_cube = config_.delta_time * config_.delta_time * config_.delta_time;
+  double kOverSpeed = 1.2;
+  double kDefaultSBoundUpper = 30;
+  double s_upper_bound =
+      std::fmax(lon_behav_input_->ego_info().ego_cruise() * kOverSpeed * 5.0,
+                kDefaultSBoundUpper);
   LonBound soft_bound;
   LonBound hard_bound;
   double s_ref;
@@ -669,7 +674,7 @@ void StGraphGenerator::UpdateSTGraphs(
         } else {
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
-          hard_bound.upper = 150;
+          hard_bound.upper = s_upper_bound;
           hard_bound.lower =
               std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
           hard_bound.vel = st.v_lead();
@@ -679,7 +684,7 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref_update = std::max(
               hard_bound.lower, s_ref_update = std::max(sref_update[i], s_ref));
           // soft bound先使用期望跟车距离+buffer
-          soft_bound.upper = 150;
+          soft_bound.upper = s_upper_bound;
           soft_bound.lower =
               std::max(0.5 * (hard_bound.lower + s_ref_update), s_ref);
           soft_bound.vel = st.v_lead();
@@ -690,13 +695,13 @@ void StGraphGenerator::UpdateSTGraphs(
         }
       } else {
         // 采用默认值,这个目前太过粗暴
-        hard_bound.upper = 150.0;
+        hard_bound.upper = s_upper_bound;
         hard_bound.lower = -10.0;
         hard_bound.vel = 0.0;
         hard_bound.acc = 0.0;
         hard_bound.id = 0.0;
         st_boundary.hard_bound.emplace_back(hard_bound);
-        soft_bound.upper = 150.0;
+        soft_bound.upper = s_upper_bound;
         soft_bound.lower = -10.0;  // 应该至少使用自车s-10
         soft_bound.vel = 0.0;
         soft_bound.acc = 0.0;
