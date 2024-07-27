@@ -41,12 +41,13 @@ class PerpendicularPathPlanner {
     }
   };
 
-  enum PathColDetRes {
-    PATH_COL_INVALID,
-    PATH_COL_SHORTEN,
-    PATH_COL_INSIDE_STUCK,
-    PATH_COL_NORMAL,
-    PATH_COL_COUNT,
+  enum class PathColDetRes : uint8_t {
+    INVALID,
+    NORMAL,
+    SINGLE_PLAN_AGAIN,
+    COMPLETE_PLAN_AGAIN,
+    SHORTEN,
+    COUNT,
   };
 
   enum class PathPlanMethod {
@@ -88,7 +89,6 @@ class PerpendicularPathPlanner {
     bool is_first_path = true;
     bool is_last_path = false;
     bool gear_shift = false;
-    bool is_first_reverse_path = false;
     bool multi_reach_target_pose = false;
     double length = 0.0;
     uint8_t gear_change_count = 0;
@@ -106,7 +106,6 @@ class PerpendicularPathPlanner {
       is_last_path = false;
       gear_shift = false;
       multi_reach_target_pose = false;
-      is_first_reverse_path = false;
       length = 0.0;
       gear_change_count = 0;
       path_seg_index = std::make_pair(0, 0);
@@ -126,7 +125,8 @@ class PerpendicularPathPlanner {
     bool should_prepare_second = false;
     bool should_prepare_third = false;
     bool first_multi_plan = true;
-    bool stuck_by_inside = false;
+    bool complete_plan_again = false;
+    bool single_plan_again = false;
     bool multi_plan = false;
     bool can_insert_line = true;
 
@@ -164,7 +164,8 @@ class PerpendicularPathPlanner {
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
-      stuck_by_inside = false;
+      complete_plan_again = false;
+      single_plan_again = false;
       multi_plan = false;
       can_insert_line = true;
 
@@ -346,9 +347,9 @@ class PerpendicularPathPlanner {
   // sample path end
 
   // collision detect start
-  const uint8_t TrimPathByCollisionDetection(
+  const PathColDetRes TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg);
-  const uint8_t TrimPathByCollisionDetection(
+  const PathColDetRes TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg, const double safe_dist);
   // collision detect end
 

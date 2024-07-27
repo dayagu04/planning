@@ -145,6 +145,7 @@ struct ApaParameters {
   double col_obs_safe_dist_normal = 0.36;
   double car_lat_inflation_normal = 0.0;
   bool tmp_no_consider_obs_dy = true;
+  bool believe_in_fus_obs = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
@@ -257,7 +258,9 @@ struct ApaParameters {
   double inside_lon_dist_max_slot2mirror = 4.54;
   double inside_lon_dist_min_slot2mirror = 3.5;
   double min_slot_release_long_dist_slot2mirror = 3.86;
-  double min_parallel_slot_release_long_dist_slot2mirror = 3.86;
+  double min_parallel_vis_slot_release_long_dist_slot2mirror = 1.87;
+  double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
+  double max_dist_from_slot2car_release = 7.68;
 
   double terminal_length = 1.2;
   double limiter_length = 0.0;

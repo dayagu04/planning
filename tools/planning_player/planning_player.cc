@@ -25,6 +25,8 @@ static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
     "/iflytek/planning/debug_info";
 static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
 static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
+static constexpr auto TOPIC_FUSION_OCCUPANCY_OBJECTS =
+    "/iflytek/fusion/occupancy/objects";
 static constexpr auto TOPIC_ROAD_FUSION = "/iflytek/fusion/road_fusion";
 static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
     "/iflytek/localization/ego_pose";
@@ -244,6 +246,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
   for (const auto& msg : view) {
     if (msg.getTopic() == TOPIC_FUSION_OBJECTS) {
       cache_with_ros_msg_and_header_time<struct_msgs::FusionObjectsInfo>(msg);
+    } else if (msg.getTopic() == TOPIC_FUSION_OCCUPANCY_OBJECTS) {
+      cache_with_ros_msg_and_header_time<
+          struct_msgs::FusionOccupancyObjectsInfo>(msg);
     } else if (msg.getTopic() == TOPIC_ROAD_FUSION) {
       cache_with_ros_msg_and_header_time<struct_msgs::RoadInfo>(msg);
     } else if (msg.getTopic() == TOPIC_LOCALIZATION_ESTIMATE) {
@@ -326,6 +331,9 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
       if (it_msg.first == TOPIC_FUSION_OBJECTS) {
         write_ros_msg<struct_msgs::FusionObjectsInfo::Ptr>(
             it_msg.second, TOPIC_FUSION_OBJECTS, bag);
+      } else if (it_msg.first == TOPIC_FUSION_OCCUPANCY_OBJECTS) {
+        write_ros_msg<struct_msgs::FusionOccupancyObjectsInfo::Ptr>(
+            it_msg.second, TOPIC_FUSION_OCCUPANCY_OBJECTS, bag);
       } else if (it_msg.first == TOPIC_ROAD_FUSION) {
         write_ros_msg<struct_msgs::RoadInfo::Ptr>(it_msg.second,
                                                   TOPIC_ROAD_FUSION, bag);
@@ -418,6 +426,19 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
+  }
+
+  auto fusion_occ_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
+      struct_msgs::FusionOccupancyObjectsInfo>(TOPIC_FUSION_OCCUPANCY_OBJECTS,
+                                               input_time_list.fusion_object());
+  if (fusion_occ_object_ros_msg) {
+    iflyauto::FusionOccupancyObjectsInfo fusion_occ_object_msg{};
+    convert(fusion_occ_object_msg, *fusion_occ_object_ros_msg,
+            ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedFusionOccupancyObjects(fusion_occ_object_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/fusion/occupancy/objects" << std::endl;
   }
 
   // 由于fusion_road的频率与planning相同，为了避免重复feed同一帧fusion_road而做对应判断
@@ -1212,6 +1233,19 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/objects" << std::endl;
+    }
+
+    auto fusion_occ_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs::FusionOccupancyObjectsInfo>(TOPIC_FUSION_OCCUPANCY_OBJECTS,
+                                                 start_time);
+    if (fusion_occ_object_ros_msg) {
+      iflyauto::FusionOccupancyObjectsInfo fusion_occ_object_msg{};
+      convert(fusion_occ_object_msg, *fusion_occ_object_ros_msg,
+              ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->FeedFusionOccupancyObjects(fusion_occ_object_msg);
+    } else {
+      std::cerr << "frame_num " << frame_num_
+                << " missing /iflytek/fusion/occupancy/objects" << std::endl;
     }
 
     auto fusion_road_ros_msg =

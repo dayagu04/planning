@@ -14,7 +14,11 @@
 
 #include "apa_plan_base.h"
 #include "apa_plan_interface.h"
+#include "camera_preception_groundline_c.h"
+#include "debug_info_log.h"
 #include "func_state_machine_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -29,6 +33,9 @@
 #include "struct_convert/uss_wave_info_c.h"
 #include "struct_convert/vehicle_service_c.h"
 #include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionObjectsInfo.h"
+#include "struct_msgs/FusionOccupancyObjectsInfo.h"
+#include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/LocalizationEstimate.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
@@ -45,9 +52,9 @@ static PerfectControl *perfect_control_ptr;
 static planning::LocalView local_view;
 
 int Init() {
-  const std::string flag_file_path =
-      "/asw/planning/res/conf/planning_gflags.conf";
-  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+  // const std::string flag_file_path =
+  //     "/asw/planning/res/conf/planning_gflags.conf";
+  // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
 
@@ -134,13 +141,19 @@ const bool InterfaceUpdateParam(
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes,
     py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
-    int select_id, bool force_plan, bool is_path_optimization,
-    bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
-    bool sim_to_target, bool use_slot_in_bag, double sample_ds,
+    py::bytes &ground_line_info_bytes, py::bytes &fus_obj_info_bytes,
+    py::bytes &fus_occ_obj_info_bytes, int select_id, bool force_plan,
+    bool is_path_optimization, bool is_cilqr_optimization, bool is_reset,
+    bool is_complete_path, bool sim_to_target, bool use_slot_in_bag,
+    bool use_obs_in_bag, double sample_ds,
     std::vector<double> target_managed_slot_x_vec,
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
-    std::vector<double> target_managed_limiter_y_vec) {
+    std::vector<double> target_managed_limiter_y_vec,
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
+    std::vector<std::vector<Eigen::Vector2d>> gl_coord,
+    std::vector<std::vector<Eigen::Vector2d>> fus_obj_coord,
+    std::vector<std::vector<Eigen::Vector2d>> fus_occ_obj_coord) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
@@ -150,10 +163,13 @@ const bool InterfaceUpdateParam(
   param.is_reset = is_reset;
   param.sim_to_target = sim_to_target;
   param.use_slot_in_bag = use_slot_in_bag;
+  param.use_obs_in_bag = use_obs_in_bag;
   param.target_managed_slot_x_vec = target_managed_slot_x_vec;
   param.target_managed_slot_y_vec = target_managed_slot_y_vec;
   param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
   param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
+  param.obs_x_vec = obs_x_vec;
+  param.obs_y_vec = obs_y_vec;
 
   const auto &apa_planner_stack = apa_interface_ptr->GetPlannerStack();
 
@@ -182,10 +198,62 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
           uss_wave_info_bytes);
 
-  // iflyauto::UssPerceptInfo uss_perception_info =
-  //   BytesToStruct<iflyauto::UssPerceptInfo,
-  //   struct_msgs::UssPerceptInfo>(uss_perception_info_bytes);
-  iflyauto::UssPerceptInfo uss_perception_info;
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
+
+  iflyauto::GroundLinePerceptionInfo ground_line_info =
+      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+                    struct_msgs::GroundLinePerceptionInfo>(
+          ground_line_info_bytes);
+
+  iflyauto::FusionObjectsInfo fus_obj_info =
+      BytesToStruct<iflyauto::FusionObjectsInfo,
+                    struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+                    struct_msgs::FusionOccupancyObjectsInfo>(
+          fus_occ_obj_info_bytes);
+
+  ground_line_info.ground_lines_size = gl_coord.size();
+  for (size_t i = 0; i < ground_line_info.ground_lines_size; ++i) {
+    ground_line_info.ground_lines[i].points_3d_size = gl_coord[i].size();
+    for (size_t j = 0; j < ground_line_info.ground_lines[i].points_3d_size;
+         ++j) {
+      ground_line_info.ground_lines[i].points_3d[j].x = gl_coord[i][j].x();
+      ground_line_info.ground_lines[i].points_3d[j].y = gl_coord[i][j].y();
+    }
+  }
+  fus_obj_info.fusion_object_num = fus_obj_coord.size();
+  for (size_t i = 0; i < fus_obj_info.fusion_object_num; ++i) {
+    fus_obj_info.fusion_object[i].additional_info.polygon_points_num =
+        fus_obj_coord[i].size();
+    for (size_t j = 0;
+         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_num;
+         ++j) {
+      fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
+          fus_obj_coord[i][j].x();
+      fus_obj_info.fusion_object[i].additional_info.polygon_points[j].y =
+          fus_obj_coord[i][j].y();
+    }
+  }
+  fus_occ_obj_info.fusion_object_num = fus_occ_obj_coord.size();
+  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_num; ++i) {
+    fus_occ_obj_info.fusion_object[i]
+        .additional_occupancy_info.polygon_points_num =
+        fus_occ_obj_coord[i].size();
+    for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
+                               .additional_occupancy_info.polygon_points_num;
+         ++j) {
+      fus_occ_obj_info.fusion_object[i]
+          .additional_occupancy_info.polygon_points[j]
+          .x = fus_occ_obj_coord[i][j].x();
+      fus_occ_obj_info.fusion_object[i]
+          .additional_occupancy_info.polygon_points[j]
+          .y = fus_occ_obj_coord[i][j].y();
+    }
+  }
 
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
@@ -193,6 +261,18 @@ const bool InterfaceUpdateParam(
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   local_view.uss_percept_info = uss_perception_info;
+  local_view.ground_line_perception = ground_line_info;
+  local_view.fusion_objects_info = fus_obj_info;
+  local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
+
+  // DEBUG_PRINT(
+  //     "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
+
+  // DEBUG_PRINT(
+  //     "c++ fus_obj_num = " << static_cast<int>(fus_obj_info.fusion_object_num));
+
+  // DEBUG_PRINT("c++ fus_occ_obj_num = "
+  //             << static_cast<int>(fus_occ_obj_info.fusion_object_num));
 
   if (force_plan) {
     local_view.function_state_machine_info.current_state =

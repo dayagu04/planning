@@ -65,6 +65,10 @@ class ParallelPathPlanner {
     }
   };
 
+  struct DebugInfo {
+    std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
+  };
+
   enum PathColDetRes {
     PATH_COL_INVALID,
     PATH_COL_SHORTEN,
@@ -162,6 +166,7 @@ class ParallelPathPlanner {
 
     double min_outer_front_corner_radius = 5.5;
     double min_inner_rear_corner_radius = 5.5;
+    double min_outer_front_corner_deta_y = 0.8;
     Eigen::Vector2d v_ego_farest_front_corner = Eigen::Vector2d::Zero();
     Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
 
@@ -191,6 +196,7 @@ class ParallelPathPlanner {
       valid_target_pt_vec.reserve(20);
       min_outer_front_corner_radius = 5.5;
       min_inner_rear_corner_radius = 5.5;
+      min_outer_front_corner_deta_y = 0.8;
       v_ego_farest_front_corner = Eigen::Vector2d::Zero();
       v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
     }
@@ -222,6 +228,7 @@ class ParallelPathPlanner {
 
   // pybind simulation
   const std::vector<double> GetPathEle(size_t index) const;
+  const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
  private:
   const bool PrepareStepFromEgo(
@@ -255,6 +262,16 @@ class ParallelPathPlanner {
   const bool PlanFromTargetToLine(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &start_pose);
+
+  const bool PlanFromTargetToLineInNarrowChannel(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::Arc &arc1, const pnc::geometry_lib::Arc &arc_2);
+
+  const bool CalSinglePathInNarrowChannel(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose, const uint8_t gear,
+      const uint8_t steer);
 
   const bool MonoStepPlanWithShift();
   const bool MonoStepPlanOnceWithShift(
@@ -307,6 +324,12 @@ class ParallelPathPlanner {
       const pnc::geometry_lib::LineSegment &target_line, const uint8_t gear,
       const double buffer = 0.0);
 
+  const bool TwoSameGearArcPlanToLine(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::LineSegment &target_line, const uint8_t gear,
+      const double radius, const double buffer = 0.0);
+
   const bool CalcParkOutPath(
       std::vector<pnc::geometry_lib::PathSegment> &reversed_park_out_path,
       const double arc_length, const double line_length,
@@ -328,6 +351,7 @@ class ParallelPathPlanner {
 
   const bool CalSinglePathInMulti(
       const pnc::geometry_lib::PathPoint &current_pose,
+      const pnc::geometry_lib::PathPoint &target_pose,
       const uint8_t current_gear, const uint8_t current_arc_steer,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
 
@@ -336,7 +360,8 @@ class ParallelPathPlanner {
   const bool OneArcPlan(
       pnc::geometry_lib::Arc &arc,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear, const uint8_t current_arc_steer);
+      pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
+      const uint8_t current_arc_steer);
 
   // adjust plan
   const bool AdjustPlan();
@@ -363,18 +388,19 @@ class ParallelPathPlanner {
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &current_pose,
-      const pnc::geometry_lib::LineSegment &target_line,
-      const uint8_t current_gear);
+      pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear);
 
   const bool TwoArcPlan(
       pnc::geometry_lib::Arc &arc,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear, const uint8_t current_arc_steer);
+      pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
+      const uint8_t current_arc_steer);
 
   const bool LineArcPlan(
       pnc::geometry_lib::Arc &arc,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear, const uint8_t current_arc_steer);
+      pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
+      const uint8_t current_arc_steer);
 
   const bool AlignBodyPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -470,6 +496,7 @@ class ParallelPathPlanner {
   PlannerParams calc_params_;
   pnc::dubins_lib::DubinsLibrary dubins_planner_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_ = nullptr;
+  DebugInfo debug_info_;
 };
 
 }  // namespace apa_planner

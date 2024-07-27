@@ -464,16 +464,25 @@ const bool IsArcTurnLeft(const pnc::geometry_lib::Arc &arc);
 const bool IsLineAdvance(const LineSegment &line_seg);
 
 const bool SamplePointSetInLineSeg(std::vector<Eigen::Vector2d> &point_set,
-                                   const LineSegment &line, const double &ds);
+                                   const LineSegment &line, const double ds);
 
 const bool SamplePointSetInArc(std::vector<Eigen::Vector2d> &point_set,
-                               const Arc &arc, const double &ds);
+                               const Arc &arc, const double ds);
+
+const bool SamplePointSetInPathSeg(std::vector<Eigen::Vector2d> &point_set,
+                                   const PathSegment &path_seg,
+                                   const double ds);
 
 const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
-                                   const LineSegment &line, const double &ds);
+                                   const LineSegment &line, const double ds);
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
-                               const Arc &arc, const double &ds);
+                               const Arc &arc, const double ds);
+
+const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
+                                   const PathSegment &path_seg,
+                                   const double ds);
+
 const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
                             const Eigen::Vector2d &point);
 
@@ -520,12 +529,22 @@ const bool CompleteArcInfo(Arc &arc, const double rot_angle);
 const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer);
 
 const bool CompleteArcInfo(Arc &arc, const double length,
-                           bool is_anti_clockwise);
+                           const bool is_anti_clockwise);
+
+const bool CompleteArcInfo(Arc &arc, const double length,
+                           const bool is_anti_clockwise,
+                           const bool save_start_pt);
 
 const bool CompleteLineInfo(LineSegment &line, const double length);
 
 const bool CompleteLineInfo(LineSegment &line, const double length,
                             const double heading);
+
+const bool CompleteLineInfo(LineSegment &line, const double length,
+                            const bool save_start_pt);
+
+const bool CompletePathSeg(PathSegment &path_seg, const double length,
+                           const bool save_start_pt = true);
 
 const uint8_t CalArcGear(const Arc &arc);
 
