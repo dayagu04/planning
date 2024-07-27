@@ -14,6 +14,7 @@
 #include "map_info_manager.h"
 #include "reference_path_manager.h"
 #include "refline.h"
+#include "session.h"
 
 namespace planning {
 
@@ -92,7 +93,20 @@ class VirtualLane {
   const std::shared_ptr<LaneReferencePath> get_reference_path() {
     return reference_path_;
   }
+  double set_ego_lateral_offset(double ego_lateral_offset) {
+    ego_lateral_offset_ = ego_lateral_offset;
+  };
+
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
+
+  void set_lane_frenet_coord(std::shared_ptr<KDPath> frenet_coord) {
+    lane_frenet_coord_ = frenet_coord;
+  };
+
+  const std::shared_ptr<KDPath> get_lane_frenet_coord() {
+    return lane_frenet_coord_;
+  };
+
   iflyauto::LaneType get_lane_type() const {
     return lane_types_.size() > 0 ? lane_types_[0].type
                                   : iflyauto::LANETYPE_UNKNOWN;
@@ -140,12 +154,14 @@ class VirtualLane {
   }
 
  private:
+  planning::framework::Session *session_ = nullptr;
   int order_id_ = -1;
 
   int virtual_id_ = 0;
   int relative_id_ = 0;
   float ego_lateral_offset_ = 0;
   double width_ = 2.8;
+  std::shared_ptr<KDPath> lane_frenet_coord_;
   LaneStatusEx lane_status_;
   std::vector<iflyauto::LaneTypeMsg> lane_types_;
   std::vector<iflyauto::LaneMarkMsg> lane_marks_;
