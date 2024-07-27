@@ -1363,9 +1363,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   ad_common::math::Vec2d current_point;
   const auto& ego_state =
     session_->environmental_model().get_ego_state_manager();
-  const auto& pose = local_view.localization_estimate.pose.local_position;
-  ego_pose_x_ = pose.x;
-  ego_pose_y_ = pose.y;
+  const auto& pose = ego_state->location_enu();
+  ego_pose_x_ = pose.position.x;
+  ego_pose_y_ = pose.position.y;
   std::cout << "ego_pose_x_:" << ego_pose_x_ 
             << "ego_pose_y_:" << ego_pose_y_ << std::endl;
   current_point.set_x(ego_pose_x_);
