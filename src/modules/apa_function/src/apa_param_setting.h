@@ -77,6 +77,7 @@ struct ApaParameters {
   double car_static_keep_time_by_vel = 1.5;
 
   // uss params
+  bool is_uss_dist_from_perception = false;
   double detection_distance = 2.5;
   double lat_inflation = 0.1;
   double safe_uss_remain_dist_in_slot = 0.35;

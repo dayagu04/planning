@@ -298,36 +298,60 @@ const bool UssObstacleAvoidance::Preprocess() {
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
-  const auto &uss_dis_info_buf =
-      local_view_ptr_->uss_percept_info.dis_from_car_to_obj;
 
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // TODO(xjli32): NOTE
-  // uss info is stored in the fifth buf,
-  // uss_dis_info_buf size is 4 in c struct definition now, need to
-  // confirm interface with xuliu15;
-  // disable uss_dis_info temporarily;
-  // return false;
-  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // const auto &uss_dis_info = uss_dis_info_buf[4];
-  // if (uss_dis_info.obj_pt_cnt != 12) {
-  //   DEBUG_PRINT("uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ");
-  //   return false;
-  // }
-  // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
-  // first four are front upa, the middle four are rear upa, the rest are apa.
+  if (apa_param.GetParam().is_uss_dist_from_perception) {
+    const auto &uss_dis_info_buf =
+        local_view_ptr_->uss_percept_info.dis_from_car_to_obj;
 
-  //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
-  //  upa, fr apa
-  for (const auto &front_uss_idx : apa_param.GetParam().uss_wdis_index_front) {
-    uss_raw_dist_vec_.emplace_back(0.001 * uss_dis_info_buf[front_uss_idx]);
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // TODO(xjli32): NOTE
+    // uss info is stored in the fifth buf,
+    // uss_dis_info_buf size is 4 in c struct definition now, need to
+    // confirm interface with xuliu15;
+    // disable uss_dis_info temporarily;
+    // return false;
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // const auto &uss_dis_info = uss_dis_info_buf[4];
+    // if (uss_dis_info.obj_pt_cnt != 12) {
+    //   DEBUG_PRINT("uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ");
+    //   return false;
+    // }
+    // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
+    // first four are front upa, the middle four are rear upa, the rest are apa.
+
+    //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
+    //  upa, fr apa
+    for (const auto &front_uss_idx :
+         apa_param.GetParam().uss_wdis_index_front) {
+      uss_raw_dist_vec_.emplace_back(0.001 * uss_dis_info_buf[front_uss_idx]);
+    }
+
+    // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4
+    // upa, rl apa
+    for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
+      uss_raw_dist_vec_.emplace_back(0.001 * uss_dis_info_buf[rear_uss_idx]);
+    }
+  } else {
+    // load uss dist from uss wave, m id f
+    const auto &upa_dis_info_buf =
+        local_view_ptr_->uss_wave_info.upa_dis_info_buf;
+
+    const std::vector<int> front_wids_idx_vec = {0, 9, 6, 3, 1, 11};
+    const std::vector<int> rear_wids_idx_vec = {0, 1, 3, 6, 9, 11};
+
+    const std::vector<std::vector<int>> wids_idx_vec = {front_wids_idx_vec,
+                                                        rear_wids_idx_vec};
+    for (size_t i = 0; i < wids_idx_vec.size(); i++) {
+      for (size_t j = 0; j < wids_idx_vec[i].size(); j++) {
+        const auto idx = wids_idx_vec[i][j];
+
+        uss_raw_dist_vec_.emplace_back(
+            upa_dis_info_buf[i].wdis[idx].wdis_value[0]);
+      }
+    }
   }
 
-  // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4 upa,
-  // rl apa
-  for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
-    uss_raw_dist_vec_.emplace_back(0.001 * uss_dis_info_buf[rear_uss_idx]);
-  }
+  JSON_DEBUG_VECTOR("uss_raw_dist_vec", uss_raw_dist_vec_, 2)
 
   return true;
 }

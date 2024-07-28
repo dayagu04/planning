@@ -324,6 +324,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   "car_static_keep_time_by_vel");
 
   // uss params
+  JSON_READ_VALUE(apa_param.SetPram().is_uss_dist_from_perception, bool,
+                  "is_uss_dist_from_perception");
+
   JSON_READ_VALUE(apa_param.SetPram().detection_distance, double,
                   "detection_distance");
 
