@@ -34,6 +34,9 @@ constexpr double kAccMax = 1.5;
 constexpr double kJerkMin = -1.0;
 constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
+constexpr double kOverSpeed = 1.2;
+constexpr double kDefaultSBoundUpper = 30;
+constexpr double kLowAgentSpeed = 20.0 / 3.6;
 }  // namespace
 namespace planning {
 
@@ -486,6 +489,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     const std::pair<double, double> &a_bounds,
     const std::pair<double, double> &j_bounds) {
   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
+  double s_upper_bound = std::fmax(v_cruise * kOverSpeed * 5.0, kDefaultSBoundUpper);
   lon_behav_output_.t_list.resize(config_.lon_num_step + 1);
   lon_behav_output_.s_refs.resize(config_.lon_num_step + 1);
   lon_behav_output_.ds_refs.resize(config_.lon_num_step + 1);
@@ -496,11 +500,11 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   lon_behav_output_.lon_bound_a.resize(config_.lon_num_step + 1);
   lon_behav_output_.lon_bound_jerk.resize(config_.lon_num_step + 1);
   WeightedBounds s_hard_bounds;
-  s_hard_bounds.emplace_back(WeightedBound{0.0 - 10.0, 150.0, -1.0});
+  s_hard_bounds.emplace_back(WeightedBound{0.0 - 10.0, s_upper_bound, -1.0});
   WeightedBounds s_soft_bounds;
-  s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, 150.0, -1.0});
+  s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, s_upper_bound, -1.0});
   LonLeadBounds s_lead_bounds;
-  s_lead_bounds.emplace_back(LonLeadBound{150, 0.0, 0.0, -1});
+  s_lead_bounds.emplace_back(LonLeadBound{s_upper_bound, 0.0, 0.0, -1});
   Bound lon_v_bound{-0.1, std::min(v_cruise, config_.velocity_upper_bound)};
   Bound lon_a_bound{a_bounds.first, a_bounds.second};
   Bound lon_j_bound{j_bounds.first, j_bounds.second};
@@ -764,6 +768,10 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   }
 
   if (lon_init_state_[1] < kEgoSpeedThreshold) {
+    return false;
+  }
+
+  if (check_st.vel > kLowAgentSpeed) {
     return false;
   }
 

@@ -141,33 +141,33 @@ parallel_planning_py.Init()
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     # ego pose
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 7, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 3.42, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 7.68852, step=0.1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 5.02958, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 2.37, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= -0.0458551, step=0.1)
     self.s_init_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "s_init",min=-10.0, max=10.0, value=0.0, step=0.01)
     # obs pt pos
-    self.obs_tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_x",min=-15, max=15, value=6.13941, step=0.01)
-    self.obs_tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_y",min=-15, max=15, value=1.17322, step=0.01)
-    self.obs_tlane_p_outside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_out_x",min=-15, max=15, value=-1.0753, step=0.01)
-    self.obs_tlane_p_outside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_out_y",min=-15, max=15, value=1.17322, step=0.01)
+    self.obs_tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_x",min=-15, max=15, value= 7.80066, step=0.01)
+    self.obs_tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_y",min=-15, max=15, value=0.587081, step=0.01)
+    self.obs_tlane_p_outside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_out_x",min=-15, max=15, value=-0.2, step=0.01)
+    self.obs_tlane_p_outside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_out_y",min=-15, max=15, value=0.587081, step=0.01)
     # tlane pt pose
     self.tlane_p_outside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_x",min=-15, max=15, value=-1.0753, step=0.01)
     self.tlane_p_outside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_outside_y",min=-15, max=15, value=1.17322, step=0.01)
     self.tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_x",min=-15, max=15, value= 6.13941, step=0.01)# 6.74947
     self.tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_p_inside_y",min=-15, max=15, value= 1.17322, step=0.01)
     # terminal pos
-    self.tlane_pt_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-2.0, max=2.0, value=1.497, step=0.01)
-    self.tlane_pt_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_y",min=-2.0, max=2.0, value=0.0, step=0.01)
+    self.tlane_pt_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_x",min=-2.0, max=2.0, value=1.73183, step=0.01)
+    self.tlane_pt_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "tlane_pt_y",min=-2.0, max=2.0, value=0.110242, step=0.01)
     # channel
-    self.channel_max_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_x",min=3.0, max=20.0, value=16.6, step=0.1)
-    self.channel_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_y",min=8.0, max=30.0, value=7.5, step=0.1)
+    self.channel_max_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_x",min=3.0, max=20.0, value=25.6, step=0.1)
+    self.channel_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_y",min=4.0, max=30.0, value = 4.27006, step=0.1)
     self.curb_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "curb_offset",min=-5.0, max=5.0, value=-1.31336, step=0.1)
     self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.1, step=0.025)
     self.obs_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs ds",min=0.025, max=1.0, value=0.5, step=0.5)
 
-    self.fix_car_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-20.0, max=20.0, value=1.30479, step=0.01)
-    self.fix_car_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-20.0, max=20.0, value=-0.262434, step=0.01)
-    self.fix_car_heading_deg_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-180.0, max=180.0, value=25.8808, step=0.01)
+    self.fix_car_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-20.0, max=20.0, value=6.27911, step=0.01)
+    self.fix_car_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-20.0, max=20.0, value= 5.29415, step=0.01)
+    self.fix_car_heading_deg_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "fix_car",min=-180.0, max=180.0, value=18.2098, step=0.01)
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot width",min=2.0, max=4.0, value=1.17322 * 2.0, step=0.01)
     self.set_left_slot_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "set left slot",min=0, max=1, value=0, step=1)

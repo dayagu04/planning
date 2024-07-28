@@ -43,7 +43,7 @@ static double kCurbYMagIdentification = 0.0;
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 
-static double kMinChannelYMagIdentification = 2.5;
+static double kMinChannelYMagIdentification = 2.1;
 
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
@@ -180,9 +180,9 @@ void ParallelParInPlanner::PlanCore() {
   }
 
   // print planning status
-  std::cout << "parking status = "
-            << static_cast<int>(GetPlannerStates().planning_status)
-            << std::endl;
+  // std::cout << "parking status = "
+  //           << static_cast<int>(GetPlannerStates().planning_status)
+  //           << std::endl;
 }
 
 const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
@@ -890,21 +890,42 @@ void ParallelParInPlanner::GenObstacles() {
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
 
+  double channel_obs_lim = channel_y;
+  DEBUG_PRINT("frame_.ego_slot_info.obs_pt_vec_slot size = "
+              << frame_.ego_slot_info.obs_pt_vec_slot.size());
+
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
     // Todo: select obs in ROI instead of using obs deciding channel y
-    const bool channel_condition =
-        (obstacle_point_slot.x() > -kRearDetaXMagWhenFrontOccupiedRearVacant) &&
-        (obstacle_point_slot.x() < t_lane_.channel_x_limit) &&
+    // const bool channel_y_condition =
+    //     (obstacle_point_slot.x() > -kRearDetaXMagWhenFrontOccupiedRearVacant)
+    //     && (obstacle_point_slot.x() < t_lane_.channel_x_limit) &&
+    //     (pnc::mathlib::IsInBound(
+    //         obstacle_point_slot.y(),
+    //         kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
+    //         t_lane_.channel_y));
+    const bool channel_y_condition =
+        (obstacle_point_slot.x() > t_lane_.slot_length) &&
+        (obstacle_point_slot.x() < t_lane_.slot_length + 6.0) &&
         (pnc::mathlib::IsInBound(
             obstacle_point_slot.y(),
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
             t_lane_.channel_y));
 
-    if (channel_condition) {
+    if (channel_y_condition) {
+      if (t_lane_.slot_side_sgn > 0.0) {
+        channel_obs_lim = std::min(obstacle_point_slot.y(), channel_obs_lim);
+      } else {
+        channel_obs_lim = std::max(obstacle_point_slot.y(), channel_obs_lim);
+      }
+      DEBUG_PRINT("channel to pt_y = " << std::fabs(obstacle_point_slot.y() -
+                                                    t_lane_.obs_pt_inside.y()));
       apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
           obstacle_point_slot);
     }
   }
+  DEBUG_PRINT("pre channel y = " << t_lane_.channel_y);
+  t_lane_.channel_y = channel_obs_lim;
+  DEBUG_PRINT("channel_obs_lim = " << channel_obs_lim);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -1062,8 +1083,8 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   parallel_path_planner_.SampleCurrentPathSeg();
 
   // print segment info
-  pnc::geometry_lib::PrintSegmentsVecInfo(
-      parallel_path_planner_.GetOutput().path_segment_vec);
+  // pnc::geometry_lib::PrintSegmentsVecInfo(
+  //     parallel_path_planner_.GetOutput().path_segment_vec);
 
   // reverse info for next plan
   if (frame_.is_replan_first) {
@@ -1304,11 +1325,23 @@ const bool ParallelParInPlanner::CheckFinished() {
       front_bumper_center.x() <=
           ego_slot_info.slot_length -
               apa_param.GetParam().finish_parallel_lon_err;
+
+  DEBUG_PRINT("terminal x error = " << ego_slot_info.terminal_err.pos.x());
+
   const bool lon_condition = lon_condition_1 || lon_condition_2;
+  DEBUG_PRINT("lon_condition = " << lon_condition);
+  if (lon_condition) {
+    DEBUG_PRINT("lon rac condition = " << lon_condition_1);
+    DEBUG_PRINT("lon overhaing contidion =" << lon_condition_2);
+  }
 
   const bool heading_condition =
       std::fabs(ego_slot_info.terminal_err.heading) <=
       apa_param.GetParam().finish_parallel_heading_err / 57.3;
+
+  DEBUG_PRINT(
+      "terminal heading error = " << ego_slot_info.terminal_err.heading * 57.3);
+  DEBUG_PRINT("heading_condition = " << heading_condition);
 
   const bool lat_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.y()) <=
                                apa_param.GetParam().finish_parallel_lat_rac_err;
@@ -1342,13 +1375,7 @@ const bool ParallelParInPlanner::CheckFinished() {
   }
   const bool lat_condition = lat_condition_1 || lat_condition_2;
 
-  const bool static_condition =
-      apa_world_ptr_->GetMeasurementsPtr()->static_flag;
-
-  DEBUG_PRINT("terminal x error = " << ego_slot_info.terminal_err.pos.x());
   DEBUG_PRINT("terminal y error = " << ego_slot_info.terminal_err.pos.y());
-  DEBUG_PRINT(
-      "terminal heading error = " << ego_slot_info.terminal_err.heading * 57.3);
   DEBUG_PRINT("lat condition  = " << lat_condition);
   if (lat_condition) {
     if (lat_condition_1) {
@@ -1359,6 +1386,11 @@ const bool ParallelParInPlanner::CheckFinished() {
       DEBUG_PRINT("ego outer wheel are both in slot!");
     }
   }
+
+  const bool static_condition =
+      apa_world_ptr_->GetMeasurementsPtr()->static_flag;
+
+  DEBUG_PRINT("static_condition = " << static_condition);
 
   return lon_condition && lat_condition && heading_condition &&
          static_condition;

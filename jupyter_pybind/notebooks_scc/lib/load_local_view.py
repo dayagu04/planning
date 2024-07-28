@@ -406,6 +406,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       init_state_y = lat_init_state.y
       init_state_theta = lat_init_state.theta
       init_state_delta = lat_init_state.delta
+      ego_pos_compensation_x = plan_debug_json_msg['predicted_ego_x']
+      ego_pos_compensation_y = plan_debug_json_msg['predicted_ego_y']
       lon_init_state = plan_debug_msg.longitudinal_motion_planning_input.init_state
       init_state_s = lon_init_state.s
       init_state_v = lon_init_state.v
@@ -413,6 +415,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       replan_status = plan_debug_json_msg["replan_status"]
       init_pos_point_x = []
       init_pos_point_y = []
+      ego_pos_compensation_x_ = []
+      ego_pos_compensation_y_ = []
       init_pos_point_theta = []
       if g_is_display_enu:
         init_pos_point_x.append(init_state_x)
@@ -420,6 +424,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         init_pos_point_theta.append(init_state_theta)
       else:
         init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
+        ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
         temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
         init_pos_point_theta.append(temp_theta)
 
@@ -435,6 +440,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'init_state_v': [init_state_v],
         'init_state_a': [init_state_a],
         'replan_status': [replan_status],
+        'ego_pos_compensation_x': ego_pos_compensation_x_,
+        'ego_pos_compensation_y': ego_pos_compensation_y_
       })
 
       lat_motion_planning_output = plan_debug_msg.lateral_motion_planning_output
@@ -891,7 +898,9 @@ def load_local_view_figure():
                                                  'init_state_s':[],
                                                  'init_state_v':[],
                                                  'init_state_a':[],
-                                                 'replan_status':[]})
+                                                 'replan_status':[],
+                                                 'ego_pos_compensation_x': [],
+                                                 'ego_pos_compensation_y': []})
   data_text = ColumnDataSource(data = {'vel_ego_text':[], 'text_xn': [],  'text_yn': []})
   data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
   data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
@@ -1188,6 +1197,7 @@ def load_local_view_figure():
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
   fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
+  fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')
   fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')

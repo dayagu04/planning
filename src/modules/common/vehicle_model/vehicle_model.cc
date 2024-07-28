@@ -1,8 +1,11 @@
 #include "vehicle_model/vehicle_model.h"
+
 #include <assert.h>
+
 #include <fstream>
 #include <iostream>
 #include <iterator>
+
 #include "config/vehicle_param_tmp.h"
 #include "config_context.h"
 #include "mjson/mjson.hpp"
@@ -72,8 +75,9 @@ void VehicleModel::RearCenteredKinematicBicycleModel(
   predicted_vehicle_state->jerk = cur_vehicle_state.jerk;
 }
 
-VehicleState VehicleModel::Predict(const double predicted_time_horizon,
-                                   const VehicleState& cur_vehicle_state) {
+VehicleState VehicleModel::Predict(
+    const double predicted_time_horizon,
+    const VehicleState& cur_vehicle_state) {  // predicted_time_horizon is s
   VehicleModelConfig vehicle_model_config;
 
   // Some models not supported for now

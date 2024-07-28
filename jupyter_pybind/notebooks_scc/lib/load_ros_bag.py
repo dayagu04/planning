@@ -552,7 +552,7 @@ class LoadRosbag:
     # load planning debug msg
     try:
       json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                         "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", \
+                         "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'acc_cipv', \
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
@@ -565,6 +565,8 @@ class LoadRosbag:
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
                          "dis_to_ramp", "v_target_ramp", \
+                         'virtual_lane_relative_id_switch_flag', \
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
                          'gap_v_limit_lc', \
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
@@ -578,7 +580,7 @@ class LoadRosbag:
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
-                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state"]
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 
@@ -746,7 +748,7 @@ class LoadRosbag:
     # load ehr sd map msg
     try:
       ehr_sd_map_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap_info"):
         sdmap = SdMap()
         sdmap.ParseFromString(msg.debug_info)
         ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e3] = sdmap

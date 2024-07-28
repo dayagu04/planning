@@ -11,6 +11,7 @@
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
+#include "ifly_time.h"
 #include "local_view.h"
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_in_planner.h"
@@ -75,7 +76,7 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
                "------------------------\n";
-
+  const double start_timestamp_ms = IflyTime::Now_ms();
   const uint8_t last_state =
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
 
@@ -115,6 +116,12 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   }
 
   AddReleasedSlotInfo(planning_output_);
+
+  const auto end_timestamp_ms = IflyTime::Now_ms();
+  const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
+
+  DEBUG_PRINT("time_consumption = " << frame_duration << "ms");
+  JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
   return success;
 }
@@ -456,6 +463,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().tmp_no_consider_obs_dy, bool,
                   "tmp_no_consider_obs_dy");
 
+  JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
+                  "believe_in_fus_obs");
+
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
 
@@ -752,8 +762,15 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   double, "min_slot_release_long_dist_slot2mirror");
 
   JSON_READ_VALUE(
-      apa_param.SetPram().min_parallel_slot_release_long_dist_slot2mirror,
-      double, "min_parallel_slot_release_long_dist_slot2mirror");
+      apa_param.SetPram().min_parallel_uss_slot_release_long_dist_slot2mirror,
+      double, "min_parallel_uss_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().min_parallel_vis_slot_release_long_dist_slot2mirror,
+      double, "min_parallel_vis_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_dist_from_slot2car_release, double,
+                  "max_dist_from_slot2car_release");
 
   JSON_READ_VALUE(apa_param.SetPram().terminal_length, double,
                   "terminal_length");

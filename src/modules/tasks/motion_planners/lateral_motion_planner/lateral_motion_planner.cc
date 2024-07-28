@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
@@ -298,7 +299,7 @@ void LateralMotionPlanner::AssembleInput() {
       session_->mutable_planning_context()->lateral_offset_decider_output();
   if (lane_change_scene) {
     const auto target_state = session_->planning_context().lane_change_decider_output().coarse_planning_info.target_state;
-    if (target_state == ROAD_LC_LBACK || target_state == ROAD_LC_RBACK) {
+    if (target_state == ROAD_LC_RBACK || target_state == ROAD_LC_LBACK) {
       planning_weight_ptr_->SetLCBackFlag(true);
     }
     planning_weight_ptr_->SetLateralMotionWeight(

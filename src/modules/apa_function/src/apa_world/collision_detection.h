@@ -1,6 +1,7 @@
 #ifndef __COLLISION_DETECTION_H__
 #define __COLLISION_DETECTION_H__
 
+#include <cstdint>
 #include <vector>
 
 #include "Eigen/Core"
@@ -17,10 +18,23 @@ namespace planning {
 class CollisionDetector {
  public:
   enum ObsType {
+    NONE_OBS,
     CHANNEL_OBS,
     TLANE_OBS,
     LINEARC_OBS,
+    FUSION_OBS,
+    RECORD_OBS,
     COUNT_OBS,
+  };
+
+  enum class ObsSlotType : uint8_t {
+    OBS_INVALID,
+    SLOT_INSIDE_OBS,
+    SLOT_OUTSIDE_OBS,
+    SLOT_IN_OBS,
+    SLOT_ENTRANCE_OBS,
+    SLOT_OUT_OBS,
+    OBS_COUNT,
   };
 
   struct CarMoveBound {
@@ -37,10 +51,12 @@ class CollisionDetector {
     double remain_dist = 25.0;
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
-    Eigen::Vector2d collision_point;
-    Eigen::Vector2d collision_point_global;
+    Eigen::Vector2d col_pt_ego_global;
+    Eigen::Vector2d col_pt_ego_local;
+    Eigen::Vector2d col_pt_obs_global;
     int car_line_order = -1;
     CarMoveBound car_move_bound;
+    ObsType obs_type = NONE_OBS;
   };
 
   struct Paramters {
@@ -107,8 +123,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
+  GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 
@@ -127,6 +143,8 @@ class CollisionDetector {
 
   void SetParam(Paramters param);
 
+  const Paramters GetParam() { return param_; }
+
   void SetLatInflation();
 
   const double CalMinDistObs2Car(const Eigen::Vector2d &obs,
@@ -142,6 +160,11 @@ class CollisionDetector {
   const bool CalCarMoveBound(CarMoveBound &car_move_bound,
                              const pnc::geometry_lib::PathPoint &start_pose,
                              const pnc::geometry_lib::PathPoint &target_pose);
+
+  const ObsSlotType GetObsSlotType(
+      const Eigen::Vector2d &obs,
+      const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
+      const bool is_left_side, const bool is_vertical_slot = true);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;

@@ -28,12 +28,14 @@ class ApaPlannerBase {
     SEG_COMPLETED_USS,
     STUCKED,
     DYNAMIC,
+    SEG_COMPLETED_COL_DET,
   };
   struct SimulationParam {
     bool is_complete_path = false;
     bool force_plan = false;
     bool sim_to_target = false;
     bool use_slot_in_bag = true;
+    bool use_obs_in_bag = true;
     bool is_path_optimization = false;
     bool is_cilqr_optimization = false;
     bool is_reset = false;
@@ -42,6 +44,8 @@ class ApaPlannerBase {
     std::vector<double> target_managed_slot_y_vec;
     std::vector<double> target_managed_limiter_x_vec;
     std::vector<double> target_managed_limiter_y_vec;
+    std::vector<double> obs_x_vec;
+    std::vector<double> obs_y_vec;
 
     double q_ref_xy = 100.0;
     double q_ref_theta = 100.0;
@@ -84,7 +88,7 @@ class ApaPlannerBase {
     pnc::geometry_lib::GlobalToLocalTf g2l_tf;
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
-    bool first_fix_limiter = true;
+    bool fix_limiter = false;
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
@@ -94,6 +98,8 @@ class ApaPlannerBase {
     Eigen::Vector2d pt_1;
 
     double channel_width;
+
+    bool fus_obj_valid_flag = false;
 
     void Reset() {
       target_managed_slot.Clear();
@@ -126,7 +132,7 @@ class ApaPlannerBase {
       terminal_err.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
       slot_occupied_ratio = 0.0;
 
-      first_fix_limiter = true;
+      fix_limiter = false;
 
       obs_pt_vec_slot.clear();
 
@@ -136,6 +142,8 @@ class ApaPlannerBase {
       pt_1.setZero();
 
       channel_width = apa_param.GetParam().channel_width;
+
+      fus_obj_valid_flag = false;
     }
   };
 
@@ -167,6 +175,8 @@ class ApaPlannerBase {
       pause_time = 0.0;
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
+      remain_dist_col_det = 5.01;
+      car_already_move_dist = 0.0;
       spline_success = false;
       current_path_length = 0.0;
       path_extended_dist = 1.0;
@@ -206,6 +216,8 @@ class ApaPlannerBase {
     double pause_time = 0.0;
     double remain_dist = 5.01;
     double remain_dist_uss = 5.01;
+    double remain_dist_col_det = 5.01;
+    double car_already_move_dist = 0.0;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
 

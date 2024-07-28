@@ -8,6 +8,7 @@
 #include "ehr_sdmap.pb.h"
 #include "func_state_machine_c.h"
 #include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
 #include "fusion_road_c.h"
 #include "hmi_mcu_inner_c.h"
@@ -41,6 +42,9 @@ struct LocalView {
 
   iflyauto::FusionObjectsInfo fusion_objects_info;
   double fusion_objects_info_recv_time = 0.0;
+
+  iflyauto::FusionOccupancyObjectsInfo fusion_occupancy_objects_info;
+  double fusion_occupancy_objects_info_recv_time = 0.0;
 
   iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
   double vehicle_service_output_info_recv_time = 0.0;

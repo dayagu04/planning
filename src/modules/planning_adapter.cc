@@ -151,6 +151,19 @@ void PlanningAdapter::Proc() {
   input_topic_latency->set_fusion_object(get_latency(
       start_time, local_view_ptr_->fusion_objects_info.header.timestamp));
 
+  if (is_fusion_occupancy_objects_info_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->fusion_occupancy_objects_info =
+        fusion_occupancy_objects_info_msg_;
+    local_view_ptr_->fusion_occupancy_objects_info_recv_time =
+        fusion_occupancy_objects_info_msg_recv_time_;
+    is_fusion_occupancy_objects_info_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_fusion_object(
+      local_view_ptr_->fusion_objects_info.header.timestamp);
+  input_topic_latency->set_fusion_object(get_latency(
+      start_time, local_view_ptr_->fusion_objects_info.header.timestamp));
+
   if (is_vehicle_service_output_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     local_view_ptr_->vehicle_service_output_info =

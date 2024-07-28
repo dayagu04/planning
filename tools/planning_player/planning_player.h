@@ -55,7 +55,7 @@ class PlanningPlayer {
             const std::string &scene_type, bool no_debug);
   void Clear();
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
-                  bool is_close_loop, bool no_debug);
+                  bool is_close_loop, bool no_debug, bool interface_check);
   void StoreRosBag(const std::string &bag_path);
   void GenMileage(const std::string &mileage_path);
   void NoDebugInfoMode(bool is_close_loop);
@@ -120,6 +120,7 @@ class PlanningPlayer {
   pnc::mathlib::spline a_t_spline_;
   pnc::mathlib::spline yaw_rate_t_spline_;
   pnc::mathlib::spline curvature_t_spline_;
+  bool instant_error_ = false;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);
@@ -178,6 +179,7 @@ void PlanningPlayer::cache_with_ros_msg_time(
     std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
               << "msg instantiate error, msg name: " << msg.getTopic()
               << std::endl;
+    instant_error_ = true;
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
@@ -193,6 +195,7 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
     std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
               << "msg instantiate error, msg name: " << msg.getTopic()
               << std::endl;
+    instant_error_ = true;
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
@@ -211,6 +214,7 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
     std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
               << "msg instantiate error, msg name: " << msg.getTopic()
               << std::endl;
+    instant_error_ = true;
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;

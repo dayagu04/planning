@@ -9,12 +9,12 @@ sys.path.append('../../../')
 sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 
 sys.path.append('python_proto')
-from python_proto import planning_plan_pb2
+from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLine
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_48160/trigger/20240702/20240702-15-26-28/park_in_data_collection_CHERY_E0Y_48160_ALL_FILTER_2024-07-02-15-26-29_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240726/20240726-16-37-55/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-26-16-37-55_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -96,7 +96,11 @@ data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_sim_target_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_simu_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_sim_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
+data_sim_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
 
+fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
+fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
 fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_tune, size=4, color='yellow', legend_label = 'sim_tuned_plan')
 fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
@@ -104,6 +108,7 @@ fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_a
 fig1.patches('y_vec', 'x_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_sim_target_pos, fill_color = "blue", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_target_pos', visible = False)
+fig1.circle('obs_y', 'obs_x', source = data_sim_obs, size=6.0, color='red', legend_label='sim obs', visible = False)
 
 ### sliders config
 class LocalViewSlider:
@@ -112,6 +117,7 @@ class LocalViewSlider:
     self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.use_slot_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_slot_in_bag",min=0, max=1, value=1, step=1)
+    self.use_obs_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_obs_in_bag",min=0, max=1, value=1, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
     self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
@@ -128,6 +134,7 @@ class LocalViewSlider:
                         vehicle_type = self.vehicle_type_slider,
                         sim_to_target = self.sim_to_target_slider,
                         use_slot_in_bag = self.use_slot_in_bag_slider,
+                        use_obs_in_bag = self.use_obs_in_bag_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
                         is_path_optimization = self.is_path_optimization_slider,
@@ -140,7 +147,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -155,18 +162,30 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
   index_map = bag_loader.get_msg_index(bag_time)
 
   plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
+  # print("plan remain dist uss = ", plan_debug_msg["remain_dist_uss"])
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
   wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
   vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
   soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
-  # uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
-  uss_perception_msg = UssPerceptInfo() # uss_perception_msg is unavailable now
-  loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
-  try:
-    ground_line_perception_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
-  except:
-    ground_line_perception_msg = GroundLine() # ground_line_perception_msg is unavailable now
+  if bag_loader.uss_percept_msg['enable'] == True:
+    uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
+  else:
+    uss_perception_msg = UssPerceptInfo()
+  if bag_loader.fus_ground_line_msg['enable'] == True:
+    gl_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
+  else:
+    gl_msg = GroundLinePerceptionInfo()
+  if bag_loader.fus_objects_msg['enable'] == True:
+    fus_obj_msg = bag_loader.fus_objects_msg['data'][index_map['fus_objects_msg_idx']]
+  else:
+    fus_obj_msg = FusionObjectsInfo()
+  if bag_loader.fus_occupancy_objects_msg['enable'] == True:
+    fus_occ_obj_msg = bag_loader.fus_occupancy_objects_msg['data'][index_map['fus_occupancy_objects_msg_idx']]
+  else:
+    fus_occ_obj_msg = FusionOccupancyObjectsInfo()
+
+  loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
   select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
@@ -183,11 +202,15 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
   target_managed_slot_y_vec = []
   target_managed_limiter_x_vec = []
   target_managed_limiter_y_vec = []
+  obs_x_vec = []
+  obs_y_vec = []
   if soc_state_msg.current_state >= 26:
     target_managed_slot_x_vec = plan_debug_msg['slot_corner_X']
     target_managed_slot_y_vec = plan_debug_msg['slot_corner_Y']
     target_managed_limiter_x_vec = plan_debug_msg['limiter_corner_X']
     target_managed_limiter_y_vec = plan_debug_msg['limiter_corner_Y']
+    obs_x_vec = plan_debug_msg['obstaclesX']
+    obs_y_vec = plan_debug_msg['obstaclesY']
 
   current_ego_x = loc_msg.pose.local_position.x
   current_ego_y = loc_msg.pose.local_position.y
@@ -248,8 +271,40 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
   uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
 
   ground_line_perception_msg_buff = BytesIO()
-  ground_line_perception_msg.serialize(ground_line_perception_msg_buff)
+  gl_msg.serialize(ground_line_perception_msg_buff)
   ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
+  gl_coord = []
+  for i in range(gl_msg.ground_lines_size):
+    num = gl_msg.ground_lines[i].points_3d_size
+    polygon_points = fus_obj_msg.ground_lines[i].points_3d
+    single_gl_coord = []
+    for j in range(num):
+      single_gl_coord.append([polygon_points[j].x, polygon_points[j].y])
+    gl_coord.append(single_gl_coord)
+
+  fus_obj_msg_buff = BytesIO()
+  fus_obj_msg.serialize(fus_obj_msg_buff)
+  fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
+  fus_obj_coord = []
+  for i in range(fus_obj_msg.fusion_object_num):
+    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_num
+    polygon_points = fus_obj_msg.fusion_object[i].additional_info.polygon_points
+    single_fus_obj_coord = []
+    for j in range(num):
+      single_fus_obj_coord.append([polygon_points[j].x, polygon_points[j].y])
+    fus_obj_coord.append(single_fus_obj_coord)
+
+  fus_occ_obj_msg_buff = BytesIO()
+  fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
+  fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
+  fus_occ_obj_coord = []
+  for i in range(fus_occ_obj_msg.fusion_object_num):
+    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_num
+    polygon_points = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points
+    single_fus_occ_obj_coord = []
+    for j in range(num):
+      single_fus_occ_obj_coord.append([polygon_points[j].x, polygon_points[j].y])
+    fus_occ_obj_coord.append(single_fus_occ_obj_coord)
 
   res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg_bytes,
                                     fus_parking_msg_bytes,
@@ -257,11 +312,16 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
                                     vs_msg_bytes,
                                     wave_msg_bytes,
                                     uss_perception_msg_bytes,
+                                    ground_line_perception_msg_bytes,
+                                    fus_obj_msg_bytes,
+                                    fus_occ_obj_msg_bytes,
                                     select_id, force_plan, is_path_optimization,
                                     is_cilqr_enable, is_reset, is_complete_path,
-                                    sim_to_target, use_slot_in_bag, sample_ds,
+                                    sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
-                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec)
+                                    target_managed_limiter_x_vec, target_managed_limiter_y_vec,
+                                    obs_x_vec, obs_y_vec,
+                                    gl_coord, fus_obj_coord, fus_occ_obj_coord)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],
@@ -276,9 +336,27 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
   car_yn = []
   car_box_x_vec = []
   car_box_y_vec = []
+  obstacle_x = []
+  obstacle_y = []
+  col_det_path_x = []
+  col_det_path_y = []
+  col_det_path_phi = []
   if res == True:
     tuned_planning_output = PlanningOutput()
     tuned_planning_output.deserialize(apa_simulation_py.GetPlanningOutput())
+    print("plan release slot id = ", tuned_planning_output.successful_slot_info_list)
+
+    tuned_planning_debug_info = planning_debug_info_pb2.PlanningDebugInfo()
+    tuned_planning_debug_info.ParseFromString(apa_simulation_py.GetPlanningDebugInfo())
+    date_planning_debug = json.loads(tuned_planning_debug_info.data_json)
+    obstacle_x = date_planning_debug["obstaclesX"]
+    obstacle_y = date_planning_debug["obstaclesY"]
+
+    col_det_path_x = date_planning_debug["col_det_path_x"]
+    col_det_path_y = date_planning_debug["col_det_path_y"]
+    col_det_path_phi = date_planning_debug["col_det_path_phi"]
+
+    # print("obstaclesX = ",date_planning_debug["obstaclesX"])
 
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
       plan_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
@@ -341,6 +419,38 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, sele
   data_sim_target_line.data.update({
     'x' : line_xn,
     'y' : line_yn,
+  })
+
+  if isinstance(obstacle_x, str):
+    obstacle_x_list = [float(x) for x in obstacle_x.split(',')]
+  else:
+    obstacle_x_list = obstacle_x
+
+  if isinstance(obstacle_y, str):
+    obstacle_y_list = [float(y) for y in obstacle_y.split(',')]
+  else:
+    obstacle_y_list = obstacle_y
+
+  data_sim_obs.data.update({
+    'obs_x': obstacle_x_list,
+    'obs_y': obstacle_y_list,
+  })
+
+  col_det_path_x_list = []
+  col_det_path_y_list = []
+  if isinstance(col_det_path_x, str):
+    col_det_path_x_list = [float(x) for x in col_det_path_x.split(',')]
+  else:
+    col_det_path_x_list = col_det_path_x
+
+  if isinstance(col_det_path_y, str):
+    col_det_path_y_list = [float(y) for y in col_det_path_y.split(',')]
+  else:
+    col_det_path_y_list = col_det_path_y
+
+  data_sim_col_det_path.data.update({
+    'x': col_det_path_x_list,
+    'y': col_det_path_y_list,
   })
 
   push_notebook()
