@@ -373,13 +373,17 @@ ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
 
   return extend_point;
 }
+
 double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
     const ReferencePathPoints &ref_path_points) const {
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  const auto &ego_pose = ego_state_mgr->ego_pose();
-  double dx = ego_pose.x - ref_path_points[0].path_point.x;
-  double dy = ego_pose.y - ref_path_points[0].path_point.y;
+  // const auto &ego_pose = ego_state_mgr->ego_pose();
+  // double dx = ego_pose.x - ref_path_points[0].path_point.x;
+  // double dy = ego_pose.y - ref_path_points[0].path_point.y;
+  const auto &lat_init_state = ego_state_mgr->planning_init_point().lat_init_state;
+  double dx = lat_init_state.x() - ref_path_points[0].path_point.x;
+  double dy = lat_init_state.y() - ref_path_points[0].path_point.y;
   const int point_nums = ref_path_points.size();
   int nearest_point_index = 0;
   double accumulate_distance_for_nearest_point = 0;
@@ -391,8 +395,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
     const auto &pre_point = ref_path_points[i - 1].path_point;
     accumulate_distance_reference_path +=
         std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
-    dx = ego_pose.x - cur_point.x;
-    dy = ego_pose.y - cur_point.y;
+    dx = lat_init_state.x() - cur_point.x;
+    dy = lat_init_state.y() - cur_point.y;
     double temp_min_distance_square_to_ego_point = dx * dx + dy * dy;
     if (temp_min_distance_square_to_ego_point <
         min_distance_square_to_ego_point) {
@@ -404,8 +408,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   }
   // calculate ego projection distance in reference path
   const auto &nearest_point = ref_path_points[nearest_point_index].path_point;
-  dx = ego_pose.x - nearest_point.x;
-  dy = ego_pose.y - nearest_point.y;
+  dx = lat_init_state.x() - nearest_point.x;
+  dy = lat_init_state.y() - nearest_point.y;
   const double projection_length =
       dx * std::cos(nearest_point.theta) + dy * std::sin(nearest_point.theta);
   const double ego_projection_distance_in_reference_path =
