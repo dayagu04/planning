@@ -24,6 +24,7 @@
 #include "math/math_utils.h"
 #include "planning_context.h"
 #include "planning_debug_info.pb.h"
+#include "planning_hmi_c.h"
 #include "scene_type_config.pb.h"
 #include "struct_container.hpp"
 #include "utils/lateral_utils.h"
@@ -548,11 +549,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // HMI for ad_info
   const auto &virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  // planning_hmi_info->ad_info.lane_change_direction = ;  // 待兴宇补充
+  planning_hmi_info->ad_info.lane_change_direction = (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
 
-  // planning_hmi_info->ad_info.lane_change_status = ;  // 待兴宇补充
-  // planning_hmi_info->ad_info.lane_change_intent = ;  // 待兴宇补充
-  // planning_hmi_info->ad_info.lane_change_source = ;  // 待兴宇补充
+  planning_hmi_info->ad_info.lane_change_status = (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
 
   // planning_hmi_info->ad_info.avoid_status = ;  // 晨亮填写
   // planning_hmi_info->ad_info.aovid_id = ;      // 晨亮填写
