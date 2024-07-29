@@ -82,7 +82,9 @@ void ParallelPathPlanner::Preprocess() {
   calc_params_.is_left_side =
       (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
 
-  calc_params_.slot_side_sgn = input_.tlane.slot_side_sgn;
+  calc_params_.slot_side_sgn =
+      (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) ? -1.0
+                                                                    : 1.0;
 
   const double target_heading = 0.0;
   calc_params_.target_pose.Set(input_.tlane.pt_terminal_pos, target_heading);
@@ -745,6 +747,8 @@ const bool ParallelPathPlanner::MonoStepPlanOnceWithShift(
   backward_line.pA = target_pose.pos;
   backward_line.heading = target_pose.heading;
 
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.15));
+
   if (!CalcLineStepLimitPose(backward_line,
                              pnc::geometry_lib::SEG_GEAR_REVERSE)) {
     std::cout << "CalcLineStepLimitPose error!" << std::endl;
@@ -991,6 +995,8 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
 
     pnc::geometry_lib::PathPoint prepare_pose = aligned_pose;
     double& prepare_y = prepare_pose.pos.y();
+
+    DEBUG_PRINT("calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn);
 
     DEBUG_PRINT("tlane lat =" << tlane_lat_dist
                               << "channel lat dist = " << channel_lat_dist);
@@ -1532,6 +1538,7 @@ const bool ParallelPathPlanner::InverseSearchLoopInSlot(
   search_out_res.clear();
   search_out_res.reserve(10);
   const double radius = apa_param.GetParam().min_turn_radius;
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.15));
 
   // calc backward limit
   pnc::geometry_lib::LineSegment first_line_step;
@@ -1896,7 +1903,7 @@ const bool ParallelPathPlanner::TwoSameGearArcPlanToLine(
   if (col_res.collision_flag ||
       col_res.remain_car_dist > col_res.remain_obstacle_dist - buffer) {
     DEBUG_PRINT("col pt = " << col_res.col_pt_obs_global.transpose());
-
+    debug_info_.debug_arc_vec.emplace_back(arc_1);
     DEBUG_PRINT("TwoSameGearArcPlanToLine arc1 collided!");
     return false;
   }

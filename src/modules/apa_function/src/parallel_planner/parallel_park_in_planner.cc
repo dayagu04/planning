@@ -770,6 +770,14 @@ void ParallelParInPlanner::GenTlane() {
   JSON_DEBUG_VALUE("para_tlane_obs_in_y", t_lane_.obs_pt_inside.y())
   JSON_DEBUG_VALUE("para_tlane_obs_out_x", t_lane_.obs_pt_outside.x())
   JSON_DEBUG_VALUE("para_tlane_obs_out_x", t_lane_.obs_pt_outside.y())
+
+  std::vector<double> x_vec = {0.0};
+  std::vector<double> y_vec = {0.0};
+  std::vector<double> phi_vec = {0.0};
+
+  JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
+  JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
+  JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
 }
 
 void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
@@ -1059,22 +1067,14 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   parallel_path_planner_.SetCurrentPathSegIndex();
   // parallel_path_planner_.SetLineSegmentHeading();
 
-  // bool is_allow_entend_line = true;
-  // if (frame_.ego_slot_info.slot_occupied_ratio < 0.05) {
-  //   const auto path_end_idx = path_planner_output.path_seg_index.second;
-  //   const auto& end_pose =
-  //       path_planner_output.path_segment_vec[path_end_idx].GetEndPose();
+  if (frame_.ego_slot_info.slot_occupied_ratio < 0.05 &&
+      frame_.is_replan_first &&
+      frame_.ego_slot_info.ego_pos_slot.x() < t_lane_.obs_pt_inside.x() + 1.0) {
+    const double extend_lenth = 0.20;
+    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+        extend_lenth);
+  }
 
-  //   if (IsEgoInSlot(end_pose)) {
-  //     is_allow_entend_line = false;
-  //   }
-  // }
-
-  // if (is_allow_entend_line) {
-  //   const double extend_lenth = 0.15;
-  //   parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-  //       extend_lenth);
-  // }
   if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     const double extend_lenth = 0.15;
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
