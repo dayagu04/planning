@@ -447,7 +447,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   const iflyauto::RoadInfo* roads_ptr = &roads;
   iflyauto::RoadInfo roads_virtual;
   
-  //(1)、检查lane的有效性
+  // 1.检查lane的有效性
   if (!CheckLaneValid(roads)) {
     // 依次为常数项、一次项、二次项、三次项
     std::vector<double> current_lane_virtual_poly;
@@ -488,7 +488,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     in_intersection_ = false;
   }
 
-  //(2)、根据地图信息，计算需要的超视距信息
+  //2.根据地图信息，计算需要的超视距信息
   CalculateDistanceToRampSplitMergeWithSdMap(session_);
 
   // if (session_->is_hpp_scene() && GetCurrentNearestLane(*session_)) {
@@ -510,20 +510,13 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("dis to tar slot: %f, distance_to_frist_speed_bump: %f \n",
             distance_to_target_slot_, distance_to_next_speed_bump_);
   JSON_DEBUG_VALUE("is_ego_on_expressway",is_ego_on_expressway_);
-  //(3)、根据计算的超视距信息，更新需要的lane信息
+  // 3.根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
-  
-  //(4)生成导航变道的任务
-  if (is_ego_on_expressway_) {
-    GenerateLaneChangeTasksForNOA();
-  } else {
-    ResetForRampInfo();
-  }
 
-  // 构建车道kd_path/计算自车相对于各车道的横向距离
+  // 4.构建车道kd_path/计算自车相对于各车道的横向距离
   CalculateVirtualLaneAttributes();
 
-  // track自车道
+  // 5.track自车道
   const auto& location_valid = session_->environmental_model().location_valid();
   auto time_start = IflyTime::Now_ms();
   if (location_valid) {
@@ -532,17 +525,21 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
 
-  //(4)生成导航变道的任务
-  GenerateLaneChangeTasksForNOA();
+  //6.生成导航变道的任务
+  if (is_ego_on_expressway_) {
+    GenerateLaneChangeTasksForNOA();
+  } else {
+    ResetForRampInfo();
+  }
 
-  //(5)、根据relative_id，判断current_lane_、left_lane_、right_lane_
+  //7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
     LOG_ERROR("!!!current_lane is empty!!!");
     return false;
   }
 
-  //(6)、更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
+  //8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
   UpdateLaneVirtualId();
 
   LOG_DEBUG("input lane:");
