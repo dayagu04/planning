@@ -219,7 +219,7 @@ bool EnvironmentalModelManager::Run() {
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
-  last_feed_time_[FEED_VEHICLE_DBW_STATUS] = current_time;
+  last_feed_time_[FEED_VEHICLE_DBW_STATUS] = local_view.function_state_machine_info_recv_time;
 
   // Step 2) update ego_state
   auto time_start = IflyTime::Now_ms();
@@ -576,7 +576,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
-      } 
+      }
     } else {
       history_lc_source_[0] = history_lc_source_[1];//上上帧
       history_lc_source_[1] = session_->planning_context().lane_change_decider_output().lc_request_source;//上一帧
@@ -1096,8 +1096,11 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     };
   };
 
-  static const double kCheckTimeDiff = 2000.0;
-  static const double kMapCheckTimeDiff = 5000.0;
+  static const std::vector<double> kCheckTimeDiff = {
+      20, 20, 20, 20, 20, 20, 20, 50, -1, -1, -1};
+  static const double kMapCheckTimeDiff = 1000;
+  static const double kpredictionCheckTimeDiff = 50;
+  static const double kfusionlaneCheckTimeDiff = 50;
 
   static const std::vector<FeedType> input_longtime_with_hdmap{
       FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
@@ -1146,9 +1149,23 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     auto feed_type = static_cast<FeedType>(i);
     const char *feed_type_str = to_string(feed_type);
     if (last_feed_time_[i] > 0.0) {
-      if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
-        if (feed_type == FEED_MAP_INFO &&
-            current_time - last_feed_time_[i] <= kMapCheckTimeDiff)
+      LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,current_time - last_feed_time_[i],
+                  "\n");
+        if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
+          (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
+          if (feed_type == FEED_MAP_INFO &&
+            current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
+            current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
+          continue;
+         if (feed_type == FEED_FUSION_LANES_INFO &&
+            current_time - last_feed_time_[i] <=
+                kfusionlaneCheckTimeDiff * 1.2 &&
+            current_time - last_feed_time_[i] >= kfusionlaneCheckTimeDiff * 0.8)
+          continue;
+         if (feed_type == FEED_PREDICTION_INFO &&
+            current_time - last_feed_time_[i] <=
+                kpredictionCheckTimeDiff * 1.2 &&
+            current_time - last_feed_time_[i] >= kpredictionCheckTimeDiff * 0.8)
           continue;
         LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
                   "\n");
@@ -1171,7 +1188,7 @@ void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOut
     case NONE:
       if (active) {
         //如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
-        if (history_lc_source_[0] == INT_REQUEST 
+        if (history_lc_source_[0] == INT_REQUEST
             && history_lc_source_[1] != INT_REQUEST) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         }
@@ -1182,7 +1199,7 @@ void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOut
     case LEFT_FIRMLY_TOUCH:
       if (history_lc_source_[0] == INT_REQUEST &&
            history_lc_source_[1] == INT_REQUEST &&
-          last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT && 
+          last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
           lc_state == ROAD_LC_RCHANGE) {
         //  表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
@@ -1190,12 +1207,12 @@ void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOut
         //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
-        current_turn_signal_ = common::TurnSignalType::LEFT;       
+        current_turn_signal_ = common::TurnSignalType::LEFT;
       }
       break;
     case RIGHT_FIRMLY_TOUCH:
       //与上同理
-      if (history_lc_source_[0] == INT_REQUEST && 
+      if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
           lc_state == ROAD_LC_LCHANGE) {
@@ -1203,24 +1220,24 @@ void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOut
       } else if (lc_state == ROAD_LC_LCHANGE) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
-        current_turn_signal_ = common::TurnSignalType::RIGHT;       
+        current_turn_signal_ = common::TurnSignalType::RIGHT;
       }
-      break; 
+      break;
     case LEFT_LIGHTLY_TOUCH:
       //只有在向右变道的过程中才会起作用
       if (last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } 
-      break; 
+      }
+      break;
     case RIGHT_LIGHTLY_TOUCH:
       //只有在向左变道的过程中才会起作用
       if (last_frame_turn_sinagl_ == common::TurnSignalType::LEFT) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       }
-      break; 
+      break;
     case ERROR:
       current_turn_signal_ = common::TurnSignalType::NONE;
-      break; 
+      break;
   }
 }
 }  // namespace planner
