@@ -78,6 +78,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
                "------------------------\n";
   if (local_view_ptr == nullptr) {
     std::cout << "\nlocal_view_ptr is nullptr, quit apa\n";
+    return false;
   }
   RecordNodeReceiveTime(local_view_ptr);
 
