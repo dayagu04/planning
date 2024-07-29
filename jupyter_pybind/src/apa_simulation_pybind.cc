@@ -202,19 +202,25 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
           uss_perception_info_bytes);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_info =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(
-          ground_line_info_bytes);
+  // iflyauto::GroundLinePerceptionInfo ground_line_info =
+  //     BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+  //                   struct_msgs::GroundLinePerceptionInfo>(
+  //         ground_line_info_bytes);
 
-  iflyauto::FusionObjectsInfo fus_obj_info =
-      BytesToStruct<iflyauto::FusionObjectsInfo,
-                    struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
+  // iflyauto::FusionObjectsInfo fus_obj_info =
+  //     BytesToStruct<iflyauto::FusionObjectsInfo,
+  //                   struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
 
-  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
-      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
-                    struct_msgs::FusionOccupancyObjectsInfo>(
-          fus_occ_obj_info_bytes);
+  // iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+  //     BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+  //                   struct_msgs::FusionOccupancyObjectsInfo>(
+  //         fus_occ_obj_info_bytes);
+
+  iflyauto::GroundLinePerceptionInfo ground_line_info;
+
+  iflyauto::FusionObjectsInfo fus_obj_info;
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info;
 
   ground_line_info.ground_lines_size = gl_coord.size();
   for (size_t i = 0; i < ground_line_info.ground_lines_size; ++i) {
