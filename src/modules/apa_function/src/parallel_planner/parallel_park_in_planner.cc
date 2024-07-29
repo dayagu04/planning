@@ -1070,7 +1070,7 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   if (frame_.ego_slot_info.slot_occupied_ratio < 0.05 &&
       frame_.is_replan_first &&
       frame_.ego_slot_info.ego_pos_slot.x() < t_lane_.obs_pt_inside.x() + 1.0) {
-    const double extend_lenth = 0.20;
+    const double extend_lenth = 0.25;
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
         extend_lenth);
   }
