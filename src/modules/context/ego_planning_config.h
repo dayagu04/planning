@@ -537,6 +537,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "soft_min_distance_road2center", soft_min_distance_road2center);
     hard_min_distance_road2center =
         read_json_key<double>(json, "hard_min_distance_road2center", hard_min_distance_road2center);
+    care_lon_area_road_border =
+        read_json_key<double>(json, "care_lon_area_road_border", care_lon_area_road_border);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -574,7 +576,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double care_area_s_start_buffer = 0.0;
   double max_avoid_edge = 2.0;
   bool lateral_ref_traj_type = false;
-  double max_lateral_ttc = 5.0;
+  double max_lateral_ttc = 0.0;
+  double care_lon_area_road_border = 100;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

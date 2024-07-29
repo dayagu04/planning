@@ -49,7 +49,7 @@ class GeneralLateralDecider : public Task {
   void GenerateLaneSoftBoundary();
 
   void GetDesireRoadExtraBuffer(double* const left_road_extra_buffer, double* const right_road_extra_buffer);
-  void GetLateralTTCToRoad(double* const left_collision_t, double* const right_collision_t);
+  void GetLateralTTCToRoad(double* max_collision_t, double* const left_collision_t, double* const right_collision_t);
 
   // 3. construct the obstacle decisions
   void GenerateObstaclesBoundary();

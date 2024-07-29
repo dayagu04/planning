@@ -145,6 +145,7 @@
   "extra_soft_buffer2road":0.3,
   "soft_min_distance_road2center":-20,
   "hard_min_distance_road2center":-20,
+  "care_lon_area_road_border":80,
   "lateral_ref_traj_type":false,
   "lon_rear_car_filter_buffer":0.0,
   "care_dynamic_object_t_threshold":-1,

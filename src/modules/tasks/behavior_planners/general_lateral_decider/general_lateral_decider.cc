@@ -406,7 +406,6 @@ void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
 void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-
   double left_road_extra_buffer, right_road_extra_buffer;
   GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
 
@@ -421,21 +420,22 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;
     map_obstacle_decision.tp.s = ref_traj_points_[i].s;
     map_obstacle_decision.tp.l = ref_traj_points_[i].l;
-
-    hard_bound_road.upper =
+    if (map_obstacle_decision.tp.s - ego_frenet_state_.planning_init_point().frenet_state.s < config_.care_lon_area_road_border) {
+      hard_bound_road.upper =
         std::fmin(std::max(config_.hard_min_distance_road2center, ref_path_points_[i].distance_to_left_road_border -
                       0.5 * vehicle_param.max_width - config_.hard_buffer2road),
                   hard_bound_road.upper);
-    hard_bound_road.lower =
-        std::fmax(std::min( -config_.hard_min_distance_road2center, -ref_path_points_[i].distance_to_right_road_border +
-                      0.5 * vehicle_param.max_width + config_.hard_buffer2road),
-                  hard_bound_road.lower);
-    soft_bound_road.upper =
-        std::fmin(std::max(config_.soft_min_distance_road2center, hard_bound_road.upper - left_road_extra_buffer),
-                  soft_bound_road.upper);
-    soft_bound_road.lower =
-        std::fmax(std::min( -config_.soft_min_distance_road2center, hard_bound_road.lower + right_road_extra_buffer),
-                  soft_bound_road.lower);
+      hard_bound_road.lower =
+          std::fmax(std::min( -config_.hard_min_distance_road2center, -ref_path_points_[i].distance_to_right_road_border +
+                        0.5 * vehicle_param.max_width + config_.hard_buffer2road),
+                    hard_bound_road.lower);
+      soft_bound_road.upper =
+          std::fmin(std::max(config_.soft_min_distance_road2center, hard_bound_road.upper - left_road_extra_buffer),
+                    soft_bound_road.upper);
+      soft_bound_road.lower =
+          std::fmax(std::min( -config_.soft_min_distance_road2center, hard_bound_road.lower + right_road_extra_buffer),
+                    soft_bound_road.lower);
+    }
 
     hard_bounds_[i].emplace_back(WeightedBound{
         hard_bound_road.lower, hard_bound_road.upper, config_.kHardBoundWeight,
@@ -506,19 +506,19 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(double* const left_road_ext
   const double kMinExtraBuffer = config_.extra_soft_buffer2road;
   const auto &planning_init_point = ego_cart_state_manager_->planning_init_point();
   const double ego_v = planning_init_point.v;
-  double left_collision_t, right_collision_t;
-  GetLateralTTCToRoad(&left_collision_t, &right_collision_t);
+  double max_collision_t, left_collision_t, right_collision_t;
+  GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
   *left_road_extra_buffer =
-      std::min(0.4, (config_.max_lateral_ttc - left_collision_t) * 0.1);
+      std::min(0.4, (max_collision_t - left_collision_t) * 0.1);
   *right_road_extra_buffer =
-      std::min(0.4, (config_.max_lateral_ttc - right_collision_t) * 0.1);
+      std::min(0.4, (max_collision_t - right_collision_t) * 0.1);
 
   double extra_buffer = std::max(0.02 * std::pow(ego_v * 3.6, 0.75), kMinExtraBuffer);
   *left_road_extra_buffer += extra_buffer;
   *right_road_extra_buffer += extra_buffer;
 }
 
-void GeneralLateralDecider::GetLateralTTCToRoad(double* const left_collision_t, double* const right_collision_t) {
+void GeneralLateralDecider::GetLateralTTCToRoad(double* max_collision_t, double* const left_collision_t, double* const right_collision_t) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &frenet_coord =
@@ -536,11 +536,16 @@ void GeneralLateralDecider::GetLateralTTCToRoad(double* const left_collision_t, 
   bool is_right_overlap = false;
   *left_collision_t = config_.max_lateral_ttc;
   *right_collision_t = config_.max_lateral_ttc;
+  *max_collision_t = config_.max_lateral_ttc;
   for (double t = 0.0; t < config_.max_lateral_ttc; t += time_diff) {
     Point2D prediction_xy(planning_init_point.x + ego_vx * t, planning_init_point.y + ego_vy * t);
     Point2D prediction_sl;
     if (!frenet_coord->XYToSL(prediction_xy, prediction_sl)) {
       continue;
+    }
+    if (prediction_sl.x - ego_frenet_state_.planning_init_point().frenet_state.s > config_.care_lon_area_road_border) {
+      *max_collision_t = t;
+      break;
     }
     const double ego_s_start = prediction_sl.x - vehicle_param.back_edge_to_rear_axis;
     const double ego_s_end = prediction_sl.x + vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
@@ -569,10 +574,17 @@ void GeneralLateralDecider::GetLateralTTCToRoad(double* const left_collision_t, 
         }
       }
 
-      if (is_left_overlap && is_right_overlap) {
-        break;
-      }
+      // if (is_left_overlap && is_right_overlap) {
+      //   break;
+      // }
     }
+  }
+
+  if (*left_collision_t > *max_collision_t) {
+    *left_collision_t = *max_collision_t;
+  }
+  if (*right_collision_t > *max_collision_t) {
+    *right_collision_t = *max_collision_t;
   }
 }
 
