@@ -566,14 +566,18 @@ void PlanningScheduler::FillPlanningHmiInfo(
       (uint)virtual_lane_manager
           ->ramp_direction();  // 临时将toll_station改为ramp_direction
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
-  // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
+  planning_hmi_info->ad_info.is_within_hdmap = virtual_lane_manager->is_within_hdmap();
   // planning_hmi_info->ad_info.ramp_direction = ;      // 义龙填写
   // planning_hmi_info->ad_info.ramp_pass_sts = ;       // 义龙填写
 
   // planning_hmi_info->ad_info.dis_to_reference_line = ;   // 晨亮填写
   // planning_hmi_info->ad_info.angle_to_roaddirection = ;  // 晨亮填写
   // planning_hmi_info->ad_info.is_in_sdmaproad = ;         // 义龙填写
-  // planning_hmi_info->ad_info.road_type = ;               // 晨亮填写
+  if (virtual_lane_manager->is_ego_on_expressway()) {
+    planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY; 
+  } else {
+    planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  }
 
   // HMI for hpp
   auto hpp_info = &(session_.mutable_planning_context()

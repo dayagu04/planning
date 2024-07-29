@@ -207,6 +207,10 @@ class VirtualLaneManager {
 
   bool is_local_valid() const { return is_local_valid_; }
 
+  bool is_within_hdmap() const { return is_within_hdmap_; }
+
+  bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
+
   bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
 
   bool is_reached_hpp_start_point() const {
@@ -330,6 +334,7 @@ class VirtualLaneManager {
   double distance_to_route_end_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
+  bool is_within_hdmap_ = false;
 };
 }  // namespace planning
 #endif

@@ -1817,6 +1817,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
+  is_within_hdmap_ = false;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(
