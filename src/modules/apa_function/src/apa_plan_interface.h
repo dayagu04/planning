@@ -56,6 +56,8 @@ class ApaPlanInterface {
   const bool ApaPlanOnce(const uint8_t planner_type);
   void AddReleasedSlotInfo(iflyauto::PlanningOutput& planning_output);
 
+  void RecordNodeReceiveTime(const LocalView* local_view_ptr);
+
   std::vector<std::shared_ptr<ApaPlannerBase>> apa_planner_stack_;
   std::shared_ptr<ApaWorld> apa_world_ptr_ = nullptr;
   std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;

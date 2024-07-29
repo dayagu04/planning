@@ -77,6 +77,7 @@ struct ApaParameters {
   double car_static_keep_time_by_vel = 1.5;
 
   // uss params
+  bool is_uss_dist_from_perception = false;
   double detection_distance = 2.5;
   double lat_inflation = 0.1;
   double safe_uss_remain_dist_in_slot = 0.35;
@@ -146,6 +147,7 @@ struct ApaParameters {
   double car_lat_inflation_normal = 0.0;
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = true;
+  bool use_fus_occ_obj = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
