@@ -300,6 +300,7 @@ class VirtualLaneManager {
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
   double current_segment_passed_distance_ = 0.0;
+  double distance_to_route_end_ = NL_NMAX;
 };
 }  // namespace planning
 #endif
