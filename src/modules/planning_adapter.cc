@@ -148,6 +148,11 @@ void PlanningAdapter::Proc() {
         fusion_occupancy_objects_info_msg_recv_time_;
     is_fusion_occupancy_objects_info_msg_updated_.store(false);
   }
+  input_topic_timestamp->set_fusion_occupancy_object(
+      local_view_ptr_->fusion_occupancy_objects_info.header.timestamp);
+  input_topic_latency->set_fusion_occupancy_object(get_latency(
+      start_time,
+      local_view_ptr_->fusion_occupancy_objects_info.header.timestamp));
 
   if (is_vehicle_service_output_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -217,6 +222,10 @@ void PlanningAdapter::Proc() {
     local_view_ptr_->uss_wave_info_recv_time = uss_wave_info_msg_recv_time_;
     is_uss_wave_info_msg_updated_.store(false);
   }
+  input_topic_timestamp->set_uss_wave(
+      local_view_ptr_->uss_wave_info.header.timestamp);
+  input_topic_latency->set_uss_wave(
+      get_latency(start_time, local_view_ptr_->uss_wave_info.header.timestamp));
 
   if (is_uss_percept_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -225,6 +234,10 @@ void PlanningAdapter::Proc() {
         uss_percept_info_msg_recv_time_;
     is_uss_percept_info_msg_updated_.store(false);
   }
+  input_topic_timestamp->set_uss_perception(
+      local_view_ptr_->uss_percept_info.header.timestamp);
+  input_topic_latency->set_uss_perception(get_latency(
+      start_time, local_view_ptr_->uss_percept_info.header.timestamp));
 
   if (is_map_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);

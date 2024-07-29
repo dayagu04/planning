@@ -40,6 +40,9 @@ message TopicTimeList {
   optional uint64 ehr_parking_map = 12;
   optional uint64 ground_line = 13;
   optional uint64 localization = 14;
+  optional uint64 uss_wave = 15;
+  optional uint64 uss_perception = 16;
+  optional uint64 fusion_occupancy_object = 17;
 }
 
 message FrameInfo {
