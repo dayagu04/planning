@@ -365,15 +365,22 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   PncTrajectoryPoint reinit_point;
   if (!replan_type_.empty()) {
     if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
+      enable_delta_stitch_in_replan_ = false;
+      reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+          cur_vehicle_state);
+      LateralInitStateReset(reinit_point);
+      LongitudinalInitStateReset(reinit_point);
+    } else if (replan_type_.find(LAT_LON_REPLAN) != replan_type_.end()) {
+      enable_delta_stitch_in_replan_ = false;
       reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
           cur_vehicle_state);
       LateralInitStateReset(reinit_point);
       LongitudinalInitStateReset(reinit_point);
     } else if (replan_type_.find(LAT_REPLAN) != replan_type_.end()) {
+      enable_delta_stitch_in_replan_ = false;
+      reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+          cur_vehicle_state);
       if (replan_type_.find(LON_POSITION_REPLAN) != replan_type_.end()) {
-        reinit_point =
-            TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
-                cur_vehicle_state);
         LateralInitStateReset(reinit_point);
         LongitudinalInitStateReset(reinit_point);
       } else {
@@ -386,6 +393,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
       LongitudinalInitStateReset(reinit_point);
     }
   }
+  enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
   return replan_code;
 }
 
@@ -805,11 +813,13 @@ void EgoStateManager::UpdatePlanningInitState() {
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
   } else {
     stitch_success = false;
+    enable_delta_stitch_in_replan_ = false;
     PncTrajectoryPoint reinit_point;
     reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
         cur_vehicle_state_process_);
     LateralInitStateReset(reinit_point);
     LongitudinalInitStateReset(reinit_point);
+    enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
     replan_status = LAT_lON_REST;
   }
 
