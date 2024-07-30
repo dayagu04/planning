@@ -56,6 +56,9 @@ bool LaneChangeRequestManager::Update(
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
       config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
+  const double max_pass_merge_distance_to_surpress_overtake_lane_change = 
+      virtual_lane_mgr_->pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane();
+  double sum_dis_to_last_merge_point = virtual_lane_mgr_->sum_dis_to_last_merge_point();
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -89,11 +92,11 @@ bool LaneChangeRequestManager::Update(
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->is_on_ramp() ||
-          virtual_lane_mgr_->dis_to_ramp() <=
-              minimum_distance_nearby_ramp_to_surpress_overtake_lane_change) {
+      if (virtual_lane_mgr_->is_on_ramp() || 
+          virtual_lane_mgr_->dis_to_ramp() <= minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
+          sum_dis_to_last_merge_point < max_pass_merge_distance_to_surpress_overtake_lane_change) {
         overtake_request_.Reset();
-        LOG_DEBUG("cann't generate overtake lane change in ramp");
+        LOG_DEBUG("cann't generate overtake lane change on ramp or near ramp or near merge");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
