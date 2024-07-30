@@ -126,7 +126,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   const auto end_timestamp_ms = IflyTime::Now_ms();
   const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
 
-  DEBUG_PRINT("time_consumption = " << frame_duration << "ms");
+  DEBUG_PRINT("total time consumption = " << frame_duration << "ms");
   JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
   return success;

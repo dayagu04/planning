@@ -71,7 +71,9 @@ class ApaWorld {
       heading_ego_vec.setZero();
       heading_ego = 0.0;
       car_static_timer_by_pos_strict = 0.0;
+      car_static_timer_by_pos_normal = 0.0;
       car_static_timer_by_vel_strict = 0.0;
+      car_static_timer_by_vel_normal = 0.0;
       static_flag = false;
       current_state = iflyauto::FunctionalState_STANDBY;
       is_slot_type_fixed = false;

@@ -1226,11 +1226,11 @@ bool SlotManagement::UpdateSlotsInSearching() {
 
       if (frame_.fus_obj_valid_flag) {
         DEBUG_PRINT("use fusion obs, lon_dist = " << lon_dist);
-        const size_t slot_id = static_cast<size_t>(slot->id());
-        frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
+        // const size_t slot_id = static_cast<size_t>(slot->id());
+        // frame_.obs_pt_map[slot_id] = frame_.obs_pt_vec;
 
-        DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
-                    << frame_.obs_pt_map[slot_id].size());
+        // DEBUG_PRINT("frame_.obs_pt_map[slot_id] size = "
+        //             << frame_.obs_pt_map[slot_id].size());
 
         if (lon_dist <
                 apa_param.GetParam()
@@ -2443,11 +2443,6 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
 
   // set obs
   ego_slot_info.obs_pt_vec_slot.clear();
-  if (frame_.obs_pt_map.count(select_slot.id()) == 0) {
-    return true;
-  }
-
-  frame_.obs_pt_map[select_slot.id()] = frame_.obs_pt_vec;
 
   // const auto &obs_pt_vec = frame_.obs_pt_map[select_slot.id()];
   // ego_slot_info.obs_pt_vec_slot.reserve(obs_pt_vec.size());
@@ -2785,7 +2780,7 @@ void SlotManagement::Log() {
   std::vector<double> nearby_obs_x_vec;
   std::vector<double> nearby_obs_y_vec;
   if (frame_.obs_pt_map.count(select_slot_id) != 0) {
-    for (const auto &obs_pt : frame_.obs_pt_map[select_slot_id]) {
+    for (const auto &obs_pt : frame_.obs_pt_vec) {
       nearby_obs_x_vec.emplace_back(obs_pt.x());
       nearby_obs_y_vec.emplace_back(obs_pt.y());
     }
