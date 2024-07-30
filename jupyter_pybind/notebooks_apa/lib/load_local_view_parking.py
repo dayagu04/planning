@@ -234,7 +234,7 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading",
-                         "current_gear_length", "current_gear_pt_size", "sample_ds",
+                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
@@ -1558,6 +1558,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("sample_ds")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['sample_ds']))
+
+      names.append("move_slot_dist")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['move_slot_dist']))
 
       names.append("slot_replan_jump_dist")
       datas.append(str(slot_replan_jump_dist))
@@ -3676,6 +3679,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("sample_ds")
             datas.append(str(plan_json['sample_ds']))
+
+            names.append("move_slot_dist")
+            datas.append(str(plan_json['move_slot_dist']))
 
             names.append("terminal_error_x")
             datas.append(str(plan_json['terminal_error_x']))
