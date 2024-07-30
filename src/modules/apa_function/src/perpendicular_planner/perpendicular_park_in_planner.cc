@@ -918,6 +918,8 @@ void PerpendicularInPlanner::GenTlane() {
     }
   }
 
+  JSON_DEBUG_VALUE("move_slot_dist", move_slot_dist)
+
   // construct slot_t_lane_, left is positive, right is negative
   const double slot_width = std::min(virtual_slot_width, real_slot_width);
 
