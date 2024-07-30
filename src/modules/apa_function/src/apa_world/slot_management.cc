@@ -2548,7 +2548,7 @@ void SlotManagement::UpdateParallelSlotInfoInParking() {
 
   if ((frame_.ego_slot_info.slot_occupied_ratio > 0.55) &&
       (std::fabs(frame_.measurement.v_ego) <
-       apa_param.GetParam().car_static_velocity) &&
+       apa_param.GetParam().car_static_velocity_strict) &&
       (!frame_.parallel_slot_reseted_once)) {
     DEBUG_PRINT("reset parallel slot once!");
 

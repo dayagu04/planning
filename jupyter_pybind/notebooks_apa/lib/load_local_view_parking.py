@@ -60,10 +60,10 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = True
+load_uss_wave_from_uss_percept_msg = False
 load_fusion_object_from_occupancy = True
 version_245 = True
-read_uss_per_msg = True
+read_uss_per_msg = False
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 4
 smallest_abs_t = 0.0
@@ -223,7 +223,7 @@ class LoadCyberbag:
                          "terminal_error_x", "terminal_error_y", "terminal_error_heading",
                          "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason", "plan_fail_reason",
                          "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_uss", "stuck_time", "replan_consume_time", "total_plan_consume_time",
-                         "car_static_timer_by_pos", "car_static_timer_by_vel", "static_flag", "ego_heading_slot",
+                         "car_static_timer_by_pos_strict", "car_static_timer_by_pos_normal", "car_static_timer_by_vel_strict", "car_static_timer_by_vel_normal", "static_flag", "ego_heading_slot",
                          "selected_slot_id", "slot_length", "slot_width", "slot_origin_pos_x", "slot_origin_pos_y", "slot_origin_heading",
                          "slot_occupied_ratio", "pathplan_result", "target_ego_pos_slot", "path_start_seg_index", "path_end_seg_index", "path_length",
                          "uss_available", "uss_remain_dist", "uss_index", "uss_car_index",
@@ -1601,11 +1601,17 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       names.append("remain_dist_col_det")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_col_det']))
 
-      names.append("car_static_timer_by_pos (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos']))
+      names.append("car_static_timer_by_pos_strict (s)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos_strict']))
 
-      names.append("car_static_timer_by_vel (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel']))
+      names.append("car_static_timer_by_pos_normal (s)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos_normal']))
+
+      names.append("car_static_timer_by_vel_strict (s)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel_strict']))
+
+      names.append("car_static_timer_by_vel_normal (s)")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel_normal']))
 
       names.append("static_flag")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['static_flag']))
@@ -3716,11 +3722,17 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             names.append("remain_dist_col_det")
             datas.append(str(plan_json['remain_dist_col_det']))
 
-            names.append("car_static_timer_by_pos (s)")
-            datas.append(str(plan_json['car_static_timer_by_pos']))
+            names.append("car_static_timer_by_pos_strict (s)")
+            datas.append(str(plan_json['car_static_timer_by_pos_strict']))
 
-            names.append("car_static_timer_by_vel (s)")
-            datas.append(str(plan_json['car_static_timer_by_vel']))
+            names.append("car_static_timer_by_pos_normal (s)")
+            datas.append(str(plan_json['car_static_timer_by_pos_normal']))
+
+            names.append("car_static_timer_by_vel_strict (s)")
+            datas.append(str(plan_json['car_static_timer_by_vel_strict']))
+
+            names.append("car_static_timer_by_vel_normal (s)")
+            datas.append(str(plan_json['car_static_timer_by_vel_normal']))
 
             names.append("static_flag")
             datas.append(str(plan_json['static_flag']))

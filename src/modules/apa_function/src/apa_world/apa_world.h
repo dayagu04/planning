@@ -52,8 +52,10 @@ class ApaWorld {
     Eigen::Vector2d heading_ego_vec = Eigen::Vector2d::Zero();
 
     // static params
-    double car_static_timer_by_pos = 0.0;
-    double car_static_timer_by_vel = 0.0;
+    double car_static_timer_by_pos_strict = 0.0;
+    double car_static_timer_by_pos_normal = 0.0;
+    double car_static_timer_by_vel_strict = 0.0;
+    double car_static_timer_by_vel_normal = 0.0;
     bool static_flag = false;
 
     uint8_t slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
@@ -68,8 +70,8 @@ class ApaWorld {
       pos_ego.setZero();
       heading_ego_vec.setZero();
       heading_ego = 0.0;
-      car_static_timer_by_pos = 0.0;
-      car_static_timer_by_vel = 0.0;
+      car_static_timer_by_pos_strict = 0.0;
+      car_static_timer_by_vel_strict = 0.0;
       static_flag = false;
       current_state = iflyauto::FunctionalState_STANDBY;
       is_slot_type_fixed = false;

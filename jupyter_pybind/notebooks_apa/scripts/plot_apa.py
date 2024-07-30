@@ -8,9 +8,10 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240726/20240726-16-37-55/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-26-16-37-55_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240730/20240730-10-47-22/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-30-10-47-22_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
+cur_pos = [0.0, 0.0]
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -103,6 +104,15 @@ def slider_callback(bag_time, vehicle_type):
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag)
   index_map = bag_loader.get_msg_index(bag_time)
+
+  if bag_loader.loc_msg['enable'] == True:
+    loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
+    print("local_vel = ",  loc_msg.pose.linear_velocity_from_wheel)
+    temp_pos = [loc_msg.pose.local_position.x, loc_msg.pose.local_position.y]
+    global cur_pos
+    print("local_move_dist = ",  math.hypot(temp_pos[0] - cur_pos[0], temp_pos[1] - cur_pos[1]))
+    cur_pos = temp_pos
+
 
   if bag_loader.plan_msg['enable'] == True:
     plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]

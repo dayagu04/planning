@@ -312,17 +312,29 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   "pause_failed_time");
 
   // check static params
-  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err, double,
-                  "car_static_pos_err");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err_strict, double,
+                  "car_static_pos_err_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity, double,
-                  "car_static_velocity");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_pos_strict,
+                  double, "car_static_keep_time_by_pos_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_pos, double,
-                  "car_static_keep_time_by_pos");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err_normal, double,
+                  "car_static_pos_err_normal");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_vel, double,
-                  "car_static_keep_time_by_vel");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_pos_normal,
+                  double, "car_static_keep_time_by_pos_normal");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity_strict, double,
+                  "car_static_velocity_strict");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_vel_strict,
+                  double, "car_static_keep_time_by_vel_strict");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity_normal, double,
+                  "car_static_velocity_normal");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_vel_normal,
+                  double, "car_static_keep_time_by_vel_normal");
 
   // uss params
   JSON_READ_VALUE(apa_param.SetPram().is_uss_dist_from_perception, bool,

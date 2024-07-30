@@ -1739,14 +1739,6 @@ void ParallelParInPlanner::Log() const {
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
   JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_pos",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_pos)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_vel",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_vel)
-  JSON_DEBUG_VALUE("static_flag",
-                   apa_world_ptr_->GetMeasurementsPtr()->static_flag)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
 
