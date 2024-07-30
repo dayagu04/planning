@@ -1555,7 +1555,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   const SdMapSwtx::Segment* last_merge_seg = current_segment;
   is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point = nearest_s;
-  sum_dis_to_last_merge_point_ = -1.0;
+  sum_dis_to_last_merge_point_ = NL_NMAX;
   if (!is_on_ramp_) {
     while(last_merge_seg->in_link().size() == 1 ) {
       if (sum_dis_to_last_merge_point > pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_) {
@@ -1781,7 +1781,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_ego_on_expressway_ = false;
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
-  sum_dis_to_last_merge_point_ = -1.0;
+  sum_dis_to_last_merge_point_ = NL_NMAX;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(
