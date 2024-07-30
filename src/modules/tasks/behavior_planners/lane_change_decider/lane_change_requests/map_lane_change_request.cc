@@ -37,6 +37,7 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   const double kTmpRampLength = 100.;
   const double kResponseOffset = 300.;
   const double kDefaultMapDelay = 2.;
+  const double sum_dis_to_last_merge_point = virtual_lane_mgr_->sum_dis_to_last_merge_point();
 
   double lc_end_dis = virtual_lane_mgr_->dis_to_ramp() - kTmpRampLength;
 
@@ -45,7 +46,10 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
 
   std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
-  std::array<double, 3> fp{500.0, 800.0, 1200.0};
+  std::array<double, 3> fp{300.0, 500.0, 800.0};
+  if (sum_dis_to_last_merge_point > 800) {
+    fp = {500.0, 800.0, 1200.0};
+  }
   double adaptor_interval = interp(v_limit, xp, fp);
   double map_response_dist =
       kResponseOffset + adaptor_interval * std::fabs(lc_map_decision);

@@ -185,6 +185,10 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
+  const double sum_dis_to_last_merge_point() const {return sum_dis_to_last_merge_point_;}
+
+  bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
+
   bool is_local_valid() const { return is_local_valid_; }
 
   bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
@@ -294,7 +298,7 @@ class VirtualLaneManager {
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
-  double sum_dis_to_last_merge_point_ = 0.0;
+  double sum_dis_to_last_merge_point_ = -1.0;
   bool is_ego_on_expressway_ = false;
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;

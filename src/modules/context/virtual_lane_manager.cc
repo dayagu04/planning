@@ -1555,9 +1555,10 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   const SdMapSwtx::Segment* last_merge_seg = current_segment;
   is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point = nearest_s;
+  sum_dis_to_last_merge_point_ = -1.0;
   if (!is_on_ramp_) {
-    while (last_merge_seg->in_link().size() == 1) {
-      if (sum_dis_to_last_merge_point > 700) {
+    while(last_merge_seg->in_link().size() == 1 ) {
+      if (sum_dis_to_last_merge_point > 800) {
         break;
       } else {
         last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
@@ -1570,14 +1571,14 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
         }
       }
     }
-    if (sum_dis_to_last_merge_point > 700) {
+    if (sum_dis_to_last_merge_point > 800) {
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
+    sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
   }
+  JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
 
   //计算到路线终点的距离
-  sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
-  JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
   double dis_to_end = NL_NMAX;
   int result = sd_map.GetDistanceToRouteEnd(current_segment->id(),nearest_s, dis_to_end);
   if (result == 0) {
@@ -1780,6 +1781,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_ego_on_expressway_ = false;
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
+  sum_dis_to_last_merge_point_ = -1.0;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(
@@ -1883,9 +1885,8 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   // 2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
   is_leaving_ramp_ = false;
   if (lane_num_except_emergency > 0) {
-    if (distance_to_first_road_merge_ < 100 ||
-        (sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
-         is_ego_on_expressway_)) {
+    if (distance_to_first_road_merge_ < 100 || 
+        (sum_dis_to_last_merge_point_ > 0 && sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ && is_ego_on_expressway_)) {
       is_leaving_ramp_ = true;
     }
   }
