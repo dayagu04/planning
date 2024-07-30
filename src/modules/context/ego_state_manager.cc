@@ -314,8 +314,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     max_replan_dist_err = hpp_max_replan_dist_err_;
   }
 
-  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v); /*&&
-                               (ego_state->ego_acc() < config_.kEpsilon_a);*/
+  const auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
+  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v) &&
+                          (start_stop_state == common::StartStopInfo::START);
   // replan type judge
   int replan_code = 0;
   if (fabs(lat_err) > max_replan_lat_err) {
@@ -343,8 +345,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     replan_code += LON_TINY_SPEED_REPLAN;
   }
 
-  const auto start_stop_state =
-      session_->planning_context().start_stop_result().state();
   // deal with ego_acc which has noise
   // TODO: need to recieve linear acceleration from vehicle wheel speed
   double ego_acc_replan = ego_state->ego_acc();

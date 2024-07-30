@@ -32,7 +32,7 @@
   "approach_distance_threshold_avoid_obstacle": 50,
   "parking_space_release_dis_max": 2.0,
   "parking_cruise_speed": 1.5,
-  "kEpsilon_v": -10.1,
+  "kEpsilon_v": 0.1,
   "kEpsilon_a": 0.4,
   "steer_ratio": 13.0,
   "max_replan_lat_err" : 0.6,
