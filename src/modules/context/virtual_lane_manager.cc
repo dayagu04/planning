@@ -1558,7 +1558,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   sum_dis_to_last_merge_point_ = -1.0;
   if (!is_on_ramp_) {
     while(last_merge_seg->in_link().size() == 1 ) {
-      if (sum_dis_to_last_merge_point > 800) {
+      if (sum_dis_to_last_merge_point > pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_) {
         break;
       } else {
         last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
@@ -1571,7 +1571,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
         }
       }
     }
-    if (sum_dis_to_last_merge_point > 800) {
+    if (sum_dis_to_last_merge_point > pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_) {
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
     sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
