@@ -479,6 +479,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.planning_context().lateral_behavior_planner_output();
   const auto &lane_change_decider_output =
       session_.planning_context().lane_change_decider_output();
+  const auto &lat_offset_decider_output =
+      session_.planning_context().lateral_offset_decider_output();
 
   planning_hmi_info->header.timestamp = IflyTime::Now_us();
   // HMI for ldw
@@ -553,9 +555,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   planning_hmi_info->ad_info.lane_change_status = (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
 
-  // planning_hmi_info->ad_info.avoid_status = ;  // 晨亮填写
-  // planning_hmi_info->ad_info.aovid_id = ;      // 晨亮填写
 
+  planning_hmi_info->ad_info.avoid_status = lat_offset_decider_output.avoid_id > 0 ? iflyauto::AvoidObstacle::AVOID_HIDING : iflyauto::AvoidObstacle::AVOID_NO_HIDING;  // 晨亮填写
+  planning_hmi_info->ad_info.aovid_id = lat_offset_decider_output.avoid_id;      // 晨亮填写
+  planning_hmi_info->ad_info.avoiddirect = static_cast<iflyauto::AvoidObstacleDirection>(lat_offset_decider_output.avoid_direction);
+  
   planning_hmi_info->ad_info.distance_to_ramp =
       virtual_lane_manager->dis_to_ramp();
   planning_hmi_info->ad_info.distance_to_split =
@@ -574,7 +578,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // planning_hmi_info->ad_info.angle_to_roaddirection = ;  // 晨亮填写
   planning_hmi_info->ad_info.is_in_sdmaproad = virtual_lane_manager->is_in_sdmaproad();
   if (virtual_lane_manager->is_ego_on_expressway()) {
-    planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY; 
+    planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
   } else {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
