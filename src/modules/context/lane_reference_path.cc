@@ -187,7 +187,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     const double ego_projection_length_in_reference_path =
         CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
     // if need to extend reference path length
-    if (preview_dis + ego_projection_length_in_reference_path >
+    if (preview_dis + ego_projection_length_in_reference_path + extend_buff >
         origin_reference_path_total_length) {
       const double extend_length =
           preview_dis + ego_projection_length_in_reference_path -
