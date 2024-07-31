@@ -579,14 +579,21 @@ void PlanningScheduler::FillPlanningHmiInfo(
     planning_hmi_info->ad_info.angle_to_roaddirection = fix_reference_path->get_frenet_ego_state().heading_angle();
   }
 
+  std::cout << "fengwang31:111:" << session_.planning_context().planning_hmi_info().ad_info.is_in_sdmaproad << std::endl;
+  std::cout << "fengwang31:virtual_lane_manager->is_in_sdmaproad():" << virtual_lane_manager->is_in_sdmaproad() << std::endl;
   planning_hmi_info->ad_info.is_in_sdmaproad = virtual_lane_manager->is_in_sdmaproad();
-  std::cout << "fengwang31:planning_hmi_info->ad_info.is_in_sdmaproad:" << planning_hmi_info->ad_info.is_in_sdmaproad << std::endl;
+  std::cout << "fengwang31:222:" << session_.planning_context().planning_hmi_info().ad_info.is_in_sdmaproad << std::endl;
+  std::cout << "fengwang31:333:" << planning_hmi_info->ad_info.is_in_sdmaproad << std::endl;
+  
+  std::cout << "fengwang31:virtual_lane_manager->is_ego_on_expressway():" << virtual_lane_manager->is_ego_on_expressway() << std::endl;
+  std::cout << "fengwang31:333road_type:" << session_.planning_context().planning_hmi_info().ad_info.road_type << std::endl;
   if (virtual_lane_manager->is_ego_on_expressway()) {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
   } else {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
-  std::cout << "fengwang31:planning_hmi_info->ad_info.road_type" << planning_hmi_info->ad_info.road_type << std::endl;
+  std::cout << "fengwang31:444road_type:" << session_.planning_context().planning_hmi_info().ad_info.road_type << std::endl;
+  std::cout << "fengwang31:555planning_hmi_info->ad_info.road_type:" << planning_hmi_info->ad_info.road_type << std::endl;
 
   // HMI for hpp
   auto hpp_info = &(session_.mutable_planning_context()
