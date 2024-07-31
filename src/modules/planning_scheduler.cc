@@ -580,11 +580,13 @@ void PlanningScheduler::FillPlanningHmiInfo(
   }
 
   planning_hmi_info->ad_info.is_in_sdmaproad = virtual_lane_manager->is_in_sdmaproad();
+  std::cout << "fengwang31:planning_hmi_info->ad_info.is_in_sdmaproad:" << planning_hmi_info->ad_info.is_in_sdmaproad << std::endl;
   if (virtual_lane_manager->is_ego_on_expressway()) {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
   } else {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
+  std::cout << "fengwang31:planning_hmi_info->ad_info.road_type" << planning_hmi_info->ad_info.road_type << std::endl;
 
   // HMI for hpp
   auto hpp_info = &(session_.mutable_planning_context()
