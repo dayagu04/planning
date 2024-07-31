@@ -413,8 +413,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       line_curvature = []
       line_s = []
       if g_is_display_enu:
-        line_x = [virtual_lane_refline_points[j].enu_point.x for j in range(virtual_lane_refline_points_size)]
-        line_y = [virtual_lane_refline_points[j].enu_point.y for j in range(virtual_lane_refline_points_size)]
+        line_x = [virtual_lane_refline_points[j].local_point.x for j in range(virtual_lane_refline_points_size)]
+        line_y = [virtual_lane_refline_points[j].local_point.y for j in range(virtual_lane_refline_points_size)]
       else:
         if is_enu_to_car:
           coord_tf = coord_transformer()
@@ -423,8 +423,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
             cur_pos_yn = loc_msg.position.position_boot.y
             cur_yaw = loc_msg.orientation.euler_boot.yaw
             coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            line_x = [virtual_lane_refline_points[j].enu_point.x for j in range(virtual_lane_refline_points_size)]
-            line_y = [virtual_lane_refline_points[j].enu_point.y for j in range(virtual_lane_refline_points_size)]
+            line_x = [virtual_lane_refline_points[j].local_point.x for j in range(virtual_lane_refline_points_size)]
+            line_y = [virtual_lane_refline_points[j].local_point.y for j in range(virtual_lane_refline_points_size)]
             line_x, line_y = coord_tf.global_to_local(line_x, line_y)
             """ for virtual_lane_refline_point in virtual_lane_refline_points:
               car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
@@ -469,7 +469,7 @@ def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False,
   cur_yaw = loc_msg.orientation.euler_boot.yaw
   coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
   for virtual_lane_refline_point in virtual_lane_refline_points:
-    car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
+    car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.local_point.x], [virtual_lane_refline_point.local_point.y])
     line_x.append(car_point_x[0])
     line_y.append(car_point_y[0])
   return line_x, line_y
