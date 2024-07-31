@@ -1162,7 +1162,7 @@ def load_local_view_figure():
       value = sdmap_ramp_data_segments[i]
       local_view_data[key] = value
   ### figures config
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1250, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1300, match_aspect = True, aspect_scale=1)
 
   fig1.x_range.flipped = True
   # figure plot

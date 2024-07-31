@@ -163,7 +163,7 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-          
+
   GenerateEnuBoundaryPoints(frenet_safe_bounds, frenet_path_bounds,
                             general_lateral_decider_output);
 
@@ -185,7 +185,7 @@ bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
 }
 
 double GeneralLateralDecider::CalCruiseVelByCurvature(const double ego_v, const std::vector<double>& d_poly) {
-  double cruise_v = ego_cart_state_manager_->ego_v_cruise();
+  double cruise_v = session_->planning_context().v_ref_cruise();
   const double preview_length = 5.0;
   const double preview_step = 1.0;
   double aver_close_kappa = 0.0;
@@ -276,7 +276,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     traj_points.clear();
     TrajectoryPoint point;
-    constexpr double kEps = 1e-6;
+    constexpr double kEps = 1e-4;
     for (size_t i = 0; i < 26; ++i) {
       // cart info
       if (s_ref < cart_ref_info.s_vec.back() + kEps) {

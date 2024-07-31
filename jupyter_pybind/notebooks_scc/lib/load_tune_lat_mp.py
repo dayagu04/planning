@@ -484,11 +484,15 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     jerk_vec = lat_motion_plan_output.jerk_vec
 
     xn_vec, yn_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
+    x_vec, y_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)
     if g_is_display_enu:
       xn_vec, yn_vec = coord_tf.global_to_local(lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec)
+      x_vec, y_vec = lat_motion_plan_output.x_vec, lat_motion_plan_output.y_vec
 
     lat_plan_data['data_lat_motion_plan_output'].data.update({
       'time_vec': time_vec,
+      'x_vec': x_vec,
+      'y_vec': y_vec,
       'xn_vec': xn_vec,
       'yn_vec': yn_vec,
       'ref_theta_deg_vec': ref_theta_deg_vec,
@@ -513,6 +517,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     # print("dist_err = ", planning_json['dist_err'])
     print("solver_condition = ", lat_motion_plan_output.solver_info.solver_condition)
     print("iLqr_lat_update_time = ", planning_json['iLqr_lat_update_time'], " ms")
+    print("min cost = ", lat_motion_plan_output.solver_info.iter_info[max(lat_motion_plan_output.solver_info.iter_count - 1, 0)].cost)
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = plan_msg.trajectory
@@ -811,6 +816,8 @@ def load_lat_plan_figure(fig1):
                                                         })
 
   data_lat_motion_plan_output = ColumnDataSource(data = {'time_vec':[],
+                                                         'x_vec':[],
+                                                         'y_vec':[],
                                                          'xn_vec':[],
                                                          'yn_vec':[],
                                                          'ref_theta_deg_vec':[],
@@ -932,7 +939,7 @@ def load_lat_plan_figure(fig1):
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard upper bound')
   fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard lower bound')
   fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
-  # fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
+  fig1.circle('y_vec', 'x_vec', source = data_lat_motion_plan_output, size = 6, line_width = 5, line_color = 'red', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'plan path')
   fig1.line('y_vec_t', 'x_vec_t', source = data_lat_motion_plan_output, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.4, legend_label = 'tuned plan path')
   # fig1.line('comb_y_vec', 'comb_x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'combined path')
   # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)

@@ -312,10 +312,23 @@ void LateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
 
+  const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
+  double motion_plan_concerned_end_index = config_.motion_plan_concerned_end_index;
+  for (size_t i = 0; i < motion_plan_concerned_end_index; ++i) {
+    Point2D cart_ref_xy(planning_input_.ref_x_vec(i), planning_input_.ref_y_vec(i));
+    Point2D frenet_ref_xy;
+    if (reference_path_ptr->get_frenet_coord() != nullptr &&
+        reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref_xy, frenet_ref_xy)) {
+      if (frenet_ref_xy.x > (ego_s + config_.valid_perception_range)) {
+        motion_plan_concerned_end_index = i;
+        break;
+      }
+    }
+  }
+
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);
-  planning_input_.set_motion_plan_concerned_index(
-      config_.motion_plan_concerned_end_index);
+  planning_input_.set_motion_plan_concerned_index(motion_plan_concerned_end_index);
 }
 
 void LateralMotionPlanner::Update() {
@@ -327,6 +340,7 @@ void LateralMotionPlanner::Update() {
                config_.min_ego_vel);
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
+      config_.end_ratio_for_qref, config_.end_ratio_for_qjerk,
       config_.motion_plan_concerned_start_index, concerned_start_q_jerk,
       ego_vel, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);

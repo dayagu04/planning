@@ -113,6 +113,7 @@ void read_json_vec(const Json &json, const std::vector<std::string> &keys,
     }
   }
   if (json_new.find(keys.back()) != json_new.end()) {
+    vec.clear();
     for (size_t i = 0; i < json_new[keys.back()].size(); i++) {
       vec.emplace_back(json_new[keys.back()][i]);
     }
@@ -596,14 +597,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "min_ego_vel"});
     acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound"});
-    jerk_bound1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound1"});
-    jerk_bound2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound2"});
-    jerk_bound3 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound3"});
-    jerk_bound4 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound4"});
+    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"}, map_jerk_bound);
     acc_bound_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "acc_bound_lane_change"});
@@ -642,8 +636,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_avoid"});
     q_acc_avoid = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_avoid"});
-    q_jerk_avoid = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid"});
+    q_jerk_avoid_close = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_close"});
+    q_jerk_avoid_middle = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_middle"});
+    q_jerk_avoid_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_vel"});
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
@@ -688,28 +686,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     motion_plan_concerned_end_index = read_json_keys<size_t>(
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "motion_plan_concerned_end_index"});
-    map_qxy0 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy0"});
-    map_qxy1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy1"});
-    map_qxy2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy2"});
-    map1_qjerk0 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk0"});
-    map1_qjerk1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk1"});
-    map1_qjerk2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk2"});
-    map1_qjerk3 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map1_qjerk3"});
-    map2_qjerk0 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk0"});
-    map2_qjerk1 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk1"});
-    map2_qjerk2 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk2"});
-    map2_qjerk3 = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "map2_qjerk3"});
+    valid_perception_range = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "valid_perception_range"});
+    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"}, map_qxy);
+    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk1"}, map_qjerk1);
+    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk2"}, map_qjerk2);
+    end_ratio_for_qref = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qref"});
+    end_ratio_for_qjerk = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qjerk"});
   }
 
   bool warm_start_enable = true;
@@ -718,10 +703,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double min_ego_vel = 5.0;
 
   double acc_bound = 1.5;
-  double jerk_bound1 = 1.2;
-  double jerk_bound2 = 1.0;
-  double jerk_bound3 = 0.8;
-  double jerk_bound4 = 0.5;
+  std::vector<double> map_jerk_bound{1.2, 1.0, 0.8, 0.25};
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
   double acc_bound_bend = 1.8;
@@ -743,7 +725,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_y_avoid = 20.0;
   double q_ref_theta_avoid = 15.0;
   double q_acc_avoid = 0.5;
-  double q_jerk_avoid = 2.0;
+  double q_jerk_avoid_close = 2.0;
+  double q_jerk_avoid_middle = 2.0;
+  double q_jerk_avoid_vel = 25.0;
 
   double q_ref_x_lane_change = 20.0;
   double q_ref_y_lane_change = 20.0;
@@ -761,17 +745,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double curvature_preview_step = 1.0;
   size_t motion_plan_concerned_start_index = 2;
   size_t motion_plan_concerned_end_index = 20;
-  double map_qxy0 = 1000.0;
-  double map_qxy1 = 500.0;
-  double map_qxy2 = 50.0;
-  double map1_qjerk0 = 5.0;
-  double map1_qjerk1 = 10.0;
-  double map1_qjerk2 = 50.0;
-  double map1_qjerk3 = 150.0;
-  double map2_qjerk0 = 0.5;
-  double map2_qjerk1 = 1.0;
-  double map2_qjerk2 = 5.0;
-  double map2_qjerk3 = 50.0;
+  double valid_perception_range = 60.0;
+  std::vector<double> map_qxy{80.0, 400.0, 500.0, 500.0};
+  std::vector<double> map_qjerk1{120.0, 90.0, 60.0, 500.0};
+  std::vector<double> map_qjerk2{40.0, 30.0, 30.0, 100.0};
+  double end_ratio_for_qref = 1.0;
+  double end_ratio_for_qjerk = 1.0;
 };
 
 struct RealtimeLateralMotionPlannerConfig : public EgoPlanningConfig {
