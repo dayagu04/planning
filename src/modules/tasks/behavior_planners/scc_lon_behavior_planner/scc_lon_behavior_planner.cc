@@ -129,16 +129,18 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   auto &lon_decision_info =
       session_->mutable_planning_context()->mutable_lon_decision_result();
   auto &function_info = session_->environmental_model().function_info();
+  const auto &planning_init_point = ego_state_mgr->planning_init_point();
 
   const auto &lane_status = session_->mutable_planning_context()->lane_status();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
-  // 1. set ego_info & lon_decision_info
+  // 1. set ego_info & lon_decision_info, ego_info needs to be recieved from
+  // init point rather than real-time vehicle state
   auto ego_info = lon_behav_plan_input_->mutable_ego_info();
-  ego_info->set_ego_v(ego_state_mgr->ego_v());
+  ego_info->set_ego_v(planning_init_point.lon_init_state.v());
   ego_info->set_ego_cruise(std::max(ego_state_mgr->ego_v_cruise(), 0.0));
-  ego_info->set_ego_acc(ego_state_mgr->ego_acc());
+  ego_info->set_ego_acc(planning_init_point.lon_init_state.a());
   ego_info->set_ego_steer_angle(ego_state_mgr->ego_steer_angle());
   ego_info->set_ego_pose_x(ego_state_mgr->ego_pose().x);
   ego_info->set_ego_pose_y(ego_state_mgr->ego_pose().y);
