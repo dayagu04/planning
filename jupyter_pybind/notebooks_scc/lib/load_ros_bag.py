@@ -772,7 +772,7 @@ class LoadRosbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap_info"):
         sdmap = SdMap()
         sdmap.ParseFromString(msg.debug_info)
-        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e3] = sdmap
+        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e6] = sdmap
       ehr_sd_map_msg_dict = {key: val for key, val in sorted(ehr_sd_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_sd_map_msg_dict.items():
         self.ehr_sd_map_msg['t'].append(t)

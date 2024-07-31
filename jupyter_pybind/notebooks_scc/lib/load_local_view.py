@@ -919,37 +919,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = loc_msg.position.position_boot.y
     cur_yaw = loc_msg.orientation.euler_boot.yaw
     print("road_map.lanes len:",len(ehr_sd_map_msg.route_map.segms))
-    ehr_line_info_list = load_sd_map_segments(ehr_sd_map_msg.route_map.segms,
+    sdmap_road_line_info = load_sd_map_segments(ehr_sd_map_msg.route_map.segms,
                                           cur_pos_xn,cur_pos_yn,cur_yaw,Max_sdmap_segment_size)
-    ehr_data_lane_dict = {}
-    for i in range(Max_sdmap_segment_size):
-      ehr_data_lane_dict[i] = local_view_data['sdmap_data_segment_{}'.format(i)]
-    for i in range(len(ehr_line_info_list)):
-      if ehr_line_info_list[i]['ehr_relative_id'] == 1000: #车道不存在
-        ehr_line_info_list[i]['ehr_line_x_vec'] = []
-        ehr_line_info_list[i]['ehr_line_y_vec'] = []
-      ehr_data_line = ehr_data_lane_dict[i]
-      # print("ehr_line_info_list:",len(ehr_line_info_list))
-      ehr_data_line.data.update({
-            'sdmap_segment_{}_x'.format(i): ehr_line_info_list[i]['ehr_line_x_vec'],
-            'sdmap_segment_{}_y'.format(i): ehr_line_info_list[i]['ehr_line_y_vec'],
-          })
-
-    ehr_ramp_line_info_list = load_sd_map_ramp_segments(ehr_sd_map_msg.route_map.segms,
-                                      cur_pos_xn,cur_pos_yn,cur_yaw,Max_sdmap_segment_size)
-    ehr_ramp_data_lane_dict = {}
-    for i in range(Max_sdmap_segment_size):
-      ehr_ramp_data_lane_dict[i] = local_view_data['sdmap_ramp_data_segment_{}'.format(i)]
-    for i in range(len(ehr_ramp_line_info_list)):
-      if ehr_ramp_line_info_list[i]['ehr_relative_id'] == 1000: #车道不存在
-        ehr_ramp_line_info_list[i]['ehr_line_x_vec'] = []
-        ehr_ramp_line_info_list[i]['ehr_line_y_vec'] = []
-      ehr_ramp_data_line = ehr_ramp_data_lane_dict[i]
-      # print("ehr_line_info_list:",len(ehr_line_info_list))
-      ehr_ramp_data_line.data.update({
-            'sdmap_ramp_segment_{}_x'.format(i): ehr_ramp_line_info_list[i]['ehr_line_x_vec'],
-            'sdmap_ramp_segment_{}_y'.format(i): ehr_ramp_line_info_list[i]['ehr_line_y_vec'],
-          })
+    local_view_data['data_sdmap_road_line'].data.update({
+      'data_sdmap_road_line_x': sdmap_road_line_info['sdmap_road_line_x_vec'],
+      'data_sdmap_road_line_y': sdmap_road_line_info['sdmap_road_line_y_vec']
+    })
+    local_view_data['data_sdmap_ramp_line'].data.update({
+      'data_sdmap_ramp_line_x': sdmap_road_line_info['sdmap_ramp_line_x_vec'],
+      'data_sdmap_ramp_line_y': sdmap_road_line_info['sdmap_ramp_line_y_vec']
+    })
+    local_view_data['data_sdmap_inlink'].data.update({
+      'data_sdmap_inlink_x': sdmap_road_line_info['inlinek_x_vec'],
+      'data_sdmap_inlink_y': sdmap_road_line_info['inlinek_y_vec']
+    })
+    local_view_data['data_sdmap_outlink'].data.update({
+      'data_sdmap_outlink_x': sdmap_road_line_info['outlinek_x_vec'],
+      'data_sdmap_outlink_y': sdmap_road_line_info['outlinek_y_vec']
+    })
 
   # 加载ehr_parking_map
   if bag_loader.ehr_parking_map_msg['enable'] == True:
@@ -1099,14 +1086,10 @@ def load_local_view_figure():
       ehr_lane_boundary_lanes.append(ColumnDataSource(data={'ehr_lane_boundary_{}_y'.format(i): [], 'ehr_lane_boundary_{}_x'.format(i): []}))
   ## add plot sdmap info
   if is_vis_sdmap:
-    sdmap_data_segments = []
-    for i in range(Max_sdmap_segment_size):
-      sdmap_data_segments.append(ColumnDataSource(data={'sdmap_segment_{}_y'.format(i): [], 'sdmap_segment_{}_x'.format(i): []}))
-
-
-    sdmap_ramp_data_segments = []
-    for i in range(Max_sdmap_segment_size):
-      sdmap_ramp_data_segments.append(ColumnDataSource(data={'sdmap_ramp_segment_{}_y'.format(i): [], 'sdmap_ramp_segment_{}_x'.format(i): []}))
+    data_sdmap_road_line = ColumnDataSource(data = {'data_sdmap_road_line_y':[], 'data_sdmap_road_line_x':[]})
+    data_sdmap_ramp_line = ColumnDataSource(data = {'data_sdmap_ramp_line_y':[], 'data_sdmap_ramp_line_x':[]})
+    data_sdmap_inlink = ColumnDataSource(data = {'data_sdmap_inlink_y':[], 'data_sdmap_inlink_x':[]})
+    data_sdmap_outlink = ColumnDataSource(data = {'data_sdmap_outlink_y':[], 'data_sdmap_outlink_x':[]})
 
   data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[]})
   data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[]})
@@ -1378,15 +1361,11 @@ def load_local_view_figure():
       value = ehr_lane_boundary_lanes[i]
       local_view_data[key] = value
   if is_vis_sdmap:
-    for i in range(len(sdmap_data_segments)):
-      key = "sdmap_data_segment_" + str(i)
-      value = sdmap_data_segments[i]
-      local_view_data[key] = value
-
-    for i in range(len(sdmap_ramp_data_segments)):
-      key = "sdmap_ramp_data_segment_" + str(i)
-      value = sdmap_ramp_data_segments[i]
-      local_view_data[key] = value
+    local_view_data ["data_sdmap_road_line"] = data_sdmap_road_line
+    local_view_data ["data_sdmap_ramp_line"] = data_sdmap_ramp_line
+    local_view_data ["data_sdmap_inlink"] = data_sdmap_inlink
+    local_view_data ["data_sdmap_outlink"] = data_sdmap_outlink
+    
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1300, match_aspect = True, aspect_scale=1)
 
@@ -1488,14 +1467,10 @@ def load_local_view_figure():
       keyx = 'ehr_lane_boundary_{}_x'.format(i)
       fig1.line(keyy,keyx,source = ehr_lane_boundary_lanes[i], line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'ehr_lane_boundary')
   if is_vis_sdmap:
-    for i in range (len(sdmap_data_segments)):
-      keyy = 'sdmap_segment_{}_y'.format(i)
-      keyx = 'sdmap_segment_{}_x'.format(i)
-      fig1.line(keyy,keyx,source = sdmap_data_segments[i], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'sdmap_segment')
-    for i in range (len(sdmap_ramp_data_segments)):
-      keyy = 'sdmap_ramp_segment_{}_y'.format(i)
-      keyx = 'sdmap_ramp_segment_{}_x'.format(i)
-      fig1.line(keyy,keyx,source = sdmap_ramp_data_segments[i], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdmap_ramp_segment')
+    fig1.line('data_sdmap_road_line_y','data_sdmap_road_line_x',source = data_sdmap_road_line, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdmap_road_line')
+    fig1.circle('data_sdmap_ramp_line_y', 'data_sdmap_ramp_line_x', source = data_sdmap_ramp_line, radius = 3, fill_color="red", line_color='red', legend_label = 'ramp_segment')
+    fig1.circle('data_sdmap_inlink_y', 'data_sdmap_inlink_x', source = data_sdmap_inlink, radius = 3, fill_color="green", line_color='green', legend_label = 'inlink_segment')
+    fig1.circle('data_sdmap_outlink_y', 'data_sdmap_outlink_x', source = data_sdmap_outlink, radius = 3, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
 
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')

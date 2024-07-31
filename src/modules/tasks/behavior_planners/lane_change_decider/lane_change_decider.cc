@@ -130,7 +130,8 @@ bool LaneChangeDecider::Execute() {
   UpdateStateMachineDebugInfo();
 
   UpdateAdInfo();
-
+  const int lc_status = transition_context_.target_state;
+  JSON_DEBUG_VALUE("cur_state", lc_status)
   return true;
 }
 

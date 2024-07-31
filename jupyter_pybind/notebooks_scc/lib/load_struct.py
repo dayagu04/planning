@@ -131,80 +131,73 @@ def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size):
   return ehr_line_info_list
 
 def load_sd_map_segments(segments,x,y,yaw,Max_sdmap_segment_size):
-  sd_map_segments_list = []
-  for i in range(Max_sdmap_segment_size):
-    ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
-    if i < len(segments):
-      segment = segments[i]
-      if (segment.usage != RoadUsage.RAMP):
-        line_x = []
-        line_y = []
-        cur_line_first_point = segment.enu_points[0]
-        cur_line_last_point = segment.enu_points[-1]
-        first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
-        last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-        # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
-        #   continue
-        for point in segment.enu_points:
-          ehr_x = point.x
-          ehr_y = point.y
-          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
-          # print("x:",ehr_x)
-          # print("y:",ehr_y)
-          line_x.append(car_x)
-          line_y.append(car_y)
-        ehr_lane_info['ehr_line_x_vec'] = line_x
-        ehr_lane_info['ehr_line_y_vec'] = line_y
-        ehr_lane_info['ehr_relative_id'] = segment.id
-        if (segment.usage == 3):
-          ehr_lane_info['ehr_type'] = 1
-        else:
-          ehr_lane_info['ehr_type'] = 0
-        sd_map_segments_list.append(ehr_lane_info)
-    else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      ehr_lane_info['ehr_line_x_vec'] = line_x
-      ehr_lane_info['ehr_line_y_vec'] = line_y
-      ehr_lane_info['ehr_relative_id'] = 1000
-      ehr_lane_info['ehr_type'] = 0
-      sd_map_segments_list.append(ehr_lane_info)
-  return sd_map_segments_list
+  sdmap_road_line_info = {'sdmap_road_line_x_vec':[], 'sdmap_road_line_y_vec':[],
+                          'sdmap_ramp_line_x_vec':[], 'sdmap_ramp_line_y_vec':[],
+                          'sdmap_expressway_line_x_vec':[], 'sdmap_expressway_line_y_vec':[],
+                          'inlinek_x_vec':[], 'inlinek_y_vec':[],
+                          'outlinek_x_vec':[], 'outlinek_y_vec':[],}
+  line_x = []
+  line_y = []
+  ramp_line_x = []
+  ramp_line_y = []
+  expressway_line_x = []
+  expressway_line_y = []
+  inlink_x = []
+  inlink_y = []
+  outlink_x = []
+  outlink_y = []
+  route_ids = set([seg.id for seg in segments])
+  for segment in segments:
+    for point in segment.enu_points:
+      ehr_x = point.x
+      ehr_y = point.y
+      car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+      line_x.append(car_x)
+      line_y.append(car_y)
+    if (segment.usage != RoadUsage.RAMP and segment.usage != RoadUsage.ENTRANCE_EXIT):
+      for point in segment.enu_points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        expressway_line_x.append(car_x)
+        expressway_line_y.append(car_y)
+    if (segment.usage == RoadUsage.RAMP or segment.usage == RoadUsage.ENTRANCE_EXIT):
+      for point in segment.enu_points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        ramp_line_x.append(car_x)
+        ramp_line_y.append(car_y)
+    for inlink in segment.in_link:
+      if inlink.id in route_ids:
+        continue
+      for point in inlink.enu_points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        inlink_x.append(car_x)
+        inlink_y.append(car_y)
+    for outlink in segment.out_link:
+      if outlink.id in route_ids:
+        continue
+      for point in outlink.enu_points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        outlink_x.append(car_x)
+        outlink_y.append(car_y)
 
-def load_sd_map_ramp_segments(segments,x,y,yaw,Max_sdmap_segment_size):
-  sd_map_ramp_segments_list = []
-  for i in range(Max_sdmap_segment_size):
-    ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
-    if i < len(segments):
-      segment = segments[i]
-      if (segment.usage == 3 or segment.usage == 5):
-        line_x = []
-        line_y = []
-        cur_line_first_point = segment.enu_points[0]
-        cur_line_last_point = segment.enu_points[-1]
-        first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
-        last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
-        # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
-        #   continue
-        for point in segment.enu_points:
-          ehr_x = point.x
-          ehr_y = point.y
-          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
-          # print("x:",ehr_x)
-          # print("y:",ehr_y)
-          line_x.append(car_x)
-          line_y.append(car_y)
-        ehr_lane_info['ehr_line_x_vec'] = line_x
-        ehr_lane_info['ehr_line_y_vec'] = line_y
-        ehr_lane_info['ehr_relative_id'] = segment.id
-        sd_map_ramp_segments_list.append(ehr_lane_info)
-    else:
-      line_x, line_y = gen_line(0,0,0,0,0,0)
-      ehr_lane_info['ehr_line_x_vec'] = line_x
-      ehr_lane_info['ehr_line_y_vec'] = line_y
-      ehr_lane_info['ehr_relative_id'] = 1000
-      ehr_lane_info['ehr_type'] = 0
-      sd_map_ramp_segments_list.append(ehr_lane_info)
-  return sd_map_ramp_segments_list
+  sdmap_road_line_info['sdmap_road_line_x_vec'] = line_x
+  sdmap_road_line_info['sdmap_road_line_y_vec'] = line_y
+  sdmap_road_line_info['sdmap_ramp_line_x_vec'] = ramp_line_x
+  sdmap_road_line_info['sdmap_ramp_line_y_vec'] = ramp_line_y
+  sdmap_road_line_info['sdmap_expressway_line_x_vec'] = expressway_line_x
+  sdmap_road_line_info['sdmap_expressway_line_y_vec'] = expressway_line_y
+  sdmap_road_line_info['inlinek_x_vec'] = inlink_x
+  sdmap_road_line_info['inlinek_y_vec'] = inlink_y
+  sdmap_road_line_info['outlinek_x_vec'] = outlink_x
+  sdmap_road_line_info['outlinek_y_vec'] = outlink_y
+  return sdmap_road_line_info
 
 def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size):
   ehr_road_boundary_info_list = []
