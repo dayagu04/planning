@@ -71,10 +71,14 @@ struct ApaParameters {
   double pause_failed_time = 12.68;
 
   // check static params
-  double car_static_pos_err = 0.005;
-  double car_static_velocity = 0.01;
-  double car_static_keep_time_by_pos = 1.5;
-  double car_static_keep_time_by_vel = 1.5;
+  double car_static_pos_err_strict = 0.005;
+  double car_static_keep_time_by_pos_strict = 1.5;
+  double car_static_pos_err_normal = 0.005;
+  double car_static_keep_time_by_pos_normal = 1.5;
+  double car_static_velocity_strict = 0.01;
+  double car_static_keep_time_by_vel_strict = 1.5;
+  double car_static_velocity_normal = 0.01;
+  double car_static_keep_time_by_vel_normal = 1.5;
 
   // uss params
   bool is_uss_dist_from_perception = false;

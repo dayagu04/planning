@@ -2376,14 +2376,6 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
   JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_pos",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_pos)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_vel",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_vel)
-  JSON_DEBUG_VALUE("static_flag",
-                   apa_world_ptr_->GetMeasurementsPtr()->static_flag)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
   JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)

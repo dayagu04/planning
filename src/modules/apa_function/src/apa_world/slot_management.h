@@ -466,6 +466,10 @@ class SlotManagement {
 
   const std::vector<Eigen::Vector2d> GetSelectedSlotObsVec();
 
+  const std::vector<Eigen::Vector2d>& GetRealTimeObsPtVec() {
+    return frame_.obs_pt_vec;
+  }
+
   const common::SlotManagementInfo& GetOutput() const {
     return frame_.slot_management_info;
   }
