@@ -606,15 +606,17 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
       auto target_lane_frenet_coord= iter->second->get_lane_frenet_coord();
       if (target_lane_frenet_coord != nullptr) {
         for (const auto& relative_id_lane : relative_id_lanes_) {
-          auto& lane_points = relative_id_lane->lane_points();
+          const auto& lane_points = relative_id_lane->lane_points();
           if (lane_points.size() <= 2) {
             continue;
           }
-          int default_point_nums = 20;
+          int default_point_nums = 30;
           int point_nums = 0;
           double lane_mapping_cost = 0.0;
-          double total_lateral_offset = 0.0; 
-          for (const auto &point : lane_points) {
+          double total_lateral_offset = 0.0;
+          int select_lane_point_interval = 3;
+          for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+            iflyauto::ReferencePoint point = lane_points[i];
             if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
               LOG_ERROR("update_lane_points: skip NaN point");
               continue;
