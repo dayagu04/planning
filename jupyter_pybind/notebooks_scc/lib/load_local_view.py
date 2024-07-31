@@ -941,7 +941,7 @@ def load_local_view_figure():
     sdmap_data_segments = []
     for i in range(Max_sdmap_segment_size):
       sdmap_data_segments.append(ColumnDataSource(data={'sdmap_segment_{}_y'.format(i): [], 'sdmap_segment_{}_x'.format(i): []}))
-    
+
     sdmap_ramp_data_segments = []
     for i in range(Max_sdmap_segment_size):
       sdmap_ramp_data_segments.append(ColumnDataSource(data={'sdmap_ramp_segment_{}_y'.format(i): [], 'sdmap_ramp_segment_{}_x'.format(i): []}))
@@ -1227,8 +1227,8 @@ def load_local_view_figure():
     for i in range (len(sdmap_ramp_data_segments)):
       keyy = 'sdmap_ramp_segment_{}_y'.format(i)
       keyx = 'sdmap_ramp_segment_{}_x'.format(i)
-      fig1.line(keyy,keyx,source = sdmap_ramp_data_segments[i], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdmap_ramp_segment')
-  
+      fig1.line(keyy,keyx,source = sdmap_ramp_data_segments[i], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'sdmap_ramp_segment')
+
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
