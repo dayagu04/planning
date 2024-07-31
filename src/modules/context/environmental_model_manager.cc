@@ -2,6 +2,7 @@
 
 #include <Eigen/Dense>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <string>
@@ -12,6 +13,7 @@
 #include "Eigen/src/Core/util/Constants.h"
 #include "agent/agent_manager.h"
 #include "basic_types.pb.h"
+#include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -1122,7 +1124,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
   static const double kMapCheckTimeDiff = 1000;
   static const double kpredictionCheckTimeDiff = 50;
   static const double kfusionlaneCheckTimeDiff = 50;
-
+  setFaultcode(39999);
   static const std::vector<FeedType> input_longtime_with_hdmap{
       FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
       FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
@@ -1170,33 +1172,39 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     auto feed_type = static_cast<FeedType>(i);
     const char *feed_type_str = to_string(feed_type);
     if (last_feed_time_[i] > 0.0) {
-      LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,
-                current_time - last_feed_time_[i], "\n");
-      if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
-          (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
-        if (feed_type == FEED_MAP_INFO &&
-            current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
-            current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
-          continue;
-        if (feed_type == FEED_FUSION_LANES_INFO &&
-            current_time - last_feed_time_[i] <=
-                kfusionlaneCheckTimeDiff * 1.2 &&
-            current_time - last_feed_time_[i] >= kfusionlaneCheckTimeDiff * 0.8)
-          continue;
-        if (feed_type == FEED_PREDICTION_INFO &&
-            current_time - last_feed_time_[i] <=
-                kpredictionCheckTimeDiff * 1.2 &&
-            current_time - last_feed_time_[i] >= kpredictionCheckTimeDiff * 0.8)
-          continue;
-        LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
-                  "\n");
-        error_msg += std::string(feed_type_str) + "; ";
-        res = false;
+      LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,current_time - last_feed_time_[i],"\n");
+        if(current_time - last_feed_time_[i] > 200 ){
+          LOG_ERROR("(%s)input_delay: %d, %s", __FUNCTION__, i, feed_type_str,"\n");
+          error_msg += std::string(feed_type_str) + "; ";
+          setFaultcode(39001);
+          res = false;
+        }
+        else{
+          if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) || (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
+            if (feed_type == FEED_MAP_INFO &&
+              current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
+              current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
+              continue;
+            if (feed_type == FEED_FUSION_LANES_INFO &&
+              current_time - last_feed_time_[i] <= kfusionlaneCheckTimeDiff * 1.2 &&
+              current_time - last_feed_time_[i] >= kfusionlaneCheckTimeDiff * 0.8)
+              continue;
+            if (feed_type == FEED_PREDICTION_INFO &&
+              current_time - last_feed_time_[i] <= kpredictionCheckTimeDiff * 1.2 &&
+              current_time - last_feed_time_[i] >= kpredictionCheckTimeDiff * 0.8)
+              continue;
+            LOG_ERROR("(%s)input_rate_error: %d, %s", __FUNCTION__, i, feed_type_str,"\n");
+            error_msg += std::string(feed_type_str) + "; ";
+            setFaultcode(39000);
+            res = false;
+          }
+        }
       }
-    } else {
+    else {
       // LOG_ERROR("(%s)no feed: %d, %s", __FUNCTION__, i, feed_type_str, "\n");
-      LOG_ERROR("no feed: '%s'\n", feed_type_str);
+      LOG_ERROR("lost frame: '%s'\n", feed_type_str);
       error_msg += std::string(feed_type_str) + "; ";
+      setFaultcode(39002);
       res = false;
     }
   }
@@ -1262,6 +1270,20 @@ void EnvironmentalModelManager::RunBlinkState(
       current_turn_signal_ = common::TurnSignalType::NONE;
       break;
   }
+}
+
+void EnvironmentalModelManager::setFaultcode(uint64_t faultcode){
+  if (faultcode_== 39999){
+    faultcode_ = faultcode;
+  }
+  else{
+    if(faultcode > faultcode_)
+    faultcode_ = faultcode;
+  }
+}
+
+uint64_t EnvironmentalModelManager::getFaultcode(){
+  return faultcode_;
 }
 
 bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
