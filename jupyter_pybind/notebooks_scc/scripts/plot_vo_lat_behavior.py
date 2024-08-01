@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240731/20240731-16-30-46/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-31-16-30-46_no_camera.bag"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240731/20240731-20-10-40/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-31-20-10-40_no_camera.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -269,7 +269,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-slider_class = LatBehaviorSlider(slider_callback)
 bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
-# slider_class = LatBehaviorSlider(slider_callback)
+slider_class = LatBehaviorSlider(slider_callback)
 # slider_class = ObjText(obj_id_handler)
