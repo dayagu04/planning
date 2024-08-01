@@ -72,8 +72,9 @@ int main(int argc, char **argv) {
         std::cout << "--scene-type       acc/apa" << std::endl;
         std::cout << "--no-debug         play without planning debug info"
                   << std::endl;
-        std::cout << "--interface-check   exit when interface version check failed"
-                  << std::endl;
+        std::cout
+            << "--interface-check   exit when interface version check failed"
+            << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);

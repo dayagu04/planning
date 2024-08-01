@@ -52,7 +52,7 @@ class TrackletMaintainer {
                     const std::vector<PredictionObject> &predictions,
                     std::vector<TrackedObject> &tracked_objects,
                     LeadCars &lead_cars, bool isRedLightStop, bool hdmap_valid);
-  bool is_static_scene() const {return is_static_scene_;}
+  bool is_static_scene() const { return is_static_scene_; }
 
  private:
   void recv_prediction_objects(const std::vector<PredictionObject> &predictions,

@@ -281,7 +281,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
   const bool use_lateral_distance_to_judge_cutout_in_active_lane_change =
       config_.use_lateral_distance_to_judge_cutout_in_active_lane_change;
-  
+
   const double half_car_width = 1.75;
 
   const std::vector<TrackedObject> &front_tracks =

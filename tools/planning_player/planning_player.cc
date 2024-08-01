@@ -146,8 +146,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_output_struct.header.timestamp =
-              planning_header_time_us_;
+          planning_output_struct.header.timestamp = planning_header_time_us_;
           ros_time = planning_msg_time_s_;
         }
         struct_msgs::PlanningOutput planning_output_ros_msg{};
@@ -365,8 +364,8 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
         write_ros_msg<proto_msgs::StaticMap::Ptr>(it_msg.second, TOPIC_HD_MAP,
                                                   bag);
       } else if (it_msg.first == TOPIC_SD_MAP) {
-        write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second, TOPIC_SD_MAP,
-                                                  bag);
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
+                                                        TOPIC_SD_MAP, bag);
       } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
         write_ros_msg<struct_msgs::ParkingInfo::Ptr>(
             it_msg.second, TOPIC_EHR_PARKING_MAP, bag);
@@ -578,9 +577,8 @@ void PlanningPlayer::PlayOneFrame(
       auto sd_map_msg_i =
           boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
       std::string sd_map_str(sd_map_msg_i->debug_info.begin(),
-                                          sd_map_msg_i->debug_info.end());
-      auto sd_map =
-          std::make_shared<SdMapSwtx::SdMap>();
+                             sd_map_msg_i->debug_info.end());
+      auto sd_map = std::make_shared<SdMapSwtx::SdMap>();
       sd_map->ParseFromString(sd_map_str);
       if (sd_map->header().timestamp() == input_time_list_map_) {
         planning_adapter_->FeedSdMap(sd_map);
@@ -689,13 +687,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
 
   auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
       it_planning_msg->second);
-  if (planning_debug_info->timestamp() >
-      planning_msg->msg_header.timestamp) {
+  if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
     it_planning_msg++;
     auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
         it_planning_msg->second);
-    if (planning_debug_info->timestamp() >
-        planning_msg->msg_header.timestamp) {
+    if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
       std::cerr << "timestamp error!!!!!" << std::endl;
       return;
     }

@@ -107,7 +107,8 @@ class PlanningContext {
     return general_lateral_decider_output_;
   }
 
-  const HppGeneralLateralDeciderOutput &hpp_general_lateral_decider_output() const {
+  const HppGeneralLateralDeciderOutput &hpp_general_lateral_decider_output()
+      const {
     return hpp_general_lateral_decider_output_;
   }
 

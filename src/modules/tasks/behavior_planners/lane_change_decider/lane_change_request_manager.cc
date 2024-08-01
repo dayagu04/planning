@@ -89,8 +89,9 @@ bool LaneChangeRequestManager::Update(
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->is_on_ramp() || 
-          virtual_lane_mgr_->dis_to_ramp() <= minimum_distance_nearby_ramp_to_surpress_overtake_lane_change) {
+      if (virtual_lane_mgr_->is_on_ramp() ||
+          virtual_lane_mgr_->dis_to_ramp() <=
+              minimum_distance_nearby_ramp_to_surpress_overtake_lane_change) {
         overtake_request_.Reset();
         LOG_DEBUG("cann't generate overtake lane change in ramp");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;

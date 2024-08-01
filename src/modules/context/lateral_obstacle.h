@@ -4,9 +4,9 @@
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "prediction_object.h"
+#include "task_basic_types.h"
 #include "tracked_object.h"
 #include "tracklet_maintainer.h"
-#include "task_basic_types.h"
 
 #include <cstdint>
 #include <utility>
@@ -67,8 +67,12 @@ class LateralObstacle {
 
   bool find_track(int track_id, TrackedObject &dest);
 
-  const std::unordered_map<uint16_t, LatObstacleDecisionType>& lat_obstacle_decision() { return lat_obstacle_decision_; }
+  const std::unordered_map<uint16_t, LatObstacleDecisionType>
+      &lat_obstacle_decision() {
+    return lat_obstacle_decision_;
+  }
   bool is_static_avoid_scene() const { return is_static_avoid_scene_; };
+
  private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
                       const std::vector<PredictionObject> &predictions,

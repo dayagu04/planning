@@ -18,13 +18,16 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   int lc_map_decision = current_lane != nullptr
                             ? virtual_lane_mgr_->lc_map_decision(current_lane)
                             : 0;
-  //TODO(fengwang31):目前自车在最左侧车道上时，无法确认到最右边有几条车道，因此hack一下，判断自车在左侧，提前产生变道任务
+  // TODO(fengwang31):目前自车在最左侧车道上时，无法确认到最右边有几条车道，因此hack一下，判断自车在左侧，提前产生变道任务
   bool is_current_lane_on_leftmost = false;
   auto right_lane = virtual_lane_mgr_->get_right_lane();
   if (right_lane) {
-    bool is_right_lane_boundary_both_dash = !right_lane->is_solid_line(0) && !right_lane->is_solid_line(1);
-    bool is_current_lane_is_leftmost =  current_lane->is_solid_line(0) && !current_lane->is_solid_line(1);
-    is_current_lane_on_leftmost = is_current_lane_is_leftmost && is_right_lane_boundary_both_dash;
+    bool is_right_lane_boundary_both_dash =
+        !right_lane->is_solid_line(0) && !right_lane->is_solid_line(1);
+    bool is_current_lane_is_leftmost =
+        current_lane->is_solid_line(0) && !current_lane->is_solid_line(1);
+    is_current_lane_on_leftmost =
+        is_current_lane_is_leftmost && is_right_lane_boundary_both_dash;
   }
   if (lc_map_decision == 1) {
     lc_map_decision = is_current_lane_on_leftmost ? 2 : 1;
@@ -225,9 +228,9 @@ bool MapRequest::IsDashEnoughForRepeatSegments(
     const auto& left_lane_boundarys = current_lane->get_left_lane_boundary();
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
       if (left_lane_boundarys.type_segments[i].type ==
-          iflyauto::LaneBoundaryType_MARKING_DASHED ||
+              iflyauto::LaneBoundaryType_MARKING_DASHED ||
           left_lane_boundarys.type_segments[i].type ==
-          iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         dash_length += left_lane_boundarys.type_segments[i].length;
       } else {
         all_lane_boundary_types_are_dashed = false;
@@ -238,9 +241,9 @@ bool MapRequest::IsDashEnoughForRepeatSegments(
     const auto& right_lane_boundarys = current_lane->get_right_lane_boundary();
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
       if (right_lane_boundarys.type_segments[i].type ==
-          iflyauto::LaneBoundaryType_MARKING_DASHED ||
+              iflyauto::LaneBoundaryType_MARKING_DASHED ||
           right_lane_boundarys.type_segments[i].type ==
-          iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         dash_length += right_lane_boundarys.type_segments[i].length;
       } else {
         all_lane_boundary_types_are_dashed = false;
@@ -251,10 +254,12 @@ bool MapRequest::IsDashEnoughForRepeatSegments(
   const double map_response_dist = ego_v * kNeedLaneChangeTime;  // hack
   std::cout << "dash_length:" << dash_length
             << ",map_response_dist:" << map_response_dist << std::endl;
-  if (dash_length > default_lc_boundary_length || all_lane_boundary_types_are_dashed || dash_length > map_response_dist) {
+  if (dash_length > default_lc_boundary_length ||
+      all_lane_boundary_types_are_dashed || dash_length > map_response_dist) {
     return true;
   }
-  // if (dash_length < default_lc_boundary_length && !all_lane_boundary_types_are_dashed_) {
+  // if (dash_length < default_lc_boundary_length &&
+  // !all_lane_boundary_types_are_dashed_) {
   //   std::cout << "dash lengh less than map response dist!!!!" << std::endl;
   //   return false;
   // }

@@ -22,8 +22,7 @@ PncTrajectoryPoint TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
   return point;
 }
 
-PncTrajectoryPoint
-TrajectoryStitcher::ComputeReinitStitchingTrajectory(
+PncTrajectoryPoint TrajectoryStitcher::ComputeReinitStitchingTrajectory(
     const double planning_cycle_time, const VehicleState& vehicle_state,
     const bool enable_vehi_state_predict) {
   PncTrajectoryPoint reinit_point;

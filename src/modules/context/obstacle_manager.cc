@@ -55,9 +55,12 @@ void ObstacleManager::update() {
 
     const double kMaxStaticPredictionLength =
         config_.max_speed_static_obstacle * prediction_duration;
-    bool is_static = prediction_object.speed < 0.1 ||
-                     prediction_object.trajectory_array.size() == 0 ||
-                     prediction_trajectory_length < kMaxStaticPredictionLength || prediction_object.motion_pattern_current == iflyauto::OBJECT_MOTION_TYPE_STATIC;
+    bool is_static =
+        prediction_object.speed < 0.1 ||
+        prediction_object.trajectory_array.size() == 0 ||
+        prediction_trajectory_length < kMaxStaticPredictionLength ||
+        prediction_object.motion_pattern_current ==
+            iflyauto::OBJECT_MOTION_TYPE_STATIC;
     double prediction_relative_time =
         prediction_object.delay_time - ego_init_relative_time;
     if (prediction_object.trajectory_array.size() == 0) {

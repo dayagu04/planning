@@ -404,7 +404,8 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
     potential_near_car_v_lb = read_json_key<double>(
         json, "potential_near_car_v_lb", potential_near_car_v_lb);
     use_lat_offset_in_tracklet_maintainer =
-        read_json_key<bool>(json, "use_lat_offset_in_tracklet_maintainer", use_lat_offset_in_tracklet_maintainer);
+        read_json_key<bool>(json, "use_lat_offset_in_tracklet_maintainer",
+                            use_lat_offset_in_tracklet_maintainer);
     enable_static_scene =
         read_json_key<bool>(json, "enable_static_scene", enable_static_scene);
   }
@@ -482,9 +483,10 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"lateral_offset_decider", "avd_vrel_bp_5"},
         avd_vrel_bp_5);
     care_dynamic_object_t_threshold =
-        read_json_key<double>(json, "care_dynamic_object_t_threshold", care_dynamic_object_t_threshold);
-    care_static_object_t_threshold =
-        read_json_key<double>(json, "care_static_object_t_threshold", care_static_object_t_threshold);
+        read_json_key<double>(json, "care_dynamic_object_t_threshold",
+                              care_dynamic_object_t_threshold);
+    care_static_object_t_threshold = read_json_key<double>(
+        json, "care_static_object_t_threshold", care_static_object_t_threshold);
   }
   bool is_valid_lateral_offset = false;
   double nudge_buffer_road_boundary = 0.3;
@@ -519,26 +521,27 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "max_avoid_edge", max_avoid_edge);
     soft_buffer2lane =
         read_json_key<double>(json, "soft_buffer2lane", soft_buffer2lane);
-    extra_soft_buffer2road =
-        read_json_key<double>(json, "extra_soft_buffer2road", extra_soft_buffer2road);
+    extra_soft_buffer2road = read_json_key<double>(
+        json, "extra_soft_buffer2road", extra_soft_buffer2road);
     hard_buffer2lane =
         read_json_key<double>(json, "hard_buffer2lane", hard_buffer2lane);
     hard_buffer2road =
         read_json_key<double>(json, "hard_buffer2road", hard_buffer2road);
-    lon_rear_car_filter_buffer =
-        read_json_key<double>(json, "lon_rear_car_filter_buffer", lon_rear_car_filter_buffer);
-    lateral_ref_traj_type =
-        read_json_key<bool>(json, "lateral_ref_traj_type", lateral_ref_traj_type);
+    lon_rear_car_filter_buffer = read_json_key<double>(
+        json, "lon_rear_car_filter_buffer", lon_rear_car_filter_buffer);
+    lateral_ref_traj_type = read_json_key<bool>(json, "lateral_ref_traj_type",
+                                                lateral_ref_traj_type);
     care_dynamic_object_t_threshold =
-        read_json_key<double>(json, "care_dynamic_object_t_threshold", care_dynamic_object_t_threshold);
-    care_static_object_t_threshold =
-        read_json_key<double>(json, "care_static_object_t_threshold", care_static_object_t_threshold);
-    soft_min_distance_road2center =
-        read_json_key<double>(json, "soft_min_distance_road2center", soft_min_distance_road2center);
-    hard_min_distance_road2center =
-        read_json_key<double>(json, "hard_min_distance_road2center", hard_min_distance_road2center);
-    care_lon_area_road_border =
-        read_json_key<double>(json, "care_lon_area_road_border", care_lon_area_road_border);
+        read_json_key<double>(json, "care_dynamic_object_t_threshold",
+                              care_dynamic_object_t_threshold);
+    care_static_object_t_threshold = read_json_key<double>(
+        json, "care_static_object_t_threshold", care_static_object_t_threshold);
+    soft_min_distance_road2center = read_json_key<double>(
+        json, "soft_min_distance_road2center", soft_min_distance_road2center);
+    hard_min_distance_road2center = read_json_key<double>(
+        json, "hard_min_distance_road2center", hard_min_distance_road2center);
+    care_lon_area_road_border = read_json_key<double>(
+        json, "care_lon_area_road_border", care_lon_area_road_border);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -637,7 +640,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "min_ego_vel"});
     acc_bound = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound"});
-    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"}, map_jerk_bound);
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"},
+        map_jerk_bound);
     acc_bound_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "acc_bound_lane_change"});
@@ -677,23 +682,31 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     q_acc_avoid = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_avoid"});
     q_jerk_avoid_close = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_close"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_close"});
     q_jerk_avoid_middle = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_middle"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_middle"});
     q_jerk_avoid_vel = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_vel"});
     q_ref_x_static_avoid = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_static_avoid"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_static_avoid"});
     q_ref_y_static_avoid = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y_static_avoid"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_y_static_avoid"});
     q_ref_theta_static_avoid = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_static_avoid"});
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_ref_theta_static_avoid"});
     q_acc_static_avoid = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_static_avoid"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_acc_static_avoid"});
     q_jerk_static_avoid_close = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_static_avoid_close"});
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_jerk_static_avoid_close"});
     q_jerk_static_avoid_middle = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_static_avoid_middle"});
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_jerk_static_avoid_middle"});
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
@@ -739,14 +752,22 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "motion_plan_concerned_end_index"});
     valid_perception_range = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "valid_perception_range"});
-    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"}, map_qxy);
-    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk1"}, map_qjerk1);
-    read_json_vec<double>(json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk2"}, map_qjerk2);
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "valid_perception_range"});
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qxy"}, map_qxy);
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk1"},
+        map_qjerk1);
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qjerk2"},
+        map_qjerk2);
     end_ratio_for_qref = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qref"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qref"});
     end_ratio_for_qjerk = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qjerk"});
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qjerk"});
   }
 
   bool warm_start_enable = true;

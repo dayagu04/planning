@@ -96,7 +96,7 @@ void LateralObstacle::LateralObstacleDecision(
                          .GetDebugInfoPb()
                          ->environment_model_info()
                          .ego_l();
-  const auto& vehicle_param =
+  const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto ego_car_width = vehicle_param.width;
   const auto ego_car_length = vehicle_param.length;

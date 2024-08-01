@@ -166,13 +166,18 @@ uint8_t LateralMotionPlanningProblem::Update(
                      0.0);
         cost_config_vec.at(i)[W_JERK] = concerned_start_q_jerk - start_step * i;
       } else if (i > planning_input.motion_plan_concerned_index()) {
-        cost_config_vec.at(i)[W_REF_X] = end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_X];
-        cost_config_vec.at(i)[W_REF_Y] = end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_Y];
-        cost_config_vec.at(i)[W_REF_THETA] = end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_THETA];
-        cost_config_vec.at(i)[W_JERK] = end_ratio_for_qjerk * cost_config_vec.at(i - 1)[W_JERK];
+        cost_config_vec.at(i)[W_REF_X] =
+            end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_X];
+        cost_config_vec.at(i)[W_REF_Y] =
+            end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_Y];
+        cost_config_vec.at(i)[W_REF_THETA] =
+            end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_THETA];
+        cost_config_vec.at(i)[W_JERK] =
+            end_ratio_for_qjerk * cost_config_vec.at(i - 1)[W_JERK];
         // LOG_DEBUG(
-        //   "motion_plan_concerned_start_index: %zu, remote_qxy: %f,  remote_qjerk: %f",
-        //   motion_plan_concerned_start_index, remote_xy, cost_config_vec.at(i)[W_JERK]);
+        //   "motion_plan_concerned_start_index: %zu, remote_qxy: %f,
+        //   remote_qjerk: %f", motion_plan_concerned_start_index, remote_xy,
+        //   cost_config_vec.at(i)[W_JERK]);
       }
     }
 
@@ -362,10 +367,14 @@ uint8_t LateralMotionPlanningProblem::Update(
                      0.0);
         cost_config_vec.at(i)[W_JERK] = concerned_start_q_jerk - start_step * i;
       } else if (i > planning_input.motion_plan_concerned_index()) {
-        cost_config_vec.at(i)[W_REF_X] = end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_X];
-        cost_config_vec.at(i)[W_REF_Y] = end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_Y];
-        cost_config_vec.at(i)[W_REF_THETA] = end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_THETA];
-        cost_config_vec.at(i)[W_JERK] = end_ratio_for_qjerk * cost_config_vec.at(i - 1)[W_JERK];
+        cost_config_vec.at(i)[W_REF_X] =
+            end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_X];
+        cost_config_vec.at(i)[W_REF_Y] =
+            end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_Y];
+        cost_config_vec.at(i)[W_REF_THETA] =
+            end_ratio_for_qref * cost_config_vec.at(i - 1)[W_REF_THETA];
+        cost_config_vec.at(i)[W_JERK] =
+            end_ratio_for_qjerk * cost_config_vec.at(i - 1)[W_JERK];
       }
     }
 

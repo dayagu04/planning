@@ -56,7 +56,8 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
   ego_planning_result.raw_traj_points = traj_points;
-  std::copy(traj_points.begin(), traj_points.end(), ego_planning_result.raw_traj_points.begin());
+  std::copy(traj_points.begin(), traj_points.end(),
+            ego_planning_result.raw_traj_points.begin());
   // const auto &num_point = traj_points.size();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();

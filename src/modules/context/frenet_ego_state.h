@@ -3,9 +3,9 @@
 #include "ego_state_manager.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
+#include "utils/agent_sl.h"
 #include "utils/frenet_coordinate_system.h"
 #include "utils/kd_path.h"
-#include "utils/agent_sl.h"
 namespace planning {
 
 class FrenetEgoState {
@@ -30,7 +30,8 @@ class FrenetEgoState {
   const PlanningInitPoint &planning_init_point() const {
     return planning_init_point_;
   }
-  const AgentSLInfo& ego_init_sl_info() const { return ego_init_sl_info_; }
+  const AgentSLInfo &ego_init_sl_info() const { return ego_init_sl_info_; }
+
  private:
   double s_;
   double l_;

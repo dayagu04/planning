@@ -383,7 +383,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   // const auto &ego_pose = ego_state_mgr->ego_pose();
   // double dx = ego_pose.x - ref_path_points[0].path_point.x;
   // double dy = ego_pose.y - ref_path_points[0].path_point.y;
-  const auto &lat_init_state = ego_state_mgr->planning_init_point().lat_init_state;
+  const auto &lat_init_state =
+      ego_state_mgr->planning_init_point().lat_init_state;
   double dx = lat_init_state.x() - ref_path_points[0].path_point.x;
   double dy = lat_init_state.y() - ref_path_points[0].path_point.y;
   const int point_nums = ref_path_points.size();

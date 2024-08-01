@@ -1,14 +1,15 @@
 #include "general_lateral_decider_utils.h"
-#include "common/math/linear_interpolation.h"
-#include "utils/pose2d_utils.h"
 #include <cassert>
 #include <cmath>
+#include "common/math/linear_interpolation.h"
+#include "utils/pose2d_utils.h"
 
 namespace planning {
 namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
-                              const double agent_lateral_relative_speed, iflyauto::ObjectType type,
-                              const bool is_nudge_left) {
+                                const double agent_lateral_relative_speed,
+                                iflyauto::ObjectType type,
+                                const bool is_nudge_left) {
   double base_dis = 0.8;
   if (IsVRU(type)) {
     base_dis = 1.0;
@@ -23,7 +24,10 @@ double CalDesireLonDistance(double ego_vel, double agent_vel) {
   return 3.0 + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
 
-double CalDesireStaticLateralDistance(const double base_distance, const double ego_vel, const double ego_l, iflyauto::ObjectType type, bool is_update_hard_bound) {
+double CalDesireStaticLateralDistance(const double base_distance,
+                                      const double ego_vel, const double ego_l,
+                                      iflyauto::ObjectType type,
+                                      bool is_update_hard_bound) {
   const double kStaticVRUMaxExtraLateralBuffer = 0.65;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.45;
@@ -42,43 +46,46 @@ double CalDesireStaticLateralDistance(const double base_distance, const double e
     max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
   }
 
-  double min_extra_lateral_buffer = std::fmin(0.15 * ego_vel, max_extra_lateral_buffer);
+  double min_extra_lateral_buffer =
+      std::fmin(0.15 * ego_vel, max_extra_lateral_buffer);
 
   double clip_ego_l = clip(fabs(ego_l), kMaxEgoLCoeff, 0.0);
   double lateral_extra_buffer =
-          min_extra_lateral_buffer + clip_ego_l * (max_extra_lateral_buffer - min_extra_lateral_buffer) / kMaxEgoLCoeff;
+      min_extra_lateral_buffer +
+      clip_ego_l * (max_extra_lateral_buffer - min_extra_lateral_buffer) /
+          kMaxEgoLCoeff;
   return base_distance + lateral_extra_buffer;
 }
 
 int GetBoundTypePriority(BoundType type) {
   // higher priority, larger value
   switch (type) {
-  // the same level
-  case BoundType::DEFAULT:
-    return 0;
-  // the same level
-  case BoundType::LANE:
-    return 1;
-  case BoundType::EGO_POSITION:
-    return 1;
-  //  the same level
-  case BoundType::DYNAMIC_AGENT:
-    return 2;
-  //  the same level
-  case BoundType::AGENT:
-    return 3;
-  case BoundType::ROAD_BORDER:
-    return 3;
-  //  the same level
-  // case BoundType::PURNE_VEHICLE_WIDTH:
-  //   return 4;
-  default:
-    return 0;
+    // the same level
+    case BoundType::DEFAULT:
+      return 0;
+    // the same level
+    case BoundType::LANE:
+      return 1;
+    case BoundType::EGO_POSITION:
+      return 1;
+    //  the same level
+    case BoundType::DYNAMIC_AGENT:
+      return 2;
+    //  the same level
+    case BoundType::AGENT:
+      return 3;
+    case BoundType::ROAD_BORDER:
+      return 3;
+    //  the same level
+    // case BoundType::PURNE_VEHICLE_WIDTH:
+    //   return 4;
+    default:
+      return 0;
   }
 }
 
-
-std::vector<int> MatchRefTrajPoints(int s, const TrajectoryPoints &ref_traj_points) {
+std::vector<int> MatchRefTrajPoints(int s,
+                                    const TrajectoryPoints &ref_traj_points) {
   assert(ref_traj_points.size() >= 1);
   int left_index = 0;
   int right_index = ref_traj_points.size() - 1;
@@ -105,7 +112,8 @@ std::vector<int> MatchRefTrajPoints(int s, const TrajectoryPoints &ref_traj_poin
     index.emplace_back(left_index);
     index.emplace_back(right_index);
     return index;
-    if (abs(ref_traj_points[left_index].s - s) < abs(ref_traj_points[right_index].s - s)) {
+    if (abs(ref_traj_points[left_index].s - s) <
+        abs(ref_traj_points[right_index].s - s)) {
       index.emplace_back(left_index);
       return index;
     } else {
@@ -113,16 +121,13 @@ std::vector<int> MatchRefTrajPoints(int s, const TrajectoryPoints &ref_traj_poin
       return index;
     }
   }
-
 }
 
-TrajectoryPoint GetTrajectoryPointAtTime(const TrajectoryPoints trajectory_points,
-    const double relative_time) {
+TrajectoryPoint GetTrajectoryPointAtTime(
+    const TrajectoryPoints trajectory_points, const double relative_time) {
   const auto &points = trajectory_points;
   if (trajectory_points.size() == 0) {
-
   } else if (trajectory_points.size() == 1) {
-
   } else {
     auto comp = [](const TrajectoryPoint &p, const double time) {
       return p.t < time;
@@ -162,5 +167,5 @@ bool IsTruck(iflyauto::ObjectType type) {
           type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK);
 }
 
-}
-}
+}  // namespace general_lateral_decider_utils
+}  // namespace planning
