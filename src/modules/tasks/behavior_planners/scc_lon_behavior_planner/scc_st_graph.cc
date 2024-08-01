@@ -292,8 +292,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // 对lead two进行类似的计算
     bool is_camera_and_lidar =
         lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
-    if (config_.enable_lead_two &&
-        lead_two.track_id() != 0 &&
+    if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
@@ -437,8 +436,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     // 对lead two进行类似的计算
     bool is_camera_and_lidar =
         temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
-    if (config_.enable_lead_two &&
-        temp_lead_two.track_id() != 0 &&
+    if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
@@ -671,15 +669,18 @@ void StGraphGenerator::UpdateSTGraphs(
     double s_step = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
-    double st_obs_j = 3.0;//_J_MAX
+    double st_obs_j = 3.0;  //_J_MAX
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
       //考虑前车减速的情况
       if (st.a_lead() < 0) {
-        //s_step += CalcDeceleratedObstacleST();
-        s_step += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square + 1.0 / 6 * st_obs_j * t_cube, 0.0);
-        st_obs_v = std::max(st_obs_v + st_obs_a * t + 0.5 * st_obs_j * t_square, 0.0);
+        // s_step += CalcDeceleratedObstacleST();
+        s_step += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
+                               1.0 / 6 * st_obs_j * t_cube,
+                           0.0);
+        st_obs_v =
+            std::max(st_obs_v + st_obs_a * t + 0.5 * st_obs_j * t_square, 0.0);
         st_obs_a = std::min(st_obs_a + st_obs_j * t, 0.0);
         if (st_obs_a == 0.0) {
           st_obs_j = 0.0;
@@ -1064,7 +1065,8 @@ void StGraphGenerator::UpdateNearObstacles(
       //                                0);
       cutin_condition[i] = "lead_car";
     } else {
-      v_limit_cutin[i] = clip(v_limit_cutin[i] + 0.2, std::max(40.0, v_ego + 0.2), v_ego);
+      v_limit_cutin[i] =
+          clip(v_limit_cutin[i] + 0.2, std::max(40.0, v_ego + 0.2), v_ego);
       a_limit_cutin[i] = a_limit_cutin[i] + 0.1;
       cutin_condition[i] = "stage other";
     }
@@ -1102,7 +1104,8 @@ void StGraphGenerator::UpdateNearObstacles(
   for (int i = 0; i < (3 - near_cars_sorted.size()); i++) {
     nearest_car_track_id[i + near_cars_sorted.size()] = 0;
     v_limit_cutin[i + near_cars_sorted.size()] =
-        clip(v_limit_cutin[i + near_cars_sorted.size()] + 0.2, std::max(40.0, v_ego + 0.2), v_ego);
+        clip(v_limit_cutin[i + near_cars_sorted.size()] + 0.2,
+             std::max(40.0, v_ego + 0.2), v_ego);
     a_limit_cutin[i + near_cars_sorted.size()] =
         clip(a_limit_cutin[i + near_cars_sorted.size()] + 0.1, 0.0, -4.0);
     cutin_condition[i + near_cars_sorted.size()] = "near_cars_sorted None";
@@ -2079,8 +2082,8 @@ void StGraphGenerator::CalculateSrefsByVref(const double v_ego,
   if (v_ego <= v_ref) {
     double one_j = _J_MAX;
     for (int i = 1; i <= config_.lon_num_step; i++) {
-      one_s +=
-          std::max(one_v * t + 0.5 * one_a * t_square + 1.0 / 6 * one_j * t_cube, 0.0);
+      one_s += std::max(
+          one_v * t + 0.5 * one_a * t_square + 1.0 / 6 * one_j * t_cube, 0.0);
       one_v = std::max(
           std::min(one_v + one_a * t + 0.5 * one_j * t_square, v_refs[i]), 0.0);
       if (one_v == v_ref) {
@@ -2269,7 +2272,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double ego_l = 0.0;
     double ego_pose_x = lon_behav_input_->ego_info().ego_pose_x();
     double ego_pose_y = lon_behav_input_->ego_info().ego_pose_y();
-    if (!(current_lane_frenet_coord->XYToSL(ego_pose_x, ego_pose_y, &ego_s, &ego_l))) {
+    if (!(current_lane_frenet_coord->XYToSL(ego_pose_x, ego_pose_y, &ego_s,
+                                            &ego_l))) {
       continue;
     }
     // 3.3 min/max sl
@@ -2277,8 +2281,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double max_s = std::numeric_limits<double>::lowest();
     double min_l = std::numeric_limits<double>::max();
     double max_l = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(current_lane_frenet_coord, *agent, &min_s, &max_s, &min_l,
-                             &max_l);
+    CalculateAgentSLBoundary(current_lane_frenet_coord, *agent, &min_s, &max_s,
+                             &min_l, &max_l);
     double min_lat_l = 0.0;
     if (agent_l >= 0) {
       min_lat_l = (agent_l * min_l) > 0 ? min_l : 0;
@@ -2328,7 +2332,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
         false, false, false);
     double s_safe = CalcSafeDistance(agent->speed(), v_ego);
     double v_target = CalcDesiredVelocity(min_s, s_target, agent->speed());
-    double avoid_offset = std::max(fabs(min_lat_l_by_lat_path) - fabs(min_lat_l), 0.0);
+    double avoid_offset =
+        std::max(fabs(min_lat_l_by_lat_path) - fabs(min_lat_l), 0.0);
     std::array<double, 2> xp2{kStaticAgentPosThr, invade_thr + avoid_offset};
     std::array<double, 2> fp2{v_target, v_ego};
     double v_limit_narrow = interp(fabs(min_lat_l_by_lat_path), xp2, fp2);

@@ -129,9 +129,9 @@ class VirtualLaneManager {
 
   void TrackEgoLane();
 
-  void PreprocessRoadSplit(const std::vector<int>& order_ids);
+  void PreprocessRoadSplit(const std::vector<int> &order_ids);
 
-  void PreprocessRampSplit(const std::vector<int>& order_ids);
+  void PreprocessRampSplit(const std::vector<int> &order_ids);
 
   void SelectEgoLaneWithoutPlan();
 
@@ -208,7 +208,9 @@ class VirtualLaneManager {
   LaneChangeStatus is_lane_change();
   void UpdateLaneVirtualId();
 
-  double ComputeLanesMatchlaterakDisCost(int virtual_id, const std::shared_ptr<VirtualLane> current_relative_id_lane);
+  double ComputeLanesMatchlaterakDisCost(
+      int virtual_id,
+      const std::shared_ptr<VirtualLane> current_relative_id_lane);
 
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
@@ -231,8 +233,11 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
-  void CalculateDistanceToRampSplitMergeWithSdMap(planning::framework::Session *session);
-  RampDirection MakesureSplitDirection(const ::SdMapSwtx::Segment& split_segment,const ad_common::sdmap::SDMap& sd_map);
+  void CalculateDistanceToRampSplitMergeWithSdMap(
+      planning::framework::Session *session);
+  RampDirection MakesureSplitDirection(
+      const ::SdMapSwtx::Segment &split_segment,
+      const ad_common::sdmap::SDMap &sd_map);
   // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
   // void CalculateDistanceToTargetSlot(planning::framework::Session *session);
@@ -241,7 +246,8 @@ class VirtualLaneManager {
   void ResetForRampInfo();
   void SetGeneratedReflineToDebugInfo(
       const iflyauto::LaneReferenceLine &refline);
-  std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(const iflyauto::RoadInfo* roads_ptr);
+  std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(
+      const iflyauto::RoadInfo *roads_ptr);
   void GenerateLaneChangeTasksForNOA();
 
   planning::framework::Session *session_ = nullptr;

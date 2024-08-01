@@ -16,12 +16,15 @@ class LateralMotionPlanningProblem {
  public:
   void Init();
 
-  uint8_t Update(const double end_ratio_for_qref, const double end_ratio_for_qjerk,
+  uint8_t Update(const double end_ratio_for_qref,
+                 const double end_ratio_for_qjerk,
                  const size_t motion_plan_concerned_start_index,
                  const double concerned_start_q_jerk, const double ego_vel,
                  planning::common::LateralPlanningInput &planning_input);
 
-  uint8_t Update(double end_ratio_for_qref, double end_ratio_for_qjerk, double max_iter, const size_t motion_plan_concerned_start_index,
+  uint8_t Update(double end_ratio_for_qref, double end_ratio_for_qjerk,
+                 double max_iter,
+                 const size_t motion_plan_concerned_start_index,
                  const double concerned_start_q_jerk, const double ego_vel,
                  planning::common::LateralPlanningInput &planning_input);
 

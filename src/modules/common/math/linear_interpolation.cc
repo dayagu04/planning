@@ -192,9 +192,9 @@ iflyauto::TrajectoryPoint InterpolateUsingLinearApproximation(
   return trajectory_point;
 }
 
-TrajectoryPoint InterpolateUsingLinearApproximation(
-    const TrajectoryPoint &p0, const TrajectoryPoint &p1,
-    const double t) {
+TrajectoryPoint InterpolateUsingLinearApproximation(const TrajectoryPoint &p0,
+                                                    const TrajectoryPoint &p1,
+                                                    const double t) {
   if (std::fabs(p0.t - p1.t) < kMathEpsilon) {
     return p0;
   }

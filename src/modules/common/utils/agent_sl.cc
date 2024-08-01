@@ -1,7 +1,8 @@
 #include "agent_sl.h"
 
 namespace planning {
-bool GetLaneAgentSLInfo(const std::shared_ptr<planning_math::KDPath>& path, const planning::planning_math::Box2d& box,
+bool GetLaneAgentSLInfo(const std::shared_ptr<planning_math::KDPath>& path,
+                        const planning::planning_math::Box2d& box,
                         AgentSLInfo* agent_sl_info) {
   assert(path != nullptr);
 
@@ -32,4 +33,4 @@ bool GetLaneAgentSLInfo(const std::shared_ptr<planning_math::KDPath>& path, cons
   }
   return true;
 }
-}
+}  // namespace planning

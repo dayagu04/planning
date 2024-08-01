@@ -186,7 +186,7 @@ class StGraphGenerator {
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
 
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
-                      const double &agent_min_l);
+                             const double &agent_min_l);
 
  private:
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;

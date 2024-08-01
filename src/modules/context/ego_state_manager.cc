@@ -396,7 +396,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   cur_vehicle_state_process_.linear_velocity = ego_state->ego_v();
   cur_vehicle_state_process_.jerk = ego_state->ego_jerk();
   cur_vehicle_state_process_.linear_acceleration = ego_state->ego_acc();
-  cur_vehicle_state_process_.delta = ego_state->ego_steer_angle() / steer_ratio_;
+  cur_vehicle_state_process_.delta =
+      ego_state->ego_steer_angle() / steer_ratio_;
   cur_vehicle_state_process_.heading = ego_state->heading_angle();
   cur_vehicle_state_process_.kappa =
       curve_factor * cur_vehicle_state_process_.delta;
@@ -419,10 +420,11 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   double localization_latency_s = localization_latency_ms / 1000.0;
 
-  #ifdef X86
-  localization_latency_s = SimulationContext::Instance()->localizatoin_latency() / 1000.0;
-  #endif
-  
+#ifdef X86
+  localization_latency_s =
+      SimulationContext::Instance()->localizatoin_latency() / 1000.0;
+#endif
+
   JSON_DEBUG_VALUE("localizatoin_latency_inEgoStateManager",
                    localization_latency_ms);
   JSON_DEBUG_VALUE("new_localization_latency",
@@ -433,8 +435,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   }
 
   VehicleState predicted_vehicle_state;
-  predicted_vehicle_state =
-      common::VehicleModel::Predict(localization_latency_s, cur_vehicle_state_process_);
+  predicted_vehicle_state = common::VehicleModel::Predict(
+      localization_latency_s, cur_vehicle_state_process_);
   cur_vehicle_state_process_.linear_acceleration = cur_vehi_acc;
   cur_vehicle_state_process_ = predicted_vehicle_state;
 }
@@ -774,7 +776,7 @@ void EgoStateManager::UpdatePlanningInitState() {
   // reset trajectory spline
   MotionPlanningInfoReset();
 
-  //compensate ego state because of localization latency
+  // compensate ego state because of localization latency
   CompensateEgoStateForLocalizationLatency();
 
   // stitch process
@@ -805,7 +807,7 @@ void EgoStateManager::UpdatePlanningInitState() {
     stitch_success = false;
     PncTrajectoryPoint reinit_point;
     reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
-          cur_vehicle_state_process_);
+        cur_vehicle_state_process_);
     LateralInitStateReset(reinit_point);
     LongitudinalInitStateReset(reinit_point);
     replan_status = LAT_lON_REST;

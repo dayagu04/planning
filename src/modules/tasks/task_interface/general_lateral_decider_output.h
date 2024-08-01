@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "config/basic_type.h"
-#include "task_basic_types.h"
 #include "define/geometry.h"
 #include "lateral_motion_planner.pb.h"
+#include "task_basic_types.h"
 
 namespace planning {
 struct GeneralLateralDeciderOutput {

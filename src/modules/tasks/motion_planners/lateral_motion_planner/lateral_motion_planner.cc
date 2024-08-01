@@ -10,12 +10,12 @@
 #include "debug_info_log.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
+#include "lateral_obstacle.h"
 #include "planning_context.h"
 #include "spline.h"
 #include "src/lateral_motion_planning_cost.h"
 #include "src/lateral_motion_planning_weight.h"
 #include "virtual_lane_manager.h"
-#include "lateral_obstacle.h"
 
 static const double pi_const = 3.141592654;
 static const double planning_loop_dt = 0.1;
@@ -208,8 +208,10 @@ void LateralMotionPlanner::AssembleInput() {
   }
 
   // set soft and hard bound
-  const auto &soft_bounds = general_lateral_decider_output.soft_bounds_cart_point;
-  const auto &hard_bounds = general_lateral_decider_output.hard_bounds_cart_point;
+  const auto &soft_bounds =
+      general_lateral_decider_output.soft_bounds_cart_point;
+  const auto &hard_bounds =
+      general_lateral_decider_output.hard_bounds_cart_point;
   assert(soft_bounds.size() == hard_bounds.size());
 
   for (size_t i = 0; i < soft_bounds.size(); ++i) {
@@ -299,15 +301,19 @@ void LateralMotionPlanner::AssembleInput() {
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
   if (lane_change_scene) {
-    const auto target_state = session_->planning_context().lane_change_decider_output().coarse_planning_info.target_state;
+    const auto target_state = session_->planning_context()
+                                  .lane_change_decider_output()
+                                  .coarse_planning_info.target_state;
     if (target_state == ROAD_LC_RBACK || target_state == ROAD_LC_LBACK) {
       planning_weight_ptr_->SetLCBackFlag(true);
     }
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
-  } else if (session_->environmental_model().get_lateral_obstacle()->is_static_avoid_scene()) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::STATIC_AVOID,
-                                                 planning_input_);
+  } else if (session_->environmental_model()
+                 .get_lateral_obstacle()
+                 ->is_static_avoid_scene()) {
+    planning_weight_ptr_->SetLateralMotionWeight(
+        pnc::lateral_planning::STATIC_AVOID, planning_input_);
   } else if (lateral_offset_decider_output.is_valid) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
@@ -317,12 +323,15 @@ void LateralMotionPlanner::AssembleInput() {
   }
 
   const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
-  double motion_plan_concerned_end_index = config_.motion_plan_concerned_end_index;
+  double motion_plan_concerned_end_index =
+      config_.motion_plan_concerned_end_index;
   for (size_t i = 0; i < motion_plan_concerned_end_index; ++i) {
-    Point2D cart_ref_xy(planning_input_.ref_x_vec(i), planning_input_.ref_y_vec(i));
+    Point2D cart_ref_xy(planning_input_.ref_x_vec(i),
+                        planning_input_.ref_y_vec(i));
     Point2D frenet_ref_xy;
     if (reference_path_ptr->get_frenet_coord() != nullptr &&
-        reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref_xy, frenet_ref_xy)) {
+        reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref_xy,
+                                                       frenet_ref_xy)) {
       if (frenet_ref_xy.x > (ego_s + config_.valid_perception_range)) {
         motion_plan_concerned_end_index = i;
         break;
@@ -332,7 +341,8 @@ void LateralMotionPlanner::AssembleInput() {
 
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);
-  planning_input_.set_motion_plan_concerned_index(motion_plan_concerned_end_index);
+  planning_input_.set_motion_plan_concerned_index(
+      motion_plan_concerned_end_index);
 }
 
 void LateralMotionPlanner::Update() {

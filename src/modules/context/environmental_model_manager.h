@@ -76,7 +76,8 @@ class EnvironmentalModelManager {
       const double relative_time) const;
 
   EgoPlanningConfigBuilder *load_config_builder(const char *file_name);
-  void RunBlinkState(const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info);
+  void RunBlinkState(
+      const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -104,7 +105,7 @@ class EnvironmentalModelManager {
   EgoPlanningConfig ego_config_;
   int current_turn_signal_ = 0;
   int last_frame_turn_sinagl_ = 0;
-  std::vector<int> history_lc_source_ = {0,0};//0表示none，1表示ilc.
+  std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
 };
 
 }  // namespace planner

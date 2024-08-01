@@ -219,7 +219,8 @@ bool EnvironmentalModelManager::Run() {
 
   // 自动有效，临时hack
   // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
-  last_feed_time_[FEED_VEHICLE_DBW_STATUS] = local_view.function_state_machine_info_recv_time;
+  last_feed_time_[FEED_VEHICLE_DBW_STATUS] =
+      local_view.function_state_machine_info_recv_time;
 
   // Step 2) update ego_state
   auto time_start = IflyTime::Now_ms();
@@ -571,15 +572,18 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   // 转向拨杆状态
   if (vehicle_service_output_info.turn_switch_state_available) {
     //紧急灯
-    if (vehicle_service_output_info.turn_switch_state == NONE && vehicle_service_output_info.hazard_light_state) {
+    if (vehicle_service_output_info.turn_switch_state == NONE &&
+        vehicle_service_output_info.hazard_light_state) {
       if (vehicle_service_output_info.hazard_light_state_available) {
         vehicle_light->mutable_vehicle_light_data()
             ->mutable_turn_signal()
             ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
       }
     } else {
-      history_lc_source_[0] = history_lc_source_[1];//上上帧
-      history_lc_source_[1] = session_->planning_context().lane_change_decider_output().lc_request_source;//上一帧
+      history_lc_source_[0] = history_lc_source_[1];  //上上帧
+      history_lc_source_[1] = session_->planning_context()
+                                  .lane_change_decider_output()
+                                  .lc_request_source;  //上一帧
       //根据传入的拨杆信号计算转向
       RunBlinkState(vehicle_service_output_info);
       vehicle_light->mutable_vehicle_light_data()
@@ -590,7 +594,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         local_view.vehicle_service_output_info_recv_time;
   }
   last_frame_turn_sinagl_ = current_turn_signal_;
-  JSON_DEBUG_VALUE("turn_switch_state", vehicle_service_output_info.turn_switch_state)
+  JSON_DEBUG_VALUE("turn_switch_state",
+                   vehicle_service_output_info.turn_switch_state)
 
   if (vehicle_service_output_info.auto_light_state_available) {
     vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(
@@ -1098,8 +1103,8 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     };
   };
 
-  static const std::vector<double> kCheckTimeDiff = {
-      20, 20, 20, 20, 20, 20, 20, 50, -1, -1, -1};
+  static const std::vector<double> kCheckTimeDiff = {20, 20, 20, 20, 20, 20,
+                                                     20, 50, -1, -1, -1};
   static const double kMapCheckTimeDiff = 1000;
   static const double kpredictionCheckTimeDiff = 50;
   static const double kfusionlaneCheckTimeDiff = 50;
@@ -1151,20 +1156,20 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     auto feed_type = static_cast<FeedType>(i);
     const char *feed_type_str = to_string(feed_type);
     if (last_feed_time_[i] > 0.0) {
-      LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,current_time - last_feed_time_[i],
-                  "\n");
-        if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
+      LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,
+                current_time - last_feed_time_[i], "\n");
+      if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
           (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
-          if (feed_type == FEED_MAP_INFO &&
+        if (feed_type == FEED_MAP_INFO &&
             current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
             current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
           continue;
-         if (feed_type == FEED_FUSION_LANES_INFO &&
+        if (feed_type == FEED_FUSION_LANES_INFO &&
             current_time - last_feed_time_[i] <=
                 kfusionlaneCheckTimeDiff * 1.2 &&
             current_time - last_feed_time_[i] >= kfusionlaneCheckTimeDiff * 0.8)
           continue;
-         if (feed_type == FEED_PREDICTION_INFO &&
+        if (feed_type == FEED_PREDICTION_INFO &&
             current_time - last_feed_time_[i] <=
                 kpredictionCheckTimeDiff * 1.2 &&
             current_time - last_feed_time_[i] >= kpredictionCheckTimeDiff * 0.8)
@@ -1183,15 +1188,17 @@ bool EnvironmentalModelManager::InputReady(double current_time,
   }
   return res;
 }
-void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info) {
+void EnvironmentalModelManager::RunBlinkState(
+    const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info) {
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
-  const auto& lc_state = session_->planning_context().lane_change_decider_output().curr_state;
+  const auto &lc_state =
+      session_->planning_context().lane_change_decider_output().curr_state;
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
         //如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
-        if (history_lc_source_[0] == INT_REQUEST
-            && history_lc_source_[1] != INT_REQUEST) {
+        if (history_lc_source_[0] == INT_REQUEST &&
+            history_lc_source_[1] != INT_REQUEST) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         }
       } else {
@@ -1200,7 +1207,7 @@ void EnvironmentalModelManager::RunBlinkState (const iflyauto::VehicleServiceOut
       break;
     case LEFT_FIRMLY_TOUCH:
       if (history_lc_source_[0] == INT_REQUEST &&
-           history_lc_source_[1] == INT_REQUEST &&
+          history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
           lc_state == ROAD_LC_RCHANGE) {
         //  表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back

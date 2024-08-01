@@ -482,7 +482,8 @@ bool SccLonBehaviorPlanner::Update() {
   const auto &current_lane = session_->environmental_model()
                                  .get_virtual_lane_manager()
                                  ->get_current_lane();
-  st_graph_->Update(lon_behav_plan_input_, last_traj, dynamic_world, current_lane);
+  st_graph_->Update(lon_behav_plan_input_, last_traj, dynamic_world,
+                    current_lane);
 
   // 2.SV
   sv_graph_->Update(lon_behav_plan_input_);
@@ -511,7 +512,8 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     const std::pair<double, double> &a_bounds,
     const std::pair<double, double> &j_bounds) {
   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
-  double s_upper_bound = std::fmax(v_cruise * kOverSpeed * 5.0, kDefaultSBoundUpper);
+  double s_upper_bound =
+      std::fmax(v_cruise * kOverSpeed * 5.0, kDefaultSBoundUpper);
   lon_behav_output_.t_list.resize(config_.lon_num_step + 1);
   lon_behav_output_.s_refs.resize(config_.lon_num_step + 1);
   lon_behav_output_.ds_refs.resize(config_.lon_num_step + 1);

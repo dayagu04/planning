@@ -800,7 +800,8 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
 
   obstacle_decision.rel_pos_type = ObsRelPosType::NONE;
 
-  auto care_dynamic_object_t_threshold = config_.care_dynamic_object_t_threshold;
+  auto care_dynamic_object_t_threshold =
+      config_.care_dynamic_object_t_threshold;
   // bool is_approach_to_destination =
   //     distance_to_destination <
   //     route_extend_length +

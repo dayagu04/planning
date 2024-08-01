@@ -203,10 +203,10 @@ bool PlanningComponent::Init() {
       });
 
   auto sd_map_reader_ = planning_node_->CreateReader<SdMapSwtx::SdMap>(
-    "/iflytek/ehr/sdmap",
-    [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
-      planning_adapter_->FeedSdMap(sd_map_msg);
-    });
+      "/iflytek/ehr/sdmap",
+      [this](const std::shared_ptr<SdMapSwtx::SdMap> &sd_map_msg) {
+        planning_adapter_->FeedSdMap(sd_map_msg);
+      });
 
   // -------------- writter topics --------------
   planning_writer_ = planning_node_->CreateWriter<iflyauto::StructContainer>(

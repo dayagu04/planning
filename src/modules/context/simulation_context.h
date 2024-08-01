@@ -20,9 +20,7 @@ class SimulationContext {
     prediction_relative_time_ = prediction_relative_time;
   }
 
-  const double localizatoin_latency() const {
-    return localizatoin_latency_;
-  }
+  const double localizatoin_latency() const { return localizatoin_latency_; }
   void set_localizatoin_latency(double localizatoin_latency) {
     localizatoin_latency_ = localizatoin_latency;
   }
