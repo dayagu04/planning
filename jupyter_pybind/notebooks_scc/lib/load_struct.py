@@ -396,6 +396,42 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
       line_info_list.append(lane_info_r)
   return line_info_list
 
+#加载topo车道线
+def load_lane_topo_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_topo_info_list = []
+  line_topo_msg = lane_topo_msg.lane_line
+  line_topo_msg_size = lane_topo_msg.lane_line_size
+
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(20):
+    lane_info = {'line_x_topo':[], 'line_y_topo':[],'type':[]}
+    if i< line_topo_msg_size:
+      lane_line = line_topo_msg[i]
+      lane_line_topo_refline_points = lane_line.lane_points_set
+      lane_line_topo_refline_points_size = lane_line.lane_points_set_num
+      line_x = []
+      line_y = []
+      line_x = [lane_line_topo_refline_points[j].x for j in range(lane_line_topo_refline_points_size)]
+      line_y = [lane_line_topo_refline_points[j].y for j in range(lane_line_topo_refline_points_size)]
+
+      lane_info['line_x_topo'] = line_x
+      lane_info['line_y_topo'] = line_y
+
+      line_topo_info_list.append(lane_info)
+
+      tp = lane_line.type
+      if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+        lane_info['type'] = ['dashed']
+      else:
+        lane_info['type'] = ['solid']
+    else:
+      lane_info['line_x_topo'] = default_line_x
+      lane_info['line_y_topo'] = default_line_y
+      lane_info['type'] = ['dashed']
+      line_topo_info_list.append(lane_info)
+
+  return line_topo_info_list
+
 # 加载中心线
 def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   line_info_list = []
@@ -458,6 +494,34 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       line_info_list.append(lane_info)
 
   return line_info_list
+
+# 加载topo中心线
+def load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  center_line_topo_info_list = []
+  lane_topo_msg_msg = lane_topo_msg.lanes
+  lane_topo_size = lane_topo_msg.lane_line_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(10):
+    lane_info = {'center_line_x_topo':[], 'center_line_y_topo':[]}
+    if i< lane_topo_size:
+      lane = lane_topo_msg_msg[i]
+      center_lane_topo_refline_points = lane.central_line.lane_points_set
+      center_lane_topo_refline_points_size = lane.central_line.lane_points_set_num
+      line_x = []
+      line_y = []
+      line_x = [center_lane_topo_refline_points[j].x for j in range(center_lane_topo_refline_points_size)]
+      line_y = [center_lane_topo_refline_points[j].y for j in range(center_lane_topo_refline_points_size)]
+
+      lane_info['center_line_x_topo'] = line_x
+      lane_info['center_line_y_topo'] = line_y
+
+      center_line_topo_info_list.append(lane_info)
+    else:
+      lane_info['center_line_x_topo'] = default_line_x
+      lane_info['center_line_y_topo'] = default_line_y
+      center_line_topo_info_list.append(lane_info)
+
+  return center_line_topo_info_list
 
 def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   line_info_list = []

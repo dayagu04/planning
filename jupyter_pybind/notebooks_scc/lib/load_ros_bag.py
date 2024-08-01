@@ -120,6 +120,8 @@ class LoadRosbag:
     self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
     self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
+    self.lane_topo_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
     # time offset
     t0 = 0
 
@@ -340,6 +342,25 @@ class LoadRosbag:
       self.rdg_lane_lines_msg['enable'] = False
       print('missing /iflytek/camera_perception/lane_lines topic !!!')
 
+    # load lane_topo
+    try:
+      lane_topo_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_topo"):
+        lane_topo_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+      sorted_lane_topo_msg_dict = OrderedDict(sorted(lane_topo_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_lane_topo_msg_dict.items():
+        self.lane_topo_msg['t'].append(t)
+        self.lane_topo_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.lane_topo_msg['data'].append(msg)
+      self.lane_topo_msg['t'] = [tmp - t0  for tmp in self.lane_topo_msg['t']]
+      print('lane_topo_msg time:',self.lane_topo_msg['t'][-1])
+      if len(self.lane_topo_msg['t']) > 0:
+        self.lane_topo_msg['enable'] = True
+      else:
+        self.lane_topo_msg['enable'] = False
+    except:
+      self.lane_topo_msg['enable'] = False
+      print('missing /iflytek/camera_perception/lane_topo topic !!!')
     # load fusion objects msg
     try:
       fus_msg_dict = {}
@@ -564,7 +585,7 @@ class LoadRosbag:
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
-                         "dis_to_ramp", "v_target_ramp", \
+                         "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
                          'gap_v_limit_lc', \
