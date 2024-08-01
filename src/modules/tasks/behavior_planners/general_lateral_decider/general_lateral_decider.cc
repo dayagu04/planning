@@ -219,20 +219,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
-    double avg_cruise_v = s / span_t;
+    const double max_ref_length = session_->planning_context().v_ref_cruise() * span_t;
+    double avg_cruise_v = std::min(s, max_ref_length) / span_t;
     double delta_s = avg_cruise_v * config_.delta_t;
-    Point2D cart_init_point(planning_init_point.lat_init_state.x(),
-                            planning_init_point.lat_init_state.y());
+    Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
+                                    planning_init_point.lat_init_state.y());
     const auto &frenet_coord =
-        coarse_planning_info.reference_path->get_frenet_coord();
-    Point2D frenet_init_point;
-    double s_ref = 0;
-    if (!frenet_coord->XYToSL(cart_init_point, frenet_init_point)) {
-      printf("frenet error!");
-    } else {
-      s_ref = frenet_init_point.x;
-    }
+      coarse_planning_info.reference_path->get_frenet_coord();
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
+    pnc::spline::Projection projection_spline;
+    projection_spline.CalProjectionPoint(
+        cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
+        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(), cart_init_point);
+
+    double s_ref = projection_spline.GetOutput().s_proj;
     traj_points.clear();
     TrajectoryPoint point;
     constexpr double kEps = 1e-4;
