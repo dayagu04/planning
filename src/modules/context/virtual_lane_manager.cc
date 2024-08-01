@@ -530,7 +530,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
 
   //6.生成导航变道的任务
-  const double cancel_mlc_dis_threshold_to_route_end = 100;
+  const double cancel_mlc_dis_threshold_to_route_end = 400;
   if (is_ego_on_expressway_ && distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
     GenerateLaneChangeTasksForNOA();
   } else {
@@ -1558,17 +1558,12 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   sum_dis_to_last_merge_point_ = NL_NMAX;
   if (!is_on_ramp_) {
     while(last_merge_seg->in_link().size() == 1 ) {
-      if (sum_dis_to_last_merge_point > pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_) {
+      last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
+      //判断是否为nullptr
+      if (!last_merge_seg) {
         break;
       } else {
-        last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
-        //判断是否为nullptr
-        if (!last_merge_seg) {
-          break;
-        } else {
-          sum_dis_to_last_merge_point =
-              sum_dis_to_last_merge_point + last_merge_seg->dis();
-        }
+        sum_dis_to_last_merge_point = sum_dis_to_last_merge_point + last_merge_seg->dis();
       }
     }
     if (sum_dis_to_last_merge_point > pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_) {
