@@ -459,6 +459,53 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
 
   return line_info_list
 
+def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_info_list = []
+  lane_line = road_msg.lane_line
+  lane_line_size = road_msg.lane_line_size
+  #print("reference_line_msg_size ", reference_line_msg_size)
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+
+  for i in range(20):
+    if i< lane_line_size:
+      lane = lane_line[i]
+      lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+
+      local_points = lane.lane_points_set
+      point_num = lane.lane_points_set_num
+      if g_is_display_enu:
+        if loc_msg != None: # 长时轨迹
+          coord_tf = coord_transformer()
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        line_x = [local_points[j].x for j in range(point_num)]
+        line_y = [local_points[j].y for j in range(point_num)]
+        line_x, line_y = coord_tf.local_to_global(line_x, line_y)
+      else:
+        line_x = [local_points[j].x for j in range(point_num)]
+        line_y = [local_points[j].y for j in range(point_num)]
+
+      lane_info['line_x_vec'] = line_x
+      lane_info['line_y_vec'] = line_y
+      tp = lane.marking_segments[0].marking
+      if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+        lane_info['type'] = ['dashed']
+      else:
+        lane_info['type'] = ['solid']
+
+      if (lane.type == 2):
+        print('lane_info curb')
+        lane_info['type'] = ['curb']
+      line_info_list.append(lane_info)
+    else:
+      lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info['line_x_vec'] = default_line_x
+      lane_info['line_y_vec'] = default_line_y
+      lane_info['type'] = ['dashed']
+      line_info_list.append(lane_info)
+  return line_info_list
 def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False, loc_msg = [], g_is_display_enu = False):
   virtual_lane_refline_points = plan_gen_refline.virtual_lane_refline_points
   line_x = []
@@ -1482,6 +1529,19 @@ def load_avoid(plan_debug, planning_json):
   # except:
   #   pass
   return  data_dict2
+
+def load_time_cost(plan_debug, planning_json):
+  time_cost_keys = ["VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost"]
+  data_dict = {}
+  for key in time_cost_keys:
+    try:
+      data_dict[key] = planning_json[key]
+    except:
+      data_dict[key] = 'none'
+      pass
+  print(data_dict)
 # 障碍物的id选择
 class ObjText:
   def __init__(self,  obj_callback):

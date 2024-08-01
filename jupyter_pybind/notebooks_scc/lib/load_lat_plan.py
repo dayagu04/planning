@@ -62,6 +62,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     planning_debug = plan_debug_msg
 
     debug1, debug2 = load_lat_common(planning_debug, planning_json)
+    load_time_cost(planning_debug, planning_json)
     print(debug2)
     ego_xn, ego_yn = [], []
     ### global variables

@@ -446,8 +446,8 @@ struct GapSelectorInfo {
 struct PlanningResult {
   int target_lane_id;
   // ScenarioStateEnum target_scenario_state = ROAD_NONE;
-  TrajectoryPoints raw_traj_points;
   TrajectoryPoints traj_points;
+  TrajectoryPoints raw_traj_points;
   // MotionPlanningInfo motion_planning_info; // TODO: 从PlanningResult移出去
   RequestType turn_signal = NO_CHANGE;
   // CurvatureInfo curvature_info;

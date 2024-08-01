@@ -1,8 +1,11 @@
 #include "scc_st_graph.h"
+#include <math.h>
 
 #include <algorithm>
+#include <cmath>
 #include <complex>
 
+#include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "math/linear_interpolation.h"
@@ -12,6 +15,50 @@
 #include "task_basic_types.h"
 #include "task_basic_types.pb.h"
 #include "virtual_lane_manager.h"
+
+namespace {
+
+constexpr double kStaticAgentSpeedThr = 3;
+constexpr double kStaticAgentPosThr = 1.4;
+constexpr double kStaticAgentBuffer = 0.12;
+constexpr double kHalfLaneWidth = 1.75;
+constexpr double kLeadoneThr = 1.2;
+constexpr double kHalfEgoWidth = 1.1;
+constexpr double kHalfEgoLength = 2.55;
+constexpr double kEgoWidth = 2.2;
+constexpr double kEgoLength = 5.1;
+
+void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
+                              const planning_math::Box2d &agent_box,
+                              double *const ptr_min_s, double *const ptr_max_s,
+                              double *const ptr_min_l,
+                              double *const ptr_max_l) {
+  if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
+      nullptr == ptr_max_l) {
+    return;
+  }
+  const auto &all_corners = agent_box.GetAllCorners();
+  for (const auto &corner : all_corners) {
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l);
+    *ptr_min_s = std::fmin(*ptr_min_s, agent_s);
+    *ptr_max_s = std::fmax(*ptr_max_s, agent_s);
+    *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
+    *ptr_max_l = std::fmax(*ptr_max_l, agent_l);
+  }
+}
+
+void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
+                              const agent::Agent &agent,
+                              double *const ptr_min_s, double *const ptr_max_s,
+                              double *const ptr_min_l,
+                              double *const ptr_max_l) {
+  const auto &agent_box = agent.box();
+  CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s, ptr_max_s,
+                           ptr_min_l, ptr_max_l);
+}
+}  // namespace
 
 namespace planning {
 namespace scc {
@@ -29,14 +76,16 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
 
 void StGraphGenerator::Update(
     std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
-    const TrajectoryPoints &last_traj) {
+    const TrajectoryPoints &last_traj,
+    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+    std::shared_ptr<VirtualLane> current_lane) {
   lon_behav_input_ = std::move(lon_behav_input);
   LOG_DEBUG("=======Entering StGraphGenerator::Update======= \n");
   double v_ego = lon_behav_input_->ego_info().ego_v();
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double acc_ego = lon_behav_input_->ego_info().ego_acc();
   double steer_angle_ego = lon_behav_input_->ego_info().ego_steer_angle();
-  //lon_init_state_ = {0, v_ego, acc_ego};
+  // lon_init_state_ = {0, v_ego, acc_ego};
   lon_init_state_[0] = lon_behav_input_->lon_init_state().s();
   lon_init_state_[1] = lon_behav_input_->lon_init_state().v();
   lon_init_state_[2] = lon_behav_input_->lon_init_state().a();
@@ -90,6 +139,8 @@ void StGraphGenerator::Update(
                         lon_behav_input_->lat_obs_info().lead_two(),
                         lon_behav_input_->lat_output().lc_request(), v_ego,
                         leads_st_info);
+  CalculateNarrowLimitSpeed(lon_behav_input_->lat_obs_info(), dynamic_world,
+                            current_lane, leads_st_info);
 
   // 2.2 计算temp lead one, 选择性使用lead two
   std::vector<planning::common::RealTimeLonObstacleSTInfo> temp_leads_st_info;
@@ -616,7 +667,7 @@ void StGraphGenerator::UpdateSTGraphs(
       default:
         st_boundary.boundary_type = scc::BoundaryType::UNKNOWN;
     }
-    
+
     double s_step = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
@@ -1387,9 +1438,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       if (gap.base_car_id == gap.front_id) {
         // safe_distance = CalcSafeDistance(gap.v_front, v_ego);
         v_limit_lc_ = gap.base_car_vrel -
-                     clip((safe_distance - gap.base_car_drel) / safe_distance,
-                          2.0, 0.0) -
-                     1.0;
+                      clip((safe_distance - gap.base_car_drel) / safe_distance,
+                           2.0, 0.0) -
+                      1.0;
         if (v_limit_lc_ < 0) {
           // no need to decel when front car is far away
           const std::vector<double> _V_LIMIT_DISTANCE_BP{
@@ -1398,7 +1449,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
           const std::vector<double> _V_LIMIT_DISTANCE_V{1.0, 0.0};
           v_limit_lc_ =
               v_limit_lc_ * interp(gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
-                                  _V_LIMIT_DISTANCE_V);
+                                   _V_LIMIT_DISTANCE_V);
         }
         v_limit_lc_ = std::max(v_ego - 3.0, v_ego + v_limit_lc_);
         // a_target_lc = 0.0;
@@ -1417,7 +1468,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
           const std::vector<double> _V_LIMIT_DISTANCE_V{1.0, 0.0};
           v_limit_lc_ =
               v_limit_lc_ * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
-                                  _V_LIMIT_DISTANCE_V);
+                                   _V_LIMIT_DISTANCE_V);
         }
         v_limit_lc_ = std::max(v_ego - 2.8, v_ego + v_limit_lc_);
         // a_target_lc = 0.6;
@@ -1428,7 +1479,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       }
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
 
-      double safe_distance_lc_front = CalcSafeDistance(gap.v_front, v_limit_lc_);
+      double safe_distance_lc_front =
+          CalcSafeDistance(gap.v_front, v_limit_lc_);
       double lc_front_desired_distance = GetCalibratedDistance(
           gap.v_front, v_limit_lc_, lc_request, false, false, false);
 
@@ -1468,8 +1520,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                          v_limit_lc_ * gap.acc_time);
 
       double lc_rear_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          rear_obs, v_limit_lc_, safe_distance_lc_rear, lc_rear_desired_distance,
-          false);
+          rear_obs, v_limit_lc_, safe_distance_lc_rear,
+          lc_rear_desired_distance, false);
 
       common::RealTimeLonObstacleSTInfo lc_gap_rear_st_info;
       lc_gap_rear_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
@@ -1497,7 +1549,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                0.0) -
           v_ego / 10.0;
       v_limit_lc_ = std::max({v_ego - 3.2, v_ego + v_limit_lc_,
-                             6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
+                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
       // a_target_lc = 0.0;
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
     }
@@ -2082,11 +2134,10 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  // acc_bound_.first = (std::fmin(lon_init_state_[2],
-  // config_.acc_lower_bound));
+  acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
   // acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
+  // acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
   acc_bound_.second =
       std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
   // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
@@ -2109,6 +2160,259 @@ void StGraphGenerator::MakeJerkBound() {
   double jerk_lower_bound = config_.jerk_lower_bound;
   jerk_bound_.second = jerk_upper_bound;
   jerk_bound_.first = jerk_lower_bound;
+}
+
+void StGraphGenerator::CalculateNarrowLimitSpeed(
+    const planning::common::LatObsInfo &lateral_obstacles,
+    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+    std::shared_ptr<VirtualLane> current_lane,
+    std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info) {
+  if (!config_.enable_narrow_agent_limit) {
+    return;
+  }
+  // 1) 构造横向KDPath
+  std::vector<planning_math::PathPoint> lat_path_points;
+  lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size());
+  const auto &spline_x_vec = lon_behav_input_->lat_output().spline_x_vec();
+  const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
+  for (int i = 0; i <= config_.lon_num_step; ++i) {
+    if (std::isnan(spline_x_vec[i]) || std::isnan(spline_y_vec[i])) {
+      LOG_ERROR("skip NaN point");
+      continue;
+    }
+    planning_math::PathPoint path_point{spline_x_vec[i], spline_y_vec[i]};
+    lat_path_points.emplace_back(path_point);
+    if (not lat_path_points.empty()) {
+      auto &last_pt = lat_path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - path_point.x(),
+                               last_pt.y() - path_point.y())
+              .Length() < 1e-3) {
+        continue;
+      }
+    }
+  }
+  if (lat_path_points.size() <= 2) {
+    return;
+  }
+  lat_path_coord_ = std::make_shared<KDPath>(std::move(lat_path_points));
+
+  // 2) 获取障碍物
+  narrow_agent_.clear();
+  const auto &agent_manager = dynamic_world->agent_manager();
+  const auto &all_current_agents = agent_manager->GetAllCurrentAgents();
+  if (all_current_agents.empty()) {
+    return;
+  }
+
+  for (auto agent : all_current_agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    // check static agent
+    if (agent->speed() > kStaticAgentSpeedThr && (!agent->is_static())) {
+      continue;
+    }
+    // check fusion source
+    if ((agent->fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
+      continue;
+    }
+
+    int agent_id = agent->agent_id();
+    bool is_lead_one = false;
+    bool is_lead_two = false;
+    bool is_temp_one = false;
+    bool is_temp_two = false;
+    if (lateral_obstacles.lead_one().track_id() != -1) {
+      is_lead_one =
+          lateral_obstacles.lead_one().track_id() == agent_id ? true : false;
+    }
+    if (lateral_obstacles.lead_two().track_id() != -1) {
+      is_lead_two =
+          lateral_obstacles.lead_two().track_id() == agent_id ? true : false;
+    }
+    if (lateral_obstacles.temp_lead_one().track_id() != -1) {
+      is_temp_one = lateral_obstacles.temp_lead_one().track_id() == agent_id
+                        ? true
+                        : false;
+    }
+    if (lateral_obstacles.temp_lead_two().track_id() != -1) {
+      is_temp_two = lateral_obstacles.temp_lead_two().track_id() == agent_id
+                        ? true
+                        : false;
+    }
+    // ignore leadone or leadtwo
+    if (is_lead_one || is_lead_two || is_temp_one || is_temp_two) {
+      continue;
+    }
+
+    // 3) 侵入车道检查
+    // 3.1 check intrude into ego lane (using current lane reference path)
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    const auto current_lane_frenet_coord =
+        current_lane->get_reference_path()->get_frenet_coord();
+    if (!(current_lane_frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s,
+                                            &agent_l))) {
+      continue;
+    }
+    // ignore narrow agent if lead closer
+    if (lateral_obstacles.lead_one().track_id() != -1 &&
+        lateral_obstacles.lead_one().d_rel() < agent_s) {
+      continue;
+    }
+    if (lateral_obstacles.temp_lead_one().track_id() != -1 &&
+        lateral_obstacles.temp_lead_one().d_rel() < agent_s) {
+      continue;
+    }
+    // 3.2 calclate ego sl info (using current lane reference path)
+    double ego_s = 0.0;
+    double ego_l = 0.0;
+    double ego_pose_x = lon_behav_input_->ego_info().ego_pose_x();
+    double ego_pose_y = lon_behav_input_->ego_info().ego_pose_y();
+    if (!(current_lane_frenet_coord->XYToSL(ego_pose_x, ego_pose_y, &ego_s, &ego_l))) {
+      continue;
+    }
+    // 3.3 min/max sl
+    double min_s = std::numeric_limits<double>::max();
+    double max_s = std::numeric_limits<double>::lowest();
+    double min_l = std::numeric_limits<double>::max();
+    double max_l = std::numeric_limits<double>::lowest();
+    CalculateAgentSLBoundary(current_lane_frenet_coord, *agent, &min_s, &max_s, &min_l,
+                             &max_l);
+    double min_lat_l = 0.0;
+    if (agent_l >= 0) {
+      min_lat_l = (agent_l * min_l) > 0 ? min_l : 0;
+    } else {
+      min_lat_l = (agent_l * max_l) > 0 ? max_l : 0;
+    }
+    double half_lane_width_by_s = 0.5 * current_lane->width_by_s(min_s);
+    double invade_thr = half_lane_width_by_s - kStaticAgentBuffer;
+    if (fabs(min_lat_l) > invade_thr) {
+      continue;
+    }
+    // 3.4 check agent is front of ego ?
+    if (min_s - ego_s < 0.0) {
+      continue;
+    }
+
+    // 4) 安全性检查
+    // 4.1 calculate min_s and min_l (using lateral path)
+    double min_s_by_lat_path = std::numeric_limits<double>::max();
+    double max_s_by_lat_path = std::numeric_limits<double>::lowest();
+    double min_l_by_lat_path = std::numeric_limits<double>::max();
+    double max_l_by_lat_path = std::numeric_limits<double>::lowest();
+    CalculateAgentSLBoundary(lat_path_coord_, *agent, &min_s_by_lat_path,
+                             &max_s_by_lat_path, &min_l_by_lat_path,
+                             &max_l_by_lat_path);
+    double min_lat_l_by_lat_path = 0.0;
+    if (agent_l >= 0) {
+      min_lat_l_by_lat_path =
+          (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    } else {
+      min_lat_l_by_lat_path =
+          (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
+    }
+    // 4.2 collision check
+    double end_s = min_s + kHalfEgoLength * 2 + agent->length();
+    bool is_collison =
+        LateralCollisionCheck(min_s, end_s, min_lat_l_by_lat_path);
+
+    // calc v_limit
+    // std::array<double, 5> xp1{0, 5, 40, 80, 120};
+    // std::array<double, 5> fp1{1.28, 1.28, 1.21, 1.19, 1.1};
+    // double lead_one_thr = interp(min_s, xp1, fp1);
+
+    double v_ego = lon_behav_input_->ego_info().ego_v();
+    double s_target = GetCalibratedDistance(
+        agent->speed(), v_ego, lon_behav_input_->lat_output().lc_request(),
+        false, false, false);
+    double s_safe = CalcSafeDistance(agent->speed(), v_ego);
+    double v_target = CalcDesiredVelocity(min_s, s_target, agent->speed());
+    double avoid_offset = std::max(fabs(min_lat_l_by_lat_path) - fabs(min_lat_l), 0.0);
+    std::array<double, 2> xp2{kStaticAgentPosThr, invade_thr + avoid_offset};
+    std::array<double, 2> fp2{v_target, v_ego};
+    double v_limit_narrow = interp(fabs(min_lat_l_by_lat_path), xp2, fp2);
+    if (is_collison) {
+      v_limit_narrow = v_target;
+    }
+
+    NarrowLead narrow_lead;
+    narrow_lead.id = agent_id;
+    narrow_lead.desire_distance = s_target;
+    narrow_lead.min_s = min_s;
+    narrow_lead.safe_distance = s_safe;
+    narrow_lead.v_limit = v_limit_narrow;
+    narrow_lead.is_collison = is_collison;
+
+    narrow_agent_.emplace_back(narrow_lead);
+
+    // sort
+    auto comp = [](const NarrowLead &a, const NarrowLead &b) {
+      return a.min_s < b.min_s;
+    };
+    std::sort(narrow_agent_.begin(), narrow_agent_.end(), comp);
+  }
+
+  if (narrow_agent_.empty()) {
+    return;
+  }
+
+  auto it = narrow_agent_.begin();
+  if (it != narrow_agent_.end()) {
+    if (it->is_collison) {
+      // if have collison, update lead one st
+      common::RealTimeLonObstacleSTInfo lead_one_st_info;
+      lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
+      lead_one_st_info.set_id(it->id);
+      lead_one_st_info.set_a_lead(0.0);
+      lead_one_st_info.set_v_lead(0.0);
+      lead_one_st_info.set_s_lead(it->min_s);
+      lead_one_st_info.set_desired_distance(it->desire_distance);
+      lead_one_st_info.set_desired_velocity(it->v_limit);
+      lead_one_st_info.set_safe_distance(it->safe_distance);
+      lead_one_st_info.set_start_time(0.0);  // TBD:使用可配置参数
+      lead_one_st_info.set_end_time(5.0);    // TBD:使用可配置参数
+      lead_one_st_info.set_start_s(it->min_s);
+      leads_st_info.emplace_back(lead_one_st_info);
+      v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("narrow_agent_id", it->id)
+      JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
+    } else {
+      v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
+    }
+  }
+}
+
+bool StGraphGenerator::LateralCollisionCheck(const double &start_s,
+                                             const double &end_s,
+                                             const double &agent_min_l) {
+  const double sampling_interval_s = 1.0;
+  for (double s = start_s; s <= end_s; s += sampling_interval_s) {
+    double box_x = 0.0;
+    double box_y = 0.0;
+    lat_path_coord_->SLToXY(s, 0.0, &box_x, &box_y);
+    double theta = lat_path_coord_->GetPathCurveHeading(s);
+    planning_math::Box2d ego_box({box_x, box_y}, theta, kEgoLength, kEgoWidth);
+    const auto &all_corners = ego_box.GetAllCorners();
+    double min_l = std::numeric_limits<double>::max();
+    double max_l = -min_l;
+
+    for (const auto &corner : all_corners) {
+      double ego_s = 0.0;
+      double ego_l = 0.0;
+      lat_path_coord_->XYToSL(corner.x(), corner.y(), &ego_s, &ego_l);
+      min_l = std::fmin(min_l, ego_l);
+      max_l = std::fmax(max_l, ego_l);
+    }
+
+    // check collision
+    if ((agent_min_l < 0 && min_l < agent_min_l) ||
+        (agent_min_l >= 0 && max_l > agent_min_l)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void StGraphGenerator::SetConfig(

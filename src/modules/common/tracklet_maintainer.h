@@ -52,6 +52,7 @@ class TrackletMaintainer {
                     const std::vector<PredictionObject> &predictions,
                     std::vector<TrackedObject> &tracked_objects,
                     LeadCars &lead_cars, bool isRedLightStop, bool hdmap_valid);
+  bool is_static_scene() const {return is_static_scene_;}
 
  private:
   void recv_prediction_objects(const std::vector<PredictionObject> &predictions,
@@ -107,7 +108,7 @@ class TrackletMaintainer {
                                  bool borrow_bicycle_lane, double dist_rblane,
                                  bool tleft_lane, bool rightest_lane,
                                  double dist_intersect, double intersect_length,
-                                 bool isRedLightStop);
+                                 bool isRedLightStop, double farthest_distance);
 
   bool is_leadone_potential_avoiding_car(TrackedObject *lead_one, int scenario,
                                          double lane_width,
@@ -145,6 +146,7 @@ class TrackletMaintainer {
   double theta_ego_;
   double vl_ego_;
   double vs_ego_;
+  bool is_static_scene_{false};
 };
 
 }  // namespace planning

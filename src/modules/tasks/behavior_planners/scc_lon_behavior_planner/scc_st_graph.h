@@ -29,8 +29,11 @@ class StGraphGenerator {
   virtual ~StGraphGenerator() = default;
 
   // 更新
-  void Update(std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
-              const TrajectoryPoints &last_traj);
+  void Update(
+      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
+      const TrajectoryPoints &last_traj,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      std::shared_ptr<VirtualLane> current_lane);
 
   void SetConfig(
       planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
@@ -176,6 +179,15 @@ class StGraphGenerator {
 
   void MakeJerkBound();
 
+  void CalculateNarrowLimitSpeed(
+      const planning::common::LatObsInfo &lateral_obstacles,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      std::shared_ptr<VirtualLane> current_lane,
+      std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
+
+  bool LateralCollisionCheck(const double &start_s, const double &end_s,
+                      const double &agent_min_l);
+
  private:
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;
   SccLonBehaviorPlannerConfig config_;
@@ -188,6 +200,8 @@ class StGraphGenerator {
   scc::STboundaries st_boundaries_;
   common::StartStopInfo start_stop_info_;
   std::array<double, 3> lon_init_state_;
+  std::shared_ptr<KDPath> lat_path_coord_;
+  std::vector<NarrowLead> narrow_agent_;
 
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;

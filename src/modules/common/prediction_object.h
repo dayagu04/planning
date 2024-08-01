@@ -76,6 +76,7 @@ struct PredictionObject {
   float yaw;    // for obj
   float theta;  // for velocity
   float acc;
+  iflyauto::ObjectMotionType motion_pattern_current;
   // add relative info for highway
   float relative_position_x;
   float relative_position_y;

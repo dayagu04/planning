@@ -13,6 +13,7 @@ struct VehicleParam {
   double rear_axis_to_center = 1.453;
   double length = 4.786;
   double width = 1.935;
+  double max_width = 2.229;
   double height = 1.685;
   double width_mirror = 0.15;
   double min_turn_radius = 4.88;

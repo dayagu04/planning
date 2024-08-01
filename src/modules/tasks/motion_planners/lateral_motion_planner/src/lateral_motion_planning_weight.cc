@@ -64,10 +64,23 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       }
       break;
     }
+    case STATIC_AVOID: {
+      planning_input.set_q_ref_x(config_.q_ref_x_static_avoid);
+      planning_input.set_q_ref_y(config_.q_ref_y_static_avoid);
+      planning_input.set_q_ref_theta(config_.q_ref_theta_static_avoid);
+      planning_input.set_q_continuity(config_.q_continuity);
+      planning_input.set_q_acc(config_.q_acc_static_avoid);
+      planning_input.set_q_jerk(config_.q_jerk_static_avoid_middle);
+      SetAccJerkBoundByVelocity(planning_input);
+      concerned_start_q_jerk_ = config_.q_jerk_static_avoid_close;
+      break;
+    }
     default: { break; }
   }
   planning_input.set_q_acc_bound(config_.q_acc_bound);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
+  planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  planning_input.set_q_hard_corridor(config_.q_hard_corridor);
 }
 
 void LateralMotionPlanningWeight::CalculateInitInfo(

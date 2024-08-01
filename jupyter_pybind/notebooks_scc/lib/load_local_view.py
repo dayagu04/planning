@@ -63,6 +63,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ehr_parking_map_msg = find_nearest(bag_loader.ehr_parking_map_msg, bag_time)
   ground_line_msg = find_nearest(bag_loader.ground_line_msg, bag_time)
   planning_hmi_msg = find_nearest(bag_loader.planning_hmi_msg, bag_time)
+  rdg_lane_lines_msg = find_nearest(bag_loader.rdg_lane_lines_msg, bag_time)
 
   input_topic_timestamp = plan_debug_msg.input_topic_timestamp
   fusion_object_timestamp = input_topic_timestamp.fusion_object
@@ -82,8 +83,15 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     if fus_msg_tmp != None:
       fus_msg = fus_msg_tmp
     road_msg_tmp = find(bag_loader.road_msg, fusion_road_timestamp)
+
     if road_msg_tmp != None:
       road_msg = road_msg_tmp
+      rdg_lane_lines_msg_tmp = find(bag_loader.rdg_lane_lines_msg, road_msg_tmp.isp_timestamp)
+      if rdg_lane_lines_msg_tmp != None:
+        rdg_lane_lines_msg = rdg_lane_lines_msg_tmp
+        print('find rdg_lane_lines_msg success')
+      else :
+        print('find rdg_lane_lines_msg fail')
     loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
     if loc_msg_tmp != None:
       loc_msg = loc_msg_tmp
@@ -305,6 +313,51 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
         })
+
+    # 加载rdg车道线
+    if bag_loader.rdg_lane_lines_msg['enable'] == True:
+      rdg_lane_lines = load_rdg_lane_lines(rdg_lane_lines_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      data_lane_dict2 = {
+        0:local_view_data['rdg_data_lane_0'],
+        1:local_view_data['rdg_data_lane_1'],
+        2:local_view_data['rdg_data_lane_2'],
+        3:local_view_data['rdg_data_lane_3'],
+        4:local_view_data['rdg_data_lane_4'],
+        5:local_view_data['rdg_data_lane_5'],
+        6:local_view_data['rdg_data_lane_6'],
+        7:local_view_data['rdg_data_lane_7'],
+        8:local_view_data['rdg_data_lane_8'],
+        9:local_view_data['rdg_data_lane_9'],
+        10:local_view_data['rdg_data_lane_10'],
+        11:local_view_data['rdg_data_lane_11'],
+        12:local_view_data['rdg_data_lane_12'],
+        13:local_view_data['rdg_data_lane_13'],
+        14:local_view_data['rdg_data_lane_14'],
+        15:local_view_data['rdg_data_lane_15'],
+        16:local_view_data['rdg_data_lane_16'],
+        17:local_view_data['rdg_data_lane_17'],
+        18:local_view_data['rdg_data_lane_18'],
+        19:local_view_data['rdg_data_lane_19'],
+      }
+
+      for i in range(20):
+        try:
+          fig1.renderers[20 + i].glyph.line_dash = 'dashed'
+          fig1.renderers[20 + i].glyph.line_color = 'green'
+          if rdg_lane_lines[i]['type'] == ['dashed']:
+            fig1.renderers[20 + i].glyph.line_dash = 'dashed'
+          elif rdg_lane_lines[i]['type'] == ['solid']:
+            fig1.renderers[20 + i].glyph.line_dash = 'solid'
+          elif rdg_lane_lines[i]['type'] == ['curb']:
+            fig1.renderers[20 + i].glyph.line_color = 'red'
+          data_lane = data_lane_dict2[i]
+          data_lane.data.update({
+            'rdg_line_{}_x'.format(i): rdg_lane_lines[i]['line_x_vec'],
+            'rdg_line_{}_y'.format(i): rdg_lane_lines[i]['line_y_vec'],
+          })
+        except:
+          print('error1')
+          pass
     #加载planning 生成中心线的信息
     try:
       plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
@@ -924,6 +977,27 @@ def load_local_view_figure():
   data_lane_18 = ColumnDataSource(data = {'line_18_y':[], 'line_18_x':[]})
   data_lane_19 = ColumnDataSource(data = {'line_19_y':[], 'line_19_x':[]})
 
+  rdg_data_lane_0 = ColumnDataSource(data = {'rdg_line_0_y':[], 'rdg_line_0_x':[]})
+  rdg_data_lane_1 = ColumnDataSource(data = {'rdg_line_1_y':[], 'rdg_line_1_x':[]})
+  rdg_data_lane_2 = ColumnDataSource(data = {'rdg_line_2_y':[], 'rdg_line_2_x':[]})
+  rdg_data_lane_3 = ColumnDataSource(data = {'rdg_line_3_y':[], 'rdg_line_3_x':[]})
+  rdg_data_lane_4 = ColumnDataSource(data = {'rdg_line_4_y':[], 'rdg_line_4_x':[]})
+  rdg_data_lane_5 = ColumnDataSource(data = {'rdg_line_5_y':[], 'rdg_line_5_x':[]})
+  rdg_data_lane_6 = ColumnDataSource(data = {'rdg_line_6_y':[], 'rdg_line_6_x':[]})
+  rdg_data_lane_7 = ColumnDataSource(data = {'rdg_line_7_y':[], 'rdg_line_7_x':[]})
+  rdg_data_lane_8 = ColumnDataSource(data = {'rdg_line_8_y':[], 'rdg_line_8_x':[]})
+  rdg_data_lane_9 = ColumnDataSource(data = {'rdg_line_9_y':[], 'rdg_line_9_x':[]})
+  rdg_data_lane_10 = ColumnDataSource(data = {'rdg_line_10_y':[], 'rdg_line_10_x':[]})
+  rdg_data_lane_11 = ColumnDataSource(data = {'rdg_line_11_y':[], 'rdg_line_11_x':[]})
+  rdg_data_lane_12 = ColumnDataSource(data = {'rdg_line_12_y':[], 'rdg_line_12_x':[]})
+  rdg_data_lane_13 = ColumnDataSource(data = {'rdg_line_13_y':[], 'rdg_line_13_x':[]})
+  rdg_data_lane_14 = ColumnDataSource(data = {'rdg_line_14_y':[], 'rdg_line_14_x':[]})
+  rdg_data_lane_15 = ColumnDataSource(data = {'rdg_line_15_y':[], 'rdg_line_15_x':[]})
+  rdg_data_lane_16 = ColumnDataSource(data = {'rdg_line_16_y':[], 'rdg_line_16_x':[]})
+  rdg_data_lane_17 = ColumnDataSource(data = {'rdg_line_17_y':[], 'rdg_line_17_x':[]})
+  rdg_data_lane_18 = ColumnDataSource(data = {'rdg_line_18_y':[], 'rdg_line_18_x':[]})
+  rdg_data_lane_19 = ColumnDataSource(data = {'rdg_line_19_y':[], 'rdg_line_19_x':[]})
+
   if is_vis_map:
     ehr_data_lanes = []
     for i in range(Max_line_size):
@@ -1101,6 +1175,26 @@ def load_local_view_figure():
                      'data_center_line_7':data_center_line_7, \
                      'data_center_line_8':data_center_line_8, \
                      'data_center_line_9':data_center_line_9, \
+                     'rdg_data_lane_0':rdg_data_lane_0, \
+                     'rdg_data_lane_1':rdg_data_lane_1, \
+                     'rdg_data_lane_2':rdg_data_lane_2, \
+                     'rdg_data_lane_3':rdg_data_lane_3, \
+                     'rdg_data_lane_4':rdg_data_lane_4, \
+                     'rdg_data_lane_5':rdg_data_lane_5, \
+                     'rdg_data_lane_6':rdg_data_lane_6, \
+                     'rdg_data_lane_7':rdg_data_lane_7, \
+                     'rdg_data_lane_8':rdg_data_lane_8, \
+                     'rdg_data_lane_9':rdg_data_lane_9, \
+                     'rdg_data_lane_10':rdg_data_lane_10, \
+                     'rdg_data_lane_11':rdg_data_lane_11, \
+                     'rdg_data_lane_12':rdg_data_lane_12, \
+                     'rdg_data_lane_13':rdg_data_lane_13, \
+                     'rdg_data_lane_14':rdg_data_lane_14, \
+                     'rdg_data_lane_15':rdg_data_lane_15, \
+                     'rdg_data_lane_16':rdg_data_lane_16, \
+                     'rdg_data_lane_17':rdg_data_lane_17, \
+                     'rdg_data_lane_18':rdg_data_lane_18, \
+                     'rdg_data_lane_19':rdg_data_lane_19, \
                      'data_fix_lane': data_fix_lane ,\
                      'data_target_lane': data_target_lane ,\
                      'data_origin_lane': data_origin_lane ,\
@@ -1188,9 +1282,30 @@ def load_local_view_figure():
   fig1.line('line_17_y', 'line_17_x', source = data_lane_17, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_18_y', 'line_18_x', source = data_lane_18, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
   fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane')
+
+  fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_2_y', 'rdg_line_2_x', source = rdg_data_lane_2, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_3_y', 'rdg_line_3_x', source = rdg_data_lane_3, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_4_y', 'rdg_line_4_x', source = rdg_data_lane_4, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_5_y', 'rdg_line_5_x', source = rdg_data_lane_5, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_6_y', 'rdg_line_6_x', source = rdg_data_lane_6, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_7_y', 'rdg_line_7_x', source = rdg_data_lane_7, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_8_y', 'rdg_line_8_x', source = rdg_data_lane_8, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_9_y', 'rdg_line_9_x', source = rdg_data_lane_9, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_10_y', 'rdg_line_10_x', source = rdg_data_lane_10, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_11_y', 'rdg_line_11_x', source = rdg_data_lane_11, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_12_y', 'rdg_line_12_x', source = rdg_data_lane_12, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_13_y', 'rdg_line_13_x', source = rdg_data_lane_13, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_14_y', 'rdg_line_14_x', source = rdg_data_lane_14, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_15_y', 'rdg_line_15_x', source = rdg_data_lane_15, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_16_y', 'rdg_line_16_x', source = rdg_data_lane_16, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_17_y', 'rdg_line_17_x', source = rdg_data_lane_17, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+
   fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 3, line_color = 'cyan', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'center_line_gen')
   # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!!
-
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
@@ -1227,7 +1342,7 @@ def load_local_view_figure():
     for i in range (len(sdmap_ramp_data_segments)):
       keyy = 'sdmap_ramp_segment_{}_y'.format(i)
       keyx = 'sdmap_ramp_segment_{}_x'.format(i)
-      fig1.line(keyy,keyx,source = sdmap_ramp_data_segments[i], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'sdmap_ramp_segment')
+      fig1.line(keyy,keyx,source = sdmap_ramp_data_segments[i], line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdmap_ramp_segment')
 
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')

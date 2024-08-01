@@ -140,8 +140,8 @@ struct AvoidInfo {
   void Reset() {
     normal_left_avoid_threshold = 0.0;
     normal_right_avoid_threshold = 0.0;
-    // static_left_avoid_threshold = 0.0;
-    // static_right_avoid_threshold = 0.0;
+    static_left_avoid_threshold = 0.0;
+    static_right_avoid_threshold = 0.0;
     desire_lat_offset = 0.0;
     lat_offset = 0.0;
     avoid_way = AvoidWay::None;
@@ -154,8 +154,8 @@ struct AvoidInfo {
   void operator=(const AvoidInfo &avoid_info) {
     normal_left_avoid_threshold = avoid_info.normal_left_avoid_threshold;
     normal_right_avoid_threshold = avoid_info.normal_right_avoid_threshold;
-    // static_left_avoid_threshold = avoid_info.static_left_avoid_threshold;
-    // static_right_avoid_threshold = avoid_info.static_right_avoid_threshold;
+    static_left_avoid_threshold = avoid_info.static_left_avoid_threshold;
+    static_right_avoid_threshold = avoid_info.static_right_avoid_threshold;
     desire_lat_offset = avoid_info.desire_lat_offset;
     lat_offset = avoid_info.lat_offset;
     avoid_way = avoid_info.avoid_way;
@@ -171,8 +171,8 @@ struct AvoidInfo {
 
   double normal_left_avoid_threshold;
   double normal_right_avoid_threshold;
-  // double static_left_avoid_threshold;
-  // double static_right_avoid_threshold;
+  double static_left_avoid_threshold;
+  double static_right_avoid_threshold;
   double desire_lat_offset = 0.0;
   double lat_offset = 0.0;
   AvoidWay avoid_way;

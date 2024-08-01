@@ -192,5 +192,39 @@ iflyauto::TrajectoryPoint InterpolateUsingLinearApproximation(
   return trajectory_point;
 }
 
+TrajectoryPoint InterpolateUsingLinearApproximation(
+    const TrajectoryPoint &p0, const TrajectoryPoint &p1,
+    const double t) {
+  if (std::fabs(p0.t - p1.t) < kMathEpsilon) {
+    return p0;
+  }
+
+  TrajectoryPoint trajectory_point;
+  const double weight0 = (t - p0.t) / (p1.t - p0.t);
+  const double weight1 = 1.0 - weight0;
+  const double x = weight1 * p0.x + weight0 * p1.x;
+  const double y = weight1 * p0.y + weight0 * p1.y;
+  const double heading_angle =
+      slerp(p0.heading_angle, p0.t, p1.heading_angle, p1.t, t);
+  const double curvature = weight1 * p0.curvature + weight0 * p1.curvature;
+  // const double t = weight1 * p0.t + weight0 * p1.t;
+  const double v = weight1 * p0.v + weight0 * p1.v;
+  const double a = weight1 * p0.a + weight0 * p1.a;
+  const double s = weight1 * p0.s + weight0 * p1.s;
+  const double jerk = weight1 * p0.jerk + weight0 * p1.jerk;
+
+  trajectory_point.x = x;
+  trajectory_point.y = y;
+  trajectory_point.heading_angle = heading_angle;
+  trajectory_point.curvature = curvature;
+  trajectory_point.t = t;
+  trajectory_point.v = v;
+  trajectory_point.a = a;
+  trajectory_point.s = s;
+  trajectory_point.jerk = jerk;
+
+  return trajectory_point;
+}
+
 }  // namespace planning_math
 }  // namespace planning

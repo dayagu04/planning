@@ -323,12 +323,12 @@ class LoadRosbag:
     try:
       rdg_lane_lines_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_lines"):
-        rdg_lane_lines_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        rdg_lane_lines_msg_dict[msg.isp_timestamp / 1e6] = msg
       # rdg_lane_lines_msg_dict = {key: val for key, val in sorted(rdg_lane_lines_msg_dict.items(), key = lambda ele: ele[0])}
       sorted_rdg_lane_lines_msg_dict = OrderedDict(sorted(rdg_lane_lines_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_rdg_lane_lines_msg_dict.items():
         self.rdg_lane_lines_msg['t'].append(t)
-        self.rdg_lane_lines_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.rdg_lane_lines_msg['timestamp'].append(msg.isp_timestamp)
         self.rdg_lane_lines_msg['data'].append(msg)
       self.rdg_lane_lines_msg['t'] = [tmp - t0  for tmp in self.rdg_lane_lines_msg['t']]
       print('rdg_lane_lines_msg time:',self.rdg_lane_lines_msg['t'][-1])
@@ -556,7 +556,7 @@ class LoadRosbag:
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'acc_cipv', \
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost",\
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \

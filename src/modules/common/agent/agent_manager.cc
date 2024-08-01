@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <utility>
 #include "agent/agent.h"
+#include "common_c.h"
 #include "environmental_model.h"
 #include "session.h"
 
@@ -71,9 +72,12 @@ void AgentManager::Update() {
 
     const double kMaxStaticPredictionLength =
         config_.max_speed_static_obstacle * prediction_duration;
-    bool is_static = prediction_object.speed < 0.1 ||
-                     prediction_object.trajectory_array.size() == 0 ||
-                     prediction_trajectory_length < kMaxStaticPredictionLength;
+    bool is_static =
+        prediction_object.speed < 0.1 ||
+        prediction_object.trajectory_array.size() == 0 ||
+        prediction_trajectory_length < kMaxStaticPredictionLength ||
+        prediction_object.motion_pattern_current ==
+            iflyauto::OBJECT_MOTION_TYPE_STATIC;
     double prediction_relative_time = prediction_object.delay_time - init_time;
     unordered_map<int32_t, Agent> agent_table;
     if (prediction_object.trajectory_array.size() == 0) {

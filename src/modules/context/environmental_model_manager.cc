@@ -961,6 +961,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   prediction_object.width = fusion_object.common_info.shape.width;
   prediction_object.speed = std::hypot(fusion_object.common_info.velocity.x,
                                        fusion_object.common_info.velocity.y);
+  prediction_object.motion_pattern_current =
+      fusion_object.additional_info.motion_pattern_current;
 
   prediction_object.yaw = fusion_object.common_info.heading_angle;
   if ((int)prediction_object.yaw == 255) {

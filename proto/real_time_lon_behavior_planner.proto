@@ -12,6 +12,8 @@ message EgoInfo {
   optional double ego_cruise = 2;
   optional double ego_acc = 3;
   optional double ego_steer_angle = 4;
+  optional double ego_pose_x = 5;
+  optional double ego_pose_y = 6;
 }
 
 message LatOutputInfo {
@@ -19,6 +21,8 @@ message LatOutputInfo {
   optional string lc_status = 2;
   optional bool close_to_accident = 3;
   repeated double d_poly_vec = 4;
+  repeated double spline_x_vec = 5;
+  repeated double spline_y_vec = 6;
 }
 
 message TrackedObjectInfo {

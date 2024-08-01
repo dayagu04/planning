@@ -42,19 +42,31 @@ class GeneralLateralDecider : public Task {
   // // 1. construct the trajectory of reference and bind the obstacle info on
   bool ConstructReferencePathPoints(const TrajectoryPoints &traj_points);
 
-  // // 2. construct the obstacle decisions
-  void ConstructLateralObstacleDecisions(
-      // const TrajectoryPoints &traj_points,
-      ObstacleDecisions &obstacle_decisions);
+  // 2. construct the lane and boundary bound
+  void GenerateRoadAndLaneBoundary();
+  void UpdateDistanceToRoadBorder();
+  void GenerateRoadHardSoftBoundary();
+  void GenerateLaneSoftBoundary();
 
-  void ConstructLateralObstacleDecision(
+  void GetDesireRoadExtraBuffer(double* const left_road_extra_buffer, double* const right_road_extra_buffer);
+  void GetLateralTTCToRoad(double* max_collision_t, double* const left_collision_t, double* const right_collision_t);
+
+  // 3. construct the obstacle decisions
+  void GenerateObstaclesBoundary();
+  void GenerateStaticObstaclesBoundary(
+      const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+      ObstacleDecisions &obstacle_decisions);
+  void GenerateStaticObstacleDecision(
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
+  void GenerateDynamicObstaclesBoundary(
+      const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+      ObstacleDecisions &obstacle_decisions);
+  void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
-  // 3. construct the lane and boundary bound
-  void ConstructLaneAndBoundaryBounds(
-      MapObstacleDecision &map_obstacle_decisions);
 
-  bool CheckObstacleNudgeCondition(
+  bool CheckObstacleNudgeDecision(
       const std::shared_ptr<FrenetObstacle> &obstacle);
 
   bool CheckObstacleCrossingCondition(
@@ -63,16 +75,32 @@ class GeneralLateralDecider : public Task {
   void RefineConflictLatDecisions(const double &ego_l,
                                   ObstacleDecision &obstacle_decision);
 
-  void ExtractBoundary(
-      const MapObstacleDecision &map_obstacle_decision,
-      const ObstacleDecisions &obstacle_decisions,
-      std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      std::vector<std::pair<double, double>> &frenet_path_bounds);
+  void ExtractBoundary(std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      std::vector<std::pair<double, double>> &frenet_hard_bounds,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
 
+  void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
+  void ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision);
+
+  void PostProcessBound(std::vector<WeightedBound>& bounds_input, std::pair<double, double>& bound_output, std::pair<BoundInfo, BoundInfo>& bound_info);
+  void SaveLatDebugInfo(const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
+
+  void GenerateObstaclePreliminaryDecision(double ego_l, double distance_to_right_lane_border, double distance_to_left_lane_border, double overlap_min_y, double overlap_max_y, double lat_buf_dis,
+                                           bool b_overlap_side, bool init_lon_no_overlap, bool is_cross_obj, LatObstacleDecisionType pre_lateral_decision,
+                                           bool &reset_conflict_decision,
+                                           ObstacleDecision &obstacle_decision,
+                                           LatObstacleDecisionType &lat_decision, LonObstacleDecisionType &lon_decision);
+  void AddObstacleDecisionBound(int id, double t, Polygon2d &care_overlap_polygon, double lat_buf_dis, LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision, bool is_update_hard_bound = false);
+  void GenerateLateralDeciderOutput(const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
   void GenerateEnuBoundaryPoints(
-
-      const std::vector<std::pair<double, double>> &frenet_safe_bounds,
-      const std::vector<std::pair<double, double>> &frenet_path_bounds,
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void SampleRoadDistanceInfo(const double &s_target,
@@ -87,16 +115,31 @@ class GeneralLateralDecider : public Task {
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
   void HandleAvoidScene(TrajectoryPoints &traj_points);
   void CalcLateralBehaviorOutput();
+  bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool IsRearObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool IsFilterForStaticObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool IsFilterForDynamicObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool IsAgentPredLonOverlapWithPlanPath(const std::shared_ptr<FrenetObstacle> obstacle);
 
+ private:
   GeneralLateralDeciderConfig config_;
 
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
+  TrajectoryPoints plan_history_traj_;
+  std::unordered_map<int, std::vector<int>> match_index_map_;
+
   ReferencePathPoints ref_path_points_;
+  ObstacleDecisions static_obstacle_decisions_;
+  ObstacleDecisions dynamic_obstacle_decisions_;
+
+  std::vector<WeightedBounds> soft_bounds_;
+  std::vector<WeightedBounds> hard_bounds_;
+
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
-  std::shared_ptr<ReferencePath> cur_reference_path_ptr_;
+  std::shared_ptr<ReferencePath> reference_path_ptr_;
   double cruise_vel_ = 0.0;
   bool is_lane_change_scene_ = false;
   LatDeciderLaneChangeInfo lat_lane_change_info_ =

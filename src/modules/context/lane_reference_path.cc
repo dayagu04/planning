@@ -112,7 +112,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
   auto &lane_points = virtual_lane->lane_points();
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
-
+  const double width = virtual_lane->width();
   ref_path_points.clear();
   auto is_enu_valid = session_->environmental_model().location_valid();
   for (auto &refline_pt : lane_points) {
@@ -131,19 +131,21 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_pt.path_point.theta = refline_pt.car_heading;
     }
     ref_path_pt.path_point.kappa = refline_pt.curvature;
-    ref_path_pt.distance_to_left_lane_border = std::fmin(
-        refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_right_lane_border = std::fmin(
-        refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_left_lane_border = std::fmin(
+    //     refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_right_lane_border = std::fmin(
+    //     refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
     ref_path_pt.distance_to_left_road_border = std::fmin(
         refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_road_border = std::fmin(
         refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
+    ref_path_pt.distance_to_left_lane_border = width * 0.5;
+    ref_path_pt.distance_to_right_lane_border = width * 0.5;
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
     ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type;
-    ref_path_pt.lane_width = refline_pt.lane_width;
+    ref_path_pt.lane_width = width;
     ref_path_pt.max_velocity = refline_pt.speed_limit_max;
     ref_path_pt.min_velocity = refline_pt.speed_limit_min;
     ref_path_pt.type = ReferencePathPointType::MAP;
