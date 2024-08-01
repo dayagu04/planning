@@ -591,6 +591,7 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   const auto& lane_change_decider_output = session_->mutable_planning_context()
                                          ->mutable_lane_change_decider_output();
   const auto& coarse_planning_info = lane_change_decider_output.coarse_planning_info;
+  const double lane_point_match_lateral_dis_threshold = 1.5;
   int last_ego_lane_order_id = 0;
   int current_ego_lane_order_id = last_ego_lane_order_id;
   int order_id_diff = 0;
@@ -599,74 +600,85 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   auto lc_request = lane_change_decider_output.lc_request;
   int target_lane_vitrual_id = lane_change_decider_output.target_lane_virtual_id;
   int target_lane_order_id = 0;
-  int order_and_virtual_diff = 0;
-  double lane_maping_diff_total = std::numeric_limits<double>::max();
+  int origin_lane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
+  int origin_lane_order_id = 0;
+  int target_lane_order_and_virtual_diff = 0;
+  int origin_lane_order_and_virtual_diff = 0;
+  double target_lane_maping_diff_total = std::numeric_limits<double>::max();
+  double origin_lane_maping_diff_total = std::numeric_limits<double>::max();
+  double current_relative_id_lane_mapping_cost = 10.0;
 
   if ((lc_request == LEFT_CHANGE || lc_request == RIGHT_CHANGE) && (lc_state != ROAD_NONE)) {
-    auto iter = virtual_id_mapped_lane_.find(target_lane_vitrual_id);
-    if (iter != virtual_id_mapped_lane_.end()) {
-      auto target_lane_frenet_coord= iter->second->get_lane_frenet_coord();
-      if (target_lane_frenet_coord != nullptr) {
-        for (const auto& relative_id_lane : relative_id_lanes_) {
-          const auto& lane_points = relative_id_lane->lane_points();
-          if (lane_points.size() <= 2) {
-            continue;
-          }
-          int default_point_nums = 30;
-          int point_nums = 0;
-          double lane_mapping_cost = 0.0;
-          double total_lateral_offset = 0.0;
-          int select_lane_point_interval = 3;
-          for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
-            iflyauto::ReferencePoint point = lane_points[i];
-            if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
-              LOG_ERROR("update_lane_points: skip NaN point");
-              continue;
-            }
-            double lateral_offset = 0.0;
-            double ego_s, ego_l;
-            if (!target_lane_frenet_coord->XYToSL(point.local_point.x, point.local_point.y, &ego_s,
-                                      &ego_l)) {
-              lateral_offset = 10.0;
-            } else {
-              lateral_offset = ego_l;
-            }
-            total_lateral_offset += lateral_offset;
-            point_nums += 1;
-            if (point_nums >= default_point_nums) {
-              break;
-            }
-          }
-          lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
-
-          if (lane_mapping_cost < lane_maping_diff_total) {
-            lane_maping_diff_total = lane_mapping_cost;
-            target_lane_order_id = relative_id_lane->get_order_id();
-          }
+    for (const auto& relative_id_lane : relative_id_lanes_) {
+      if (relative_id_lane != nullptr) {
+        current_relative_id_lane_mapping_cost = 
+            ComputeLanesMatchlaterakDisCost(target_lane_vitrual_id, relative_id_lane);
+        if (current_relative_id_lane_mapping_cost < target_lane_maping_diff_total) {
+          target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
+          target_lane_order_id = relative_id_lane->get_order_id();
         }
-        order_and_virtual_diff = target_lane_vitrual_id - target_lane_order_id;
-
-        virtual_id_mapped_lane_.clear();
-        for (auto& lane : relative_id_lanes_) {
-          auto lane_virtual_id = lane->get_order_id() + order_and_virtual_diff;
+      } else {
+        continue;
+      }
+    }
+    if (target_lane_maping_diff_total < lane_point_match_lateral_dis_threshold) {
+      target_lane_order_and_virtual_diff = target_lane_vitrual_id - target_lane_order_id;
+      virtual_id_mapped_lane_.clear();
+      for (auto& lane : relative_id_lanes_) {
+        if (lane != nullptr) {
+          auto lane_virtual_id = lane->get_order_id() + target_lane_order_and_virtual_diff;
           virtual_id_mapped_lane_[lane_virtual_id] = lane;
           lane->set_virtual_id(lane_virtual_id);
           if (lane->get_relative_id() == 0) {
             current_lane_virtual_id_ = lane_virtual_id;
           }
+        } else {
+          continue;
         }
-        return;
+      }
+      return;  
+    }
+
+    // 换道过程中目标车道匹配不成功 则匹配原车道
+    for (const auto& relative_id_lane : relative_id_lanes_) {
+      if (relative_id_lane != nullptr) {
+        current_relative_id_lane_mapping_cost = 
+            ComputeLanesMatchlaterakDisCost(origin_lane_virtual_id, relative_id_lane);
+        if (current_relative_id_lane_mapping_cost < origin_lane_maping_diff_total) {
+          origin_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
+          origin_lane_order_id = relative_id_lane->get_order_id();
+        }
       } else {
-        virtual_id_mapped_lane_.clear();
-        for (auto& lane : relative_id_lanes_) {
-          auto lane_virtual_id = lane->get_relative_id() + current_lane_virtual_id_;
-          virtual_id_mapped_lane_[lane_virtual_id] = lane;
-          lane->set_virtual_id(lane_virtual_id);
-        }
-        return;
+        continue;
       }
     }
-  } 
+
+    if (origin_lane_maping_diff_total < lane_point_match_lateral_dis_threshold) {
+      origin_lane_order_and_virtual_diff = origin_lane_virtual_id - origin_lane_order_id;
+      virtual_id_mapped_lane_.clear();
+      for (auto& lane : relative_id_lanes_) {
+        if (lane != nullptr) {
+          auto lane_virtual_id = lane->get_order_id() + origin_lane_order_and_virtual_diff;
+          virtual_id_mapped_lane_[lane_virtual_id] = lane;
+          lane->set_virtual_id(lane_virtual_id);
+          if (lane->get_relative_id() == 0) {
+            current_lane_virtual_id_ = lane_virtual_id;
+          }
+        } else {
+          continue;
+        }
+      }
+      return;  
+    }
+
+    virtual_id_mapped_lane_.clear();
+    for (auto& lane : relative_id_lanes_) {
+      auto lane_virtual_id = lane->get_relative_id() + current_lane_virtual_id_;
+      virtual_id_mapped_lane_[lane_virtual_id] = lane;
+      lane->set_virtual_id(lane_virtual_id);
+    }
+    return;
+  }
 
   lane_virtual_id = current_lane_virtual_id_;
   // update fixlane id
@@ -2508,5 +2520,50 @@ void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
     }
   }
 }
+
+double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(int virtual_id, const std::shared_ptr<VirtualLane> current_relative_id_lane) {
+  const double default_lane_mapping_cost = 10.0;
+  auto iter = virtual_id_mapped_lane_.find(virtual_id);
+  if (iter != virtual_id_mapped_lane_.end()) {
+    auto target_lane_frenet_coord= iter->second->get_lane_frenet_coord();
+    if (target_lane_frenet_coord != nullptr) {
+      const auto& lane_points = current_relative_id_lane->lane_points();
+      if (lane_points.size() <= 2) {
+        return default_lane_mapping_cost;
+      }
+      int default_point_nums = 30;
+      int point_nums = 0;
+      double lane_mapping_cost = 0.0;
+      double total_lateral_offset = 0.0;
+      int select_lane_point_interval = 3;
+      for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+        iflyauto::ReferencePoint point = lane_points[i];
+        if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
+          LOG_ERROR("update_lane_points: skip NaN point");
+          continue;
+        }
+        double lateral_offset = 0.0;
+        double ego_s, ego_l;
+        if (!target_lane_frenet_coord->XYToSL(point.local_point.x, point.local_point.y, &ego_s,
+                                  &ego_l)) {
+          lateral_offset = 10.0;
+        } else {
+          lateral_offset = ego_l;
+        }
+        total_lateral_offset += lateral_offset;
+        point_nums += 1;
+        if (point_nums >= default_point_nums) {
+          break;
+        }
+      }
+      lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
+      return lane_mapping_cost;
+    } else {
+      return default_lane_mapping_cost;
+    }
+  } else {
+    return default_lane_mapping_cost;
+  }
+} 
 
 }  // namespace planning

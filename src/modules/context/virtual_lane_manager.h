@@ -208,6 +208,8 @@ class VirtualLaneManager {
   LaneChangeStatus is_lane_change();
   void UpdateLaneVirtualId();
 
+  double ComputeLanesMatchlaterakDisCost(int virtual_id, const std::shared_ptr<VirtualLane> current_relative_id_lane);
+
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
                         const ad_common::hdmap::HDMap &hd_map);
