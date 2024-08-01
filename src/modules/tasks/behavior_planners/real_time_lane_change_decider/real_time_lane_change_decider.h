@@ -31,7 +31,7 @@ class RealTimeLaneChangeDecider {
   double get_target_gap_cost() { return target_gap_cost_; }
 
   void update_lc_info(planning::common::LaneChangeInfo *new_lc_info) {
-    lc_info_.Swap(new_lc_info);
+    lc_info_.CopyFrom(*new_lc_info);
   }
 
   void feed_config_and_target_cars(

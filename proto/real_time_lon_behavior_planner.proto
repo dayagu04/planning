@@ -129,6 +129,7 @@ message RealTimeLonBehaviorInput {
   repeated ReferencePathPoint ref_path_points = 12;
   optional bool is_in_intersection = 13;
   optional LongitudinalInitState lon_init_state = 14;
+  optional bool is_continuous_ramp = 15;
 }
 
 // The output of real time lon behavior

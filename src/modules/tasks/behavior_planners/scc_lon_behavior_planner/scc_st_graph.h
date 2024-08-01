@@ -79,8 +79,8 @@ class StGraphGenerator {
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &cut_in_st_info);
 
   bool CalcSpeedWithRamp(double dis_to_ramp, double dis_to_merge,
-                         bool is_on_ramp, double ramp_v_limit,
-                         double acc_to_ramp, double v_ego);
+                         bool is_on_ramp, bool is_continuous_ramp,
+                         double ramp_v_limit, double acc_to_ramp, double v_ego);
 
   bool CalcCruiseAccelLimits(const double v_ego);
 

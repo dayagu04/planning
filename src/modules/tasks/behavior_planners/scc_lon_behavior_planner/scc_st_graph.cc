@@ -126,10 +126,11 @@ void StGraphGenerator::Update(
   double distance_to_ramp = lon_behav_input_->dis_to_ramp();
   double distance_to_merge = lon_behav_input_->dis_to_merge();
   bool is_on_ramp = lon_behav_input_->is_on_ramp();
+  bool is_continuous_ramp = lon_behav_input_->is_continuous_ramp();
   double ramp_v_limit = config_.v_limit_ramp;
   double acc_to_ramp = -1.0;
   CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp,
-                    ramp_v_limit, acc_to_ramp, v_ego);
+                    is_continuous_ramp, ramp_v_limit, acc_to_ramp, v_ego);
 
   // 2. 计算障碍物s-t
   // 2.1 计算leads: lead one, 选择性使用lead two
@@ -579,6 +580,7 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
 
 bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
                                          double dis_to_merge, bool is_on_ramp,
+                                         bool is_continuous_ramp,
                                          double ramp_v_limit,
                                          double acc_to_ramp, double v_ego) {
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
@@ -586,10 +588,11 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   double v_target_ramp = 40;
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
-    if (dis_to_merge > 50) {
+    if (dis_to_merge > 50 || is_continuous_ramp) {
       v_target_ramp = ramp_v_limit;
     }
     v_target_ = std::min(v_target_ramp, v_target_);
+    v_limit_on_ramp_ = v_target_ramp;
     LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
     JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
@@ -1496,20 +1499,20 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
           front_obs, v_limit_lc_, safe_distance_lc_front,
           lc_front_desired_distance, true);
 
-      common::RealTimeLonObstacleSTInfo lc_gap_front_st_info;
-      lc_gap_front_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
-      lc_gap_front_st_info.set_id(gap.front_id);
-      lc_gap_front_st_info.set_a_lead(0.0);
-      lc_gap_front_st_info.set_v_lead(gap.v_front);
-      lc_gap_front_st_info.set_s_lead(gap.s_front);
-      lc_gap_front_st_info.set_desired_distance(
-          lc_front_desired_distance_filtered);
-      lc_gap_front_st_info.set_desired_velocity(v_limit_lc_);
-      lc_gap_front_st_info.set_safe_distance(safe_distance_lc_front);
-      lc_gap_front_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
-      lc_gap_front_st_info.set_end_time(5.0);  // TBD:使用可配置参数
-      lc_gap_front_st_info.set_start_s(gap.s_front);
-      lane_change_st_info.emplace_back(lc_gap_front_st_info);
+      // common::RealTimeLonObstacleSTInfo lc_gap_front_st_info;
+      // lc_gap_front_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
+      // lc_gap_front_st_info.set_id(gap.front_id);
+      // lc_gap_front_st_info.set_a_lead(0.0);
+      // lc_gap_front_st_info.set_v_lead(gap.v_front);
+      // lc_gap_front_st_info.set_s_lead(gap.s_front);
+      // lc_gap_front_st_info.set_desired_distance(
+      //     lc_front_desired_distance_filtered);
+      // lc_gap_front_st_info.set_desired_velocity(v_limit_lc_);
+      // lc_gap_front_st_info.set_safe_distance(safe_distance_lc_front);
+      // lc_gap_front_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
+      // lc_gap_front_st_info.set_end_time(5.0);  // TBD:使用可配置参数
+      // lc_gap_front_st_info.set_start_s(gap.s_front);
+      // lane_change_st_info.emplace_back(lc_gap_front_st_info);
 
       double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc_, gap.v_rear);
       double lc_rear_desired_distance = GetCalibratedDistance(
@@ -1525,22 +1528,22 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
           rear_obs, v_limit_lc_, safe_distance_lc_rear,
           lc_rear_desired_distance, false);
 
-      common::RealTimeLonObstacleSTInfo lc_gap_rear_st_info;
-      lc_gap_rear_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
-      lc_gap_rear_st_info.set_decision(
-          common::RealTimeLonObstacleSTInfo::OVERTAKE);
-      lc_gap_rear_st_info.set_id(gap.rear_id);
-      lc_gap_rear_st_info.set_a_lead(0.0);
-      lc_gap_rear_st_info.set_v_lead(gap.v_rear);
-      lc_gap_rear_st_info.set_s_lead(gap.s_rear);
-      lc_gap_rear_st_info.set_desired_distance(
-          lc_rear_desired_distance_filtered);
-      lc_gap_rear_st_info.set_desired_velocity(v_limit_lc_);
-      lc_gap_rear_st_info.set_safe_distance(safe_distance_lc_rear);
-      lc_gap_rear_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
-      lc_gap_rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
-      lc_gap_rear_st_info.set_start_s(gap.s_rear);
-      lane_change_st_info.emplace_back(lc_gap_rear_st_info);
+      // common::RealTimeLonObstacleSTInfo lc_gap_rear_st_info;
+      // lc_gap_rear_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
+      // lc_gap_rear_st_info.set_decision(
+      //     common::RealTimeLonObstacleSTInfo::OVERTAKE);
+      // lc_gap_rear_st_info.set_id(gap.rear_id);
+      // lc_gap_rear_st_info.set_a_lead(0.0);
+      // lc_gap_rear_st_info.set_v_lead(gap.v_rear);
+      // lc_gap_rear_st_info.set_s_lead(gap.s_rear);
+      // lc_gap_rear_st_info.set_desired_distance(
+      //     lc_rear_desired_distance_filtered);
+      // lc_gap_rear_st_info.set_desired_velocity(v_limit_lc_);
+      // lc_gap_rear_st_info.set_safe_distance(safe_distance_lc_rear);
+      // lc_gap_rear_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
+      // lc_gap_rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
+      // lc_gap_rear_st_info.set_start_s(gap.s_rear);
+      // lane_change_st_info.emplace_back(lc_gap_rear_st_info);
     } else {
       // decelerate to check next interval
       auto nearest_rear_car = lane_changing_decider_->nearest_rear_car_track();
