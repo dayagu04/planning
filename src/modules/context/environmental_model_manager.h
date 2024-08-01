@@ -78,6 +78,10 @@ class EnvironmentalModelManager {
   EgoPlanningConfigBuilder *load_config_builder(const char *file_name);
   void RunBlinkState(
       const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info);
+  bool CheckIfOversizeVehicle(const int type);
+  bool CheckIfVru(const int type);
+  bool CheckIfTrafficFacilities(const int type);
+  bool CheckIfCar(const int type);
 
  private:
   planning::framework::Session *session_ = nullptr;
