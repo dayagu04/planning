@@ -130,9 +130,12 @@ bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
   // pipeline test
   return true;
 }
-double GeneralLateralDecider::CalCruiseVelByCurvature(
-    const double ego_v, const std::vector<double> &d_poly) {
-  double cruise_v = session_->planning_context().v_ref_cruise();
+
+bool GeneralLateralDecider::CalCruiseVelByCurvature(
+    const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
+  if (session_->environmental_model().get_virtual_lane_manager()->get_is_exist_ramp_on_road()) {
+    return false;
+  }
   const double preview_length = 5.0;
   const double preview_step = 1.0;
   double aver_close_kappa = 0.0;
@@ -165,14 +168,19 @@ double GeneralLateralDecider::CalCruiseVelByCurvature(
       double road_radius = close_kappa_radius < far_kappa_radius
                                ? close_kappa_radius
                                : far_kappa_radius;
-      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 650.0};
-      std::array<double, 4> fp_acc{1.8, 1.4, 1.0, 0.8};
+      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
+      std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
       double acc_max = interp(road_radius, xp_radius, fp_acc);
       cruise_v = std::min(
           std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
+      return true;
     }
   }
-  return cruise_v;
+  if ((config_.ramp_limit_v_valid) && (session_->environmental_model().get_virtual_lane_manager()->is_on_ramp())) {
+    cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
+    return true;
+  }
+  return false;
 }
 
 void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
@@ -185,6 +193,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+
+  bool limit_ref_vel_on_ramp_valid = false;
   if (config_.lateral_ref_traj_type ||
       ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
         coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
@@ -199,7 +209,10 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     const double kMaxAcc = 2;
     const double kMinAcc = -5.5;
     double ego_v = planning_init_point.v;
-    double cruise_v = CalCruiseVelByCurvature(ego_v, flane->get_center_line());
+    double cruise_v = session_->planning_context().v_ref_cruise();
+    if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
+      limit_ref_vel_on_ramp_valid = true;
+    }
     double s = 0.0;
     double span_t = config_.delta_t * config_.num_step;
     if (ego_v < cruise_v) {
@@ -261,7 +274,11 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-
+  if (limit_ref_vel_on_ramp_valid) {
+    general_lateral_decider_output.ramp_scene = true;
+  } else {
+    general_lateral_decider_output.ramp_scene = false;
+  }
   if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
        coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
        coarse_planning_info.target_state == ROAD_LC_LBACK ||
