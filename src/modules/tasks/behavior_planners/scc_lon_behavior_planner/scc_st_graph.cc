@@ -85,7 +85,6 @@ void StGraphGenerator::Update(
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double acc_ego = lon_behav_input_->ego_info().ego_acc();
   double steer_angle_ego = lon_behav_input_->ego_info().ego_steer_angle();
-  // lon_init_state_ = {0, v_ego, acc_ego};
   lon_init_state_[0] = lon_behav_input_->lon_init_state().s();
   lon_init_state_[1] = lon_behav_input_->lon_init_state().v();
   lon_init_state_[2] = lon_behav_input_->lon_init_state().a();
