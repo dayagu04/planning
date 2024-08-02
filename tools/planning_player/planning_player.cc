@@ -43,6 +43,8 @@ static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
+static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
+
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
                           const std::string& scene_type, bool no_debug) {
   std::cout << "===========planning player init, is_close_loop="
@@ -284,6 +286,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
     } else if (msg.getTopic() == TOPIC_GROUND_LINE) {
       cache_with_ros_msg_and_header_time<struct_msgs::GroundLinePerceptionInfo>(
           msg);
+    } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
+      new_bag.write(msg.getTopic(), msg.getTime(), msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.getTopic() << std::endl;
     }
