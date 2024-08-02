@@ -1522,10 +1522,21 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   //TODO(fengwang31):是否需要考虑merge的方向
   const auto& merge_info = sd_map.GetMergeInfoList(current_segment->id(),nearest_s,max_search_length);
   if (!merge_info.empty()) {
+    const auto seg_of_first_road_merge = merge_info.begin()->first;
+    const auto next_seg_of_first_road_merge =
+        sd_map.GetNextRoadSegment(merge_info.begin()->first->id());
+
     if (merge_info.begin()->second > 0) {
       distance_to_first_road_merge_ = merge_info.begin()->second;
     } else {
       distance_to_first_road_merge_ = NL_NMAX;
+    }
+
+    if (next_seg_of_first_road_merge != nullptr) {
+      if (seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP &&
+        next_seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP) {
+      is_continuous_ramp_ = true;
+    }
     }
   } else {
     distance_to_first_road_merge_ = NL_NMAX;

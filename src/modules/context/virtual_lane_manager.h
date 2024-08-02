@@ -192,10 +192,11 @@ class VirtualLaneManager {
   const double sum_dis_to_last_merge_point() const {return sum_dis_to_last_merge_point_;}
 
   bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
-  
+
   const double dis_threshold_to_last_merge_point() const{
     return dis_threshold_to_last_merge_point_;
   }
+  bool is_continuous_ramp() const { return is_continuous_ramp_; }
 
   bool is_local_valid() const { return is_local_valid_; }
 
@@ -293,6 +294,7 @@ class VirtualLaneManager {
   bool is_nearing_ramp_ = false;
   bool is_on_ramp_ = false;
   bool is_on_highway_ = false;
+  bool is_continuous_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   bool in_intersection_ = false;
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
