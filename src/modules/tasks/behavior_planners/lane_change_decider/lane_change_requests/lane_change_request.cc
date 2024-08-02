@@ -1,4 +1,5 @@
 #include "lane_change_request.h"
+#include "common_c.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "lateral_obstacle.h"
@@ -459,8 +460,10 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     if (left_lane_boundarys.type_segments[0].type ==
         iflyauto::LaneBoundaryType_MARKING_SOLID && 
         ego_s > left_lane_boundarys.type_segments[0].length &&
-        left_lane_boundarys.type_segments[1].type ==
-        iflyauto::LaneBoundaryType_MARKING_DASHED) {
+        ((left_lane_boundarys.type_segments[1].type ==
+        iflyauto::LaneBoundaryType_MARKING_DASHED) ||
+        (left_lane_boundarys.type_segments[1].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL))) {
       first_solid_second_dashed = true;
     }
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
@@ -488,8 +491,10 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     if (right_lane_boundarys.type_segments[0].type ==
         iflyauto::LaneBoundaryType_MARKING_SOLID && 
         ego_s > right_lane_boundarys.type_segments[0].length &&
-        right_lane_boundarys.type_segments[1].type ==
-        iflyauto::LaneBoundaryType_MARKING_DASHED) {
+        ((right_lane_boundarys.type_segments[1].type ==
+        iflyauto::LaneBoundaryType_MARKING_DASHED) ||
+        (right_lane_boundarys.type_segments[1].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL)))  {
       first_solid_second_dashed = true;
     }
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
