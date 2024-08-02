@@ -47,10 +47,10 @@ static const size_t kMaxParallelShiftNums = 6;
 
 static const double kCornerSafeBufferWithChannel = 0.2;
 static const double kMaxHeadingFirstStepForwardLine = 5.0;
-static const double kMaxFirstStepForwardInclinedLineLength = 0.4;
+static const double kMaxFirstStepForwardInclinedLineLength = 1.0;
 static const double kFirstStepForwardLineLonBuffer = 0.26;
 static const double kFirstStepArcLatBuffer = 0.12;
-static const double kControlLonError = 0.15;
+static const double kControlLonError = 0.35;
 
 static const double kMinTlaneAddedLength = 0.8;
 
@@ -285,25 +285,29 @@ const bool ParallelPathPlanner::PlanFromTargetToLine(
 
     const auto ego_line_gear = pnc::geometry_lib::CalLineSegGear(ego_line);
 
-    // make sure first line step length are more than min_leng during dirve gear
-    // but not too long
-    if (input_.is_replan_first &&
-        ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      const double heading_mag_deg = std::fabs(start_pose.heading) * 57.3;
-
-      if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
-          ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
-        DEBUG_PRINT("ego heading = " << heading_mag_deg);
-        DEBUG_PRINT("ego length = " << ego_line.length);
-        continue;
-      }
-
+    if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
       // prolong the path during preparation, or will not calc success
       // during normal backward step if ego stops early
       const Eigen::Vector2d v_ego =
           pnc::geometry_lib::GenHeadingVec(ego_line.heading);
 
-      ego_line.SetPoints(ego_line.pA, ego_line.pB + kControlLonError * v_ego);
+      if (ego_line.length < 0.35) {
+        ego_line.SetPoints(ego_line.pA, ego_line.pA + kControlLonError * v_ego);
+      }
+
+      // make sure first line step length are more than min_leng during dirve
+      // gear
+      // but not too long
+      if (input_.is_replan_first) {
+        const double heading_mag_deg = std::fabs(start_pose.heading) * 57.3;
+
+        if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
+            ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+          DEBUG_PRINT("ego heading = " << heading_mag_deg);
+          DEBUG_PRINT("ego length = " << ego_line.length);
+          continue;
+        }
+      }
     }
 
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.15));
@@ -395,12 +399,12 @@ const bool ParallelPathPlanner::PlanFromTargetToLine(
       DEBUG_PRINT("ego_line_gear = " << static_cast<int>(ego_line_gear));
 
       if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-          ego_line_in_channel.length < 0.15) {
+          ego_line_in_channel.length < 0.25) {
         const auto v_extend =
             (ego_line_in_channel.pB - ego_line_in_channel.pA).normalized();
 
         ego_line_in_channel.SetPoints(ego_line_in_channel.pA,
-                                      ego_line_in_channel.pB + 0.2 * v_extend);
+                                      ego_line_in_channel.pA + 0.25 * v_extend);
       }
       path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
           pnc::geometry_lib::CalLineSegGear(ego_line_in_channel),

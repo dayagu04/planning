@@ -144,7 +144,7 @@
   "line_arc_obs_channel_length": 5.086,
   "dynamic_col_det_enable": true,
   "parallel_obs2slot_max_dist": 16.66,
-  "parallel_channel_y_mag": 6.2,
+  "parallel_channel_y_mag": 7.9,
   "parallel_channel_x_mag": 20.0,
   "parallel_ego_side_to_obs_in_buffer": 0.25,
   "parallel_ego_front_corner_to_obs_in_buffer": 0.1,

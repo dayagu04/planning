@@ -43,7 +43,7 @@ static double kCurbYMagIdentification = 0.0;
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
 static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 
-static double kMinChannelYMagIdentification = 2.1;
+static double kMinChannelYMagIdentification = 3.3;
 
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
@@ -297,15 +297,14 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
       << std::cos(ego_slot_info.ego_heading_slot),
       std::sin(ego_slot_info.ego_heading_slot);
 
-  // Todo: use limiter to determine the practical target pose
-
-  // calc terminal pos
-  const double terminal_x =
-      apa_param.GetParam().rear_overhanging +
-      apa_param.GetParam().finish_parallel_rear_stop_buffer;
+  // calc terminal pos, try best to stop in the middle of slot
+  const double terminal_x = 0.5 * ego_slot_info.slot_length -
+                            0.5 * apa_param.GetParam().car_length +
+                            apa_param.GetParam().rear_overhanging;
 
   const double slot_side_sgn =
       t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0;
+
   const double terminal_y =
       slot_side_sgn * apa_param.GetParam().terminal_parallel_y_offset;
 
@@ -355,7 +354,7 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.obs_pt_vec_slot.clear();
 
   for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
-    if ((obs_pt_global - slot_center).norm() > 10.0) {
+    if ((obs_pt_global - slot_center).norm() > 12.0) {
       continue;
     }
 
@@ -679,68 +678,73 @@ void ParallelParInPlanner::GenTlane() {
   }
 
   // for terminal pose: get accurate target x combining with obs tlane
-  const double front_obs_x = t_lane_.obs_pt_inside.x();
-  const double rear_obs_x = t_lane_.obs_pt_outside.x();
-  const double front_corner_x = t_lane_.corner_inside_slot.x();
-  const double rear_corner_x = t_lane_.corner_outside_slot.x();
+  // const double front_obs_x = t_lane_.obs_pt_inside.x();
+  // const double rear_obs_x = t_lane_.obs_pt_outside.x();
+  // const double front_corner_x = t_lane_.corner_inside_slot.x();
+  // const double rear_corner_x = t_lane_.corner_outside_slot.x();
 
   const double rac_to_geom_center = 0.5 * apa_param.GetParam().car_length -
                                     apa_param.GetParam().rear_overhanging;
 
   const double target_x_in_slot_center =
-      (front_corner_x + rear_corner_x) * 0.5 - rac_to_geom_center;
+      0.5 * frame_.ego_slot_info.slot_length - rac_to_geom_center;
 
-  const double stop_buffer =
-      apa_param.GetParam().finish_parallel_rear_stop_buffer;
+  // const double target_x_in_slot_center =
+  //     (front_corner_x + rear_corner_x) * 0.5 - rac_to_geom_center;
 
-  const double ego_front_x = target_x_in_slot_center +
-                             apa_param.GetParam().wheel_base +
-                             apa_param.GetParam().front_overhanging;
-  const double ego_rear_x =
-      target_x_in_slot_center - apa_param.GetParam().rear_overhanging;
+  // const double stop_buffer =
+  //     apa_param.GetParam().finish_parallel_rear_stop_buffer;
 
-  DEBUG_PRINT("terminal debug --------------------------------");
-  DEBUG_PRINT("target_x_in_slot_center =" << target_x_in_slot_center);
+  // const double ego_front_x = target_x_in_slot_center +
+  //                            apa_param.GetParam().wheel_base +
+  //                            apa_param.GetParam().front_overhanging;
+  // const double ego_rear_x =
+  //     target_x_in_slot_center - apa_param.GetParam().rear_overhanging;
 
-  const bool is_front_exceeded = ego_front_x > front_obs_x - stop_buffer;
-  const bool is_rear_exceeded = ego_rear_x < rear_obs_x + stop_buffer;
+  // DEBUG_PRINT("terminal debug --------------------------------");
+  // DEBUG_PRINT("target_x_in_slot_center =" << target_x_in_slot_center);
 
-  double target_x = target_x_in_slot_center;
-  if (is_front_exceeded && is_rear_exceeded) {
-    DEBUG_PRINT("both sides exceed!");
-    target_x = (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
-  } else if (is_front_exceeded && !is_rear_exceeded) {
-    DEBUG_PRINT("front exceeded, rear safe!");
-    const double target_x_via_front_obs =
-        front_obs_x - apa_param.GetParam().wheel_base -
-        apa_param.GetParam().front_overhanging - stop_buffer;
+  // const bool is_front_exceeded = ego_front_x > front_obs_x - stop_buffer;
+  // const bool is_rear_exceeded = ego_rear_x < rear_obs_x + stop_buffer;
 
-    const double target_x_via_obs_corner =
-        (front_obs_x + rear_corner_x) * 0.5 - rac_to_geom_center;
-    target_x = std::min(target_x_via_front_obs, target_x_via_obs_corner);
+  // double target_x = target_x_in_slot_center;
+  // if (is_front_exceeded && is_rear_exceeded) {
+  //   DEBUG_PRINT("both sides exceed!");
+  //   target_x = (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
+  // } else if (is_front_exceeded && !is_rear_exceeded) {
+  //   DEBUG_PRINT("front exceeded, rear safe!");
+  //   const double target_x_via_front_obs =
+  //       front_obs_x - apa_param.GetParam().wheel_base -
+  //       apa_param.GetParam().front_overhanging - stop_buffer;
 
-    const double target_x_via_obs_center =
-        (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
+  //   const double target_x_via_obs_corner =
+  //       (front_obs_x + rear_corner_x) * 0.5 - rac_to_geom_center;
+  //   target_x = std::min(target_x_via_front_obs, target_x_via_obs_corner);
 
-    target_x = std::max(target_x, target_x_via_obs_center);
+  //   const double target_x_via_obs_center =
+  //       (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
 
-  } else if (!is_front_exceeded && is_rear_exceeded) {
-    DEBUG_PRINT("rear exceeded, front safe!");
-    const double target_x_via_rear_obs =
-        rear_obs_x + apa_param.GetParam().rear_overhanging + stop_buffer;
-    const double target_x_via_corner_obs =
-        (front_corner_x + rear_obs_x) * 0.5 - rac_to_geom_center;
+  //   target_x = std::max(target_x, target_x_via_obs_center);
 
-    target_x = std::max(target_x_via_rear_obs, target_x_via_corner_obs);
+  // } else if (!is_front_exceeded && is_rear_exceeded) {
+  //   DEBUG_PRINT("rear exceeded, front safe!");
+  //   const double target_x_via_rear_obs =
+  //       rear_obs_x + apa_param.GetParam().rear_overhanging + stop_buffer;
+  //   const double target_x_via_corner_obs =
+  //       (front_corner_x + rear_obs_x) * 0.5 - rac_to_geom_center;
 
-    const double target_x_via_obs_center =
-        (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
-    target_x = std::min(target_x, target_x_via_obs_center);
-  } else {
-    DEBUG_PRINT("both sides safe");
-    target_x = target_x_in_slot_center;
-  }
-  frame_.ego_slot_info.target_ego_pos_slot.x() = target_x;
+  //   target_x = std::max(target_x_via_rear_obs, target_x_via_corner_obs);
+
+  //   const double target_x_via_obs_center =
+  //       (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
+  //   target_x = std::min(target_x, target_x_via_obs_center);
+  // } else {
+  //   DEBUG_PRINT("both sides safe");
+  //   target_x = target_x_in_slot_center;
+  // }
+  // frame_.ego_slot_info.target_ego_pos_slot.x() = target_x;
+
+  frame_.ego_slot_info.target_ego_pos_slot.x() = target_x_in_slot_center;
 
   t_lane_.pt_terminal_pos = frame_.ego_slot_info.target_ego_pos_slot;
 
@@ -919,24 +923,28 @@ void ParallelParInPlanner::GenObstacles() {
     //         obstacle_point_slot.y(),
     //         kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
     //         t_lane_.channel_y));
+
     const bool channel_y_condition =
-        (obstacle_point_slot.x() > t_lane_.slot_length) &&
-        (obstacle_point_slot.x() < t_lane_.slot_length + 6.0) &&
-        (pnc::mathlib::IsInBound(
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                t_lane_.corner_outside_slot.x(),
+                                t_lane_.slot_length + 12.0) &&
+        pnc::mathlib::IsInBound(
             obstacle_point_slot.y(),
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
-            t_lane_.channel_y));
+            t_lane_.channel_y);
 
     if (channel_y_condition) {
-      if (t_lane_.slot_side_sgn > 0.0) {
-        channel_obs_lim = std::min(obstacle_point_slot.y(), channel_obs_lim);
-      } else {
-        channel_obs_lim = std::max(obstacle_point_slot.y(), channel_obs_lim);
-      }
-      DEBUG_PRINT("channel to pt_y = " << std::fabs(obstacle_point_slot.y() -
-                                                    t_lane_.obs_pt_inside.y()));
       apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
           obstacle_point_slot);
+
+      if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
+                                  t_lane_.slot_length + 3.0)) {
+        if (t_lane_.slot_side_sgn > 0.0) {
+          channel_obs_lim = std::min(obstacle_point_slot.y(), channel_obs_lim);
+        } else {
+          channel_obs_lim = std::max(obstacle_point_slot.y(), channel_obs_lim);
+        }
+      }
     }
   }
   DEBUG_PRINT("pre channel y = " << t_lane_.channel_y);
@@ -1079,19 +1087,19 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   parallel_path_planner_.SetCurrentPathSegIndex();
   // parallel_path_planner_.SetLineSegmentHeading();
 
-  if (frame_.ego_slot_info.slot_occupied_ratio < 0.05 &&
-      frame_.is_replan_first &&
-      frame_.ego_slot_info.ego_pos_slot.x() < t_lane_.obs_pt_inside.x() + 1.0) {
-    const double extend_lenth = 0.25;
-    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-        extend_lenth);
-  }
+  // if (frame_.ego_slot_info.slot_occupied_ratio < 0.05 &&
+  //     frame_.is_replan_first &&
+  //     frame_.ego_slot_info.ego_pos_slot.x() < t_lane_.obs_pt_inside.x() + 1.0) {
+  //   const double extend_lenth = 0.25;
+  //   parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+  //       extend_lenth);
+  // }
 
-  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
-    const double extend_lenth = 0.15;
-    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-        extend_lenth);
-  }
+  // if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+  //   const double extend_lenth = 0.15;
+  //   parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+  //       extend_lenth);
+  // }
   parallel_path_planner_.SampleCurrentPathSeg();
 
   // print segment info
