@@ -601,7 +601,8 @@ class LoadRosbag:
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
-                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway"]
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
+                         "is_leaving_ramp","is_nearing_ramp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 
@@ -772,7 +773,7 @@ class LoadRosbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap_info"):
         sdmap = SdMap()
         sdmap.ParseFromString(msg.debug_info)
-        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e3] = sdmap
+        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e6] = sdmap
       ehr_sd_map_msg_dict = {key: val for key, val in sorted(ehr_sd_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_sd_map_msg_dict.items():
         self.ehr_sd_map_msg['t'].append(t)
