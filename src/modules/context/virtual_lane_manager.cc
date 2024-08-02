@@ -1566,7 +1566,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
         sum_dis_to_last_merge_point = sum_dis_to_last_merge_point + last_merge_seg->dis();
       }
     }
-    if (sum_dis_to_last_merge_point > pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_) {
+    if (sum_dis_to_last_merge_point > dis_threshold_to_last_merge_point_) {
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
     sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;

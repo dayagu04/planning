@@ -46,8 +46,8 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
   std::array<double, 3> fp{500.0, 800.0, 1200.0};
   const double sum_dis_to_last_merge_point = virtual_lane_mgr_->sum_dis_to_last_merge_point();
-  const double pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane = virtual_lane_mgr_->pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane();
-  if (sum_dis_to_last_merge_point < pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane) {
+  const double dis_threshold_to_last_merge_point = virtual_lane_mgr_->dis_threshold_to_last_merge_point();
+  if (sum_dis_to_last_merge_point < dis_threshold_to_last_merge_point) {
     fp = {300.0, 500.0, 800.0};
   }
   double adaptor_interval = interp(v_limit, xp, fp);

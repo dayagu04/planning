@@ -189,8 +189,8 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
   
-  const double pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane() const{
-    return pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_;
+  const double dis_threshold_to_last_merge_point() const{
+    return dis_threshold_to_last_merge_point_;
   }
 
   bool is_local_valid() const { return is_local_valid_; }
@@ -309,7 +309,7 @@ class VirtualLaneManager {
   bool is_exist_ramp_on_road_ = false;
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
-  const double pass_merge_point_dis_threshold_for_ramp_lane_merge_to_road_lane_ = 800.0;
+  const double dis_threshold_to_last_merge_point_ = 800.0;
 };
 }  // namespace planning
 #endif
