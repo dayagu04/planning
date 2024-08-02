@@ -149,6 +149,10 @@ class VirtualLaneManager {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
+  double get_distance_to_route_end () {
+    return distance_to_route_end_;
+  }
+
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
   double get_distance_to_final_dash_line(const RequestType direction,
@@ -196,6 +200,7 @@ class VirtualLaneManager {
   bool is_local_valid() const { return is_local_valid_; }
 
   bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
+
   bool is_reached_hpp_start_point() const {
     return is_reached_hpp_start_point_;
   }
