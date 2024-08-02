@@ -384,8 +384,8 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
   if ((lateral_offset_decider::HasOverlap(session_, avoid_obstacle_1, 0, 0) &&
        lateral_offset_decider::HasOverlap(session_, avoid_obstacle_2, 0, 0)) ||
       (!is_side_way &&
-       !(lateral_offset_decider::IsTruck(avoid_obstacle_1) ||
-         lateral_offset_decider::IsTruck(avoid_obstacle_2)) &&
+      //  !(lateral_offset_decider::IsTruck(avoid_obstacle_1) ||
+      //    lateral_offset_decider::IsTruck(avoid_obstacle_2)) &&
        lateral_offset_decider::HasEnoughSpace(avoid_obstacle_1,
                                               avoid_obstacle_2))) {
     // it has enough space to go through the center
