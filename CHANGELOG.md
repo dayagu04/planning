@@ -1,3 +1,16 @@
+# planning.2.4.7
+####  修改说明
+1. 变道结束前1s使用avoid offset
+2. 打开起步模式下低速重规划（仅起步模式生效）
+3. APA decide static flag from local pose and vel
+4. 新增静态障碍物避让
+5. 新增静态障碍物预减速
+6. 新增道路边缘bound
+7. 新增障碍物bound(关闭状态)
+8. 场景抑制主动变道
+9. 新增连续匝道的判断，防止自车在连续匝道场景，先加速后减速的问题
+10. lane change wait状态下，gap不作为bound引入
+
 # planning.2.4.6
 ####  修改说明
 1. 完善导航地图变道
