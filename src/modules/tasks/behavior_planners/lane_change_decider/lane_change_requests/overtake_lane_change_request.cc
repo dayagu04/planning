@@ -383,7 +383,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "[OvertakeRequest::update] Ask for overtake changing lane to left "
           "\n");
     }
-    if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
+    if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, clane) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
         (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
          (lc_status == ROAD_LC_LBACK &&
@@ -409,7 +409,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "[OvertakeRequest::update] Ask for overtake changing lane to right "
           "\n");
     }
-    if (!IsDashedLineEnough(RIGHT_CHANGE, v_ego, virtual_lane_mgr_) &&
+    if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, clane) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
         (lc_status == ROAD_NONE || lc_status == ROAD_LC_RWAIT ||
          (lc_status == ROAD_LC_RBACK &&

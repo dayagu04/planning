@@ -54,8 +54,7 @@ void EnvironmentalModel::UpdateSdMap(const LocalView &local_view) {
       local_view.sd_map_info.header().timestamp();
   if (sd_map_info_current_timestamp != sd_map_info_updated_timestamp_) {
     ad_common::sdmap::SDMap sd_map_temp;
-    const int res =
-        sd_map_temp.LoadMapFromProto(local_view.sd_map_info);
+    const int res = sd_map_temp.LoadMapFromProto(local_view.sd_map_info);
     if (res == 0) {
       sd_map_ = std::move(sd_map_temp);
       sdmap_valid_ = true;

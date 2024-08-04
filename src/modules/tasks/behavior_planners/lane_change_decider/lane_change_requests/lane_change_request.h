@@ -37,6 +37,9 @@ class LaneChangeRequest {
   double tstart() const { return tstart_; }
   double tfinish() const { return tfinish_; }
   bool compute_lc_valid_info(RequestType direction);
+  bool IsDashEnoughForRepeatSegments(
+    const RequestType lc_request,
+    const std::shared_ptr<VirtualLane> current_lane) const;
 
  protected:
   TrackInfo lc_invalid_track_;

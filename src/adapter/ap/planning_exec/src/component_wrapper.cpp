@@ -83,8 +83,7 @@ void ComponentWrapper::InitClient() {
                               FeedLocalizationEstimateOutput,
                               LocalizationEstimate);
       REGISTER_CLIENT_HANDLER("IflytekLocalizationEgomotion",
-                              FeedLocalizationOutput,
-                              IFLYLocalization);
+                              FeedLocalizationOutput, IFLYLocalization);
       REGISTER_CLIENT_HANDLER("IflytekPredictionPredictionResult",
                               FeedPredictionResult, PredictionResult);
       REGISTER_CLIENT_HANDLER("IflytekVehicleService", FeedVehicleService,
@@ -103,10 +102,9 @@ void ComponentWrapper::InitClient() {
                               UssPerceptInfo);
 
       SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
-                  << "RegisterEvent: "<<portName;
+          << "RegisterEvent: " << portName;
       if (portName == "IflytekEhrSdmapInfo") {
-        SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
-                  << "EEEEEE "<<portName;
+        SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError() << "EEEEEE " << portName;
         clientPtr->RegisterEventNotifyHandler(
             [this](const struct_container::eventDataType &data) {
               SPL_LOG_SPACE::GetLoggerIns("SPL")->LogInfo()

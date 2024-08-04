@@ -23,7 +23,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-
+fig1.height = 1350
 # init pybind
 lateral_motion_planning_py.Init()
 
@@ -150,6 +150,9 @@ class LocalViewSlider:
     self.motion_plan_concerned_end_index = ipywidgets.IntText(value=lat_motion_plan_input0.motion_plan_concerned_index, description='motion_plan_concerned_end_index:')
     self.q_start_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_start_jerk",min=0.0, max=1000.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
     self.curv_factor_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "curv_factor",min=0.0, max=1.0, value=lat_motion_plan_input0.curv_factor, step=0.01)
+    self.end_ratio_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio",min=0.0, max=10.0, value=0.3, step=0.1)
+    self.end_ratio2_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio2",min=0.0, max=10.0, value=1.5, step=0.1)
+    self.max_iter_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "max_iter",min=0, max=10, value=10, step=1)
 
     self.safe_ub_start_idx = ipywidgets.IntText(value=0, description='safe_ub_start_idx:')
     self.safe_ub_end_idx = ipywidgets.IntText(value=26, description='safe_ub_end_idx:')
@@ -194,13 +197,16 @@ class LocalViewSlider:
                                          motion_plan_concerned_start_index = self.motion_plan_concerned_start_index,
                                          motion_plan_concerned_end_index = self.motion_plan_concerned_end_index,
                                          q_start_jerk = self.q_start_jerk_slider,
-                                         curv_factor = self.curv_factor_slider)
+                                         curv_factor = self.curv_factor_slider,
+                                         end_ratio = self.end_ratio_slider,
+                                         end_ratio2 = self.end_ratio2_slider,
+                                         max_iter = self.max_iter_slider)
 
 
 ### sliders callback
 def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
                     upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
-                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor):
+                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, end_ratio, end_ratio2, max_iter):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_tune_lat_plan_data(fig7, bag_loader, bag_time, bag_time + bag_dt, local_view_data, lat_plan_data, ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu)
@@ -313,7 +319,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
     lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound,
                                               ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
                                               safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
-                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 5.0))
+                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 5.0), end_ratio, end_ratio2, max_iter)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()

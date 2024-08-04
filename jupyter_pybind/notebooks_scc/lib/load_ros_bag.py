@@ -120,6 +120,8 @@ class LoadRosbag:
     self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
     self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
+    self.lane_topo_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
     # time offset
     t0 = 0
 
@@ -323,12 +325,12 @@ class LoadRosbag:
     try:
       rdg_lane_lines_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_lines"):
-        rdg_lane_lines_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        rdg_lane_lines_msg_dict[msg.isp_timestamp / 1e6] = msg
       # rdg_lane_lines_msg_dict = {key: val for key, val in sorted(rdg_lane_lines_msg_dict.items(), key = lambda ele: ele[0])}
       sorted_rdg_lane_lines_msg_dict = OrderedDict(sorted(rdg_lane_lines_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_rdg_lane_lines_msg_dict.items():
         self.rdg_lane_lines_msg['t'].append(t)
-        self.rdg_lane_lines_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.rdg_lane_lines_msg['timestamp'].append(msg.isp_timestamp)
         self.rdg_lane_lines_msg['data'].append(msg)
       self.rdg_lane_lines_msg['t'] = [tmp - t0  for tmp in self.rdg_lane_lines_msg['t']]
       print('rdg_lane_lines_msg time:',self.rdg_lane_lines_msg['t'][-1])
@@ -340,6 +342,25 @@ class LoadRosbag:
       self.rdg_lane_lines_msg['enable'] = False
       print('missing /iflytek/camera_perception/lane_lines topic !!!')
 
+    # load lane_topo
+    try:
+      lane_topo_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_topo"):
+        lane_topo_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+      sorted_lane_topo_msg_dict = OrderedDict(sorted(lane_topo_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_lane_topo_msg_dict.items():
+        self.lane_topo_msg['t'].append(t)
+        self.lane_topo_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.lane_topo_msg['data'].append(msg)
+      self.lane_topo_msg['t'] = [tmp - t0  for tmp in self.lane_topo_msg['t']]
+      print('lane_topo_msg time:',self.lane_topo_msg['t'][-1])
+      if len(self.lane_topo_msg['t']) > 0:
+        self.lane_topo_msg['enable'] = True
+      else:
+        self.lane_topo_msg['enable'] = False
+    except:
+      self.lane_topo_msg['enable'] = False
+      print('missing /iflytek/camera_perception/lane_topo topic !!!')
     # load fusion objects msg
     try:
       fus_msg_dict = {}
@@ -556,7 +577,7 @@ class LoadRosbag:
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'acc_cipv', \
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost",\
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
@@ -564,7 +585,7 @@ class LoadRosbag:
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
-                         "dis_to_ramp", "v_target_ramp", \
+                         "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
                          'gap_v_limit_lc', \
@@ -580,7 +601,8 @@ class LoadRosbag:
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
-                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway"]
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
+                         "is_leaving_ramp","is_nearing_ramp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 
@@ -751,7 +773,7 @@ class LoadRosbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap_info"):
         sdmap = SdMap()
         sdmap.ParseFromString(msg.debug_info)
-        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e3] = sdmap
+        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e6] = sdmap
       ehr_sd_map_msg_dict = {key: val for key, val in sorted(ehr_sd_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_sd_map_msg_dict.items():
         self.ehr_sd_map_msg['t'].append(t)

@@ -79,6 +79,7 @@ void FrenetEgoState::update(
 
   // Step 5) planning init point
   planning_init_point_ = ego_state.planning_init_point();
+
   CartesianState cstate;
   cstate.x = planning_init_point_.x;
   cstate.y = planning_init_point_.y;
@@ -101,6 +102,16 @@ void FrenetEgoState::update(
       ego_state.ego_carte().y, s_, l_);
   LOG_DEBUG("planning_init_point_valid: %d\n", ok);
   planning_init_point_valid_ = ok;
+
+  planning_math::Vec2d center(
+      planning_init_point_.x + std::cos(planning_init_point_.heading_angle) *
+                                   vehicle_param.rear_axis_to_center,
+      planning_init_point_.y + std::sin(planning_init_point_.heading_angle) *
+                                   vehicle_param.rear_axis_to_center);
+  planning_math::Box2d ego_init_box(center, planning_init_point_.heading_angle,
+                                    vehicle_param.length, vehicle_param.width);
+
+  GetLaneAgentSLInfo(frenet_coord, ego_init_box, &ego_init_sl_info_);
 }
 
 }  // namespace planning

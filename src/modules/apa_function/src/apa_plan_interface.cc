@@ -76,6 +76,12 @@ std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "\n------------------------ apa_interface: Update() "
                "------------------------\n";
+  if (local_view_ptr == nullptr) {
+    std::cout << "\nlocal_view_ptr is nullptr, quit apa\n";
+    return false;
+  }
+  RecordNodeReceiveTime(local_view_ptr);
+
   const double start_timestamp_ms = IflyTime::Now_ms();
   const uint8_t last_state =
       apa_world_ptr_->GetMeasurementsPtr()->current_state;
@@ -120,7 +126,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   const auto end_timestamp_ms = IflyTime::Now_ms();
   const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
 
-  DEBUG_PRINT("time_consumption = " << frame_duration << "ms");
+  DEBUG_PRINT("total time consumption = " << frame_duration << "ms");
   JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
   return success;
@@ -158,6 +164,25 @@ void ApaPlanInterface::UpdateDebugInfo() {
   planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
 
   planning_debug_info_ = *planning_debug_data;
+}
+
+void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
+  JSON_DEBUG_VALUE("statemachine_timestamp",
+                   local_view_ptr->function_state_machine_info_recv_time)
+  JSON_DEBUG_VALUE("fusion_slot_timestamp",
+                   local_view_ptr->parking_fusion_info_recv_time)
+  JSON_DEBUG_VALUE("localiztion_timestamp",
+                   local_view_ptr->localization_estimate_recv_time)
+  JSON_DEBUG_VALUE("uss_wave_timestamp",
+                   local_view_ptr->uss_wave_info_recv_time)
+  JSON_DEBUG_VALUE("uss_per_timestamp",
+                   local_view_ptr->uss_percept_info_recv_time)
+  JSON_DEBUG_VALUE("ground_line_timestamp",
+                   local_view_ptr->ground_line_perception_recv_time)
+  JSON_DEBUG_VALUE("fusion_objects_timestamp",
+                   local_view_ptr->fusion_objects_info_recv_time)
+  JSON_DEBUG_VALUE("fusion_occupancy_objects_timestamp",
+                   local_view_ptr->fusion_occupancy_objects_info_recv_time)
 }
 
 static std::string ReadFile(const std::string &path) {
@@ -287,19 +312,34 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   "pause_failed_time");
 
   // check static params
-  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err, double,
-                  "car_static_pos_err");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err_strict, double,
+                  "car_static_pos_err_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity, double,
-                  "car_static_velocity");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_pos_strict,
+                  double, "car_static_keep_time_by_pos_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_pos, double,
-                  "car_static_keep_time_by_pos");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_pos_err_normal, double,
+                  "car_static_pos_err_normal");
 
-  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_vel, double,
-                  "car_static_keep_time_by_vel");
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_pos_normal,
+                  double, "car_static_keep_time_by_pos_normal");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity_strict, double,
+                  "car_static_velocity_strict");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_vel_strict,
+                  double, "car_static_keep_time_by_vel_strict");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_velocity_normal, double,
+                  "car_static_velocity_normal");
+
+  JSON_READ_VALUE(apa_param.SetPram().car_static_keep_time_by_vel_normal,
+                  double, "car_static_keep_time_by_vel_normal");
 
   // uss params
+  JSON_READ_VALUE(apa_param.SetPram().is_uss_dist_from_perception, bool,
+                  "is_uss_dist_from_perception");
+
   JSON_READ_VALUE(apa_param.SetPram().detection_distance, double,
                   "detection_distance");
 
@@ -465,6 +505,8 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().believe_in_fus_obs, bool,
                   "believe_in_fus_obs");
+
+  JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
 
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");

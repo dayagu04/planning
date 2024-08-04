@@ -487,4 +487,61 @@ bool FrenetObstacle::get_polygon_at_time(
                                                         &obstacle_polygon);
   return ok;
 }
+
+bool FrenetObstacle::get_polygon_at_time_tmp(
+    const double relative_time,
+    const std::shared_ptr<ReferencePath> &reference_path,
+    planning_math::Polygon2d &obstacle_polygon) const {
+  // auto enu_polygon = obstacle_ptr_->get_polygon_at_point(
+  //     obstacle_ptr_->get_point_at_time(relative_time));
+
+  // auto &frenet_coord = reference_path->get_frenet_coord();
+  // std::vector<planning_math::Vec2d> frenet_points;
+  // for (auto &pt : enu_polygon.points()) {
+  //   Point2D frenet_point, carte_point;
+  //   carte_point.x = pt.x();
+  //   carte_point.y = pt.y();
+  //   if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
+  //     LOG_DEBUG(
+  //         "Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f],
+  //         " "max_x: [%f], min_y: [%f], max_y: [%f] \n", obstacle_ptr_->id(),
+  //         enu_polygon.min_x(), enu_polygon.max_x(), enu_polygon.min_y(),
+  //         enu_polygon.max_y());
+  //     continue;
+  //   }
+  //   frenet_points.push_back(
+  //       planning_math::Vec2d(frenet_point.x, frenet_point.y));
+  // }
+
+  // bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
+  //                                                       &obstacle_polygon);
+  // return ok;
+  // Hack(clren): 当前无预测，横向l不变，纵向速度递推
+  double prediction_frenet_s = frenet_velocity_s_ * relative_time;
+  auto enu_polygon =
+      obstacle_ptr_->get_polygon_at_point(obstacle_ptr_->get_point_at_time(0));
+
+  auto &frenet_coord = reference_path->get_frenet_coord();
+  std::vector<planning_math::Vec2d> frenet_points;
+  for (auto &pt : enu_polygon.points()) {
+    Point2D frenet_point, carte_point;
+    carte_point.x = pt.x();
+    carte_point.y = pt.y();
+    if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
+      LOG_DEBUG(
+          "Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f], "
+          "max_x: [%f], min_y: [%f], max_y: [%f] \n",
+          obstacle_ptr_->id(), enu_polygon.min_x(), enu_polygon.max_x(),
+          enu_polygon.min_y(), enu_polygon.max_y());
+      continue;
+    }
+    frenet_points.push_back(planning_math::Vec2d(
+        frenet_point.x + prediction_frenet_s, frenet_point.y));
+  }
+
+  bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
+                                                        &obstacle_polygon);
+  return ok;
+}
+
 }  // namespace planning

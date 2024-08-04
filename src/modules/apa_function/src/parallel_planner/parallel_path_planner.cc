@@ -23,6 +23,7 @@
 #include "debug_info_log.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
+#include "ifly_time.h"
 #include "math_lib.h"
 
 namespace planning {
@@ -82,7 +83,9 @@ void ParallelPathPlanner::Preprocess() {
   calc_params_.is_left_side =
       (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
 
-  calc_params_.slot_side_sgn = input_.tlane.slot_side_sgn;
+  calc_params_.slot_side_sgn =
+      (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) ? -1.0
+                                                                    : 1.0;
 
   const double target_heading = 0.0;
   calc_params_.target_pose.Set(input_.tlane.pt_terminal_pos, target_heading);
@@ -110,6 +113,8 @@ const bool ParallelPathPlanner::Update() {
     return false;
   }
 
+  const double start_time = IflyTime::Now_ms();
+
   // judge if ego is out of slot
   if (!CheckEgoInSlot()) {
     DEBUG_PRINT("ego is out of slot");
@@ -123,7 +128,14 @@ const bool ParallelPathPlanner::Update() {
       return false;
     }
 
+    const double start_plan_time = IflyTime::Now_ms();
+    DEBUG_PRINT("calc safe circle cost time(ms) = " << start_plan_time -
+                                                           start_time);
+
     const bool success = OutsideSlotPlan();
+    const double outside_plan_end_time = IflyTime::Now_ms();
+    DEBUG_PRINT("OutsideSlotPlan cost time(ms) = " << outside_plan_end_time -
+                                                          start_plan_time);
 
     if (success) {
       DEBUG_PRINT("OutsideSlotPlan success!");
@@ -702,14 +714,14 @@ const bool ParallelPathPlanner::CalSinglePathInNarrowChannel(
 }
 
 const bool ParallelPathPlanner::MonoStepPlanWithShift() {
-  const double deta_y = 0.05 * calc_params_.slot_side_sgn;
+  const double deta_y = 0.03 * calc_params_.slot_side_sgn;
   const double terminal_y = input_.tlane.pt_terminal_pos.y();
 
   std::vector<double> target_y_vec;
   target_y_vec.clear();
   target_y_vec.reserve(10);
 
-  for (double y_offset = 0.0; std::fabs(y_offset) < 0.06; y_offset += deta_y) {
+  for (double y_offset = 0.0; std::fabs(y_offset) < 0.05; y_offset += deta_y) {
     target_y_vec.emplace_back(y_offset + terminal_y);
   }
 
@@ -744,6 +756,8 @@ const bool ParallelPathPlanner::MonoStepPlanOnceWithShift(
   pnc::geometry_lib::LineSegment backward_line;
   backward_line.pA = target_pose.pos;
   backward_line.heading = target_pose.heading;
+
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.15));
 
   if (!CalcLineStepLimitPose(backward_line,
                              pnc::geometry_lib::SEG_GEAR_REVERSE)) {
@@ -991,6 +1005,8 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
 
     pnc::geometry_lib::PathPoint prepare_pose = aligned_pose;
     double& prepare_y = prepare_pose.pos.y();
+
+    DEBUG_PRINT("calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn);
 
     DEBUG_PRINT("tlane lat =" << tlane_lat_dist
                               << "channel lat dist = " << channel_lat_dist);
@@ -1532,6 +1548,7 @@ const bool ParallelPathPlanner::InverseSearchLoopInSlot(
   search_out_res.clear();
   search_out_res.reserve(10);
   const double radius = apa_param.GetParam().min_turn_radius;
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
 
   // calc backward limit
   pnc::geometry_lib::LineSegment first_line_step;
@@ -1896,7 +1913,7 @@ const bool ParallelPathPlanner::TwoSameGearArcPlanToLine(
   if (col_res.collision_flag ||
       col_res.remain_car_dist > col_res.remain_obstacle_dist - buffer) {
     DEBUG_PRINT("col pt = " << col_res.col_pt_obs_global.transpose());
-
+    debug_info_.debug_arc_vec.emplace_back(arc_1);
     DEBUG_PRINT("TwoSameGearArcPlanToLine arc1 collided!");
     return false;
   }

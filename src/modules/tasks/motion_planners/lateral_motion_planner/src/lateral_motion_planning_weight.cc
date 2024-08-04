@@ -34,9 +34,13 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_ref_theta(config_.q_ref_theta_avoid);
       planning_input.set_q_continuity(config_.q_continuity);
       planning_input.set_q_acc(config_.q_acc_avoid);
-      planning_input.set_q_jerk(config_.q_jerk_avoid);
+      planning_input.set_q_jerk(config_.q_jerk_avoid_middle);
       SetAccJerkBoundByVelocity(planning_input);
-      concerned_start_q_jerk_ = config_.q_jerk_avoid;
+      concerned_start_q_jerk_ = config_.q_jerk_avoid_middle;
+      if (ego_vel_ > config_.q_jerk_avoid_vel) {
+        planning_input.set_q_jerk(config_.q_jerk_avoid_close);
+        concerned_start_q_jerk_ = config_.q_jerk_avoid_close;
+      }
       break;
     }
     case LANE_CHANGE: {
@@ -60,10 +64,23 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       }
       break;
     }
+    case STATIC_AVOID: {
+      planning_input.set_q_ref_x(config_.q_ref_x_static_avoid);
+      planning_input.set_q_ref_y(config_.q_ref_y_static_avoid);
+      planning_input.set_q_ref_theta(config_.q_ref_theta_static_avoid);
+      planning_input.set_q_continuity(config_.q_continuity);
+      planning_input.set_q_acc(config_.q_acc_static_avoid);
+      planning_input.set_q_jerk(config_.q_jerk_static_avoid_middle);
+      SetAccJerkBoundByVelocity(planning_input);
+      concerned_start_q_jerk_ = config_.q_jerk_static_avoid_close;
+      break;
+    }
     default: { break; }
   }
   planning_input.set_q_acc_bound(config_.q_acc_bound);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
+  planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  planning_input.set_q_hard_corridor(config_.q_hard_corridor);
 }
 
 void LateralMotionPlanningWeight::CalculateInitInfo(
@@ -97,39 +114,27 @@ void LateralMotionPlanningWeight::CalculateInitInfo(
 void LateralMotionPlanningWeight::SetAccJerkBoundByVelocity(
     planning::common::LateralPlanningInput &planning_input) {
   const double velocity = ego_vel_ * 3.6;
-  const double jerk_bound1 = config_.jerk_bound1;
-  const double jerk_bound2 = config_.jerk_bound2;
-  const double jerk_bound3 = config_.jerk_bound3;
-  const double jerk_bound4 = config_.jerk_bound4;
-  std::array<double, 4> xp_vel{10.0, 50.0, 80.0, 100.0};
-  std::array<double, 4> fp_jerk_bound{jerk_bound1, jerk_bound2, jerk_bound3,
-                                      jerk_bound4};
-  double jerk_bound = interp(velocity, xp_vel, fp_jerk_bound);
+  std::vector<double> xp_vel{10.0, 50.0, 80.0, 100.0};
+  double jerk_bound = interp(velocity, xp_vel, config_.map_jerk_bound);
   planning_input.set_acc_bound(config_.acc_bound);
   planning_input.set_jerk_bound(jerk_bound);
 }
 
 void LateralMotionPlanningWeight::MakeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
-  std::array<double, 3> xp_v{5.0, 10.0, 20.0};
-  std::array<double, 3> fp_qxy{config_.map_qxy0, config_.map_qxy1,
-                               config_.map_qxy2};
-  double q_xy = planning::interp(ego_vel_, xp_v, fp_qxy);
+  std::vector<double> xp_v{5.0, 10.0, 20.0, 30.0};
+  double q_xy = planning::interp(ego_vel_, xp_v, config_.map_qxy);
   planning_input.set_q_ref_x(q_xy);
   planning_input.set_q_ref_y(q_xy);
 
-  std::array<double, 4> xp_xy{0.1, 0.2, 0.4, 0.8};
-  std::array<double, 4> fp_qjerk0{config_.map1_qjerk0, config_.map1_qjerk1,
-                                  config_.map1_qjerk2, config_.map1_qjerk3};
-  std::array<double, 4> fp_qjerk1{config_.map2_qjerk0, config_.map2_qjerk1,
-                                  config_.map2_qjerk2, config_.map2_qjerk3};
-  double q_jerk0 =
-      planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk0);
+  std::vector<double> xp_xy{0.1, 0.2, 0.4, 0.8};
   double q_jerk1 =
-      planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_qjerk1);
+      planning::interp(std::fabs(init_dis_to_ref_), xp_xy, config_.map_qjerk1);
+  double q_jerk2 =
+      planning::interp(std::fabs(init_dis_to_ref_), xp_xy, config_.map_qjerk2);
 
-  planning_input.set_q_jerk(q_jerk1);
-  concerned_start_q_jerk_ = q_jerk0;
+  concerned_start_q_jerk_ = q_jerk1;
+  planning_input.set_q_jerk(q_jerk2);
 }
 
 }  // namespace lateral_planning

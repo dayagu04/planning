@@ -26,6 +26,14 @@ enum iLqrCostconfigId {
   SOFT_LOWER_BOUND_Y0,
   SOFT_LOWER_BOUND_X1,
   SOFT_LOWER_BOUND_Y1,
+  HARD_UPPER_BOUND_X0,
+  HARD_UPPER_BOUND_Y0,
+  HARD_UPPER_BOUND_X1,
+  HARD_UPPER_BOUND_Y1,
+  HARD_LOWER_BOUND_X0,
+  HARD_LOWER_BOUND_Y0,
+  HARD_LOWER_BOUND_X1,
+  HARD_LOWER_BOUND_Y1,
   W_REF_X,
   W_REF_Y,
   W_REF_THETA,
@@ -50,6 +58,7 @@ enum iLqrCostId {
   LAT_ACC_BOUND_COST,
   LAT_JERK_BOUND_COST,
   PATH_SOFT_CORRIDOR_COST,
+  PATH_HARD_CORRIDOR_COST,
   LAT_SNAP_COST,
   COST_SIZE,
 };
@@ -157,6 +166,20 @@ class PathSoftCorridorCostTerm : public ilqr_solver::BaseCostTerm {
   uint8_t GetCostId() override { return PATH_SOFT_CORRIDOR_COST; }
 };
 
+class PathHardCorridorCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  PathHardCorridorCostTerm() = default;
+  double GetCost(const ilqr_solver::State & /*x*/,
+                 const ilqr_solver::Control &u) override;
+  void GetGradientHessian(const ilqr_solver::State & /*x*/,
+                          const ilqr_solver::Control &u,
+                          ilqr_solver::LxMT & /*lx*/, ilqr_solver::LuMT &lu,
+                          ilqr_solver::LxxMT & /*lxx*/,
+                          ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT &luu) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return PATH_HARD_CORRIDOR_COST; }
+};
 }  // namespace lateral_planning
 }  // namespace pnc
 #endif

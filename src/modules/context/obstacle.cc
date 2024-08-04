@@ -162,6 +162,10 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   acc_ = prediction_object.acc;
   fusion_source_ = prediction_object.fusion_source;
   type_ = prediction_object.type;
+  is_oversize_vehicle_ = prediction_object.is_oversize_vehicle;
+  is_VRU_ = prediction_object.is_VRU;
+  is_traffic_facilities_ = prediction_object.is_traffic_facilities;
+  is_car_ = prediction_object.is_car;
 
   std::vector<planning_math::Vec2d> polygon_points;
   if (prediction_object.bottom_polygon_points.size() < 3) {

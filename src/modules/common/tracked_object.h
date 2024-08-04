@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "common.pb.h"
+#include "common_c.h"
 #include "define/geometry.h"
 
 namespace planning {
@@ -150,6 +151,9 @@ struct TrackedObject {
   double cutinp = 0.0;
 
   bool frenet_transform_valid = false;
+  iflyauto::ObjectMotionType motion_pattern_current;
+  bool can_not_avoid = false;
+  bool is_static = false;
 
   // fisheye related for cutin
   Point2D points_3d_f = {DBL_MAX, DBL_MAX};

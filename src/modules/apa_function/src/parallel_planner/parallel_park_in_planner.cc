@@ -37,7 +37,7 @@ static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
 
 static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
-static double kCurbInitialOffset = 0.3;
+static double kCurbInitialOffset = 0.36;
 static double kCurbYMagIdentification = 0.0;
 
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
@@ -213,13 +213,16 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
 
   std::vector<Eigen::Vector2d> pt;
   pt.resize(slot_points.size());
+  Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
 
   std::cout << "parallel slot points in slm :" << std::endl;
   for (int i = 0; i < slot_points.size(); i++) {
     pt[i] << slot_points[i].x(), slot_points[i].y();
+    slot_center += pt[i];
     std::cout << pt[i].transpose() << std::endl;
   }
   ego_slot_info.slot_corner = pt;
+  slot_center *= 0.25;
 
   // calc slot side once at first
   if (frame_.is_replan_first) {
@@ -350,7 +353,12 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
             << ego_slot_info.slot_occupied_ratio << std::endl;
 
   ego_slot_info.obs_pt_vec_slot.clear();
-  for (const auto& obs_pt_global : slot_manager_ptr->GetSelectedSlotObsVec()) {
+
+  for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
+    if ((obs_pt_global - slot_center).norm() > 10.0) {
+      continue;
+    }
+
     ego_slot_info.obs_pt_vec_slot.emplace_back(
         frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global));
   }
@@ -770,6 +778,14 @@ void ParallelParInPlanner::GenTlane() {
   JSON_DEBUG_VALUE("para_tlane_obs_in_y", t_lane_.obs_pt_inside.y())
   JSON_DEBUG_VALUE("para_tlane_obs_out_x", t_lane_.obs_pt_outside.x())
   JSON_DEBUG_VALUE("para_tlane_obs_out_x", t_lane_.obs_pt_outside.y())
+
+  std::vector<double> x_vec = {0.0};
+  std::vector<double> y_vec = {0.0};
+  std::vector<double> phi_vec = {0.0};
+
+  JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
+  JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
+  JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
 }
 
 void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
@@ -1036,9 +1052,13 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
 
   parallel_path_planner_.SetInput(path_planner_input);
 
+  const double path_plan_start_time = IflyTime::Now_ms();
+
   const bool path_plan_success =
       parallel_path_planner_.Update(apa_world_ptr_->GetCollisionDetectorPtr());
 
+  DEBUG_PRINT("path planner cost time(ms) = " << IflyTime::Now_ms() -
+                                                     path_plan_start_time);
   // const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
   frame_.total_plan_count++;
@@ -1059,22 +1079,14 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   parallel_path_planner_.SetCurrentPathSegIndex();
   // parallel_path_planner_.SetLineSegmentHeading();
 
-  // bool is_allow_entend_line = true;
-  // if (frame_.ego_slot_info.slot_occupied_ratio < 0.05) {
-  //   const auto path_end_idx = path_planner_output.path_seg_index.second;
-  //   const auto& end_pose =
-  //       path_planner_output.path_segment_vec[path_end_idx].GetEndPose();
+  if (frame_.ego_slot_info.slot_occupied_ratio < 0.05 &&
+      frame_.is_replan_first &&
+      frame_.ego_slot_info.ego_pos_slot.x() < t_lane_.obs_pt_inside.x() + 1.0) {
+    const double extend_lenth = 0.25;
+    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+        extend_lenth);
+  }
 
-  //   if (IsEgoInSlot(end_pose)) {
-  //     is_allow_entend_line = false;
-  //   }
-  // }
-
-  // if (is_allow_entend_line) {
-  //   const double extend_lenth = 0.15;
-  //   parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-  //       extend_lenth);
-  // }
   if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     const double extend_lenth = 0.15;
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
@@ -1739,14 +1751,6 @@ void ParallelParInPlanner::Log() const {
   JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
   JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_pos",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_pos)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_vel",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_vel)
-  JSON_DEBUG_VALUE("static_flag",
-                   apa_world_ptr_->GetMeasurementsPtr()->static_flag)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
 

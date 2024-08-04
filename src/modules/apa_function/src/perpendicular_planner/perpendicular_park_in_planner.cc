@@ -125,7 +125,7 @@ void PerpendicularInPlanner::PlanCore() {
     frame_.replan_flag = true;
     pt_center_replan_ = frame_.ego_slot_info.slot_center;
     pt_center_heading_replan_ = frame_.ego_slot_info.slot_origin_heading;
-    frame_.car_already_move_dist = 0.0;
+    frame_.dynamic_plan_fail_flag = false;
 
     const double start_time = IflyTime::Now_ms();
 
@@ -135,6 +135,12 @@ void PerpendicularInPlanner::PlanCore() {
 
     // path plan
     const auto pathplan_result = PathPlanOnce();
+
+    if (!frame_.dynamic_plan_fail_flag) {
+      frame_.car_already_move_dist = 0.0;
+    }
+
+    JSON_DEBUG_VALUE("dynamic_plan_fail_flag", frame_.dynamic_plan_fail_flag)
 
     DEBUG_PRINT("replan_consume_time = " << IflyTime::Now_ms() - start_time
                                          << " ms");
@@ -912,6 +918,8 @@ void PerpendicularInPlanner::GenTlane() {
     }
   }
 
+  JSON_DEBUG_VALUE("move_slot_dist", move_slot_dist)
+
   // construct slot_t_lane_, left is positive, right is negative
   const double slot_width = std::min(virtual_slot_width, real_slot_width);
 
@@ -1269,6 +1277,7 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
   if (!path_plan_success && frame_.is_replan_dynamic) {
     DEBUG_PRINT("path dynamic plan fail, save last plan path.");
     plan_result = PathPlannerResult::PLAN_UPDATE;
+    frame_.dynamic_plan_fail_flag = true;
     return plan_result;
   }
 
@@ -2367,14 +2376,6 @@ void PerpendicularInPlanner::Log() const {
   JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
   JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_pos",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_pos)
-  JSON_DEBUG_VALUE(
-      "car_static_timer_by_vel",
-      apa_world_ptr_->GetMeasurementsPtr()->car_static_timer_by_vel)
-  JSON_DEBUG_VALUE("static_flag",
-                   apa_world_ptr_->GetMeasurementsPtr()->static_flag)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
   JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)

@@ -243,7 +243,6 @@ bool EgoStateManager::update(
   } else {
     RealtimeUpdatePlanningInitState();
   }
-
   return true;
 }
 
@@ -314,8 +313,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     max_replan_dist_err = hpp_max_replan_dist_err_;
   }
 
-  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v); /*&&
-                               (ego_state->ego_acc() < config_.kEpsilon_a);*/
+  const auto start_stop_state =
+      session_->planning_context().start_stop_result().state();
+  bool low_speed_replan = (ego_state->ego_v() < config_.kEpsilon_v) &&
+                          (start_stop_state == common::StartStopInfo::START);
   // replan type judge
   int replan_code = 0;
   if (fabs(lat_err) > max_replan_lat_err) {
@@ -343,8 +344,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     replan_code += LON_TINY_SPEED_REPLAN;
   }
 
-  const auto start_stop_state =
-      session_->planning_context().start_stop_result().state();
   // deal with ego_acc which has noise
   // TODO: need to recieve linear acceleration from vehicle wheel speed
   double ego_acc_replan = ego_state->ego_acc();
@@ -366,15 +365,22 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   PncTrajectoryPoint reinit_point;
   if (!replan_type_.empty()) {
     if (replan_type_.find(LON_TINY_SPEED_REPLAN) != replan_type_.end()) {
+      enable_delta_stitch_in_replan_ = false;
+      reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+          cur_vehicle_state);
+      LateralInitStateReset(reinit_point);
+      LongitudinalInitStateReset(reinit_point);
+    } else if (replan_type_.find(LAT_LON_REPLAN) != replan_type_.end()) {
+      enable_delta_stitch_in_replan_ = false;
       reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
           cur_vehicle_state);
       LateralInitStateReset(reinit_point);
       LongitudinalInitStateReset(reinit_point);
     } else if (replan_type_.find(LAT_REPLAN) != replan_type_.end()) {
+      enable_delta_stitch_in_replan_ = false;
+      reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
+          cur_vehicle_state);
       if (replan_type_.find(LON_POSITION_REPLAN) != replan_type_.end()) {
-        reinit_point =
-            TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
-                cur_vehicle_state);
         LateralInitStateReset(reinit_point);
         LongitudinalInitStateReset(reinit_point);
       } else {
@@ -387,6 +393,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
       LongitudinalInitStateReset(reinit_point);
     }
   }
+  enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
   return replan_code;
 }
 
@@ -397,7 +404,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   cur_vehicle_state_process_.linear_velocity = ego_state->ego_v();
   cur_vehicle_state_process_.jerk = ego_state->ego_jerk();
   cur_vehicle_state_process_.linear_acceleration = ego_state->ego_acc();
-  cur_vehicle_state_process_.delta = ego_state->ego_steer_angle() / steer_ratio_;
+  cur_vehicle_state_process_.delta =
+      ego_state->ego_steer_angle() / steer_ratio_;
   cur_vehicle_state_process_.heading = ego_state->heading_angle();
   cur_vehicle_state_process_.kappa =
       curve_factor * cur_vehicle_state_process_.delta;
@@ -420,10 +428,11 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   double localization_latency_s = localization_latency_ms / 1000.0;
 
-  #ifdef X86
-  localization_latency_s = SimulationContext::Instance()->localizatoin_latency() / 1000.0;
-  #endif
-  
+#ifdef X86
+  localization_latency_s =
+      SimulationContext::Instance()->localizatoin_latency() / 1000.0;
+#endif
+
   JSON_DEBUG_VALUE("localizatoin_latency_inEgoStateManager",
                    localization_latency_ms);
   JSON_DEBUG_VALUE("new_localization_latency",
@@ -434,8 +443,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   }
 
   VehicleState predicted_vehicle_state;
-  predicted_vehicle_state =
-      common::VehicleModel::Predict(localization_latency_s, cur_vehicle_state_process_);
+  predicted_vehicle_state = common::VehicleModel::Predict(
+      localization_latency_s, cur_vehicle_state_process_);
   cur_vehicle_state_process_.linear_acceleration = cur_vehi_acc;
   cur_vehicle_state_process_ = predicted_vehicle_state;
 }
@@ -775,7 +784,7 @@ void EgoStateManager::UpdatePlanningInitState() {
   // reset trajectory spline
   MotionPlanningInfoReset();
 
-  //compensate ego state because of localization latency
+  // compensate ego state because of localization latency
   CompensateEgoStateForLocalizationLatency();
 
   // stitch process
@@ -804,11 +813,13 @@ void EgoStateManager::UpdatePlanningInitState() {
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);
   } else {
     stitch_success = false;
+    enable_delta_stitch_in_replan_ = false;
     PncTrajectoryPoint reinit_point;
     reinit_point = TrajectoryStitcher::ComputeTrajectoryPointFromVehicleState(
-          cur_vehicle_state_process_);
+        cur_vehicle_state_process_);
     LateralInitStateReset(reinit_point);
     LongitudinalInitStateReset(reinit_point);
+    enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
     replan_status = LAT_lON_REST;
   }
 

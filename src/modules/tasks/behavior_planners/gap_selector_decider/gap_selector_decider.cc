@@ -380,9 +380,6 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
     gap_selector_decider_output.gap_selector_trustworthy =
         remain_lc_time < 1.0 ? false : true;
-    gap_selector_decider_output.gap_selector_trustworthy =
-        config_.use_gs ? true
-                       : gap_selector_decider_output.gap_selector_trustworthy;
 
   } else if (is_lc_back_scene) {
     double lb_end_s, lb_target_l,

@@ -27,8 +27,8 @@ class PlanningAdapter {
     is_fusion_objects_info_msg_updated_.store(true);
   }
 
-  void FeedFusionOccupancyObjects(
-      const iflyauto::FusionOccupancyObjectsInfo& fusion_occupancy_objects_info_msg) {
+  void FeedFusionOccupancyObjects(const iflyauto::FusionOccupancyObjectsInfo&
+                                      fusion_occupancy_objects_info_msg) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     fusion_occupancy_objects_info_msg_ = fusion_occupancy_objects_info_msg;
     fusion_occupancy_objects_info_msg_recv_time_ = IflyTime::Now_ms();

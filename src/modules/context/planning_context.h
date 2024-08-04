@@ -2,6 +2,7 @@
 
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
+#include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
 #include "../tasks/task_interface/lane_change_decider_output.h"
 #include "../tasks/task_interface/lateral_motion_planner_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
@@ -104,6 +105,15 @@ class PlanningContext {
 
   GeneralLateralDeciderOutput &mutable_general_lateral_decider_output() {
     return general_lateral_decider_output_;
+  }
+
+  const HppGeneralLateralDeciderOutput &hpp_general_lateral_decider_output()
+      const {
+    return hpp_general_lateral_decider_output_;
+  }
+
+  HppGeneralLateralDeciderOutput &mutable_hpp_general_lateral_decider_output() {
+    return hpp_general_lateral_decider_output_;
   }
 
   const VisionLongitudinalBehaviorPlannerOutput &
@@ -322,6 +332,7 @@ class PlanningContext {
   VisionLateralMotionPlannerOutput vision_lateral_motion_planner_output_;
   // used in HppGeneralLateralDecider and GeneralLateralDecider
   GeneralLateralDeciderOutput general_lateral_decider_output_;
+  HppGeneralLateralDeciderOutput hpp_general_lateral_decider_output_;
 
   // longitudinal task pipeline
   VisionLongitudinalBehaviorPlannerOutput

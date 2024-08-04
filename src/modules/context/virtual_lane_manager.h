@@ -129,9 +129,9 @@ class VirtualLaneManager {
 
   void TrackEgoLane();
 
-  void PreprocessRoadSplit(const std::vector<int>& order_ids);
+  void PreprocessRoadSplit(const std::vector<int> &order_ids);
 
-  void PreprocessRampSplit(const std::vector<int>& order_ids);
+  void PreprocessRampSplit(const std::vector<int> &order_ids);
 
   void SelectEgoLaneWithoutPlan();
 
@@ -148,6 +148,10 @@ class VirtualLaneManager {
       const planning_math::KDPath &lane_boundary_path,
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
+
+  double get_distance_to_route_end () {
+    return distance_to_route_end_;
+  }
 
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
@@ -185,9 +189,19 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
+  const double sum_dis_to_last_merge_point() const {return sum_dis_to_last_merge_point_;}
+
+  bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
+
+  const double dis_threshold_to_last_merge_point() const{
+    return dis_threshold_to_last_merge_point_;
+  }
+  bool is_continuous_ramp() const { return is_continuous_ramp_; }
+
   bool is_local_valid() const { return is_local_valid_; }
 
   bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
+
   bool is_reached_hpp_start_point() const {
     return is_reached_hpp_start_point_;
   }
@@ -207,6 +221,10 @@ class VirtualLaneManager {
  private:
   LaneChangeStatus is_lane_change();
   void UpdateLaneVirtualId();
+
+  double ComputeLanesMatchlaterakDisCost(
+      int virtual_id,
+      const std::shared_ptr<VirtualLane> current_relative_id_lane);
 
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
@@ -229,8 +247,11 @@ class VirtualLaneManager {
 
   bool GetCurrentNearestLane(const planning::framework::Session &session);
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
-  void CalculateDistanceToRampSplitMergeWithSdMap(planning::framework::Session *session);
-  RampDirection MakesureSplitDirection(const ::SdMapSwtx::Segment& split_segment,const ad_common::sdmap::SDMap& sd_map);
+  void CalculateDistanceToRampSplitMergeWithSdMap(
+      planning::framework::Session *session);
+  RampDirection MakesureSplitDirection(
+      const ::SdMapSwtx::Segment &split_segment,
+      const ad_common::sdmap::SDMap &sd_map);
   // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
   // void CalculateDistanceToTargetSlot(planning::framework::Session *session);
@@ -239,7 +260,8 @@ class VirtualLaneManager {
   void ResetForRampInfo();
   void SetGeneratedReflineToDebugInfo(
       const iflyauto::LaneReferenceLine &refline);
-  std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(const iflyauto::RoadInfo* roads_ptr);
+  std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(
+      const iflyauto::RoadInfo *roads_ptr);
   void GenerateLaneChangeTasksForNOA();
 
   planning::framework::Session *session_ = nullptr;
@@ -272,6 +294,7 @@ class VirtualLaneManager {
   bool is_nearing_ramp_ = false;
   bool is_on_ramp_ = false;
   bool is_on_highway_ = false;
+  bool is_continuous_ramp_ = false;
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_;
   bool in_intersection_ = false;
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
@@ -286,12 +309,14 @@ class VirtualLaneManager {
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
-  double sum_dis_to_last_merge_point_ = 0.0;
+  double sum_dis_to_last_merge_point_ = NL_NMAX;
   bool is_ego_on_expressway_ = false;
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
   double current_segment_passed_distance_ = 0.0;
+  double distance_to_route_end_ = NL_NMAX;
+  const double dis_threshold_to_last_merge_point_ = 800.0;
 };
 }  // namespace planning
 #endif

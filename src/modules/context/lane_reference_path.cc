@@ -112,7 +112,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
   auto &lane_points = virtual_lane->lane_points();
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
-
+  const double width = virtual_lane->width();
   ref_path_points.clear();
   auto is_enu_valid = session_->environmental_model().location_valid();
   for (auto &refline_pt : lane_points) {
@@ -131,19 +131,21 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_pt.path_point.theta = refline_pt.car_heading;
     }
     ref_path_pt.path_point.kappa = refline_pt.curvature;
-    ref_path_pt.distance_to_left_lane_border = std::fmin(
-        refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_right_lane_border = std::fmin(
-        refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_left_lane_border = std::fmin(
+    //     refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_right_lane_border = std::fmin(
+    //     refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
     ref_path_pt.distance_to_left_road_border = std::fmin(
         refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_road_border = std::fmin(
         refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
+    ref_path_pt.distance_to_left_lane_border = width * 0.5;
+    ref_path_pt.distance_to_right_lane_border = width * 0.5;
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
     ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type;
-    ref_path_pt.lane_width = refline_pt.lane_width;
+    ref_path_pt.lane_width = width;
     ref_path_pt.max_velocity = refline_pt.speed_limit_max;
     ref_path_pt.min_velocity = refline_pt.speed_limit_min;
     ref_path_pt.type = ReferencePathPointType::MAP;
@@ -185,7 +187,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     const double ego_projection_length_in_reference_path =
         CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
     // if need to extend reference path length
-    if (preview_dis + ego_projection_length_in_reference_path >
+    if (preview_dis + ego_projection_length_in_reference_path + extend_buff >
         origin_reference_path_total_length) {
       const double extend_length =
           preview_dis + ego_projection_length_in_reference_path -
@@ -239,7 +241,7 @@ void LaneReferencePath::assign_obstacles_to_lane() {
 
 bool LaneReferencePath::IsObstacleOn(
     std::shared_ptr<FrenetObstacle> frenet_obstacle) {
-  if (frenet_obstacle->rel_s() > 80 || frenet_obstacle->rel_s() < -50 ||
+  if (frenet_obstacle->rel_s() > 120 || frenet_obstacle->rel_s() < -50 ||
       frenet_obstacle->s_min_l().x > 15 || frenet_obstacle->s_max_l().x < -15 ||
       !frenet_obstacle->b_frenet_valid()) {
     return false;
@@ -373,13 +375,18 @@ ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
 
   return extend_point;
 }
+
 double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
     const ReferencePathPoints &ref_path_points) const {
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  const auto &ego_pose = ego_state_mgr->ego_pose();
-  double dx = ego_pose.x - ref_path_points[0].path_point.x;
-  double dy = ego_pose.y - ref_path_points[0].path_point.y;
+  // const auto &ego_pose = ego_state_mgr->ego_pose();
+  // double dx = ego_pose.x - ref_path_points[0].path_point.x;
+  // double dy = ego_pose.y - ref_path_points[0].path_point.y;
+  const auto &lat_init_state =
+      ego_state_mgr->planning_init_point().lat_init_state;
+  double dx = lat_init_state.x() - ref_path_points[0].path_point.x;
+  double dy = lat_init_state.y() - ref_path_points[0].path_point.y;
   const int point_nums = ref_path_points.size();
   int nearest_point_index = 0;
   double accumulate_distance_for_nearest_point = 0;
@@ -391,8 +398,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
     const auto &pre_point = ref_path_points[i - 1].path_point;
     accumulate_distance_reference_path +=
         std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
-    dx = ego_pose.x - cur_point.x;
-    dy = ego_pose.y - cur_point.y;
+    dx = lat_init_state.x() - cur_point.x;
+    dy = lat_init_state.y() - cur_point.y;
     double temp_min_distance_square_to_ego_point = dx * dx + dy * dy;
     if (temp_min_distance_square_to_ego_point <
         min_distance_square_to_ego_point) {
@@ -404,8 +411,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   }
   // calculate ego projection distance in reference path
   const auto &nearest_point = ref_path_points[nearest_point_index].path_point;
-  dx = ego_pose.x - nearest_point.x;
-  dy = ego_pose.y - nearest_point.y;
+  dx = lat_init_state.x() - nearest_point.x;
+  dy = lat_init_state.y() - nearest_point.y;
   const double projection_length =
       dx * std::cos(nearest_point.theta) + dy * std::sin(nearest_point.theta);
   const double ego_projection_distance_in_reference_path =

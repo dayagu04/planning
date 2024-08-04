@@ -15,6 +15,7 @@
 #include "apa_plan_base.h"
 #include "apa_plan_interface.h"
 #include "camera_preception_groundline_c.h"
+#include "config_context.h"
 #include "debug_info_log.h"
 #include "func_state_machine_c.h"
 #include "fusion_objects_c.h"
@@ -55,6 +56,7 @@ int Init() {
   // const std::string flag_file_path =
   //     "/asw/planning/res/conf/planning_gflags.conf";
   // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+  (void)common::ConfigurationContext::Instance();
 
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
 
@@ -202,19 +204,25 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
           uss_perception_info_bytes);
 
-  iflyauto::GroundLinePerceptionInfo ground_line_info =
-      BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                    struct_msgs::GroundLinePerceptionInfo>(
-          ground_line_info_bytes);
+  // iflyauto::GroundLinePerceptionInfo ground_line_info =
+  //     BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+  //                   struct_msgs::GroundLinePerceptionInfo>(
+  //         ground_line_info_bytes);
 
-  iflyauto::FusionObjectsInfo fus_obj_info =
-      BytesToStruct<iflyauto::FusionObjectsInfo,
-                    struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
+  // iflyauto::FusionObjectsInfo fus_obj_info =
+  //     BytesToStruct<iflyauto::FusionObjectsInfo,
+  //                   struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
 
-  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
-      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
-                    struct_msgs::FusionOccupancyObjectsInfo>(
-          fus_occ_obj_info_bytes);
+  // iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+  //     BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+  //                   struct_msgs::FusionOccupancyObjectsInfo>(
+  //         fus_occ_obj_info_bytes);
+
+  iflyauto::GroundLinePerceptionInfo ground_line_info;
+
+  iflyauto::FusionObjectsInfo fus_obj_info;
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info;
 
   ground_line_info.ground_lines_size = gl_coord.size();
   for (size_t i = 0; i < ground_line_info.ground_lines_size; ++i) {
@@ -266,10 +274,12 @@ const bool InterfaceUpdateParam(
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
   // DEBUG_PRINT(
-  //     "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
+  //     "c++ gl size = " <<
+  //     static_cast<int>(ground_line_info.ground_lines_size));
 
   // DEBUG_PRINT(
-  //     "c++ fus_obj_num = " << static_cast<int>(fus_obj_info.fusion_object_num));
+  //     "c++ fus_obj_num = " <<
+  //     static_cast<int>(fus_obj_info.fusion_object_num));
 
   // DEBUG_PRINT("c++ fus_occ_obj_num = "
   //             << static_cast<int>(fus_occ_obj_info.fusion_object_num));

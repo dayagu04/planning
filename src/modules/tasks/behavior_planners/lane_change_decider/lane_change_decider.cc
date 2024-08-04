@@ -130,7 +130,8 @@ bool LaneChangeDecider::Execute() {
   UpdateStateMachineDebugInfo();
 
   UpdateAdInfo();
-
+  const int lc_status = transition_context_.target_state;
+  JSON_DEBUG_VALUE("cur_state", lc_status)
   return true;
 }
 
@@ -1866,10 +1867,12 @@ void LaneChangeDecider::ProcessWaitState() {
   std::vector<int> yield_obstacles;
   LaneChangeStageInfo lane_change_info;
   if (current_time_s - lc_tstart > lane_change_wait_time_threshold) {
-    std::cout << "lane change wait time more than 20s,cancel the lc_req!!!" << std::endl;
+    std::cout << "lane change wait time more than 20s,cancel the lc_req!!!"
+              << std::endl;
     PrepareForNoneState();
     lc_req_mgr_->FinishRequest();
-  } else if (lc_request != NO_CHANGE && lc_request == transition_context_.direction) {
+  } else if (lc_request != NO_CHANGE &&
+             lc_request == transition_context_.direction) {
     int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
     if (!lc_lane_mgr_->has_target_lane() ||
         lc_lane_mgr_->target_lane_virtual_id() != target_lane_virtual_id) {

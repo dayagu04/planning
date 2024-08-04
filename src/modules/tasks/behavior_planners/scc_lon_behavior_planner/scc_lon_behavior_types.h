@@ -30,5 +30,14 @@ struct STBoundary {
 };
 using STboundaries = std::vector<STBoundary>;
 
+struct NarrowLead {
+  int id;
+  double min_s;
+  double desire_distance;
+  double safe_distance;
+  double v_limit;
+  bool is_collison;
+};
+
 }  // namespace scc
 }  // namespace planning

@@ -4,9 +4,11 @@
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "prediction_object.h"
+#include "task_basic_types.h"
 #include "tracked_object.h"
 #include "tracklet_maintainer.h"
 
+#include <cstdint>
 #include <utility>
 
 namespace planning {
@@ -65,11 +67,19 @@ class LateralObstacle {
 
   bool find_track(int track_id, TrackedObject &dest);
 
+  const std::unordered_map<uint16_t, LatObstacleDecisionType>
+      &lat_obstacle_decision() {
+    return lat_obstacle_decision_;
+  }
+  bool is_static_avoid_scene() const { return is_static_avoid_scene_; };
+
  private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
                       const std::vector<PredictionObject> &predictions,
                       bool isRedLightStop, bool hdmap_valid);
   void update_tracks(const std::vector<TrackedObject> &tracked_objects);
+  void LateralObstacleDecision(
+      const std::vector<TrackedObject> &tracked_objects);
 
   double fvf_time_ = 0.0;
   bool fvf_dead_ = true;
@@ -77,6 +87,7 @@ class LateralObstacle {
   bool svf_dead_ = true;
   double warning_timer_[5];
   bool prediction_update_ = false;
+  bool is_static_avoid_scene_ = false;
 
   std::vector<TrackedObject> front_tracks_;
   std::vector<TrackedObject> front_tracks_copy_;
@@ -90,6 +101,7 @@ class LateralObstacle {
   std::shared_ptr<planning::TrackletMaintainer> maintainer_ = nullptr;
   planning::framework::Session *session_ = nullptr;
   LateralObstacleConfig config_;
+  std::unordered_map<uint16_t, LatObstacleDecisionType> lat_obstacle_decision_;
 };
 
 class LaneTracksManager {
