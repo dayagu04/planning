@@ -373,7 +373,7 @@
     "distance_stop": 2.0,
     "distance_start": 0.3,
     "dece_to_ramp": -1.0,
-    "v_limit_ramp": 19.44,
+    "v_limit_ramp": 16.67,
     "safe_distance_ttc": 0.3,
     "enable_lead_two": true,
     "enable_rss_model": false,
