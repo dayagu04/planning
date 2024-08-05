@@ -194,7 +194,7 @@ def update_lc_data (noa_info, plan_debug_json):
       names.append(name)
     except:
       pass
-  vars_lc = ['hdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
+  vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
              'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'is_solid_left_boundary','is_solid_right_boundary',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
              "is_leaving_ramp","is_nearing_ramp"]
@@ -270,6 +270,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_behavior_table_2), column(data_overtake_lc_table, data_obstacle_table)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
 # slider_class = ObjText(obj_id_handler)

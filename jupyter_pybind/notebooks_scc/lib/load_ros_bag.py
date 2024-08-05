@@ -591,7 +591,7 @@ class LoadRosbag:
                          'gap_v_limit_lc', \
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                         'hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
+                         'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
                          "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","is_solid_left_boundary","is_solid_right_boundary", \
                          "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
