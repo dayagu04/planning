@@ -169,6 +169,8 @@ class PlanningAdapter {
   }
 
  private:
+  void UpdateInputListInfo(iflyauto::Header &header);
+
   std::mutex msg_mutex_;
 
   iflyauto::PredictionResult prediction_result_msg_;
