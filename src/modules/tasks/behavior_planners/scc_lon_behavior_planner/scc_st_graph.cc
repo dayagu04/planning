@@ -629,11 +629,8 @@ void StGraphGenerator::UpdateSTGraphs(
   double t = config_.delta_time;
   double t_square = config_.delta_time * config_.delta_time;
   double t_cube = config_.delta_time * config_.delta_time * config_.delta_time;
-  double kOverSpeed = 1.2;
-  double kDefaultSBoundUpper = 30;
-  double s_upper_bound =
-      std::fmax(lon_behav_input_->ego_info().ego_cruise() * kOverSpeed * 5.0,
-                kDefaultSBoundUpper);
+  //TODO: 后续取参考线的长度为s bound upper
+  constexpr double s_upper_bound = 200.0;
   LonBound soft_bound;
   LonBound hard_bound;
   double s_ref;
@@ -2388,6 +2385,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
       JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
     } else {
       v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("narrow_agent_id", it->id)
       JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
     }
   }
