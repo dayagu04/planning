@@ -66,8 +66,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     double ds, bool is_complete_path,
                                     bool is_astar, double inside_dx,
                                     std::vector<double> obs_params) {
-  FilePath::SetName("slant_simulation_pybind");
-  InitGlog(FilePath::GetName().c_str());
+  // FilePath::SetName("slant_simulation_pybind");
+  // InitGlog(FilePath::GetName().c_str());
   obs_pts_.clear();
   planning::apa_planner::ApaPlannerBase::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;

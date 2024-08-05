@@ -109,6 +109,7 @@ struct ApaParameters {
   // check replan params
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
+  int max_replan_count = 12;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;
@@ -148,7 +149,7 @@ struct ApaParameters {
   double max_obs2car_dist_slot_occupied_ratio = 0.086;
   double obstacle_ds = 0.5;
   double col_obs_safe_dist_normal = 0.36;
-  double car_lat_inflation_normal = 0.0;
+  double car_lat_inflation_normal = 0.0986;
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = true;
   bool use_fus_occ_obj = true;

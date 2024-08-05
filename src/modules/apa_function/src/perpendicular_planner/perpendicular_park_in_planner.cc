@@ -133,12 +133,22 @@ void PerpendicularInPlanner::PlanCore() {
 
     GenObstacles();
 
-    // path plan
-    const auto pathplan_result = PathPlanOnce();
+    frame_.total_plan_count++;
+
+    uint8_t pathplan_result = PathPlannerResult::PLAN_FAILED;
+
+    if (frame_.total_plan_count <= apa_param.GetParam().max_replan_count) {
+      pathplan_result = PathPlanOnce();
+      DEBUG_PRINT("generate path by geometry");
+    } else {
+      DEBUG_PRINT("replan count is exceed max count, fail, directly quit apa");
+    }
 
     if (!frame_.dynamic_plan_fail_flag) {
       frame_.car_already_move_dist = 0.0;
     }
+
+    JSON_DEBUG_VALUE("replan_count", frame_.total_plan_count)
 
     JSON_DEBUG_VALUE("dynamic_plan_fail_flag", frame_.dynamic_plan_fail_flag)
 
@@ -205,12 +215,13 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
         pt[i] << slot_points[i].x(), slot_points[i].y();
       }
     }
-    const auto pM01 = 0.5 * (pt[0] + pt[1]);
-    const auto pM23 = 0.5 * (pt[2] + pt[3]);
+    const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
+    const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
     const double real_slot_length = (pM01 - pM23).norm();
-    // const auto t = (pt[1] - pt[0]).normalized();
-    // const auto n = Eigen::Vector2d(t.y(), -t.x());
-    const auto n = (pM01 - pM23).normalized();
+    const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
+    // n is vec that slot opening orientation
+    const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+    // const Eigen::Vector2d n = (pM01 - pM23).normalized();
     pt[2] = pt[0] - real_slot_length * n;
     pt[3] = pt[1] - real_slot_length * n;
 
@@ -267,14 +278,14 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
       double angle =
           std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
               Eigen::Vector2d(virtual_slot_length, 0.0), pt_01_vec)) *
-          57.3;
+          kRad2Deg;
 
       if (angle > 90.0) {
         angle = 180.0 - angle;
       }
 
       angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
-      ego_slot_info.sin_angle = std::sin(angle / 57.3);
+      ego_slot_info.sin_angle = std::sin(angle * kDeg2Rad);
       ego_slot_info.origin_pt_0_heading = 90.0 - angle;
     } else {
       ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(pt[0]);
@@ -341,7 +352,7 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (std::fabs(ego_slot_info.terminal_err.pos.y()) <
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_slot_info.ego_heading_slot) <
-          apa_param.GetParam().slot_occupied_ratio_max_heading_err / 57.3) {
+          apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     ego_slot_info.slot_occupied_ratio = pnc::mathlib::Clamp(
         1.0 - (ego_slot_info.terminal_err.pos.x() / ego_slot_info.slot_length),
         0.0, 1.0);
@@ -635,10 +646,11 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
   // DEBUG_PRINT(
   //     "ego_pos = " << measures_ptr->pos_ego.transpose() << "  ego_heading = "
-  //                  << measures_ptr->heading_ego * 57.3 << "  ego_pos_slot = "
+  //                  << measures_ptr->heading_ego * kRad2Deg << "  ego_pos_slot
+  //                  = "
   //                  << ego_slot_info.ego_pos_slot.transpose()
   //                  << "  ego_heading_slot = "
-  //                  << ego_slot_info.ego_heading_slot * 57.3);
+  //                  << ego_slot_info.ego_heading_slot * kRad2Deg);
 
   // DEBUG_PRINT("ego_slot_info.limiter.first = "
   //             << ego_slot_info.limiter.first.transpose()
@@ -648,12 +660,12 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   // DEBUG_PRINT("target_ego_pos_slot = "
   //             << ego_slot_info.target_ego_pos_slot.transpose()
   //             << "  target_ego_heading_slot = "
-  //             << ego_slot_info.target_ego_heading_slot * 57.3);
+  //             << ego_slot_info.target_ego_heading_slot * kRad2Deg);
 
   DEBUG_PRINT("terminal x error= " << ego_slot_info.terminal_err.pos.x());
   DEBUG_PRINT("terminal y error= " << ego_slot_info.terminal_err.pos.y());
   DEBUG_PRINT("terminal heading error= " << ego_slot_info.terminal_err.heading *
-                                                57.3);
+                                                kRad2Deg);
 
   DEBUG_PRINT("slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio);
 
@@ -810,8 +822,6 @@ void PerpendicularInPlanner::GenTlane() {
                                  << virtual_slot_width
                                  << "  real slot width = " << real_slot_width);
 
-  const double safe_threshold = apa_param.GetParam().safe_threshold;
-
   double left_y = left_pq_for_y.top().y();
 
   double real_left_y = left_y;
@@ -875,6 +885,8 @@ void PerpendicularInPlanner::GenTlane() {
   bool left_obs_meet_safe_require = false;
   bool right_obs_meet_safe_require = false;
 
+  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal;
+
   left_obs_meet_safe_require = left_dis_obs_car > safe_threshold ? true : false;
   right_obs_meet_safe_require =
       right_dis_obs_car > safe_threshold ? true : false;
@@ -919,6 +931,7 @@ void PerpendicularInPlanner::GenTlane() {
   }
 
   JSON_DEBUG_VALUE("move_slot_dist", move_slot_dist)
+  ego_slot_info.move_slot_dist = move_slot_dist;
 
   // construct slot_t_lane_, left is positive, right is negative
   const double slot_width = std::min(virtual_slot_width, real_slot_width);
@@ -952,10 +965,12 @@ void PerpendicularInPlanner::GenTlane() {
         std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
   }
 
-  slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
-      ego_slot_info.target_ego_pos_slot.y();
+  if (frame_.replan_flag) {
+    slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
+        ego_slot_info.target_ego_pos_slot.y();
 
-  slot_t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
+    slot_t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
+  }
 
   if (need_move_slot) {
     slot_t_lane_.pt_terminal_pos.y() += move_slot_dist;
@@ -1148,7 +1163,8 @@ void PerpendicularInPlanner::GenObstacles() {
     double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
     if (frame_.ego_slot_info.slot_occupied_ratio >
             apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
-        std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
+        std::fabs(frame_.ego_slot_info.terminal_err.heading) * kRad2Deg <
+            36.6) {
       safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
     }
     for (const auto& obs_pos : tlane_obstacle_vec) {
@@ -1586,7 +1602,7 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
     bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) <
                            apa_param.GetParam().pose_y_err &&
                        std::fabs(frame_.ego_slot_info.terminal_err.heading) <
-                           apa_param.GetParam().pose_heading_err / 57.3;
+                           apa_param.GetParam().pose_heading_err * kDeg2Rad;
 
     bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
                        apa_param.GetParam().pose_slot_occupied_ratio;
@@ -1602,7 +1618,7 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
     bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) >
                            apa_param.GetParam().max_y_err_2 ||
                        std::fabs(frame_.ego_slot_info.terminal_err.heading) >
-                           apa_param.GetParam().max_heading_err_2 / 57.3;
+                           apa_param.GetParam().max_heading_err_2 * kDeg2Rad;
 
     bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
                        apa_param.GetParam().pose_slot_occupied_ratio_2;
@@ -1621,7 +1637,7 @@ const bool PerpendicularInPlanner::CheckDynamicUpdate() {
     bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) >
                            apa_param.GetParam().max_y_err_3 ||
                        std::fabs(frame_.ego_slot_info.terminal_err.heading) >
-                           apa_param.GetParam().max_heading_err_3 / 57.3;
+                           apa_param.GetParam().max_heading_err_3 * kDeg2Rad;
 
     bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
                        apa_param.GetParam().pose_slot_occupied_ratio_3;
@@ -1657,7 +1673,7 @@ const bool PerpendicularInPlanner::CheckReplan() {
       std::fabs(pnc::geometry_lib::NormalizeAngle(
           pt_center_heading_replan_ -
           frame_.ego_slot_info.slot_origin_heading)) *
-      57.3;
+      kRad2Deg;
   DEBUG_PRINT("replan slot_jump_dist = " << pt_center_replan_jump_dist_);
   DEBUG_PRINT("replan slot_jump_heading = " << pt_center_replan_jump_heading_);
 
@@ -1732,11 +1748,11 @@ const bool PerpendicularInPlanner::CheckFinished() {
 
   const bool heading_condition_1 =
       std::fabs(ego_slot_info.terminal_err.heading) <=
-      apa_param.GetParam().finish_heading_err / 57.3;
+      apa_param.GetParam().finish_heading_err * kDeg2Rad;
 
   const bool heading_condition_2 =
       std::fabs(ego_slot_info.terminal_err.heading) <=
-      (apa_param.GetParam().finish_heading_err + 1.988) / 57.3;
+      (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
 
   const bool lat_condition = (lat_condition_1 && heading_condition_1) &&
                              (lat_condition_2 && heading_condition_2);
@@ -2288,7 +2304,8 @@ const bool PerpendicularInPlanner::PostProcessPath() {
 }
 
 void PerpendicularInPlanner::Log() const {
-  const auto& l2g_tf = frame_.ego_slot_info.l2g_tf;
+  const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+  const auto& l2g_tf = ego_slot_info.l2g_tf;
   const auto p0_g = l2g_tf.GetPos(slot_t_lane_.pt_outside);
   const auto p1_g = l2g_tf.GetPos(slot_t_lane_.pt_inside);
   const auto pt_g = l2g_tf.GetPos(slot_t_lane_.pt_terminal_pos);
@@ -2333,22 +2350,50 @@ void PerpendicularInPlanner::Log() const {
     }
   }
 
-  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
-  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
+  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 6)
+  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 6)
 
   std::vector<double> slot_corner_X;
+  const size_t corner_size = ego_slot_info.slot_corner.size();
   slot_corner_X.clear();
-  slot_corner_X.reserve(frame_.ego_slot_info.slot_corner.size());
+  slot_corner_X.reserve(4 * corner_size);
   std::vector<double> slot_corner_Y;
   slot_corner_Y.clear();
-  slot_corner_Y.reserve(frame_.ego_slot_info.slot_corner.size());
-  for (const auto& corner : frame_.ego_slot_info.slot_corner) {
+  slot_corner_Y.reserve(4 * corner_size);
+  std::vector<Eigen::Vector2d> pt_vec;
+  pt_vec.clear();
+  pt_vec.reserve(corner_size);
+  for (const auto& corner : ego_slot_info.slot_corner) {
     slot_corner_X.emplace_back(corner.x());
     slot_corner_Y.emplace_back(corner.y());
+    pt_vec.emplace_back(corner);
   }
 
-  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 2)
-  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 2)
+  if (corner_size == 4) {
+    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+    const Eigen::Vector2d vec_01 = (pt_vec[1] - pt_vec[0]).normalized();
+    const Eigen::Vector2d vec_23 = (pt_vec[3] - pt_vec[2]).normalized();
+    pt_vec[0] = pt_vec[0] + ego_slot_info.move_slot_dist * vec_01;
+    pt_vec[1] = pt_vec[1] + ego_slot_info.move_slot_dist * vec_01;
+    pt_vec[2] = pt_vec[2] + ego_slot_info.move_slot_dist * vec_23;
+    pt_vec[3] = pt_vec[3] + ego_slot_info.move_slot_dist * vec_23;
+    for (const Eigen::Vector2d& pt : pt_vec) {
+      slot_corner_X.emplace_back(pt.x());
+      slot_corner_Y.emplace_back(pt.y());
+    }
+    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+  }
+  slot_corner_X.emplace_back(l2g_tf.GetPos(slot_t_lane_.pt_terminal_pos).x());
+  slot_corner_Y.emplace_back(l2g_tf.GetPos(slot_t_lane_.pt_terminal_pos).y());
+
+  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 6)
+  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 6)
 
   std::vector<double> limiter_corner_X;
   limiter_corner_X.clear();

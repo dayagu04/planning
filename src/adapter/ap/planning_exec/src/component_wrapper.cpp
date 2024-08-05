@@ -133,7 +133,7 @@ void ComponentWrapper::InitClient() {
                               FeedFuncStateMachine, FuncStateMachine);
       REGISTER_CLIENT_HANDLER("IflytekUssUsswaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
-      REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptInfo", FeedUssPerceptInfo,
+      REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptionInfo", FeedUssPerceptInfo,
                               UssPerceptInfo);
 
       SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()

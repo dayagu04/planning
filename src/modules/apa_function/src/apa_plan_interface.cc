@@ -397,6 +397,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().max_replan_remain_dist, double,
                   "max_replan_remain_dist");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_replan_count, int,
+                  "max_replan_count");
+
   // construct t_lane params
   JSON_READ_VALUE(apa_param.SetPram().vacant_pt_outside_dx, double,
                   "vacant_pt_outside_dx");

@@ -523,6 +523,9 @@ const bool PerpendicularPathPlanner::PreparePlan() {
 
   std::cout << "leave prepare plan\n";
 
+  JSON_DEBUG_VALUE("mono_plan", calc_params_.use_mono_tang)
+  JSON_DEBUG_VALUE("multi_plan", calc_params_.use_multi_tang)
+
   return plan_success;
 }
 

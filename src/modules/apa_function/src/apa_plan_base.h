@@ -64,6 +64,7 @@ class ApaPlannerBase {
     double target_ego_heading_slot = 0.0;
 
     std::vector<Eigen::Vector2d> slot_corner;
+    double move_slot_dist = 0.0;
     std::vector<Eigen::Vector2d> limiter_corner;
 
     Eigen::Vector2d slot_center;
@@ -110,6 +111,7 @@ class ApaPlannerBase {
 
       slot_corner.clear();
       limiter_corner.clear();
+      move_slot_dist = 0.0;
 
       slot_center.setZero();
 
@@ -202,7 +204,7 @@ class ApaPlannerBase {
     uint8_t dynamic_replan_count = 0;
     uint8_t replan_reason = NOT_REPLAN;
     uint8_t plan_fail_reason = NOT_FAILED;
-    uint8_t total_plan_count = 0;
+    int total_plan_count = 0;
     uint8_t in_slot_plan_count = 0;
     bool is_finished = false;
     bool is_fix_slot = false;

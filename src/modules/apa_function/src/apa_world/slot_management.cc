@@ -332,12 +332,13 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
   for (size_t i = 0; i < 4; ++i) {
     pt[i] << slot_points[i].x(), slot_points[i].y();
   }
-  const auto pM01 = 0.5 * (pt[0] + pt[1]);
-  const auto pM23 = 0.5 * (pt[2] + pt[3]);
+  const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
+  const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
   const double real_slot_length = (pM01 - pM23).norm();
-  // const auto t = (pt[1] - pt[0]).normalized();
-  // const auto n = Eigen::Vector2d(t.y(), -t.x());
-  const auto n = (pM01 - pM23).normalized();
+  const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
+  // n is vec that slot opening orientation
+  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
   pt[2] = pt[0] - real_slot_length * n;
   pt[3] = pt[1] - real_slot_length * n;
 
@@ -413,9 +414,20 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
     // use fus obj and ground line
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
+    uint8_t obs_in_slot_count = 0;
+    const uint8_t max_obs_in_slot_count = 5;
     for (const auto &obs_pt : frame_.obs_pt_vec) {
-      const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+      const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+      if (std::fabs(obs_pt_slot.y()) < 0.468 &&
+          obs_pt_slot.x() > ego_slot_info.pt_0.x() -
+                                apa_param.GetParam().car_length + 0.168 &&
+          obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
+        obs_in_slot_count++;
+      }
       ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+    }
+    if (obs_in_slot_count > max_obs_in_slot_count) {
+      return false;
     }
   }
 
@@ -568,8 +580,6 @@ bool SlotManagement::GenTLane(
                                  << virtual_slot_width
                                  << "  real slot width = " << real_slot_width);
 
-  const double safe_threshold = apa_param.GetParam().safe_threshold;
-
   double left_y = left_pq_for_y.top().y();
 
   double real_left_y = left_y;
@@ -633,6 +643,8 @@ bool SlotManagement::GenTLane(
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
                                     << "  right_dis_obs_car = "
                                     << right_dis_obs_car);
+
+  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal;
 
   // ensure it can move slot to make both side safe
   if (left_dis_obs_car + right_dis_obs_car < 2.0 * safe_threshold) {
