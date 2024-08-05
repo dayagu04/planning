@@ -21,6 +21,7 @@ namespace {
 constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.4;
 constexpr double kStaticAgentBuffer = 0.12;
+constexpr double kStaticLeadThr = 1.1;
 constexpr double kHalfLaneWidth = 1.75;
 constexpr double kLeadoneThr = 1.2;
 constexpr double kHalfEgoWidth = 1.1;
@@ -2139,10 +2140,10 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
+  // acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
   // acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  // acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
+  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
   acc_bound_.second =
       std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
   // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
@@ -2293,7 +2294,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     }
     double half_lane_width_by_s = 0.5 * current_lane->width_by_s(min_s);
     double invade_thr = half_lane_width_by_s - kStaticAgentBuffer;
-    if (fabs(min_lat_l) > invade_thr) {
+    // invade thr: (1.1, half_lane_width - 0.12)
+    if (fabs(min_lat_l) > invade_thr || fabs(min_lat_l) < kStaticLeadThr) {
       continue;
     }
     // 3.4 check agent is front of ego ?

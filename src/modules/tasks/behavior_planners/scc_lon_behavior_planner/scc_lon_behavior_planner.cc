@@ -18,7 +18,7 @@ constexpr double check_time = 1.6;
 constexpr double kMinFarTimeGap = 1.8;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 5.5;
+constexpr double kSpeedBuffer = 10.0;
 constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
 constexpr double kFarDistFollowTimeGap = 1.8;
 constexpr double kNearDistFollowTimeGap = 1.2;
@@ -799,9 +799,9 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
     return false;
   }
 
-  if (check_st.vel > kLowAgentSpeed) {
-    return false;
-  }
+  // if (check_st.vel > kLowAgentSpeed) {
+  //   return false;
+  // }
 
   const double far_preview_dist = kFarPreviewTime * lon_init_state_[1];
   const double near_preview_dist = kNearPreviewTime * lon_init_state_[1];
