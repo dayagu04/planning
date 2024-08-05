@@ -1365,7 +1365,7 @@ def load_local_view_figure():
     local_view_data ["data_sdmap_ramp_line"] = data_sdmap_ramp_line
     local_view_data ["data_sdmap_inlink"] = data_sdmap_inlink
     local_view_data ["data_sdmap_outlink"] = data_sdmap_outlink
-    
+
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1300, match_aspect = True, aspect_scale=1)
 
@@ -1468,9 +1468,9 @@ def load_local_view_figure():
       fig1.line(keyy,keyx,source = ehr_lane_boundary_lanes[i], line_width = 1, line_color = 'blue', line_dash = 'dashed', legend_label = 'ehr_lane_boundary')
   if is_vis_sdmap:
     fig1.line('data_sdmap_road_line_y','data_sdmap_road_line_x',source = data_sdmap_road_line, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdmap_road_line')
-    fig1.circle('data_sdmap_ramp_line_y', 'data_sdmap_ramp_line_x', source = data_sdmap_ramp_line, radius = 3, fill_color="red", line_color='red', legend_label = 'ramp_segment')
-    fig1.circle('data_sdmap_inlink_y', 'data_sdmap_inlink_x', source = data_sdmap_inlink, radius = 3, fill_color="green", line_color='green', legend_label = 'inlink_segment')
-    fig1.circle('data_sdmap_outlink_y', 'data_sdmap_outlink_x', source = data_sdmap_outlink, radius = 3, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
+    fig1.circle('data_sdmap_ramp_line_y', 'data_sdmap_ramp_line_x', source = data_sdmap_ramp_line, radius = 0.3, fill_color="red", line_color='red', legend_label = 'ramp_segment')
+    fig1.circle('data_sdmap_inlink_y', 'data_sdmap_inlink_x', source = data_sdmap_inlink, radius = 0.3, fill_color="green", line_color='green', legend_label = 'inlink_segment')
+    fig1.circle('data_sdmap_outlink_y', 'data_sdmap_outlink_x', source = data_sdmap_outlink, radius = 0.3, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
 
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -1517,17 +1517,17 @@ def load_local_view_figure():
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_3, radius = 0.03, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_4, radius = 0.03, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
-  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  fig1.circle('prediction_y', 'prediction_x', source = data_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
-  fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
-  fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec' ,source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id')
-  fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
-  fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
-  fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
-  fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
+  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
+  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
+  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
+  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
+  # fig1.circle('prediction_y', 'prediction_x', source = data_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'prediction')
+  # fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'parking_space')
+  # fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec' ,source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id')
+  # fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'road_mark')
+  # fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
+  # fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
+  # fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
 
   hover1_1 = HoverTool(renderers=[fig1.renderers[26]], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),

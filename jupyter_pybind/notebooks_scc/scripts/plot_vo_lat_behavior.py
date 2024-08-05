@@ -20,6 +20,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
+fig1.height = 1000
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -71,11 +72,11 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=600)
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
+data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=550)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=700)
-data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=600)
+data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=400)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -269,6 +270,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_behavior_table_2), column(data_overtake_lc_table, data_obstacle_table)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 # slider_class = ObjText(obj_id_handler)
