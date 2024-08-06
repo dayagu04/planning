@@ -1,6 +1,8 @@
 #include "lane_reference_path.h"
+
 #include <openssl/evp.h>
 #include <sys/param.h>
+
 #include <cmath>
 
 #include "ifly_time.h"
@@ -165,8 +167,8 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
-  //判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
-  // calculate reference path origin total length
+  // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
+  //  calculate reference path origin total length
   double origin_reference_path_total_length = 0;
   for (int i = 1; i < ref_path_points.size(); i++) {
     const auto &cur_point = ref_path_points[i].path_point;
@@ -182,7 +184,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
         session_->mutable_environmental_model()->get_ego_state_manager();
     const double ego_v = ego_state_mgr->ego_v();
     const double cruise_v = ego_state_mgr->ego_v_cruise();
-    const double preview_dis = std::fmax(ego_v, cruise_v) * 5;
+    const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
     const double extend_buff = 5;
     const double ego_projection_length_in_reference_path =
         CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
@@ -205,7 +207,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
 
 void LaneReferencePath::assign_obstacles_to_lane() {
   lane_obstacles_id_.clear();
-  lane_leadone_obstacle_ = -1;  //需要注意id是否为负数 todo
+  lane_leadone_obstacle_ = -1;  // 需要注意id是否为负数 todo
   lane_leadtwo_obstacle_ = -1;
 
   std::vector<std::shared_ptr<FrenetObstacle>> sorted_obstacles;
