@@ -1,4 +1,5 @@
 #include "scc_st_graph.h"
+
 #include <math.h>
 
 #include <algorithm>
@@ -673,7 +674,7 @@ void StGraphGenerator::UpdateSTGraphs(
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
-      //考虑前车减速的情况
+      // 考虑前车减速的情况
       if (st.a_lead() < 0) {
         // s_step += CalcDeceleratedObstacleST();
         s_step += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
@@ -1365,7 +1366,10 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
   LOG_DEBUG("x_linear_to_parabola : [%f] , x_parabola_offset : [%f]\n",
             x_linear_to_parabola, x_parabola_offset);
 
+  double v_ego = lon_behav_input_->ego_info().ego_v();
+  double v_rel = v_ego - v_lead;
   double v_rel_des = 0.0;
+  double soft_brake_distance = 0.0;
   if (d_rel < d_des) {
     // calculate v_rel_des on the line that connects 0m at max_runaway_speed
     // to d_des
@@ -1375,15 +1379,20 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
     // take the min of the 2 above
     v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
     v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = d_rel;
   } else if (d_rel < d_des + x_linear_to_parabola) {
     v_rel_des = (d_rel - d_des) * l_slope;
     v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = v_rel / l_slope + d_des;
   } else {
     v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
+    soft_brake_distance =
+        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
   }
   // compute desired speed
   double v_target = v_rel_des + v_lead;
   LOG_DEBUG("v_rel_des : [%f], v_target : [%f] \n", v_rel_des, v_target);
+  JSON_DEBUG_VALUE("soft_brake_distance_lead", soft_brake_distance);
   return v_target;
 }
 
