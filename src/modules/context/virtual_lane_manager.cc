@@ -1514,7 +1514,6 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
 
   if (!current_segment) {
     ResetForRampInfo();
-    std::cout << "fengwang31:!current_segment!!!!!!!!!" << std::endl;
     return;
   } else {
     is_in_sdmaproad_ = true;
@@ -1528,7 +1527,6 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     ResetForRampInfo();
     return;
   }
-  std::cout << "fengwang31:is_ego_on_expressway_" << is_ego_on_expressway_ << std::endl;
   //计算ramp信息
   const auto& ramp_info =
       sd_map.GetRampInfo(current_segment->id(), nearest_s, max_search_length);

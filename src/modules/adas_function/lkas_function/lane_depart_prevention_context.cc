@@ -306,7 +306,7 @@ uint16 LaneDepartPrevention::LeftSuppressionCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state <
        iflyauto::FunctionalState_PARK_IN_SEARCHING)) {
     ldp_left_suppression_code_temp += uint16_bit[4];
@@ -380,7 +380,7 @@ uint16 LaneDepartPrevention::LeftKickDownCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state <
        iflyauto::FunctionalState_PARK_IN_SEARCHING)) {
     ldp_left_kickdown_code_temp += uint16_bit[4];
@@ -483,7 +483,7 @@ uint16 LaneDepartPrevention::RightSuppressionCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state <
        iflyauto::FunctionalState_PARK_IN_SEARCHING)) {
     ldp_right_suppression_code_temp += uint16_bit[4];
@@ -557,7 +557,7 @@ uint16 LaneDepartPrevention::RightKickDownCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state <
        iflyauto::FunctionalState_PARK_IN_SEARCHING)) {
     ldp_right_kickdown_code_temp += uint16_bit[4];

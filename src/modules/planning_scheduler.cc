@@ -553,9 +553,51 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.environmental_model().get_virtual_lane_manager();
   planning_hmi_info->ad_info.lane_change_direction = (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
 
-  planning_hmi_info->ad_info.lane_change_status = (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
-
-
+  // planning_hmi_info->ad_info.lane_change_status = (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
+  // update LaneChangeStatus
+  const auto curr_state = lane_change_decider_output.curr_state;
+  if (curr_state == ROAD_NONE) {
+    planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+  } else if (curr_state == ROAD_LC_LWAIT ||
+             curr_state == ROAD_LC_RWAIT) {
+    planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_WAITING;       
+  } else if (curr_state == ROAD_LC_LCHANGE ||
+             curr_state == ROAD_LC_RCHANGE) {
+    planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;       
+  } else if (curr_state == ROAD_LC_LBACK ||
+             curr_state == ROAD_LC_RBACK) {
+    planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;       
+  }
+  // update StatusUpdateReason
+  const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
+  const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
+  if (lc_invalid_reason == "side view invalid" ||
+      lc_invalid_reason == "front view invalid" ||
+      lc_invalid_reason == "valid cnt below threshold" ||
+      lc_back_reason == "side view back" ||
+      lc_back_reason == "front view back" ||
+      lc_back_reason == "but back cnt below threshold") {
+    planning_hmi_info->ad_info.status_update_reason = iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
+  } else {
+    planning_hmi_info->ad_info.status_update_reason = iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
+  }
+  // update LaneChangeReason
+  const auto lc_request_source = lane_change_decider_output.lc_request_source;
+  if (lc_request_source == NO_REQUEST) {
+    planning_hmi_info->ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_NONE;
+  } else if (lc_request_source == INT_REQUEST) {
+    planning_hmi_info->ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MANUAL;
+  } else if (lc_request_source == ACT_REQUEST ||
+             lc_request_source == OVERTAKE_REQUEST) {
+    planning_hmi_info->ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
+  } else if (lc_request_source == MAP_REQUEST) {
+    if (virtual_lane_manager->dis_to_ramp() < virtual_lane_manager->distance_to_first_road_merge()) {
+      planning_hmi_info->ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    } else {
+      planning_hmi_info->ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    }
+  }
+  
   planning_hmi_info->ad_info.avoid_status = lat_offset_decider_output.avoid_id > 0 ? iflyauto::AvoidObstacle::AVOID_HIDING : iflyauto::AvoidObstacle::AVOID_NO_HIDING;  // 晨亮填写
   planning_hmi_info->ad_info.aovid_id = lat_offset_decider_output.avoid_id;      // 晨亮填写
   planning_hmi_info->ad_info.avoiddirect = static_cast<iflyauto::AvoidObstacleDirection>(lat_offset_decider_output.avoid_direction);
@@ -579,21 +621,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
     planning_hmi_info->ad_info.angle_to_roaddirection = fix_reference_path->get_frenet_ego_state().heading_angle();
   }
 
-  std::cout << "fengwang31:111:" << session_.planning_context().planning_hmi_info().ad_info.is_in_sdmaproad << std::endl;
-  std::cout << "fengwang31:virtual_lane_manager->is_in_sdmaproad():" << virtual_lane_manager->is_in_sdmaproad() << std::endl;
   planning_hmi_info->ad_info.is_in_sdmaproad = virtual_lane_manager->is_in_sdmaproad();
-  std::cout << "fengwang31:222:" << session_.planning_context().planning_hmi_info().ad_info.is_in_sdmaproad << std::endl;
-  std::cout << "fengwang31:333:" << planning_hmi_info->ad_info.is_in_sdmaproad << std::endl;
-  
-  std::cout << "fengwang31:virtual_lane_manager->is_ego_on_expressway():" << virtual_lane_manager->is_ego_on_expressway() << std::endl;
-  std::cout << "fengwang31:333road_type:" << session_.planning_context().planning_hmi_info().ad_info.road_type << std::endl;
   if (virtual_lane_manager->is_ego_on_expressway()) {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
   } else {
     planning_hmi_info->ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
-  std::cout << "fengwang31:444road_type:" << session_.planning_context().planning_hmi_info().ad_info.road_type << std::endl;
-  std::cout << "fengwang31:555planning_hmi_info->ad_info.road_type:" << planning_hmi_info->ad_info.road_type << std::endl;
 
   // HMI for hpp
   auto hpp_info = &(session_.mutable_planning_context()

@@ -342,7 +342,7 @@ uint16 EmergencyLaneKeep::LeftSuppressionCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state <
        iflyauto::FunctionalState_PARK_IN_SEARCHING)) {
     elk_left_suppression_code_temp += uint16_bit[4];
@@ -416,7 +416,7 @@ uint16 EmergencyLaneKeep::LeftKickDownCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state <
        iflyauto::FunctionalState_PARK_IN_SEARCHING)) {
     elk_left_kickdown_code_temp += uint16_bit[4];
@@ -542,7 +542,7 @@ uint16 EmergencyLaneKeep::RightSuppressionCode() {
   }
 
   // Condition5
-  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANBY) &&
+  if ((lkas_input_->function_state > iflyauto::FunctionalState_SCC_STANDBY) &&
       (lkas_input_->function_state < iflyauto::FunctionalState_PARK_STANDBY)) {
     elk_right_suppression_code_temp += uint16_bit[4];
   }
