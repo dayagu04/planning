@@ -77,10 +77,11 @@ struct PredictionObject {
   float theta;  // for velocity
   float acc;
   iflyauto::ObjectMotionType motion_pattern_current;
-  bool is_oversize_vehicle;
-  bool is_VRU;
-  bool is_traffic_facilities;
-  bool is_car;
+  bool is_oversize_vehicle{false};
+  bool is_VRU{false};
+  bool is_traffic_facilities{false};
+  bool is_car{false};
+  bool is_static{false};
   // add relative info for highway
   float relative_position_x;
   float relative_position_y;

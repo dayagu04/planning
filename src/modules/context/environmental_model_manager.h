@@ -85,6 +85,7 @@ class EnvironmentalModelManager {
   bool CheckIfVru(const int type);
   bool CheckIfTrafficFacilities(const int type);
   bool CheckIfCar(const int type);
+  bool IsStatic(const PredictionObject &prediction_object);
 
  private:
   planning::framework::Session *session_ = nullptr;
