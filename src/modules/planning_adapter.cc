@@ -428,7 +428,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
   header.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
   header.input_list[input_list_count].seq =
-      local_view_ptr_->hmi_mcu_inner_info.header.seq;
+      local_view_ptr_->hmi_inner_info.header.seq;
   input_list_count += 1;
 
   header.input_list[input_list_count].input_type =
