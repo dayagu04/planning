@@ -204,6 +204,8 @@ struct ApaParameters {
   double prepare_directly_use_tangent_heading_err = 2.6;
   double prepare_adjust_drive_max_length = 2.28;
   double prepare_adjust_reverse_max_length = 3.6;
+  double prepare_single_max_allow_time = 6.68;
+  int prepare_max_try_count = 2;
   double third_prepare_heading_threshold = 26.68;
   double min_turn_radius = 5.5;
   double max_one_step_arc_radius = 8.5;

@@ -668,6 +668,12 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_reverse_max_length, double,
                   "prepare_adjust_reverse_max_length");
 
+  JSON_READ_VALUE(apa_param.SetPram().prepare_single_max_allow_time, double,
+                  "prepare_single_max_allow_time");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_max_try_count, int,
+                  "prepare_max_try_count");
+
   JSON_READ_VALUE(apa_param.SetPram().third_prepare_heading_threshold, double,
                   "third_prepare_heading_threshold");
 

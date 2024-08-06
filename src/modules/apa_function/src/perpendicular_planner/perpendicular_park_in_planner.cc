@@ -1271,6 +1271,8 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     DEBUG_PRINT("path plan fail");
     plan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    current_plan_path_vec_.clear();
+    current_path_point_global_vec_.clear();
     return plan_result;
   }
 
@@ -1290,7 +1292,8 @@ const uint8_t PerpendicularInPlanner::PathPlanOnce() {
     return plan_result;
   }
 
-  perpendicular_path_planner_.SetLineSegmentHeading();
+  // retired
+  // perpendicular_path_planner_.SetLineSegmentHeading();
 
   perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
       apa_param.GetParam().path_extend_distance);
@@ -1783,6 +1786,11 @@ void PerpendicularInPlanner::GenPlanningOutput() {
   pnc::geometry_lib::PathPoint current_ego_pose(
       apa_world_ptr_->GetMeasurementsPtr()->pos_ego,
       apa_world_ptr_->GetMeasurementsPtr()->heading_ego);
+
+  DEBUG_PRINT("frame_.plan_stm.planning_status = "
+              << static_cast<int>(frame_.plan_stm.planning_status)
+              << "  plan path pt size = "
+              << current_path_point_global_vec_.size());
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);

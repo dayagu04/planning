@@ -41,6 +41,16 @@ class PerpendicularPathPlanner {
     }
   };
 
+  enum class PrePlanCase : uint8_t {
+    FAIL,
+    EGO_POSE,
+    FIRST_MID_POINT,
+    SECOND_MID_POINT,
+    MOVE_TO_TARGET_LINE,
+    TURN_AROUND,
+    COUNT,
+  };
+
   enum class PathColDetRes : uint8_t {
     INVALID,
     NORMAL,
@@ -122,6 +132,8 @@ class PerpendicularPathPlanner {
     bool is_left_side = true;
     double slot_side_sgn = 1.0;
 
+    PrePlanCase pre_plan_case = PrePlanCase::FAIL;
+
     bool should_prepare_second = false;
     bool should_prepare_third = false;
     bool first_multi_plan = true;
@@ -161,6 +173,7 @@ class PerpendicularPathPlanner {
 
       adjust_fail_count = 0;
 
+      pre_plan_case = PrePlanCase::FAIL;
       should_prepare_second = false;
       should_prepare_third = false;
       first_multi_plan = true;
@@ -261,6 +274,16 @@ class PerpendicularPathPlanner {
                              const double &heading_offset,
                              const double &radius);
 
+  const bool CalTurnAroundPose();
+
+  const bool TurnAround();
+
+  const bool DubinsPlan(
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
+      const double min_length, const bool need_col_det,
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+
   const bool PreparePlanSecond();
 
   const bool GenPathOutputByDubins();
@@ -348,9 +371,11 @@ class PerpendicularPathPlanner {
 
   // collision detect start
   const PathColDetRes TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg);
+      pnc::geometry_lib::PathSegment &path_seg,
+      CollisionDetector::CollisionResult *pcol_res = nullptr);
   const PathColDetRes TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg, const double safe_dist);
+      pnc::geometry_lib::PathSegment &path_seg, const double safe_dist,
+      CollisionDetector::CollisionResult *pcol_res = nullptr);
   // collision detect end
 
   const bool CheckArcOrLineAvailable(const pnc::geometry_lib::Arc &arc);

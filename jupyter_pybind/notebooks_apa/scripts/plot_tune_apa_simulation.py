@@ -421,14 +421,14 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     'y' : line_yn,
   })
 
-  if isinstance(obstacle_x, str):
+  if isinstance(obstacle_x, str) and len(obstacle_x) > 0:
     obstacle_x_list = [float(x) for x in obstacle_x.split(',')]
-  else:
+  elif not isinstance(obstacle_x, str):
     obstacle_x_list = obstacle_x
 
-  if isinstance(obstacle_y, str):
+  if isinstance(obstacle_y, str) and len(obstacle_y) > 0:
     obstacle_y_list = [float(y) for y in obstacle_y.split(',')]
-  else:
+  elif not isinstance(obstacle_y, str):
     obstacle_y_list = obstacle_y
 
   data_sim_obs.data.update({
@@ -438,14 +438,14 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
 
   col_det_path_x_list = []
   col_det_path_y_list = []
-  if isinstance(col_det_path_x, str):
+  if isinstance(col_det_path_x, str) and len(col_det_path_x) > 0:
     col_det_path_x_list = [float(x) for x in col_det_path_x.split(',')]
-  else:
+  elif not isinstance(col_det_path_x, str):
     col_det_path_x_list = col_det_path_x
 
-  if isinstance(col_det_path_y, str):
+  if isinstance(col_det_path_y, str) and len(col_det_path_y) > 0:
     col_det_path_y_list = [float(y) for y in col_det_path_y.split(',')]
-  else:
+  elif not isinstance(col_det_path_x, str):
     col_det_path_y_list = col_det_path_y
 
   data_sim_col_det_path.data.update({
