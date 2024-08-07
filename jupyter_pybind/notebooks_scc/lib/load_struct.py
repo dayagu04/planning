@@ -546,9 +546,12 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
-      tp = lane.marking_segments[0].marking
-      if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-        lane_info['type'] = ['dashed']
+      if( lane.marking_segments_size != 0 ):
+        tp = lane.marking_segments[0].marking
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info['type'] = ['dashed']
+        else:
+          lane_info['type'] = ['solid']
       else:
         lane_info['type'] = ['solid']
 
