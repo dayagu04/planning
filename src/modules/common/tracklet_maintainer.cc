@@ -1923,8 +1923,23 @@ bool TrackletMaintainer::is_potential_avoiding_car(
 
   bool is_not_full_in_road = (std::fabs(item.y_rel) > 0.0);
   bool is_in_range = (item.d_rel < 20.0 && item.v_rel < in_range_v);
-  double ttc_for_static_obs = 3.6;
-  double max_enter_range = std::fabs(item.v_rel) * ttc_for_static_obs;
+  double ttc_for_obs = 3.6;
+  // hysteresis
+  const auto lat_offset =
+      session_->planning_context().lateral_behavior_planner_output().lat_offset;
+  if ((lat_offset > 0 && item.d_max_cpath < 0) ||
+      (lat_offset < 0 && item.d_min_cpath > 0)) {
+    if (item.is_oversize_vehicle) {
+      ttc_for_obs = 8.0;
+    } else {
+      ttc_for_obs = 6.0;
+    }
+    std::array<double, 2> x1{50, 60};
+    std::array<double, 2> f1{0, 0.1};
+    double near_car_d_lane_buffer = interp(item.d_rel, x1, f1);
+    near_car_d_lane_thr += near_car_d_lane_buffer;
+  }
+  double max_enter_range = std::fabs(item.v_rel) * ttc_for_obs;
   max_enter_range = max_enter_range > 100 ? 100 : max_enter_range;
   max_enter_range = max_enter_range < 50 ? 50 : max_enter_range;
   bool is_about_to_enter_range =
