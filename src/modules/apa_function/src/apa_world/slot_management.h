@@ -348,6 +348,7 @@ class SlotManagement {
       slot_occupied_ratio = 0.0;
 
       obs_pt_vec_slot.clear();
+      slot_corner.clear();
 
       origin_pt_0_heading = 0.0;
       sin_angle = 1.0;

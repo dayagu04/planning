@@ -1316,11 +1316,12 @@ const bool SlotManagement::UpdateEgoParallelSlotInfoInSearching(
   ego_slot_info.Reset();
   ego_slot_info.select_slot = *slot_info;
 
-  const auto &slot_point =
-      ego_slot_info.select_slot.corner_points().corner_point();
-
   for (size_t i = 0; i < 4; ++i) {
-    ego_slot_info.slot_corner[i] << slot_point[i].x(), slot_point[i].y();
+    const Eigen::Vector2d pt(
+        ego_slot_info.select_slot.corner_points().corner_point(i).x(),
+        ego_slot_info.select_slot.corner_points().corner_point(i).y());
+
+    ego_slot_info.slot_corner.emplace_back(std::move(pt));
   }
 
   const Eigen::Vector2d v_10_unit =
