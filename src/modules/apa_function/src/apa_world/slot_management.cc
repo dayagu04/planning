@@ -415,7 +415,7 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
     uint8_t obs_in_slot_count = 0;
-    const uint8_t max_obs_in_slot_count = 5;
+    const uint8_t max_obs_in_slot_count = 2;
     for (const auto &obs_pt : frame_.obs_pt_vec) {
       const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
       if (std::fabs(obs_pt_slot.y()) < 0.468 &&
@@ -644,7 +644,7 @@ bool SlotManagement::GenTLane(
                                     << "  right_dis_obs_car = "
                                     << right_dis_obs_car);
 
-  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal;
+  const double safe_threshold = apa_param.GetParam().safe_threshold;
 
   // ensure it can move slot to make both side safe
   if (left_dis_obs_car + right_dis_obs_car < 2.0 * safe_threshold) {
@@ -693,10 +693,10 @@ bool SlotManagement::GenTLane(
     }
   }
 
-  const auto pM01 =
+  const Eigen::Vector2d pM01 =
       0.5 * (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1]);
 
-  const auto pM23 =
+  const Eigen::Vector2d pM23 =
       0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
 
   Eigen::Vector2d ego_to_slot_center_vec =
@@ -729,7 +729,7 @@ bool SlotManagement::GenTLane(
   Eigen::Vector2d corner_right_slot(ego_slot_info.slot_length,
                                     -0.5 * slot_width);
 
-  const auto &slot_side = slot_tlane.slot_side;
+  const uint8_t &slot_side = slot_tlane.slot_side;
   if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     // inside is right, outside is left
     slot_tlane.corner_outside_slot = corner_left_slot;
@@ -2189,9 +2189,15 @@ bool SlotManagement::UpdateEgoSlotInfo(
     pt[i] << slot_points[i].x(), slot_points[i].y();
   }
 
-  const auto pM01 = 0.5 * (pt[0] + pt[1]);
-  const auto pM23 = 0.5 * (pt[2] + pt[3]);
+  const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
+  const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
   const double real_slot_length = (pM01 - pM23).norm();
+  const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
+  // n is vec that slot opening orientation
+  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
+  pt[2] = pt[0] - real_slot_length * n;
+  pt[3] = pt[1] - real_slot_length * n;
 
   const double virtual_slot_length =
       apa_param.GetParam().car_length +
@@ -2200,9 +2206,6 @@ bool SlotManagement::UpdateEgoSlotInfo(
   const double use_slot_length =
       std::min(real_slot_length, virtual_slot_length);
 
-  // const auto t = (pt[1] - pt[0]).normalized();
-  // const auto n = Eigen::Vector2d(t.y(), -t.x());
-  const auto n = (pM01 - pM23).normalized();
   ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;

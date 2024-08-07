@@ -11,10 +11,10 @@ sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240730/20240730-10-47-22/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-30-10-47-22_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240807/20240807-10-33-36/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-07-10-33-37_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -164,9 +164,14 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   # print("plan remain dist uss = ", plan_debug_msg["remain_dist_uss"])
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
-  wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
+
   vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
   soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+
+  if bag_loader.wave_msg['enable'] == True:
+    wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
+  else:
+    wave_msg = UssWaveInfo()
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]

@@ -965,12 +965,10 @@ void PerpendicularInPlanner::GenTlane() {
         std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
   }
 
-  if (frame_.replan_flag) {
-    slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
-        ego_slot_info.target_ego_pos_slot.y();
+  slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
+      ego_slot_info.target_ego_pos_slot.y();
 
-    slot_t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
-  }
+  slot_t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
 
   if (need_move_slot) {
     slot_t_lane_.pt_terminal_pos.y() += move_slot_dist;

@@ -112,7 +112,7 @@
   "curb_offset": 1.4,
   "nearby_slot_corner_dist": 0.6,
   "force_both_side_occupied": false,
-  "safe_threshold": 0.086,
+  "safe_threshold": 0.05,
   "virtual_obs_y_pos": 0.386,
   "virtual_obs_x_pos": 2.068,
   "obs_consider_long_threshold": 0.6886,
