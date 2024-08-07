@@ -849,7 +849,7 @@ void PerpendicularInPlanner::GenTlane() {
     }
   }
 
-  const double threshold = 0.4268;
+  const double threshold = 0.6868;
   if (ego_slot_info.fus_obj_valid_flag) {
     left_y = std::max(left_y, car_half_width_with_mirror + threshold);
     left_x = std::min(left_x, ego_slot_info.pt_1.x() - 1.68 * threshold);
@@ -885,27 +885,29 @@ void PerpendicularInPlanner::GenTlane() {
   bool left_obs_meet_safe_require = false;
   bool right_obs_meet_safe_require = false;
 
-  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal;
+  const double safe_threshold =
+      apa_param.GetParam().car_lat_inflation_normal + 0.03168;
 
   left_obs_meet_safe_require = left_dis_obs_car > safe_threshold ? true : false;
   right_obs_meet_safe_require =
       right_dis_obs_car > safe_threshold ? true : false;
 
-  bool need_move_slot = false;
-  double move_slot_dist = 0.0;
-
-  // if two side is all no safe, the slot would not release in slot managment,
-  // and should not move target pose
-  if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
-    // left side is dangerous, should move toward right
-    need_move_slot = true;
-    move_slot_dist = safe_threshold - left_dis_obs_car;
-    move_slot_dist *= -1.0;
-  } else if (left_obs_meet_safe_require && !right_obs_meet_safe_require) {
-    // right side is dangerous, should move toward left
-    need_move_slot = true;
-    move_slot_dist = safe_threshold - right_dis_obs_car;
+  if (ego_slot_info.slot_occupied_ratio < 0.618 && frame_.replan_flag) {
+    // if two side is all no safe, the slot would not release in slot managment,
+    // and should not move target pose
+    if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
+      // left side is dangerous, should move toward right
+      ego_slot_info.move_slot_dist = safe_threshold - left_dis_obs_car;
+      ego_slot_info.move_slot_dist *= -1.0;
+    } else if (left_obs_meet_safe_require && !right_obs_meet_safe_require) {
+      // right side is dangerous, should move toward left
+      ego_slot_info.move_slot_dist = safe_threshold - right_dis_obs_car;
+    }
   }
+
+  const bool need_move_slot =
+      (pnc::mathlib::IsDoubleEqual(ego_slot_info.move_slot_dist, 0.0)) ? false
+                                                                       : true;
 
   if (need_move_slot) {
     // cal max_move_slot_dist to avoid car press line
@@ -920,18 +922,17 @@ void PerpendicularInPlanner::GenTlane() {
     const double max_move_slot_dist =
         half_slot_width - half_car_width - car2line_dist_threshold;
     if (max_move_slot_dist > 0.0 &&
-        (std::fabs(move_slot_dist) > max_move_slot_dist)) {
-      if (move_slot_dist > 0.0) {
-        move_slot_dist = max_move_slot_dist;
+        (std::fabs(ego_slot_info.move_slot_dist) > max_move_slot_dist)) {
+      if (ego_slot_info.move_slot_dist > 0.0) {
+        ego_slot_info.move_slot_dist = max_move_slot_dist;
       }
-      if (move_slot_dist < 0.0) {
-        move_slot_dist = -max_move_slot_dist;
+      if (ego_slot_info.move_slot_dist < 0.0) {
+        ego_slot_info.move_slot_dist = -max_move_slot_dist;
       }
     }
   }
 
-  JSON_DEBUG_VALUE("move_slot_dist", move_slot_dist)
-  ego_slot_info.move_slot_dist = move_slot_dist;
+  JSON_DEBUG_VALUE("move_slot_dist", ego_slot_info.move_slot_dist)
 
   // construct slot_t_lane_, left is positive, right is negative
   const double slot_width = std::min(virtual_slot_width, real_slot_width);
@@ -971,11 +972,11 @@ void PerpendicularInPlanner::GenTlane() {
   slot_t_lane_.pt_terminal_heading = ego_slot_info.target_ego_heading_slot;
 
   if (need_move_slot) {
-    slot_t_lane_.pt_terminal_pos.y() += move_slot_dist;
-    slot_t_lane_.pt_inside.y() += move_slot_dist;
-    slot_t_lane_.pt_outside.y() += move_slot_dist;
-    DEBUG_PRINT(
-        "should move slot according to obs pt, move dist = " << move_slot_dist);
+    slot_t_lane_.pt_terminal_pos.y() += ego_slot_info.move_slot_dist;
+    slot_t_lane_.pt_inside.y() += ego_slot_info.move_slot_dist;
+    slot_t_lane_.pt_outside.y() += ego_slot_info.move_slot_dist;
+    std::cout << "should move slot according to obs pt, move dist = "
+              << ego_slot_info.move_slot_dist << std::endl;
 
     ego_slot_info.terminal_err.Set(
         ego_slot_info.ego_pos_slot - slot_t_lane_.pt_terminal_pos,
@@ -1165,7 +1166,7 @@ void PerpendicularInPlanner::GenObstacles() {
             36.6) {
       safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
     }
-    for (const auto& obs_pos : tlane_obstacle_vec) {
+    for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
       if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pos, ego_pose, safe_dist)) {
         apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
@@ -1175,8 +1176,18 @@ void PerpendicularInPlanner::GenObstacles() {
   }
 
   else {
+    const double safe_dist = 0.0268;
+    // add virtual tlane obs
+    std::vector<Eigen::Vector2d> tlane_obs_vec;
+    tlane_obs_vec.reserve(tlane_obstacle_vec.size());
+    for (const Eigen::Vector2d& obs_pos : tlane_obstacle_vec) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs_pos, ego_pose, safe_dist)) {
+        tlane_obs_vec.emplace_back(obs_pos);
+      }
+    }
     apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-        tlane_obstacle_vec, CollisionDetector::TLANE_OBS);
+        tlane_obs_vec, CollisionDetector::TLANE_OBS);
 
     // add actual fus obs
     Eigen::Vector2d pt_left = obstacle_t_lane_.pt_outside;
@@ -1185,7 +1196,6 @@ void PerpendicularInPlanner::GenObstacles() {
       std::swap(pt_left, pt_right);
     }
     std::vector<Eigen::Vector2d> fus_obs_vec;
-    const double safe_dist = 0.0268;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
     for (const auto& obs_pos : ego_slot_info.obs_pt_vec_slot) {
@@ -2341,6 +2351,10 @@ void PerpendicularInPlanner::Log() const {
           apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap();
 
   for (const auto& obs_pair : obstacles_map) {
+    if (obs_pair.first == CollisionDetector::FUSION_OBS ||
+        obs_pair.first == CollisionDetector::RECORD_OBS) {
+      continue;
+    }
     for (const auto& obstacle : obs_pair.second) {
       const auto tmp_obstacle = l2g_tf.GetPos(obstacle);
       obstaclesX.emplace_back(tmp_obstacle.x());

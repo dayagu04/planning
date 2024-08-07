@@ -65,7 +65,7 @@
   "car_static_keep_time_by_vel_normal": 0.8,
 
   "comment_8": "uss params",
-  "is_uss_dist_from_perception": false,
+  "is_uss_dist_from_perception": true,
   "lat_inflation": 0.0,
   "detection_distance": 2.5,
   "safe_uss_remain_dist_in_slot": 0.2886,

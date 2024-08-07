@@ -939,6 +939,8 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const double upper_x = 3.68;
     const double lower_x = 0.608;
     const double offset_y = 0.668;
+    const double max_obs_invasion_slot_dist = 0.00168;
+    
     if (obs.x() > slot_x + lower_x && obs.x() < slot_x + upper_x &&
         obs.y() > slot_right_pt.y() - offset_y &&
         obs.y() < slot_left_pt.y() + offset_y) {
