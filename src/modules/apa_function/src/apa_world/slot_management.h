@@ -509,6 +509,10 @@ class SlotManagement {
       const iflyauto::ParkingFusionSlot& select_fusion_slot);
   bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
                          const common::SlotInfo* slot_info);
+
+  const bool UpdateEgoParallelSlotInfoInSearching(
+      EgoSlotInfo& ego_slot_info, const common::SlotInfo* slot_info);
+
   bool GenTLane(EgoSlotInfo& ego_slot_info,
                 apa_planner::PerpendicularPathPlanner::Tlane& slot_tlane,
                 apa_planner::PerpendicularPathPlanner::Tlane& obs_tlane);
