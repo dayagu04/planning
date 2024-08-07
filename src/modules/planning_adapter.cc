@@ -370,13 +370,10 @@ void PlanningAdapter::Proc() {
     planning_hmi_info_writer_(planning_hmi_info_container);
   }
 
-  // binwang33: 需要读取inputready
-  // write fault info where error occured
-  if(planning_scheduler_->FaultCode() != 39999){
+  // Trigger: write fault info where error occured
+  if(planning_scheduler_->FaultCode() >= 39000 && planning_scheduler_->FaultCode() <= 39999) {
     ReportFmIfno(planning_scheduler_->FaultCode(), 1, true);
   }
-  // write fault info where error disappear
-  ReportFmIfno(39999, 1, false);
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
@@ -411,7 +408,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
 
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
   header.input_list[input_list_count].seq = local_view_ptr_->hmi_mcu_inner_info.header.seq;
-  input_list_count += 1; 
+  input_list_count += 1;
 
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE;
   header.input_list[input_list_count].seq = local_view_ptr_->function_state_machine_info.header.seq;
@@ -428,7 +425,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP;
   header.input_list[input_list_count].seq = local_view_ptr_->static_map_info.header().seq();
   input_list_count += 1;
-  
+
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR;
   header.input_list[input_list_count].seq = local_view_ptr_->sd_map_info.header().seq();
   input_list_count += 1;
