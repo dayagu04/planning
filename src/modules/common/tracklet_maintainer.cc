@@ -279,6 +279,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->is_static =
         (p.motion_pattern_current == iflyauto::OBJECT_MOTION_TYPE_STATIC &&
          p.speed < 4);
+    origin->can_not_avoid = false;
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);

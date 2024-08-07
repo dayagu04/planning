@@ -124,7 +124,7 @@
   "is_valid_lateral_offset" : true,
   "near_car_thr": 0.25,
   "lat_safety_buffer": 1.0,
-  "oversize_veh_addition_buffer": 0.0,
+  "oversize_veh_addition_buffer": 0.2,
   "traffic_cone_thr": 0.2,
   "static_obs_buffer": 0.6,
   "near_car_hysteresis": 1.6,
