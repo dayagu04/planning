@@ -115,6 +115,8 @@ struct TrackedObject {
   double d_min_cpath = DBL_MAX;
   double v_lat = 0;
   double v_lat_self = 0;
+  double v_lat_filtered_history = 0;
+  double v_lat_filtered = 0;
   double s_center = 0;
   double s_max = 0;
   double s_min = 0;

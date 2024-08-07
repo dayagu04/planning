@@ -221,6 +221,7 @@ void TrackletMaintainer::recv_prediction_objects(
       origin->has_history = true;
       origin->c0_history = origin->c0;
       origin->d_center_cpath_hostory = origin->d_center_cpath;
+      origin->v_lat_filtered_history = origin->v_lat_filtered;
     } else {
       origin = new TrackedObject();
       origin->track_id = p.id;
@@ -278,6 +279,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->is_static =
         (p.motion_pattern_current == iflyauto::OBJECT_MOTION_TYPE_STATIC &&
          p.speed < 4);
+    origin->can_not_avoid = false;
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
@@ -445,6 +447,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       origin->has_history = true;
       origin->c0_history = origin->c0;
       origin->d_center_cpath_hostory = origin->d_center_cpath;
+      origin->v_lat_filtered_history = origin->v_lat_filtered;
     } else {
       origin = new TrackedObject();
       origin->track_id = p.id;
@@ -632,7 +635,7 @@ void TrackletMaintainer::calc(
 
       item->frenet_transform_valid =
           fill_info_with_refline(*item, d_poly_offset);
-      if (!session_->environmental_model().location_valid()) {
+      if (config.enable_fill_deriv_info) {
         fill_deriv_info(*item);
       }
       // only use obstacle with camera source
@@ -1059,6 +1062,15 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
     }
   }
 
+  float filter_factor = 0.1f;
+  item.v_lat_filtered = filter_factor * v_lat_unfiltered +
+                        (1 - filter_factor) * item.v_lat_filtered_history;
+
+  // 数值越大，越相信用位移差分得来的值
+  float factor = 0.9f;
+  item.v_lat = factor * item.v_lat_filtered + (1 - factor) * item.v_lat;
+
+  /*
   TrackletSequentialState *sequential_state = seq_state_.get(item.track_id);
   seq_state_.mark_dirty(item.track_id);
   if (sequential_state == nullptr) {
@@ -1074,6 +1086,8 @@ void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
   // interval);
   double k_v_lat = 0.4;
   item.v_lat = k_v_lat * v_lat_unfiltered + (1 - k_v_lat) * item.v_lat;
+  */
+
   // obstacle without camera source, set to zero
   if ((item.fusion_source != OBSTACLE_SOURCE_CAMERA) &&
       (item.fusion_source != OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
