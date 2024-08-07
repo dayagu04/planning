@@ -74,6 +74,9 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_hard_lower_bound_y1_vec()->Resize(N, 0.0);
 
   planning_input_.mutable_control_vec()->Resize(N, 0.0);
+
+  avoid_back_time_ = 0.0;
+  enter_ramp_on_road_time_ = 0.0;
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -136,9 +139,10 @@ void LateralMotionPlanner::AssembleInput() {
 
   const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
-  const bool &complete_follow = general_lateral_decider_output.complete_follow;
+  bool complete_follow = general_lateral_decider_output.complete_follow;
   const bool &lane_change_scene =
       general_lateral_decider_output.lane_change_scene;
+  const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
   // set reference trajectory
@@ -293,13 +297,40 @@ void LateralMotionPlanner::AssembleInput() {
   } else {
     planning_weight_ptr_->CalculateInitInfo(planning_input_);
   }
-  planning_weight_ptr_->SetEgoVel(
-      session_->environmental_model().get_ego_state_manager()->ego_v());
-  planning_weight_ptr_->SetEgoL(reference_path_ptr->get_frenet_ego_state().l());
+  const double ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
+  const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
+  planning_weight_ptr_->SetEgoVel(ego_v);
+  planning_weight_ptr_->SetEgoL(ego_l);
   planning_weight_ptr_->SetLCBackFlag(false);
 
+  bool ramp_on_road = false;
+  if (session_->environmental_model().get_virtual_lane_manager()->get_is_exist_ramp_on_road()) {
+    ramp_on_road = true;
+    complete_follow = true;
+    enter_ramp_on_road_time_ = 1.0;
+  } else if (enter_ramp_on_road_time_ > 1e-6) {
+    enter_ramp_on_road_time_ += 0.1;
+    ramp_on_road = true;
+    complete_follow = true;
+  }
+  if (enter_ramp_on_road_time_ > config_.enter_ramp_on_road_time + 1.0) {
+    ramp_on_road = false;
+    enter_ramp_on_road_time_ = 0.0;
+  }
+
+  bool avoid_back_status = false;
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
+  if (lateral_offset_decider_output.is_valid) {
+    avoid_back_time_ = 1.0;
+  } else if (avoid_back_time_ > 1e-6) {
+    avoid_back_time_ += 0.1;
+    avoid_back_status = true;
+  }
+  if (avoid_back_time_ > config_.avoid_back_time + 1.0) {
+    avoid_back_time_ = 0.0;
+    avoid_back_status = false;
+  }
   if (lane_change_scene) {
     const auto target_state = session_->planning_context()
                                   .lane_change_decider_output()
@@ -309,12 +340,18 @@ void LateralMotionPlanner::AssembleInput() {
     }
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
+  } else if (ramp_on_road) {
+    planning_weight_ptr_->SetLateralMotionWeight(
+        pnc::lateral_planning::SPLIT, planning_input_);
+  } else if ((ramp_scene) && (config_.ramp_valid)) {
+    planning_weight_ptr_->SetLateralMotionWeight(
+        pnc::lateral_planning::RAMP, planning_input_);
   } else if (session_->environmental_model()
                  .get_lateral_obstacle()
                  ->is_static_avoid_scene()) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::STATIC_AVOID, planning_input_);
-  } else if (lateral_offset_decider_output.is_valid) {
+  } else if ((lateral_offset_decider_output.is_valid) || ((avoid_back_status) && (ego_v > config_.avoid_high_vel))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
   } else {
@@ -325,14 +362,18 @@ void LateralMotionPlanner::AssembleInput() {
   const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
   double motion_plan_concerned_end_index =
       config_.motion_plan_concerned_end_index;
-  for (size_t i = 0; i < motion_plan_concerned_end_index; ++i) {
+  double valid_perception_range = config_.valid_perception_range;
+  if (ramp_scene) {
+    valid_perception_range = config_.valid_perception_range_on_ramp;
+  }
+  for (size_t i = config_.motion_plan_concerned_start_index; i < motion_plan_concerned_end_index; ++i) {
     Point2D cart_ref_xy(planning_input_.ref_x_vec(i),
                         planning_input_.ref_y_vec(i));
     Point2D frenet_ref_xy;
     if (reference_path_ptr->get_frenet_coord() != nullptr &&
         reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref_xy,
                                                        frenet_ref_xy)) {
-      if (frenet_ref_xy.x > (ego_s + config_.valid_perception_range)) {
+      if (frenet_ref_xy.x > (ego_s + valid_perception_range)) {
         motion_plan_concerned_end_index = i;
         break;
       }

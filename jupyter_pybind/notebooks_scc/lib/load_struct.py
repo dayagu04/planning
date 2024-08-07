@@ -320,6 +320,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         tp = left_line.type_segments[0].type
         if tp == 0 or tp == 1 or tp == 3 or tp == 4:
           lane_info_l['type'] = ['dashed']
+        elif tp == 9:
+          lane_info_l['type'] = ['dashdot']
         else:
           lane_info_l['type'] = ['solid']
       except:
@@ -368,6 +370,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         tp = right_line.type_segments[0].type
         if tp == 0 or tp == 1 or tp == 3 or tp == 4:
           lane_info_r['type'] = ['dashed']
+        elif tp == 9:
+          lane_info_r['type'] = ['dashdot']
         else:
           lane_info_r['type'] = ['solid']
       except:

@@ -153,6 +153,8 @@ class VirtualLaneManager {
     return distance_to_route_end_;
   }
 
+  bool get_is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
+
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
   double get_distance_to_final_dash_line(const RequestType direction,

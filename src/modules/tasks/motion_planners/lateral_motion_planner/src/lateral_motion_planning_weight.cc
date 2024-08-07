@@ -15,6 +15,10 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
     planning::common::LateralPlanningInput &planning_input) {
   lateral_motion_scene_ = scene;
   // CalculateInitInfo(planning_input);
+  planning_input.set_q_acc_bound(config_.q_acc_bound);
+  planning_input.set_q_jerk_bound(config_.q_jerk_bound);
+  planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  planning_input.set_q_hard_corridor(config_.q_hard_corridor);
   // set cost weight by scene
   switch (scene) {
     case LANE_KEEP: {
@@ -24,6 +28,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_continuity(config_.q_continuity);
       planning_input.set_q_acc(config_.q_acc);
       planning_input.set_q_jerk(config_.q_jerk);
+      concerned_start_q_jerk_ = config_.q_jerk;
       SetAccJerkBoundByVelocity(planning_input);
       MakeDynamicWeight(planning_input);
       break;
@@ -34,12 +39,14 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_ref_theta(config_.q_ref_theta_avoid);
       planning_input.set_q_continuity(config_.q_continuity);
       planning_input.set_q_acc(config_.q_acc_avoid);
-      planning_input.set_q_jerk(config_.q_jerk_avoid_middle);
+      planning_input.set_q_jerk(config_.q_jerk_avoid);
       SetAccJerkBoundByVelocity(planning_input);
-      concerned_start_q_jerk_ = config_.q_jerk_avoid_middle;
-      if (ego_vel_ > config_.q_jerk_avoid_vel) {
-        planning_input.set_q_jerk(config_.q_jerk_avoid_close);
-        concerned_start_q_jerk_ = config_.q_jerk_avoid_close;
+      concerned_start_q_jerk_ = config_.q_jerk_avoid;
+      if (ego_vel_ > config_.avoid_high_vel) {
+        planning_input.set_q_ref_theta(config_.q_ref_theta_avoid_high_vel);
+        planning_input.set_q_jerk(config_.q_jerk_avoid_high_vel_middle);
+        concerned_start_q_jerk_ = config_.q_jerk_avoid_high_vel_close;
+        planning_input.set_q_jerk_bound(config_.q_jerk_bound_avoid_high_vel);
       }
       break;
     }
@@ -62,6 +69,11 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
         concerned_start_q_jerk_ = config_.q_jerk_lane_change_back;
       }
+
+      if (ego_vel_ > config_.lane_change_high_vel) {
+        planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
+        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+      }
       break;
     }
     case STATIC_AVOID: {
@@ -75,12 +87,38 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       concerned_start_q_jerk_ = config_.q_jerk_static_avoid_close;
       break;
     }
+    case SPLIT: {
+      planning_input.set_acc_bound(config_.acc_bound_lane_change);
+      planning_input.set_jerk_bound(config_.jerk_bound_lane_change);
+      planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
+      planning_input.set_q_ref_y(config_.q_ref_y_lane_change);
+      planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
+      planning_input.set_q_continuity(config_.q_continuity);
+      planning_input.set_q_acc(config_.q_acc_lane_change);
+      planning_input.set_q_jerk(config_.q_jerk_ramp_on_road);
+      concerned_start_q_jerk_ = config_.q_jerk_ramp_on_road;
+      if (ego_vel_ > config_.lane_change_high_vel) {
+        planning_input.set_jerk_bound(config_.jerk_bound_ramp_on_road);
+        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+      }
+      break;
+    }
+    case RAMP: {
+      planning_input.set_acc_bound(config_.acc_bound_ramp);
+      planning_input.set_jerk_bound(config_.jerk_bound_ramp);
+      planning_input.set_q_ref_x(config_.q_ref_x_ramp);
+      planning_input.set_q_ref_y(config_.q_ref_y_ramp);
+      planning_input.set_q_ref_theta(config_.q_ref_theta_ramp);
+      planning_input.set_q_continuity(config_.q_continuity);
+      planning_input.set_q_acc(config_.q_acc_ramp);
+      planning_input.set_q_jerk(config_.q_jerk_ramp_mid);
+      concerned_start_q_jerk_ = config_.q_jerk_ramp_close;
+      // SetAccJerkBoundByVelocity(planning_input);
+      // MakeDynamicWeight(planning_input);
+      break;
+    }
     default: { break; }
   }
-  planning_input.set_q_acc_bound(config_.q_acc_bound);
-  planning_input.set_q_jerk_bound(config_.q_jerk_bound);
-  planning_input.set_q_soft_corridor(config_.q_soft_corridor);
-  planning_input.set_q_hard_corridor(config_.q_hard_corridor);
 }
 
 void LateralMotionPlanningWeight::CalculateInitInfo(

@@ -359,13 +359,13 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
       cur_pos_yn = loc_msg.position.position_boot.y
       cur_yaw = loc_msg.orientation.euler_boot.yaw
 
-    try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
-      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    except:
-      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    # try:
+    #   json_pos_x = planning_json['ego_pos_x']
+    #   json_pos_y = planning_json['ego_pos_y']
+    #   json_yaw = planning_json['ego_pos_yaw']
+    #   coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    # except:
+    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
     if g_is_display_enu:
       x_vec, y_vec = planning_output.x_vec, planning_output.y_vec

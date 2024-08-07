@@ -124,13 +124,13 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         'ego_pos_point_theta': [0],
       })
 
-    try:
-      json_pos_x = planning_json['ego_pos_x']
-      json_pos_y = planning_json['ego_pos_y']
-      json_yaw = planning_json['ego_pos_yaw']
-      coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
-    except:
-      coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
+    # try:
+    #   json_pos_x = planning_json['ego_pos_x']
+    #   json_pos_y = planning_json['ego_pos_y']
+    #   json_yaw = planning_json['ego_pos_yaw']
+    #   coord_tf.set_info( json_pos_x, json_pos_y, json_yaw)
+    # except:
+    coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input

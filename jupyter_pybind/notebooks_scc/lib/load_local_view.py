@@ -295,6 +295,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       try:
         if line_info_list[i]['type'] == ['dashed']:
           fig1.renderers[0 + i].glyph.line_dash = 'dashed'
+        elif line_info_list[i]['type'] == ['dashdot']:
+          fig1.renderers[0 + i].glyph.line_dash = 'dashdot'
+          print("虚拟线")
         else:
           fig1.renderers[0 + i].glyph.line_dash = 'solid'
         data_lane = data_lane_dict[i]
@@ -1371,7 +1374,7 @@ def load_local_view_figure():
     local_view_data ["data_sdmap_outlink"] = data_sdmap_outlink
 
   ### figures config
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1300, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1350, match_aspect = True, aspect_scale=1)
 
   fig1.x_range.flipped = True
   # figure plot

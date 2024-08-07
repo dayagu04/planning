@@ -35,8 +35,9 @@ class GeneralLateralDecider : public Task {
   bool InitInfo();
 
  private:
-  double CalCruiseVelByCurvature(const double ego_v,
-                                 const std::vector<double> &d_poly);
+  bool CalCruiseVelByCurvature(const double ego_v,
+                               const std::vector<double> &d_poly,
+                               double &cruise_v);
 
   void ConstructTrajPoints(TrajectoryPoints &traj_points);
 
