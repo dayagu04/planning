@@ -60,12 +60,12 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = False
+load_uss_wave_from_uss_percept_msg = True
 load_fusion_object_from_occupancy = True
 version_245 = True
 read_uss_per_msg = False
 corner_points_size = 4
-NUM_OF_OUTLINE_DATAORI = 4
+NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
@@ -3388,7 +3388,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         print('find uss percept error')
       else:
         for i in range(NUM_OF_OUTLINE_DATAORI):
-          single_out_line_dataori = dataLoader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i]
+          single_out_line_dataori = uss_percept_msg.out_line_dataori[i]
           if version_245:
             obj_count = single_out_line_dataori.obj_pt_cnt
           else:
@@ -3740,7 +3740,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(current_line_layer, 'current_line_layer', current_line_generate, 'current_line_generate', 2)
 
     # uss
-    if dataLoader.wave_msg['enable'] == True:
+    if dataLoader.wave_msg['enable'] == True or dataLoader.uss_percept_msg['enable'] == True:
       uss_layer = MultiWedgesLayer(fig_local_view, uss_wave_params)
       layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
       if dataLoader.plan_debug_msg['enable'] == True and dataLoader.soc_state_msg['enable'] == True:

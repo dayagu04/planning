@@ -127,7 +127,7 @@
   "max_obs2car_dist_in_slot": 0.0886,
   "max_obs2car_dist_out_slot": 0.1868,
   "max_obs2car_dist_slot_occupied_ratio": 0.086,
-  "obstacle_ds": 0.3,
+  "obstacle_ds": 0.1568,
   "col_obs_safe_dist_normal": 0.268,
   "col_obs_safe_dist_strict": 0.308,
   "car_lat_inflation_normal": 0.0986,
