@@ -517,6 +517,28 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 3.根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
 
+#ifdef X86
+  int zero_order_count = 0;
+  for (const auto& lane : relative_id_lanes_) {
+    if (lane->get_order_id() == 0) {
+      zero_order_count += 1;
+    }
+  }
+  if (zero_order_count > 1) {
+    auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
+                                  std::shared_ptr<VirtualLane> lane2) {
+      return lane1->get_relative_id() < lane2->get_relative_id();
+    };
+    std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
+              compare_relative_id);
+    int count = 0;
+    for (auto& lane : relative_id_lanes_) {
+      lane->set_order_id(count);
+      count++;
+    }
+  }
+#endif
+
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
   CalculateVirtualLaneAttributes();
 
