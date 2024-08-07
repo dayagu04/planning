@@ -48,6 +48,8 @@ class EnvironmentalModelManager {
   void Init(planning::framework::Session *session);
   void InitContext();
   ~EnvironmentalModelManager() = default;
+  void setFaultcode(uint64_t faultcode);
+  uint64_t getFaultcode();
 
   //  private:
   //   void SetPlanningPesult(const PlanningResult &ego_prediction_result,
@@ -110,6 +112,7 @@ class EnvironmentalModelManager {
   int current_turn_signal_ = 0;
   int last_frame_turn_sinagl_ = 0;
   std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
+  uint64_t faultcode_ = 39999;
 };
 
 }  // namespace planner

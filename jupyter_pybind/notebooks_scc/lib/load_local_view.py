@@ -254,10 +254,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     except:
       print("vis road_msg error")
 
-
-    line_topo_info_list = load_lane_topo_lines(lane_topo_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-
-
     # update lane info
     data_lane_dict = {
       0:local_view_data['data_lane_0'],
@@ -281,28 +277,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       18:local_view_data['data_lane_18'],
       19:local_view_data['data_lane_19'],
     }
-    data_lane_topo_dict = {
-      0:local_view_data['data_lane_topo_0'],
-      1:local_view_data['data_lane_topo_1'],
-      2:local_view_data['data_lane_topo_2'],
-      3:local_view_data['data_lane_topo_3'],
-      4:local_view_data['data_lane_topo_4'],
-      5:local_view_data['data_lane_topo_5'],
-      6:local_view_data['data_lane_topo_6'],
-      7:local_view_data['data_lane_topo_7'],
-      8:local_view_data['data_lane_topo_8'],
-      9:local_view_data['data_lane_topo_9'],
-      10:local_view_data['data_lane_topo_10'],
-      11:local_view_data['data_lane_topo_11'],
-      12:local_view_data['data_lane_topo_12'],
-      13:local_view_data['data_lane_topo_13'],
-      14:local_view_data['data_lane_topo_14'],
-      15:local_view_data['data_lane_topo_15'],
-      16:local_view_data['data_lane_topo_16'],
-      17:local_view_data['data_lane_topo_17'],
-      18:local_view_data['data_lane_topo_18'],
-      19:local_view_data['data_lane_topo_19'],
-    }
 
     data_center_line_dict = {
       0:local_view_data['data_center_line_0'],
@@ -315,19 +289,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       7:local_view_data['data_center_line_7'],
       8:local_view_data['data_center_line_8'],
       9:local_view_data['data_center_line_9'],
-    }
-
-    data_center_line_topo_dict = {
-      0:local_view_data['data_center_line_topo_0'],
-      1:local_view_data['data_center_line_topo_1'],
-      2:local_view_data['data_center_line_topo_2'],
-      3:local_view_data['data_center_line_topo_3'],
-      4:local_view_data['data_center_line_topo_4'],
-      5:local_view_data['data_center_line_topo_5'],
-      6:local_view_data['data_center_line_topo_6'],
-      7:local_view_data['data_center_line_topo_7'],
-      8:local_view_data['data_center_line_topo_8'],
-      9:local_view_data['data_center_line_topo_9'],
     }
 
     for i in range(20):
@@ -345,24 +306,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         print('error')
         pass
 
-    for i in range(20):
-      try:
-        if line_info_list[i]['type'] == ['dashed']:
-          fig1.renderers[21 + i].glyph.line_dash = 'dashed'
-        else:
-          fig1.renderers[21 + i].glyph.line_dash = 'solid'
-        data_lane_topo = data_lane_topo_dict[i]
-        data_lane_topo.data.update({
-        'line_topo_{}_x'.format(i): line_topo_info_list[i]['line_x_topo'],
-        'line_topo_{}_y'.format(i): line_topo_info_list[i]['line_y_topo'],
-      })
-      except:
-        print('error')
-        pass
-
     center_line_list = load_lane_center_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
 
-    center_line_topo_list = load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car, loc_msg, g_is_display_enu)
     # print(center_line_list)
 
     for i in range(10):
@@ -372,12 +317,71 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
         })
 
-    for i in range(10):
-        data_center_line_topo = data_center_line_topo_dict[i]
-        data_center_line_topo.data.update({
-          'center_line_topo_{}_x'.format(i): center_line_topo_list[i]['center_line_x_topo'],
-          'center_line_topo_{}_y'.format(i): center_line_topo_list[i]['center_line_y_topo'],
-        })
+         
+    # 加载topo车道线和中心线
+    if bag_loader.lane_topo_msg['enable'] == True:
+      try:
+        line_topo_info_list = load_lane_topo_lines(lane_topo_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+        center_line_topo_list = load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+        data_lane_topo_dict = {
+          0:local_view_data['data_lane_topo_0'],
+          1:local_view_data['data_lane_topo_1'],
+          2:local_view_data['data_lane_topo_2'],
+          3:local_view_data['data_lane_topo_3'],
+          4:local_view_data['data_lane_topo_4'],
+          5:local_view_data['data_lane_topo_5'],
+          6:local_view_data['data_lane_topo_6'],
+          7:local_view_data['data_lane_topo_7'],
+          8:local_view_data['data_lane_topo_8'],
+          9:local_view_data['data_lane_topo_9'],
+          10:local_view_data['data_lane_topo_10'],
+          11:local_view_data['data_lane_topo_11'],
+          12:local_view_data['data_lane_topo_12'],
+          13:local_view_data['data_lane_topo_13'],
+          14:local_view_data['data_lane_topo_14'],
+          15:local_view_data['data_lane_topo_15'],
+          16:local_view_data['data_lane_topo_16'],
+          17:local_view_data['data_lane_topo_17'],
+          18:local_view_data['data_lane_topo_18'],
+          19:local_view_data['data_lane_topo_19'],
+        }
+        data_center_line_topo_dict = {
+          0:local_view_data['data_center_line_topo_0'],
+          1:local_view_data['data_center_line_topo_1'],
+          2:local_view_data['data_center_line_topo_2'],
+          3:local_view_data['data_center_line_topo_3'],
+          4:local_view_data['data_center_line_topo_4'],
+          5:local_view_data['data_center_line_topo_5'],
+          6:local_view_data['data_center_line_topo_6'],
+          7:local_view_data['data_center_line_topo_7'],
+          8:local_view_data['data_center_line_topo_8'],
+          9:local_view_data['data_center_line_topo_9'],
+        }
+
+        for i in range(20):
+          try:
+            if line_topo_info_list[i]['type'] == ['dashed']:
+              fig1.renderers[21 + i].glyph.line_dash = 'dashed'
+            else:
+              fig1.renderers[21 + i].glyph.line_dash = 'solid'
+            data_lane_topo = data_lane_topo_dict[i]
+            data_lane_topo.data.update({
+            'line_topo_{}_x'.format(i): line_topo_info_list[i]['line_x_topo'],
+            'line_topo_{}_y'.format(i): line_topo_info_list[i]['line_y_topo'],
+            })
+          except:
+            print('error')
+            pass
+
+        for i in range(10):
+          data_center_line_topo = data_center_line_topo_dict[i]
+          data_center_line_topo.data.update({
+            'center_line_topo_{}_x'.format(i): center_line_topo_list[i]['center_line_x_topo'],
+            'center_line_topo_{}_y'.format(i): center_line_topo_list[i]['center_line_y_topo'],
+          })
+
+      except:
+        print("vis topo_msg error")
 
 
     # 加载rdg车道线

@@ -15,6 +15,14 @@
 
 namespace planning {
 
+static uint64_t get_latency(double now, uint64_t input_time) {
+  constexpr double US_PER_MS = 1000.0;
+  if (input_time == 0) {
+    return 0;
+  }
+  return (now - input_time) / US_PER_MS;
+}
+
 void PlanningAdapter::Init() {
   std::cout << "The planning component init!!!" << std::endl;
   std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
@@ -51,12 +59,20 @@ void PlanningAdapter::Init() {
       std::make_unique<PlanningScheduler>(local_view_ptr_.get());
 }
 
-static uint64_t get_latency(double now, uint64_t input_time) {
-  constexpr double US_PER_MS = 1000.0;
-  if (input_time == 0) {
-    return 0;
+void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
+                                   bool fault_exist) {
+  iflyauto::FmInfo fmInfo{};
+  fmInfo.alarmId = alarmId;
+  fmInfo.alarmObj = alarmObj;
+  fmInfo.clss = 1;  // 告警类别，0：状态型，1：事件型
+  fmInfo.level = 2;  // 告警级别，0：提示，1：次要，2：重要，3：紧急
+  fmInfo.status = fault_exist ? 1 : 0;  // 告警状态，0：告警恢复，1：告警产生
+  fmInfo.time = IflyTime::Now_ms();
+  // fmInfo.desc; //告警描述，最长为64字节
+
+  if (fm_info_writer_) {
+    fm_info_writer_(fmInfo);
   }
-  return (now - input_time) / US_PER_MS;
 }
 
 void PlanningAdapter::Proc() {
@@ -353,6 +369,12 @@ void PlanningAdapter::Proc() {
     iflyauto::strcpy_array(planning_hmi_info.header.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info_container);
   }
+
+  // Trigger: write fault info where error occured
+  if(planning_scheduler_->FaultCode() >= 39000 && planning_scheduler_->FaultCode() <= 39999) {
+    ReportFmIfno(planning_scheduler_->FaultCode(), 1, true);
+  }
+
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
 }
@@ -386,7 +408,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
 
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
   header.input_list[input_list_count].seq = local_view_ptr_->hmi_mcu_inner_info.header.seq;
-  input_list_count += 1; 
+  input_list_count += 1;
 
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE;
   header.input_list[input_list_count].seq = local_view_ptr_->function_state_machine_info.header.seq;
@@ -403,7 +425,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP;
   header.input_list[input_list_count].seq = local_view_ptr_->static_map_info.header().seq();
   input_list_count += 1;
-  
+
   header.input_list[input_list_count].input_type = iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR;
   header.input_list[input_list_count].seq = local_view_ptr_->sd_map_info.header().seq();
   input_list_count += 1;
