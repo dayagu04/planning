@@ -4,6 +4,8 @@
 2. 限制acc bound下限；修改远距离慢车场景中的JLT触发频率
 3. Regard virtual line type as dashed line type when lc
 4. 增加planning IO topic 故障码
+5. 优化横向path，提升横向舒适度，以及匝道内的收敛性
+6. 调整大车的避让buffer
 
 # planning.2.4.7
 ####  修改说明
