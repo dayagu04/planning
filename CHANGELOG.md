@@ -1,3 +1,10 @@
+# planning.2.4.8
+####  修改说明
+1. Add planning InputHistoryInfo of Header
+2. 限制acc bound下限；修改远距离慢车场景中的JLT触发频率
+3. Regard virtual line type as dashed line type when lc
+4. 增加planning IO topic 故障码
+
 # planning.2.4.7
 ####  修改说明
 1. 变道结束前1s使用avoid offset
