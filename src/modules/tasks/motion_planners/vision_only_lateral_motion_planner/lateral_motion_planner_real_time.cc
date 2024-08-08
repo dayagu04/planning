@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <vector>
 
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
@@ -47,6 +48,13 @@ bool VisionLateralMotionPlanner::Execute() {
       vision_lateral_behavior_planner_output.avd_sp_car_past;
   const auto &flag_avd = vision_lateral_behavior_planner_output.flag_avd;
   const auto &dist_rblane = vision_lateral_behavior_planner_output.dist_rblane;
+  const auto& cur_lc_direction = lane_change_decider_output.lc_request;
+  is_LC_LWAIT_ = (cur_lc_direction == LEFT_CHANGE) && (status == kLaneChangePropose);
+  is_LC_RWAIT_ = (cur_lc_direction == RIGHT_CHANGE) && (status == kLaneChangePropose);
+  is_LC_LBACK_ = (cur_lc_direction == LEFT_CHANGE) && (status == kLaneChangeCancel);
+  is_LC_RBACK_ = (cur_lc_direction == RIGHT_CHANGE) && (status == kLaneChangeCancel);
+  is_LC_LCHANGE_ = (cur_lc_direction == LEFT_CHANGE) && (status == kLaneChangeExecution || status == kLaneChangeComplete);
+  is_LC_RCHANGE_ = (cur_lc_direction == RIGHT_CHANGE) && (status == kLaneChangeExecution || status == kLaneChangeComplete);
 
   // init info
   flane_ = session_->environmental_model()
@@ -111,22 +119,14 @@ bool VisionLateralMotionPlanner::update(
   for (auto value : d_poly_) {
     lat_motion_plan->add_basic_dpoly(value);
   }
-  if (status == ROAD_LC_LWAIT || status == ROAD_LC_RWAIT ||
-      status == ROAD_LC_LBACK || status == ROAD_LC_RBACK ||
-      status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_RWAIT ||
-      status == INTER_TR_LC_LWAIT || status == INTER_TR_LC_RWAIT ||
-      status == INTER_TL_LC_LWAIT || status == INTER_TL_LC_RWAIT) {
+  if (status == kLaneChangePropose || status == kLaneChangeCancel) {
     update_premove_path(status, should_premove, should_suspend, accident_ahead,
                         avd_car_past);
   } else {
     premoving_ = false;
   }
   lat_motion_plan->set_premove_dpoly_c0(d_poly_[3]);
-  if ((status >= ROAD_NONE && status <= INTER_GS_NONE) ||
-      status == INTER_TR_NONE || status == INTER_TL_NONE ||
-      status == INTER_GS_LC_LCHANGE || status == INTER_GS_LC_RCHANGE ||
-      status == INTER_TR_LC_LCHANGE || status == INTER_TR_LC_RCHANGE ||
-      status == INTER_TL_LC_LCHANGE || status == INTER_TL_LC_RCHANGE) {
+  if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     update_avoidance_path(status, flag_avd, accident_ahead, should_premove,
                           dist_rblane, avd_car_past, avd_sp_car_past);
   } else {
@@ -137,6 +137,7 @@ bool VisionLateralMotionPlanner::update(
 }
 
 bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
+
   double reject_prob_thre = 0.5;
   double short_reject_length = 15;
 
@@ -211,14 +212,15 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
 
     double gap_distance = 1.0;
 
+    
     if (lane_width > max_width) {
       if (std::fabs(r_intercept) < std::fabs(l_intercept) - gap_distance &&
-          status != ROAD_LC_LWAIT && status != ROAD_LC_LBACK) {
+          !is_LC_LWAIT_ && !is_LC_LBACK_) {
         l_reject = true;
         reject_reason_ = WIDE_REJECTION_L;
       } else if (std::fabs(r_intercept) >=
                      std::fabs(l_intercept) - gap_distance &&
-                 status != ROAD_LC_RWAIT && status != ROAD_LC_RBACK) {
+                 !is_LC_RWAIT_ && !is_LC_RBACK_) {
         r_reject = true;
         reject_reason_ = WIDE_REJECTION_R;
       }
@@ -241,10 +243,10 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
           if (lane_width > MIN_WIDTH && front_lane_witdh > MIN_WIDTH &&
               rear_lane_witdh > MIN_WIDTH) {
           } else {
-            if (status == ROAD_LC_LCHANGE) {
+            if (status == is_LC_LCHANGE_) {
               l_reject = true;
               reject_reason_ = NARROW_REJECTION;
-            } else if (status == ROAD_LC_RCHANGE) {
+            } else if (status == is_LC_RCHANGE_) {
               r_reject = true;
               reject_reason_ = NARROW_REJECTION;
             } else if (reject_reason_ == BIAS_L || reject_reason_ == BIAS_R) {
@@ -360,9 +362,8 @@ void VisionLateralMotionPlanner::update_premove_path(
   double temp_ego = std::min(10.0 / std::max(v_ego, 0.1), 1.0);
   double temp_poly = std::sqrt(1 + std::pow(l_poly_[2] + r_poly_[2], 2) / 4);
 
-  if ((status == ROAD_LC_LWAIT && (should_premove || accident_ahead)) ||
-      status == ROAD_LC_LBACK || status == INTER_GS_LC_LWAIT ||
-      status == INTER_TR_LC_LWAIT || status == INTER_TL_LC_LWAIT) {
+  if ((status == is_LC_LWAIT_ && (should_premove || accident_ahead)) ||
+      status == is_LC_LBACK_ ) {
     premoving_ = true;
 
     if (avd_car_past[0].size() > 0 && avd_car_past[0][5] > 0 &&
@@ -383,9 +384,8 @@ void VisionLateralMotionPlanner::update_premove_path(
 
       d_poly_[3] += lat_offset_;
     }
-  } else if ((status == ROAD_LC_RWAIT && (should_premove || accident_ahead)) ||
-             status == ROAD_LC_RBACK || status == INTER_GS_LC_RWAIT ||
-             status == INTER_TR_LC_RWAIT || status == INTER_TL_LC_RWAIT) {
+  } else if ((status == is_LC_RWAIT_ && (should_premove || accident_ahead)) ||
+             status == is_LC_RBACK_) {
     premoving_ = true;
 
     if (avd_car_past[0].size() > 0 && avd_car_past[0][6] < 0 &&
@@ -489,26 +489,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
   force_pause_ = false;
   avd_car_past_ = avd_car_past;
   avd_sp_car_past_ = avd_sp_car_past;
-  if (status == ScenarioStateEnum::ROAD_NONE ||
-      status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
-      status == ScenarioStateEnum::ROAD_LC_RCHANGE ||
-      status == ScenarioStateEnum::ROAD_LC_LWAIT ||
-      status == ScenarioStateEnum::ROAD_LC_RWAIT ||
-      status == ScenarioStateEnum::ROAD_LC_LBACK ||
-      status == ScenarioStateEnum::ROAD_LC_RBACK ||
-      status == ScenarioStateEnum::ROAD_LB_LBACK ||
-      status == ScenarioStateEnum::ROAD_LB_RBACK ||
-      status == ScenarioStateEnum::ROAD_LB_LRETURN ||
-      status == ScenarioStateEnum::ROAD_LB_RRETURN ||
-      status == ScenarioStateEnum::INTER_GS_NONE ||
-      status == ScenarioStateEnum::INTER_TR_NONE ||
-      status == ScenarioStateEnum::INTER_TL_NONE ||
-      status == ScenarioStateEnum::INTER_GS_LC_LCHANGE ||
-      status == ScenarioStateEnum::INTER_GS_LC_RCHANGE ||
-      status == ScenarioStateEnum::INTER_TR_LC_LCHANGE ||
-      status == ScenarioStateEnum::INTER_TR_LC_RCHANGE ||
-      status == ScenarioStateEnum::INTER_TL_LC_LCHANGE ||
-      status == ScenarioStateEnum::INTER_TL_LC_RCHANGE) {
+  if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     if (avd_car_past[0].size() > 0) {
       double plus1 =
           interp(avd_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
@@ -670,15 +651,17 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                       lat_offset = -1.3 + avd_car_past[0][5];
                       force_pause_ = true;
                     }
-                  } else if ((avd_car_past[1][5] > -0.65 ||
-                              avd_car_past[1][7] == 20001) &&
-                             (status == INTER_GS_NONE ||
-                              status == INTER_TR_NONE ||
-                              status == INTER_TL_NONE)) {
-                    lat_offset =
-                        std::max(lat_offset, -1.6 + avd_car_past[1][5]);
-                    sb_lane_ = true;
-                  }
+                  } 
+                  //fengwang31（TODO）：以前和现在状态机中都没有使用这3个状态，这段代码是否可以不再使用
+                  // else if ((avd_car_past[1][5] > -0.65 ||
+                  //             avd_car_past[1][7] == 20001) &&
+                  //            (status == INTER_GS_NONE ||
+                  //             status == INTER_TR_NONE ||
+                  //             status == INTER_TL_NONE)) {
+                  //   lat_offset =
+                  //       std::max(lat_offset, -1.6 + avd_car_past[1][5]);
+                  //   sb_lane_ = true;
+                  // }
 
                   if (!sb_blane_ || !force_pause_ || !sb_lane_) {
                     lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
@@ -919,15 +902,17 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     } else {
                       lat_offset = 0;
                     }
-                  } else if ((avd_car_past[0][5] > -0.65 ||
-                              avd_car_past[0][7] == 20001) &&
-                             (status == INTER_GS_NONE ||
-                              status == INTER_TR_NONE ||
-                              status == INTER_TL_NONE)) {
-                    lat_offset =
-                        std::max(lat_offset, -1.6 + avd_car_past[0][5]);
-                    sb_lane_ = true;
-                  }
+                  } 
+    //fengwang31（TODO）：以前和现在状态机中都没有使用这3个状态，这段代码是否可以不再使用
+                  // else if ((avd_car_past[0][5] > -0.65 ||
+                  //             avd_car_past[0][7] == 20001) &&
+                  //            (status == INTER_GS_NONE ||
+                  //             status == INTER_TR_NONE ||
+                  //             status == INTER_TL_NONE)) {
+                  //   lat_offset =
+                  //       std::max(lat_offset, -1.6 + avd_car_past[0][5]);
+                  //   sb_lane_ = true;
+                  // }
 
                   if (!sb_blane_ || !force_pause_ || !sb_lane_) {
                     lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
@@ -1113,21 +1098,21 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                 }
                 lat_offset = 0.;
               }
+              //fengwang31:新状态机中没有这几个状态
+              // if ((status == INTER_GS_NONE || status == INTER_TR_NONE ||
+              //      status == INTER_TL_NONE) &&
+              //     avd_car_past[0][5] < 1.1 &&
+              //     (avd_car_past[0][2] + v_ego < 1.5 ||
+              //      avd_car_past[0][3] < 0) &&
+              //     avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+              //     avd_car_past[0][1] == 0) {
+              //   lat_offset =
+              //       avd_car_past[0][5] -
+              //       (avd_car_past[0][5] + 2.0 + avd_car_past[0][9]) / 2;
+              //   lat_offset = std::max(lat_offset, -1.6 + avd_car_past[0][5]);
 
-              if ((status == INTER_GS_NONE || status == INTER_TR_NONE ||
-                   status == INTER_TL_NONE) &&
-                  avd_car_past[0][5] < 1.1 &&
-                  (avd_car_past[0][2] + v_ego < 1.5 ||
-                   avd_car_past[0][3] < 0) &&
-                  avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
-                  avd_car_past[0][1] == 0) {
-                lat_offset =
-                    avd_car_past[0][5] -
-                    (avd_car_past[0][5] + 2.0 + avd_car_past[0][9]) / 2;
-                lat_offset = std::max(lat_offset, -1.6 + avd_car_past[0][5]);
-
-                sb_lane_ = true;
-              }
+              //   sb_lane_ = true;
+              // }
             } else if (!session_->environmental_model().is_on_highway() &&
                        abs(avd_car_past[0][4]) < 0.45) {
               if ((avd_car_past[0][3] < 15 && v_ego < 5) ||
@@ -1184,53 +1169,53 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                                     std::fabs(avd_car_past[1][6])) +
                              lat_compen1;
               }
+              //fengwang31:新状态机中没有这几个状态
+              // if ((status == INTER_GS_NONE || status == INTER_TR_NONE ||
+              //      status == INTER_TL_NONE) &&
+              //     (avd_car_past[0][6] > 0 ||
+              //      (avd_car_past[1][7] == 20001 && avd_car_past[1][6] > 0)) &&
+              //     (avd_car_past[0][2] + v_ego < 1.5 ||
+              //      avd_car_past[0][3] < 0) &&
+              //     avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
+              //     avd_car_past[0][1] == 0) {
+              //   if (((avd_car_past[0][7] != 20001 || status != INTER_TL_NONE
+              //         //||
+              //         //   map_info.dist_to_last_intsect() - avd_car_past[0][3]
+              //         //   <=
+              //         //        15// hack
+              //         ) &&
+              //        avd_car_past[0][5] - l_ego > -0.6) ||
+              //       (avd_car_past[0][7] == 20001 &&
+              //        (status == INTER_TL_NONE &&
+              //             std::fabs(std::min(avd_car_past[0][5],
+              //                                avd_car_past[1][5])) +
+              //                     0.3 <
+              //                 avd_car_past[0][6] ||
+              //         (avd_car_past[1][7] != 20001 &&
+              //          avd_car_past[1][5] - l_ego >
+              //              -1.)))) {  // need a history record for
+              //                         // avd_car_past[0][5]
+              //     lat_offset =
+              //         std::min(avd_car_past[0][5], avd_car_past[1][5]) -
+              //         (std::min(avd_car_past[0][5], avd_car_past[1][5]) + 2.0 +
+              //          avd_car_past[0][9]) /
+              //             2;
+              //     lat_offset = std::max(
+              //         lat_offset,
+              //         -1.6 + std::min(avd_car_past[0][5], avd_car_past[1][5]));
 
-              if ((status == INTER_GS_NONE || status == INTER_TR_NONE ||
-                   status == INTER_TL_NONE) &&
-                  (avd_car_past[0][6] > 0 ||
-                   (avd_car_past[1][7] == 20001 && avd_car_past[1][6] > 0)) &&
-                  (avd_car_past[0][2] + v_ego < 1.5 ||
-                   avd_car_past[0][3] < 0) &&
-                  avd_car_past[0][4] > -0.5 && avd_car_past[0][4] < 0.3 &&
-                  avd_car_past[0][1] == 0) {
-                if (((avd_car_past[0][7] != 20001 || status != INTER_TL_NONE
-                      //||
-                      //   map_info.dist_to_last_intsect() - avd_car_past[0][3]
-                      //   <=
-                      //        15// hack
-                      ) &&
-                     avd_car_past[0][5] - l_ego > -0.6) ||
-                    (avd_car_past[0][7] == 20001 &&
-                     (status == INTER_TL_NONE &&
-                          std::fabs(std::min(avd_car_past[0][5],
-                                             avd_car_past[1][5])) +
-                                  0.3 <
-                              avd_car_past[0][6] ||
-                      (avd_car_past[1][7] != 20001 &&
-                       avd_car_past[1][5] - l_ego >
-                           -1.)))) {  // need a history record for
-                                      // avd_car_past[0][5]
-                  lat_offset =
-                      std::min(avd_car_past[0][5], avd_car_past[1][5]) -
-                      (std::min(avd_car_past[0][5], avd_car_past[1][5]) + 2.0 +
-                       avd_car_past[0][9]) /
-                          2;
-                  lat_offset = std::max(
-                      lat_offset,
-                      -1.6 + std::min(avd_car_past[0][5], avd_car_past[1][5]));
-
-                  sb_lane_ = true;
-                } else if (avd_car_past[0][6] < 0.65 ||
-                           avd_car_past[0][7] == 20001) {
-                  lat_offset = std::min(
-                      std::max(avd_car_past[0][6], avd_car_past[1][6]) -
-                          (std::max(avd_car_past[0][6], avd_car_past[1][6]) -
-                           1.8 - avd_car_past[0][9]) /
-                              2,
-                      1.6 - std::max(avd_car_past[0][6], avd_car_past[1][6]));
-                  lat_offset = std::min(lat_offset, 1.1);
-                }
-              }
+              //     sb_lane_ = true;
+              //   } else if (avd_car_past[0][6] < 0.65 ||
+              //              avd_car_past[0][7] == 20001) {
+              //     lat_offset = std::min(
+              //         std::max(avd_car_past[0][6], avd_car_past[1][6]) -
+              //             (std::max(avd_car_past[0][6], avd_car_past[1][6]) -
+              //              1.8 - avd_car_past[0][9]) /
+              //                 2,
+              //         1.6 - std::max(avd_car_past[0][6], avd_car_past[1][6]));
+              //     lat_offset = std::min(lat_offset, 1.1);
+              //   }
+              // }
 
               if (avd_car_past[0][6] >= 0 && avd_car_past[0][6] != 100 &&
                   (avd_car_past[0][2] + v_ego < 1.5 ||
@@ -1544,8 +1529,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     avd_car_past[0][3] > -6.0) ||
                    ((int)avd_car_past[0][0] != 0 &&
                     avd_car_past[0][3] >= -3.0)) {
-          if (status != INTER_GS_NONE && status != INTER_TR_NONE &&
-              status != INTER_TL_NONE) {
+          // if (status != INTER_GS_NONE && status != INTER_TR_NONE &&
+          //     status != INTER_TL_NONE) 
+          //fengwang31:新状态机中没有这几个状态
+          if (true) {
             if (avd_car_past[0][5] != 100) {
               lat_offset = 0.5 * (lane_width - car_width / 2 -
                                   std::fabs(avd_car_past[0][5])) +
@@ -1782,8 +1769,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                     avd_car_past[0][3] > -6.0) ||
                    ((int)avd_car_past[0][0] != 0 &&
                     avd_car_past[0][3] >= -3.0)) {
-          if (status != INTER_GS_NONE && status != INTER_TR_NONE &&
-              status != INTER_TL_NONE) {
+          // if (status != INTER_GS_NONE && status != INTER_TR_NONE &&
+          //     status != INTER_TL_NONE) 
+          //fengwang31:新状态机中没有这几个状态
+          if (true) {
             if (avd_car_past[0][6] != 100) {
               lat_offset = 0.5 * (lane_width - car_width / 2 -
                                   std::fabs(avd_car_past[0][6])) +
@@ -2080,10 +2069,9 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
           one_nudge_right_car = d_poly_[3];
         }
       }
-    } else if (flag_avd == 1 && status != ROAD_LB_LBACK &&
-               status != ROAD_LB_RBACK && status != ROAD_LB_LRETURN &&
-               status != ROAD_LB_RRETURN && status != ROAD_LC_LCHANGE &&
-               status != ROAD_LC_RCHANGE) {
+    } else if (flag_avd == 1 && status != is_LC_LBACK_ &&
+               status != is_LC_RBACK_ &&  status != is_LC_LCHANGE_ &&
+               status != is_LC_RCHANGE_) {
       double path_gap = 0.2;
       std::array<double, 2> xp1{0, 0.02};
       std::array<double, 2> xp2{0, 0.003};
@@ -2107,293 +2095,295 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
     lane_borrow_suspend_cnt_ = 0;
     suspend_lat_offset_ = 0;
 
-  } else if (status == ROAD_LB_LBORROW || status == ROAD_LB_RBORROW) {
-    if (avd_sp_car_past[0].size() > 0) {
-      double plus1 =
-          interp(avd_sp_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
-      double plus1_rel =
-          interp(avd_sp_car_past[0][3], near_car_drel_bp, near_car_drel_v);
-      double lat_compen1 = 0.5 * plus1 + 0.5 * plus1_rel;
+  } 
+  //fengwang31:新状态机中没有这几个状态
+  // else if (status == ROAD_LB_LBORROW || status == ROAD_LB_RBORROW) {
+  //   if (avd_sp_car_past[0].size() > 0) {
+  //     double plus1 =
+  //         interp(avd_sp_car_past[0][2], near_car_vrel_bp, near_car_vrel_v);
+  //     double plus1_rel =
+  //         interp(avd_sp_car_past[0][3], near_car_drel_bp, near_car_drel_v);
+  //     double lat_compen1 = 0.5 * plus1 + 0.5 * plus1_rel;
 
-      if (avd_sp_car_past[1].size() > 0) {
-        double v_near_car2 = v_ego + avd_sp_car_past[1][2];
-        double desired_dist2 = dist_offset + v_near_car2 * t_gap;
-        double diff_dist_nudge_car =
-            avd_sp_car_past[1][3] - avd_sp_car_past[0][3];
-        double dist_avd_nudge_car1 = avd_sp_car_past[0][3] + 5.0 + safety_dist;
+  //     if (avd_sp_car_past[1].size() > 0) {
+  //       double v_near_car2 = v_ego + avd_sp_car_past[1][2];
+  //       double desired_dist2 = dist_offset + v_near_car2 * t_gap;
+  //       double diff_dist_nudge_car =
+  //           avd_sp_car_past[1][3] - avd_sp_car_past[0][3];
+  //       double dist_avd_nudge_car1 = avd_sp_car_past[0][3] + 5.0 + safety_dist;
 
-        double t_avdcar1 = 0;
-        if (avd_sp_car_past[0][2] != 0) {
-          if (avd_sp_car_past[0][2] < 0) {
-            t_avdcar1 = -dist_avd_nudge_car1 / avd_sp_car_past[0][2];
-          } else {
-            t_avdcar1 = 5;
-          }
-        } else {
-          t_avdcar1 = 0;
-        }
+  //       double t_avdcar1 = 0;
+  //       if (avd_sp_car_past[0][2] != 0) {
+  //         if (avd_sp_car_past[0][2] < 0) {
+  //           t_avdcar1 = -dist_avd_nudge_car1 / avd_sp_car_past[0][2];
+  //         } else {
+  //           t_avdcar1 = 5;
+  //         }
+  //       } else {
+  //         t_avdcar1 = 0;
+  //       }
 
-        if (t_avdcar1 > 0) {
-          diff_dist_nudge_car += diff_dist_nudge_car * t_avdcar1;
-          if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE &&
-              (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
-            if (diff_dist_nudge_car <
-                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] ||
-                  avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
-                if (avd_sp_car_past[0][5] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                      std::fabs(avd_sp_car_past[0][5])) +
-                               lat_compen1;
-                }
+  //       if (t_avdcar1 > 0) {
+  //         diff_dist_nudge_car += diff_dist_nudge_car * t_avdcar1;
+  //         if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE &&
+  //             (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
+  //           if (diff_dist_nudge_car <
+  //               desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+  //             if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] ||
+  //                 avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
+  //               if (avd_sp_car_past[0][5] != 100) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                     std::fabs(avd_sp_car_past[0][5])) +
+  //                              lat_compen1;
+  //               }
 
-                lat_offset = -std::max(lat_offset, 0.0);
-                if (d_poly_[3] < 0) {
-                  lat_offset += lane_width;
-                  d_poly_[3] += lat_offset;
-                }
-              } else {
-                if (avd_sp_car_past[1][6] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                      std::fabs(avd_sp_car_past[1][6])) +
-                               lat_compen1;
-                }
+  //               lat_offset = -std::max(lat_offset, 0.0);
+  //               if (d_poly_[3] < 0) {
+  //                 lat_offset += lane_width;
+  //                 d_poly_[3] += lat_offset;
+  //               }
+  //             } else {
+  //               if (avd_sp_car_past[1][6] != 100) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                     std::fabs(avd_sp_car_past[1][6])) +
+  //                              lat_compen1;
+  //               }
 
-                lat_offset = std::max(lat_offset, 0.0);
-                if (d_poly_[3] > 0) {
-                  lat_offset = -(lane_width - lat_offset);
-                  d_poly_[3] += lat_offset;
-                }
-              }
-            } else {
-              lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                  std::fabs(avd_sp_car_past[0][5])) +
-                           lat_compen1;
+  //               lat_offset = std::max(lat_offset, 0.0);
+  //               if (d_poly_[3] > 0) {
+  //                 lat_offset = -(lane_width - lat_offset);
+  //                 d_poly_[3] += lat_offset;
+  //               }
+  //             }
+  //           } else {
+  //             lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                 std::fabs(avd_sp_car_past[0][5])) +
+  //                          lat_compen1;
 
-              lat_offset = -std::max(lat_offset, 0.0);
-              if (lane_type == MSD_LANE_TYPE_PARKING ||
-                  std::fabs(d_poly_[1]) > 0.0001) {
-                lat_offset *= 0.7;
-              }
-            }
-          } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE &&
-                     (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
-            if (diff_dist_nudge_car <
-                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] ||
-                  avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
-                if (avd_sp_car_past[0][6] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                      std::fabs(avd_sp_car_past[0][6])) +
-                               lat_compen1;
-                }
+  //             lat_offset = -std::max(lat_offset, 0.0);
+  //             if (lane_type == MSD_LANE_TYPE_PARKING ||
+  //                 std::fabs(d_poly_[1]) > 0.0001) {
+  //               lat_offset *= 0.7;
+  //             }
+  //           }
+  //         } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE &&
+  //                    (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
+  //           if (diff_dist_nudge_car <
+  //               desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+  //             if (avd_sp_car_past[0][2] <= avd_sp_car_past[1][2] ||
+  //                 avd_sp_car_past[0][2] - avd_sp_car_past[1][2] < 2) {
+  //               if (avd_sp_car_past[0][6] != 100) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                     std::fabs(avd_sp_car_past[0][6])) +
+  //                              lat_compen1;
+  //               }
 
-                lat_offset = std::max(lat_offset, 0.0);
+  //               lat_offset = std::max(lat_offset, 0.0);
 
-                if (d_poly_[3] > 0) {
-                  lat_offset = -(lane_width - lat_offset);
-                  d_poly_[3] += lat_offset;
-                }
-              } else {
-                if (avd_sp_car_past[1][5] != 100) {
-                  lat_offset = 0.9 * (lane_width - car_width -
-                                      std::fabs(avd_sp_car_past[1][5])) +
-                               lat_compen1;
-                }
+  //               if (d_poly_[3] > 0) {
+  //                 lat_offset = -(lane_width - lat_offset);
+  //                 d_poly_[3] += lat_offset;
+  //               }
+  //             } else {
+  //               if (avd_sp_car_past[1][5] != 100) {
+  //                 lat_offset = 0.9 * (lane_width - car_width -
+  //                                     std::fabs(avd_sp_car_past[1][5])) +
+  //                              lat_compen1;
+  //               }
 
-                lat_offset = -std::max(lat_offset, 0.0);
+  //               lat_offset = -std::max(lat_offset, 0.0);
 
-                if (d_poly_[3] < 0) {
-                  lat_offset += lane_width;
-                  d_poly_[3] += lat_offset;
-                }
-              }
-            } else {
-              lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                  std::fabs(avd_sp_car_past[0][6])) +
-                           lat_compen1;
+  //               if (d_poly_[3] < 0) {
+  //                 lat_offset += lane_width;
+  //                 d_poly_[3] += lat_offset;
+  //               }
+  //             }
+  //           } else {
+  //             lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                 std::fabs(avd_sp_car_past[0][6])) +
+  //                          lat_compen1;
 
-              lat_offset = std::max(lat_offset, 0.0);
+  //             lat_offset = std::max(lat_offset, 0.0);
 
-              if (lane_type == MSD_LANE_TYPE_PARKING ||
-                  std::fabs(d_poly_[1]) > 0.0001) {
-                lat_offset *= 0.7;
-              }
+  //             if (lane_type == MSD_LANE_TYPE_PARKING ||
+  //                 std::fabs(d_poly_[1]) > 0.0001) {
+  //               lat_offset *= 0.7;
+  //             }
 
-              if (d_poly_[3] > 0) {
-                lat_offset = -(lane_width - lat_offset);
-                d_poly_[3] += lane_width - lat_offset;
-              }
-            }
-          } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE &&
-                     (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
-            if (diff_dist_nudge_car <
-                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][5] != 100 ||
-                  avd_sp_car_past[1][5] != 100) {
-                if (std::fabs(avd_sp_car_past[0][5]) < 1.9 ||
-                    std::fabs(avd_sp_car_past[1][5]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                      std::min(avd_sp_car_past[0][5],
-                                               avd_sp_car_past[1][5])) +
-                               lat_compen1;
-                } else {
-                  if (avd_sp_car_past[0][5] >= 1.9 ||
-                      avd_sp_car_past[1][5] >= 1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                        std::min(avd_sp_car_past[0][5],
-                                                 avd_sp_car_past[1][5]) +
-                                        lane_width) +
-                                 lat_compen1;
-                  }
-                }
-              }
-            } else {
-              if (avd_sp_car_past[0][5] != 100) {
-                if (std::fabs(avd_sp_car_past[0][5]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                      avd_sp_car_past[0][5]) +
-                               lat_compen1;
-                } else {
-                  if (avd_sp_car_past[0][5] >= 1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 -
-                                        avd_sp_car_past[0][5] + lane_width) +
-                                 lat_compen1;
-                  }
-                }
-              }
-            }
+  //             if (d_poly_[3] > 0) {
+  //               lat_offset = -(lane_width - lat_offset);
+  //               d_poly_[3] += lane_width - lat_offset;
+  //             }
+  //           }
+  //         } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE &&
+  //                    (int)avd_sp_car_past[1][9] == RIGHT_CHANGE) {
+  //           if (diff_dist_nudge_car <
+  //               desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+  //             if (avd_sp_car_past[0][5] != 100 ||
+  //                 avd_sp_car_past[1][5] != 100) {
+  //               if (std::fabs(avd_sp_car_past[0][5]) < 1.9 ||
+  //                   std::fabs(avd_sp_car_past[1][5]) < 1.9) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                     std::min(avd_sp_car_past[0][5],
+  //                                              avd_sp_car_past[1][5])) +
+  //                              lat_compen1;
+  //               } else {
+  //                 if (avd_sp_car_past[0][5] >= 1.9 ||
+  //                     avd_sp_car_past[1][5] >= 1.9) {
+  //                   lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                       std::min(avd_sp_car_past[0][5],
+  //                                                avd_sp_car_past[1][5]) +
+  //                                       lane_width) +
+  //                                lat_compen1;
+  //                 }
+  //               }
+  //             }
+  //           } else {
+  //             if (avd_sp_car_past[0][5] != 100) {
+  //               if (std::fabs(avd_sp_car_past[0][5]) < 1.9) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                     avd_sp_car_past[0][5]) +
+  //                              lat_compen1;
+  //               } else {
+  //                 if (avd_sp_car_past[0][5] >= 1.9) {
+  //                   lat_offset = 0.9 * (lane_width - car_width / 2 -
+  //                                       avd_sp_car_past[0][5] + lane_width) +
+  //                                lat_compen1;
+  //                 }
+  //               }
+  //             }
+  //           }
 
-            lat_offset = -std::max(lat_offset, 0.0);
-            lat_offset = std::max(-1.2 * lane_width, lat_offset);
-            d_poly_[3] += lat_offset;
-          } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE &&
-                     (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
-            if (diff_dist_nudge_car <
-                desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
-              if (avd_sp_car_past[0][6] != 100 &&
-                  avd_sp_car_past[1][6] != 100) {
-                if (std::fabs(avd_sp_car_past[0][6]) < 1.9 ||
-                    std::fabs(avd_sp_car_past[1][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                      std::max(avd_sp_car_past[0][6],
-                                               avd_sp_car_past[1][6]) +
-                                      lane_width) +
-                               lat_compen1;
-                } else {
-                  if (avd_sp_car_past[0][6] <= -1.9 ||
-                      avd_sp_car_past[1][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                        std::max(avd_sp_car_past[0][6],
-                                                 avd_sp_car_past[1][6]) +
-                                        lane_width) +
-                                 lat_compen1;
-                  }
-                }
-              } else if (avd_sp_car_past[0][6] != 100) {
-                if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                      avd_sp_car_past[0][6]) +
-                               lat_compen1;
-                } else {
-                  if (avd_sp_car_past[0][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                        avd_sp_car_past[0][6] + lane_width) +
-                                 lat_compen1;
-                  }
-                }
-              } else if (avd_sp_car_past[1][6] != 100) {
-                if (std::fabs(avd_sp_car_past[1][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                      avd_sp_car_past[1][6]) +
-                               lat_compen1;
-                } else {
-                  if (avd_sp_car_past[1][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                        avd_sp_car_past[1][6] + lane_width) +
-                                 lat_compen1;
-                  }
-                }
-              }
-            } else {
-              if (avd_sp_car_past[0][6] != 100) {
-                if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
-                  lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                      avd_sp_car_past[0][6]) +
-                               lat_compen1;
-                } else {
-                  if (avd_sp_car_past[0][6] <= -1.9) {
-                    lat_offset = 0.9 * (lane_width - car_width / 2 +
-                                        avd_sp_car_past[0][6] + lane_width) +
-                                 lat_compen1;
-                  }
-                }
-              }
-            }
+  //           lat_offset = -std::max(lat_offset, 0.0);
+  //           lat_offset = std::max(-1.2 * lane_width, lat_offset);
+  //           d_poly_[3] += lat_offset;
+  //         } else if ((int)avd_sp_car_past[0][9] == LEFT_CHANGE &&
+  //                    (int)avd_sp_car_past[1][9] == LEFT_CHANGE) {
+  //           if (diff_dist_nudge_car <
+  //               desired_dist2 + 5.0 + safety_dist + 0.5 * v_ego) {
+  //             if (avd_sp_car_past[0][6] != 100 &&
+  //                 avd_sp_car_past[1][6] != 100) {
+  //               if (std::fabs(avd_sp_car_past[0][6]) < 1.9 ||
+  //                   std::fabs(avd_sp_car_past[1][6]) < 1.9) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                     std::max(avd_sp_car_past[0][6],
+  //                                              avd_sp_car_past[1][6]) +
+  //                                     lane_width) +
+  //                              lat_compen1;
+  //               } else {
+  //                 if (avd_sp_car_past[0][6] <= -1.9 ||
+  //                     avd_sp_car_past[1][6] <= -1.9) {
+  //                   lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                       std::max(avd_sp_car_past[0][6],
+  //                                                avd_sp_car_past[1][6]) +
+  //                                       lane_width) +
+  //                                lat_compen1;
+  //                 }
+  //               }
+  //             } else if (avd_sp_car_past[0][6] != 100) {
+  //               if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                     avd_sp_car_past[0][6]) +
+  //                              lat_compen1;
+  //               } else {
+  //                 if (avd_sp_car_past[0][6] <= -1.9) {
+  //                   lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                       avd_sp_car_past[0][6] + lane_width) +
+  //                                lat_compen1;
+  //                 }
+  //               }
+  //             } else if (avd_sp_car_past[1][6] != 100) {
+  //               if (std::fabs(avd_sp_car_past[1][6]) < 1.9) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                     avd_sp_car_past[1][6]) +
+  //                              lat_compen1;
+  //               } else {
+  //                 if (avd_sp_car_past[1][6] <= -1.9) {
+  //                   lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                       avd_sp_car_past[1][6] + lane_width) +
+  //                                lat_compen1;
+  //                 }
+  //               }
+  //             }
+  //           } else {
+  //             if (avd_sp_car_past[0][6] != 100) {
+  //               if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
+  //                 lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                     avd_sp_car_past[0][6]) +
+  //                              lat_compen1;
+  //               } else {
+  //                 if (avd_sp_car_past[0][6] <= -1.9) {
+  //                   lat_offset = 0.9 * (lane_width - car_width / 2 +
+  //                                       avd_sp_car_past[0][6] + lane_width) +
+  //                                lat_compen1;
+  //                 }
+  //               }
+  //             }
+  //           }
 
-            lat_offset = std::max(lat_offset, 0.0);
-            lat_offset = std::min(lat_offset, 1.2 * lane_width);
-            d_poly_[3] += lat_offset;
-          }
-        }
-      } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE) {
-        if (avd_sp_car_past[0][5] != 100) {
-          if (std::fabs(avd_sp_car_past[0][5]) < 1.9) {
-            lat_offset =
-                0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) +
-                lat_compen1;
-          } else {
-            if (avd_sp_car_past[0][5] >= 1.9) {
-              lat_offset =
-                  0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) +
-                  lat_compen1;
-            }
-          }
+  //           lat_offset = std::max(lat_offset, 0.0);
+  //           lat_offset = std::min(lat_offset, 1.2 * lane_width);
+  //           d_poly_[3] += lat_offset;
+  //         }
+  //       }
+  //     } else if ((int)avd_sp_car_past[0][9] == RIGHT_CHANGE) {
+  //       if (avd_sp_car_past[0][5] != 100) {
+  //         if (std::fabs(avd_sp_car_past[0][5]) < 1.9) {
+  //           lat_offset =
+  //               0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) +
+  //               lat_compen1;
+  //         } else {
+  //           if (avd_sp_car_past[0][5] >= 1.9) {
+  //             lat_offset =
+  //                 0.9 * (lane_width - car_width / 2 - avd_sp_car_past[0][5]) +
+  //                 lat_compen1;
+  //           }
+  //         }
 
-          lat_offset = -std::max(lat_offset, 0.0);
-          lat_offset = std::max(-1.2 * lane_width, lat_offset);
-        } else {
-          lat_offset = 0;
-        }
+  //         lat_offset = -std::max(lat_offset, 0.0);
+  //         lat_offset = std::max(-1.2 * lane_width, lat_offset);
+  //       } else {
+  //         lat_offset = 0;
+  //       }
 
-        d_poly_[3] += lat_offset;
-      } else {
-        if (avd_sp_car_past[0][6] != 100) {
-          if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
-            lat_offset =
-                0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) +
-                lat_compen1;
-          } else {
-            if (avd_sp_car_past[0][6] <= -1.9) {
-              lat_offset =
-                  0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) +
-                  lat_compen1;
-            }
-          }
+  //       d_poly_[3] += lat_offset;
+  //     } else {
+  //       if (avd_sp_car_past[0][6] != 100) {
+  //         if (std::fabs(avd_sp_car_past[0][6]) < 1.9) {
+  //           lat_offset =
+  //               0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) +
+  //               lat_compen1;
+  //         } else {
+  //           if (avd_sp_car_past[0][6] <= -1.9) {
+  //             lat_offset =
+  //                 0.9 * (lane_width - car_width / 2 + avd_sp_car_past[0][6]) +
+  //                 lat_compen1;
+  //           }
+  //         }
 
-          lat_offset = std::max(lat_offset, 0.0);
-          lat_offset = std::min(lat_offset, 1.2 * lane_width);
-        } else {
-          lat_offset = 0;
-        }
+  //         lat_offset = std::max(lat_offset, 0.0);
+  //         lat_offset = std::min(lat_offset, 1.2 * lane_width);
+  //       } else {
+  //         lat_offset = 0;
+  //       }
 
-        d_poly_[3] += lat_offset;
-      }
-    }
+  //       d_poly_[3] += lat_offset;
+  //     }
+  //   }
 
-    lane_borrow_suspend_cnt_ = 0;
-    suspend_lat_offset_ = 0;
+  //   lane_borrow_suspend_cnt_ = 0;
+  //   suspend_lat_offset_ = 0;
 
-  } else if (status == ROAD_LB_LSUSPEND || status == ROAD_LB_RSUSPEND) {
-    if (lane_borrow_suspend_cnt_ == 0) {
-      suspend_lat_offset_ = d_poly_[3];
-      lat_offset = -suspend_lat_offset_;
-      lane_borrow_suspend_cnt_ += 1;
-    }
+  // } else if (status == ROAD_LB_LSUSPEND || status == ROAD_LB_RSUSPEND) {
+  //   if (lane_borrow_suspend_cnt_ == 0) {
+  //     suspend_lat_offset_ = d_poly_[3];
+  //     lat_offset = -suspend_lat_offset_;
+  //     lane_borrow_suspend_cnt_ += 1;
+  //   }
 
-    lat_offset = -suspend_lat_offset_;
-    d_poly_[3] -= suspend_lat_offset_;
-  }
+  //   lat_offset = -suspend_lat_offset_;
+  //   d_poly_[3] -= suspend_lat_offset_;
+  // }
 
   two_nudge_car_ = two_nudge_car;  // some problem
                                    // need to be solved
@@ -2405,13 +2395,7 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                        ->ad_info);
   ad_info->avoid_status = iflyauto::AVOID_NO_HIDING;
   ad_info->avoiddirect = iflyauto::AVOID_NONE;
-  if (status == ScenarioStateEnum::ROAD_NONE ||
-      status == ScenarioStateEnum::ROAD_LC_LCHANGE ||
-      status == ScenarioStateEnum::ROAD_LC_RCHANGE ||
-      status == ScenarioStateEnum::ROAD_LC_LWAIT ||
-      status == ScenarioStateEnum::ROAD_LC_RWAIT ||
-      status == ScenarioStateEnum::ROAD_LC_LBACK ||
-      status == ScenarioStateEnum::ROAD_LC_RBACK) {
+  if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     if (avd_car_past[0].size() > 0) {
       if (lat_offset > 0.3) {
         ad_info->avoid_status = iflyauto::AVOID_HIDING;
@@ -2532,39 +2516,33 @@ bool VisionLateralMotionPlanner::update_planner_output() {
     lateral_output.lc_request = "right";
   }
 
-  if (state == ROAD_LC_LCHANGE || state == INTER_GS_LC_LCHANGE ||
-      state == INTER_TR_LC_LCHANGE || state == INTER_TL_LC_LCHANGE) {
+  if (is_LC_LCHANGE_) {
     lateral_output.lc_status = "left_lane_change";
-  } else if (state == ROAD_LC_LBACK || state == INTER_GS_LC_LBACK ||
-             state == INTER_TR_LC_LBACK || state == INTER_TL_LC_LBACK) {
+  } else if (is_LC_LBACK_) {
     lateral_output.lc_status = "left_lane_change_back";
-  } else if (state == ROAD_LC_RCHANGE || state == INTER_GS_LC_RCHANGE ||
-             state == INTER_TR_LC_RCHANGE || state == INTER_TL_LC_RCHANGE) {
+  } else if (is_LC_RCHANGE_) {
     lateral_output.lc_status = "right_lane_change";
-  } else if (state == ROAD_LC_RBACK || state == INTER_GS_LC_RBACK ||
-             state == INTER_TR_LC_RBACK || state == INTER_TL_LC_RBACK) {
+  } else if (is_LC_RBACK_) {
     lateral_output.lc_status = "right_lane_change_back";
-  } else if (state == ROAD_LC_LWAIT || state == INTER_GS_LC_LWAIT ||
-             state == INTER_TR_LC_LWAIT || state == INTER_TL_LC_LWAIT) {
+  } else if (is_LC_LWAIT_) {
     lateral_output.lc_status = "left_lane_change_wait";
-  } else if (state == ROAD_LC_RWAIT || state == INTER_GS_LC_RWAIT ||
-             state == INTER_TR_LC_RWAIT || state == INTER_TL_LC_RWAIT) {
+  } else if (is_LC_RWAIT_) {
     lateral_output.lc_status = "right_lane_change_wait";
   } else {
     lateral_output.lc_status = "none";
   }
-
-  if (state == ROAD_LB_LBORROW) {
-    lateral_output.lb_status = "left_lane_borrow";
-  } else if (state == ROAD_LB_RBORROW) {
-    lateral_output.lb_status = "right_lane_borrow";
-  } else if (state == ROAD_LB_LSUSPEND) {
-    lateral_output.lb_status = "left_lane_suspend";
-  } else if (state == ROAD_LB_RSUSPEND) {
-    lateral_output.lb_status = "right_lane_suspend";
-  } else {
-    lateral_output.lb_status = "none";
-  }
+  //fengwang31:新状态机中没有这几个状态
+  // if (state == ROAD_LB_LBORROW) {
+  //   lateral_output.lb_status = "left_lane_borrow";
+  // } else if (state == ROAD_LB_RBORROW) {
+  //   lateral_output.lb_status = "right_lane_borrow";
+  // } else if (state == ROAD_LB_LSUSPEND) {
+  //   lateral_output.lb_status = "left_lane_suspend";
+  // } else if (state == ROAD_LB_RSUSPEND) {
+  //   lateral_output.lb_status = "right_lane_suspend";
+  // } else {
+  //   lateral_output.lb_status = "none";
+  // }
 
   lateral_output.avd_info.clear();
 
@@ -2843,12 +2821,11 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   int state = lane_change_decider_output.curr_state;
   planning::common::LaneStatus default_lane_status;
   // //   // scenario input info
-  default_lane_status.change_lane.target_gap_obs =
+  default_lane_status.change_lane.target_gap_obs = 
       lane_status.change_lane.target_gap_obs;
   lane_status = default_lane_status;
 
-  if (state == ROAD_NONE || state == INTER_GS_NONE || state == INTER_TR_NONE ||
-      state == INTER_TL_NONE) {
+  if (state == kLaneKeeping) {
     lane_status.status = planning::common::LaneStatus::Status::LANE_KEEP;
   } else {
     if (lc_request == "none") {
@@ -2981,241 +2958,244 @@ bool VisionLateralMotionPlanner::update_planner_status() {
   lateral_output.planner_scene = 0;
   lateral_output.planner_action = 0;
   lateral_output.planner_status = 0;
-
+  const auto cur_lc_direction = session_->planning_context().lane_change_decider_output().lc_request;
   switch (lane_change_decider_output.curr_state) {
-    case ROAD_NONE:
+    case kLaneKeeping:
       lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
       break;
 
-    case ROAD_LC_LWAIT:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    case kLaneChangePropose:
+      if(cur_lc_direction == LEFT_CHANGE) {
+        lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+        lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_LEFT;
+        lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+        break;
+      } else if (cur_lc_direction == RIGHT_CHANGE) {
+        lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+        lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_RIGHT;
+        lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
       break;
+      }
 
-    case ROAD_LC_RWAIT:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
+    case kLaneChangeExecution:
+    case kLaneChangeComplete:
+      if (cur_lc_direction == LEFT_CHANGE) {
+        lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+        lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_LEFT;
+        lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+        break;
+      } else if (cur_lc_direction == RIGHT_CHANGE) {
+        lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+        lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_RIGHT;
+        lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+        break;
+      }
+    case kLaneChangeCancel:
+      if (cur_lc_direction == LEFT_CHANGE) {
+        lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+        lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_LEFT;
+        lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+        break;
+      } else if (cur_lc_direction == RIGHT_CHANGE) {
+        lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+        lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_RIGHT;
+        lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+        break;
+      }
+    //fengwang31:新状态机中没有这几个状态
+    // case ROAD_LB_LBORROW:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROWING;
+    //   break;
 
-    case ROAD_LC_LCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
+    // case ROAD_LB_RBORROW:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROWING;
+    //   break;
 
-    case ROAD_LC_RCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
+    // case ROAD_LB_LBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_BACK;
+    //   break;
 
-    case ROAD_LC_LBACK:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
+    // case ROAD_LB_RBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_BACK;
+    //   break;
 
-    case ROAD_LC_RBACK:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
+    // case ROAD_LB_LRETURN:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_RETURN;
+    //   break;
 
-    case ROAD_LB_LBORROW:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROWING;
-      break;
+    // case ROAD_LB_RRETURN:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_RETURN;
+    //   break;
 
-    case ROAD_LB_RBORROW:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROWING;
-      break;
+    // case ROAD_LB_LSUSPEND:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_SUSPEND;
+    //   break;
 
-    case ROAD_LB_LBACK:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_BACK;
-      break;
+    // case ROAD_LB_RSUSPEND:
+    //   lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
+    //   lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_SUSPEND;
+    //   break;
 
-    case ROAD_LB_RBACK:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_BACK;
-      break;
+    // case INTER_GS_NONE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT;
+    //   break;
 
-    case ROAD_LB_LRETURN:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_RETURN;
-      break;
+    // case INTER_GS_LC_LWAIT:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    //   break;
 
-    case ROAD_LB_RRETURN:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_RETURN;
-      break;
+    // case INTER_GS_LC_RWAIT:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    //   break;
 
-    case ROAD_LB_LSUSPEND:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_SUSPEND;
-      break;
+    // case INTER_GS_LC_LCHANGE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+    //   break;
 
-    case ROAD_LB_RSUSPEND:
-      lateral_output.planner_scene = AlgorithmScene::NORMAL_ROAD;
-      lateral_output.planner_action = AlgorithmAction::LANE_BORROW_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_BORROW_SUSPEND;
-      break;
+    // case INTER_GS_LC_RCHANGE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+    //   break;
 
-    case INTER_GS_NONE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT;
-      break;
+    // case INTER_GS_LC_LBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+    //   break;
 
-    case INTER_GS_LC_LWAIT:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
+    // case INTER_GS_LC_RBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+    //   break;
 
-    case INTER_GS_LC_RWAIT:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
+    // case INTER_TR_NONE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT;
+    //   break;
 
-    case INTER_GS_LC_LCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
+    // case INTER_TR_LC_LWAIT:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    //   break;
 
-    case INTER_GS_LC_RCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
+    // case INTER_TR_LC_RWAIT:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    //   break;
 
-    case INTER_GS_LC_LBACK:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
+    // case INTER_TR_LC_LCHANGE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+    //   break;
 
-    case INTER_GS_LC_RBACK:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_GO_STRAIGHT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
+    // case INTER_TR_LC_RCHANGE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+    //   break;
 
-    case INTER_TR_NONE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT;
-      break;
+    // case INTER_TR_LC_LBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+    //   break;
 
-    case INTER_TR_LC_LWAIT:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
+    // case INTER_TR_LC_RBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+    //   break;
+    //   //
+    // case INTER_TL_NONE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT;
+    //   break;
 
-    case INTER_TR_LC_RWAIT:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
+    // case INTER_TL_LC_LWAIT:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    //   break;
 
-    case INTER_TR_LC_LCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
+    // case INTER_TL_LC_RWAIT:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
+    //   break;
 
-    case INTER_TR_LC_RCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
+    // case INTER_TL_LC_LCHANGE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+    //   break;
 
-    case INTER_TR_LC_LBACK:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
+    // case INTER_TL_LC_RCHANGE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
+    //   break;
 
-    case INTER_TR_LC_RBACK:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_RIGHT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
-      //
-    case INTER_TL_NONE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT;
-      break;
+    // case INTER_TL_LC_LBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+    //                                   AlgorithmAction::LANE_CHANGE_LEFT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+    //   break;
 
-    case INTER_TL_LC_LWAIT:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
+    // case INTER_TL_LC_RBACK:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
+    //                                   AlgorithmAction::LANE_CHANGE_RIGHT;
+    //   lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
+    //   break;
 
-    case INTER_TL_LC_RWAIT:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_WAITING;
-      break;
-
-    case INTER_TL_LC_LCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
-
-    case INTER_TL_LC_RCHANGE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGEING;
-      break;
-
-    case INTER_TL_LC_LBACK:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
-                                      AlgorithmAction::LANE_CHANGE_LEFT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
-
-    case INTER_TL_LC_RBACK:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_TURN_LEFT |
-                                      AlgorithmAction::LANE_CHANGE_RIGHT;
-      lateral_output.planner_status = AlgorithmStatus::LANE_CHANGE_BACK;
-      break;
-
-    case INTER_UT_NONE:
-      lateral_output.planner_scene = AlgorithmScene::INTERSECT;
-      lateral_output.planner_action = AlgorithmAction::INTERSECT_U_TURN;
-      break;
+    // case INTER_UT_NONE:
+    //   lateral_output.planner_scene = AlgorithmScene::INTERSECT;
+    //   lateral_output.planner_action = AlgorithmAction::INTERSECT_U_TURN;
+    //   break;
 
     default:
       break;

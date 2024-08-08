@@ -148,10 +148,13 @@ void GapSelectorDecider::Preprocessor() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
+  const auto& lc_request_direction = session_->planning_context().lane_change_decider_output().lc_request;
+  bool is_LC_LCHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || (coarse_planning_info.target_state == kLaneChangeComplete)) && (lc_request_direction == 1);
+  bool is_LC_RCHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || (coarse_planning_info.target_state == kLaneChangeComplete)) && (lc_request_direction == 2);
   target_state_ =
-      coarse_planning_info.target_state == ROAD_LC_LCHANGE
+      is_LC_LCHANGE
           ? 1
-          : (coarse_planning_info.target_state == ROAD_LC_RCHANGE ? 2 : 0);
+          : (is_LC_RCHANGE ? 2 : 0);
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
   const std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
@@ -316,17 +319,15 @@ GapSelectorStatus GapSelectorDecider::Update() {
       ego_cart_pose, ego_frenet_pose);
 
   if (coarse_planning_info.target_state != last_target_state_) {
-    if (coarse_planning_info.target_state == ROAD_NONE ||
-        coarse_planning_info.target_state == ROAD_LC_LWAIT ||
-        coarse_planning_info.target_state == ROAD_LC_RWAIT) {
+    if (coarse_planning_info.target_state == kLaneKeeping ||
+        coarse_planning_info.target_state == kLaneChangePropose ) {
       lc_timer_ = 0.;
       lc_total_time_ = config_.default_lc_time;
       lc_back_timer_ = 0.;
       lc_back_vel_ = 0.;
       use_ego_v_ = false;
       return GapSelectorStatus::NO_LC_REQUSET;
-    } else if (coarse_planning_info.target_state == ROAD_LC_LBACK ||
-               coarse_planning_info.target_state == ROAD_LC_RBACK) {
+    } else if (coarse_planning_info.target_state == kLaneChangeCancel) {
       lc_timer_ = 0.;
       lc_total_time_ = config_.default_lc_time;
       use_ego_v_ = false;
@@ -352,12 +353,11 @@ GapSelectorStatus GapSelectorDecider::Update() {
       lc_timer_ += 0.1;
       is_lc_scene = true;
     }
-  } else if (coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-             coarse_planning_info.target_state == ROAD_LC_RCHANGE) {
+  } else if (coarse_planning_info.target_state == kLaneChangeExecution ||
+             coarse_planning_info.target_state == kLaneChangeComplete) {
     lc_timer_ += 0.1;
     is_lc_scene = true;
-  } else if (coarse_planning_info.target_state == ROAD_LC_LBACK ||
-             coarse_planning_info.target_state == ROAD_LC_RBACK) {
+  } else if (coarse_planning_info.target_state == kLaneChangeCancel) {
     lc_back_timer_ += 0.1;
     is_lc_back_scene = true;
   }
@@ -585,10 +585,7 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
   }
   // frenet_init_point_ = frenet_init_point;
 
-  const double lat_lc_dis =
-      target_state == ROAD_LC_LCHANGE
-          ? std::fabs(lat_avoid_offset - frenet_init_point.y)
-          : std::fabs(frenet_init_point.y - lat_avoid_offset);
+  const double lat_lc_dis = std::fabs(frenet_init_point.y - lat_avoid_offset);
   const double ego_v =
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   const double v_cruise = session_->mutable_environmental_model()

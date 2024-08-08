@@ -195,11 +195,12 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
   bool limit_ref_vel_on_ramp_valid = false;
+  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || 
+                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
+  
   if (config_.lateral_ref_traj_type ||
-      ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-        coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-        coarse_planning_info.target_state == ROAD_LC_LBACK ||
-        coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+      ((is_LC_CHANGE || is_LC_BACK) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
@@ -279,10 +280,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   } else {
     general_lateral_decider_output.ramp_scene = false;
   }
-  if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_LBACK ||
-       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+  if ((is_LC_CHANGE || is_LC_BACK) &&
       gap_selector_decider_output.gap_selector_trustworthy) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
@@ -505,10 +503,10 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                                          .coarse_planning_info;
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_lane_change = coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-                        coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-                        coarse_planning_info.target_state == ROAD_LC_LBACK ||
-                        coarse_planning_info.target_state == ROAD_LC_RBACK;
+  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || 
+                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
+  bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
   const double kDefaultDistanceToRoad = 10.0;
   const double half_ego_width = 0.5 * vehicle_param.max_width;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
@@ -1552,24 +1550,26 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
     lateral_output.lc_request = "right";
   }
 
-  int state = lane_change_decider_output.curr_state;
-  if (state == ROAD_LC_LCHANGE || state == INTER_GS_LC_LCHANGE ||
-      state == INTER_TR_LC_LCHANGE || state == INTER_TL_LC_LCHANGE) {
+  const auto state = lane_change_decider_output.curr_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LWAIT = (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RWAIT = (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LBACK = (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RBACK = (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
+  //(fengwang31)TODO:交互式变道的的取消状态还需要考虑进去
+  if (is_LC_LCHANGE) {
     lateral_output.lc_status = "left_lane_change";
-  } else if (state == ROAD_LC_LBACK || state == INTER_GS_LC_LBACK ||
-             state == INTER_TR_LC_LBACK || state == INTER_TL_LC_LBACK) {
+  } else if (is_LC_LBACK) {
     lateral_output.lc_status = "left_lane_change_back";
-  } else if (state == ROAD_LC_RCHANGE || state == INTER_GS_LC_RCHANGE ||
-             state == INTER_TR_LC_RCHANGE || state == INTER_TL_LC_RCHANGE) {
+  } else if (is_LC_RCHANGE) {
     lateral_output.lc_status = "right_lane_change";
-  } else if (state == ROAD_LC_RBACK || state == INTER_GS_LC_RBACK ||
-             state == INTER_TR_LC_RBACK || state == INTER_TL_LC_RBACK) {
+  } else if (is_LC_RBACK) {
     lateral_output.lc_status = "right_lane_change_back";
-  } else if (state == ROAD_LC_LWAIT || state == INTER_GS_LC_LWAIT ||
-             state == INTER_TR_LC_LWAIT || state == INTER_TL_LC_LWAIT) {
+  } else if (is_LC_LWAIT) {
     lateral_output.lc_status = "left_lane_change_wait";
-  } else if (state == ROAD_LC_RWAIT || state == INTER_GS_LC_RWAIT ||
-             state == INTER_TR_LC_RWAIT || state == INTER_TL_LC_RWAIT) {
+  } else if (is_LC_RWAIT) {
     lateral_output.lc_status = "right_lane_change_wait";
   } else {
     lateral_output.lc_status = "none";

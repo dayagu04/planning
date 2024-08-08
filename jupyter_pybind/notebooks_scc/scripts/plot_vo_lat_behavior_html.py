@@ -213,7 +213,7 @@ def draw_mlc_data_view(dataLoader, layer_manager):
 
       names = []
       datas = []
-      vars_lc = ['hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
+      vars_lc = ['sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
                 'current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
                 'is_solid_left_boundary','is_solid_right_boundary']
       for name in vars_lc:

@@ -122,8 +122,7 @@ bool LaneChangeRequestManager::Update(
       // TODO:添加至操作时间域的距离小于一定值时将overtake_count_=0
 
       // trigger overtake lane change when lane keep status.
-      if (lc_status != ROAD_NONE && lc_status != ROAD_LC_LWAIT &&
-          lc_status != ROAD_LC_RWAIT) {
+      if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
         LOG_DEBUG("cann't generate overtake lane change when not lane keep!");
         overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;

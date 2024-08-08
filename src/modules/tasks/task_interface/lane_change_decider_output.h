@@ -24,7 +24,7 @@ struct LaneChangeStateMachineInfo {
 
 struct LaneChangeDeciderOutput {
   int scenario;
-  int curr_state;
+  StateMachineLaneChangeStatus curr_state;
   int fix_lane_virtual_id;
   int origin_lane_virtual_id;
   int target_lane_virtual_id;

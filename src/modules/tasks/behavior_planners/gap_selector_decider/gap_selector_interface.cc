@@ -118,11 +118,15 @@ void GapSelectorInterface::Store(
   const auto &coarse_planning_info = session->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-
+  const auto& lane_change_decider_output = session->planning_context().lane_change_decider_output();
+  const auto state = lane_change_decider_output.curr_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
   auto target_state =
-      coarse_planning_info.target_state == ROAD_LC_LCHANGE
+      is_LC_LCHANGE
           ? 1
-          : (coarse_planning_info.target_state == ROAD_LC_RCHANGE ? 2 : 0);
+          : (is_LC_RCHANGE ? 2 : 0);
   gap_selector_input->set_request(target_state);
 
   const std::shared_ptr<VirtualLane> target_lane =
@@ -174,9 +178,9 @@ void GapSelectorInterface::Store(
   state_machine_info->set_lc_cancel(gap_selector_state_machine_info.lc_cancel);
   state_machine_info->set_gs_skip(gap_selector_state_machine_info.gs_skip);
   int lc_request =
-      coarse_planning_info.target_state == ROAD_LC_LCHANGE
+      is_LC_LCHANGE
           ? 1
-          : (coarse_planning_info.target_state == ROAD_LC_RCHANGE ? 2 : 0);
+          : (is_LC_RCHANGE ? 2 : 0);
   state_machine_info->set_lc_request(lc_request);
 
   state_machine_info->mutable_lc_request_buffer()->Resize(3, 0);

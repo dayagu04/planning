@@ -125,6 +125,13 @@ class VisionLateralMotionPlanner : public Task {
   int one_nudge_right_car_;
   int lane_borrow_suspend_cnt_ = 0;
   // int suspend_lat_offset_ = 0;
+  //for new statemachine
+  bool is_LC_LWAIT_ = false;
+  bool is_LC_RWAIT_ = false;
+  bool is_LC_LBACK_ = false;
+  bool is_LC_RBACK_ = false;
+  bool is_LC_LCHANGE_ = false;
+  bool is_LC_RCHANGE_ = false;
 };
 
 }  // namespace planning
