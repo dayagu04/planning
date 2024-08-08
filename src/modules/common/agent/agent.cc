@@ -28,6 +28,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   x_ = prediction_object.position_x;
   y_ = prediction_object.position_y;
   // theta定义
+  // theta_ = prediction_object.relative_theta;
   theta_ = prediction_object.theta;
   speed_ = prediction_object.speed;
   accel_ = prediction_object.acc;

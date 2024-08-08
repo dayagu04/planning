@@ -1,4 +1,5 @@
 #include "longtime_task_pipeline_v1.h"
+#include <memory>
 
 namespace planning {
 
@@ -15,6 +16,8 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
       std::make_unique<GeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
+  agent_longitudinal_decider_ =
+      std::make_unique<AgentLongitudinalDecider>(config_builder, session);
   scc_lon_behavior_planner_ =
       std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
@@ -51,6 +54,12 @@ bool LongTimeTaskPipelineV1::Run() {
   ok = lateral_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_motion_planner_->Name());
+    return false;
+  }
+
+  ok = agent_longitudinal_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(agent_longitudinal_decider_->Name());
     return false;
   }
 

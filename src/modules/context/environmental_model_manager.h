@@ -3,6 +3,7 @@
 #include <memory>
 #include "agent/agent_manager.h"
 #include "agent_node_manager.h"
+#include "dynamic_world/dynamic_world.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "history_obstacle_manager.h"

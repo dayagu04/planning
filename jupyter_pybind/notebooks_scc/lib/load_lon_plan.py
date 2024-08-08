@@ -34,6 +34,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                               'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                              'new_cutin_id', 'new_cutin_id_count', \
                               'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', \
                               "dis_to_ramp", "v_target_ramp", "narrow_agent_id", "narrow_agent_v_limit",\
                               'gap_v_limit_lc', \
@@ -44,6 +45,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
+  new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
   plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
@@ -158,6 +160,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(planning_json_value_list)):
      vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
 
+  cutin_attr_vec = []
+  for ind in range(len(new_cutin_list)):
+     cutin_attr_vec.append(plan_debug_json_info[new_cutin_list[ind]])
+
   v_limit_vec = plan_debug_json_info['limit_v_type']
   print('v_limit_vec', v_limit_vec)
   lon_plan_data['data_st'].data.update({
@@ -221,6 +227,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_text'].data.update({
     'VisionLonAttr': planning_json_value_list,
     'VisionLonVal': vision_lon_attr_vec
+  })
+
+  lon_plan_data['data_cutin'].data.update({
+    'cutinAttr': new_cutin_list,
+    'cutinVal': cutin_attr_vec
   })
 
   # motion planning
@@ -741,6 +752,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
+  data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
 
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
@@ -772,6 +784,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
+                   'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
                    'data_tv':data_tv, \
                    'data_ta':data_ta, \
@@ -785,6 +798,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
         TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
         TableColumn(field="VisionLonVal", title="VisionLonVal"),
     ]
+  cutin_colums = [
+      TableColumn(field="cutinAttr", title="cutinAttr"),
+      TableColumn(field="cutinVal", title="cutinVal")
+  ]
   hover = HoverTool(tooltips = [
      ('index','$index'),
      ('id_low','@obs_low_id'),

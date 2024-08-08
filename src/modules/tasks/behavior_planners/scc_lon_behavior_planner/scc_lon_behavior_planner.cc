@@ -132,6 +132,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   const auto &planning_init_point = ego_state_mgr->planning_init_point();
 
   const auto &lane_status = session_->mutable_planning_context()->lane_status();
+  const auto *agent_manager =
+        session_->environmental_model().get_dynamic_world()->agent_manager();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
@@ -291,6 +293,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_is_accident_car(track.is_accident_car);
     one_obs->set_is_lead(track.is_lead);
     one_obs->set_is_temp_lead(track.is_temp_lead);
+    one_obs->set_is_new_cutin(agent_manager->GetAgent(track.track_id)->is_cutin());
     one_obs->set_cutinp(track.cutinp);
     one_obs->set_y_min(track.y_min);
     one_obs->set_y_x0(track.y_x0);

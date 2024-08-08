@@ -19,6 +19,7 @@
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "tasks/behavior_planners/agent_longitudinal_decider/agent_longitudinal_decider.h"
 
 namespace planning {
 
@@ -42,6 +43,7 @@ class LongTimeTaskPipelineV1 : public BaseTaskPipeline {
   std::unique_ptr<SccLongitudinalMotionPlanner>
       scc_longitudinal_motion_planner_;
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
+  std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
 };
 
 }  // namespace planning

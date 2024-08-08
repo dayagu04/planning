@@ -46,6 +46,7 @@ message TrackedObjectInfo {
   optional double location_tail = 18;
   optional double vy_rel = 19;
   optional double y_rel = 20;
+  optional bool is_new_cutin = 21;
 }
 
 message LatObsInfo {
