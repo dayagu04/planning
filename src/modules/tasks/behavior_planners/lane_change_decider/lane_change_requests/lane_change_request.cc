@@ -531,7 +531,7 @@ iflyauto::LaneBoundaryType LaneChangeRequest::MakesureCurrentBoundaryType(
     const int origin_lane_id) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  double dash_length = 0.0;
+  double lane_line_length = 0.0;
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
   const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
@@ -550,13 +550,13 @@ iflyauto::LaneBoundaryType LaneChangeRequest::MakesureCurrentBoundaryType(
       return iflyauto::LaneBoundaryType_MARKING_SOLID;
     }
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-      dash_length += left_lane_boundarys.type_segments[i].length;
-      if (dash_length > ego_s) {
+      lane_line_length += left_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
         return left_lane_boundarys.type_segments[i].type;
       }
     }
   } else if (lc_request == RIGHT_CHANGE) {
-    const auto& right_lane_boundarys = current_lane->get_left_lane_boundary();
+    const auto& right_lane_boundarys = current_lane->get_right_lane_boundary();
     target_boundary_path = virtual_lane_mgr_->MakeBoundaryPath(right_lane_boundarys);
     if (target_boundary_path != nullptr) {
       if (!target_boundary_path->XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
@@ -566,8 +566,8 @@ iflyauto::LaneBoundaryType LaneChangeRequest::MakesureCurrentBoundaryType(
       return iflyauto::LaneBoundaryType_MARKING_SOLID;
     }
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-      dash_length += right_lane_boundarys.type_segments[i].length;
-      if (dash_length > ego_s) {
+      lane_line_length += right_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
         return right_lane_boundarys.type_segments[i].type;
       }
     }
