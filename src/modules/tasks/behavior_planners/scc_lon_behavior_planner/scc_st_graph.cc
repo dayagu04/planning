@@ -1262,7 +1262,8 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     if ((track.fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
-    if (!track.is_lead() && track.cutinp() > cutinp_threshold &&
+    if (!track.is_lead() &&
+        (track.cutinp() > cutinp_threshold || track.is_new_cutin()) &&
         track.v_lat() < -0.01 &&
         track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       cut_in_info->set_has_cutin(true);
@@ -1301,8 +1302,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       // v_target_potential_cutin =
       //     std::min(v_target_potential_cutin,
       //              (desired_velocity - v_limit) * track.cutinp() + v_limit);
-      double v_potential_cutin =
-          (desired_velocity - v_limit) * track.cutinp() + v_limit;
+      double v_potential_cutin = desired_velocity;
       if (v_target_potential_cutin > v_potential_cutin) {
         v_target_potential_cutin = v_potential_cutin;
         cutin_id_vt.first = track.track_id();

@@ -584,6 +584,7 @@ class LoadRosbag:
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                         'new_cutin_id', 'new_cutin_id_count', \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
