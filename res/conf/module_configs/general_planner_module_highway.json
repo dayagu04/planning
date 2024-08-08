@@ -478,7 +478,13 @@
     "search_sdmap_curv_dis":300.0,
     "sdmap_curv_thred":1000.0,
     "straight_ramp_v_limit":22.22,
-    "enable_sdmap_curv_v_adjust": true
+    "enable_sdmap_curv_v_adjust": true,
+    "enable_merge_decision_process": true,
+    "dangerous_ttc_thrd": 1.1,
+    "tense_ttc_thrd": 2.4,
+    "merge_desired_distance_sharp_rate": 2.0,
+    "merge_desired_distance_slow_rate": 1.0,
+    "enabe_right_lane_merge_to_ego_lane_decision_process" : false
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false

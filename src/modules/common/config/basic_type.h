@@ -243,16 +243,20 @@ struct ObstaclePredicatedPoint {
 using ObstaclePredicatedPoints = std::vector<ObstaclePredicatedPoint>;
 struct ObstaclePredicatedInfo {
   ObstaclePredicatedPoints obstacle_pred_info;
-
+  ~ObstaclePredicatedInfo() = default;
   // perception info
   double origin_x = 0.;
   double origin_y = 0.;
+  double origin_heading_angle = 0.;
   double raw_vel = 0.;
   double cur_s = 0.;
   double cur_l = 0.;
 
   double length = 5.;
   double width = 2.1;
+  std::vector<double> x_vec{};
+  std::vector<double> y_vec{};
+  std::vector<double> heading_angle_vec{};
 };
 // enum ScenarioStateEnum {
 //   ROAD_NONE = 0,

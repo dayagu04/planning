@@ -572,6 +572,8 @@ void LateralMotionPlanner::Update() {
   motion_planner_output.lateral_x_t_spline.set_points(t_vec, x_vec);
   motion_planner_output.lateral_y_t_spline.set_points(t_vec, y_vec);
   motion_planner_output.lateral_theta_t_spline.set_points(t_vec, theta_vec);
+  motion_planner_output.lateral_s_t_spline.set_points(t_vec, s_vec);
+  motion_planner_output.lateral_t_s_spline.set_points(s_vec, t_vec);
   motion_planner_output.s_lat_vec = s_vec;
   motion_planner_output.lat_init_flag = true;
 

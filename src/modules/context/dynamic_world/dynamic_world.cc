@@ -1,8 +1,10 @@
 #include "dynamic_world.h"
+
 #include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
+
 #include "agent/agent_manager.h"
 #include "debug_info_log.h"
 #include "dynamic_world/dynamic_agent_node.h"
@@ -542,6 +544,149 @@ const int64_t DynamicWorld::ego_left_rear_node_id() const {
 }
 const int64_t DynamicWorld::ego_right_rear_node_id() const {
   return ego_right_rear_node_id_;
+}
+
+void DynamicWorld::DebugEgoNearByAgentNodesTrajectory() const {
+  std::vector<double> empty_traj{};
+  if (ego_front_node_id_ != planning_data::kInvalidId) {
+    const auto ego_front_agent_node = GetNode(ego_front_node_id_);
+    if (ego_front_agent_node != nullptr) {
+      auto prediction_traj = ego_front_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_front_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_front_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_front_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_front_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_front_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_front_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_rear_node_id_ != planning_data::kInvalidId) {
+    const auto ego_rear_agent_node = GetNode(ego_rear_node_id_);
+    if (ego_rear_agent_node != nullptr) {
+      auto prediction_traj = ego_rear_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_rear_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_rear_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_rear_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_rear_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_rear_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_rear_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_left_node_id_ != planning_data::kInvalidId) {
+    auto ego_left_agent_node = GetNode(ego_left_node_id_);
+    if (ego_left_agent_node != nullptr) {
+      auto prediction_traj = ego_left_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_left_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_left_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_left_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_left_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_right_node_id_ != planning_data::kInvalidId) {
+    const auto ego_right_agent_node = GetNode(ego_right_node_id_);
+    if (ego_right_agent_node != nullptr) {
+      auto prediction_traj = ego_right_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_right_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_right_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_right_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_right_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_left_front_node_id_ != planning_data::kInvalidId) {
+    const auto ego_left_front_agent_node = GetNode(ego_left_front_node_id_);
+    if (ego_left_front_agent_node != nullptr) {
+      auto prediction_traj =
+          ego_left_front_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_left_front_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_front_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_front_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_left_front_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_left_front_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_left_front_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_right_front_node_id_ != planning_data::kInvalidId) {
+    const auto ego_right_front_agent_node = GetNode(ego_right_front_node_id_);
+    if (ego_right_front_agent_node != nullptr) {
+      auto prediction_traj =
+          ego_right_front_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_right_front_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_front_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_front_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_right_front_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_right_front_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_right_front_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_left_rear_node_id_ != planning_data::kInvalidId) {
+    const auto ego_left_rear_agent_node = GetNode(ego_left_rear_node_id_);
+    if (ego_left_rear_agent_node != nullptr) {
+      auto prediction_traj =
+          ego_left_rear_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_left_rear_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_rear_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_rear_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_left_rear_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_left_rear_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_left_rear_agent_traj_theta_vec", empty_traj, 4)
+  }
+
+  if (ego_right_rear_node_id_ != planning_data::kInvalidId) {
+    const auto ego_right_rear_agent_node = GetNode(ego_right_rear_node_id_);
+    if (ego_right_rear_agent_node != nullptr) {
+      auto prediction_traj =
+          ego_right_rear_agent_node->node_trajectories().at(0);
+      JSON_DEBUG_VECTOR("ego_right_rear_agent_traj_x_vec",
+                        prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_rear_agent_traj_y_vec",
+                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_rear_agent_traj_theta_vec",
+                        prediction_traj.theta_vec_, 4)
+    }
+  } else {
+    JSON_DEBUG_VECTOR("ego_right_rear_agent_traj_x_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_right_rear_agent_traj_y_vec", empty_traj, 4)
+    JSON_DEBUG_VECTOR("ego_right_rear_agent_traj_theta_vec", empty_traj, 4)
+  }
 }
 
 }  // namespace planning_data

@@ -1,5 +1,4 @@
 #include "trajectory.h"
-#include "trajectory_point.h"
 
 #include <cstdint>
 #include <iterator>

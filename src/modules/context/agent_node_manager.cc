@@ -23,9 +23,9 @@
 
 using namespace planning;
 constexpr double Eps = 1e-3;
-constexpr int PointNum = 25;
+constexpr int PointNum = 30;
 constexpr double LaneCheckBuffer = 0.55;
-constexpr double delta_t = 0.2;
+constexpr double delta_t = 0.1;
 
 bool AgentNodeManager::init() {
   agent_node_origin_lane_map_.clear();
@@ -52,7 +52,8 @@ void AgentNodeManager::set_input_info(
     return;
   }
   target_state_ = request;
-  frenet_coord_ = origin_coord;
+  // frenet_coord_ = origin_coord;
+  frenet_coord_ = target_coord;
 
   map_gs_care_obstacles_.reserve(gs_care_obstacles.size());
   for (const auto &pair : gs_care_obstacles) {
@@ -257,7 +258,8 @@ bool AgentNodeManager::InferObjTrajByLane(
                  std::back_inserter(lane_predict_points_y),
                  [=](double y) { return y - delta_y; });
 
-  double obj_traj_length = obj.velocity() * delta_t * PointNum;
+  double obj_traj_length =
+      obj.velocity() * delta_t * (prediction_traj_points_size_ - 1);
 
   std::vector<double> s_vec;
   if (mono_status == MonotonicStatus::NONMONOTIONIC) {
@@ -301,13 +303,36 @@ bool AgentNodeManager::InferObjTrajByKDPath(
   }
 
   auto &obj_pred_traj = obstacle_predicated_info.obstacle_pred_info;
-  obj_pred_traj.resize(PointNum + 1);
+  obj_pred_traj.resize(prediction_traj_points_size_);
 
-  for (auto i = 0; i < PointNum + 1; i++) {
-    obj_pred_traj[i].x =
-        obstacle_predicated_info.origin_x;  // x y is keep origin
-    obj_pred_traj[i].y = obstacle_predicated_info.origin_y;
+  // for (auto i = 0; i < prediction_traj_points_size_ + 1; i++) {
+  //   obj_pred_traj[i].x =
+  //       obstacle_predicated_info.origin_x;  // x y is keep origin
+  //   obj_pred_traj[i].y = obstacle_predicated_info.origin_y;
 
+  //   obj_pred_traj[i].s =
+  //       use_cur_s ? obstacle_predicated_info.cur_s
+  //                 : std::fmin(obstacle_predicated_info.cur_s +
+  //                                 (i - 1) * obstacle_predicated_info.raw_vel
+  //                                 *
+  //                                     delta_t,
+  //                             frenet_coord_->Length());
+  //   obj_pred_traj[i].l = obstacle_predicated_info.cur_l;
+
+  //   // reserve, the xy can be convert by kdpath
+  //   obj_pred_traj[i].heading_angle = 0.;
+  // }
+  obj_pred_traj[0].x = obstacle_predicated_info.origin_x;
+  obj_pred_traj[0].y = obstacle_predicated_info.origin_y;
+  obj_pred_traj[0].heading_angle =
+      obstacle_predicated_info.origin_heading_angle;
+  obj_pred_traj[0].s = obstacle_predicated_info.cur_s;
+  obj_pred_traj[0].l = obstacle_predicated_info.cur_l;
+  obstacle_predicated_info.x_vec.emplace_back(obj_pred_traj[0].x);
+  obstacle_predicated_info.y_vec.emplace_back(obj_pred_traj[0].y);
+  obstacle_predicated_info.heading_angle_vec.emplace_back(
+      obj_pred_traj[0].heading_angle);
+  for (auto i = 1; i < prediction_traj_points_size_; i++) {
     obj_pred_traj[i].s =
         use_cur_s ? obstacle_predicated_info.cur_s
                   : std::fmin(obstacle_predicated_info.cur_s +
@@ -315,9 +340,18 @@ bool AgentNodeManager::InferObjTrajByKDPath(
                                       delta_t,
                               frenet_coord_->Length());
     obj_pred_traj[i].l = obstacle_predicated_info.cur_l;
-
+    Point2D frenet_point{obj_pred_traj[i].s, obj_pred_traj[i].l};
+    Point2D cart_point{0.0, 0.0};
+    frenet_coord_->SLToXY(frenet_point, cart_point);
+    obj_pred_traj[i].x = cart_point.x;
+    obj_pred_traj[i].y = cart_point.y;
     // reserve, the xy can be convert by kdpath
-    obj_pred_traj[i].heading_angle = 0.;
+    obj_pred_traj[i].heading_angle =
+        obstacle_predicated_info.origin_heading_angle;
+    obstacle_predicated_info.x_vec.emplace_back(obj_pred_traj[i].x);
+    obstacle_predicated_info.y_vec.emplace_back(obj_pred_traj[i].y);
+    obstacle_predicated_info.heading_angle_vec.emplace_back(
+        obj_pred_traj[i].heading_angle);
   }
 
   return true;
@@ -400,7 +434,7 @@ bool AgentNodeManager::InferConstSpeedObstacleTraj(
 
   double sn = 0.;
   auto &obj_pred_traj = obj_predicted_points.obstacle_pred_info;
-  obj_pred_traj.resize(PointNum + 1);
+  obj_pred_traj.resize(prediction_traj_points_size_);
 
   Point2D obj_cart_position{obj.x_center(), obj.y_center()};
   Point2D obj_frenet_position{
@@ -409,7 +443,8 @@ bool AgentNodeManager::InferConstSpeedObstacleTraj(
     // LOG_ERROR("Agent Node, cart 2 frenet failed first position");
   }
 
-  for (auto i = 0; i < PointNum + 1; i++) {  // only update pred x, y, heading
+  for (auto i = 0; i < prediction_traj_points_size_;
+       i++) {  // only update pred x, y, heading
     obj_pred_traj[i].x = x_s_spline(sn);
     obj_pred_traj[i].y = y_s_spline(sn);
     obj_pred_traj[i].heading_angle =
@@ -694,7 +729,7 @@ bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
   std::vector<int64_t> origin_delete_ids;
   std::vector<int64_t> target_delete_ids;
 
-  for (auto &agent_id : map_origin_lane_obstacles_) {
+  for (auto &agent_id : map_target_lane_obstacles_) {
     ObstaclePredicatedInfo obj_predicated_info;
     auto iter = map_gs_care_obstacles_.find(agent_id);
     if (iter != map_gs_care_obstacles_.end()) {
@@ -716,6 +751,7 @@ bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
       obj_predicated_info.cur_l = obj_frenet_p.y;
       obj_predicated_info.length = iter->second.length();
       obj_predicated_info.width = iter->second.width();
+      obj_predicated_info.origin_heading_angle = iter->second.heading_angle();
 
       bool infer_ok =
           InferObjTrajByKDPath(obj_predicated_info, iter->second, false);
@@ -745,6 +781,7 @@ bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
       obj_predicated_info.origin_x = iter->second.x_center();
       obj_predicated_info.origin_y = iter->second.y_center();
       obj_predicated_info.raw_vel = iter->second.velocity();
+      obj_predicated_info.origin_heading_angle = iter->second.heading_angle();
       obj_predicated_info.cur_s = obj_frenet_p.x;
       obj_predicated_info.cur_l = obj_frenet_p.y;
       obj_predicated_info.length = iter->second.length();

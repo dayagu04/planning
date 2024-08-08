@@ -1911,6 +1911,25 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
                                        "enable_sdmap_curv_v_adjust"});
     enable_speed_adjust = read_json_keys<bool>(
         json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
+    dangerous_ttc_thrd = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dangerous_ttc_thrd"});
+    tense_ttc_thrd = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "tense_ttc_thrd"});
+    merge_desired_distance_sharp_rate = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "merge_desired_distance_sharp_rate"});
+    merge_desired_distance_slow_rate = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "merge_desired_distance_slow_rate"});
+    enable_merge_decision_process = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_merge_decision_process"});
+    enabe_right_lane_merge_to_ego_lane_decision_process = read_json_keys<bool>(
+        json, std::vector<std::string>{
+                  "real_time_long_behavior_planner",
+                  "enabe_right_lane_merge_to_ego_lane_decision_process"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1986,6 +2005,13 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double straight_ramp_v_limit = 22.22;
   bool enable_sdmap_curv_v_adjust = true;
   bool enable_speed_adjust = true;
+  // merge
+  double dangerous_ttc_thrd = 0.5;
+  double tense_ttc_thrd = 1.5;
+  double merge_desired_distance_sharp_rate = 1.5;
+  double merge_desired_distance_slow_rate = 1.0;
+  bool enable_merge_decision_process = false;
+  bool enabe_right_lane_merge_to_ego_lane_decision_process = false;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {

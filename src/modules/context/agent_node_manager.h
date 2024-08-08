@@ -1,5 +1,6 @@
-
+#pragma once
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -55,13 +56,27 @@ class AgentNodeManager {
     return map_gs_care_obstacles_;
   };
 
-  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
-      &agent_node_origin_lane_map() const {
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo> &
+  agent_node_origin_lane_map() const {
     return agent_node_origin_lane_map_;
   };
 
-  const std::unordered_map<int64_t, ObstaclePredicatedInfo>
-      &agent_node_target_lane_map() const {
+  const std::unordered_map<int64_t, ObstaclePredicatedInfo> &
+  agent_node_target_lane_map() const {
+    return agent_node_target_lane_map_;
+  };
+
+  const int agent_node_prediction_traj_points_size() const {
+    return prediction_traj_points_size_;
+  };
+
+  std::unordered_map<int64_t, ObstaclePredicatedInfo> &
+  mutable_agent_node_origin_lane_map() {
+    return agent_node_origin_lane_map_;
+  };
+
+  std::unordered_map<int64_t, ObstaclePredicatedInfo> &
+  mutable_agent_node_target_lane_map() {
     return agent_node_target_lane_map_;
   };
 
@@ -175,6 +190,7 @@ class AgentNodeManager {
   std::vector<int64_t> ids_sorted_target_lane_;  // sorted id
   std::vector<int64_t> ids_sorted_origin_lane_;
   // std::vector<Gap> gap_list_;
+  size_t prediction_traj_points_size_{51};
 };
 
 }  // namespace planning
