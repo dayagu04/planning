@@ -1878,10 +1878,10 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   //(1)按照order_id的顺序排序输入lanes
   std::vector<iflyauto::ReferenceLineMsg> lane_msg;
   lane_msg.reserve(roads_ptr->reference_line_msg_size);
-  int relative_id_zero_nums = 0;
+  origin_relative_id_zero_nums_ = 0;
   for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
     if (roads_ptr->reference_line_msg[i].relative_id == 0) {
-      relative_id_zero_nums = relative_id_zero_nums + 1;
+      origin_relative_id_zero_nums_ = origin_relative_id_zero_nums_ + 1;
     }
     lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
   }
