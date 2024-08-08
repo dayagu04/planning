@@ -4,7 +4,6 @@
 #include <float.h>
 #include <limits.h>
 
-#include <cstddef>
 #include <vector>
 
 #include "camera_perception_lane_lines_c.h"
@@ -164,7 +163,7 @@ class VirtualLane {
   int relative_id_ = 0;
   float ego_lateral_offset_ = 0;
   double width_ = 2.8;
-  std::shared_ptr<KDPath> lane_frenet_coord_ = nullptr;
+  std::shared_ptr<KDPath> lane_frenet_coord_;
   LaneStatusEx lane_status_;
   std::vector<iflyauto::LaneTypeMsg> lane_types_;
   std::vector<iflyauto::LaneMarkMsg> lane_marks_;

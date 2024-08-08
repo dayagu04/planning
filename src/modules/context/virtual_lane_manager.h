@@ -145,7 +145,7 @@ class VirtualLaneManager {
       const iflyauto::LaneBoundary &boundary);
 
   void CalcBoundaryCross(
-      const std::shared_ptr<KDPath> lane_boundary_path,
+      const planning_math::KDPath &lane_boundary_path,
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 

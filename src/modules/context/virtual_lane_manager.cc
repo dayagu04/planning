@@ -2056,20 +2056,18 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
   double ego2lane_min = std::numeric_limits<double>::max();
   int origin_order_id = 0;
   int relative_id_diff = 0;
-  Point2D ego_cart_point{ego_state->ego_pose().x,
-                         ego_state->ego_pose().y};
 
   for (auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
         std::shared_ptr<KDPath> frenet_coord =
             relative_id_lane->get_lane_frenet_coord();
-        Point2D ego_frenet_point;
-        if (!frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
+        double ego_s, ego_l;
+        if (!frenet_coord->XYToSL(ego_state->ego_pose().x,
+                                  ego_state->ego_pose().y, &ego_s, &ego_l)) {
           continue;
         }
-        double ego_s = ego_frenet_point.x;
-        double ego_l = ego_frenet_point.y;
+
         if (ego_s < frenet_coord->Length()) {
           if (std::fabs(ego_l) < ego2lane_min) {
             ego2lane_min = std::fabs(ego_l);
@@ -2140,11 +2138,12 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
   planned_path =
       std::make_shared<planning_math::KDPath>(std::move(path_points));
 
-  Point2D ego_frenet_point;
-  if (!planned_path->XYToSL(ego_cart_point, ego_frenet_point)) {
+  double ego_s, ego_l;
+  if (!planned_path->XYToSL(ego_cart_point.x, ego_cart_point.y, &ego_s,
+                            &ego_l)) {
     return;
   }
-  double ego_s = ego_frenet_point.x;
+
   double min_s = std::numeric_limits<double>::max();
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane == nullptr) {
@@ -2158,22 +2157,16 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
       continue;
     }
     const auto& last_point = lane_points.back();
-    Point2D lane_line_last_point(last_point.local_point.x,last_point.local_point.y);
-    Point2D lane_line_last_point_frenet;
-    double back_s;
-    if (!planned_path->XYToSL(lane_line_last_point, lane_line_last_point_frenet)) {
-      back_s = planned_path->Length();
-    } else {
-      back_s = lane_line_last_point_frenet.x;
+    double back_s, back_l;
+    if (!planned_path->XYToSL(last_point.local_point.x,
+                              last_point.local_point.y, &back_s, &back_l)) {
+      continue;
     }
     const auto& front_point = lane_points.front();
-    Point2D lane_line_front_point(front_point.local_point.x,front_point.local_point.y);
-    Point2D lane_line_front_point_frenet;
-    double front_s;
-    if (!planned_path->XYToSL(lane_line_front_point, lane_line_front_point_frenet)) {
-      front_s = 0;
-    } else {
-      front_s = lane_line_front_point_frenet.x;
+    double front_s, front_l;
+    if (!planned_path->XYToSL(front_point.local_point.x,
+                              front_point.local_point.y, &front_s, &front_l)) {
+      continue;
     }
     const double larger_s = std::fmax(front_s, back_s);
     if (min_s > larger_s) {
@@ -2221,13 +2214,11 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
 
     std::shared_ptr<KDPath> frenet_coord;
     for (auto& refline_pt : lane_points) {
-      Point2D lane_line_point(refline_pt.local_point.x, refline_pt.local_point.y);
-      Point2D lane_line_point_frenet;
-      if (!planned_path->XYToSL(lane_line_point, lane_line_point_frenet)) {
+      double s, l;
+      if (!planned_path->XYToSL(refline_pt.local_point.x,
+                                refline_pt.local_point.y, &s, &l)) {
         continue;
       }
-      double s = lane_line_point_frenet.x;
-      double l = lane_line_point_frenet.y;
       if (s > ego_s && s < planned_path->Length() && l > 0.0) {
         cumu_lat_dis_front += std::fabs(l);
         cumu_lat_dis_front_count++;
@@ -2260,15 +2251,17 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     cumu_lat_dis_cost = std::fmax(cumu_lat_dis_front, cumu_lat_dis_back);
 
     if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
+      frenet_coord = nullptr;
       continue;
     }
     frenet_coord = relative_id_lane->get_lane_frenet_coord();
 
-    Point2D ego_cart_point_frenet;
-    if (!frenet_coord->XYToSL(ego_cart_point, ego_cart_point_frenet)) {
+    double ego_s_lane, ego_l_lane;
+    if (!frenet_coord->XYToSL(ego_cart_point.x, ego_cart_point.y, &ego_s_lane,
+                              &ego_l_lane)) {
       init_pose_cost = 0.0;
     } else {
-      init_pose_cost = std::fabs(ego_cart_point_frenet.y) / kInitPosCostStandardThr;
+      init_pose_cost = std::fabs(ego_l_lane) / kInitPosCostStandardThr;
     }
     total_cost = kCumuLateralDistanceCostWeight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
@@ -2322,7 +2315,7 @@ bool VirtualLaneManager::CalcCrosslaneStatus(
     right_boundary_path = MakeBoundaryPath(right_boundary);
 
     if (left_boundary_path != nullptr) {
-      CalcBoundaryCross(left_boundary_path, center_line_pathpoints,
+      CalcBoundaryCross(*left_boundary_path, center_line_pathpoints,
                         &cross_lane);
     }
     if (cross_lane) {
@@ -2330,7 +2323,7 @@ bool VirtualLaneManager::CalcCrosslaneStatus(
     }
 
     if (right_boundary_path != nullptr) {
-      CalcBoundaryCross(right_boundary_path, center_line_pathpoints,
+      CalcBoundaryCross(*right_boundary_path, center_line_pathpoints,
                         &cross_lane);
     }
     if (cross_lane) {
@@ -2387,7 +2380,7 @@ std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
 }
 
 void VirtualLaneManager::CalcBoundaryCross(
-    const std::shared_ptr<KDPath> lane_boundary_path,
+    const planning_math::KDPath& lane_boundary_path,
     const std::vector<iflyauto::ReferencePoint>& center_line_pathpoints,
     bool* cross_lane) {
   const auto& ego_state =
@@ -2396,14 +2389,13 @@ void VirtualLaneManager::CalcBoundaryCross(
 
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
-  Point2D ego_cart_point(ego_x, ego_y);
-  Point2D ego_cart_point_frenet;
   double ego_s = 0.0, ego_l = 0.0;
-  if (!lane_boundary_path->KdtreeValid()) {
+  if (!lane_boundary_path.KdtreeValid()) {
     *cross_lane = false;
     return;
   }
-  if (lane_boundary_path->XYToSL(ego_cart_point, ego_cart_point_frenet)) {
+  if (lane_boundary_path.KdtreeValid() &&
+      !lane_boundary_path.XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
     *cross_lane = false;
     return;
   }
@@ -2411,14 +2403,12 @@ void VirtualLaneManager::CalcBoundaryCross(
   bool llane_pos = false;
   bool llane_neg = false;
   for (const auto& ref_pt : center_line_pathpoints) {
-    Point2D lane_line_point(ref_pt.local_point.x, ref_pt.local_point.y);
-    Point2D lane_line_point_frenet;
-    if (!lane_boundary_path->XYToSL(lane_line_point, lane_line_point_frenet)) {
+    double s, l;
+    if (!lane_boundary_path.XYToSL(ref_pt.local_point.x, ref_pt.local_point.y,
+                                   &s, &l)) {
       continue;
     }
-    double s = lane_line_point_frenet.x;
-    double l = lane_line_point_frenet.y;
-    if (s > lane_boundary_path->Length()) {
+    if (s > lane_boundary_path.Length()) {
       continue;
     }
     if (l > 0.0) {
@@ -2515,14 +2505,14 @@ void VirtualLaneManager::CalculateVirtualLaneAttributes() {
   for (auto& relative_id_lane : relative_id_lanes_) {
     double ego_lateral_offset = 0.0;
     if (relative_id_lane != nullptr) {
-      auto& lane_points = relative_id_lane->lane_points();
-      if (lane_points.size() <= 2) {
-        continue;
-      }
-      std::shared_ptr<KDPath> frenet_coord;
-      std::vector<planning_math::PathPoint> path_points;
-      path_points.reserve(lane_points.size());
       if (location_valid) {
+        auto& lane_points = relative_id_lane->lane_points();
+        if (lane_points.size() <= 2) {
+          continue;
+        }
+        std::shared_ptr<KDPath> frenet_coord;
+        std::vector<planning_math::PathPoint> path_points;
+        path_points.reserve(lane_points.size());
         for (const auto& point : lane_points) {
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {
@@ -2543,7 +2533,7 @@ void VirtualLaneManager::CalculateVirtualLaneAttributes() {
           path_points.emplace_back(pt);
         }
 
-        if (path_points.size() < 3) {
+        if (path_points.size() <= 2) {
           frenet_coord = nullptr;
           continue;
         }
@@ -2551,12 +2541,20 @@ void VirtualLaneManager::CalculateVirtualLaneAttributes() {
             std::make_shared<planning_math::KDPath>(std::move(path_points));
         relative_id_lane->set_lane_frenet_coord(frenet_coord);
 
-        Point2D ego_cart_point_frenet;
-        if (!frenet_coord->XYToSL(ego_cart_point, ego_cart_point_frenet)) {
+        double ego_s, ego_l;
+        if (!frenet_coord->XYToSL(ego_cart_point.x, ego_cart_point.y, &ego_s,
+                                  &ego_l)) {
           ego_lateral_offset = 0.0;
         }
-        ego_lateral_offset = ego_cart_point_frenet.y;
+        ego_lateral_offset = ego_l;
       } else {
+        auto& lane_points = relative_id_lane->lane_points();
+        if (lane_points.size() <= 2) {
+          continue;
+        }
+        std::shared_ptr<KDPath> frenet_coord;
+        std::vector<planning_math::PathPoint> path_points;
+        path_points.reserve(lane_points.size());
         for (const auto& point : lane_points) {
           if (std::isnan(point.car_point.x) || std::isnan(point.car_point.y)) {
             LOG_ERROR("update_lane_points: skip NaN point");
@@ -2575,7 +2573,7 @@ void VirtualLaneManager::CalculateVirtualLaneAttributes() {
           }
           path_points.emplace_back(pt);
         }
-        if (path_points.size() < 3) {
+        if (path_points.size() <= 2) {
           frenet_coord = nullptr;
           continue;
         }
@@ -2583,11 +2581,12 @@ void VirtualLaneManager::CalculateVirtualLaneAttributes() {
             std::make_shared<planning_math::KDPath>(std::move(path_points));
         relative_id_lane->set_lane_frenet_coord(frenet_coord);
 
-        Point2D ego_cart_point_frenet;
-        if (!frenet_coord->XYToSL(ego_cart_point, ego_cart_point_frenet)) {
+        double ego_s, ego_l;
+        if (!frenet_coord->XYToSL(ego_cart_point.x, ego_cart_point.y, &ego_s,
+                                  &ego_l)) {
           ego_lateral_offset = 0.0;
         }
-        ego_lateral_offset = ego_cart_point_frenet.y;
+        ego_lateral_offset = ego_l;
       }
       relative_id_lane->set_ego_lateral_offset(ego_lateral_offset);
     } else {
@@ -2649,12 +2648,12 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
           continue;
         }
         double lateral_offset = 0.0;
-        Point2D lane_line_point(point.local_point.x, point.local_point.y);
-        Point2D lane_line_point_frenet;
-        if (!target_lane_frenet_coord->XYToSL(lane_line_point, lane_line_point_frenet)) {
+        double ego_s, ego_l;
+        if (!target_lane_frenet_coord->XYToSL(
+                point.local_point.x, point.local_point.y, &ego_s, &ego_l)) {
           lateral_offset = 10.0;
         } else {
-          lateral_offset = lane_line_point_frenet.y;
+          lateral_offset = ego_l;
         }
         total_lateral_offset += lateral_offset;
         point_nums += 1;
