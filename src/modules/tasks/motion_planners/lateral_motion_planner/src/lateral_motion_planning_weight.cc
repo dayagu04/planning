@@ -72,7 +72,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
 
       if (ego_vel_ > config_.lane_change_high_vel) {
         planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
-        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+        planning_input.set_q_jerk_bound(
+            config_.q_jerk_bound_lane_change_high_vel);
       }
       break;
     }
@@ -99,7 +100,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       concerned_start_q_jerk_ = config_.q_jerk_ramp_on_road;
       if (ego_vel_ > config_.lane_change_high_vel) {
         planning_input.set_jerk_bound(config_.jerk_bound_ramp_on_road);
-        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+        planning_input.set_q_jerk_bound(
+            config_.q_jerk_bound_lane_change_high_vel);
       }
       break;
     }

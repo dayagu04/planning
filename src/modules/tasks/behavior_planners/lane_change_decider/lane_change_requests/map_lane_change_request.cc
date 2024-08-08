@@ -45,8 +45,10 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
 
   std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
   std::array<double, 3> fp{500.0, 800.0, 1200.0};
-  const double sum_dis_to_last_merge_point = virtual_lane_mgr_->sum_dis_to_last_merge_point();
-  const double dis_threshold_to_last_merge_point = virtual_lane_mgr_->dis_threshold_to_last_merge_point();
+  const double sum_dis_to_last_merge_point =
+      virtual_lane_mgr_->sum_dis_to_last_merge_point();
+  const double dis_threshold_to_last_merge_point =
+      virtual_lane_mgr_->dis_threshold_to_last_merge_point();
   if (sum_dis_to_last_merge_point < dis_threshold_to_last_merge_point) {
     fp = {300.0, 500.0, 800.0};
   }
@@ -112,11 +114,12 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
                             : 0;
   JSON_DEBUG_VALUE("lc_map_decision", lc_map_decision);
 
-  bool allow_cancel = (lc_status == kLaneChangePropose || lc_status == kLaneKeeping );
+  bool allow_cancel =
+      (lc_status == kLaneChangePropose || lc_status == kLaneKeeping);
 
   bool allow_generate =
       ((lc_status == kLaneChangePropose || lc_status == kLaneChangeHold) ||
-       lc_status == kLaneKeeping );
+       lc_status == kLaneKeeping);
 
   auto& ego_state = session_->environmental_model().get_ego_state_manager();
   double v_ego = ego_state->ego_v();
@@ -129,8 +132,7 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
             << " current_lane->is_solid_line(0): "
             << current_lane->is_solid_line(0) << std::endl;
 
-  if (current_lane != nullptr &&
-      (lc_map_decision > 0 || lc_map_decision < 0)) {
+  if (current_lane != nullptr && (lc_map_decision > 0 || lc_map_decision < 0)) {
     LOG_DEBUG("!!!!!!!!!!! lc_map_decision is %d", lc_map_decision);
     if (check_mlc_enable(lc_map_tfinish) == true && allow_generate == true) {
       if (lc_map_decision < 0) {
@@ -151,7 +153,8 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
           }
         }
 
-        if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, origin_lane_virtual_id_)) {
+        if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE,
+                                           origin_lane_virtual_id_)) {
           Finish();
           set_target_lane_virtual_id(current_lane_virtual_id);
           LOG_DEBUG(
@@ -182,7 +185,8 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
           }
         }
 
-        if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, origin_lane_virtual_id_) &&
+        if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE,
+                                           origin_lane_virtual_id_) &&
             request_type_ != NO_CHANGE &&
             (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
              (lc_status == kLaneChangeCancel &&

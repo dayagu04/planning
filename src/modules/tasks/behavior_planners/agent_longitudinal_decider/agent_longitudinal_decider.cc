@@ -349,8 +349,8 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   }
 
   rule_based_cut_in_agent_count_[agent_id] =
-      current_cut_in_rule == true ?
-      ++rule_based_cut_in_agent_count_[agent_id] : 0;
+      current_cut_in_rule == true ? ++rule_based_cut_in_agent_count_[agent_id]
+                                  : 0;
   pred_cut_in_agent_count_[agent_id] =
       current_cut_in_pred ? ++pred_cut_in_agent_count_[agent_id] : 0;
 
@@ -552,7 +552,8 @@ void AgentLongitudinalDecider::UpdateCutInAgentTable() {
 
   // debug
   std::vector<double> cutin_id;
-  std::vector<double> cutin_count;;
+  std::vector<double> cutin_count;
+  ;
   for (const auto cut_in_agent : cut_in_agent_count_) {
     if (cut_in_agent.second > 0) {
       cutin_id.emplace_back(cut_in_agent.first);

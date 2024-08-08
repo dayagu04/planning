@@ -148,13 +148,17 @@ void GapSelectorDecider::Preprocessor() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto& lc_request_direction = session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_LC_LCHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || (coarse_planning_info.target_state == kLaneChangeComplete)) && (lc_request_direction == 1);
-  bool is_LC_RCHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || (coarse_planning_info.target_state == kLaneChangeComplete)) && (lc_request_direction == 2);
-  target_state_ =
-      is_LC_LCHANGE
-          ? 1
-          : (is_LC_RCHANGE ? 2 : 0);
+  const auto &lc_request_direction =
+      session_->planning_context().lane_change_decider_output().lc_request;
+  bool is_LC_LCHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete)) &&
+      (lc_request_direction == 1);
+  bool is_LC_RCHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete)) &&
+      (lc_request_direction == 2);
+  target_state_ = is_LC_LCHANGE ? 1 : (is_LC_RCHANGE ? 2 : 0);
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
   const std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
@@ -320,7 +324,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
   if (coarse_planning_info.target_state != last_target_state_) {
     if (coarse_planning_info.target_state == kLaneKeeping ||
-        coarse_planning_info.target_state == kLaneChangePropose ) {
+        coarse_planning_info.target_state == kLaneChangePropose) {
       lc_timer_ = 0.;
       lc_total_time_ = config_.default_lc_time;
       lc_back_timer_ = 0.;

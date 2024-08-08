@@ -88,11 +88,16 @@ bool HppGeneralLateralDecider::Execute() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto state = coarse_planning_info.target_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
   int target_state = is_LC_LCHANGE ? 1 : (is_LC_RCHANGE ? 2 : 0);
   std::shared_ptr<AgentNodeManager> agent_node_manager =
       session_->mutable_environmental_model()->mutable_agent_node_manager();
@@ -232,11 +237,16 @@ void HppGeneralLateralDecider::HandleLaneChangeScene(
   const auto &timer =
       session_->planning_context().lane_change_decider_output().lc_timer;
   bool lane_change_flag{false};
-  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto state = coarse_planning_info.target_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
   if (is_LC_LCHANGE) {
     lat_lane_change_info_ = LatDeciderLaneChangeInfo::LEFT_LANE_CHANGE;
     lane_change_flag = true;
@@ -1465,12 +1475,20 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
   }
   const auto state = lane_change_decider_output.curr_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
-  bool is_LC_LWAIT = (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RWAIT = (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
-  bool is_LC_LBACK = (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RBACK = (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
   //(fengwang31)TODO:交互式变道的的取消状态还需要考虑进去
   if (is_LC_LCHANGE) {
     lateral_output.lc_status = "left_lane_change";

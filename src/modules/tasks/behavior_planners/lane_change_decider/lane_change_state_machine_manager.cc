@@ -208,7 +208,8 @@ bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
   bool propose_time_out =
       lc_req_mgr_->GetReqStartTime(lc_req_mgr_->request_source()) -
-          IflyTime::Now_s() > propose_time_threshold;
+          IflyTime::Now_s() >
+      propose_time_threshold;
   if (is_no_lc_request || propose_time_out) {
     return true;
   }
@@ -230,15 +231,21 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
           ->get_reference_path_by_current_lane();
   if (current_reference_path == nullptr) {
     return false;
-  } 
-  
+  }
+
   const double target_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
-  const auto reference_path_manager = session_->environmental_model().get_reference_path_manager();
-  const auto virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
-  const auto target_reference_path = reference_path_manager->get_reference_path_by_lane(target_lane_virtual_id);
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto target_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          target_lane_virtual_id);
   const double ego_l_target = target_reference_path->get_frenet_ego_state().l();
   const double ego_s_target = target_reference_path->get_frenet_ego_state().s();
-  const double width_by_target = virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id)->width();
+  const double width_by_target =
+      virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id)
+          ->width();
   if (std::abs(ego_l_target) < std::abs(width_by_target) / 2) {
     return true;
   }
@@ -658,8 +665,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       static_cast<StateMachineLaneChangeStatus>(current_state);
   coarse_planning_info.lane_change_request_source =
       lc_req_mgr_->request_source();
-  coarse_planning_info.source_lane_id =
-      lc_lane_mgr_->origin_lane_virtual_id();
+  coarse_planning_info.source_lane_id = lc_lane_mgr_->origin_lane_virtual_id();
   coarse_planning_info.target_lane_id = lc_lane_mgr_->fix_lane_virtual_id();
   coarse_planning_info.reference_path =
       session_->mutable_environmental_model()
@@ -806,10 +812,9 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
       lane_change_stage_info_.lc_back_reason;
   lane_change_decider_output.lc_invalid_reason =
       lane_change_stage_info_.lc_invalid_reason;
-  lane_change_decider_output.behavior_suspend =
-      behavior_suspend_;
-  lane_change_decider_output.suspend_obs.assign(
-      suspend_obs_.begin(), suspend_obs_.end());
+  lane_change_decider_output.behavior_suspend = behavior_suspend_;
+  lane_change_decider_output.suspend_obs.assign(suspend_obs_.begin(),
+                                                suspend_obs_.end());
   lane_change_decider_output.must_change_lane = must_change_lane_;
 
   if (map_turn_signal_ != NO_CHANGE) {
@@ -869,8 +874,7 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(lc_req_mgr_->target_lane_virtual_id());
   double dist_mline =
-      std::fabs(target_lane_frenet_ego_state.l()) -
-      target_lane->width();
+      std::fabs(target_lane_frenet_ego_state.l()) - target_lane->width();
   double t_reaction = (dist_mline == DBL_MAX) ? 0.5 : 0.5 * dist_mline / 1.8;
   double mss = 0.0;
   double mss_t = 0.0;
@@ -1088,9 +1092,7 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
   const auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   const auto &target_lane_frenet_ego_state =
       target_reference_path->get_frenet_ego_state();
-  const double dist_mline =
-      std::fabs(target_lane_frenet_ego_state.l()) -
-      1.8;
+  const double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) - 1.8;
   const double t_reaction =
       (dist_mline == DBL_MAX) ? 1.0 : 1.0 * dist_mline / 1.8;
   const double l_ego = frenet_ego_state.l();
@@ -1307,7 +1309,7 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
       lc_state_info->lc_pause = true;
     }
     if (lc_state_info->lc_should_back) {
-      behavior_suspend_ = true; 
+      behavior_suspend_ = true;
       suspend_obs_.push_back(lc_back_track_.track_id);
     }
     lc_state_info->lc_should_back = false;
@@ -1340,7 +1342,7 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     double safety_dist = v_ego * 0.2 + 2;
     double mss = 0.0;
     if (tr.type == 2 || tr.type == 3 || tr.type == 4) {
-      safety_dist = v_ego * 0.1 + 1; 
+      safety_dist = v_ego * 0.1 + 1;
     }
     if (tr.v_rel < 0) {
       mss = tr.v_rel * tr.v_rel / (2 * a_dflc) + safety_dist;
@@ -1377,7 +1379,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   near_cars_origin_.clear();
   must_change_lane_ = false;
   start_move_dist_lane_ = 0;
-  behavior_suspend_ = false; 
+  behavior_suspend_ = false;
   suspend_obs_.clear();
 }
 

@@ -55,7 +55,7 @@ void IntRequest::Update(int lc_status) {
   int target_lane_virtual_id_tmp{current_lane_virtual_id};
 
   // 获取左车道线型
-  iflyauto::LaneBoundaryType left_boundary_type = 
+  iflyauto::LaneBoundaryType left_boundary_type =
       MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
 
   // 获取右车道线型,实线禁止换道

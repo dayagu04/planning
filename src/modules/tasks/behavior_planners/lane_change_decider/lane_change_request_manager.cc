@@ -56,9 +56,10 @@ bool LaneChangeRequestManager::Update(
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
       config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change;
-  const double max_pass_merge_distance_to_surpress_overtake_lane_change = 
+  const double max_pass_merge_distance_to_surpress_overtake_lane_change =
       virtual_lane_mgr_->dis_threshold_to_last_merge_point();
-  double sum_dis_to_last_merge_point = virtual_lane_mgr_->sum_dis_to_last_merge_point();
+  double sum_dis_to_last_merge_point =
+      virtual_lane_mgr_->sum_dis_to_last_merge_point();
   const double odd_route_distance_threshold = 500.0;
 
   int state = lane_change_decider_output.curr_state;
@@ -93,15 +94,20 @@ bool LaneChangeRequestManager::Update(
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->is_on_ramp() || 
-          virtual_lane_mgr_->dis_to_ramp() <= minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
-          sum_dis_to_last_merge_point < max_pass_merge_distance_to_surpress_overtake_lane_change) {
+      if (virtual_lane_mgr_->is_on_ramp() ||
+          virtual_lane_mgr_->dis_to_ramp() <=
+              minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
+          sum_dis_to_last_merge_point <
+              max_pass_merge_distance_to_surpress_overtake_lane_change) {
         overtake_request_.Reset();
-        LOG_DEBUG("cann't generate overtake lane change on ramp or near ramp or near merge");
+        LOG_DEBUG(
+            "cann't generate overtake lane change on ramp or near ramp or near "
+            "merge");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->get_distance_to_route_end() < odd_route_distance_threshold) {
+      if (virtual_lane_mgr_->get_distance_to_route_end() <
+          odd_route_distance_threshold) {
         overtake_request_.Reset();
         LOG_DEBUG("cann't generate overtake lane change nearby odd boundary");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;

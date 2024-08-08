@@ -629,7 +629,7 @@ void StGraphGenerator::UpdateSTGraphs(
   double t = config_.delta_time;
   double t_square = config_.delta_time * config_.delta_time;
   double t_cube = config_.delta_time * config_.delta_time * config_.delta_time;
-  //TODO: 后续取参考线的长度为s bound upper
+  // TODO: 后续取参考线的长度为s bound upper
   constexpr double s_upper_bound = 200.0;
   LonBound soft_bound;
   LonBound hard_bound;
@@ -1507,9 +1507,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       //     lc_front_desired_distance_filtered);
       // lc_gap_front_st_info.set_desired_velocity(v_limit_lc_);
       // lc_gap_front_st_info.set_safe_distance(safe_distance_lc_front);
-      // lc_gap_front_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
-      // lc_gap_front_st_info.set_end_time(5.0);  // TBD:使用可配置参数
-      // lc_gap_front_st_info.set_start_s(gap.s_front);
+      // lc_gap_front_st_info.set_start_time(gap.acc_time);  //
+      // TBD:使用可配置参数 lc_gap_front_st_info.set_end_time(5.0);  //
+      // TBD:使用可配置参数 lc_gap_front_st_info.set_start_s(gap.s_front);
       // lane_change_st_info.emplace_back(lc_gap_front_st_info);
 
       double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc_, gap.v_rear);
@@ -1538,9 +1538,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       //     lc_rear_desired_distance_filtered);
       // lc_gap_rear_st_info.set_desired_velocity(v_limit_lc_);
       // lc_gap_rear_st_info.set_safe_distance(safe_distance_lc_rear);
-      // lc_gap_rear_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
-      // lc_gap_rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
-      // lc_gap_rear_st_info.set_start_s(gap.s_rear);
+      // lc_gap_rear_st_info.set_start_time(gap.acc_time);  //
+      // TBD:使用可配置参数 lc_gap_rear_st_info.set_end_time(5.0);  //
+      // TBD:使用可配置参数 lc_gap_rear_st_info.set_start_s(gap.s_rear);
       // lane_change_st_info.emplace_back(lc_gap_rear_st_info);
     } else {
       // decelerate to check next interval
@@ -2137,8 +2137,8 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  // acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
-  // acc_bound_.second =
+  // acc_bound_.first = (std::fmin(lon_init_state_[2],
+  // config_.acc_lower_bound)); acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
   acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
   acc_bound_.second =

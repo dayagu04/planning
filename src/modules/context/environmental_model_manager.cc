@@ -1221,11 +1221,17 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 void EnvironmentalModelManager::RunBlinkState(
     const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info) {
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
-  const auto& state = session_->planning_context().lane_change_decider_output().curr_state;
-  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto &state =
+      session_->planning_context().lane_change_decider_output().curr_state;
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
@@ -1240,8 +1246,8 @@ void EnvironmentalModelManager::RunBlinkState(
       break;
     case LEFT_FIRMLY_TOUCH:
       if (history_lc_source_[0] == INT_REQUEST &&
-           history_lc_source_[1] == INT_REQUEST &&
-          last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT && 
+          history_lc_source_[1] == INT_REQUEST &&
+          last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
           is_LC_RCHANGE) {
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;

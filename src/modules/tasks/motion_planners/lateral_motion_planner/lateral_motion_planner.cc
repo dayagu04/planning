@@ -297,14 +297,17 @@ void LateralMotionPlanner::AssembleInput() {
   } else {
     planning_weight_ptr_->CalculateInitInfo(planning_input_);
   }
-  const double ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
   const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
   planning_weight_ptr_->SetLCBackFlag(false);
 
   bool ramp_on_road = false;
-  if (session_->environmental_model().get_virtual_lane_manager()->get_is_exist_ramp_on_road()) {
+  if (session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_is_exist_ramp_on_road()) {
     ramp_on_road = true;
     complete_follow = true;
     enter_ramp_on_road_time_ = 1.0;
@@ -341,17 +344,18 @@ void LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
   } else if (ramp_on_road) {
-    planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::SPLIT, planning_input_);
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
+                                                 planning_input_);
   } else if ((ramp_scene) && (config_.ramp_valid)) {
-    planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::RAMP, planning_input_);
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
+                                                 planning_input_);
   } else if (session_->environmental_model()
                  .get_lateral_obstacle()
                  ->is_static_avoid_scene()) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::STATIC_AVOID, planning_input_);
-  } else if ((lateral_offset_decider_output.is_valid) || ((avoid_back_status) && (ego_v > config_.avoid_high_vel))) {
+  } else if ((lateral_offset_decider_output.is_valid) ||
+             ((avoid_back_status) && (ego_v > config_.avoid_high_vel))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
   } else {
@@ -366,7 +370,8 @@ void LateralMotionPlanner::AssembleInput() {
   if (ramp_scene) {
     valid_perception_range = config_.valid_perception_range_on_ramp;
   }
-  for (size_t i = config_.motion_plan_concerned_start_index; i < motion_plan_concerned_end_index; ++i) {
+  for (size_t i = config_.motion_plan_concerned_start_index;
+       i < motion_plan_concerned_end_index; ++i) {
     Point2D cart_ref_xy(planning_input_.ref_x_vec(i),
                         planning_input_.ref_y_vec(i));
     Point2D frenet_ref_xy;
