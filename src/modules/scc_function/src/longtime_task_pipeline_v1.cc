@@ -59,7 +59,7 @@ bool LongTimeTaskPipelineV1::Run() {
 
   ok = agent_longitudinal_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(lateral_motion_planner_->Name());
+    AddErrorInfo(agent_longitudinal_decider_->Name());
     return false;
   }
 
