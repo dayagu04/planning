@@ -408,8 +408,6 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
                             use_lat_offset_in_tracklet_maintainer);
     enable_static_scene =
         read_json_key<bool>(json, "enable_static_scene", enable_static_scene);
-    enable_fill_deriv_info =
-        read_json_key<bool>(json, "enable_fill_deriv_info", enable_fill_deriv_info);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -424,7 +422,6 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
   double potential_near_car_v_lb = -0.03;
   bool use_lat_offset_in_tracklet_maintainer = false;
   bool enable_static_scene = false;
-  bool enable_fill_deriv_info = false;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
