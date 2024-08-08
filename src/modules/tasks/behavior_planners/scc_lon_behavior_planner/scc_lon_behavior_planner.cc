@@ -35,7 +35,7 @@ constexpr double kJerkMin = -1.0;
 constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
 constexpr double kLowAgentSpeed = 20.0 / 3.6;
-//TODO: 后续取参考线的长度为s bound upper
+// TODO: 后续取参考线的长度为s bound upper
 constexpr double kSUpperBound = 200.0;
 }  // namespace
 namespace planning {
@@ -133,7 +133,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
 
   const auto &lane_status = session_->mutable_planning_context()->lane_status();
   const auto *agent_manager =
-        session_->environmental_model().get_dynamic_world()->agent_manager();
+      session_->environmental_model().get_dynamic_world()->agent_manager();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
@@ -293,7 +293,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_is_accident_car(track.is_accident_car);
     one_obs->set_is_lead(track.is_lead);
     one_obs->set_is_temp_lead(track.is_temp_lead);
-    one_obs->set_is_new_cutin(agent_manager->GetAgent(track.track_id)->is_cutin());
+    one_obs->set_is_new_cutin(
+        agent_manager->GetAgent(track.track_id)->is_cutin());
     one_obs->set_cutinp(track.cutinp);
     one_obs->set_y_min(track.y_min);
     one_obs->set_y_x0(track.y_x0);

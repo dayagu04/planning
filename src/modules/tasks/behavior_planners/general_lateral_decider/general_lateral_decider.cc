@@ -133,7 +133,9 @@ bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
 
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
     const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
-  if (session_->environmental_model().get_virtual_lane_manager()->get_is_exist_ramp_on_road()) {
+  if (session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_is_exist_ramp_on_road()) {
     return false;
   }
   const double preview_length = 5.0;
@@ -176,7 +178,9 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
       return true;
     }
   }
-  if ((config_.ramp_limit_v_valid) && (session_->environmental_model().get_virtual_lane_manager()->is_on_ramp())) {
+  if ((config_.ramp_limit_v_valid) && (session_->environmental_model()
+                                           .get_virtual_lane_manager()
+                                           ->is_on_ramp())) {
     cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
     return true;
   }
@@ -195,10 +199,11 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
   bool limit_ref_vel_on_ramp_valid = false;
-  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || 
-                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
-  
+
   if (config_.lateral_ref_traj_type ||
       ((is_LC_CHANGE || is_LC_BACK) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
@@ -233,18 +238,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
-    const double max_ref_length = session_->planning_context().v_ref_cruise() * span_t;
+    const double max_ref_length =
+        session_->planning_context().v_ref_cruise() * span_t;
     double avg_cruise_v = std::min(s, max_ref_length) / span_t;
     double delta_s = avg_cruise_v * config_.delta_t;
     Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
                                     planning_init_point.lat_init_state.y());
     const auto &frenet_coord =
-      coarse_planning_info.reference_path->get_frenet_coord();
+        coarse_planning_info.reference_path->get_frenet_coord();
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     pnc::spline::Projection projection_spline;
     projection_spline.CalProjectionPoint(
         cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
-        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(), cart_init_point);
+        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
+        cart_init_point);
 
     double s_ref = projection_spline.GetOutput().s_proj;
     traj_points.clear();
@@ -503,8 +510,9 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                                          .coarse_planning_info;
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) || 
-                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
   const double kDefaultDistanceToRoad = 10.0;
@@ -1552,12 +1560,20 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
 
   const auto state = lane_change_decider_output.curr_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
-  bool is_LC_LWAIT = (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RWAIT = (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
-  bool is_LC_LBACK = (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RBACK = (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
   //(fengwang31)TODO:交互式变道的的取消状态还需要考虑进去
   if (is_LC_LCHANGE) {
     lateral_output.lc_status = "left_lane_change";

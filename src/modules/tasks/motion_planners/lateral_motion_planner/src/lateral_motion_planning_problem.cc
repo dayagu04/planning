@@ -356,7 +356,7 @@ uint8_t LateralMotionPlanningProblem::Update(
         planning_input.hard_lower_bound_x1_vec(i);
     cost_config_vec.at(i)[HARD_LOWER_BOUND_Y1] =
         planning_input.hard_lower_bound_y1_vec(i);
-    
+
     // weights
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();

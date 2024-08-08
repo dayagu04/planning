@@ -6,6 +6,8 @@
 4. 增加planning IO topic 故障码
 5. 优化横向path，提升横向舒适度，以及匝道内的收敛性
 6. 调整大车的避让buffer
+7. 增加agent_longitudinal_decider，优化cut in
+8. Add lane line dashed and solid judgment for ilc
 
 # planning.2.4.7
 ####  修改说明

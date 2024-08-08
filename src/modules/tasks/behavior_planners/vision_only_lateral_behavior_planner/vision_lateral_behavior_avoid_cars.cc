@@ -985,7 +985,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
         }
       }
     }
-    //fengwang31：新状态机中没有这几个状态
+    // fengwang31：新状态机中没有这几个状态
     // if ((state == INTER_TR_NONE || state == INTER_TL_NONE) &&
     //     intersection_cnt_ == 0) {
     //   avd_cars.clear();

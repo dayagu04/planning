@@ -412,7 +412,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, origin_lane_virtual_id_) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-         (lc_status == kLaneChangeCancel  &&
+         (lc_status == kLaneChangeCancel &&
           (lane_change_lane_mgr_->has_origin_lane() &&
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
@@ -1485,7 +1485,8 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
                kCancelOverTakeLnChgLeadVehLatSpdThold &&
            leading_vehicle_lateral_dis <=
                -kCancelOverTakeLnChgLeadVehLatDstThold))) ||
-        (((lc_state == kLaneChangeExecution || lc_state == kLaneChangeComplete) &&
+        (((lc_state == kLaneChangeExecution ||
+           lc_state == kLaneChangeComplete) &&
           front_leading_vehivle_long_distance >
               kCancelOverTakeLnChgFrtLeadVehLonDst) &&
          ((request_type_ == LEFT_CHANGE &&

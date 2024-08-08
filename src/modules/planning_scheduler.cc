@@ -209,8 +209,8 @@ bool PlanningScheduler::RunOnce(
   return planning_success;
 }
 
-uint64_t PlanningScheduler::FaultCode(){
-    return environmental_model_manager_.getFaultcode();
+uint64_t PlanningScheduler::FaultCode() {
+  return environmental_model_manager_.getFaultcode();
 }
 void PlanningScheduler::FillPlanningTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {

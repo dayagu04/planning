@@ -23,7 +23,6 @@ class MapRequest : public LaneChangeRequest {
       std::vector<std::string>& forbid_generating_right_reason,
       int left_int_freeze_cnt, int right_int_freeze_cnt);
   bool must_change_before_curr_intersection();
-
 };
 
 }  // namespace planning

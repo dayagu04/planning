@@ -607,15 +607,20 @@ const double GeneralLongitudinalDecider::compute_max_lat_acceleration() const {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto state = coarse_planning_info.target_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
-  auto lc_acc_decay = ((is_LC_LCHANGE ||is_LC_RCHANGE) &&
-                       ego_velocity < kUrbanVelocityThld)
-                          ? kLowSpeedLaneChangeAccBuff
-                          : 0.0;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  auto lc_acc_decay =
+      ((is_LC_LCHANGE || is_LC_RCHANGE) && ego_velocity < kUrbanVelocityThld)
+          ? kLowSpeedLaneChangeAccBuff
+          : 0.0;
   if (session_->environmental_model().is_on_highway()) {
     return config_.highway_max_lat_acceleration +
            std::min(kHighwayLatAccBuffMax,
@@ -1203,14 +1208,19 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto state = coarse_planning_info.target_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE = ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) && (lc_request_direction == RIGHT_CHANGE);
-  
-  bool keep_stop = (!is_LC_LCHANGE && !is_LC_RCHANGE) &&
-                   is_CIPV && ini_ds > 0.0 && ini_ds < kDisToCIPVThreshold &&
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+
+  bool keep_stop = (!is_LC_LCHANGE && !is_LC_RCHANGE) && is_CIPV &&
+                   ini_ds > 0.0 && ini_ds < kDisToCIPVThreshold &&
                    ego_velocity < kLowSpeedThreshold && too_close_to_nudge;
   lon_yield_info_.keep_stop = keep_stop || lon_yield_info_.keep_stop;
   const auto &frenet_coord =
