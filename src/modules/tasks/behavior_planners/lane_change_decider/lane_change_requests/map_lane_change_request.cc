@@ -151,7 +151,7 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
           }
         }
 
-        if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, current_lane)) {
+        if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, origin_lane_virtual_id_)) {
           Finish();
           set_target_lane_virtual_id(current_lane_virtual_id);
           LOG_DEBUG(
@@ -182,7 +182,7 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
           }
         }
 
-        if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, current_lane) &&
+        if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, origin_lane_virtual_id_) &&
             request_type_ != NO_CHANGE &&
             (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
              (lc_status == kLaneChangeCancel &&

@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240731/20240731-20-10-40/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-31-20-10-40_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240803/20240803-15-22-52/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-03-15-22-52_no_camera.bag.1722930340.close-loop.plan"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -215,7 +215,7 @@ def update_overtake_request_lc_data (plan_debug_json):
   datas = []
   overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
                        "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
-                       "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len"]
+                       "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len"]
   for name in overtake_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))
