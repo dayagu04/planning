@@ -809,7 +809,7 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
     }
   }
 
-  double s, l, v_s, v_l, theta;
+  double s = 0, l = 0, v_s = 0, v_l = 0, theta = 0;
   Point2D frenet_point;
   if (frenet_coord_->XYToSL(Point2D(item.center_x, item.center_y),
                             frenet_point)) {
