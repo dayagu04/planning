@@ -78,7 +78,19 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
 
   double overlap_lateral_offset_change_rate = kMaxLateralOffsetChangeRate;
   if (is_overlap[0] && is_overlap[1]) {
-    overlap_lateral_offset_change_rate = 0.01;
+    if ((avoid_obstacles[0].min_l_to_ref > 0 && avoid_obstacles[1].min_l_to_ref < 0) ||
+        (avoid_obstacles[0].min_l_to_ref < 0 && avoid_obstacles[1].min_l_to_ref > 0)) {
+      overlap_lateral_offset_change_rate = 0.01;
+    } else if ((avoid_obstacles[0].min_l_to_ref > 0 &&
+                in_lat_offset > lateral_offset_) ||
+               (avoid_obstacles[0].min_l_to_ref < 0 &&
+                in_lat_offset < lateral_offset_)) {
+      if (lateral_offset_decider::IsTruck(avoid_obstacles[0]) || lateral_offset_decider::IsTruck(avoid_obstacles[1])) {
+        overlap_lateral_offset_change_rate = 0.01;
+      } else {
+        overlap_lateral_offset_change_rate = 0.02;
+      }
+    }
   } else if (is_overlap[0]) {
     if ((avoid_obstacles[0].min_l_to_ref > 0 &&
          in_lat_offset > lateral_offset_) ||

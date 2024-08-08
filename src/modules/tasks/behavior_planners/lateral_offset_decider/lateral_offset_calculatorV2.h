@@ -66,7 +66,7 @@ class LateralOffsetCalculatorV2 {
                                       double lat_compensate_2);
   void CalcMaxOppositeOffset(const AvoidObstacleInfo& avoid_obstacle_1,
                              int except_id = -1);
-  void InitHysteresisMap(const AvoidObstacleInfo& avoid_obstacle);
+  void ResetHysteresisMap(HysteresisType type, int avoid_obstacle_id = -1);
   void PreacquireMaxOppositeOffsetIds();
   void PreacquisitionLeftMaxOppositeOffsetIds();
   void CalcFrontMaxOppositeOffset(
