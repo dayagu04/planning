@@ -1518,12 +1518,13 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     return;
   }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
-  if (current_segment->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY) {
+  if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
+      current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+    is_ego_on_expressway_ = true;
+  } else {
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
     ResetForRampInfo();
     return;
-  } else {
-    is_ego_on_expressway_ = true;
   }
   //计算ramp信息
   const auto& ramp_info =
