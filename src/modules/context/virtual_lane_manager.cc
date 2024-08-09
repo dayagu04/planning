@@ -2102,89 +2102,27 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = 0;
   int current_order_id = 0;
-  int relative_id_diff = 0;
+  const double default_lane_mapping_cost = 10.0;
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
-  const auto& planned_traj_points =
-      session_->planning_context().last_planning_result().traj_points;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  std::shared_ptr<KDPath> planned_path;
-  std::vector<Vec2d> planner_path_points;
+  const int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
+  std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
+  int last_track_virtual_id = 0;
 
-  for (auto& traj_point : planned_traj_points) {
-    planner_path_points.emplace_back(traj_point.x, traj_point.y);
-  }
-
-  if (planner_path_points.size() <= 2) {
-    return;
-    ;
-  }
-  std::vector<planning_math::PathPoint> path_points;
-  path_points.reserve(planner_path_points.size());
-  for (const auto& point : planner_path_points) {
-    if (std::isnan(point.x()) || std::isnan(point.y())) {
-      LOG_ERROR("update_planner_path_points: skip NaN point");
-      continue;
-    }
-    auto pt = planning_math::PathPoint(point.x(), point.y());
-    // std ::cout << "path_point: " << pt.x() << "," << pt.y() <<std::endl;
-    if (not path_points.empty()) {
-      auto& last_pt = path_points.back();
-      if (planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y())
-              .Length() < 1e-2) {
-        continue;
+  if (!virtual_id_mapped_lane_.empty()) {
+    for (const auto& virtual_id_lane : virtual_id_mapped_lane_) {
+      if (virtual_id_lane.second->get_virtual_id() == fix_lane_virtual_id) {
+        last_track_virtual_id_lane = virtual_id_lane.second;
+        last_track_virtual_id = virtual_id_lane.first;
       }
     }
-    path_points.emplace_back(pt);
-  }
-
-  if (path_points.size() <= 2) {
+  } else {
     return;
   }
-  planned_path =
-      std::make_shared<planning_math::KDPath>(std::move(path_points));
-
-  double ego_s, ego_l;
-  if (!planned_path->XYToSL(ego_cart_point.x, ego_cart_point.y, &ego_s,
-                            &ego_l)) {
-    return;
-  }
-
-  double min_s = std::numeric_limits<double>::max();
-  for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (relative_id_lane == nullptr) {
-      continue;
-    }
-    if (relative_id_lane->get_relative_id() == 0) {
-      origin_order_id = relative_id_lane->get_order_id();
-    }
-    auto& lane_points = relative_id_lane->lane_points();
-    if (lane_points.size() < kLaneCenterMinPointsThr) {
-      continue;
-    }
-    const auto& last_point = lane_points.back();
-    double back_s, back_l;
-    if (!planned_path->XYToSL(last_point.local_point.x,
-                              last_point.local_point.y, &back_s, &back_l)) {
-      continue;
-    }
-    const auto& front_point = lane_points.front();
-    double front_s, front_l;
-    if (!planned_path->XYToSL(front_point.local_point.x,
-                              front_point.local_point.y, &front_s, &front_l)) {
-      continue;
-    }
-    const double larger_s = std::fmax(front_s, back_s);
-    if (min_s > larger_s) {
-      min_s = larger_s;
-    }
-  }
-  const double preview_s = ego_state->ego_v() * 3.0 + ego_s;
-  min_s = std::fmin(preview_s, min_s);
-  min_s = std::fmax(kMinCostLength, min_s);
 
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const auto coarse_planning_info = session_->planning_context()
@@ -2207,6 +2145,10 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     if (relative_id_lane == nullptr) {
       continue;
     }
+
+    if (relative_id_lane->get_relative_id() == 0) {
+      origin_order_id = relative_id_lane->get_order_id();
+    }
     auto& lane_points = relative_id_lane->lane_points();
     if (lane_points.size() < kLaneCenterMinPointsThr) {
       continue;
@@ -2215,54 +2157,53 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     double cumu_lat_dis_cost = 0.0;
     double init_pose_cost = 0.0;
     double crosslane_cost = 0.0;
-    double cumu_lat_dis_front = 0.0;
-    double cumu_lat_dis_back = 0.0;
-    int cumu_lat_dis_front_count = 0;
-    int cumu_lat_dis_back_count = 0;
 
     if ((!is_lane_change) &&
         CalcCrosslaneStatus(relative_id_lane, lane_points)) {
       crosslane_cost = kCrossLaneCostDefault;
     }
 
+    if (last_track_virtual_id_lane != nullptr) {
+      auto track_lane_frenet_coord = last_track_virtual_id_lane->get_lane_frenet_coord();
+      if (track_lane_frenet_coord != nullptr) {
+        const auto& lane_points = relative_id_lane->lane_points();
+        if (lane_points.size() <= 2) {
+          continue;
+        }
+        int default_point_nums = 30;
+        int point_nums = 0;
+        double total_lateral_offset = 0.0;
+        int select_lane_point_interval = 3;
+        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+          iflyauto::ReferencePoint point = lane_points[i];
+          if (std::isnan(point.local_point.x) ||
+              std::isnan(point.local_point.y)) {
+            LOG_ERROR("update_lane_points: skip NaN point");
+            continue;
+          }
+          double lateral_offset = 0.0;
+          double ego_s, ego_l;
+          if (!track_lane_frenet_coord->XYToSL(
+                  point.local_point.x, point.local_point.y, &ego_s, &ego_l)) {
+            lateral_offset = 10.0;
+          } else {
+            lateral_offset = ego_l;
+          }
+          total_lateral_offset += lateral_offset;
+          point_nums += 1;
+          if (point_nums >= default_point_nums) {
+            break;
+          }
+        }
+        cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
+      } else {
+        cumu_lat_dis_cost = default_lane_mapping_cost;
+      }
+    } else {
+      return;
+    }
+
     std::shared_ptr<KDPath> frenet_coord;
-    for (auto& refline_pt : lane_points) {
-      double s, l;
-      if (!planned_path->XYToSL(refline_pt.local_point.x,
-                                refline_pt.local_point.y, &s, &l)) {
-        continue;
-      }
-      if (s > ego_s && s < planned_path->Length() && l > 0.0) {
-        cumu_lat_dis_front += std::fabs(l);
-        cumu_lat_dis_front_count++;
-      }
-      if (s > ego_s && s < planned_path->Length() && l < 0.0) {
-        cumu_lat_dis_back += std::fabs(l);
-        cumu_lat_dis_back_count++;
-      }
-
-      if (s > min_s) {
-        break;
-      }
-
-      if (s > planned_path->Length()) {
-        break;
-      }
-    }
-    if (cumu_lat_dis_front_count == 0 && cumu_lat_dis_back_count == 0) {
-      continue;
-    }
-
-    if (cumu_lat_dis_front_count > 0) {
-      cumu_lat_dis_front /=
-          (cumu_lat_dis_front_count * kLatDistanceMaxStandardThr);
-    }
-    if (cumu_lat_dis_back_count > 0) {
-      cumu_lat_dis_back /=
-          (cumu_lat_dis_back_count * kLatDistanceMaxStandardThr);
-    }
-    cumu_lat_dis_cost = std::fmax(cumu_lat_dis_front, cumu_lat_dis_back);
-
     if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
       frenet_coord = nullptr;
       continue;
