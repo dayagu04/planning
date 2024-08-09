@@ -571,7 +571,7 @@ class LoadCyberbag:
     # load wave_info msg
     try:
       wave_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/uss/wave_info"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
         wave_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
@@ -589,7 +589,7 @@ class LoadCyberbag:
         self.wave_msg['enable'] = False
     except:
       self.wave_msg['enable'] = False
-      print("missing /iflytek/uss/wave_info !!!")
+      print("missing /iflytek/uss/usswave_info !!!")
    #load adas_debug_msg
     try:
       adas_debug_msg_dict = {}
@@ -1566,7 +1566,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("plan_fail_reason")
       plan_fail_reason = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['plan_fail_reason']
-      plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED'}
+      plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT'}
       fail_reason = plan_fail_reason_dict.get(plan_fail_reason, 'UNKNOWN')
       datas.append(str(plan_fail_reason) + ": " + str(fail_reason))
 
@@ -3804,7 +3804,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("plan_fail_reason")
             plan_fail_reason = plan_json['plan_fail_reason']
-            plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED'}
+            plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT'}
             fail_reason = plan_fail_reason_dict.get(plan_fail_reason, 'UNKNOWN')
             datas.append(str(plan_fail_reason) + ": " + str(fail_reason))
 

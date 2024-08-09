@@ -263,6 +263,7 @@ class ApaPlannerBase {
     SET_SEG_INDEX,
     CHECK_GEAR_LENGTH,
     PATH_PLAN_FAILED,
+    PLAN_COUNT_EXCEED_LIMIT,
   };
 
  public:

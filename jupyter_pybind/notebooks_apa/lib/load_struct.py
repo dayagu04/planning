@@ -34,7 +34,7 @@ def load_car_params_patch_parking(vehicle_type = JAC_S811):
     car_x = [3.724, 3.924, 3.924, 3.724, 2.234, 2.234, 2.034, 2.034, -0.825, -1.025, -1.025, -0.825, 2.034, 2.034, 2.234, 2.234]
     car_y = [0.9875, 0.7875, -0.7875, -0.9875, -0.9875, -1.1375, -1.1375, -0.9875, -0.9875, -0.7875, 0.7875, 0.9875, 0.9875, 1.1375, 1.1375, 0.9875]
 
-  car_lat_inflation = 0.0986
+  car_lat_inflation = 0.08
   for i in range(len(car_x)):
     if car_y[i] > 0.0:
       car_y[i] = car_y[i] + car_lat_inflation

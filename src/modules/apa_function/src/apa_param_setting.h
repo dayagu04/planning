@@ -151,7 +151,7 @@ struct ApaParameters {
   double col_obs_safe_dist_normal = 0.36;
   double car_lat_inflation_normal = 0.0986;
   bool tmp_no_consider_obs_dy = true;
-  bool believe_in_fus_obs = true;
+  bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
@@ -163,6 +163,7 @@ struct ApaParameters {
   double line_arc_obs_channel_length = 5.086;
   bool dynamic_col_det_enable = false;
   double car_lat_inflation_strict = 0.1;
+  double max_obs_invasion_slot_dist = -0.026;
   double col_obs_safe_dist_strict = 0.2;
   double parallel_obs2slot_max_dist = 16.66;
   double parallel_channel_y_mag = 8.5;

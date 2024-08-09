@@ -3245,7 +3245,7 @@ PerpendicularPathPlanner::TrimPathByCollisionDetection(
 
     CollisionDetector::ObsSlotType obs_slot_type =
         collision_detector_ptr_->GetObsSlotType(
-            col_res.col_pt_obs_global, slot_pt, calc_params_.is_left_side);
+            col_res.col_pt_obs_global, slot_pt, 5.0, calc_params_.is_left_side);
 
     bool need_plan_again = false;
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_INSIDE_OBS &&
