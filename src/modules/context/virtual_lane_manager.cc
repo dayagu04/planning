@@ -2108,7 +2108,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
                          plannig_init_point.lat_init_state.y()};
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
+  const int fix_lane_virtual_id =
+      lane_change_decider_output.fix_lane_virtual_id;
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
   std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
   int last_track_virtual_id = 0;
@@ -2164,7 +2165,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     }
 
     if (last_track_virtual_id_lane != nullptr) {
-      auto track_lane_frenet_coord = last_track_virtual_id_lane->get_lane_frenet_coord();
+      auto track_lane_frenet_coord =
+          last_track_virtual_id_lane->get_lane_frenet_coord();
       if (track_lane_frenet_coord != nullptr) {
         const auto& lane_points = relative_id_lane->lane_points();
         if (lane_points.size() <= 2) {
@@ -2174,7 +2176,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
         int point_nums = 0;
         double total_lateral_offset = 0.0;
         int select_lane_point_interval = 3;
-        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+        for (int i = 0; i < lane_points.size();
+             i += select_lane_point_interval) {
           iflyauto::ReferencePoint point = lane_points[i];
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {

@@ -8,6 +8,8 @@
 6. 调整大车的避让buffer
 7. 增加agent_longitudinal_decider，优化cut in
 8. Add lane line dashed and solid judgment for ilc
+9. 使用前后帧车道重合率代替轨迹与车道计算cost
+10. 添加舒适性减速的感知距离需求
 
 # planning.2.4.7
 ####  修改说明
