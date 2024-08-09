@@ -579,7 +579,7 @@ class LoadRosbag:
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost",\
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
+                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
