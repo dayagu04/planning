@@ -109,6 +109,7 @@ struct ApaParameters {
   // check replan params
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
+  int max_replan_count = 12;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;
@@ -148,9 +149,9 @@ struct ApaParameters {
   double max_obs2car_dist_slot_occupied_ratio = 0.086;
   double obstacle_ds = 0.5;
   double col_obs_safe_dist_normal = 0.36;
-  double car_lat_inflation_normal = 0.0;
+  double car_lat_inflation_normal = 0.0986;
   bool tmp_no_consider_obs_dy = true;
-  bool believe_in_fus_obs = true;
+  bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
@@ -162,6 +163,7 @@ struct ApaParameters {
   double line_arc_obs_channel_length = 5.086;
   bool dynamic_col_det_enable = false;
   double car_lat_inflation_strict = 0.1;
+  double max_obs_invasion_slot_dist = -0.026;
   double col_obs_safe_dist_strict = 0.2;
   double parallel_obs2slot_max_dist = 16.66;
   double parallel_channel_y_mag = 8.5;
@@ -204,6 +206,8 @@ struct ApaParameters {
   double prepare_directly_use_tangent_heading_err = 2.6;
   double prepare_adjust_drive_max_length = 2.28;
   double prepare_adjust_reverse_max_length = 3.6;
+  double prepare_single_max_allow_time = 6.68;
+  int prepare_max_try_count = 2;
   double third_prepare_heading_threshold = 26.68;
   double min_turn_radius = 5.5;
   double max_one_step_arc_radius = 8.5;

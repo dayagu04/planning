@@ -11,10 +11,10 @@ sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240730/20240730-10-47-22/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-30-10-47-22_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240808/20240808-18-53-05/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-08-18-53-05_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -164,9 +164,14 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
   # print("plan remain dist uss = ", plan_debug_msg["remain_dist_uss"])
   fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
-  wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
+
   vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
   soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+
+  if bag_loader.wave_msg['enable'] == True:
+    wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
+  else:
+    wave_msg = UssWaveInfo()
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
@@ -421,14 +426,14 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     'y' : line_yn,
   })
 
-  if isinstance(obstacle_x, str):
+  if isinstance(obstacle_x, str) and len(obstacle_x) > 0:
     obstacle_x_list = [float(x) for x in obstacle_x.split(',')]
-  else:
+  elif not isinstance(obstacle_x, str):
     obstacle_x_list = obstacle_x
 
-  if isinstance(obstacle_y, str):
+  if isinstance(obstacle_y, str) and len(obstacle_y) > 0:
     obstacle_y_list = [float(y) for y in obstacle_y.split(',')]
-  else:
+  elif not isinstance(obstacle_y, str):
     obstacle_y_list = obstacle_y
 
   data_sim_obs.data.update({
@@ -438,14 +443,14 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
 
   col_det_path_x_list = []
   col_det_path_y_list = []
-  if isinstance(col_det_path_x, str):
+  if isinstance(col_det_path_x, str) and len(col_det_path_x) > 0:
     col_det_path_x_list = [float(x) for x in col_det_path_x.split(',')]
-  else:
+  elif not isinstance(col_det_path_x, str):
     col_det_path_x_list = col_det_path_x
 
-  if isinstance(col_det_path_y, str):
+  if isinstance(col_det_path_y, str) and len(col_det_path_y) > 0:
     col_det_path_y_list = [float(y) for y in col_det_path_y.split(',')]
-  else:
+  elif not isinstance(col_det_path_x, str):
     col_det_path_y_list = col_det_path_y
 
   data_sim_col_det_path.data.update({

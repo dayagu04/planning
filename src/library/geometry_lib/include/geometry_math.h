@@ -11,6 +11,9 @@
 #include "Eigen/Core"
 #include "spline.h"
 
+extern double kDeg2Rad;
+extern double kRad2Deg;
+
 namespace pnc {
 
 namespace geometry_lib {

@@ -397,6 +397,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().max_replan_remain_dist, double,
                   "max_replan_remain_dist");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_replan_count, int,
+                  "max_replan_count");
+
   // construct t_lane params
   JSON_READ_VALUE(apa_param.SetPram().vacant_pt_outside_dx, double,
                   "vacant_pt_outside_dx");
@@ -555,6 +558,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_strict, double,
                   "col_obs_safe_dist_strict");
 
+  JSON_READ_VALUE(apa_param.SetPram().max_obs_invasion_slot_dist, double,
+                  "max_obs_invasion_slot_dist");
+
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,
                   "car_to_limiter_dis");
@@ -667,6 +673,12 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().prepare_adjust_reverse_max_length, double,
                   "prepare_adjust_reverse_max_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_single_max_allow_time, double,
+                  "prepare_single_max_allow_time");
+
+  JSON_READ_VALUE(apa_param.SetPram().prepare_max_try_count, int,
+                  "prepare_max_try_count");
 
   JSON_READ_VALUE(apa_param.SetPram().third_prepare_heading_threshold, double,
                   "third_prepare_heading_threshold");

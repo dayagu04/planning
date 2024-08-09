@@ -78,19 +78,13 @@ bool SlotManagement::Update(
   // preprocess
   Preprocess();
 
-  if (apa_param.GetParam().believe_in_fus_obs) {
-    // update obs
-    AddObstacles();
-  }
+  // update obs
+  AddObstacles();
 
   bool update_slot_in_searching_flag = false;
   bool update_slot_in_parking_flag = false;
   // update_slot_in_searching_flag is always false, only update slot
   if (IsInSearchingState()) {
-    if (!apa_param.GetParam().believe_in_fus_obs) {
-      // update obs
-      AddObstacles();
-    }
     update_slot_in_searching_flag = UpdateSlotsInSearching();
   } else if (IsInParkingState()) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
@@ -332,12 +326,13 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
   for (size_t i = 0; i < 4; ++i) {
     pt[i] << slot_points[i].x(), slot_points[i].y();
   }
-  const auto pM01 = 0.5 * (pt[0] + pt[1]);
-  const auto pM23 = 0.5 * (pt[2] + pt[3]);
+  const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
+  const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
   const double real_slot_length = (pM01 - pM23).norm();
-  // const auto t = (pt[1] - pt[0]).normalized();
-  // const auto n = Eigen::Vector2d(t.y(), -t.x());
-  const auto n = (pM01 - pM23).normalized();
+  const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
+  // n is vec that slot opening orientation
+  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
   pt[2] = pt[0] - real_slot_length * n;
   pt[3] = pt[1] - real_slot_length * n;
 
@@ -413,9 +408,20 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
     // use fus obj and ground line
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
+    uint8_t obs_in_slot_count = 0;
+    const uint8_t max_obs_in_slot_count = 2;
     for (const auto &obs_pt : frame_.obs_pt_vec) {
-      const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+      const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+      if (std::fabs(obs_pt_slot.y()) < 0.8 &&
+          obs_pt_slot.x() > ego_slot_info.pt_0.x() -
+                                apa_param.GetParam().car_length + 0.168 &&
+          obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
+        obs_in_slot_count++;
+      }
       ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+    }
+    if (obs_in_slot_count > max_obs_in_slot_count) {
+      return false;
     }
   }
 
@@ -427,6 +433,34 @@ bool SlotManagement::GenTLane(
     apa_planner::PerpendicularPathPlanner::Tlane &slot_tlane,
     apa_planner::PerpendicularPathPlanner::Tlane &obs_tlane) {
   using namespace pnc::geometry_lib;
+
+  const Eigen::Vector2d pM01 =
+      0.5 * (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1]);
+
+  const Eigen::Vector2d pM23 =
+      0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
+
+  Eigen::Vector2d ego_to_slot_center_vec =
+      0.5 * (pM01 + pM23) - frame_.measurement.ego_pos;
+
+  const double cross_ego_to_slot_center =
+      pnc::geometry_lib::GetCrossFromTwoVec2d(
+          frame_.measurement.ego_heading_vec, ego_to_slot_center_vec);
+
+  const double cross_ego_to_slot_heading =
+      pnc::geometry_lib::GetCrossFromTwoVec2d(
+          frame_.measurement.ego_heading_vec,
+          ego_slot_info.slot_origin_heading_vec);
+
+  if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
+    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+  } else if (cross_ego_to_slot_heading < 0.0 &&
+             cross_ego_to_slot_center > 0.0) {
+    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+  } else {
+    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+    return false;
+  }
 
   const Eigen::Vector2d pt_01_norm_vec =
       (ego_slot_info.pt_1 - ego_slot_info.pt_0).normalized();
@@ -473,7 +507,7 @@ bool SlotManagement::GenTLane(
         channel_width, apa_param.GetParam().min_channel_width,
         apa_param.GetParam().channel_width);
   } else {
-    ego_slot_info.channel_width = 10.68;
+    ego_slot_info.channel_width = apa_param.GetParam().channel_width;
   }
 
   // DEBUG_PRINT("channel_width = " << ego_slot_info.channel_width);
@@ -492,25 +526,69 @@ bool SlotManagement::GenTLane(
       right_pq_for_x(Compare(0));
 
   // only hack for obs is not accurate
-  const double y_min = ego_slot_info.slot_width * 0.5 - 0.068;
-  const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
-                        4.28 * pt_01_norm_down_vec)
-                           .x();
+  // const double y_min = ego_slot_info.slot_width * 0.5 - 0.068;
+  // const double x_min = ((ego_slot_info.pt_1 + ego_slot_info.pt_0) * 0.5 +
+  //                       4.28 * pt_01_norm_down_vec)
+  //                          .x();
 
+  CollisionDetector::ObsSlotType obs_slot_type;
+  const std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
+      std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
+  const bool is_left_side =
+      (slot_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
+  const double max_obs_invasion_slot_dist =
+      apa_param.GetParam().max_obs_invasion_slot_dist;
+  const double mir_width =
+      (apa_param.GetParam().max_car_width - apa_param.GetParam().car_width) *
+      0.5;
+
+  const double mir_x = ego_slot_info.target_ego_pos_slot.x() +
+                       apa_param.GetParam().lon_dist_mirror_to_rear_axle -
+                       0.368;
   // sift obstacles that meet requirement
-  for (const auto &obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
-    if (std::fabs(obstacle_point_slot.x()) > x_max ||
-        obstacle_point_slot.x() < x_min ||
-        std::fabs(obstacle_point_slot.y()) > y_max ||
-        std::fabs(obstacle_point_slot.y()) < y_min) {
+  for (Eigen::Vector2d obstacle_point_slot : ego_slot_info.obs_pt_vec_slot) {
+    // if (std::fabs(obstacle_point_slot.x()) > x_max ||
+    //     obstacle_point_slot.x() < x_min ||
+    //     std::fabs(obstacle_point_slot.y()) > y_max ||
+    //     std::fabs(obstacle_point_slot.y()) < y_min) {
+    //   continue;
+    // }
+    obs_slot_type = CollisionDetector::GetObsSlotType(
+        obstacle_point_slot, slot_pt, ego_slot_info.slot_length, is_left_side);
+
+    if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
+        !apa_param.GetParam().believe_in_fus_obs) {
+      if (obstacle_point_slot.y() > 0.0) {
+        obstacle_point_slot.y() =
+            0.5 * ego_slot_info.slot_width - max_obs_invasion_slot_dist;
+      } else {
+        obstacle_point_slot.y() =
+            -0.5 * ego_slot_info.slot_width + max_obs_invasion_slot_dist;
+      }
+    } else if (obs_slot_type !=
+                   CollisionDetector::ObsSlotType::SLOT_INSIDE_OBS &&
+               obs_slot_type !=
+                   CollisionDetector::ObsSlotType::SLOT_OUTSIDE_OBS) {
       continue;
     }
+    // the obs lower mir can relax requirements
+    if (obstacle_point_slot.x() < mir_x) {
+      if (obstacle_point_slot.y() > 1e-6) {
+        obstacle_point_slot.y() += mir_width;
+      } else {
+        obstacle_point_slot.y() -= mir_width;
+      }
+    }
+    // the obs far from slot can relax requirements
+    if (std::fabs(obstacle_point_slot.y()) > 0.468) {
+      obstacle_point_slot.x() -= 0.268;
+    }
     if (obstacle_point_slot.y() > 1e-6) {
-      left_pq_for_y.emplace(obstacle_point_slot);
-      left_pq_for_x.emplace(obstacle_point_slot);
+      left_pq_for_y.emplace(std::move(obstacle_point_slot));
+      left_pq_for_x.emplace(std::move(obstacle_point_slot));
     } else {
-      right_pq_for_y.emplace(obstacle_point_slot);
-      right_pq_for_x.emplace(obstacle_point_slot);
+      right_pq_for_y.emplace(std::move(obstacle_point_slot));
+      right_pq_for_x.emplace(std::move(obstacle_point_slot));
     }
   }
 
@@ -568,24 +646,19 @@ bool SlotManagement::GenTLane(
                                  << virtual_slot_width
                                  << "  real slot width = " << real_slot_width);
 
-  const double safe_threshold = apa_param.GetParam().safe_threshold;
-
   double left_y = left_pq_for_y.top().y();
-
   double real_left_y = left_y;
 
   double left_x = left_pq_for_x.top().x();
-
   double real_left_x = left_x;
 
   double right_y = right_pq_for_y.top().y();
-
   double real_right_y = right_y;
 
   double right_x = right_pq_for_x.top().x();
-
   double real_right_x = right_x;
 
+  // temp hack, when use uss obs, obs lat y is set virtual value
   if (apa_param.GetParam().tmp_no_consider_obs_dy &&
       !ego_slot_info.fus_obj_valid_flag) {
     if (!left_empty) {
@@ -597,7 +670,8 @@ bool SlotManagement::GenTLane(
     }
   }
 
-  const double threshold = 0.4268;
+  // set t lane area
+  const double threshold = 0.6868;
   if (ego_slot_info.fus_obj_valid_flag) {
     left_y = std::max(left_y, car_half_width_with_mirror + threshold);
     left_x = std::min(left_x, ego_slot_info.pt_1.x() - 1.68 * threshold);
@@ -618,14 +692,10 @@ bool SlotManagement::GenTLane(
   double right_dis_obs_car = 0.0;
   if (ego_slot_info.fus_obj_valid_flag) {
     // use fus obj
-    if (!apa_param.GetParam().believe_in_fus_obs) {
-      real_left_y = std::min(real_left_y, ego_slot_info.pt_1.y());
-      real_right_y = std::max(real_right_y, ego_slot_info.pt_0.y());
-    }
     left_dis_obs_car = real_left_y - car_half_width_with_mirror;
     right_dis_obs_car = -car_half_width_with_mirror - real_right_y;
   } else {
-    // use uss
+    // use uss obj
     left_dis_obs_car = left_y - car_half_width_with_mirror;
     right_dis_obs_car = -car_half_width_with_mirror - right_y;
   }
@@ -633,6 +703,8 @@ bool SlotManagement::GenTLane(
   DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
                                     << "  right_dis_obs_car = "
                                     << right_dis_obs_car);
+
+  const double safe_threshold = apa_param.GetParam().safe_threshold;
 
   // ensure it can move slot to make both side safe
   if (left_dis_obs_car + right_dis_obs_car < 2.0 * safe_threshold) {
@@ -681,34 +753,6 @@ bool SlotManagement::GenTLane(
     }
   }
 
-  const auto pM01 =
-      0.5 * (ego_slot_info.slot_corner[0] + ego_slot_info.slot_corner[1]);
-
-  const auto pM23 =
-      0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
-
-  Eigen::Vector2d ego_to_slot_center_vec =
-      0.5 * (pM01 + pM23) - frame_.measurement.ego_pos;
-
-  const double cross_ego_to_slot_center =
-      pnc::geometry_lib::GetCrossFromTwoVec2d(
-          frame_.measurement.ego_heading_vec, ego_to_slot_center_vec);
-
-  const double cross_ego_to_slot_heading =
-      pnc::geometry_lib::GetCrossFromTwoVec2d(
-          frame_.measurement.ego_heading_vec,
-          ego_slot_info.slot_origin_heading_vec);
-
-  if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
-  } else if (cross_ego_to_slot_heading < 0.0 &&
-             cross_ego_to_slot_center > 0.0) {
-    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
-  } else {
-    slot_tlane.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
-    return false;
-  }
-
   // construct slot_t_lane_, left is positive, right is negative
   const double slot_width = std::min(virtual_slot_width, real_slot_width);
 
@@ -717,7 +761,7 @@ bool SlotManagement::GenTLane(
   Eigen::Vector2d corner_right_slot(ego_slot_info.slot_length,
                                     -0.5 * slot_width);
 
-  const auto &slot_side = slot_tlane.slot_side;
+  const uint8_t &slot_side = slot_tlane.slot_side;
   if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
     // inside is right, outside is left
     slot_tlane.corner_outside_slot = corner_left_slot;
@@ -910,7 +954,8 @@ bool SlotManagement::GenObstacles(
     double safe_dist = apa_param.GetParam().max_obs2car_dist_out_slot;
     if (frame_.ego_slot_info.slot_occupied_ratio >
             apa_param.GetParam().max_obs2car_dist_slot_occupied_ratio &&
-        std::fabs(frame_.ego_slot_info.terminal_err.heading) * 57.3 < 36.6) {
+        std::fabs(frame_.ego_slot_info.terminal_err.heading) * kRad2Deg <
+            36.6) {
       safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
     }
     for (const auto &obs_pos : tlane_obstacle_vec) {
@@ -923,7 +968,17 @@ bool SlotManagement::GenObstacles(
   }
 
   else {
-    collision_detector_ptr->AddObstacles(tlane_obstacle_vec,
+    const double safe_dist = 0.0268;
+    // add virtual tlane obs
+    std::vector<Eigen::Vector2d> tlane_obs_vec;
+    tlane_obs_vec.reserve(tlane_obstacle_vec.size());
+    for (const Eigen::Vector2d &obs_pos : tlane_obstacle_vec) {
+      if (!collision_detector_ptr->IsObstacleInCar(obs_pos, ego_pose,
+                                                   safe_dist)) {
+        tlane_obs_vec.emplace_back(obs_pos);
+      }
+    }
+    collision_detector_ptr->AddObstacles(tlane_obs_vec,
                                          CollisionDetector::TLANE_OBS);
 
     // add actual fus obs
@@ -932,24 +987,35 @@ bool SlotManagement::GenObstacles(
     if (obs_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       std::swap(pt_left, pt_right);
     }
+    const double max_obs_invasion_slot_dist = 0.0;
     std::vector<Eigen::Vector2d> fus_obs_vec;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
-    for (const auto &obs_pos : ego_slot_info.obs_pt_vec_slot) {
-      CollisionDetector::ObsSlotType obs_slot_type =
-          collision_detector_ptr->GetObsSlotType(obs_pos, slot_pt,
-                                                 is_left_side);
+    CollisionDetector::ObsSlotType obs_slot_type;
+    for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
+      obs_slot_type = collision_detector_ptr->GetObsSlotType(
+          obs_pos, slot_pt, ego_slot_info.slot_length, is_left_side);
 
-      if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
-          !apa_param.GetParam().believe_in_fus_obs) {
-        // obs is in slot, temp hack, lose it, todo, should not del obs
-        continue;
-      }
+      // when searching, no process obs
+      if (false && !apa_param.GetParam().believe_in_fus_obs) {
+        if (obs_slot_type ==
+            CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS) {
+          // obs is slot entrance, when replan, no conside it, but when dynamic
+          // move and col det, conside it
+          continue;
+        }
 
-      if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS) {
-        // obs is slot entrance, when replan, no conside it, but when dynamic
-        // move and col det, conside it
-        continue;
+        if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS) {
+          // obs is in slot, temp hack, when believe_in_fus_obs is false, force
+          // move obs to out slot
+          if (obs_pos.y() > 0.0) {
+            obs_pos.y() =
+                0.5 * ego_slot_info.slot_width - max_obs_invasion_slot_dist;
+          } else {
+            obs_pos.y() =
+                -0.5 * ego_slot_info.slot_width + max_obs_invasion_slot_dist;
+          }
+        }
       }
 
       if (std::fabs(obs_pos.y()) > std::fabs(A.y()) ||
@@ -969,7 +1035,7 @@ bool SlotManagement::GenObstacles(
         continue;
       }
 
-      fus_obs_vec.emplace_back(obs_pos);
+      fus_obs_vec.emplace_back(std::move(obs_pos));
     }
     collision_detector_ptr->AddObstacles(fus_obs_vec,
                                          CollisionDetector::FUSION_OBS);
@@ -1094,9 +1160,6 @@ bool SlotManagement::UpdateSlotsInSearching() {
       slot->set_is_occupied(!slot->is_release());
     }
 
-    if (!apa_param.GetParam().release_slot_by_prepare) {
-      continue;
-    }
     if ((slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
          slot->slot_type() ==
@@ -1143,12 +1206,14 @@ bool SlotManagement::UpdateSlotsInSearching() {
 
       const double lon_dist = CalLonDistSlot2Car(*slot);
       // DEBUG_PRINT("lon_dist = " << lon_dist);
-      // DEBUG_PRINT("angle = " << CalAngleSlot2Car(*slot) * 57.3);
+      // DEBUG_PRINT("angle = " << CalAngleSlot2Car(*slot) * kRad2Deg);
+      const double min_slot_release_long_dist =
+          frame_.fus_obj_valid_flag
+              ? (apa_param.GetParam().min_slot_release_long_dist_slot2mirror *
+                 0.128)
+              : apa_param.GetParam().min_slot_release_long_dist_slot2mirror;
 
-      if (!frame_.fus_obj_valid_flag &&
-          lon_dist <
-              apa_param.GetParam().min_slot_release_long_dist_slot2mirror &&
-          pair.second.GetOccupied()) {
+      if (lon_dist < min_slot_release_long_dist && pair.second.GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
         DEBUG_PRINT("CalLonDistSlot2Car slot id = "
@@ -1179,6 +1244,10 @@ bool SlotManagement::UpdateSlotsInSearching() {
         DEBUG_PRINT("GenTLane slot id = "
                     << slot->id() << "  slot type = " << slot->slot_type()
                     << "  is_release = " << slot->is_release());
+        continue;
+      }
+
+      if (!apa_param.GetParam().release_slot_by_prepare) {
         continue;
       }
 
@@ -1222,6 +1291,16 @@ bool SlotManagement::UpdateSlotsInSearching() {
     } else if (slot->slot_type() ==
                    Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
                slot->is_release()) {
+      EgoSlotInfo ego_slot_info;
+      if (!UpdateEgoParallelSlotInfoInSearching(ego_slot_info, slot)) {
+        slot->set_is_release(false);
+        slot->set_is_occupied(true);
+        DEBUG_PRINT("UpdateEgoParallelSlotInfoInSearching slot id = "
+                    << slot->id() << "  slot type = " << slot->slot_type()
+                    << "  is_release = " << slot->is_release());
+        continue;
+      }
+
       const double lon_dist = CalLonDistSlot2Car(*slot);
 
       if (frame_.fus_obj_valid_flag) {
@@ -1268,6 +1347,197 @@ bool SlotManagement::UpdateSlotsInSearching() {
   }
 
   return false;
+}
+
+const bool SlotManagement::UpdateEgoParallelSlotInfoInSearching(
+    EgoSlotInfo &ego_slot_info, const common::SlotInfo *slot_info) {
+  if (!slot_info->has_corner_points()) {
+    DEBUG_PRINT("no selected corner pts in slm!");
+    return false;
+  }
+
+  if (slot_info->corner_points().corner_point_size() != 4) {
+    DEBUG_PRINT("select slot in slm corner points size != 4!");
+    return false;
+  }
+
+  if (!slot_info->has_slot_type() ||
+      slot_info->slot_type() !=
+          Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+    DEBUG_PRINT("not parallel slot!");
+    return false;
+  }
+
+  ego_slot_info.Reset();
+  ego_slot_info.select_slot = *slot_info;
+
+  for (size_t i = 0; i < 4; ++i) {
+    const Eigen::Vector2d pt(
+        ego_slot_info.select_slot.corner_points().corner_point(i).x(),
+        ego_slot_info.select_slot.corner_points().corner_point(i).y());
+
+    ego_slot_info.slot_corner.emplace_back(std::move(pt));
+  }
+
+  const Eigen::Vector2d v_10_unit =
+      (ego_slot_info.slot_corner[0] - ego_slot_info.slot_corner[1])
+          .normalized();
+
+  const double dot_ego_to_v10 =
+      frame_.measurement.ego_heading_vec.dot(v_10_unit);
+  // DEBUG_PRINT("dot ego to v10 = " << dot_ego_to_v10);
+
+  // judge slot side via slot pt3
+  if (dot_ego_to_v10 < -1e-8) {
+    ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+    DEBUG_PRINT("left!");
+  } else if (dot_ego_to_v10 > 1e-8) {
+    ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+    DEBUG_PRINT("right!");
+  } else {
+    ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+    DEBUG_PRINT("calculate parallel slot side error ");
+    return false;
+  }
+
+  ego_slot_info.slot_length =
+      (ego_slot_info.slot_corner[0] - ego_slot_info.slot_corner[1]).norm();
+  pnc::geometry_lib::LineSegment line_01(ego_slot_info.slot_corner[0],
+                                         ego_slot_info.slot_corner[1]);
+
+  DEBUG_PRINT(
+      "slot side in slm = " << static_cast<int>(ego_slot_info.slot_side));
+
+  ego_slot_info.slot_width =
+      std::min(pnc::geometry_lib::CalPoint2LineDist(
+                   ego_slot_info.slot_corner[2], line_01),
+               pnc::geometry_lib::CalPoint2LineDist(
+                   ego_slot_info.slot_corner[3], line_01));
+  DEBUG_PRINT("slot width =" << ego_slot_info.slot_width);
+
+  Eigen::Vector2d n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d t = Eigen::Vector2d::Zero();
+  // note: slot points' order is corrected in slot management
+  if (ego_slot_info.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+    n = (ego_slot_info.slot_corner[0] - ego_slot_info.slot_corner[1])
+            .normalized();
+    t << -n.y(), n.x();
+    ego_slot_info.slot_origin_pos = ego_slot_info.slot_corner[0] -
+                                    ego_slot_info.slot_length * n -
+                                    0.5 * ego_slot_info.slot_width * t;
+
+  } else if (ego_slot_info.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+    n = -(ego_slot_info.slot_corner[0] - ego_slot_info.slot_corner[1])
+             .normalized();
+    t << -n.y(), n.x();
+    ego_slot_info.slot_origin_pos = ego_slot_info.slot_corner[1] -
+                                    ego_slot_info.slot_length * n +
+                                    0.5 * ego_slot_info.slot_width * t;
+  } else {
+    DEBUG_PRINT("side error");
+    return false;
+  }
+
+  ego_slot_info.slot_origin_heading =
+      pnc::geometry_lib::NormalizeAngle(std::atan2(n.y(), n.x()));
+
+  ego_slot_info.slot_origin_heading_vec = n;
+
+  DEBUG_PRINT("origin heading =" << ego_slot_info.slot_origin_heading *
+                                        kRad2Deg);
+
+  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+
+  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(frame_.measurement.ego_pos);
+
+  ego_slot_info.ego_heading_slot =
+      ego_slot_info.g2l_tf.GetHeading(frame_.measurement.heading);
+
+  ego_slot_info.ego_heading_slot_vec
+      << std::cos(ego_slot_info.ego_heading_slot),
+      std::sin(ego_slot_info.ego_heading_slot);
+
+  const double rac_to_center_dist = 0.5 * apa_param.GetParam().car_length -
+                                    apa_param.GetParam().rear_overhanging;
+
+  ego_slot_info.target_ego_pos_slot
+      << 0.5 * ego_slot_info.slot_length - rac_to_center_dist,
+      0.0;
+
+  ego_slot_info.target_ego_heading_slot = 0.0;
+
+  DEBUG_PRINT("target ego pos in slot ="
+              << ego_slot_info.target_ego_pos_slot.transpose() << " heading ="
+              << ego_slot_info.target_ego_heading_slot * kRad2Deg);
+
+  // calc terminal error once
+  ego_slot_info.terminal_err.Set(
+      ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
+      pnc::geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
+                                        ego_slot_info.target_ego_heading_slot));
+
+  // calc slot occupied ratio
+
+  double slot_occupied_ratio = 0.0;
+  if (pnc::mathlib::IsInBound(ego_slot_info.terminal_err.pos.x(), -3.0, 4.0)) {
+    const double y_err_ratio =
+        ego_slot_info.terminal_err.pos.y() / (0.5 * ego_slot_info.slot_width);
+
+    if (ego_slot_info.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
+    } else if (ego_slot_info.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
+    }
+  }
+  ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
+
+  DEBUG_PRINT("ego_slot_info.slot_occupied_ratio = "
+              << ego_slot_info.slot_occupied_ratio);
+
+  // set obs
+  ego_slot_info.obs_pt_vec_slot.clear();
+
+  const Eigen::Vector2d slot_center(ego_slot_info.select_slot.center().x(),
+                                    ego_slot_info.select_slot.center().y());
+
+  const double slot_side_sgn =
+      ego_slot_info.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0
+                                                                    : -1.0;
+  const double max_obs_to_slot_dist_square = 12.0 * 12.0;
+
+  int obs_in_slot = 0;
+  for (const auto &obs_pt_g : frame_.obs_pt_vec) {
+    const Eigen::Vector2d obs_to_sc = obs_pt_g - slot_center;
+
+    const double obs_to_sc_dist_square =
+        obs_to_sc.x() * obs_to_sc.x() + obs_to_sc.y() * obs_to_sc.y();
+
+    if (obs_to_sc_dist_square > max_obs_to_slot_dist_square) {
+      continue;
+    }
+
+    const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt_g);
+    if (pnc::mathlib::IsInBound(obs_pt_slot.x(), 0.5,
+                                ego_slot_info.slot_length - 0.5) &&
+        pnc::mathlib::IsInBound(obs_pt_slot.y(), -0.4 * slot_side_sgn,
+                                1.2 * slot_side_sgn)) {
+      obs_in_slot++;
+    }
+
+    if (obs_in_slot > 2) {
+      DEBUG_PRINT("too many obs in slot");
+      return false;
+    }
+
+    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+  }
+
+  return true;
 }
 
 const bool SlotManagement::ProcessRawSlot(
@@ -1400,7 +1670,7 @@ const bool SlotManagement::ProcessSlantSlot(
     angle = 180.0 - angle;
   }
   angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
-  double sin_angle = std::sin(angle / 57.3);
+  const double sin_angle = std::sin(angle * kDeg2Rad);
   frame_.slot_info_angle[slot_info.id()] = std::make_pair(angle, sin_angle);
 
   const Eigen::Vector2d slot_heading_vec = pt_23mid_01_mid;
@@ -1595,7 +1865,7 @@ bool SlotManagement::IsValidParkingSlot(
   // slot are approximately parallel
   const double slot_line_angle_dif = std::fabs(
       pnc::transform::GetAngleFromTwoVec(slot_line02_vec, slot_line13_vec));
-  const double slot_line_angle_dif_deg = slot_line_angle_dif * 57.3;
+  const double slot_line_angle_dif_deg = slot_line_angle_dif * kRad2Deg;
 
   const bool slot_line_parallel_condition =
       slot_line_angle_dif_deg <=
@@ -2175,9 +2445,15 @@ bool SlotManagement::UpdateEgoSlotInfo(
     pt[i] << slot_points[i].x(), slot_points[i].y();
   }
 
-  const auto pM01 = 0.5 * (pt[0] + pt[1]);
-  const auto pM23 = 0.5 * (pt[2] + pt[3]);
+  const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
+  const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
   const double real_slot_length = (pM01 - pM23).norm();
+  const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
+  // n is vec that slot opening orientation
+  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
+  pt[2] = pt[0] - real_slot_length * n;
+  pt[3] = pt[1] - real_slot_length * n;
 
   const double virtual_slot_length =
       apa_param.GetParam().car_length +
@@ -2186,9 +2462,6 @@ bool SlotManagement::UpdateEgoSlotInfo(
   const double use_slot_length =
       std::min(real_slot_length, virtual_slot_length);
 
-  // const auto t = (pt[1] - pt[0]).normalized();
-  // const auto n = Eigen::Vector2d(t.y(), -t.x());
-  const auto n = (pM01 - pM23).normalized();
   ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;
@@ -2236,7 +2509,7 @@ bool SlotManagement::UpdateEgoSlotInfo(
   if (std::fabs(ego_slot_info.terminal_err.pos.y()) <
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_slot_info.ego_heading_slot) <
-          apa_param.GetParam().slot_occupied_ratio_max_heading_err / 57.3) {
+          apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     ego_slot_info.slot_occupied_ratio = pnc::mathlib::Clamp(
         1.0 - (ego_slot_info.terminal_err.pos.x() / ego_slot_info.slot_length),
         0.0, 1.0);
@@ -2388,7 +2661,8 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;
 
-  DEBUG_PRINT("origin heading =" << ego_slot_info.slot_origin_heading * 57.3);
+  DEBUG_PRINT("origin heading =" << ego_slot_info.slot_origin_heading *
+                                        kRad2Deg);
 
   ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
                             ego_slot_info.slot_origin_heading);
@@ -2414,8 +2688,8 @@ const bool SlotManagement::UpdateEgoParallelSlotInfo(
   ego_slot_info.target_ego_heading_slot = 0.0;
 
   DEBUG_PRINT("target ego pos in slot ="
-              << ego_slot_info.target_ego_pos_slot.transpose()
-              << " heading =" << ego_slot_info.target_ego_heading_slot * 57.3);
+              << ego_slot_info.target_ego_pos_slot.transpose() << " heading ="
+              << ego_slot_info.target_ego_heading_slot * kRad2Deg);
 
   // calc terminal error once
   ego_slot_info.terminal_err.Set(
@@ -2459,53 +2733,55 @@ void SlotManagement::UpdateSlotInfoInParking() {
   auto &ego_slot_info = frame_.ego_slot_info;
 
   bool reset_slot_flag = false;
-  bool update_slot_flag = false;
+  bool update_slot_flag = true;
 
-  bool update_slot_condition_1 =
-      IfUpdateSlot(ego_slot_info.select_slot,
-                   ego_slot_info.select_fusion_slot.fusion_source);
+  if (!update_slot_flag) {
+    bool update_slot_condition_1 =
+        IfUpdateSlot(ego_slot_info.select_slot,
+                     ego_slot_info.select_fusion_slot.fusion_source);
 
-  double slot_update_out_heading_max =
-      apa_param.GetParam().slot_update_out_heading_max;
-  double slot_update_out_heading_min =
-      apa_param.GetParam().slot_update_out_heading_min;
-  double slot_update_out_lat_max = apa_param.GetParam().slot_update_out_lat_max;
-  double slot_update_out_lat_min = apa_param.GetParam().slot_update_out_lat_min;
+    double slot_update_out_heading_max =
+        apa_param.GetParam().slot_update_out_heading_max;
+    double slot_update_out_heading_min =
+        apa_param.GetParam().slot_update_out_heading_min;
+    double slot_update_out_lat_max =
+        apa_param.GetParam().slot_update_out_lat_max;
+    double slot_update_out_lat_min =
+        apa_param.GetParam().slot_update_out_lat_min;
 
-  if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
-    slot_update_out_heading_max -= ego_slot_info.origin_pt_0_heading;
-    slot_update_out_heading_min -= ego_slot_info.origin_pt_0_heading;
-    slot_update_out_lat_min = 0.01;
+    if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
+      slot_update_out_heading_max -= ego_slot_info.origin_pt_0_heading;
+      slot_update_out_heading_min -= ego_slot_info.origin_pt_0_heading;
+      slot_update_out_lat_min = 0.01;
+    }
+
+    bool update_slot_condition_2 =
+        (ego_slot_info.slot_occupied_ratio <
+             apa_param.GetParam().slot_update_in_or_out_occupied_ratio ||
+         std::fabs(ego_slot_info.ego_heading_slot * kRad2Deg > 22.8)) &&
+        (std::fabs(ego_slot_info.ego_heading_slot) <
+             slot_update_out_heading_max * kDeg2Rad &&
+         std::fabs(ego_slot_info.ego_heading_slot) >
+             slot_update_out_heading_min * kDeg2Rad) &&
+        (std::fabs(ego_slot_info.ego_pos_slot.y()) < slot_update_out_lat_max &&
+         std::fabs(ego_slot_info.ego_pos_slot.y()) > slot_update_out_lat_min) &&
+        (std::fabs(ego_slot_info.ego_pos_slot.x() < 7.86));
+
+    bool update_slot_condition_3 =
+        (ego_slot_info.slot_occupied_ratio >=
+             apa_param.GetParam().slot_update_in_or_out_occupied_ratio &&
+         std::fabs(ego_slot_info.ego_heading_slot) <
+             apa_param.GetParam().slot_update_in_heading * kDeg2Rad &&
+         std::fabs(ego_slot_info.ego_pos_slot.y()) <
+             apa_param.GetParam().slot_update_in_lat);
+
+    // DEBUG_PRINT("update_slot_condition_1 = "
+    //             << update_slot_condition_1
+    //             << " update_slot_condition_2 = " << update_slot_condition_2
+    //             << " update_slot_condition_3 = " << update_slot_condition_3);
+    update_slot_flag = update_slot_condition_1 || update_slot_condition_2 ||
+                       update_slot_condition_3;
   }
-
-  bool update_slot_condition_2 =
-      (ego_slot_info.slot_occupied_ratio <
-           apa_param.GetParam().slot_update_in_or_out_occupied_ratio ||
-       std::fabs(ego_slot_info.ego_heading_slot * 57.3 > 22.8)) &&
-      (std::fabs(ego_slot_info.ego_heading_slot) <
-           slot_update_out_heading_max / 57.3 &&
-       std::fabs(ego_slot_info.ego_heading_slot) >
-           slot_update_out_heading_min / 57.3) &&
-      (std::fabs(ego_slot_info.ego_pos_slot.y()) < slot_update_out_lat_max &&
-       std::fabs(ego_slot_info.ego_pos_slot.y()) > slot_update_out_lat_min) &&
-      (std::fabs(ego_slot_info.ego_pos_slot.x() < 7.86));
-
-  bool update_slot_condition_3 =
-      (ego_slot_info.slot_occupied_ratio >=
-           apa_param.GetParam().slot_update_in_or_out_occupied_ratio &&
-       std::fabs(ego_slot_info.ego_heading_slot) <
-           apa_param.GetParam().slot_update_in_heading / 57.3 &&
-       std::fabs(ego_slot_info.ego_pos_slot.y()) <
-           apa_param.GetParam().slot_update_in_lat);
-
-  // DEBUG_PRINT("update_slot_condition_1 = "
-  //             << update_slot_condition_1
-  //             << " update_slot_condition_2 = " << update_slot_condition_2
-  //             << " update_slot_condition_3 = " <<
-  //             update_slot_condition_3);
-
-  update_slot_flag = true || update_slot_condition_1 ||
-                     update_slot_condition_2 || update_slot_condition_3;
 
   if (!update_slot_flag) {
     frame_.no_update_slot_count++;
