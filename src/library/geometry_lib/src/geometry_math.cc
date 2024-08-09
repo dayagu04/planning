@@ -2495,7 +2495,8 @@ void PrintSegmentsVecInfo(
       std::cout << "start_heading deg: " << arc_seg.headingA * kRad2Deg
                 << std::endl;
       std::cout << "end_pos: " << arc_seg.pB.transpose() << std::endl;
-      std::cout << "end_heading deg: " << arc_seg.headingB * kRad2Deg << std::endl;
+      std::cout << "end_heading deg: " << arc_seg.headingB * kRad2Deg
+                << std::endl;
       std::cout << "center: " << arc_seg.circle_info.center.transpose()
                 << "radius = " << arc_seg.circle_info.radius << std::endl;
     }
