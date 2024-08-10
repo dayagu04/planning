@@ -93,7 +93,7 @@ class VirtualLane {
   const std::shared_ptr<LaneReferencePath> get_reference_path() {
     return reference_path_;
   }
-  double set_ego_lateral_offset(double ego_lateral_offset) {
+  void set_ego_lateral_offset(double ego_lateral_offset) {
     ego_lateral_offset_ = ego_lateral_offset;
   };
 
