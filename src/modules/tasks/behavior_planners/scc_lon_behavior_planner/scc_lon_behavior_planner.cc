@@ -140,13 +140,14 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   // 1. set ego_info & lon_decision_info, ego_info needs to be recieved from
   // init point rather than real-time vehicle state
   auto ego_info = lon_behav_plan_input_->mutable_ego_info();
-  ego_info->set_ego_v(planning_init_point.lon_init_state.v());
+  ego_info->set_ego_v(ego_state_mgr->ego_v());
   ego_info->set_ego_cruise(std::max(ego_state_mgr->ego_v_cruise(), 0.0));
-  ego_info->set_ego_acc(planning_init_point.lon_init_state.a());
+  ego_info->set_ego_acc(ego_state_mgr->ego_acc());
   ego_info->set_ego_steer_angle(ego_state_mgr->ego_steer_angle());
   ego_info->set_ego_pose_x(ego_state_mgr->ego_pose().x);
   ego_info->set_ego_pose_y(ego_state_mgr->ego_pose().y);
-  lon_init_state_ = {0, ego_info->ego_v(), ego_info->ego_acc()};
+  lon_init_state_ = {0, planning_init_point.lon_init_state.v(),
+                     planning_init_point.lon_init_state.a()};
   auto lon_decision_info_input =
       lon_behav_plan_input_->mutable_lon_decision_info();
   lon_decision_info_input->CopyFrom(lon_decision_info);
