@@ -215,7 +215,7 @@ def draw_mlc_data_view(dataLoader, layer_manager):
       datas = []
       vars_lc = ['sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
                 'current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
-                'is_solid_left_boundary','is_solid_right_boundary']
+                'left_boundary_type','right_boundary_type']
       for name in vars_lc:
         try:
           datas.append((plan_debug[name]))

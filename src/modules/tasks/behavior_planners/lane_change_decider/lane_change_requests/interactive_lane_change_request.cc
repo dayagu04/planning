@@ -62,6 +62,8 @@ void IntRequest::Update(int lc_status) {
   iflyauto::LaneBoundaryType right_boundary_type =
       MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
 
+  JSON_DEBUG_VALUE("left_boundary_type", (int)left_boundary_type);
+  JSON_DEBUG_VALUE("right_boundary_type", (int)right_boundary_type);
   LOG_DEBUG("[IntRequest::update] lane_change_cmd: %d\n", lane_change_cmd_);
   LOG_DEBUG(
       "[IntRequest::update] current_lane_virtual_id: %d, "

@@ -1960,25 +1960,6 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
           first_split_direction_, is_leaving_ramp_, lane_num_except_emergency,
           is_on_ramp_);
     }
-    if (relative_id_lane->get_relative_id() == 0) {
-      auto left_boundary_type =
-          relative_id_lane->get_left_lane_boundary().type_segments_size > 0
-              ? relative_id_lane->get_left_lane_boundary().type_segments[0].type
-              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
-      bool is_solid_left_boundary =
-          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
-
-      auto right_boundary_type =
-          relative_id_lane->get_right_lane_boundary().type_segments_size > 0
-              ? relative_id_lane->get_right_lane_boundary()
-                    .type_segments[0]
-                    .type
-              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
-      bool is_solid_right_boundary =
-          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
-      JSON_DEBUG_VALUE("is_solid_left_boundary", is_solid_left_boundary);
-      JSON_DEBUG_VALUE("is_solid_right_boundary", is_solid_right_boundary);
-    }
   }
 }
 
