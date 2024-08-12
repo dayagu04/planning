@@ -928,43 +928,44 @@ const bool CollisionDetector::CalCarMoveBound(
 const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const Eigen::Vector2d &obs,
     const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-    const bool is_left_side, const bool is_vertical_slot) {
+    const double slot_length, const bool is_left_side,
+    const bool is_vertical_slot) {
   if (is_vertical_slot) {
     Eigen::Vector2d slot_left_pt = slot_pt.first;
     Eigen::Vector2d slot_right_pt = slot_pt.second;
     if (slot_left_pt.y() < slot_right_pt.y()) {
       std::swap(slot_left_pt, slot_right_pt);
     }
+    const double max_obs_invasion_slot_dist =
+        apa_param.GetParam().max_obs_invasion_slot_dist;
     const double slot_x = ((slot_left_pt + slot_right_pt) * 0.5).x();
-    const double upper_x = 3.68;
-    const double lower_x = 0.608;
-    const double offset_y = 0.668;
-    if (obs.x() > slot_x + lower_x && obs.x() < slot_x + upper_x &&
-        obs.y() > slot_right_pt.y() - offset_y &&
-        obs.y() < slot_left_pt.y() + offset_y) {
-      return ObsSlotType::SLOT_ENTRANCE_OBS;
-    }
+    const double slot_upper_x = slot_x + 0.68;
+    const double slot_lower_x = slot_x - slot_length + 0.108;
+    const double slot_left_y = slot_left_pt.y() - max_obs_invasion_slot_dist;
+    const double slot_right_y = slot_right_pt.y() + max_obs_invasion_slot_dist;
 
-    if (obs.x() > slot_x - 5.468 && obs.x() < slot_x + lower_x &&
-        obs.y() > slot_right_pt.y() + 0.068 &&
-        obs.y() < slot_left_pt.y() - 0.068) {
-      return ObsSlotType::SLOT_ENTRANCE_OBS;
-    }
-
-    if (obs.x() < slot_x + lower_x && obs.y() > slot_right_pt.y() &&
-        obs.y() < slot_left_pt.y()) {
+    if (obs.x() < slot_upper_x && obs.x() > slot_lower_x &&
+        obs.y() < slot_left_y && obs.y() > slot_right_y) {
       return ObsSlotType::SLOT_IN_OBS;
     }
 
-    if (obs.x() < slot_x + lower_x) {
-      if ((is_left_side && obs.y() > slot_left_pt.y() &&
-           obs.y() < slot_left_pt.y() + offset_y) ||
-          (!is_left_side && obs.y() < slot_right_pt.y() &&
-           obs.y() > slot_right_pt.y() - offset_y)) {
+    const double slot_upper_upper_x = slot_upper_x + 3.5;
+    const double slot_upper_y = slot_left_y + 0.86;
+    const double slot_lower_y = slot_right_y - 0.86;
+
+    if (obs.x() > slot_upper_x && obs.x() < slot_upper_upper_x &&
+        obs.y() < slot_upper_y && obs.y() > slot_lower_y) {
+      return ObsSlotType::SLOT_ENTRANCE_OBS;
+    }
+
+    if (obs.x() < slot_upper_x && obs.x() > slot_lower_x) {
+      if ((is_left_side && obs.y() > slot_left_y &&
+           obs.y() < slot_left_pt.y() + slot_upper_y) ||
+          (!is_left_side && obs.y() < slot_right_y && obs.y() > slot_lower_y)) {
         return ObsSlotType::SLOT_INSIDE_OBS;
       }
-      if ((is_left_side && obs.y() < slot_right_pt.y()) ||
-          (!is_left_side && obs.y() > slot_left_pt.y())) {
+      if ((is_left_side && obs.y() < slot_right_y) ||
+          (!is_left_side && obs.y() > slot_left_y)) {
         return ObsSlotType::SLOT_OUTSIDE_OBS;
       }
     }

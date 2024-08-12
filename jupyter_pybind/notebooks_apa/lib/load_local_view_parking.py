@@ -60,12 +60,12 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = False
+load_uss_wave_from_uss_percept_msg = True
 load_fusion_object_from_occupancy = True
 version_245 = True
 read_uss_per_msg = False
 corner_points_size = 4
-NUM_OF_OUTLINE_DATAORI = 4
+NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
@@ -234,7 +234,7 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading",
-                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist",
+                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
@@ -571,7 +571,7 @@ class LoadCyberbag:
     # load wave_info msg
     try:
       wave_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/uss/wave_info"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
         wave_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
@@ -589,7 +589,7 @@ class LoadCyberbag:
         self.wave_msg['enable'] = False
     except:
       self.wave_msg['enable'] = False
-      print("missing /iflytek/uss/wave_info !!!")
+      print("missing /iflytek/uss/usswave_info !!!")
    #load adas_debug_msg
     try:
       adas_debug_msg_dict = {}
@@ -996,10 +996,21 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       line_xn = [x1, x2]
       line_yn = [y1, y2]
 
-    local_view_data['data_car_target_pos'].data.update({
+    local_view_data['data_car_target'].data.update({
       'car_xn': car_xn,
       'car_yn': car_yn,
     })
+
+    if (len(plan_x) > 0):
+      local_view_data['data_target_pos'].data.update({
+        'target_pos_x': [plan_x[-1]],
+        'target_pos_y': [plan_y[-1]],
+      })
+    else:
+      local_view_data['data_target_pos'].data.update({
+        'target_pos_x': [],
+        'target_pos_y': [],
+      })
 
     local_view_data['data_car_target_line'].data.update({
       'x' : line_xn,
@@ -1239,6 +1250,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   # load plan debug msg
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.fus_parking_msg['enable'] == True:
     local_view_data['data_target_managed_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_target_line'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_origin_pose'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_planning_slot'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_planning_line'].data.update({'corner_point_x': [], 'corner_point_y': [],})
+    local_view_data['data_planning_pose'].data.update({'corner_point_x': [], 'corner_point_y': [],})
     local_view_data['data_all_managed_slot_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
     slot_management_info = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].slot_management_info
     select_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
@@ -1316,15 +1332,40 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'y': bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['col_det_path_y'],
     })
 
+    local_view_data['data_origin_pose'].data.update({
+      'corner_point_x': [bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_origin_pos_x']],
+      'corner_point_y': [bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_origin_pos_y']],
+    })
+
     slot_corner_X = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_corner_X']
     slot_corner_Y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_corner_Y']
     limiter_corner_X = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['limiter_corner_X']
     limiter_corner_Y = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['limiter_corner_Y']
 
-    local_view_data['data_target_managed_slot'].data.update({
-      'corner_point_x': [slot_corner_X[0], slot_corner_X[2], slot_corner_X[3], slot_corner_X[1]],
-      'corner_point_y': [slot_corner_Y[0], slot_corner_Y[2], slot_corner_Y[3], slot_corner_Y[1]],
-    })
+    if (len(slot_corner_X) > 3):
+      local_view_data['data_target_managed_slot'].data.update({
+        'corner_point_x': [slot_corner_X[0], slot_corner_X[2], slot_corner_X[3], slot_corner_X[1]],
+        'corner_point_y': [slot_corner_Y[0], slot_corner_Y[2], slot_corner_Y[3], slot_corner_Y[1]],
+      })
+
+    if (len(slot_corner_X) > 12):
+      local_view_data['data_target_line'].data.update({
+        'corner_point_x': [slot_corner_X[4],slot_corner_X[5]],
+        'corner_point_y': [slot_corner_Y[4],slot_corner_Y[5]],
+      })
+
+      local_view_data['data_planning_slot'].data.update({
+        'corner_point_x': [slot_corner_X[6], slot_corner_X[8], slot_corner_X[9], slot_corner_X[7]],
+        'corner_point_y': [slot_corner_Y[6], slot_corner_Y[8], slot_corner_Y[9], slot_corner_Y[7]],
+      })
+      local_view_data['data_planning_line'].data.update({
+        'corner_point_x': [slot_corner_X[10],slot_corner_X[11]],
+        'corner_point_y': [slot_corner_Y[10],slot_corner_Y[11]],
+      })
+      local_view_data['data_planning_pose'].data.update({
+        'corner_point_x': [slot_corner_X[12]],
+        'corner_point_y': [slot_corner_Y[12]],
+      })
 
     local_view_data['data_all_managed_limiter'].data.update({
       'limiter_point_x': limiter_corner_X,
@@ -1525,7 +1566,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("plan_fail_reason")
       plan_fail_reason = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['plan_fail_reason']
-      plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED'}
+      plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT'}
       fail_reason = plan_fail_reason_dict.get(plan_fail_reason, 'UNKNOWN')
       datas.append(str(plan_fail_reason) + ": " + str(fail_reason))
 
@@ -1561,6 +1602,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
       names.append("move_slot_dist")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['move_slot_dist']))
+
+      names.append("replan_count")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_count']))
+
+      names.append("mono_plan")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['mono_plan']))
+
+      names.append("multi_plan")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['multi_plan']))
 
       names.append("slot_replan_jump_dist")
       datas.append(str(slot_replan_jump_dist))
@@ -1985,12 +2035,14 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
 def load_local_view_figure_parking():
   data_car = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
-  data_car_target_pos = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
+  data_current_pos = ColumnDataSource(data = {'current_pos_y':[], 'current_pos_x':[]})
+  data_current_line = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_car_target = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
+  data_target_pos = ColumnDataSource(data = {'target_pos_y':[], 'target_pos_x':[]})
+  data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
   data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
   data_car_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
-  data_current_pos = ColumnDataSource(data = {'current_pos_y':[], 'current_pos_x':[]})
   data_ego = ColumnDataSource(data = {'ego_yn':[], 'ego_xn':[]})
-  data_current_line = ColumnDataSource(data = {'y':[], 'x':[]})
   data_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
   data_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[]})
@@ -2009,14 +2061,17 @@ def load_local_view_figure_parking():
   data_fusion_occupied_slot3 = ColumnDataSource(data = {'occupied_slot_y': [], 'occupied_slot_x': [],})
   data_vision_parking = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_target_managed_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_target_line = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_origin_pose = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_planning_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_planning_line = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
+  data_planning_pose = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_final_slot = ColumnDataSource(data = {'corner_point_y':[], 'corner_point_x':[]})
   data_fusion_parking_id = ColumnDataSource(data = {'id':[], 'id_text_x':[], 'id_text_y':[]})
 
   data_wave = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
   data_wave_min = ColumnDataSource(data = {'wave_x': [], 'wave_y': [], 'radius':[], 'start_angle':[], 'end_angle':[]})
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
-
-  data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
 
   data_fusion_obj = ColumnDataSource(data = {'y':[], 'x':[]})
 
@@ -2049,12 +2104,14 @@ def load_local_view_figure_parking():
                 'uss_percept_msg_idx': 0,
                }
   local_view_data = {'data_car':data_car, \
-                     'data_car_target_pos':data_car_target_pos, \
+                     'data_current_pos': data_current_pos, \
+                     'data_current_line':data_current_line, \
+                     'data_car_target':data_car_target, \
+                     'data_target_pos':data_target_pos, \
+                     'data_car_target_line':data_car_target_line,\
                      'data_car_box':data_car_box, \
                      'data_car_circle':data_car_circle, \
-                     'data_current_pos': data_current_pos, \
                      'data_ego':data_ego, \
-                     'data_current_line':data_current_line, \
                      'data_obs':data_obs, \
                      'data_col_det_path': data_col_det_path, \
                      'data_text':data_text, \
@@ -2071,6 +2128,11 @@ def load_local_view_figure_parking():
                      'data_fusion_occupied_slot3':data_fusion_occupied_slot3,\
                      'data_vision_parking':data_vision_parking, \
                      'data_target_managed_slot':data_target_managed_slot, \
+                     'data_target_line':data_target_line, \
+                     'data_origin_pose':data_origin_pose, \
+                     'data_planning_slot':data_planning_slot, \
+                     'data_planning_line':data_planning_line, \
+                     'data_planning_pose':data_planning_pose, \
                      'data_final_slot':data_final_slot, \
                      'data_fusion_parking_id':data_fusion_parking_id, \
                      'data_index': data_index, \
@@ -2081,7 +2143,6 @@ def load_local_view_figure_parking():
                      'data_all_managed_slot_id':data_all_managed_slot_id,\
                      'data_all_managed_limiter':data_all_managed_limiter,\
                      'data_all_managed_occupied_slot':data_all_managed_occupied_slot,\
-                     'data_car_target_line':data_car_target_line,\
                      'data_dluss_model':data_dluss_model,\
                      'data_dluss_post':data_dluss_post,\
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
@@ -2093,10 +2154,13 @@ def load_local_view_figure_parking():
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=800, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
-  fig1.patch('car_yn', 'car_xn', source = data_car_target_pos, fill_color = "pink", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target_pos')
-  f1 = fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'car')
+  fig1.patch('car_yn', 'car_xn', source = data_car_target, fill_color = "pink", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target')
+  fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'car')
+  fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey', legend_label = 'car')
+  fig1.line('y', 'x', source = data_current_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car')
+  fig1.circle('target_pos_y','target_pos_x', source = data_target_pos, size=8, color='blue', legend_label = 'car_target')
+  fig1.line('y', 'x', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target')
   fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sampled carbox', visible = False)
-  fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey')
   fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'car_circle', visible = False)
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.circle('obs_y', 'obs_x', source = data_obs, size=8, color='green', legend_label='obs')
@@ -2107,9 +2171,6 @@ def load_local_view_figure_parking():
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc', visible = False)
   # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
-  fig1.line('y', 'x', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target_pos')
-  fig1.line('y', 'x', source = data_current_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car')
-
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot1, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
@@ -2121,6 +2182,11 @@ def load_local_view_figure_parking():
 
 
   fig1.line('corner_point_y', 'corner_point_x', source = data_target_managed_slot, line_width = 3, line_color = 'green', line_dash = 'solid',legend_label = 'target_managed_slot')
+  fig1.line('corner_point_y', 'corner_point_x', source = data_target_line, line_width = 3, line_color = 'green', line_dash = 'dashed',legend_label = 'target_managed_slot')
+  fig1.circle('corner_point_y', 'corner_point_x', source = data_origin_pose, size=6, color='grey', legend_label = 'origin_pose')
+  fig1.line('corner_point_y', 'corner_point_x', source = data_planning_slot, line_width = 3, line_color = 'blue', line_dash = 'solid',legend_label = 'planning_slot')
+  fig1.line('corner_point_y', 'corner_point_x', source = data_planning_line, line_width = 3, line_color = 'blue', line_dash = 'dashed',legend_label = 'planning_slot')
+  fig1.circle('corner_point_y', 'corner_point_x', source = data_planning_pose, size=6, color='black', legend_label = 'planning_pose')
   fig1.line('corner_point_y', 'corner_point_x', source = data_final_slot, line_width = 3, line_color = '#A52A2A', line_dash = 'dashed',legend_label = 'final_parking_slot')
 
   fig1.text(x = 'id_text_y', y = 'id_text_x', text = 'id', source = data_fusion_parking_id, text_color='black', text_align='center', text_font_size='10pt',legend_label = 'fusion_parking_slot', visible = True)
@@ -2380,6 +2446,46 @@ ego_dot_params_apa ={
   'color' : "grey",
   'legend_label' : 'car'
 }
+
+current_line_params={
+  'line_width' : 3.0,
+  'line_color' : 'black',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.8,
+  'legend_label' : 'car'
+}
+
+target_pos_params={
+  'fill_color' : "pink",
+  'line_color' : "red",
+  'line_width' : 1,
+  'line_alpha' : 0.5,
+  'legend_label' : 'car_target'
+}
+
+target_dot_params_apa ={
+  'size' : 8,
+  'color' : "blue",
+  'legend_label' : 'car_target'
+}
+
+target_line_params={
+  'line_width' : 3.0,
+  'line_color' : 'black',
+  'line_dash' : 'solid',
+  'line_alpha' : 0.8,
+  'legend_label' : 'car_target'
+}
+
+sampled_carbox_params={
+  'fill_color' : "#98FB98",
+  'fill_alpha' : 0.0,
+  'line_color' : "black",
+  'line_width' : 1,
+  'legend_label' : 'sampled carbox',
+  'visible' : False
+}
+
 ego_circle_params_apa ={
   'line_alpha' : 0.5,
   'line_width' : 1,
@@ -2462,6 +2568,39 @@ target_slot_params_apa = {
   'line_color' : "green",
   'line_width' : 3,
   'legend_label' : 'target_managed_slot'
+}
+
+target_slot_line_params_apa = {
+  'line_dash' : 'dashed',
+  'line_color' : "green",
+  'line_width' : 3,
+  'legend_label' : 'target_managed_slot'
+}
+
+origin_pose_params_apa = {
+  "size" : 6,
+  "color" : 'grey',
+  'legend_label' : 'origin_pose'
+}
+
+planning_slot_params_apa = {
+  'line_dash' : 'solid',
+  'line_color' : "blue",
+  'line_width' : 3,
+  'legend_label' : 'planning_slot'
+}
+
+planning_line_params_apa = {
+  'line_dash' : 'dashed',
+  'line_color' : "blue",
+  'line_width' : 3,
+  'legend_label' : 'planning_slot'
+}
+
+plan_pose_params_apa = {
+  "size" : 6,
+  "color" : 'black',
+  'legend_label' : 'planning_pose'
 }
 
 all_slot_params_apa = {
@@ -2547,45 +2686,12 @@ tlane_params = {
 }
 
 col_det_path_params = {
-  'line_width' : 2.0, 'line_color' : 'green', 'line_dash' : 'solid', 'line_alpha' : 0.4, 'legend_label' : 'col_det_path'
+  'line_width' : 6.0, 'line_color' : 'grey', 'line_dash' : 'solid', 'line_alpha' : 0.5, 'legend_label' : 'col_det_path'
 }
 
 table_params={
     'width': 600,
     'height':520,
-}
-
-current_line_params={
-  'line_width' : 3.0,
-  'line_color' : 'black',
-  'line_dash' : 'solid',
-  'line_alpha' : 0.8,
-  'legend_label' : 'car'
-}
-
-target_line_params={
-  'line_width' : 3.0,
-  'line_color' : 'black',
-  'line_dash' : 'solid',
-  'line_alpha' : 0.8,
-  'legend_label' : 'car_target_pos'
-}
-
-target_pos_params={
-  'fill_color' : "pink",
-  'line_color' : "red",
-  'line_width' : 1,
-  'line_alpha' : 0.5,
-  'legend_label' : 'car_target_pos'
-}
-
-sampled_carbox_params={
-  'fill_color' : "#98FB98",
-  'fill_alpha' : 0.0,
-  'line_color' : "black",
-  'line_width' : 1,
-  'legend_label' : 'sampled carbox',
-  'visible' : False
 }
 
 dluss_post_params={
@@ -2911,6 +3017,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     fusion_occupied_slot2_generate = CommonGenerator()
     fusion_occupied_slot3_generate = CommonGenerator()
     target_slot_generate = CommonGenerator()
+    target_slot_line_generate = CommonGenerator()
+    origin_pose_generate = CommonGenerator()
+    planning_slot_generate = CommonGenerator()
+    planning_line_generate = CommonGenerator()
+    plan_pose_generate = CommonGenerator()
     final_slot_generate = CommonGenerator()
     all_slot_generate = CommonGenerator()
     slot_id_generate = TextGenerator()
@@ -3081,6 +3192,10 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           all_managed_slot_y_vec = []
           temp_corner_x_list = []
           temp_corner_y_list = []
+          target_slot_line_x_list, target_slot_line_y_list = [], []
+          plan_slot_corner_x_list, plan_slot_corner_y_list = [], []
+          plan_slot_line_x_list, plan_slot_line_y_list = [], []
+          plan_pose_x_list, plan_pose_y_list = [], []
           occupied_x_vec = []
           occupied_y_vec = []
           limiter_x_vec = []
@@ -3132,12 +3247,31 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             slot_corner_Y = plan_json['slot_corner_Y']
             limiter_corner_X = plan_json['limiter_corner_X']
             limiter_corner_Y = plan_json['limiter_corner_Y']
-            temp_corner_x_list = [[slot_corner_X[0], slot_corner_X[2], slot_corner_X[3], slot_corner_X[1]]]
-            temp_corner_y_list = [[slot_corner_Y[0], slot_corner_Y[2], slot_corner_Y[3], slot_corner_Y[1]]]
+            temp_corner_x_list = []
+            temp_corner_y_list = []
+            if (len(slot_corner_X) > 3):
+              temp_corner_x_list = [[slot_corner_X[0], slot_corner_X[2], slot_corner_X[3], slot_corner_X[1]]]
+              temp_corner_y_list = [[slot_corner_Y[0], slot_corner_Y[2], slot_corner_Y[3], slot_corner_Y[1]]]
             limiter_y_vec = limiter_corner_Y
             limiter_x_vec = limiter_corner_X
 
+            if (len(slot_corner_X) > 12):
+              target_slot_line_x_list = [slot_corner_X[4],slot_corner_X[5]]
+              target_slot_line_y_list = [slot_corner_Y[4],slot_corner_Y[5]]
+              plan_slot_corner_x_list = [[slot_corner_X[6], slot_corner_X[8], slot_corner_X[9], slot_corner_X[7]]]
+              plan_slot_corner_y_list = [[slot_corner_Y[6], slot_corner_Y[8], slot_corner_Y[9], slot_corner_Y[7]]]
+              plan_slot_line_x_list = [slot_corner_X[10],slot_corner_X[11]]
+              plan_slot_line_y_list = [slot_corner_Y[10],slot_corner_Y[11]]
+              plan_pose_x_list = [slot_corner_X[12]]
+              plan_pose_y_list = [slot_corner_Y[12]]
+
+          origin_pose_generate.xys.append(([plan_json['slot_origin_pos_y']], [plan_json['slot_origin_pos_x']]))
           target_slot_generate.xys.append((temp_corner_y_list, temp_corner_x_list))
+          target_slot_line_generate.xys.append((target_slot_line_y_list, target_slot_line_x_list))
+          planning_slot_generate.xys.append((plan_slot_corner_y_list, plan_slot_corner_x_list))
+          planning_line_generate.xys.append((plan_slot_line_y_list, plan_slot_line_x_list))
+          plan_pose_generate.xys.append((plan_pose_y_list, plan_pose_x_list))
+
           all_slot_generate.xys.append((all_managed_slot_y_vec, all_managed_slot_x_vec))
           all_slot_id_generate.xys.append((all_slot_id_y_list,all_slot_id_x_list,all_slot_id_list))
           all_managed_occupied_slot_generate.xys.append((occupied_y_vec, occupied_x_vec))
@@ -3149,6 +3283,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     plan_generator = CommonGenerator()
     target_line_generator = CommonGenerator()
     target_pos_generator = CommonGenerator()
+    target_pt_generator = CommonGenerator()
     car_box_generator = CommonGenerator()
     for plan_timestamp in plan_output_timestamps:
       flag, plan_msg = findt(dataLoader.plan_msg, plan_timestamp)
@@ -3157,12 +3292,14 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         plan_traj_x, plan_traj_y, plan_heading = [], [], []
         target_line_xn, target_line_yn = [], []
         target_pos_xn, target_pos_yn = [], []
+        target_pt_x, target_pt_y = [], []
         car_box_x_vec, car_box_y_vec = [], []
       else:
         trajectory = plan_msg.trajectory
         plan_traj_x, plan_traj_y, plan_heading = [], [], []
         target_line_xn, target_line_yn = [], []
         target_pos_xn, target_pos_yn = [], []
+        target_pt_x, target_pt_y = [], []
         car_box_x_vec, car_box_y_vec = [], []
         for j in range(trajectory.trajectory_points_size):
           plan_traj_x.append(trajectory.trajectory_points[j].x)
@@ -3188,6 +3325,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           y2 = last_y + norm_vec_2[1]
           target_line_xn = [x1, x2]
           target_line_yn = [y1, y2]
+          target_pt_x = [last_x]
+          target_pt_y = [last_y]
 
           for i in range(len(plan_traj_x)):
             car_xn = []
@@ -3202,10 +3341,12 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
       plan_generator.xys.append((plan_traj_y, plan_traj_x))
       target_line_generator.xys.append((target_line_yn,target_line_xn))
+      target_pt_generator.xys.append((target_pt_y,target_pt_x))
       target_pos_generator.xys.append(([target_pos_yn],[target_pos_xn]))
       car_box_generator.xys.append((car_box_y_vec,car_box_x_vec))
 
     target_pos_generator.ts = np.array(ctrl_debug_ts)
+    target_pt_generator.ts = np.array(ctrl_debug_ts)
     plan_generator.ts = np.array(ctrl_debug_ts)
     target_line_generator.ts = np.array(ctrl_debug_ts)
     car_box_generator.ts = np.array(ctrl_debug_ts)
@@ -3247,7 +3388,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         print('find uss percept error')
       else:
         for i in range(NUM_OF_OUTLINE_DATAORI):
-          single_out_line_dataori = dataLoader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[i]
+          single_out_line_dataori = uss_percept_msg.out_line_dataori[i]
           if version_245:
             obj_count = single_out_line_dataori.obj_pt_cnt
           else:
@@ -3541,6 +3682,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
     if dataLoader.fus_parking_msg['enable'] == True and dataLoader.plan_debug_msg['enable'] == True:
       target_slot_generate.ts = np.array(ctrl_debug_ts)
+      target_slot_line_generate.ts = np.array(ctrl_debug_ts)
+      origin_pose_generate.ts = np.array(ctrl_debug_ts)
+      planning_slot_generate.ts = np.array(ctrl_debug_ts)
+      planning_line_generate.ts = np.array(ctrl_debug_ts)
+      plan_pose_generate.ts = np.array(ctrl_debug_ts)
       all_slot_generate.ts = np.array(ctrl_debug_ts)
       all_slot_id_generate.ts = np.array(ctrl_debug_ts)
       all_managed_occupied_slot_generate.ts = np.array(ctrl_debug_ts)
@@ -3548,6 +3694,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       tlane_generate.ts = np.array(ctrl_debug_ts)
       col_det_path_generate.ts = np.array(ctrl_debug_ts)
       target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
+      target_slot_line_layer = CurveLayer(fig_local_view ,target_slot_line_params_apa)
+      origin_pose_layer = DotLayer(fig_local_view, origin_pose_params_apa)
+      plan_slot_layer = MultiCurveLayer(fig_local_view, planning_slot_params_apa)
+      plan_line_layer = CurveLayer(fig_local_view, planning_line_params_apa)
+      plan_pose_layer = DotLayer(fig_local_view, plan_pose_params_apa)
       all_slot_layer = MultiCurveLayer(fig_local_view ,all_slot_params_apa)
       all_slot_id_layer = TextLayer(fig_local_view, all_slot_id_params_apa)
       all_managed_occupied_slot_layer = PatchLayer(fig_local_view, all_managed_occupied_slot_params_apa)
@@ -3556,6 +3707,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       col_det_path_layer = CurveLayer(fig_local_view, col_det_path_params)
 
       layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
+      layer_manager.AddLayer(target_slot_line_layer, 'target_slot_line_layer',target_slot_line_generate,'target_slot_line_generate',2)
+      layer_manager.AddLayer(origin_pose_layer, 'origin_pose_layer',origin_pose_generate,'origin_pose_generate',2)
+      layer_manager.AddLayer(plan_slot_layer, 'plan_slot_layer',planning_slot_generate,'planning_slot_generate',2)
+      layer_manager.AddLayer(plan_line_layer, 'plan_line_layer',planning_line_generate,'planning_line_generate',2)
+      layer_manager.AddLayer(plan_pose_layer, 'plan_pose_layer',plan_pose_generate,'plan_pose_generate',2)
       layer_manager.AddLayer(all_slot_layer, 'all_slot_layer',all_slot_generate,'all_slot_generate',2)
       layer_manager.AddLayer(all_slot_id_layer, 'all_slot_id_layer',all_slot_id_generate,'all_slot_id_generate',3)
       layer_manager.AddLayer(all_managed_occupied_slot_layer, 'all_managed_occupied_slot_layer',all_managed_occupied_slot_generate,'all_managed_occupied_slot_generate',2)
@@ -3576,13 +3732,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     if dataLoader.plan_msg['enable'] == True:
       target_line_layer = CurveLayer(fig_local_view, target_line_params)
       layer_manager.AddLayer(target_line_layer, 'target_line_layer', target_line_generator, 'target_line_generator', 2)
+      target_pt_layer = DotLayer(fig_local_view, target_dot_params_apa)
+      layer_manager.AddLayer(target_pt_layer, 'target_pt_layer', target_pt_generator, 'target_pt_generator', 2)
 
     if dataLoader.loc_msg['enable'] == True:
       current_line_layer = CurveLayer(fig_local_view, current_line_params)
       layer_manager.AddLayer(current_line_layer, 'current_line_layer', current_line_generate, 'current_line_generate', 2)
 
     # uss
-    if dataLoader.wave_msg['enable'] == True:
+    if dataLoader.wave_msg['enable'] == True or dataLoader.uss_percept_msg['enable'] == True:
       uss_layer = MultiWedgesLayer(fig_local_view, uss_wave_params)
       layer_manager.AddLayer(uss_layer, 'uss_layer', uss_generator, 'uss_generator', 5)
       if dataLoader.plan_debug_msg['enable'] == True and dataLoader.soc_state_msg['enable'] == True:
@@ -3646,7 +3804,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("plan_fail_reason")
             plan_fail_reason = plan_json['plan_fail_reason']
-            plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED'}
+            plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT'}
             fail_reason = plan_fail_reason_dict.get(plan_fail_reason, 'UNKNOWN')
             datas.append(str(plan_fail_reason) + ": " + str(fail_reason))
 
@@ -3688,6 +3846,15 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("move_slot_dist")
             datas.append(str(plan_json['move_slot_dist']))
+
+            names.append("replan_count")
+            datas.append(str(plan_json['replan_count']))
+
+            names.append("mono_plan")
+            datas.append(str(plan_json['mono_plan']))
+
+            names.append("multi_plan")
+            datas.append(str(plan_json['multi_plan']))
 
             names.append("terminal_error_x")
             datas.append(str(plan_json['terminal_error_x']))

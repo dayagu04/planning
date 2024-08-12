@@ -51,7 +51,7 @@ class SimulationContext {
 
   double planning_loop_dt_ = 0.1;
   double prediction_relative_time_ = 0;
-  double localizatoin_latency_ = 0;
+  double localizatoin_latency_ = 45;
   Eigen::Vector3d ego_pose_;
   Eigen::Vector4d ego_orientation_;
   double ego_yaw_ = 0;

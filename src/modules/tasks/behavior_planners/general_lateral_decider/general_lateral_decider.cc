@@ -130,9 +130,14 @@ bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
   // pipeline test
   return true;
 }
-double GeneralLateralDecider::CalCruiseVelByCurvature(
-    const double ego_v, const std::vector<double> &d_poly) {
-  double cruise_v = session_->planning_context().v_ref_cruise();
+
+bool GeneralLateralDecider::CalCruiseVelByCurvature(
+    const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
+  if (session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_is_exist_ramp_on_road()) {
+    return false;
+  }
   const double preview_length = 5.0;
   const double preview_step = 1.0;
   double aver_close_kappa = 0.0;
@@ -165,14 +170,21 @@ double GeneralLateralDecider::CalCruiseVelByCurvature(
       double road_radius = close_kappa_radius < far_kappa_radius
                                ? close_kappa_radius
                                : far_kappa_radius;
-      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 650.0};
-      std::array<double, 4> fp_acc{1.8, 1.4, 1.0, 0.8};
+      std::array<double, 4> xp_radius{100.0, 200.0, 400.0, 600.0};
+      std::array<double, 4> fp_acc{1.5, 0.9, 0.7, 0.6};
       double acc_max = interp(road_radius, xp_radius, fp_acc);
       cruise_v = std::min(
           std::max(std::sqrt(acc_max * road_radius) * 0.9, ego_v), cruise_v);
+      return true;
     }
   }
-  return cruise_v;
+  if ((config_.ramp_limit_v_valid) && (session_->environmental_model()
+                                           .get_virtual_lane_manager()
+                                           ->is_on_ramp())) {
+    cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
+    return true;
+  }
+  return false;
 }
 
 void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
@@ -185,11 +197,15 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+
+  bool limit_ref_vel_on_ramp_valid = false;
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
+
   if (config_.lateral_ref_traj_type ||
-      ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-        coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-        coarse_planning_info.target_state == ROAD_LC_LBACK ||
-        coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+      ((is_LC_CHANGE || is_LC_BACK) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
@@ -199,7 +215,10 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     const double kMaxAcc = 2;
     const double kMinAcc = -5.5;
     double ego_v = planning_init_point.v;
-    double cruise_v = CalCruiseVelByCurvature(ego_v, flane->get_center_line());
+    double cruise_v = session_->planning_context().v_ref_cruise();
+    if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
+      limit_ref_vel_on_ramp_valid = true;
+    }
     double s = 0.0;
     double span_t = config_.delta_t * config_.num_step;
     if (ego_v < cruise_v) {
@@ -219,18 +238,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         s += (span_t - t) * cruise_v;
       }
     }
-    const double max_ref_length = session_->planning_context().v_ref_cruise() * span_t;
+    const double max_ref_length =
+        session_->planning_context().v_ref_cruise() * span_t;
     double avg_cruise_v = std::min(s, max_ref_length) / span_t;
     double delta_s = avg_cruise_v * config_.delta_t;
     Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
                                     planning_init_point.lat_init_state.y());
     const auto &frenet_coord =
-      coarse_planning_info.reference_path->get_frenet_coord();
+        coarse_planning_info.reference_path->get_frenet_coord();
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     pnc::spline::Projection projection_spline;
     projection_spline.CalProjectionPoint(
         cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
-        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(), cart_init_point);
+        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
+        cart_init_point);
 
     double s_ref = projection_spline.GetOutput().s_proj;
     traj_points.clear();
@@ -261,11 +282,12 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-
-  if ((coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-       coarse_planning_info.target_state == ROAD_LC_LBACK ||
-       coarse_planning_info.target_state == ROAD_LC_RBACK) &&
+  if (limit_ref_vel_on_ramp_valid) {
+    general_lateral_decider_output.ramp_scene = true;
+  } else {
+    general_lateral_decider_output.ramp_scene = false;
+  }
+  if ((is_LC_CHANGE || is_LC_BACK) &&
       gap_selector_decider_output.gap_selector_trustworthy) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
@@ -488,10 +510,11 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                                          .coarse_planning_info;
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_lane_change = coarse_planning_info.target_state == ROAD_LC_LCHANGE ||
-                        coarse_planning_info.target_state == ROAD_LC_RCHANGE ||
-                        coarse_planning_info.target_state == ROAD_LC_LBACK ||
-                        coarse_planning_info.target_state == ROAD_LC_RBACK;
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
+  bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
   const double kDefaultDistanceToRoad = 10.0;
   const double half_ego_width = 0.5 * vehicle_param.max_width;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
@@ -1535,24 +1558,34 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
     lateral_output.lc_request = "right";
   }
 
-  int state = lane_change_decider_output.curr_state;
-  if (state == ROAD_LC_LCHANGE || state == INTER_GS_LC_LCHANGE ||
-      state == INTER_TR_LC_LCHANGE || state == INTER_TL_LC_LCHANGE) {
+  const auto state = lane_change_decider_output.curr_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
+  //(fengwang31)TODO:交互式变道的的取消状态还需要考虑进去
+  if (is_LC_LCHANGE) {
     lateral_output.lc_status = "left_lane_change";
-  } else if (state == ROAD_LC_LBACK || state == INTER_GS_LC_LBACK ||
-             state == INTER_TR_LC_LBACK || state == INTER_TL_LC_LBACK) {
+  } else if (is_LC_LBACK) {
     lateral_output.lc_status = "left_lane_change_back";
-  } else if (state == ROAD_LC_RCHANGE || state == INTER_GS_LC_RCHANGE ||
-             state == INTER_TR_LC_RCHANGE || state == INTER_TL_LC_RCHANGE) {
+  } else if (is_LC_RCHANGE) {
     lateral_output.lc_status = "right_lane_change";
-  } else if (state == ROAD_LC_RBACK || state == INTER_GS_LC_RBACK ||
-             state == INTER_TR_LC_RBACK || state == INTER_TL_LC_RBACK) {
+  } else if (is_LC_RBACK) {
     lateral_output.lc_status = "right_lane_change_back";
-  } else if (state == ROAD_LC_LWAIT || state == INTER_GS_LC_LWAIT ||
-             state == INTER_TR_LC_LWAIT || state == INTER_TL_LC_LWAIT) {
+  } else if (is_LC_LWAIT) {
     lateral_output.lc_status = "left_lane_change_wait";
-  } else if (state == ROAD_LC_RWAIT || state == INTER_GS_LC_RWAIT ||
-             state == INTER_TR_LC_RWAIT || state == INTER_TL_LC_RWAIT) {
+  } else if (is_LC_RWAIT) {
     lateral_output.lc_status = "right_lane_change_wait";
   } else {
     lateral_output.lc_status = "none";

@@ -542,6 +542,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json, "hard_min_distance_road2center", hard_min_distance_road2center);
     care_lon_area_road_border = read_json_key<double>(
         json, "care_lon_area_road_border", care_lon_area_road_border);
+    ramp_limit_v = read_json_key<double>(json, "ramp_limit_v", ramp_limit_v);
+    ramp_limit_v_valid =
+        read_json_key<bool>(json, "ramp_limit_v_valid", ramp_limit_v_valid);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -581,6 +584,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   bool lateral_ref_traj_type = false;
   double max_lateral_ttc = 0.0;
   double care_lon_area_road_border = 100;
+  double ramp_limit_v = 19.44;
+  bool ramp_limit_v_valid = false;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -673,6 +678,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_soft_corridor"});
     q_hard_corridor = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_hard_corridor"});
+    avoid_back_time = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "avoid_back_time"});
     q_ref_x_avoid = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_avoid"});
     q_ref_y_avoid = read_json_keys<double>(
@@ -681,14 +688,22 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_avoid"});
     q_acc_avoid = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_avoid"});
-    q_jerk_avoid_close = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_close"});
-    q_jerk_avoid_middle = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_middle"});
-    q_jerk_avoid_vel = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid_vel"});
+    q_jerk_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_avoid"});
+    avoid_high_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "avoid_high_vel"});
+    q_ref_theta_avoid_high_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_ref_theta_avoid_high_vel"});
+    q_jerk_avoid_high_vel_close = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_jerk_avoid_high_vel_close"});
+    q_jerk_avoid_high_vel_middle = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_jerk_avoid_high_vel_middle"});
+    q_jerk_bound_avoid_high_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_jerk_bound_avoid_high_vel"});
     q_ref_x_static_avoid = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_static_avoid"});
@@ -707,6 +722,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     q_jerk_static_avoid_middle = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr",
                                        "q_jerk_static_avoid_middle"});
+    lane_change_high_vel = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "lane_change_high_vel"});
+    jerk_bound_lane_change_high_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "jerk_bound_lane_change_high_vel"});
+    q_jerk_bound_lane_change_high_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "q_jerk_bound_lane_change_high_vel"});
     q_ref_x_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_lane_change"});
@@ -768,6 +792,36 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     end_ratio_for_qjerk = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "end_ratio_for_qjerk"});
+    enter_ramp_on_road_time = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "enter_ramp_on_road_time"});
+    q_jerk_ramp_on_road = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_ramp_on_road"});
+    jerk_bound_ramp_on_road = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_ramp_on_road"});
+    ramp_valid = read_json_keys<bool>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "ramp_valid"});
+    acc_bound_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "acc_bound_ramp"});
+    jerk_bound_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_ramp"});
+    q_ref_x_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_x_ramp"});
+    q_ref_y_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_y_ramp"});
+    q_ref_theta_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_ramp"});
+    q_acc_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_ramp"});
+    q_jerk_ramp_close = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_ramp_close"});
+    q_jerk_ramp_mid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_ramp_mid"});
+    valid_perception_range_on_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "valid_perception_range_on_ramp"});
   }
 
   bool warm_start_enable = true;
@@ -794,13 +848,17 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc = 0.5;
   double q_jerk = 0.6;
 
+  double avoid_back_time = 2.0;
   double q_ref_x_avoid = 20.0;
   double q_ref_y_avoid = 20.0;
   double q_ref_theta_avoid = 15.0;
   double q_acc_avoid = 0.5;
-  double q_jerk_avoid_close = 2.0;
-  double q_jerk_avoid_middle = 2.0;
-  double q_jerk_avoid_vel = 25.0;
+  double q_jerk_avoid = 15.0;
+  double avoid_high_vel = 2.0;
+  double q_ref_theta_avoid_high_vel = 15.0;
+  double q_jerk_avoid_high_vel_close = 2.0;
+  double q_jerk_avoid_high_vel_middle = 2.0;
+  double q_jerk_bound_avoid_high_vel = 25.0;
 
   double q_ref_x_static_avoid = 20.0;
   double q_ref_y_static_avoid = 20.0;
@@ -809,6 +867,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_static_avoid_close = 2.0;
   double q_jerk_static_avoid_middle = 2.0;
 
+  double lane_change_high_vel = 20.0;
+  double jerk_bound_lane_change_high_vel = 0.5;
+  double q_jerk_bound_lane_change_high_vel = 5000.0;
   double q_ref_x_lane_change = 20.0;
   double q_ref_y_lane_change = 20.0;
   double q_ref_theta_lane_change = 15.0;
@@ -817,6 +878,21 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_lane_change2 = 2.0;
   double lane_change_ego_l_thr = 1.0;
   double q_jerk_lane_change_back = 10.0;
+
+  double enter_ramp_on_road_time = 2.0;
+  double q_jerk_ramp_on_road = 50.0;
+  double jerk_bound_ramp_on_road = 0.4;
+
+  bool ramp_valid = false;
+  double acc_bound_ramp = 3.0;
+  double jerk_bound_ramp = 1.0;
+  double q_ref_x_ramp = 400.0;
+  double q_ref_y_ramp = 400.0;
+  double q_ref_theta_ramp = 5000.0;
+  double q_acc_ramp = 0.02;
+  double q_jerk_ramp_close = 45.0;
+  double q_jerk_ramp_mid = 10.0;
+  double valid_perception_range_on_ramp = 30.0;
 
   double road_curvature_radius = 750.0;
   size_t curvature_change_index = 15;

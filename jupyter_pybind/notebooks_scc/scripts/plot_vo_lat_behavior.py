@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240731/20240731-20-10-40/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-31-20-10-40_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240803/20240803-15-22-52/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-03-15-22-52_no_camera.bag.1722930340.close-loop.plan"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -20,6 +20,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
+fig1.height = 1000
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -71,11 +72,11 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=600)
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
+data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=550)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=700)
-data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=600)
+data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=400)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -193,7 +194,7 @@ def update_lc_data (noa_info, plan_debug_json):
       names.append(name)
     except:
       pass
-  vars_lc = ['hdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
+  vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
              'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'is_solid_left_boundary','is_solid_right_boundary',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
              "is_leaving_ramp","is_nearing_ramp"]
@@ -214,7 +215,7 @@ def update_overtake_request_lc_data (plan_debug_json):
   datas = []
   overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
                        "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
-                       "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len"]
+                       "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len"]
   for name in overtake_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))
@@ -269,6 +270,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_behavior_table_2)), notebook_handle=True)
 # slider_class = ObjText(obj_id_handler)

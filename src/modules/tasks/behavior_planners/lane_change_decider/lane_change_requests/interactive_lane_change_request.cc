@@ -3,6 +3,7 @@
 #include <string>
 
 #include "common.pb.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "interactive_lane_change_request.h"
 
@@ -45,20 +46,6 @@ void IntRequest::Update(int lc_status) {
           ? target_reference_path->get_frenet_ego_state().l()
           : 0.;
 
-  // 获取左车道线型
-  iflyauto::LaneBoundaryType left_boundary_type;
-  const auto& left_boundary =
-      virtual_lane_mgr_->get_current_lane()->get_left_lane_boundary();
-  if (left_boundary.type_segments_size > 0) {
-    left_boundary_type = left_boundary.type_segments[0].type;
-  }
-  // 获取右车道线型,实线禁止换道
-  iflyauto::LaneBoundaryType right_boundary_type;
-  const auto& right_boundary =
-      virtual_lane_mgr_->get_current_lane()->get_right_lane_boundary();
-  if (right_boundary.type_segments_size > 0) {
-    right_boundary_type = right_boundary.type_segments[0].type;
-  }
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();
     origin_lane_virtual_id_ = origin_lane->get_virtual_id();
@@ -66,6 +53,14 @@ void IntRequest::Update(int lc_status) {
     origin_lane_virtual_id_ = current_lane_virtual_id;
   }
   int target_lane_virtual_id_tmp{current_lane_virtual_id};
+
+  // 获取左车道线型
+  iflyauto::LaneBoundaryType left_boundary_type =
+      MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
+
+  // 获取右车道线型,实线禁止换道
+  iflyauto::LaneBoundaryType right_boundary_type =
+      MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
 
   LOG_DEBUG("[IntRequest::update] lane_change_cmd: %d\n", lane_change_cmd_);
   LOG_DEBUG(

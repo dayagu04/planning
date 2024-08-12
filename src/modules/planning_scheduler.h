@@ -5,6 +5,7 @@
 #include "apa_function/apa_function.h"
 #include "common/define/debug_output.h"
 #include "common/local_view.h"
+#include "common_platform_type_soc.h"
 #include "environmental_model_manager.h"
 #include "hpp_function/hpp_function.h"
 #include "ihc_function/intelligent_headlight_control.h"
@@ -28,6 +29,8 @@ class PlanningScheduler {
   void SyncParameters(planning::common::SceneType scene_type);
   //   void ResetState() override;
   planning::framework::Session *MutableSession() { return &session_; }
+
+  uint64_t FaultCode();
 
  private:
   // 解析障碍物

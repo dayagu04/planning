@@ -1,3 +1,16 @@
+# planning.2.4.8
+####  修改说明
+1. Add planning InputHistoryInfo of Header
+2. 限制acc bound下限；修改远距离慢车场景中的JLT触发频率
+3. Regard virtual line type as dashed line type when lc
+4. 增加planning IO topic 故障码
+5. 优化横向path，提升横向舒适度，以及匝道内的收敛性
+6. 调整大车的避让buffer
+7. 增加agent_longitudinal_decider，优化cut in
+8. Add lane line dashed and solid judgment for ilc
+9. 使用前后帧车道重合率代替轨迹与车道计算cost
+10. 添加舒适性减速的感知距离需求
+
 # planning.2.4.7
 ####  修改说明
 1. 变道结束前1s使用avoid offset

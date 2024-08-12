@@ -1,6 +1,7 @@
 #include "lateral_behavior_object_selector.h"
 #include <algorithm>
 #include "../../common/planning_gflags.h"
+#include "config/basic_type.h"
 #include "planning_context.h"
 
 namespace planning {
@@ -178,28 +179,23 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
   bool r_change_cond =
       (tlane != nullptr && frenet_ego_state.l() - v_ego * dt_delay >
                                start_move_distolane - act_cancel_thr);
-
-  return (status == ROAD_NONE || status == ROAD_LC_LWAIT ||
-          status == ROAD_LC_RWAIT ||
-          (status == ROAD_LC_LBACK &&
-           lane_change_decider_output.lc_back_reason != "" &&
+  const auto state = lane_change_decider_output.curr_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == 1);
+  bool is_LC_RWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == 2);
+  bool is_LC_LBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == 1);
+  bool is_LC_RBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == 2);
+  return (status == kLaneKeeping || is_LC_LWAIT || is_LC_RWAIT ||
+          (is_LC_LBACK && lane_change_decider_output.lc_back_reason != "" &&
            (lane_change_decider_output.lc_back_reason == "front view back" ||
             lane_change_decider_output.lc_back_reason == "side view back")) ||
-          (status == ROAD_LC_RBACK &&
-           lane_change_decider_output.lc_back_reason != "" &&
+          (is_LC_RBACK && lane_change_decider_output.lc_back_reason != "" &&
            (lane_change_decider_output.lc_back_reason == "front view back" ||
-            lane_change_decider_output.lc_back_reason == "side view back")) ||
-          status == ROAD_LB_LBORROW || status == ROAD_LB_RBORROW ||
-          status == ROAD_LB_LBACK || status == ROAD_LB_RBACK ||
-          status == INTER_GS_LC_LWAIT || status == INTER_GS_LC_RWAIT ||
-          (status == ROAD_LC_LCHANGE && l_change_cond) ||
-          (status == ROAD_LC_RCHANGE && r_change_cond) ||
-          (status == INTER_GS_LC_LCHANGE && l_change_cond) ||
-          (status == INTER_GS_LC_RCHANGE && r_change_cond) ||
-          (status == INTER_TR_LC_LCHANGE && l_change_cond) ||
-          (status == INTER_TR_LC_RCHANGE && r_change_cond) ||
-          (status == INTER_TL_LC_LCHANGE && l_change_cond) ||
-          (status == INTER_TL_LC_RCHANGE && r_change_cond));
+            lane_change_decider_output.lc_back_reason == "side view back")));
 }
 
 bool ObjectSelector::check_map_alc_enable(int direction, bool accident_ahead) {
@@ -333,34 +329,42 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   double press_thr = 0.3;
   double lane_width = flane->width();
   double t_gap = interp(v_ego, t_gap_vego_bp, t_gap_vego_v);
-  bool None_state = (status == ROAD_NONE || status == INTER_GS_NONE ||
-                     status == INTER_TR_NONE || status == INTER_TL_NONE ||
-                     status == INTER_UT_NONE);
+  const auto state = lane_change_decider_output.curr_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
   bool LCHANGE =
-      (status == ROAD_LC_LCHANGE || status == INTER_GS_LC_LCHANGE ||
-       status == INTER_TR_LC_LCHANGE || status == INTER_TL_LC_LCHANGE);
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
   bool RCHANGE =
-      (status == ROAD_LC_RCHANGE || status == INTER_GS_LC_RCHANGE ||
-       status == INTER_TR_LC_RCHANGE || status == INTER_TL_LC_RCHANGE);
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
+  bool None_state = status == kLaneKeeping;
   bool isRedLightStop = false;
 
   if ((llane == nullptr || (left_boundary_info.type_segments_size > 0 &&
                             left_boundary_info.type_segments[0].type ==
                                 iflyauto::LaneBoundaryType_MARKING_SOLID)) &&
-      (status == ROAD_NONE ||
+      (status == kLaneKeeping ||
        (olane != nullptr &&
         olane->get_virtual_id() == clane->get_virtual_id() &&
-        (status != ROAD_LC_LCHANGE || l_ego < -lane_width / 2 - 0.2)))) {
+        (!LCHANGE || l_ego < -lane_width / 2 - 0.2)))) {
     l_enable = false;
   }
 
   if ((rlane == nullptr || (right_boundary_info.type_segments_size > 0 &&
                             right_boundary_info.type_segments[0].type ==
                                 iflyauto::LaneBoundaryType_MARKING_SOLID)) &&
-      (status == ROAD_NONE ||
+      (status == kLaneKeeping ||
        (olane != nullptr &&
         olane->get_virtual_id() == clane->get_virtual_id() &&
-        (status != ROAD_LC_RCHANGE || l_ego > lane_width / 2 + 0.2)))) {
+        (!RCHANGE || l_ego > lane_width / 2 + 0.2)))) {
     r_enable = false;
   }
 
@@ -476,7 +480,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
             iflyauto::LaneBoundaryType_MARKING_DASHED &&
         dist_to_intsect > 0 &&
         (left_boundary_info.type_segments[0].length - dist_to_intsect > -10 ||
-         (status == ROAD_LC_LCHANGE) || (status == ROAD_LC_RCHANGE))) ||
+         (LCHANGE) || (RCHANGE))) ||
        dist_to_intsect < -5 || accident_ahead) &&
       lateral_obstacle->sensors_okay()) {
     std::map<int, bool> front_tracks_ids;
@@ -550,8 +554,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
     for (auto &tr : front_tracks) {
       front_tracks_ids.insert(std::make_pair(tr.track_id, true));
-      if (status != ROAD_LC_LCHANGE && status != ROAD_LC_RCHANGE &&
-          accident_drel < 1000. &&
+      if (!LCHANGE && !RCHANGE && accident_drel < 1000. &&
           front_tracks_l_ids.find(tr.track_id) == front_tracks_l_ids.end() &&
           front_tracks_r_ids.find(tr.track_id) == front_tracks_r_ids.end() &&
           accident_drel - tr.d_rel > 2 && accident_drel - tr.d_rel < 15 &&
@@ -598,13 +601,13 @@ bool ObjectSelector::update(int status, double start_move_distolane,
     }
 
     if (!check_map_alc_enable(LEFT_CHANGE, accident_ahead) && is_on_highway &&
-        l_enable && status != ROAD_LC_LCHANGE) {
+        l_enable && !LCHANGE) {
       l_enable = false;
       enable_l_ = false;
       LOG_ERROR("check_map_alc_enable] left alc disable");
     }
     if (!check_map_alc_enable(RIGHT_CHANGE, accident_ahead) && is_on_highway &&
-        r_enable && status != ROAD_LC_RCHANGE) {
+        r_enable && !RCHANGE) {
       r_enable = false;
       enable_r_ = false;
       LOG_ERROR("check_map_alc_enable] right alc disable");
@@ -656,18 +659,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 ((lead_one == nullptr ||
                   ((lead_two == nullptr) ||
                    (tr.track_id != lead_two->track_id)))) &&
-                (status == ROAD_NONE || status == ROAD_LC_LWAIT ||
-                 status == ROAD_LC_LCHANGE || status == ROAD_LC_LBACK ||
-                 status == ROAD_LB_LBORROW || status == ROAD_LB_LRETURN ||
-                 status == INTER_GS_NONE || status == INTER_GS_LC_LWAIT ||
-                 status == INTER_GS_LC_LCHANGE || status == INTER_GS_LC_LBACK ||
-                 status == INTER_TR_NONE || status == INTER_TR_LC_LWAIT ||
-                 status == INTER_TR_LC_LCHANGE || status == INTER_TR_LC_LBACK ||
-                 status == INTER_TL_NONE || status == INTER_TL_LC_LWAIT ||
-                 status == INTER_TL_LC_LCHANGE || status == INTER_TL_LC_LBACK ||
-                 (status == ROAD_LC_RCHANGE &&
-                  (request_source == MAP_REQUEST ||
-                   request_source == INT_REQUEST))) &&
+                (status == kLaneKeeping || is_LC_LWAIT || LCHANGE ||
+                 is_LC_LBACK ||
+                 (RCHANGE && (request_source == MAP_REQUEST ||
+                              request_source == INT_REQUEST))) &&
                 (r_accident_cnt_ != 1 || rlane == nullptr) &&
                 (dist_to_intsect - tr.d_rel >= 35 ||
                  (left_boundary_info.type_segments_size > 0 &&
@@ -719,12 +714,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                     }
                   }
 
-                  if (((lead_two != nullptr &&
-                        (status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_LCHANGE &&
-                         status != INTER_TR_LC_LCHANGE &&
-                         status != INTER_TL_LC_LCHANGE) &&
+                  if (((lead_two != nullptr && (!LCHANGE && !RCHANGE) &&
                         lead_two->d_rel - lead_one->d_rel < 20 &&
                         lead_two->d_rel - lead_one->d_rel > 5 &&
                         lead_two->type != 20001 && lead_one->type != 20001) ||
@@ -855,7 +845,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 l_accident_cnt_ = 0;
 
                 if (!accident_ahead) {
-                  if (status != ROAD_LC_LCHANGE) {
+                  if (!LCHANGE) {
                     left_lb_car_.clear();
                   } else {
                     for (auto &tr : front_tracks) {
@@ -1963,12 +1953,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                             use_lateral_distance_to_judge_cutout_in_active_lane_change
                         ? tr.l > half_car_width
                         : std::fabs(tr.v_lat) > 0.3 ||
-                              ((status != ROAD_LC_LCHANGE &&
-                                status != ROAD_LC_RCHANGE &&
-                                status != INTER_GS_LC_LCHANGE &&
-                                status != INTER_TR_LC_LCHANGE &&
-                                status != INTER_TL_LC_LCHANGE) &&
-                               lead_one != nullptr && lead_two != nullptr &&
+                              ((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                               lead_two != nullptr &&
                                lead_two->d_rel - lead_one->d_rel <
                                    std::min(v_left_front, v_target) * 2 &&
                                (lead_two->v_rel < 5. &&
@@ -1990,12 +1976,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (left_alc_car_cnt_[tr.track_id].neg > neg_thr_l ||
-                      ((status != ROAD_LC_LCHANGE &&
-                        status != ROAD_LC_RCHANGE &&
-                        status != INTER_GS_LC_LCHANGE &&
-                        status != INTER_TR_LC_LCHANGE &&
-                        status != INTER_TL_LC_LCHANGE) &&
-                       lead_one != nullptr && lead_two != nullptr &&
+                      ((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                       lead_two != nullptr &&
                        lead_two->d_rel - lead_one->d_rel <
                            std::min(v_left_front, v_target) * 1.5 &&
                        ((lead_one->v_lead > 3)) &&
@@ -2016,8 +1998,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (left_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_l ||
-                      ((status != ROAD_LB_LBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
+                      ((lead_one != nullptr && lead_two != nullptr &&
                         lead_two->d_rel - lead_one->d_rel <
                             std::min(v_left_front, v_target) * 1.5 &&
                         lead_one->d_max_cpath > lb_width_l / 2.0 &&
@@ -2036,7 +2017,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                   tr.track_id) != left_lb_car_.end()) {
                       left_lb_car_.clear();
 
-                      if (status != ROAD_LB_RBORROW) {
+                      if (true) {
                         neg_left_lb_car_ = true;
                       }
 
@@ -2045,9 +2026,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   }
                 }
               }
-            } else if ((status == ROAD_LC_LCHANGE ||
-                        status == INTER_GS_LC_LCHANGE ||
-                        status == ROAD_LB_LBORROW) &&
+            } else if (LCHANGE &&
                        (left_alc_car_.size() > 0 || left_lb_car_.size() > 0 ||
                         v_ego >= 1.0) &&
                        tr.d_max_cpath <= -lane_width / 2 + car_width / 5 &&
@@ -2074,12 +2053,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                           use_lateral_distance_to_judge_cutout_in_active_lane_change
                       ? tr.l > half_car_width
                       : std::fabs(tr.v_lat) > 0.3 ||
-                            ((status != ROAD_LC_LCHANGE &&
-                              status != ROAD_LC_RCHANGE &&
-                              status != INTER_GS_LC_LCHANGE &&
-                              status != INTER_TR_LC_LCHANGE &&
-                              status != INTER_TL_LC_LCHANGE) &&
-                             lead_one != nullptr && lead_two != nullptr &&
+                            ((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                             lead_two != nullptr &&
                              lead_two->d_rel - lead_one->d_rel <
                                  std::min(v_left_front, v_target) * 2 &&
                              (lead_two->v_rel < 5. &&
@@ -2093,8 +2068,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
 
                   if (left_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_l ||
-                      ((status != ROAD_LB_LBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
+                      ((lead_one != nullptr && lead_two != nullptr &&
                         lead_two->d_rel - lead_one->d_rel <
                             std::min(v_left_front, v_target) * 1.5 &&
                         lead_one->d_max_cpath > lb_width_l / 2.0 &&
@@ -2113,7 +2087,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                   tr.track_id) != left_lb_car_.end()) {
                       left_lb_car_.clear();
 
-                      if (status != ROAD_LB_RBORROW) {
+                      if (true) {
                         neg_left_lb_car_ = true;
                       }
 
@@ -2129,12 +2103,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3, 0);
 
                   if (left_alc_car_cnt_[tr.track_id].neg > neg_thr_l ||
-                      ((status != ROAD_LC_LCHANGE &&
-                        status != ROAD_LC_RCHANGE &&
-                        status != INTER_GS_LC_LCHANGE &&
-                        status != INTER_TR_LC_LCHANGE &&
-                        status != INTER_TL_LC_LCHANGE) &&
-                       lead_one != nullptr && lead_two != nullptr &&
+                      ((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                       lead_two != nullptr &&
                        lead_two->d_rel - lead_one->d_rel <
                            std::min(v_left_front, v_target) * 1.5 &&
                        ((lead_one->v_lead > 3)) &&
@@ -2166,18 +2136,10 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 ((lead_one == nullptr ||
                   ((lead_two == nullptr) ||
                    (tr.track_id != lead_two->track_id)))) &&
-                (status == ROAD_NONE || status == ROAD_LC_RWAIT ||
-                 status == ROAD_LC_RCHANGE || status == ROAD_LC_RBACK ||
-                 status == ROAD_LB_RBORROW || status == ROAD_LB_RRETURN ||
-                 status == INTER_GS_NONE || status == INTER_GS_LC_RWAIT ||
-                 status == INTER_GS_LC_RCHANGE || status == INTER_GS_LC_RBACK ||
-                 status == INTER_TR_NONE || status == INTER_TR_LC_RWAIT ||
-                 status == INTER_TR_LC_RCHANGE || status == INTER_TR_LC_RBACK ||
-                 status == INTER_TL_NONE || status == INTER_TL_LC_RWAIT ||
-                 status == INTER_TL_LC_RCHANGE || status == INTER_TL_LC_RBACK ||
-                 (status == ROAD_LC_LCHANGE &&
-                  (request_source == MAP_REQUEST ||
-                   request_source == INT_REQUEST))) &&
+                (status == kLaneKeeping || is_LC_RWAIT || RCHANGE ||
+                 is_LC_RBACK ||
+                 (LCHANGE && (request_source == MAP_REQUEST ||
+                              request_source == INT_REQUEST))) &&
                 (l_accident_cnt_ != 1 || llane == nullptr) &&
                 (dist_to_intsect - tr.d_rel >= 35 || dist_to_intsect < -5)) {
               if (dist_to_intsect > 0 || dist_to_intsect < -5) {
@@ -2222,12 +2184,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       r_accident_cnt_ = 0;
                     }
                   }
-                  if (((lead_two != nullptr &&
-                        (status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_RCHANGE &&
-                         status != INTER_TR_LC_RCHANGE &&
-                         status != INTER_TL_LC_RCHANGE) &&
+                  if (((lead_two != nullptr && (!LCHANGE && !RCHANGE) &&
                         lead_two->d_rel - lead_one->d_rel < 20 &&
                         lead_two->d_rel - lead_one->d_rel > 5 &&
                         lead_two->type != 20001 && lead_one->type != 20001) ||
@@ -2361,7 +2318,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 r_accident_cnt_ = 0;
 
                 if (!accident_ahead) {
-                  if (status != ROAD_LC_RCHANGE) {
+                  if (!RCHANGE) {
                     right_lb_car_.clear();
                     // right_alc_car_.clear();
                   } else {
@@ -3482,12 +3439,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                             use_lateral_distance_to_judge_cutout_in_active_lane_change
                         ? tr.l < -half_car_width
                         : std::fabs(tr.v_lat) > 0.3 ||
-                              (((status != ROAD_LC_LCHANGE &&
-                                 status != ROAD_LC_RCHANGE &&
-                                 status != INTER_GS_LC_RCHANGE &&
-                                 status != INTER_TR_LC_RCHANGE &&
-                                 status != INTER_TL_LC_RCHANGE) &&
-                                lead_one != nullptr && lead_two != nullptr &&
+                              (((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                                lead_two != nullptr &&
                                 lead_two->v_lead > -0.5 &&
                                 lead_two->d_rel - lead_one->d_rel <
                                     std::min(v_right_front, v_target) * 2 &&
@@ -3519,12 +3472,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (right_alc_car_cnt_[tr.track_id].neg > neg_thr_r ||
-                      (((status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_RCHANGE &&
-                         status != INTER_TR_LC_RCHANGE &&
-                         status != INTER_TL_LC_RCHANGE) &&
-                        lead_one != nullptr && lead_two != nullptr &&
+                      (((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                        lead_two != nullptr &&
                         lead_two->d_rel - lead_one->d_rel <
                             std::min(v_right_front, v_target) * 1.5 &&
                         (lead_two->v_rel < 5. &&
@@ -3544,8 +3493,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   }
 
                   if (right_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_r ||
-                      ((status != ROAD_LB_RBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
+                      ((lead_one != nullptr && lead_two != nullptr &&
                         lead_two->d_rel - lead_one->d_rel <
                             std::min(v_right_front, v_target) * 1.5 &&
                         lead_one->d_min_cpath < -lb_width_r / 2.0) ||
@@ -3562,7 +3510,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                                   tr.track_id) != right_lb_car_.end()) {
                       right_lb_car_.clear();
 
-                      if (status != ROAD_LB_LBORROW) {
+                      if (true) {
                         neg_right_lb_car_ = true;
                       }
 
@@ -3571,9 +3519,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                   }
                 }
               }
-            } else if ((status == ROAD_LC_RCHANGE ||
-                        status == INTER_GS_LC_RCHANGE ||
-                        status == ROAD_LB_RBORROW) &&
+            } else if (RCHANGE &&
                        (right_alc_car_.size() > 0 || right_lb_car_.size() > 0 ||
                         v_ego >= 1.0) &&
                        tr.d_min_cpath >= lane_width / 2 - car_width / 5 &&
@@ -3600,11 +3546,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                           use_lateral_distance_to_judge_cutout_in_active_lane_change
                       ? tr.l > half_car_width
                       : std::fabs(tr.v_lat) > 0.3 ||
-                            ((status != ROAD_LC_LCHANGE &&
-                              status != ROAD_LC_RCHANGE &&
-                              status != INTER_GS_LC_RCHANGE &&
-                              status != INTER_TR_LC_RCHANGE &&
-                              status != INTER_TL_LC_RCHANGE) &&
+                            ((!LCHANGE && !RCHANGE) &&
                              (lead_one != nullptr && lead_two != nullptr &&
                               lead_two->d_rel - lead_one->d_rel <
                                   std::min(v_right_front, v_target) * 2 &&
@@ -3626,8 +3568,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       std::max(right_lb_car_cnt_[tr.track_id].pos - 3, 0);
 
                   if (right_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_r ||
-                      ((status != ROAD_LB_RBORROW && lead_one != nullptr &&
-                        lead_two != nullptr &&
+                      ((lead_one != nullptr && lead_two != nullptr &&
                         lead_two->d_rel - lead_one->d_rel <
                             std::min(v_right_front, v_target) * 1.5 &&
                         lead_one->d_min_cpath < -lb_width_r / 2.0) ||
@@ -3643,7 +3584,7 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                         std::find(right_lb_car_.begin(), right_lb_car_.end(),
                                   tr.track_id) != right_lb_car_.end()) {
                       right_lb_car_.clear();
-                      if (status != ROAD_LB_LBORROW) {
+                      if (true) {
                         neg_right_lb_car_ = true;
                       }
 
@@ -3659,12 +3600,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                       std::max(right_alc_car_cnt_[tr.track_id].pos - 3, 0);
 
                   if (right_alc_car_cnt_[tr.track_id].neg > neg_thr_r ||
-                      (((status != ROAD_LC_LCHANGE &&
-                         status != ROAD_LC_RCHANGE &&
-                         status != INTER_GS_LC_RCHANGE &&
-                         status != INTER_TR_LC_RCHANGE &&
-                         status != INTER_TL_LC_RCHANGE) &&
-                        lead_one != nullptr && lead_two != nullptr &&
+                      (((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+                        lead_two != nullptr &&
                         lead_two->d_rel - lead_one->d_rel <
                             std::min(v_right_front, v_target) * 1.5 &&
                         (lead_two->v_rel < 5. &&
@@ -3718,376 +3655,377 @@ bool ObjectSelector::update(int status, double start_move_distolane,
                 right_lb_car_cnt_.end()) {
               right_lb_car_cnt_[tr.track_id].pos = 0;
             }
-          } else if (left_lb_car_.size() > 0 || status == ROAD_LB_LBORROW ||
-                     status == ROAD_LB_LRETURN || status == ROAD_LB_LSUSPEND) {
-            right_lb_car_.clear();
+          }
+          // fengwang31:新状态机中没有这几个状态，暂时注掉这部分代码
+          //   else if (left_lb_car_.size() > 0 || status == ROAD_LB_LBORROW ||
+          //              status == ROAD_LB_LRETURN || status ==
+          //              ROAD_LB_LSUSPEND) {
+          //     right_lb_car_.clear();
 
-            if (right_lb_car_cnt_.find(tr.track_id) !=
-                right_lb_car_cnt_.end()) {
-              right_lb_car_cnt_[tr.track_id].pos = 0;
+          //     if (right_lb_car_cnt_.find(tr.track_id) !=
+          //         right_lb_car_cnt_.end()) {
+          //       right_lb_car_cnt_[tr.track_id].pos = 0;
+          //     }
+          //   }
+          // }
+
+          if (!l_enable) {
+            if (left_alc_car_.size() > 0 &&
+                front_tracks_r_ids.find(left_alc_car_[0]) !=
+                    front_tracks_r_ids.end()) {
+            } else {
+              left_alc_car_.clear();
+              left_lb_car_.clear();
+              premovel_ = false;
+
+              if (left_lb_car_cnt_.find(tr.track_id) !=
+                  left_lb_car_cnt_.end()) {
+                left_lb_car_cnt_[tr.track_id].pos = 0;
+              }
+
+              if (left_alc_car_cnt_.find(tr.track_id) !=
+                  left_alc_car_cnt_.end()) {
+                left_alc_car_cnt_[tr.track_id].pos = 0;
+              }
             }
           }
-        }
 
-        if (!l_enable) {
-          if (left_alc_car_.size() > 0 &&
-              front_tracks_r_ids.find(left_alc_car_[0]) !=
-                  front_tracks_r_ids.end()) {
-          } else {
-            left_alc_car_.clear();
-            left_lb_car_.clear();
-            premovel_ = false;
+          if (!r_enable) {
+            if (right_alc_car_.size() > 0 &&
+                front_tracks_l_ids.find(right_alc_car_[0]) !=
+                    front_tracks_l_ids.end()) {
+            } else {
+              right_lb_car_.clear();
+              right_alc_car_.clear();
+              premover_ = false;
 
-            if (left_lb_car_cnt_.find(tr.track_id) != left_lb_car_cnt_.end()) {
-              left_lb_car_cnt_[tr.track_id].pos = 0;
-            }
+              if (right_lb_car_cnt_.find(tr.track_id) !=
+                  right_lb_car_cnt_.end()) {
+                right_lb_car_cnt_[tr.track_id].pos = 0;
+              }
 
-            if (left_alc_car_cnt_.find(tr.track_id) !=
-                left_alc_car_cnt_.end()) {
-              left_alc_car_cnt_[tr.track_id].pos = 0;
-            }
-          }
-        }
-
-        if (!r_enable) {
-          if (right_alc_car_.size() > 0 &&
-              front_tracks_l_ids.find(right_alc_car_[0]) !=
-                  front_tracks_l_ids.end()) {
-          } else {
-            right_lb_car_.clear();
-            right_alc_car_.clear();
-            premover_ = false;
-
-            if (right_lb_car_cnt_.find(tr.track_id) !=
-                right_lb_car_cnt_.end()) {
-              right_lb_car_cnt_[tr.track_id].pos = 0;
-            }
-
-            if (right_alc_car_cnt_.find(tr.track_id) !=
-                right_alc_car_cnt_.end()) {
-              right_alc_car_cnt_[tr.track_id].pos = 0;
+              if (right_alc_car_cnt_.find(tr.track_id) !=
+                  right_alc_car_cnt_.end()) {
+                right_alc_car_cnt_[tr.track_id].pos = 0;
+              }
             }
           }
         }
       }
-    }
 
-    if (status == ROAD_LC_LCHANGE || status == INTER_GS_LC_LCHANGE) {
-      premovel_ = false;
-      premover_ = false;
-      if (!accident_ahead) {
-        right_alc_car_.clear();
-        left_lb_car_.clear();
-        right_lb_car_.clear();
-      }
-    } else if (status == ROAD_LC_RCHANGE || status == INTER_GS_LC_RCHANGE) {
-      premovel_ = false;
-      premover_ = false;
-      if (!accident_ahead) {
-        left_alc_car_.clear();
-        left_lb_car_.clear();
-        right_lb_car_.clear();
-      }
-    }
-
-    if (left_alc_car_.size() > 0 &&
-        (front_tracks_ids.find(left_alc_car_[0]) == front_tracks_ids.end() ||
-         front_tracks_c_ids.find(left_alc_car_[0]) ==
-             front_tracks_c_ids.end()) &&
-        status != ROAD_LC_LCHANGE && status != INTER_GS_LC_LCHANGE &&
-        status != INTER_TL_LC_LCHANGE && status != INTER_TR_LC_LCHANGE) {
-      if (status == ROAD_NONE || status == INTER_GS_NONE ||
-          status == INTER_TL_NONE || status == INTER_TR_NONE) {
-        left_alc_car_.clear();
+      if (LCHANGE) {
         premovel_ = false;
         premover_ = false;
-      } else {
-        if (olane != nullptr &&
-            olane->get_virtual_id() == clane->get_virtual_id()) {
+        if (!accident_ahead) {
+          right_alc_car_.clear();
+          left_lb_car_.clear();
+          right_lb_car_.clear();
+        }
+      } else if (RCHANGE) {
+        premovel_ = false;
+        premover_ = false;
+        if (!accident_ahead) {
           left_alc_car_.clear();
-          premovel_ = false;
-          premover_ = false;
+          left_lb_car_.clear();
+          right_lb_car_.clear();
         }
       }
-    }
 
-    if (right_alc_car_.size() > 0 || status == ROAD_LC_RCHANGE) {
-      if (status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
-          status != INTER_TL_LC_RCHANGE && status != INTER_TR_LC_RCHANGE &&
-          (front_tracks_ids.find(right_alc_car_[0]) == front_tracks_ids.end() ||
-           front_tracks_c_ids.find(right_alc_car_[0]) ==
-               front_tracks_c_ids.end())) {
-        if (status == ROAD_NONE || status == INTER_GS_NONE ||
-            status == INTER_TL_NONE || status == INTER_TR_NONE) {
-          right_alc_car_.clear();
+      if (left_alc_car_.size() > 0 &&
+          (front_tracks_ids.find(left_alc_car_[0]) == front_tracks_ids.end() ||
+           front_tracks_c_ids.find(left_alc_car_[0]) ==
+               front_tracks_c_ids.end()) &&
+          !LCHANGE) {
+        if (status == kLaneKeeping) {
+          left_alc_car_.clear();
           premovel_ = false;
           premover_ = false;
         } else {
           if (olane != nullptr &&
               olane->get_virtual_id() == clane->get_virtual_id()) {
-            right_alc_car_.clear();
+            left_alc_car_.clear();
             premovel_ = false;
             premover_ = false;
           }
         }
       }
-    }
 
-    if (left_lb_car_.size() > 0) {
-      double lat_dist_l = 0.;
-      for (auto &tr : front_tracks) {
-        if (tr.track_id == left_lb_car_[0]) {
-          lat_dist_l = tr.d_max_cpath;
-          break;
-        }
-      }
-      if (front_tracks_ids.find(left_lb_car_[0]) == front_tracks_ids.end() ||
-          lat_dist_l > lane_width * 1.5 + car_width / 8 ||
-          lat_dist_l < -lane_width) {
-        left_lb_car_.clear();
-        premovel_ = false;
-        premover_ = false;
-      }
-    }
-
-    if (right_lb_car_.size() > 0) {
-      double lat_dist_r = 0.;
-      for (auto &tr : front_tracks) {
-        if (tr.track_id == right_lb_car_[0]) {
-          lat_dist_r = tr.d_min_cpath;
-          break;
-        }
-      }
-      if (front_tracks_ids.find(right_lb_car_[0]) == front_tracks_ids.end() ||
-          lat_dist_r < -(lane_width * 1.5 + car_width / 8) ||
-          lat_dist_r > lane_width) {
-        right_lb_car_.clear();
-        premovel_ = false;
-        premover_ = false;
-      }
-    }
-
-    auto iter = left_lb_car_cnt_.begin();
-
-    while (iter != left_lb_car_cnt_.end()) {
-      if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
-        iter = left_lb_car_cnt_.erase(iter);
-      } else {
-        iter++;
-      }
-    }
-
-    iter = right_lb_car_cnt_.begin();
-
-    while (iter != right_lb_car_cnt_.end()) {
-      if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
-        iter = right_lb_car_cnt_.erase(iter);
-      } else {
-        iter++;
-      }
-    }
-
-    iter = left_alc_car_cnt_.begin();
-
-    while (iter != left_alc_car_cnt_.end()) {
-      if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
-        iter = left_alc_car_cnt_.erase(iter);
-      } else {
-        iter++;
-      }
-    }
-
-    iter = right_alc_car_cnt_.begin();
-
-    while (iter != right_alc_car_cnt_.end()) {
-      if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
-        iter = right_alc_car_cnt_.erase(iter);
-      } else {
-        iter++;
-      }
-    }
-
-    if (lb_leadone_disable) {
-      neg_right_lb_car_ = true;
-      neg_left_lb_car_ = true;
-    }
-
-    if (is_on_highway) {
-      left_lb_car_.clear();
-      left_lb_car_cnt_.clear();
-      right_lb_car_.clear();
-      right_lb_car_cnt_.clear();
-    }
-
-    double v_target_final =
-        session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
-    double ego_minium_cruise_speed =
-        config_.minimum_ego_cruise_speed_for_active_lane_change;
-    if (v_target_final <= ego_minium_cruise_speed) {
-      left_alc_car_.clear();
-      left_alc_car_cnt_.clear();
-      right_alc_car_.clear();
-      right_alc_car_cnt_.clear();
-    }
-
-  } else {
-    left_lb_car_.clear();
-    left_lb_car_cnt_.clear();
-    neg_right_lb_car_ = true;
-    left_alc_car_.clear();
-    right_lb_car_.clear();
-    right_alc_car_.clear();
-    left_alc_car_cnt_.clear();
-    right_lb_car_cnt_.clear();
-    right_alc_car_cnt_.clear();
-    neg_right_alc_car_ = true;
-    premovel_ = false;
-    premover_ = false;
-  }
-  LOG_DEBUG(
-      "WRDEBUG left_alc_car_.size()[%d], left_lb_car_.size()[%d], "
-      "right_alc_car_.size()[%d], right_lb_car_.size()[%d]",
-      left_alc_car_.size(), left_lb_car_.size(), right_alc_car_.size(),
-      right_lb_car_.size());
-
-  if (upstream_enable_r || upstream_enable_l) {
-    if (!(upstream_enable_lb)) {
-      if (left_alc_car_.size() > 0) return true;
-      if (right_alc_car_.size() > 0) return true;
-      if (left_lb_car_.size() > 0) return true;
-      if (right_lb_car_.size() > 0) return true;
-    }
-    if (upstream_enable_l) {
-      if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
-        if (!upstream_enable_r) {
-          if (status != ROAD_LC_RCHANGE && status != INTER_GS_LC_RCHANGE &&
-              status != INTER_TL_LC_RCHANGE && status != INTER_TR_LC_RCHANGE) {
+      if (right_alc_car_.size() > 0 || RCHANGE) {
+        if (!RCHANGE && (front_tracks_ids.find(right_alc_car_[0]) ==
+                             front_tracks_ids.end() ||
+                         front_tracks_c_ids.find(right_alc_car_[0]) ==
+                             front_tracks_c_ids.end())) {
+          if (status == kLaneKeeping) {
             right_alc_car_.clear();
-            right_lb_car_.clear();
+            premovel_ = false;
+            premover_ = false;
+          } else {
+            if (olane != nullptr &&
+                olane->get_virtual_id() == clane->get_virtual_id()) {
+              right_alc_car_.clear();
+              premovel_ = false;
+              premover_ = false;
+            }
           }
-        } else {
-          return true;
         }
-      } else if (left_alc_car_.size() > 0 || left_lb_car_.size() > 0) {
-        return true;
       }
-      if (left_alc_car_.size() == 0 && left_lb_car_.size() == 0 &&
-          !(upstream_enable_lb)) {
-        for (auto &tr : front_tracks_c) {
-          if (tr.v_lead > 2.0)
-            break;  // assume front_tracks_c is in d_rel-ascending order
-          left_alc_car_.push_back(tr.track_id);
+
+      if (left_lb_car_.size() > 0) {
+        double lat_dist_l = 0.;
+        for (auto &tr : front_tracks) {
+          if (tr.track_id == left_lb_car_[0]) {
+            lat_dist_l = tr.d_max_cpath;
+            break;
+          }
         }
-        right_alc_car_.clear();
-        right_lb_car_.clear();
+        if (front_tracks_ids.find(left_lb_car_[0]) == front_tracks_ids.end() ||
+            lat_dist_l > lane_width * 1.5 + car_width / 8 ||
+            lat_dist_l < -lane_width) {
+          left_lb_car_.clear();
+          premovel_ = false;
+          premover_ = false;
+        }
+      }
+
+      if (right_lb_car_.size() > 0) {
+        double lat_dist_r = 0.;
+        for (auto &tr : front_tracks) {
+          if (tr.track_id == right_lb_car_[0]) {
+            lat_dist_r = tr.d_min_cpath;
+            break;
+          }
+        }
+        if (front_tracks_ids.find(right_lb_car_[0]) == front_tracks_ids.end() ||
+            lat_dist_r < -(lane_width * 1.5 + car_width / 8) ||
+            lat_dist_r > lane_width) {
+          right_lb_car_.clear();
+          premovel_ = false;
+          premover_ = false;
+        }
+      }
+
+      auto iter = left_lb_car_cnt_.begin();
+
+      while (iter != left_lb_car_cnt_.end()) {
+        if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
+          iter = left_lb_car_cnt_.erase(iter);
+        } else {
+          iter++;
+        }
+      }
+
+      iter = right_lb_car_cnt_.begin();
+
+      while (iter != right_lb_car_cnt_.end()) {
+        if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
+          iter = right_lb_car_cnt_.erase(iter);
+        } else {
+          iter++;
+        }
+      }
+
+      iter = left_alc_car_cnt_.begin();
+
+      while (iter != left_alc_car_cnt_.end()) {
+        if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
+          iter = left_alc_car_cnt_.erase(iter);
+        } else {
+          iter++;
+        }
+      }
+
+      iter = right_alc_car_cnt_.begin();
+
+      while (iter != right_alc_car_cnt_.end()) {
+        if (front_tracks_ids.find(iter->first) == front_tracks_ids.end()) {
+          iter = right_alc_car_cnt_.erase(iter);
+        } else {
+          iter++;
+        }
+      }
+
+      if (lb_leadone_disable) {
+        neg_right_lb_car_ = true;
+        neg_left_lb_car_ = true;
+      }
+
+      if (is_on_highway) {
         left_lb_car_.clear();
-        neg_left_alc_car_ = false;
-        neg_right_alc_car_ = false;
-        neg_left_lb_car_ = false;
-        neg_right_lb_car_ = false;
+        left_lb_car_cnt_.clear();
+        right_lb_car_.clear();
+        right_lb_car_cnt_.clear();
+      }
+
+      double v_target_final = session_->environmental_model()
+                                  .get_ego_state_manager()
+                                  ->ego_v_cruise();
+      double ego_minium_cruise_speed =
+          config_.minimum_ego_cruise_speed_for_active_lane_change;
+      if (v_target_final <= ego_minium_cruise_speed) {
+        left_alc_car_.clear();
+        left_alc_car_cnt_.clear();
+        right_alc_car_.clear();
+        right_alc_car_cnt_.clear();
       }
 
     } else {
-      if ((left_alc_car_.size() > 0 || left_lb_car_.size() > 0)) {
-        if (!upstream_enable_l) {
-          if (status != ROAD_LC_LCHANGE && status != INTER_GS_LC_LCHANGE &&
-              status != INTER_TL_LC_LCHANGE && status != INTER_TR_LC_LCHANGE) {
-            left_alc_car_.clear();
-            left_lb_car_.clear();
+      left_lb_car_.clear();
+      left_lb_car_cnt_.clear();
+      neg_right_lb_car_ = true;
+      left_alc_car_.clear();
+      right_lb_car_.clear();
+      right_alc_car_.clear();
+      left_alc_car_cnt_.clear();
+      right_lb_car_cnt_.clear();
+      right_alc_car_cnt_.clear();
+      neg_right_alc_car_ = true;
+      premovel_ = false;
+      premover_ = false;
+    }
+    LOG_DEBUG(
+        "WRDEBUG left_alc_car_.size()[%d], left_lb_car_.size()[%d], "
+        "right_alc_car_.size()[%d], right_lb_car_.size()[%d]",
+        left_alc_car_.size(), left_lb_car_.size(), right_alc_car_.size(),
+        right_lb_car_.size());
+
+    if (upstream_enable_r || upstream_enable_l) {
+      if (!(upstream_enable_lb)) {
+        if (left_alc_car_.size() > 0) return true;
+        if (right_alc_car_.size() > 0) return true;
+        if (left_lb_car_.size() > 0) return true;
+        if (right_lb_car_.size() > 0) return true;
+      }
+      if (upstream_enable_l) {
+        if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
+          if (!upstream_enable_r) {
+            if (!RCHANGE) {
+              right_alc_car_.clear();
+              right_lb_car_.clear();
+            }
+          } else {
+            return true;
           }
-        } else {
+        } else if (left_alc_car_.size() > 0 || left_lb_car_.size() > 0) {
           return true;
         }
-      } else if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
-        return true;
-      }
-      if (right_alc_car_.size() == 0 && right_lb_car_.size() == 0 &&
-          !(upstream_enable_lb)) {
-        for (auto &tr : front_tracks_c) {
-          if (tr.v_lead > 2.0) break;
-          right_alc_car_.push_back(tr.track_id);
+        if (left_alc_car_.size() == 0 && left_lb_car_.size() == 0 &&
+            !(upstream_enable_lb)) {
+          for (auto &tr : front_tracks_c) {
+            if (tr.v_lead > 2.0)
+              break;  // assume front_tracks_c is in d_rel-ascending order
+            left_alc_car_.push_back(tr.track_id);
+          }
+          right_alc_car_.clear();
+          right_lb_car_.clear();
+          left_lb_car_.clear();
+          neg_left_alc_car_ = false;
+          neg_right_alc_car_ = false;
+          neg_left_lb_car_ = false;
+          neg_right_lb_car_ = false;
         }
-        left_alc_car_.clear();
-        right_lb_car_.clear();
-        left_lb_car_.clear();
-        neg_left_alc_car_ = false;
-        neg_right_alc_car_ = false;
-        neg_left_lb_car_ = false;
-        neg_right_lb_car_ = false;
+
+      } else {
+        if ((left_alc_car_.size() > 0 || left_lb_car_.size() > 0)) {
+          if (!upstream_enable_l) {
+            if (!LCHANGE) {
+              left_alc_car_.clear();
+              left_lb_car_.clear();
+            }
+          } else {
+            return true;
+          }
+        } else if (right_alc_car_.size() > 0 || right_lb_car_.size() > 0) {
+          return true;
+        }
+        if (right_alc_car_.size() == 0 && right_lb_car_.size() == 0 &&
+            !(upstream_enable_lb)) {
+          for (auto &tr : front_tracks_c) {
+            if (tr.v_lead > 2.0) break;
+            right_alc_car_.push_back(tr.track_id);
+          }
+          left_alc_car_.clear();
+          right_lb_car_.clear();
+          left_lb_car_.clear();
+          neg_left_alc_car_ = false;
+          neg_right_alc_car_ = false;
+          neg_left_lb_car_ = false;
+          neg_right_lb_car_ = false;
+        }
       }
     }
+    return true;
   }
-  return true;
-}
 
-// void ObjectSelector::restore_context(const ObjectSelectorContext &context) {
-//   v_rel_l_ = context.v_rel_l;
-//   v_rel_r_ = context.v_rel_r;
-//   v_rel_f_ = context.v_rel_f;
-//   d_stop_l_ = context.d_stop_l;
-//   d_stop_r_ = context.d_stop_r;
-//   d_lb_car_l_ = context.d_lb_car_l;
-//   d_lb_car_r_ = context.d_lb_car_r;
-//   t_surpass_l_ = context.t_surpass_l;
-//   t_surpass_r_ = context.t_surpass_r;
-//   premove_dist_ = context.premove_dist;
+  // void ObjectSelector::restore_context(const ObjectSelectorContext &context)
+  // {
+  //   v_rel_l_ = context.v_rel_l;
+  //   v_rel_r_ = context.v_rel_r;
+  //   v_rel_f_ = context.v_rel_f;
+  //   d_stop_l_ = context.d_stop_l;
+  //   d_stop_r_ = context.d_stop_r;
+  //   d_lb_car_l_ = context.d_lb_car_l;
+  //   d_lb_car_r_ = context.d_lb_car_r;
+  //   t_surpass_l_ = context.t_surpass_l;
+  //   t_surpass_r_ = context.t_surpass_r;
+  //   premove_dist_ = context.premove_dist;
 
-//   premovel_ = context.premovel;
-//   premover_ = context.premover;
-//   left_is_faster_ = context.left_is_faster;
-//   right_is_faster_ = context.right_is_faster;
-//   left_is_faster_cnt_ = context.left_is_faster_cnt;
-//   right_is_faster_cnt_ = context.right_is_faster_cnt;
-//   premoved_id_ = context.premoved_id;
-//   neg_premoved_id_ = context.neg_premoved_id;
+  //   premovel_ = context.premovel;
+  //   premover_ = context.premover;
+  //   left_is_faster_ = context.left_is_faster;
+  //   right_is_faster_ = context.right_is_faster;
+  //   left_is_faster_cnt_ = context.left_is_faster_cnt;
+  //   right_is_faster_cnt_ = context.right_is_faster_cnt;
+  //   premoved_id_ = context.premoved_id;
+  //   neg_premoved_id_ = context.neg_premoved_id;
 
-//   l_accident_cnt_ = context.l_accident_cnt;
-//   r_accident_cnt_ = context.r_accident_cnt;
+  //   l_accident_cnt_ = context.l_accident_cnt;
+  //   r_accident_cnt_ = context.r_accident_cnt;
 
-//   left_lb_car_ = context.left_lb_car;
-//   left_alc_car_ = context.left_alc_car;
-//   right_lb_car_ = context.right_lb_car;
-//   right_alc_car_ = context.right_alc_car;
+  //   left_lb_car_ = context.left_lb_car;
+  //   left_alc_car_ = context.left_alc_car;
+  //   right_lb_car_ = context.right_lb_car;
+  //   right_alc_car_ = context.right_alc_car;
 
-//   left_lb_car_cnt_ = context.left_lb_car_cnt;
-//   left_alc_car_cnt_ = context.left_alc_car_cnt;
-//   right_lb_car_cnt_ = context.right_lb_car_cnt;
-//   right_alc_car_cnt_ = context.right_alc_car_cnt;
-// }
+  //   left_lb_car_cnt_ = context.left_lb_car_cnt;
+  //   left_alc_car_cnt_ = context.left_alc_car_cnt;
+  //   right_lb_car_cnt_ = context.right_lb_car_cnt;
+  //   right_alc_car_cnt_ = context.right_alc_car_cnt;
+  // }
 
-// void ObjectSelector::save_context(ObjectSelectorContext &context) const {
-//   context.v_rel_l = v_rel_l_;
-//   context.v_rel_r = v_rel_r_;
-//   context.v_rel_f = v_rel_f_;
-//   context.d_stop_l = d_stop_l_;
-//   context.d_stop_r = d_stop_r_;
-//   context.d_lb_car_l = d_lb_car_l_;
-//   context.d_lb_car_r = d_lb_car_r_;
-//   context.t_surpass_l = t_surpass_l_;
-//   context.t_surpass_r = t_surpass_r_;
-//   context.premove_dist = premove_dist_;
+  // void ObjectSelector::save_context(ObjectSelectorContext &context) const {
+  //   context.v_rel_l = v_rel_l_;
+  //   context.v_rel_r = v_rel_r_;
+  //   context.v_rel_f = v_rel_f_;
+  //   context.d_stop_l = d_stop_l_;
+  //   context.d_stop_r = d_stop_r_;
+  //   context.d_lb_car_l = d_lb_car_l_;
+  //   context.d_lb_car_r = d_lb_car_r_;
+  //   context.t_surpass_l = t_surpass_l_;
+  //   context.t_surpass_r = t_surpass_r_;
+  //   context.premove_dist = premove_dist_;
 
-//   context.premovel = premovel_;
-//   context.premover = premover_;
-//   context.left_is_faster = left_is_faster_;
-//   context.right_is_faster = right_is_faster_;
-//   context.left_is_faster_cnt = left_is_faster_cnt_;
-//   context.right_is_faster_cnt = right_is_faster_cnt_;
-//   context.premoved_id = premoved_id_;
-//   context.neg_premoved_id = neg_premoved_id_;
+  //   context.premovel = premovel_;
+  //   context.premover = premover_;
+  //   context.left_is_faster = left_is_faster_;
+  //   context.right_is_faster = right_is_faster_;
+  //   context.left_is_faster_cnt = left_is_faster_cnt_;
+  //   context.right_is_faster_cnt = right_is_faster_cnt_;
+  //   context.premoved_id = premoved_id_;
+  //   context.neg_premoved_id = neg_premoved_id_;
 
-//   context.l_accident_cnt = l_accident_cnt_;
-//   context.r_accident_cnt = r_accident_cnt_;
+  //   context.l_accident_cnt = l_accident_cnt_;
+  //   context.r_accident_cnt = r_accident_cnt_;
 
-//   context.left_lb_car = left_lb_car_;
-//   context.left_alc_car = left_alc_car_;
-//   context.right_lb_car = right_lb_car_;
-//   context.right_alc_car = right_alc_car_;
+  //   context.left_lb_car = left_lb_car_;
+  //   context.left_alc_car = left_alc_car_;
+  //   context.right_lb_car = right_lb_car_;
+  //   context.right_alc_car = right_alc_car_;
 
-//   context.left_lb_car_cnt = left_lb_car_cnt_;
-//   context.left_alc_car_cnt = left_alc_car_cnt_;
-//   context.right_lb_car_cnt = right_lb_car_cnt_;
-//   context.right_alc_car_cnt = right_alc_car_cnt_;
-// }
+  //   context.left_lb_car_cnt = left_lb_car_cnt_;
+  //   context.left_alc_car_cnt = left_alc_car_cnt_;
+  //   context.right_lb_car_cnt = right_lb_car_cnt_;
+  //   context.right_alc_car_cnt = right_alc_car_cnt_;
+  // }
 
+}  // namespace planning
 }  // namespace planning

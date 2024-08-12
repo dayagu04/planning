@@ -161,10 +161,11 @@ class CollisionDetector {
                              const pnc::geometry_lib::PathPoint &start_pose,
                              const pnc::geometry_lib::PathPoint &target_pose);
 
-  const ObsSlotType GetObsSlotType(
+  static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
       const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-      const bool is_left_side, const bool is_vertical_slot = true);
+      const double slot_length, const bool is_left_side,
+      const bool is_vertical_slot = true);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;

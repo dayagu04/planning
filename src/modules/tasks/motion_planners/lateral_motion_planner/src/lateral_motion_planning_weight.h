@@ -9,7 +9,14 @@
 namespace pnc {
 namespace lateral_planning {
 
-enum LateralMotionSceneEnum { LANE_KEEP = 0, AVOID, LANE_CHANGE, STATIC_AVOID };
+enum LateralMotionSceneEnum {
+  LANE_KEEP = 0,
+  AVOID,
+  LANE_CHANGE,
+  STATIC_AVOID,
+  SPLIT,
+  RAMP
+};
 
 class LateralMotionPlanningWeight {
  public:

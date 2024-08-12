@@ -15,6 +15,14 @@
 
 namespace planning {
 
+static uint64_t get_latency(double now, uint64_t input_time) {
+  constexpr double US_PER_MS = 1000.0;
+  if (input_time == 0) {
+    return 0;
+  }
+  return (now - input_time) / US_PER_MS;
+}
+
 void PlanningAdapter::Init() {
   std::cout << "The planning component init!!!" << std::endl;
   std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
@@ -51,12 +59,20 @@ void PlanningAdapter::Init() {
       std::make_unique<PlanningScheduler>(local_view_ptr_.get());
 }
 
-static uint64_t get_latency(double now, uint64_t input_time) {
-  constexpr double US_PER_MS = 1000.0;
-  if (input_time == 0) {
-    return 0;
+void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
+                                   bool fault_exist) {
+  iflyauto::FmInfo fmInfo{};
+  fmInfo.alarmId = alarmId;
+  fmInfo.alarmObj = alarmObj;
+  fmInfo.clss = 1;  // 告警类别，0：状态型，1：事件型
+  fmInfo.level = 2;  // 告警级别，0：提示，1：次要，2：重要，3：紧急
+  fmInfo.status = fault_exist ? 1 : 0;  // 告警状态，0：告警恢复，1：告警产生
+  fmInfo.time = IflyTime::Now_ms();
+  // fmInfo.desc; //告警描述，最长为64字节
+
+  if (fm_info_writer_) {
+    fm_info_writer_(fmInfo);
   }
-  return (now - input_time) / US_PER_MS;
 }
 
 void PlanningAdapter::Proc() {
@@ -343,30 +359,8 @@ void PlanningAdapter::Proc() {
     header.timestamp = output_time_us;
     iflyauto::strcpy_array(header.version, __version_str__);
     header.seq = frame_num_;
-    // TODO
-    // header->input_list_size =
-    // local_view_ptr_->fusion_objects_info.header.input_list_size; for (int i =
-    // 0; i < local_view_ptr_->fusion_objects_info.header.input_list_size; i++)
-    // {
-    //   header->input_list[i] =
-    //   local_view_ptr_->fusion_objects_info.header.input_list[i];
-    // }
-    // for (int i = ; i < local_view_ptr_->road_info.header.input_list_size;
-    // i++) {
-    //   header->input_list[header->input_list_size + i] =
-    //   local_view_ptr_->road_info.header.input_list[i];
-    // }
-    // for (int i = ; i <
-    // local_view_ptr_->localization_estimate.header.input_list_size; i++) {
-    //   header->input_list[header->input_list_size + i] =
-    //   local_view_ptr_->localization_estimate.header.input_list[i];
-    // }
-    // auto &planning_latency = header->mutable_input_list()->Add();
-    // planning_latency->set_input_type(
-    //     Common::InputHistoryTimestamp::
-    //         INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING);
-    // planning_latency->set_in_ts_us(start_time);
-    // planning_latency->set_out_ts_us(output_time_us);
+    UpdateInputListInfo(header);
+
     planning_writer_(planning_output_container);
   }
 
@@ -375,8 +369,93 @@ void PlanningAdapter::Proc() {
     iflyauto::strcpy_array(planning_hmi_info.header.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info_container);
   }
+
+  // Trigger: write fault info where error occured
+  if (planning_scheduler_->FaultCode() >= 39000 &&
+      planning_scheduler_->FaultCode() <= 39999) {
+    ReportFmIfno(planning_scheduler_->FaultCode(), 1, true);
+  }
+
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
+}
+
+void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
+  int input_list_count = 0;
+  // 更新input_list
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->prediction_result.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATIC_FUSION;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->road_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->localization.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->fusion_objects_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_VIHECLE_SERVICES;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->vehicle_service_output_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CONTROL;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->control_output.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->hmi_mcu_inner_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->function_state_machine_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_WAVE;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->uss_wave_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_PERCEPTION;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->uss_percept_info.header.seq;
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->static_map_info.header().seq();
+  input_list_count += 1;
+
+  header.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR;
+  header.input_list[input_list_count].seq =
+      local_view_ptr_->sd_map_info.header().seq();
+  input_list_count += 1;
+
+  header.input_list_size = input_list_count;
 }
 
 }  // namespace planning

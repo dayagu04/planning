@@ -242,7 +242,7 @@ class StGraphGenerator {
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};
   // parabola slope
   const std::vector<double> _P_SLOPE_BP{0., 40.0};
-  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
+  const std::vector<double> _P_SLOPE_V{1.0, 0.2};
   // do not consider a_lead at 0m/s, fully consider it at 5m/s
   const std::vector<double> _A_LEAD_LOW_SPEED_BP{0.0, 5.0};
   const std::vector<double> _A_LEAD_LOW_SPEED_V{0.0, 1.0};

@@ -176,7 +176,7 @@ bool PlanningComponent::Init() {
 
   auto uss_wave_info_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
-          "/iflytek/uss/wave_info",
+          "/iflytek/uss/usswave_info",
           [this](const std::shared_ptr<iflyauto::StructContainer>
                      &uss_wave_info_msg) {
             const auto &uss_wave_info_struct =

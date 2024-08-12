@@ -13,11 +13,14 @@
 #include "Eigen/Geometry"
 #include "math_lib.h"
 
+double kDeg2Rad = M_PI / 180;
+double kRad2Deg = 180 / M_PI;
+
 namespace pnc {
 namespace geometry_lib {
 
 static const double kRadiusCalcTolerance = 1e-6;
-static const double kSameHeadingEps = 0.5 / 57.3;
+static const double kSameHeadingEps = 0.5 * kDeg2Rad;
 
 const double NormalizeAngle(const double angle) {
   double a = std::fmod(angle + M_PI, 2.0 * M_PI);
@@ -919,7 +922,7 @@ const bool OneStepArcTargetLine(
     const bool res = OneStepArcTargetLine(tmp_arc, start_pos, start_heading,
                                           is_left, target_line);
     // std::cout << "No." << i << " calc res: " << res << std::endl;
-    // std::cout << "tmp_arc.headingB =" << tmp_arc.headingB * 57.3 <<
+    // std::cout << "tmp_arc.headingB =" << tmp_arc.headingB * kRad2Deg <<
     // std::endl;
     if (res &&
         std::fabs(NormalizeAngle(tmp_arc.headingB - target_line.heading)) <=
@@ -1064,9 +1067,9 @@ void OneStepArcTargetHeading(Arc &arc, const Eigen::Vector2d &start_pos,
   arc.is_ignored = false;
 
   // std::cout << "start_pos: " << arc.pA.transpose() << std::endl;
-  // std::cout << "start_heading: " << arc.headingA * 57.3 << std::endl;
+  // std::cout << "start_heading: " << arc.headingA * kRad2Deg << std::endl;
   // std::cout << "end_pos: " << arc.pB.transpose() << std::endl;
-  // std::cout << "end_heading: " << arc.headingB * 57.3 << std::endl;
+  // std::cout << "end_heading: " << arc.headingB * kRad2Deg << std::endl;
   // std::cout << "arc.length: " << arc.length << std::endl;
   // std::cout << "is_anti_clockwise: " << arc.is_anti_clockwise << std::endl;
 }
@@ -1509,8 +1512,8 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     return LogErr(__func__, 5);
   }
   if (!mathlib::IsDoubleEqual(arc2.headingB, line.heading)) {
-    std::cout << "arc2.headingB = " << arc2.headingB * 57.3
-              << "  line.heading = " << line.heading * 57.3 << std::endl;
+    std::cout << "arc2.headingB = " << arc2.headingB * kRad2Deg
+              << "  line.heading = " << line.heading * kRad2Deg << std::endl;
     return LogErr(__func__, 6);
   }
   return true;
@@ -2146,7 +2149,7 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
     std::cout << "pos = " << pos.transpose()
               << "  line.pA = " << line.pA.transpose()
               << "  line.pB = " << line.pB.transpose()
-              << "  line.heading = " << line.heading * 57.3 << std::endl;
+              << "  line.heading = " << line.heading * kRad2Deg << std::endl;
     return LogErr(__func__, 1);
   }
   return true;
@@ -2201,7 +2204,7 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
     return LogErr(__func__, 1);
   }
   if (!mathlib::IsDoubleEqual(arc.headingB, line.heading)) {
-    std::cout << "arc.headingB = " << arc.headingB * 57.3
+    std::cout << "arc.headingB = " << arc.headingB * kRad2Deg
               << "  line.heading = " << line.heading << std::endl;
     return LogErr(__func__, 2);
   }
@@ -2253,8 +2256,8 @@ const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t &current_seg_gear,
   }
 
   if (!mathlib::IsDoubleEqual(arc.headingB, target_heading)) {
-    std::cout << "arc.headingB =" << arc.headingB * 57.3 << " , "
-              << "target_heading =" << target_heading * 57.3 << std::endl;
+    std::cout << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
+              << "target_heading =" << target_heading * kRad2Deg << std::endl;
     return LogErr(__func__, 2);
   }
 
@@ -2407,24 +2410,24 @@ std::vector<Eigen::Vector2d> LinSpace(const Eigen::Vector2d &start_pos,
 
 void PrintPose(const pnc::geometry_lib::PathPoint &pose) {
   std::cout << " " << pose.pos.x() << ", " << pose.pos.y()
-            << ", heading(deg): " << pose.heading * 57.3 << std::endl;
+            << ", heading(deg): " << pose.heading * kRad2Deg << std::endl;
 }
 
 void PrintPose(const std::string &str,
                const pnc::geometry_lib::PathPoint &pose) {
   std::cout << str << "= " << pose.pos.x() << ", " << pose.pos.y()
-            << ", heading(deg): " << pose.heading * 57.3 << std::endl;
+            << ", heading(deg): " << pose.heading * kRad2Deg << std::endl;
 }
 
 void PrintPose(const Eigen::Vector2d &pos, const double heading) {
   std::cout << " " << pos.x() << ", " << pos.y()
-            << ", heading(deg): " << heading * 57.3 << std::endl;
+            << ", heading(deg): " << heading * kRad2Deg << std::endl;
 }
 
 void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
                const double heading) {
   std::cout << str << "= " << pos.x() << ", " << pos.y()
-            << ", heading(deg): " << heading * 57.3 << std::endl;
+            << ", heading(deg): " << heading * kRad2Deg << std::endl;
 }
 
 void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {
@@ -2437,17 +2440,17 @@ void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {
 
   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
     std::cout << "start_pos: " << seg.GetLineSeg().pA.transpose() << std::endl;
-    std::cout << "start_heading deg: " << seg.GetLineSeg().heading * 57.3
+    std::cout << "start_heading deg: " << seg.GetLineSeg().heading * kRad2Deg
               << std::endl;
     std::cout << "end_pos: " << seg.GetLineSeg().pB.transpose() << std::endl;
-    std::cout << "end_heading deg: " << seg.GetLineSeg().heading * 57.3
+    std::cout << "end_heading deg: " << seg.GetLineSeg().heading * kRad2Deg
               << std::endl;
   } else {
     std::cout << "start_pos: " << seg.GetArcSeg().pA.transpose() << std::endl;
-    std::cout << "start_heading deg: " << seg.GetArcSeg().headingA * 57.3
+    std::cout << "start_heading deg: " << seg.GetArcSeg().headingA * kRad2Deg
               << std::endl;
     std::cout << "end_pos: " << seg.GetArcSeg().pB.transpose() << std::endl;
-    std::cout << "end_heading deg: " << seg.GetArcSeg().headingB * 57.3
+    std::cout << "end_heading deg: " << seg.GetArcSeg().headingB * kRad2Deg
               << std::endl;
   }
 }
@@ -2472,7 +2475,7 @@ void PrintSegmentsVecInfo(
                 << std::endl;
 
       std::cout << "start_pos: " << line_seg.pA.transpose() << std::endl;
-      std::cout << "start_heading deg: " << line_seg.heading * 57.3
+      std::cout << "start_heading deg: " << line_seg.heading * kRad2Deg
                 << std::endl;
       std::cout << "end_pos: " << line_seg.pB.transpose() << std::endl;
     } else {
@@ -2489,10 +2492,11 @@ void PrintSegmentsVecInfo(
                 << std::endl;
 
       std::cout << "start_pos: " << arc_seg.pA.transpose() << std::endl;
-      std::cout << "start_heading deg: " << arc_seg.headingA * 57.3
+      std::cout << "start_heading deg: " << arc_seg.headingA * kRad2Deg
                 << std::endl;
       std::cout << "end_pos: " << arc_seg.pB.transpose() << std::endl;
-      std::cout << "end_heading deg: " << arc_seg.headingB * 57.3 << std::endl;
+      std::cout << "end_heading deg: " << arc_seg.headingB * kRad2Deg
+                << std::endl;
       std::cout << "center: " << arc_seg.circle_info.center.transpose()
                 << "radius = " << arc_seg.circle_info.radius << std::endl;
     }

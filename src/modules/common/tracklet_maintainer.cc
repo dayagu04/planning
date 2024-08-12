@@ -278,6 +278,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->is_static =
         (p.motion_pattern_current == iflyauto::OBJECT_MOTION_TYPE_STATIC &&
          p.speed < 4);
+    origin->can_not_avoid = false;
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
@@ -808,7 +809,7 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
     }
   }
 
-  double s, l, v_s, v_l, theta;
+  double s = 0, l = 0, v_s = 0, v_l = 0, theta = 0;
   Point2D frenet_point;
   if (frenet_coord_->XYToSL(Point2D(item.center_x, item.center_y),
                             frenet_point)) {
@@ -830,6 +831,7 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   item.l0 = l_ego_;
   item.c0 = l_ego_;
   item.v_lat = (l > 0) ? v_l : -v_l;
+  item.vy_rel = v_l;
   // std::cout << "object track_id: " << item.track_id
   //           << " ego l_ego_ : " << l_ego_ << " ego vl_: " << vl_ego_
   //           << " item.s: " << item.s << " item.l: " << item.l
@@ -840,9 +842,7 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
   if (hdmap_valid_) {
     item.a_lead = item.a * std::cos(item.theta - theta);
     item.a_lead_k = item.a_lead;
-    item.v_lat = (l > 0) ? v_l : -v_l;
     item.v_lat_self = item.v_lat;
-    item.vy_rel = v_l;
   }
 
   std::array<int, 2> sgn_list{1, -1};

@@ -320,6 +320,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         tp = left_line.type_segments[0].type
         if tp == 0 or tp == 1 or tp == 3 or tp == 4:
           lane_info_l['type'] = ['dashed']
+        elif tp == 9:
+          lane_info_l['type'] = ['dashdot']
         else:
           lane_info_l['type'] = ['solid']
       except:
@@ -368,6 +370,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         tp = right_line.type_segments[0].type
         if tp == 0 or tp == 1 or tp == 3 or tp == 4:
           lane_info_r['type'] = ['dashed']
+        elif tp == 9:
+          lane_info_r['type'] = ['dashdot']
         else:
           lane_info_r['type'] = ['solid']
       except:
@@ -546,9 +550,12 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
-      tp = lane.marking_segments[0].marking
-      if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-        lane_info['type'] = ['dashed']
+      if( lane.marking_segments_size != 0 ):
+        tp = lane.marking_segments[0].marking
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info['type'] = ['dashed']
+        else:
+          lane_info['type'] = ['solid']
       else:
         lane_info['type'] = ['solid']
 
@@ -703,7 +710,7 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
           + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4)))
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4)))
+          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+ str(obstacle_list[i].common_info.type))
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
     obs_info_all[source]['obstacles_y'].append(obs_y)

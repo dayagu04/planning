@@ -1,7 +1,9 @@
 #include "environmental_model_manager.h"
 
 #include <Eigen/Dense>
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <string>
@@ -12,6 +14,7 @@
 #include "Eigen/src/Core/util/Constants.h"
 #include "agent/agent_manager.h"
 #include "basic_types.pb.h"
+#include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -571,7 +574,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   auto vehicle_light = vehicle_status.mutable_vehicle_light();
   // 转向拨杆状态
   if (vehicle_service_output_info.turn_switch_state_available) {
-    //紧急灯
+    // 紧急灯
     if (vehicle_service_output_info.turn_switch_state == NONE &&
         vehicle_service_output_info.hazard_light_state) {
       if (vehicle_service_output_info.hazard_light_state_available) {
@@ -580,11 +583,11 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
             ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
       }
     } else {
-      history_lc_source_[0] = history_lc_source_[1];  //上上帧
+      history_lc_source_[0] = history_lc_source_[1];  // 上上帧
       history_lc_source_[1] = session_->planning_context()
                                   .lane_change_decider_output()
-                                  .lc_request_source;  //上一帧
-      //根据传入的拨杆信号计算转向
+                                  .lc_request_source;  // 上一帧
+      // 根据传入的拨杆信号计算转向
       RunBlinkState(vehicle_service_output_info);
       vehicle_light->mutable_vehicle_light_data()
           ->mutable_turn_signal()
@@ -1122,7 +1125,8 @@ bool EnvironmentalModelManager::InputReady(double current_time,
   static const double kMapCheckTimeDiff = 1000;
   static const double kpredictionCheckTimeDiff = 50;
   static const double kfusionlaneCheckTimeDiff = 50;
-
+  // set default value
+  setFaultcode(666);
   static const std::vector<FeedType> input_longtime_with_hdmap{
       FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
       FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
@@ -1172,31 +1176,43 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     if (last_feed_time_[i] > 0.0) {
       LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,
                 current_time - last_feed_time_[i], "\n");
-      if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
-          (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
-        if (feed_type == FEED_MAP_INFO &&
-            current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
-            current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
-          continue;
-        if (feed_type == FEED_FUSION_LANES_INFO &&
-            current_time - last_feed_time_[i] <=
-                kfusionlaneCheckTimeDiff * 1.2 &&
-            current_time - last_feed_time_[i] >= kfusionlaneCheckTimeDiff * 0.8)
-          continue;
-        if (feed_type == FEED_PREDICTION_INFO &&
-            current_time - last_feed_time_[i] <=
-                kpredictionCheckTimeDiff * 1.2 &&
-            current_time - last_feed_time_[i] >= kpredictionCheckTimeDiff * 0.8)
-          continue;
-        LOG_ERROR("(%s)feed delay: %d, %s", __FUNCTION__, i, feed_type_str,
+      if (current_time - last_feed_time_[i] > 200) {
+        LOG_ERROR("(%s)input_delay: %d, %s", __FUNCTION__, i, feed_type_str,
                   "\n");
         error_msg += std::string(feed_type_str) + "; ";
+        setFaultcode(39001);
         res = false;
+      } else {
+        if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
+            (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
+          if (feed_type == FEED_MAP_INFO &&
+              current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
+              current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
+            continue;
+          if (feed_type == FEED_FUSION_LANES_INFO &&
+              current_time - last_feed_time_[i] <=
+                  kfusionlaneCheckTimeDiff * 1.2 &&
+              current_time - last_feed_time_[i] >=
+                  kfusionlaneCheckTimeDiff * 0.8)
+            continue;
+          if (feed_type == FEED_PREDICTION_INFO &&
+              current_time - last_feed_time_[i] <=
+                  kpredictionCheckTimeDiff * 1.2 &&
+              current_time - last_feed_time_[i] >=
+                  kpredictionCheckTimeDiff * 0.8)
+            continue;
+          LOG_ERROR("(%s)input_rate_error: %d, %s", __FUNCTION__, i,
+                    feed_type_str, "\n");
+          error_msg += std::string(feed_type_str) + "; ";
+          setFaultcode(39000);
+          res = false;
+        }
       }
     } else {
       // LOG_ERROR("(%s)no feed: %d, %s", __FUNCTION__, i, feed_type_str, "\n");
-      LOG_ERROR("no feed: '%s'\n", feed_type_str);
+      LOG_ERROR("lost frame: '%s'\n", feed_type_str);
       error_msg += std::string(feed_type_str) + "; ";
+      setFaultcode(39002);
       res = false;
     }
   }
@@ -1205,12 +1221,21 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 void EnvironmentalModelManager::RunBlinkState(
     const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info) {
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
-  const auto &lc_state =
+  const auto &state =
       session_->planning_context().lane_change_decider_output().curr_state;
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
-        //如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
+        // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
         if (history_lc_source_[0] == INT_REQUEST &&
             history_lc_source_[1] != INT_REQUEST) {
           current_turn_signal_ = common::TurnSignalType::NONE;
@@ -1223,10 +1248,10 @@ void EnvironmentalModelManager::RunBlinkState(
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
-          lc_state == ROAD_LC_RCHANGE) {
-        //  表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
+          is_LC_RCHANGE) {
+        // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (lc_state == ROAD_LC_RCHANGE) {
+      } else if (is_LC_RCHANGE) {
         //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
@@ -1234,26 +1259,26 @@ void EnvironmentalModelManager::RunBlinkState(
       }
       break;
     case RIGHT_FIRMLY_TOUCH:
-      //与上同理
+      // 与上同理
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
-          lc_state == ROAD_LC_LCHANGE) {
+          is_LC_LCHANGE) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (lc_state == ROAD_LC_LCHANGE) {
+      } else if (is_LC_LCHANGE) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::RIGHT;
       }
       break;
     case LEFT_LIGHTLY_TOUCH:
-      //只有在向右变道的过程中才会起作用
+      // 只有在向右变道的过程中才会起作用
       if (last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       }
       break;
     case RIGHT_LIGHTLY_TOUCH:
-      //只有在向左变道的过程中才会起作用
+      // 只有在向左变道的过程中才会起作用
       if (last_frame_turn_sinagl_ == common::TurnSignalType::LEFT) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       }
@@ -1263,6 +1288,16 @@ void EnvironmentalModelManager::RunBlinkState(
       break;
   }
 }
+
+void EnvironmentalModelManager::setFaultcode(uint64_t faultcode) {
+  if (faultcode >= 39000 && faultcode <= 39999) {
+    faultcode_ = std::max(faultcode_, faultcode);
+  } else {
+    faultcode_ = 666;
+  }
+}
+
+uint64_t EnvironmentalModelManager::getFaultcode() { return faultcode_; }
 
 bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
   if (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||

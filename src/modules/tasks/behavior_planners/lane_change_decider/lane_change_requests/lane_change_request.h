@@ -37,9 +37,10 @@ class LaneChangeRequest {
   double tstart() const { return tstart_; }
   double tfinish() const { return tfinish_; }
   bool compute_lc_valid_info(RequestType direction);
-  bool IsDashEnoughForRepeatSegments(
-    const RequestType lc_request,
-    const std::shared_ptr<VirtualLane> current_lane) const;
+  bool IsDashEnoughForRepeatSegments(const RequestType lc_request,
+                                     const int origin_lane_id) const;
+  iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
+      const RequestType lc_request, const int origin_lane_id);
 
  protected:
   TrackInfo lc_invalid_track_;

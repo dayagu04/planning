@@ -18,7 +18,7 @@ constexpr double check_time = 1.6;
 constexpr double kMinFarTimeGap = 1.8;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 5.5;
+constexpr double kSpeedBuffer = 10.0;
 constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
 constexpr double kFarDistFollowTimeGap = 1.8;
 constexpr double kNearDistFollowTimeGap = 1.2;
@@ -34,9 +34,9 @@ constexpr double kAccMax = 1.5;
 constexpr double kJerkMin = -1.0;
 constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
-constexpr double kOverSpeed = 1.2;
-constexpr double kDefaultSBoundUpper = 30;
 constexpr double kLowAgentSpeed = 20.0 / 3.6;
+// TODO: 后续取参考线的长度为s bound upper
+constexpr double kSUpperBound = 200.0;
 }  // namespace
 namespace planning {
 
@@ -132,6 +132,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   const auto &planning_init_point = ego_state_mgr->planning_init_point();
 
   const auto &lane_status = session_->mutable_planning_context()->lane_status();
+  const auto *agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
@@ -291,6 +293,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_is_accident_car(track.is_accident_car);
     one_obs->set_is_lead(track.is_lead);
     one_obs->set_is_temp_lead(track.is_temp_lead);
+    one_obs->set_is_new_cutin(
+        agent_manager->GetAgent(track.track_id)->is_cutin());
     one_obs->set_cutinp(track.cutinp);
     one_obs->set_y_min(track.y_min);
     one_obs->set_y_x0(track.y_x0);
@@ -516,8 +520,6 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     const std::pair<double, double> &a_bounds,
     const std::pair<double, double> &j_bounds) {
   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
-  double s_upper_bound =
-      std::fmax(v_cruise * kOverSpeed * 5.0, kDefaultSBoundUpper);
   lon_behav_output_.t_list.resize(config_.lon_num_step + 1);
   lon_behav_output_.s_refs.resize(config_.lon_num_step + 1);
   lon_behav_output_.ds_refs.resize(config_.lon_num_step + 1);
@@ -528,11 +530,11 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   lon_behav_output_.lon_bound_a.resize(config_.lon_num_step + 1);
   lon_behav_output_.lon_bound_jerk.resize(config_.lon_num_step + 1);
   WeightedBounds s_hard_bounds;
-  s_hard_bounds.emplace_back(WeightedBound{0.0 - 10.0, s_upper_bound, -1.0});
+  s_hard_bounds.emplace_back(WeightedBound{0.0 - 10.0, kSUpperBound, -1.0});
   WeightedBounds s_soft_bounds;
-  s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, s_upper_bound, -1.0});
+  s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, kSUpperBound, -1.0});
   LonLeadBounds s_lead_bounds;
-  s_lead_bounds.emplace_back(LonLeadBound{s_upper_bound, 0.0, 0.0, -1});
+  s_lead_bounds.emplace_back(LonLeadBound{kSUpperBound, 0.0, 0.0, -1});
   Bound lon_v_bound{-0.1, std::min(v_cruise, config_.velocity_upper_bound)};
   Bound lon_a_bound{a_bounds.first, a_bounds.second};
   Bound lon_j_bound{j_bounds.first, j_bounds.second};
@@ -799,9 +801,9 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
     return false;
   }
 
-  if (check_st.vel > kLowAgentSpeed) {
-    return false;
-  }
+  // if (check_st.vel > kLowAgentSpeed) {
+  //   return false;
+  // }
 
   const double far_preview_dist = kFarPreviewTime * lon_init_state_[1];
   const double near_preview_dist = kNearPreviewTime * lon_init_state_[1];

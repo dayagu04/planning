@@ -579,11 +579,12 @@ class LoadRosbag:
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost",\
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
+                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                         'new_cutin_id', 'new_cutin_id_count', \
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
@@ -591,9 +592,9 @@ class LoadRosbag:
                          'gap_v_limit_lc', \
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                         'hdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
+                         'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
                          "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","is_solid_left_boundary","is_solid_right_boundary", \
-                         "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "left_dash_line_len", "right_dash_line_len", \
+                         "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                          "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
                          "front_node_id", "rear_node_id", \

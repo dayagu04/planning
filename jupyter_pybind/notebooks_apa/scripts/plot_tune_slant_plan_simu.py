@@ -130,7 +130,7 @@ slant_planning_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=-1.2, step=0.01)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=-0.83, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=-0.6, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=0.2)
 
@@ -140,11 +140,11 @@ class LocalViewSlider:
 
     self.is_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
-    self.slot_inside_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs",min=0.66, max=9.9, value=8.8, step=0.25)
+    self.slot_inside_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs",min=0.66, max=9.9, value=1.91, step=0.25)
 
-    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.8, step=0.05)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.3, step=0.05)
     self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
-    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.8, step=0.5)
+    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.5, step=0.5)
     self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=6.6, step=0.1)
 

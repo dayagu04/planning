@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstdint>
 
 #include "adas_function/adaptive_cruise_control.h"
 #include "adas_function/ihc_function/intelligent_headlight_control.h"
@@ -208,6 +209,9 @@ bool PlanningScheduler::RunOnce(
   return planning_success;
 }
 
+uint64_t PlanningScheduler::FaultCode() {
+  return environmental_model_manager_.getFaultcode();
+}
 void PlanningScheduler::FillPlanningTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 获取LDP&&ELK功能干预状态

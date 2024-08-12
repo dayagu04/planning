@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "ehr_sdmap.pb.h"
+#include "fm_info_c.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "planning_scheduler.h"
@@ -168,7 +169,17 @@ class PlanningAdapter {
     planning_hmi_info_writer_ = planning_hmi_info_writer;
   }
 
+  void RegisterFmInfoWriter(
+      const std::function<void(const iflyauto::FmInfo&)>& fm_info_writer) {
+    fm_info_writer_ = fm_info_writer;
+  }
+
  private:
+  void ReportFmIfno(uint64 alarmId, uint64 alarmObj, bool fault_exist);
+
+ private:
+  void UpdateInputListInfo(iflyauto::Header& header);
+
   std::mutex msg_mutex_;
 
   iflyauto::PredictionResult prediction_result_msg_;
@@ -245,6 +256,7 @@ class PlanningAdapter {
       planning_debug_writer_ = nullptr;
   std::function<void(const std::shared_ptr<iflyauto::StructContainer>&)>
       planning_hmi_info_writer_ = nullptr;
+  std::function<void(const iflyauto::FmInfo&)> fm_info_writer_ = nullptr;
 
   std::shared_ptr<LocalView> local_view_ptr_;
 

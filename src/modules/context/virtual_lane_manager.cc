@@ -517,6 +517,28 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 3.根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
 
+#ifdef X86
+  int zero_order_count = 0;
+  for (const auto& lane : relative_id_lanes_) {
+    if (lane->get_order_id() == 0) {
+      zero_order_count += 1;
+    }
+  }
+  if (zero_order_count > 1) {
+    auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
+                                   std::shared_ptr<VirtualLane> lane2) {
+      return lane1->get_relative_id() < lane2->get_relative_id();
+    };
+    std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
+              compare_relative_id);
+    int count = 0;
+    for (auto& lane : relative_id_lanes_) {
+      lane->set_order_id(count);
+      count++;
+    }
+  }
+#endif
+
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
   CalculateVirtualLaneAttributes();
 
@@ -529,9 +551,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
 
-  //6.生成导航变道的任务
+  // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
-  if (is_ego_on_expressway_ && distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
+  if (is_ego_on_expressway_ &&
+      distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
     GenerateLaneChangeTasksForNOA();
   } else {
     ResetForRampInfo();
@@ -614,9 +637,10 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   double target_lane_maping_diff_total = std::numeric_limits<double>::max();
   double origin_lane_maping_diff_total = std::numeric_limits<double>::max();
   double current_relative_id_lane_mapping_cost = 10.0;
-
-  if ((lc_request == LEFT_CHANGE || lc_request == RIGHT_CHANGE) &&
-      (lc_state != ROAD_NONE)) {
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
+  if (is_LC_CHANGE && (lc_state != kLaneKeeping)) {
     for (const auto& relative_id_lane : relative_id_lanes_) {
       if (relative_id_lane != nullptr) {
         current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
@@ -1473,7 +1497,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   const auto& sd_map = session_->environmental_model().get_sd_map();
   double nearest_s = 0;
   double nearest_l = 0;
-  const double max_search_length = 7000.0;//搜索7km范围内得地图信息
+  const double max_search_length = 7000.0;  //搜索7km范围内得地图信息
   const double search_distance = 50.0;
   const double max_heading_diff = PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
@@ -1492,7 +1516,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   if (!current_segment) {
     ResetForRampInfo();
     return;
-  } 
+  }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
   if (current_segment->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY) {
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
@@ -1502,7 +1526,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     is_ego_on_expressway_ = true;
   }
   //计算ramp信息
-  const auto& ramp_info = sd_map.GetRampInfo(current_segment->id(),nearest_s,max_search_length);
+  const auto& ramp_info =
+      sd_map.GetRampInfo(current_segment->id(), nearest_s, max_search_length);
   if (ramp_info.second > 0) {
     dis_to_ramp_ = ramp_info.second;
     const auto previous_seg =
@@ -1519,8 +1544,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     ramp_direction_ = RAMP_NONE;
   }
   //计算merge信息
-  //TODO(fengwang31):是否需要考虑merge的方向
-  const auto& merge_info = sd_map.GetMergeInfoList(current_segment->id(),nearest_s,max_search_length);
+  // TODO(fengwang31):是否需要考虑merge的方向
+  const auto& merge_info = sd_map.GetMergeInfoList(
+      current_segment->id(), nearest_s, max_search_length);
   if (!merge_info.empty()) {
     const auto seg_of_first_road_merge = merge_info.begin()->first;
     const auto next_seg_of_first_road_merge =
@@ -1534,9 +1560,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
 
     if (next_seg_of_first_road_merge != nullptr) {
       if (seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP &&
-        next_seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP) {
-      is_continuous_ramp_ = true;
-    }
+          next_seg_of_first_road_merge->usage() == SdMapSwtx::RoadUsage::RAMP) {
+        is_continuous_ramp_ = true;
+      }
     }
   } else {
     distance_to_first_road_merge_ = NL_NMAX;
@@ -1547,7 +1573,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
   is_on_ramp_ = current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
   //计算split信息
-  const auto& split_info = sd_map.GetSplitInfoList(current_segment->id(),nearest_s,max_search_length);
+  const auto& split_info = sd_map.GetSplitInfoList(
+      current_segment->id(), nearest_s, max_search_length);
   if (!split_info.empty()) {
     const auto split_segment = split_info.begin()->first;
     if (split_info.begin()->second > 0 && split_segment) {
@@ -1568,13 +1595,14 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   double sum_dis_to_last_merge_point = nearest_s;
   sum_dis_to_last_merge_point_ = NL_NMAX;
   if (!is_on_ramp_) {
-    while(last_merge_seg->in_link().size() == 1 ) {
+    while (last_merge_seg->in_link().size() == 1) {
       last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
       //判断是否为nullptr
       if (!last_merge_seg) {
         break;
       } else {
-        sum_dis_to_last_merge_point = sum_dis_to_last_merge_point + last_merge_seg->dis();
+        sum_dis_to_last_merge_point =
+            sum_dis_to_last_merge_point + last_merge_seg->dis();
       }
     }
     if (sum_dis_to_last_merge_point > dis_threshold_to_last_merge_point_) {
@@ -1586,7 +1614,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
 
   //计算到路线终点的距离
   double dis_to_end = NL_NMAX;
-  int result = sd_map.GetDistanceToRouteEnd(current_segment->id(),nearest_s, dis_to_end);
+  int result = sd_map.GetDistanceToRouteEnd(current_segment->id(), nearest_s,
+                                            dis_to_end);
   if (result == 0) {
     distance_to_route_end_ = dis_to_end;
   } else {
@@ -1891,8 +1920,10 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   // 2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
   is_leaving_ramp_ = false;
   if (lane_num_except_emergency > 0) {
-    if (distance_to_first_road_merge_ < 100 || 
-        (sum_dis_to_last_merge_point_ > 0 && sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ && is_ego_on_expressway_)) {
+    if (distance_to_first_road_merge_ < 100 ||
+        (sum_dis_to_last_merge_point_ > 0 &&
+         sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
+         is_ego_on_expressway_)) {
       is_leaving_ramp_ = true;
     }
   }
@@ -1957,7 +1988,7 @@ void VirtualLaneManager::TrackEgoLane() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  const bool lane_keep_status = lane_change_status == ROAD_NONE;
+  const bool lane_keep_status = lane_change_status == kLaneKeeping;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& function_info = session_->environmental_model().function_info();
@@ -2071,97 +2102,40 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = 0;
   int current_order_id = 0;
-  int relative_id_diff = 0;
+  const double default_lane_mapping_cost = 10.0;
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
-  const auto& planned_traj_points =
-      session_->planning_context().last_planning_result().traj_points;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  std::shared_ptr<KDPath> planned_path;
-  std::vector<Vec2d> planner_path_points;
+  const int fix_lane_virtual_id =
+      lane_change_decider_output.fix_lane_virtual_id;
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
+  std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
+  int last_track_virtual_id = 0;
 
-  for (auto& traj_point : planned_traj_points) {
-    planner_path_points.emplace_back(traj_point.x, traj_point.y);
-  }
-
-  if (planner_path_points.size() <= 2) {
-    return;
-    ;
-  }
-  std::vector<planning_math::PathPoint> path_points;
-  path_points.reserve(planner_path_points.size());
-  for (const auto& point : planner_path_points) {
-    if (std::isnan(point.x()) || std::isnan(point.y())) {
-      LOG_ERROR("update_planner_path_points: skip NaN point");
-      continue;
-    }
-    auto pt = planning_math::PathPoint(point.x(), point.y());
-    // std ::cout << "path_point: " << pt.x() << "," << pt.y() <<std::endl;
-    if (not path_points.empty()) {
-      auto& last_pt = path_points.back();
-      if (planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y())
-              .Length() < 1e-2) {
-        continue;
+  if (!virtual_id_mapped_lane_.empty()) {
+    for (const auto& virtual_id_lane : virtual_id_mapped_lane_) {
+      if (virtual_id_lane.second->get_virtual_id() == fix_lane_virtual_id) {
+        last_track_virtual_id_lane = virtual_id_lane.second;
+        last_track_virtual_id = virtual_id_lane.first;
       }
     }
-    path_points.emplace_back(pt);
-  }
-
-  if (path_points.size() <= 2) {
+  } else {
     return;
   }
-  planned_path =
-      std::make_shared<planning_math::KDPath>(std::move(path_points));
-
-  double ego_s, ego_l;
-  if (!planned_path->XYToSL(ego_cart_point.x, ego_cart_point.y, &ego_s,
-                            &ego_l)) {
-    return;
-  }
-
-  double min_s = std::numeric_limits<double>::max();
-  for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (relative_id_lane == nullptr) {
-      continue;
-    }
-    if (relative_id_lane->get_relative_id() == 0) {
-      origin_order_id = relative_id_lane->get_order_id();
-    }
-    auto& lane_points = relative_id_lane->lane_points();
-    if (lane_points.size() < kLaneCenterMinPointsThr) {
-      continue;
-    }
-    const auto& last_point = lane_points.back();
-    double back_s, back_l;
-    if (!planned_path->XYToSL(last_point.local_point.x,
-                              last_point.local_point.y, &back_s, &back_l)) {
-      continue;
-    }
-    const auto& front_point = lane_points.front();
-    double front_s, front_l;
-    if (!planned_path->XYToSL(front_point.local_point.x,
-                              front_point.local_point.y, &front_s, &front_l)) {
-      continue;
-    }
-    const double larger_s = std::fmax(front_s, back_s);
-    if (min_s > larger_s) {
-      min_s = larger_s;
-    }
-  }
-  const double preview_s = ego_state->ego_v() * 3.0 + ego_s;
-  min_s = std::fmin(preview_s, min_s);
-  min_s = std::fmax(kMinCostLength, min_s);
 
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  bool is_lane_change = (lane_change_status == ROAD_LC_LCHANGE ||
-                         lane_change_status == ROAD_LC_RCHANGE ||
-                         lane_change_status == ROAD_LC_LBACK ||
-                         lane_change_status == ROAD_LC_RBACK);
-  bool is_lane_change_execution = (lane_change_status == ROAD_LC_LCHANGE ||
-                                   lane_change_status == ROAD_LC_RCHANGE);
+  const auto coarse_planning_info = session_->planning_context()
+                                        .lane_change_decider_output()
+                                        .coarse_planning_info;
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
+  bool is_lane_change = (is_LC_CHANGE || is_LC_BACK);
+  bool is_lane_change_execution =
+      (coarse_planning_info.target_state == kLaneChangeExecution);
   const double k_init_pos_cost_weight =
       is_lane_change_execution
           ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
@@ -2172,6 +2146,10 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     if (relative_id_lane == nullptr) {
       continue;
     }
+
+    if (relative_id_lane->get_relative_id() == 0) {
+      origin_order_id = relative_id_lane->get_order_id();
+    }
     auto& lane_points = relative_id_lane->lane_points();
     if (lane_points.size() < kLaneCenterMinPointsThr) {
       continue;
@@ -2180,54 +2158,55 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     double cumu_lat_dis_cost = 0.0;
     double init_pose_cost = 0.0;
     double crosslane_cost = 0.0;
-    double cumu_lat_dis_front = 0.0;
-    double cumu_lat_dis_back = 0.0;
-    int cumu_lat_dis_front_count = 0;
-    int cumu_lat_dis_back_count = 0;
 
     if ((!is_lane_change) &&
         CalcCrosslaneStatus(relative_id_lane, lane_points)) {
       crosslane_cost = kCrossLaneCostDefault;
     }
 
+    if (last_track_virtual_id_lane != nullptr) {
+      auto track_lane_frenet_coord =
+          last_track_virtual_id_lane->get_lane_frenet_coord();
+      if (track_lane_frenet_coord != nullptr) {
+        const auto& lane_points = relative_id_lane->lane_points();
+        if (lane_points.size() <= 2) {
+          continue;
+        }
+        int default_point_nums = 30;
+        int point_nums = 0;
+        double total_lateral_offset = 0.0;
+        int select_lane_point_interval = 3;
+        for (int i = 0; i < lane_points.size();
+             i += select_lane_point_interval) {
+          iflyauto::ReferencePoint point = lane_points[i];
+          if (std::isnan(point.local_point.x) ||
+              std::isnan(point.local_point.y)) {
+            LOG_ERROR("update_lane_points: skip NaN point");
+            continue;
+          }
+          double lateral_offset = 0.0;
+          double ego_s, ego_l;
+          if (!track_lane_frenet_coord->XYToSL(
+                  point.local_point.x, point.local_point.y, &ego_s, &ego_l)) {
+            lateral_offset = 10.0;
+          } else {
+            lateral_offset = ego_l;
+          }
+          total_lateral_offset += lateral_offset;
+          point_nums += 1;
+          if (point_nums >= default_point_nums) {
+            break;
+          }
+        }
+        cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
+      } else {
+        cumu_lat_dis_cost = default_lane_mapping_cost;
+      }
+    } else {
+      return;
+    }
+
     std::shared_ptr<KDPath> frenet_coord;
-    for (auto& refline_pt : lane_points) {
-      double s, l;
-      if (!planned_path->XYToSL(refline_pt.local_point.x,
-                                refline_pt.local_point.y, &s, &l)) {
-        continue;
-      }
-      if (s > ego_s && s < planned_path->Length() && l > 0.0) {
-        cumu_lat_dis_front += std::fabs(l);
-        cumu_lat_dis_front_count++;
-      }
-      if (s > ego_s && s < planned_path->Length() && l < 0.0) {
-        cumu_lat_dis_back += std::fabs(l);
-        cumu_lat_dis_back_count++;
-      }
-
-      if (s > min_s) {
-        break;
-      }
-
-      if (s > planned_path->Length()) {
-        break;
-      }
-    }
-    if (cumu_lat_dis_front_count == 0 && cumu_lat_dis_back_count == 0) {
-      continue;
-    }
-
-    if (cumu_lat_dis_front_count > 0) {
-      cumu_lat_dis_front /=
-          (cumu_lat_dis_front_count * kLatDistanceMaxStandardThr);
-    }
-    if (cumu_lat_dis_back_count > 0) {
-      cumu_lat_dis_back /=
-          (cumu_lat_dis_back_count * kLatDistanceMaxStandardThr);
-    }
-    cumu_lat_dis_cost = std::fmax(cumu_lat_dis_front, cumu_lat_dis_back);
-
     if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
       frenet_coord = nullptr;
       continue;
@@ -2581,18 +2560,10 @@ void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
   std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
             compare_relative_id);
 
-  const auto& virtual_lane_mgr =
-      session_->environmental_model().get_virtual_lane_manager();
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
       LOG_DEBUG("create current_lane_\n");
-      double right_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
-          RIGHT_CHANGE, current_lane_->get_virtual_id());
-      double left_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
-          LEFT_CHANGE, current_lane_->get_virtual_id());
-      JSON_DEBUG_VALUE("right_dash_line_len", right_dash_line_len);
-      JSON_DEBUG_VALUE("left_dash_line_len", left_dash_line_len);
     } else if (relative_id_lane->get_relative_id() == -1) {
       left_lane_ = relative_id_lane;
     } else if (relative_id_lane->get_relative_id() == 1) {

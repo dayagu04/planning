@@ -1,4 +1,5 @@
 #include "scc_st_graph.h"
+
 #include <math.h>
 
 #include <algorithm>
@@ -21,6 +22,7 @@ namespace {
 constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.4;
 constexpr double kStaticAgentBuffer = 0.12;
+constexpr double kStaticLeadThr = 1.1;
 constexpr double kHalfLaneWidth = 1.75;
 constexpr double kLeadoneThr = 1.2;
 constexpr double kHalfEgoWidth = 1.1;
@@ -628,11 +630,8 @@ void StGraphGenerator::UpdateSTGraphs(
   double t = config_.delta_time;
   double t_square = config_.delta_time * config_.delta_time;
   double t_cube = config_.delta_time * config_.delta_time * config_.delta_time;
-  double kOverSpeed = 1.2;
-  double kDefaultSBoundUpper = 30;
-  double s_upper_bound =
-      std::fmax(lon_behav_input_->ego_info().ego_cruise() * kOverSpeed * 5.0,
-                kDefaultSBoundUpper);
+  // TODO: 后续取参考线的长度为s bound upper
+  constexpr double s_upper_bound = 200.0;
   LonBound soft_bound;
   LonBound hard_bound;
   double s_ref;
@@ -675,7 +674,7 @@ void StGraphGenerator::UpdateSTGraphs(
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
-      //考虑前车减速的情况
+      // 考虑前车减速的情况
       if (st.a_lead() < 0) {
         // s_step += CalcDeceleratedObstacleST();
         s_step += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
@@ -1264,7 +1263,8 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
     if ((track.fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
-    if (!track.is_lead() && track.cutinp() > cutinp_threshold &&
+    if (!track.is_lead() &&
+        (track.cutinp() > cutinp_threshold || track.is_new_cutin()) &&
         track.v_lat() < -0.01 &&
         track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       cut_in_info->set_has_cutin(true);
@@ -1303,8 +1303,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       // v_target_potential_cutin =
       //     std::min(v_target_potential_cutin,
       //              (desired_velocity - v_limit) * track.cutinp() + v_limit);
-      double v_potential_cutin =
-          (desired_velocity - v_limit) * track.cutinp() + v_limit;
+      double v_potential_cutin = desired_velocity;
       if (v_target_potential_cutin > v_potential_cutin) {
         v_target_potential_cutin = v_potential_cutin;
         cutin_id_vt.first = track.track_id();
@@ -1367,7 +1366,10 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
   LOG_DEBUG("x_linear_to_parabola : [%f] , x_parabola_offset : [%f]\n",
             x_linear_to_parabola, x_parabola_offset);
 
+  double v_ego = lon_behav_input_->ego_info().ego_v();
+  double v_rel = v_ego - v_lead;
   double v_rel_des = 0.0;
+  double soft_brake_distance = 0.0;
   if (d_rel < d_des) {
     // calculate v_rel_des on the line that connects 0m at max_runaway_speed
     // to d_des
@@ -1377,15 +1379,20 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
     // take the min of the 2 above
     v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
     v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = d_rel;
   } else if (d_rel < d_des + x_linear_to_parabola) {
     v_rel_des = (d_rel - d_des) * l_slope;
     v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = v_rel / l_slope + d_des;
   } else {
     v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
+    soft_brake_distance =
+        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
   }
   // compute desired speed
   double v_target = v_rel_des + v_lead;
   LOG_DEBUG("v_rel_des : [%f], v_target : [%f] \n", v_rel_des, v_target);
+  JSON_DEBUG_VALUE("soft_brake_distance_lead", soft_brake_distance);
   return v_target;
 }
 
@@ -1509,9 +1516,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       //     lc_front_desired_distance_filtered);
       // lc_gap_front_st_info.set_desired_velocity(v_limit_lc_);
       // lc_gap_front_st_info.set_safe_distance(safe_distance_lc_front);
-      // lc_gap_front_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
-      // lc_gap_front_st_info.set_end_time(5.0);  // TBD:使用可配置参数
-      // lc_gap_front_st_info.set_start_s(gap.s_front);
+      // lc_gap_front_st_info.set_start_time(gap.acc_time);  //
+      // TBD:使用可配置参数 lc_gap_front_st_info.set_end_time(5.0);  //
+      // TBD:使用可配置参数 lc_gap_front_st_info.set_start_s(gap.s_front);
       // lane_change_st_info.emplace_back(lc_gap_front_st_info);
 
       double safe_distance_lc_rear = CalcSafeDistance(v_limit_lc_, gap.v_rear);
@@ -1540,9 +1547,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       //     lc_rear_desired_distance_filtered);
       // lc_gap_rear_st_info.set_desired_velocity(v_limit_lc_);
       // lc_gap_rear_st_info.set_safe_distance(safe_distance_lc_rear);
-      // lc_gap_rear_st_info.set_start_time(gap.acc_time);  // TBD:使用可配置参数
-      // lc_gap_rear_st_info.set_end_time(5.0);  // TBD:使用可配置参数
-      // lc_gap_rear_st_info.set_start_s(gap.s_rear);
+      // lc_gap_rear_st_info.set_start_time(gap.acc_time);  //
+      // TBD:使用可配置参数 lc_gap_rear_st_info.set_end_time(5.0);  //
+      // TBD:使用可配置参数 lc_gap_rear_st_info.set_start_s(gap.s_rear);
       // lane_change_st_info.emplace_back(lc_gap_rear_st_info);
     } else {
       // decelerate to check next interval
@@ -2139,10 +2146,10 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  acc_bound_.first = (std::fmin(lon_init_state_[2], config_.acc_lower_bound));
-  // acc_bound_.second =
+  // acc_bound_.first = (std::fmin(lon_init_state_[2],
+  // config_.acc_lower_bound)); acc_bound_.second =
   //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  // acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
+  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
   acc_bound_.second =
       std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
   // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
@@ -2293,7 +2300,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     }
     double half_lane_width_by_s = 0.5 * current_lane->width_by_s(min_s);
     double invade_thr = half_lane_width_by_s - kStaticAgentBuffer;
-    if (fabs(min_lat_l) > invade_thr) {
+    // invade thr: (1.1, half_lane_width - 0.12)
+    if (fabs(min_lat_l) > invade_thr || fabs(min_lat_l) < kStaticLeadThr) {
       continue;
     }
     // 3.4 check agent is front of ego ?
@@ -2386,6 +2394,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
       JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
     } else {
       v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("narrow_agent_id", it->id)
       JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
     }
   }

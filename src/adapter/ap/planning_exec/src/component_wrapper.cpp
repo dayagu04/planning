@@ -43,6 +43,41 @@ void ComponentWrapper::StopHandle() {
       << "Some operations during stopping";
 }
 
+static mdc::fm::AlarmInfo FminfoToAlarmInfo(const iflyauto::FmInfo &fminfo) {
+  mdc::fm::AlarmInfo alarm_info = {};
+  alarm_info.alarmId = fminfo.alarmId;
+  alarm_info.alarmObj = fminfo.alarmObj;
+  alarm_info.clss = fminfo.clss;
+  alarm_info.level = fminfo.level;
+  alarm_info.status = fminfo.status;
+  alarm_info.time = fminfo.time;
+  alarm_info.desc = ::String(fminfo.desc);
+  return alarm_info;
+}
+
+void ComponentWrapper::SendAlarmInfo(const ara::core::String &portName,
+                                     const mdc::fm::AlarmInfo &alarmInfo) {
+  if (!swc_ptr_) {
+    SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
+        << "The swc object is empty.";
+    return;
+  }
+
+  /* 获取发送端服务，其中portName对应MMC上配置的此应用对应的发送端portName */
+  auto clientPtr = swc_ptr_->GetFmAlarmReceiveServiceClient(portName);
+  if (!clientPtr) {
+    SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
+        << "Failed to initialize the instance: " << portName;
+    return;
+  }
+  if (clientPtr->ReportAlarm(alarmInfo)) {
+    mdc::fm::ReportAlarmOutput res = clientPtr->GetReportAlarmData();
+    std::cout << "receive server result: " << res.result << std::endl;
+  } else {
+    std::cout << "Request failed!" << std::endl;
+  }
+}
+
 void ComponentWrapper::InitClient() {
   auto structContainerInterfaceClientPortVec =
       swc_ptr_->GetStructContainerInterfaceClientVec();
@@ -98,7 +133,7 @@ void ComponentWrapper::InitClient() {
                               FeedFuncStateMachine, FuncStateMachine);
       REGISTER_CLIENT_HANDLER("IflytekUssUsswaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
-      REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptInfo", FeedUssPerceptInfo,
+      REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptionInfo", FeedUssPerceptInfo,
                               UssPerceptInfo);
 
       SPL_LOG_SPACE::GetLoggerIns("SPL")->LogError()
@@ -203,10 +238,10 @@ bool ComponentWrapper::Init() {
 #undef REGISTER_SERVER_HANDLER
   }
 
-  /*component_ptr_->RegisterDebugInfoWriter(
-      [this](const planning::common::PlanningDebugInfo &msg) {
-        std::cout << "out planning debug"<< std::endl;
-      });*/
+  component_ptr_->RegisterFmInfoWriter([this](const iflyauto::FmInfo &fmInfo) {
+    mdc::fm::AlarmInfo alarmInfo = FminfoToAlarmInfo(fmInfo);
+    SendAlarmInfo("IflytekAlarmPlanning", alarmInfo);
+  });
 
   return true;
 }

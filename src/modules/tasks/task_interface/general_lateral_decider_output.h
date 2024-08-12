@@ -23,6 +23,7 @@ struct GeneralLateralDeciderOutput {
   std::string lc_status;
   bool lane_change_scene = false;
   double v_cruise;
+  bool ramp_scene = false;
   void Clear() {
     init_state.Clear();
     enu_ref_path.clear();

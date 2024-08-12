@@ -1,5 +1,6 @@
 #include "active_lane_change_request.h"
 
+#include "config/basic_type.h"
 #include "planning_context.h"
 #include "tasks/behavior_planners/lane_change_decider/lateral_behavior_object_selector.h"
 #include "virtual_lane_manager.h"
@@ -204,7 +205,7 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
         }
       }
     } else if (enable_l_ && request_type_ == LEFT_CHANGE &&
-               (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT) &&
+               (lc_status == kLaneKeeping || lc_status == kLaneChangePropose) &&
                ((v_rel_l < -3. && v_rel_l + v_ego <= 50. / 3.6) ||
                 v_rel_l + v_ego < 20. / 3.6 || v_ego < 20. / 3.6 ||
                 (v_rel_f > 6.0 && !(distance_to_y_point < 1000)))) {
@@ -227,7 +228,7 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
       }
     }
   } else {
-    if (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT) {
+    if (lc_status == kLaneKeeping || lc_status == kLaneChangePropose) {
       if (enable_l_ && request_type_ == LEFT_CHANGE) {
         Finish();
         Reset();
@@ -266,8 +267,8 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
     }
     if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
         curr_direct_exist && request_type_ != NO_CHANGE &&
-        (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
-         (lc_status == ROAD_LC_LBACK &&
+        (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
+         (lc_status == kLaneChangeCancel &&
           (lane_change_lane_mgr_->has_origin_lane() &&
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
@@ -279,20 +280,10 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
     bool status_cond =
         ((not_accident && lane_change_lane_mgr_->has_origin_lane() &&
           lane_change_lane_mgr_->is_ego_on(olane)) ||
-         (!(lc_status == ROAD_LC_LCHANGE || lc_status == ROAD_LC_RCHANGE ||
-            lc_status == INTER_GS_LC_LCHANGE ||
-            lc_status == INTER_GS_LC_RCHANGE ||
-            lc_status == INTER_TR_LC_LCHANGE ||
-            lc_status == INTER_TR_LC_RCHANGE ||
-            lc_status == INTER_TL_LC_LCHANGE ||
-            lc_status == INTER_TL_LC_RCHANGE) ||
-          ((lc_status == ROAD_LC_LCHANGE) || (lc_status == ROAD_LC_RCHANGE) ||
-           (lc_status == INTER_GS_LC_LCHANGE && l_change_cond) ||
-           (lc_status == INTER_GS_LC_RCHANGE && r_change_cond) ||
-           (lc_status == INTER_TR_LC_LCHANGE && l_change_cond) ||
-           (lc_status == INTER_TR_LC_RCHANGE && r_change_cond) ||
-           (lc_status == INTER_TL_LC_LCHANGE && l_change_cond) ||
-           (lc_status == INTER_TL_LC_RCHANGE && r_change_cond))));
+         (!(lc_status == kLaneChangeExecution ||
+            lc_status == kLaneChangeComplete) ||
+          ((lc_status == kLaneChangeExecution) ||
+           (lc_status == kLaneChangeComplete))));
 
     if (left_alc_car.size() > 0) {
       // 存在需要从左避让的车
@@ -317,8 +308,8 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
       }
       if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
           curr_direct_exist && request_type_ != NO_CHANGE &&
-          (lc_status == ROAD_NONE || lc_status == ROAD_LC_LWAIT ||
-           (lc_status == ROAD_LC_LBACK &&
+          (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
+           (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&
              lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
@@ -351,12 +342,19 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
               "[ActRequest::update] Ask for active changing lane to right \n");
         }
       }
+      const auto &lane_change_decider_output =
+          session_->planning_context().lane_change_decider_output();
+      const auto state = lane_change_decider_output.curr_state;
+      const auto lc_request_direction = lane_change_decider_output.lc_request;
+      bool is_LC_RWAIT = (state == kLaneChangePropose) &&
+                         (lc_request_direction == RIGHT_CHANGE);
+      bool is_LC_RBACK = (state == kLaneChangeCancel) &&
+                         (lc_request_direction == RIGHT_CHANGE);
       if (!IsDashedLineEnough(RIGHT_CHANGE, v_ego, virtual_lane_mgr_) &&
           curr_direct_exist && request_type_ != NO_CHANGE &&
-          (lc_status == ROAD_NONE || lc_status == ROAD_LC_RWAIT ||
-           (lc_status == ROAD_LC_RBACK &&
-            (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane))))) {
+          (lc_status == kLaneKeeping || is_LC_RWAIT ||
+           (is_LC_RBACK && (lane_change_lane_mgr_->has_origin_lane() &&
+                            lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
         Reset();
         set_target_lane_virtual_id(current_lane_virtual_id);

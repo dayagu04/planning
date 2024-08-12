@@ -149,9 +149,9 @@ class VirtualLaneManager {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
-  double get_distance_to_route_end () {
-    return distance_to_route_end_;
-  }
+  double get_distance_to_route_end() { return distance_to_route_end_; }
+
+  bool get_is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
 
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
@@ -189,11 +189,13 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
-  const double sum_dis_to_last_merge_point() const {return sum_dis_to_last_merge_point_;}
+  const double sum_dis_to_last_merge_point() const {
+    return sum_dis_to_last_merge_point_;
+  }
 
   bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
 
-  const double dis_threshold_to_last_merge_point() const{
+  const double dis_threshold_to_last_merge_point() const {
     return dis_threshold_to_last_merge_point_;
   }
   bool is_continuous_ramp() const { return is_continuous_ramp_; }

@@ -47,6 +47,9 @@ class LateralMotionPlanner : public Task {
 
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
       planning_weight_ptr_;
+
+  double avoid_back_time_;
+  double enter_ramp_on_road_time_;
 };
 
 }  // namespace planning

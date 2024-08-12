@@ -1,3 +1,4 @@
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
@@ -346,7 +347,7 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
 
   TrackedObject *lead_one = lateral_obstacle->leadone();
 
-  if (state == ROAD_NONE && intersection_cnt_ != 0) {
+  if (state == kLaneKeeping && intersection_cnt_ != 0) {
     intersection_cnt_ = 0;
   }
 
@@ -984,14 +985,14 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
         }
       }
     }
-
-    if ((state == INTER_TR_NONE || state == INTER_TL_NONE) &&
-        intersection_cnt_ == 0) {
-      avd_cars.clear();
-      avd_car_past_[0].clear();
-      avd_car_past_[1].clear();
-      intersection_cnt_ = 1;
-    }
+    // fengwang31：新状态机中没有这几个状态
+    // if ((state == INTER_TR_NONE || state == INTER_TL_NONE) &&
+    //     intersection_cnt_ == 0) {
+    //   avd_cars.clear();
+    //   avd_car_past_[0].clear();
+    //   avd_car_past_[1].clear();
+    //   intersection_cnt_ = 1;
+    // }
 
     if (avd_cars.size() == 2) {
       if ((avd_car_past_[0].size() > 0 &&

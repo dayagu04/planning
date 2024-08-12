@@ -88,15 +88,20 @@ bool HppGeneralLateralDecider::Execute() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  int target_state =
-      coarse_planning_info.target_state == ROAD_LC_LCHANGE
-          ? 1
-          : (coarse_planning_info.target_state == ROAD_LC_RCHANGE ? 2 : 0);
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto state = coarse_planning_info.target_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  int target_state = is_LC_LCHANGE ? 1 : (is_LC_RCHANGE ? 2 : 0);
   std::shared_ptr<AgentNodeManager> agent_node_manager =
       session_->mutable_environmental_model()->mutable_agent_node_manager();
 
-  const auto &lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
   auto origin_refline =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
@@ -223,7 +228,6 @@ void HppGeneralLateralDecider::HandleLaneChangeScene(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto &target_state = coarse_planning_info.target_state;
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   auto &general_lateral_decider_output =
@@ -233,12 +237,21 @@ void HppGeneralLateralDecider::HandleLaneChangeScene(
   const auto &timer =
       session_->planning_context().lane_change_decider_output().lc_timer;
   bool lane_change_flag{false};
-
-  if (target_state == ROAD_LC_LCHANGE) {
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto state = coarse_planning_info.target_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  if (is_LC_LCHANGE) {
     lat_lane_change_info_ = LatDeciderLaneChangeInfo::LEFT_LANE_CHANGE;
     lane_change_flag = true;
     general_lateral_decider_output.complete_follow = true;
-  } else if (target_state == ROAD_LC_RCHANGE) {
+  } else if (is_LC_RCHANGE) {
     lat_lane_change_info_ = LatDeciderLaneChangeInfo::RIGHT_LANE_CHANGE;
     lane_change_flag = true;
     general_lateral_decider_output.complete_follow = true;
@@ -1460,25 +1473,34 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
   } else {
     lateral_output.lc_request = "right";
   }
-
-  int state = lane_change_decider_output.curr_state;
-  if (state == ROAD_LC_LCHANGE || state == INTER_GS_LC_LCHANGE ||
-      state == INTER_TR_LC_LCHANGE || state == INTER_TL_LC_LCHANGE) {
+  const auto state = lane_change_decider_output.curr_state;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RWAIT =
+      (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+  bool is_LC_LBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RBACK =
+      (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
+  //(fengwang31)TODO:交互式变道的的取消状态还需要考虑进去
+  if (is_LC_LCHANGE) {
     lateral_output.lc_status = "left_lane_change";
-  } else if (state == ROAD_LC_LBACK || state == INTER_GS_LC_LBACK ||
-             state == INTER_TR_LC_LBACK || state == INTER_TL_LC_LBACK) {
+  } else if (is_LC_LBACK) {
     lateral_output.lc_status = "left_lane_change_back";
-  } else if (state == ROAD_LC_RCHANGE || state == INTER_GS_LC_RCHANGE ||
-             state == INTER_TR_LC_RCHANGE || state == INTER_TL_LC_RCHANGE) {
+  } else if (is_LC_RCHANGE) {
     lateral_output.lc_status = "right_lane_change";
-  } else if (state == ROAD_LC_RBACK || state == INTER_GS_LC_RBACK ||
-             state == INTER_TR_LC_RBACK || state == INTER_TL_LC_RBACK) {
+  } else if (is_LC_RBACK) {
     lateral_output.lc_status = "right_lane_change_back";
-  } else if (state == ROAD_LC_LWAIT || state == INTER_GS_LC_LWAIT ||
-             state == INTER_TR_LC_LWAIT || state == INTER_TL_LC_LWAIT) {
+  } else if (is_LC_LWAIT) {
     lateral_output.lc_status = "left_lane_change_wait";
-  } else if (state == ROAD_LC_RWAIT || state == INTER_GS_LC_RWAIT ||
-             state == INTER_TR_LC_RWAIT || state == INTER_TL_LC_RWAIT) {
+  } else if (is_LC_RWAIT) {
     lateral_output.lc_status = "right_lane_change_wait";
   } else {
     lateral_output.lc_status = "none";

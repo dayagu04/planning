@@ -343,7 +343,7 @@ class MapLaneChangeRequestTest : public ::testing::Test {
                              0., false, 80., false, false, false, false, false,
                              -1);
 
-    lc_req_mgr_->Update(ROAD_NONE, true);
+    lc_req_mgr_->Update(kLaneKeeping, true);
   }
 
  public:
