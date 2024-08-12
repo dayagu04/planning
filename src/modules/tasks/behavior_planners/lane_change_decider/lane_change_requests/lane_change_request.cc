@@ -578,7 +578,75 @@ iflyauto::LaneBoundaryType LaneChangeRequest::MakesureCurrentBoundaryType(
     }
   } else {
     return iflyauto::LaneBoundaryType_MARKING_SOLID;
-    ;
+  }
+}
+
+bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
+    const RequestType lc_request,
+    const int origin_lane_id,
+    const int target_lane_id) {
+  ReferencePathPoint sample_path_point{};
+  const double cut_length = 1.4;
+  const double sample_forward_distance = 1.0;
+  const double default_lane_width = 3.5;
+  ReferencePathPoint refpath_pt{};
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+
+  std::shared_ptr<ReferencePath>  reference_path_ptr = reference_path_mgr->get_reference_path_by_lane(
+      origin_lane_id, false);
+  const std::shared_ptr<VirtualLane> target_lane = virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
+  const double ego_lateral_offset_in_target_lane = std::fabs(target_lane->get_ego_lateral_offset());
+
+  const std::shared_ptr<KDPath> base_frenet_coord = reference_path_ptr->get_frenet_coord();
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const PlanningInitPoint planning_init_point = ego_state->planning_init_point();
+  Point2D ego_frenet_point;
+  Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
+                         planning_init_point.lat_init_state.y()};
+  if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
+    LOG_DEBUG("IsRoadBorderSurpressLaneChange::fail to get ego position on base lane");
+    return true;
+  }
+  if (!reference_path_ptr->get_reference_point_by_lon(ego_frenet_point.x, sample_path_point)) {
+    return true;
+  }
+  for (double s = ego_frenet_point.x - vehicle_param.back_edge_to_rear_axis;
+       s < ego_frenet_point.x + vehicle_param.rear_axis_to_front_edge +
+               sample_forward_distance;
+       s += cut_length) {
+    if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
+      sample_path_point.distance_to_left_lane_border =
+          std::fmin(refpath_pt.distance_to_left_lane_border,
+                    sample_path_point.distance_to_left_lane_border);
+      sample_path_point.distance_to_right_lane_border =
+          std::fmin(refpath_pt.distance_to_right_lane_border,
+                    sample_path_point.distance_to_right_lane_border);
+      sample_path_point.distance_to_left_road_border =
+          std::fmin(refpath_pt.distance_to_left_road_border,
+                    sample_path_point.distance_to_left_road_border);
+      sample_path_point.distance_to_right_road_border =
+          std::fmin(refpath_pt.distance_to_right_road_border,
+                    sample_path_point.distance_to_right_road_border);
+    }
+  }
+  if (lc_request == LEFT_CHANGE) {
+    if (sample_path_point.distance_to_left_road_border < ego_lateral_offset_in_target_lane) {
+      return true;
+    } else {
+      return false;
+    }
+  } else if (lc_request == RIGHT_CHANGE) {
+    if (sample_path_point.distance_to_right_road_border < ego_lateral_offset_in_target_lane) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
   }
 }
 }  // namespace planning
