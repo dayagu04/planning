@@ -500,6 +500,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().obstacle_ds, double, "obstacle_ds");
 
+  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_dynamic_col, double,
+                  "car_lat_inflation_dynamic_col");
+
   JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_normal, double,
                   "car_lat_inflation_normal");
 
