@@ -66,7 +66,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   } else {
     origin_lane_virtual_id_ = current_lane_virtual_id;
   }
-  int target_lane_virtual_id_tmp{current_lane_virtual_id};
+  int target_lane_virtual_id_tmp{origin_lane_virtual_id_};
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   planning_init_point_ = ego_state->planning_init_point();
@@ -91,7 +91,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   if (!is_emergency_avoidance_situation_) {
     if (request_type_ != NO_CHANGE) {
       Finish();
-      set_target_lane_virtual_id(current_lane_virtual_id);
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       LOG_DEBUG("[EmergenceAvoidRequest::update] finish request\n");
     }
     return;
@@ -129,7 +129,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
 
   if (is_left_lane_change_safe && is_right_lane_change_safe) {
     bool ramp_on_Right = false;
-    bool is_on_highway = session_->environmental_model().is_on_highway();
+    bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
     if (is_on_highway) {
       ramp_on_Right =
           virtual_lane_mgr_->ramp_direction() == RampDirection::RAMP_ON_RIGHT
@@ -169,14 +169,14 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             (lane_change_lane_mgr_->has_origin_lane() &&
              lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
-        set_target_lane_virtual_id(current_lane_virtual_id);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
             "[EmergenceAvoidRequest::update] %s:%d finish request, dash not "
             "enough \n",
             __FUNCTION__, __LINE__);
       }
     } else {
-      // 获取右车道线型,实线禁止换道
+      // 获取右车道线型
       iflyauto::LaneBoundaryType right_boundary_type =
           MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
       if (request_type_ != RIGHT_CHANGE) {
@@ -195,7 +195,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             (lane_change_lane_mgr_->has_origin_lane() &&
              lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
-        set_target_lane_virtual_id(current_lane_virtual_id);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
             "[EmergenceAvoidRequest::update] %s:%d finish request, dash not "
             "enough \n",
@@ -206,7 +206,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
              (lane_change_lane_mgr_->has_origin_lane() &&
               lane_change_lane_mgr_->is_ego_on(olane))) {
     Finish();
-    set_target_lane_virtual_id(current_lane_virtual_id);
+    set_target_lane_virtual_id(target_lane_virtual_id_tmp);
     LOG_DEBUG(
         "[OvertakeRequest::update] %s:%d finish request, "
         "!trigger_left_overtake and !trigger_right_overtake\n",

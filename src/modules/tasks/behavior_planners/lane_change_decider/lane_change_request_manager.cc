@@ -2,6 +2,7 @@
 
 #include "adas_function/mrc_condition.h"
 #include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
+#include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -74,6 +75,7 @@ bool LaneChangeRequestManager::Update(
       config_.enable_use_emergency_avoidence_lane_change_request;
   const bool enable_use_cone_change_request =
       config_.enable_use_cone_change_request;
+  const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -83,7 +85,7 @@ bool LaneChangeRequestManager::Update(
     int_request_.reset_int_cnt();
   }
   if (int_request_.request_type() == NO_CHANGE) {
-    if (enable_use_emergency_avoidence_lc_request) {
+    if (enable_use_emergency_avoidence_lc_request && is_on_highway) {
       // TODO: 待感知停止线输出ready，添加变道抑制
       emergence_avoid_request_.Update(lc_status);
     }
