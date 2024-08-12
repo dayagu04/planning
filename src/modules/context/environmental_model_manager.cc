@@ -526,14 +526,13 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   //       local_view.vehicle_service_output_info_recv_time;
   // }
 
-  //use new localization linear speed
+  // use new localization linear speed
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()
         ->mutable_heading_velocity()
         ->set_value_mps(localization.velocity.velocity_body.vx);
-    last_feed_time_[FEED_EGO_VEL] =
-        local_view.localization_recv_time;
+    last_feed_time_[FEED_EGO_VEL] = local_view.localization_recv_time;
   }
 
   // if (vehicle_service_output_info.long_acceleration_available) {
