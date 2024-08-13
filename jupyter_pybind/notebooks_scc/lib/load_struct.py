@@ -281,6 +281,256 @@ def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_
   return ehr_lane_boundary_info_list
 
 # 加载车道boundary
+def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_info_list = []
+  reference_line_msg = road_msg.reference_line_msg
+  reference_line_msg_size = road_msg.reference_line_msg_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  lane_line_info = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[], 'relative_id_vec':[]}
+  dash_line_x, dash_line_y, dash_line_id = [], [], []
+  solid_line_x, solid_line_y, solid_line_id = [], [], []
+  dot_line_x, dot_line_y, dot_line_id = [], [], []
+  for i in range(10):
+    if i < reference_line_msg_size:
+      lane = reference_line_msg[i]
+      relative_id = lane.relative_id
+      left_line = lane.left_lane_boundary
+      left_length = 0.0
+      try:
+        line_x, line_y = [], []
+        if g_is_display_enu:
+          local_points = left_line.enu_points
+          point_num = left_line.enu_points_size
+          type_num = left_line.type_segments_size
+          k = 0
+          for j in range(point_num):
+            line_x.append(local_points[j].x)
+            line_y.append(local_points[j].y)
+            if j > 0:
+              left_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
+              if left_length >= left_line.type_segments[k].length or j == (point_num - 1):
+                left_length = 0
+                tp = left_line.type_segments[k].type
+                k += 1
+                k = min(k, type_num)
+                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                  dash_line_x.append(line_x)
+                  dash_line_y.append(line_y)
+                  dash_line_id.append(relative_id)
+                elif tp == 9:
+                  dot_line_x.append(line_x)
+                  dot_line_y.append(line_y)
+                  dot_line_id.append(relative_id)
+                else:
+                  solid_line_x.append(line_x)
+                  solid_line_y.append(line_y)
+                  solid_line_id.append(relative_id)
+                line_x, line_y = [], []
+                line_x.append(local_points[j].x)
+                line_y.append(local_points[j].y)
+        else :
+          if is_enu_to_car:
+            coord_tf = coord_transformer()
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              local_points = left_line.enu_points
+              point_num = left_line.enu_points_size
+              type_num = left_line.type_segments_size
+              k = 0
+              for j in range(point_num):
+                line_x.append(local_points[j].x)
+                line_y.append(local_points[j].y)
+                if j > 0:
+                  left_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
+                  if left_length >= left_line.type_segments[k].length or j == (point_num - 1):
+                    left_length = 0
+                    tp = left_line.type_segments[k].type
+                    k += 1
+                    k = min(k, type_num)
+                    line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+                    if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                      dash_line_x.append(line_x)
+                      dash_line_y.append(line_y)
+                      dash_line_id.append(relative_id)
+                    elif tp == 9:
+                      dot_line_x.append(line_x)
+                      dot_line_y.append(line_y)
+                      dot_line_id.append(relative_id)
+                    else:
+                      solid_line_x.append(line_x)
+                      solid_line_y.append(line_y)
+                      solid_line_id.append(relative_id)
+                    line_x, line_y = [], []
+                    line_x.append(local_points[j].x)
+                    line_y.append(local_points[j].y)
+            else:
+              dash_line_x.append(default_line_x)
+              dash_line_y.append(default_line_y)
+              dash_line_id.append(relative_id)
+          else:
+            car_points = left_line.car_points
+            point_num = left_line.car_points_size
+            type_num = left_line.type_segments_size
+            k = 0
+            for j in range(point_num):
+              line_x.append(car_points[j].x)
+              line_y.append(car_points[j].y)
+              if j > 0:
+                left_length += math.sqrt((car_points[j].x - car_points[j - 1].x)**2 + (car_points[j].y - car_points[j - 1].y)**2)
+                if left_length >= left_line.type_segments[k].length or j == (point_num - 1):
+                  left_length = 0
+                  tp = left_line.type_segments[k].type
+                  k += 1
+                  k = min(k, type_num)
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    dash_line_x.append(line_x)
+                    dash_line_y.append(line_y)
+                    dash_line_id.append(relative_id)
+                  elif tp == 9:
+                    dot_line_x.append(line_x)
+                    dot_line_y.append(line_y)
+                    dot_line_id.append(relative_id)
+                  else:
+                    solid_line_x.append(line_x)
+                    solid_line_y.append(line_y)
+                    solid_line_id.append(relative_id)
+                  line_x, line_y = [], []
+                  line_x.append(car_points[j].x)
+                  line_y.append(car_points[j].y)
+      except:
+        dash_line_x.append(default_line_x)
+        dash_line_y.append(default_line_y)
+        dash_line_id.append(relative_id)
+
+      right_line = lane.right_lane_boundary
+      right_length = 0.0
+      try:
+        line_x, line_y = [], []
+        if g_is_display_enu:
+          local_points = right_line.enu_points
+          point_num = right_line.enu_points_size
+          type_num = right_line.type_segments_size
+          k = 0
+          for j in range(point_num):
+            line_x.append(local_points[j].x)
+            line_y.append(local_points[j].y)
+            if j > 0:
+              right_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
+              if right_length >= right_line.type_segments[k].length or j == (point_num - 1):
+                right_length = 0
+                tp = right_line.type_segments[k].type
+                k += 1
+                k = min(k, type_num)
+                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                  dash_line_x.append(line_x)
+                  dash_line_y.append(line_y)
+                  dash_line_id.append(relative_id)
+                elif tp == 9:
+                  dot_line_x.append(line_x)
+                  dot_line_y.append(line_y)
+                  dot_line_id.append(relative_id)
+                else:
+                  solid_line_x.append(line_x)
+                  solid_line_y.append(line_y)
+                  solid_line_id.append(relative_id)
+                line_x, line_y = [], []
+                line_x.append(local_points[j].x)
+                line_y.append(local_points[j].y)
+        else :
+          if is_enu_to_car:
+            coord_tf = coord_transformer()
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              local_points = right_line.enu_points
+              point_num = right_line.enu_points_size
+              type_num = right_line.type_segments_size
+              k = 0
+              for j in range(point_num):
+                line_x.append(local_points[j].x)
+                line_y.append(local_points[j].y)
+                if j > 0:
+                  right_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
+                  if right_length >= right_line.type_segments[k].length or j == (point_num - 1):
+                    right_length = 0
+                    tp = right_line.type_segments[k].type
+                    k += 1
+                    k = min(k, type_num)
+                    line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+                    if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                      dash_line_x.append(line_x)
+                      dash_line_y.append(line_y)
+                      dash_line_id.append(relative_id)
+                    elif tp == 9:
+                      dot_line_x.append(line_x)
+                      dot_line_y.append(line_y)
+                      dot_line_id.append(relative_id)
+                    else:
+                      solid_line_x.append(line_x)
+                      solid_line_y.append(line_y)
+                      solid_line_id.append(relative_id)
+                    line_x, line_y = [], []
+                    line_x.append(local_points[j].x)
+                    line_y.append(local_points[j].y)
+            else:
+              dash_line_x.append(default_line_x)
+              dash_line_y.append(default_line_y)
+              dash_line_id.append(relative_id)
+          else:
+            car_points = right_line.car_points
+            point_num = right_line.car_points_size
+            type_num = right_line.type_segments_size
+            k = 0
+            for j in range(point_num):
+              line_x.append(car_points[j].x)
+              line_y.append(car_points[j].y)
+              if j > 0:
+                right_length += math.sqrt((car_points[j].x - car_points[j - 1].x)**2 + (car_points[j].y - car_points[j - 1].y)**2)
+                if right_length >= right_line.type_segments[k].length or j == (point_num - 1):
+                  right_length = 0
+                  tp = right_line.type_segments[k].type
+                  k += 1
+                  k = min(k, type_num)
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    dash_line_x.append(line_x)
+                    dash_line_y.append(line_y)
+                    dash_line_id.append(relative_id)
+                  elif tp == 9:
+                    dot_line_x.append(line_x)
+                    dot_line_y.append(line_y)
+                    dot_line_id.append(relative_id)
+                  else:
+                    solid_line_x.append(line_x)
+                    solid_line_y.append(line_y)
+                    solid_line_id.append(relative_id)
+                  line_x, line_y = [], []
+                  line_x.append(car_points[j].x)
+                  line_y.append(car_points[j].y)
+      except:
+        dash_line_x.append(default_line_x)
+        dash_line_y.append(default_line_y)
+        dash_line_id.append(relative_id)
+    else:
+      dash_line_x.append(default_line_x)
+      dash_line_y.append(default_line_y)
+      dash_line_id.append(relative_id)
+  line_x_vec, line_y_vec, type_vec, relative_id_vec = [], [], [], []
+  line_x_vec.extend([dash_line_x, solid_line_x, dot_line_x])
+  line_y_vec.extend([dash_line_y, solid_line_y, dot_line_y])
+  type_vec.extend(['dashed_line', 'solid_line', 'virtual_line'])
+  relative_id_vec.extend([dash_line_id, solid_line_id, dot_line_id])
+  lane_line_info['line_x_vec'] = line_x_vec
+  lane_line_info['line_y_vec'] = line_y_vec
+  lane_line_info['type_vec'] = type_vec
+  lane_line_info['relative_id_vec'] = relative_id_vec
+  return lane_line_info
+
+# 加载车道boundary
 def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   line_info_list = []
   reference_line_msg = road_msg.reference_line_msg
@@ -290,7 +540,7 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
   for i in range(10):
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
-      lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
       left_line = lane.left_lane_boundary
       # left_line_coef = left_line.poly_coefficient
       try:
@@ -329,21 +579,24 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         lane_info_l['line_y_vec'] = line_y
         lane_info_l['line_x_vec'] = line_x
 
-        tp = left_line.type_segments[0].type
-        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-          lane_info_l['type'] = ['dashed']
-        elif tp == 9:
-          lane_info_l['type'] = ['dashdot']
-        else:
-          lane_info_l['type'] = ['solid']
+        left_line_type_vec = []
+        for j in range(len(left_line.type_segments)):
+          tp = left_line.type_segments[j].type
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            left_line_type_vec.append(['dashed'])
+          elif tp == 9:
+            left_line_type_vec.append(['dashdot'])
+          else:
+            left_line_type_vec.append(['solid'])
+        lane_info_l['type_vec'] = left_line_type_vec
       except:
         lane_info_l['line_x_vec'] = default_line_x
         lane_info_l['line_y_vec'] = default_line_y
-        lane_info_l['type'] = ['dashed']
+        lane_info_l['type_vec'] = ['dashed']
 
       line_info_list.append(lane_info_l)
 
-      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
       right_line = lane.right_lane_boundary
       # right_line_coef = right_line.poly_coefficient
       try:
@@ -379,28 +632,31 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         lane_info_r['line_x_vec'] = line_x
         lane_info_r['line_y_vec'] = line_y
 
-        tp = right_line.type_segments[0].type
-        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-          lane_info_r['type'] = ['dashed']
-        elif tp == 9:
-          lane_info_r['type'] = ['dashdot']
-        else:
-          lane_info_r['type'] = ['solid']
+        right_line_type_vec = []
+        for j in range(len(right_line.type_segments)):
+          tp = right_line.type_segments[j].type
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            right_line_type_vec.append(['dashed'])
+          elif tp == 9:
+            right_line_type_vec.append(['dashdot'])
+          else:
+            right_line_type_vec.append(['solid'])
+        lane_info_r['type_vec'] = right_line_type_vec
       except:
         lane_info_r['line_x_vec'] = default_line_x
         lane_info_r['line_y_vec'] = default_line_y
-        lane_info_r['type'] = ['dashed']
+        lane_info_r['type_vec'] = ['dashed']
 
       line_info_list.append(lane_info_r)
     else:
-      lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
       lane_info_l['line_x_vec'] = default_line_x
       lane_info_l['line_y_vec'] = default_line_y
-      lane_info_l['type'] = ['dashed']
-      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info_l['type_vec'] = ['dashed']
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
       lane_info_r['line_x_vec'] = default_line_x
       lane_info_r['line_y_vec'] = default_line_y
-      lane_info_r['type'] = ['dashed']
+      lane_info_r['type_vec'] = ['dashed']
       line_info_list.append(lane_info_l)
       line_info_list.append(lane_info_r)
   return line_info_list

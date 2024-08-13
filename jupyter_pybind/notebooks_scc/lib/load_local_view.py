@@ -19,7 +19,7 @@ from collections import namedtuple
 from functools import  partial
 from bokeh.models import ColumnDataSource
 import bokeh.plotting as bkp
-from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS, CheckboxGroup
+from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS, CheckboxGroup,TapTool
 from google.protobuf.json_format import MessageToJson
 
 car_xb, car_yb = load_car_params_patch()
@@ -255,6 +255,32 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
+    dash_line_x, dash_line_y, dash_line_id = [], [], []
+    solid_line_x, solid_line_y, solid_line_id = [], [], []
+    virtual_line_x, virtual_line_y, dot_line_id = [], [], []
+    try:
+      lane_line_list = load_lane_boundary_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      dash_line_x, dash_line_y, dash_line_id = lane_line_list['line_x_vec'][0], lane_line_list['line_y_vec'][0], lane_line_list['relative_id_vec'][0]
+      solid_line_x, solid_line_y, solid_line_id = lane_line_list['line_x_vec'][1], lane_line_list['line_y_vec'][1], lane_line_list['relative_id_vec'][1]
+      virtual_line_x, virtual_line_y, dot_line_id = lane_line_list['line_x_vec'][2], lane_line_list['line_y_vec'][2], lane_line_list['relative_id_vec'][2]
+
+    except:
+      print("vis road_msg error")
+    local_view_data['data_lane_dashed_line'].data.update({
+      'lines_x_vec': dash_line_x,
+      'lines_y_vec': dash_line_y,
+      'relative_id_vec': dash_line_id,
+    })
+    local_view_data['data_lane_solid_line'].data.update({
+      'lines_x_vec': solid_line_x,
+      'lines_y_vec': solid_line_y,
+      'relative_id_vec': solid_line_id,
+    })
+    local_view_data['data_lane_virtual_line'].data.update({
+      'lines_x_vec': virtual_line_x,
+      'lines_y_vec': virtual_line_y,
+      'relative_id_vec': dot_line_id,
+    })
     # load lane info
     try:
       line_info_list = load_lane_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
@@ -301,8 +327,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     for i in range(20):
       try:
-        if line_info_list[i]['type'] == ['dashed']:
+        if line_info_list[i]['type_vec'][0] == ['dashed']:
           fig1.renderers[0 + i].glyph.line_dash = 'dashed'
+        elif line_info_list[i]['type_vec'][0] == ['dashdot']:
+          fig1.renderers[0 + i].glyph.line_dash = 'dashdot'
         else:
           fig1.renderers[0 + i].glyph.line_dash = 'solid'
         data_lane = data_lane_dict[i]
@@ -1069,6 +1097,9 @@ def load_local_view_figure():
                                                  'ego_pos_compensation_x': [],
                                                  'ego_pos_compensation_y': []})
   data_text = ColumnDataSource(data = {'vel_ego_text':[], 'text_xn': [],  'text_yn': []})
+  data_lane_dashed_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
+  data_lane_solid_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
+  data_lane_virtual_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
   data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
   data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
   data_lane_2 = ColumnDataSource(data = {'line_2_y':[], 'line_2_x':[]})
@@ -1311,6 +1342,9 @@ def load_local_view_figure():
                      'data_ego_pos_point': data_ego_pos_point, \
                      'data_init_pos_point': data_init_pos_point, \
                      'data_text':data_text, \
+                     'data_lane_dashed_line':data_lane_dashed_line, \
+                     'data_lane_solid_line':data_lane_solid_line, \
+                     'data_lane_virtual_line':data_lane_virtual_line, \
                      'data_lane_0':data_lane_0, \
                      'data_lane_1':data_lane_1, \
                      'data_lane_2':data_lane_2, \
@@ -1467,31 +1501,34 @@ def load_local_view_figure():
 
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1350, match_aspect = True, aspect_scale=1)
+  fig1.background_fill_color = 'lightgray'
+  fig1.xgrid.grid_line_color = None
+  fig1.ygrid.grid_line_color = None
 
   fig1.x_range.flipped = True
   # figure plot
 
   # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!!
-  f0 = fig1.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_1_y', 'line_1_x', source = data_lane_1, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_2_y', 'line_2_x', source = data_lane_2, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_3_y', 'line_3_x', source = data_lane_3, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_4_y', 'line_4_x', source = data_lane_4, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_5_y', 'line_5_x', source = data_lane_5, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_6_y', 'line_6_x', source = data_lane_6, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_10_y', 'line_10_x', source = data_lane_10, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_11_y', 'line_11_x', source = data_lane_11, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_12_y', 'line_12_x', source = data_lane_12, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_13_y', 'line_13_x', source = data_lane_13, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_14_y', 'line_14_x', source = data_lane_14, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_15_y', 'line_15_x', source = data_lane_15, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_16_y', 'line_16_x', source = data_lane_16, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_17_y', 'line_17_x', source = data_lane_17, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_18_y', 'line_18_x', source = data_lane_18, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
-  fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
+  f0 = fig1.line('line_0_y', 'line_0_x', source = data_lane_0, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_1_y', 'line_1_x', source = data_lane_1, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_2_y', 'line_2_x', source = data_lane_2, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_3_y', 'line_3_x', source = data_lane_3, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_4_y', 'line_4_x', source = data_lane_4, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_5_y', 'line_5_x', source = data_lane_5, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_6_y', 'line_6_x', source = data_lane_6, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_7_y', 'line_7_x', source = data_lane_7, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_8_y', 'line_8_x', source = data_lane_8, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_9_y', 'line_9_x', source = data_lane_9, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_10_y', 'line_10_x', source = data_lane_10, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_11_y', 'line_11_x', source = data_lane_11, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_12_y', 'line_12_x', source = data_lane_12, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_13_y', 'line_13_x', source = data_lane_13, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_14_y', 'line_14_x', source = data_lane_14, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_15_y', 'line_15_x', source = data_lane_15, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_16_y', 'line_16_x', source = data_lane_16, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_17_y', 'line_17_x', source = data_lane_17, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_18_y', 'line_18_x', source = data_lane_18, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
+  fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion',visible = False)
   fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 3, line_color = 'cyan', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'center_line_gen')
   # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!!
   f21 = fig1.line('line_topo_0_y', 'line_topo_0_x', source = data_lane_topo_0, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
@@ -1536,13 +1573,13 @@ def load_local_view_figure():
   fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
   fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
 
-  fig1.line('stop_line_0_y', 'stop_line_0_x', source = stop_line_0, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
+  f61 = fig1.line('stop_line_0_y', 'stop_line_0_x', source = stop_line_0, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
   fig1.line('stop_line_1_y', 'stop_line_1_x', source = stop_line_1, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
   fig1.line('stop_line_2_y', 'stop_line_2_x', source = stop_line_2, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
   fig1.line('stop_line_3_y', 'stop_line_3_x', source = stop_line_3, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
   fig1.line('stop_line_4_y', 'stop_line_4_x', source = stop_line_4, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
 
-  fig1.patch('zebra_crossing_line_0_y', 'zebra_crossing_line_0_x', source = zebra_crossing_line_0, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  f66 = fig1.patch('zebra_crossing_line_0_y', 'zebra_crossing_line_0_x', source = zebra_crossing_line_0, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
   fig1.patch('zebra_crossing_line_1_y', 'zebra_crossing_line_1_x', source = zebra_crossing_line_1, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
   fig1.patch('zebra_crossing_line_2_y', 'zebra_crossing_line_2_x', source = zebra_crossing_line_2, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
   fig1.patch('zebra_crossing_line_3_y', 'zebra_crossing_line_3_x', source = zebra_crossing_line_3, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
@@ -1555,14 +1592,18 @@ def load_local_view_figure():
   fig1.patch('zebra_crossing_line_10_y', 'zebra_crossing_line_10_x', source = zebra_crossing_line_10, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
   fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
-  f61 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
+  f78 = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
+  f79 = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
+  f80 = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
+
+  f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_raw, fill_color = "deepskyblue", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_raw',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
-  f66 = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
+  f86 = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
   fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')
-  f68 = fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
+  f88 = fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
@@ -1646,26 +1687,35 @@ def load_local_view_figure():
   # fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
   # fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster')
 
-  hover1_1 = HoverTool(renderers=[f66], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+  hover1_1 = HoverTool(renderers=[f86], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[f68], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
-  hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s)')])
-  hover1_6 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '$index')])
-  hover1_7 = HoverTool(renderers=[fig1.renderers[69]], tooltips=[('index', '$index')])
+  hover1_2 = HoverTool(renderers=[f88], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+  # hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
+  # hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s')])
+  # hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s')])
+  # hover1_6 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '$index')])
+  # hover1_7 = HoverTool(renderers=[fig1.renderers[69]], tooltips=[('index', '$index')])
   # hover1_8 = HoverTool(renderers=[fig1.renderers[70]], tooltips=[('id', '@groundline_id_vec')])
+  hover1_9 = HoverTool(renderers=[f78], tooltips=[('relative_id', '@relative_id_vec')])
+  hover1_10 = HoverTool(renderers=[f79], tooltips=[('relative_id', '@relative_id_vec')])
+  hover1_11 = HoverTool(renderers=[f80], tooltips=[('relative_id', '@relative_id_vec')])
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
-  fig1.add_tools(hover1_3)
-  fig1.add_tools(hover1_4)
-  fig1.add_tools(hover1_5)
-  fig1.add_tools(hover1_6)
-  fig1.add_tools(hover1_7)
+  # fig1.add_tools(hover1_3)
+  # fig1.add_tools(hover1_4)
+  # fig1.add_tools(hover1_5)
+  # fig1.add_tools(hover1_6)
+  # fig1.add_tools(hover1_7)
   # fig1.add_tools(hover1_8)
+  fig1.add_tools(hover1_9)
+  fig1.add_tools(hover1_10)
+  fig1.add_tools(hover1_11)
+
+  # tap1 = TapTool(renderers=[f80])
+  # fig1.add_tools(tap1)
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
