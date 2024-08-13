@@ -140,6 +140,10 @@ void LateralObstacle::LateralObstacleDecision(
       } else {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
       }
+      // 防止感知误检，同时有横向和纵向overlap
+      if (lat_overlap) {
+        lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
+      }
       // 后方车辆
     } else {
       if (item.d_max_cpath < 0 && !lat_overlap && item.d_max_cpath < -ref_dis) {
