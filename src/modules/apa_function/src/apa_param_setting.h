@@ -149,6 +149,7 @@ struct ApaParameters {
   double max_obs2car_dist_slot_occupied_ratio = 0.086;
   double obstacle_ds = 0.5;
   double col_obs_safe_dist_normal = 0.36;
+  double car_lat_inflation_dynamic_col = 0.05;
   double car_lat_inflation_normal = 0.0986;
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = false;

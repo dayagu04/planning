@@ -409,10 +409,10 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
     uint8_t obs_in_slot_count = 0;
-    const uint8_t max_obs_in_slot_count = 2;
+    const uint8_t max_obs_in_slot_count = 5;
     for (const auto &obs_pt : frame_.obs_pt_vec) {
       const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      if (std::fabs(obs_pt_slot.y()) < 0.8 &&
+      if (std::fabs(obs_pt_slot.y()) < 0.6 &&
           obs_pt_slot.x() > ego_slot_info.pt_0.x() -
                                 apa_param.GetParam().car_length + 0.168 &&
           obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
@@ -558,6 +558,10 @@ bool SlotManagement::GenTLane(
 
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
         !apa_param.GetParam().believe_in_fus_obs) {
+      if (frame_.replan_flag) {
+        // construct t lane no consider obs in slot when replan
+        continue;
+      }
       if (obstacle_point_slot.y() > 0.0) {
         obstacle_point_slot.y() =
             0.5 * ego_slot_info.slot_width - max_obs_invasion_slot_dist;
@@ -580,7 +584,8 @@ bool SlotManagement::GenTLane(
       }
     }
     // the obs far from slot can relax requirements
-    if (std::fabs(obstacle_point_slot.y()) > 0.468) {
+    if (std::fabs(obstacle_point_slot.y()) >
+        ego_slot_info.slot_width * 0.5 + 0.468) {
       obstacle_point_slot.x() -= 0.268;
     }
     if (obstacle_point_slot.y() > 1e-6) {
@@ -674,9 +679,13 @@ bool SlotManagement::GenTLane(
   const double threshold = 0.6868;
   if (ego_slot_info.fus_obj_valid_flag) {
     left_y = std::max(left_y, car_half_width_with_mirror + threshold);
+    left_y = std::min(left_y, virtual_left_y);
     left_x = std::min(left_x, ego_slot_info.pt_1.x() - 1.68 * threshold);
+    left_x = std::max(left_x, virtual_x);
     right_y = std::min(right_y, -car_half_width_with_mirror - threshold);
+    right_y = std::max(right_y, virtual_right_y);
     right_x = std::min(right_x, ego_slot_info.pt_0.x() - 1.68 * threshold);
+    right_x = std::max(right_x, virtual_x);
   }
 
   // DEBUG_PRINT("real_left_y = " << real_left_y
@@ -704,7 +713,8 @@ bool SlotManagement::GenTLane(
                                     << "  right_dis_obs_car = "
                                     << right_dis_obs_car);
 
-  const double safe_threshold = apa_param.GetParam().safe_threshold;
+  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal +
+                                apa_param.GetParam().safe_threshold;
 
   // ensure it can move slot to make both side safe
   if (left_dis_obs_car + right_dis_obs_car < 2.0 * safe_threshold) {
@@ -900,13 +910,15 @@ bool SlotManagement::GenObstacles(
   Eigen::Vector2d channel_point_3;
   pnc::geometry_lib::LineSegment channel_line;
   std::vector<pnc::geometry_lib::LineSegment> channel_line_vec;
-  channel_line.SetPoints(channel_point_1, channel_point_2);
-  channel_line_vec.emplace_back(channel_line);
   channel_point_3 = F;
+  channel_point_2.y() = channel_point_3.y();
   channel_line.SetPoints(channel_point_2, channel_point_3);
   channel_line_vec.emplace_back(channel_line);
   channel_point_3 = A;
+  channel_point_1.y() = channel_point_3.y();
   channel_line.SetPoints(channel_point_1, channel_point_3);
+  channel_line_vec.emplace_back(channel_line);
+  channel_line.SetPoints(channel_point_1, channel_point_2);
   channel_line_vec.emplace_back(channel_line);
 
   const double ds = apa_param.GetParam().obstacle_ds;
@@ -996,16 +1008,20 @@ bool SlotManagement::GenObstacles(
       obs_slot_type = collision_detector_ptr->GetObsSlotType(
           obs_pos, slot_pt, ego_slot_info.slot_length, is_left_side);
 
-      // when searching, no process obs
-      if (false && !apa_param.GetParam().believe_in_fus_obs) {
+      if (!apa_param.GetParam().believe_in_fus_obs) {
         if (obs_slot_type ==
-            CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS) {
+                CollisionDetector::ObsSlotType::SLOT_ENTRANCE_OBS &&
+            frame_.replan_flag) {
           // obs is slot entrance, when replan, no conside it, but when dynamic
           // move and col det, conside it
           continue;
         }
 
         if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS) {
+          if (frame_.replan_flag) {
+            // when replan, temp del obs in slot
+            continue;
+          }
           // obs is in slot, temp hack, when believe_in_fus_obs is false, force
           // move obs to out slot
           if (obs_pos.y() > 0.0) {
@@ -1015,6 +1031,12 @@ bool SlotManagement::GenObstacles(
             obs_pos.y() =
                 -0.5 * ego_slot_info.slot_width + max_obs_invasion_slot_dist;
           }
+        }
+
+        if (std::fabs(obs_pos.y()) < ego_slot_info.slot_width * 0.5 &&
+            obs_pos.x() < 0.668) {
+          // todo: temp hack, when obs is directly behind the slot, lose it
+          continue;
         }
       }
 
@@ -1210,7 +1232,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
       const double min_slot_release_long_dist =
           frame_.fus_obj_valid_flag
               ? (apa_param.GetParam().min_slot_release_long_dist_slot2mirror *
-                 0.128)
+                 0.088)
               : apa_param.GetParam().min_slot_release_long_dist_slot2mirror;
 
       if (lon_dist < min_slot_release_long_dist && pair.second.GetOccupied()) {

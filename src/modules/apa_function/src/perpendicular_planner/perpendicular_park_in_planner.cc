@@ -406,6 +406,12 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   if (apa_param.GetParam().dynamic_col_det_enable &&
       !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
+
+    // when dynamic col det, use small car lat inflation, try to avoid getting
+    // stuck as much as possible
+    CollisionDetector::Paramters params;
+    params.lat_inflation = apa_param.GetParam().car_lat_inflation_dynamic_col;
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
     // construct real time obs
     GenTlane();
     GenObstacles();
@@ -575,6 +581,9 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
 
     frame_.remain_dist_col_det =
         std::min(frame_.remain_dist_col_det, frame_.remain_dist);
+
+    params.Reset();
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
 
     DEBUG_PRINT("remain_dist_col_det = " << frame_.remain_dist_col_det);
 
@@ -781,6 +790,10 @@ void PerpendicularInPlanner::GenTlane() {
 
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
         !apa_param.GetParam().believe_in_fus_obs) {
+      if (frame_.replan_flag) {
+        // construct t lane no consider obs in slot when replan
+        continue;
+      }
       if (obstacle_point_slot.y() > 0.0) {
         obstacle_point_slot.y() =
             0.5 * ego_slot_info.slot_width - max_obs_invasion_slot_dist;
@@ -803,7 +816,8 @@ void PerpendicularInPlanner::GenTlane() {
       }
     }
     // the obs far from slot can relax requirements
-    if (std::fabs(obstacle_point_slot.y()) > 0.468) {
+    if (std::fabs(obstacle_point_slot.y()) >
+        ego_slot_info.slot_width * 0.5 + 0.468) {
       obstacle_point_slot.x() -= 0.268;
     }
     if (obstacle_point_slot.y() > 1e-6) {
@@ -895,9 +909,13 @@ void PerpendicularInPlanner::GenTlane() {
   const double threshold = 0.6868;
   if (ego_slot_info.fus_obj_valid_flag) {
     left_y = std::max(left_y, car_half_width_with_mirror + threshold);
+    left_y = std::min(left_y, virtual_left_y);
     left_x = std::min(left_x, ego_slot_info.pt_1.x() - 1.68 * threshold);
+    left_x = std::max(left_x, virtual_x);
     right_y = std::min(right_y, -car_half_width_with_mirror - threshold);
+    right_y = std::max(right_y, virtual_right_y);
     right_x = std::min(right_x, ego_slot_info.pt_0.x() - 1.68 * threshold);
+    right_x = std::max(right_x, virtual_x);
   }
 
   DEBUG_PRINT("real_left_y = " << real_left_y
@@ -924,8 +942,8 @@ void PerpendicularInPlanner::GenTlane() {
   bool left_obs_meet_safe_require = false;
   bool right_obs_meet_safe_require = false;
 
-  const double safe_threshold =
-      apa_param.GetParam().car_lat_inflation_normal + 0.02;
+  const double safe_threshold = apa_param.GetParam().car_lat_inflation_normal +
+                                apa_param.GetParam().safe_threshold;
 
   left_obs_meet_safe_require = left_dis_obs_car > safe_threshold ? true : false;
   right_obs_meet_safe_require =
@@ -942,6 +960,9 @@ void PerpendicularInPlanner::GenTlane() {
       // right side is dangerous, should move toward left
       ego_slot_info.move_slot_dist = safe_threshold - right_dis_obs_car;
     }
+    DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
+                                      << "  right_dis_obs_car = "
+                                      << right_dis_obs_car);
   }
 
   const bool need_move_slot =
@@ -1131,13 +1152,15 @@ void PerpendicularInPlanner::GenObstacles() {
   Eigen::Vector2d channel_point_3;
   pnc::geometry_lib::LineSegment channel_line;
   std::vector<pnc::geometry_lib::LineSegment> channel_line_vec;
-  channel_line.SetPoints(channel_point_1, channel_point_2);
-  channel_line_vec.emplace_back(channel_line);
   channel_point_3 = F;
+  channel_point_2.y() = channel_point_3.y();
   channel_line.SetPoints(channel_point_2, channel_point_3);
   channel_line_vec.emplace_back(channel_line);
   channel_point_3 = A;
+  channel_point_1.y() = channel_point_3.y();
   channel_line.SetPoints(channel_point_1, channel_point_3);
+  channel_line_vec.emplace_back(channel_line);
+  channel_line.SetPoints(channel_point_1, channel_point_2);
   channel_line_vec.emplace_back(channel_line);
 
   const double ds = apa_param.GetParam().obstacle_ds;
@@ -1262,6 +1285,10 @@ void PerpendicularInPlanner::GenObstacles() {
         }
 
         if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS) {
+          if (frame_.replan_flag) {
+            // when replan, temp del obs in slot
+            continue;
+          }
           // obs is in slot, temp hack, when believe_in_fus_obs is false, force
           // move obs to out slot
           if (obs_pos.y() > 0.0) {
@@ -1271,6 +1298,12 @@ void PerpendicularInPlanner::GenObstacles() {
             obs_pos.y() =
                 -0.5 * ego_slot_info.slot_width + max_obs_invasion_slot_dist;
           }
+        }
+
+        if (std::fabs(obs_pos.y()) < ego_slot_info.slot_width * 0.5 &&
+            obs_pos.x() < 0.668) {
+          // todo: temp hack, when obs is directly behind the slot, lose it
+          continue;
         }
       }
 
