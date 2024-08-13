@@ -128,7 +128,7 @@ class LaneChangeStateMachineManager {
  private:
   void RunStateMachine();
   bool CheckIfProposeLaneChange(RequestType* const lane_change_direction,
-                                RequestSource* const lane_change_type) const;
+                                RequestSource* const lane_change_type);
   bool CheckIfProposeToExecution(const RequestType& lane_change_direction,
                                  const RequestSource& lane_change_type);
   bool CheckIfProposeToCancel(const RequestType& lane_change_direction,

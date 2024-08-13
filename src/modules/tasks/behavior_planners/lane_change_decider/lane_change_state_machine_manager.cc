@@ -184,12 +184,18 @@ void LaneChangeStateMachineManager::RunStateMachine() {
 
 bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     RequestType *const lane_change_direction,
-    RequestSource *const lane_change_type) const {
+    RequestSource *const lane_change_type) {
   *lane_change_direction = lc_req_mgr_->request();
   *lane_change_type = lc_req_mgr_->request_source();
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    return true;
+    bool is_ego_in_perfect_pose = CheckIfInPerfectLaneKeeping();
+    JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
+    if (*lane_change_type == INT_REQUEST) {
+      return true;
+    } else {
+      return is_ego_in_perfect_pose;
+    }
   }
   return false;
 }
@@ -203,7 +209,6 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
   CheckLaneChangeValid(lane_change_direction);
-
   return has_target_lane && lane_change_stage_info_.gap_insertable;
 }
 
