@@ -874,7 +874,7 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(lc_req_mgr_->target_lane_virtual_id());
   double dist_mline =
-      std::fabs(target_lane_frenet_ego_state.l()) - target_lane->width();
+      std::abs(std::fabs(target_lane_frenet_ego_state.l()) - target_lane->width() / 2);
   double t_reaction = (dist_mline == DBL_MAX) ? 0.5 : 0.5 * dist_mline / 1.8;
   double mss = 0.0;
   double mss_t = 0.0;
@@ -1294,11 +1294,10 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
       virtual_lane_manager->current_lane_virtual_id();
   const double pause_ttc = 2.0;
   const double pause_v_rel = 2.0;
-  if (((direction == LEFT_CHANGE &&
+  if ((direction == LEFT_CHANGE &&
         distance > -left_lane_width / 2 - move_thre) ||
        (direction == RIGHT_CHANGE &&
-        distance < right_lane_width / 2 + move_thre) ||
-       fix_lane->get_virtual_id() == current_lane_virtual_id)) {
+        distance < right_lane_width / 2 + move_thre)) {
     if (lc_state_info->lc_should_back &&
         lc_state_info->tr_pause_dv > pause_v_rel &&
         -lc_state_info->tr_pause_s / lc_state_info->tr_pause_dv < pause_ttc &&
