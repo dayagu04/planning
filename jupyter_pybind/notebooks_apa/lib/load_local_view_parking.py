@@ -64,6 +64,7 @@ load_uss_wave_from_uss_percept_msg = True
 load_fusion_object_from_occupancy = True
 version_245 = True
 read_uss_per_msg = False
+read_fus_obj_msg = False
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
@@ -409,30 +410,33 @@ class LoadCyberbag:
       self.fus_ground_line_msg['enable'] = False
       print('missing /iflytek/fusion/ground_line !!!')
 
-    # load fusion objects msg
-    try:
-      fus_objects_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
-        if version_245:
-          fus_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
-        else:
-          fus_objects_msg_dict[msg.header.timestamp / 1e6] = msg
+    if read_fus_obj_msg:
+      # load fusion objects msg
+      try:
+        fus_objects_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
+          if version_245:
+            fus_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+          else:
+            fus_objects_msg_dict[msg.header.timestamp / 1e6] = msg
 
-      fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
-      for t, msg in fus_objects_msg_dict.items():
-        self.fus_objects_msg['t'].append(t)
-        self.fus_objects_msg['abs_t'].append(t)
-        self.fus_objects_msg['data'].append(msg)
-      smallest_abs_t = min(smallest_abs_t, self.fus_objects_msg['t'][0])
-      self.fus_objects_msg['t'] = [tmp - t0  for tmp in self.fus_objects_msg['t']]
-      print('fus_objects_msg time:',self.fus_objects_msg['t'][-1])
-      if len(self.fus_objects_msg['t']) > 0:
-        self.fus_objects_msg['enable'] = True
-      else:
+        fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
+        for t, msg in fus_objects_msg_dict.items():
+          self.fus_objects_msg['t'].append(t)
+          self.fus_objects_msg['abs_t'].append(t)
+          self.fus_objects_msg['data'].append(msg)
+        smallest_abs_t = min(smallest_abs_t, self.fus_objects_msg['t'][0])
+        self.fus_objects_msg['t'] = [tmp - t0  for tmp in self.fus_objects_msg['t']]
+        print('fus_objects_msg time:',self.fus_objects_msg['t'][-1])
+        if len(self.fus_objects_msg['t']) > 0:
+          self.fus_objects_msg['enable'] = True
+        else:
+          self.fus_objects_msg['enable'] = False
+      except:
         self.fus_objects_msg['enable'] = False
-    except:
-      self.fus_objects_msg['enable'] = False
-      print('missing /iflytek/fusion/objects !!!')
+        print('missing /iflytek/fusion/objects !!!')
+    else:
+      print('no read /iflytek/fusion/objects !!!')
 
 
     # load fusion objects msg

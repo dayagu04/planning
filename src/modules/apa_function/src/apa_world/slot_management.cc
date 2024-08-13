@@ -409,10 +409,10 @@ bool SlotManagement::UpdateEgoSlotInfo(EgoSlotInfo &ego_slot_info,
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
     uint8_t obs_in_slot_count = 0;
-    const uint8_t max_obs_in_slot_count = 2;
+    const uint8_t max_obs_in_slot_count = 5;
     for (const auto &obs_pt : frame_.obs_pt_vec) {
       const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      if (std::fabs(obs_pt_slot.y()) < 0.8 &&
+      if (std::fabs(obs_pt_slot.y()) < 0.6 &&
           obs_pt_slot.x() > ego_slot_info.pt_0.x() -
                                 apa_param.GetParam().car_length + 0.168 &&
           obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
@@ -1232,7 +1232,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
       const double min_slot_release_long_dist =
           frame_.fus_obj_valid_flag
               ? (apa_param.GetParam().min_slot_release_long_dist_slot2mirror *
-                 0.128)
+                 0.088)
               : apa_param.GetParam().min_slot_release_long_dist_slot2mirror;
 
       if (lon_dist < min_slot_release_long_dist && pair.second.GetOccupied()) {
