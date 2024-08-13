@@ -556,8 +556,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   if (is_ego_on_expressway_ &&
       distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
     GenerateLaneChangeTasksForNOA();
-  } else {
-    ResetForRampInfo();
   }
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
