@@ -708,6 +708,8 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
+  std::vector<double> kappa_radius_vec;
+  kappa_radius_vec.resize(point_size);
   float normal_care_spline_length = 50.;
   const float preview_time = 20.;
   const double min_preview_spline_length = 20.;
@@ -737,12 +739,16 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y -
                                    ref_point.at(i - 1).path_point.y)
               : 0.;
+    kappa_radius_vec[i] = std::min(
+      std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
+      10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);
       cart_ref_info.y_vec.resize(i);
       cart_ref_info.s_vec.resize(i);
+      kappa_radius_vec.resize(i);
       break;
     }
   }
@@ -752,6 +758,8 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_s_vec", cart_ref_info.s_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_k_vec", kappa_radius_vec, 2)
 
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());
