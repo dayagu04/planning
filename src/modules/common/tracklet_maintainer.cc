@@ -2132,8 +2132,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
   bool in_lon_near_area =
       (item.v_rel < 0 &&
-       ((item.d_rel / (-item.v_rel) < 3) ||
-        ((item.d_rel / (-item.v_rel) < 5 && item.d_rel < 10))));
+       ((item.d_rel / (-item.v_rel) < 1.5) ||
+        ((item.d_rel / (-item.v_rel) < 3 && item.d_rel < 5))));
 
   // for lead one
   // if (lead_one != nullptr && item.track_id == lead_one->track_id &&
