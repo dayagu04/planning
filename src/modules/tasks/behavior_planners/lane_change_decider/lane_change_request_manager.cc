@@ -85,12 +85,12 @@ bool LaneChangeRequestManager::Update(
     int_request_.reset_int_cnt();
   }
   if (int_request_.request_type() == NO_CHANGE) {
-    if (enable_use_emergency_avoidence_lc_request && is_on_highway) {
-      // TODO: 待感知停止线输出ready，添加变道抑制
-      emergence_avoid_request_.Update(lc_status);
-    }
     if (enable_use_cone_change_request) {
       cone_change_request_.Update(lc_status);
+    }
+    if (enable_use_emergency_avoidence_lc_request && is_on_highway &&
+        cone_change_request_.request_type() == RequestType::NO_CHANGE) {
+      emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
       map_request_.update(lc_status, map_request_.tfinish());
@@ -223,23 +223,11 @@ bool LaneChangeRequestManager::Update(
       request_ = int_request_.request_type();
       request_source_ = INT_REQUEST;
       target_lane_virtual_id_ = int_request_.target_lane_virtual_id();
-    } else if (emergence_avoid_request_.request_type() != NO_CHANGE) {
-      if (cone_change_request_.request_type() != NO_CHANGE) {
-        cone_change_request_.Finish();
-        cone_change_request_.Reset();
-      }
-      if (map_request_.request_type() != NO_CHANGE) {
-        map_request_.Finish();
-      }
-      if (overtake_request_.request_type() != NO_CHANGE) {
-        overtake_request_.Finish();
-        overtake_request_.Reset();
-      }
-      request_ = emergence_avoid_request_.request_type();
-      request_source_ = EMERGENCE_AVOID_REQUEST;
-      target_lane_virtual_id_ =
-          emergence_avoid_request_.target_lane_virtual_id();
     } else if (cone_change_request_.request_type() != NO_CHANGE) {
+      if (emergence_avoid_request_.request_type() != NO_CHANGE) {
+        emergence_avoid_request_.Finish();
+        emergence_avoid_request_.Reset();
+      }
       if (map_request_.request_type() != NO_CHANGE) {
         map_request_.Finish();
       }
@@ -249,7 +237,20 @@ bool LaneChangeRequestManager::Update(
       }
       request_ = cone_change_request_.request_type();
       request_source_ = CONE_REQUEST;
-      target_lane_virtual_id_ = cone_change_request_.target_lane_virtual_id();
+      target_lane_virtual_id_ =
+          cone_change_request_.target_lane_virtual_id();
+    } else if (emergence_avoid_request_.request_type() != NO_CHANGE) {
+      if (map_request_.request_type() != NO_CHANGE) {
+        map_request_.Finish();
+      }
+      if (overtake_request_.request_type() != NO_CHANGE) {
+        overtake_request_.Finish();
+        overtake_request_.Reset();
+      }
+      request_ = emergence_avoid_request_.request_type();
+      request_source_ = EMERGENCE_AVOID_REQUEST;
+      target_lane_virtual_id_ = 
+          emergence_avoid_request_.target_lane_virtual_id();
     } else if (map_request_.request_type() != NO_CHANGE) {
       if (overtake_request_.request_type() != NO_CHANGE) {
         overtake_request_.Finish();

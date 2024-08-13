@@ -7,6 +7,7 @@
 #include <limits>
 
 #include "common.pb.h"
+#include "common_c.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
@@ -267,20 +268,27 @@ void EmergenceAvoidRequest::updateEmergencyAvoidanceSituation(int lc_status) {
       if (front_vehicle_iter->second.track_id == kInvalidAgentId) {
         continue;
       }
-      double obs_speed_abs = 0.0;
-      obs_speed_abs = std::sqrt(
-          std::pow(ego_state->ego_v() + front_vehicle_iter->second.v_x, 2) +
-          std::pow(front_vehicle_iter->second.v_y, 2));
-      if (obs_speed_abs <= kStationaryObstacleSpeedThreshold &&
+      bool object_type_static = front_vehicle_iter->second.motion_pattern_current == 
+          iflyauto::ObjectMotionType:: OBJECT_MOTION_TYPE_STATIC;
+      if ((!object_type_static || (front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_COUPE &&
           front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+              Common::ObjectType::OBJECT_TYPE_TRUCK)) &&
+          front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&    
+          (front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+          front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_CRASH_BARREL &&
+          front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN)) {
         continue;
       }
       const double long_dis = front_vehicle_iter->second.d_rel;
       if (long_dis > kEmergencyAvoidancelongitudinalDistanceThreshold) {
         continue;
       }
-      const double half_width = vehicle_param.width * 0.5;
+      const double half_width = front_vehicle_iter->second.width * 0.5;
       const double front_track_left_boundary_l =
           front_vehicle_iter->second.l + half_width;
       const double front_track_right_boundary_l =
