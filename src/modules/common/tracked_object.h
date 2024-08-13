@@ -154,6 +154,10 @@ struct TrackedObject {
   iflyauto::ObjectMotionType motion_pattern_current;
   bool can_not_avoid = false;
   bool is_static = false;
+  bool is_oversize_vehicle = false;
+  bool is_VRU = false;
+  bool is_traffic_facilities = false;
+  bool is_car = false;
 
   // fisheye related for cutin
   Point2D points_3d_f = {DBL_MAX, DBL_MAX};

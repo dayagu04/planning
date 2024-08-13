@@ -39,43 +39,16 @@ void ObstacleManager::update() {
       continue;
     }
 
-    double prediction_trajectory_length = 10.0;
-    double prediction_duration = 0.0;
-    if (prediction_object.trajectory_array.size() > 0) {
-      const auto &trajectory_array = prediction_object.trajectory_array.at(0);
-      if (trajectory_array.trajectory.size() > 0) {
-        const auto &start_point = trajectory_array.trajectory.at(0);
-        const auto &end_point = trajectory_array.trajectory.at(
-            trajectory_array.trajectory.size() - 1);
-        prediction_trajectory_length = std::sqrt(
-            (start_point.x - end_point.x) * (start_point.x - end_point.x) +
-            (start_point.y - end_point.y) * (start_point.y - end_point.y));
-        prediction_duration = end_point.relative_time;
-      }
-    }
-
-    const double kMaxStaticPredictionLength =
-        config_.max_speed_static_obstacle * prediction_duration;
-    std::array<double, 3> xp{10, 20, 30};
-    std::array<double, 3> fp{1, 2, 3};
-    double static_speed = interp(ego_state.ego_v(), xp, fp);
-    bool is_static =
-        prediction_object.speed < static_speed ||
-        prediction_object.trajectory_array.size() == 0 ||
-        prediction_trajectory_length < kMaxStaticPredictionLength ||
-        prediction_object.motion_pattern_current ==
-            iflyauto::OBJECT_MOTION_TYPE_STATIC ||
-        prediction_object.is_traffic_facilities;
     double prediction_relative_time =
         prediction_object.delay_time - ego_init_relative_time;
     if (prediction_object.trajectory_array.size() == 0) {
       auto obstacle = Obstacle(prediction_object.id, prediction_object,
-                               is_static, prediction_relative_time);
+                               prediction_object.is_static, prediction_relative_time);
       add_obstacle(obstacle);
       continue;
     }
     for (int i = 0; i < prediction_object.trajectory_array.size(); ++i) {
-      Obstacle obstacle(prediction_object.id, prediction_object, is_static,
+      Obstacle obstacle(prediction_object.id, prediction_object, prediction_object.is_static,
                         prediction_relative_time);
       if (obstacle.is_vaild()) {
         add_obstacle(obstacle);
