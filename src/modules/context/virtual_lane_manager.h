@@ -177,6 +177,9 @@ class VirtualLaneManager {
 
   double dis_to_ramp() const { return dis_to_ramp_; }
   RampDirection ramp_direction() const { return ramp_direction_; }
+
+  RampDirection first_split_direction() const { return first_split_direction_; }
+
   double distance_to_first_road_merge() const {
     return distance_to_first_road_merge_;
   }
@@ -212,6 +215,11 @@ class VirtualLaneManager {
   double DistanceToNextSpeedBump() const {
     return distance_to_next_speed_bump_;
   }
+
+  int origin_relative_id_zero_nums() const {
+    return origin_relative_id_zero_nums_;
+  }
+  bool is_nearing_ramp ()const {return is_nearing_ramp_;}
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);
@@ -319,6 +327,7 @@ class VirtualLaneManager {
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
+  int origin_relative_id_zero_nums_ = 0;
 };
 }  // namespace planning
 #endif

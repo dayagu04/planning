@@ -556,8 +556,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   if (is_ego_on_expressway_ &&
       distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
     GenerateLaneChangeTasksForNOA();
-  } else {
-    ResetForRampInfo();
   }
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
@@ -1518,12 +1516,13 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     return;
   }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
-  if (current_segment->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY) {
+  if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
+      current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+    is_ego_on_expressway_ = true;
+  } else {
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
     ResetForRampInfo();
     return;
-  } else {
-    is_ego_on_expressway_ = true;
   }
   //计算ramp信息
   const auto& ramp_info =
@@ -1879,10 +1878,10 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   //(1)按照order_id的顺序排序输入lanes
   std::vector<iflyauto::ReferenceLineMsg> lane_msg;
   lane_msg.reserve(roads_ptr->reference_line_msg_size);
-  int relative_id_zero_nums = 0;
+  origin_relative_id_zero_nums_ = 0;
   for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
     if (roads_ptr->reference_line_msg[i].relative_id == 0) {
-      relative_id_zero_nums = relative_id_zero_nums + 1;
+      origin_relative_id_zero_nums_ = origin_relative_id_zero_nums_ + 1;
     }
     lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
   }
