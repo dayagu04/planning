@@ -34,6 +34,7 @@
 #include "reference_path_manager.h"
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
+#include "utils/path_point.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
 
@@ -2020,7 +2021,7 @@ void VirtualLaneManager::TrackEgoLane() {
         SelectEgoLaneWithoutPlan();
         return;
       }
-      if (is_on_highway_ && zero_relative_id_nums == 2) {
+      if (is_on_highway_ && zero_relative_id_nums >= 2) {
         if (!is_on_ramp_ && dis_to_ramp_ < 3000 && !is_leaving_ramp_ &&
             lane_keep_status) {
           // hack::针对分流 感知未提供分汇流点信息 作如下后处理
@@ -2061,27 +2062,58 @@ void VirtualLaneManager::TrackEgoLane() {
 void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const double ego_heading_angle = ego_state->heading_angle();
   double ego2lane_min = std::numeric_limits<double>::max();
   int origin_order_id = 0;
   int relative_id_diff = 0;
+  double total_lane_cost = 0.0;
+  const double lane_line_segment_length = 5.0;
+  const double default_lane_line_length = 100.0;
+  std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
+  const double init_pos_lateral_offset_weight = 1.0;
+  const double heading_angle_diff_weight = 1.5;
+
 
   for (auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
+        double average_heading_angle_cost = 0.0;
+        double heading_angle_cost = 0.0;
+        double pos_lateral_offset_cost = 0.0;
         std::shared_ptr<KDPath> frenet_coord =
             relative_id_lane->get_lane_frenet_coord();
-        double ego_s, ego_l;
+        double ego_s = 0.0;
+        double ego_l = 0.0;
         if (!frenet_coord->XYToSL(ego_state->ego_pose().x,
                                   ego_state->ego_pose().y, &ego_s, &ego_l)) {
           continue;
         }
-
-        if (ego_s < frenet_coord->Length()) {
-          if (std::fabs(ego_l) < ego2lane_min) {
-            ego2lane_min = std::fabs(ego_l);
-            origin_order_id = relative_id_lane->get_order_id();
-            relative_id_lane->set_relative_id(0);
+        if (ego_s > frenet_coord->Length()) {
+          continue;
+        }
+        planning_math::PathPoint ego_s_nearest_point = 
+            frenet_coord->GetPathPointByS(ego_s);
+        int iter_count = 0;
+        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length(); s += lane_line_segment_length) {
+          if (s > default_lane_line_length + ego_s) {
+            break;
           }
+          double heading_angle = frenet_coord->GetPathCurveHeading(s);
+          heading_angle_cost += std::fabs(heading_angle - ego_heading_angle);
+          iter_count++;
+        }
+        pos_lateral_offset_cost = std::fabs(ego_l);
+        iter_count = std::max(1, iter_count);
+        average_heading_angle_cost = heading_angle_cost / iter_count;
+        total_lane_cost = average_heading_angle_cost * heading_angle_diff_weight +
+            pos_lateral_offset_cost * init_pos_lateral_offset_weight;
+        std::vector<double> cost_list{average_heading_angle_cost, ego_l, total_lane_cost};
+        lane_cost_list[relative_id_lane->get_order_id()] = cost_list;
+
+        if (total_lane_cost < ego2lane_min) {
+          ego2lane_min = std::fabs(ego_l);
+          origin_order_id = relative_id_lane->get_order_id();
+          relative_id_lane->set_relative_id(0);
         }
       }
     }
