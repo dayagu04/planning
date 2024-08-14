@@ -178,7 +178,8 @@ class LaneChangeStateMachineManager {
   void UpdateStateMachineDebugInfo();
   void GenerateTurnSignalForSplitCase();
   bool IsSplitCase(RampDirection* ramp_direction);
-  bool MakeFrontDiff(double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
+  bool MakeFrontDiff(double* lat_diff,
+                     const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
   vector<Point2D> CarSideCorners();
 
