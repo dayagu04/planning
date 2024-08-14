@@ -215,7 +215,13 @@ struct LateralObstacleConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    obstacle_detect_distance_upper = read_json_key<double>(
+        json, "obstacle_detect_distance_upper", obstacle_detect_distance_upper);
+    obstacle_detect_distance_lower = read_json_key<double>(
+        json, "obstacle_detect_distance_lower", obstacle_detect_distance_lower);
   }
+  double obstacle_detect_distance_upper = 220;
+  double obstacle_detect_distance_lower = -50;
 };
 
 struct HistoryObstacleConfig : public EgoPlanningConfig {

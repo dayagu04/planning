@@ -68,8 +68,10 @@ void LifecycleDict::remove_clean() {
   dirty_set_.clear();
 }
 
-TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session) {
+TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session,
+                                       const LateralObstacleConfig &config) {
   session_ = session;
+  config_ = config;
   s_ego_ = 0;
   l_ego_ = 0;
   theta_ego_ = 0;
@@ -206,7 +208,9 @@ void TrackletMaintainer::recv_prediction_objects(
     double rel_x = dx * ego_fx + dy * ego_fy;
     double rel_y = dx * ego_lx + dy * ego_ly;
 
-    if (rel_x < -50 || rel_x > 150 || p.trajectory_array.size() == 0) {
+    if (rel_x < config_.obstacle_detect_distance_lower ||
+        rel_x > config_.obstacle_detect_distance_upper ||
+        p.trajectory_array.size() == 0) {
       LOG_DEBUG(
           "[obstacle_prediction_update] ignore far away obstacle : [%d] \n",
           p.id);
@@ -434,7 +438,9 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     double rel_y = p.relative_position_y;
 
     // TBD: use config
-    if (rel_x < -45 || rel_x > 150 || p.trajectory_array.size() == 0) {
+    if (rel_x < config_.obstacle_detect_distance_lower ||
+        rel_x > config_.obstacle_detect_distance_upper ||
+        p.trajectory_array.size() == 0) {
       continue;
     }
 
