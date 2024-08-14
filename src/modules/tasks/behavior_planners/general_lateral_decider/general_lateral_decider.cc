@@ -370,17 +370,29 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     // frenet info
     Point2D frenet_pt{0.0, 0.0};
     Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
-    frenet_coord->XYToSL(cart_pt, frenet_pt);
-    last_traj_points[i].s = frenet_pt.x;
-    last_traj_points[i].l = frenet_pt.y;
-    plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      last_traj_points[i].s = frenet_pt.x;
+      last_traj_points[i].l = frenet_pt.y;
+      plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+    } else {
+      LOG_DEBUG("plan_history_traj frenet error");
+    }
   }
   if (plan_history_traj_tmp.empty()) {
     return false;
   }
-  auto ego_s = ego_frenet_state_.s();
-  if (ego_s <= plan_history_traj_tmp.front().s ||
-      ego_s >= plan_history_traj_tmp.back().s) {
+  auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
+  // auto ego_s = ego_frenet_state_.s();
+  if (ego_s <= plan_history_traj_tmp.front().s) {
+    for (double t = 0; t <= plan_history_traj_tmp.back().t; t += config_.delta_t) {
+      TrajectoryPoint pt =
+          general_lateral_decider_utils::GetTrajectoryPointAtTime(
+              plan_history_traj_tmp, t);
+      pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
+      plan_history_traj_.emplace_back(std::move(pt));
+    }
+  } else if (ego_s >= plan_history_traj_tmp.back().s) {
+    // assert(false);
   } else {
     int index = 1;
     while (index < plan_history_traj_tmp.size()) {
@@ -843,7 +855,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     GenerateObstaclePreliminaryDecision(
         ego_l, ref_path_points_[i].distance_to_right_lane_border,
         ref_path_points_[i].distance_to_left_lane_border, overlap_min_y,
-        overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+        overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_nudge_left,
         is_cross_obj, pre_lateral_decision, reset_conflict_decision,
         obstacle_decision, lat_decision, lon_decision);
     has_lat_decision =
@@ -1000,7 +1012,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       GenerateObstaclePreliminaryDecision(
           ego_l, ref_path_points_[index].distance_to_right_lane_border,
           ref_path_points_[index].distance_to_left_lane_border, overlap_min_y,
-          overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+          overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_nudge_left,
           is_cross_obj, pre_lateral_decision, reset_conflict_decision,
           obstacle_decision, lat_decision, lon_decision);
       has_lat_decision =
@@ -1018,7 +1030,7 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
     double ego_l, double distance_to_right_lane_border,
     double distance_to_left_lane_border, double overlap_min_y,
     double overlap_max_y, double lat_buf_dis, bool b_overlap_side,
-    bool init_lon_no_overlap, bool is_cross_obj,
+    bool init_lon_no_overlap, bool is_nudge_left, bool is_cross_obj,
     LatObstacleDecisionType pre_lateral_decision, bool &reset_conflict_decision,
     ObstacleDecision &obstacle_decision, LatObstacleDecisionType &lat_decision,
     LonObstacleDecisionType &lon_decision) {
@@ -1027,40 +1039,46 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
   const double half_ego_width = vehicle_param.max_width * 0.5;
   constexpr double kMaxAvoidEdgeL{2.0};  // m
   auto avoid_cross_lane = 0.2;
-
-  if ((overlap_min_y <= ego_l && ego_l <= overlap_max_y) || is_cross_obj) {
-    lat_decision = LatObstacleDecisionType::IGNORE;
-    lon_decision = LonObstacleDecisionType::YIELD;
-  } else if (overlap_min_y > ego_l) {
-    auto avoid_right_edge = overlap_min_y - lat_buf_dis - half_ego_width;
-    if (avoid_right_edge >
-            std::fmax(-distance_to_right_lane_border - avoid_cross_lane,
-                      -kMaxAvoidEdgeL) or
-        b_overlap_side) {
-      lat_decision = LatObstacleDecisionType::RIGHT;
-      lon_decision = LonObstacleDecisionType::IGNORE;
-      // lat_decision = LatObstacleDecisionType::IGNORE;
-      // lon_decision = LonObstacleDecisionType::YIELD;
-    } else {
-      lat_decision = LatObstacleDecisionType::IGNORE;
-      lon_decision = LonObstacleDecisionType::YIELD;
-    }
+  if (is_nudge_left) {
+    lat_decision = LatObstacleDecisionType::RIGHT;
+    lon_decision = LonObstacleDecisionType::IGNORE;
   } else {
-    assert(overlap_max_y < ego_l);
-    auto avoid_left_edge = overlap_max_y + lat_buf_dis + half_ego_width;
-    if (avoid_left_edge <
-            std::min(distance_to_left_lane_border + avoid_cross_lane,
-                     kMaxAvoidEdgeL) or
-        b_overlap_side) {
-      lat_decision = LatObstacleDecisionType::LEFT;
-      lon_decision = LonObstacleDecisionType::IGNORE;
-      // lat_decision = LatObstacleDecisionType::IGNORE;
-      // lon_decision = LonObstacleDecisionType::YIELD;
-    } else {
-      lat_decision = LatObstacleDecisionType::IGNORE;
-      lon_decision = LonObstacleDecisionType::YIELD;
-    }
+    lat_decision = LatObstacleDecisionType::LEFT;
+    lon_decision = LonObstacleDecisionType::IGNORE;
   }
+  // if ((overlap_min_y <= ego_l && ego_l <= overlap_max_y) || is_cross_obj) {
+  //   lat_decision = LatObstacleDecisionType::IGNORE;
+  //   lon_decision = LonObstacleDecisionType::YIELD;
+  // } else if (overlap_min_y > ego_l) {
+  //   auto avoid_right_edge = overlap_min_y - lat_buf_dis - half_ego_width;
+  //   if (avoid_right_edge >
+  //           std::fmax(-distance_to_right_lane_border - avoid_cross_lane,
+  //                     -kMaxAvoidEdgeL) or
+  //       b_overlap_side) {
+  //     lat_decision = LatObstacleDecisionType::RIGHT;
+  //     lon_decision = LonObstacleDecisionType::IGNORE;
+  //     // lat_decision = LatObstacleDecisionType::IGNORE;
+  //     // lon_decision = LonObstacleDecisionType::YIELD;
+  //   } else {
+  //     lat_decision = LatObstacleDecisionType::IGNORE;
+  //     lon_decision = LonObstacleDecisionType::YIELD;
+  //   }
+  // } else {
+  //   assert(overlap_max_y < ego_l);
+  //   auto avoid_left_edge = overlap_max_y + lat_buf_dis + half_ego_width;
+  //   if (avoid_left_edge <
+  //           std::min(distance_to_left_lane_border + avoid_cross_lane,
+  //                    kMaxAvoidEdgeL) or
+  //       b_overlap_side) {
+  //     lat_decision = LatObstacleDecisionType::LEFT;
+  //     lon_decision = LonObstacleDecisionType::IGNORE;
+  //     // lat_decision = LatObstacleDecisionType::IGNORE;
+  //     // lon_decision = LonObstacleDecisionType::YIELD;
+  //   } else {
+  //     lat_decision = LatObstacleDecisionType::IGNORE;
+  //     lon_decision = LonObstacleDecisionType::YIELD;
+  //   }
+  // }
 
   if (pre_lateral_decision == LatObstacleDecisionType::IGNORE) {
     pre_lateral_decision = lat_decision;
