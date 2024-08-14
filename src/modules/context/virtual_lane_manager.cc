@@ -63,6 +63,9 @@ constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 4.0;
 constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kMinCostLength = 30.0;
+constexpr double kLaneLineSegmentLength = 10.0;
+constexpr double kConsiderLaneLineLength = 50.0;
+constexpr double kDefaultRoadRadius = 750.0;
 }  // namespace
 
 VirtualLaneManager::VirtualLaneManager(
@@ -2136,6 +2139,7 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
   std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
   int last_track_virtual_id = 0;
+  double last_ego_lane_curv = 0.0;
 
   if (!virtual_id_mapped_lane_.empty()) {
     for (const auto& virtual_id_lane : virtual_id_mapped_lane_) {
@@ -2147,6 +2151,9 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
   } else {
     return;
   }
+
+  last_ego_lane_curv = ComputeTargetLaneSpecifiedRangeCurvature(last_track_virtual_id_lane);
+  double road_radius = 1 / std::max(last_ego_lane_curv, 0.0001);
 
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const auto coarse_planning_info = session_->planning_context()
@@ -2195,32 +2202,66 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
         if (lane_points.size() <= 2) {
           continue;
         }
-        int default_point_nums = 30;
         int point_nums = 0;
         double total_lateral_offset = 0.0;
-        int select_lane_point_interval = 3;
-        for (int i = 0; i < lane_points.size();
-             i += select_lane_point_interval) {
-          iflyauto::ReferencePoint point = lane_points[i];
-          if (std::isnan(point.local_point.x) ||
-              std::isnan(point.local_point.y)) {
-            LOG_ERROR("update_lane_points: skip NaN point");
-            continue;
+        if (road_radius > kDefaultRoadRadius) {
+          int default_point_nums = 30;
+          int select_lane_point_interval = 3;
+          for (int i = 0; i < lane_points.size();
+              i += select_lane_point_interval) {
+            iflyauto::ReferencePoint point = lane_points[i];
+            if (std::isnan(point.local_point.x) ||
+                std::isnan(point.local_point.y)) {
+              LOG_ERROR("update_lane_points: skip NaN point");
+              continue;
+            }
+            double lateral_offset = 0.0;
+            double ego_s, ego_l;
+            if (!track_lane_frenet_coord->XYToSL(
+                    point.local_point.x, point.local_point.y, &ego_s, &ego_l)) {
+              lateral_offset = 10.0;
+            } else {
+              lateral_offset = ego_l;
+            }
+            total_lateral_offset += lateral_offset;
+            point_nums += 1;
+            if (point_nums >= default_point_nums) {
+              break;
+            }
           }
-          double lateral_offset = 0.0;
-          double ego_s, ego_l;
-          if (!track_lane_frenet_coord->XYToSL(
-                  point.local_point.x, point.local_point.y, &ego_s, &ego_l)) {
-            lateral_offset = 10.0;
-          } else {
-            lateral_offset = ego_l;
+        } else {
+          int default_point_nums = 25;
+          int select_lane_point_interval = 3;
+          double target_ego_s = 0.0;
+          double target_ego_l = 0.0;
+          if (!track_lane_frenet_coord->XYToSL(ego_state->ego_pose().x,
+                                    ego_state->ego_pose().y, &target_ego_s, &target_ego_l)) {
+            cumu_lat_dis_cost = default_lane_mapping_cost;
           }
-          total_lateral_offset += lateral_offset;
-          point_nums += 1;
-          if (point_nums >= default_point_nums) {
-            break;
+          for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+            iflyauto::ReferencePoint point = lane_points[i];
+            if (std::isnan(point.local_point.x) ||
+                std::isnan(point.local_point.y)) {
+              LOG_ERROR("update_lane_points: skip NaN point");
+              continue;
+            }
+            double lateral_offset = 0.0;
+            double s = 0.0;
+            double l = 0.0;
+            if (!track_lane_frenet_coord->XYToSL(
+                    point.local_point.x, point.local_point.y, &s, &l)) {
+              lateral_offset = 10.0;
+            } else {
+              lateral_offset = l;
+            }
+            if (point_nums >= default_point_nums || s > target_ego_s + kConsiderLaneLineLength) {
+              break;
+            }
+            total_lateral_offset += lateral_offset;
+            point_nums += 1;
           }
         }
+        point_nums = std::max(1, point_nums);
         cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
       } else {
         cumu_lat_dis_cost = default_lane_mapping_cost;
@@ -2231,7 +2272,6 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
 
     std::shared_ptr<KDPath> frenet_coord;
     if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
-      frenet_coord = nullptr;
       continue;
     }
     frenet_coord = relative_id_lane->get_lane_frenet_coord();
@@ -2599,6 +2639,19 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
     int virtual_id,
     const std::shared_ptr<VirtualLane> current_relative_id_lane) {
   const double default_lane_mapping_cost = 10.0;
+  double average_curv = 0.0;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_relative_id() == 0) {
+      average_curv = ComputeTargetLaneSpecifiedRangeCurvature(relative_id_lane);
+      break;
+    } else {
+      continue;
+    }
+  }
+  double road_radius = 1 / std::max(average_curv, 0.0001);
+
   auto iter = virtual_id_mapped_lane_.find(virtual_id);
   if (iter != virtual_id_mapped_lane_.end()) {
     auto target_lane_frenet_coord = iter->second->get_lane_frenet_coord();
@@ -2607,32 +2660,67 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
       if (lane_points.size() <= 2) {
         return default_lane_mapping_cost;
       }
-      int default_point_nums = 30;
-      int point_nums = 0;
       double lane_mapping_cost = 0.0;
       double total_lateral_offset = 0.0;
-      int select_lane_point_interval = 3;
-      for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
-        iflyauto::ReferencePoint point = lane_points[i];
-        if (std::isnan(point.local_point.x) ||
-            std::isnan(point.local_point.y)) {
-          LOG_ERROR("update_lane_points: skip NaN point");
-          continue;
+      int point_nums = 0;
+      if (road_radius > kDefaultRoadRadius) {
+        int default_point_nums = 30;
+        int select_lane_point_interval = 3;
+        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+          iflyauto::ReferencePoint point = lane_points[i];
+          if (std::isnan(point.local_point.x) ||
+              std::isnan(point.local_point.y)) {
+            LOG_ERROR("update_lane_points: skip NaN point");
+            continue;
+          }
+          double lateral_offset = 0.0;
+          double s = 0.0;
+          double l = 0.0;
+          if (!target_lane_frenet_coord->XYToSL(
+                  point.local_point.x, point.local_point.y, &s, &l)) {
+            lateral_offset = 10.0;
+          } else {
+            lateral_offset = l;
+          }
+          total_lateral_offset += lateral_offset;
+          point_nums += 1;
+          if (point_nums >= default_point_nums) {
+            break;
+          }
         }
-        double lateral_offset = 0.0;
-        double ego_s, ego_l;
-        if (!target_lane_frenet_coord->XYToSL(
-                point.local_point.x, point.local_point.y, &ego_s, &ego_l)) {
-          lateral_offset = 10.0;
-        } else {
-          lateral_offset = ego_l;
+      } else {
+        int default_point_nums = 25;
+        int select_lane_point_interval = 2;
+        double target_ego_s = 0.0;
+        double target_ego_l = 0.0;
+        if (!target_lane_frenet_coord->XYToSL(ego_state->ego_pose().x,
+                                  ego_state->ego_pose().y, &target_ego_s, &target_ego_l)) {
+          return default_lane_mapping_cost;
         }
-        total_lateral_offset += lateral_offset;
-        point_nums += 1;
-        if (point_nums >= default_point_nums) {
-          break;
+        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+          iflyauto::ReferencePoint point = lane_points[i];
+          if (std::isnan(point.local_point.x) ||
+              std::isnan(point.local_point.y)) {
+            LOG_ERROR("update_lane_points: skip NaN point");
+            continue;
+          }
+          double lateral_offset = 0.0;
+          double s = 0.0;
+          double l = 0.0;
+          if (!target_lane_frenet_coord->XYToSL(
+                  point.local_point.x, point.local_point.y, &s, &l)) {
+            lateral_offset = 10.0;
+          } else {
+            lateral_offset = l;
+          }
+          if (point_nums >= default_point_nums || s > target_ego_s + kConsiderLaneLineLength) {
+            break;
+          }
+          total_lateral_offset += lateral_offset;
+          point_nums += 1;
         }
       }
+      point_nums = std::max(1, point_nums);
       lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
       return lane_mapping_cost;
     } else {
@@ -2643,4 +2731,37 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
   }
 }
 
+double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
+    const std::shared_ptr<VirtualLane> virtual_lane) {
+  double average_curv = 0.0;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager(); 
+  std::shared_ptr<KDPath> frenet_coord =
+      virtual_lane->get_lane_frenet_coord();
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!frenet_coord->XYToSL(ego_state->ego_pose().x,
+                            ego_state->ego_pose().y, &ego_s, &ego_l)) {
+    return average_curv;
+  }
+  if (ego_s > frenet_coord->Length()) {
+    return average_curv;
+  }
+  planning_math::PathPoint ego_s_nearest_point = 
+      frenet_coord->GetPathPointByS(ego_s);
+  int iter_count = 0;
+  double total_curv = 0.0;
+  for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length(); s += kLaneLineSegmentLength) {
+    if (s > kConsiderLaneLineLength + ego_s) {
+      break;
+    }
+    double curv = 0.0;
+    frenet_coord->GetKappaByS(s, &curv);
+    total_curv += curv;
+    iter_count++;
+  }
+  iter_count = std::max(1, iter_count);
+  average_curv = std::fabs(total_curv / iter_count);
+  return average_curv;
+} 
 }  // namespace planning
