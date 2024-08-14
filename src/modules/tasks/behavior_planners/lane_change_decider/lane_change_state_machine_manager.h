@@ -128,7 +128,7 @@ class LaneChangeStateMachineManager {
  private:
   void RunStateMachine();
   bool CheckIfProposeLaneChange(RequestType* const lane_change_direction,
-                                RequestSource* const lane_change_type);
+                                RequestSource* const lane_change_type) const;
   bool CheckIfProposeToExecution(const RequestType& lane_change_direction,
                                  const RequestSource& lane_change_type);
   bool CheckIfProposeToCancel(const RequestType& lane_change_direction,
@@ -143,10 +143,10 @@ class LaneChangeStateMachineManager {
                            const RequestSource& lane_change_type);
   bool CheckIfHoldToExecution(const RequestType& lane_change_direction,
                               const RequestSource& lane_change_type);
-  bool CheckIfCompleteToLaneKeeping();
-  bool CheckIfInPerfectLaneKeeping();
+  bool CheckIfCompleteToLaneKeeping() const;
+  bool CheckIfInPerfectLaneKeeping() const;
+  bool CheckIfCancelToLaneKeeping() const;
   bool CheckIfCompleteToCancel();
-  bool CheckIfCancelToLaneKeeping();
   bool CheckIfCancelTimeOut();
 
   void LaneChangeInfoReset();
@@ -176,12 +176,11 @@ class LaneChangeStateMachineManager {
   void UpdateCoarsePlanningInfo();
   void UpdateAdInfo();
   void UpdateStateMachineDebugInfo();
-  void GenerateTurnSignalForSplitCase();
-  bool IsSplitCase(RampDirection* ramp_direction);
-  bool MakeFrontDiff(double* lat_diff,
+  void GenerateTurnSignalForSplitRegion();
+  bool IsSplitRegion(RampDirection* ramp_direction);
+  void CalculateLatOffsetOfOverlappedLanes(double* lat_diff,
                      const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
-  vector<Point2D> CarSideCorners();
 
  private:
   ScenarioStateMachineConfig config_;
