@@ -409,6 +409,8 @@ class SlotManagement {
 
     bool replan_flag = true;
 
+    bool is_fix_slot = false;
+
     void Reset() {
       uss_raw_dist_vec.clear();
       released_slot_info_vec.clear();
@@ -428,6 +430,7 @@ class SlotManagement {
       ground_line_pt_map.clear();
       fus_obj_valid_flag = false;
       replan_flag = true;
+      is_fix_slot = false;
     }
   };
 

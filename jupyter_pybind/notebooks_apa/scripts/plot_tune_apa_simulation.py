@@ -14,7 +14,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240808/20240808-18-53-05/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-08-18-53-05_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240813/20240813-17-00-46/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-13-17-00-47_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -425,6 +425,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     'x' : line_xn,
     'y' : line_yn,
   })
+
+  obstacle_x_list, obstacle_y_list = [], []
 
   if isinstance(obstacle_x, str) and len(obstacle_x) > 0:
     obstacle_x_list = [float(x) for x in obstacle_x.split(',')]

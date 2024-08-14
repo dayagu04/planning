@@ -2069,14 +2069,20 @@ const bool PerpendicularPathPlanner::AdjustPlan() {
         return false;
       }
     }
-    const auto& path_seg = output_.path_segment_vec.back();
+    const pnc::geometry_lib::PathSegment& path_seg =
+        output_.path_segment_vec.back();
+
+    // only the last seg is line and length meet length require, the control
+    // would track it
     pnc::geometry_lib::PathPoint temp_pose;
-    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
+        path_seg.Getlength() > 0.368) {
       temp_pose.pos = path_seg.GetLineSeg().pB;
       temp_pose.heading = path_seg.GetLineSeg().heading;
-    } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-      temp_pose.pos = path_seg.GetArcSeg().pB;
-      temp_pose.heading = path_seg.GetArcSeg().headingB;
+    } else {
+      // dynamic plan fail
+      output_.Reset();
+      return false;
     }
 
     if (!CheckReachTargetPose(temp_pose)) {
@@ -2854,8 +2860,8 @@ void PerpendicularPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
           output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         const std::vector<double> lat_tab = {0.0, 0.05, 0.1, 0.15, 0.20};
         const std::vector<double> path_length_tab = {
-            1.668 * min_path_length, 3.168 * min_path_length,
-            3.868 * min_path_length, 4.268 * min_path_length,
+            2.068 * min_path_length, 3.368 * min_path_length,
+            3.968 * min_path_length, 4.368 * min_path_length,
             4.868 * min_path_length};
 
         min_path_length = pnc::mathlib::Interp1(
@@ -3245,7 +3251,7 @@ PerpendicularPathPlanner::TrimPathByCollisionDetection(
 
     CollisionDetector::ObsSlotType obs_slot_type =
         collision_detector_ptr_->GetObsSlotType(
-            col_res.col_pt_obs_global, slot_pt, 5.0, calc_params_.is_left_side);
+            col_res.col_pt_obs_global, slot_pt, calc_params_.is_left_side);
 
     bool need_plan_again = false;
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_INSIDE_OBS &&
@@ -3329,7 +3335,10 @@ void PerpendicularPathPlanner::PrintSegmentInfo(
 
 void PerpendicularPathPlanner::PrintOutputSegmentsInfo() const {
   DEBUG_PRINT("-------------- OutputSegmentsInfo --------------");
-  const size_t N = std::min(2, int(output_.path_segment_vec.size()));
+  const size_t N =
+      std::min(output_.path_seg_index.second - output_.path_seg_index.first + 1,
+               output_.path_segment_vec.size());
+
   for (size_t i = 0; i < N; i++) {
     const auto& current_seg = output_.path_segment_vec[i];
 
