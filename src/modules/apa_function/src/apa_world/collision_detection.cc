@@ -939,7 +939,7 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const double max_obs_lat_invasion_slot_dist =
         apa_param.GetParam().max_obs_lat_invasion_slot_dist;
     const double slot_x = ((slot_left_pt + slot_right_pt) * 0.5).x();
-    const double slot_upper_x = slot_x + 0.68;
+    const double slot_upper_x = slot_x + 1.068;
     const double slot_lower_x =
         0.0 + apa_param.GetParam().max_obs_lon_invasion_slot_dist;
     const double slot_left_y =

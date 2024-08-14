@@ -165,6 +165,7 @@ struct ApaParameters {
   bool dynamic_col_det_enable = false;
   double car_lat_inflation_strict = 0.1;
   double max_obs_lat_invasion_slot_dist = -0.026;
+  double max_obs_lat_invasion_slot_dist_dynamic_col = -0.026;
   double max_obs_lon_invasion_slot_dist = -0.026;
   double col_obs_safe_dist_strict = 0.2;
   double parallel_obs2slot_max_dist = 16.66;

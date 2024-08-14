@@ -541,8 +541,7 @@ bool SlotManagement::GenTLane(
       std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
   const bool is_left_side =
       (slot_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT);
-  const double max_obs_lat_invasion_slot_dist =
-      apa_param.GetParam().max_obs_lat_invasion_slot_dist;
+  double max_obs_lat_invasion_slot_dist = 0.0;
   const double mir_width =
       (apa_param.GetParam().max_car_width - apa_param.GetParam().car_width) *
       0.5;
@@ -563,16 +562,23 @@ bool SlotManagement::GenTLane(
 
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
         !apa_param.GetParam().believe_in_fus_obs) {
-      if (frame_.replan_flag) {
-        // construct t lane no consider obs in slot when replan
-        continue;
+      max_obs_lat_invasion_slot_dist =
+          frame_.replan_flag
+              ? apa_param.GetParam().max_obs_lat_invasion_slot_dist
+              : apa_param.GetParam().max_obs_lat_invasion_slot_dist_dynamic_col;
+      const double min_left_y =
+          0.5 * ego_slot_info.slot_width - max_obs_lat_invasion_slot_dist;
+      const double max_right_y =
+          -0.5 * ego_slot_info.slot_width + max_obs_lat_invasion_slot_dist;
+      // obs is in slot, temp hack, when believe_in_fus_obs is false,
+      // force move obs to out slot
+      if (obstacle_point_slot.y() < min_left_y &&
+          obstacle_point_slot.y() > 0.0) {
+        obstacle_point_slot.y() = min_left_y;
       }
-      if (obstacle_point_slot.y() > 0.0) {
-        obstacle_point_slot.y() =
-            0.5 * ego_slot_info.slot_width - max_obs_lat_invasion_slot_dist;
-      } else {
-        obstacle_point_slot.y() =
-            -0.5 * ego_slot_info.slot_width + max_obs_lat_invasion_slot_dist;
+      if (obstacle_point_slot.y() > max_right_y &&
+          obstacle_point_slot.y() < 0.0) {
+        obstacle_point_slot.y() = max_right_y;
       }
     } else if (obs_slot_type !=
                    CollisionDetector::ObsSlotType::SLOT_INSIDE_OBS &&
@@ -1004,7 +1010,7 @@ bool SlotManagement::GenObstacles(
     if (obs_tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       std::swap(pt_left, pt_right);
     }
-    const double max_obs_lat_invasion_slot_dist = 0.0;
+    double max_obs_lat_invasion_slot_dist = 0.0;
     std::vector<Eigen::Vector2d> fus_obs_vec;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
@@ -1023,18 +1029,22 @@ bool SlotManagement::GenObstacles(
         }
 
         if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS) {
-          if (frame_.replan_flag) {
-            // when replan, temp del obs in slot
-            continue;
+          max_obs_lat_invasion_slot_dist =
+              frame_.replan_flag
+                  ? apa_param.GetParam().max_obs_lat_invasion_slot_dist
+                  : apa_param.GetParam()
+                        .max_obs_lat_invasion_slot_dist_dynamic_col;
+          const double min_left_y =
+              0.5 * ego_slot_info.slot_width - max_obs_lat_invasion_slot_dist;
+          const double max_right_y =
+              -0.5 * ego_slot_info.slot_width + max_obs_lat_invasion_slot_dist;
+          // obs is in slot, temp hack, when believe_in_fus_obs is false,
+          // force move obs to out slot
+          if (obs_pos.y() < min_left_y && obs_pos.y() > 0.0) {
+            obs_pos.y() = min_left_y;
           }
-          // obs is in slot, temp hack, when believe_in_fus_obs is false, force
-          // move obs to out slot
-          if (obs_pos.y() > 0.0) {
-            obs_pos.y() =
-                0.5 * ego_slot_info.slot_width - max_obs_lat_invasion_slot_dist;
-          } else {
-            obs_pos.y() = -0.5 * ego_slot_info.slot_width +
-                          max_obs_lat_invasion_slot_dist;
+          if (obs_pos.y() > max_right_y && obs_pos.y() < 0.0) {
+            obs_pos.y() = max_right_y;
           }
         }
 
