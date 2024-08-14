@@ -556,16 +556,13 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // planning_hmi_info->ad_info.lane_change_status = (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
   // update LaneChangeStatus
   const auto curr_state = lane_change_decider_output.curr_state;
-  if (curr_state == ROAD_NONE) {
+  if (curr_state == kLaneKeeping) {
     planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-  } else if (curr_state == ROAD_LC_LWAIT ||
-             curr_state == ROAD_LC_RWAIT) {
+  } else if (curr_state == kLaneChangePropose) {
     planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_WAITING;       
-  } else if (curr_state == ROAD_LC_LCHANGE ||
-             curr_state == ROAD_LC_RCHANGE) {
+  } else if (curr_state == kLaneChangeExecution) {
     planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;       
-  } else if (curr_state == ROAD_LC_LBACK ||
-             curr_state == ROAD_LC_RBACK) {
+  } else if (curr_state == kLaneChangeCancel) {
     planning_hmi_info->ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;       
   }
   // update StatusUpdateReason

@@ -1429,41 +1429,41 @@ void LaneChangeStateMachineManager::UpdateAdInfo() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  ad_info->lane_change_direction = iflyauto::LC_OTHER;
+  ad_info->lane_change_direction = iflyauto::LaneChangeDirection::LC_DIR_NO_CHANGE;
   if (transition_info_.lane_change_status == kLaneChangePropose) {
-    ad_info->lane_change_status = iflyauto::LC_WAITING;
+    ad_info->lane_change_status = iflyauto::LC_STATE_WAITING;
     if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_LEFT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
     } else {
-      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
     }
   } else if (transition_info_.lane_change_status == kLaneChangeExecution ||
              transition_info_.lane_change_status == kLaneChangeComplete) {
     if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_LEFT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
     } else {
-      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
     }
-    ad_info->lane_change_status = iflyauto::LC_STARTING;
+    ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
   } else if (transition_info_.lane_change_status == kLaneChangeCancel) {
-    ad_info->lane_change_status = iflyauto::LC_CANCELLED;
+    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
   } else if (transition_info_.lane_change_status == kLaneChangeHold) {
-    ad_info->lane_change_status = iflyauto::LC_REJECTED;
+    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
   } else if (transition_info_.lane_change_status == kLaneKeeping) {
     if (coarse_planning_info.source_state != kLaneKeeping) {
-      ad_info->lane_change_status = iflyauto::LC_COMPLETED;
-      ad_info->lane_change_direction = iflyauto::LC_OTHER;
+      ad_info->lane_change_status = iflyauto::LC_STATE_COMPLETE;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
     } else {
       GenerateTurnSignalForSplitRegion();
       if (road_to_ramp_turn_signal_ == RAMP_NONE) {
-        ad_info->lane_change_status = iflyauto::LC_NO_CHANGE;
-        ad_info->lane_change_direction = iflyauto::LC_OTHER;
+        ad_info->lane_change_status = iflyauto::LC_STATE_NO_CHANGE;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
       } else if (road_to_ramp_turn_signal_ == RAMP_ON_LEFT) {
-        ad_info->lane_change_status = iflyauto::LC_STARTING;
-        ad_info->lane_change_direction = iflyauto::LC_LEFT;
+        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
       } else if (road_to_ramp_turn_signal_ == RAMP_ON_RIGHT) {
-        ad_info->lane_change_status = iflyauto::LC_STARTING;
-        ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
       }
     }
   }
