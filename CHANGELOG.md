@@ -1,3 +1,8 @@
+# planning.2.4.9
+####  修改说明
+1. Add new HMI/FSM
+2. 适配感知220m特性
+
 # planning.2.4.8
 ####  修改说明
 1. Add planning InputHistoryInfo of Header
