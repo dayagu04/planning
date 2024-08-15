@@ -103,6 +103,7 @@ fig8.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_col
 f9 = fig9.line('time', 'plan_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_dot_deg')
 fig9.line('time', 'ego_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_dot_deg')
 f10_1 = fig10.line('center_line_s', 'center_line_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'kappa radius')
+fig10.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'road radius')
 refline_kappa_radius = ColumnDataSource(data = {'refline_s':[], 'refline_curvature':[]})
 f10_2 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
 hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg')], mode='vline')
@@ -222,6 +223,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
   lat_behavior_common = plan_debug_msg.lat_behavior_common
   print("init curv: ",lat_motion_plan_input.init_state.curv)
   print("road curv: ",planning_json["road_radius"])
+  print("far_kappa_radius", planning_json["far_kappa_radius"])
   print("left_turn_light_state_available: ",vs_msg.left_turn_light_state_available)
   print("left_turn_light_state: ",vs_msg.left_turn_light_state)
   print("right_turn_light_state_available: ",vs_msg.right_turn_light_state_available)
