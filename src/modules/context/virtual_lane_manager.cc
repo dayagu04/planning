@@ -1983,13 +1983,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
 }
 
 void VirtualLaneManager::TrackEgoLane() {
-  auto &local_view = session_->environmental_model().get_local_view();
-  auto fsm_state = local_view.function_state_machine_info.current_state;
-  bool acc_mode = (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_STAND_ACTIVATE) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_STAND_WAIT) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE) ||
-                  (fsm_state == iflyauto::FunctionalState_ACC_SECURE);
+  const auto &function_info = session_->environmental_model().function_info();
   const auto& planning_context = session_->planning_context();
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
@@ -1998,7 +1992,6 @@ void VirtualLaneManager::TrackEgoLane() {
   const bool lane_keep_status = lane_change_status == kLaneKeeping;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto& function_info = session_->environmental_model().function_info();
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -2018,7 +2011,7 @@ void VirtualLaneManager::TrackEgoLane() {
       zero_relative_id_nums += 1;
     }
   }
-  if (!active || acc_mode) {
+  if (!active || function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
     SelectEgoLaneWithoutPlan();
   } else {
     if (!planning_result.traj_points.empty()) {
