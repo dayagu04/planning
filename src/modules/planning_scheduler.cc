@@ -172,7 +172,7 @@ bool PlanningScheduler::RunOnce(
 
   if (scene_type == planning::common::SceneType::HIGHWAY) {
     planning_success = scc_function_->Plan();
-  } else if (planning::common::SceneType::HPP) {
+  } else if (scene_type == planning::common::SceneType::HPP) {
     planning_success = hpp_function_->Plan();
   } else {
     planning_success = scc_function_->Plan();
