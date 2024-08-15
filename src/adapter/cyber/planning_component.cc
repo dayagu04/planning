@@ -130,14 +130,16 @@ bool PlanningComponent::Init() {
             planning_adapter_->FeedControlCommand(control_output_struct);
           });
 
-  auto hmi_reader_ = planning_node_->CreateReader<iflyauto::StructContainer>(
-      "/iflytek/hmi/mcu_inner",
-      [this](const std::shared_ptr<iflyauto::StructContainer>
-                 &hmi_inner_info_msg) {
-        const auto &hmi_mcu_inner_struct =
-            *iflyauto::struct_cast<iflyauto::HmiInner>(hmi_inner_info_msg);
-        planning_adapter_->FeedHmiInner(hmi_mcu_inner_struct);
-      });
+  // auto hmi_reader_ = planning_node_->CreateReader<iflyauto::StructContainer>(
+  //     "/iflytek/hmi/mcu_inner",
+  //     [this](const std::shared_ptr<iflyauto::StructContainer>
+  //                &hmi_inner_info_msg) {
+  //       const auto &hmi_mcu_inner_struct =
+  //           *iflyauto::struct_cast<iflyauto::HmiInner>(hmi_inner_info_msg);
+  //       planning_adapter_->FeedHmiInner(hmi_mcu_inner_struct);
+  //     });
+
+
 
   auto parking_fusion_info_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
@@ -163,7 +165,7 @@ bool PlanningComponent::Init() {
 
   auto func_state_machine_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
-          "/iflytek/system_state/soc_state",
+          "/iflytek/fsm/soc_state",
           [this](const std::shared_ptr<iflyauto::StructContainer>
                      &func_state_machine_msg) {
             const auto &func_state_machine_struct =

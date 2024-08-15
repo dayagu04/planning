@@ -2,6 +2,7 @@
 ####  修改说明
 1. Add new HMI/FSM
 2. 适配感知220m特性
+3. 更新系统状态机topic，不再接收hmi topic
 
 # planning.2.4.8
 ####  修改说明
