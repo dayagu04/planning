@@ -448,7 +448,7 @@ vector<double> FrenetCoordinateSystem::polyfit(
   X.resize(n, 1);
   for (int i = 0; i < num; i++) {
     for (int j = 0; j < n; j++) {
-      A(i, j) = a[i, j];
+      A(i, j) = a[i * n + j];
     }
   }
   for (int i = 0; i < num; i++) {
