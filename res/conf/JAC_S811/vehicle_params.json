@@ -1,0 +1,21 @@
+{
+  "car_type": "jac_s811",
+  "front_edge_to_rear_axle": 3.624,
+  "rear_edge_to_rear_axle": 0.947,
+  "length":4.571,
+  "width":1.89,
+  "max_width":2.11,
+  "height":1.701,
+  "width_mirror":0.21,
+  "min_turn_radius":5.450,
+  "max_acceleration":3.0,
+  "max_deceleration":5.0,
+  "max_jerk":8.0,
+  "min_jerk":-5.0,
+  "max_steer_angle":7.33,
+  "max_steer_angle_rate":6.283,
+  "min_steer_angle_rate":0.0,
+  "steer_ratio":16.5,
+  "wheel_base":2.7,
+  "max_front_wheel_angle":0.56
+}

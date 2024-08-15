@@ -9,6 +9,7 @@
 #include "common/config_context.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "utils/file.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
@@ -206,7 +207,7 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
     path = engine_config.vehicle_cfg_dir + "/apa_params.json";
   }
 
-  std::string config_file = ReadFile(path);
+  std::string config_file = planning::common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
   // schedule params

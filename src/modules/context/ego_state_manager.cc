@@ -232,9 +232,9 @@ bool EgoStateManager::update(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   planning_math::Vec2d center(
       ego_pose_.x +
-          std::cos(ego_pose_.theta) * vehicle_param.rear_axis_to_center,
+          std::cos(ego_pose_.theta) * vehicle_param.rear_edge_to_center,
       ego_pose_.y +
-          std::sin(ego_pose_.theta) * vehicle_param.rear_axis_to_center);
+          std::sin(ego_pose_.theta) * vehicle_param.rear_edge_to_center);
   planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param.length,
                                vehicle_param.width);
   polygon_ = planning_math::Polygon2d(ego_box);

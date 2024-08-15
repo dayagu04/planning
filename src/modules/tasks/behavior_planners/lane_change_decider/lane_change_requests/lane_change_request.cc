@@ -1,5 +1,7 @@
 #include "lane_change_request.h"
+
 #include <cmath>
+
 #include "common_c.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -336,8 +338,8 @@ bool LaneChangeRequest::compute_lc_valid_info(RequestType direction) {
             }
           }
 
-          //如果目标车道上后车的相对车速较自车快2m/s以上,
-          //最小安全距离的阈值再增加2m，以免产生变道恐慌感
+          // 如果目标车道上后车的相对车速较自车快2m/s以上,
+          // 最小安全距离的阈值再增加2m，以免产生变道恐慌感
           if (tr.v_rel > 2.0) {
             mss = mss + 2;
           }
@@ -619,8 +621,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
                                                       sample_path_point)) {
     return true;
   }
-  for (double s = ego_frenet_point.x - vehicle_param.back_edge_to_rear_axis;
-       s < ego_frenet_point.x + vehicle_param.rear_axis_to_front_edge +
+  for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
+       s < ego_frenet_point.x + vehicle_param.front_edge_to_rear_axle +
                sample_forward_distance;
        s += cut_length) {
     if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {

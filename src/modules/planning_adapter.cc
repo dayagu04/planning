@@ -56,8 +56,8 @@ void PlanningAdapter::Init() {
   LOG_DEBUG("The planning component init!!! \n");
 
   local_view_ptr_ = std::make_shared<LocalView>();
-  planning_scheduler_ =
-      std::make_unique<PlanningScheduler>(local_view_ptr_.get());
+  planning_scheduler_ = std::make_unique<PlanningScheduler>(
+      local_view_ptr_.get(), &engine_config);
 }
 
 void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,

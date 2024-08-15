@@ -756,7 +756,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   if ((session_->is_hpp_scene() &&
        obstacle->type() != iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN)) {
     // the obstacle will be ignored when it behind rear axle for PNP
-    if (obstacle_sl_boundary.s_end + vehicle_param.back_edge_to_rear_axis <
+    if (obstacle_sl_boundary.s_end + vehicle_param.rear_edge_to_rear_axle <
         ego_sl_boundary.s_end) {
       return true;
     }
@@ -992,7 +992,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
       continue;
     } else {
       overlap_info.emplace_back(LonObstacleOverlapInfo{
-          care_overlap_polygon.min_x() - vehicle_param.rear_axis_to_front_edge,
+          care_overlap_polygon.min_x() - vehicle_param.front_edge_to_rear_axle,
           t});
     }
 
@@ -1007,17 +1007,17 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
     }
 
     obstacle_yield_uppers.back().second =
-        care_overlap_polygon.min_x() - vehicle_param.rear_axis_to_front_edge;
+        care_overlap_polygon.min_x() - vehicle_param.front_edge_to_rear_axle;
 
     if (i == 0) {
       // check initial collision
       if (!(care_overlap_polygon.min_x() -
-                    vehicle_param.rear_axis_to_front_edge >
+                    vehicle_param.front_edge_to_rear_axle >
                 reference_path_ptr->get_frenet_ego_state()
                     .planning_init_point()
                     .frenet_state.s ||
             care_overlap_polygon.max_x() +
-                    vehicle_param.back_edge_to_rear_axis <
+                    vehicle_param.rear_edge_to_rear_axle <
                 reference_path_ptr->get_frenet_ego_state()
                     .planning_init_point()
                     .frenet_state.s)) {
@@ -1272,7 +1272,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
         if (keep_stop) {
           yield_upper =
               std::min(yield_upper, obstacle_sl_boundary.s_start -
-                                        vehicle_param.rear_axis_to_front_edge);
+                                        vehicle_param.front_edge_to_rear_axle);
           LOG_DEBUG(
               "[GeneralLongitudinalDecider]: keep stop for close leadone");
         }
@@ -1462,14 +1462,14 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
                   }
                   pos_decision.lon_bounds.push_back(
                       WeightedBound{obstacle_sl_polygon.max_x() +
-                                        vehicle_param.back_edge_to_rear_axis,
+                                        vehicle_param.rear_edge_to_rear_axle,
                                     std::numeric_limits<double>::max(), 1.0});
                   LOG_DEBUG(
                       "wait_speed overtake obstacle_id:%d, t:%f, "
                       "lower_bound:%f \n",
                       overtake_obstacle_id, traj_pt.t,
                       obstacle_sl_polygon.max_x() +
-                          vehicle_param.back_edge_to_rear_axis);
+                          vehicle_param.rear_edge_to_rear_axle);
                 }
               }
             }
@@ -1516,14 +1516,14 @@ void GeneralLongitudinalDecider::construct_longitudinal_outer_decision(
                   pos_decision.lon_bounds.push_back(
                       WeightedBound{std::numeric_limits<double>::min(),
                                     obstacle_sl_polygon.min_x() -
-                                        vehicle_param.rear_axis_to_front_edge,
+                                        vehicle_param.front_edge_to_rear_axle,
                                     1.0});
                   LOG_DEBUG(
                       "wait_speed yield obstacle_id:%d, t:%f,upper_bound: % f "
                       "\n",
                       yield_obstacle_id, traj_pt.t,
                       obstacle_sl_polygon.min_x() -
-                          vehicle_param.rear_axis_to_front_edge);
+                          vehicle_param.front_edge_to_rear_axle);
                 }
               }
             }
@@ -1706,7 +1706,7 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
         continue;
       }
       double distance_to_obstacle = frenet_obstacle->frenet_s() - ego_s -
-                                    vehicle_param.rear_axis_to_front_edge;
+                                    vehicle_param.front_edge_to_rear_axle;
       const bool satisfy_s_leadone =
           (distance_to_obstacle < leadone_min_s_leadone) &&
           (distance_to_obstacle > 0);
@@ -1947,7 +1947,7 @@ double GeneralLongitudinalDecider::get_s_bound_by_target_parking_space() {
   //     nearest_parking_location_s =
   //         frenet_point.x + nearest_distance_to_parking_area +
   //         (vehicle_param_.length / 2. -
-  //         vehicle_param_.back_edge_to_center);
+  //         vehicle_param_.rear_edge_to_rear_axle);
   //     if (reference_len < nearest_parking_location_s) {
   //       LOG_DEBUG("reference line length = %f < nearest parking location =
   //       %f",

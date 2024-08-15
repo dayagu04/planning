@@ -347,8 +347,9 @@ void LaneKeepAssistManager::Update() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   lkas_input_.vehicle_info.common_front_over =
-      vehicle_param.front_edge_to_center - vehicle_param.wheel_base;
-  lkas_input_.vehicle_info.common_rear_over = vehicle_param.back_edge_to_center;
+      vehicle_param.front_edge_to_rear_axle - vehicle_param.wheel_base;
+  lkas_input_.vehicle_info.common_rear_over =
+      vehicle_param.rear_edge_to_rear_axle;
   lkas_input_.vehicle_info.common_wheel_base = vehicle_param.wheel_base;
   lkas_input_.vehicle_info.common_veh_width = vehicle_param.width;
 
