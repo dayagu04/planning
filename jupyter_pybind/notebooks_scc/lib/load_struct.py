@@ -52,7 +52,7 @@ def find_nearest(msg, bag_time, find_json = False):
   else:
     return None
 
-def load_car_params_patch(car_type = 'S811'):
+def load_car_params_patch(car_type = 'E0Y'):
   # car_x = [3.624, 3.624, -0.947, -0.947, 3.624]
   # car_y = [1.89*0.5, -1.89*0.5, -1.89*0.5, 1.89*0.5, 1.89*0.5]
   # return car_x, car_y
