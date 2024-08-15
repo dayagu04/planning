@@ -19,7 +19,7 @@ class EmergenceAvoidRequest : public LaneChangeRequest {
   void Reset();
 
  private:
-  void updateEmergencyAvoidanceSituation(int lc_status);
+  void UpdateEmergencyAvoidanceSituation(int lc_status);
 
   bool is_emergency_avoidance_situation_ = false;
   double emergency_situation_timetstamp_ = std::numeric_limits<double>::max();

@@ -20,7 +20,7 @@ class ConeRequest : public LaneChangeRequest {
 
  private:
   // define cone point of cluster
-  struct cone_point {
+  struct ConePoint {
     double x, y;
     double s, l;
     double left_dist, right_dist;
@@ -29,7 +29,7 @@ class ConeRequest : public LaneChangeRequest {
     bool visited;
 
     // Default constructor
-    cone_point()
+    ConePoint()
         : id(0),
           x(0.0),
           y(0.0),
@@ -40,8 +40,8 @@ class ConeRequest : public LaneChangeRequest {
           cluster(-1),
           visited(false) {}
     // Parameterized constructor
-    cone_point(int32_t id, double x, double y, double s, double l,
-               double left_dist, double right_dist)
+    ConePoint(int32_t id, double x, double y, double s, double l,
+              double left_dist, double right_dist)
         : id(id),
           x(x),
           y(y),
@@ -52,12 +52,12 @@ class ConeRequest : public LaneChangeRequest {
           cluster(-1),
           visited(false) {}
   };
-  void updateConeSituation(int lc_status);
+  void UpdateConeSituation(int lc_status);
 
   void setLaneChangeRequestByCone();
 
   void GetTargetLaneWidthByCone(
-      std::vector<std::pair<double, double>> lane_s_width,
+      const std::vector<std::pair<double, double>> lane_s_width,
       const std::shared_ptr<VirtualLane> target_lane, const double cone_s,
       const double cone_l, bool is_left, double* dist);
 
@@ -65,16 +65,16 @@ class ConeRequest : public LaneChangeRequest {
                                 const double cone_s, const double cone_l,
                                 bool is_left, double* dist);
 
-  bool ConeDistance(const cone_point& a, const cone_point& b, double eps_s,
+  bool ConeDistance(const ConePoint& a, const ConePoint& b, double eps_s,
                     double eps_l);
 
-  void ExpandCluster(std::vector<cone_point>& cone_points, int index, int c,
+  void ExpandCluster(std::vector<ConePoint>& cone_points, int index, int c,
                      double eps_s, double eps_l, int minPts);
 
-  void DbScan(std::vector<cone_point>& cone_points, double eps_s, double eps_l,
+  void DbScan(std::vector<ConePoint>& cone_points, double eps_s, double eps_l,
               int minPts);
 
-  double CalcClusterToBoundaryDist(const std::vector<cone_point>& points,
+  double CalcClusterToBoundaryDist(const std::vector<ConePoint>& points,
                                    RequestType direction);
 
   void ConeDir();
@@ -83,22 +83,22 @@ class ConeRequest : public LaneChangeRequest {
 
   bool CheckEgoLaneAvailable(bool is_left);
 
-  bool CheckTargetLaneAvailable(
-      bool is_left, const std::shared_ptr<VirtualLane> lane);
+  bool CheckTargetLaneAvailable(bool is_left,
+                                const std::shared_ptr<VirtualLane> lane);
 
-  double ConeSpearmanRankCorrelation(std::vector<cone_point> points);
+  double ConeSpearmanRankCorrelation(const std::vector<ConePoint> points);
 
-  double ConeComputeSlope(std::vector<cone_point> points);
+  double ConeComputeSlope(std::vector<ConePoint> points);
 
   std::vector<double> ConeRankify(std::vector<double>& arr);
 
-  bool ConeMean(const std::vector<cone_point>& points, double& s_mean,
+  bool ConeMean(const std::vector<ConePoint>& points, double& s_mean,
                 double& l_mean);
 
-  bool ConeStddev(const std::vector<cone_point>& points, double s_mean,
+  bool ConeStddev(const std::vector<ConePoint>& points, double s_mean,
                   double l_mean, double& s_stddev, double& l_stddev);
 
-  bool ConeStandardize(std::vector<cone_point>& points);
+  bool ConeStandardize(std::vector<ConePoint>& points);
 
   double QueryLaneWidth(
       const double s0,
@@ -114,11 +114,11 @@ class ConeRequest : public LaneChangeRequest {
   bool is_cone_lane_change_situation_ = false;
   int cone_alc_trigger_counter_;
   RequestType cone_lane_change_direction_ = NO_CHANGE;
-  std::vector<cone_point> cone_points_;
-  std::map<int, std::vector<cone_point>> points_by_cluster_;
+  std::vector<ConePoint> cone_points_;
+  std::map<int, std::vector<ConePoint>> cone_cluster_attribute_set_;
   std::map<int, ad_common::math::Polygon2d> out_cluster_;
   std::vector<int32_t> cone_cluster_size_;
-  std::vector<cone_point> cone_cluster_;
+  std::vector<ConePoint> cone_cluster_;
   std::vector<std::pair<double, double>> left_lane_s_width_;  // <s, lane_width>
   std::vector<std::pair<double, double>>
       right_lane_s_width_;  // <s, lane_width>

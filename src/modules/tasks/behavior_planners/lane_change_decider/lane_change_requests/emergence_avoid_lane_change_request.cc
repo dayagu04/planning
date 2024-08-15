@@ -52,7 +52,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
-  const auto tracks = lateral_obstacle_->all_tracks();
+  const auto& tracks = lateral_obstacle_->all_tracks();
   tracks_map_.clear();
   for (auto track : tracks) {
     tracks_map_[track.track_id] = track;
@@ -87,7 +87,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
 
-  updateEmergencyAvoidanceSituation(lc_status);
+  UpdateEmergencyAvoidanceSituation(lc_status);
 
   if (!is_emergency_avoidance_situation_) {
     if (request_type_ != NO_CHANGE) {
@@ -163,7 +163,8 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to left "
             "\n");
       }
-      if (left_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
+      if (left_boundary_type ==
+              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
           curr_direct_exist && request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
@@ -189,7 +190,8 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to right "
             "\n");
       }
-      if (right_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
+      if (right_boundary_type ==
+              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
           curr_direct_exist && request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
@@ -217,7 +219,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   }
 }
 
-void EmergenceAvoidRequest::updateEmergencyAvoidanceSituation(int lc_status) {
+void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
   int base_lane_virtual_id{current_lane_virtual_id};
@@ -268,20 +270,22 @@ void EmergenceAvoidRequest::updateEmergencyAvoidanceSituation(int lc_status) {
       if (front_vehicle_iter->second.track_id == kInvalidAgentId) {
         continue;
       }
-      bool object_type_static = front_vehicle_iter->second.motion_pattern_current == 
-          iflyauto::ObjectMotionType:: OBJECT_MOTION_TYPE_STATIC;
-      if ((!object_type_static || (front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_COUPE &&
+      bool object_type_static =
+          front_vehicle_iter->second.motion_pattern_current ==
+          iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC;
+      if ((!object_type_static ||
+           (front_vehicle_iter->second.type !=
+                Common::ObjectType::OBJECT_TYPE_COUPE &&
+            front_vehicle_iter->second.type !=
+                Common::ObjectType::OBJECT_TYPE_TRUCK)) &&
           front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_TRUCK)) &&
-          front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&    
+              Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
           (front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
-          front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_CRASH_BARREL &&
-          front_vehicle_iter->second.type !=
-              Common::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN)) {
+               Common::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+           front_vehicle_iter->second.type !=
+               Common::ObjectType::OBJECT_TYPE_CRASH_BARREL &&
+           front_vehicle_iter->second.type !=
+               Common::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN)) {
         continue;
       }
       const double long_dis = front_vehicle_iter->second.d_rel;

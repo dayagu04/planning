@@ -59,7 +59,7 @@ void ConeRequest::Update(int lc_status) {
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
-  const auto tracks = lateral_obstacle_->all_tracks();
+  const auto& tracks = lateral_obstacle_->all_tracks();
   tracks_map_.clear();
   for (auto track : tracks) {
     tracks_map_[track.track_id] = track;
@@ -87,8 +87,9 @@ void ConeRequest::Update(int lc_status) {
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
+  is_cone_lane_change_situation_ = false;
 
-  updateConeSituation(lc_status);
+  UpdateConeSituation(lc_status);
   LOG_DEBUG("ConeRequest::Update: is_cone_lane_change_situation %d",
             is_cone_lane_change_situation_);
   JSON_DEBUG_VALUE("is_cone_lane_change_situation_",
@@ -117,7 +118,7 @@ void ConeRequest::Update(int lc_status) {
             turn_signal_);
 }
 
-void ConeRequest::updateConeSituation(int lc_status) {
+void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto& ego_state =
@@ -155,7 +156,7 @@ void ConeRequest::updateConeSituation(int lc_status) {
   int cone_nums_of_front_objects = 0;
   int minPts = 1;
   cone_points_.clear();
-  points_by_cluster_.clear();
+  cone_cluster_attribute_set_.clear();
   is_cone_lane_change_situation_ = false;
 
   const std::vector<TrackedObject>& front_obstacles_array =
@@ -200,9 +201,9 @@ void ConeRequest::updateConeSituation(int lc_status) {
           is_cone_lane_change_situation_ = false;
           return;
         }
-        auto point = cone_point(front_vehicle_iter->first, obs_cart_point.x,
-                                obs_cart_point.y, cone_s, cone_l,
-                                dist_to_left_boundary, dist_to_right_boundary);
+        auto point = ConePoint(front_vehicle_iter->first, obs_cart_point.x,
+                               obs_cart_point.y, cone_s, cone_l,
+                               dist_to_left_boundary, dist_to_right_boundary);
         cone_points_.push_back(point);
       }
     } else {
@@ -228,7 +229,7 @@ void ConeRequest::updateConeSituation(int lc_status) {
   bool did_break = false;
   for (const auto& p : cone_points_) {
     // 构建相同cluster属性所包含cones的map
-    points_by_cluster_[p.cluster].push_back(p);
+    cone_cluster_attribute_set_[p.cluster].push_back(p);
   }
 
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
@@ -238,9 +239,9 @@ void ConeRequest::updateConeSituation(int lc_status) {
   int right_lane_nums = std::max((int)lane_nums - lane_index - 1, 0);
   int left_lane_nums = lane_index;
 
-  for (const auto& kv : points_by_cluster_) {
-    int cluster = kv.first;
-    const std::vector<cone_point>& points = kv.second;
+  for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
+    int cluster = cluster_attribute_iter.first;
+    const std::vector<ConePoint>& points = cluster_attribute_iter.second;
     double min_left_l, min_right_l, pass_threshold_left, pass_threshold_right;
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
@@ -373,7 +374,7 @@ void ConeRequest::setLaneChangeRequestByCone() {
 }
 
 void ConeRequest::GetTargetLaneWidthByCone(
-    std::vector<std::pair<double, double>> lane_s_width,
+    const std::vector<std::pair<double, double>> lane_s_width,
     const std::shared_ptr<VirtualLane> base_lane, const double cone_s,
     const double cone_l, bool is_left, double* dist) {
   double target_lane_width = kDefaultLaneWidth;
@@ -442,7 +443,7 @@ bool ConeRequest::GetOriginLaneWidthByCone(
   return true;
 }
 
-void ConeRequest::DbScan(std::vector<cone_point>& cone_points, double eps_s,
+void ConeRequest::DbScan(std::vector<ConePoint>& cone_points, double eps_s,
                          double eps_l, int minPts) {
   int c = 0;  // cluster index
 
@@ -455,12 +456,12 @@ void ConeRequest::DbScan(std::vector<cone_point>& cone_points, double eps_s,
   }
 }
 
-bool ConeRequest::ConeDistance(const cone_point& a, const cone_point& b,
+bool ConeRequest::ConeDistance(const ConePoint& a, const ConePoint& b,
                                double eps_s, double eps_l) {
   return std::abs(a.s - b.s) < eps_s && std::abs(a.l - b.l) < eps_l;
 }
 
-void ConeRequest::ExpandCluster(std::vector<cone_point>& cone_points, int index,
+void ConeRequest::ExpandCluster(std::vector<ConePoint>& cone_points, int index,
                                 int c, double eps_s, double eps_l, int minPts) {
   std::vector<int> neighborPts;
 
@@ -482,7 +483,7 @@ void ConeRequest::ExpandCluster(std::vector<cone_point>& cone_points, int index,
 
   // Check all neighbours for being part of the cluster
   for (auto& neighborPt : neighborPts) {
-    cone_point& p_neighbor = cone_points[neighborPt];
+    ConePoint& p_neighbor = cone_points[neighborPt];
     if (!p_neighbor.visited) {
       // Recursively expand the cluster
       ExpandCluster(cone_points, neighborPt, c, eps_s, eps_l, minPts);
@@ -491,7 +492,7 @@ void ConeRequest::ExpandCluster(std::vector<cone_point>& cone_points, int index,
 }
 
 double ConeRequest::CalcClusterToBoundaryDist(
-    const std::vector<cone_point>& points, RequestType direction) {
+    const std::vector<ConePoint>& points, RequestType direction) {
   double left_l = std::abs(points[0].left_dist);
   double right_l = std::abs(points[0].right_dist);
   for (const auto& p : points) {
@@ -523,17 +524,18 @@ void ConeRequest::ConeDir() {
   // 获取左车道线型
   if (base_lane != nullptr) {
     auto left_lane_boundary = base_lane->get_left_lane_boundary();
-    auto left_boundary_type = MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
+    auto left_boundary_type =
+        MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
     current_left_boundary_type = left_boundary_type;
     // 获取右车道线型
-    auto right_lane_boundary =
-        base_lane->get_right_lane_boundary();
-    auto right_boundary_type = MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
+    auto right_lane_boundary = base_lane->get_right_lane_boundary();
+    auto right_boundary_type =
+        MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
     current_right_boundary_type = right_boundary_type;
   } else {
     return;
   }
-  
+
   if (left_lane_nums == 0 && right_lane_nums == 0) {
     return;
   }
@@ -606,12 +608,14 @@ void ConeRequest::ConeDir() {
   }
 
   if (left_change_available && right_change_available) {
-    if (current_right_boundary_type != iflyauto::LaneBoundaryType_MARKING_SOLID) {
+    if (current_right_boundary_type !=
+        iflyauto::LaneBoundaryType_MARKING_SOLID) {
       LOG_DEBUG("cone alc right!!!\n");
       cone_lane_change_direction_ = RIGHT_CHANGE;
       return;
     }
-    if (current_left_boundary_type != iflyauto::LaneBoundaryType_MARKING_SOLID) {
+    if (current_left_boundary_type !=
+        iflyauto::LaneBoundaryType_MARKING_SOLID) {
       LOG_DEBUG("cone alc left!!!\n");
       cone_lane_change_direction_ = LEFT_CHANGE;
       return;
@@ -636,8 +640,8 @@ void ConeRequest::ConeDir() {
 
 bool ConeRequest::ConesDirection(RequestType& direction) {
   direction = NO_CHANGE;
-  for (const auto& kv : points_by_cluster_) {
-    std::vector<cone_point> points = kv.second;
+  for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
+    std::vector<ConePoint> points = cluster_attribute_iter.second;
     if (points.size() < kConeDirecSize) {
       continue;
     }
@@ -667,7 +671,9 @@ bool ConeRequest::ConesDirection(RequestType& direction) {
 }
 
 bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
-  const auto& ego_lane = virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);;
+  const auto& ego_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
+  ;
   if (ego_lane == nullptr) {
     LOG_DEBUG("seach fail: ego lane is nullptr \n");
     return false;
@@ -737,7 +743,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
   std::shared_ptr<KDPath> target_lane_frenet_coord =
       target_refline->get_frenet_coord();
 
-  std::vector<cone_point> serach_cone_points = cone_points_;
+  std::vector<ConePoint> serach_cone_points = cone_points_;
   for (auto& p : serach_cone_points) {
     if (!target_lane_frenet_coord->XYToSL(p.x, p.y, &p.s, &p.l)) {
       LOG_DEBUG("[CheckTargetLaneAvailable]: XYToSL fail \n");
@@ -745,7 +751,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
     } else {
       GetTargetLaneWidthByCone(lane_s_width, seach_lane, p.s, p.l, true,
                                &p.left_dist);
-      GetTargetLaneWidthByCone(lane_s_width, seach_lane, p.s, p.l,  false,
+      GetTargetLaneWidthByCone(lane_s_width, seach_lane, p.s, p.l, false,
                                &p.right_dist);
     }
   }
@@ -778,7 +784,7 @@ std::vector<double> ConeRequest::ConeRankify(std::vector<double>& arr) {
 }
 
 double ConeRequest::ConeSpearmanRankCorrelation(
-    std::vector<cone_point> points) {
+    const std::vector<ConePoint> points) {
   int n = points.size();
 
   std::vector<double> s(n);
@@ -802,7 +808,7 @@ double ConeRequest::ConeSpearmanRankCorrelation(
   return 1 - (6 * d_square_sum) / (n * (std::pow(n, 2) - 1));
 }
 
-double ConeRequest::ConeComputeSlope(std::vector<cone_point> points) {
+double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
   double s_mean, l_mean;
   double s_stddev, l_stddev;
   // 计算cone的s、l的平均值
@@ -839,7 +845,7 @@ double ConeRequest::ConeComputeSlope(std::vector<cone_point> points) {
   }
 }
 
-bool ConeRequest::ConeStandardize(std::vector<cone_point>& points) {
+bool ConeRequest::ConeStandardize(std::vector<ConePoint>& points) {
   double s_mean, l_mean;
   // 计算锥桶障碍物的s、l均值
   if (ConeMean(points, s_mean, l_mean)) {
@@ -858,8 +864,8 @@ bool ConeRequest::ConeStandardize(std::vector<cone_point>& points) {
   return false;
 }
 
-bool ConeRequest::ConeMean(const std::vector<cone_point>& points,
-                           double& s_mean, double& l_mean) {
+bool ConeRequest::ConeMean(const std::vector<ConePoint>& points, double& s_mean,
+                           double& l_mean) {
   if (points.empty()) {
     return false;
   }
@@ -872,7 +878,7 @@ bool ConeRequest::ConeMean(const std::vector<cone_point>& points,
   return true;
 }
 
-bool ConeRequest::ConeStddev(const std::vector<cone_point>& points,
+bool ConeRequest::ConeStddev(const std::vector<ConePoint>& points,
                              double s_mean, double l_mean, double& s_stddev,
                              double& l_stddev) {
   if (points.empty()) {
@@ -918,7 +924,7 @@ void ConeRequest::Reset() {
   cone_cluster_size_.clear();
   cone_cluster_.clear();
   cone_points_.clear();
-  points_by_cluster_.clear();
+  cone_cluster_attribute_set_.clear();
 }
 
 }  // namespace planning

@@ -6,9 +6,9 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
-#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 #include "lane_change_requests/emergence_avoid_lane_change_request.h"
 #include "lane_change_requests/overtake_lane_change_request.h"
+#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 
 namespace planning {
 
@@ -237,8 +237,7 @@ bool LaneChangeRequestManager::Update(
       }
       request_ = cone_change_request_.request_type();
       request_source_ = CONE_REQUEST;
-      target_lane_virtual_id_ =
-          cone_change_request_.target_lane_virtual_id();
+      target_lane_virtual_id_ = cone_change_request_.target_lane_virtual_id();
     } else if (emergence_avoid_request_.request_type() != NO_CHANGE) {
       if (map_request_.request_type() != NO_CHANGE) {
         map_request_.Finish();
@@ -249,7 +248,7 @@ bool LaneChangeRequestManager::Update(
       }
       request_ = emergence_avoid_request_.request_type();
       request_source_ = EMERGENCE_AVOID_REQUEST;
-      target_lane_virtual_id_ = 
+      target_lane_virtual_id_ =
           emergence_avoid_request_.target_lane_virtual_id();
     } else if (map_request_.request_type() != NO_CHANGE) {
       if (overtake_request_.request_type() != NO_CHANGE) {

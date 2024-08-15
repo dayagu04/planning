@@ -1964,7 +1964,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
 }
 
 void VirtualLaneManager::TrackEgoLane() {
-  const auto &function_info = session_->environmental_model().function_info();
+  const auto& function_info = session_->environmental_model().function_info();
   const auto& planning_context = session_->planning_context();
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
@@ -1992,7 +1992,8 @@ void VirtualLaneManager::TrackEgoLane() {
       zero_relative_id_nums += 1;
     }
   }
-  if (!active || function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
+  if (!active ||
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
     SelectEgoLaneWithoutPlan();
   } else {
     if (!planning_result.traj_points.empty()) {
@@ -2071,10 +2072,11 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
         if (ego_s > frenet_coord->Length()) {
           continue;
         }
-        planning_math::PathPoint ego_s_nearest_point = 
+        planning_math::PathPoint ego_s_nearest_point =
             frenet_coord->GetPathPointByS(ego_s);
         int iter_count = 0;
-        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length(); s += lane_line_segment_length) {
+        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+             s += lane_line_segment_length) {
           if (s > default_lane_line_length + ego_s) {
             break;
           }
@@ -2085,9 +2087,11 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
         pos_lateral_offset_cost = std::fabs(ego_l);
         iter_count = std::max(1, iter_count);
         average_heading_angle_cost = heading_angle_cost / iter_count;
-        total_lane_cost = average_heading_angle_cost * heading_angle_diff_weight +
+        total_lane_cost =
+            average_heading_angle_cost * heading_angle_diff_weight +
             pos_lateral_offset_cost * init_pos_lateral_offset_weight;
-        std::vector<double> cost_list{average_heading_angle_cost, ego_l, total_lane_cost};
+        std::vector<double> cost_list{average_heading_angle_cost, ego_l,
+                                      total_lane_cost};
         lane_cost_list[relative_id_lane->get_order_id()] = cost_list;
 
         if (total_lane_cost < ego2lane_min) {

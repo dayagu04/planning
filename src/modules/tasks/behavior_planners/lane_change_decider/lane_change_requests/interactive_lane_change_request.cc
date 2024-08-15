@@ -90,9 +90,11 @@ void IntRequest::Update(int lc_status) {
         LOG_DEBUG(
             "[IntRequest::update] Ask for interactive changing lane to left\n");
         if ((lc_status == kLaneKeeping || lc_status == kLaneChangePropose) &&
-          IsRoadBorderSurpressLaneChange(LEFT_CHANGE, origin_lane_virtual_id_, target_lane_virtual_id_)){
+            IsRoadBorderSurpressLaneChange(LEFT_CHANGE, origin_lane_virtual_id_,
+                                           target_lane_virtual_id_)) {
           LOG_DEBUG(
-              "[IntRequest::update] Road border surpress lane change to left\n");            
+              "[IntRequest::update] Road border surpress lane change to "
+              "left\n");
           Finish();
           set_target_lane_virtual_id(current_lane_virtual_id);
         }
@@ -125,9 +127,12 @@ void IntRequest::Update(int lc_status) {
             "[IntRequest::update] Ask for interactive changing lane to right "
             "\n");
         if ((lc_status == kLaneKeeping || lc_status == kLaneChangePropose) &&
-          IsRoadBorderSurpressLaneChange(RIGHT_CHANGE, origin_lane_virtual_id_, target_lane_virtual_id_)){
+            IsRoadBorderSurpressLaneChange(RIGHT_CHANGE,
+                                           origin_lane_virtual_id_,
+                                           target_lane_virtual_id_)) {
           LOG_DEBUG(
-              "[IntRequest::update] Road border surpress lane change to right\n");            
+              "[IntRequest::update] Road border surpress lane change to "
+              "right\n");
           Finish();
           set_target_lane_virtual_id(current_lane_virtual_id);
         }

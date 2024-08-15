@@ -41,10 +41,9 @@ class LaneChangeRequest {
                                      const int origin_lane_id) const;
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request, const int origin_lane_id);
-  bool IsRoadBorderSurpressLaneChange(
-    const RequestType lc_request,
-    const int origin_lane_id,
-    const int target_lane_id);
+  bool IsRoadBorderSurpressLaneChange(const RequestType lc_request,
+                                      const int origin_lane_id,
+                                      const int target_lane_id);
 
  protected:
   TrackInfo lc_invalid_track_;
