@@ -1983,6 +1983,13 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
 }
 
 void VirtualLaneManager::TrackEgoLane() {
+  auto &local_view = session_->environmental_model().get_local_view();
+  auto fsm_state = local_view.function_state_machine_info.current_state;
+  bool acc_mode = (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_STAND_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_STAND_WAIT) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_SECURE);
   const auto& planning_context = session_->planning_context();
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
@@ -2011,7 +2018,7 @@ void VirtualLaneManager::TrackEgoLane() {
       zero_relative_id_nums += 1;
     }
   }
-  if (!active) {
+  if (!active || acc_mode) {
     SelectEgoLaneWithoutPlan();
   } else {
     if (!planning_result.traj_points.empty()) {
@@ -2072,7 +2079,6 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
   const double init_pos_lateral_offset_weight = 1.0;
   const double heading_angle_diff_weight = 1.5;
-
 
   for (auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane != nullptr) {
