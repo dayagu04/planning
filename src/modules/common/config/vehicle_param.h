@@ -17,7 +17,6 @@ struct VehicleParam {
   double width = 1.935;                    // 车宽
   double max_width = 2.229;                // 车宽 （带后视镜
   double height = 1.685;                   // 车高度
-  double width_mirror = 0.15;              // 车宽 （带后视镜
   double min_turn_radius = 4.88;           // 最小转弯半径
   double max_acceleration = 2.5;           // 最大加速度
   double max_deceleration = -6.0;          // 最大减速度
@@ -43,7 +42,6 @@ struct VehicleParam {
     JSON_READ_VALUE(width, double, "width");
     JSON_READ_VALUE(max_width, double, "max_width");
     JSON_READ_VALUE(height, double, "height");
-    JSON_READ_VALUE(width_mirror, double, "width_mirror");
     JSON_READ_VALUE(min_turn_radius, double, "min_turn_radius");
     JSON_READ_VALUE(max_acceleration, double, "max_acceleration");
     JSON_READ_VALUE(max_deceleration, double, "max_deceleration");

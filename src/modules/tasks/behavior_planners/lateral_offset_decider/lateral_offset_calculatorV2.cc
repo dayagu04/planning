@@ -143,7 +143,7 @@ bool LateralOffsetCalculatorV2::UpdateAvoidPath(
 void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double ego_width = vehicle_param.width + vehicle_param.width_mirror;
+  const double ego_width = vehicle_param.max_width;
 
   const double road_avoid_threshold =
       lane_width_ * 0.5 - config_.nudge_buffer_road_boundary - ego_width * 0.5;
@@ -565,8 +565,7 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width =
-      vehicle_param.width * 0.5 + vehicle_param.width_mirror;
+  const double half_ego_width =  vehicle_param.max_width * 0.5;
 
   double nearest_l_to_ref =
       fabs(avoid_way == AvoidWay::Left ? avoid_obstacle.min_l_to_ref
