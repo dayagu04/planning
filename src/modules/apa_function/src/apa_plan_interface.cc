@@ -561,8 +561,11 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_strict, double,
                   "col_obs_safe_dist_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().max_obs_invasion_slot_dist, double,
-                  "max_obs_invasion_slot_dist");
+  JSON_READ_VALUE(apa_param.SetPram().max_obs_lat_invasion_slot_dist, double,
+                  "max_obs_lat_invasion_slot_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_obs_lon_invasion_slot_dist, double,
+                  "max_obs_lon_invasion_slot_dist");
 
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,
