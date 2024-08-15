@@ -49,6 +49,13 @@ class LateralMotionPlanningWeight {
 
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
 
+  double GetConcernedEndRatioForXY() const { return end_ratio_for_qrefxy_; }
+
+  double GetConcernedEndRatioForTheta() const { return end_ratio_for_qreftheta_; }
+
+  void MakeLaneChangeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
  private:
   void SetAccJerkBoundByVelocity(
       planning::common::LateralPlanningInput &planning_input);
@@ -64,6 +71,8 @@ class LateralMotionPlanningWeight {
   double concerned_start_q_jerk_;
   double ego_vel_;
   double ego_l_;
+  double end_ratio_for_qrefxy_;
+  double end_ratio_for_qreftheta_;
   bool is_lane_change_back_;
 };
 

@@ -334,10 +334,11 @@ void LateralMotionPlanner::AssembleInput() {
     avoid_back_time_ = 0.0;
     avoid_back_status = false;
   }
+
+  const auto target_state = session_->planning_context()
+                                .lane_change_decider_output()
+                                .coarse_planning_info.target_state;
   if (lane_change_scene) {
-    const auto target_state = session_->planning_context()
-                                  .lane_change_decider_output()
-                                  .coarse_planning_info.target_state;
     if (target_state == kLaneChangeCancel) {
       planning_weight_ptr_->SetLCBackFlag(true);
     }
@@ -384,6 +385,33 @@ void LateralMotionPlanner::AssembleInput() {
     }
   }
 
+  const double lateral_offset = lateral_offset_decider_output.lateral_offset;
+  if ((lane_change_scene) && (ego_v > config_.lane_change_high_vel)) {
+    if (config_.use_high_vel_lc_version_two) {
+      complete_follow = false;
+    }
+    // complete_follow = false;
+    motion_plan_concerned_end_index = 17;
+    for (size_t i = 1; i < 17; ++i) {
+      Point2D cart_refi(planning_input_.ref_x_vec(i), planning_input_.ref_y_vec(i));
+      Point2D frenet_refi;
+      if (reference_path_ptr->get_frenet_coord() != nullptr &&
+          reference_path_ptr->get_frenet_coord()->XYToSL(cart_refi, frenet_refi)) {
+        if (std::fabs(frenet_refi.y - lateral_offset) < 0.05) {
+          motion_plan_concerned_end_index = i - 1;
+          break;
+        }
+      }
+    }
+    if (motion_plan_concerned_end_index < 1) {
+      if (!config_.use_high_vel_lc_version_two) {
+        complete_follow = false;
+      }
+      motion_plan_concerned_end_index = 17;
+      planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
+    }
+  }
+
   // set complete hold flag, concerned index
   planning_input_.set_complete_follow(complete_follow);
   planning_input_.set_motion_plan_concerned_index(
@@ -394,12 +422,16 @@ void LateralMotionPlanner::Update() {
   const double concerned_start_q_jerk =
       planning_weight_ptr_->GetConcernedStartQJerk();
   JSON_DEBUG_VALUE("concerned_start_q_jerk", concerned_start_q_jerk);
+  const double end_ratio_for_qrefxy =
+      planning_weight_ptr_->GetConcernedEndRatioForXY();
+  const double end_ratio_for_qreftheta =
+      planning_weight_ptr_->GetConcernedEndRatioForTheta();
   const double ego_vel =
       std::max(session_->environmental_model().get_ego_state_manager()->ego_v(),
                config_.min_ego_vel);
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
-      config_.end_ratio_for_qref, config_.end_ratio_for_qjerk,
+      end_ratio_for_qrefxy, end_ratio_for_qreftheta, config_.end_ratio_for_qjerk,
       config_.motion_plan_concerned_start_index, concerned_start_q_jerk,
       ego_vel, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);

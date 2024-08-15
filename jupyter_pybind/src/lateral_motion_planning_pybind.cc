@@ -54,7 +54,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
                    int motion_plan_concerned_start_index, int motion_plan_concerned_end_index,
                    double curv_factor,
                    double start_w_jerk, double ego_v,
-                   double end_ratio, double end_ratio1, double max_iter) {
+                   double end_ratio1, double end_ratio2, double end_ratio3, double max_iter) {
   planning::common::LateralPlanningInput planning_input =
       BytesToProto<planning::common::LateralPlanningInput>(
           planning_input_bytes);
@@ -282,7 +282,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   //   model_dt_vec[i] = new_dt;
   // }
 
-  pBase->Update(end_ratio, end_ratio1, max_iter, motion_plan_concerned_start_index, start_w_jerk, ego_v, planning_input);
+  pBase->Update(end_ratio1, end_ratio2, end_ratio3, max_iter, motion_plan_concerned_start_index, start_w_jerk, ego_v, planning_input);
   return 0;
 }
 

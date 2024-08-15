@@ -208,6 +208,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  const auto &frenet_coord =
+      coarse_planning_info.reference_path->get_frenet_coord();
+  Eigen::Vector2d cart_init_point(ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
+                                  ego_cart_state_manager_->planning_init_point().lat_init_state.y());
+  Point2D frenet_init_pt{0.0, 3.0};
+  Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
+  frenet_coord->XYToSL(cart_init_pt, frenet_init_pt);
 
   bool limit_ref_vel_on_ramp_valid = false;
   bool is_LC_CHANGE =
@@ -215,9 +222,10 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
 
-  if (config_.lateral_ref_traj_type ||
-      ((is_LC_CHANGE || is_LC_BACK) &&
-       gap_selector_decider_output.gap_selector_trustworthy)) {
+  const double lateral_offset = session_->mutable_planning_context()->lateral_offset_decider_output().lateral_offset;
+  if (config_.lateral_ref_traj_type || (((ego_cart_state_manager_->ego_v() <= config_.lc_high_vel_thr) || (std::fabs(frenet_init_pt.y - lateral_offset) > config_.lc_second_dist_thr)) &&
+      (is_LC_CHANGE || is_LC_BACK) &&
+        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
     // generate traj_points based on kMaxAcc or kMinAcc
@@ -253,10 +261,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         session_->planning_context().v_ref_cruise() * span_t;
     double avg_cruise_v = std::min(s, max_ref_length) / span_t;
     double delta_s = avg_cruise_v * config_.delta_t;
-    Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
-                                    planning_init_point.lat_init_state.y());
-    const auto &frenet_coord =
-        coarse_planning_info.reference_path->get_frenet_coord();
+    // Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
+    //                                 planning_init_point.lat_init_state.y());
     const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
     pnc::spline::Projection projection_spline;
     projection_spline.CalProjectionPoint(
@@ -298,10 +304,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   } else {
     general_lateral_decider_output.ramp_scene = false;
   }
-  if ((is_LC_CHANGE || is_LC_BACK) &&
-      gap_selector_decider_output.gap_selector_trustworthy) {
+  if ((is_LC_CHANGE || is_LC_BACK) && (((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) && (config_.not_use_gap_flag)) ||
+      gap_selector_decider_output.gap_selector_trustworthy)) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
+    if ((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) && (std::fabs(frenet_init_pt.y - lateral_offset) < config_.lc_second_dist_thr)) {
+      HandleAvoidScene(traj_points);
+    }
   } else {
     general_lateral_decider_output.complete_follow =
         false;  // fusion is unsteady, lane keep weight need decay in end of
