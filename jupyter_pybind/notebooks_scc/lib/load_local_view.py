@@ -320,7 +320,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
         })
 
-         
+
     # 加载topo车道线和中心线
     if bag_loader.lane_topo_msg['enable'] == True:
       try:
@@ -1402,26 +1402,26 @@ def load_local_view_figure():
   fig1.line('line_19_y', 'line_19_x', source = data_lane_19, line_width = 1.5, line_color = 'black', line_dash = 'dashed', legend_label = 'lane_fusion')
   fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 3, line_color = 'cyan', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'center_line_gen')
   # !!!!!!!!!!!! Important: Do not draw above !!!!!!!!!!!
-  fig1.line('line_topo_0_y', 'line_topo_0_x', source = data_lane_topo_0, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_1_y', 'line_topo_1_x', source = data_lane_topo_1, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_2_y', 'line_topo_2_x', source = data_lane_topo_2, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_3_y', 'line_topo_3_x', source = data_lane_topo_3, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_4_y', 'line_topo_4_x', source = data_lane_topo_4, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_5_y', 'line_topo_5_x', source = data_lane_topo_5, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_6_y', 'line_topo_6_x', source = data_lane_topo_6, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_7_y', 'line_topo_7_x', source = data_lane_topo_7, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_8_y', 'line_topo_8_x', source = data_lane_topo_8, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_9_y', 'line_topo_9_x', source = data_lane_topo_9, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_10_y', 'line_topo_10_x', source = data_lane_topo_10, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_11_y', 'line_topo_11_x', source = data_lane_topo_11, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_12_y', 'line_topo_12_x', source = data_lane_topo_12, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_13_y', 'line_topo_13_x', source = data_lane_topo_13, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_14_y', 'line_topo_14_x', source = data_lane_topo_14, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_15_y', 'line_topo_15_x', source = data_lane_topo_15, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_16_y', 'line_topo_16_x', source = data_lane_topo_16, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_17_y', 'line_topo_17_x', source = data_lane_topo_17, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_18_y', 'line_topo_18_x', source = data_lane_topo_18, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
-  fig1.line('line_topo_19_y', 'line_topo_19_x', source = data_lane_topo_19, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo')
+  fig1.line('line_topo_0_y', 'line_topo_0_x', source = data_lane_topo_0, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_1_y', 'line_topo_1_x', source = data_lane_topo_1, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_2_y', 'line_topo_2_x', source = data_lane_topo_2, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_3_y', 'line_topo_3_x', source = data_lane_topo_3, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_4_y', 'line_topo_4_x', source = data_lane_topo_4, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_5_y', 'line_topo_5_x', source = data_lane_topo_5, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_6_y', 'line_topo_6_x', source = data_lane_topo_6, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_7_y', 'line_topo_7_x', source = data_lane_topo_7, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_8_y', 'line_topo_8_x', source = data_lane_topo_8, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_9_y', 'line_topo_9_x', source = data_lane_topo_9, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_10_y', 'line_topo_10_x', source = data_lane_topo_10, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_11_y', 'line_topo_11_x', source = data_lane_topo_11, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_12_y', 'line_topo_12_x', source = data_lane_topo_12, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_13_y', 'line_topo_13_x', source = data_lane_topo_13, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_14_y', 'line_topo_14_x', source = data_lane_topo_14, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_15_y', 'line_topo_15_x', source = data_lane_topo_15, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_16_y', 'line_topo_16_x', source = data_lane_topo_16, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_17_y', 'line_topo_17_x', source = data_lane_topo_17, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_18_y', 'line_topo_18_x', source = data_lane_topo_18, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
+  fig1.line('line_topo_19_y', 'line_topo_19_x', source = data_lane_topo_19, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
 
   fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
   fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
