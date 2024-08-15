@@ -2,6 +2,7 @@
   "car_type": "jac_s811",
   "front_edge_to_rear_axle": 3.624,
   "rear_edge_to_rear_axle": 0.947,
+  "rear_axle_to_center":1.338,
   "length":4.571,
   "width":1.89,
   "max_width":2.11,

@@ -2,6 +2,7 @@
   "car_type": "e0y",
   "front_edge_to_rear_axle": 4.025,
   "rear_edge_to_rear_axle": 0.925,
+  "rear_axle_to_center":1.55,
   "length":4.95,
   "width":2.079,
   "max_width":2.229,

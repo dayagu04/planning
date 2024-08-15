@@ -12,7 +12,7 @@ struct VehicleParam {
 
   double front_edge_to_rear_axle = 3.73;
   double rear_edge_to_rear_axle = 1.085;
-  double rear_edge_to_center = 1.295;
+  double rear_axle_to_center = 1.295;
   double length = 4.786;                   // 车长
   double width = 1.935;                    // 车宽
   double max_width = 2.229;                // 车宽 （带后视镜
@@ -55,6 +55,7 @@ struct VehicleParam {
     JSON_READ_VALUE(steer_ratio, double, "steer_ratio");
     JSON_READ_VALUE(wheel_base, double, "wheel_base");
     JSON_READ_VALUE(max_front_wheel_angle, double, "max_front_wheel_angle");
+    JSON_READ_VALUE(rear_axle_to_center, double, "rear_axle_to_center");
     JSON_READ_VALUE(car_type, std::string, "car_type");
   }
 };

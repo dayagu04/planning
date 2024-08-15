@@ -105,9 +105,9 @@ void FrenetEgoState::update(
 
   planning_math::Vec2d center(
       planning_init_point_.x + std::cos(planning_init_point_.heading_angle) *
-                                   vehicle_param.rear_edge_to_center,
+                                   vehicle_param.rear_axle_to_center,
       planning_init_point_.y + std::sin(planning_init_point_.heading_angle) *
-                                   vehicle_param.rear_edge_to_center);
+                                   vehicle_param.rear_axle_to_center);
   planning_math::Box2d ego_init_box(center, planning_init_point_.heading_angle,
                                     vehicle_param.length, vehicle_param.width);
 
