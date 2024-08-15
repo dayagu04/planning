@@ -599,6 +599,7 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
   auto ref_path_points = lon_behav_input_->ref_path_points();
   double v_target_ramp = 40;
+  double v_target_near_ramp_zone = 40;
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > 50 || is_continuous_ramp) {
@@ -613,10 +614,17 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
     LOG_DEBUG("v_target : [%f] \n", v_target_);
     return true;
   }
+  if (dis_to_ramp <= config_.dis_near_ramp_zone) {
+    double pre_brake_dis_near_ramp_zone = std::max(dis_to_ramp - config_.brake_dis_near_ramp_zone, 0.0);
+    v_target_near_ramp_zone = std::pow(
+      std::pow(config_.v_limit_near_ramp_zone, 2.0) - 2 * pre_brake_dis_near_ramp_zone * acc_to_ramp,
+      0.5);
+  }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
   v_target_ramp = std::pow(
       std::pow(ramp_v_limit, 2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp,
       0.5);
+  v_target_ramp = std::min(v_target_near_ramp_zone, v_target_ramp);
   v_limit_on_ramp_ = v_target_ramp;
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
