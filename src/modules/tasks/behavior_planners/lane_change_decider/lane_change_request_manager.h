@@ -1,15 +1,16 @@
 #pragma once
 
+#include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "ifly_time.h"
 #include "lane_change_requests/active_lane_change_request.h"
+#include "lane_change_requests/emergence_avoid_lane_change_request.h"
 #include "lane_change_requests/interactive_lane_change_request.h"
 #include "lane_change_requests/lane_change_request.h"
 #include "lane_change_requests/map_lane_change_request.h"
 #include "lane_change_requests/overtake_lane_change_request.h"
 #include "session.h"
-#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 
 namespace planning {
 
@@ -61,6 +62,8 @@ class LaneChangeRequestManager {
       return act_request_.AggressiveChange();
     } else if (request_source_ == OVERTAKE_REQUEST) {
       return overtake_request_.AggressiveChange();
+    } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
+      return emergence_avoid_request_.AggressiveChange();
     }
     return false;
   }
@@ -79,6 +82,8 @@ class LaneChangeRequestManager {
   MapRequest map_request_;
   ActRequest act_request_;
   OvertakeRequest overtake_request_;
+  EmergenceAvoidRequest emergence_avoid_request_;
+  ConeRequest cone_change_request_;
 
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_;
   framework::Session* session_;

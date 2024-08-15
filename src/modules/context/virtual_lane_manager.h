@@ -219,7 +219,7 @@ class VirtualLaneManager {
   int origin_relative_id_zero_nums() const {
     return origin_relative_id_zero_nums_;
   }
-  bool is_nearing_ramp ()const {return is_nearing_ramp_;}
+  bool is_nearing_ramp() const { return is_nearing_ramp_; }
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);

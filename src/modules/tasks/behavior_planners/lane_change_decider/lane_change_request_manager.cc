@@ -1,9 +1,13 @@
 #include "lane_change_request_manager.h"
 
 #include "adas_function/mrc_condition.h"
+#include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
+#include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
+#include "lane_change_requests/emergence_avoid_lane_change_request.h"
+#include "lane_change_requests/overtake_lane_change_request.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/overtake_lane_change_request.h"
 
 namespace planning {
@@ -18,6 +22,8 @@ LaneChangeRequestManager::LaneChangeRequestManager(
                    lane_change_lane_mgr),
       act_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       overtake_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
+      emergence_avoid_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
+      cone_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {
   config_ = config_builder->cast<EgoPlanningConfig>();
@@ -28,6 +34,10 @@ void LaneChangeRequestManager::FinishRequest() {
   map_request_.Finish();
   overtake_request_.Finish();
   overtake_request_.Reset();
+  emergence_avoid_request_.Finish();
+  emergence_avoid_request_.Reset();
+  cone_change_request_.Finish();
+  cone_change_request_.Reset();
 
   request_ = NO_CHANGE;
   request_source_ = NO_REQUEST;
@@ -51,7 +61,7 @@ bool LaneChangeRequestManager::Update(
   // const double kOvertakeTriggerCruiseSpeedMinThreshold = 16.67;  // 60km/h
   const double intersection_distance_of_suppression_active_lane_change = 90.0;
   bool EnableGenerateOvertakeQequestByFrontSlowVehicle = true;
-  bool use_overtake_lane_change_request =
+  const bool use_overtake_lane_change_request =
       config_
           .use_overtake_lane_change_request_instead_of_active_lane_change_request;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change =
@@ -61,6 +71,11 @@ bool LaneChangeRequestManager::Update(
   double sum_dis_to_last_merge_point =
       virtual_lane_mgr_->sum_dis_to_last_merge_point();
   const double odd_route_distance_threshold = 500.0;
+  const bool enable_use_emergency_avoidence_lc_request =
+      config_.enable_use_emergency_avoidence_lane_change_request;
+  const bool enable_use_cone_change_request =
+      config_.enable_use_cone_change_request;
+  const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -70,6 +85,13 @@ bool LaneChangeRequestManager::Update(
     int_request_.reset_int_cnt();
   }
   if (int_request_.request_type() == NO_CHANGE) {
+    if (enable_use_cone_change_request) {
+      cone_change_request_.Update(lc_status);
+    }
+    if (enable_use_emergency_avoidence_lc_request && is_on_highway &&
+        cone_change_request_.request_type() == RequestType::NO_CHANGE) {
+      emergence_avoid_request_.Update(lc_status);
+    }
     if (hd_map_valid) {
       map_request_.update(lc_status, map_request_.tfinish());
     }
@@ -153,10 +175,13 @@ bool LaneChangeRequestManager::Update(
   if (location_valid && use_overtake_lane_change_request) {
     LOG_DEBUG(
         "[LaneChangeRequestManager::update] int_request: %d, map_request: %d, "
-        "overtake_request: %d,"
+        "overtake_request: %d, emergence_avoid_request: %d, "
+        "cone_change_request: %d, "
         "int_cancel_reason: %d, turn_signal: %d \n",
         int_request_.request_type(), map_request_.request_type(),
-        overtake_request_.request_type(), int_request_cancel_reason_,
+        overtake_request_.request_type(),
+        emergence_avoid_request_.request_type(),
+        cone_change_request_.request_type(), int_request_cancel_reason_,
         gen_turn_signal_);
 
     if (int_request_cancel_reason_ == MANUAL_CANCEL &&
@@ -180,6 +205,14 @@ bool LaneChangeRequestManager::Update(
               << std::endl;
 
     if (int_request_.request_type() != NO_CHANGE) {
+      if (emergence_avoid_request_.request_type() != NO_CHANGE) {
+        emergence_avoid_request_.Finish();
+        emergence_avoid_request_.Reset();
+      }
+      if (cone_change_request_.request_type() != NO_CHANGE) {
+        cone_change_request_.Finish();
+        cone_change_request_.Reset();
+      }
       if (map_request_.request_type() != NO_CHANGE) {
         map_request_.Finish();
       }
@@ -190,6 +223,33 @@ bool LaneChangeRequestManager::Update(
       request_ = int_request_.request_type();
       request_source_ = INT_REQUEST;
       target_lane_virtual_id_ = int_request_.target_lane_virtual_id();
+    } else if (cone_change_request_.request_type() != NO_CHANGE) {
+      if (emergence_avoid_request_.request_type() != NO_CHANGE) {
+        emergence_avoid_request_.Finish();
+        emergence_avoid_request_.Reset();
+      }
+      if (map_request_.request_type() != NO_CHANGE) {
+        map_request_.Finish();
+      }
+      if (overtake_request_.request_type() != NO_CHANGE) {
+        overtake_request_.Finish();
+        overtake_request_.Reset();
+      }
+      request_ = cone_change_request_.request_type();
+      request_source_ = CONE_REQUEST;
+      target_lane_virtual_id_ = cone_change_request_.target_lane_virtual_id();
+    } else if (emergence_avoid_request_.request_type() != NO_CHANGE) {
+      if (map_request_.request_type() != NO_CHANGE) {
+        map_request_.Finish();
+      }
+      if (overtake_request_.request_type() != NO_CHANGE) {
+        overtake_request_.Finish();
+        overtake_request_.Reset();
+      }
+      request_ = emergence_avoid_request_.request_type();
+      request_source_ = EMERGENCE_AVOID_REQUEST;
+      target_lane_virtual_id_ =
+          emergence_avoid_request_.target_lane_virtual_id();
     } else if (map_request_.request_type() != NO_CHANGE) {
       if (overtake_request_.request_type() != NO_CHANGE) {
         overtake_request_.Finish();
@@ -239,10 +299,12 @@ bool LaneChangeRequestManager::Update(
   } else {
     LOG_DEBUG(
         "[LaneChangeRequestManager::update] int_request: %d, map_request: %d, "
-        "act_request: %d,"
+        "act_request: %d, emergence_avoid_request: %d, cone_change_request: "
+        "%d, "
         "int_cancel_reason: %d, turn_signal: %d \n",
         int_request_.request_type(), map_request_.request_type(),
-        act_request_.request_type(), int_request_cancel_reason_,
+        act_request_.request_type(), emergence_avoid_request_.request_type(),
+        cone_change_request_.request_type(), int_request_cancel_reason_,
         gen_turn_signal_);
 
     if (int_request_cancel_reason_ == MANUAL_CANCEL &&
@@ -356,6 +418,14 @@ void LaneChangeRequestManager::GenerateHMIInfoForOvertake() {
     gen_turn_signal_ = NO_CHANGE;
     ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
     ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
+  } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
+    gen_turn_signal_ = emergence_avoid_request_.turn_signal();
+    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
+  } else if (request_source_ == CONE_REQUEST) {
+    gen_turn_signal_ = cone_change_request_.turn_signal();
+    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
@@ -398,6 +468,14 @@ void LaneChangeRequestManager::GenerateHMIInfo() {
     gen_turn_signal_ = NO_CHANGE;
     ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
     ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
+  } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
+    gen_turn_signal_ = emergence_avoid_request_.turn_signal();
+    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
+  } else if (request_source_ == CONE_REQUEST) {
+    gen_turn_signal_ = cone_change_request_.turn_signal();
+    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
+    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
@@ -412,6 +490,10 @@ double LaneChangeRequestManager::GetReqStartTime(int source) const {
     return act_request_.tstart();
   } else if (source == OVERTAKE_REQUEST) {
     return overtake_request_.tstart();
+  } else if (source == EMERGENCE_AVOID_REQUEST) {
+    return emergence_avoid_request_.tstart();
+  } else if (source == CONE_REQUEST) {
+    return cone_change_request_.tstart();
   }
   return DBL_MAX;
 }
@@ -425,6 +507,10 @@ double LaneChangeRequestManager::GetReqFinishTime(int source) const {
     return act_request_.tfinish();
   } else if (source == OVERTAKE_REQUEST) {
     return overtake_request_.tfinish();
+  } else if (source == EMERGENCE_AVOID_REQUEST) {
+    return emergence_avoid_request_.tfinish();
+  } else if (source == CONE_REQUEST) {
+    return cone_change_request_.tfinish();
   }
   return DBL_MAX;
 }

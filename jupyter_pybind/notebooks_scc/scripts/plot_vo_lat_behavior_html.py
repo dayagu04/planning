@@ -133,7 +133,7 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
       tab_rt_layer2, 'rt_table_source2', lat_behavior_table2, 'lat_behavior_table2', 3)
 
   # 2. 可视化障碍物数据debug信息
-  obj_vars = ['id','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
+  obj_vars = ['id','type','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
           'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
             'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
             'current_lead_obstacle_to_ego','cutin_p']
@@ -215,7 +215,7 @@ def draw_mlc_data_view(dataLoader, layer_manager):
       datas = []
       vars_lc = ['sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision','is_in_merge_area',
                 'current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
-                'is_solid_left_boundary','is_solid_right_boundary']
+                'left_boundary_type','right_boundary_type']
       for name in vars_lc:
         try:
           datas.append((plan_debug[name]))
