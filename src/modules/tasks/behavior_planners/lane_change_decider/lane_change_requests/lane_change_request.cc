@@ -576,9 +576,8 @@ iflyauto::LaneBoundaryType LaneChangeRequest::MakesureCurrentBoundaryType(
         return right_lane_boundarys.type_segments[i].type;
       }
     }
-  } else {
-    return iflyauto::LaneBoundaryType_MARKING_SOLID;
   }
+  return iflyauto::LaneBoundaryType_MARKING_SOLID;
 }
 
 bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
