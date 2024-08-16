@@ -529,7 +529,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'origin_lane_y':center_line_list[i]['line_y_vec']
         })
 
-    if loc_mode == 2:
+    if loc_mode > 0:
       plan_debug_json = plan_debug_json_msg
       plan_traj_x = plan_debug_json["assembled_x"]
       plan_traj_y = plan_debug_json["assembled_y"]
@@ -810,7 +810,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   #  加载fix_lane, target_lane信息
   ### step 3: 加载planning轨迹信息
   # if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
-  if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
+  if bag_loader.plan_msg['enable'] == True and loc_mode > 0:
     trajectory = plan_msg.trajectory
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
