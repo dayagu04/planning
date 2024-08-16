@@ -209,6 +209,7 @@ class StGraphGenerator {
   // cut in障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter cut_in_desired_distance_filter_;
   pnc::filters::SlopeFilter accel_vel_filter_;
+  pnc::filters::SlopeFilter accel_vel_in_turns_filter_;
 
   // acc bound
   std::pair<double, double> acc_bound_;

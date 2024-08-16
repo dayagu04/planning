@@ -628,11 +628,14 @@ void TrackletMaintainer::calc(
       item->v_rel = item->v_lead - v_ego;
 
       double d_poly_offset = lat_offset;
-      if (((d_poly.size() == 4) && (c_poly.size() == 4)) &&
-          (!config.use_lat_offset_in_tracklet_maintainer)) {
-        d_poly_offset = d_poly[3] - c_poly[3];
+      // only use lat_offset to static obstacle
+      if (!item->is_static) {
+        d_poly_offset = 0.0;
       }
-
+      // if (((d_poly.size() == 4) && (c_poly.size() == 4)) &&
+      //     (!config.use_lat_offset_in_tracklet_maintainer)) {
+      //   d_poly_offset = d_poly[3] - c_poly[3];
+      // }
       item->frenet_transform_valid =
           fill_info_with_refline(*item, d_poly_offset);
       if (!session_->environmental_model().location_valid()) {
