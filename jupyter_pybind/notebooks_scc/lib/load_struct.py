@@ -578,6 +578,65 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
       lane_info['type'] = ['dashed']
       line_info_list.append(lane_info)
   return line_info_list
+
+def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  stop_line_info_list = []
+  stop_line_msg = rdg_lane_lines_msg.stop_line
+  stop_line_msg_size = rdg_lane_lines_msg.stop_line_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(5):
+    lane_info = {'stop_line_x':[], 'stop_line_y':[]}
+    if i< stop_line_msg_size:
+      stop_line = stop_line_msg[i]
+      stop_line_points = stop_line.lane_points_set
+      stop_line_points_size = stop_line.lane_points_set_num
+      line_x = []
+      line_y = []
+      line_x = [stop_line_points[j].x for j in range(stop_line_points_size)]
+      line_y = [stop_line_points[j].y for j in range(stop_line_points_size)]
+
+      lane_info['stop_line_x'] = line_x
+      lane_info['stop_line_y'] = line_y
+
+      stop_line_info_list.append(lane_info)
+
+    else:
+      lane_info['stop_line_x'] = default_line_x
+      lane_info['stop_line_y'] = default_line_y
+      stop_line_info_list.append(lane_info)
+
+  return stop_line_info_list
+
+def load_zebra_crossing_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  zebra_crossing_lines_info_list = []
+  zebra_crossing_lines_msg = rdg_lane_lines_msg.lane_ground_markings
+  zebra_crossing_lines_size = rdg_lane_lines_msg.lane_ground_marking_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(20):
+    zebra_crossing_info = {'zebra_crossing_line_x':[], 'zebra_crossing_line_y':[]}
+    if i< zebra_crossing_lines_size and zebra_crossing_lines_msg[i].turn_type == 18 :
+      zebra_crossing_line = zebra_crossing_lines_msg[i]
+      zebra_crossing_line_points = zebra_crossing_line.ground_marking_points_set
+      zebra_crossing_line_points_size = zebra_crossing_line.ground_marking_points_set_num
+      line_x = []
+      line_y = []
+      line_x = [zebra_crossing_line_points[j].x for j in range(zebra_crossing_line_points_size)]
+      line_y = [zebra_crossing_line_points[j].y for j in range(zebra_crossing_line_points_size)]
+
+      zebra_crossing_info['zebra_crossing_line_x'] = line_x
+      zebra_crossing_info['zebra_crossing_line_y'] = line_y
+
+      zebra_crossing_lines_info_list.append(zebra_crossing_info)
+    else:
+      zebra_crossing_info['zebra_crossing_line_x'] = default_line_x
+      zebra_crossing_info['zebra_crossing_line_y'] = default_line_y
+
+      zebra_crossing_lines_info_list.append(zebra_crossing_info)
+
+  return zebra_crossing_lines_info_list
+
+
+
 def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False, loc_msg = [], g_is_display_enu = False):
   virtual_lane_refline_points = plan_gen_refline.virtual_lane_refline_points
   line_x = []
