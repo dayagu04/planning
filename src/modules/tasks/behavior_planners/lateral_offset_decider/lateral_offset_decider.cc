@@ -155,7 +155,8 @@ void LateralOffsetDecider::GenerateOutput() {
       config_.is_valid_lateral_offset && fabs(lateral_offset_) > 1e-2;
   lateral_offset_decider_output.lateral_offset = lateral_offset_;
 
-  const std::array<AvoidObstacleInfo, 2> avd_obstacles = avoid_obstacle_maintainer5v_.avd_obstacles();
+  const std::array<AvoidObstacleInfo, 2> avd_obstacles =
+      avoid_obstacle_maintainer5v_.avd_obstacles();
   lateral_offset_decider_output.avoid_id = -1;
   lateral_offset_decider_output.avoid_direction = 0;
   if (avd_obstacles[0].flag != AvoidObstacleFlag::INVALID) {

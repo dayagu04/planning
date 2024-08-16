@@ -16,7 +16,8 @@ LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
     : session_(session) {
   // TODO: add config
   config_ = config_builder->cast<LateralObstacleConfig>();
-  maintainer_ = std::make_shared<planning::TrackletMaintainer>(session_, config_);
+  maintainer_ =
+      std::make_shared<planning::TrackletMaintainer>(session_, config_);
   double curr_time = IflyTime::Now_ms();
   warning_timer_[0] = curr_time;
   warning_timer_[1] = curr_time - 1;

@@ -133,8 +133,12 @@ bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
 
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
     const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
-  if (session_->environmental_model().get_virtual_lane_manager()->get_is_exist_ramp_on_road() ||
-      session_->environmental_model().get_virtual_lane_manager()->get_is_exist_split_on_ramp()) {
+  if (session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_is_exist_ramp_on_road() ||
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_is_exist_split_on_ramp()) {
     return false;
   }
   if ((config_.ramp_limit_v_valid) && (session_->environmental_model()
@@ -151,23 +155,27 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
   d_polys.resize(d_poly.size());
   std::reverse_copy(d_poly.begin(), d_poly.end(), d_polys.begin());
   for (double preview_distance = 0.0; preview_distance < preview_length;
-      preview_distance += preview_step) {
+       preview_distance += preview_step) {
     // sum_close_kappa +=
     //     std::fabs(2 * d_polys[0] * preview_distance + d_polys[1]) /
     //     std::pow(
     //         std::pow(2 * d_polys[0] * preview_distance + d_polys[1], 2) + 1,
     //         1.5);
     sum_far_kappa +=
-        std::fabs(2 * d_polys[0] * (preview_distance + preview_x) + d_polys[1]) /
-        std::pow(
-            std::pow(2 * d_polys[0] * (preview_distance + preview_x) + d_polys[1],
-            2) + 1,
-            1.5);
+        std::fabs(2 * d_polys[0] * (preview_distance + preview_x) +
+                  d_polys[1]) /
+        std::pow(std::pow(2 * d_polys[0] * (preview_distance + preview_x) +
+                              d_polys[1],
+                          2) +
+                     1,
+                 1.5);
   }
 
   if ((std::fabs(preview_length) > 1e-6) && (std::fabs(preview_step) > 1e-6)) {
-    // double aver_close_kappa = sum_close_kappa / std::max((preview_length / preview_step), 1.0);
-    double aver_far_kappa = sum_far_kappa / std::max((preview_length / preview_step), 1.0);
+    // double aver_close_kappa = sum_close_kappa / std::max((preview_length /
+    // preview_step), 1.0);
+    double aver_far_kappa =
+        sum_far_kappa / std::max((preview_length / preview_step), 1.0);
     // double close_kappa_radius = 1.0 / std::max(aver_close_kappa, 0.0001);
     double far_kappa_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
     // JSON_DEBUG_VALUE("close_kappa_radius", close_kappa_radius);

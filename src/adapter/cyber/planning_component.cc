@@ -139,8 +139,6 @@ bool PlanningComponent::Init() {
   //       planning_adapter_->FeedHmiInner(hmi_mcu_inner_struct);
   //     });
 
-
-
   auto parking_fusion_info_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/fusion/parking_slot",

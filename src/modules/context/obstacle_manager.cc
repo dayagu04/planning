@@ -42,14 +42,15 @@ void ObstacleManager::update() {
     double prediction_relative_time =
         prediction_object.delay_time - ego_init_relative_time;
     if (prediction_object.trajectory_array.size() == 0) {
-      auto obstacle = Obstacle(prediction_object.id, prediction_object,
-                               prediction_object.is_static, prediction_relative_time);
+      auto obstacle =
+          Obstacle(prediction_object.id, prediction_object,
+                   prediction_object.is_static, prediction_relative_time);
       add_obstacle(obstacle);
       continue;
     }
     for (int i = 0; i < prediction_object.trajectory_array.size(); ++i) {
-      Obstacle obstacle(prediction_object.id, prediction_object, prediction_object.is_static,
-                        prediction_relative_time);
+      Obstacle obstacle(prediction_object.id, prediction_object,
+                        prediction_object.is_static, prediction_relative_time);
       if (obstacle.is_vaild()) {
         add_obstacle(obstacle);
       }

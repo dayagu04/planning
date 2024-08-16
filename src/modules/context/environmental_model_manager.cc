@@ -424,7 +424,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   const auto &localization = local_view.localization;
   // const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
   // const auto &hmi_inner_info = local_view.hmi_inner_info;
-  const auto &function_state_machine_info = local_view.function_state_machine_info;
+  const auto &function_state_machine_info =
+      local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(
       vehicle_service_output_info.header.timestamp);
 
@@ -1119,7 +1120,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   return true;
 }
 
-bool EnvironmentalModelManager::IsStatic(const PredictionObject &prediction_object) {
+bool EnvironmentalModelManager::IsStatic(
+    const PredictionObject &prediction_object) {
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
   double prediction_trajectory_length = 10.0;
   double prediction_duration = 0.0;

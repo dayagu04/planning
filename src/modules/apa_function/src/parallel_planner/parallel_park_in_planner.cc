@@ -1528,7 +1528,7 @@ const bool ParallelParInPlanner::CheckReplan() {
 
 const bool ParallelParInPlanner::CheckPaused() {
   if (apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_SUSPEND) {
+      iflyauto::FunctionalState_PARK_SUSPEND) {
     return true;
   } else {
     return false;

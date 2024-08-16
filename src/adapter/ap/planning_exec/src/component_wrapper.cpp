@@ -127,8 +127,8 @@ void ComponentWrapper::InitClient() {
                               FeedControlCommand, ControlOutput);
       REGISTER_CLIENT_HANDLER("IflytekFusionParkingSlot", FeedParkingFusion,
                               ParkingFusionInfo);
-      REGISTER_CLIENT_HANDLER("IflytekFsmSocState",
-                              FeedFuncStateMachine, FuncStateMachine);
+      REGISTER_CLIENT_HANDLER("IflytekFsmSocState", FeedFuncStateMachine,
+                              FuncStateMachine);
       REGISTER_CLIENT_HANDLER("IflytekUssUsswaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
       REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptionInfo", FeedUssPerceptInfo,

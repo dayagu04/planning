@@ -2003,8 +2003,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         }
 
         is_static_scene_ =
-            enable_static_scene && is_need_avoid &&
-            item.is_static &&
+            enable_static_scene && is_need_avoid && item.is_static &&
             ((item.d_min_cpath > 0 &&
               item.d_min_cpath < lane_width / 2 - 0.4) ||
              (item.d_max_cpath < 0 &&
@@ -2164,8 +2163,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     if ((item.trajectory.intersection == 0 && item.v_lat > -0.3 &&
          item.v_lat < 0.3) ||
         // 静止的车
-        (item.is_car && std::fabs(item.v_lead) < 0.5 &&
-         item.v_lat > -0.3 && item.v_lat < 0.3) ||
+        (item.is_car && std::fabs(item.v_lead) < 0.5 && item.v_lat > -0.3 &&
+         item.v_lat < 0.3) ||
         // 横向无运动的人或锥桶
         (!item.is_car && (std::fabs(item.v_lat) < 0.3)) ||
         // 可以借用自行车道 || 自车在最右车道

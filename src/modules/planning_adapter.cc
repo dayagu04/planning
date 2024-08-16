@@ -208,7 +208,8 @@ void PlanningAdapter::Proc() {
   // if (is_hmi_inner_info_msg_updated_) {
   //   std::lock_guard<std::mutex> lock(msg_mutex_);
   //   local_view_ptr_->hmi_inner_info = hmi_inner_info_msg_;
-  //   local_view_ptr_->hmi_inner_info_recv_time = hmi_inner_info_msg_recv_time_;
+  //   local_view_ptr_->hmi_inner_info_recv_time =
+  //   hmi_inner_info_msg_recv_time_;
   //   is_hmi_inner_info_msg_updated_.store(false);
   // }
   // input_topic_timestamp->set_hmi(

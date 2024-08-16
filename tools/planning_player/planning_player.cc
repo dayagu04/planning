@@ -525,9 +525,8 @@ void PlanningPlayer::PlayOneFrame(
     // std::cerr << "missing /iflytek/control/control_command" << std::endl;
   }
 
-  auto hmi_mcu_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs::HmiInner>(
-          TOPIC_HMI_MCU_INNER, input_time_list.hmi());
+  auto hmi_mcu_ros_msg = find_ros_msg_with_header_time<struct_msgs::HmiInner>(
+      TOPIC_HMI_MCU_INNER, input_time_list.hmi());
   if (hmi_mcu_ros_msg) {
     iflyauto::HmiInner hmi_inner_msg{};
     convert(hmi_inner_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
