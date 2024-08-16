@@ -2047,13 +2047,12 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
   const double ego_heading_angle = ego_state->heading_angle();
   double ego2lane_min = std::numeric_limits<double>::max();
   int origin_order_id = 0;
-  int relative_id_diff = 0;
   double total_lane_cost = 0.0;
-  const double lane_line_segment_length = 5.0;
-  const double default_lane_line_length = 100.0;
+  const double lane_line_segment_length = 3.0;
+  const double default_lane_line_length = 60.0;
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
   const double init_pos_lateral_offset_weight = 1.0;
-  const double heading_angle_diff_weight = 1.5;
+  const double heading_angle_diff_weight = 2.5;
 
   for (auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane != nullptr) {
@@ -2095,7 +2094,7 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
         lane_cost_list[relative_id_lane->get_order_id()] = cost_list;
 
         if (total_lane_cost < ego2lane_min) {
-          ego2lane_min = std::fabs(ego_l);
+          ego2lane_min = total_lane_cost;
           origin_order_id = relative_id_lane->get_order_id();
           relative_id_lane->set_relative_id(0);
         }
