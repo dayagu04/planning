@@ -66,10 +66,10 @@ class PlanningPlayer {
 
   void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
   void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
-  void PerfectControlHPP(uint64_t delta_t,
-                         struct_msgs::IFLYLocalization::Ptr loc_msg);
-  void PerfectControlSCC(uint64_t delta_t,
-                         struct_msgs::LocalizationEstimate::Ptr loc_msg);
+  void PerfectControlEgoMotion(uint64_t delta_t,
+                               struct_msgs::IFLYLocalization::Ptr loc_msg);
+  void PerfectControlEgoPose(uint64_t delta_t,
+                             struct_msgs::LocalizationEstimate::Ptr loc_msg);
   void PerfectControlAPA(const struct_msgs::PlanningOutput &plan_msg,
                          uint64_t delta_t,
                          struct_msgs::LocalizationEstimate::Ptr loc_msg);
