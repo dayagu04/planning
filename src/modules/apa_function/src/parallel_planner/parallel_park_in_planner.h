@@ -34,6 +34,7 @@ class ParallelParInPlanner : public ApaPlannerBase {
   void PlanCore();
   void GenTlane();
   void UpdateTlaneOnceInSlot();
+  void GenTBoundaryObstacles();
   void GenObstacles();
   void SetParkingStatus(uint8_t status);
   const bool IsEgoInSlot() const;

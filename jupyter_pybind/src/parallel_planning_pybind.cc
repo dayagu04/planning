@@ -33,6 +33,8 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
                     double obs_p_inside_y, double p_target_x, double p_target_y,
                     double channel_y, double channel_x_limit, double curb_y,
                     double obs_ds, bool set_left_side) {
+  col_det.ClearObstacles();
+
   const double slot_side_sgn = (set_left_side ? -1.0 : 1.0);
   // set obstacles. eg: right side
   //  channel pt1 ----------------------------------- channel pt2
@@ -75,7 +77,8 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
     channel_obstacle_vec.insert(channel_obstacle_vec.end(), point_set.begin(),
                                 point_set.end());
   }
-  col_det.SetObstacles(channel_obstacle_vec);
+  col_det.SetObstacles(channel_obstacle_vec,
+                       planning::CollisionDetector::CHANNEL_OBS);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -115,7 +118,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
 
   for (const auto &obs_pos : tlane_obstacle_vec) {
     if (!col_det.IsObstacleInCar(obs_pos, ego_pose, safe_dist)) {
-      col_det.AddObstacles(obs_pos);
+      col_det.AddObstacles(obs_pos, planning::CollisionDetector::TLANE_OBS);
       // std::cout << "obs_pos = " << obs_pos.transpose() << std::endl;
     }
   }
@@ -202,8 +205,10 @@ std::vector<double> GetPathEle(size_t index) {
 std::vector<double> GetObsX() {
   std::vector<double> obs_x_vec;
   obs_x_vec.reserve(200);
-  for (const auto &obs_pt : col_det.GetObstacles()) {
-    obs_x_vec.emplace_back(obs_pt.x());
+  for (const auto &obs_pt_pair : col_det.GetObstaclesMap()) {
+    for (const auto &obs_pt : obs_pt_pair.second) {
+      obs_x_vec.emplace_back(obs_pt.x());
+    }
   }
   return obs_x_vec;
 }
@@ -211,8 +216,10 @@ std::vector<double> GetObsX() {
 std::vector<double> GetObsY() {
   std::vector<double> obs_y_vec;
   obs_y_vec.reserve(200);
-  for (const auto &obs_pt : col_det.GetObstacles()) {
-    obs_y_vec.emplace_back(obs_pt.y());
+  for (const auto &obs_pt_pair : col_det.GetObstaclesMap()) {
+    for (const auto &obs_pt : obs_pt_pair.second) {
+      obs_y_vec.emplace_back(obs_pt.y());
+    }
   }
   return obs_y_vec;
 }

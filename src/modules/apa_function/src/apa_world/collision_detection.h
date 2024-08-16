@@ -21,9 +21,11 @@ class CollisionDetector {
     NONE_OBS,
     CHANNEL_OBS,
     TLANE_OBS,
+    TLANE_BOUNDARY_OBS,
     LINEARC_OBS,
     FUSION_OBS,
     RECORD_OBS,
+    VIRTUAL_OBS,
     COUNT_OBS,
   };
 
@@ -127,6 +129,10 @@ class CollisionDetector {
   const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
   GetObstaclesMap() const {
     return obs_pt_global_map_;
+  }
+
+  void DeleteGivenTypeObstacles(const size_t obs_type) {
+    obs_pt_global_map_.erase(obs_type);
   }
 
   void ClearObstacles();
