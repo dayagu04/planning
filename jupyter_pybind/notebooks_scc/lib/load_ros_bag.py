@@ -33,7 +33,7 @@ import time
 
 is_bag_main = True # False: main分支之前的包   True: main分支之后的包
 g_is_display_enu = False # True: local_view显示enu坐标系   False: local_view显示自车坐标系
-is_new_loc = False #   True:新定位 False:老定位
+is_new_loc = False #   True:新定位 False:老定位; 目前是自适应的，有新定位就用新定位，没有就用老定位
 is_match_planning = True  #True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
 is_vis_map = False
 is_vis_sdmap = True
@@ -151,7 +151,14 @@ class LoadRosbag:
     except:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!') """
+
     # load localization msg
+    global is_new_loc
+    topics = self.bag.get_type_and_topic_info().topics
+    for topic in topics:
+      if topic == "/iflytek/localization/egomotion":
+        is_new_loc = True
+
     if is_new_loc:
       try:
         loc_msg_dict = {}
@@ -278,26 +285,26 @@ class LoadRosbag:
         print('missing /iflytek/localization/ego_pose_origin !!!')
 
     # load road_fusion msg
-      try:
-        road_msg_dict = {}
-        for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
-          road_msg_dict[msg.msg_header.timestamp / 1e6] = msg
-        road_msg_dict = {key: val for key, val in sorted(road_msg_dict.items(), key = lambda ele: ele[0])}
-        for t, msg in road_msg_dict.items():
-          self.road_msg['t'].append(t)
-          self.road_msg['timestamp'].append(msg.msg_header.timestamp)
-          self.road_msg['data'].append(msg)
-        if t0 == 0:
-          t0 = self.road_msg['t'][0]
-        self.road_msg['t'] = [tmp - t0  for tmp in self.road_msg['t']]
-        print('road_msg time:',self.road_msg['t'][-1])
-        if len(self.road_msg['t']) > 0:
-          self.road_msg['enable'] = True
-        else:
-          self.road_msg['enable'] = False
-      except:
+    try:
+      road_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
+        road_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+      road_msg_dict = {key: val for key, val in sorted(road_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in road_msg_dict.items():
+        self.road_msg['t'].append(t)
+        self.road_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.road_msg['data'].append(msg)
+      if t0 == 0:
+        t0 = self.road_msg['t'][0]
+      self.road_msg['t'] = [tmp - t0  for tmp in self.road_msg['t']]
+      print('road_msg time:',self.road_msg['t'][-1])
+      if len(self.road_msg['t']) > 0:
+        self.road_msg['enable'] = True
+      else:
         self.road_msg['enable'] = False
-        print('missing /iflytek/fusion/road_fusion topic !!!')
+    except:
+      self.road_msg['enable'] = False
+      print('missing /iflytek/fusion/road_fusion topic !!!')
 
 
     # load mobileye lane_lines msg

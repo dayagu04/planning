@@ -44,6 +44,11 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
   hpp_max_replan_dist_err_ = config_.hpp_max_replan_dist_err;
   enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
   enable_ego_state_compensation_ = config_.enable_ego_state_compensation;
+#ifdef X86
+  if (SimulationContext::Instance()->is_close_loop()) {
+    enable_ego_state_compensation_ = false;
+  }
+#endif
   // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
   v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }

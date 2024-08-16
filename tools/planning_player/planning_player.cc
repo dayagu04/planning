@@ -696,7 +696,9 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
     auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
         it_planning_msg->second);
     if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
-      std::cerr << "timestamp error!!!!!" << std::endl;
+      std::cerr << "timestamp error!!! planning output and planning debug do "
+                   "not match"
+                << std::endl;
       return;
     }
   }
@@ -801,9 +803,10 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
 
 void PlanningPlayer::RunCloseLoop(
     const struct_msgs::PlanningOutput& planning_output) {
-  if (scene_type_ == "scc" || scene_type_ == "noa") {  // scc
-    if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
-        !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+  if (scene_type_ == "scc" || scene_type_ == "noa" ||
+      scene_type_ == "hpp") {  // scc
+    if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO)) {
+      std::cerr << "Error!!! missing planning debug info" << std::endl;
       return;
     }
     auto traj_size = planning_output.trajectory.trajectory_points_size;
@@ -814,19 +817,39 @@ void PlanningPlayer::RunCloseLoop(
     }
 
     PerpareTrajectory(planning_output);
-    for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-         it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
-      auto loc_msg_i =
-          boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-      auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
-      if (loc_header_time_i > loc_esti_header_time_us_) {
-        if (loc_header_time_i <= next_loc_esti_header_time_us_) {
-          auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
-          PerfectControlSCC(delta_t, loc_msg_i);
-        } else {
-          break;
+    if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+      for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
+           it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
+        auto loc_msg_i =
+            boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
+        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        if (loc_header_time_i > loc_header_time_us_) {
+          if (loc_header_time_i <= next_loc_header_time_us_) {
+            auto delta_t = loc_header_time_i - loc_header_time_us_;
+            PerfectControlEgoMotion(delta_t, loc_msg_i);
+          } else {
+            break;
+          }
         }
       }
+    } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+      for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+           it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
+        auto loc_msg_i =
+            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
+        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        if (loc_header_time_i > loc_esti_header_time_us_) {
+          if (loc_header_time_i <= next_loc_esti_header_time_us_) {
+            auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
+            PerfectControlEgoPose(delta_t, loc_msg_i);
+          } else {
+            break;
+          }
+        }
+      }
+    } else {
+      std::cerr << "Error, missing localization topic !!!!" << std::endl;
+      return;
     }
     UpdateVehicleServiceData();
   } else if (scene_type_ == "apa") {  // apa
@@ -852,34 +875,6 @@ void PlanningPlayer::RunCloseLoop(
         PerfectControlAPA(planning_output, delta_t, loc_msg_i);
       }
     }
-  } else if (scene_type_ == "hpp") {  // hpp
-    if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO) ||
-        !check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
-      return;
-    }
-    auto traj_size = planning_output.trajectory.trajectory_points_size;
-    if (traj_size < 10) {
-      std::cerr << "RunCloseLoop fail, traj_points size=" << traj_size
-                << std::endl;
-      return;
-    }
-
-    PerpareTrajectory(planning_output);
-    for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
-         it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
-      auto loc_msg_i =
-          boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-      auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
-      if (loc_header_time_i > loc_header_time_us_) {
-        if (loc_header_time_i <= next_loc_header_time_us_) {
-          auto delta_t = loc_header_time_i - loc_header_time_us_;
-          PerfectControlHPP(delta_t, loc_msg_i);
-        } else {
-          break;
-        }
-      }
-    }
-    UpdateVehicleServiceData();
   } else {
     std::cerr << "Error, unknown scene_type !" << std::endl;
   }
@@ -933,7 +928,7 @@ void PlanningPlayer::PerpareTrajectory(
   curvature_t_spline_.set_points(t_vec, curvature_vec);
 }
 
-void PlanningPlayer::PerfectControlHPP(
+void PlanningPlayer::PerfectControlEgoMotion(
     uint64_t delta_t, struct_msgs::IFLYLocalization::Ptr loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const double x = x_t_spline_(dt);
@@ -950,13 +945,21 @@ void PlanningPlayer::PerfectControlHPP(
   q = pnc::transform::EulerZYX2Quat(euler_zxy);
 
   // vel
-  loc_msg->velocity.velocity_boot.vx = v * cos(theta);
-  loc_msg->velocity.velocity_boot.vy = v * sin(theta);
+  // loc_msg->velocity.velocity_boot.vx = v * cos(theta);
+  // loc_msg->velocity.velocity_boot.vy = v * sin(theta);
+  // loc_msg->velocity.velocity_boot.vz = 0;
+
+  loc_msg->velocity.velocity_body.vx = v;
+  loc_msg->velocity.velocity_boot.vy = 0;
   loc_msg->velocity.velocity_boot.vz = 0;
 
   // acc
-  loc_msg->acceleration.acceleration_boot.ax = a * cos(theta);
-  loc_msg->acceleration.acceleration_boot.ay = a * sin(theta);
+  // loc_msg->acceleration.acceleration_boot.ax = a * cos(theta);
+  // loc_msg->acceleration.acceleration_boot.ay = a * sin(theta);
+  // loc_msg->acceleration.acceleration_boot.az = 0;
+
+  loc_msg->acceleration.acceleration_boot.ax = a;
+  loc_msg->acceleration.acceleration_boot.ay = 0;
   loc_msg->acceleration.acceleration_boot.az = 0;
 
   // atti
@@ -1105,7 +1108,7 @@ void PlanningPlayer::PerfectControlAPA(
   pose.local_position.y = state_.pos.y();
 }
 
-void PlanningPlayer::PerfectControlSCC(
+void PlanningPlayer::PerfectControlEgoPose(
     uint64_t delta_t, struct_msgs::LocalizationEstimate::Ptr loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const double x = x_t_spline_(dt);
