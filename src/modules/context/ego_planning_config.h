@@ -834,6 +834,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound"},
         map_jerk_bound);
+    jerk_bound_avoid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_avoid"});
     acc_bound_lane_change = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "acc_bound_lane_change"});
@@ -1055,6 +1057,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   double acc_bound = 1.5;
   std::vector<double> map_jerk_bound{1.2, 1.0, 0.8, 0.25};
+  double jerk_bound_avoid = 0.5;
   double acc_bound_lane_change = 3.0;
   double jerk_bound_lane_change = 5.0;
   double acc_bound_bend = 1.8;
