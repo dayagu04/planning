@@ -153,9 +153,9 @@ bool EnvironmentalModelManager::Run() {
   auto &local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
-  // bool msf_valid = local_view.localization_estimate.msf_status.available &&
-  //                  (local_view.localization_estimate.msf_status.msf_status !=
-  //                   iflyauto::MsfStatusType_ERROR);
+  bool msf_valid = local_view.localization_estimate.msf_status.available &&
+                   (local_view.localization_estimate.msf_status.msf_status !=
+                    iflyauto::MsfStatusType_ERROR);
   bool localization_valid =
       local_view.localization.status.status_info.mode !=
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
@@ -169,7 +169,7 @@ bool EnvironmentalModelManager::Run() {
                        g_context.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
   printf("planner_type:%d\n", g_context.GetParam().planner_type);
-  auto location_valid = /*msf_valid*/ localization_valid &&
+  auto location_valid = (msf_valid || localization_valid) &&
                         fusion_localization_valid && planner_valid;
 
   if (session_->is_hpp_scene() && !location_valid) {
@@ -367,8 +367,11 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
+    auto timestamp = local_view.localization.header.timestamp != 0
+                         ? local_view.localization.header.timestamp
+                         : local_view.localization_estimate.header.timestamp;
     truncate_prediction_info(local_view.prediction_result,
-                             local_view.localization_estimate.header.timestamp,
+                             timestamp,
                              prediction_obj_id_set);
     for (int i = 0; i < local_view.fusion_objects_info.fusion_object_num; i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
@@ -428,6 +431,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
       local_view.vehicle_service_output_info;
   const auto &localization_estimate = local_view.localization_estimate;
   const auto &localization = local_view.localization;
+  bool new_local = localization.header.timestamp != 0;
   const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
   vehicle_status.mutable_header()->set_timestamp_us(
       vehicle_service_output_info.header.timestamp);
@@ -435,51 +439,68 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
-        ->set_value_rad(localization.orientation.euler_boot.yaw);
+        ->set_value_rad(new_local
+                            ? localization.orientation.euler_boot.yaw
+                            : localization_estimate.pose.euler_angles.yaw);
     // ->set_value_rad(localization_estimate.pose.euler_angles.yaw);
     vehicle_status.mutable_location()->set_available(true);
     // auto llh_position = localization_estimate.pose.llh_position;
-    auto llh_position = localization.position.position_llh;
+    // auto llh_position = localization.position.position_llh;
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_latitude_degree(llh_position.latitude);
+        ->set_latitude_degree(
+            new_local ? localization.position.position_llh.latitude
+                      : localization_estimate.pose.llh_position.lat);
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_longitude_degree(llh_position.longitude);
+        ->set_longitude_degree(
+            new_local ? localization.position.position_llh.longitude
+                      : localization_estimate.pose.llh_position.lon);
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_altitude_meter(llh_position.height);
+        ->set_altitude_meter(
+            new_local ? localization.position.position_llh.height
+                      : localization_estimate.pose.llh_position.height);
     // auto local_position = localization_estimate.pose.local_position;
-    auto local_position = localization.position.position_boot;
+    // auto local_position = localization.position.position_boot;
     vehicle_status.mutable_location()->mutable_location_enu()->set_x(
-        local_position.x);
+        new_local ? localization.position.position_boot.x
+                  : localization_estimate.pose.local_position.x);
     vehicle_status.mutable_location()->mutable_location_enu()->set_y(
-        local_position.y);
+        new_local ? localization.position.position_boot.y
+                  : localization_estimate.pose.local_position.y);
     vehicle_status.mutable_location()->mutable_location_enu()->set_z(
-        local_position.z);
+        new_local ? localization.position.position_boot.z
+                  : localization_estimate.pose.local_position.z);
     vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
         localization.header.timestamp);
     // auto enu_orientation = localization_estimate.pose.orientation;
-    auto enu_orientation = localization.orientation.quaternion_boot;
+    // auto enu_orientation = localization.orientation.quaternion_boot;
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_x(enu_orientation.x);
+        ->set_x(new_local ? localization.orientation.quaternion_boot.x
+                          : localization_estimate.pose.orientation.x);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_y(enu_orientation.y);
+        ->set_y(new_local ? localization.orientation.quaternion_boot.y
+                          : localization_estimate.pose.orientation.y);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_z(enu_orientation.z);
+        ->set_z(new_local ? localization.orientation.quaternion_boot.z
+                          : localization_estimate.pose.orientation.z);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_w(enu_orientation.w);
+        ->set_w(new_local ? localization.orientation.quaternion_boot.w
+                          : localization_estimate.pose.orientation.w);
     // last_feed_time_[FEED_EGO_ENU] =
     // local_view.localization_estimate_recv_time;
-    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
+    last_feed_time_[FEED_EGO_ENU] =
+        new_local ? local_view.localization_recv_time
+                  : local_view.localization_estimate_recv_time;
   } else {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
@@ -499,7 +520,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     location_enu->mutable_orientation()->set_w(1.0);
     // last_feed_time_[FEED_EGO_ENU] =
     // local_view.localization_estimate_recv_time;
-    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
+    last_feed_time_[FEED_EGO_ENU] =
+        new_local ? local_view.localization_recv_time
+                  : local_view.localization_estimate_recv_time;
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
@@ -517,40 +540,26 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         ->set_value_rps(0.);
   }
 
-  // if (vehicle_service_output_info.vehicle_speed_available) {
-  //   vehicle_status.mutable_velocity()->set_available(true);
-  //   vehicle_status.mutable_velocity()
-  //       ->mutable_heading_velocity()
-  //       ->set_value_mps(vehicle_service_output_info.vehicle_speed);
-  //   last_feed_time_[FEED_EGO_VEL] =
-  //       local_view.vehicle_service_output_info_recv_time;
-  // }
-
-  // use new localization linear speed
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()
         ->mutable_heading_velocity()
-        ->set_value_mps(localization.velocity.velocity_body.vx);
-    last_feed_time_[FEED_EGO_VEL] = local_view.localization_recv_time;
+        ->set_value_mps(new_local ? localization.velocity.velocity_body.vx
+                                  : vehicle_service_output_info.vehicle_speed);
+    last_feed_time_[FEED_EGO_VEL] =
+        new_local ? local_view.localization_recv_time
+                  : local_view.vehicle_service_output_info_recv_time;
   }
 
-  // if (vehicle_service_output_info.long_acceleration_available) {
-  //   vehicle_status.mutable_brake_info()
-  //       ->mutable_brake_info_data()
-  //       ->set_acceleration_on_vehicle_wheel(
-  //           vehicle_service_output_info.long_acceleration);
-  //   last_feed_time_[FEED_EGO_ACC] =
-  //       local_view.vehicle_service_output_info_recv_time;
-  // }
-
-  // use new localization linear acc
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_brake_info()
         ->mutable_brake_info_data()
         ->set_acceleration_on_vehicle_wheel(
-            localization.acceleration.acceleration_body.ax);
-    last_feed_time_[FEED_EGO_ACC] = local_view.localization_recv_time;
+            new_local ? localization.acceleration.acceleration_body.ax
+                      : vehicle_service_output_info.long_acceleration);
+    last_feed_time_[FEED_EGO_ACC] =
+        new_local ? local_view.localization_recv_time
+                  : local_view.vehicle_service_output_info_recv_time;
   }
 
   if (vehicle_service_output_info.vehicle_speed_display_available) {
