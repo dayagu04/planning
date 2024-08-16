@@ -3,6 +3,9 @@
 1. Add new HMI/FSM
 2. 适配感知220m特性
 3. 更新系统状态机topic，不再接收hmi topic
+4. 修复acc状态先ego lane选取
+5. 加入锥桶换道功能
+6. 启用高架NOA
 
 # planning.2.4.8
 ####  修改说明
