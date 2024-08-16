@@ -2009,6 +2009,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   double obstacle_v_start = config_.obstacle_v_start;
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
+  constexpr double lead_change_buffer = 1.0;
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
@@ -2031,7 +2032,8 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
              distance_start);
     // lead_one change: obj stopped adc by cut_in, then leaved
     bool lead_one_change =
-        (lead_one.d_rel() - desire_distance) > (distance_stop + 1.0);
+        (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+        (distance_stop + lead_change_buffer);
     bool start_condition = lead_one_start || lead_one_change;
 
     // 2. Update the state
