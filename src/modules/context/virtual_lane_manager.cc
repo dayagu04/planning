@@ -639,7 +639,8 @@ void VirtualLaneManager::UpdateLaneVirtualId() {
   double current_relative_id_lane_mapping_cost = 10.0;
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-       (coarse_planning_info.target_state == kLaneChangeComplete));
+       (coarse_planning_info.target_state == kLaneChangeComplete) ||
+       (coarse_planning_info.target_state == kLaneChangeCancel));
   if (is_LC_CHANGE && (lc_state != kLaneKeeping)) {
     for (const auto& relative_id_lane : relative_id_lanes_) {
       if (relative_id_lane != nullptr) {
@@ -1836,7 +1837,9 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
         sd_map.GetNextRoadSegment(split_segment.id());
     ad_common::math::Vec2d segment_in_route_dir_vec;
     ad_common::math::Vec2d segment_not_in_route_dir_vec;
-    Point2D anchor_point_of_cur_seg_to_next_seg = {split_segment.enu_points().rbegin()->x(),split_segment.enu_points().rbegin()->y()};
+    Point2D anchor_point_of_cur_seg_to_next_seg = {
+        split_segment.enu_points().rbegin()->x(),
+        split_segment.enu_points().rbegin()->y()};
     std::cout << "out_link[0].id():" << out_link[0].id() << std::endl;
     std::cout << "out_link[1].id():" << out_link[1].id() << std::endl;
     std::cout << "split_next_segment->id()" << split_next_segment->id()

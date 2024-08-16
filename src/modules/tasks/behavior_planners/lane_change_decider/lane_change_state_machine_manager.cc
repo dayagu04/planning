@@ -53,9 +53,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           transition_info_.lane_change_type = lane_change_type;
           lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
         } else {
-          // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
-          // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
-          lc_lane_mgr_->reset_lc_lanes();
+          //在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
+          //在这重新维护lc_lane的值，可以保证fix lane不会跳变
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         }
       }
       break;
@@ -103,7 +103,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_execution_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         } else if (is_execution_to_hold) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeHold;
@@ -135,7 +135,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_hold_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
           lane_change_stage_info_.Reset();
         } else if (is_hold_to_execution) {
           transition_info_.lane_change_status =
@@ -158,7 +158,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_complete_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         }
       }
       break;
@@ -508,9 +508,12 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   std::vector<TrackInfo> near_cars_target;
   std::vector<TrackedObject> side_target_tracks;
   std::vector<TrackedObject> front_target_tracks;
-  auto tlane_obstacles =
-      target_lane->get_reference_path()->get_lane_obstacles_ids();
-  // 处理目标车车道后方障碍物
+  auto target_lane_reference_path = target_lane->get_reference_path();
+  if (target_lane_reference_path == nullptr) {
+    return lc_state_info;
+  } 
+  auto tlane_obstacles = target_lane_reference_path->get_lane_obstacles_ids();
+  //处理目标车车道后方障碍物
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
@@ -585,7 +588,9 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(lc_lane_mgr_->fix_lane_virtual_id());
-
+  if (fix_lane == nullptr) {
+    return lc_state_info;
+  } 
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
       lc_state_info.lc_back_reason = "no front view";
@@ -595,9 +600,11 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     lc_state_info.lc_should_back = true;
     return lc_state_info;
   }
-
-  const auto &tlane_obstacles =
-      fix_lane->get_reference_path()->get_lane_obstacles_ids();
+  auto fix_lane_reference_path = fix_lane->get_reference_path();
+  if (fix_lane_reference_path == nullptr) {
+    return lc_state_info;
+  } 
+  const auto &tlane_obstacles = fix_lane_reference_path->get_lane_obstacles_ids();
 
   near_cars_target_.clear();
   std::vector<TrackInfo> near_cars_target;
@@ -1385,7 +1392,7 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
 
 void LaneChangeStateMachineManager::ResetStateMachine() {
   transition_info_.Rest();
-  lc_lane_mgr_->reset_lc_lanes();
+  lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
   lc_req_mgr_->FinishRequest();
   lane_change_stage_info_.Reset();
   lc_timer_.Reset();
