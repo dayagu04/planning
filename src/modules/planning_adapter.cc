@@ -306,7 +306,8 @@ void PlanningAdapter::Proc() {
 
   auto &last_fusion_select_id = g_context.GetStatemachine().fusion_select_id;
 
-  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+  if ((last_state == iflyauto::FunctionalState_MANUAL ||
+       last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
       (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
        current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     state_machine_g.apa_reset_flag = true;
