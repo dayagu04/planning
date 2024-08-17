@@ -150,7 +150,7 @@ bool EnvironmentalModelManager::Run() {
     LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
   }
 
-  auto &local_view = session_->environmental_model().get_local_view();
+  const auto &local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
   bool msf_valid = local_view.localization_estimate.msf_status.available &&
