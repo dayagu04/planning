@@ -33,4 +33,5 @@ message Obstacle {
   optional bool is_lane_lead_obstacle = 21;
   optional bool current_lead_obstacle_to_ego = 22;
   optional double cutin_p = 23;
+  optional uint32 lat_decision = 24;
 }
