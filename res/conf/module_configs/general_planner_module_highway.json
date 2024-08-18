@@ -138,6 +138,8 @@
   "potential_near_car_v_lb": -0.03,
   "use_lat_offset_in_tracklet_maintainer": true,
   "enable_static_scene": true,
+  "car_addition_decre_factor": 0.8,
+  "car_addition_decre_buffer": 0.13,
   "base_nudge_distance": 1.2,
   "nudge_value_way" :false,
   "static_obj_safe_buffer": 0.8,

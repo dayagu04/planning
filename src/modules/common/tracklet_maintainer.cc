@@ -1883,6 +1883,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double potential_near_car_v_ub = config.potential_near_car_v_ub;
   double potential_near_car_v_lb = config.potential_near_car_v_lb;
   bool enable_static_scene = config.enable_static_scene;
+  double car_addition_decre_factor = config.car_addition_decre_factor;
+  double car_addition_decre_buffer = config.car_addition_decre_buffer;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1916,6 +1918,14 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
   double near_car_d_lane_thr = interp(item.d_rel, xp, fp);
+  // lower buffer for car
+  if (item.type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+      item.type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+      item.type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+      item.type == iflyauto::ObjectType::OBJECT_TYPE_BUS) {
+    // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
+    near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
+  }
   // addition buffer for oversize vehicle
   if (item.is_oversize_vehicle) {
     std::array<double, 2> vel_xp_oversize_veh{2.7, 5.6};
