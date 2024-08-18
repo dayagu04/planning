@@ -3573,7 +3573,7 @@ const bool PerpendicularPathPlanner::UpdatePb(
     DEBUG_PRINT("first prepare plan success");
   } else {
     DEBUG_PRINT("first prepare plan fail, quit");
-    return CalTurnAroundPose();
+    // return CalTurnAroundPose();
     return false;
   }
   if (CheckReachTargetPose()) {

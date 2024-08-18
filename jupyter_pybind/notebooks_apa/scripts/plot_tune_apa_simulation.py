@@ -14,7 +14,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240814/20240814-21-02-00/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-14-21-02-00_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240814/20240814-20-42-23/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-14-20-42-23_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_

@@ -3,12 +3,15 @@
 #include <math.h>
 
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <type_traits>
 
-#include "Eigen/src/Core/Matrix.h"
 #include "apa_param_setting.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
+#include "ifly_time.h"
 
 const bool box = true;
 
@@ -230,10 +233,11 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     car_line_global_vec.emplace_back(car_line_global);
   }
 
-  CarMoveBound car_move_bound;
+  std::vector<Eigen::Vector2d> traj_bound;
   pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
   pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
-  CalCarMoveBound(car_move_bound, start_pose, target_pose);
+  // CalTrajBound(traj_bound, start_pose, target_pose, true);
+  traj_bound = CalTrajBound(start_pose, target_pose);
 
   // detect if there is intersection(point_P) between obstacle and car line
   // segment
@@ -255,10 +259,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
-      if ((obs_pt_global.x() > car_move_bound.max_x ||
-           obs_pt_global.x() < car_move_bound.min_x ||
-           obs_pt_global.y() > car_move_bound.max_y ||
-           obs_pt_global.y() < car_move_bound.min_y) &&
+      if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
           box) {
         continue;
       }
@@ -306,7 +307,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     result.car_line_order = col_car_line_order;
     result.obs_type = col_obs_type;
   }
-  result.car_move_bound = car_move_bound;
+  result.traj_bound = traj_bound;
   return result;
 }
 
@@ -442,10 +443,11 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     car_line_global_vec.emplace_back(car_line_global);
   }
 
-  CarMoveBound car_move_bound;
+  std::vector<Eigen::Vector2d> traj_bound;
   pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
   pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
-  CalCarMoveBound(car_move_bound, start_pose, target_pose);
+  // CalTrajBound(traj_bound, start_pose, target_pose, false);
+  traj_bound = CalTrajBound(start_pose, target_pose, arc);
 
   // obstacle arc segment
   const auto v_OA = arc.pA - arc.circle_info.center;
@@ -469,10 +471,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
-      if ((obs_pt_global.x() > car_move_bound.max_x ||
-           obs_pt_global.x() < car_move_bound.min_x ||
-           obs_pt_global.y() > car_move_bound.max_y ||
-           obs_pt_global.y() < car_move_bound.min_y) &&
+      if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
           box) {
         continue;
       }
@@ -553,7 +552,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     result.car_line_order = col_car_line_order;
     result.obs_type = col_obs_type;
   }
-  result.car_move_bound = car_move_bound;
+  result.traj_bound = traj_bound;
   return result;
 }
 
@@ -877,8 +876,7 @@ void CollisionDetector::AddLineObstacles(
   obs_line_global_vec_.emplace_back(obs_line_global);
 }
 
-const bool CollisionDetector::CalCarMoveBound(
-    CarMoveBound &car_move_bound,
+const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
     const pnc::geometry_lib::PathPoint &start_pose,
     const pnc::geometry_lib::PathPoint &target_pose) {
   pnc::geometry_lib::LocalToGlobalTf l2g_tf_start;
@@ -897,30 +895,262 @@ const bool CollisionDetector::CalCarMoveBound(
     car_vertex_vec.emplace_back(car_vertex);
   }
 
-  car_move_bound.min_x = 33.3;
-  car_move_bound.min_y = 33.3;
-  car_move_bound.max_x = -33.3;
-  car_move_bound.max_y = -33.3;
+  double min_x = std::numeric_limits<double>::infinity();
+  double min_y = std::numeric_limits<double>::infinity();
+  double max_x = -std::numeric_limits<double>::infinity();
+  double max_y = -std::numeric_limits<double>::infinity();
   for (const Eigen::Vector2d &car_vertex : car_vertex_vec) {
-    if (car_vertex.x() < car_move_bound.min_x) {
-      car_move_bound.min_x = car_vertex.x();
+    if (car_vertex.x() < min_x) {
+      min_x = car_vertex.x();
     }
-    if (car_vertex.y() < car_move_bound.min_y) {
-      car_move_bound.min_y = car_vertex.y();
+    if (car_vertex.y() < min_y) {
+      min_y = car_vertex.y();
     }
-    if (car_vertex.x() > car_move_bound.max_x) {
-      car_move_bound.max_x = car_vertex.x();
+    if (car_vertex.x() > max_x) {
+      max_x = car_vertex.x();
     }
-    if (car_vertex.y() > car_move_bound.max_y) {
-      car_move_bound.max_y = car_vertex.y();
+    if (car_vertex.y() > max_y) {
+      max_y = car_vertex.y();
     }
   }
 
-  const double car_expand = 1.168;
-  car_move_bound.min_x -= car_expand;
-  car_move_bound.min_y -= car_expand;
-  car_move_bound.max_x += car_expand;
-  car_move_bound.max_y += car_expand;
+  const double bound_expand =
+      apa_param.GetParam().col_obs_safe_dist_strict + 0.01;
+  min_x -= bound_expand;
+  min_y -= bound_expand;
+  max_x += bound_expand;
+  max_y += bound_expand;
+
+  std::vector<Eigen::Vector2d> traj_bound;
+  traj_bound.resize(4, Eigen::Vector2d(0.0, 0.0));
+  traj_bound[0] << max_x, max_y;
+  traj_bound[1] << max_x, min_y;
+  traj_bound[2] << min_x, min_y;
+  traj_bound[3] << min_x, max_y;
+
+  return traj_bound;
+}
+
+const std::vector<Eigen::Vector2d> CollisionDetector::CalTrajBound(
+    const pnc::geometry_lib::PathPoint &start_pose,
+    const pnc::geometry_lib::PathPoint &target_pose,
+    const pnc::geometry_lib::Arc &arc) {
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf_start;
+  l2g_tf_start.Init(start_pose.pos, start_pose.heading);
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf_end;
+  l2g_tf_end.Init(target_pose.pos, target_pose.heading);
+
+  Eigen::Vector2d car_vertex;
+  std::vector<Eigen::Vector2d> car_vertex_vec;
+  std::vector<pnc::geometry_lib::Arc> arc_vec;
+  arc_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::Arc temp_arc = arc;
+  car_vertex_vec.clear();
+  car_vertex_vec.reserve(2 * car_line_local_vec_.size());
+  for (size_t i = 0; i < car_line_local_vec_.size(); ++i) {
+    car_vertex = l2g_tf_start.GetPos(car_line_local_vec_[i].pA);
+    car_vertex_vec.emplace_back(car_vertex);
+    temp_arc.pA = car_vertex;
+    car_vertex = l2g_tf_end.GetPos(car_line_local_vec_[i].pA);
+    car_vertex_vec.emplace_back(car_vertex);
+    temp_arc.pB = car_vertex;
+    temp_arc.circle_info.radius =
+        (temp_arc.pB - temp_arc.circle_info.center).norm();
+    arc_vec.emplace_back(temp_arc);
+  }
+
+  double min_x = std::numeric_limits<double>::infinity();
+  double min_y = std::numeric_limits<double>::infinity();
+  double max_x = -std::numeric_limits<double>::infinity();
+  double max_y = -std::numeric_limits<double>::infinity();
+  for (const Eigen::Vector2d &car_vertex : car_vertex_vec) {
+    if (car_vertex.x() < min_x) {
+      min_x = car_vertex.x();
+    }
+    if (car_vertex.y() < min_y) {
+      min_y = car_vertex.y();
+    }
+    if (car_vertex.x() > max_x) {
+      max_x = car_vertex.x();
+    }
+    if (car_vertex.y() > max_y) {
+      max_y = car_vertex.y();
+    }
+  }
+
+  double bound_expand = 2.0;
+  min_x -= bound_expand;
+  min_y -= bound_expand;
+  max_x += bound_expand;
+  max_y += bound_expand;
+
+  pnc::geometry_lib::LineSegment line_seg;
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> intersections;
+
+  bool flag = true;
+  uint8_t i = 0;
+  const uint8_t count = 9;
+  const double dx_dy = 0.3;
+
+  do {
+    i++;
+    if (i > count) {
+      break;
+    }
+    line_seg.pA << max_x, max_y;
+    line_seg.pB << max_x, min_y;
+    for (const auto &arc : arc_vec) {
+      if (pnc::geometry_lib::GetArcLineIntersection(intersections, arc,
+                                                    line_seg) > 0) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
+      max_x -= dx_dy;
+    } else {
+      max_x += dx_dy;
+    }
+  } while (flag);
+
+  flag = true;
+  i = 0;
+  do {
+    i++;
+    if (i > count) {
+      break;
+    }
+    line_seg.pA << max_x, max_y;
+    line_seg.pB << min_x, max_y;
+    for (const auto &arc : arc_vec) {
+      if (pnc::geometry_lib::GetArcLineIntersection(intersections, arc,
+                                                    line_seg) > 0) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
+      max_y -= dx_dy;
+    } else {
+      max_y += dx_dy;
+    }
+  } while (flag);
+
+  flag = true;
+  i = 0;
+  do {
+    i++;
+    if (i > count) {
+      break;
+    }
+    line_seg.pA << min_x, min_y;
+    line_seg.pB << min_x, max_y;
+    for (const auto &arc : arc_vec) {
+      if (pnc::geometry_lib::GetArcLineIntersection(intersections, arc,
+                                                    line_seg) > 0) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
+      min_x += dx_dy;
+    } else {
+      min_x -= dx_dy;
+    }
+  } while (flag);
+
+  flag = true;
+  i = 0;
+  do {
+    i++;
+    if (i > count) {
+      break;
+    }
+    line_seg.pA << min_x, min_y;
+    line_seg.pB << max_x, min_y;
+    for (const auto &arc : arc_vec) {
+      if (pnc::geometry_lib::GetArcLineIntersection(intersections, arc,
+                                                    line_seg) > 0) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
+      min_y += dx_dy;
+    } else {
+      min_y -= dx_dy;
+    }
+  } while (flag);
+
+  // DEBUG_PRINT("max_x = " << max_x << "  min_x = " << min_x
+  //                        << "  max_y = " << max_y << "  min_y = " << min_y);
+
+  bound_expand = apa_param.GetParam().col_obs_safe_dist_strict + 0.01;
+
+  min_x -= bound_expand;
+  min_y -= bound_expand;
+  max_x += bound_expand;
+  max_y += bound_expand;
+
+  std::vector<Eigen::Vector2d> traj_bound;
+  traj_bound.resize(4, Eigen::Vector2d(0.0, 0.0));
+  traj_bound[0] << max_x, max_y;
+  traj_bound[1] << max_x, min_y;
+  traj_bound[2] << min_x, min_y;
+  traj_bound[3] << min_x, max_y;
+
+  return traj_bound;
+}
+
+const bool CollisionDetector::CalTrajBound(
+    std::vector<Eigen::Vector2d> &traj_bound,
+    const pnc::geometry_lib::PathPoint &start_pose,
+    const pnc::geometry_lib::PathPoint &target_pose, bool is_line) {
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf_start;
+  l2g_tf_start.Init(start_pose.pos, start_pose.heading);
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf_end;
+  l2g_tf_end.Init(target_pose.pos, target_pose.heading);
+
+  Eigen::Vector2d car_vertex;
+  std::vector<Eigen::Vector2d> car_vertex_vec;
+  car_vertex_vec.clear();
+  car_vertex_vec.reserve(2 * car_line_local_vec_.size());
+  for (size_t i = 0; i < car_line_local_vec_.size(); ++i) {
+    car_vertex = l2g_tf_start.GetPos(car_line_local_vec_[i].pA);
+    car_vertex_vec.emplace_back(car_vertex);
+    car_vertex = l2g_tf_end.GetPos(car_line_local_vec_[i].pA);
+    car_vertex_vec.emplace_back(car_vertex);
+  }
+
+  double min_x = std::numeric_limits<double>::infinity();
+  double min_y = std::numeric_limits<double>::infinity();
+  double max_x = -std::numeric_limits<double>::infinity();
+  double max_y = -std::numeric_limits<double>::infinity();
+  for (const Eigen::Vector2d &car_vertex : car_vertex_vec) {
+    if (car_vertex.x() < min_x) {
+      min_x = car_vertex.x();
+    }
+    if (car_vertex.y() < min_y) {
+      min_y = car_vertex.y();
+    }
+    if (car_vertex.x() > max_x) {
+      max_x = car_vertex.x();
+    }
+    if (car_vertex.y() > max_y) {
+      max_y = car_vertex.y();
+    }
+  }
+  const double bound_expand = is_line ? 0.168 : param_.bound_expand;
+  min_x -= bound_expand;
+  min_y -= bound_expand;
+  max_x += bound_expand;
+  max_y += bound_expand;
+
+  traj_bound.resize(4, Eigen::Vector2d(0.0, 0.0));
+  traj_bound[0] << max_x, max_y;
+  traj_bound[1] << max_x, min_y;
+  traj_bound[2] << min_x, min_y;
+  traj_bound[3] << min_x, max_y;
 
   return true;
 }
@@ -938,42 +1168,80 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     }
     const double max_obs_lat_invasion_slot_dist =
         apa_param.GetParam().max_obs_lat_invasion_slot_dist;
-    const double slot_x = ((slot_left_pt + slot_right_pt) * 0.5).x();
-    const double slot_upper_x = slot_x + 1.068;
-    const double slot_lower_x =
-        0.0 + apa_param.GetParam().max_obs_lon_invasion_slot_dist;
-    const double slot_left_y =
-        slot_left_pt.y() - max_obs_lat_invasion_slot_dist;
-    const double slot_right_y =
-        slot_right_pt.y() + max_obs_lat_invasion_slot_dist;
+    const double max_obs_lon_invasion_slot_dist =
+        apa_param.GetParam().max_obs_lon_invasion_slot_dist;
+    const Eigen::Vector2d unit_01_vec =
+        (slot_left_pt - slot_right_pt).transpose();
+    const Eigen::Vector2d unit_02_vec(-1.0, 0.0);
+    std::vector<Eigen::Vector2d> area_vec;
+    area_vec.resize(4);
+    const double max_x = std::max(slot_left_pt.x(), slot_right_pt.x());
 
-    if (obs.x() < slot_upper_x && obs.x() > slot_lower_x &&
-        obs.y() < slot_left_y && obs.y() > slot_right_y) {
+    const Eigen::Vector2d pt_1 = slot_left_pt -
+                                 max_obs_lat_invasion_slot_dist * unit_01_vec -
+                                 1.068 * unit_02_vec;
+
+    const Eigen::Vector2d pt_0 = slot_right_pt +
+                                 max_obs_lat_invasion_slot_dist * unit_01_vec -
+                                 1.068 * unit_02_vec;
+
+    const Eigen::Vector2d pt_2 = slot_right_pt + max_x * unit_02_vec +
+                                 max_obs_lat_invasion_slot_dist * unit_01_vec -
+                                 max_obs_lon_invasion_slot_dist * unit_02_vec;
+
+    const Eigen::Vector2d pt_3 = slot_left_pt + max_x * unit_02_vec -
+                                 max_obs_lat_invasion_slot_dist * unit_01_vec -
+                                 max_obs_lon_invasion_slot_dist * unit_02_vec;
+
+    area_vec[0] = pt_1;
+    area_vec[1] = pt_0;
+    area_vec[2] = pt_2;
+    area_vec[3] = pt_3;
+
+    if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
       return ObsSlotType::SLOT_IN_OBS;
     }
 
-    if (obs.x() < slot_lower_x && obs.y() < slot_left_y &&
-        obs.y() > slot_right_y) {
+    area_vec[0] = pt_3;
+    area_vec[1] = pt_2;
+    area_vec[2] = pt_2 + 0.68 * unit_02_vec;
+    area_vec[3] = pt_3 + 0.68 * unit_02_vec;
+
+    if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
       return ObsSlotType::SLOT_DIRECTLY_BEHIND_OBS;
     }
 
-    const double slot_upper_upper_x = slot_upper_x + 3.5;
-    const double slot_upper_y = slot_left_y + 0.86;
-    const double slot_lower_y = slot_right_y - 0.86;
+    area_vec[0] = pt_1 + 0.86 * unit_01_vec - 3.468 * unit_02_vec;
+    area_vec[1] = pt_0 - 0.86 * unit_01_vec - 3.468 * unit_02_vec;
+    area_vec[2] = pt_0 - 0.86 * unit_01_vec;
+    area_vec[3] = pt_1 + 0.86 * unit_01_vec;
 
-    if (obs.x() > slot_upper_x && obs.x() < slot_upper_upper_x &&
-        obs.y() < slot_upper_y && obs.y() > slot_lower_y) {
+    if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
       return ObsSlotType::SLOT_ENTRANCE_OBS;
     }
 
-    if (obs.x() < slot_upper_x && obs.x() > slot_lower_x) {
-      if ((is_left_side && obs.y() > slot_left_y &&
-           obs.y() < slot_left_pt.y() + slot_upper_y) ||
-          (!is_left_side && obs.y() < slot_right_y && obs.y() > slot_lower_y)) {
+    area_vec[0] = pt_0;
+    area_vec[1] = pt_0 - 0.86 * unit_01_vec;
+    area_vec[2] = pt_2 - 0.86 * unit_01_vec;
+    area_vec[3] = pt_2;
+
+    if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
+      if (is_left_side) {
+        return ObsSlotType::SLOT_OUTSIDE_OBS;
+      } else {
         return ObsSlotType::SLOT_INSIDE_OBS;
       }
-      if ((is_left_side && obs.y() < slot_right_y) ||
-          (!is_left_side && obs.y() > slot_left_y)) {
+    }
+
+    area_vec[0] = pt_1 + 0.86 * unit_01_vec;
+    area_vec[1] = pt_1;
+    area_vec[2] = pt_3;
+    area_vec[3] = pt_3 + 0.86 * unit_01_vec;
+
+    if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
+      if (is_left_side) {
+        return ObsSlotType::SLOT_INSIDE_OBS;
+      } else {
         return ObsSlotType::SLOT_OUTSIDE_OBS;
       }
     }

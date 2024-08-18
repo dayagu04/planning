@@ -11,8 +11,21 @@
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "perpendicular_path_planner.h"
+#include "config_context.h"
 
 namespace py = pybind11;
+
+int Init() {
+  // const std::string flag_file_path =
+  //     "/asw/planning/res/conf/planning_gflags.conf";
+  // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+
+  // FilePath::SetName("slant_simulation_pybind");
+  // InitGlog(FilePath::GetName().c_str());
+  (void)planning::common::ConfigurationContext::Instance();
+
+  return 0;
+}
 
 static std::vector<double> res;
 int UpdateOneStepArcTargetLineByGear(double ego_x, double ego_y,
