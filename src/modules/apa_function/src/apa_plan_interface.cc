@@ -66,7 +66,7 @@ void ApaPlanInterface::Reset() {
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
     const uint8_t apa_planner_id) {
-  if (apa_planner_id <= apa_planner_stack_.size()) {
+  if (apa_planner_id < apa_planner_stack_.size()) {
     return apa_planner_stack_[apa_planner_id];
   } else {
     return nullptr;
@@ -90,9 +90,9 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
       local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if (last_state == iflyauto::FunctionalState_STANDBY &&
-      (current_state >= iflyauto::FunctionalState_PARK_IN_APA_IN &&
-       current_state <= iflyauto::FunctionalState_PARK_IN_COMPLETED)) {
+  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+      (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+       current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     Reset();
   }
 
@@ -106,7 +106,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   std::cout << "PERPENDICULAR_SIMULATION\n";
   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   // if (current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT ||
-  //     current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL ||
+  //     current_state == iflyauto::FunctionalState_PARK_GUIDANCE ||
   //     current_state == iflyauto::FunctionalState_PARK_IN_SECURE) {
   //   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
   // }
@@ -500,6 +500,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().obstacle_ds, double, "obstacle_ds");
 
+  JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_dynamic_col, double,
+                  "car_lat_inflation_dynamic_col");
+
   JSON_READ_VALUE(apa_param.SetPram().car_lat_inflation_normal, double,
                   "car_lat_inflation_normal");
 
@@ -558,8 +561,11 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().col_obs_safe_dist_strict, double,
                   "col_obs_safe_dist_strict");
 
-  JSON_READ_VALUE(apa_param.SetPram().max_obs_invasion_slot_dist, double,
-                  "max_obs_invasion_slot_dist");
+  JSON_READ_VALUE(apa_param.SetPram().max_obs_lat_invasion_slot_dist, double,
+                  "max_obs_lat_invasion_slot_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_obs_lon_invasion_slot_dist, double,
+                  "max_obs_lon_invasion_slot_dist");
 
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,

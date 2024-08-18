@@ -22,6 +22,7 @@ class LateralOffsetDecider : public Task {
   void SmoothLateralOffset(double in_lat_offset);
   void SaveDebugInfo();
   void Reset();
+  void GenerateOutput();
   LateralOffsetDeciderConfig config_;
   AvoidObstacleMaintainer avoid_obstacle_maintainer_;
   LateralOffsetCalculator lateral_offset_calculator_;

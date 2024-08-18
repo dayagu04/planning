@@ -150,6 +150,10 @@ struct EgoPlanningConfig : public Config {
             "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change");
     minimum_ego_cruise_speed_for_active_lane_change = read_json_key<double>(
         json, "minimum_ego_cruise_speed_for_active_lane_change");
+    enable_use_emergency_avoidence_lane_change_request = read_json_key<bool>(
+        json, "enable_use_emergency_avoidence_lane_change_request");
+    enable_use_cone_change_request =
+        read_json_key<bool>(json, "enable_use_cone_change_request");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
@@ -161,6 +165,8 @@ struct EgoPlanningConfig : public Config {
       false;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
+  bool enable_use_emergency_avoidence_lane_change_request = false;
+  bool enable_use_cone_change_request = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -209,7 +215,13 @@ struct LateralObstacleConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    obstacle_detect_distance_upper = read_json_key<double>(
+        json, "obstacle_detect_distance_upper", obstacle_detect_distance_upper);
+    obstacle_detect_distance_lower = read_json_key<double>(
+        json, "obstacle_detect_distance_lower", obstacle_detect_distance_lower);
   }
+  double obstacle_detect_distance_upper = 220;
+  double obstacle_detect_distance_lower = -50;
 };
 
 struct HistoryObstacleConfig : public EgoPlanningConfig {

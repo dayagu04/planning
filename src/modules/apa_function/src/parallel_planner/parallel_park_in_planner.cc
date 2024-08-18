@@ -23,15 +23,16 @@
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "math_lib.h"
+#include "obstacle.h"
 #include "parallel_path_planner.h"
 
 namespace planning {
 namespace apa_planner {
-static double kFrontDetaXMagWhenFrontVacant = 1.66;
+static double kFrontDetaXMagWhenFrontVacant = 1.98;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.4;
 static double kRearDetaXMagWhenBothSidesVacant = 0.2;
-static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.5;
+static double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.2;
 static double kRearDetaXMagWhenFrontVacantRearOccupied = 0.2;
 static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
 
@@ -45,6 +46,8 @@ static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 
 static double kMinChannelYMagIdentification = 3.3;
 
+static double kTBoundarySampleDist = 0.38;
+static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
 
@@ -132,7 +135,8 @@ void ParallelParInPlanner::PlanCore() {
     GenTlane();
 
     // update obstacles
-    GenObstacles();
+    GenTBoundaryObstacles();
+    // GenObstacles();
 
     // path plan
     const auto pathplan_result = PathPlanOnce();
@@ -352,21 +356,51 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
             << ego_slot_info.slot_occupied_ratio << std::endl;
 
   ego_slot_info.obs_pt_vec_slot.clear();
+  const pnc::geometry_lib::PathPoint ego_pose(ego_slot_info.ego_pos_slot,
+                                              ego_slot_info.ego_heading_slot);
 
   for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
-    if ((obs_pt_global - slot_center).norm() > 12.0) {
+    if ((obs_pt_global - slot_center).norm() > 13.3) {
       continue;
     }
 
-    ego_slot_info.obs_pt_vec_slot.emplace_back(
-        frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global));
+    const auto obs_pt_local = frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global);
+    // outof total box range
+    if (obs_pt_local.x() > apa_param.GetParam().parallel_channel_x_mag ||
+        obs_pt_local.x() < -1.6 ||
+        obs_pt_local.y() * slot_side_sgn >
+            apa_param.GetParam().parallel_channel_y_mag * slot_side_sgn ||
+        obs_pt_local.y() * slot_side_sgn <
+            (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset) *
+                slot_side_sgn) {
+      continue;
+    }
+
+    // remote front T-boundary obs
+    if (obs_pt_local.x() >
+            t_lane_.slot_length + kFrontDetaXMagWhenFrontVacant &&
+        obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
+      continue;
+    }
+
+    // remote rear T-boundary obs
+    if (obs_pt_local.x() < -1.6 &&
+        obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
+      continue;
+    }
+
+    if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+            obs_pt_local, ego_pose, 0.3)) {
+      continue;
+    }
+    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_local));
   }
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
       apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_ACTIVATE_CONTROL) {
+          iflyauto::FunctionalState_PARK_GUIDANCE) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -458,16 +492,8 @@ void ParallelParInPlanner::GenTlane() {
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
 
-  DEBUG_PRINT("obs size =" << ego_slot_info.obs_pt_vec_slot.size()
-                           << "-----------");
-  std::vector<double> obs_slot_x_vec;
-  std::vector<double> obs_slot_y_vec;
-  for (const auto& pt : ego_slot_info.obs_pt_vec_slot) {
-    obs_slot_x_vec.emplace_back(pt.x());
-    obs_slot_y_vec.emplace_back(pt.y());
-  }
-  JSON_DEBUG_VECTOR("obs_slot_x_vec", obs_slot_x_vec, 2)
-  JSON_DEBUG_VECTOR("obs_slot_y_vec", obs_slot_y_vec, 2)
+  DEBUG_PRINT("ego_slot_info.obs_pt_vec_slot size ="
+              << ego_slot_info.obs_pt_vec_slot.size());
 
   // for json debug
   std::vector<double> front_que_x;
@@ -857,6 +883,194 @@ void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
         t_lane_.obs_pt_outside.x() =
             std::max(t_lane_.obs_pt_outside.x(), upa_obs_x);
       }
+    }
+  }
+}
+
+void ParallelParInPlanner::GenTBoundaryObstacles() {
+  //                                                  |
+  //                         c-------------D
+  //                         |             |  pin
+  //            A -----------B pout        E---------F
+  //                         |       ego-------->     |
+  //  channel pt1 ----------------------------------- channel pt2
+  //                                                  |
+  //                         |       ego-------->     |
+  //            A -----------B pout        E---------F
+  //                         |             |  pin
+  //                         c-------------D
+
+  apa_world_ptr_->GetCollisionDetectorPtr()->Reset();
+
+  // set T-Boundary obstacles
+  const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
+                          0.5 * t_lane_.slot_side_sgn);
+
+  const Eigen::Vector2d A(B.x() - 1.2, B.y());
+  const Eigen::Vector2d E(
+      t_lane_.obs_pt_inside.x(),
+      t_lane_.obs_pt_inside.y() - t_lane_.slot_side_sgn * 0.5);
+
+  const Eigen::Vector2d C(
+      B.x(), (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset) *
+                 t_lane_.slot_side_sgn);
+  const Eigen::Vector2d D(E.x(), C.y());
+  const Eigen::Vector2d F(t_lane_.channel_x_limit, E.y());
+
+  const Eigen::Vector2d channel_point_1(
+      A.x(),
+      apa_param.GetParam().parallel_channel_y_mag * t_lane_.slot_side_sgn);
+
+  const Eigen::Vector2d channel_point_2(
+      F.x(),
+      apa_param.GetParam().parallel_channel_y_mag * t_lane_.slot_side_sgn);
+
+  const pnc::geometry_lib::LineSegment channel_line(channel_point_1,
+                                                    channel_point_2);
+
+  // sample channel
+  std::vector<Eigen::Vector2d> channel_obstacle_vec;
+  pnc::geometry_lib::SamplePointSetInLineSeg(channel_obstacle_vec, channel_line,
+                                             kChannelSampleDist);
+
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+      channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
+
+  for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
+    const bool channel_y_condition =
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(), F.x()) &&
+        pnc::mathlib::IsInBound(
+            obstacle_point_slot.y(),
+            kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
+            channel_point_1.y());
+
+    if (channel_y_condition) {
+      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+          obstacle_point_slot, CollisionDetector::CHANNEL_OBS);
+
+      if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
+                                  t_lane_.slot_length + 3.0)) {
+        if (t_lane_.slot_side_sgn > 0.0) {
+          t_lane_.channel_y =
+              std::min(obstacle_point_slot.y(), t_lane_.channel_y);
+        } else {
+          t_lane_.channel_y =
+              std::max(obstacle_point_slot.y(), t_lane_.channel_y);
+        }
+      }
+    }
+  }
+
+  // set tlane obs
+  pnc::geometry_lib::LineSegment tlane_line;
+  std::vector<pnc::geometry_lib::LineSegment> tlane_line_vec;
+  // currently channel and curb are set as obstacles
+  tlane_line.SetPoints(A, B);
+  tlane_line_vec.emplace_back(tlane_line);
+
+  tlane_line.SetPoints(E, F);
+  tlane_line_vec.emplace_back(tlane_line);
+
+  std::vector<Eigen::Vector2d> tlane_obstacle_vec;
+  tlane_obstacle_vec.clear();
+  tlane_obstacle_vec.reserve(100);
+  std::vector<Eigen::Vector2d> point_set;
+  for (const auto& line : tlane_line_vec) {
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
+                                               kTBoundarySampleDist);
+    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
+                              point_set.end());
+  }
+
+  for (const auto& obs_pos : tlane_obstacle_vec) {
+    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+        obs_pos, CollisionDetector::TLANE_BOUNDARY_OBS);
+  }
+
+  for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
+    const bool is_rear_tlane_line =
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(),
+                                t_lane_.obs_pt_outside.x()) &&
+        pnc::mathlib::IsInBound(
+            obstacle_point_slot.y(), B.y(),
+            kMinChannelYMagIdentification * t_lane_.slot_side_sgn);
+
+    if (is_rear_tlane_line) {
+      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+          obstacle_point_slot, CollisionDetector::TLANE_BOUNDARY_OBS);
+      continue;
+    }
+
+    const bool is_front_tlane_line =
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                t_lane_.obs_pt_inside.x() - 0.3, F.x()) &&
+        pnc::mathlib::IsInBound(
+            obstacle_point_slot.y(), E.y(),
+            kMinChannelYMagIdentification * t_lane_.slot_side_sgn);
+
+    if (is_front_tlane_line) {
+      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+          obstacle_point_slot, CollisionDetector::TLANE_BOUNDARY_OBS);
+    }
+  }
+
+  // tlane
+  tlane_line_vec.clear();
+
+  const Eigen::Vector2d C_curb(C.x(), t_lane_.curb_y);
+  const Eigen::Vector2d D_curb(D.x(), t_lane_.curb_y);
+
+  tlane_line.SetPoints(B, C_curb);
+  tlane_line_vec.emplace_back(tlane_line);
+
+  tlane_line.SetPoints(D_curb, E);
+  tlane_line_vec.emplace_back(tlane_line);
+
+  tlane_line.SetPoints(C_curb, D_curb);
+  tlane_line_vec.emplace_back(tlane_line);
+
+  for (const auto& line : tlane_line_vec) {
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
+                                               kTBoundarySampleDist);
+    tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
+                              point_set.end());
+  }
+
+  for (const auto& obs_pos : tlane_obstacle_vec) {
+    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+        obs_pos, CollisionDetector::TLANE_OBS);
+  }
+
+  for (const auto& obs_pos : frame_.ego_slot_info.obs_pt_vec_slot) {
+    const bool is_tlane_obs =
+        pnc::mathlib::IsInBound(obs_pos.x(), B.x(), E.x()) &&
+        pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y(),
+                                C_curb.y());
+    if (!is_tlane_obs) {
+      continue;
+    }
+
+    if (pnc::mathlib::IsInBound(obs_pos.x(), 0.5, t_lane_.slot_length - 0.5) &&
+        pnc::mathlib::IsInBound(obs_pos.y(), -0.4 * t_lane_.slot_side_sgn,
+                                1.2 * t_lane_.slot_side_sgn)) {
+      // obs noise in slot
+      continue;
+    }
+
+    const bool is_front_tlane_obs =
+        pnc::mathlib::IsInBound(obs_pos.x(), t_lane_.obs_pt_inside.x(),
+                                E.x()) &&
+        pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y(),
+                                D_curb.y());
+    const bool is_rear_tlane_obs =
+        pnc::mathlib::IsInBound(obs_pos.x(), B.x(),
+                                t_lane_.obs_pt_outside.x()) &&
+        pnc::mathlib::IsInBound(obs_pos.y(), 1.5 * t_lane_.slot_side_sgn,
+                                C_curb.y());
+
+    if (is_front_tlane_obs || is_rear_tlane_obs) {
+      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
+          obs_pos, CollisionDetector::TLANE_OBS);
     }
   }
 }
@@ -1314,9 +1528,7 @@ const bool ParallelParInPlanner::CheckReplan() {
 
 const bool ParallelParInPlanner::CheckPaused() {
   if (apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_SUSPEND_ACTIVATE ||
-      apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_IN_SUSPEND_CLOSE) {
+      iflyauto::FunctionalState_PARK_SUSPEND) {
     return true;
   } else {
     return false;
@@ -1699,28 +1911,15 @@ void ParallelParInPlanner::Log() const {
   DEBUG_PRINT("obs p out = " << p0_g.transpose());
   DEBUG_PRINT("obs p in = " << p1_g.transpose());
 
-  std::vector<double> obstacles_x_slot;
-  std::vector<double> obstacles_y_slot;
-  for (const auto& pt : frame_.ego_slot_info.obs_pt_vec_slot) {
-    obstacles_x_slot.emplace_back(pt.x());
-    obstacles_y_slot.emplace_back(pt.y());
-  }
-  JSON_DEBUG_VECTOR("obstacles_x_slot", obstacles_x_slot, 2)
-  JSON_DEBUG_VECTOR("obstacles_y_slot", obstacles_y_slot, 2)
-
-  const std::vector<Eigen::Vector2d>& obstacles =
-      apa_world_ptr_->GetCollisionDetectorPtr()->GetObstacles();
-
   std::vector<double> obstaclesX;
   std::vector<double> obstaclesY;
-  obstaclesX.clear();
-  obstaclesY.clear();
-  obstaclesX.reserve(obstacles.size());
-  obstaclesY.reserve(obstacles.size());
-  for (const auto& obstacle : obstacles) {
-    const auto tmp_obstacle = l2g_tf.GetPos(obstacle);
-    obstaclesX.emplace_back(tmp_obstacle.x());
-    obstaclesY.emplace_back(tmp_obstacle.y());
+  for (const auto& obs_pair :
+       apa_world_ptr_->GetCollisionDetectorPtr()->GetObstaclesMap()) {
+    for (const auto& obstacle : obs_pair.second) {
+      const auto tmp_obstacle = l2g_tf.GetPos(obstacle);
+      obstaclesX.emplace_back(tmp_obstacle.x());
+      obstaclesY.emplace_back(tmp_obstacle.y());
+    }
   }
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)

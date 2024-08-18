@@ -1,3 +1,14 @@
+# planning.2.4.9
+####  修改说明
+1. Add new HMI/FSM
+2. 适配感知220m特性
+3. 更新系统状态机topic，不再接收hmi topic
+4. 修复acc状态先ego lane选取
+5. 加入锥桶换道功能
+6. 启用高架NOA
+7. 修复lead_one_change引起二次起步
+8. 放开曲率限速加速度限制，cut in判断不使用lat offset
+
 # planning.2.4.8
 ####  修改说明
 1. Add planning InputHistoryInfo of Header

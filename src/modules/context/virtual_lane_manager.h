@@ -151,6 +151,8 @@ class VirtualLaneManager {
 
   double get_distance_to_route_end() { return distance_to_route_end_; }
 
+  bool get_is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
+
   bool get_is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
 
   double get_distance_to_dash_line(const RequestType direction,
@@ -177,6 +179,9 @@ class VirtualLaneManager {
 
   double dis_to_ramp() const { return dis_to_ramp_; }
   RampDirection ramp_direction() const { return ramp_direction_; }
+
+  RampDirection first_split_direction() const { return first_split_direction_; }
+
   double distance_to_first_road_merge() const {
     return distance_to_first_road_merge_;
   }
@@ -202,6 +207,8 @@ class VirtualLaneManager {
 
   bool is_local_valid() const { return is_local_valid_; }
 
+  bool is_in_sdmaproad() const { return is_in_sdmaproad_; }
+
   bool is_on_hpp_lane() const { return is_on_hpp_lane_; }
 
   bool is_reached_hpp_start_point() const {
@@ -212,6 +219,11 @@ class VirtualLaneManager {
   double DistanceToNextSpeedBump() const {
     return distance_to_next_speed_bump_;
   }
+
+  int origin_relative_id_zero_nums() const {
+    return origin_relative_id_zero_nums_;
+  }
+  bool is_nearing_ramp() const { return is_nearing_ramp_; }
   void CalculateDistanceToRamp(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadSplit(planning::framework::Session *session);
   void CalculateDistanceToFirstRoadMerge(planning::framework::Session *session);
@@ -312,6 +324,7 @@ class VirtualLaneManager {
   double distance_to_next_speed_bump_ = NL_NMAX;
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point_ = NL_NMAX;
+  bool is_in_sdmaproad_ = false;
   bool is_ego_on_expressway_ = false;
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
@@ -319,6 +332,8 @@ class VirtualLaneManager {
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
+  int origin_relative_id_zero_nums_ = 0;
+  bool is_within_hdmap_ = false;
 };
 }  // namespace planning
 #endif

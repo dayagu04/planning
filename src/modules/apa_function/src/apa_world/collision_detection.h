@@ -21,9 +21,11 @@ class CollisionDetector {
     NONE_OBS,
     CHANNEL_OBS,
     TLANE_OBS,
+    TLANE_BOUNDARY_OBS,
     LINEARC_OBS,
     FUSION_OBS,
     RECORD_OBS,
+    VIRTUAL_OBS,
     COUNT_OBS,
   };
 
@@ -32,6 +34,7 @@ class CollisionDetector {
     SLOT_INSIDE_OBS,
     SLOT_OUTSIDE_OBS,
     SLOT_IN_OBS,
+    SLOT_DIRECTLY_BEHIND_OBS,
     SLOT_ENTRANCE_OBS,
     SLOT_OUT_OBS,
     OBS_COUNT,
@@ -128,6 +131,10 @@ class CollisionDetector {
     return obs_pt_global_map_;
   }
 
+  void DeleteGivenTypeObstacles(const size_t obs_type) {
+    obs_pt_global_map_.erase(obs_type);
+  }
+
   void ClearObstacles();
 
   void DeleteObstacles(const size_t obs_type);
@@ -164,8 +171,7 @@ class CollisionDetector {
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
       const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-      const double slot_length, const bool is_left_side,
-      const bool is_vertical_slot = true);
+      const bool is_left_side, const bool is_vertical_slot = true);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;

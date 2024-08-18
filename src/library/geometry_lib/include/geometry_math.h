@@ -342,6 +342,9 @@ double GetAngleFromTwoVec(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
 
 const Eigen::Matrix2d GetRotm2dFromTheta(const double theta);
 
+const double CalTwoPointDistSquare(const Eigen::Vector2d &p0,
+                                   const Eigen::Vector2d &p1);
+
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line);
 

@@ -49,7 +49,7 @@ class LateralMotionPlanner : public Task {
       planning_weight_ptr_;
 
   double avoid_back_time_;
-  double enter_ramp_on_road_time_;
+  double enter_split_time_;
 };
 
 }  // namespace planning

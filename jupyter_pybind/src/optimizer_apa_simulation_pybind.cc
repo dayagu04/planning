@@ -183,7 +183,7 @@ const bool InterfaceUpdateParam(
 
   if (force_plan) {
     local_view.function_state_machine_info.current_state =
-        iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT;
+        iflyauto::FunctionalState_PARK_IN_SEARCHING;
     if (select_id > 0) {
       local_view.parking_fusion_info.select_slot_id = select_id;
     }

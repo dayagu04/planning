@@ -284,9 +284,10 @@ const bool InterfaceUpdateParam(
   // DEBUG_PRINT("c++ fus_occ_obj_num = "
   //             << static_cast<int>(fus_occ_obj_info.fusion_object_num));
 
+  // Note: currently plan once when slot selected in searching state
   if (force_plan) {
     local_view.function_state_machine_info.current_state =
-        iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT;
+        iflyauto::FunctionalState_PARK_IN_SEARCHING;
   }
   if (select_id > 0) {
     local_view.parking_fusion_info.select_slot_id = select_id;

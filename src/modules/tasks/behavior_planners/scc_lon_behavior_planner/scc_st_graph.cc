@@ -73,7 +73,9 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
                                          0.0, 200, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 200, 0.1);
+  // TODO: 不同场景下的速度滤波应初始化不同的滤波器
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
+  accel_vel_in_turns_filter_.Init(-1.5, 1.0, 0.0, 42.0, 0.1);
 }
 
 void StGraphGenerator::Update(
@@ -110,6 +112,7 @@ void StGraphGenerator::Update(
 
   last_v_target_ = v_target_;
   accel_vel_filter_.SetState(last_v_target_);
+  accel_vel_in_turns_filter_.SetState(last_v_target_);
 
   // 1. 初始化 acc_bound, refs
   // 1.1 acceleration limits for cruising
@@ -201,11 +204,19 @@ void StGraphGenerator::Update(
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   } else if (v_target_ < v_ego &&
-             (v_limit_on_turns_and_road_ == v_target_ ||
-              (is_on_ramp && v_limit_on_ramp_ == v_target_) ||
+             ((is_on_ramp && v_limit_on_ramp_ == v_target_) ||
               v_limit_lc_ == v_target_)) {
+    if (v_ego < v_last_target_) {
+      accel_vel_filter_.SetState(v_ego);
+    }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
+  } else if (v_target_ < v_ego && v_limit_on_turns_and_road_ == v_target_) {
+    if (v_ego < v_last_target_) {
+      accel_vel_in_turns_filter_.SetState(v_ego);
+    }
+    accel_vel_in_turns_filter_.Update(v_target_);
+    v_target_ = accel_vel_in_turns_filter_.GetOutput();
   }
 
   // 0. get start & stop state
@@ -1998,6 +2009,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   double obstacle_v_start = config_.obstacle_v_start;
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
+  constexpr double lead_change_buffer = 1.0;
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
@@ -2020,7 +2032,8 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
              distance_start);
     // lead_one change: obj stopped adc by cut_in, then leaved
     bool lead_one_change =
-        (lead_one.d_rel() - desire_distance) > (distance_stop + 1.0);
+        (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+        (distance_stop + lead_change_buffer);
     bool start_condition = lead_one_start || lead_one_change;
 
     // 2. Update the state

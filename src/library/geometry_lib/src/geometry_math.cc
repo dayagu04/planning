@@ -43,6 +43,13 @@ const Eigen::Vector2d GenHeadingVec(const double heading) {
   return Eigen::Vector2d(std::cos(heading), std::sin(heading));
 }
 
+const double CalTwoPointDistSquare(const Eigen::Vector2d &p0,
+                                   const Eigen::Vector2d &p1) {
+  const auto v_AB = p1 - p0;
+
+  return v_AB.x() * v_AB.x() + v_AB.y() * v_AB.y();
+}
+
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line) {
   double dist_square = CalPoint2LineDistSquare(pO, line);

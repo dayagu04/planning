@@ -1,9 +1,15 @@
 #include "lane_change_state_machine_manager.h"
+#include <cmath>
+#include <complex>
+#include <cstddef>
+#include <vector>
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
 #include "ifly_time.h"
 #include "planning_context.h"
 #include "spline_projection.h"
+#include "virtual_lane.h"
 namespace planning {
 namespace {
 constexpr double kEps = 1e-6;
@@ -183,7 +189,13 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
   *lane_change_type = lc_req_mgr_->request_source();
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    return true;
+    bool is_ego_in_perfect_pose = CheckIfInPerfectLaneKeeping();
+    JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
+    if (*lane_change_type == INT_REQUEST) {
+      return true;
+    } else {
+      return is_ego_in_perfect_pose;
+    }
   }
   return false;
 }
@@ -197,7 +209,6 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
   CheckLaneChangeValid(lane_change_direction);
-
   return has_target_lane && lane_change_stage_info_.gap_insertable;
 }
 
@@ -367,7 +378,7 @@ bool LaneChangeStateMachineManager::CheckIfHoldToExecution(
   return lane_change_stage_info_.gap_insertable && has_target_lane;
 }
 
-bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
+bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() const {
   const bool perfect_in_lane = CheckIfInPerfectLaneKeeping();
   if (perfect_in_lane) {
     std::cout << "perfect_in_lane!!!" << std::endl;
@@ -375,7 +386,7 @@ bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
   return perfect_in_lane;
 }
 
-bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() {
+bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   const auto &virtual_lane_mgr =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   const auto &clane = virtual_lane_mgr->get_current_lane();
@@ -411,7 +422,7 @@ bool LaneChangeStateMachineManager::CheckIfCompleteToCancel() {
   return complete_time_out;
 }
 
-bool LaneChangeStateMachineManager::CheckIfCancelToLaneKeeping() {
+bool LaneChangeStateMachineManager::CheckIfCancelToLaneKeeping() const {
   const bool perfect_in_lane = CheckIfInPerfectLaneKeeping();
   return perfect_in_lane;
 }
@@ -697,6 +708,8 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
   cart_ref_info.x_vec.resize(point_size);
   cart_ref_info.y_vec.resize(point_size);
   cart_ref_info.s_vec.resize(point_size);
+  std::vector<double> kappa_radius_vec;
+  kappa_radius_vec.resize(point_size);
   float normal_care_spline_length = 50.;
   const float preview_time = 20.;
   const double min_preview_spline_length = 20.;
@@ -726,12 +739,16 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
                                ref_point.at(i).path_point.y -
                                    ref_point.at(i - 1).path_point.y)
               : 0.;
+    kappa_radius_vec[i] = std::min(
+        std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
+        10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
       cart_ref_info.x_vec.resize(i);
       cart_ref_info.y_vec.resize(i);
       cart_ref_info.s_vec.resize(i);
+      kappa_radius_vec.resize(i);
       break;
     }
   }
@@ -741,6 +758,8 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   JSON_DEBUG_VECTOR("raw_refline_x_vec", cart_ref_info.x_vec, 2)
   JSON_DEBUG_VECTOR("raw_refline_y_vec", cart_ref_info.y_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_s_vec", cart_ref_info.s_vec, 2)
+  JSON_DEBUG_VECTOR("raw_refline_k_vec", kappa_radius_vec, 2)
 
   Eigen::Vector2d init_pos(planning_init_point.lat_init_state.x(),
                            planning_init_point.lat_init_state.y());
@@ -873,8 +892,8 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(lc_req_mgr_->target_lane_virtual_id());
-  double dist_mline =
-      std::fabs(target_lane_frenet_ego_state.l()) - target_lane->width();
+  double dist_mline = std::abs(std::fabs(target_lane_frenet_ego_state.l()) -
+                               target_lane->width() / 2);
   double t_reaction = (dist_mline == DBL_MAX) ? 0.5 : 0.5 * dist_mline / 1.8;
   double mss = 0.0;
   double mss_t = 0.0;
@@ -1294,11 +1313,10 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
       virtual_lane_manager->current_lane_virtual_id();
   const double pause_ttc = 2.0;
   const double pause_v_rel = 2.0;
-  if (((direction == LEFT_CHANGE &&
-        distance > -left_lane_width / 2 - move_thre) ||
-       (direction == RIGHT_CHANGE &&
-        distance < right_lane_width / 2 + move_thre) ||
-       fix_lane->get_virtual_id() == current_lane_virtual_id)) {
+  if ((direction == LEFT_CHANGE &&
+       distance > -left_lane_width / 2 - move_thre) ||
+      (direction == RIGHT_CHANGE &&
+       distance < right_lane_width / 2 + move_thre)) {
     if (lc_state_info->lc_should_back &&
         lc_state_info->tr_pause_dv > pause_v_rel &&
         -lc_state_info->tr_pause_s / lc_state_info->tr_pause_dv < pause_ttc &&
@@ -1411,31 +1429,43 @@ void LaneChangeStateMachineManager::UpdateAdInfo() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  ad_info->lane_change_direction = iflyauto::LC_OTHER;
+  ad_info->lane_change_direction =
+      iflyauto::LaneChangeDirection::LC_DIR_NO_CHANGE;
   if (transition_info_.lane_change_status == kLaneChangePropose) {
-    ad_info->lane_change_status = iflyauto::LC_WAITING;
+    ad_info->lane_change_status = iflyauto::LC_STATE_WAITING;
     if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_LEFT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
     } else {
-      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
     }
   } else if (transition_info_.lane_change_status == kLaneChangeExecution ||
              transition_info_.lane_change_status == kLaneChangeComplete) {
     if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_LEFT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
     } else {
-      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
     }
-    ad_info->lane_change_status = iflyauto::LC_STARTING;
+    ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
   } else if (transition_info_.lane_change_status == kLaneChangeCancel) {
-    ad_info->lane_change_status = iflyauto::LC_CANCELLED;
+    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
   } else if (transition_info_.lane_change_status == kLaneChangeHold) {
-    ad_info->lane_change_status = iflyauto::LC_REJECTED;
+    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
   } else if (transition_info_.lane_change_status == kLaneKeeping) {
     if (coarse_planning_info.source_state != kLaneKeeping) {
-      ad_info->lane_change_status = iflyauto::LC_COMPLETED;
+      ad_info->lane_change_status = iflyauto::LC_STATE_COMPLETE;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
     } else {
-      ad_info->lane_change_status = iflyauto::LC_NO_CHANGE;
+      GenerateTurnSignalForSplitRegion();
+      if (road_to_ramp_turn_signal_ == RAMP_NONE) {
+        ad_info->lane_change_status = iflyauto::LC_STATE_NO_CHANGE;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
+      } else if (road_to_ramp_turn_signal_ == RAMP_ON_LEFT) {
+        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
+      } else if (road_to_ramp_turn_signal_ == RAMP_ON_RIGHT) {
+        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
+      }
     }
   }
 
@@ -1523,5 +1553,247 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   lat_behavior_common->set_lc_valid_cnt(
       lane_change_decider_output.lc_valid_cnt);
   lat_behavior_common->set_lc_back_cnt(lane_change_decider_output.lc_back_cnt);
+}
+
+void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
+  // fengwang31:hack temp split lane nums is two
+  //生成转向灯信号的条件：同时满足以下5个条件:
+  // 1、存在两条lane的relative_id为0；
+  // 2、ramp的方向即转向灯信号的方向；
+  // 3、当前自车还在高速路上(NOA模式下);
+  // 4、当前没有生成变道请求。
+  // 5、当前还在主路上，即不在匝道上。
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager == nullptr) {
+    road_to_ramp_turn_signal_ = RAMP_NONE;
+    return;
+  }
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  if (reference_path_manager == nullptr) {
+    road_to_ramp_turn_signal_ = RAMP_NONE;
+    return;
+  }
+  int origin_relative_id_zero_nums =
+      virtual_lane_manager->origin_relative_id_zero_nums();
+  bool is_ego_on_expressway = virtual_lane_manager->is_ego_on_expressway();
+  bool is_on_ramp = virtual_lane_manager->is_on_ramp();
+  if (origin_relative_id_zero_nums > 1) {
+    RampDirection ramp_direction = RAMP_NONE;
+    if (IsSplitRegion(&ramp_direction)) {
+      if (is_ego_on_expressway &&
+          transition_info_.lane_change_status == kLaneKeeping && !is_on_ramp) {
+        if (ramp_direction == RAMP_ON_RIGHT) {
+          road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
+        } else if (ramp_direction == RAMP_ON_LEFT) {
+          road_to_ramp_turn_signal_ = RAMP_ON_LEFT;
+        } else {
+          road_to_ramp_turn_signal_ = RAMP_NONE;
+        }
+      }
+    }
+  }
+
+  if (road_to_ramp_turn_signal_ != RAMP_NONE) {
+    if (IsOffTurnLight(road_to_ramp_turn_signal_)) {
+      road_to_ramp_turn_signal_ = RAMP_NONE;
+    }
+  }
+  int road_to_ramp_turn_signal = static_cast<int>(road_to_ramp_turn_signal_);
+  JSON_DEBUG_VALUE("road_to_ramp_turn_signal", road_to_ramp_turn_signal);
+}
+
+bool LaneChangeStateMachineManager::IsSplitRegion(
+    RampDirection *ramp_direction) {
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto left_lane = virtual_lane_manager->get_left_lane();
+  const auto right_lane = virtual_lane_manager->get_right_lane();
+  const auto current_lane = virtual_lane_manager->get_current_lane();
+  const double lane_lat_diff_threshold = 3.8;
+  std::shared_ptr<ReferencePath> left_reference_path;
+  std::shared_ptr<ReferencePath> right_reference_path;
+  double left_ego_l = NL_NMAX;
+  double right_ego_l = NL_NMAX;
+  double left_ego_s = NL_NMAX;
+  double right_ego_s = NL_NMAX;
+  double left_lane_width = 0;
+  double right_lane_width = 0;
+  bool cur_lane_overlap_left_lane = false;
+  bool cur_lane_overlap_right_lane = false;
+  if (left_lane != nullptr) {
+    left_reference_path = reference_path_manager->get_reference_path_by_lane(
+        left_lane->get_virtual_id());
+    left_lane_width = left_lane->width();
+    if (left_reference_path != nullptr) {
+      const auto left_frenet_ego_state =
+          left_reference_path->get_frenet_ego_state();
+      left_ego_l = left_frenet_ego_state.l();
+      left_ego_s = left_frenet_ego_state.s();
+    }
+  }
+  if (right_lane != nullptr) {
+    right_lane_width = right_lane->width();
+    right_reference_path = reference_path_manager->get_reference_path_by_lane(
+        right_lane->get_virtual_id());
+    if (right_reference_path != nullptr) {
+      const auto right_frenet_ego_state =
+          right_reference_path->get_frenet_ego_state();
+      right_ego_l = right_frenet_ego_state.l();
+      right_ego_s = right_frenet_ego_state.s();
+    }
+  }
+  //目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
+
+  if (std::abs(left_ego_l) < left_lane_width / 2) {
+    cur_lane_overlap_left_lane = true;
+  }
+  if (std::abs(right_ego_l) < right_lane_width / 2) {
+    cur_lane_overlap_right_lane = true;
+  }
+  if (cur_lane_overlap_left_lane && left_reference_path) {
+    double lat_diff = 0;
+    CalculateLatOffsetOfOverlappedLanes(&lat_diff, left_reference_path);
+    if (std::abs(lat_diff) > lane_lat_diff_threshold) {
+      if (lat_diff > 0) {
+        *ramp_direction = RAMP_ON_LEFT;
+      } else {
+        *ramp_direction = RAMP_ON_RIGHT;
+      }
+      return true;
+    }
+  }
+  if (cur_lane_overlap_right_lane && right_reference_path) {
+    double lat_diff = 0;
+    CalculateLatOffsetOfOverlappedLanes(&lat_diff, right_reference_path);
+    JSON_DEBUG_VALUE("lat_diff", lat_diff);
+    if (std::abs(lat_diff) > lane_lat_diff_threshold) {
+      if (lat_diff > 0) {
+        *ramp_direction = RAMP_ON_LEFT;
+      } else {
+        *ramp_direction = RAMP_ON_RIGHT;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
+    double *lat_diff, const std::shared_ptr<ReferencePath> reference_path) {
+  const auto current_reference_path =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_current_lane();
+  const double current_lane_front_length =
+      current_reference_path->get_frenet_coord()->Length() -
+      current_reference_path->get_frenet_ego_state().s();
+  const double reference_lane_front_length =
+      reference_path->get_frenet_coord()->Length() -
+      reference_path->get_frenet_ego_state().s();
+  const double length_diff_cur_lane_with_overlap_lane =
+      current_lane_front_length - reference_lane_front_length;
+  const double length_diff_threshold = 10.0;  // 两条车道线的前方长度差值阈值
+  bool is_cur_path_project_to_ref_path = true;
+  const auto cur_ref_path_finally_point =
+      current_reference_path->get_points().back().path_point;
+  Point2D projection_point = {cur_ref_path_finally_point.x,
+                              cur_ref_path_finally_point.y};
+  std::shared_ptr<KDPath> reference_path_frenet_coordinate =
+      reference_path->get_frenet_coord();
+  if (std::abs(length_diff_cur_lane_with_overlap_lane) >
+      length_diff_threshold) {
+    if (length_diff_cur_lane_with_overlap_lane > length_diff_threshold) {
+      is_cur_path_project_to_ref_path = false;
+      const auto ref_path_finally_point =
+          current_reference_path->get_points().back().path_point;
+      projection_point = {ref_path_finally_point.x, ref_path_finally_point.y};
+      reference_path_frenet_coordinate =
+          current_reference_path->get_frenet_coord();
+    }
+  } else {
+    ReferencePathPoint refpoint = {};
+    current_reference_path->get_reference_point_by_lon(
+        current_reference_path->get_frenet_coord()->Length() -
+            length_diff_threshold,
+        refpoint);
+    projection_point = {refpoint.path_point.x, refpoint.path_point.y};
+  }
+  Point2D frenet_point;
+  if (reference_path_frenet_coordinate->XYToSL(projection_point,
+                                               frenet_point)) {
+    if (is_cur_path_project_to_ref_path) {
+      *lat_diff = frenet_point.y;
+    } else {
+      *lat_diff = -frenet_point.y;
+    }
+  }
+}
+
+bool LaneChangeStateMachineManager::IsOffTurnLight(
+    const RampDirection ramp_direction) {
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto left_lane = virtual_lane_manager->get_left_lane();
+  const auto right_lane = virtual_lane_manager->get_right_lane();
+  const auto current_lane = virtual_lane_manager->get_current_lane();
+  const auto current_reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
+  std::shared_ptr<ReferencePath> left_reference_path;
+  std::shared_ptr<ReferencePath> right_reference_path;
+  double ref_lane_width = 3.8;
+  std::shared_ptr<KDPath> reference_path_frenet_coordinate =
+      current_reference_path->get_frenet_coord();
+  if (ramp_direction == RAMP_ON_LEFT) {
+    if (right_lane == nullptr) {
+      return true;
+    }
+    ref_lane_width = right_lane->width();
+    right_reference_path = reference_path_manager->get_reference_path_by_lane(
+        right_lane->get_virtual_id());
+    if (right_reference_path == nullptr) {
+      return true;
+    }
+    reference_path_frenet_coordinate = right_reference_path->get_frenet_coord();
+  } else if (ramp_direction == RAMP_ON_RIGHT) {
+    if (left_lane == nullptr) {
+      return true;
+    }
+    ref_lane_width = left_lane->width();
+    left_reference_path = reference_path_manager->get_reference_path_by_lane(
+        left_lane->get_virtual_id());
+    if (left_reference_path == nullptr) {
+      return true;
+    }
+    reference_path_frenet_coordinate = left_reference_path->get_frenet_coord();
+  }
+  const auto &ego_vertices_points = session_->environmental_model()
+                                        .get_ego_state_manager()
+                                        ->polygon()
+                                        .points();
+  double ego_dis_to_ref_lane = NL_NMAX;
+  for (auto ego_vertices_point : ego_vertices_points) {
+    Point2D frenet_point;
+    Point2D ego_vertices_point_tem = {ego_vertices_point.x(),
+                                      ego_vertices_point.y()};
+    if (reference_path_frenet_coordinate->XYToSL(ego_vertices_point_tem,
+                                                 frenet_point)) {
+      if (std::abs(frenet_point.y) < ego_dis_to_ref_lane) {
+        ego_dis_to_ref_lane = std::abs(frenet_point.y);
+      }
+    }
+  }
+  if (ego_dis_to_ref_lane < ref_lane_width / 2) {
+    return false;
+  }
+  if (!CheckIfInPerfectLaneKeeping()) {
+    return false;
+  }
+  return true;
 }
 }  // namespace planning

@@ -405,9 +405,11 @@ class SlotManagement {
 
     std::unordered_map<size_t, std::vector<Eigen::Vector2d>> ground_line_pt_map;
 
-    bool first_enter_slot_mangement = true;
-
     bool fus_obj_valid_flag = false;
+
+    bool replan_flag = true;
+
+    bool is_fix_slot = false;
 
     void Reset() {
       uss_raw_dist_vec.clear();
@@ -426,8 +428,9 @@ class SlotManagement {
       obs_pt_vec.clear();
       obs_pt_map.clear();
       ground_line_pt_map.clear();
-      first_enter_slot_mangement = true;
       fus_obj_valid_flag = false;
+      replan_flag = true;
+      is_fix_slot = false;
     }
   };
 
@@ -554,6 +557,8 @@ class SlotManagement {
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
 
   void Log();
+
+  const bool CheckIfSlotSelectedInFusion() const;
 
   void FinishApa();
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "session.h"
 namespace planning {
@@ -14,6 +15,10 @@ struct StateTransitionInfo {
   }
 };
 
+enum RelativeDirection {
+  ON_LEFT = 0,
+  ON_RIGHT = 1,
+};
 struct LaneChangeTimer {
   bool propose_time_count_ = false;
   double propose_at_time_ = 0.0;
@@ -138,10 +143,10 @@ class LaneChangeStateMachineManager {
                            const RequestSource& lane_change_type);
   bool CheckIfHoldToExecution(const RequestType& lane_change_direction,
                               const RequestSource& lane_change_type);
-  bool CheckIfCompleteToLaneKeeping();
-  bool CheckIfInPerfectLaneKeeping();
+  bool CheckIfCompleteToLaneKeeping() const;
+  bool CheckIfInPerfectLaneKeeping() const;
+  bool CheckIfCancelToLaneKeeping() const;
   bool CheckIfCompleteToCancel();
-  bool CheckIfCancelToLaneKeeping();
   bool CheckIfCancelTimeOut();
 
   void LaneChangeInfoReset();
@@ -171,6 +176,11 @@ class LaneChangeStateMachineManager {
   void UpdateCoarsePlanningInfo();
   void UpdateAdInfo();
   void UpdateStateMachineDebugInfo();
+  void GenerateTurnSignalForSplitRegion();
+  bool IsSplitRegion(RampDirection* ramp_direction);
+  void CalculateLatOffsetOfOverlappedLanes(
+      double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
+  bool IsOffTurnLight(const RampDirection ramp_direction);
 
  private:
   ScenarioStateMachineConfig config_;
@@ -195,5 +205,6 @@ class LaneChangeStateMachineManager {
   double start_move_dist_lane_ = 0;
   bool must_change_lane_ = false;
   int scenario_ = SCENARIO_CRUISE;
+  RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
 };
 }  // namespace planning

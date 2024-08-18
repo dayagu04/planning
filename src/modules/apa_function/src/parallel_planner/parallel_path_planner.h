@@ -170,6 +170,7 @@ class ParallelPathPlanner {
     Eigen::Vector2d v_ego_farest_front_corner = Eigen::Vector2d::Zero();
     Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
 
+    std::vector<Eigen::Vector2d> front_corner_obs_vec;
     std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
     std::vector<pnc::geometry_lib::PathSegment> inversed_park_out_path;
     std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
@@ -194,6 +195,8 @@ class ParallelPathPlanner {
       triple_step_path.reserve(6);
       valid_target_pt_vec.clear();
       valid_target_pt_vec.reserve(20);
+      front_corner_obs_vec.clear();
+      front_corner_obs_vec.reserve(20);
       min_outer_front_corner_radius = 5.5;
       min_inner_rear_corner_radius = 5.5;
       min_outer_front_corner_deta_y = 0.8;
@@ -204,7 +207,13 @@ class ParallelPathPlanner {
 
  public:
   void Reset();
+
   void Preprocess();
+  void CalcEgoParams();
+  void ExpandPInObstacles();
+  void AddPInVirtualObstacles();
+  void DeletePInVirtualObstacles();
+
   const bool Update();
   const bool Update(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
@@ -275,7 +284,7 @@ class ParallelPathPlanner {
 
   const bool MonoStepPlanWithShift();
   const bool MonoStepPlanOnceWithShift(
-      bool &is_drive_out_safe, pnc::geometry_lib::PathPoint &target_pose);
+      bool &is_drive_out_safe, const pnc::geometry_lib::PathPoint &target_pose);
   const bool BackwardNormalPlan();
 
   const bool BackwardNormalPlan(
@@ -306,8 +315,8 @@ class ParallelPathPlanner {
       std::vector<pnc::geometry_lib::PathSegment> &search_out_res);
 
   const bool CalcLineStepLimitPose(
-      pnc::geometry_lib::LineSegment &line,
-      const uint8_t gear);  // start pose should be given in line
+      pnc::geometry_lib::LineSegment &line, const uint8_t gear,
+      const double buffer = 0.3);  // start pose should be given in line
 
   const bool CalcArcStepLimitPose(
       pnc::geometry_lib::Arc &arc, bool &is_drive_out_safe, const uint8_t gear,
@@ -488,8 +497,6 @@ class ParallelPathPlanner {
 
   const bool CheckSamePose(const pnc::geometry_lib::PathPoint &pose1,
                            const pnc::geometry_lib::PathPoint &pose2) const;
-
-  void CalcEgoParams();
 
   Input input_;
   Output output_;

@@ -72,7 +72,9 @@ enum RequestSource {
   MAP_REQUEST,
   ACT_REQUEST,
   ROUTE_REQUEST,
-  OVERTAKE_REQUEST
+  OVERTAKE_REQUEST,
+  EMERGENCE_AVOID_REQUEST,
+  CONE_REQUEST
 };
 
 struct PointLLH {
@@ -656,6 +658,10 @@ enum class LatObstacleType { LANE, ROAD, CAR };
 struct LateralOffsetDeciderOutput {
   bool is_valid = false;
   double lateral_offset = 0.0;
+
+  // hmi
+  int avoid_id = -1;
+  int avoid_direction = 0;
 };
 
 struct LatDeciderOutput {

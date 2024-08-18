@@ -928,25 +928,33 @@ const bool CollisionDetector::CalCarMoveBound(
 const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const Eigen::Vector2d &obs,
     const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-    const double slot_length, const bool is_left_side,
-    const bool is_vertical_slot) {
+    const bool is_left_side, const bool is_vertical_slot) {
   if (is_vertical_slot) {
+    // the slot origin pt is on the line(pt2->pt3)
     Eigen::Vector2d slot_left_pt = slot_pt.first;
     Eigen::Vector2d slot_right_pt = slot_pt.second;
     if (slot_left_pt.y() < slot_right_pt.y()) {
       std::swap(slot_left_pt, slot_right_pt);
     }
-    const double max_obs_invasion_slot_dist =
-        apa_param.GetParam().max_obs_invasion_slot_dist;
+    const double max_obs_lat_invasion_slot_dist =
+        apa_param.GetParam().max_obs_lat_invasion_slot_dist;
     const double slot_x = ((slot_left_pt + slot_right_pt) * 0.5).x();
-    const double slot_upper_x = slot_x + 0.68;
-    const double slot_lower_x = slot_x - slot_length + 0.108;
-    const double slot_left_y = slot_left_pt.y() - max_obs_invasion_slot_dist;
-    const double slot_right_y = slot_right_pt.y() + max_obs_invasion_slot_dist;
+    const double slot_upper_x = slot_x + 1.068;
+    const double slot_lower_x =
+        0.0 + apa_param.GetParam().max_obs_lon_invasion_slot_dist;
+    const double slot_left_y =
+        slot_left_pt.y() - max_obs_lat_invasion_slot_dist;
+    const double slot_right_y =
+        slot_right_pt.y() + max_obs_lat_invasion_slot_dist;
 
     if (obs.x() < slot_upper_x && obs.x() > slot_lower_x &&
         obs.y() < slot_left_y && obs.y() > slot_right_y) {
       return ObsSlotType::SLOT_IN_OBS;
+    }
+
+    if (obs.x() < slot_lower_x && obs.y() < slot_left_y &&
+        obs.y() > slot_right_y) {
+      return ObsSlotType::SLOT_DIRECTLY_BEHIND_OBS;
     }
 
     const double slot_upper_upper_x = slot_upper_x + 3.5;

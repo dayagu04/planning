@@ -34,6 +34,7 @@
 #include "reference_path_manager.h"
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
+#include "utils/path_point.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
 
@@ -556,8 +557,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   if (is_ego_on_expressway_ &&
       distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
     GenerateLaneChangeTasksForNOA();
-  } else {
-    ResetForRampInfo();
   }
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
@@ -1516,14 +1515,17 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   if (!current_segment) {
     ResetForRampInfo();
     return;
+  } else {
+    is_in_sdmaproad_ = true;
   }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
-  if (current_segment->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY) {
+  if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
+      current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+    is_ego_on_expressway_ = true;
+  } else {
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
     ResetForRampInfo();
     return;
-  } else {
-    is_ego_on_expressway_ = true;
   }
   //计算ramp信息
   const auto& ramp_info =
@@ -1813,10 +1815,12 @@ void VirtualLaneManager::ResetForRampInfo() {
   distance_to_first_road_merge_ = NL_NMAX;
   distance_to_first_road_split_ = NL_NMAX;
   distance_to_route_end_ = NL_NMAX;
+  is_in_sdmaproad_ = false;
   is_ego_on_expressway_ = false;
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
+  is_within_hdmap_ = false;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(
@@ -1879,10 +1883,10 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   //(1)按照order_id的顺序排序输入lanes
   std::vector<iflyauto::ReferenceLineMsg> lane_msg;
   lane_msg.reserve(roads_ptr->reference_line_msg_size);
-  int relative_id_zero_nums = 0;
+  origin_relative_id_zero_nums_ = 0;
   for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
     if (roads_ptr->reference_line_msg[i].relative_id == 0) {
-      relative_id_zero_nums = relative_id_zero_nums + 1;
+      origin_relative_id_zero_nums_ = origin_relative_id_zero_nums_ + 1;
     }
     lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
   }
@@ -1960,29 +1964,11 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
           first_split_direction_, is_leaving_ramp_, lane_num_except_emergency,
           is_on_ramp_);
     }
-    if (relative_id_lane->get_relative_id() == 0) {
-      auto left_boundary_type =
-          relative_id_lane->get_left_lane_boundary().type_segments_size > 0
-              ? relative_id_lane->get_left_lane_boundary().type_segments[0].type
-              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
-      bool is_solid_left_boundary =
-          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
-
-      auto right_boundary_type =
-          relative_id_lane->get_right_lane_boundary().type_segments_size > 0
-              ? relative_id_lane->get_right_lane_boundary()
-                    .type_segments[0]
-                    .type
-              : iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
-      bool is_solid_right_boundary =
-          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID;
-      JSON_DEBUG_VALUE("is_solid_left_boundary", is_solid_left_boundary);
-      JSON_DEBUG_VALUE("is_solid_right_boundary", is_solid_right_boundary);
-    }
   }
 }
 
 void VirtualLaneManager::TrackEgoLane() {
+  const auto& function_info = session_->environmental_model().function_info();
   const auto& planning_context = session_->planning_context();
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
@@ -1991,7 +1977,6 @@ void VirtualLaneManager::TrackEgoLane() {
   const bool lane_keep_status = lane_change_status == kLaneKeeping;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto& function_info = session_->environmental_model().function_info();
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -2011,7 +1996,8 @@ void VirtualLaneManager::TrackEgoLane() {
       zero_relative_id_nums += 1;
     }
   }
-  if (!active) {
+  if (!active ||
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
     SelectEgoLaneWithoutPlan();
   } else {
     if (!planning_result.traj_points.empty()) {
@@ -2021,7 +2007,7 @@ void VirtualLaneManager::TrackEgoLane() {
         SelectEgoLaneWithoutPlan();
         return;
       }
-      if (is_on_highway_ && zero_relative_id_nums == 2) {
+      if (is_on_highway_ && zero_relative_id_nums >= 2) {
         if (!is_on_ramp_ && dis_to_ramp_ < 3000 && !is_leaving_ramp_ &&
             lane_keep_status) {
           // hack::针对分流 感知未提供分汇流点信息 作如下后处理
@@ -2062,27 +2048,60 @@ void VirtualLaneManager::TrackEgoLane() {
 void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const double ego_heading_angle = ego_state->heading_angle();
   double ego2lane_min = std::numeric_limits<double>::max();
   int origin_order_id = 0;
   int relative_id_diff = 0;
+  double total_lane_cost = 0.0;
+  const double lane_line_segment_length = 5.0;
+  const double default_lane_line_length = 100.0;
+  std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
+  const double init_pos_lateral_offset_weight = 1.0;
+  const double heading_angle_diff_weight = 1.5;
 
   for (auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
+        double average_heading_angle_cost = 0.0;
+        double heading_angle_cost = 0.0;
+        double pos_lateral_offset_cost = 0.0;
         std::shared_ptr<KDPath> frenet_coord =
             relative_id_lane->get_lane_frenet_coord();
-        double ego_s, ego_l;
+        double ego_s = 0.0;
+        double ego_l = 0.0;
         if (!frenet_coord->XYToSL(ego_state->ego_pose().x,
                                   ego_state->ego_pose().y, &ego_s, &ego_l)) {
           continue;
         }
-
-        if (ego_s < frenet_coord->Length()) {
-          if (std::fabs(ego_l) < ego2lane_min) {
-            ego2lane_min = std::fabs(ego_l);
-            origin_order_id = relative_id_lane->get_order_id();
-            relative_id_lane->set_relative_id(0);
+        if (ego_s > frenet_coord->Length()) {
+          continue;
+        }
+        planning_math::PathPoint ego_s_nearest_point =
+            frenet_coord->GetPathPointByS(ego_s);
+        int iter_count = 0;
+        for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+             s += lane_line_segment_length) {
+          if (s > default_lane_line_length + ego_s) {
+            break;
           }
+          double heading_angle = frenet_coord->GetPathCurveHeading(s);
+          heading_angle_cost += std::fabs(heading_angle - ego_heading_angle);
+          iter_count++;
+        }
+        pos_lateral_offset_cost = std::fabs(ego_l);
+        iter_count = std::max(1, iter_count);
+        average_heading_angle_cost = heading_angle_cost / iter_count;
+        total_lane_cost =
+            average_heading_angle_cost * heading_angle_diff_weight +
+            pos_lateral_offset_cost * init_pos_lateral_offset_weight;
+        std::vector<double> cost_list{average_heading_angle_cost, ego_l,
+                                      total_lane_cost};
+        lane_cost_list[relative_id_lane->get_order_id()] = cost_list;
+
+        if (total_lane_cost < ego2lane_min) {
+          ego2lane_min = std::fabs(ego_l);
+          origin_order_id = relative_id_lane->get_order_id();
+          relative_id_lane->set_relative_id(0);
         }
       }
     }

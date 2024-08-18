@@ -40,7 +40,9 @@ void IntelligentHeadlightControl::RunOnce() {
 void IntelligentHeadlightControl::Update() {
   // 获取IHC开关状态
   ihc_sys_.input.ihc_main_switch =
-      session_->mutable_environmental_model()->get_hmi_info().ihc_main_switch;
+      session_->environmental_model()
+          .get_local_view()
+          .function_state_machine_info.switch_sts.ihc_main_switch;
 
   // 获取当前仪表车速
   auto ptr_ego_state_manager =

@@ -45,7 +45,8 @@ class LifecycleDict {
 
 class TrackletMaintainer {
  public:
-  TrackletMaintainer(planning::framework::Session *session);
+  TrackletMaintainer(planning::framework::Session *session,
+                     const LateralObstacleConfig &config);
   virtual ~TrackletMaintainer();
 
   void apply_update(const std::shared_ptr<EgoStateManager> ego_state,
@@ -133,6 +134,7 @@ class TrackletMaintainer {
   bool is_car(const int type);
 
   planning::framework::Session *session_ = nullptr;
+  LateralObstacleConfig config_;
   std::shared_ptr<planning_math::KDPath> frenet_coord_;
   LifecycleDict seq_state_;
   std::map<int, TrackedObject *> object_map_;
