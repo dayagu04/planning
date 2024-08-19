@@ -1,3 +1,7 @@
+# planning.2.5.0
+####  修改说明
+1. 使用新定位，弃用老定位接口:/iflytek/localization/ego_pose
+
 # planning.2.4.9
 ####  修改说明
 1. Add new HMI/FSM
