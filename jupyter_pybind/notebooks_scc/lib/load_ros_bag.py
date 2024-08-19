@@ -882,12 +882,12 @@ class LoadRosbag:
       '/iflytek/control/control_command',
       '/iflytek/control/debug_info',
       '/iflytek/fusion/parking_slot',
-      '/iflytek/system_state/soc_state',
+      '/iflytek/fsm/soc_state',
     ]
     detail_list = [
       '/iflytek/planning/plan',
       '/iflytek/planning/debug_info',
-      '/iflytek/system_state/soc_state',
+      '/iflytek/fsm/soc_state',
     ]
     print("========【使用说明】========")
     print("========鼠标滚轮缩放时间轴，鼠标悬停或点击以下topic的点，可以在浏览器控制台（F12打开）查看该msg具体内容: ")

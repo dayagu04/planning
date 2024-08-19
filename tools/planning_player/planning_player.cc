@@ -37,8 +37,7 @@ static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
 static constexpr auto TOPIC_CONTROL_COMMAN = "/iflytek/control/control_command";
 static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
 static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
-static constexpr auto TOPIC_FUNC_STATE_MACHINE =
-    "/iflytek/system_state/soc_state";
+static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
@@ -622,7 +621,7 @@ void PlanningPlayer::PlayOneFrame(
       find_function_state_machine = true;
     } else {
       std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/system_state/soc_state" << std::endl;
+                << " missing /iflytek/fsm/soc_state" << std::endl;
     }
   }
   if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
@@ -1397,7 +1396,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
       find_function_state_machine = true;
     } else {
       std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/system_state/soc_state" << std::endl;
+                << " missing /iflytek/fsm/soc_state" << std::endl;
     }
 
     if (frame_num_ >= frame_num_before_enter_auto_) {  // enter auto after 1.5s

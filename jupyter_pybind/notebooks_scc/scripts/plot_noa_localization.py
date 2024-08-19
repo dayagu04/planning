@@ -489,7 +489,7 @@ class LocalizationApaPlotter(object):
             lat = float(strs[2])
             lon = float(strs[3])
             utc_time = strs[-1].strip().split(':')
-            time = float(utc_time[0]) * 3600.0 + float(utc_time[1]) * 60.0 + float(utc_time[2]) 
+            time = float(utc_time[0]) * 3600.0 + float(utc_time[1]) * 60.0 + float(utc_time[2])
             self.offline_insd_utc_time_vec.append(time)
             heading = float(strs[8])
             self.offline_insd_lat_vec.append(lat)
@@ -725,7 +725,7 @@ class LocalizationApaPlotter(object):
     bag = rosbag.Bag(self.file_path)
     start_function_state_machine_timestamp = None
     last_function_state_machine_timestamp = None
-    for topic, msg, t in bag.read_messages('/iflytek/system_state/soc_state'):
+    for topic, msg, t in bag.read_messages('/iflytek/fsm/soc_state'):
       self.function_state_machine_timestamp_vec.append(msg.msg_header.timestamp)
       if start_function_state_machine_timestamp is None:
         start_function_state_machine_timestamp = msg.msg_header.timestamp
