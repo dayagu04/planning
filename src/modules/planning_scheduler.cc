@@ -659,6 +659,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.distance_to_toll_station =
       (uint)virtual_lane_manager
           ->ramp_direction();  // 临时将toll_station改为ramp_direction
+  // planning_hmi_info->ad_info.noa_exit_warning_level_distance = ;  // 到终点的距离 王丰
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
   // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
   // planning_hmi_info->ad_info.ramp_direction = ;      // 义龙填写
