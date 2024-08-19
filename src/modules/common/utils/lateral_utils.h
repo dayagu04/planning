@@ -14,7 +14,8 @@ bool calc_dist(const std::vector<double> &path_y, double x, double y,
 
 double get_boot_time();
 
-double cal_lat_offset(double ego_vel, double dash_length);
+double cal_lat_offset(double ego_vel, double dash_length,
+                      double max_front_wheel_angle, double wheel_base);
 }  // namespace planning
 
 #endif
