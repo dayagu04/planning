@@ -1893,6 +1893,9 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   lane_msg.reserve(roads_ptr->reference_line_msg_size);
   origin_relative_id_zero_nums_ = 0;
   for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
+    if (roads_ptr->reference_line_msg[i].lane_reference_line.virtual_lane_refline_points_size < 3) {
+      continue;
+    }
     if (roads_ptr->reference_line_msg[i].relative_id == 0) {
       origin_relative_id_zero_nums_ = origin_relative_id_zero_nums_ + 1;
     }
