@@ -1018,6 +1018,15 @@ bool SlotManagement::GenObstacles(
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
     CollisionDetector::ObsSlotType obs_slot_type;
+    std::vector<Eigen::Vector2d> tlane_vec;
+    tlane_vec.emplace_back(A);
+    tlane_vec.emplace_back(B);
+    tlane_vec.emplace_back(C);
+    tlane_vec.emplace_back(D);
+    tlane_vec.emplace_back(E);
+    tlane_vec.emplace_back(F);
+    tlane_vec.emplace_back(channel_point_2);
+    tlane_vec.emplace_back(channel_point_1);
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
       obs_slot_type = collision_detector_ptr->GetObsSlotType(obs_pos, slot_pt,
                                                              is_left_side);
@@ -1070,20 +1079,8 @@ bool SlotManagement::GenObstacles(
         }
       }
 
-      if (std::fabs(obs_pos.y()) > std::fabs(A.y()) ||
-          std::fabs(obs_pos.y()) > std::fabs(F.y()) ||
-          obs_pos.x() > channel_point_1.x()) {
-        // obs is outside channel, lose it
-        continue;
-      }
-
-      if (obs_pos.y() > pt_left.y() && obs_pos.x() < pt_left.x()) {
-        // obs is in the lower left T-lane area, lose it
-        continue;
-      }
-
-      if (obs_pos.y() < pt_right.y() && obs_pos.x() < pt_right.x()) {
-        // obs is in the lower right T-lane area, lose it
+      // if obs is in tlane area lose it
+      if (!pnc::geometry_lib::IsPointInPolygon(tlane_vec, obs_pos)) {
         continue;
       }
 
@@ -2614,20 +2611,22 @@ bool SlotManagement::UpdateEgoSlotInfo(
     }
     const auto &obs_pt_vec = frame_.obs_pt_map[select_slot.id()];
     ego_slot_info.obs_pt_vec_slot.reserve(obs_pt_vec.size());
-    for (const auto &obs_pt : obs_pt_vec) {
-      const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-    }
+    ego_slot_info.obs_pt_vec_slot = obs_pt_vec;
+    // for (const auto &obs_pt : obs_pt_vec) {
+    //   const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+    //   ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+    // }
   }
 
   else {
     // use fus obj and ground line
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
-    for (const auto &obs_pt : frame_.obs_pt_vec) {
-      const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-    }
+    ego_slot_info.obs_pt_vec_slot = frame_.obs_pt_vec;
+    // for (const auto &obs_pt : frame_.obs_pt_vec) {
+    //   const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+    //   ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+    // }
   }
 
   return true;

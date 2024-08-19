@@ -313,10 +313,18 @@ const bool PerpendicularInPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.fus_obj_valid_flag =
       slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
   ego_slot_info.obs_pt_vec_slot.clear();
-  ego_slot_info.obs_pt_vec_slot =
-      slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot;
+  ego_slot_info.obs_pt_vec_slot.reserve(
+      slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot.size());
 
-  if (!frame_.is_fix_slot && !ego_slot_info.fix_limiter) {
+  for (const Eigen::Vector2d& obs_pt :
+       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot) {
+    const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+  }
+  // ego_slot_info.obs_pt_vec_slot =
+  //     slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot;
+
+  if (!ego_slot_info.fix_limiter) {
     ego_slot_info.limiter = slot_manager_ptr_->GetEgoSlotInfo().limiter;
   }
 
@@ -1273,6 +1281,16 @@ void PerpendicularInPlanner::GenObstacles() {
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
     CollisionDetector::ObsSlotType obs_slot_type;
+    std::vector<Eigen::Vector2d> tlane_vec;
+    tlane_vec.emplace_back(A);
+    tlane_vec.emplace_back(B);
+    tlane_vec.emplace_back(C);
+    tlane_vec.emplace_back(D);
+    tlane_vec.emplace_back(E);
+    tlane_vec.emplace_back(F);
+    tlane_vec.emplace_back(channel_point_2);
+    tlane_vec.emplace_back(channel_point_1);
+
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
       obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
           obs_pos, slot_pt, is_left_side);
@@ -1334,25 +1352,8 @@ void PerpendicularInPlanner::GenObstacles() {
         }
       }
 
-      if (std::fabs(obs_pos.y()) > std::fabs(A.y()) ||
-          std::fabs(obs_pos.y()) > std::fabs(F.y()) ||
-          obs_pos.x() > channel_point_1.x()) {
-        // obs is outside channel, lose it
-        continue;
-      }
-
-      if (obs_pos.y() > pt_left.y() && obs_pos.x() < pt_left.x()) {
-        // obs is in the lower left T-lane area, lose it
-        continue;
-      }
-
-      if (obs_pos.y() < pt_right.y() && obs_pos.x() < pt_right.x()) {
-        // obs is in the lower right T-lane area, lose it
-        continue;
-      }
-
-      if (obs_pos.x() < obstacle_t_lane_.pt_lower_boundry_pos.x()) {
-        // obs is in the lower boundry, lose it
+      // if obs is not in tlane area lose it
+      if (!pnc::geometry_lib::IsPointInPolygon(tlane_vec, obs_pos)) {
         continue;
       }
 

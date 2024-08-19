@@ -13,6 +13,7 @@
 #include "apa_plan_base.h"
 #include "apa_plan_interface.h"
 #include "collision_detection.h"
+#include "config_context.h"
 #include "math_lib.h"
 #include "perpendicular_park_in_planner.h"
 #include "perpendicular_path_planner.h"
@@ -24,16 +25,20 @@ static planning::apa_planner::PerpendicularPathPlanner *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
-  const std::string flag_file_path =
-      "/asw/planning/res/conf/planning_gflags.conf";
-  google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+  // const std::string flag_file_path =
+  //     "/asw/planning/res/conf/planning_gflags.conf";
+  // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+
+  // FilePath::SetName("slant_simulation_pybind");
+  // InitGlog(FilePath::GetName().c_str());
+  (void)planning::common::ConfigurationContext::Instance();
 
   pBase = new PerpendicularPathPlanner();
   pBase->Reset();
 
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
 
-  pApaPlanInterface->Init();
+  pApaPlanInterface->Init(true);
 
   return 0;
 }
@@ -66,8 +71,6 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     double ds, bool is_complete_path,
                                     bool is_astar, double inside_dx,
                                     std::vector<double> obs_params) {
-  // FilePath::SetName("slant_simulation_pybind");
-  // InitGlog(FilePath::GetName().c_str());
   obs_pts_.clear();
   planning::apa_planner::ApaPlannerBase::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;

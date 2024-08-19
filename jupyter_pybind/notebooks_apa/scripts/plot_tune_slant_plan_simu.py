@@ -16,7 +16,6 @@ from jupyter_pybind import slant_planning_py
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-car_xb, car_yb = load_car_params_patch_parking(JAC_S811)
 coord_tf = coord_transformer()
 
 data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -130,6 +129,7 @@ slant_planning_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=-0.83, step=0.01)
     self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=-0.6, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=0.2)
@@ -155,7 +155,8 @@ class LocalViewSlider:
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
 
-    ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
+    ipywidgets.interact(slider_callback, vehicle_type = self.vehicle_type_slider,
+                                         ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
                                          is_complete = self.is_complete_slider,
@@ -178,9 +179,18 @@ class LocalViewSlider:
                                        )
 
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading, is_left, is_astar, is_complete, slot_phi, slot_inside_obs, right_obj_dx,
+def slider_callback(vehicle_type, ego_x, ego_y, ego_heading, is_left, is_astar, is_complete, slot_phi, slot_inside_obs, right_obj_dx,
                     right_obj_dy, left_obj_dx, left_obj_dy, channel_width,  slot_pt0_x, slot_pt0_y, slot_width, slot_length, inside_dx, ):
   kwargs = locals()
+
+  if vehicle_type == 0:
+    vehicle_type = 'JAC_S811'
+  elif vehicle_type == 1:
+    vehicle_type = 'CHERY_T26'
+  elif vehicle_type == 2:
+    vehicle_type = 'CHERY_E0X'
+
+  car_xb, car_yb = load_car_params_patch_parking(JAC_S811)
 
   car_xn = []
   car_yn = []

@@ -59,9 +59,11 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
                            py::bytes &localization_info_bytes,
                            py::bytes &vehicle_service_output_info_bytes,
                            py::bytes &uss_wave_info_bytes) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -71,10 +73,11 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::LocalizationEstimate,
                     struct_msgs::LocalizationEstimate>(localization_info_bytes);
 
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
   iflyauto::UssWaveInfo uss_wave_info =
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
@@ -97,9 +100,11 @@ const bool InterfaceUpdateClosedLoop(
     py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -109,10 +114,11 @@ const bool InterfaceUpdateClosedLoop(
       BytesToStruct<iflyauto::LocalizationEstimate,
                     struct_msgs::LocalizationEstimate>(localization_info_bytes);
 
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
   local_view.localization_estimate = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
@@ -154,9 +160,11 @@ const bool InterfaceUpdateParam(
     planner->SetSimuParam(param);
   }
 
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -166,10 +174,11 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::LocalizationEstimate,
                     struct_msgs::LocalizationEstimate>(localization_info_bytes);
 
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
   iflyauto::UssWaveInfo uss_wave_info =
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(

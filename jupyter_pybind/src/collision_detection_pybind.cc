@@ -9,6 +9,8 @@
 #include "Eigen/Core"
 #include "apa_plan_interface.h"
 #include "collision_detection.h"
+#include "config_context.h"
+#include "debug_info_log.h"
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"
@@ -25,13 +27,23 @@ static CollisionDetector::CollisionResult collision_result;
 static std::vector<Eigen::Vector3d> pt_vec;
 static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
 static bool is_obs_in_car = false;
+static bool is_line_intersect_arc = false;
+static pnc::geometry_lib::LineSegment gl_line_seg;
 static Eigen::Vector2d obs;
 static double length = 0.0;
 
 int Init() {
+  // const std::string flag_file_path =
+  //     "/asw/planning/res/conf/planning_gflags.conf";
+  // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+
+  // FilePath::SetName("slant_simulation_pybind");
+  // InitGlog(FilePath::GetName().c_str());
+  (void)planning::common::ConfigurationContext::Instance();
+
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
 
-  pApaPlanInterface->Init();
+  pApaPlanInterface->Init(true);
   pBaseColDetAir = new CollisionDetector();
   return 0;
 }
@@ -61,12 +73,15 @@ void SetObstacleLine(const double obstacles_x1, const double obstacles_y1,
   obs_line_global.SetPoints(obstacle_global_1, obstacle_global_2);
   obs_line_global_vec.emplace_back(obs_line_global);
 
+  gl_line_seg = obs_line_global;
+
   pBaseColDetAir->SetLineObstacles(obs_line_global_vec);
 }
 
-void SetParam(const double lat_inflation) {
+void SetParam(const double lat_inflation, const double bound_expand) {
   CollisionDetector::Paramters param;
   param.lat_inflation = lat_inflation;
+  param.bound_expand = bound_expand;
   pBaseColDetAir->SetParam(param);
 }
 
@@ -85,7 +100,7 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
         pBaseColDetAir->UpdateByLineObs(line_seg, ego_pos_start[2]);
   }
   std::vector<pnc::geometry_lib::PathPoint> pose_vec;
-  pnc::geometry_lib::SamplePointSetInLineSeg(pose_vec, line_seg, 0.5);
+  pnc::geometry_lib::SamplePointSetInLineSeg(pose_vec, line_seg, 0.1);
   for (size_t i = 0; i < pose_vec.size(); ++i) {
     pt_vec.emplace_back(pose_vec[i].pos.x(), pose_vec[i].pos.y(),
                         pose_vec[i].heading);
@@ -97,6 +112,8 @@ void UpdateRefTrajLine(const Eigen::Vector3d ego_pos_start,
           Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
           ego_pos_start[2]),
       0.02);
+
+  is_line_intersect_arc = false;
 }
 
 void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
@@ -120,7 +137,7 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
     collision_result = pBaseColDetAir->UpdateByLineObs(arc, ego_pos_start[2]);
   }
   std::vector<pnc::geometry_lib::PathPoint> pose_vec;
-  pnc::geometry_lib::SamplePointSetInArc(pose_vec, arc, 0.5);
+  pnc::geometry_lib::SamplePointSetInArc(pose_vec, arc, 0.1);
   for (size_t i = 0; i < pose_vec.size(); ++i) {
     pt_vec.emplace_back(pose_vec[i].pos.x(), pose_vec[i].pos.y(),
                         pose_vec[i].heading);
@@ -132,6 +149,15 @@ void UpdateRefTrajArc(const Eigen::Vector3d ego_pos_start,
           Eigen::Vector2d(ego_pos_start[0], ego_pos_start[1]),
           ego_pos_start[2]),
       0.02);
+
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> intersections;
+
+  if (pnc::geometry_lib::GetArcLineIntersection(intersections, arc,
+                                                gl_line_seg) > 0) {
+    is_line_intersect_arc = true;
+  } else {
+    is_line_intersect_arc = false;
+  }
 }
 
 const double GetRemainDist() { return float(collision_result.remain_dist); }
@@ -155,6 +181,12 @@ const Eigen::Vector2d GetCollisionPointEgoGlobal() {
 const std::vector<Eigen::Vector3d> GetSamplePt() { return pt_vec; }
 
 const bool GetObsIsInCar() { return is_obs_in_car; }
+
+const bool GetLineIntersectArc() { return is_line_intersect_arc; }
+
+const std::vector<Eigen::Vector2d> GetTrajBound() {
+  return collision_result.traj_bound;
+}
 
 const Eigen::Vector2d GetTrunCenterCoord(
     const Eigen::Vector3d ego_pos_start,
@@ -205,5 +237,7 @@ PYBIND11_MODULE(collision_detection_py, m) {
       .def("GetCarLineOrder", &GetCarLineOrder)
       .def("SetParam", &SetParam)
       .def("GetSamplePt", &GetSamplePt)
-      .def("GetObsIsInCar", &GetObsIsInCar);
+      .def("GetObsIsInCar", &GetObsIsInCar)
+      .def("GetTrajBound", &GetTrajBound)
+      .def("GetLineIntersectArc", &GetLineIntersectArc);
 }

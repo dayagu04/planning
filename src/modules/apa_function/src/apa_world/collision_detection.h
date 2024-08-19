@@ -58,17 +58,19 @@ class CollisionDetector {
     Eigen::Vector2d col_pt_ego_local;
     Eigen::Vector2d col_pt_obs_global;
     int car_line_order = -1;
-    CarMoveBound car_move_bound;
+    std::vector<Eigen::Vector2d> traj_bound;
     ObsType obs_type = NONE_OBS;
   };
 
   struct Paramters {
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+    double bound_expand = 0.5;
     Paramters() = default;
     Paramters(const double lat_inf) { lat_inflation = lat_inf; }
 
     void Reset() {
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+      bound_expand = 0.5;
     }
   };
 
@@ -164,9 +166,19 @@ class CollisionDetector {
                              const pnc::geometry_lib::PathPoint &ego_pose,
                              double safe_dist);
 
-  const bool CalCarMoveBound(CarMoveBound &car_move_bound,
-                             const pnc::geometry_lib::PathPoint &start_pose,
-                             const pnc::geometry_lib::PathPoint &target_pose);
+  const bool CalTrajBound(std::vector<Eigen::Vector2d> &traj_bound,
+                          const pnc::geometry_lib::PathPoint &start_pose,
+                          const pnc::geometry_lib::PathPoint &target_pose,
+                          bool is_line);
+
+  const std::vector<Eigen::Vector2d> CalTrajBound(
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose);
+
+  const std::vector<Eigen::Vector2d> CalTrajBound(
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose,
+      const pnc::geometry_lib::Arc &arc);
 
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,

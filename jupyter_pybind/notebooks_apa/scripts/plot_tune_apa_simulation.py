@@ -14,7 +14,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240814/20240814-21-02-00/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-14-21-02-00_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240814/20240814-20-42-23/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-14-20-42-23_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -254,6 +254,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   soc_state_msg_buff = BytesIO()
   soc_state_msg.serialize(soc_state_msg_buff)
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
+  current_state = soc_state_msg.current_state
 
   fus_parking_msg_buff = BytesIO()
   fus_parking_msg.serialize(fus_parking_msg_buff)
@@ -266,6 +267,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   vs_msg_buff = BytesIO()
   vs_msg.serialize(vs_msg_buff)
   vs_msg_bytes = vs_msg_buff.getvalue()
+  steering_wheel_angle = vs_msg.steering_wheel_angle
 
   wave_msg_buff = BytesIO()
   wave_msg.serialize(wave_msg_buff)
@@ -326,7 +328,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
                                     obs_x_vec, obs_y_vec,
-                                    gl_coord, fus_obj_coord, fus_occ_obj_coord)
+                                    gl_coord, fus_obj_coord, fus_occ_obj_coord, current_state, steering_wheel_angle)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],
