@@ -127,7 +127,13 @@ bool LaneChangeRequest::IsDashedLineEnough(
       current_lane != nullptr
           ? virtual_lane_mgr_->must_change_lane(current_lane, distance_thld)
           : false;
-  if (!must_change_lane && cal_lat_offset(ego_vel, dash_length) < 3.6) {
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double max_front_wheel_angle = vehicle_param.max_front_wheel_angle;
+  const double wheel_base = vehicle_param.wheel_base;
+  if (!must_change_lane &&
+      cal_lat_offset(ego_vel, dash_length, max_front_wheel_angle, wheel_base) <
+          3.6) {
     LOG_ERROR("!dashed_enough \n");
     return false;
   }
