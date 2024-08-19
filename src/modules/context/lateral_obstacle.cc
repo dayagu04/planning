@@ -132,7 +132,7 @@ void LateralObstacle::LateralObstacleDecision(
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
       }
       // 平行车辆
-    } else if (item.d_rel < 0 && item.d_rel > -(ego_car_length + item.length)) {
+    } else if (item.d_rel <= 0 && item.d_rel > -(ego_car_length + item.length)) {
       if (ego_l < item.l) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       } else {
