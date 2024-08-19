@@ -29,7 +29,7 @@
 #include "gap_selector_interface.h"
 // #include "gap_selector_common.h"
 // #include "gap_selector_debug_info.h"
-#include "config/vehicle_param_tmp.h"
+// #include "config/vehicle_param_tmp.h"
 #include "spline_projection.h"
 #include "task_basic_types.h"
 #include "tasks/task.h"

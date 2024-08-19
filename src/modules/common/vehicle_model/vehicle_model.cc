@@ -6,7 +6,7 @@
 #include <iostream>
 #include <iterator>
 
-#include "config/vehicle_param_tmp.h"
+// #include "config/vehicle_param_tmp.h"
 #include "config_context.h"
 #include "mjson/mjson.hpp"
 
