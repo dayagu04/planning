@@ -1989,7 +1989,7 @@ void VirtualLaneManager::TrackEgoLane() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   int zero_relative_id_nums = 0;
-  double select_split_min_distance_threshold = 10.0;
+  double select_split_min_distance_threshold = 0.0;
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
 
