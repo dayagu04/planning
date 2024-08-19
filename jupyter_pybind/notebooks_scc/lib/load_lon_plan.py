@@ -644,6 +644,12 @@ def load_lon_global_figure(bag_loader):
   for i in range(len(soc_state_info)):
      t_soc_state.append(soc_state_t[i])
      fsm_cur_state.append(soc_state_info[i].current_state)
+  if len(t_soc_state) > 0:
+    x_range = [t_soc_state[0], t_soc_state[-1]]
+    x_value = t_soc_state[10]
+  else:
+    x_range = [0, 1]
+    x_value = 0
 
   fsm_state_command.data.update({
     'time': t_soc_state,
@@ -667,15 +673,15 @@ def load_lon_global_figure(bag_loader):
   })
 
 
-  fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = [t_soc_state[0], t_soc_state[-1]], width=600, height=300)
+  fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = x_range, width=600, height=300)
   f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
-  fig_fsm_state.text(x=t_soc_state[10], y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=t_soc_state[10], y=10, text=['SCC_ACTIVE:12'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=t_soc_state[10], y=8, text=['SCC_STANDSTILL:13'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=t_soc_state[10], y=6, text=['SCC_STAND_ACTIVE:14'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=t_soc_state[10], y=4, text=['SCC_STAND_WAIT:15'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=t_soc_state[10], y=2, text=['SCC_STAND_OVERRIDE:16'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
-  fig_fsm_state.text(x=t_soc_state[10], y=0, text=['SCC_STAND_SECURE:17'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=8, text=['SCC_STANDBY:7'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=10, text=['SCC_ACTIVE:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=2, text=['SCC_OVERRIDE:9'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=6, text=['NOA_STANDBY:10'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=4, text=['NOA_ACTIVE:11'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=0, text=['NOA_OVERRIDE:12'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
 
   fig_replan_status = bkp.figure(x_axis_label='time', y_axis_label='plan debug multi',x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600, height=300)
   f_replan_status = fig_replan_status.line('time', 'replan_status', source = plan_debug_multi, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'replan_status')

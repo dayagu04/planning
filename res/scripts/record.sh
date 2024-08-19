@@ -3,7 +3,7 @@
 if [ $# -ne 2 ]; then
     echo "usage: record.sh [output path] [bag prefix]"
     echo "example: record.sh /user_data long_time"
-    exit -1 
+    exit -1
 fi
 
 output_dir=`realpath $1`
@@ -30,7 +30,7 @@ cyber_recorder record -c \
     /iflytek/adas_function_debug \
     /iflytek/prediction/prediction_result \
     /iflytek/fusion/objects \
-    /iflytek/system_state/soc_state \
+    /iflytek/fsm/soc_state \
     /iflytek/control/control_command \
     /iflytek/control/debug_info \
     /iflytek/hmi/mcu_inner \
