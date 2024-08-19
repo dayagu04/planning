@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240814/20240814-17-05-10/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-14-17-05-10_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240815/20240815-14-24-57/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-15-14-24-57_no_camera.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -20,7 +20,8 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1000
+fig1.height = 900
+fig1.width = 700
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -76,12 +77,12 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=400, height=550)
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=900)
-data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=400, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=400, height=600)
-data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=400, height=500)
-data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=400, height=300)
+data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=350, height=600)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
+data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=300)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=600)
+data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=500)
+data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=300)
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -294,6 +295,6 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_cone_lc_table, data_behavior_table_2)), notebook_handle=True)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), column(data_obstacle_table, data_behavior_table_2), column(data_overtake_lc_table, data_cone_lc_table)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
 # slider_class = ObjText(obj_id_handler)
