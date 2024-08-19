@@ -137,9 +137,9 @@ void SlotManagement::AddFusionObjects() {
   uint8 fusion_object_num;
   if (use_fus_occ_obj) {
     fusion_object_num =
-        frame_.fusion_occupancy_objects_info_ptr->fusion_object_num;
+        frame_.fusion_occupancy_objects_info_ptr->fusion_object_size;
   } else {
-    fusion_object_num = frame_.fusion_objects_info_ptr->fusion_object_num;
+    fusion_object_num = frame_.fusion_objects_info_ptr->fusion_object_size;
   }
 
   if (fusion_object_num == 0) {
@@ -158,7 +158,7 @@ void SlotManagement::AddFusionObjects() {
       fusion_occupancy_object =
           frame_.fusion_occupancy_objects_info_ptr->fusion_object[i]
               .additional_occupancy_info;
-      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_num; ++j) {
+      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_size; ++j) {
         fs_pt << fusion_occupancy_object.polygon_points[j].x,
             fusion_occupancy_object.polygon_points[j].y;
         frame_.obs_pt_vec.emplace_back(fs_pt);
@@ -169,7 +169,7 @@ void SlotManagement::AddFusionObjects() {
     for (uint8 i = 0; i < fusion_object_num; ++i) {
       fusion_object =
           frame_.fusion_objects_info_ptr->fusion_object[i].additional_info;
-      for (uint32 j = 0; j < fusion_object.polygon_points_num; ++j) {
+      for (uint32 j = 0; j < fusion_object.polygon_points_size; ++j) {
         fs_pt << fusion_object.polygon_points[j].x,
             fusion_object.polygon_points[j].y;
         frame_.obs_pt_vec.emplace_back(fs_pt);
@@ -2948,18 +2948,18 @@ void SlotManagement::UpdateLimiterInfoInParking() {
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_slot;
     double move_dist;
     const double limiter_len =
-        std::hypot(select_fusion_slot.limiter_position[0].x -
-                       select_fusion_slot.limiter_position[1].x,
-                   select_fusion_slot.limiter_position[0].y -
-                       select_fusion_slot.limiter_position[1].y);
+        std::hypot(select_fusion_slot.limiters[0].end_points[0].x -
+                       select_fusion_slot.limiters[0].end_points[1].x,
+                   select_fusion_slot.limiters[0].end_points[0].y -
+                       select_fusion_slot.limiters[0].end_points[1].y);
     if (limiter_len > kEps) {
       // there is limiter in slot
-      limiter_global.first << select_fusion_slot.limiter_position[0].x,
-          select_fusion_slot.limiter_position[0].y;
+      limiter_global.first << select_fusion_slot.limiters[0].end_points[0].x,
+          select_fusion_slot.limiters[0].end_points[0].y;
       // std::cout << "fus has limiter\n";
 
-      limiter_global.second << select_fusion_slot.limiter_position[1].x,
-          select_fusion_slot.limiter_position[1].y;
+      limiter_global.second << select_fusion_slot.limiters[0].end_points[1].x,
+          select_fusion_slot.limiters[0].end_points[1].y;
 
       move_dist = apa_param.GetParam().limiter_move_dist;
 

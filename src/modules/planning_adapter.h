@@ -170,7 +170,7 @@ class PlanningAdapter {
   void ReportFmIfno(uint64 alarmId, uint64 alarmObj, bool fault_exist);
 
  private:
-  void UpdateInputListInfo(iflyauto::Header& header);
+  void UpdateInputListInfo(iflyauto::MsgMeta& msg_meta);
 
   std::mutex msg_mutex_;
 

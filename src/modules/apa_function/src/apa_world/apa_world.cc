@@ -66,7 +66,7 @@ void ApaWorld::UpdateEgoState() {
   //     local_view_ptr_->vehicle_service_output_info.vehicle_speed();
 
   measures_ptr_->vel_ego =
-      local_view_ptr_->localization_estimate.pose.linear_velocity_from_wheel;
+      local_view_ptr_->localization.velocity.velocity_body.vx;
 
   // calculate standstill time by velocity
   if (std::fabs(measures_ptr_->vel_ego) < param.car_static_velocity_strict) {

@@ -155,7 +155,7 @@ bool PlanningScheduler::RunOnce(
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.timestamp = start_timestamp;
-  planning_output->header.start_timestamp = start_timestamp_us;
+  planning_output->msg_header.stamp = start_timestamp_us;
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -451,7 +451,7 @@ void PlanningScheduler::FillPlanningTrajectory(
 void PlanningScheduler::GenerateStopTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 更新输出
-  planning_output->header.start_timestamp = IflyTime::Now_ms();
+  planning_output->msg_header.stamp = IflyTime::Now_ms();
 
   auto trajectory = &(planning_output->trajectory);
   // Hack: 长时规划
@@ -484,7 +484,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const auto &lat_offset_decider_output =
       session_.planning_context().lateral_offset_decider_output();
 
-  planning_hmi_info->header.timestamp = IflyTime::Now_us();
+  planning_hmi_info->msg_header.stamp = IflyTime::Now_us();
   // HMI for ldw
   const auto &lkas_info =
       session_.mutable_planning_context()->lane_keep_assit_function();
