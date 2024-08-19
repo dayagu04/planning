@@ -738,7 +738,7 @@ class LoadRosbag:
     # load state machine msg
     try:
       soc_state_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/fsm/soc_state"):
         soc_state_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in soc_state_msg_dict.items():
@@ -754,7 +754,7 @@ class LoadRosbag:
         self.soc_state_msg['enable'] = False
     except:
       self.soc_state_msg['enable'] = False
-      print('missing /iflytek/system_state/soc_state !!!')
+      print('missing /iflytek/fsm/soc_state !!!')
 
     # load ehr static map msg
     try:
