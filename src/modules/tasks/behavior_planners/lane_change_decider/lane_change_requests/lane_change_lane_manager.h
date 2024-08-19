@@ -17,7 +17,7 @@ class LaneChangeLaneManager {
   ~LaneChangeLaneManager() {}
 
   void assign_lc_lanes(int lane_virtual_id);
-  void reset_lc_lanes();
+  void reset_lc_lanes(const StateMachineLaneChangeStatus state_machine_lc_state);
   void reset_origin_lane() {
     origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
   }

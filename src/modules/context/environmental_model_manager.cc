@@ -1297,12 +1297,17 @@ void EnvironmentalModelManager::RunBlinkState(
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE =
-      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
-      (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE =
-      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
-      (lc_request_direction == RIGHT_CHANGE);
+  const auto lc_source = lane_change_decider_output.lc_request_source;
+  bool is_ilc_left_change =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
+      (state == kLaneChangePropose)) &&
+      (lc_request_direction == LEFT_CHANGE) &&
+      (lc_source == INT_REQUEST);
+  bool is_ilc_right_change =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
+      (state == kLaneChangePropose)) &&
+      (lc_request_direction == RIGHT_CHANGE) &&
+      (lc_source == INT_REQUEST);
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
@@ -1319,11 +1324,11 @@ void EnvironmentalModelManager::RunBlinkState(
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
-          is_LC_RCHANGE) {
+          is_ilc_right_change) {
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_LC_RCHANGE) {
-        // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+      } else if (is_ilc_right_change) {
+        //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::LEFT;
@@ -1334,9 +1339,9 @@ void EnvironmentalModelManager::RunBlinkState(
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
-          is_LC_LCHANGE) {
+          is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_LC_LCHANGE) {
+      } else if (is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::RIGHT;

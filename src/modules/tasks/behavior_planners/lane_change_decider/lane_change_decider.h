@@ -49,6 +49,7 @@ class LaneChangeDecider : public Task {
   std::shared_ptr<ObjectSelector> object_selector_;
   std::shared_ptr<LaneChangeStateMachineManager> lc_sm_mgr_;
   int scenario_ = SCENARIO_CRUISE;
+  RequestSource last_frame_lc_req_source_ = NO_REQUEST;
 };
 
 }  // namespace planning
