@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "session.h"
+#include "virtual_lane.h"
 namespace planning {
 struct StateTransitionInfo {
   StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
@@ -181,7 +182,8 @@ class LaneChangeStateMachineManager {
   void CalculateLatOffsetOfOverlappedLanes(
       double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
-
+  bool IsMergeRegion(int* merge_lane_virtual_id);
+  bool IsOverlapWithOtherLaneOnEndRegion(const std::shared_ptr<ReferencePath> reference_path, const RelativeDirection rel_dir);
  private:
   ScenarioStateMachineConfig config_;
   framework::Session* session_;
@@ -206,5 +208,6 @@ class LaneChangeStateMachineManager {
   bool must_change_lane_ = false;
   int scenario_ = SCENARIO_CRUISE;
   RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
+  bool is_front_merge_region_ = false;
 };
 }  // namespace planning

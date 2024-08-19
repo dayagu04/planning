@@ -102,6 +102,9 @@ struct LaneChangeDeciderOutput {
   double start_move_dist_lane;
 
   CoarsePlanningInfo coarse_planning_info;
+  bool is_merge_region = false;
+  MergeDirection merge_direction = NONE_LANE_MERGE;
+  int merge_lane_virtual_id;
 };
 
 }  // namespace planning
