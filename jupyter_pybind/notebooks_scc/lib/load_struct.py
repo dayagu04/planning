@@ -26,7 +26,19 @@ def find(msg, t):
       return msg['data'][ind]
   else:
     return None
-
+def findbyseq(msg, t):
+  try:
+    if msg['enable']  == True:
+      t_list = msg['seq']
+      ind = binary_search(t_list, t)
+      if(ind == -1):
+        return None
+      else:
+        return msg['data'][ind]
+    else:
+      return None
+  except:
+    return None
 def binary_search(in_list, target):
   low = 0
   high = len(in_list) - 1

@@ -87,7 +87,15 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     if road_msg_tmp != None:
       road_msg = road_msg_tmp
-      rdg_lane_lines_msg_tmp = find(bag_loader.rdg_lane_lines_msg, road_msg_tmp.isp_timestamp)
+      index = 0
+      try:
+        for i in range(16):
+          if (road_msg_tmp.msg_header.input_list[i].input_type == 22):
+            index = i
+            break
+        rdg_lane_lines_msg_tmp = findbyseq(bag_loader.rdg_lane_lines_msg, road_msg_tmp.msg_header.input_list[index].seq)
+      except:
+        rdg_lane_lines_msg_tmp = None
       if rdg_lane_lines_msg_tmp != None:
         rdg_lane_lines_msg = rdg_lane_lines_msg_tmp
         print('find rdg_lane_lines_msg success')
@@ -96,7 +104,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
     if loc_msg_tmp != None:
       loc_msg = loc_msg_tmp
-
 
   local_view_data['data_msg']['plan_msg'] = plan_msg
   local_view_data['data_msg']['plan_debug_msg'] = plan_debug_msg

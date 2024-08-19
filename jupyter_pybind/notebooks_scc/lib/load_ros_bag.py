@@ -118,7 +118,7 @@ class LoadRosbag:
     self.planning_hmi_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
-    self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
 
     self.lane_topo_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
@@ -338,6 +338,7 @@ class LoadRosbag:
       for t, msg in sorted_rdg_lane_lines_msg_dict.items():
         self.rdg_lane_lines_msg['t'].append(t)
         self.rdg_lane_lines_msg['timestamp'].append(msg.isp_timestamp)
+        self.rdg_lane_lines_msg['seq'].append(msg.msg_header.seq)
         self.rdg_lane_lines_msg['data'].append(msg)
       self.rdg_lane_lines_msg['t'] = [tmp - t0  for tmp in self.rdg_lane_lines_msg['t']]
       print('rdg_lane_lines_msg time:',self.rdg_lane_lines_msg['t'][-1])
