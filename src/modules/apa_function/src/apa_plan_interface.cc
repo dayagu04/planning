@@ -173,7 +173,7 @@ void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
   JSON_DEBUG_VALUE("fusion_slot_timestamp",
                    local_view_ptr->parking_fusion_info_recv_time)
   JSON_DEBUG_VALUE("localiztion_timestamp",
-                   local_view_ptr->localization_estimate_recv_time)
+                   local_view_ptr->localization_recv_time)
   JSON_DEBUG_VALUE("uss_wave_timestamp",
                    local_view_ptr->uss_wave_info_recv_time)
   JSON_DEBUG_VALUE("uss_per_timestamp",
