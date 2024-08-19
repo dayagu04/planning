@@ -125,12 +125,10 @@ void ComponentWrapper::InitClient() {
                               VehicleServiceOutputInfo);
       REGISTER_CLIENT_HANDLER("IflytekControlControlCommand",
                               FeedControlCommand, ControlOutput);
-      REGISTER_CLIENT_HANDLER("IflytekHmiMcuInner", FeedHmiMcuInner,
-                              HmiMcuInner);
       REGISTER_CLIENT_HANDLER("IflytekFusionParkingSlot", FeedParkingFusion,
                               ParkingFusionInfo);
-      REGISTER_CLIENT_HANDLER("IflytekSystemStateSocState",
-                              FeedFuncStateMachine, FuncStateMachine);
+      REGISTER_CLIENT_HANDLER("IflytekFsmSocState", FeedFuncStateMachine,
+                              FuncStateMachine);
       REGISTER_CLIENT_HANDLER("IflytekUssUsswaveInfo", FeedUssWaveInfo,
                               UssWaveInfo);
       REGISTER_CLIENT_HANDLER("IflytekUssUssPerceptionInfo", FeedUssPerceptInfo,

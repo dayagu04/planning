@@ -73,7 +73,7 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
                                          0.0, 200, 0.1);
   cut_in_desired_distance_filter_.Init(
       -0.2, config_.cut_in_desired_distance_step, 0.0, 200, 0.1);
-  //TODO: 不同场景下的速度滤波应初始化不同的滤波器
+  // TODO: 不同场景下的速度滤波应初始化不同的滤波器
   accel_vel_filter_.Init(-1.0, 1.0, 0.0, 42.0, 0.1);
   accel_vel_in_turns_filter_.Init(-1.5, 1.0, 0.0, 42.0, 0.1);
 }

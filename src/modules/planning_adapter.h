@@ -90,12 +90,12 @@ class PlanningAdapter {
     is_control_output_msg_updated_.store(true);
   }
 
-  void FeedHmiMcuInner(const iflyauto::HmiMcuInner& hmi_mcu_inner_info_msg) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
-    hmi_mcu_inner_info_msg_ = hmi_mcu_inner_info_msg;
-    hmi_mcu_inner_info_msg_recv_time_ = IflyTime::Now_ms();
-    is_hmi_mcu_inner_info_msg_updated_.store(true);
-  }
+  // void FeedHmiInner(const iflyauto::HmiInner& hmi_inner_info_msg) {
+  //   std::lock_guard<std::mutex> lock(msg_mutex_);
+  //   hmi_inner_info_msg_ = hmi_inner_info_msg;
+  //   hmi_inner_info_msg_recv_time_ = IflyTime::Now_ms();
+  //   is_hmi_inner_info_msg_updated_.store(true);
+  // }
 
   void FeedParkingFusion(
       const iflyauto::ParkingFusionInfo& parking_fusion_info_msg) {
@@ -218,9 +218,9 @@ class PlanningAdapter {
   int64_t control_output_msg_recv_time_;
   std::atomic<bool> is_control_output_msg_updated_{false};
 
-  iflyauto::HmiMcuInner hmi_mcu_inner_info_msg_;
-  int64_t hmi_mcu_inner_info_msg_recv_time_;
-  std::atomic<bool> is_hmi_mcu_inner_info_msg_updated_{false};
+  // iflyauto::HmiInner hmi_inner_info_msg_;
+  // int64_t hmi_inner_info_msg_recv_time_;
+  // std::atomic<bool> is_hmi_inner_info_msg_updated_{false};
 
   iflyauto::ParkingFusionInfo parking_fusion_info_msg_;
   int64_t parking_fusion_info_msg_recv_time_;

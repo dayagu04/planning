@@ -276,8 +276,8 @@ class EnvironmentalModel {
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool get_sdmap_valid() const { return sdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
-  const iflyauto::HmiMcuInner &get_hmi_info() const {
-    return local_view_->hmi_mcu_inner_info;
+  const iflyauto::HmiInner &get_hmi_info() const {
+    return local_view_->hmi_inner_info;
   }
 
   // update function by system function state

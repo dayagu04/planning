@@ -68,8 +68,10 @@ void LifecycleDict::remove_clean() {
   dirty_set_.clear();
 }
 
-TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session) {
+TrackletMaintainer::TrackletMaintainer(planning::framework::Session *session,
+                                       const LateralObstacleConfig &config) {
   session_ = session;
+  config_ = config;
   s_ego_ = 0;
   l_ego_ = 0;
   theta_ego_ = 0;
@@ -206,7 +208,9 @@ void TrackletMaintainer::recv_prediction_objects(
     double rel_x = dx * ego_fx + dy * ego_fy;
     double rel_y = dx * ego_lx + dy * ego_ly;
 
-    if (rel_x < -50 || rel_x > 150 || p.trajectory_array.size() == 0) {
+    if (rel_x < config_.obstacle_detect_distance_lower ||
+        rel_x > config_.obstacle_detect_distance_upper ||
+        p.trajectory_array.size() == 0) {
       LOG_DEBUG(
           "[obstacle_prediction_update] ignore far away obstacle : [%d] \n",
           p.id);
@@ -434,7 +438,9 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     double rel_y = p.relative_position_y;
 
     // TBD: use config
-    if (rel_x < -45 || rel_x > 150 || p.trajectory_array.size() == 0) {
+    if (rel_x < config_.obstacle_detect_distance_lower ||
+        rel_x > config_.obstacle_detect_distance_upper ||
+        p.trajectory_array.size() == 0) {
       continue;
     }
 
@@ -1997,8 +2003,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         }
 
         is_static_scene_ =
-            enable_static_scene && is_need_avoid &&
-            item.is_static &&
+            enable_static_scene && is_need_avoid && item.is_static &&
             ((item.d_min_cpath > 0 &&
               item.d_min_cpath < lane_width / 2 - 0.4) ||
              (item.d_max_cpath < 0 &&
@@ -2158,8 +2163,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     if ((item.trajectory.intersection == 0 && item.v_lat > -0.3 &&
          item.v_lat < 0.3) ||
         // 静止的车
-        (item.is_car && std::fabs(item.v_lead) < 0.5 &&
-         item.v_lat > -0.3 && item.v_lat < 0.3) ||
+        (item.is_car && std::fabs(item.v_lead) < 0.5 && item.v_lat > -0.3 &&
+         item.v_lat < 0.3) ||
         // 横向无运动的人或锥桶
         (!item.is_car && (std::fabs(item.v_lat) < 0.3)) ||
         // 可以借用自行车道 || 自车在最右车道

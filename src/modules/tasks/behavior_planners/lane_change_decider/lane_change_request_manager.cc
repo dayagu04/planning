@@ -395,37 +395,29 @@ void LaneChangeRequestManager::GenerateHMIInfoForOvertake() {
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   }
 
-  auto ad_info = &(session_->mutable_planning_context()
-                       ->mutable_planning_hmi_info()
-                       ->ad_info);
-  ad_info->lane_change_intent = iflyauto::NO_INTENT;
-  ad_info->lane_change_source = iflyauto::LC_SOURCE_NONE;
+  // auto ad_info = &(session_->mutable_planning_context()
+  //                      ->mutable_planning_hmi_info()
+  //                      ->ad_info);
+  // ad_info->lane_change_intent = iflyauto::NO_INTENT;
+  // ad_info->lane_change_source = iflyauto::LC_SOURCE_NONE;
   if (request_source_ == MAP_REQUEST) {
     gen_turn_signal_ = map_request_.turn_signal();
-    auto current_lane = virtual_lane_mgr_->get_current_lane();
-    int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
-    if (lc_map_decision > 0) {
-      ad_info->lane_change_intent = iflyauto::OUT_INTENT;
-    } else if (lc_map_decision < 0) {
-      ad_info->lane_change_intent = iflyauto::IN_INTENT;
-    }
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_MAP;
+    // auto current_lane = virtual_lane_mgr_->get_current_lane();
+    // int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
+    // if (lc_map_decision > 0) {
+    //   ad_info->lane_change_intent = iflyauto::OUT_INTENT;
+    // } else if (lc_map_decision < 0) {
+    //   ad_info->lane_change_intent = iflyauto::IN_INTENT;
+    // }
+    // ad_info->lane_change_source = iflyauto::LC_SOURCE_MAP;
   } else if (request_source_ == OVERTAKE_REQUEST) {
     gen_turn_signal_ = overtake_request_.turn_signal();
-    ad_info->lane_change_intent = iflyauto::SLOWING_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
+    // ad_info->lane_change_intent = iflyauto::SLOWING_INTENT;
+    // ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
   } else if (request_source_ == INT_REQUEST) {
     gen_turn_signal_ = NO_CHANGE;
-    ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
-  } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
-    gen_turn_signal_ = emergence_avoid_request_.turn_signal();
-    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
-  } else if (request_source_ == CONE_REQUEST) {
-    gen_turn_signal_ = cone_change_request_.turn_signal();
-    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
+    // ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
+    // ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }
@@ -445,37 +437,29 @@ void LaneChangeRequestManager::GenerateHMIInfo() {
     LOG_WARNING("[LCRequestManager::update] source: %d \n", request_source_);
   }
 
-  auto ad_info = &(session_->mutable_planning_context()
-                       ->mutable_planning_hmi_info()
-                       ->ad_info);
-  ad_info->lane_change_intent = iflyauto::NO_INTENT;
-  ad_info->lane_change_source = iflyauto::LC_SOURCE_NONE;
+  // auto ad_info = &(session_->mutable_planning_context()
+  //                      ->mutable_planning_hmi_info()
+  //                      ->ad_info);
+  // ad_info->lane_change_intent = iflyauto::NO_INTENT;
+  // ad_info->lane_change_source = iflyauto::LC_SOURCE_NONE;
   if (request_source_ == MAP_REQUEST) {
     gen_turn_signal_ = map_request_.turn_signal();
-    auto current_lane = virtual_lane_mgr_->get_current_lane();
-    int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
-    if (lc_map_decision > 0) {
-      ad_info->lane_change_intent = iflyauto::OUT_INTENT;
-    } else if (lc_map_decision < 0) {
-      ad_info->lane_change_intent = iflyauto::IN_INTENT;
-    }
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_MAP;
+    // auto current_lane = virtual_lane_mgr_->get_current_lane();
+    // int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
+    // if (lc_map_decision > 0) {
+    //   ad_info->lane_change_intent = iflyauto::OUT_INTENT;
+    // } else if (lc_map_decision < 0) {
+    //   ad_info->lane_change_intent = iflyauto::IN_INTENT;
+    // }
+    // ad_info->lane_change_source = iflyauto::LC_SOURCE_MAP;
   } else if (request_source_ == ACT_REQUEST) {
     gen_turn_signal_ = act_request_.turn_signal();
-    ad_info->lane_change_intent = iflyauto::SLOWING_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
+    // ad_info->lane_change_intent = iflyauto::SLOWING_INTENT;
+    // ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
   } else if (request_source_ == INT_REQUEST) {
     gen_turn_signal_ = NO_CHANGE;
-    ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
-  } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
-    gen_turn_signal_ = emergence_avoid_request_.turn_signal();
-    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
-  } else if (request_source_ == CONE_REQUEST) {
-    gen_turn_signal_ = cone_change_request_.turn_signal();
-    ad_info->lane_change_intent = iflyauto::FASTLANE_INTENT;
-    ad_info->lane_change_source = iflyauto::LC_SOURCE_ACT;
+    // ad_info->lane_change_intent = iflyauto::BLINKSWITCH_INTENT;
+    // ad_info->lane_change_source = iflyauto::LC_SOURCE_INT;
   } else {
     gen_turn_signal_ = NO_CHANGE;
   }

@@ -370,8 +370,7 @@ void LateralMotionPlanner::AssembleInput() {
   if (ramp_scene) {
     valid_perception_range = config_.valid_perception_range_on_ramp;
   }
-  for (size_t i = 15;
-       i < motion_plan_concerned_end_index; ++i) {
+  for (size_t i = 15; i < motion_plan_concerned_end_index; ++i) {
     Point2D cart_ref_xy(planning_input_.ref_x_vec(i),
                         planning_input_.ref_y_vec(i));
     Point2D frenet_ref_xy;
@@ -474,7 +473,8 @@ void LateralMotionPlanner::Update() {
   t_vec[0] = -0.2;
 
   if (!planning_input_.complete_follow()) {
-    const double end_points_size = planning_input_.motion_plan_concerned_index() + 1;
+    const double end_points_size =
+        planning_input_.motion_plan_concerned_index() + 1;
     std::vector<double> end_x_vec(end_points_size + 1);
     std::vector<double> end_y_vec(end_points_size + 1);
     std::vector<double> end_s_vec(end_points_size + 1);
@@ -482,7 +482,10 @@ void LateralMotionPlanner::Update() {
       if (i > planning_input_.motion_plan_concerned_index()) {
         end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
         end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
-        end_s_vec[i] = end_s_vec[i - 1] + std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1], end_y_vec[i] - end_y_vec[i - 1]), 1e-3);
+        end_s_vec[i] = end_s_vec[i - 1] +
+                       std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
+                                           end_y_vec[i] - end_y_vec[i - 1]),
+                                1e-3);
       } else {
         end_x_vec[i] = planning_output.x_vec(i);
         end_y_vec[i] = planning_output.y_vec(i);
@@ -493,13 +496,16 @@ void LateralMotionPlanner::Update() {
     pnc::mathlib::spline end_y_s_spline;
     end_x_s_spline.set_points(end_s_vec, end_x_vec);
     end_y_s_spline.set_points(end_s_vec, end_y_vec);
-    double end_ds = (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) / (N - end_points_size);
+    double end_ds =
+        (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
+        (N - end_points_size);
     double end_s = end_s_vec[end_points_size - 1];
     for (size_t i = end_points_size; i < N; ++i) {
       end_s += end_ds;
       x_vec[i + 1] = end_x_s_spline(end_s);
       y_vec[i + 1] = end_y_s_spline(end_s);
-      theta_vec[i + 1] = std::atan2(end_y_s_spline.deriv(1, end_s), end_x_s_spline.deriv(1, end_s));
+      theta_vec[i + 1] = std::atan2(end_y_s_spline.deriv(1, end_s),
+                                    end_x_s_spline.deriv(1, end_s));
       s_vec[i + 1] = end_s;
     }
   }

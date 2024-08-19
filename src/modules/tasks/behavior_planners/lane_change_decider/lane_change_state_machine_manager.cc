@@ -740,8 +740,8 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
                                    ref_point.at(i - 1).path_point.y)
               : 0.;
     kappa_radius_vec[i] = std::min(
-      std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
-      10000.0);
+        std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
+        10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
             std::max(v_ref_cruise * preview_time, min_preview_spline_length)) {
@@ -1429,41 +1429,42 @@ void LaneChangeStateMachineManager::UpdateAdInfo() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  ad_info->lane_change_direction = iflyauto::LC_OTHER;
+  ad_info->lane_change_direction =
+      iflyauto::LaneChangeDirection::LC_DIR_NO_CHANGE;
   if (transition_info_.lane_change_status == kLaneChangePropose) {
-    ad_info->lane_change_status = iflyauto::LC_WAITING;
+    ad_info->lane_change_status = iflyauto::LC_STATE_WAITING;
     if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_LEFT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
     } else {
-      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
     }
   } else if (transition_info_.lane_change_status == kLaneChangeExecution ||
              transition_info_.lane_change_status == kLaneChangeComplete) {
     if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_LEFT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
     } else {
-      ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
     }
-    ad_info->lane_change_status = iflyauto::LC_STARTING;
+    ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
   } else if (transition_info_.lane_change_status == kLaneChangeCancel) {
-    ad_info->lane_change_status = iflyauto::LC_CANCELLED;
+    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
   } else if (transition_info_.lane_change_status == kLaneChangeHold) {
-    ad_info->lane_change_status = iflyauto::LC_REJECTED;
+    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
   } else if (transition_info_.lane_change_status == kLaneKeeping) {
     if (coarse_planning_info.source_state != kLaneKeeping) {
-      ad_info->lane_change_status = iflyauto::LC_COMPLETED;
-      ad_info->lane_change_direction = iflyauto::LC_OTHER;
+      ad_info->lane_change_status = iflyauto::LC_STATE_COMPLETE;
+      ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
     } else {
       GenerateTurnSignalForSplitRegion();
       if (road_to_ramp_turn_signal_ == RAMP_NONE) {
-        ad_info->lane_change_status = iflyauto::LC_NO_CHANGE;
-        ad_info->lane_change_direction = iflyauto::LC_OTHER;
+        ad_info->lane_change_status = iflyauto::LC_STATE_NO_CHANGE;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
       } else if (road_to_ramp_turn_signal_ == RAMP_ON_LEFT) {
-        ad_info->lane_change_status = iflyauto::LC_STARTING;
-        ad_info->lane_change_direction = iflyauto::LC_LEFT;
+        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
       } else if (road_to_ramp_turn_signal_ == RAMP_ON_RIGHT) {
-        ad_info->lane_change_status = iflyauto::LC_STARTING;
-        ad_info->lane_change_direction = iflyauto::LC_RIGHT;
+        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
+        ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
       }
     }
   }
@@ -1603,7 +1604,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
   JSON_DEBUG_VALUE("road_to_ramp_turn_signal", road_to_ramp_turn_signal);
 }
 
-bool LaneChangeStateMachineManager::IsSplitRegion(RampDirection *ramp_direction) {
+bool LaneChangeStateMachineManager::IsSplitRegion(
+    RampDirection *ramp_direction) {
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto reference_path_manager =
@@ -1702,7 +1704,8 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
                               cur_ref_path_finally_point.y};
   std::shared_ptr<KDPath> reference_path_frenet_coordinate =
       reference_path->get_frenet_coord();
-  if (std::abs(length_diff_cur_lane_with_overlap_lane) > length_diff_threshold) {
+  if (std::abs(length_diff_cur_lane_with_overlap_lane) >
+      length_diff_threshold) {
     if (length_diff_cur_lane_with_overlap_lane > length_diff_threshold) {
       is_cur_path_project_to_ref_path = false;
       const auto ref_path_finally_point =
@@ -1714,7 +1717,9 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
   } else {
     ReferencePathPoint refpoint = {};
     current_reference_path->get_reference_point_by_lon(
-        current_reference_path->get_frenet_coord()->Length() - length_diff_threshold, refpoint);
+        current_reference_path->get_frenet_coord()->Length() -
+            length_diff_threshold,
+        refpoint);
     projection_point = {refpoint.path_point.x, refpoint.path_point.y};
   }
   Point2D frenet_point;
@@ -1767,12 +1772,15 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
     }
     reference_path_frenet_coordinate = left_reference_path->get_frenet_coord();
   }
-  const auto& ego_vertices_points = session_->environmental_model()
-      .get_ego_state_manager()->polygon().points();
+  const auto &ego_vertices_points = session_->environmental_model()
+                                        .get_ego_state_manager()
+                                        ->polygon()
+                                        .points();
   double ego_dis_to_ref_lane = NL_NMAX;
   for (auto ego_vertices_point : ego_vertices_points) {
     Point2D frenet_point;
-    Point2D ego_vertices_point_tem = {ego_vertices_point.x(),ego_vertices_point.y()};
+    Point2D ego_vertices_point_tem = {ego_vertices_point.x(),
+                                      ego_vertices_point.y()};
     if (reference_path_frenet_coordinate->XYToSL(ego_vertices_point_tem,
                                                  frenet_point)) {
       if (std::abs(frenet_point.y) < ego_dis_to_ref_lane) {

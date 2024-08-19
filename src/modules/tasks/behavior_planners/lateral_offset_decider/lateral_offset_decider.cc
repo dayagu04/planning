@@ -23,10 +23,6 @@ bool LateralOffsetDecider::Execute() {
     return false;
   }
 
-  LateralOffsetDeciderOutput &lateral_offset_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lateral_offset_decider_output();
-
   double lat_offset = 0.0;
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
@@ -53,9 +49,7 @@ bool LateralOffsetDecider::Execute() {
 
   lat_offset = lateral_offset_calculatorv2_.lat_offset();
   SmoothLateralOffset(lat_offset);
-  lateral_offset_decider_output.is_valid =
-      config_.is_valid_lateral_offset && fabs(lateral_offset_) > 1e-2;
-  lateral_offset_decider_output.lateral_offset = lateral_offset_;
+  GenerateOutput();
   SaveDebugInfo();
   return true;
 }
@@ -151,5 +145,28 @@ void LateralOffsetDecider::SaveDebugInfo() {
       planning_debug_data->mutable_lateral_offset_decider_info();
   lateral_offset_decider_info->set_smooth_lateral_offset(lateral_offset_);
   JSON_DEBUG_VALUE("smooth_lateral_offset", lateral_offset_);
+}
+
+void LateralOffsetDecider::GenerateOutput() {
+  LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lateral_offset_decider_output();
+  lateral_offset_decider_output.is_valid =
+      config_.is_valid_lateral_offset && fabs(lateral_offset_) > 1e-2;
+  lateral_offset_decider_output.lateral_offset = lateral_offset_;
+
+  const std::array<AvoidObstacleInfo, 2> avd_obstacles =
+      avoid_obstacle_maintainer5v_.avd_obstacles();
+  lateral_offset_decider_output.avoid_id = -1;
+  lateral_offset_decider_output.avoid_direction = 0;
+  if (avd_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
+    if (lateral_offset_ > 0.2) {
+      lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
+      lateral_offset_decider_output.avoid_direction = 1;
+    } else if (lateral_offset_ < -0.2) {
+      lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
+      lateral_offset_decider_output.avoid_direction = 2;
+    }
+  }
 }
 }  // namespace planning

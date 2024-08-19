@@ -178,8 +178,8 @@ class LaneChangeStateMachineManager {
   void UpdateStateMachineDebugInfo();
   void GenerateTurnSignalForSplitRegion();
   bool IsSplitRegion(RampDirection* ramp_direction);
-  void CalculateLatOffsetOfOverlappedLanes(double* lat_diff,
-                     const std::shared_ptr<ReferencePath> reference_path);
+  void CalculateLatOffsetOfOverlappedLanes(
+      double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
 
  private:

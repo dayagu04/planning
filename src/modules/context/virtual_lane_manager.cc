@@ -1515,6 +1515,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   if (!current_segment) {
     ResetForRampInfo();
     return;
+  } else {
+    is_in_sdmaproad_ = true;
   }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
   if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
@@ -1813,10 +1815,12 @@ void VirtualLaneManager::ResetForRampInfo() {
   distance_to_first_road_merge_ = NL_NMAX;
   distance_to_first_road_split_ = NL_NMAX;
   distance_to_route_end_ = NL_NMAX;
+  is_in_sdmaproad_ = false;
   is_ego_on_expressway_ = false;
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
+  is_within_hdmap_ = false;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(

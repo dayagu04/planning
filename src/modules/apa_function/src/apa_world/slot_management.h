@@ -558,6 +558,8 @@ class SlotManagement {
 
   void Log();
 
+  const bool CheckIfSlotSelectedInFusion() const;
+
   void FinishApa();
 };
 
