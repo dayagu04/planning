@@ -207,6 +207,8 @@ void StGraphGenerator::Update(
   if (v_target_ > v_ego) {
     if (start_stop_info_.state() == common::StartStopInfo::START) {
       accel_vel_filter_.SetRate(-config_.acc_start, config_.acc_start);
+    } else if (lon_behav_input_->lat_output().lc_request() != "none") {
+      accel_vel_filter_.SetRate(-2.0, 2.0);  //换道调速滤波
     } else {
       accel_vel_filter_.SetRate(-1.0, 1.0);
     }
@@ -226,6 +228,14 @@ void StGraphGenerator::Update(
     if (v_ego < v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+    } else if (v_target_ < v_ego &&
+             lon_behav_input_->lat_output().lc_request() != "none" ){
+    if (v_ego < v_last_target_) {
+      accel_vel_filter_.SetState(v_ego);
+    }
+    accel_vel_filter_.SetRate(-2.0, 2.0);
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   } else if (v_target_ < v_ego && v_limit_on_turns_and_road_ == v_target_) {

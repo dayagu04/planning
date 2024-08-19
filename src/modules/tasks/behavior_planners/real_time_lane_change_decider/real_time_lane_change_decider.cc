@@ -177,10 +177,10 @@ GapInfo RealTimeLaneChangeDecider::check_gap_valid(
   gap_info.base_car_id = base_car.id;
   gap_info.base_car_drel = base_car.d_rel;
   gap_info.base_car_vrel = base_car.v_rel;
-  if (gap_info.acc_valid) {
-    // set front car's vrel when acc_valid
-    gap_info.base_car_vrel = front_car.v_rel;
-  }
+  // if (gap_info.acc_valid) {
+  //   // set front car's vrel when acc_valid
+  //   gap_info.base_car_vrel = front_car.v_rel;
+  // }
 
   double mssf =
       std::pow(std::max(-(front_car.v_rel - v_ego_p_rel), 0.0), 2) / 2.0 +
@@ -246,7 +246,7 @@ GapInfo RealTimeLaneChangeDecider::check_gap_valid(
     gap_info.valid = true;
     if (gap_info.acc_valid) {
       v_ego_p =
-          std::min(std::max(0.0, v_ego_ + front_car.v_rel - 1.0), v_limit_);
+          std::min(std::max(0.0, v_ego_ + base_car.v_rel + 1.0), v_limit_);
       v_ego_p_rel = v_ego_p - v_ego_;
     }
     double dis_offset =
