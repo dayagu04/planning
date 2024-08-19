@@ -254,6 +254,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   soc_state_msg_buff = BytesIO()
   soc_state_msg.serialize(soc_state_msg_buff)
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
+  current_state = soc_state_msg.current_state
 
   fus_parking_msg_buff = BytesIO()
   fus_parking_msg.serialize(fus_parking_msg_buff)
@@ -266,6 +267,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   vs_msg_buff = BytesIO()
   vs_msg.serialize(vs_msg_buff)
   vs_msg_bytes = vs_msg_buff.getvalue()
+  steering_wheel_angle = vs_msg.steering_wheel_angle
 
   wave_msg_buff = BytesIO()
   wave_msg.serialize(wave_msg_buff)
@@ -326,7 +328,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
                                     obs_x_vec, obs_y_vec,
-                                    gl_coord, fus_obj_coord, fus_occ_obj_coord)
+                                    gl_coord, fus_obj_coord, fus_occ_obj_coord, current_state, steering_wheel_angle)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

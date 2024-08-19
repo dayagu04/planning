@@ -49,9 +49,11 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
                 py::bytes &ground_line_perception_info_bytes,
                 py::bytes &fusion_objects_info_bytes,
                 py::bytes &fusion_occupancy_objects_info_bytes) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  //   iflyauto::FuncStateMachine func_statemachine =
+  //       BytesToStruct<iflyauto::FuncStateMachine,
+  //       struct_msgs::FuncStateMachine>(
+  //           func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -104,9 +106,11 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                        double max_slot_boundary_line_angle_dif_deg,
                        double outside_lon_dist_max_slot2mirror,
                        double outside_lon_dist_min_slot2mirror) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
+  //   iflyauto::FuncStateMachine func_statemachine =
+  //       BytesToStruct<iflyauto::FuncStateMachine,
+  //       struct_msgs::FuncStateMachine>(
+  //           func_statemachine_bytes);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
