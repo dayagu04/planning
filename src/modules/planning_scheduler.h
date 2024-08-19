@@ -6,6 +6,7 @@
 #include "common/define/debug_output.h"
 #include "common/local_view.h"
 #include "common_platform_type_soc.h"
+#include "config_context.h"
 #include "environmental_model_manager.h"
 #include "hpp_function/hpp_function.h"
 #include "ihc_function/intelligent_headlight_control.h"
@@ -19,10 +20,11 @@ namespace planning {
 
 class PlanningScheduler {
  public:
-  PlanningScheduler(const LocalView *const local_view);
+  PlanningScheduler(const LocalView *const local_view,
+                    const common::EngineConfiguration *const engine_config_ptr);
   virtual ~PlanningScheduler();
 
-  void Init();
+  void Init(const common::EngineConfiguration *const engine_config_ptr);
   bool RunOnce(iflyauto::PlanningOutput *const planning_output,
                iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
 

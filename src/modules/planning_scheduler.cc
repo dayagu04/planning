@@ -27,28 +27,39 @@
 #include "planning_hmi_c.h"
 #include "scene_type_config.pb.h"
 #include "struct_container.hpp"
+#include "utils/file.h"
 #include "utils/lateral_utils.h"
 #include "vehicle_config_context.h"
 #include "vehicle_status.pb.h"
 
 namespace planning {
 
-PlanningScheduler::PlanningScheduler(const LocalView *const local_view)
+PlanningScheduler::PlanningScheduler(
+    const LocalView *const local_view,
+    const common::EngineConfiguration *const engine_config_ptr)
     : local_view_(local_view) {
-  Init();
+  Init(engine_config_ptr);
 }
 
 PlanningScheduler::~PlanningScheduler() {}
 
-void PlanningScheduler::Init() {
+void PlanningScheduler::Init(
+    const common::EngineConfiguration *const engine_config_ptr) {
   session_.Init();
   environmental_model_manager_.Init(&session_);
   EnvironmentalModel *environmental_model =
       session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view_);
   // TODO: 车辆配置文件从文件读取
-  VehicleParam vehicle_param;
-  VehicleConfigurationContext::Instance()->set_vehicle_param(vehicle_param);
+
+  VehicleConfigurationContext::Instance()->set_vehicle_param(
+      engine_config_ptr->vehicle_cfg_dir);
+  std::cout
+      << "load vehicle param success! car type: "
+      << VehicleConfigurationContext::Instance()->get_vehicle_param().car_type
+      << ", the car wheel base is: "
+      << VehicleConfigurationContext::Instance()->get_vehicle_param().wheel_base
+      << std::endl;
 
   // TODO：配置文件改成和场景/功能有关，不能使用默认场景
   planning::common::SceneType scene_type = session_.get_scene_type();
@@ -63,19 +74,6 @@ void PlanningScheduler::Init() {
   noa_function_ = std::make_unique<NoaFunction>(&session_);
   scc_function_ = std::make_unique<SccFunction>(&session_);
   apa_function_ = std::make_unique<ApaFunction>(&session_);
-}
-
-static std::string ReadFile(const std::string &path) {
-  FILE *file = fopen(path.c_str(), "r");
-  assert(file != nullptr);
-  std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
-  fseek(fp.get(), 0, SEEK_END);
-  std::vector<char> content(ftell(fp.get()));
-  fseek(fp.get(), 0, SEEK_SET);
-  auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
-  assert(read_bytes == content.size());
-  (void)read_bytes;
-  return std::string(content.begin(), content.end());
 }
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
@@ -99,7 +97,7 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
           engine_config.module_cfg_dir + "/general_planner_module_highway.json";
   }
 
-  std::string config_file = ReadFile(path);
+  std::string config_file = common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
   // all parameters can be changed here

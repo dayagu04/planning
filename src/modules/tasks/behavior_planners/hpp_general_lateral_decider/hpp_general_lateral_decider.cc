@@ -783,10 +783,10 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
   double rear_axle_to_front_bumper =  // TBD：define as consexpr
-      vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
+      vehicle_param.length - vehicle_param.rear_edge_to_rear_axle;
   const bool init_lon_no_overlap =
       (obstacle->frenet_obstacle_boundary().s_end <
-           ego_cur_s - vehicle_param.back_edge_to_rear_axis ||
+           ego_cur_s - vehicle_param.rear_edge_to_rear_axle ||
        obstacle->frenet_obstacle_boundary().s_start >
            ego_cur_s + rear_axle_to_front_bumper);
   const bool init_lat_overlap = !(obstacle->frenet_obstacle_boundary().l_end <
@@ -874,7 +874,7 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
     //     std::max(std::min(5.0, 5.0 - 0.5 * (10.0 - ego_velocity)),
     //              0.0);  // @cai: currently use fixed distance
 
-    auto care_area_s_start = ego_s - vehicle_param.back_edge_to_rear_axis -
+    auto care_area_s_start = ego_s - vehicle_param.rear_edge_to_rear_axle -
                              config_.care_area_s_start_buffer;
     auto care_area_s_end = ego_s + rear_axle_to_front_bumper + kCareAreaSBuffer;
     auto care_area_center =
@@ -940,7 +940,7 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
     std::pair<double, double> s_side_range{obstacle_sl_polygon.min_x(),
                                            obstacle_sl_polygon.max_x()};
     std::pair<double, double> ego_side_range{
-        ego_s - vehicle_param.back_edge_to_rear_axis,
+        ego_s - vehicle_param.rear_edge_to_rear_axle,
         ego_s + rear_axle_to_front_bumper + 2.};
     bool b_overlap_side = std::max(s_side_range.first, ego_side_range.first) <
                           std::min(s_side_range.second, ego_side_range.second);
@@ -1414,8 +1414,8 @@ void HppGeneralLateralDecider::SampleRoadDistanceInfo(
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
 
-  for (double s = s_target - vehicle_param.back_edge_to_rear_axis;
-       s < s_target + vehicle_param.rear_axis_to_front_edge +
+  for (double s = s_target - vehicle_param.rear_edge_to_rear_axle;
+       s < s_target + vehicle_param.front_edge_to_rear_axle +
                config_.sample_forward_distance;
        s += cut_length) {
     if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {

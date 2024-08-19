@@ -1,8 +1,10 @@
 #include "lane_change_state_machine_manager.h"
+
 #include <cmath>
 #include <complex>
 #include <cstddef>
 #include <vector>
+
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
@@ -51,8 +53,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           transition_info_.lane_change_type = lane_change_type;
           lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
         } else {
-          //在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
-          //在这重新维护lc_lane的值，可以保证fix lane不会跳变
+          // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
+          // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
           lc_lane_mgr_->reset_lc_lanes();
         }
       }
@@ -508,7 +510,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   std::vector<TrackedObject> front_target_tracks;
   auto tlane_obstacles =
       target_lane->get_reference_path()->get_lane_obstacles_ids();
-  //处理目标车车道后方障碍物
+  // 处理目标车车道后方障碍物
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
@@ -532,7 +534,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
       return lc_state_info;
     }
   }
-  //处理目标车车道前方障碍物，整体逻辑同上处理后方障碍物
+  // 处理目标车车道前方障碍物，整体逻辑同上处理后方障碍物
   for (auto &obstacle : lateral_obstacle->front_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
@@ -911,9 +913,9 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
       lc_state_info->lc_invalid_reason = "side view invalid";
       return;
     }
-    //（2）相对速度小于100，且纵向上在自车后方5米以内（相当于一个车的长度）
+    // （2）相对速度小于100，且纵向上在自车后方5米以内（相当于一个车的长度）
     if (tr.v_rel < 100.0 && tr.d_rel > -5.0) {
-      //根据相对速度大于0，或者小于0计算mss
+      // 根据相对速度大于0，或者小于0计算mss
       if (tr.v_rel < 0) {
         mss = tr.v_rel * tr.v_rel / 2 + safety_dist;
         mss_t = mss;
@@ -944,7 +946,7 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     }
     //(3) 相对速度小于100，纵向上在自车后方5米以外
     if (tr.v_rel < 100.0 && tr.d_rel <= -5.0) {
-      //根据自车车速小于17m/s，自车速度大于17m/s分别计算mss
+      // 根据自车车速小于17m/s，自车速度大于17m/s分别计算mss
       if (v_ego < 17 && vel_sequence.size() > 1) {
         double temp1 = tr.v_rel;
         double temp2 = tr.v_rel - (vel_sequence[5] - v_ego);
@@ -1029,7 +1031,7 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     std::array<double, 5> a_dec_v{2.0, 1.5, 1.3, 1.2, 1.0};
     std::array<double, 5> a_ace_v{0.3, 0.6, 0.8, 1.0, 1.5};
     std::array<double, 5> v_ego_bp{0, 10, 15, 20, 30};
-    //插值计算当前速度下的减速度a_dflc、加速度a_aflc
+    // 插值计算当前速度下的减速度a_dflc、加速度a_aflc
     double a_dflc = interp(v_ego, v_ego_bp, a_dec_v);
     double a_aflc = interp(v_ego, v_ego_bp, a_ace_v);
     // (2)如果相对速度小于0，即前方的障碍物车辆比自车慢
@@ -1077,7 +1079,7 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
 
     std::array<double, 2> xp{0, 3.5};
     std::array<double, 2> fp{1, 0.7};
-    //该值表示前车速度越大，那么变道安全距离可以在原来基础上更小一点
+    // 该值表示前车速度越大，那么变道安全距离可以在原来基础上更小一点
     const double real_safety_dist = interp(tr.v_rel, xp, fp) * safety_dist;
     if (tr.d_rel < real_safety_dist || tr.d_rel < mss) {
       lc_invalid_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
@@ -1115,7 +1117,7 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
   const double t_reaction =
       (dist_mline == DBL_MAX) ? 1.0 : 1.0 * dist_mline / 1.8;
   const double l_ego = frenet_ego_state.l();
-  //根据车道边界的曲率插值计算横向移动阈值 move_thre，曲率越大，move越大
+  // 根据车道边界的曲率插值计算横向移动阈值 move_thre，曲率越大，move越大
   std::array<double, 3> xp_heading{0, 0.5, 1};
   std::array<double, 3> fp_l{0, 0.4, 0.6};
   double c1 = 0;
@@ -1646,7 +1648,7 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
       right_ego_s = right_frenet_ego_state.s();
     }
   }
-  //目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
+  // 目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
 
   if (std::abs(left_ego_l) < left_lane_width / 2) {
     cur_lane_overlap_left_lane = true;

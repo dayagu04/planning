@@ -1,6 +1,8 @@
 #include "overtake_lane_change_request.h"
+
 #include <glog/logging.h>
 #include <math.h>
+
 #include <cassert>
 #include <cmath>
 #include <complex>
@@ -284,7 +286,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     return;
   }
 
-  const double ego_front_edge = vehicle_param.front_edge_to_center;
+  const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
   const double long_diff =
       lead_one->d_rel - ego_front_edge - lead_one->length * 0.5;
 
@@ -644,7 +646,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
     speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
   }
 
-  //当总车道数不少于3时，抑制向最右侧车道触发超车变道
+  // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
   if (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum && !is_left &&
       1 == right_lane_nums) {
     return false;
@@ -799,7 +801,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
       }
     }
   }
-  //针对左侧车道边界的锥桶，安排距离自车由近及远排序
+  // 针对左侧车道边界的锥桶，安排距离自车由近及远排序
   for (const auto& tr : left_boundary_cone_distribution_set) {
     if (tr.d_rel >= 0.0) {
       auto it = left_boundary_cone_distribution_ordered_set.begin();
@@ -816,7 +818,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
     }
   }
 
-  //根据自车道以及目标车道的锥桶分布情况来判断左侧变道是否有效
+  // 根据自车道以及目标车道的锥桶分布情况来判断左侧变道是否有效
   if (left_boundary_cone_distribution_ordered_set.size() >=
           kBoundaryConeNumThres &&
       current_lane_cone_distribution_set.size() >= kLaneConeNumThres &&
@@ -929,7 +931,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
       }
     }
   }
-  //针对右侧车道边界的锥桶，安排距离自车由近及远排序
+  // 针对右侧车道边界的锥桶，安排距离自车由近及远排序
   for (const auto& tr : right_boundary_cone_distribution_set) {
     if (tr.d_rel >= 0.0) {
       auto it = right_boundary_cone_distribution_ordered_set.begin();
@@ -946,7 +948,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
     }
   }
 
-  //根据自车道以及目标车道的锥桶分布情况来判断右侧变道是否有效
+  // 根据自车道以及目标车道的锥桶分布情况来判断右侧变道是否有效
   if (right_boundary_cone_distribution_ordered_set.size() >=
           kBoundaryConeNumThres &&
       current_lane_cone_distribution_set.size() >= kLaneConeNumThres &&
@@ -1036,8 +1038,8 @@ bool OvertakeRequest::checkLaneChangeSafety(
     return false;
   }
 
-  const double ego_front_edge = vehicle_param.front_edge_to_center;
-  const double ego_rear_edge = vehicle_param.back_edge_to_center;
+  const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
+  const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   const double ego_half_width = vehicle_param.width * 0.5;
   *front_required_space = 0.0;
   *rear_required_space = 0.0;
@@ -1650,7 +1652,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
 }
 
 void OvertakeRequest::Reset() {
-  overtake_vehicle_id_ = -1;  //初始化为有关无效的障碍物track_id
+  overtake_vehicle_id_ = -1;  // 初始化为有关无效的障碍物track_id
   overtake_vehicle_speed_ = 0.0;
   overtake_count_ = 0;
   target_lane_exist_slow_front_veh_frame_num_ = 0;

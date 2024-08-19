@@ -1,0 +1,21 @@
+{
+  "car_type": "cherry_t26",
+  "front_edge_to_rear_axle": 3.73,
+  "rear_edge_to_rear_axle": 1.085,
+  "rear_axle_to_center":1.322,
+  "length":4.815,
+  "width":1.919,
+  "max_width":2.184,
+  "height":1.701,
+  "min_turn_radius":5.608,
+  "max_acceleration":3.0,
+  "max_deceleration":5.0,
+  "max_jerk":8.0,
+  "min_jerk":-5.0,
+  "max_steer_angle":7.33,
+  "max_steer_angle_rate":6.283,
+  "min_steer_angle_rate":0.0,
+  "steer_ratio":15.3,
+  "wheel_base":2.796,
+  "max_front_wheel_angle":0.56
+}

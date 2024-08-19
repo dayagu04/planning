@@ -66,8 +66,7 @@ bool IsInConsiderFrontLateralRange(
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width =
-      vehicle_param.width * 0.5 + vehicle_param.width_mirror;
+  const double half_ego_width = vehicle_param.max_width * 0.5;
   const double safe_lat_distance = 0.4;
   const double max_lat_position =
       -normal_avoid_threshold + half_ego_width + safe_lat_distance;

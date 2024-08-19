@@ -1839,14 +1839,14 @@ bool GapSelectorDecider::BodyCheck() {
   const double cross_l = (target_state_ == 1) ? half_away_origin_lane_width
                                               : -half_away_origin_lane_width;
 
-  Point2D lf_point{vehicle_param_.rear_axis_to_front_edge,
-                   vehicle_param_.left_edge_to_center};
-  Point2D lb_point{vehicle_param_.back_edge_to_rear_axis,
-                   vehicle_param_.left_edge_to_center};
-  Point2D rf_point{vehicle_param_.rear_axis_to_front_edge,
-                   vehicle_param_.right_edge_to_center};
-  Point2D rb_point{vehicle_param_.back_edge_to_rear_axis,
-                   vehicle_param_.right_edge_to_center};
+  Point2D lf_point{vehicle_param_.front_edge_to_rear_axle,
+                   vehicle_param_.max_width * 0.5};
+  Point2D lb_point{vehicle_param_.rear_edge_to_rear_axle,
+                   vehicle_param_.max_width * 0.5};
+  Point2D rf_point{vehicle_param_.front_edge_to_rear_axle,
+                   vehicle_param_.max_width * 0.5};
+  Point2D rb_point{vehicle_param_.rear_edge_to_rear_axle,
+                   vehicle_param_.max_width * 0.5};
   Point2D lf_point_car, lb_point_car, rf_point_car, rb_point_car;
   ego_transform.Local2Gobal(lf_point, lf_point_car);
   ego_transform.Local2Gobal(lb_point, lb_point_car);

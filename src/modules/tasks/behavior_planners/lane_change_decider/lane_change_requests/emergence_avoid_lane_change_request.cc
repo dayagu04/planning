@@ -1,6 +1,8 @@
 #include "emergence_avoid_lane_change_request.h"
+
 #include <glog/logging.h>
 #include <math.h>
+
 #include <cassert>
 #include <cmath>
 #include <complex>
@@ -250,8 +252,8 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     Reset();
     return;
   }
-  const double ego_left_edge = vehicle_param.left_edge_to_center;
-  const double ego_right_edge = vehicle_param.right_edge_to_center;
+  const double ego_left_edge = vehicle_param.max_width * 0.5;
+  const double ego_right_edge = vehicle_param.max_width * 0.5;
   const double lateral_left_offset =
       ego_left_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
   const double lateral_right_offset =
