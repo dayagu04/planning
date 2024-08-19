@@ -73,18 +73,6 @@ bool PlanningComponent::Init() {
                 ground_line_perception_msg);
           });
 
-  auto localization_estimate_reader_ =
-      planning_node_->CreateReader<iflyauto::StructContainer>(
-          "/iflytek/localization/ego_pose",
-          [this](const std::shared_ptr<iflyauto::StructContainer>
-                     &localization_estimate_container) {
-            const auto localization_estimate_msg =
-                *iflyauto::struct_cast<iflyauto::LocalizationEstimate>(
-                    localization_estimate_container);
-            planning_adapter_->FeedLocalizationEstimateOutput(
-                localization_estimate_msg);
-          });
-
   auto localization_reader_ =
       planning_node_->CreateReader<iflyauto::StructContainer>(
           "/iflytek/localization/egomotion",

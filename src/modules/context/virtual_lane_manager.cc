@@ -25,7 +25,6 @@
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
 #include "local_view.h"
-#include "localization_c.h"
 #include "log.h"
 // #include "log_glog.h"
 #include "math/box2d.h"
@@ -40,11 +39,11 @@
 
 namespace planning {
 
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 namespace {
@@ -483,7 +482,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     SetGeneratedReflineToDebugInfo(current_lane_virtual.lane_reference_line);
 
     // set roads_virtual
-    roads_virtual.header = roads.header;
+    roads_virtual.msg_header = roads.msg_header;
     roads_virtual.isp_timestamp = roads.isp_timestamp;
 
     roads_virtual.reference_line_msg[0] = current_lane_virtual;
@@ -1301,12 +1300,13 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 
 bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
+  const auto& ego_state =
+          session.environmental_model().get_ego_state_manager();
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
-  const auto& pose = local_view.localization_estimate.pose;
 
-  const double ego_pose_x = pose.local_position.x;
-  const double ego_pose_y = pose.local_position.y;
+  const double ego_pose_x = ego_state->ego_pose_raw().x;
+  const double ego_pose_y = ego_state->ego_pose_raw().y;
   ad_common::math::Vec2d point(ego_pose_x, ego_pose_y);
 
   // get nearest lane
@@ -1381,8 +1381,8 @@ bool VirtualLaneManager::GetCurrentNearestLane(
     const planning::framework::Session& session) {
   if (session_->environmental_model().get_hdmap_valid()) {
     const auto& local_view = session_->environmental_model().get_local_view();
-    if (local_view.localization_estimate.msf_status.msf_status !=
-        iflyauto::MsfStatusType::MsfStatusType_ERROR) {
+    if (local_view.localization.status.status_info.mode !=
+        iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR) {
       std::cout << "hdmap_valid is true,current timestamp:"
                 << session_->environmental_model()
                        .get_local_view()
@@ -1436,8 +1436,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
     planning::framework::Session* session) {
   if (session_->environmental_model().get_hdmap_valid()) {
     const auto& local_view = session_->environmental_model().get_local_view();
-    if (local_view.localization_estimate.msf_status.msf_status !=
-        iflyauto::MsfStatusType_ERROR) {
+    if (local_view.localization.status.status_info.mode !=
+        iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR) {
       std::cout << "hdmap_valid is true,current timestamp:"
                 << session_->environmental_model()
                        .get_local_view()
@@ -1483,8 +1483,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   }
   std::cout << "sd_map valid!!!" << std::endl;
 
-  if (local_view.localization_estimate.msf_status.msf_status ==
-      iflyauto::MsfStatusType_ERROR) {
+  if (local_view.localization.status.status_info.mode ==
+      iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR) {
     std::cout << "localization invalid" << std::endl;
     ResetForRampInfo();
     return;
@@ -1503,7 +1503,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   const auto& sd_map = session_->environmental_model().get_sd_map();
   double nearest_s = 0;
   double nearest_l = 0;
-  const double max_search_length = 7000.0;  //搜索7km范围内得地图信息
+  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
   const double search_distance = 50.0;
   const double max_heading_diff = PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
@@ -1534,7 +1534,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     ResetForRampInfo();
     return;
   }
-  //计算ramp信息
+  // 计算ramp信息
   const auto& ramp_info =
       sd_map.GetRampInfo(current_segment->id(), nearest_s, max_search_length);
   if (ramp_info.second > 0) {
@@ -1552,8 +1552,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     dis_to_ramp_ = NL_NMAX;
     ramp_direction_ = RAMP_NONE;
   }
-  //计算merge信息
-  // TODO(fengwang31):是否需要考虑merge的方向
+  // 计算merge信息
+  //  TODO(fengwang31):是否需要考虑merge的方向
   const auto& merge_info = sd_map.GetMergeInfoList(
       current_segment->id(), nearest_s, max_search_length);
   if (!merge_info.empty()) {
@@ -1581,7 +1581,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   is_on_highway_ =
       current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
   is_on_ramp_ = current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
-  //计算split信息
+  // 计算split信息
   const auto& split_info = sd_map.GetSplitInfoList(
       current_segment->id(), nearest_s, max_search_length);
   if (!split_info.empty()) {
@@ -1603,7 +1603,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     first_split_direction_ = RAMP_NONE;
     std::cout << "split_info.empty()!!!!!!!" << std::endl;
   }
-  //计算距离上一个merge点的信息
+  // 计算距离上一个merge点的信息
   const SdMapSwtx::Segment* last_merge_seg = current_segment;
   is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point = nearest_s;
@@ -1611,7 +1611,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   if (!is_on_ramp_) {
     while (last_merge_seg->in_link().size() == 1) {
       last_merge_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
-      //判断是否为nullptr
+      // 判断是否为nullptr
       if (!last_merge_seg) {
         break;
       } else {
@@ -1628,7 +1628,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   }
   JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
 
-  //计算到路线终点的距离
+  // 计算到路线终点的距离
   double dis_to_end = NL_NMAX;
   int result = sd_map.GetDistanceToRouteEnd(current_segment->id(), nearest_s,
                                             dis_to_end);
@@ -1950,7 +1950,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
     }
   }
 
-  //判断ego是否在最右边车道上
+  // 判断ego是否在最右边车道上
   bool is_ego_on_rightest_lane = true;
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() > 0) {
@@ -1958,12 +1958,12 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       break;
     }
   }
-  //为了临时hack处理在匝道延长车道上的case，使得自车能在匝道延长车道上也能变道至lane上。
-  //同时满足以下4个条件则认为，还在匝道延长线上：
-  // 1、自车当前不在匝道上；
-  // 2、且距离下一个匝道距离在1300m以上,距离上一个merge点在700m以内；
-  // 3、当前在最右边车道上；
-  // 4、当前是在expressway上。
+  // 为了临时hack处理在匝道延长车道上的case，使得自车能在匝道延长车道上也能变道至lane上。
+  // 同时满足以下4个条件则认为，还在匝道延长线上：
+  //  1、自车当前不在匝道上；
+  //  2、且距离下一个匝道距离在1300m以上,距离上一个merge点在700m以内；
+  //  3、当前在最右边车道上；
+  //  4、当前是在expressway上。
   if (!is_on_ramp_ && dis_to_ramp_ > 1300 &&
       !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
       is_ego_on_rightest_lane && is_ego_on_expressway_) {
@@ -2196,7 +2196,7 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
           : kInitPosCostWeight;
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
 
-  if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) && 
+  if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
       zero_relative_id_nums < 2) {
     lateral_distance_cost_weight = 0.5;
   }
@@ -2539,19 +2539,19 @@ void VirtualLaneManager::ProcessUrbanIntersectionSplit(
     if (lane_relative_id < 0) {
       ego_on_left_side_lane = false;
       break;
-    } 
+    }
   }
   for (const auto& lane : relative_id_lanes_) {
     int lane_relative_id = lane->get_relative_id();
     if (lane_relative_id > 0) {
       ego_on_right_side_lane = false;
       break;
-    } 
+    }
   }
 
   if (ego_on_left_side_lane && ego_on_right_side_lane) {
     is_exist_intersection_split_ = false;
-    return; 
+    return;
   } else if(ego_on_left_side_lane) {
     is_exist_intersection_split_ = true;
     relative_id_lanes_[order_ids[1]]->set_relative_id(0);

@@ -51,14 +51,6 @@ class PlanningAdapter {
     is_ground_line_perception_msg_updated_.store(true);
   }
 
-  void FeedLocalizationEstimateOutput(
-      const iflyauto::LocalizationEstimate& localization_estimate_msg) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
-    localization_estimate_msg_ = localization_estimate_msg;
-    localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
-    is_localization_estimate_msg_updated_.store(true);
-  }
-
   void FeedLocalizationOutput(
       const iflyauto::IFLYLocalization& localization_msg) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -193,10 +185,6 @@ class PlanningAdapter {
   iflyauto::GroundLinePerceptionInfo ground_line_perception_msg_;
   int64_t ground_line_perception_msg_recv_time_;
   std::atomic<bool> is_ground_line_perception_msg_updated_{false};
-
-  iflyauto::LocalizationEstimate localization_estimate_msg_;
-  int64_t localization_estimate_msg_recv_time_;
-  std::atomic<bool> is_localization_estimate_msg_updated_{false};
 
   iflyauto::IFLYLocalization localization_msg_;
   int64_t localization_msg_recv_time_;

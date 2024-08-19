@@ -189,7 +189,7 @@ class LoadCyberbag:
     try:
       vs_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
-        vs_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        vs_msg_dict[msg.msg_header.stamp / 1e6] = msg
       vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vs_msg_dict.items():
         self.vs_msg['t'].append(t)
@@ -213,9 +213,9 @@ class LoadCyberbag:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
         if hasattr(msg.meta, 'msg_header'):
-          plan_msg_timestamp = msg.meta.msg_header.timestamp
+          plan_msg_timestamp = msg.meta.msg_header.stamp
         else:
-          plan_msg_timestamp = msg.msg_header.timestamp
+          plan_msg_timestamp = msg.msg_header.stamp
         plan_msg_dict[plan_msg_timestamp / 1e6] = msg
       plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
@@ -318,7 +318,7 @@ class LoadCyberbag:
     try:
       ctrl_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
-        ctrl_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        ctrl_msg_dict[msg.msg_header.stamp / 1e6] = msg
       ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_msg_dict.items():
         self.ctrl_msg['t'].append(t)
@@ -385,7 +385,7 @@ class LoadCyberbag:
     try:
       fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
-        fus_parking_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        fus_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
       fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_parking_msg_dict.items():
         self.fus_parking_msg['t'].append(t)
@@ -410,7 +410,7 @@ class LoadCyberbag:
     try:
       fusion_ground_line_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
-        fusion_ground_line_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        fusion_ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
       fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fusion_ground_line_msg_dict.items():
@@ -439,7 +439,7 @@ class LoadCyberbag:
         fus_objects_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
           if version_245:
-            fus_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+            fus_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
           else:
             fus_objects_msg_dict[msg.header.timestamp / 1e6] = msg
 
@@ -467,7 +467,7 @@ class LoadCyberbag:
       fus_occupancy_objects_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
         if version_245:
-          fus_occupancy_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+          fus_occupancy_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
         else:
           fus_occupancy_objects_msg_dict[msg.header.timestamp / 1e6] = msg
 
@@ -494,7 +494,7 @@ class LoadCyberbag:
       # for topic, msg, t in self.bag.read_messages("/parking_slot"):
       # new visula parking slot proto
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
-        vis_parking_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        vis_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
       vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vis_parking_msg_dict.items():
         self.vis_parking_msg['t'].append(t)
@@ -554,7 +554,7 @@ class LoadCyberbag:
     # try:
     #   precept_msg_dict = {}
     #   for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_info"):
-    #     precept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+    #     precept_msg_dict[msg.msg_header.stamp / 1e6] = msg
     #   precept_msg_dict = {key: val for key, val in sorted(precept_msg_dict.items(), key = lambda ele: ele[0])}
     #   for t, msg in precept_msg_dict.items():
     #     self.precept_msg['t'].append(t)
@@ -577,7 +577,7 @@ class LoadCyberbag:
     # try:
     #   precept_debug_msg_dict = {}
     #   for topic, msg, t in self.bag.read_messages("/iflytek/ultrasonic_perception_debug_info"):
-    #     precept_debug_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+    #     precept_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
     #   precept_debug_msg_dict = {key: val for key, val in sorted(precept_debug_msg_dict.items(), key = lambda ele: ele[0])}
     #   for t, msg in precept_debug_msg_dict.items():
     #     self.precept_debug_msg['t'].append(t)
@@ -599,7 +599,7 @@ class LoadCyberbag:
     try:
       wave_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
-        wave_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        wave_msg_dict[msg.msg_header.stamp / 1e6] = msg
       wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
         self.wave_msg['t'].append(t)
@@ -621,7 +621,7 @@ class LoadCyberbag:
     try:
       adas_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/adas_function_debug"):
-        adas_debug_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        adas_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
       adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in adas_debug_msg_dict.items():
         self.adas_debug_msg['t'].append(t)
@@ -644,7 +644,7 @@ class LoadCyberbag:
     try:
       wave_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
-        wave_debug_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        wave_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
       wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_debug_msg_dict.items():
         self.wave_debug_msg['t'].append(t)
@@ -668,7 +668,7 @@ class LoadCyberbag:
       try:
         uss_percept_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
-          uss_percept_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+          uss_percept_msg_dict[msg.msg_header.stamp / 1e6] = msg
         uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in uss_percept_msg_dict.items():
           self.uss_percept_msg['t'].append(t)

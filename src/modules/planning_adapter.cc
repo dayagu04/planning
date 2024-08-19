@@ -96,9 +96,9 @@ void PlanningAdapter::Proc() {
     is_prediction_result_msg_updated_.store(false);
   }
   input_topic_timestamp->set_prediction(
-      local_view_ptr_->prediction_result.header.timestamp);
+      local_view_ptr_->prediction_result.msg_header.stamp);
   input_topic_latency->set_prediction(get_latency(
-      start_time, local_view_ptr_->prediction_result.header.timestamp));
+      start_time, local_view_ptr_->prediction_result.msg_header.stamp));
 
   // 1.2 receive fusion_road
   if (is_road_info_msg_updated_) {
@@ -120,9 +120,9 @@ void PlanningAdapter::Proc() {
     is_localization_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization(
-      local_view_ptr_->localization.header.timestamp);
+      local_view_ptr_->localization.msg_header.stamp);
   input_topic_latency->set_localization(
-      get_latency(start_time, local_view_ptr_->localization.header.timestamp));
+      get_latency(start_time, local_view_ptr_->localization.msg_header.stamp));
   // TBD: 新定位，2.4.9后应该启用
   if (is_localization_estimate_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -393,7 +393,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
   header.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION;
   header.input_list[input_list_count].seq =
-      local_view_ptr_->prediction_result.header.seq;
+      local_view_ptr_->prediction_result.msg_header.seq;
   input_list_count += 1;
 
   header.input_list[input_list_count].input_type =
@@ -405,7 +405,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::Header &header) {
   header.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION;
   header.input_list[input_list_count].seq =
-      local_view_ptr_->localization.header.seq;
+      local_view_ptr_->localization.msg_header.seq;
   input_list_count += 1;
 
   header.input_list[input_list_count].input_type =

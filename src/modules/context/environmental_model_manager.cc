@@ -153,9 +153,6 @@ bool EnvironmentalModelManager::Run() {
   const auto &local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
-  bool msf_valid = local_view.localization_estimate.msf_status.available &&
-                   (local_view.localization_estimate.msf_status.msf_status !=
-                    iflyauto::MsfStatusType_ERROR);
   bool localization_valid =
       local_view.localization.status.status_info.mode !=
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
@@ -169,8 +166,8 @@ bool EnvironmentalModelManager::Run() {
                        g_context.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
   printf("planner_type:%d\n", g_context.GetParam().planner_type);
-  auto location_valid = (msf_valid || localization_valid) &&
-                        fusion_localization_valid && planner_valid;
+  auto location_valid =
+      localization_valid && fusion_localization_valid && planner_valid;
 
   if (session_->is_hpp_scene() && !location_valid) {
     LOG_ERROR("hpp location invalid\n");
@@ -361,28 +358,28 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
-    auto timestamp = local_view.localization.header.timestamp != 0
-                         ? local_view.localization.header.timestamp
-                         : local_view.localization_estimate.header.timestamp;
+    auto timestamp = local_view.localization.msg_header.stamp;
     truncate_prediction_info(local_view.prediction_result, timestamp,
                              prediction_obj_id_set);
-    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_num; i++) {
+    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+         i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
       if (prediction_obj_id_set.find(obj.additional_info.track_id) ==
           prediction_obj_id_set.end()) {
         transform_fusion_to_prediction_longtime(
-            obj, (double)local_view.fusion_objects_info.header.timestamp,
+            obj, (double)local_view.fusion_objects_info.msg_header.stamp,
             prediction_info);
       }
       transform_fusion_to_prediction_longtime(
-          obj, (double)local_view.fusion_objects_info.header.timestamp,
+          obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           fusion_objs_info);
     }
   } else {
-    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_num; i++) {
+    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+         i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
       transform_fusion_to_prediction(
-          obj, (double)local_view.fusion_objects_info.header.timestamp,
+          obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           prediction_info);
     }
   }
@@ -422,79 +419,64 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     common::VehicleStatus &vehicle_status) {
   const auto &vehicle_service_output_info =
       local_view.vehicle_service_output_info;
-  const auto &localization_estimate = local_view.localization_estimate;
+  // const auto &localization_estimate = local_view.localization_estimate;
   const auto &localization = local_view.localization;
-  bool new_local = localization.header.timestamp != 0;
+  // bool new_local = localization.msg_header.stamp != 0;
   const auto &function_state_machine_info =
       local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(
-      vehicle_service_output_info.header.timestamp);
+      vehicle_service_output_info.msg_header.stamp);
 
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
-        ->set_value_rad(new_local
-                            ? localization.orientation.euler_boot.yaw
-                            : localization_estimate.pose.euler_angles.yaw);
-    // ->set_value_rad(localization_estimate.pose.euler_angles.yaw);
+        // ->set_value_rad(new_local
+        //                     ? localization.orientation.euler_boot.yaw
+        //                     : localization_estimate.pose.euler_angles.yaw);
+        ->set_value_rad(localization.orientation.euler_boot.yaw);
     vehicle_status.mutable_location()->set_available(true);
     // auto llh_position = localization_estimate.pose.llh_position;
     // auto llh_position = localization.position.position_llh;
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_latitude_degree(
-            new_local ? localization.position.position_llh.latitude
-                      : localization_estimate.pose.llh_position.lat);
+        ->set_latitude_degree(localization.position.position_llh.latitude);
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_longitude_degree(
-            new_local ? localization.position.position_llh.longitude
-                      : localization_estimate.pose.llh_position.lon);
+        ->set_longitude_degree(localization.position.position_llh.longitude);
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_altitude_meter(
-            new_local ? localization.position.position_llh.height
-                      : localization_estimate.pose.llh_position.height);
+        ->set_altitude_meter(localization.position.position_llh.height);
     // auto local_position = localization_estimate.pose.local_position;
     // auto local_position = localization.position.position_boot;
     vehicle_status.mutable_location()->mutable_location_enu()->set_x(
-        new_local ? localization.position.position_boot.x
-                  : localization_estimate.pose.local_position.x);
+        localization.position.position_boot.x);
     vehicle_status.mutable_location()->mutable_location_enu()->set_y(
-        new_local ? localization.position.position_boot.y
-                  : localization_estimate.pose.local_position.y);
+        localization.position.position_boot.y);
     vehicle_status.mutable_location()->mutable_location_enu()->set_z(
-        new_local ? localization.position.position_boot.z
-                  : localization_estimate.pose.local_position.z);
+        localization.position.position_boot.z);
     vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
-        localization.header.timestamp);
+        localization.msg_header.stamp);
     // auto enu_orientation = localization_estimate.pose.orientation;
     // auto enu_orientation = localization.orientation.quaternion_boot;
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_x(new_local ? localization.orientation.quaternion_boot.x
-                          : localization_estimate.pose.orientation.x);
+        ->set_x(localization.orientation.quaternion_boot.x);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_y(new_local ? localization.orientation.quaternion_boot.y
-                          : localization_estimate.pose.orientation.y);
+        ->set_y(localization.orientation.quaternion_boot.y);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_z(new_local ? localization.orientation.quaternion_boot.z
-                          : localization_estimate.pose.orientation.z);
+        ->set_z(localization.orientation.quaternion_boot.z);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_w(new_local ? localization.orientation.quaternion_boot.w
-                          : localization_estimate.pose.orientation.w);
+        ->set_w(localization.orientation.quaternion_boot.w);
     // last_feed_time_[FEED_EGO_ENU] =
     // local_view.localization_estimate_recv_time;
-    last_feed_time_[FEED_EGO_ENU] =
-        new_local ? local_view.localization_recv_time
-                  : local_view.localization_estimate_recv_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
   } else {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
@@ -514,9 +496,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     location_enu->mutable_orientation()->set_w(1.0);
     // last_feed_time_[FEED_EGO_ENU] =
     // local_view.localization_estimate_recv_time;
-    last_feed_time_[FEED_EGO_ENU] =
-        new_local ? local_view.localization_recv_time
-                  : local_view.localization_estimate_recv_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
   }
 
   vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
@@ -538,22 +518,16 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()
         ->mutable_heading_velocity()
-        ->set_value_mps(new_local ? localization.velocity.velocity_body.vx
-                                  : vehicle_service_output_info.vehicle_speed);
-    last_feed_time_[FEED_EGO_VEL] =
-        new_local ? local_view.localization_recv_time
-                  : local_view.vehicle_service_output_info_recv_time;
+        ->set_value_mps(localization.velocity.velocity_body.vx);
+    last_feed_time_[FEED_EGO_VEL] = local_view.localization_recv_time;
   }
 
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_brake_info()
         ->mutable_brake_info_data()
         ->set_acceleration_on_vehicle_wheel(
-            new_local ? localization.acceleration.acceleration_body.ax
-                      : vehicle_service_output_info.long_acceleration);
-    last_feed_time_[FEED_EGO_ACC] =
-        new_local ? local_view.localization_recv_time
-                  : local_view.vehicle_service_output_info_recv_time;
+            localization.acceleration.acceleration_body.ax);
+    last_feed_time_[FEED_EGO_ACC] = local_view.localization_recv_time;
   }
 
   if (vehicle_service_output_info.vehicle_speed_display_available) {
@@ -563,12 +537,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   if (session_->environmental_model().location_valid()) {
-    auto linear_velocity_from_wheel =
-        localization_estimate.pose.linear_velocity_from_wheel;
-    // WB：定位没有给linear_velocity_from_wheel赋值
-    // vehicle_status.mutable_velocity()
-    //     ->mutable_heading_velocity()
-    //     ->set_value_mps(linear_velocity_from_wheel);
+    auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
   }
 
   if (vehicle_service_output_info.steering_wheel_angle_available) {
@@ -694,9 +663,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.fusion_source =
         prediction_object.fusion_obstacle.additional_info.fusion_source;
     // todo:后面接口变化时，取trajectory的时间戳
-    cur_predicion_obj.timestamp_us = prediction_result.header.timestamp;
+    cur_predicion_obj.timestamp_us = prediction_result.msg_header.stamp;
     double prediction_relative_time =
-        clip(prediction_result.header.timestamp / 1.e+6 - current_time / 1.e+3 -
+        clip(prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3 -
                  init_relative_time,
              0.0, -1.0);
     if (std::abs(prediction_relative_time) > 0.3) {
@@ -704,8 +673,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
           "[prediction delay time] obstacle[%d] absolute start time %lu "
           "relative time %f start time %f "
           "init_relative_time %f \n",
-          cur_predicion_obj.id, prediction_result.header.timestamp,
-          prediction_result.header.timestamp / 1.e+6 - current_time / 1.e+3,
+          cur_predicion_obj.id, prediction_result.msg_header.stamp,
+          prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3,
           prediction_relative_time, init_relative_time);
     }
     cur_predicion_obj.delay_time = prediction_relative_time;

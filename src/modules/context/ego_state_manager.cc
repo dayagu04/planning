@@ -424,9 +424,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   auto cur_time_us = IflyTime::Now_us();
   const auto &local_view = session_->environmental_model().get_local_view();
   const auto &localization_timestamp_us =
-      local_view.localization.header.timestamp;
-  // const auto localization_timestamp_us =
-  //     local_view.localization_estimate.header.timestamp;
+      local_view.localization.msg_header.stamp;
+
   uint64_t localization_latency_ms =
       localization_timestamp_us == 0
           ? 0

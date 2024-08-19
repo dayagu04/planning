@@ -76,7 +76,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
           (current_state == iflyauto::FunctionalState_HPP_IN_SECURE);
       bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
       if (dbw_status == true) {
-        auto_timestamp = fsm_msg->msg_header.timestamp;
+        auto_timestamp = fsm_msg->msg_header.stamp;
         break;
       }
     }
@@ -689,11 +689,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
 
   auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
       it_planning_msg->second);
-  if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
+  if (planning_debug_info->timestamp() > planning_msg->msg_header.stamp) {
     it_planning_msg++;
     auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
         it_planning_msg->second);
-    if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
+    if (planning_debug_info->timestamp() > planning_msg->msg_header.stamp) {
       std::cerr << "timestamp error!!! planning output and planning debug do "
                    "not match"
                 << std::endl;
@@ -776,11 +776,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
-    planning_header_time_us_ = planning_msg->msg_header.timestamp;
+    planning_header_time_us_ = planning_msg->msg_header.stamp;
     planning_msg_time_s_ = it_planning_msg->first;
     it_planning_msg++;
 
-    planning_hmi_header_time_us_ = planning_hmi_msg->msg_header.timestamp;
+    planning_hmi_header_time_us_ = planning_hmi_msg->msg_header.stamp;
     planning_hmi_msg_time_ns_ = it_planning_hmi_msg->first;
     it_planning_hmi_msg++;
 
@@ -820,7 +820,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -835,7 +835,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
         if (loc_header_time_i > loc_esti_header_time_us_) {
           if (loc_header_time_i <= next_loc_esti_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
@@ -866,7 +866,7 @@ void PlanningPlayer::RunCloseLoop(
          it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
       auto loc_msg_i =
           boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-      auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+      auto loc_header_time_i = loc_msg_i->msg_header.stamp;
       if (loc_header_time_i > loc_esti_header_time_us_ &&
           loc_header_time_i < loc_esti_header_time_us_ + 1000 * 1000) {
         auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
@@ -1147,7 +1147,7 @@ void PlanningPlayer::UpdateVehicleServiceData() {
        it != msg_cache_[TOPIC_VEHICLE_SERVICE].end(); it++) {
     auto vehi_svc_msg_i =
         boost::any_cast<struct_msgs::VehicleServiceOutputInfo::Ptr>(it->second);
-    auto vehi_svc_header_time_i = vehi_svc_msg_i->msg_header.timestamp;
+    auto vehi_svc_header_time_i = vehi_svc_msg_i->msg_header.stamp;
     if (vehi_svc_header_time_i > vehi_svc_header_time_us_) {
       if (vehi_svc_header_time_i <= next_vehi_svc_header_time_us_) {
         auto delta_t = vehi_svc_header_time_i - vehi_svc_header_time_us_;
@@ -1267,7 +1267,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
             struct_msgs::LocalizationEstimate>(TOPIC_LOCALIZATION_ESTIMATE,
                                                start_time);
     if (localization_estimate_ros_msg) {
-      local_time_ = localization_estimate_ros_msg->msg_header.timestamp;
+      local_time_ = localization_estimate_ros_msg->msg_header.stamp;
       iflyauto::LocalizationEstimate localization_estimate_msg{};
       convert(localization_estimate_msg, *localization_estimate_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
@@ -1281,7 +1281,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     auto localization_ros_msg = find_ros_msg_with_header_time_upper_bound<
         struct_msgs::IFLYLocalization>(TOPIC_LOCALIZATION, start_time);
     if (localization_ros_msg) {
-      local_time_ = localization_ros_msg->msg_header.timestamp;
+      local_time_ = localization_ros_msg->msg_header.stamp;
       iflyauto::IFLYLocalization localization_msg{};
       convert(localization_msg, *localization_ros_msg,
               ConvertTypeInfo::TO_STRUCT);

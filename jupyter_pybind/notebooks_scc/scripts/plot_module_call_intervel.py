@@ -53,108 +53,108 @@ class LocalizationApaPlotter(object):
     last_planning_time = None
     for topic, msg, t in bag.read_messages('/iflytek/planning/plan'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_planning_time is None:
         self.planning_call_interval_vec.append(0.0)
       else:
-        self.planning_call_interval_vec.append((msg.msg_header.timestamp - last_planning_time) * 1e-6)
-      self.planning_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_planning_time = msg.msg_header.timestamp
+        self.planning_call_interval_vec.append((msg.msg_header.stamp - last_planning_time) * 1e-6)
+      self.planning_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_planning_time = msg.msg_header.stamp
 
     last_static_map_time = None
     for topic, msg, t in bag.read_messages('/iflytek/ehr/static_map'):
       if last_static_map_time is None:
         self.static_map_call_interval_vec.append(0.0)
       else:
-        self.static_map_call_interval_vec.append((msg.msg_header.timestamp * 1000 - last_static_map_time) * 1e-6)
-      self.static_map_time_vec.append((msg.msg_header.timestamp * 1000 - start_time) * 1e-6)
-      last_static_map_time = msg.msg_header.timestamp * 1000
+        self.static_map_call_interval_vec.append((msg.msg_header.stamp * 1000 - last_static_map_time) * 1e-6)
+      self.static_map_time_vec.append((msg.msg_header.stamp * 1000 - start_time) * 1e-6)
+      last_static_map_time = msg.msg_header.stamp * 1000
 
     last_pbox_imu_time = None
     for topic, msg, t in bag.read_messages('/iflytek/sensor/pbox/imu'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_pbox_imu_time is None:
         self.pbox_imu_call_interval_vec.append(0.0)
       else:
-        self.pbox_imu_call_interval_vec.append((msg.msg_header.timestamp - last_pbox_imu_time) * 1e-6)
-      self.pbox_imu_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_pbox_imu_time = msg.msg_header.timestamp
+        self.pbox_imu_call_interval_vec.append((msg.msg_header.stamp - last_pbox_imu_time) * 1e-6)
+      self.pbox_imu_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_pbox_imu_time = msg.msg_header.stamp
 
     last_pbox_gnss_time = None
     for topic, msg, t in bag.read_messages('/iflytek/sensor/pbox/gnss'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_pbox_gnss_time is None:
         self.pbox_gnss_call_interval_vec.append(0.0)
       else:
-        self.pbox_gnss_call_interval_vec.append((msg.msg_header.timestamp - last_pbox_gnss_time) * 1e-6)
-      self.pbox_gnss_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_pbox_gnss_time = msg.msg_header.timestamp
+        self.pbox_gnss_call_interval_vec.append((msg.msg_header.stamp - last_pbox_gnss_time) * 1e-6)
+      self.pbox_gnss_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_pbox_gnss_time = msg.msg_header.stamp
 
     last_fusion_objects_time = None
     for topic, msg, t in bag.read_messages('/iflytek/fusion/objects'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_fusion_objects_time is None:
         self.fusion_objects_call_interval_vec.append(0.0)
       else:
-        self.fusion_objects_call_interval_vec.append((msg.msg_header.timestamp - last_fusion_objects_time) * 1e-6)
-      self.fusion_objects_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_fusion_objects_time = msg.msg_header.timestamp
+        self.fusion_objects_call_interval_vec.append((msg.msg_header.stamp - last_fusion_objects_time) * 1e-6)
+      self.fusion_objects_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_fusion_objects_time = msg.msg_header.stamp
 
     last_control_time = None
     for topic, msg, t in bag.read_messages('/iflytek/control/control_command'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_control_time is None:
         self.control_call_interval_vec.append(0.0)
       else:
-        self.control_call_interval_vec.append((msg.msg_header.timestamp - last_control_time) * 1e-6)
-      self.control_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_control_time = msg.msg_header.timestamp
+        self.control_call_interval_vec.append((msg.msg_header.stamp - last_control_time) * 1e-6)
+      self.control_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_control_time = msg.msg_header.stamp
 
     last_ego_pose_time = None
     for topic, msg, t in bag.read_messages('/iflytek/localization/ego_pose'):
       if last_ego_pose_time is None:
         self.ego_pose_call_interval_vec.append(0.0)
       else:
-        self.ego_pose_call_interval_vec.append((msg.msg_header.timestamp * 1000 - last_ego_pose_time) * 1e-6)
-      self.ego_pose_time_vec.append((msg.msg_header.timestamp * 1000 - start_time) * 1e-6)
-      last_ego_pose_time = msg.msg_header.timestamp * 1000
+        self.ego_pose_call_interval_vec.append((msg.msg_header.stamp * 1000 - last_ego_pose_time) * 1e-6)
+      self.ego_pose_time_vec.append((msg.msg_header.stamp * 1000 - start_time) * 1e-6)
+      last_ego_pose_time = msg.msg_header.stamp * 1000
 
     last_vehicle_service_time = None
     for topic, msg, t in bag.read_messages('/iflytek/vehicle_service'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_vehicle_service_time is None:
         self.vehicle_service_call_interval_vec.append(0.0)
       else:
-        self.vehicle_service_call_interval_vec.append((msg.msg_header.timestamp - last_vehicle_service_time) * 1e-6)
-      self.vehicle_service_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_vehicle_service_time = msg.msg_header.timestamp
+        self.vehicle_service_call_interval_vec.append((msg.msg_header.stamp - last_vehicle_service_time) * 1e-6)
+      self.vehicle_service_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_vehicle_service_time = msg.msg_header.stamp
 
     last_ehr_position_time = None
     for topic, msg, t in bag.read_messages('/iflytek/ehr/position'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp * 1000
+        start_time = msg.msg_header.stamp * 1000
       if last_ehr_position_time is None:
         self.ehr_position_call_interval_vec.append(0.0)
       else:
-        self.ehr_position_call_interval_vec.append((msg.msg_header.timestamp * 1000 - last_ehr_position_time) * 1e-6)
-      self.ehr_position_time_vec.append((msg.msg_header.timestamp * 1000 - start_time) * 1e-6)
-      last_ehr_position_time = msg.msg_header.timestamp * 1000
+        self.ehr_position_call_interval_vec.append((msg.msg_header.stamp * 1000 - last_ehr_position_time) * 1e-6)
+      self.ehr_position_time_vec.append((msg.msg_header.stamp * 1000 - start_time) * 1e-6)
+      last_ehr_position_time = msg.msg_header.stamp * 1000
 
     last_road_fusion_time = None
     for topic, msg, t in bag.read_messages('/iflytek/fusion/road_fusion'):
       if start_time is None:
-        start_time = msg.msg_header.timestamp
+        start_time = msg.msg_header.stamp
       if last_road_fusion_time is None:
         self.road_fusion_call_interval_vec.append(0.0)
       else:
-        self.road_fusion_call_interval_vec.append((msg.msg_header.timestamp - last_road_fusion_time) * 1e-6)
-      self.road_fusion_time_vec.append((msg.msg_header.timestamp - start_time) * 1e-6)
-      last_road_fusion_time = msg.msg_header.timestamp
+        self.road_fusion_call_interval_vec.append((msg.msg_header.stamp - last_road_fusion_time) * 1e-6)
+      self.road_fusion_time_vec.append((msg.msg_header.stamp - start_time) * 1e-6)
+      last_road_fusion_time = msg.msg_header.stamp
 
 
   def plot_figure(self):

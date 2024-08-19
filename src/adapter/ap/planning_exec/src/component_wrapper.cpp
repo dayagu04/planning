@@ -114,9 +114,6 @@ void ComponentWrapper::InitClient() {
                               FusionOccupancyObjectsInfo);
       REGISTER_CLIENT_HANDLER("IflytekFusionRoadFusion", FeedFusionRoad,
                               RoadInfo);
-      REGISTER_CLIENT_HANDLER("IflytekLocalizationEgoPose",
-                              FeedLocalizationEstimateOutput,
-                              LocalizationEstimate);
       REGISTER_CLIENT_HANDLER("IflytekLocalizationEgomotion",
                               FeedLocalizationOutput, IFLYLocalization);
       REGISTER_CLIENT_HANDLER("IflytekPredictionPredictionResult",

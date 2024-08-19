@@ -199,9 +199,8 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
-    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
-    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
-        obj_msg;  // us
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
   }
 }
 
@@ -218,9 +217,8 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
-    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
-    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
-        obj_msg;  // us
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
     if (is_close_loop) {
       auto origin_topic = msg.getTopic() + "_origin";
       new_bag.write(origin_topic, msg.getTime(), obj_msg);
