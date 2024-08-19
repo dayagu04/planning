@@ -41,8 +41,7 @@ constexpr double kEps = 1e-6;
 bool SlotManagement::Update(const LocalView *local_view_ptr) {
   return Update(&local_view_ptr->function_state_machine_info,
                 &local_view_ptr->parking_fusion_info,
-                &local_view_ptr->localization_estimate,
-                &local_view_ptr->uss_wave_info,
+                &local_view_ptr->localization, &local_view_ptr->uss_wave_info,
                 &local_view_ptr->uss_percept_info,
                 &local_view_ptr->ground_line_perception,
                 &local_view_ptr->fusion_objects_info,
@@ -52,7 +51,7 @@ bool SlotManagement::Update(const LocalView *local_view_ptr) {
 bool SlotManagement::Update(
     const iflyauto::FuncStateMachine *func_statemachine,
     const iflyauto::ParkingFusionInfo *parking_slot_info,
-    const iflyauto::LocalizationEstimate *localization_info,
+    const iflyauto::IFLYLocalization *localization_info,
     const iflyauto::UssWaveInfo *uss_wave_info,
     const iflyauto::UssPerceptInfo *uss_percept_info,
     const iflyauto::GroundLinePerceptionInfo *ground_line_perception_info,
@@ -267,11 +266,11 @@ void SlotManagement::Reset() { frame_.Reset(); }
 
 void SlotManagement::Preprocess() {
   auto &measurement = frame_.measurement;
-  const auto &local_pos = frame_.localization_ptr->pose;
 
-  measurement.ego_pos << local_pos.local_position.x, local_pos.local_position.y;
+  measurement.ego_pos << frame_.localization_ptr->position.position_boot.x,
+      frame_.localization_ptr->position.position_boot.y;
 
-  measurement.heading = local_pos.heading;
+  measurement.heading = frame_.localization_ptr->orientation.euler_boot.yaw;
   measurement.ego_heading_vec =
       pnc::geometry_lib::GetUnitTangVecByHeading(measurement.heading);
 
@@ -295,7 +294,9 @@ void SlotManagement::Preprocess() {
       apa_param.GetParam().lat_dist_mirror_to_center *
           ego_heading_vec_turn_left;
 
-  measurement.v_ego = frame_.localization_ptr->pose.linear_velocity_from_wheel;
+  measurement.v_ego =
+      std::hypot(frame_.localization_ptr->velocity.velocity_boot.vx,
+                 frame_.localization_ptr->velocity.velocity_boot.vy);
 }
 
 bool SlotManagement::IsInSearchingState() const {

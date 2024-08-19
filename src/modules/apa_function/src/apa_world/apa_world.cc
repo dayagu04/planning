@@ -38,10 +38,11 @@ void ApaWorld::UpdateEgoState() {
   measures_ptr_->current_state =
       local_view_ptr_->function_state_machine_info.current_state;
 
-  const auto& pose = local_view_ptr_->localization_estimate.pose;
+  const auto& pos = local_view_ptr_->localization.position.position_boot;
+  const auto& heading =
+      local_view_ptr_->localization.orientation.euler_boot.yaw;
 
-  const Eigen::Vector2d current_pos(pose.local_position.x,
-                                    pose.local_position.y);
+  const Eigen::Vector2d current_pos(pos.x, pos.y);
 
   const ApaParameters& param = apa_param.GetParam();
   // calculate standstill time by pos
@@ -58,9 +59,8 @@ void ApaWorld::UpdateEgoState() {
   }
 
   measures_ptr_->pos_ego = current_pos;
-  measures_ptr_->heading_ego = pose.heading;
-  measures_ptr_->heading_ego_vec << std::cos(pose.heading),
-      std::sin(pose.heading);
+  measures_ptr_->heading_ego = heading;
+  measures_ptr_->heading_ego_vec << std::cos(heading), std::sin(heading);
 
   // measures_ptr_->vel_ego =
   //     local_view_ptr_->vehicle_service_output_info.vehicle_speed();
