@@ -26,6 +26,10 @@ IntRequest::IntRequest(
 }
 
 void IntRequest::Update(int lc_status) {
+  if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
+    LOG_DEBUG("IntRequest::Update: ego not in lane keeping!");
+    return;
+  }
   // ego_blinker 0-lane follow, 1-left, 2-right
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
