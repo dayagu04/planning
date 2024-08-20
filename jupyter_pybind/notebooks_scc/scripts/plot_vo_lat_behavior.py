@@ -295,11 +295,7 @@ def slider_callback(bag_time):
 
   push_notebook()
 
-<<<<<<< HEAD
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), column(data_obstacle_table, data_behavior_table_2), column(data_overtake_lc_table, data_cone_lc_table)), notebook_handle=True)
-=======
 # +
->>>>>>> daed7ceca... add funcion for judgement ego front is merge region
 slider_class = LatBehaviorSlider(slider_callback)
 bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_cone_lc_table, data_behavior_table_2)), notebook_handle=True)
 
