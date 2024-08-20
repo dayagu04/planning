@@ -8,6 +8,7 @@
 
 #include "apa_plan_base.h"
 #include "collision_detection.h"
+#include "config_context.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "parallel_park_in_planner.h"
@@ -20,6 +21,7 @@ static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
 int Init() {
+  (void)planning::common::ConfigurationContext::Instance();
   pBase = new ParallelPathPlanner();
   pBase->Reset();
   return 0;
