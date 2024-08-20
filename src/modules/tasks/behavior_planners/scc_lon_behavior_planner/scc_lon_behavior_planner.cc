@@ -300,9 +300,9 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_location_tail(track.location_tail);
     one_obs->set_vy_rel(track.vy_rel);
     one_obs->set_y_rel(track.y_rel);
-    if (agent_manager->GetAgent(track.track_id) != nullptr) {
-      one_obs->set_is_new_cutin(
-          agent_manager->GetAgent(track.track_id)->is_cutin());
+    const auto *agent = agent_manager->GetAgent(track.track_id);
+    if (agent != nullptr) {
+      one_obs->set_is_new_cutin(agent->is_cutin());
     } else {
       one_obs->set_is_new_cutin(false);
     }
