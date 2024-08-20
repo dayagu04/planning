@@ -108,6 +108,7 @@ struct LaneChangeDeciderOutput {
   MergeDirection merge_direction = NONE_LANE_MERGE;
   int merge_lane_virtual_id;
   RampDirection dir_turn_signal_road_to_ramp = RAMP_NONE;
+  IntCancelReasonType int_request_cancel_reason = NO_CANCEL;
 };
 
 }  // namespace planning

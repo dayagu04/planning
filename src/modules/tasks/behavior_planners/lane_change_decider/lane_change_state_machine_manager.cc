@@ -887,9 +887,10 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.merge_lane_virtual_id = merge_lane_virtual_id;
   JSON_DEBUG_VALUE("is_merge_region", lane_change_decider_output.is_merge_region);
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
-  
+
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp = road_to_ramp_turn_signal_;
+  lane_change_decider_output.int_request_cancel_reason = lc_req_mgr_->int_request_cancel_reason();
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const std::vector<TrackedObject> &vec_side_obstacles,
@@ -1845,7 +1846,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(const std:
     abs_lat_diff = std::abs(frenet_ref_point.y);
   } else {
     //特殊情况如果进入到这，这会有些误差 TODO(fengwang31)
-    abs_lat_diff = std::abs(ref_ego_l) + std::abs(cur_ego_l); 
+    abs_lat_diff = std::abs(ref_ego_l) + std::abs(cur_ego_l);
   }
   const auto cur_lane_coord = cur_reference_path->get_frenet_coord();
   const auto cur_ref_path_end_point = cur_reference_path->get_points().back();

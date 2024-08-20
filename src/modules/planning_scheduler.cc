@@ -598,9 +598,16 @@ void PlanningScheduler::FillPlanningHmiInfo(
         iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
   }
   // update StatusUpdateReason
+  const auto int_request_cancel_reason = lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (lc_invalid_reason == "side view invalid" ||
+  if (int_request_cancel_reason == SOLID_LC) {
+    planning_hmi_info->ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (int_request_cancel_reason == MANUAL_CANCEL) {
+    planning_hmi_info->ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
+  } else if (lc_invalid_reason == "side view invalid" ||
       lc_invalid_reason == "front view invalid" ||
       lc_invalid_reason == "valid cnt below threshold" ||
       lc_back_reason == "side view back" ||
