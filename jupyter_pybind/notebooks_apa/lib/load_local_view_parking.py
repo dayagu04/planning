@@ -139,10 +139,33 @@ class LoadCyberbag:
   def load_all_data(self):
     max_time = 0.0
     global smallest_abs_t
-    # load localization msg
+    # # load localization msg
+    # try:
+    #   loc_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+    #     loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+    #   loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in loc_msg_dict.items():
+    #     self.loc_msg['t'].append(t)
+    #     self.loc_msg['abs_t'].append(t)
+    #     self.loc_msg['data'].append(msg)
+    #   t0 = self.loc_msg['t'][0]
+    #   smallest_abs_t = max(smallest_abs_t, self.loc_msg['t'][0])
+    #   self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
+    #   max_time = max(max_time, self.loc_msg['t'][-1])
+    #   print('loc_msg time:',self.loc_msg['t'][-1])
+    #   if len(self.loc_msg['t']) > 0:
+    #     self.loc_msg['enable'] = True
+    #   else:
+    #     self.loc_msg['enable'] = False
+    # except:
+    #   self.loc_msg['enable'] = False
+    #   print('missing /iflytek/localization/ego_pose !!!')
+
+    # load new localization msg
     try:
       loc_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
@@ -160,7 +183,7 @@ class LoadCyberbag:
         self.loc_msg['enable'] = False
     except:
       self.loc_msg['enable'] = False
-      print('missing /iflytek/localization/ego_pose !!!')
+      print('missing /iflytek/localization/egomotion !!!')
 
     # load vehicle service msg
     try:

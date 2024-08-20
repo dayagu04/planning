@@ -107,8 +107,10 @@ def slider_callback(bag_time, vehicle_type):
 
   if bag_loader.loc_msg['enable'] == True:
     loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
-    print("local_vel = ",  loc_msg.pose.linear_velocity_from_wheel)
-    temp_pos = [loc_msg.pose.local_position.x, loc_msg.pose.local_position.y]
+
+    velocity = math.hypot(loc_msg.velocity.velocity_boot.vx,loc_msg.velocity.velocity_boot.vy)
+    print("local_vel = ", velocity)
+    temp_pos = [loc_msg.position.position_boot.x, loc_msg.position.position_boot.y]
     global cur_pos
     print("local_move_dist = ",  math.hypot(temp_pos[0] - cur_pos[0], temp_pos[1] - cur_pos[1]))
     cur_pos = temp_pos

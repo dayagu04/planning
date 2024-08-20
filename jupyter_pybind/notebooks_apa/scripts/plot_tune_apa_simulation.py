@@ -217,9 +217,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     obs_x_vec = plan_debug_msg['obstaclesX']
     obs_y_vec = plan_debug_msg['obstaclesY']
 
-  current_ego_x = loc_msg.pose.local_position.x
-  current_ego_y = loc_msg.pose.local_position.y
-  sim_ego_heading = loc_msg.pose.euler_angles.yaw + heading_dif / 57.2958
+  current_ego_x = loc_msg.position.position_boot.x
+  current_ego_y = loc_msg.position.position_boot.y
+  sim_ego_heading = loc_msg.orientation.euler_boot.yaw + heading_dif / 57.2958
 
   sim_ego_x = current_ego_x + lon_pos_dif * math.cos(sim_ego_heading) - lat_pos_dif * math.sin(sim_ego_heading)
   sim_ego_y = current_ego_y + lon_pos_dif * math.sin(sim_ego_heading) + lat_pos_dif * math.cos(sim_ego_heading)
@@ -229,10 +229,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     sim_ego_y = last_plan_pose_[1]
     sim_ego_heading = last_plan_pose_[2]
 
-  loc_msg.pose.local_position.x = sim_ego_x
-  loc_msg.pose.local_position.y = sim_ego_y
-  loc_msg.pose.euler_angles.yaw = sim_ego_heading
-  loc_msg.pose.heading = sim_ego_heading
+  loc_msg.position.position_boot.x = sim_ego_x
+  loc_msg.position.position_boot.y = sim_ego_y
+  loc_msg.orientation.euler_boot.yaw = sim_ego_heading
 
   data_sim_pos.data.update({
     'x': [sim_ego_x],

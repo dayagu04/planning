@@ -5,6 +5,7 @@
 #include "camera_preception_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
+#include "ifly_localization_c.h"
 #include "planning_debug_info.pb.h"
 #include "serialize_utils.h"
 #include "slot_management.h"
@@ -14,7 +15,7 @@
 #include "struct_convert/fusion_objects_c.h"
 #include "struct_convert/fusion_occupancy_objects_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
-#include "struct_convert/localization_c.h"
+#include "struct_convert/ifly_localization_c.h"
 #include "struct_convert/planning_plan_c.h"
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
@@ -23,7 +24,7 @@
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
-#include "struct_msgs/LocalizationEstimate.h"
+#include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/UssPerceptInfo.h"
@@ -59,9 +60,9 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
   iflyauto::UssWaveInfo uss_wave_info =
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
@@ -116,9 +117,9 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
   iflyauto::UssWaveInfo uss_wave_info =
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
