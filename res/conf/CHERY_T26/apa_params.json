@@ -238,7 +238,7 @@
   "limiter_update_min_occupied_ratio": 0.386,
   "limiter_update_max_occupied_ratio": 0.886,
   "limiter_update_occupied_ratio": 0.6,
-  "limiter_move_dist": 0.25,
+  "limiter_move_dist": 0.426,
   "max_slots_update_angle_dis_limit_deg": 45.0,
   "max_slot_boundary_line_angle_dif_deg": 10.0,
   "outside_lon_dist_max_slot2mirror": 2.168,

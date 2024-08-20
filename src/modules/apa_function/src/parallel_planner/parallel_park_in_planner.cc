@@ -544,9 +544,14 @@ void ParallelParInPlanner::GenTlane() {
 
     if (curb_condition) {
       curb_count++;
-      curb_y_limit = side_sgn > 0.0
-                         ? std::max(curb_y_limit, obstacle_point_slot.y())
-                         : std::min(curb_y_limit, obstacle_point_slot.y());
+      if (side_sgn > 0.0) {
+        curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
+        curb_y_limit = std::min(curb_y_limit, half_slot_width);
+      } else {
+        curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+        curb_y_limit = std::max(curb_y_limit, half_slot_width);
+      }
+
       // DEBUG_PRINT("curb condition!");
     }
 
@@ -661,7 +666,7 @@ void ParallelParInPlanner::GenTlane() {
 
   curb_y_limit =
       pnc::mathlib::Clamp(curb_y_limit, -side_sgn * (half_slot_width + 0.4),
-                          -side_sgn * (half_slot_width - 0.2));
+                          -side_sgn * half_slot_width);
 
   t_lane_.corner_inside_slot << slot_length, half_slot_width * side_sgn;
   t_lane_.corner_outside_slot << 0.0, half_slot_width * side_sgn;
@@ -691,7 +696,7 @@ void ParallelParInPlanner::GenTlane() {
   }
 
   // if curb exist, combine curb and slot center line to decide target y
-  if (curb_count > 1) {
+  if (curb_count > 3) {
     const double target_y_with_curb =
         curb_y_limit +
         side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
