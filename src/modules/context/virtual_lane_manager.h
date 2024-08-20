@@ -137,6 +137,9 @@ class VirtualLaneManager {
 
   void SelectEgoLaneWithPlan(int zero_relative_id_nums);
 
+  double ComputeTargetLaneSpecifiedRangeCurvature(
+      const std::shared_ptr<VirtualLane> virtual_lane);
+
   bool CalcCrosslaneStatus(
       const std::shared_ptr<VirtualLane> lane,
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints);
