@@ -108,6 +108,14 @@ class ParallelPathPlanner : public ApaPathPlanner {
     }
   };
 
+  struct GeometryPath {
+    size_t gear_change_count = 0;
+    double length = 0.0;
+    double park_out_heading_deg = 0.0;
+    std::vector<uint8_t> gear_cmd_vec;
+    std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
+  };
+
  public:
   virtual void Reset() override;
   virtual const bool Update() override;
@@ -208,6 +216,15 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
   const bool ReduceRootPoseHeadingInSlot(
       std::vector<pnc::geometry_lib::PathSegment> &search_out_res);
+
+  const bool AdvancedInversedTrialsInSlot(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &target_pose);
+
+  const bool InversedTrialsByGivenGear(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const uint8_t current_gear);
 
   const bool CalcLineStepLimitPose(
       pnc::geometry_lib::LineSegment &line, const uint8_t gear,
