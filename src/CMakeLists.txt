@@ -56,7 +56,7 @@ add_subdirectory(library/jlt_lib EXCLUDE_FROM_ALL)
 add_subdirectory(thirdparty/mjson EXCLUDE_FROM_ALL)
 
 if(ADAPTER STREQUAL "cyber")
-  add_subdirectory(adapter/cyber)
+  # add_subdirectory(adapter/cyber)
   add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/eigen thirdparty/eigen.out EXCLUDE_FROM_ALL)
   add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/rapidjson thirdparty/rapidjson.out EXCLUDE_FROM_ALL)
   add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/osqp thirdparty/osqp.out EXCLUDE_FROM_ALL)
@@ -83,9 +83,9 @@ if (ADAPTER STREQUAL "cyber")
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/res)
   install(FILES ${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md
       DESTINATION ${PROJECT_SOURCE_DIR}/install/planning)
-  install(TARGETS
-    planning_component
-    LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/Lib)
+  # install(TARGETS
+    # planning_component
+    # LIBRARY DESTINATION ${PROJECT_SOURCE_DIR}/install/planning/Lib)
   install(FILES
     ${CMAKE_CURRENT_LIST_DIR}/../res/dag/planning.dag
     DESTINATION ${PROJECT_SOURCE_DIR}/install/planning)
