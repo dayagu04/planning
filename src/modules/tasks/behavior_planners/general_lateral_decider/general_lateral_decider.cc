@@ -613,7 +613,7 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
   const double ego_vx = ego_v * std::cos(ego_theta);
   const double ego_vy = ego_v * std::sin(ego_theta);
 
-  const double time_diff = 3.0 / ego_v;
+  const double time_diff = 0.1;
 
   bool is_left_overlap = false;
   bool is_right_overlap = false;
