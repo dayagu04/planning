@@ -1710,13 +1710,13 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
 bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo* roads_ptr) {
   planning::planning_math::Vec2d;
   std::vector<std::vector<iflyauto::Point2f>> cross_walk_pts_vec;
-  for(int i = 0; i < roads_ptr->lane_ground_marking_size; i++) {
+  for(int i = 0; i < roads_ptr->lane_ground_markings_size; i++) {
     const auto& cross_walk = roads_ptr->lane_ground_markings[i];
     if(cross_walk.turn_type == iflyauto::LaneDrivableDirection_DIRECTION_CROSS_LINE &&
        std::abs(cross_walk.orientation_angle) < 0.5) {
        std::vector<iflyauto::Point2f> cw_pts;
-       cw_pts.resize(cross_walk.ground_marking_points_set_num);
-       for(int idx = 0; idx < cross_walk.ground_marking_points_set_num; idx++) {
+       cw_pts.resize(cross_walk.ground_marking_points_set_size);
+       for(int idx = 0; idx < cross_walk.ground_marking_points_set_size; idx++) {
          cw_pts[idx] = cross_walk.ground_marking_points_set[idx];
        }
        cross_walk_pts_vec.push_back(cw_pts);

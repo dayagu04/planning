@@ -301,9 +301,9 @@ void PlanningAdapter::Proc() {
     is_perception_tsr_msg_updated_.store(false);
   }
   input_topic_timestamp->set_perception_tsr(
-      local_view_ptr_->perception_tsr_info.header.timestamp);
+      local_view_ptr_->perception_tsr_info.msg_header.stamp);
   input_topic_latency->set_perception_tsr(
-      get_latency(start_time, local_view_ptr_->perception_tsr_info.header.timestamp));
+      get_latency(start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
 
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();

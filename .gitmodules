@@ -7,3 +7,6 @@
 [submodule "ad_common"]
 	path = ad_common
 	url = ../ad_common.git
+[submodule "interface"]
+	path = interface
+	url = ssh://git@code.iflytek.com:30004/nywang/interface.git

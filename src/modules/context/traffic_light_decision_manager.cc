@@ -12,7 +12,7 @@ TrafficLightDecisionManager::TrafficLightDecisionManager(
 
 bool TrafficLightDecisionManager::Update(const iflyauto::CameraPerceptionTsrInfo &tsr_info) {
   traffic_lights_info_.clear();
-  int traffic_lights_num = tsr_info.traffic_light_size;
+  int traffic_lights_num = tsr_info.traffic_lights_size;
   for(int i = 0; i < traffic_lights_num; i++) {
     traffic_lights_info_.emplace_back(tsr_info.traffic_lights[i]);
   }
