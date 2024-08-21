@@ -952,22 +952,22 @@ void PlanningPlayer::PerfectControlEgoMotion(
   q = pnc::transform::EulerZYX2Quat(euler_zxy);
 
   // vel
-  // loc_msg->velocity.velocity_boot.vx = v * cos(theta);
-  // loc_msg->velocity.velocity_boot.vy = v * sin(theta);
-  // loc_msg->velocity.velocity_boot.vz = 0;
-
-  loc_msg->velocity.velocity_body.vx = v;
-  loc_msg->velocity.velocity_boot.vy = 0;
+  loc_msg->velocity.velocity_boot.vx = v * cos(theta);
+  loc_msg->velocity.velocity_boot.vy = v * sin(theta);
   loc_msg->velocity.velocity_boot.vz = 0;
 
-  // acc
-  // loc_msg->acceleration.acceleration_boot.ax = a * cos(theta);
-  // loc_msg->acceleration.acceleration_boot.ay = a * sin(theta);
-  // loc_msg->acceleration.acceleration_boot.az = 0;
+  loc_msg->velocity.velocity_body.vx = v;
+  loc_msg->velocity.velocity_body.vy = 0;
+  loc_msg->velocity.velocity_body.vz = 0;
 
-  loc_msg->acceleration.acceleration_boot.ax = a;
-  loc_msg->acceleration.acceleration_boot.ay = 0;
+  // acc
+  loc_msg->acceleration.acceleration_boot.ax = a * cos(theta);
+  loc_msg->acceleration.acceleration_boot.ay = a * sin(theta);
   loc_msg->acceleration.acceleration_boot.az = 0;
+
+  loc_msg->acceleration.acceleration_body.ax = a;
+  loc_msg->acceleration.acceleration_body.ay = 0;
+  loc_msg->acceleration.acceleration_body.az = 0;
 
   // atti
   loc_msg->orientation.euler_boot.yaw = euler_zxy[0];
