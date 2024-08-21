@@ -139,10 +139,33 @@ class LoadCyberbag:
   def load_all_data(self):
     max_time = 0.0
     global smallest_abs_t
-    # load localization msg
+    # # load localization msg
+    # try:
+    #   loc_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+    #     loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+    #   loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in loc_msg_dict.items():
+    #     self.loc_msg['t'].append(t)
+    #     self.loc_msg['abs_t'].append(t)
+    #     self.loc_msg['data'].append(msg)
+    #   t0 = self.loc_msg['t'][0]
+    #   smallest_abs_t = max(smallest_abs_t, self.loc_msg['t'][0])
+    #   self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
+    #   max_time = max(max_time, self.loc_msg['t'][-1])
+    #   print('loc_msg time:',self.loc_msg['t'][-1])
+    #   if len(self.loc_msg['t']) > 0:
+    #     self.loc_msg['enable'] = True
+    #   else:
+    #     self.loc_msg['enable'] = False
+    # except:
+    #   self.loc_msg['enable'] = False
+    #   print('missing /iflytek/localization/ego_pose !!!')
+
+    # load new localization msg
     try:
       loc_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
@@ -160,7 +183,7 @@ class LoadCyberbag:
         self.loc_msg['enable'] = False
     except:
       self.loc_msg['enable'] = False
-      print('missing /iflytek/localization/ego_pose !!!')
+      print('missing /iflytek/localization/egomotion !!!')
 
     # load vehicle service msg
     try:
@@ -497,7 +520,7 @@ class LoadCyberbag:
     # load state machine msg
     try:
       soc_state_msg_dict = {}
-      for topic, msg, t in self.bag.read_messages("/iflytek/system_state/soc_state"):
+      for topic, msg, t in self.bag.read_messages("/iflytek/fsm/soc_state"):
         soc_state_msg_dict[msg.msg_header.timestamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
       global enter_parking_time
@@ -522,7 +545,7 @@ class LoadCyberbag:
         self.soc_state_msg['enable'] = False
     except:
       self.soc_state_msg['enable'] = False
-      print('missing /iflytek/system_state/soc_state !!!')
+      print('missing /iflytek/fsm/soc_state !!!')
 
     self.max_time = max_time
 
@@ -872,9 +895,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   if bag_loader.loc_msg['enable'] == True:
 
     # ego pos in local and global coordinates
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
 
     half_car_width = car_yb[0]
     heading_vec = [math.cos(cur_yaw), math.sin(cur_yaw)]
@@ -896,8 +919,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     ### global variables
     # pos offset
     for i in range(len(bag_loader.loc_msg['data'])):
-      pos_xn_i = bag_loader.loc_msg['data'][i].pose.local_position.x
-      pos_yn_i = bag_loader.loc_msg['data'][i].pose.local_position.y
+      pos_xn_i = bag_loader.loc_msg['data'][i].position.position_boot.x
+      pos_yn_i = bag_loader.loc_msg['data'][i].position.position_boot.y
       ego_xn.append(pos_xn_i - cur_pos_xn0)
       ego_yn.append(pos_yn_i - cur_pos_yn0)
 
@@ -939,7 +962,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'car_circle_rn': car_circle_rn,
     })
 
-    vel_ego =  bag_loader.loc_msg['data'][loc_msg_idx].pose.linear_velocity_from_wheel
+    vel_ego =  math.hypot(bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vx,
+                          bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vy)
     remain_s_ctrl = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
     if bag_loader.vs_msg['enable'] == True:
       steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
@@ -1406,9 +1430,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     else:
       uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[0].dis_from_car_to_obj
 
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
 
     sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
 
@@ -1477,9 +1501,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     # load uss wave from wave_msg
     #get cur pose and uss wave
     upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
 
     sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
 
@@ -1849,9 +1873,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     # load uss wave for uss_percept_msg
     #get cur pose and uss wave
     uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
 
     sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
 
@@ -1920,9 +1944,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     # load uss wave for wave_msg
     #get cur pose and uss wave
     upa_dis_info_bufs = bag_loader.wave_msg['data'][wave_msg_idx].upa_dis_info_buf
-    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.x
-    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].pose.local_position.y
-    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].pose.euler_angles.yaw
+    cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
+    cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
+    cur_yaw = bag_loader.loc_msg['data'][loc_msg_idx].orientation.euler_boot.yaw
 
     sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
 
@@ -2889,9 +2913,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
         print('find loc_msg error')
         # location_generator.xys.append(([],[]))
       else:
-        cur_pos_xn = loc_msg.pose.local_position.x
-        cur_pos_yn = loc_msg.pose.local_position.y
-        cur_pos_theta = loc_msg.pose.euler_angles.yaw
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_pos_theta = loc_msg.orientation.euler_boot.yaw
         car_center_xn.append(cur_pos_xn)
         car_center_yn.append(cur_pos_yn)
 
@@ -2931,8 +2955,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
   # load location
     location_generator = CommonGenerator()
-    # cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].pose.local_position.x
-    # cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].pose.local_position.y
+    # cur_pos_xn0 = cur_pos_xn = dataLoader.loc_msg['data'][0].position.position_boot.x
+    # cur_pos_yn0 = cur_pos_yn = dataLoader.loc_msg['data'][0].position.position_boot.y
     for localization_timestamp in localization_timestamps:
       ego_xb, ego_yb = [], []
       # ego_xn, ego_yn = [], []
@@ -2940,16 +2964,16 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find loc_msg error')
       else:
-        cur_pos_xn = loc_msg.pose.local_position.x
-        cur_pos_yn = loc_msg.pose.local_position.y
-        cur_yaw = loc_msg.pose.euler_angles.yaw
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
         ### global variables
         # pos offset
         for i in range(len(dataLoader.loc_msg['data'])):
           if (i % 10 != 0):
             continue
-          pos_xn_i = dataLoader.loc_msg['data'][i].pose.local_position.x
-          pos_yn_i = dataLoader.loc_msg['data'][i].pose.local_position.y
+          pos_xn_i = dataLoader.loc_msg['data'][i].position.position_boot.x
+          pos_yn_i = dataLoader.loc_msg['data'][i].position.position_boot.y
 
           # ego_local_x, ego_local_y= global2local(pos_xn_i, pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
@@ -2969,7 +2993,8 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find loc_msg error')
       else:
-        vel_ego =  loc_msg.pose.linear_velocity_from_wheel
+        vel_ego = math.hypot(loc_msg.velocity.velocity_boot.vx,
+                             loc_msg.velocity.velocity_boot.vy)
 
         if dataLoader.soc_state_msg['enable'] == True:
           flag, soc_msg = findt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
@@ -3159,9 +3184,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               print('find loc error')
               temp_corner_x_list, temp_corner_y_list = [], []
             else:
-              cur_pos_xn = loc_msg.pose.local_position.x
-              cur_pos_yn = loc_msg.pose.local_position.y
-              cur_yaw = loc_msg.pose.euler_angles.yaw
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
               # attention: fusion slots are based on odom system, visual slots are based on vehicle system
               # 1. update slots corner points
               # coord_tf = coord_transformer()
@@ -3368,9 +3393,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           print('find loc error')
           mpc_dx, mpc_dy = [], []
         else:
-          cur_pos_xn = loc_msg.pose.local_position.x
-          cur_pos_yn = loc_msg.pose.local_position.y
-          cur_yaw = loc_msg.pose.euler_angles.yaw
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
           coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
           control_result_points = mpc_msg.control_trajectory.control_result_points
           mpc_dx_local, mpc_dy_local = [], []
@@ -3495,9 +3520,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               uss_dis_info = uss_percept_msg.dis_from_car_to_obj
             else:
               uss_dis_info = uss_percept_msg.out_line_dataori[0].dis_from_car_to_obj
-            cur_pos_xn = loc_msg.pose.local_position.x
-            cur_pos_yn = loc_msg.pose.local_position.y
-            cur_yaw = loc_msg.pose.euler_angles.yaw
+            cur_pos_xn = loc_msg.position.position_boot.x
+            cur_pos_yn = loc_msg.position.position_boot.y
+            cur_yaw = loc_msg.orientation.euler_boot.yaw
             # rs_text = []
             uss_x, uss_y = load_car_uss_patch(vehicle_type)
             uss_angle = load_uss_angle_patch(vehicle_type)
@@ -3556,9 +3581,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           else:
             #get cur pose and uss wave
             upa_dis_info_bufs = wave_msg.upa_dis_info_buf
-            cur_pos_xn = loc_msg.pose.local_position.x
-            cur_pos_yn = loc_msg.pose.local_position.y
-            cur_yaw = loc_msg.pose.euler_angles.yaw
+            cur_pos_xn = loc_msg.position.position_boot.x
+            cur_pos_yn = loc_msg.position.position_boot.y
+            cur_yaw = loc_msg.orientation.euler_boot.yaw
 
             sector_x, sector_y, rs, start_angle, end_angle, length= [], [], [], [], [], []
 

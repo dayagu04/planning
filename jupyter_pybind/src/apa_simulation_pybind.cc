@@ -20,6 +20,7 @@
 #include "func_state_machine_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
+#include "ifly_localization_c.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -28,7 +29,7 @@
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
-#include "struct_convert/localization_c.h"
+#include "struct_convert/ifly_localization_c.h"
 #include "struct_convert/planning_plan_c.h"
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
@@ -37,7 +38,7 @@
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
-#include "struct_msgs/LocalizationEstimate.h"
+#include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/UssPerceptInfo.h"
@@ -84,9 +85,9 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
   // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
   //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
@@ -99,7 +100,7 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
           uss_wave_info_bytes);
 
-  local_view.localization_estimate = localization_info;
+  local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
@@ -125,9 +126,9 @@ const bool InterfaceUpdateClosedLoop(
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
   // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
   //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
@@ -135,7 +136,7 @@ const bool InterfaceUpdateClosedLoop(
   //         vehicle_service_output_info_bytes);
   iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
-  local_view.localization_estimate = localization_info;
+  local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
@@ -199,9 +200,9 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
   // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
   //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
@@ -278,7 +279,7 @@ const bool InterfaceUpdateParam(
     }
   }
 
-  local_view.localization_estimate = localization_info;
+  local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.uss_wave_info = uss_wave_info;
