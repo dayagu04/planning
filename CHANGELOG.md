@@ -1,6 +1,10 @@
 # planning.2.5.0
 ####  修改说明
 1. 使用新定位，弃用老定位接口:/iflytek/localization/ego_pose
+2. 增加hmi信息: 收费站距离、道路类型、信息; 实线抑制、手动取消信息
+3. Track ego lane consider of Large curvature scene
+4. APA适配新状态机 & 新定位
+5. 信号灯通行的基础功能: 红灯停绿灯行
 
 # planning.2.4.9
 ####  修改说明
