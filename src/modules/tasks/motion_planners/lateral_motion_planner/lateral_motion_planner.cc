@@ -305,16 +305,17 @@ void LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetLCBackFlag(false);
 
   bool split_scene = false;
-  if (session_->environmental_model()
+  const bool is_exist_ramp_on_road = session_->environmental_model()
           .get_virtual_lane_manager()
-          ->get_is_exist_ramp_on_road()) {
+          ->get_is_exist_ramp_on_road();
+  if (is_exist_ramp_on_road) {
     split_scene = true;
-    complete_follow = true;
+    // complete_follow = true;
     enter_split_time_ = 1.0;
   } else if (enter_split_time_ > 1e-6) {
     enter_split_time_ += 0.1;
     split_scene = true;
-    complete_follow = true;
+    // complete_follow = true;
   }
   if (enter_split_time_ > config_.enter_ramp_on_road_time + 1.0) {
     split_scene = false;
@@ -382,6 +383,15 @@ void LateralMotionPlanner::AssembleInput() {
         motion_plan_concerned_end_index = i;
         break;
       }
+    }
+  }
+  if (split_scene) {
+    motion_plan_concerned_end_index = 17;
+    if (!is_exist_ramp_on_road) {
+      // if (std::fabs(init_ref_theta_error_) < config_.big_theta_thr) {
+
+      // }
+      planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
     }
   }
 
