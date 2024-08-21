@@ -24,6 +24,7 @@ LaneChangeRequestManager::LaneChangeRequestManager(
       overtake_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       emergence_avoid_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       cone_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
+      merge_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {
   config_ = config_builder->cast<EgoPlanningConfig>();
@@ -38,6 +39,8 @@ void LaneChangeRequestManager::FinishRequest() {
   emergence_avoid_request_.Reset();
   cone_change_request_.Finish();
   cone_change_request_.Reset();
+  merge_change_request_.Finish();
+  merge_change_request_.Reset();
 
   request_ = NO_CHANGE;
   request_source_ = NO_REQUEST;
@@ -75,6 +78,8 @@ bool LaneChangeRequestManager::Update(
       config_.enable_use_emergency_avoidence_lane_change_request;
   const bool enable_use_cone_change_request =
       config_.enable_use_cone_change_request;
+  const bool enable_use_merge_lc_request = 
+      config_.enable_use_merge_change_request;
   const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
 
   int state = lane_change_decider_output.curr_state;
@@ -94,6 +99,9 @@ bool LaneChangeRequestManager::Update(
     }
     if (hd_map_valid) {
       map_request_.update(lc_status, map_request_.tfinish());
+    }
+    if (enable_use_merge_lc_request) {
+      merge_change_request_.Update(lc_status);
     }
     if (location_valid && use_overtake_lane_change_request) {
       // 添加至可运行区域边界的距离小于一定值时overtake_count_ = 0
@@ -216,6 +224,10 @@ bool LaneChangeRequestManager::Update(
       if (map_request_.request_type() != NO_CHANGE) {
         map_request_.Finish();
       }
+      if (merge_change_request_.request_type() != NO_CHANGE) {
+        merge_change_request_.Finish();
+        merge_change_request_.Reset();
+      }
       if (overtake_request_.request_type() != NO_CHANGE) {
         overtake_request_.Finish();
         overtake_request_.Reset();
@@ -231,6 +243,10 @@ bool LaneChangeRequestManager::Update(
       if (map_request_.request_type() != NO_CHANGE) {
         map_request_.Finish();
       }
+      if (merge_change_request_.request_type() != NO_CHANGE) {
+        merge_change_request_.Finish();
+        merge_change_request_.Reset();
+      }
       if (overtake_request_.request_type() != NO_CHANGE) {
         overtake_request_.Finish();
         overtake_request_.Reset();
@@ -242,6 +258,10 @@ bool LaneChangeRequestManager::Update(
       if (map_request_.request_type() != NO_CHANGE) {
         map_request_.Finish();
       }
+      if (merge_change_request_.request_type() != NO_CHANGE) {
+        merge_change_request_.Finish();
+        merge_change_request_.Reset();
+      }
       if (overtake_request_.request_type() != NO_CHANGE) {
         overtake_request_.Finish();
         overtake_request_.Reset();
@@ -251,6 +271,10 @@ bool LaneChangeRequestManager::Update(
       target_lane_virtual_id_ =
           emergence_avoid_request_.target_lane_virtual_id();
     } else if (map_request_.request_type() != NO_CHANGE) {
+      if (merge_change_request_.request_type() != NO_CHANGE) {
+        merge_change_request_.Finish();
+        merge_change_request_.Reset();
+      }
       if (overtake_request_.request_type() != NO_CHANGE) {
         overtake_request_.Finish();
         overtake_request_.Reset();
@@ -258,6 +282,14 @@ bool LaneChangeRequestManager::Update(
       request_ = map_request_.request_type();
       request_source_ = MAP_REQUEST;
       target_lane_virtual_id_ = map_request_.target_lane_virtual_id();
+    } else if (merge_change_request_.request_type() != NO_CHANGE) {
+      if (overtake_request_.request_type() != NO_CHANGE) {
+        overtake_request_.Finish();
+        overtake_request_.Reset();
+      }
+      request_ = merge_change_request_.request_type();
+      request_source_ = MERGE_REQUEST;
+      target_lane_virtual_id_ = merge_change_request_.target_lane_virtual_id();      
     } else {
       LOG_DEBUG("overtake_request_.request_type(): %d",
                 overtake_request_.request_type());
@@ -478,6 +510,8 @@ double LaneChangeRequestManager::GetReqStartTime(int source) const {
     return emergence_avoid_request_.tstart();
   } else if (source == CONE_REQUEST) {
     return cone_change_request_.tstart();
+  } else if (source == MERGE_REQUEST) {
+    return merge_change_request_.tstart();
   }
   return DBL_MAX;
 }
@@ -495,6 +529,8 @@ double LaneChangeRequestManager::GetReqFinishTime(int source) const {
     return emergence_avoid_request_.tfinish();
   } else if (source == CONE_REQUEST) {
     return cone_change_request_.tfinish();
+  } else if (source == MERGE_REQUEST) {
+    return merge_change_request_.tfinish();
   }
   return DBL_MAX;
 }

@@ -154,6 +154,8 @@ struct EgoPlanningConfig : public Config {
         json, "enable_use_emergency_avoidence_lane_change_request");
     enable_use_cone_change_request =
         read_json_key<bool>(json, "enable_use_cone_change_request");
+    enable_use_merge_change_request =
+        read_json_key<bool>(json, "enable_use_merge_change_request");
   }
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
@@ -167,6 +169,7 @@ struct EgoPlanningConfig : public Config {
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
   bool enable_use_emergency_avoidence_lane_change_request = false;
   bool enable_use_cone_change_request = false;
+  bool enable_use_merge_change_request = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
