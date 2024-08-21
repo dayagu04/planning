@@ -1474,6 +1474,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMerge(
 
 void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     planning::framework::Session* session) {
+  ResetForRampInfo();
   const auto& local_view = session_->environmental_model().get_local_view();
   if (!session_->environmental_model().get_sdmap_valid()) {
     ResetForRampInfo();
@@ -1588,6 +1589,11 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (split_info.begin()->second > 0 && split_segment) {
       distance_to_first_road_split_ = split_info.begin()->second;
       first_split_direction_ = MakesureSplitDirection(*split_segment, sd_map);
+      if (is_on_ramp_ &&
+          distance_to_first_road_split_ < distance_to_first_road_merge_) {
+        ramp_direction_ = first_split_direction_;
+        dis_to_ramp_ = distance_to_first_road_split_;
+      }
     } else {
       distance_to_first_road_split_ = NL_NMAX;
       first_split_direction_ = RAMP_NONE;
