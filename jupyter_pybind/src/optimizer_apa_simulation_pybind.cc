@@ -38,7 +38,7 @@
 
 namespace py = pybind11;
 using namespace planning;
-
+using namespace planning::apa_planner;
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
 
@@ -111,8 +111,8 @@ const bool InterfaceUpdateClosedLoop(
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
   iflyauto::IFLYLocalization localization_info =
-      BytesToStruct<iflyauto::IFLYLocalization,
-                    struct_msgs::IFLYLocalization>(localization_info_bytes);
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
   // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
   //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
@@ -140,7 +140,7 @@ const bool InterfaceUpdateParam(
     bool is_complete_path, double sample_ds, double q_ref_xy,
     double q_ref_theta, double q_terminal_xy, double q_terminal_theta,
     double q_k, double q_u, double q_k_bound, double q_u_bound) {
-  apa_planner::ApaPlannerBase::SimulationParam param;
+  SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
@@ -154,17 +154,9 @@ const bool InterfaceUpdateParam(
   param.q_k_bound = q_k_bound;
   param.q_u_bound = q_u_bound;
 
-  const auto &apa_planner_stack = apa_interface_ptr->GetPlannerStack();
-
-  for (const auto &planner : apa_planner_stack) {
-    planner->SetSimuParam(param);
-  }
-
-  // iflyauto::FuncStateMachine func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine,
-  //     struct_msgs::FuncStateMachine>(
-  //         func_statemachine_bytes);
   iflyauto::FuncStateMachine func_statemachine;
+  // func_statemachine.current_state =
+  // static_cast<FunctionalState>(current_state);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -197,6 +189,8 @@ const bool InterfaceUpdateParam(
       local_view.parking_fusion_info.select_slot_id = select_id;
     }
   }
+
+  apa_interface_ptr->SetSimuParam(param);
 
   const bool result = apa_interface_ptr->Update(&local_view);
   apa_interface_ptr->UpdateDebugInfo();

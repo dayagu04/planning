@@ -5,7 +5,7 @@
 #include "spline.h"
 #include "spline_projection.h"
 namespace planning {
-
+namespace apa_planner {
 static const double kVelSimulation = 1.0;
 static const double kPie = 3.141592654;
 
@@ -128,5 +128,5 @@ const bool PerfectControl::Update(
 
   return true;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

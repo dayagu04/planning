@@ -10,8 +10,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "Eigen/src/Core/Matrix.h"
-#include "apa_plan_base.h"
+#include "apa_path_planner.h"
 #include "collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
@@ -19,52 +18,8 @@
 namespace planning {
 namespace apa_planner {
 
-class ParallelPathPlanner {
+class ParallelPathPlanner : public ApaPathPlanner {
  public:
-  struct Tlane {
-    // tlane
-    Eigen::Vector2d pt_outside = Eigen::Vector2d::Zero();
-    Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
-    Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
-
-    // slot corner
-    Eigen::Vector2d corner_inside_slot = Eigen::Vector2d::Zero();
-    Eigen::Vector2d corner_outside_slot = Eigen::Vector2d::Zero();
-
-    // obs tlane
-    Eigen::Vector2d obs_pt_inside = Eigen::Vector2d::Zero();
-    Eigen::Vector2d obs_pt_outside = Eigen::Vector2d::Zero();
-    double curb_y = 2.6;
-
-    uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
-    double slot_side_sgn = 1.0;
-
-    double slot_width = 2.4;
-    double slot_length = 6.0;
-
-    double channel_y = 6.5;
-    double channel_x_limit = 16.6;
-
-    void Reset() {
-      pt_outside = Eigen::Vector2d::Zero();
-      pt_inside = Eigen::Vector2d::Zero();
-      pt_terminal_pos = Eigen::Vector2d::Zero();
-
-      corner_inside_slot = Eigen::Vector2d::Zero();
-      corner_outside_slot = Eigen::Vector2d::Zero();
-
-      obs_pt_inside = Eigen::Vector2d::Zero();
-      obs_pt_outside = Eigen::Vector2d::Zero();
-
-      curb_y = 2.6;
-      slot_width = 2.4;
-      slot_length = 6.0;
-      channel_y = 6.5;
-      channel_x_limit = 16.6;
-      slot_side_sgn = 1.0;
-    }
-  };
-
   struct DebugInfo {
     std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
   };
@@ -98,58 +53,6 @@ class ParallelPathPlanner {
     TwoArcMultiPlan,
     LineArcMultiPlan,
     MultiPlanMethodCount,
-  };
-
-  struct Input {
-    uint8_t path_planner_state;
-    Tlane tlane;
-    pnc::geometry_lib::PathPoint ego_pose;
-    bool is_complete_path = false;
-    bool is_replan_first = true;
-    double sample_ds = 0.02;
-    uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-    uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
-    double slot_occupied_ratio = 0.0;
-
-    void Set(const Tlane &tlane_r,
-             const std::vector<Eigen::Vector2d> &obstacle_vec_r,
-             const pnc::geometry_lib::PathPoint &ego_pose_r,
-             bool is_complete_path_r) {
-      tlane = tlane_r;
-      ego_pose = ego_pose_r;
-      is_complete_path = is_complete_path_r;
-    }
-  };
-
-  struct Output {
-    bool path_available = false;
-    bool is_first_path = true;
-    bool is_last_path = false;
-    double length = 0.0;
-    uint8_t gear_change_count = 0;
-    uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-    uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
-
-    std::vector<uint8_t> steer_vec;
-    std::vector<uint8_t> gear_cmd_vec;
-    std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
-    std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
-    std::pair<size_t, size_t> path_seg_index = std::make_pair(0, 0);
-    void Reset() {
-      path_available = false;
-      is_first_path = true;
-      is_last_path = false;
-      length = 0.0;
-      gear_change_count = 0;
-
-      gear_cmd_vec.clear();
-      steer_vec.clear();
-      path_segment_vec.clear();
-      path_point_vec.clear();
-      current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-      current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
-      path_seg_index = std::make_pair(0, 0);
-    }
   };
 
   struct PlannerParams {
@@ -206,40 +109,32 @@ class ParallelPathPlanner {
   };
 
  public:
-  void Reset();
+  virtual void Reset() override;
+  virtual const bool Update() override;
+  virtual const bool Update(const std::shared_ptr<CollisionDetector>
+                                &collision_detector_ptr) override;
 
-  void Preprocess();
   void CalcEgoParams();
   void ExpandPInObstacles();
   void AddPInVirtualObstacles();
   void DeletePInVirtualObstacles();
 
-  const bool Update();
-  const bool Update(
-      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
-
   const bool CheckTlaneAvailable() const;
 
-  const bool SetCurrentPathSegIndex();
-  void SetLineSegmentHeading();
   void ExtendCurrentFollowLastPath(double extend_distance);
   const bool InsertTwoLinePathBetweenPathSeg(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &pose, const uint8_t gear,
       const double extend_distance);
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
-  const bool SampleCurrentPathSeg();
 
-  void SetInput(const Input &input) { input_ = input; }
-  const Output &GetOutput() const { return output_; }
-  const Output *GetOutputPtr() const { return &output_; }
   const PlannerParams &GetPlannerParams() const { return calc_params_; }
 
-  // pybind simulation
-  const std::vector<double> GetPathEle(size_t index) const;
   const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
  private:
+  virtual void Preprocess() override;
+
   const bool PrepareStepFromEgo(
       const std::vector<pnc::geometry_lib::PathSegment>
           &inversed_park_out_path);
@@ -478,12 +373,6 @@ class ParallelPathPlanner {
                              std::vector<pnc::geometry_lib::PathSegment>
                                  &line_arc_line_segments) const;
 
-  void SampleLineSegment(const pnc::geometry_lib::LineSegment &line_seg,
-                         const double ds);
-
-  void SampleArcSegment(const pnc::geometry_lib::Arc &cur_arc_seg,
-                        const double ds);
-
   const Eigen::Vector2d CalEgoTurningCenter(
       const pnc::geometry_lib::PathPoint &ego_pose, const double radius,
       const uint8_t steer) const;
@@ -498,11 +387,10 @@ class ParallelPathPlanner {
   const bool CheckSamePose(const pnc::geometry_lib::PathPoint &pose1,
                            const pnc::geometry_lib::PathPoint &pose2) const;
 
-  Input input_;
-  Output output_;
+  const bool CheckSamePos(const Eigen::Vector2d &pos0,
+                          const Eigen::Vector2d &pos1) const;
+
   PlannerParams calc_params_;
-  pnc::dubins_lib::DubinsLibrary dubins_planner_;
-  std::shared_ptr<CollisionDetector> collision_detector_ptr_ = nullptr;
   DebugInfo debug_info_;
 };
 

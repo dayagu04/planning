@@ -460,11 +460,6 @@ const bool OneStepParallelShift(
     const pnc::geometry_lib::LineSegment &target_line, const double radius,
     const bool is_advance);
 
-const bool CalInverseTwoArcGeometry(
-    std::pair<Arc, Arc> &arc_pair, const Eigen::Vector2d &start_pos,
-    const double start_heading,
-    const pnc::geometry_lib::LineSegment &target_line, const bool is_advance);
-
 const bool IsArcAdvance(const pnc::geometry_lib::Arc &arc);
 const bool IsArcTurnLeft(const pnc::geometry_lib::Arc &arc);
 const bool IsLineAdvance(const LineSegment &line_seg);

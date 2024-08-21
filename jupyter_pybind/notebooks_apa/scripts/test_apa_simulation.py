@@ -7,13 +7,13 @@ sys.path.append('../..')
 sys.path.append('../../../build')
 sys.path.append('../../../')
 
-sys.path.append('../../python_proto')
-from python_proto import planning_debug_info_pb2
+sys.path.append('python_proto')
+from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, LocalizationEstimate
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240726/20240726-16-37-55/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-26-16-37-55_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240826-15-44-44/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-26-15-44-44_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 vehicle_type = JAC_S811
@@ -91,11 +91,36 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
 
-  plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
-  fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
-  wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
-  vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
-  soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+  if bag_loader.plan_debug_msg['enable'] == True:
+    plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
+  else:
+    plan_debug_msg = planning_debug_info_pb2.PlanningDebugInfo()
+
+  if bag_loader.fus_parking_msg['enable'] == True:
+    fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
+  else:
+    fus_parking_msg = ParkingFusionInfo()
+
+  if bag_loader.wave_msg['enable'] == True:
+    wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
+  else:
+    wave_msg = UssWaveInfo()
+
+  if bag_loader.vs_msg['enable'] == True:
+    vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
+  else:
+    vs_msg = VehicleServiceOutputInfo()
+
+  if bag_loader.soc_state_msg['enable'] == True:
+    soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+  else:
+    soc_state_msg = FuncStateMachine()
+
+  if bag_loader.loc_msg['enable'] == True:
+    loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
+  else:
+    loc_msg = LocalizationEstimate()
+
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
   else:
@@ -112,8 +137,6 @@ for bag_time in np.arange(0.0, max_time, 0.1):
     fus_occ_obj_msg = bag_loader.fus_occupancy_objects_msg['data'][index_map['fus_occupancy_objects_msg_idx']]
   else:
     fus_occ_obj_msg = FusionOccupancyObjectsInfo()
-
-  loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
   select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
@@ -140,17 +163,16 @@ for bag_time in np.arange(0.0, max_time, 0.1):
     obs_x_vec = plan_debug_msg['obstaclesX']
     obs_y_vec = plan_debug_msg['obstaclesY']
 
-  current_ego_x = loc_msg.pose.local_position.x
-  current_ego_y = loc_msg.pose.local_position.y
-  sim_ego_heading = loc_msg.pose.euler_angles.yaw + heading_dif / 57.2958
+  current_ego_x = loc_msg.position.position_boot.x
+  current_ego_y = loc_msg.position.position_boot.y
+  sim_ego_heading = loc_msg.orientation.euler_boot.yaw + heading_dif / 57.2958
 
   sim_ego_x = current_ego_x + lon_pos_dif * math.cos(sim_ego_heading) - lat_pos_dif * math.sin(sim_ego_heading)
   sim_ego_y = current_ego_y + lon_pos_dif * math.sin(sim_ego_heading) + lat_pos_dif * math.cos(sim_ego_heading)
 
-  loc_msg.pose.local_position.x = sim_ego_x
-  loc_msg.pose.local_position.y = sim_ego_y
-  loc_msg.pose.euler_angles.yaw = sim_ego_heading
-  loc_msg.pose.heading = sim_ego_heading
+  loc_msg.position.position_boot.x = sim_ego_x
+  loc_msg.position.position_boot.y = sim_ego_y
+  loc_msg.orientation.euler_boot.yaw = sim_ego_heading
 
   data_sim_pos.data.update({
     'x': [sim_ego_x],
@@ -201,7 +223,7 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   gl_coord = []
   for i in range(gl_msg.ground_lines_size):
     num = gl_msg.ground_lines[i].points_3d_size
-    polygon_points = fus_obj_msg.ground_lines[i].points_3d
+    polygon_points = gl_msg.ground_lines[i].points_3d
     single_gl_coord = []
     for j in range(num):
       single_gl_coord.append([polygon_points[j].x, polygon_points[j].y])
@@ -211,8 +233,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   fus_obj_msg.serialize(fus_obj_msg_buff)
   fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
   fus_obj_coord = []
-  for i in range(fus_obj_msg.fusion_object_num):
-    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_num
+  for i in range(fus_obj_msg.fusion_object_size):
+    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_size
     polygon_points = fus_obj_msg.fusion_object[i].additional_info.polygon_points
     single_fus_obj_coord = []
     for j in range(num):
@@ -223,8 +245,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
   fus_occ_obj_coord = []
-  for i in range(fus_occ_obj_msg.fusion_object_num):
-    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_num
+  for i in range(fus_occ_obj_msg.fusion_object_size):
+    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_size
     polygon_points = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points
     single_fus_occ_obj_coord = []
     for j in range(num):

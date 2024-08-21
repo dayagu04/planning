@@ -28,10 +28,13 @@ class LateralPathOptimizer {
     double q_k_bound = 100.0;
     double q_u_bound = 50.0;
   };
+  LateralPathOptimizer() { Init(false); }
+  ~LateralPathOptimizer() {}
   void Init(const bool c_ilqr_enable);
   void Update(const std::vector<pnc::geometry_lib::PathPoint> &path_vec,
               const uint8_t gear_cmd);
   void SetParam(const Parameter &param) { param_ = param; }
+  void Reset() {}
 
   const std::vector<pnc::geometry_lib::PathPoint> &GetOutputPathVec() {
     return output_path_vec_;

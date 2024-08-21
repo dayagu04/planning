@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_data.h"
 #include "apa_param_setting.h"
 #include "geometry_math.h"
 #include "local_view.h"
@@ -15,6 +16,7 @@
 
 namespace planning {
 
+namespace apa_planner {
 class UssObstacleAvoidance {
  public:
   enum CarPointMode {
@@ -35,7 +37,7 @@ class UssObstacleAvoidance {
   struct RemainDistInfo {
     double remain_dist = 2.5;
     size_t car_index = 0;
-    size_t uss_index = 0;
+    int uss_index = 0;
     bool is_available = false;
 
     void Reset() {
@@ -79,7 +81,7 @@ class UssObstacleAvoidance {
   const RemainDistInfo& GetRemainDistInfo() const { return remain_dist_info_; }
 
   void Update(iflyauto::PlanningOutput* const planning_output,
-              const LocalView* local_view_ptr);
+              const std::shared_ptr<ApaData> apa_data_ptr);
 
   void SetParam(const Paramters& param) {
     param_ = param;
@@ -140,9 +142,10 @@ class UssObstacleAvoidance {
   Paramters param_;
   CarMotionInfo car_motion_info_;
 
-  const LocalView* local_view_ptr_ = nullptr;
+  std::shared_ptr<ApaData> apa_data_ptr_ = nullptr;
   iflyauto::PlanningOutput* planning_output_;
 };
+}  // namespace apa_planner
 }  // namespace planning
 
 #endif

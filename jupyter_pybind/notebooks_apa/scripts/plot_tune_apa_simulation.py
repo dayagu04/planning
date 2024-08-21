@@ -11,10 +11,13 @@ sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, LocalizationEstimate
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240824/20240824-16-14-11/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-24-16-14-12_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240824/20240824-17-07-50/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-24-17-07-50_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240824/20240824-17-04-24/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-24-17-04-24_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240825/20240825-16-55-11/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-25-16-55-12_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240826-15-44-44/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-26-15-44-44_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -161,17 +164,35 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
   index_map = bag_loader.get_msg_index(bag_time)
 
-  plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
-  # print("plan remain dist uss = ", plan_debug_msg["remain_dist_uss"])
-  fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
+  if bag_loader.plan_debug_msg['enable'] == True:
+    plan_debug_msg = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
+  else:
+    plan_debug_msg = planning_debug_info_pb2.PlanningDebugInfo()
 
-  vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
-  soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+  if bag_loader.fus_parking_msg['enable'] == True:
+    fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
+  else:
+    fus_parking_msg = ParkingFusionInfo()
 
   if bag_loader.wave_msg['enable'] == True:
     wave_msg = bag_loader.wave_msg['data'][index_map['wave_msg_idx']]
   else:
     wave_msg = UssWaveInfo()
+
+  if bag_loader.vs_msg['enable'] == True:
+    vs_msg = bag_loader.vs_msg['data'][index_map['vs_msg_idx']]
+  else:
+    vs_msg = VehicleServiceOutputInfo()
+
+  if bag_loader.soc_state_msg['enable'] == True:
+    soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+  else:
+    soc_state_msg = FuncStateMachine()
+
+  if bag_loader.loc_msg['enable'] == True:
+    loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
+  else:
+    loc_msg = LocalizationEstimate()
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
@@ -189,8 +210,6 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     fus_occ_obj_msg = bag_loader.fus_occupancy_objects_msg['data'][index_map['fus_occupancy_objects_msg_idx']]
   else:
     fus_occ_obj_msg = FusionOccupancyObjectsInfo()
-
-  loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
   select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
@@ -282,7 +301,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   gl_coord = []
   for i in range(gl_msg.ground_lines_size):
     num = gl_msg.ground_lines[i].points_3d_size
-    polygon_points = fus_obj_msg.ground_lines[i].points_3d
+    polygon_points = gl_msg.ground_lines[i].points_3d
     single_gl_coord = []
     for j in range(num):
       single_gl_coord.append([polygon_points[j].x, polygon_points[j].y])

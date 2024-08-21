@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apa_data.h"
 #include "apa_plan_base.h"
 #include "apa_world.h"
 #include "local_view.h"
@@ -35,11 +36,11 @@ class ApaPlanInterface {
 
   const planning::common::LateralPathOptimizerOutput& GetOutputDebugInfo()
       const {
-    return planner_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
+    return apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
   }
 
   const planning::common::LateralPathOptimizerInput& GetInputDebugInfo() const {
-    return planner_ptr_->GetLateralPathOptimizerPtr()->GetInputDebugInfo();
+    return apa_world_ptr_->GetLateralPathOptimizerPtr()->GetInputDebugInfo();
   }
 
   const planning::common::PlanningDebugInfo& GetPlanningDebugInfo() const {
@@ -51,16 +52,20 @@ class ApaPlanInterface {
   }
   const iflyauto::APAHMIData& GetAPAHmi() const { return apa_hmi_; }
 
- private:
-  std::shared_ptr<ApaPlannerBase> GetPlannerByType(
-      const uint8_t apa_planner_id);
+  void SetSimuParam(const SimulationParam& param) {
+    apa_world_ptr_->GetApaDataPtr()->simu_param = param;
+  }
 
-  const bool ApaPlanOnce(const uint8_t planner_type);
+ private:
+  const bool ApaPlanOnce(const ApaPlannerType planner_type);
   void AddReleasedSlotInfo(iflyauto::PlanningOutput& planning_output);
 
   void RecordNodeReceiveTime(const LocalView* local_view_ptr);
 
   std::vector<std::shared_ptr<ApaPlannerBase>> apa_planner_stack_;
+  std::unordered_map<ApaPlannerType, std::shared_ptr<ApaPlannerBase>>
+      apa_planner_map_;
+
   std::shared_ptr<ApaWorld> apa_world_ptr_ = nullptr;
   std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;
 

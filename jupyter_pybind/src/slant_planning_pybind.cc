@@ -16,12 +16,12 @@
 #include "config_context.h"
 #include "math_lib.h"
 #include "perpendicular_park_in_planner.h"
-#include "perpendicular_path_planner.h"
+#include "perpendicular_path_in_planner.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static planning::apa_planner::PerpendicularPathPlanner *pBase = nullptr;
+static planning::apa_planner::PerpendicularPathInPlanner *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
@@ -33,7 +33,7 @@ int Init() {
   // InitGlog(FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
 
-  pBase = new PerpendicularPathPlanner();
+  pBase = new PerpendicularPathInPlanner();
   pBase->Reset();
 
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
@@ -56,7 +56,7 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-static PerpendicularPathPlanner::DebugInfo debuginfo;
+static PerpendicularPathInPlanner::DebugInfo debuginfo;
 static std::vector<double> res;
 std::vector<Eigen::Vector3d> current_path_point_global_vec_;
 Eigen::Vector3d global_target_pose_;
@@ -197,7 +197,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularPathPlanner::Tlane slot_t_lane;
+  planning::apa_planner::PerpendicularPathInPlanner::Tlane slot_t_lane;
   // judge slot side via slot center and heading
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -400,8 +400,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     obs_pts_.insert(obs_pts_.end(), pt_vec.begin(), pt_vec.end());
   }
 
-  std::shared_ptr<planning::CollisionDetector> collision_detector_ptr = nullptr;
-  collision_detector_ptr = std::make_shared<planning::CollisionDetector>();
+  std::shared_ptr<CollisionDetector> collision_detector_ptr = nullptr;
+  collision_detector_ptr = std::make_shared<CollisionDetector>();
   collision_detector_ptr->ClearObstacles();
 
   std::vector<Eigen::Vector2d> obs_local_pts;
@@ -410,9 +410,9 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   }
 
   collision_detector_ptr->SetObstacles(obs_local_pts,
-                                       planning::CollisionDetector::TLANE_OBS);
+                                       CollisionDetector::TLANE_OBS);
 
-  planning::apa_planner::PerpendicularPathPlanner::Input input;
+  planning::apa_planner::PerpendicularPathInPlanner::Input input;
   input.pt_0 = ego_slot_info.pt_0;
   input.pt_1 = ego_slot_info.pt_1;
   input.sin_angle = ego_slot_info.sin_angle;

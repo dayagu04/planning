@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "apa_data.h"
 #include "apa_param_setting.h"
 #include "common.pb.h"
 #include "common_c.h"
@@ -15,272 +16,238 @@
 namespace planning {
 namespace apa_planner {
 void ApaWorld::Init() {
-  measures_ptr_ = std::make_shared<Measurements>();
+  apa_data_ptr_ = std::make_shared<ApaData>();
   slot_manager_ptr_ = std::make_shared<SlotManagement>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
+  lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
 }
 
 void ApaWorld::Reset() {
-  measures_ptr_->Reset();
+  apa_data_ptr_->Reset();
   slot_manager_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
+  lateral_path_optimizer_ptr_->Reset();
   local_view_ptr_ = nullptr;
 }
 
 void ApaWorld::Preprocess() {
-  // update ego info
+  apa_data_ptr_->uss_wave_info_ptr = &local_view_ptr_->uss_wave_info;
+  apa_data_ptr_->uss_percept_info_ptr = &local_view_ptr_->uss_percept_info;
+  apa_data_ptr_->localization_ptr = &local_view_ptr_->localization;
+  apa_data_ptr_->vehicle_service_info_ptr =
+      &local_view_ptr_->vehicle_service_output_info;
+  apa_data_ptr_->parking_slot_ptr = &local_view_ptr_->parking_fusion_info;
+  apa_data_ptr_->func_state_ptr = &local_view_ptr_->function_state_machine_info;
+  apa_data_ptr_->ground_line_perception_info_ptr =
+      &local_view_ptr_->ground_line_perception;
+  apa_data_ptr_->fusion_objects_info_ptr =
+      &local_view_ptr_->fusion_objects_info;
+  apa_data_ptr_->fusion_occupancy_objects_info_ptr =
+      &local_view_ptr_->fusion_occupancy_objects_info;
+
   UpdateEgoState();
+
+  UpdateStateMachine();
+
+  UpdateSlots();
+
+  UpdateObstacles();
+
+  UpdateUssDistance();
 }
 
 void ApaWorld::UpdateEgoState() {
-  measures_ptr_->current_state =
-      local_view_ptr_->function_state_machine_info.current_state;
+  MeasurementData& measurement_data = apa_data_ptr_->measurement_data;
 
-  const auto& pos = local_view_ptr_->localization.position.position_boot;
-  const auto& heading =
-      local_view_ptr_->localization.orientation.euler_boot.yaw;
+  measurement_data.steer_wheel_angle =
+      apa_data_ptr_->vehicle_service_info_ptr->steering_wheel_angle;
 
-  const Eigen::Vector2d current_pos(pos.x, pos.y);
+  if (apa_data_ptr_->vehicle_service_info_ptr->brake_pedal_pressed_available &&
+      apa_data_ptr_->vehicle_service_info_ptr->brake_pedal_pressed) {
+    measurement_data.brake_flag = true;
+  } else {
+    measurement_data.brake_flag = false;
+  }
+
+  const auto& pose = apa_data_ptr_->localization_ptr->position.position_boot;
+
+  const Eigen::Vector2d current_pos(pose.x, pose.y);
 
   const ApaParameters& param = apa_param.GetParam();
   // calculate standstill time by pos
-  const double local_move_dist = (measures_ptr_->pos_ego - current_pos).norm();
+  const double local_move_dist = (measurement_data.pos - current_pos).norm();
+
   if (local_move_dist < param.car_static_pos_err_strict) {
-    measures_ptr_->car_static_timer_by_pos_strict += param.plan_time;
+    measurement_data.car_static_timer_by_pos_strict += param.plan_time;
   } else {
-    measures_ptr_->car_static_timer_by_pos_strict = 0.0;
+    measurement_data.car_static_timer_by_pos_strict = 0.0;
   }
   if (local_move_dist < param.car_static_pos_err_normal) {
-    measures_ptr_->car_static_timer_by_pos_normal += param.plan_time;
+    measurement_data.car_static_timer_by_pos_normal += param.plan_time;
   } else {
-    measures_ptr_->car_static_timer_by_pos_normal = 0.0;
+    measurement_data.car_static_timer_by_pos_normal = 0.0;
   }
 
-  measures_ptr_->pos_ego = current_pos;
-  measures_ptr_->heading_ego = heading;
-  measures_ptr_->heading_ego_vec << std::cos(heading), std::sin(heading);
+  measurement_data.pos = current_pos;
+  measurement_data.heading =
+      apa_data_ptr_->localization_ptr->orientation.euler_boot.yaw;
+  measurement_data.heading_vec << std::cos(measurement_data.heading),
+      std::sin(measurement_data.heading);
 
-  // measures_ptr_->vel_ego =
+  const Eigen::Vector2d heading_vec_turn_right(
+      measurement_data.heading_vec.y(), -measurement_data.heading_vec.x());
+
+  const Eigen::Vector2d heading_vec_turn_left(-measurement_data.heading_vec.y(),
+                                              measurement_data.heading_vec.x());
+
+  measurement_data.right_mirror_pos =
+      measurement_data.pos +
+      param.lon_dist_mirror_to_rear_axle * measurement_data.heading_vec +
+      param.lat_dist_mirror_to_center * heading_vec_turn_right;
+
+  measurement_data.left_mirror_pos =
+      measurement_data.pos +
+      param.lon_dist_mirror_to_rear_axle * measurement_data.heading_vec +
+      param.lat_dist_mirror_to_center * heading_vec_turn_left;
+
+  // measurement_data.vel_ego =
   //     local_view_ptr_->vehicle_service_output_info.vehicle_speed();
 
-  measures_ptr_->vel_ego =
-      local_view_ptr_->localization.velocity.velocity_body.vx;
+  measurement_data.vel =
+      apa_data_ptr_->localization_ptr->velocity.velocity_body.vx;
 
   // calculate standstill time by velocity
-  if (std::fabs(measures_ptr_->vel_ego) < param.car_static_velocity_strict) {
-    measures_ptr_->car_static_timer_by_vel_strict += param.plan_time;
+  if (std::fabs(measurement_data.vel) < param.car_static_velocity_strict) {
+    measurement_data.car_static_timer_by_vel_strict += param.plan_time;
   } else {
-    measures_ptr_->car_static_timer_by_vel_strict = 0.0;
+    measurement_data.car_static_timer_by_vel_strict = 0.0;
   }
-  if (std::fabs(measures_ptr_->vel_ego) < param.car_static_velocity_normal) {
-    measures_ptr_->car_static_timer_by_vel_normal += param.plan_time;
+  if (std::fabs(measurement_data.vel) < param.car_static_velocity_normal) {
+    measurement_data.car_static_timer_by_vel_normal += param.plan_time;
   } else {
-    measures_ptr_->car_static_timer_by_vel_normal = 0.0;
+    measurement_data.car_static_timer_by_vel_normal = 0.0;
   }
 
   // static flag
-  measures_ptr_->static_flag = (measures_ptr_->car_static_timer_by_pos_strict >
-                                    param.car_static_keep_time_by_pos_strict ||
-                                measures_ptr_->car_static_timer_by_pos_normal >
-                                    param.car_static_keep_time_by_pos_normal) &&
-                               (measures_ptr_->car_static_timer_by_vel_strict >
-                                    param.car_static_keep_time_by_vel_strict ||
-                                measures_ptr_->car_static_timer_by_vel_normal >
-                                    param.car_static_keep_time_by_vel_normal);
+  measurement_data.static_flag =
+      (measurement_data.car_static_timer_by_pos_strict >
+           param.car_static_keep_time_by_pos_strict ||
+       measurement_data.car_static_timer_by_pos_normal >
+           param.car_static_keep_time_by_pos_normal) &&
+      (measurement_data.car_static_timer_by_vel_strict >
+           param.car_static_keep_time_by_vel_strict ||
+       measurement_data.car_static_timer_by_vel_normal >
+           param.car_static_keep_time_by_vel_normal);
 
   JSON_DEBUG_VALUE("local_move_dist", local_move_dist)
-  JSON_DEBUG_VALUE("local_vel", measures_ptr_->vel_ego)
+  JSON_DEBUG_VALUE("local_vel", measurement_data.vel)
   JSON_DEBUG_VALUE("car_static_timer_by_pos_strict",
-                   measures_ptr_->car_static_timer_by_pos_strict)
+                   measurement_data.car_static_timer_by_pos_strict)
   JSON_DEBUG_VALUE("car_static_timer_by_pos_normal",
-                   measures_ptr_->car_static_timer_by_pos_normal)
+                   measurement_data.car_static_timer_by_pos_normal)
   JSON_DEBUG_VALUE("car_static_timer_by_vel_strict",
-                   measures_ptr_->car_static_timer_by_vel_strict)
+                   measurement_data.car_static_timer_by_vel_strict)
   JSON_DEBUG_VALUE("car_static_timer_by_vel_normal",
-                   measures_ptr_->car_static_timer_by_vel_normal)
-  JSON_DEBUG_VALUE("static_flag", measures_ptr_->static_flag)
+                   measurement_data.car_static_timer_by_vel_normal)
+  JSON_DEBUG_VALUE("static_flag", measurement_data.static_flag)
 }
 
-const bool ApaWorld::CheckSelectedSlot() const {
-  // check selected slot id
-  if (local_view_ptr_->parking_fusion_info.select_slot_id == 0) {
-    DEBUG_PRINT("Error: no selected id");
-    return false;
+void ApaWorld::UpdateStateMachine() {
+  ApaStateMachine& cur_state = apa_data_ptr_->cur_state;
+  const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
+
+  if (state == iflyauto::FunctionalState_PARK_SUSPEND) {
+    cur_state = ApaStateMachine::SUSPEND;
   }
 
-  // check slot size in slot management
-  const size_t slots_size =
-      slot_manager_ptr_->GetOutputPtr()->slot_info_vec_size();
-  if (slots_size == 0) {
-    DEBUG_PRINT("empty managed slot!");
-    return false;
+  if (state == iflyauto::FunctionalState_PARK_COMPLETED) {
+    cur_state = ApaStateMachine::COMPLETE;
   }
 
-  const size_t selected_slot_id =
-      local_view_ptr_->parking_fusion_info.select_slot_id;
-  DEBUG_PRINT("selected_slot_id:" << selected_slot_id);
+  if (state == iflyauto::FunctionalState_PARK_IN_SEARCHING) {
+    cur_state = ApaStateMachine::SEARCH_IN;
+  }
 
-  // check slot type
-  const auto& fusion_slots =
-      local_view_ptr_->parking_fusion_info.parking_fusion_slot_lists;
-
-  bool valid_selected_slot = false;
-  const int fusion_slot_lists_size =
-      local_view_ptr_->parking_fusion_info.parking_fusion_slot_lists_size;
-  for (int i = 0; i < fusion_slot_lists_size; ++i) {
-    if (selected_slot_id == fusion_slots[i].id) {
-      const auto& slot_type = fusion_slots[i].type;
-
-      if (slot_type == iflyauto::PARKING_SLOT_TYPE_VERTICAL) {
-        DEBUG_PRINT("perpendicular slot selected in fusion");
-      } else if (slot_type == iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
-        DEBUG_PRINT("parallel slot selected in fusion");
-      }
-
-      measures_ptr_->slot_type = slot_type;
-      valid_selected_slot = true;
-      break;
+  if (state == iflyauto::FunctionalState_PARK_GUIDANCE) {
+    if (apa_data_ptr_->current_state ==
+        iflyauto::FunctionalState_PARK_IN_SEARCHING) {
+      cur_state = ApaStateMachine::ACTIVE_IN;
+    } else if (apa_data_ptr_->current_state ==
+               iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
+      cur_state = ApaStateMachine::ACTIVE_OUT;
     }
   }
 
-  if (!valid_selected_slot) {
-    DEBUG_PRINT("selected slot is invalid!");
-    return false;
+  if (state == iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
+    cur_state = ApaStateMachine::SEARCH_OUT;
   }
 
-  // check if selected slot released in slot management
-  common::SlotInfo selected_slot_slm;
-
-  if (!slot_manager_ptr_->GetSelectedSlot(selected_slot_slm,
-                                          static_cast<int>(selected_slot_id))) {
-    DEBUG_PRINT("selected slot is not found in slot management!");
-    return false;
-  }
-
-  // DEBUG_PRINT("selected_slot_slm = " << selected_slot_slm.DebugString()
-  //          );
-
-  if (!selected_slot_slm.is_release()) {
-    DEBUG_PRINT("selected slot is not released!");
-    return false;
-  }
-
-  measures_ptr_->target_managed_slot.CopyFrom(selected_slot_slm);
-
-  return true;
+  apa_data_ptr_->current_state = state;
 }
 
-const bool ApaWorld::CheckParkInState() const {
-  const bool park_in_search_stm =
-      local_view_ptr_->function_state_machine_info.current_state ==
-      iflyauto::FunctionalState_PARK_IN_SEARCHING;
-
-  const bool park_in_activated_stm =
-      (local_view_ptr_->function_state_machine_info.current_state >=
-           iflyauto::FunctionalState_PARK_GUIDANCE &&
-       local_view_ptr_->function_state_machine_info.current_state <=
-           iflyauto::FunctionalState_PARK_COMPLETED) &&
-      measures_ptr_->history_apa_function ==
-          GeneralApaFunction::PARK_IN_FUNCTION;
-
-  return park_in_search_stm || park_in_activated_stm;
-}
-
-const bool ApaWorld::CheckParkInActivated() const {
-  return local_view_ptr_->function_state_machine_info.current_state >=
-             iflyauto::FunctionalState_PARK_GUIDANCE &&
-         local_view_ptr_->function_state_machine_info.current_state <=
-             iflyauto::FunctionalState_PARK_COMPLETED &&
-         measures_ptr_->history_apa_function ==
-             GeneralApaFunction::PARK_IN_FUNCTION;
-}
-
-const bool ApaWorld::CheckParkOutState() const {
-  const bool park_out_search_stm =
-      local_view_ptr_->function_state_machine_info.current_state ==
-      iflyauto::FunctionalState_PARK_OUT_SEARCHING;
-
-  const bool park_out_activated_stm =
-      (local_view_ptr_->function_state_machine_info.current_state >=
-           iflyauto::FunctionalState_PARK_GUIDANCE &&
-       local_view_ptr_->function_state_machine_info.current_state <=
-           iflyauto::FunctionalState_PARK_COMPLETED) &&
-      measures_ptr_->history_apa_function ==
-          GeneralApaFunction::PARK_OUT_FUNCTION;
-
-  return park_out_search_stm || park_out_activated_stm;
-}
+void ApaWorld::UpdateSlots() {}
+void ApaWorld::UpdateUssDistance() {}
+void ApaWorld::UpdateObstacles() {}
 
 const bool ApaWorld::Update() {
-  // preprocess measurements
+  if (local_view_ptr_ == nullptr) {
+    DEBUG_PRINT("-- apa_world: local view ptr is nullptr, err ---");
+    return false;
+  }
   DEBUG_PRINT("-- apa_world: run preprocess ---");
   Preprocess();
-  measures_ptr_->planner_type = ApaPlannerType::NONE_PLANNER;
 
-  DEBUG_PRINT(
-      "current_state = " << static_cast<int>(measures_ptr_->current_state));
+  DEBUG_PRINT("func_state = " << static_cast<int>(
+                  apa_data_ptr_->func_state_ptr->current_state));
 
-  if (measures_ptr_->current_state == iflyauto::FunctionalState_PARK_STANDBY) {
-    measures_ptr_->history_apa_function = GeneralApaFunction::NONE_FUNCTION;
-  } else if (measures_ptr_->current_state ==
-             iflyauto::FunctionalState_PARK_IN_SEARCHING) {
-    measures_ptr_->history_apa_function = GeneralApaFunction::PARK_IN_FUNCTION;
-  } else if (measures_ptr_->current_state ==
-             iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
-    measures_ptr_->history_apa_function = GeneralApaFunction::PARK_OUT_FUNCTION;
-  }
+  PrintApaStateMachine(apa_data_ptr_->cur_state);
 
-  // check parking scenarios
-  if (CheckParkInState()) {
-    measures_ptr_->general_apa_function = GeneralApaFunction::PARK_IN_FUNCTION;
-    DEBUG_PRINT("current parking in is activated now!");
-  } else if (CheckParkOutState()) {
-    measures_ptr_->general_apa_function = GeneralApaFunction::PARK_OUT_FUNCTION;
-    DEBUG_PRINT("current parking out is not supported now!");
-    return false;
-  } else {
-    measures_ptr_->general_apa_function = GeneralApaFunction::NONE_FUNCTION;
-    DEBUG_PRINT("current parking scenarios is not supported now!");
-    return false;
-  }
+  apa_data_ptr_->planner_type = ApaPlannerType::INVALID_PLANNER;
 
   // run slot manager
   // currently path planning starts once id is selected in searching state
 
   DEBUG_PRINT("-- apa_world: run slot_management ---");
-  if (!slot_manager_ptr_->Update(local_view_ptr_)) {
+  if (!slot_manager_ptr_->Update(apa_data_ptr_)) {
     DEBUG_PRINT("shouldn't have entered the parking function at that time");
     return false;
   }
 
-  measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
+  if (!apa_data_ptr_->is_slot_type_fixed) {
+    // TODO: selected slot (slot_type) should be obtained in slot management
+    apa_data_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
+    apa_data_ptr_->slot_id = slot_manager_ptr_->GetEgoSlotInfo().select_slot_id;
+    apa_data_ptr_->is_slot_type_fixed = true;
+  }
 
-  // check park in planner
-  if (CheckParkInActivated()) {
-    if (measures_ptr_->slot_type ==
+  DEBUG_PRINT("current slot type in slm =" << static_cast<int>(
+                  slot_manager_ptr_->GetEgoSlotInfo().slot_type));
+  DEBUG_PRINT(
+      "fixed slot type =" << static_cast<int>(apa_data_ptr_->slot_type));
+
+  if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_IN) {
+    if (apa_data_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_IN!");
-      measures_ptr_->planner_type =
+      apa_data_ptr_->planner_type =
           ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
-    } else if (measures_ptr_->slot_type ==
+    } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       DEBUG_PRINT("planner_type = PARALLEL_PARK_IN!");
-      measures_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
-    } else if (measures_ptr_->slot_type ==
+      apa_data_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
+    } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
       DEBUG_PRINT("planner_type = SLANT_PARK_IN!");
-      measures_ptr_->planner_type =
-          ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
+      apa_data_ptr_->planner_type = ApaPlannerType::SLANT_PARK_IN_PLANNER;
     } else {
       DEBUG_PRINT("current slot type is not supported now!");
       return false;
     }
   }
 
-  // DEBUG_PRINT("planner_type = "
-  //           << static_cast<int>(measures_ptr_->planner_type));
+  PrintApaPlannerType(apa_data_ptr_->planner_type);
 
   return true;
 }

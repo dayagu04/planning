@@ -13,10 +13,9 @@
 #include "geometry_math.h"
 #include "ifly_time.h"
 
-const bool box = true;
-
 namespace planning {
-
+namespace apa_planner {
+const bool box = true;
 void CollisionDetector::Init() {
   car_line_local_vec_.clear();
   car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
@@ -1251,5 +1250,5 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
 
   return ObsSlotType::OBS_INVALID;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

@@ -12,16 +12,16 @@
 #include "apa_plan_interface.h"
 #include "collision_detection.h"
 #include "perpendicular_park_in_planner.h"
-#include "perpendicular_path_planner.h"
+#include "perpendicular_path_in_planner.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static planning::apa_planner::PerpendicularPathPlanner *pBase = nullptr;
+static planning::apa_planner::PerpendicularPathInPlanner *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
-  pBase = new PerpendicularPathPlanner();
+  pBase = new PerpendicularPathInPlanner();
   pBase->Reset();
 
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
@@ -44,7 +44,7 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-static PerpendicularPathPlanner::DebugInfo debuginfo;
+static PerpendicularPathInPlanner::DebugInfo debuginfo;
 static std::vector<double> res;
 std::vector<Eigen::Vector3d> current_path_point_global_vec_;
 Eigen::Vector3d global_target_pose_;
@@ -150,7 +150,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularPathPlanner::Tlane slot_t_lane;
+  planning::apa_planner::PerpendicularPathInPlanner::Tlane slot_t_lane;
   // judge slot side via slot center and heading
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -220,7 +220,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   ego_slot_info.pt_0 = pt_0;
   ego_slot_info.pt_1 = pt_1;
 
-  planning::apa_planner::PerpendicularPathPlanner::Input input;
+  planning::apa_planner::PerpendicularPathInPlanner::Input input;
   input.pt_0 = ego_slot_info.pt_0;
   input.pt_1 = ego_slot_info.pt_1;
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
@@ -237,12 +237,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   pBase->SetInput(input);
 
-  std::shared_ptr<planning::CollisionDetector> collision_detector_ptr = nullptr;
-  collision_detector_ptr = std::make_shared<planning::CollisionDetector>();
+  std::shared_ptr<CollisionDetector> collision_detector_ptr = nullptr;
+  collision_detector_ptr = std::make_shared<CollisionDetector>();
   collision_detector_ptr->ClearObstacles();
   pBase->SetColPtr(collision_detector_ptr);
 
-  pBase->Preprocess();
+  // pBase->Preprocess();
 
   current_path_point_global_vec_.clear();
 

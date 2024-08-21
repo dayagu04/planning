@@ -10,7 +10,7 @@
 #include "transform_lib.h"
 
 namespace planning {
-
+namespace apa_planner {
 void UssObstacleAvoidance::Init() {
   // init car local vertex
   car_local_vertex_vec_.clear();
@@ -352,13 +352,13 @@ void UssObstacleAvoidance::GenUssArc() {
 }
 
 const bool UssObstacleAvoidance::Preprocess() {
-  if (local_view_ptr_ == nullptr) {
-    DEBUG_PRINT("uss local_view_ptr is nullptr!");
+  if (apa_data_ptr_ == nullptr) {
+    DEBUG_PRINT("uss apa_data_ptr_ is nullptr!");
     return false;
   }
 
   car_motion_info_.steer_angle =
-      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle;
+      apa_data_ptr_->measurement_data.steer_wheel_angle;
 
   const bool trajectory_available =
       planning_output_->trajectory.available &&
@@ -388,7 +388,7 @@ const bool UssObstacleAvoidance::Preprocess() {
 
   if (apa_param.GetParam().is_uss_dist_from_perception) {
     const auto &uss_dis_info_buf =
-        local_view_ptr_->uss_percept_info.dis_from_car_to_obj;
+        apa_data_ptr_->uss_percept_info_ptr->dis_from_car_to_obj;
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // TODO(xjli32): NOTE
@@ -421,7 +421,7 @@ const bool UssObstacleAvoidance::Preprocess() {
   } else {
     // load uss dist from uss wave, m id f
     const auto &upa_dis_info_buf =
-        local_view_ptr_->uss_wave_info.upa_dis_info_buf;
+        apa_data_ptr_->uss_wave_info_ptr->upa_dis_info_buf;
 
     const std::vector<int> front_wids_idx_vec = {0, 9, 6, 3, 1, 11};
     const std::vector<int> rear_wids_idx_vec = {0, 1, 3, 6, 9, 11};
@@ -497,9 +497,9 @@ void UssObstacleAvoidance::CalRemainDist() {
 
 void UssObstacleAvoidance::Update(
     iflyauto::PlanningOutput *const planning_output,
-    const LocalView *local_view_ptr) {
+    const std::shared_ptr<ApaData> apa_data_ptr) {
   // update local_view
-  local_view_ptr_ = local_view_ptr;
+  apa_data_ptr_ = apa_data_ptr;
 
   // update planning output
   planning_output_ = planning_output;
@@ -619,5 +619,5 @@ void UssObstacleAvoidance::UpdateByPybind() {
     remain_dist_info_.is_available = false;
   }
 }
-
+}  // namespace apa_planner
 }  // namespace planning
