@@ -137,7 +137,9 @@ void StGraphGenerator::Update(
   CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp,
                     is_continuous_ramp, ramp_v_limit, acc_to_ramp, v_ego);
 
-  CalcSpeedInfoWithIntersection();
+  if (config_.enable_intersection_v_limit) {
+    CalcSpeedInfoWithIntersection();
+  }
 
   // 2. 计算障碍物s-t
   // 2.1 计算leads: lead one, 选择性使用lead two

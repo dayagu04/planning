@@ -419,10 +419,14 @@
     "v_target_stop_thrd" : -10.0,
     "acc_stop_max_bound" : 1.5,
     "enable_jlt" : true,
-    "enable_narrow_agent_limit" : true
+    "enable_narrow_agent_limit" : true,
+    "enable_intersection_v_limit" : false
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false
+  },
+  "traffic_light_decider": {
+    "enable_tfl_decider": false
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

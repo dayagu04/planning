@@ -25,7 +25,7 @@ bool TrafficLightDecider::Execute(){
     } else{
       is_first_car_ = true;
     }
-    if (is_first_car_) {
+    if (is_first_car_ && config_.enable_tfl_decider) {
       const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
       const auto traffic_status = tfl_manager->GetTrafficStatus();
       if (traffic_status.go_straight == 0) {

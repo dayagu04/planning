@@ -1586,6 +1586,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     dis_curv = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "dis_curv"});
+    enable_intersection_v_limit = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_intersection_v_limit"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1651,6 +1654,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double v_limit_near_ramp_zone = 40.0;
   double dis_near_ramp_zone = 1100.0;
   double brake_dis_near_ramp_zone = 800.0;
+  bool enable_intersection_v_limit = false;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -1810,11 +1814,12 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    stop_dis_to_stopline =
-        read_json_key<double>(json, "stop_dis_to_stopline");
+    enable_tfl_decider = read_json_keys<bool>(
+        json, std::vector<std::string>{"traffic_light_decider",
+                                       "enable_tfl_decider"});
   }
 
-  double stop_dis_to_stopline = 1.0;
+  bool enable_tfl_decider = false;
 };
 
 struct MapRequestConfig : public EgoPlanningConfig {
