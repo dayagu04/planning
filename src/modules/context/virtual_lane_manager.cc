@@ -550,6 +550,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 5.track自车道
   const auto& location_valid = session_->environmental_model().location_valid();
   auto time_start = IflyTime::Now_ms();
+  order_ids_of_same_zero_relative_id_.clear();
   if (location_valid) {
     TrackEgoLane();
   }
@@ -1825,7 +1826,6 @@ void VirtualLaneManager::ResetForRampInfo() {
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
-  is_within_hdmap_ = false;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(
@@ -1997,12 +1997,9 @@ void VirtualLaneManager::TrackEgoLane() {
   is_exist_ramp_on_road_ = false;
 
   // 判断自车是否处于车道数一分二场景
-  std::vector<int> order_ids_of_same_zero_relative_id;
-  order_ids_of_same_zero_relative_id.clear();
-
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
-      order_ids_of_same_zero_relative_id.emplace_back(
+      order_ids_of_same_zero_relative_id_.emplace_back(
           relative_id_lane->get_order_id());
       zero_relative_id_nums += 1;
     }
@@ -2022,7 +2019,7 @@ void VirtualLaneManager::TrackEgoLane() {
         if (!is_on_ramp_ && dis_to_ramp_ < 3000 && !is_leaving_ramp_ &&
             lane_keep_status) {
           // hack::针对分流 感知未提供分汇流点信息 作如下后处理
-          PreprocessRoadSplit(order_ids_of_same_zero_relative_id);
+          PreprocessRoadSplit(order_ids_of_same_zero_relative_id_);
           LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
           JSON_DEBUG_VALUE("is_exist_ramp_on_road_", is_exist_ramp_on_road_);
 
@@ -2034,7 +2031,7 @@ void VirtualLaneManager::TrackEgoLane() {
             current_segment_passed_distance_ >
                 select_split_min_distance_threshold) {
           //选择匝道上的分叉
-          PreprocessRampSplit(order_ids_of_same_zero_relative_id);
+          PreprocessRampSplit(order_ids_of_same_zero_relative_id_);
           LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
           JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 

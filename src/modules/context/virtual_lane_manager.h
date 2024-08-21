@@ -137,6 +137,10 @@ class VirtualLaneManager {
 
   void SelectEgoLaneWithPlan(int zero_relative_id_nums);
 
+  std::vector<int> GetZeroRelativeIdOrderIds() {
+    return order_ids_of_same_zero_relative_id_;
+  }
+
   double ComputeTargetLaneSpecifiedRangeCurvature(
       const std::shared_ptr<VirtualLane> virtual_lane);
 
@@ -336,7 +340,7 @@ class VirtualLaneManager {
   double distance_to_route_end_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
-  bool is_within_hdmap_ = false;
+  std::vector<int> order_ids_of_same_zero_relative_id_;
 };
 }  // namespace planning
 #endif

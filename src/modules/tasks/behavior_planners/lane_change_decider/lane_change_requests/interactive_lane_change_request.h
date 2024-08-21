@@ -62,6 +62,7 @@ class IntRequest : public LaneChangeRequest {
   ScenarioDisplayStateConfig int_request_config_;
   bool is_lever_status_valid_ = true;  //拨杆未回正，只执行一次变道的标志
   bool is_lever_status_valid_last_frame_ = true;
+  bool is_in_diverted_lane_change_ = false;
 };
 
 }  // namespace planning
