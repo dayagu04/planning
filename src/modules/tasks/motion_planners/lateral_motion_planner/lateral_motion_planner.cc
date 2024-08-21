@@ -308,7 +308,10 @@ void LateralMotionPlanner::AssembleInput() {
   const bool is_exist_ramp_on_road = session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_is_exist_ramp_on_road();
-  if (is_exist_ramp_on_road) {
+  const bool is_exist_split_on_ramp = session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_is_exist_split_on_ramp();
+  if (is_exist_ramp_on_road || is_exist_split_on_ramp) {
     split_scene = true;
     // complete_follow = true;
     enter_split_time_ = 1.0;
@@ -387,10 +390,7 @@ void LateralMotionPlanner::AssembleInput() {
   }
   if (split_scene) {
     motion_plan_concerned_end_index = 17;
-    if (!is_exist_ramp_on_road) {
-      // if (std::fabs(init_ref_theta_error_) < config_.big_theta_thr) {
-
-      // }
+    if (!is_exist_ramp_on_road || !is_exist_split_on_ramp) {
       planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
     }
   }
