@@ -667,6 +667,7 @@ enum class LatObstacleType { LANE, ROAD, CAR };
 struct LateralOffsetDeciderOutput {
   bool is_valid = false;
   double lateral_offset = 0.0;
+  bool enable_bound = false;
 
   // hmi
   int avoid_id = -1;

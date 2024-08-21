@@ -700,8 +700,16 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
+  const LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      session_->mutable_planning_context()->lateral_offset_decider_output();
+
   if (general_lateral_decider_output.lane_change_scene) {
     LOG_DEBUG("LatObstacle Decider! GS trustworthy");
+    return;
+  }
+
+  if (!lateral_offset_decider_output.enable_bound) {
+    LOG_DEBUG("Enable_bound is invalid!");
     return;
   }
 

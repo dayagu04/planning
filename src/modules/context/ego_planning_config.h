@@ -517,7 +517,10 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
                               care_dynamic_object_t_threshold);
     care_static_object_t_threshold = read_json_key<double>(
         json, "care_static_object_t_threshold", care_static_object_t_threshold);
+    v_limit_max =
+        read_json_key<double>(json, "v_limit_max", v_limit_max);
   }
+  double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
   double nudge_buffer_road_boundary = 0.3;
   double nudge_buffer_lane_boundary = 0.1;
