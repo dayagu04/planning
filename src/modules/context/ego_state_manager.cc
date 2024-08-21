@@ -406,7 +406,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   cur_vehicle_state_process_.angular_velocity = ego_state->ego_yaw_rate();
-  cur_vehicle_state_process_.linear_velocity = ego_state->ego_v();
+  cur_vehicle_state_process_.linear_velocity =
+      std::max(ego_state->ego_v(), 0.0);
   cur_vehicle_state_process_.jerk = ego_state->ego_jerk();
   cur_vehicle_state_process_.linear_acceleration = ego_state->ego_acc();
   cur_vehicle_state_process_.delta =
