@@ -557,8 +557,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
 
   // planning_hmi_info->ad_info.lane_change_status =
-  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state; update
-  // LaneChangeStatus
+  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state; 
+  // update LaneChangeStatus
   const auto curr_state = lane_change_decider_output.curr_state;
   const auto lasr_frame_state = session_.planning_context().
       lane_change_decider_output().coarse_planning_info.source_state;
@@ -657,12 +657,15 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.distance_to_merge =
       virtual_lane_manager->distance_to_first_road_merge();
   planning_hmi_info->ad_info.distance_to_toll_station =
-      (uint)virtual_lane_manager
-          ->ramp_direction();  // 临时将toll_station改为ramp_direction
-  // planning_hmi_info->ad_info.noa_exit_warning_level_distance = ;  // 到终点的距离 王丰
+      virtual_lane_manager
+          ->get_distance_to_toll_station();
+  planning_hmi_info->ad_info.noa_exit_warning_level_distance = 
+      virtual_lane_manager->get_distance_to_route_end();  
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
   // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
-  // planning_hmi_info->ad_info.ramp_direction = ;      // 义龙填写
+  const int ramp_direction = virtual_lane_manager->ramp_direction();
+  planning_hmi_info->ad_info.ramp_direction = 
+      (iflyauto::RampDirection)ramp_direction;
   // planning_hmi_info->ad_info.ramp_pass_sts = ;       // 义龙填写
   auto fix_reference_path =
       lane_change_decider_output.coarse_planning_info.reference_path;
@@ -675,9 +678,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   planning_hmi_info->ad_info.is_in_sdmaproad =
       virtual_lane_manager->is_in_sdmaproad();
-  if (virtual_lane_manager->is_ego_on_expressway()) {
+  if (virtual_lane_manager->is_ego_on_expressway_hmi()) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+  } else if (virtual_lane_manager->is_ego_on_city_expressway_hmi()) {
+    planning_hmi_info->ad_info.road_type =
+        iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
   } else {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;

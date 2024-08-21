@@ -444,6 +444,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
   is_ego_on_expressway_ = false;
+  is_ego_on_city_expressway_hmi_ = false;
+  is_ego_on_expressway_hmi_ = false;
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_generated_refline_info()
@@ -1529,6 +1531,11 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
       current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
     is_ego_on_expressway_ = true;
+    if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY) {
+      is_ego_on_expressway_hmi_ = true;
+    } else {
+      is_ego_on_city_expressway_hmi_ = true;
+    }
   } else {
     std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
     ResetForRampInfo();
@@ -1638,6 +1645,17 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     distance_to_route_end_ = NL_NMAX;
   }
   JSON_DEBUG_VALUE("distance_to_route_end", distance_to_route_end_);
+
+  // 计算到最近收费站的距离
+  const auto& toll_station_info = sd_map.GetTollStationInfo(
+    current_segment->id(), nearest_s, max_search_length);
+  if (toll_station_info.first != nullptr) {
+    distance_to_toll_station_ = toll_station_info.second;
+  } else {
+    std::cout << "not find toll station" << std::endl;
+     distance_to_toll_station_ = NL_NMAX;
+  }
+
 }
 
 // void VirtualLaneManager::CalculateHPPInfo(
@@ -1834,6 +1852,9 @@ void VirtualLaneManager::ResetForRampInfo() {
   first_split_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
+  distance_to_toll_station_ = NL_NMAX;
+  is_ego_on_city_expressway_hmi_ = false;
+  is_ego_on_expressway_hmi_ = false;
 }
 
 RampDirection VirtualLaneManager::MakesureSplitDirection(

@@ -158,7 +158,9 @@ class VirtualLaneManager {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
-  double get_distance_to_route_end() { return distance_to_route_end_; }
+  double get_distance_to_route_end() const { return distance_to_route_end_; }
+
+  double get_distance_to_toll_station () const { return distance_to_toll_station_; }
 
   bool get_is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
 
@@ -208,6 +210,10 @@ class VirtualLaneManager {
   }
 
   bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
+
+  bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
+
+  bool is_ego_on_city_expressway_hmi() const { return is_ego_on_city_expressway_hmi_; }
 
   const double dis_threshold_to_last_merge_point() const {
     return dis_threshold_to_last_merge_point_;
@@ -335,12 +341,15 @@ class VirtualLaneManager {
   double sum_dis_to_last_merge_point_ = NL_NMAX;
   bool is_in_sdmaproad_ = false;
   bool is_ego_on_expressway_ = false;
+  bool is_ego_on_expressway_hmi_ = false;
+  bool is_ego_on_city_expressway_hmi_ = false;
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
   bool is_exist_intersection_split_ = false;
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
+  double distance_to_toll_station_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;
