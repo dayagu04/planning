@@ -2099,7 +2099,14 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
             break;
           }
           double heading_angle = frenet_coord->GetPathCurveHeading(s);
-          heading_angle_cost += std::fabs(heading_angle - ego_heading_angle);
+          double theta_err = heading_angle - ego_heading_angle;
+          const double pi2 = 2.0 * M_PI;
+          if (theta_err > M_PI) {
+            theta_err -= pi2;
+          } else if (theta_err < -M_PI) {
+            theta_err += pi2;
+          }
+          heading_angle_cost += std::fabs(theta_err);
           iter_count++;
         }
         pos_lateral_offset_cost = std::fabs(ego_l);
