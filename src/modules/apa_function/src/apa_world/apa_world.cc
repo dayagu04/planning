@@ -103,10 +103,6 @@ void ApaWorld::UpdateEgoState() {
   JSON_DEBUG_VALUE("static_flag", measures_ptr_->static_flag)
 }
 
-const bool ApaWorld::CheckIfSlotSelectedInFusion() const {
-  return ((local_view_ptr_->parking_fusion_info.select_slot_id != 0));
-}
-
 const bool ApaWorld::CheckSelectedSlot() const {
   // check selected slot id
   if (local_view_ptr_->parking_fusion_info.select_slot_id == 0) {
@@ -193,7 +189,12 @@ const bool ApaWorld::CheckParkInState() const {
 }
 
 const bool ApaWorld::CheckParkInActivated() const {
-  return CheckParkInState() && CheckIfSlotSelectedInFusion();
+  return local_view_ptr_->function_state_machine_info.current_state >=
+             iflyauto::FunctionalState_PARK_GUIDANCE &&
+         local_view_ptr_->function_state_machine_info.current_state <=
+             iflyauto::FunctionalState_PARK_COMPLETED &&
+         measures_ptr_->history_apa_function ==
+             GeneralApaFunction::PARK_IN_FUNCTION;
 }
 
 const bool ApaWorld::CheckParkOutState() const {
@@ -212,9 +213,6 @@ const bool ApaWorld::CheckParkOutState() const {
   return park_out_search_stm || park_out_activated_stm;
 }
 
-const bool ApaWorld::CheckParkOutActivated() const {
-  return CheckParkOutState() && CheckIfSlotSelectedInFusion();
-}
 const bool ApaWorld::Update() {
   // preprocess measurements
   DEBUG_PRINT("-- apa_world: run preprocess ---");
@@ -257,15 +255,7 @@ const bool ApaWorld::Update() {
     return false;
   }
 
-  if (!measures_ptr_->is_slot_type_fixed) {
-    // TODO: selected slot (slot_type) should be obtained in slot management
-    measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
-    measures_ptr_->is_slot_type_fixed = true;
-  }
-  DEBUG_PRINT("current slot type in slm =" << static_cast<int>(
-                  slot_manager_ptr_->GetEgoSlotInfo().slot_type));
-  DEBUG_PRINT(
-      "fixed slot type =" << static_cast<int>(measures_ptr_->slot_type));
+  measures_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
 
   // check park in planner
   if (CheckParkInActivated()) {
