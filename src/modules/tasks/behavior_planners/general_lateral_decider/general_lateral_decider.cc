@@ -1197,24 +1197,42 @@ void GeneralLateralDecider::ExtractBoundary(
     std::vector<std::pair<double, double>> &frenet_hard_bounds,
     std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
     std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
-  for (auto &bounds : hard_bounds_) {
+  for (int i = 0; i < hard_bounds_.size(); i++) {
     std::pair<double, double> hard_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> hard_bound_info;  // <lower ,upper>
-    PostProcessBound(bounds, hard_bound, hard_bound_info);
+    PostProcessBound(hard_bounds_[i], hard_bound, hard_bound_info);
+    if (i == 0) {
+      ProtectBoundByInitPoint(hard_bound, hard_bound_info);
+    }
     frenet_hard_bounds.emplace_back(hard_bound);
     hard_bounds_info.emplace_back(hard_bound_info);
   }
 
-  for (auto &bounds : soft_bounds_) {
+  for (int i = 0; i < hard_bounds_.size(); i++) {
     std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
-    PostProcessBound(bounds, soft_bound, soft_bound_info);
+    PostProcessBound(soft_bounds_[i], soft_bound, soft_bound_info);
+    if (i == 0) {
+      ProtectBoundByInitPoint(soft_bound, soft_bound_info);
+    }
     frenet_soft_bounds.emplace_back(soft_bound);
     soft_bounds_info.emplace_back(soft_bound_info);
   }
 
   assert(frenet_hard_bounds.size() == ref_traj_points_.size());
   assert(frenet_soft_bounds.size() == ref_traj_points_.size());
+}
+
+void GeneralLateralDecider::ProtectBoundByInitPoint(std::pair<double, double> &bound, std::pair<BoundInfo, BoundInfo> &bound_info) {
+  const double planning_init_point_l = ego_frenet_state_.planning_init_point().frenet_state.r;
+  if (bound.first > planning_init_point_l) {
+    bound.first = planning_init_point_l;
+    bound_info.first.type = BoundType::EGO_POSITION;
+  }
+  if (bound.second < planning_init_point_l) {
+    bound.second = planning_init_point_l;
+    bound_info.second.type = BoundType::EGO_POSITION;
+  }
 }
 
 void GeneralLateralDecider::ExtractDynamicObstacleBound(
