@@ -155,7 +155,7 @@ bool PlanningScheduler::RunOnce(
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.timestamp = start_timestamp;
-  planning_output->msg_header.stamp = start_timestamp_us;
+  // planning_output->msg_header.stamp = start_timestamp_us; 统一放在adapter处
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -451,7 +451,7 @@ void PlanningScheduler::FillPlanningTrajectory(
 void PlanningScheduler::GenerateStopTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 更新输出
-  planning_output->msg_header.stamp = IflyTime::Now_ms();
+  // planning_output->msg_header.stamp = IflyTime::Now_ms();
 
   auto trajectory = &(planning_output->trajectory);
   // Hack: 长时规划
@@ -557,7 +557,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
 
   // planning_hmi_info->ad_info.lane_change_status =
-  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state; 
+  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
   // update LaneChangeStatus
   const auto curr_state = lane_change_decider_output.curr_state;
   const auto lasr_frame_state = session_.planning_context().
@@ -666,12 +666,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.distance_to_toll_station =
       virtual_lane_manager
           ->get_distance_to_toll_station();
-  planning_hmi_info->ad_info.noa_exit_warning_level_distance = 
-      virtual_lane_manager->get_distance_to_route_end();  
+  planning_hmi_info->ad_info.noa_exit_warning_level_distance =
+      virtual_lane_manager->get_distance_to_route_end();
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
   // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
   const int ramp_direction = virtual_lane_manager->ramp_direction();
-  planning_hmi_info->ad_info.ramp_direction = 
+  planning_hmi_info->ad_info.ramp_direction =
       (iflyauto::RampDirection)ramp_direction;
   // planning_hmi_info->ad_info.ramp_pass_sts = ;       // 义龙填写
   auto fix_reference_path =

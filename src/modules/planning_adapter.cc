@@ -302,8 +302,8 @@ void PlanningAdapter::Proc() {
   }
   input_topic_timestamp->set_perception_tsr(
       local_view_ptr_->perception_tsr_info.msg_header.stamp);
-  input_topic_latency->set_perception_tsr(
-      get_latency(start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
+  input_topic_latency->set_perception_tsr(get_latency(
+      start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
 
   // update general context
   auto &state_machine_g = g_context.MutableStatemachine();
@@ -374,20 +374,24 @@ void PlanningAdapter::Proc() {
       planning_output = last_planning_output_;
       LOG_WARNING("planning failed, use last planning output\n");
     }
+    // update msg_header & msg_meta
     auto &msg_header = planning_output.msg_header;
     auto &msg_meta = planning_output.msg_meta;
     msg_header.stamp = output_time_us;
-    // iflyauto::strcpy_array(header.version, __version_str__);
     msg_header.seq = frame_num_;
+    msg_meta.start_time = start_time;
+    iflyauto::strcpy_array(msg_meta.version, __version_str__);
     UpdateInputListInfo(msg_meta);
-
     planning_writer_(planning_output_container);
   }
 
   if (planning_hmi_info_writer_) {
-    planning_hmi_info.msg_header.stamp = output_time_us;
-    planning_hmi_info.msg_header.seq = frame_num_;
-    // iflyauto::strcpy_array(planning_hmi_info.msg_header.version, __version_str__);
+    auto &hmi_msg_header = planning_hmi_info.msg_header;
+    auto &hmi_msg_meta = planning_hmi_info.msg_meta;
+    hmi_msg_header.stamp = output_time_us;
+    hmi_msg_header.seq = frame_num_;
+    hmi_msg_meta.start_time = start_time;
+    iflyauto::strcpy_array(hmi_msg_meta.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info_container);
   }
 
