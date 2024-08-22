@@ -37,8 +37,7 @@ static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
 static constexpr auto TOPIC_CONTROL_COMMAN = "/iflytek/control/control_command";
 static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
 static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
-static constexpr auto TOPIC_FUNC_STATE_MACHINE =
-    "/iflytek/fsm/soc_state";
+static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
@@ -258,8 +257,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
           msg);
     } else if (msg.getTopic() == TOPIC_CONTROL_COMMAN) {
       cache_with_ros_msg_and_header_time<struct_msgs::ControlOutput>(msg);
-    // } else if (msg.getTopic() == TOPIC_HMI_MCU_INNER) {
-    //   cache_with_ros_msg_and_header_time<struct_msgs::HmiMcuInner>(msg);
+      // } else if (msg.getTopic() == TOPIC_HMI_MCU_INNER) {
+      //   cache_with_ros_msg_and_header_time<struct_msgs::HmiMcuInner>(msg);
     } else if (msg.getTopic() == TOPIC_PARKING_FUSION) {
       cache_with_ros_msg_and_header_time<struct_msgs::ParkingFusionInfo>(msg);
     } else if (msg.getTopic() == TOPIC_FUNC_STATE_MACHINE) {
@@ -348,9 +347,10 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
       } else if (it_msg.first == TOPIC_CONTROL_COMMAN) {
         write_ros_msg<struct_msgs::ControlOutput::Ptr>(
             it_msg.second, TOPIC_CONTROL_COMMAN, bag);
-      // } else if (it_msg.first == TOPIC_HMI_MCU_INNER) {
-      //   write_ros_msg<struct_msgs::HmiMcuInner::Ptr>(it_msg.second,
-      //                                                TOPIC_HMI_MCU_INNER, bag);
+        // } else if (it_msg.first == TOPIC_HMI_MCU_INNER) {
+        //   write_ros_msg<struct_msgs::HmiMcuInner::Ptr>(it_msg.second,
+        //                                                TOPIC_HMI_MCU_INNER,
+        //                                                bag);
       } else if (it_msg.first == TOPIC_PARKING_FUSION) {
         write_ros_msg<struct_msgs::ParkingFusionInfo::Ptr>(
             it_msg.second, TOPIC_PARKING_FUSION, bag);
@@ -525,7 +525,8 @@ void PlanningPlayer::PlayOneFrame(
     // std::cerr << "missing /iflytek/control/control_command" << std::endl;
   }
 
-  // auto hmi_mcu_ros_msg = find_ros_msg_with_header_time<struct_msgs::HmiInner>(
+  // auto hmi_mcu_ros_msg =
+  // find_ros_msg_with_header_time<struct_msgs::HmiInner>(
   //     TOPIC_HMI_MCU_INNER, input_time_list.hmi());
   // if (hmi_mcu_ros_msg) {
   //   iflyauto::HmiInner hmi_inner_msg{};

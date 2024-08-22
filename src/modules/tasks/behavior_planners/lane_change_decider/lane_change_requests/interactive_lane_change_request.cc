@@ -39,7 +39,8 @@ void IntRequest::Update(int lc_status) {
   if (lane_change_cmd_ == 0 || is_lever_status_valid_last_frame_) {
     is_lever_status_valid_ = true;
   }
-  is_lever_status_valid_last_frame_ = lane_change_cmd_; //反方向拨杆时，能触发反方向的变道请求
+  is_lever_status_valid_last_frame_ =
+      lane_change_cmd_;  //反方向拨杆时，能触发反方向的变道请求
   // init lanes with id
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
   auto tlane = lane_change_lane_mgr_->tlane();
@@ -60,8 +61,10 @@ void IntRequest::Update(int lc_status) {
   }
   int target_lane_virtual_id_tmp{current_lane_virtual_id};
 
-  const int origin_relative_id_zero_nums = virtual_lane_mgr_->origin_relative_id_zero_nums();
-  std::vector<int> zero_relative_id_order_ids = virtual_lane_mgr_->GetZeroRelativeIdOrderIds();
+  const int origin_relative_id_zero_nums =
+      virtual_lane_mgr_->origin_relative_id_zero_nums();
+  std::vector<int> zero_relative_id_order_ids =
+      virtual_lane_mgr_->GetZeroRelativeIdOrderIds();
 
   // 获取左车道线型
   iflyauto::LaneBoundaryType left_boundary_type =
@@ -91,17 +94,21 @@ void IntRequest::Update(int lc_status) {
     }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
-    if (!zero_relative_id_order_ids.empty() && origin_relative_id_zero_nums > 1) {
-      std::shared_ptr<VirtualLane> origin_lane = 
+    if (!zero_relative_id_order_ids.empty() &&
+        origin_relative_id_zero_nums > 1) {
+      std::shared_ptr<VirtualLane> origin_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
       int origin_lane_order_id = origin_lane->get_order_id();
-      std::shared_ptr<VirtualLane> tem_target_lane = 
-          virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
+      std::shared_ptr<VirtualLane> tem_target_lane =
+          virtual_lane_mgr_->get_lane_with_virtual_id(
+              target_lane_virtual_id_tmp);
       int temp_target_lane_order_id = tem_target_lane->get_order_id();
-      auto origin_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                            zero_relative_id_order_ids.end(), origin_lane_order_id);
+      auto origin_id_iter =
+          std::find(zero_relative_id_order_ids.begin(),
+                    zero_relative_id_order_ids.end(), origin_lane_order_id);
       auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                            zero_relative_id_order_ids.end(), temp_target_lane_order_id);
+                                      zero_relative_id_order_ids.end(),
+                                      temp_target_lane_order_id);
       if (origin_id_iter != zero_relative_id_order_ids.end() &&
           target_id_iter != zero_relative_id_order_ids.end()) {
         is_in_diverted_lane_change_ = true;
@@ -142,19 +149,23 @@ void IntRequest::Update(int lc_status) {
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       counter_right_ = -5;
     }
-    
+
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
-    if (!zero_relative_id_order_ids.empty() && origin_relative_id_zero_nums > 1) {
-      std::shared_ptr<VirtualLane> origin_lane = 
+    if (!zero_relative_id_order_ids.empty() &&
+        origin_relative_id_zero_nums > 1) {
+      std::shared_ptr<VirtualLane> origin_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
       int origin_lane_order_id = origin_lane->get_order_id();
-      std::shared_ptr<VirtualLane> tem_target_lane = 
-          virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
+      std::shared_ptr<VirtualLane> tem_target_lane =
+          virtual_lane_mgr_->get_lane_with_virtual_id(
+              target_lane_virtual_id_tmp);
       int temp_target_lane_order_id = tem_target_lane->get_order_id();
-      auto origin_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                            zero_relative_id_order_ids.end(), origin_lane_order_id);
+      auto origin_id_iter =
+          std::find(zero_relative_id_order_ids.begin(),
+                    zero_relative_id_order_ids.end(), origin_lane_order_id);
       auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                            zero_relative_id_order_ids.end(), temp_target_lane_order_id);
+                                      zero_relative_id_order_ids.end(),
+                                      temp_target_lane_order_id);
       if (origin_id_iter != zero_relative_id_order_ids.end() &&
           target_id_iter != zero_relative_id_order_ids.end()) {
         is_in_diverted_lane_change_ = true;
@@ -216,7 +227,8 @@ void IntRequest::Update(int lc_status) {
   } else if (lane_change_lane_mgr_->has_target_lane() &&
              (std::fabs(frenet_ego_state_l) >=
               tlane->width() / 2 +
-                  int_request_config_.disallow_cancel_int_lc_lateral_thr) && !is_in_diverted_lane_change_) {
+                  int_request_config_.disallow_cancel_int_lc_lateral_thr) &&
+             !is_in_diverted_lane_change_) {
     if ((request_type_ == LEFT_CHANGE &&
          left_boundary_type ==
              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) ||

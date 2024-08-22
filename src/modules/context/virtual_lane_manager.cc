@@ -1860,12 +1860,10 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
     const auto& other_segment_enu_point = other_segment.enu_points();
     if (split_next_segment_enu_point.size() > 1 &&
         other_segment_enu_point.size() > 1) {
-      segment_in_route_dir_vec.set_x(
-          split_next_segment_enu_point[1].x() -
-          anchor_point_of_cur_seg_to_next_seg.x);
-      segment_in_route_dir_vec.set_y(
-          split_next_segment_enu_point[1].y() -
-          anchor_point_of_cur_seg_to_next_seg.y);
+      segment_in_route_dir_vec.set_x(split_next_segment_enu_point[1].x() -
+                                     anchor_point_of_cur_seg_to_next_seg.x);
+      segment_in_route_dir_vec.set_y(split_next_segment_enu_point[1].y() -
+                                     anchor_point_of_cur_seg_to_next_seg.y);
       segment_not_in_route_dir_vec.set_x(other_segment_enu_point[1].x() -
                                          anchor_point_of_cur_seg_to_next_seg.x);
       segment_not_in_route_dir_vec.set_y(other_segment_enu_point[1].y() -
@@ -1893,7 +1891,8 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   lane_msg.reserve(roads_ptr->reference_line_msg_size);
   origin_relative_id_zero_nums_ = 0;
   for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
-    if (roads_ptr->reference_line_msg[i].lane_reference_line.virtual_lane_refline_points_size < 3) {
+    if (roads_ptr->reference_line_msg[i]
+            .lane_reference_line.virtual_lane_refline_points_size < 3) {
       continue;
     }
     if (roads_ptr->reference_line_msg[i].relative_id == 0) {
@@ -2153,7 +2152,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     return;
   }
 
-  last_ego_lane_curv = ComputeTargetLaneSpecifiedRangeCurvature(last_track_virtual_id_lane);
+  last_ego_lane_curv =
+      ComputeTargetLaneSpecifiedRangeCurvature(last_track_virtual_id_lane);
   double road_radius = 1 / std::max(last_ego_lane_curv, 0.0001);
 
   const auto& lane_change_status = lane_change_decider_output.curr_state;
@@ -2208,14 +2208,15 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
         double target_ego_s = 0.0;
         double target_ego_l = 0.0;
         if (!track_lane_frenet_coord->XYToSL(ego_state->ego_pose().x,
-                                  ego_state->ego_pose().y, &target_ego_s, &target_ego_l)) {
+                                             ego_state->ego_pose().y,
+                                             &target_ego_s, &target_ego_l)) {
           return;
         }
         if (road_radius > kDefaultRoadRadius) {
           int default_point_nums = 30;
           int select_lane_point_interval = 2;
           for (int i = 0; i < lane_points.size();
-              i += select_lane_point_interval) {
+               i += select_lane_point_interval) {
             iflyauto::ReferencePoint point = lane_points[i];
             if (std::isnan(point.local_point.x) ||
                 std::isnan(point.local_point.y)) {
@@ -2225,8 +2226,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
             double lateral_offset = 0.0;
             double s = 0.0;
             double l = 0.0;
-            if (!track_lane_frenet_coord->XYToSL(
-                    point.local_point.x, point.local_point.y, &s, &l)) {
+            if (!track_lane_frenet_coord->XYToSL(point.local_point.x,
+                                                 point.local_point.y, &s, &l)) {
               lateral_offset = 10.0;
             } else {
               lateral_offset = l;
@@ -2236,13 +2237,14 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
             }
             total_lateral_offset += lateral_offset;
             point_nums += 1;
-            if (point_nums >= default_point_nums || s > target_ego_s + default_consider_lane_length) {
+            if (point_nums >= default_point_nums ||
+                s > target_ego_s + default_consider_lane_length) {
               break;
             }
           }
         } else {
           int default_point_nums = 25;
-          for (int i = 0; i < lane_points.size(); i ++) {
+          for (int i = 0; i < lane_points.size(); i++) {
             iflyauto::ReferencePoint point = lane_points[i];
             if (std::isnan(point.local_point.x) ||
                 std::isnan(point.local_point.y)) {
@@ -2252,8 +2254,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
             double lateral_offset = 0.0;
             double s = 0.0;
             double l = 0.0;
-            if (!track_lane_frenet_coord->XYToSL(
-                    point.local_point.x, point.local_point.y, &s, &l)) {
+            if (!track_lane_frenet_coord->XYToSL(point.local_point.x,
+                                                 point.local_point.y, &s, &l)) {
               lateral_offset = 10.0;
             } else {
               lateral_offset = l;
@@ -2261,7 +2263,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
             if (s < target_ego_s) {
               continue;
             }
-            if (point_nums >= default_point_nums || s > target_ego_s + kConsiderLaneLineLength) {
+            if (point_nums >= default_point_nums ||
+                s > target_ego_s + kConsiderLaneLineLength) {
               break;
             }
             total_lateral_offset += lateral_offset;
@@ -2674,14 +2677,16 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
       double target_ego_s = 0.0;
       double target_ego_l = 0.0;
       if (!target_lane_frenet_coord->XYToSL(ego_state->ego_pose().x,
-                                ego_state->ego_pose().y, &target_ego_s, &target_ego_l)) {
+                                            ego_state->ego_pose().y,
+                                            &target_ego_s, &target_ego_l)) {
         return default_lane_mapping_cost;
       }
 
       if (road_radius > kDefaultRoadRadius) {
         int default_point_nums = 30;
         int select_lane_point_interval = 2;
-        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+        for (int i = 0; i < lane_points.size();
+             i += select_lane_point_interval) {
           iflyauto::ReferencePoint point = lane_points[i];
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {
@@ -2691,8 +2696,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
           double lateral_offset = 0.0;
           double s = 0.0;
           double l = 0.0;
-          if (!target_lane_frenet_coord->XYToSL(
-                  point.local_point.x, point.local_point.y, &s, &l)) {
+          if (!target_lane_frenet_coord->XYToSL(point.local_point.x,
+                                                point.local_point.y, &s, &l)) {
             lateral_offset = 10.0;
           } else {
             lateral_offset = l;
@@ -2721,8 +2726,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
           double lateral_offset = 0.0;
           double s = 0.0;
           double l = 0.0;
-          if (!target_lane_frenet_coord->XYToSL(
-                  point.local_point.x, point.local_point.y, &s, &l)) {
+          if (!target_lane_frenet_coord->XYToSL(point.local_point.x,
+                                                point.local_point.y, &s, &l)) {
             lateral_offset = 10.0;
           } else {
             lateral_offset = l;
@@ -2730,7 +2735,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
           if (s < target_ego_s) {
             continue;
           }
-          if (point_nums >= default_point_nums || s > target_ego_s + kConsiderLaneLineLength) {
+          if (point_nums >= default_point_nums ||
+              s > target_ego_s + kConsiderLaneLineLength) {
             break;
           }
           total_lateral_offset += lateral_offset;
@@ -2752,23 +2758,23 @@ double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
     const std::shared_ptr<VirtualLane> virtual_lane) {
   double average_curv = 0.0;
   const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager(); 
-  std::shared_ptr<KDPath> frenet_coord =
-      virtual_lane->get_lane_frenet_coord();
+      session_->environmental_model().get_ego_state_manager();
+  std::shared_ptr<KDPath> frenet_coord = virtual_lane->get_lane_frenet_coord();
   double ego_s = 0.0;
   double ego_l = 0.0;
-  if (!frenet_coord->XYToSL(ego_state->ego_pose().x,
-                            ego_state->ego_pose().y, &ego_s, &ego_l)) {
+  if (!frenet_coord->XYToSL(ego_state->ego_pose().x, ego_state->ego_pose().y,
+                            &ego_s, &ego_l)) {
     return average_curv;
   }
   if (ego_s > frenet_coord->Length()) {
     return average_curv;
   }
-  planning_math::PathPoint ego_s_nearest_point = 
+  planning_math::PathPoint ego_s_nearest_point =
       frenet_coord->GetPathPointByS(ego_s);
   int iter_count = 0;
   double total_curv = 0.0;
-  for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length(); s += kLaneLineSegmentLength) {
+  for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
+       s += kLaneLineSegmentLength) {
     if (s > kConsiderLaneLineLength + ego_s) {
       break;
     }
@@ -2780,5 +2786,5 @@ double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
   iter_count = std::max(1, iter_count);
   average_curv = std::fabs(total_curv / iter_count);
   return average_curv;
-} 
+}
 }  // namespace planning

@@ -31,7 +31,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
                           ->mutable_lane_with_virtual_id(lane_virtual_id_);
   if (virtual_lane == nullptr) {
     std::cout << "virtual_lane == nullptr!!!:" << lane_virtual_id_ << std::endl;
-    return;  
+    return;
   }
   std::cout << "get id " << lane_virtual_id_ << std::endl;
   virtual_lane->update_reference_path(shared_from_this());

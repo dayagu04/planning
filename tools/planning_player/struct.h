@@ -127,6 +127,7 @@
 #include "interface/type_convert/struct_convert/fusion_parking_slot_c.h"
 #include "interface/type_convert/struct_convert/fusion_road_c.h"
 // #include "interface/type_convert/struct_convert/hmi_mcu_inner_c.h"
+#include "interface/type_convert/struct_convert/hmi_inner_c.h"
 #include "interface/type_convert/struct_convert/ifly_localization_c.h"
 #include "interface/type_convert/struct_convert/ifly_parking_map_c.h"
 #include "interface/type_convert/struct_convert/localization_c.h"
@@ -134,7 +135,6 @@
 #include "interface/type_convert/struct_convert/planning_plan_c.h"
 #include "interface/type_convert/struct_convert/prediction_c.h"
 #include "interface/type_convert/struct_convert/vehicle_service_c.h"
-#include "interface/type_convert/struct_convert/hmi_inner_c.h"
 // #include "interface/type_convert/struct_convert/adas_function_debug_c.h"
 // #include "interface/type_convert/struct_convert/avm_output_image_info_c.h"
 // #include

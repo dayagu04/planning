@@ -565,7 +565,7 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width =  vehicle_param.max_width * 0.5;
+  const double half_ego_width = vehicle_param.max_width * 0.5;
 
   double nearest_l_to_ref =
       fabs(avoid_way == AvoidWay::Left ? avoid_obstacle.min_l_to_ref

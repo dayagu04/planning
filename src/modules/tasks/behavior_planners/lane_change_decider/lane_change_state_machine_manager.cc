@@ -511,7 +511,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   auto target_lane_reference_path = target_lane->get_reference_path();
   if (target_lane_reference_path == nullptr) {
     return lc_state_info;
-  } 
+  }
   auto tlane_obstacles = target_lane_reference_path->get_lane_obstacles_ids();
   //处理目标车车道后方障碍物
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
@@ -590,7 +590,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
           ->get_lane_with_virtual_id(lc_lane_mgr_->fix_lane_virtual_id());
   if (fix_lane == nullptr) {
     return lc_state_info;
-  } 
+  }
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
       lc_state_info.lc_back_reason = "no front view";
@@ -603,8 +603,9 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   auto fix_lane_reference_path = fix_lane->get_reference_path();
   if (fix_lane_reference_path == nullptr) {
     return lc_state_info;
-  } 
-  const auto &tlane_obstacles = fix_lane_reference_path->get_lane_obstacles_ids();
+  }
+  const auto &tlane_obstacles =
+      fix_lane_reference_path->get_lane_obstacles_ids();
 
   near_cars_target_.clear();
   std::vector<TrackInfo> near_cars_target;

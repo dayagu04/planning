@@ -91,7 +91,7 @@ bool LaneChangeDecider::Execute() {
           last_frame_lc_req_source_ != INT_REQUEST &&
           cur_frame_lc_req_source == INT_REQUEST) {
         lc_sm_mgr_->ResetStateMachine();
-      } 
+      }
       lc_sm_mgr_->Update();
       last_frame_lc_req_source_ = lc_req_mgr_->request_source();
     } else {

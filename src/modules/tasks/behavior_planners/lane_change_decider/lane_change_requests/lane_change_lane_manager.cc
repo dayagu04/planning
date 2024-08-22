@@ -31,16 +31,17 @@ void LaneChangeLaneManager::assign_lc_lanes(int lane_virtual_id) {
   fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
 }
 
-void LaneChangeLaneManager::reset_lc_lanes(const StateMachineLaneChangeStatus state_machine_lc_state) {
+void LaneChangeLaneManager::reset_lc_lanes(
+    const StateMachineLaneChangeStatus state_machine_lc_state) {
   if (state_machine_lc_state == kLaneChangeExecution ||
       state_machine_lc_state == kLaneChangeCancel ||
       state_machine_lc_state == kLaneChangeHold) {
     target_lane_virtual_id_ = origin_lane_virtual_id_;
-    fix_lane_virtual_id_ = origin_lane_virtual_id_;  
+    fix_lane_virtual_id_ = origin_lane_virtual_id_;
   } else {
     target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
-    fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();  
+    fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
   }
 }
 

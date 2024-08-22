@@ -364,8 +364,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
     auto timestamp = local_view.localization.header.timestamp != 0
                          ? local_view.localization.header.timestamp
                          : local_view.localization_estimate.header.timestamp;
-    truncate_prediction_info(local_view.prediction_result,
-                             timestamp,
+    truncate_prediction_info(local_view.prediction_result, timestamp,
                              prediction_obj_id_set);
     for (int i = 0; i < local_view.fusion_objects_info.fusion_object_num; i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
@@ -1300,14 +1299,12 @@ void EnvironmentalModelManager::RunBlinkState(
   const auto lc_source = lane_change_decider_output.lc_request_source;
   bool is_ilc_left_change =
       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
-      (state == kLaneChangePropose)) &&
-      (lc_request_direction == LEFT_CHANGE) &&
-      (lc_source == INT_REQUEST);
+       (state == kLaneChangePropose)) &&
+      (lc_request_direction == LEFT_CHANGE) && (lc_source == INT_REQUEST);
   bool is_ilc_right_change =
       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
-      (state == kLaneChangePropose)) &&
-      (lc_request_direction == RIGHT_CHANGE) &&
-      (lc_source == INT_REQUEST);
+       (state == kLaneChangePropose)) &&
+      (lc_request_direction == RIGHT_CHANGE) && (lc_source == INT_REQUEST);
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {

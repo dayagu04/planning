@@ -9,7 +9,6 @@
 #include "common/config_context.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "utils/file.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
@@ -17,6 +16,7 @@
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_in_planner.h"
 #include "planning_context.h"
+#include "utils/file.h"
 
 // #define PERPENDICULAR_SIMULATION
 
