@@ -210,9 +210,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
   bool limit_ref_vel_on_ramp_valid = false;
-  bool is_LC_CHANGE =
-      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-       (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+                        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
 
   if (config_.lateral_ref_traj_type ||
@@ -533,9 +532,8 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                                          .coarse_planning_info;
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_LC_CHANGE =
-      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-       (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+                        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
   const double kDefaultDistanceToRoad = 10.0;
@@ -597,13 +595,36 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   const double ego_v = planning_init_point.v;
   double max_collision_t, left_collision_t, right_collision_t;
   GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
-  *left_road_extra_buffer =
-      std::min(0.4, (max_collision_t - left_collision_t) * 0.1);
-  *right_road_extra_buffer =
-      std::min(0.4, (max_collision_t - right_collision_t) * 0.1);
+  const std::array<double, 5> _COLLISION_TTC_BP = {
+      config_.lateral_road_boader_collision_ttc_bp_1, config_.lateral_road_boader_collision_ttc_bp_2,
+      config_.lateral_road_boader_collision_ttc_bp_3, config_.lateral_road_boader_collision_ttc_bp_4,
+      config_.lateral_road_boader_collision_ttc_bp_5};
+  const std::array<double, 5> _COLLISION_BUFFER = {
+      config_.extra_collision_lateral_buffer_1, config_.extra_collision_lateral_buffer_2, config_.extra_collision_lateral_buffer_3,
+      config_.extra_collision_lateral_buffer_4, config_.extra_collision_lateral_buffer_5};
 
+  const std::array<double, 6> _V_ROAD_BORDER_EXTRA_BUFFER_BP = {
+      config_.lateral_road_boader_v_bp_1, config_.lateral_road_boader_v_bp_2,
+      config_.lateral_road_boader_v_bp_3, config_.lateral_road_boader_v_bp_4,
+      config_.lateral_road_boader_v_bp_5, config_.lateral_road_boader_v_bp_6};
+  const std::array<double, 6> _V_ROAD_BORDER_EXTRA_BUFFER = {
+      config_.extra_lateral_buffer_1, config_.extra_lateral_buffer_2, config_.extra_lateral_buffer_3,
+      config_.extra_lateral_buffer_4, config_.extra_lateral_buffer_5, config_.extra_lateral_buffer_6};
+
+  *left_road_extra_buffer =
+      interp(left_collision_t, _COLLISION_TTC_BP, _COLLISION_BUFFER);
+  *right_road_extra_buffer =
+      interp(right_collision_t, _COLLISION_TTC_BP, _COLLISION_BUFFER);
+  // *left_road_extra_buffer =
+  //     std::min(0.2, (max_collision_t - left_collision_t) * 0.1);
+  // *right_road_extra_buffer =
+  //     std::min(0.2, (max_collision_t - right_collision_t) * 0.1);
+  // 36     60         80          100          120           130     kph
+  // 0.3    0.43       0.53        0.632        0.725         0.77    m
+  // double extra_buffer =
   double extra_buffer =
-      std::max(0.02 * std::pow(ego_v * 3.6, 0.75), kMinExtraBuffer);
+      interp(ego_v * 3.6, _V_ROAD_BORDER_EXTRA_BUFFER_BP, _V_ROAD_BORDER_EXTRA_BUFFER);
+  extra_buffer = std::max(extra_buffer, kMinExtraBuffer);
   *left_road_extra_buffer += extra_buffer;
   *right_road_extra_buffer += extra_buffer;
 }
