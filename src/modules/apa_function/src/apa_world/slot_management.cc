@@ -2946,24 +2946,8 @@ void SlotManagement::UpdateLimiterInfoInParking() {
     const auto &select_slot_filter = ego_slot_info.select_slot_filter;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_global;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_slot;
-    double move_dist;
-    const double limiter_len =
-        std::hypot(select_fusion_slot.limiters[0].end_points[0].x -
-                       select_fusion_slot.limiters[0].end_points[1].x,
-                   select_fusion_slot.limiters[0].end_points[0].y -
-                       select_fusion_slot.limiters[0].end_points[1].y);
-    if (limiter_len > kEps) {
-      // there is limiter in slot
-      limiter_global.first << select_fusion_slot.limiters[0].end_points[0].x,
-          select_fusion_slot.limiters[0].end_points[0].y;
-      // std::cout << "fus has limiter\n";
-
-      limiter_global.second << select_fusion_slot.limiters[0].end_points[1].x,
-          select_fusion_slot.limiters[0].end_points[1].y;
-
-      move_dist = apa_param.GetParam().limiter_move_dist;
-
-    } else {
+    double move_dist = 0.0;
+    if (select_fusion_slot.limiters_size == 0) {
       // there is no limiter in slot
       // std::cout << "fus has not limiter\n";
       limiter_global.first
@@ -2975,6 +2959,24 @@ void SlotManagement::UpdateLimiterInfoInParking() {
           select_slot_filter.corner_points().corner_point(3).y();
 
       move_dist = apa_param.GetParam().terminal_target_x;
+    } else if (select_fusion_slot.limiters_size == 1) {
+      // there is one limiter in slot
+      limiter_global.first << select_fusion_slot.limiters[0].end_points[0].x,
+          select_fusion_slot.limiters[0].end_points[0].y;
+
+      limiter_global.second << select_fusion_slot.limiters[0].end_points[1].x,
+          select_fusion_slot.limiters[0].end_points[1].y;
+
+      move_dist = apa_param.GetParam().limiter_move_dist;
+    } else {
+      // there are two limiter in slot
+      limiter_global.first << select_fusion_slot.limiters[0].end_points[0].x,
+          select_fusion_slot.limiters[0].end_points[0].y;
+
+      limiter_global.second << select_fusion_slot.limiters[1].end_points[1].x,
+          select_fusion_slot.limiters[1].end_points[1].y;
+
+      move_dist = apa_param.GetParam().limiter_move_dist;
     }
 
     limiter_slot.first = ego_slot_info.g2l_tf.GetPos(limiter_global.first);
