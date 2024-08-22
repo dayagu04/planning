@@ -1568,6 +1568,21 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     v_limit_ramp = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "v_limit_ramp"});
+    v_limit_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "v_limit_near_ramp_zone"});
+    dis_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_near_ramp_zone"});
+    brake_dis_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "brake_dis_near_ramp_zone"});
+    t_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "t_curv"});
+    dis_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "dis_curv"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1591,8 +1606,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double dis_zero_speed = 3.5;
   double dis_zero_speed_accident = 6;
   double ttc_brake_hysteresis = 0.3;
-  double t_curv = 3.0;
-  double dis_curv = 0.0;
+  double t_curv = 2.0;
+  double dis_curv = 50.0;
   double velocity_upper_bound = 33.33;  // 120km/h
   // The param for StartStopState
   double v_start = 0.3;
@@ -1630,6 +1645,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   // narrow agent
   bool enable_narrow_agent_limit = true;
   double v_limit_ramp = 40.0;
+  double v_limit_near_ramp_zone = 40.0;
+  double dis_near_ramp_zone = 1100.0;
+  double brake_dis_near_ramp_zone = 800.0;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
