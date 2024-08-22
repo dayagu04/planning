@@ -417,7 +417,7 @@ def load_lane_topo_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g
     if i< line_topo_msg_size:
       lane_line = line_topo_msg[i]
       lane_line_topo_refline_points = lane_line.lane_points_set
-      lane_line_topo_refline_points_size = lane_line.lane_points_set_num
+      lane_line_topo_refline_points_size = lane_line.lane_points_set_size
       line_x = []
       line_y = []
       line_x = [lane_line_topo_refline_points[j].x for j in range(lane_line_topo_refline_points_size)]
@@ -523,7 +523,7 @@ def load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = 
     if i< lane_topo_size:
       lane = lane_topo_msg_msg[i]
       center_lane_topo_refline_points = lane.central_line.lane_points_set
-      center_lane_topo_refline_points_size = lane.central_line.lane_points_set_num
+      center_lane_topo_refline_points_size = lane.central_line.lane_points_set_size
       line_x = []
       line_y = []
       line_x = [center_lane_topo_refline_points[j].x for j in range(center_lane_topo_refline_points_size)]
@@ -601,7 +601,7 @@ def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g
     if i< stop_line_msg_size:
       stop_line = stop_line_msg[i]
       stop_line_points = stop_line.lane_points_set
-      stop_line_points_size = stop_line.lane_points_set_num
+      stop_line_points_size = stop_line.lane_points_set_size
       line_x = []
       line_y = []
       line_x = [stop_line_points[j].x for j in range(stop_line_points_size)]
@@ -629,7 +629,7 @@ def load_zebra_crossing_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg
     if i< zebra_crossing_lines_size and zebra_crossing_lines_msg[i].turn_type == 18 :
       zebra_crossing_line = zebra_crossing_lines_msg[i]
       zebra_crossing_line_points = zebra_crossing_line.ground_marking_points_set
-      zebra_crossing_line_points_size = zebra_crossing_line.ground_marking_points_set_num
+      zebra_crossing_line_points_size = zebra_crossing_line.ground_marking_points_set_size
       line_x = []
       line_y = []
       line_x = [zebra_crossing_line_points[j].x for j in range(zebra_crossing_line_points_size)]
