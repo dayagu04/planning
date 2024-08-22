@@ -553,7 +553,7 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
       lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
 
       local_points = lane.lane_points_set
-      point_num = lane.lane_points_set_num
+      point_num = lane.lane_points_set_size
       if g_is_display_enu:
         if loc_msg != None: # 长时轨迹
           coord_tf = coord_transformer()
@@ -622,7 +622,7 @@ def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g
 def load_zebra_crossing_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   zebra_crossing_lines_info_list = []
   zebra_crossing_lines_msg = rdg_lane_lines_msg.lane_ground_markings
-  zebra_crossing_lines_size = rdg_lane_lines_msg.lane_ground_marking_size
+  zebra_crossing_lines_size = rdg_lane_lines_msg.lane_ground_markings_size
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(20):
     zebra_crossing_info = {'zebra_crossing_line_x':[], 'zebra_crossing_line_y':[]}
@@ -666,10 +666,10 @@ def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False,
 
 def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environment_model_info = None):
   obs_info_all = dict()
-  fusion_object_num = fus_msg.fusion_object_num
+  fusion_object_size = fus_msg.fusion_object_size
   obstacle_list = fus_msg.fusion_object
   num = 0
-  for i in range(fusion_object_num):
+  for i in range(fusion_object_size):
     source = obstacle_list[i].additional_info.fusion_source
     if source & 0x01: #相机融合障碍物
       source = 1
