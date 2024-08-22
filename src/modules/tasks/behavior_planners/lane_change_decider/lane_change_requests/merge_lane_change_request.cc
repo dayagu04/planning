@@ -290,6 +290,9 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   } else {
     merge_lane_change_direction_ = NO_CHANGE;
   }
+
+  JSON_DEBUG_VALUE("left_boundary_exist_virtual_type", left_boundary_exist_virtual_type);
+  JSON_DEBUG_VALUE("right_boundary_exist_virtual_type", right_boundary_exist_virtual_type);
 }
 
 void MergeRequest::Reset() {
