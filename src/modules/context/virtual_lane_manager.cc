@@ -2002,6 +2002,7 @@ void VirtualLaneManager::TrackEgoLane() {
   double select_split_min_distance_threshold = 0.0;
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
+  is_exist_intersection_split_ = false;
 
   // 判断自车是否处于车道数一分二场景
   for (const auto& relative_id_lane : relative_id_lanes_) {
@@ -2047,6 +2048,11 @@ void VirtualLaneManager::TrackEgoLane() {
           }
         }
       }
+      ProcessUrbanIntersectionSplit(order_ids_of_same_zero_relative_id_);
+      if (is_exist_intersection_split_) {
+        return;
+      }
+
       SelectEgoLaneWithPlan(zero_relative_id_nums);
     } else {
       SelectEgoLaneWithoutPlan();
@@ -2138,7 +2144,7 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
 }
 
 void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
-  const double default_consider_lane_length = 120.0;
+  const double default_consider_lane_length = 60.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = 0;
@@ -2229,7 +2235,7 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
         }
         if (road_radius > kDefaultRoadRadius) {
           int default_point_nums = 30;
-          int select_lane_point_interval = 2;
+          int select_lane_point_interval = 1;
           for (int i = 0; i < lane_points.size();
                i += select_lane_point_interval) {
             iflyauto::ReferencePoint point = lane_points[i];
@@ -2477,7 +2483,6 @@ void VirtualLaneManager::CalcBoundaryCross(
 
 void VirtualLaneManager::PreprocessRoadSplit(
     const std::vector<int>& order_ids) {
-  const double kSameLaneThresholdRange = 0.2;
   const double kDefaultWidth = 3.75;
   const int lane_nums = relative_id_lanes_.size();
   int origin_order_id = 0;
@@ -2497,6 +2502,57 @@ void VirtualLaneManager::PreprocessRoadSplit(
     origin_order_id = relative_id_lanes_[order_ids[0]]->get_order_id();
   } else {
     is_exist_ramp_on_road_ = false;
+    return;
+  }
+
+  for (auto& lane : relative_id_lanes_) {
+    int lane_order_id = lane->get_order_id();
+    int lane_relative_id = lane_order_id - origin_order_id;
+    lane->set_relative_id(lane_relative_id);
+  }
+  return;
+}
+
+void VirtualLaneManager::ProcessUrbanIntersectionSplit(
+    const std::vector<int>& order_ids) {
+  const double kDefaultWidth = 3.75;
+  const int lane_nums = relative_id_lanes_.size();
+  int origin_order_id = 0;
+  bool ego_on_left_side_lane = true;
+  bool ego_on_right_side_lane = true;
+
+  if (order_ids.size() != 2) {
+    is_exist_intersection_split_ = false;
+    return;
+  }
+
+  for (const auto& lane : relative_id_lanes_) {
+    int lane_relative_id = lane->get_relative_id();
+    if (lane_relative_id < 0) {
+      ego_on_left_side_lane = false;
+      break;
+    } 
+  }
+  for (const auto& lane : relative_id_lanes_) {
+    int lane_relative_id = lane->get_relative_id();
+    if (lane_relative_id > 0) {
+      ego_on_right_side_lane = false;
+      break;
+    } 
+  }
+
+  if (ego_on_left_side_lane && ego_on_right_side_lane) {
+    is_exist_intersection_split_ = false;
+    return; 
+  } else if(ego_on_left_side_lane) {
+    is_exist_intersection_split_ = true;
+    relative_id_lanes_[order_ids[1]]->set_relative_id(0);
+    origin_order_id = relative_id_lanes_[order_ids[1]]->get_order_id();
+  } else if (ego_on_right_side_lane) {
+    is_exist_intersection_split_ = true;
+    relative_id_lanes_[order_ids[0]]->set_relative_id(0);
+    origin_order_id = relative_id_lanes_[order_ids[0]]->get_order_id();
+  } else {
     return;
   }
 
@@ -2664,7 +2720,7 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
     int virtual_id,
     const std::shared_ptr<VirtualLane> current_relative_id_lane) {
   const double default_lane_mapping_cost = 10.0;
-  const double default_consider_lane_length = 120.0;
+  const double default_consider_lane_length = 60.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -2699,9 +2755,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
 
       if (road_radius > kDefaultRoadRadius) {
         int default_point_nums = 30;
-        int select_lane_point_interval = 2;
-        for (int i = 0; i < lane_points.size();
-             i += select_lane_point_interval) {
+        int select_lane_point_interval = 1;
+        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
           iflyauto::ReferencePoint point = lane_points[i];
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {
