@@ -62,8 +62,6 @@ class ApaWorld {
     uint8_t slot_type = Common::PARKING_SLOT_TYPE_VERTICAL;
     common::SlotInfo target_managed_slot;
 
-    bool is_slot_type_fixed = false;
-
     void Reset() {
       planner_type = NONE_PLANNER;
       general_apa_function = NONE_FUNCTION;
@@ -78,7 +76,6 @@ class ApaWorld {
       car_static_timer_by_vel_normal = 0.0;
       static_flag = false;
       current_state = iflyauto::FunctionalState_PARK_STANDBY;
-      is_slot_type_fixed = false;
     }
   };
 
@@ -109,12 +106,10 @@ class ApaWorld {
   void Preprocess();
   void UpdateEgoState();
 
-  const bool CheckIfSlotSelectedInFusion() const;
   const bool CheckSelectedSlot() const;
   const bool CheckParkInState() const;
   const bool CheckParkInActivated() const;
   const bool CheckParkOutState() const;
-  const bool CheckParkOutActivated() const;
 
   std::shared_ptr<SlotManagement> slot_manager_ptr_;
   std::shared_ptr<Measurements> measures_ptr_;

@@ -15,6 +15,7 @@
 #include "geometry_math.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
+#include "planning_hmi_c.h"
 #include "planning_plan_c.h"
 
 namespace planning {
@@ -285,6 +286,10 @@ class ApaPlannerBase {
 
   const iflyauto::PlanningOutput &GetOutput() const { return planning_output_; }
 
+  const iflyauto::PlanningHMIOutputInfoStr &GetHmiOutput() const {
+    return planning_hmi_output_;
+  }
+
   void SetApaWorldPtr(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
     apa_world_ptr_ = apa_world_ptr;
   }
@@ -310,6 +315,7 @@ class ApaPlannerBase {
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
 
   iflyauto::PlanningOutput planning_output_;
+  iflyauto::PlanningHMIOutputInfoStr planning_hmi_output_;
 
   Frame frame_;
 

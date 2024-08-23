@@ -56,6 +56,8 @@ void ApaPlanInterface::Reset() {
 
   planning_output_.successful_slot_info_list_size = 0;
 
+  memset(&planning_hmi_, 0, sizeof(planning_hmi_));
+
   // reset apa world
   apa_world_ptr_->Reset();
 
@@ -91,7 +93,8 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
       local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+  if ((last_state == iflyauto::FunctionalState_MANUAL ||
+       last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
       (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
        current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     Reset();
@@ -120,6 +123,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
+    planning_hmi_ = planner_ptr_->GetHmiOutput();
   }
 
   AddReleasedSlotInfo(planning_output_);

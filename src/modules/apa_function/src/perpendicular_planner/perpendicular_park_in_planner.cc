@@ -2114,6 +2114,8 @@ void PerpendicularInPlanner::UpdateRemainDist() {
   // 2.calculate remain dist uss according to uss
   frame_.remain_dist_uss = CalRemainDistFromUss();
 
+  planning_hmi_output_.apa_info.distance_to_parking_space = frame_.remain_dist;
+
   return;
 }
 

@@ -306,7 +306,7 @@ bool SlotManagement::IsInSearchingState() const {
        frame_.func_state_ptr->current_state ==
            iflyauto::FunctionalState_PARK_OUT_SEARCHING);
 
-  if ((is_searching_stm && !CheckIfSlotSelectedInFusion()) ||
+  if ((is_searching_stm) ||
       (frame_.param.force_apa_on && (!frame_.param.is_switch_parking))) {
     return true;
   }
@@ -2345,15 +2345,7 @@ const double SlotManagement::CalAngleSlot2Car(
 }
 
 bool SlotManagement::IsInParkingState() const {
-  bool is_searching_slot_select =
-      (frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_IN_SEARCHING ||
-       frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_OUT_SEARCHING) &&
-      CheckIfSlotSelectedInFusion();
-
-  if ((is_searching_slot_select ||
-       frame_.func_state_ptr->current_state ==
+  if ((frame_.func_state_ptr->current_state ==
            iflyauto::FunctionalState_PARK_GUIDANCE ||
        frame_.func_state_ptr->current_state ==
            iflyauto::FunctionalState_PARK_SUSPEND) ||
@@ -3135,10 +3127,6 @@ void SlotManagement::Log() {
   }
   JSON_DEBUG_VECTOR("slm_selected_obs_x", nearby_obs_x_vec, 2)
   JSON_DEBUG_VECTOR("slm_selected_obs_y", nearby_obs_y_vec, 2)
-}
-
-const bool SlotManagement::CheckIfSlotSelectedInFusion() const {
-  return frame_.parking_slot_ptr->select_slot_id != 0;
 }
 
 void SlotManagement::FinishApa() {
