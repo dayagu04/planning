@@ -12,6 +12,7 @@
 #include "fusion_parking_slot_c.h"
 #include "fusion_road_c.h"
 #include "hmi_inner_c.h"
+#include "interface/src/legacy/interface2.4.5/hmi_mcu_inner_c.h"
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "localization_c.h"
@@ -54,6 +55,9 @@ struct LocalView {
 
   iflyauto::HmiInner hmi_inner_info;
   double hmi_inner_info_recv_time = 0.0;
+
+  iflyauto::interface_2_4_5::HmiMcuInner hmi_mcu_inner_info;
+  double hmi_mcu_inner_info_recv_time = 0.0;
 
   iflyauto::ParkingFusionInfo parking_fusion_info;
   double parking_fusion_info_recv_time = 0.0;
