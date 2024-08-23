@@ -1925,11 +1925,11 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
     //   break;
     relative_id_lanes.emplace_back(virtual_lane_tmp);
   }
+  lane_num_ = relative_id_lanes_.size();
   return relative_id_lanes;
 }
 
 void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
-  lane_num_ = relative_id_lanes_.size();
   int lane_num_except_emergency = lane_num_;
   if (lane_num_ > 0) {
     if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
