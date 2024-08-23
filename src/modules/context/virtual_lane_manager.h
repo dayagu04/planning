@@ -133,8 +133,6 @@ class VirtualLaneManager {
 
   void PreprocessRampSplit(const std::vector<int> &order_ids);
 
-  void ProcessUrbanIntersectionSplit(const std::vector<int> &order_ids);
-
   void SelectEgoLaneWithoutPlan();
 
   void SelectEgoLaneWithPlan(int zero_relative_id_nums);
