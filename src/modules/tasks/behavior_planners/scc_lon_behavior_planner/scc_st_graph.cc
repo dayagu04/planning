@@ -600,7 +600,7 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   auto ref_path_points = lon_behav_input_->ref_path_points();
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
-  double pre_acc_dis = config_.pre_accelerate_distance;
+  double pre_acc_dis = config_.pre_accelerate_distance_for_merge;
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
@@ -2302,7 +2302,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
       continue;
     }
 
-    double s_rel = agent_s  - ego_s;
+    double s_rel = agent_s - ego_s;
 
     // // ignore narrow agent if lead closer
     if (lateral_obstacles.lead_one().track_id() != -1 &&
@@ -2331,7 +2331,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double invade_thr = half_lane_width_by_s - kStaticAgentBuffer;
     // invade thr: (1.1, half_lane_width - 0.12)
     if (fabs(min_lat_l) > invade_thr || fabs(min_lat_l) < kStaticLeadThr) {
-       continue;
+      continue;
     }
     // 3.4 check agent is front of ego ?
     double min_s_rel = min_s - ego_s;
