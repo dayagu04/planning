@@ -1893,6 +1893,17 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double l_ego = 0.;
   double dist_limit;
 
+  const auto &state =
+      session_->planning_context().lane_change_decider_output().curr_state;
+  const auto lc_request_direction =
+      session_->planning_context().lane_change_decider_output().lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
+
   // for Intersection
   if (item.d_rel > farthest_distance + ego_car_length ||
       (item.d_rel > farthest_distance - ego_car_length &&
@@ -1936,8 +1947,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // hysteresis
   const auto lat_offset =
       session_->planning_context().lateral_behavior_planner_output().lat_offset;
-  if ((lat_offset > 0 && item.d_max_cpath < 0) ||
-      (lat_offset < 0 && item.d_min_cpath > 0)) {
+  if (((lat_offset > 0 || is_LC_RCHANGE) && item.d_max_cpath < 0) ||
+      ((lat_offset < 0 || is_LC_LCHANGE) && item.d_min_cpath > 0)) {
     if (item.is_oversize_vehicle) {
       ttc_for_obs = 8.0;
     } else {
