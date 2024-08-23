@@ -1885,6 +1885,9 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   bool enable_static_scene = config.enable_static_scene;
   double car_addition_decre_factor = config.car_addition_decre_factor;
   double car_addition_decre_buffer = config.car_addition_decre_buffer;
+  double emegency_cutin_ttc_lower = config.emegency_cutin_ttc_lower;
+  double emegency_cutin_ttc_upper = config.emegency_cutin_ttc_upper;
+  double emegency_cutin_front_area = config.emegency_cutin_front_area;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -2142,8 +2145,9 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
   bool in_lon_near_area =
       (item.v_rel < 0 &&
-       ((item.d_rel / (-item.v_rel) < 1.5) ||
-        ((item.d_rel / (-item.v_rel) < 3 && item.d_rel < 5))));
+       ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_lower) ||
+        ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_upper &&
+          item.d_rel < emegency_cutin_front_area))));
 
   // for lead one
   // if (lead_one != nullptr && item.track_id == lead_one->track_id &&

@@ -427,6 +427,12 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "car_addition_decre_factor", car_addition_decre_factor);
     car_addition_decre_buffer =
         read_json_key<double>(json, "car_addition_decre_buffer", car_addition_decre_buffer);
+    emegency_cutin_ttc_lower =
+        read_json_key<double>(json, "emegency_cutin_ttc_lower", emegency_cutin_ttc_lower);
+    emegency_cutin_ttc_upper =
+        read_json_key<double>(json, "emegency_cutin_ttc_upper", emegency_cutin_ttc_upper);
+    emegency_cutin_front_area =
+        read_json_key<double>(json, "emegency_cutin_front_area", emegency_cutin_front_area);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -443,6 +449,9 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
   bool enable_static_scene = false;
   double car_addition_decre_factor = 1;
   double car_addition_decre_buffer = 0.1;
+  double emegency_cutin_ttc_lower = 1.5;
+  double emegency_cutin_ttc_upper = 3;
+  double emegency_cutin_front_area = 5;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
