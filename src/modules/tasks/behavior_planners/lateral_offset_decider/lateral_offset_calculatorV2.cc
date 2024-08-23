@@ -162,25 +162,20 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   if (!has_left_lane && !has_right_lane) {
     avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = road_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
   } else if (!has_right_lane) {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
   } else if (!has_left_lane) {
     avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   } else {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   }
 
+  avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
+  avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
+  
   auto last_fix_lane_virtual_id = session_->environmental_model()
                                       .get_virtual_lane_manager()
                                       ->get_last_fix_lane_id();
