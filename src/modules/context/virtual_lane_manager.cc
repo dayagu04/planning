@@ -2144,12 +2144,13 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
 }
 
 void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
-  const double default_consider_lane_length = 60.0;
+  const double default_consider_lane_length = 50.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;
+  const double default_front_rear_frame_lateral_offset_threshold = 0.4;
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
@@ -2157,6 +2158,7 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
       session_->planning_context().lane_change_decider_output();
   const int fix_lane_virtual_id =
       lane_change_decider_output.fix_lane_virtual_id;
+  const int lc_state = lane_change_decider_output.curr_state;
   std::unordered_map<int32_t, std::vector<double>> lane_cost_list;
   std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
   int last_track_virtual_id = 0;
@@ -2192,6 +2194,12 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
       is_lane_change_execution
           ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
           : kInitPosCostWeight;
+  double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
+
+  if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) && 
+      zero_relative_id_nums < 2) {
+    lateral_distance_cost_weight = 0.5;
+  }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
   for (auto& relative_id_lane : relative_id_lanes_) {
@@ -2314,7 +2322,7 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
     } else {
       init_pose_cost = std::fabs(ego_l_lane) / kInitPosCostStandardThr;
     }
-    total_cost = kCumuLateralDistanceCostWeight * cumu_lat_dis_cost +
+    total_cost = lateral_distance_cost_weight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
                  k_init_pos_cost_weight * init_pose_cost;
     std::vector<double> cost_list{cumu_lat_dis_cost, crosslane_cost,
