@@ -1393,12 +1393,10 @@ bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
 bool EnvironmentalModelManager::CheckIfVru(const int type) {
   if (type == iflyauto::ObjectType::OBJECT_TYPE_BICYCLE ||
       type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
       type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
       type == iflyauto::ObjectType::OBJECT_TYPE_ANIMAL ||
       type == iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
+      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING) {
     return true;
   } else {
     return false;
@@ -1420,7 +1418,14 @@ bool EnvironmentalModelManager::CheckIfTrafficFacilities(const int type) {
 
 // TODO(zkxie): 包含UNKNOWN障碍物,确认感知什么时候会给UNKNOWN障碍物
 bool EnvironmentalModelManager::CheckIfCar(const int type) {
-  if (type <= iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
     return true;
   } else {
     return false;
