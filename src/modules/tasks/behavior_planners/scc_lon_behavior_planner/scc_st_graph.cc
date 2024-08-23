@@ -22,7 +22,7 @@ namespace {
 constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.4;
 constexpr double kStaticAgentBuffer = 0.12;
-constexpr double kStaticLeadThr = 1.1;
+constexpr double kStaticLeadThr = 1.0;
 constexpr double kHalfLaneWidth = 1.75;
 constexpr double kLeadoneThr = 1.2;
 constexpr double kHalfEgoWidth = 1.1;
@@ -600,9 +600,10 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   auto ref_path_points = lon_behav_input_->ref_path_points();
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
+  double pre_acc_dis = config_.pre_accelerate_distance_for_merge;
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
-    if (dis_to_merge > 50 || is_continuous_ramp) {
+    if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
       v_target_ramp = ramp_v_limit;
     }
     v_target_ = std::min(v_target_ramp, v_target_);
@@ -615,10 +616,12 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
     return true;
   }
   if (dis_to_ramp <= config_.dis_near_ramp_zone) {
-    double pre_brake_dis_near_ramp_zone = std::max(dis_to_ramp - config_.brake_dis_near_ramp_zone, 0.0);
-    v_target_near_ramp_zone = std::pow(
-      std::pow(config_.v_limit_near_ramp_zone, 2.0) - 2 * pre_brake_dis_near_ramp_zone * acc_to_ramp,
-      0.5);
+    double pre_brake_dis_near_ramp_zone =
+        std::max(dis_to_ramp - config_.brake_dis_near_ramp_zone, 0.0);
+    v_target_near_ramp_zone =
+        std::pow(std::pow(config_.v_limit_near_ramp_zone, 2.0) -
+                     2 * pre_brake_dis_near_ramp_zone * acc_to_ramp,
+                 0.5);
   }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
   v_target_ramp = std::pow(
@@ -2288,15 +2291,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
                                             &agent_l))) {
       continue;
     }
-    // ignore narrow agent if lead closer
-    if (lateral_obstacles.lead_one().track_id() != -1 &&
-        lateral_obstacles.lead_one().d_rel() < agent_s) {
-      continue;
-    }
-    if (lateral_obstacles.temp_lead_one().track_id() != -1 &&
-        lateral_obstacles.temp_lead_one().d_rel() < agent_s) {
-      continue;
-    }
+
     // 3.2 calclate ego sl info (using current lane reference path)
     double ego_s = 0.0;
     double ego_l = 0.0;
@@ -2306,6 +2301,19 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
                                             &ego_l))) {
       continue;
     }
+
+    double s_rel = agent_s - ego_s;
+
+    // // ignore narrow agent if lead closer
+    if (lateral_obstacles.lead_one().track_id() != -1 &&
+        lateral_obstacles.lead_one().d_rel() < s_rel) {
+      continue;
+    }
+    if (lateral_obstacles.temp_lead_one().track_id() != -1 &&
+        lateral_obstacles.temp_lead_one().d_rel() < s_rel) {
+      continue;
+    }
+
     // 3.3 min/max sl
     double min_s = std::numeric_limits<double>::max();
     double max_s = std::numeric_limits<double>::lowest();
@@ -2326,7 +2334,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
       continue;
     }
     // 3.4 check agent is front of ego ?
-    if (min_s - ego_s < 0.0) {
+    double min_s_rel = min_s - ego_s;
+    if (min_s_rel < 0.0 || min_s_rel > 100.0) {
       continue;
     }
 
@@ -2348,9 +2357,9 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
           (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
     }
     // 4.2 collision check
-    double end_s = min_s + kHalfEgoLength * 2 + agent->length();
+    double end_s = min_s_rel + kHalfEgoLength * 2 + agent->length();
     bool is_collison =
-        LateralCollisionCheck(min_s, end_s, min_lat_l_by_lat_path);
+        LateralCollisionCheck(min_s_rel, end_s, min_lat_l_by_lat_path);
 
     // calc v_limit
     // std::array<double, 5> xp1{0, 5, 40, 80, 120};
@@ -2362,7 +2371,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
         agent->speed(), v_ego, lon_behav_input_->lat_output().lc_request(),
         false, false, false);
     double s_safe = CalcSafeDistance(agent->speed(), v_ego);
-    double v_target = CalcDesiredVelocity(min_s, s_target, agent->speed());
+    double v_target = CalcDesiredVelocity(min_s_rel, s_target, agent->speed());
     double avoid_offset =
         std::max(fabs(min_lat_l_by_lat_path) - fabs(min_lat_l), 0.0);
     std::array<double, 2> xp2{kStaticAgentPosThr, invade_thr + avoid_offset};
@@ -2375,7 +2384,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     NarrowLead narrow_lead;
     narrow_lead.id = agent_id;
     narrow_lead.desire_distance = s_target;
-    narrow_lead.min_s = min_s;
+    narrow_lead.min_s = min_s_rel;
     narrow_lead.safe_distance = s_safe;
     narrow_lead.v_limit = v_limit_narrow;
     narrow_lead.is_collison = is_collison;

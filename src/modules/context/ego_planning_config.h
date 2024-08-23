@@ -1586,6 +1586,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     dis_curv = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "dis_curv"});
+    pre_accelerate_distance_for_merge = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "pre_accelerate_distance_for_merge"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1651,6 +1654,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double v_limit_near_ramp_zone = 40.0;
   double dis_near_ramp_zone = 1100.0;
   double brake_dis_near_ramp_zone = 800.0;
+  double pre_accelerate_distance_for_merge = 80.0;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {

@@ -47,6 +47,8 @@ message TrackedObjectInfo {
   optional double vy_rel = 19;
   optional double y_rel = 20;
   optional bool is_new_cutin = 21;
+  optional bool is_vru = 22;
+  optional bool is_car = 23;
 }
 
 message LatObsInfo {

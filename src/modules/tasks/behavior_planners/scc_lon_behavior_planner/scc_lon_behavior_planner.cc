@@ -193,6 +193,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     lead_one->set_is_lead(lateral_obstacles->leadone()->is_lead);
     lead_one->set_is_temp_lead(lateral_obstacles->leadone()->is_temp_lead);
     lead_one->set_cutinp(lateral_obstacles->leadone()->cutinp);
+    lead_one->set_is_vru(lateral_obstacles->leadone()->is_VRU);
+    lead_one->set_is_car(lateral_obstacles->leadone()->is_car);
   } else {
     lead_one->set_track_id(-1);
     lead_one->set_type(0);
@@ -219,6 +221,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     lead_two->set_is_lead(lateral_obstacles->leadtwo()->is_lead);
     lead_two->set_is_temp_lead(lateral_obstacles->leadtwo()->is_temp_lead);
     lead_two->set_cutinp(lateral_obstacles->leadtwo()->cutinp);
+    lead_two->set_is_vru(lateral_obstacles->leadtwo()->is_VRU);
+    lead_two->set_is_car(lateral_obstacles->leadtwo()->is_car);
   } else {
     lead_two->set_track_id(-1);
     lead_two->set_type(0);
@@ -244,6 +248,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     temp_lead_one->set_is_temp_lead(
         lateral_obstacles->tleadone()->is_temp_lead);
     temp_lead_one->set_cutinp(lateral_obstacles->tleadone()->cutinp);
+    temp_lead_one->set_is_vru(lateral_obstacles->tleadone()->is_VRU);
+    temp_lead_one->set_is_car(lateral_obstacles->tleadone()->is_car);
   } else {
     temp_lead_one->set_track_id(-1);
     temp_lead_one->set_type(0);
@@ -269,6 +275,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     temp_lead_two->set_is_temp_lead(
         lateral_obstacles->tleadtwo()->is_temp_lead);
     temp_lead_two->set_cutinp(lateral_obstacles->tleadtwo()->cutinp);
+    temp_lead_two->set_is_vru(lateral_obstacles->tleadtwo()->is_VRU);
+    temp_lead_two->set_is_car(lateral_obstacles->tleadtwo()->is_car);
   } else {
     temp_lead_two->set_track_id(-1);
     temp_lead_two->set_type(0);
@@ -728,28 +736,54 @@ void SccLonBehaviorPlanner::UpdateHMI() {
   auto lc_status = lon_behav_plan_input_->lat_output().lc_status();
   auto lateral_obstacle = lon_behav_plan_input_->lat_obs_info();
 
+  // check lead one
+  bool is_lead_one_vehicle = IsLeadVehicle(lateral_obstacle.lead_one());
+  // check lead two
+  bool is_lead_two_vehicle = IsLeadVehicle(lateral_obstacle.lead_two());
+  // check temp lead one
+  bool is_temp_lead_one_vehicle =
+      IsLeadVehicle(lateral_obstacle.temp_lead_one());
+  // check temp lead two
+  bool is_temp_lead_two_vehicle =
+      IsLeadVehicle(lateral_obstacle.temp_lead_two());
+
   // 1. update CIPV
   int CIPV_id = -1;
   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
-    if (lateral_obstacle.has_lead_one() &&
-        lateral_obstacle.lead_one().type() != 0) {
+    if (is_lead_one_vehicle) {
       hmi_info->cipv_info.has_cipv = true;
       hmi_info->cipv_info.cipv_id = lateral_obstacle.lead_one().track_id();
       CIPV_id = lateral_obstacle.lead_one().track_id();
+    } else if (!is_lead_one_vehicle && is_lead_two_vehicle) {
+      hmi_info->cipv_info.has_cipv = true;
+      hmi_info->cipv_info.cipv_id = lateral_obstacle.lead_two().track_id();
+      CIPV_id = lateral_obstacle.lead_two().track_id();
+    } else {
+      hmi_info->cipv_info.has_cipv = false;
+      hmi_info->cipv_info.cipv_id = -1;
+      CIPV_id = -1;
     }
   } else {
-    if (lateral_obstacle.has_temp_lead_one() &&
-        lateral_obstacle.temp_lead_one().type() != 0) {
+    if (is_temp_lead_one_vehicle) {
       hmi_info->cipv_info.has_cipv = true;
       hmi_info->cipv_info.cipv_id = lateral_obstacle.temp_lead_one().track_id();
       CIPV_id = lateral_obstacle.temp_lead_one().track_id();
+    } else if (!is_temp_lead_one_vehicle && is_temp_lead_two_vehicle) {
+      hmi_info->cipv_info.has_cipv = true;
+      hmi_info->cipv_info.cipv_id = lateral_obstacle.temp_lead_two().track_id();
+      CIPV_id = lateral_obstacle.temp_lead_two().track_id();
+    } else {
+      hmi_info->cipv_info.has_cipv = false;
+      hmi_info->cipv_info.cipv_id = -1;
+      CIPV_id = -1;
     }
   }
-  if (CIPV_id == -1) {
-    hmi_info->cipv_info.has_cipv = false;
-    hmi_info->cipv_info.cipv_id = CIPV_id;
-  }
   JSON_DEBUG_VALUE("CIPV_id", CIPV_id);
+}
+
+bool SccLonBehaviorPlanner::IsLeadVehicle(
+    const planning::common::TrackedObjectInfo &lead) {
+  return lead.track_id() != -1 && lead.is_lead();
 }
 
 void SccLonBehaviorPlanner::GetHardBounds() {
