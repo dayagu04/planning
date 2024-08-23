@@ -504,7 +504,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
 
     for i in range(10):
       try:
-        if line_info_list[i]['type'] == ['dashed']:
+        if line_info_list[i]['type_vec'][0] == ['dashed']:
           fig7.renderers[0 + i].glyph.line_dash = 'dashed'
         else:
           fig7.renderers[0 + i].glyph.line_dash = 'solid'
