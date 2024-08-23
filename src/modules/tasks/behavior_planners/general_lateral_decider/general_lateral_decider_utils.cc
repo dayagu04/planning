@@ -14,10 +14,10 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   if (IsVRU(type)) {
     base_dis = 1.0;
   } else if (IsTruck(type)) {
-    base_dis = 1.0;
+    base_dis = 0.8;
   }
 
-  return std::fmax(base_dis + 0.015 * ego_vel - 0.1 * pred_ts, 0.);
+  return std::fmax(base_dis + 0.015 * ego_vel - 0.05 * pred_ts, 0.);
 }
 
 double CalDesireLonDistance(double ego_vel, double agent_vel) {

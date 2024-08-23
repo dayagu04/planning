@@ -50,6 +50,7 @@ bool LateralOffsetDecider::Execute() {
   lat_offset = lateral_offset_calculatorv2_.lat_offset();
   SmoothLateralOffset(lat_offset);
   GenerateOutput();
+
   SaveDebugInfo();
   return true;
 }
@@ -154,7 +155,9 @@ void LateralOffsetDecider::GenerateOutput() {
   lateral_offset_decider_output.is_valid =
       config_.is_valid_lateral_offset && fabs(lateral_offset_) > 1e-2;
   lateral_offset_decider_output.lateral_offset = lateral_offset_;
+  lateral_offset_decider_output.enable_bound = lateral_offset_calculatorv2_.enable_bound();
 
+  // for hmi
   const std::array<AvoidObstacleInfo, 2> avd_obstacles =
       avoid_obstacle_maintainer5v_.avd_obstacles();
   lateral_offset_decider_output.avoid_id = -1;

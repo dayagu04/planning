@@ -6,6 +6,8 @@
 #include "lateral_obstacle.h"
 #include "utils/pose2d_utils.h"
 #include "virtual_lane_manager.h"
+#include <utility>
+#include "utils/hysteresis_decision.h"
 
 namespace planning {
 
@@ -21,6 +23,7 @@ class LateralOffsetCalculatorV2 {
                double dist_rblane, bool flag_avd);
 
   double lat_offset() const { return avoid_info_.lat_offset; }
+  bool enable_bound() const { return enable_bound_; }
   void Reset();
 
  private:
@@ -105,7 +108,10 @@ class LateralOffsetCalculatorV2 {
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
 
   bool is_on_rightest_lane_ = false;
+  HysteresisDecision has_enough_speed_hysteresis_;
+
   bool is_on_leftest_lane_ = false;
+  bool enable_bound_ = false;
   AvoidInfo avoid_info_;
   AvoidInfo last_avoid_info_;
   int avoid_id_ = -1;

@@ -102,7 +102,7 @@ class GeneralLateralDecider : public Task {
       double ego_l, double distance_to_right_lane_border,
       double distance_to_left_lane_border, double overlap_min_y,
       double overlap_max_y, double lat_buf_dis, bool b_overlap_side,
-      bool init_lon_no_overlap, bool is_cross_obj,
+      bool init_lon_no_overlap, bool is_nudge_left, bool is_cross_obj,
       LatObstacleDecisionType pre_lateral_decision,
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
