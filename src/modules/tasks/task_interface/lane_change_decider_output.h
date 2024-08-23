@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "config/basic_type.h"
+#include "../adas_function/display_state_types.h"
+#include "virtual_lane.h"
 namespace planning {
 
 struct LaneChangeStateMachineInfo {
@@ -102,6 +104,10 @@ struct LaneChangeDeciderOutput {
   double start_move_dist_lane;
 
   CoarsePlanningInfo coarse_planning_info;
+  bool is_merge_region = false;
+  MergeDirection merge_direction = NONE_LANE_MERGE;
+  int merge_lane_virtual_id;
+  RampDirection dir_turn_signal_road_to_ramp = RAMP_NONE;
 };
 
 }  // namespace planning

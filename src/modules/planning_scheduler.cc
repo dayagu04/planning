@@ -14,6 +14,7 @@
 #include "apa_function/src/apa_utils.h"
 #include "basic_types.pb.h"
 #include "common/config_context.h"
+#include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -31,6 +32,7 @@
 #include "utils/lateral_utils.h"
 #include "vehicle_config_context.h"
 #include "vehicle_status.pb.h"
+#include "virtual_lane.h"
 
 namespace planning {
 
@@ -557,9 +559,33 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state; update
   // LaneChangeStatus
   const auto curr_state = lane_change_decider_output.curr_state;
+  const auto lasr_frame_state = session_.planning_context().
+      lane_change_decider_output().coarse_planning_info.source_state;
   if (curr_state == kLaneKeeping) {
-    planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+    if (lasr_frame_state != kLaneKeeping) {
+      planning_hmi_info->ad_info.lane_change_status =
+          iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+    } else {
+      planning_hmi_info->ad_info.lane_change_status =
+          iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+        //for turn signal road to ramp
+      const auto dir_turn_signal_road_to_ramp = 
+          lane_change_decider_output.dir_turn_signal_road_to_ramp;
+      if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
+        planning_hmi_info->ad_info.lane_change_status =
+            iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
+        planning_hmi_info->ad_info.lane_change_status =
+            iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+        planning_hmi_info->ad_info.lane_change_direction = 
+            iflyauto::LaneChangeDirection::LC_DIR_LEFT;
+      } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
+        planning_hmi_info->ad_info.lane_change_status =
+            iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+        planning_hmi_info->ad_info.lane_change_direction = 
+            iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+      }
+    }
   } else if (curr_state == kLaneChangePropose) {
     planning_hmi_info->ad_info.lane_change_status =
         iflyauto::LaneChangeStatus::LC_STATE_WAITING;

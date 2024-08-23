@@ -334,6 +334,14 @@ enum StateMachineLaneChangeStatus {
   kLaneChangeHold
 };
 
+enum MergeDirection {
+  NONE_LANE_MERGE = 0,
+  CUR_LANE_MERGE_TO_LEFT = 1,
+  CUR_LANE_MERGE_TO_RIGHT = 2,
+  RIGHT_LANE_MERGE_TO_CUR_LANE = 3,
+  LEFT_LANE_MERGE_TO_CUR_LANE = 4,
+};
+
 enum ScenarioEnum { SCENARIO_CRUISE = 0, SCENARIO_LOW_SPEED };
 
 enum FaultDiagnosisType {
