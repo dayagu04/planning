@@ -1926,8 +1926,6 @@ void ParallelParInPlanner::Log() const {
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
-  DEBUG_PRINT("obs " << obstaclesX.front() << ", " << obstaclesY.front());
-
   std::vector<double> slot_corner_X;
   slot_corner_X.clear();
   slot_corner_X.reserve(frame_.ego_slot_info.slot_corner.size());
