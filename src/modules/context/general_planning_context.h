@@ -25,10 +25,8 @@ struct PlanningPram {
 struct PlanningStatemachine {
   bool dbw_status = false;
   bool apa_reset_flag = false;
-  bool apa_start_plan_once_flag = false;
   uint8_t scene_type = 0;
   uint8_t current_state = 0;
-  size_t fusion_select_id = 0;
 };
 
 class GeneralPlanningContext {

@@ -38,6 +38,9 @@ bool ApaFunction::Plan() {
   // set planning output
   session_->mutable_planning_context()->mutable_planning_output() =
       apa_plan_interface_->GetPlaningOutput();
+
+  *(session_->mutable_planning_context()->mutable_planning_hmi_info()) =
+      apa_plan_interface_->GetPlaningHmi();
   return true;
 }
 

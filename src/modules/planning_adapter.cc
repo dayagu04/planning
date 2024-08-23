@@ -299,12 +299,7 @@ void PlanningAdapter::Proc() {
   const auto &current_state =
       local_view_ptr_->function_state_machine_info.current_state;
 
-  const auto &current_fusion_select_id =
-      local_view_ptr_->parking_fusion_info.select_slot_id;
-
   const auto &last_state = g_context.GetStatemachine().current_state;
-
-  auto &last_fusion_select_id = g_context.GetStatemachine().fusion_select_id;
 
   if ((last_state == iflyauto::FunctionalState_MANUAL ||
        last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
@@ -315,18 +310,7 @@ void PlanningAdapter::Proc() {
     state_machine_g.apa_reset_flag = false;
   }
 
-  // APA plan once when select id change from 0 to other value during searching
-  // state
-  if (last_state == iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-      current_state == iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-      last_fusion_select_id == 0 && current_fusion_select_id != 0) {
-    state_machine_g.apa_start_plan_once_flag = true;
-  } else {
-    state_machine_g.apa_start_plan_once_flag = false;
-  }
-
   state_machine_g.current_state = current_state;
-  state_machine_g.fusion_select_id = current_fusion_select_id;
 
   // 2.planning run
   auto planning_output_container =
