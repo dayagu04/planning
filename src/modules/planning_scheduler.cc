@@ -560,8 +560,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
   // update LaneChangeStatus
   const auto curr_state = lane_change_decider_output.curr_state;
-  const auto lasr_frame_state = session_.planning_context().
-      lane_change_decider_output().coarse_planning_info.source_state;
+  const auto lasr_frame_state = session_.planning_context()
+                                    .lane_change_decider_output()
+                                    .coarse_planning_info.source_state;
   if (curr_state == kLaneKeeping) {
     if (lasr_frame_state != kLaneKeeping) {
       planning_hmi_info->ad_info.lane_change_status =
@@ -569,8 +570,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
     } else {
       planning_hmi_info->ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-        //for turn signal road to ramp
-      const auto dir_turn_signal_road_to_ramp = 
+      // for turn signal road to ramp
+      const auto dir_turn_signal_road_to_ramp =
           lane_change_decider_output.dir_turn_signal_road_to_ramp;
       if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
         planning_hmi_info->ad_info.lane_change_status =
@@ -578,12 +579,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
       } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
         planning_hmi_info->ad_info.lane_change_status =
             iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-        planning_hmi_info->ad_info.lane_change_direction = 
+        planning_hmi_info->ad_info.lane_change_direction =
             iflyauto::LaneChangeDirection::LC_DIR_LEFT;
       } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
         planning_hmi_info->ad_info.lane_change_status =
             iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-        planning_hmi_info->ad_info.lane_change_direction = 
+        planning_hmi_info->ad_info.lane_change_direction =
             iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
       }
     }
@@ -598,7 +599,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
         iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
   }
   // update StatusUpdateReason
-  const auto int_request_cancel_reason = lane_change_decider_output.int_request_cancel_reason;
+  const auto int_request_cancel_reason =
+      lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
   if (int_request_cancel_reason == SOLID_LC) {
@@ -608,11 +610,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
   } else if (lc_invalid_reason == "side view invalid" ||
-      lc_invalid_reason == "front view invalid" ||
-      lc_invalid_reason == "valid cnt below threshold" ||
-      lc_back_reason == "side view back" ||
-      lc_back_reason == "front view back" ||
-      lc_back_reason == "but back cnt below threshold") {
+             lc_invalid_reason == "front view invalid" ||
+             lc_invalid_reason == "valid cnt below threshold" ||
+             lc_back_reason == "side view back" ||
+             lc_back_reason == "front view back" ||
+             lc_back_reason == "but back cnt below threshold") {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
   } else {
@@ -664,8 +666,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.distance_to_merge =
       virtual_lane_manager->distance_to_first_road_merge();
   planning_hmi_info->ad_info.distance_to_toll_station =
-      virtual_lane_manager
-          ->get_distance_to_toll_station();
+      virtual_lane_manager->get_distance_to_toll_station();
   planning_hmi_info->ad_info.noa_exit_warning_level_distance =
       virtual_lane_manager->get_distance_to_route_end();
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写

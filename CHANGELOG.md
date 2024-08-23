@@ -6,6 +6,11 @@
 4. APA适配新状态机 & 新定位
 5. 信号灯通行的基础功能: 红灯停绿灯行（默认关闭）
 6. 移除中间件adapter层
+7. 加入计算merge区域
+### [fix]
+1. fix latent coredump
+2. fix heading_diff not normalize in SelectEgoLaneWithoutPlan
+3. fix bug for calculate dis to last merge point
 
 # planning.2.4.9
 ####  修改说明

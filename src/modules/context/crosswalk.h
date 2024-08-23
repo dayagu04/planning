@@ -8,7 +8,7 @@
 namespace planning {
 
 class Crosswalk {
-public:
+ public:
   Crosswalk() = default;
 
   Crosswalk(int32_t track_id);
@@ -25,13 +25,15 @@ public:
 
   const std::vector<planning::planning_math::Vec2d>& center_line_points() const;
 
-  void set_center_line_points(std::vector<planning::planning_math::Vec2d>&& center_line_points);
+  void set_center_line_points(
+      std::vector<planning::planning_math::Vec2d>&& center_line_points);
 
   const std::vector<planning::planning_math::Vec2d>& polygon_points() const;
 
-  void set_polygon_points(std::vector<planning::planning_math::Vec2d>&& polygon_points);
+  void set_polygon_points(
+      std::vector<planning::planning_math::Vec2d>&& polygon_points);
 
-protected:
+ protected:
   int track_id_ = -1;
 
   double width_ = 0.0;
@@ -40,8 +42,9 @@ protected:
   // Tips:the vector is empty now.
   std::vector<planning::planning_math::Vec2d> center_line_points_;
 
-  // The points of polygon.The p0->p1 and p2->p3 are the two sides of the crosswalk.
+  // The points of polygon.The p0->p1 and p2->p3 are the two sides of the
+  // crosswalk.
   std::vector<planning::planning_math::Vec2d> polygon_points_;
 };
 
-} // namespace planning
+}  // namespace planning

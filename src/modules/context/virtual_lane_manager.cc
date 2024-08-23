@@ -31,19 +31,19 @@
 #include "math/vec2d.h"
 #include "planning_context.h"
 #include "reference_path_manager.h"
+#include "stop_line.h"
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
-#include "stop_line.h"
 namespace planning {
 
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 namespace {
@@ -575,13 +575,13 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
   UpdateLaneVirtualId();
 
-  //9.计算自车到停止线的距离
+  // 9.计算自车到停止线的距离
   UpdateEgoDistanceToStopline();
 
-  //10.计算自车到斑马线距离
+  // 10.计算自车到斑马线距离
   UpdateEgoDistanceToCrosswalk(roads_ptr);
 
-  //11.更新路口状态
+  // 11.更新路口状态
   UpdateIntersectionState();
 
   LOG_DEBUG("input lane:");
@@ -1311,8 +1311,7 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 
 bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
-  const auto& ego_state =
-          session.environmental_model().get_ego_state_manager();
+  const auto& ego_state = session.environmental_model().get_ego_state_manager();
   const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
 
@@ -1657,19 +1656,18 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
 
   // 计算到最近收费站的距离
   const auto& toll_station_info = sd_map.GetTollStationInfo(
-    current_segment->id(), nearest_s, max_search_length);
+      current_segment->id(), nearest_s, max_search_length);
   if (toll_station_info.first != nullptr) {
     distance_to_toll_station_ = toll_station_info.second;
   } else {
     std::cout << "not find toll station" << std::endl;
-     distance_to_toll_station_ = NL_NMAX;
+    distance_to_toll_station_ = NL_NMAX;
   }
-
 }
 
 bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
   const auto& stop_line = current_lane_->get_stop_line();
-  if(stop_line.type == iflyauto::LANE_LINE_TYPE_STOPLINE) {
+  if (stop_line.type == iflyauto::LANE_LINE_TYPE_STOPLINE) {
     std::vector<iflyauto::Point2f> stop_line_points_vec;
     stop_line_points_vec.resize(stop_line.car_points_size);
     for (int i = 0; i < stop_line.car_points_size; i++) {
@@ -1678,25 +1676,29 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
     auto compare_y = [&](iflyauto::Point2f p1, iflyauto::Point2f p2) {
       return p1.y < p2.y;
     };
-    std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(), compare_y);
+    std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(),
+              compare_y);
     int idx = -1;
     for (int i = 0; i < stop_line_points_vec.size() - 1; i++) {
-      if(stop_line_points_vec[i].y < 0.0 && stop_line_points_vec[i+1].y > 0.0) {
+      if (stop_line_points_vec[i].y < 0.0 &&
+          stop_line_points_vec[i + 1].y > 0.0) {
         idx = i;
         break;
       }
     }
 
     if (idx != -1) {
-      planning::planning_math::Vec2d p_left(stop_line_points_vec[idx].x, stop_line_points_vec[idx].y);
-      planning::planning_math::Vec2d p_right(stop_line_points_vec[idx+1].x, stop_line_points_vec[idx+1].y);
+      planning::planning_math::Vec2d p_left(stop_line_points_vec[idx].x,
+                                            stop_line_points_vec[idx].y);
+      planning::planning_math::Vec2d p_right(stop_line_points_vec[idx + 1].x,
+                                             stop_line_points_vec[idx + 1].y);
       planning::planning_math::LineSegment2d line_seg(p_left, p_right);
       int id = 0;
       planning::StopLine lane_stop_line = planning::StopLine(id, line_seg);
-      double raw_dis = lane_stop_line.RawDistanceTo(planning::planning_math::Vec2d(0,0));
+      double raw_dis =
+          lane_stop_line.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
       distance_to_stopline_ = -1.0 * raw_dis;
-    }
-    else {
+    } else {
       distance_to_stopline_ = NL_NMAX;
     }
   } else {
@@ -1704,55 +1706,57 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
   }
   JSON_DEBUG_VALUE("distance_to_stopline", distance_to_stopline_);
   return true;
-
 }
 
-bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo* roads_ptr) {
+bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
+    const iflyauto::RoadInfo* roads_ptr) {
   planning::planning_math::Vec2d;
   std::vector<std::vector<iflyauto::Point2f>> cross_walk_pts_vec;
-  for(int i = 0; i < roads_ptr->lane_ground_markings_size; i++) {
+  for (int i = 0; i < roads_ptr->lane_ground_markings_size; i++) {
     const auto& cross_walk = roads_ptr->lane_ground_markings[i];
-    if(cross_walk.turn_type == iflyauto::LaneDrivableDirection_DIRECTION_CROSS_LINE &&
-       std::abs(cross_walk.orientation_angle) < 0.5) {
-       std::vector<iflyauto::Point2f> cw_pts;
-       cw_pts.resize(cross_walk.ground_marking_points_set_size);
-       for(int idx = 0; idx < cross_walk.ground_marking_points_set_size; idx++) {
-         cw_pts[idx] = cross_walk.ground_marking_points_set[idx];
-       }
-       cross_walk_pts_vec.push_back(cw_pts);
+    if (cross_walk.turn_type ==
+            iflyauto::LaneDrivableDirection_DIRECTION_CROSS_LINE &&
+        std::abs(cross_walk.orientation_angle) < 0.5) {
+      std::vector<iflyauto::Point2f> cw_pts;
+      cw_pts.resize(cross_walk.ground_marking_points_set_size);
+      for (int idx = 0; idx < cross_walk.ground_marking_points_set_size;
+           idx++) {
+        cw_pts[idx] = cross_walk.ground_marking_points_set[idx];
+      }
+      cross_walk_pts_vec.push_back(cw_pts);
     }
   }
   auto compare_y = [&](iflyauto::Point2f p1, iflyauto::Point2f p2) {
-      return p1.y < p2.y;
+    return p1.y < p2.y;
   };
   std::vector<std::pair<int, double>> cw_idx_dis_vec;
-  for(int j = 0; j < cross_walk_pts_vec.size(); j++) {
+  for (int j = 0; j < cross_walk_pts_vec.size(); j++) {
     auto& cw_pt_vec = cross_walk_pts_vec[j];
     std::sort(cw_pt_vec.begin(), cw_pt_vec.end(), compare_y);
     int idx = -1;
     for (int i = 0; i < cw_pt_vec.size() - 1; i++) {
-      if(cw_pt_vec[i].y < 0.0 && cw_pt_vec[i+1].y > 0.0) {
+      if (cw_pt_vec[i].y < 0.0 && cw_pt_vec[i + 1].y > 0.0) {
         idx = i;
         break;
       }
     }
     if (idx != -1) {
-      double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx+1].x);
+      double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx + 1].x);
       planning::planning_math::Vec2d p_left(pt_x, cw_pt_vec[idx].y);
-      planning::planning_math::Vec2d p_right(pt_x, cw_pt_vec[idx+1].y);
+      planning::planning_math::Vec2d p_right(pt_x, cw_pt_vec[idx + 1].y);
       planning::planning_math::LineSegment2d line_seg(p_left, p_right);
-      double raw_dis = line_seg.RawDistanceTo(planning::planning_math::Vec2d(0,0));
+      double raw_dis =
+          line_seg.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
       cw_idx_dis_vec.push_back(std::make_pair(j, -1.0 * raw_dis));
     } else {
       continue;
     }
-
   }
-  //more than one, select the min dis crosswalk
+  // more than one, select the min dis crosswalk
   if (cw_idx_dis_vec.size() > 0) {
     int min_dis = NL_NMAX;
-    for(int i = 0; i < cw_idx_dis_vec.size(); i++) {
-      if(cw_idx_dis_vec[i].second < min_dis) {
+    for (int i = 0; i < cw_idx_dis_vec.size(); i++) {
+      if (cw_idx_dis_vec[i].second < min_dis) {
         min_dis = cw_idx_dis_vec[i].second;
       }
     }
@@ -1762,38 +1766,42 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo* 
   }
   JSON_DEBUG_VALUE("distance_to_crosswalk", distance_to_crosswalk_);
   return true;
-
 }
 
 bool VirtualLaneManager::UpdateIntersectionState() {
   double ego_pos_x = 0.0;
-  if(current_lane_->get_left_lane_boundary().car_points_size > 0 &&
+  if (current_lane_->get_left_lane_boundary().car_points_size > 0 &&
       current_lane_->get_right_lane_boundary().car_points_size > 0) {
-    double first_left_x = current_lane_->get_left_lane_boundary().car_points[0].x;
-    double first_right_x = current_lane_->get_right_lane_boundary().car_points[0].x;
+    double first_left_x =
+        current_lane_->get_left_lane_boundary().car_points[0].x;
+    double first_right_x =
+        current_lane_->get_right_lane_boundary().car_points[0].x;
     ego_pos_x = std::max(0 - first_left_x, 0 - first_right_x);
   } else {
     Intersection_state_ = planning::common::IN_INTERSECTION;
     return true;
   }
-  if((distance_to_stopline_ < 25.0 && distance_to_stopline_ > 3.0) ||
-     ((distance_to_crosswalk_ < 28.0 && distance_to_crosswalk_ > 5.0) && !IsPosXOnVirtualLaneType(ego_pos_x))) {
+  if ((distance_to_stopline_ < 25.0 && distance_to_stopline_ > 3.0) ||
+      ((distance_to_crosswalk_ < 28.0 && distance_to_crosswalk_ > 5.0) &&
+       !IsPosXOnVirtualLaneType(ego_pos_x))) {
     Intersection_state_ = planning::common::APPROACH_INTERSECTION;
   } else if (distance_to_stopline_ <= 3.0) {
     Intersection_state_ = planning::common::IN_INTERSECTION;
   } else {
-      if ((0 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) && !IsPosXOnVirtualLaneType(ego_pos_x)) {
-        Intersection_state_ = planning::common::IN_INTERSECTION;
-      } else if (distance_to_crosswalk_ <= 0.0 && !IsPosXOnVirtualLaneType(ego_pos_x)) {
-        Intersection_state_ = planning::common::NO_INTERSECTION;
-      } else if (IsPosXOnVirtualLaneType(ego_pos_x) && !IsPosXOnVirtualLaneType(ego_pos_x + 8.0)) {
-        Intersection_state_ = planning::common::OFF_INTERSECTION;
-      } else if (IsPosXOnVirtualLaneType(ego_pos_x)) {
-        Intersection_state_ = planning::common::IN_INTERSECTION;
-      } else {
-        Intersection_state_ = planning::common::NO_INTERSECTION;
-      }
-
+    if ((0 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) &&
+        !IsPosXOnVirtualLaneType(ego_pos_x)) {
+      Intersection_state_ = planning::common::IN_INTERSECTION;
+    } else if (distance_to_crosswalk_ <= 0.0 &&
+               !IsPosXOnVirtualLaneType(ego_pos_x)) {
+      Intersection_state_ = planning::common::NO_INTERSECTION;
+    } else if (IsPosXOnVirtualLaneType(ego_pos_x) &&
+               !IsPosXOnVirtualLaneType(ego_pos_x + 8.0)) {
+      Intersection_state_ = planning::common::OFF_INTERSECTION;
+    } else if (IsPosXOnVirtualLaneType(ego_pos_x)) {
+      Intersection_state_ = planning::common::IN_INTERSECTION;
+    } else {
+      Intersection_state_ = planning::common::NO_INTERSECTION;
+    }
   }
   return true;
 }
@@ -1801,9 +1809,10 @@ bool VirtualLaneManager::UpdateIntersectionState() {
 bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
   bool rslt = false;
   const auto& lane_types_vec = current_lane_->get_lane_types();
-  for(int ind = 0; ind < lane_types_vec.size(); ind++) {
-    if(lane_types_vec[ind].begin <= x_pos && x_pos <= lane_types_vec[ind].end) {
-      if(lane_types_vec[ind].type == iflyauto::LANETYPE_VIRTUAL) {
+  for (int ind = 0; ind < lane_types_vec.size(); ind++) {
+    if (lane_types_vec[ind].begin <= x_pos &&
+        x_pos <= lane_types_vec[ind].end) {
+      if (lane_types_vec[ind].type == iflyauto::LANETYPE_VIRTUAL) {
         rslt = true;
       } else {
         rslt = false;
@@ -2728,7 +2737,7 @@ void VirtualLaneManager::ProcessUrbanIntersectionSplit(
   if (ego_on_left_side_lane && ego_on_right_side_lane) {
     is_exist_intersection_split_ = false;
     return;
-  } else if(ego_on_left_side_lane) {
+  } else if (ego_on_left_side_lane) {
     is_exist_intersection_split_ = true;
     relative_id_lanes_[order_ids[1]]->set_relative_id(0);
     origin_order_id = relative_id_lanes_[order_ids[1]]->get_order_id();
@@ -2940,7 +2949,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
       if (road_radius > kDefaultRoadRadius) {
         int default_point_nums = 30;
         int select_lane_point_interval = 1;
-        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+        for (int i = 0; i < lane_points.size();
+             i += select_lane_point_interval) {
           iflyauto::ReferencePoint point = lane_points[i];
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {

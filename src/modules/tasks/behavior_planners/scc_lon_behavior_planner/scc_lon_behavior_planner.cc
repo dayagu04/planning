@@ -464,7 +464,8 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
   double dis_to_stopline = virtual_lane_manager->GetEgoDistanceToStopline();
   double dis_to_crosswalk = virtual_lane_manager->GetEgoDistanceToCrosswalk();
-  planning::common::IntersectionState intersection_state = virtual_lane_manager->GetIntersectionState();
+  planning::common::IntersectionState intersection_state =
+      virtual_lane_manager->GetIntersectionState();
 
   lon_behav_plan_input_->set_dis_to_ramp(dis_to_ramp);
   lon_behav_plan_input_->set_dis_to_merge(dis_to_merge);

@@ -7,13 +7,15 @@ TrafficLightDecisionManager::TrafficLightDecisionManager(
     const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session* session) {
   session_ = session;
-  config_ = config_builder->cast<EgoPlanningTrafficLightDecisionManagerConfig>();
+  config_ =
+      config_builder->cast<EgoPlanningTrafficLightDecisionManagerConfig>();
 }
 
-bool TrafficLightDecisionManager::Update(const iflyauto::CameraPerceptionTsrInfo &tsr_info) {
+bool TrafficLightDecisionManager::Update(
+    const iflyauto::CameraPerceptionTsrInfo& tsr_info) {
   traffic_lights_info_.clear();
   int traffic_lights_num = tsr_info.traffic_lights_size;
-  for(int i = 0; i < traffic_lights_num; i++) {
+  for (int i = 0; i < traffic_lights_num; i++) {
     traffic_lights_info_.emplace_back(tsr_info.traffic_lights[i]);
   }
 
@@ -23,4 +25,4 @@ bool TrafficLightDecisionManager::Update(const iflyauto::CameraPerceptionTsrInfo
   return true;
 }
 
-}
+}  // namespace planning

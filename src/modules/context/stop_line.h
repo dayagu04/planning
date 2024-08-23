@@ -1,12 +1,12 @@
 #pragma once
 
-#include "src/modules/common/math/line_segment2d.h"
 #include "src/common/vec2d.h"
+#include "src/modules/common/math/line_segment2d.h"
 
 namespace planning {
 
 class StopLine {
-public:
+ public:
   StopLine() = default;
 
   StopLine(int id);
@@ -33,25 +33,17 @@ public:
     return stop_line_.DistanceSquareTo(point);
   }
 
-  double min_x() const {
-    return stop_line_.min_x();
-  }
+  double min_x() const { return stop_line_.min_x(); }
 
-  double min_y() const {
-    return stop_line_.min_y();
-  }
+  double min_y() const { return stop_line_.min_y(); }
 
-  double max_x() const {
-    return stop_line_.max_x();
-  }
+  double max_x() const { return stop_line_.max_x(); }
 
-  double max_y() const {
-    return stop_line_.max_y();
-  }
+  double max_y() const { return stop_line_.max_y(); }
 
-protected:
+ protected:
   int id_ = -1;
   planning::planning_math::LineSegment2d stop_line_;
 };
 
-} // namespace planning
+}  // namespace planning

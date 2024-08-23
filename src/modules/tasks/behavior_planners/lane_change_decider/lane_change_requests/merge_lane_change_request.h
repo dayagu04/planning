@@ -8,8 +8,8 @@ namespace planning {
 class MergeRequest : public LaneChangeRequest {
  public:
   MergeRequest(planning::framework::Session* session,
-             std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
-             std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
+               std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+               std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~MergeRequest() = default;
 
   void Update(int lc_status);

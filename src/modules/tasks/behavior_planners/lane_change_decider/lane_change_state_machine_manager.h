@@ -183,7 +183,10 @@ class LaneChangeStateMachineManager {
       double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
   bool IsMergeRegion(int* merge_lane_virtual_id);
-  bool IsOverlapWithOtherLaneOnEndRegion(const std::shared_ptr<ReferencePath> reference_path, const RelativeDirection rel_dir);
+  bool IsOverlapWithOtherLaneOnEndRegion(
+      const std::shared_ptr<ReferencePath> reference_path,
+      const RelativeDirection rel_dir);
+
  private:
   ScenarioStateMachineConfig config_;
   framework::Session* session_;

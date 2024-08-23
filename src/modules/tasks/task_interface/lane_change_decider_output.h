@@ -4,8 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "config/basic_type.h"
 #include "../adas_function/display_state_types.h"
+#include "config/basic_type.h"
 #include "virtual_lane.h"
 namespace planning {
 

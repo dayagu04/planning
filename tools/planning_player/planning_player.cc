@@ -44,7 +44,8 @@ static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 
-static constexpr auto TOPIC_TRAFFIC_SIGN = "/iflytek/camera_perception/traffic_sign_recognition";
+static constexpr auto TOPIC_TRAFFIC_SIGN =
+    "/iflytek/camera_perception/traffic_sign_recognition";
 
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
                           const std::string& scene_type, bool no_debug) {
@@ -271,8 +272,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_PLANNING_HMI) {
       cache_with_ros_msg_time<struct_msgs::PlanningHMIOutputInfoStr>(msg);
-    // } else if (msg.getTopic() == TOPIC_HD_MAP) {
-    //   cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
+      // } else if (msg.getTopic() == TOPIC_HD_MAP) {
+      //   cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
     } else if (msg.getTopic() == TOPIC_SD_MAP) {
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
@@ -462,7 +463,8 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
-  // // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
+  // //
+  // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
   // auto input_time_localization_estimate =
   //     input_time_list.localization_estimate();
   // if (0 == input_time_localization_estimate) {
@@ -567,7 +569,8 @@ void PlanningPlayer::PlayOneFrame(
     planning_adapter_->FeedPerceptionTsrInfo(perception_tsr_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
-              << " missing /iflytek/camera_perception/traffic_sign_recognition" << std::endl;
+              << " missing /iflytek/camera_perception/traffic_sign_recognition"
+              << std::endl;
   }
 
   // 不再使用，注释掉

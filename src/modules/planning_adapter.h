@@ -141,7 +141,7 @@ class PlanningAdapter {
     sd_map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_sd_map_info_msg_updated_.store(true);
   }
-  
+
   void FeedPerceptionTsrInfo(const iflyauto::CameraPerceptionTsrInfo& tsr_msg) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
     perception_tsr_msg_ = tsr_msg;

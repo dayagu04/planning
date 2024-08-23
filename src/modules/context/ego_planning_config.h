@@ -1581,8 +1581,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "brake_dis_near_ramp_zone"});
     t_curv = read_json_keys<double>(
-        json, std::vector<std::string>{"real_time_long_behavior_planner",
-                                       "t_curv"});
+        json,
+        std::vector<std::string>{"real_time_long_behavior_planner", "t_curv"});
     dis_curv = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "dis_curv"});
@@ -1927,8 +1927,8 @@ struct EgoPlanningTrafficLightDecisionManagerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    enable_traffic_light = read_json_key<bool>(
-        json, "enable_traffic_light", enable_traffic_light);
+    enable_traffic_light =
+        read_json_key<bool>(json, "enable_traffic_light", enable_traffic_light);
   }
   bool enable_traffic_light = true;
 };

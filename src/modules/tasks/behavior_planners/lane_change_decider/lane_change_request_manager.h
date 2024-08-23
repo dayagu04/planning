@@ -4,13 +4,13 @@
 #include "ego_planning_config.h"
 #include "ifly_time.h"
 #include "lane_change_requests/active_lane_change_request.h"
+#include "lane_change_requests/cone_lane_change_request.h"
 #include "lane_change_requests/emergence_avoid_lane_change_request.h"
 #include "lane_change_requests/interactive_lane_change_request.h"
 #include "lane_change_requests/lane_change_request.h"
 #include "lane_change_requests/map_lane_change_request.h"
-#include "lane_change_requests/overtake_lane_change_request.h"
-#include "lane_change_requests/cone_lane_change_request.h"
 #include "lane_change_requests/merge_lane_change_request.h"
+#include "lane_change_requests/overtake_lane_change_request.h"
 #include "session.h"
 
 namespace planning {
@@ -40,7 +40,9 @@ class LaneChangeRequestManager {
 
   RequestType request() const { return request_; }
   RequestSource request_source() const { return request_source_; }
-  IntCancelReasonType int_request_cancel_reason() const { return int_request_cancel_reason_;}
+  IntCancelReasonType int_request_cancel_reason() const {
+    return int_request_cancel_reason_;
+  }
   std::string act_request_source() {
     return request_source_ == ACT_REQUEST ? act_request_.act_request_source()
                                           : "none";
