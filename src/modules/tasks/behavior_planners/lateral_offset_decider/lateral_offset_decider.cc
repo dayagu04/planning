@@ -164,11 +164,25 @@ void LateralOffsetDecider::GenerateOutput() {
   lateral_offset_decider_output.avoid_direction = 0;
   if (avd_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
     if (lateral_offset_ > 0.2) {
-      lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
-      lateral_offset_decider_output.avoid_direction = 1;
+      if (avd_obstacles[0].max_l_to_ref < 0) {
+        lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
+        lateral_offset_decider_output.avoid_direction = 1;
+      } else {
+        if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID && avd_obstacles[1].max_l_to_ref < 0) {
+          lateral_offset_decider_output.avoid_id = avd_obstacles[1].track_id;
+          lateral_offset_decider_output.avoid_direction = 1;
+        }
+      }
     } else if (lateral_offset_ < -0.2) {
-      lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
-      lateral_offset_decider_output.avoid_direction = 2;
+      if (avd_obstacles[0].min_l_to_ref > 0) {
+        lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
+        lateral_offset_decider_output.avoid_direction = 2;
+      } else {
+        if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID && avd_obstacles[1].min_l_to_ref > 0) {
+          lateral_offset_decider_output.avoid_id = avd_obstacles[1].track_id;
+          lateral_offset_decider_output.avoid_direction = 2;
+        }
+      }
     }
   }
 }
