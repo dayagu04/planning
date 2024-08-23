@@ -213,7 +213,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
     Finish();
     set_target_lane_virtual_id(target_lane_virtual_id_tmp);
     LOG_DEBUG(
-        "[OvertakeRequest::update] %s:%d finish request, "
+        "[EmergenceAvoidRequest::update] %s:%d finish request, "
         "!trigger_left_overtake and !trigger_right_overtake\n",
         __FUNCTION__, __LINE__);
   } else {

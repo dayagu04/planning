@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240815/20240815-14-24-57/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-15-14-24-57_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240820/20240820-16-08-42/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-08-20-16-08-42_no_camera.bag.1724295785.close-loop.plan"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -73,6 +73,10 @@ cone_lc_data = ColumnDataSource({
   'name':[],
   'data':[]
 })
+merge_lc_data = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
@@ -83,6 +87,8 @@ data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width
 data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=600)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=500)
 data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=300)
+data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=300)
+
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
 fig1.line('fixlane_y', 'fixlane_x', source = data_fix_lane, line_width = 1, line_color = 'black', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
@@ -252,6 +258,23 @@ def update_cone_request_lc_data (plan_debug_json):
   })
   push_notebook()
 
+def update_merge_request_lc_data (plan_debug_json):
+  names  = []
+  datas = []
+  merge_lc_vars_ = ["is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type",
+                   "right_boundary_exist_virtual_type"]
+  for name in merge_lc_vars_:
+    try:
+      datas.append((plan_debug_json[name]))
+      names.append(name)
+    except:
+      pass
+  merge_lc_data.data.update({
+    'name': names,
+    'data': datas,
+  })
+  push_notebook()
+
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -272,6 +295,7 @@ def slider_callback(bag_time):
     update_lc_data(noa_info, plan_debug_json_msg)
     update_overtake_request_lc_data(plan_debug_json_msg)
     update_cone_request_lc_data(plan_debug_json_msg)
+    update_merge_request_lc_data(plan_debug_json_msg)
 
     lat_behavior_plan = plan_debug_msg.vo_lat_behavior_plan
 
@@ -297,6 +321,7 @@ def slider_callback(bag_time):
 
 # +
 slider_class = LatBehaviorSlider(slider_callback)
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table), column(data_overtake_lc_table, data_cone_lc_table, data_behavior_table_2)), notebook_handle=True)
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table),
+            column(data_overtake_lc_table, data_cone_lc_table, data_merge_lc_table, data_behavior_table_2)), notebook_handle=True)
 
 # slider_class = ObjText(obj_id_handler)

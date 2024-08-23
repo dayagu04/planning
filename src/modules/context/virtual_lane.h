@@ -116,6 +116,9 @@ class VirtualLane {
                ? lane_marks_[0].lane_mark
                : iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
   };
+  std::vector<iflyauto::LaneMarkMsg> lane_marks() const {
+    return lane_marks_;
+  }
   iflyauto::LaneSource get_lane_source() const {
     return lane_sources_.size() > 0 ? lane_sources_[0].source
                                     : iflyauto::LaneSource_SOURCE_UNKNOWN;

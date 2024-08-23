@@ -133,6 +133,8 @@ class VirtualLaneManager {
 
   void PreprocessRampSplit(const std::vector<int> &order_ids);
 
+  void ProcessUrbanIntersectionSplit(const std::vector<int> &order_ids);
+
   void SelectEgoLaneWithoutPlan();
 
   void SelectEgoLaneWithPlan(int zero_relative_id_nums);
@@ -336,6 +338,7 @@ class VirtualLaneManager {
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
+  bool is_exist_intersection_split_ = false;
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
