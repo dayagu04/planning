@@ -102,16 +102,20 @@ void IntRequest::Update(int lc_status) {
       std::shared_ptr<VirtualLane> tem_target_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(
               target_lane_virtual_id_tmp);
-      int temp_target_lane_order_id = tem_target_lane->get_order_id();
-      auto origin_id_iter =
-          std::find(zero_relative_id_order_ids.begin(),
-                    zero_relative_id_order_ids.end(), origin_lane_order_id);
-      auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                                      zero_relative_id_order_ids.end(),
-                                      temp_target_lane_order_id);
-      if (origin_id_iter != zero_relative_id_order_ids.end() &&
-          target_id_iter != zero_relative_id_order_ids.end()) {
-        is_in_diverted_lane_change_ = true;
+      if (tem_target_lane != nullptr) {
+        int temp_target_lane_order_id = tem_target_lane->get_order_id();
+        auto origin_id_iter =
+            std::find(zero_relative_id_order_ids.begin(),
+                      zero_relative_id_order_ids.end(), origin_lane_order_id);
+        auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
+                                        zero_relative_id_order_ids.end(),
+                                        temp_target_lane_order_id);
+        if (origin_id_iter != zero_relative_id_order_ids.end() &&
+            target_id_iter != zero_relative_id_order_ids.end()) {
+          is_in_diverted_lane_change_ = true;
+        }
+      } else {
+        is_in_diverted_lane_change_ = false;
       }
     }
     if (counter_left_ > count_threshold_ || is_in_diverted_lane_change_) {
@@ -159,16 +163,20 @@ void IntRequest::Update(int lc_status) {
       std::shared_ptr<VirtualLane> tem_target_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(
               target_lane_virtual_id_tmp);
-      int temp_target_lane_order_id = tem_target_lane->get_order_id();
-      auto origin_id_iter =
-          std::find(zero_relative_id_order_ids.begin(),
-                    zero_relative_id_order_ids.end(), origin_lane_order_id);
-      auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                                      zero_relative_id_order_ids.end(),
-                                      temp_target_lane_order_id);
-      if (origin_id_iter != zero_relative_id_order_ids.end() &&
-          target_id_iter != zero_relative_id_order_ids.end()) {
-        is_in_diverted_lane_change_ = true;
+      if (tem_target_lane != nullptr) {
+        int temp_target_lane_order_id = tem_target_lane->get_order_id();
+        auto origin_id_iter =
+            std::find(zero_relative_id_order_ids.begin(),
+                      zero_relative_id_order_ids.end(), origin_lane_order_id);
+        auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
+                                        zero_relative_id_order_ids.end(),
+                                        temp_target_lane_order_id);
+        if (origin_id_iter != zero_relative_id_order_ids.end() &&
+            target_id_iter != zero_relative_id_order_ids.end()) {
+          is_in_diverted_lane_change_ = true;
+        }
+      } else {
+        is_in_diverted_lane_change_ = false;
       }
     }
     if (counter_right_ > count_threshold_ || is_in_diverted_lane_change_) {
