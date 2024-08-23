@@ -85,7 +85,7 @@ class GeneralLateralDecider : public Task {
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
       std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
-
+  void ProtectBoundByInitPoint(std::pair<double, double> &bound, std::pair<BoundInfo, BoundInfo> &bound_info);
   void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
   void ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision);
 
