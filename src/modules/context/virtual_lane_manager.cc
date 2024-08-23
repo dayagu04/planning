@@ -1925,7 +1925,7 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
     //   break;
     relative_id_lanes.emplace_back(virtual_lane_tmp);
   }
-  lane_num_ = relative_id_lanes_.size();
+  lane_num_ = relative_id_lanes.size();
   return relative_id_lanes;
 }
 
