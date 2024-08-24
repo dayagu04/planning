@@ -20,7 +20,7 @@ void UssObstacleAvoidance::Init() {
     car_local_vertex_vec_.emplace_back(
         Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                         apa_param.GetParam().car_vertex_y_vec[i]));
-    if (i == 1) {
+    if (i == 2) {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[2]));
@@ -28,7 +28,7 @@ void UssObstacleAvoidance::Init() {
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[3]));
     }
-    if (i == 9) {
+    if (i == 12) {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[8]));

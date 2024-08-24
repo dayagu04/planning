@@ -2613,7 +2613,25 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
       // when gear is drive, if there is no only s turn, then when s_turn col,
       // lose all s turn path
       if (only_s_turn) {
-        path_seg_vec.emplace_back(tmp_path_seg);
+        if (current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+            input_.slot_occupied_ratio > 0.48) {
+          path_seg_vec.clear();
+          pnc::geometry_lib::LineSegment line;
+          line.pA = current_pose.pos;
+          line.heading = current_pose.heading;
+          const std::vector<double> ratio_tab = {0.48, 0.68, 0.88, 0.98};
+          const std::vector<double> length_tab = {0.28, 1.18, 2.18, 2.68};
+
+          const double length = pnc::mathlib::Interp1(
+              ratio_tab, length_tab, input_.slot_occupied_ratio);
+          line.pB =
+              line.pA + length * pnc::geometry_lib::GenHeadingVec(line.heading);
+          line.length = (line.pB - line.pA).norm();
+          pnc::geometry_lib::PathSegment line_seg(current_gear, line);
+          path_seg_vec.emplace_back(std::move(line_seg));
+        } else {
+          path_seg_vec.emplace_back(tmp_path_seg);
+        }
       } else {
         if (tmp_path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_S_TURN &&
             j > 0) {
