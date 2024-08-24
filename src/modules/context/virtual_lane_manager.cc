@@ -2231,7 +2231,7 @@ void VirtualLaneManager::TrackEgoLane() {
         SelectEgoLaneWithoutPlan();
         return;
       }
-      if (is_on_highway_ && zero_relative_id_nums >= 2) {
+      if (is_ego_on_expressway_  && zero_relative_id_nums >= 2) {
         if (!is_on_ramp_ && dis_to_ramp_ < 3000 && !is_leaving_ramp_ &&
             lane_keep_status) {
           // hack::针对分流 感知未提供分汇流点信息 作如下后处理
@@ -2704,11 +2704,11 @@ void VirtualLaneManager::PreprocessRoadSplit(
     return;
   }
 
-  if (ramp_direction_ == RAMP_ON_RIGHT) {
+  if (first_split_dir_dis_info_.first == ON_RIGHT) {
     is_exist_ramp_on_road_ = true;
     relative_id_lanes_[order_ids[1]]->set_relative_id(0);
     origin_order_id = relative_id_lanes_[order_ids[1]]->get_order_id();
-  } else if (ramp_direction_ == RAMP_ON_LEFT) {
+  } else if (first_split_dir_dis_info_.first == ON_LEFT) {
     is_exist_ramp_on_road_ = true;
     relative_id_lanes_[order_ids[0]]->set_relative_id(0);
     origin_order_id = relative_id_lanes_[order_ids[0]]->get_order_id();
@@ -2734,10 +2734,10 @@ void VirtualLaneManager::PreprocessRampSplit(
 
   if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
     is_exist_split_on_ramp_ = true;
-    if (first_split_direction_ == RAMP_ON_RIGHT) {
+    if (first_split_dir_dis_info_.first == ON_RIGHT) {
       relative_id_lanes_[order_ids[1]]->set_relative_id(0);
       origin_order_id = relative_id_lanes_[order_ids[1]]->get_order_id();
-    } else if (first_split_direction_ == RAMP_ON_LEFT) {
+    } else if (first_split_dir_dis_info_.first == ON_LEFT) {
       relative_id_lanes_[order_ids[0]]->set_relative_id(0);
       origin_order_id = relative_id_lanes_[order_ids[0]]->get_order_id();
     } else {
