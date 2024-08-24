@@ -593,6 +593,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
   } else if (curr_state == kLaneChangeExecution) {
     planning_hmi_info->ad_info.lane_change_status =
         iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+  } else if (curr_state == kLaneChangeComplete) {
+    planning_hmi_info->ad_info.lane_change_status =
+        iflyauto::LaneChangeStatus::LC_STATE_STARTING;
   } else if (curr_state == kLaneChangeCancel) {
     planning_hmi_info->ad_info.lane_change_status =
         iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
