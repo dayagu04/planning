@@ -1637,8 +1637,15 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (sum_dis_to_last_merge_point > dis_threshold_to_last_merge_point_) {
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
-    if (last_merge_seg) {
-      sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
+    if (last_merge_seg &&
+        last_merge_seg->in_link().size() == 2) {
+      //fengwang31:目前仅针对inlink是2的情况做处理
+      const auto& merge_last_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
+      if (merge_last_seg &&
+          merge_last_seg->usage() == SdMapSwtx::RAMP &&
+          last_merge_seg->usage() != SdMapSwtx::RAMP) {
+        sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
+      }
     }
   }
   JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
