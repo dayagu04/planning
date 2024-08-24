@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "Eigen/src/Core/Matrix.h"
@@ -1590,6 +1591,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
   is_on_ramp_ = current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
   // 计算split信息
+  first_split_dir_dis_info_ = std::make_pair(None, NL_NMAX);
   const auto& split_info = sd_map.GetSplitInfoList(
       current_segment->id(), nearest_s, max_search_length);
   if (!split_info.empty()) {
@@ -1597,6 +1599,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (split_info.begin()->second > 0 && split_segment) {
       distance_to_first_road_split_ = split_info.begin()->second;
       first_split_direction_ = MakesureSplitDirection(*split_segment, sd_map);
+      first_split_dir_dis_info_ = std::make_pair(static_cast<SplitRelativeDirection>(first_split_direction_), distance_to_first_road_split_);
       if (is_on_ramp_ &&
           distance_to_first_road_split_ < distance_to_first_road_merge_) {
         ramp_direction_ = first_split_direction_;
