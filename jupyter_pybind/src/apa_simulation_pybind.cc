@@ -249,12 +249,12 @@ const bool InterfaceUpdateParam(
       ground_line_info.ground_lines[i].points_3d[j].y = gl_coord[i][j].y();
     }
   }
-  fus_obj_info.fusion_object_num = fus_obj_coord.size();
-  for (size_t i = 0; i < fus_obj_info.fusion_object_num; ++i) {
-    fus_obj_info.fusion_object[i].additional_info.polygon_points_num =
+  fus_obj_info.fusion_object_size = fus_obj_coord.size();
+  for (size_t i = 0; i < fus_obj_info.fusion_object_size; ++i) {
+    fus_obj_info.fusion_object[i].additional_info.polygon_points_size =
         fus_obj_coord[i].size();
     for (size_t j = 0;
-         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_num;
+         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
          ++j) {
       fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
           fus_obj_coord[i][j].x();
@@ -262,13 +262,13 @@ const bool InterfaceUpdateParam(
           fus_obj_coord[i][j].y();
     }
   }
-  fus_occ_obj_info.fusion_object_num = fus_occ_obj_coord.size();
-  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_num; ++i) {
+  fus_occ_obj_info.fusion_object_size = fus_occ_obj_coord.size();
+  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_size; ++i) {
     fus_occ_obj_info.fusion_object[i]
-        .additional_occupancy_info.polygon_points_num =
+        .additional_occupancy_info.polygon_points_size =
         fus_occ_obj_coord[i].size();
     for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
-                               .additional_occupancy_info.polygon_points_num;
+                               .additional_occupancy_info.polygon_points_size;
          ++j) {
       fus_occ_obj_info.fusion_object[i]
           .additional_occupancy_info.polygon_points[j]

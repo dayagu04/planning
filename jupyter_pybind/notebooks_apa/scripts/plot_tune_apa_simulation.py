@@ -14,7 +14,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240814/20240814-20-42-23/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-14-20-42-23_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240824/20240824-16-14-11/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-24-16-14-12_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -292,8 +292,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   fus_obj_msg.serialize(fus_obj_msg_buff)
   fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
   fus_obj_coord = []
-  for i in range(fus_obj_msg.fusion_object_num):
-    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_num
+  for i in range(fus_obj_msg.fusion_object_size):
+    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_size
     polygon_points = fus_obj_msg.fusion_object[i].additional_info.polygon_points
     single_fus_obj_coord = []
     for j in range(num):
@@ -304,8 +304,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
   fus_occ_obj_coord = []
-  for i in range(fus_occ_obj_msg.fusion_object_num):
-    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_num
+  for i in range(fus_occ_obj_msg.fusion_object_size):
+    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_size
     polygon_points = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points
     single_fus_occ_obj_coord = []
     for j in range(num):
