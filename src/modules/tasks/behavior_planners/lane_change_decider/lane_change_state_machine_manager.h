@@ -17,8 +17,8 @@ struct StateTransitionInfo {
 };
 
 enum RelativeDirection {
-  ON_LEFT = 0,
-  ON_RIGHT = 1,
+  LEFT_DIRECTION = 0,
+  RIGHT_DIRECTION = 1,
 };
 struct LaneChangeTimer {
   bool propose_time_count_ = false;

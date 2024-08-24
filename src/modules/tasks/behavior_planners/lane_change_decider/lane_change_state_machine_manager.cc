@@ -1806,7 +1806,7 @@ bool LaneChangeStateMachineManager::IsMergeRegion(int *merge_lane_virtual_id) {
   if (left_reference_path == nullptr) {
     return false;
   }
-  if (IsOverlapWithOtherLaneOnEndRegion(left_reference_path, ON_LEFT)) {
+  if (IsOverlapWithOtherLaneOnEndRegion(left_reference_path, LEFT_DIRECTION)) {
     *merge_lane_virtual_id = left_lane->get_virtual_id();
     return true;
   }
@@ -1820,7 +1820,7 @@ bool LaneChangeStateMachineManager::IsMergeRegion(int *merge_lane_virtual_id) {
   if (right_reference_path == nullptr) {
     return false;
   }
-  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path, ON_RIGHT)) {
+  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path, RIGHT_DIRECTION)) {
     *merge_lane_virtual_id = right_lane->get_virtual_id();
     return true;
   }
@@ -1891,9 +1891,9 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   bool lane_end_satisfied_merge_condition = false;
   if (ref_lane_coord->XYToSL(cur_ref_path_end_point_temp, frenet_point)) {
     cur_to_other_lane_end_lat_diff = frenet_point.y;
-    if (rel_dir == ON_LEFT && cur_to_other_lane_end_lat_diff > 0) {
+    if (rel_dir == LEFT_DIRECTION && cur_to_other_lane_end_lat_diff > 0) {
       lane_end_satisfied_merge_condition = true;
-    } else if (rel_dir == ON_RIGHT && cur_to_other_lane_end_lat_diff < 0) {
+    } else if (rel_dir == RIGHT_DIRECTION && cur_to_other_lane_end_lat_diff < 0) {
       lane_end_satisfied_merge_condition = true;
     } else if (std::abs(cur_to_other_lane_end_lat_diff) <
                end_lane_lat_diff_threshold) {
@@ -1902,9 +1902,9 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   } else {
     if (cur_lane_coord->XYToSL(ref_path_end_point_temp, frenet_point)) {
       cur_to_other_lane_end_lat_diff = frenet_point.y;
-      if (rel_dir == ON_LEFT && cur_to_other_lane_end_lat_diff < 0) {
+      if (rel_dir == LEFT_DIRECTION && cur_to_other_lane_end_lat_diff < 0) {
         lane_end_satisfied_merge_condition = true;
-      } else if (rel_dir == ON_RIGHT && cur_to_other_lane_end_lat_diff > 0) {
+      } else if (rel_dir == RIGHT_DIRECTION && cur_to_other_lane_end_lat_diff > 0) {
         lane_end_satisfied_merge_condition = true;
       } else if (std::abs(cur_to_other_lane_end_lat_diff) <
                  end_lane_lat_diff_threshold) {
