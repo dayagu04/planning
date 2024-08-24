@@ -133,7 +133,7 @@ void StGraphGenerator::Update(
   bool is_on_ramp = lon_behav_input_->is_on_ramp();
   bool is_continuous_ramp = lon_behav_input_->is_continuous_ramp();
   double ramp_v_limit = config_.v_limit_ramp;
-  double acc_to_ramp = -1.0;
+  double acc_to_ramp = -0.7;
   CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp,
                     is_continuous_ramp, ramp_v_limit, acc_to_ramp, v_ego);
 
