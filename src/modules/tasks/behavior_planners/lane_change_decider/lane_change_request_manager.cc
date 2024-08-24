@@ -81,6 +81,7 @@ bool LaneChangeRequestManager::Update(
   const bool enable_use_merge_lc_request =
       config_.enable_use_merge_change_request;
   const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
+  const auto& function_info = session_->environmental_model().function_info();
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -122,6 +123,12 @@ bool LaneChangeRequestManager::Update(
         overtake_request_.Reset();
         LOG_DEBUG(
             "cann't generate overtake lane change close to the intersection");
+        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
+      }
+      // lcc功能抑制超车变道
+      if (function_info.function_mode() != common::DrivingFunctionInfo::NOA) {
+        overtake_request_.Reset();
+        LOG_DEBUG("cann't generate overtake lane change in non-NOA functions");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
