@@ -217,18 +217,6 @@ void PlanningAdapter::Proc() {
   // input_topic_latency->set_hmi(get_latency(
   //     start_time, local_view_ptr_->hmi_inner_info.msg_header.stamp));
 
-  if (is_hmi_mcu_inner_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
-    local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
-    local_view_ptr_->hmi_mcu_inner_info_recv_time =
-        hmi_mcu_inner_info_msg_recv_time_;
-    is_hmi_mcu_inner_info_msg_updated_.store(false);
-  }
-  input_topic_timestamp->set_hmi(
-      local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
-  input_topic_latency->set_hmi(get_latency(
-      start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
-
   // 1.7 receive parking_fusion
   if (is_parking_fusion_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
