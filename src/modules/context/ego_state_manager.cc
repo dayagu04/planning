@@ -44,6 +44,11 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
   hpp_max_replan_dist_err_ = config_.hpp_max_replan_dist_err;
   enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
   enable_ego_state_compensation_ = config_.enable_ego_state_compensation;
+#ifdef X86
+  if (SimulationContext::Instance()->is_close_loop()) {
+    enable_ego_state_compensation_ = false;
+  }
+#endif
   // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
   v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
 }
@@ -227,9 +232,9 @@ bool EgoStateManager::update(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   planning_math::Vec2d center(
       ego_pose_.x +
-          std::cos(ego_pose_.theta) * vehicle_param.rear_axis_to_center,
+          std::cos(ego_pose_.theta) * vehicle_param.rear_axle_to_center,
       ego_pose_.y +
-          std::sin(ego_pose_.theta) * vehicle_param.rear_axis_to_center);
+          std::sin(ego_pose_.theta) * vehicle_param.rear_axle_to_center);
   planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param.length,
                                vehicle_param.width);
   polygon_ = planning_math::Polygon2d(ego_box);
@@ -401,7 +406,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   cur_vehicle_state_process_.angular_velocity = ego_state->ego_yaw_rate();
-  cur_vehicle_state_process_.linear_velocity = ego_state->ego_v();
+  cur_vehicle_state_process_.linear_velocity =
+      std::max(ego_state->ego_v(), 0.0);
   cur_vehicle_state_process_.jerk = ego_state->ego_jerk();
   cur_vehicle_state_process_.linear_acceleration = ego_state->ego_acc();
   cur_vehicle_state_process_.delta =
@@ -418,9 +424,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
   auto cur_time_us = IflyTime::Now_us();
   const auto &local_view = session_->environmental_model().get_local_view();
   const auto &localization_timestamp_us =
-      local_view.localization.header.timestamp;
-  // const auto localization_timestamp_us =
-  //     local_view.localization_estimate.header.timestamp;
+      local_view.localization.msg_header.stamp;
+
   uint64_t localization_latency_ms =
       localization_timestamp_us == 0
           ? 0

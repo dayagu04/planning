@@ -17,15 +17,43 @@ class LaneChangeLaneManager {
   ~LaneChangeLaneManager() {}
 
   void assign_lc_lanes(int lane_virtual_id);
-  void reset_lc_lanes();
+  void reset_lc_lanes(
+      const StateMachineLaneChangeStatus state_machine_lc_state);
   void reset_origin_lane() {
     origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
   }
   void set_fix_lane_to_target() {
-    fix_lane_virtual_id_ = target_lane_virtual_id_;
+    const auto& target_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_);
+    const auto& origin_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
+    if (target_lane) {
+      fix_lane_virtual_id_ = target_lane_virtual_id_;
+    } else if (origin_lane) {
+      fix_lane_virtual_id_ = origin_lane_virtual_id_;
+      std::cout
+          << "last frame target lane disappear, set origin as target&fix lane"
+          << std::endl;
+      target_lane_virtual_id_ = origin_lane_virtual_id_;
+    } else {
+      fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      std::cout << "last frame target&origin lane disappear, set current as "
+                   "target&origin lane"
+                << std::endl;
+      origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    }
   }
   void set_fix_lane_to_origin() {
-    fix_lane_virtual_id_ = origin_lane_virtual_id_;
+    const auto& origin_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
+    if (origin_lane) {
+      fix_lane_virtual_id_ = origin_lane_virtual_id_;
+    } else {
+      std::cout << "last frame origin lane disappear, set current as fix lane"
+                << std::endl;
+      fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    }
   }
   void set_target_lane(int target_lane_virtual_id) {
     target_lane_virtual_id_ = target_lane_virtual_id;

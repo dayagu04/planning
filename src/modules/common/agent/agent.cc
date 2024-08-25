@@ -17,6 +17,7 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kDecayJerkMps3 = -0.2;
 constexpr double kPredictionHorizon = 5.0;
 }  // namespace
+Agent::Agent() {}
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
              double start_relative_timestamp)

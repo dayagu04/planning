@@ -1,6 +1,8 @@
 #include "cone_lane_change_request.h"
+
 #include <glog/logging.h>
 #include <math.h>
+
 #include <cassert>
 #include <cmath>
 #include <complex>
@@ -148,8 +150,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     is_cone_lane_change_situation_ = false;
     return;
   }
-  const double ego_front_edge = vehicle_param.front_edge_to_center;
-  const double ego_rear_edge = vehicle_param.back_edge_to_center;
+  const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
+  const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   double eps_s = vehicle_param.length * kLongClusterCoeff;
   double eps_l = vehicle_param.width + kLatClusterThre;
   const double ego_vel = ego_state->ego_v();

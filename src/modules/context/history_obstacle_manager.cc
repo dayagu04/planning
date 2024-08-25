@@ -49,7 +49,7 @@ bool HistoryObstacleManager::Update() {
       session_->environmental_model().get_obstacle_manager();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double rear_axis_to_front_edge = vehicle_param.rear_axis_to_front_edge;
+  const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
   frenet_coord_ =
       reference_path->get_reference_path_by_current_lane()->get_frenet_coord();
   if (frenet_coord_ != nullptr) {
@@ -107,7 +107,7 @@ bool HistoryObstacleManager::Update() {
           // obstacle center to camera.  camera to car front edge:1.25m
           // maintain obstacle in blind spots for entering the field of vision
           double obs_to_camera_s =
-              rel_s - vehicle_param.rear_axis_to_front_edge + 1.25;
+              rel_s - vehicle_param.front_edge_to_rear_axle + 1.25;
           // TODO(bsniu): rel_camera_s to be modified (enu)
           if (CheckEgoNearBound(rel_s, rel_l) &&
               ((obs_to_camera_s < 0) ||

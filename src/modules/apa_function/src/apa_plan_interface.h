@@ -10,6 +10,7 @@
 #include "apa_world.h"
 #include "local_view.h"
 #include "plan_data.h"
+#include "planning_hmi_c.h"
 #include "session.h"
 
 namespace planning {
@@ -48,6 +49,9 @@ class ApaPlanInterface {
   const iflyauto::PlanningOutput& GetPlaningOutput() const {
     return planning_output_;
   }
+  const iflyauto::PlanningHMIOutputInfoStr& GetPlaningHmi() const {
+    return planning_hmi_;
+  }
 
  private:
   std::shared_ptr<ApaPlannerBase> GetPlannerByType(
@@ -63,6 +67,7 @@ class ApaPlanInterface {
   std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;
 
   iflyauto::PlanningOutput planning_output_;
+  iflyauto::PlanningHMIOutputInfoStr planning_hmi_;
   std::shared_ptr<plan_interface::PlanData> plan_data_ptr_;
 
   // for simulation

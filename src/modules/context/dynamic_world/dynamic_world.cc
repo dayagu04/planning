@@ -54,6 +54,9 @@ bool DynamicWorld::ConstructDynamicWorld() {
   // build nodes for all agents
   std::vector<int32_t> lane_ids;
   for (const auto& lane : lane_manager.get_virtual_lanes()) {
+    if (lane == nullptr) {
+      continue;
+    }
     lane_ids.emplace_back(lane->get_virtual_id());
   }
 
@@ -64,11 +67,11 @@ bool DynamicWorld::ConstructDynamicWorld() {
     }
     lane_id_set.insert(lane_id);
     auto static_lane = lane_manager.get_lane_with_virtual_id(lane_id);
-    auto ref_line = static_lane->get_reference_path();
-    // auto ref_line = refline_manager.get_reference_path_by_lane(lane_id);
     if (static_lane == nullptr) {
       continue;
     }
+    auto ref_line = static_lane->get_reference_path();
+    // auto ref_line = refline_manager.get_reference_path_by_lane(lane_id);
     if (ref_line == nullptr) {
       continue;
     }

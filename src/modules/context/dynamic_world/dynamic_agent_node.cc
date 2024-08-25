@@ -1,7 +1,9 @@
 #include "dynamic_agent_node.h"
+
 #include <memory>
 #include <utility>
 #include <vector>
+
 #include "ifly_time.h"
 #include "reference_path.h"
 #include "trajectory/center_line_point.h"
@@ -47,8 +49,8 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
                                    const trajectory::TrajectoryPoint ego_state)
     : agent_(agent) {
   double kEgoWidth = vehicle_param_.width;
-  double kEgoFrontEdgeToCenterDistance = vehicle_param_.front_edge_to_center;
-  double kEgoBackEdgeToCenterDistance = vehicle_param_.back_edge_to_center;
+  double kEgoFrontEdgeToCenterDistance = vehicle_param_.front_edge_to_rear_axle;
+  double kEgoBackEdgeToCenterDistance = vehicle_param_.rear_edge_to_rear_axle;
   is_valid_ = false;
   if (agent == nullptr) {
     return;

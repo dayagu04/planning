@@ -87,7 +87,15 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     if road_msg_tmp != None:
       road_msg = road_msg_tmp
-      rdg_lane_lines_msg_tmp = find(bag_loader.rdg_lane_lines_msg, road_msg_tmp.isp_timestamp)
+      index = 0
+      try:
+        for i in range(16):
+          if (road_msg_tmp.msg_header.input_list[i].input_type == 22):
+            index = i
+            break
+        rdg_lane_lines_msg_tmp = findbyseq(bag_loader.rdg_lane_lines_msg, road_msg_tmp.msg_header.input_list[index].seq)
+      except:
+        rdg_lane_lines_msg_tmp = None
       if rdg_lane_lines_msg_tmp != None:
         rdg_lane_lines_msg = rdg_lane_lines_msg_tmp
         print('find rdg_lane_lines_msg success')
@@ -96,7 +104,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     loc_msg_tmp = find(bag_loader.loc_msg, localization_timestamp)
     if loc_msg_tmp != None:
       loc_msg = loc_msg_tmp
-
 
   local_view_data['data_msg']['plan_msg'] = plan_msg
   local_view_data['data_msg']['plan_debug_msg'] = plan_debug_msg
@@ -278,6 +285,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       19:local_view_data['data_lane_19'],
     }
 
+
     data_center_line_dict = {
       0:local_view_data['data_center_line_0'],
       1:local_view_data['data_center_line_1'],
@@ -295,9 +303,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       try:
         if line_info_list[i]['type'] == ['dashed']:
           fig1.renderers[0 + i].glyph.line_dash = 'dashed'
-        elif line_info_list[i]['type'] == ['dashdot']:
-          fig1.renderers[0 + i].glyph.line_dash = 'dashdot'
-          print("虚拟线")
         else:
           fig1.renderers[0 + i].glyph.line_dash = 'solid'
         data_lane = data_lane_dict[i]
@@ -387,6 +392,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         print("vis topo_msg error")
 
 
+
     # 加载rdg车道线
     if bag_loader.rdg_lane_lines_msg['enable'] == True:
       rdg_lane_lines = load_rdg_lane_lines(rdg_lane_lines_msg, is_enu_to_car, loc_msg, g_is_display_enu)
@@ -431,6 +437,54 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         except:
           print('error1')
           pass
+
+      #加载停止线
+      stop_lines = load_stop_lines(rdg_lane_lines_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      data_stop_line_dict = {
+        0:local_view_data['stop_line_0'],
+        1:local_view_data['stop_line_1'],
+        2:local_view_data['stop_line_2'],
+        3:local_view_data['stop_line_3'],
+        4:local_view_data['stop_line_4']
+      }
+      for i in range(5):
+        try:
+          data_stop_line = data_stop_line_dict[i]
+          data_stop_line.data.update({
+            'stop_line_{}_x'.format(i): stop_lines[i]['stop_line_x'],
+            'stop_line_{}_y'.format(i): stop_lines[i]['stop_line_y'],
+          })
+        except:
+          pass
+
+      #加载斑马线人行道
+      zebra_crossing_lines = load_zebra_crossing_lines(rdg_lane_lines_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      zebra_crossing_line_dict = {
+        0:local_view_data['zebra_crossing_line_0'],
+        1:local_view_data['zebra_crossing_line_1'],
+        2:local_view_data['zebra_crossing_line_2'],
+        3:local_view_data['zebra_crossing_line_3'],
+        4:local_view_data['zebra_crossing_line_4'],
+        5:local_view_data['zebra_crossing_line_5'],
+        6:local_view_data['zebra_crossing_line_6'],
+        7:local_view_data['zebra_crossing_line_7'],
+        8:local_view_data['zebra_crossing_line_8'],
+        9:local_view_data['zebra_crossing_line_9'],
+        10:local_view_data['zebra_crossing_line_10'],
+        11:local_view_data['zebra_crossing_line_11']
+      }
+      for i in range(12):
+        try:
+          data_zebra_crossing_lines = zebra_crossing_line_dict[i]
+          data_zebra_crossing_lines.data.update({
+            'zebra_crossing_line_{}_x'.format(i): zebra_crossing_lines[i]['zebra_crossing_line_x'],
+            'zebra_crossing_line_{}_y'.format(i): zebra_crossing_lines[i]['zebra_crossing_line_y'],
+          })
+        except:
+          pass
+
+
+
     #加载planning 生成中心线的信息
     try:
       plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
@@ -482,7 +536,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'origin_lane_y':center_line_list[i]['line_y_vec']
         })
 
-    if loc_mode == 2:
+    if loc_mode > 0:
       plan_debug_json = plan_debug_json_msg
       plan_traj_x = plan_debug_json["assembled_x"]
       plan_traj_y = plan_debug_json["assembled_y"]
@@ -763,7 +817,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   #  加载fix_lane, target_lane信息
   ### step 3: 加载planning轨迹信息
   # if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
-  if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
+  if bag_loader.plan_msg['enable'] == True and loc_mode > 0:
     trajectory = plan_msg.trajectory
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
@@ -1079,6 +1133,27 @@ def load_local_view_figure():
   rdg_data_lane_18 = ColumnDataSource(data = {'rdg_line_18_y':[], 'rdg_line_18_x':[]})
   rdg_data_lane_19 = ColumnDataSource(data = {'rdg_line_19_y':[], 'rdg_line_19_x':[]})
 
+  stop_line_0 = ColumnDataSource(data = {'stop_line_0_x':[], 'stop_line_0_y':[]})
+  stop_line_1 = ColumnDataSource(data = {'stop_line_1_x':[], 'stop_line_1_y':[]})
+  stop_line_2 = ColumnDataSource(data = {'stop_line_2_x':[], 'stop_line_2_y':[]})
+  stop_line_3 = ColumnDataSource(data = {'stop_line_3_x':[], 'stop_line_3_y':[]})
+  stop_line_4 = ColumnDataSource(data = {'stop_line_4_x':[], 'stop_line_4_y':[]})
+
+  zebra_crossing_line_0 = ColumnDataSource(data = {'zebra_crossing_line_0_x':[], 'zebra_crossing_line_0_y':[]})
+  zebra_crossing_line_1 = ColumnDataSource(data = {'zebra_crossing_line_1_x':[], 'zebra_crossing_line_1_y':[]})
+  zebra_crossing_line_2 = ColumnDataSource(data = {'zebra_crossing_line_2_x':[], 'zebra_crossing_line_2_y':[]})
+  zebra_crossing_line_3 = ColumnDataSource(data = {'zebra_crossing_line_3_x':[], 'zebra_crossing_line_3_y':[]})
+  zebra_crossing_line_4 = ColumnDataSource(data = {'zebra_crossing_line_4_x':[], 'zebra_crossing_line_4_y':[]})
+  zebra_crossing_line_5 = ColumnDataSource(data = {'zebra_crossing_line_5_x':[], 'zebra_crossing_line_5_y':[]})
+  zebra_crossing_line_6 = ColumnDataSource(data = {'zebra_crossing_line_6_x':[], 'zebra_crossing_line_6_y':[]})
+  zebra_crossing_line_7 = ColumnDataSource(data = {'zebra_crossing_line_7_x':[], 'zebra_crossing_line_7_y':[]})
+  zebra_crossing_line_8 = ColumnDataSource(data = {'zebra_crossing_line_8_x':[], 'zebra_crossing_line_8_y':[]})
+  zebra_crossing_line_9 = ColumnDataSource(data = {'zebra_crossing_line_9_x':[], 'zebra_crossing_line_9_y':[]})
+  zebra_crossing_line_10 = ColumnDataSource(data = {'zebra_crossing_line_10_x':[], 'zebra_crossing_line_10_y':[]})
+  zebra_crossing_line_11 = ColumnDataSource(data = {'zebra_crossing_line_11_x':[], 'zebra_crossing_line_11_y':[]})
+
+
+
   if is_vis_map:
     ehr_data_lanes = []
     for i in range(Max_line_size):
@@ -1351,6 +1426,23 @@ def load_local_view_figure():
                      'data_lane_topo_17':data_lane_topo_17,\
                      'data_lane_topo_18':data_lane_topo_18,\
                      'data_lane_topo_19':data_lane_topo_19,\
+                     'stop_line_0':stop_line_0,\
+                     'stop_line_1':stop_line_1,\
+                     'stop_line_2':stop_line_2,\
+                     'stop_line_3':stop_line_3,\
+                     'stop_line_4':stop_line_4,\
+                     'zebra_crossing_line_0':zebra_crossing_line_0,\
+                     'zebra_crossing_line_1':zebra_crossing_line_1,\
+                     'zebra_crossing_line_2':zebra_crossing_line_2,\
+                     'zebra_crossing_line_3':zebra_crossing_line_3,\
+                     'zebra_crossing_line_4':zebra_crossing_line_4,\
+                     'zebra_crossing_line_5':zebra_crossing_line_5,\
+                     'zebra_crossing_line_6':zebra_crossing_line_6,\
+                     'zebra_crossing_line_7':zebra_crossing_line_7,\
+                     'zebra_crossing_line_8':zebra_crossing_line_8,\
+                     'zebra_crossing_line_9':zebra_crossing_line_9,\
+                     'zebra_crossing_line_10':zebra_crossing_line_10,\
+                     'zebra_crossing_line_11':zebra_crossing_line_11,
                      }
   if is_vis_map:
     for i in range(len(ehr_data_lanes)):
@@ -1444,6 +1536,24 @@ def load_local_view_figure():
   fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
   fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
 
+  fig1.line('stop_line_0_y', 'stop_line_0_x', source = stop_line_0, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
+  fig1.line('stop_line_1_y', 'stop_line_1_x', source = stop_line_1, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
+  fig1.line('stop_line_2_y', 'stop_line_2_x', source = stop_line_2, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
+  fig1.line('stop_line_3_y', 'stop_line_3_x', source = stop_line_3, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
+  fig1.line('stop_line_4_y', 'stop_line_4_x', source = stop_line_4, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
+
+  fig1.patch('zebra_crossing_line_0_y', 'zebra_crossing_line_0_x', source = zebra_crossing_line_0, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_1_y', 'zebra_crossing_line_1_x', source = zebra_crossing_line_1, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_2_y', 'zebra_crossing_line_2_x', source = zebra_crossing_line_2, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_3_y', 'zebra_crossing_line_3_x', source = zebra_crossing_line_3, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_4_y', 'zebra_crossing_line_4_x', source = zebra_crossing_line_4, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_5_y', 'zebra_crossing_line_5_x', source = zebra_crossing_line_5, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_6_y', 'zebra_crossing_line_6_x', source = zebra_crossing_line_6, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_7_y', 'zebra_crossing_line_7_x', source = zebra_crossing_line_7, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_8_y', 'zebra_crossing_line_8_x', source = zebra_crossing_line_8, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_9_y', 'zebra_crossing_line_9_x', source = zebra_crossing_line_9, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_10_y', 'zebra_crossing_line_10_x', source = zebra_crossing_line_10, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
+  fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
   f61 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)

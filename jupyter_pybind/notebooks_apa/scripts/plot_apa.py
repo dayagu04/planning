@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240730/20240730-10-47-22/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-30-10-47-22_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240824/20240824-16-16-00/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-24-16-16-01_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
@@ -18,6 +18,7 @@ output_notebook()
 
 bag_loader = LoadCyberbag(bag_path, True)
 max_time = bag_loader.load_all_data()
+print("max_time = ", max_time)
 fig1, local_view_data = load_local_view_figure_parking()
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -103,12 +104,16 @@ def slider_callback(bag_time, vehicle_type):
     vehicle_type = 'CHERY_E0X'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag)
+  # print("bag_time:", bag_time)
   index_map = bag_loader.get_msg_index(bag_time)
+  # print("index_map:", index_map)
 
   if bag_loader.loc_msg['enable'] == True:
     loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
-    print("local_vel = ",  loc_msg.pose.linear_velocity_from_wheel)
-    temp_pos = [loc_msg.pose.local_position.x, loc_msg.pose.local_position.y]
+
+    velocity = math.hypot(loc_msg.velocity.velocity_boot.vx,loc_msg.velocity.velocity_boot.vy)
+    print("local_vel = ", velocity)
+    temp_pos = [loc_msg.position.position_boot.x, loc_msg.position.position_boot.y]
     global cur_pos
     print("local_move_dist = ",  math.hypot(temp_pos[0] - cur_pos[0], temp_pos[1] - cur_pos[1]))
     cur_pos = temp_pos

@@ -1,7 +1,6 @@
 #include "general_lateral_decider.h"
+
 #include <assert.h>
-#include "frenet_ego_state.h"
-#include "general_lateral_decider_utils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -14,6 +13,8 @@
 #include "agent_node_manager.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "frenet_ego_state.h"
+#include "general_lateral_decider_utils.h"
 #include "log.h"
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
@@ -612,7 +613,7 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
   const double ego_vx = ego_v * std::cos(ego_theta);
   const double ego_vy = ego_v * std::sin(ego_theta);
 
-  const double time_diff = 3.0 / ego_v;
+  const double time_diff = 0.1;
 
   bool is_left_overlap = false;
   bool is_right_overlap = false;
@@ -633,9 +634,9 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
       break;
     }
     const double ego_s_start =
-        prediction_sl.x - vehicle_param.back_edge_to_rear_axis;
+        prediction_sl.x - vehicle_param.rear_edge_to_rear_axle;
     const double ego_s_end = prediction_sl.x + vehicle_param.length -
-                             vehicle_param.back_edge_to_rear_axis;
+                             vehicle_param.rear_edge_to_rear_axle;
     const auto ego_center_point =
         Vec2d((ego_s_start + ego_s_end) * 0.5, prediction_sl.y);
 
@@ -754,9 +755,9 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   const auto &ego_cur_s = ref_traj_points_.front().s;
 
   const double rear_axle_to_front_bumper =  // TBD：define as consexpr
-      vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
+      vehicle_param.length - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_start =
-      ego_cur_s - vehicle_param.back_edge_to_rear_axis;
+      ego_cur_s - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
   double front_lon_buf_dis = 1.0;
@@ -798,7 +799,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     const double ego_l = traj_point.l;
 
     const double care_area_s_start =
-        ego_s - vehicle_param.back_edge_to_rear_axis - rear_lon_buf_dis;
+        ego_s - vehicle_param.rear_edge_to_rear_axle - rear_lon_buf_dis;
     const double care_area_s_end =
         ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
     const auto care_area_center =
@@ -834,7 +835,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     std::pair<double, double> s_side_range{obstacle_sl_polygon.min_x(),
                                            obstacle_sl_polygon.max_x()};
     std::pair<double, double> ego_side_range{
-        ego_s - vehicle_param.back_edge_to_rear_axis,
+        ego_s - vehicle_param.rear_edge_to_rear_axle,
         ego_s + rear_axle_to_front_bumper + 2.};
     bool b_overlap_side = std::max(s_side_range.first, ego_side_range.first) <
                           std::min(s_side_range.second, ego_side_range.second);
@@ -895,9 +896,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &ego_cur_s = plan_history_traj_.front().s;
 
   const double rear_axle_to_front_bumper =  // TBD：define as consexpr
-      vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
+      vehicle_param.length - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_start =
-      ego_cur_s - vehicle_param.back_edge_to_rear_axis;
+      ego_cur_s - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
   const double half_ego_width = vehicle_param.max_width * 0.5;
@@ -942,7 +943,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const double ego_l = traj_point.l;
 
     const double care_area_s_start =
-        ego_s - vehicle_param.back_edge_to_rear_axis - rear_lon_buf_dis;
+        ego_s - vehicle_param.rear_edge_to_rear_axle - rear_lon_buf_dis;
     const double care_area_s_end =
         ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
     const auto care_area_center =
@@ -985,7 +986,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     std::pair<double, double> s_side_range{obstacle_sl_polygon.min_x(),
                                            obstacle_sl_polygon.max_x()};
     std::pair<double, double> ego_side_range{
-        ego_s - vehicle_param.back_edge_to_rear_axis,
+        ego_s - vehicle_param.rear_edge_to_rear_axle,
         ego_s + rear_axle_to_front_bumper + 2.};
     bool b_overlap_side = std::max(s_side_range.first, ego_side_range.first) <
                           std::min(s_side_range.second, ego_side_range.second);
@@ -1308,13 +1309,13 @@ void GeneralLateralDecider::PostProcessBound(
     if (bound_priority < upper_bound_priority) {
       max_upper = bound_output.second;
     }
-    //处理同一类型bound的lower和upper
+    // 处理同一类型bound的lower和upper
     if (lower > upper) {
       double mid_bound = 0.5 * (lower + upper);
       lower = mid_bound;
       upper = mid_bound;
     }
-    //处理不同类型bound的lower和upper
+    // 处理不同类型bound的lower和upper
     if (lower > bound_output.second) {
       if (bound_priority < upper_bound_priority) {
         lower = bound_output.second;
@@ -1336,7 +1337,7 @@ void GeneralLateralDecider::PostProcessBound(
         bound_output.first = mid_bound;
       }
     }
-    //选取最值
+    // 选取最值
     if (bound.lower > bound_output.first) {
       bound_output.first = lower;
       tmp_lower_bound_info.id = bound.bound_info.id;
@@ -1509,8 +1510,8 @@ void GeneralLateralDecider::SampleRoadDistanceInfo(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  for (double s = s_target - vehicle_param.back_edge_to_rear_axis;
-       s < s_target + vehicle_param.rear_axis_to_front_edge +
+  for (double s = s_target - vehicle_param.rear_edge_to_rear_axle;
+       s < s_target + vehicle_param.front_edge_to_rear_axle +
                config_.sample_forward_distance;
        s += cut_length) {
     if (reference_path_ptr_->get_reference_point_by_lon(s, refpath_pt)) {
@@ -1698,7 +1699,7 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double rear_axle_to_front_bumper =  // TBD：define as consexpr
-      vehicle_param.length - vehicle_param.back_edge_to_rear_axis;
+      vehicle_param.length - vehicle_param.rear_edge_to_rear_axle;
   const double span_t = config_.delta_t * config_.num_step;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
@@ -1707,7 +1708,7 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
       continue;
     }
     const double ego_s_start =
-        traj_point.s - vehicle_param.back_edge_to_rear_axis;
+        traj_point.s - vehicle_param.rear_edge_to_rear_axle;
     const double ego_s_end = traj_point.s + rear_axle_to_front_bumper;
 
     Polygon2d obstacle_sl_polygon;

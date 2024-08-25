@@ -37,6 +37,7 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   lane_merge_split_point_ = lane.lane_merge_split_point;
   left_lane_boundary_ = lane.left_lane_boundary;
   right_lane_boundary_ = lane.right_lane_boundary;
+  stop_line_ = lane.stop_line;
 
   if (left_lane_boundary_.existence) {
     if (right_lane_boundary_.existence) {

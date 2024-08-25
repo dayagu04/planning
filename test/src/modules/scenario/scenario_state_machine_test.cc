@@ -19,7 +19,7 @@ bool transform_fusion_to_prediction(const iflyauto::FusionObject &fusion_object,
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  ego_rear_axis_to_front_edge = vehicle_param.rear_axis_to_front_edge;
+  ego_rear_axis_to_front_edge = vehicle_param.front_edge_to_rear_axle;
 
   double current_time = session->planning_context().planning_result().timestamp;
   auto &prediction_info =

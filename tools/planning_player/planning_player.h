@@ -66,10 +66,10 @@ class PlanningPlayer {
 
   void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
   void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
-  void PerfectControlHPP(uint64_t delta_t,
-                         struct_msgs::IFLYLocalization::Ptr loc_msg);
-  void PerfectControlSCC(uint64_t delta_t,
-                         struct_msgs::LocalizationEstimate::Ptr loc_msg);
+  void PerfectControlEgoMotion(uint64_t delta_t,
+                               struct_msgs::IFLYLocalization::Ptr loc_msg);
+  void PerfectControlEgoPose(uint64_t delta_t,
+                             struct_msgs::LocalizationEstimate::Ptr loc_msg);
   void PerfectControlAPA(const struct_msgs::PlanningOutput &plan_msg,
                          uint64_t delta_t,
                          struct_msgs::LocalizationEstimate::Ptr loc_msg);
@@ -112,7 +112,7 @@ class PlanningPlayer {
   uint64_t local_time_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "acc";
-  uint8_t last_functional_state = iflyauto::FunctionalState_INIT;
+  uint8_t last_functional_state = iflyauto::FunctionalState_MANUAL;
   pnc::mathlib::spline x_t_spline_;
   pnc::mathlib::spline y_t_spline_;
   pnc::mathlib::spline theta_t_spline_;
@@ -199,9 +199,8 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
-    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
-    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
-        obj_msg;  // us
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
   }
 }
 
@@ -218,9 +217,8 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
-    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
-    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
-        obj_msg;  // us
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
     if (is_close_loop) {
       auto origin_topic = msg.getTopic() + "_origin";
       new_bag.write(origin_topic, msg.getTime(), obj_msg);

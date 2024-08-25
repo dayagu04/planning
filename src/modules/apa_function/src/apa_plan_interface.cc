@@ -16,6 +16,7 @@
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_in_planner.h"
 #include "planning_context.h"
+#include "utils/file.h"
 
 // #define PERPENDICULAR_SIMULATION
 
@@ -55,6 +56,8 @@ void ApaPlanInterface::Reset() {
 
   planning_output_.successful_slot_info_list_size = 0;
 
+  memset(&planning_hmi_, 0, sizeof(planning_hmi_));
+
   // reset apa world
   apa_world_ptr_->Reset();
 
@@ -90,7 +93,8 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
       local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if (last_state == iflyauto::FunctionalState_PARK_STANDBY &&
+  if ((last_state == iflyauto::FunctionalState_MANUAL ||
+       last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
       (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
        current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     Reset();
@@ -119,6 +123,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
+    planning_hmi_ = planner_ptr_->GetHmiOutput();
   }
 
   AddReleasedSlotInfo(planning_output_);
@@ -172,7 +177,7 @@ void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
   JSON_DEBUG_VALUE("fusion_slot_timestamp",
                    local_view_ptr->parking_fusion_info_recv_time)
   JSON_DEBUG_VALUE("localiztion_timestamp",
-                   local_view_ptr->localization_estimate_recv_time)
+                   local_view_ptr->localization_recv_time)
   JSON_DEBUG_VALUE("uss_wave_timestamp",
                    local_view_ptr->uss_wave_info_recv_time)
   JSON_DEBUG_VALUE("uss_per_timestamp",
@@ -206,7 +211,7 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
     path = engine_config.vehicle_cfg_dir + "/apa_params.json";
   }
 
-  std::string config_file = ReadFile(path);
+  std::string config_file = planning::common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
   // schedule params

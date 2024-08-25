@@ -137,6 +137,13 @@ class VirtualLaneManager {
 
   void SelectEgoLaneWithPlan(int zero_relative_id_nums);
 
+  std::vector<int> GetZeroRelativeIdOrderIds() {
+    return order_ids_of_same_zero_relative_id_;
+  }
+
+  double ComputeTargetLaneSpecifiedRangeCurvature(
+      const std::shared_ptr<VirtualLane> virtual_lane);
+
   bool CalcCrosslaneStatus(
       const std::shared_ptr<VirtualLane> lane,
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints);
@@ -149,7 +156,11 @@ class VirtualLaneManager {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
-  double get_distance_to_route_end() { return distance_to_route_end_; }
+  double get_distance_to_route_end() const { return distance_to_route_end_; }
+
+  double get_distance_to_toll_station() const {
+    return distance_to_toll_station_;
+  }
 
   bool get_is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
 
@@ -200,6 +211,12 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway() const { return is_ego_on_expressway_; }
 
+  bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
+
+  bool is_ego_on_city_expressway_hmi() const {
+    return is_ego_on_city_expressway_hmi_;
+  }
+
   const double dis_threshold_to_last_merge_point() const {
     return dis_threshold_to_last_merge_point_;
   }
@@ -231,6 +248,11 @@ class VirtualLaneManager {
   void construct_reference_line_msg(
       const std::vector<double> &current_lane_virtual_poly,
       iflyauto::ReferenceLineMsg &current_lane_virtual);
+  double GetEgoDistanceToStopline() { return distance_to_stopline_; };
+  double GetEgoDistanceToCrosswalk() { return distance_to_crosswalk_; };
+  const planning::common::IntersectionState GetIntersectionState() {
+    return Intersection_state_;
+  };
 
  private:
   LaneChangeStatus is_lane_change();
@@ -277,6 +299,11 @@ class VirtualLaneManager {
   std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(
       const iflyauto::RoadInfo *roads_ptr);
   void GenerateLaneChangeTasksForNOA();
+
+  bool UpdateEgoDistanceToStopline();
+  bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);
+  bool UpdateIntersectionState();
+  bool IsPosXOnVirtualLaneType(double x_pos);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -326,14 +353,25 @@ class VirtualLaneManager {
   double sum_dis_to_last_merge_point_ = NL_NMAX;
   bool is_in_sdmaproad_ = false;
   bool is_ego_on_expressway_ = false;
+  bool is_ego_on_expressway_hmi_ = false;
+  bool is_ego_on_city_expressway_hmi_ = false;
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
+  bool is_exist_intersection_split_ = false;
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
+  double distance_to_toll_station_ = NL_NMAX;
   const double dis_threshold_to_last_merge_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
+  std::vector<int> order_ids_of_same_zero_relative_id_;
   bool is_within_hdmap_ = false;
+
+  //到停止线的距离，可以为负，表示停止线在车后
+  double distance_to_stopline_ = NL_NMAX;
+  double distance_to_crosswalk_ = NL_NMAX;
+  planning::common::IntersectionState Intersection_state_ =
+      planning::common::NO_INTERSECTION;
 };
 }  // namespace planning
 #endif

@@ -14,6 +14,7 @@
   "dump_mdebug": false,
   "enable_use_emergency_avoidence_lane_change_request": true,
   "enable_use_cone_change_request": true,
+  "enable_use_merge_change_request": true,
   "active_lane_change_min_duration_threshold": 100,
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
   "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,
@@ -392,7 +393,7 @@
     "dis_zero_speed": 3.5,
     "dis_zero_speed_accident": 6.0,
     "ttc_brake_hysteresis": 0.5,
-    "t_curv": 3.0,
+    "t_curv": 2.0,
     "dis_curv": 50.0,
     "v_start": 0.3,
     "v_startmode": 1.5,
@@ -401,6 +402,9 @@
     "distance_start": 0.3,
     "dece_to_ramp": -1.0,
     "v_limit_ramp": 16.67,
+    "v_limit_near_ramp_zone": 25.0,
+    "dis_near_ramp_zone": 1100.0,
+    "brake_dis_near_ramp_zone": 800.0,
     "safe_distance_ttc": 0.3,
     "enable_lead_two": true,
     "enable_rss_model": false,
@@ -415,10 +419,14 @@
     "v_target_stop_thrd" : -10.0,
     "acc_stop_max_bound" : 1.5,
     "enable_jlt" : true,
-    "enable_narrow_agent_limit" : true
+    "enable_narrow_agent_limit" : true,
+    "enable_intersection_v_limit" : false
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false
+  },
+  "traffic_light_decider": {
+    "enable_tfl_decider": false
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

@@ -1,14 +1,15 @@
 #pragma once
 
-#include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "ifly_time.h"
 #include "lane_change_requests/active_lane_change_request.h"
+#include "lane_change_requests/cone_lane_change_request.h"
 #include "lane_change_requests/emergence_avoid_lane_change_request.h"
 #include "lane_change_requests/interactive_lane_change_request.h"
 #include "lane_change_requests/lane_change_request.h"
 #include "lane_change_requests/map_lane_change_request.h"
+#include "lane_change_requests/merge_lane_change_request.h"
 #include "lane_change_requests/overtake_lane_change_request.h"
 #include "session.h"
 
@@ -39,6 +40,9 @@ class LaneChangeRequestManager {
 
   RequestType request() const { return request_; }
   RequestSource request_source() const { return request_source_; }
+  IntCancelReasonType int_request_cancel_reason() const {
+    return int_request_cancel_reason_;
+  }
   std::string act_request_source() {
     return request_source_ == ACT_REQUEST ? act_request_.act_request_source()
                                           : "none";
@@ -64,6 +68,10 @@ class LaneChangeRequestManager {
       return overtake_request_.AggressiveChange();
     } else if (request_source_ == EMERGENCE_AVOID_REQUEST) {
       return emergence_avoid_request_.AggressiveChange();
+    } else if (request_source_ == CONE_REQUEST) {
+      return cone_change_request_.AggressiveChange();
+    } else if (request_source_ == MERGE_REQUEST) {
+      return merge_change_request_.AggressiveChange();
     }
     return false;
   }
@@ -84,6 +92,7 @@ class LaneChangeRequestManager {
   OvertakeRequest overtake_request_;
   EmergenceAvoidRequest emergence_avoid_request_;
   ConeRequest cone_change_request_;
+  MergeRequest merge_change_request_;
 
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_;
   framework::Session* session_;

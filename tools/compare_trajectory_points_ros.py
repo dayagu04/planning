@@ -38,7 +38,7 @@ def dump_trajectory_points(bag_path, bag_trajectory_points, input_frame_num):
                 frame_num+=1
                 continue
             if len(msg.trajectory.trajectory_points) == 201:
-                index = index_map[msg.meta.msg_header.timestamp] - start_index
+                index = index_map[msg.meta.msg_header.stamp] - start_index
                 bag_trajectory_points["frame_" + str(index) + "_x"] = []
                 bag_trajectory_points["frame_" + str(index) + "_y"] = []
                 for i in range(len(msg.trajectory.trajectory_points)):

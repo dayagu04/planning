@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "config/vehicle_param_tmp.h"
+// #include "config/vehicle_param_tmp.h"
 #include "define/geometry.h"
 #include "utils/pose2d_utils.h"
 namespace planning {
@@ -112,16 +112,15 @@ double get_boot_time() {
   return (double)curr_time.tv_sec + (double)curr_time.tv_nsec / 1000000000.0;
 }
 
-double cal_lat_offset(double ego_vel, double dash_length) {
+double cal_lat_offset(double ego_vel, double dash_length,
+                      double max_front_wheel_angle, double wheel_base) {
   double kLateralAccMax = 3.0 - std::fmax(ego_vel, 3) * 0.05;
   double kDeltaRateMax = 0.4 - std::fmax(ego_vel, 3) * 0.005;
   double kLateralJerkMax = 5.0 - std::fmax(ego_vel, 3) * 0.15;
 
-  double ddl_limit = std::min(
-      kLateralAccMax / pow(fmax(ego_vel, 3.0), 2.),
-      vehicle_param::max_front_wheel_angle / vehicle_param::wheel_base);
-  double physical_limit =
-      kDeltaRateMax / vehicle_param::wheel_base / std::fmax(ego_vel, 0.1);
+  double ddl_limit = std::min(kLateralAccMax / pow(fmax(ego_vel, 3.0), 2.),
+                              max_front_wheel_angle / wheel_base);
+  double physical_limit = kDeltaRateMax / wheel_base / std::fmax(ego_vel, 0.1);
   double comfort_limit = kLateralJerkMax / pow(ego_vel, 3);
   double dddl_limit = std::fmin(physical_limit, comfort_limit);
 

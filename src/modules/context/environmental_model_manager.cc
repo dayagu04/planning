@@ -95,6 +95,12 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_virtual_lane_manager(
       virtual_lane_manager_ptr_);
 
+  traffic_light_decision_manager_ptr_ =
+      std::make_shared<planning::TrafficLightDecisionManager>(config_builder,
+                                                              session_);
+  session_->mutable_environmental_model()->set_traffic_light_decision_manager(
+      traffic_light_decision_manager_ptr_);
+
   obstacle_manager_ptr_ =
       std::make_shared<planning::ObstacleManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_obstacle_manager(
@@ -150,12 +156,9 @@ bool EnvironmentalModelManager::Run() {
     LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
   }
 
-  auto &local_view = session_->environmental_model().get_local_view();
+  const auto &local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
-  // bool msf_valid = local_view.localization_estimate.msf_status.available &&
-  //                  (local_view.localization_estimate.msf_status.msf_status !=
-  //                   iflyauto::MsfStatusType_ERROR);
   bool localization_valid =
       local_view.localization.status.status_info.mode !=
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
@@ -169,8 +172,8 @@ bool EnvironmentalModelManager::Run() {
                        g_context.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
   printf("planner_type:%d\n", g_context.GetParam().planner_type);
-  auto location_valid = /*msf_valid*/ localization_valid &&
-                        fusion_localization_valid && planner_valid;
+  auto location_valid =
+      localization_valid && fusion_localization_valid && planner_valid;
 
   if (session_->is_hpp_scene() && !location_valid) {
     LOG_ERROR("hpp location invalid\n");
@@ -253,6 +256,13 @@ bool EnvironmentalModelManager::Run() {
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
+
+  // update traffic lights info
+  if (!traffic_light_decision_manager_ptr_->Update(
+          local_view.perception_tsr_info)) {
+    LOG_ERROR("traffic_light_decision_manager update failed\n");
+    return false;
+  }
 
   // Step 5) update obstacle
   time_start = IflyTime::Now_ms();
@@ -361,26 +371,28 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
-    truncate_prediction_info(local_view.prediction_result,
-                             local_view.localization_estimate.header.timestamp,
+    auto timestamp = local_view.localization.msg_header.stamp;
+    truncate_prediction_info(local_view.prediction_result, timestamp,
                              prediction_obj_id_set);
-    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_num; i++) {
+    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+         i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
       if (prediction_obj_id_set.find(obj.additional_info.track_id) ==
           prediction_obj_id_set.end()) {
         transform_fusion_to_prediction_longtime(
-            obj, (double)local_view.fusion_objects_info.header.timestamp,
+            obj, (double)local_view.fusion_objects_info.msg_header.stamp,
             prediction_info);
       }
       transform_fusion_to_prediction_longtime(
-          obj, (double)local_view.fusion_objects_info.header.timestamp,
+          obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           fusion_objs_info);
     }
   } else {
-    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_num; i++) {
+    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+         i++) {
       const auto &obj = local_view.fusion_objects_info.fusion_object[i];
       transform_fusion_to_prediction(
-          obj, (double)local_view.fusion_objects_info.header.timestamp,
+          obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           prediction_info);
     }
   }
@@ -420,60 +432,61 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     common::VehicleStatus &vehicle_status) {
   const auto &vehicle_service_output_info =
       local_view.vehicle_service_output_info;
-  const auto &localization_estimate = local_view.localization_estimate;
+  // const auto &localization_estimate = local_view.localization_estimate;
   const auto &localization = local_view.localization;
-  // const auto &hmi_mcu_inner_info = local_view.hmi_mcu_inner_info;
-  // const auto &hmi_inner_info = local_view.hmi_inner_info;
+  // bool new_local = localization.msg_header.stamp != 0;
   const auto &function_state_machine_info =
       local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(
-      vehicle_service_output_info.header.timestamp);
+      vehicle_service_output_info.msg_header.stamp);
 
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_heading_yaw()
         ->mutable_heading_yaw_data()
+        // ->set_value_rad(new_local
+        //                     ? localization.orientation.euler_boot.yaw
+        //                     : localization_estimate.pose.euler_angles.yaw);
         ->set_value_rad(localization.orientation.euler_boot.yaw);
-    // ->set_value_rad(localization_estimate.pose.euler_angles.yaw);
     vehicle_status.mutable_location()->set_available(true);
     // auto llh_position = localization_estimate.pose.llh_position;
-    auto llh_position = localization.position.position_llh;
+    // auto llh_position = localization.position.position_llh;
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_latitude_degree(llh_position.latitude);
+        ->set_latitude_degree(localization.position.position_llh.latitude);
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_longitude_degree(llh_position.longitude);
+        ->set_longitude_degree(localization.position.position_llh.longitude);
     vehicle_status.mutable_location()
         ->mutable_location_geographic()
-        ->set_altitude_meter(llh_position.height);
+        ->set_altitude_meter(localization.position.position_llh.height);
     // auto local_position = localization_estimate.pose.local_position;
-    auto local_position = localization.position.position_boot;
+    // auto local_position = localization.position.position_boot;
     vehicle_status.mutable_location()->mutable_location_enu()->set_x(
-        local_position.x);
+        localization.position.position_boot.x);
     vehicle_status.mutable_location()->mutable_location_enu()->set_y(
-        local_position.y);
+        localization.position.position_boot.y);
     vehicle_status.mutable_location()->mutable_location_enu()->set_z(
-        local_position.z);
+        localization.position.position_boot.z);
     vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
-        localization.header.timestamp);
+        localization.msg_header.stamp);
     // auto enu_orientation = localization_estimate.pose.orientation;
-    auto enu_orientation = localization.orientation.quaternion_boot;
+    // auto enu_orientation = localization.orientation.quaternion_boot;
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_x(enu_orientation.x);
+        ->set_x(localization.orientation.quaternion_boot.x);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_y(enu_orientation.y);
+        ->set_y(localization.orientation.quaternion_boot.y);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_z(enu_orientation.z);
+        ->set_z(localization.orientation.quaternion_boot.z);
     vehicle_status.mutable_location()
         ->mutable_location_enu()
         ->mutable_orientation()
-        ->set_w(enu_orientation.w);
+        ->set_w(localization.orientation.quaternion_boot.w);
     // last_feed_time_[FEED_EGO_ENU] =
     // local_view.localization_estimate_recv_time;
     last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
@@ -514,16 +527,6 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         ->set_value_rps(0.);
   }
 
-  // if (vehicle_service_output_info.vehicle_speed_available) {
-  //   vehicle_status.mutable_velocity()->set_available(true);
-  //   vehicle_status.mutable_velocity()
-  //       ->mutable_heading_velocity()
-  //       ->set_value_mps(vehicle_service_output_info.vehicle_speed);
-  //   last_feed_time_[FEED_EGO_VEL] =
-  //       local_view.vehicle_service_output_info_recv_time;
-  // }
-
-  // use new localization linear speed
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_velocity()->set_available(true);
     vehicle_status.mutable_velocity()
@@ -532,16 +535,6 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
     last_feed_time_[FEED_EGO_VEL] = local_view.localization_recv_time;
   }
 
-  // if (vehicle_service_output_info.long_acceleration_available) {
-  //   vehicle_status.mutable_brake_info()
-  //       ->mutable_brake_info_data()
-  //       ->set_acceleration_on_vehicle_wheel(
-  //           vehicle_service_output_info.long_acceleration);
-  //   last_feed_time_[FEED_EGO_ACC] =
-  //       local_view.vehicle_service_output_info_recv_time;
-  // }
-
-  // use new localization linear acc
   if (session_->environmental_model().location_valid()) {
     vehicle_status.mutable_brake_info()
         ->mutable_brake_info_data()
@@ -557,12 +550,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   }
 
   if (session_->environmental_model().location_valid()) {
-    auto linear_velocity_from_wheel =
-        localization_estimate.pose.linear_velocity_from_wheel;
-    // WB：定位没有给linear_velocity_from_wheel赋值
-    // vehicle_status.mutable_velocity()
-    //     ->mutable_heading_velocity()
-    //     ->set_value_mps(linear_velocity_from_wheel);
+    auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
   }
 
   if (vehicle_service_output_info.steering_wheel_angle_available) {
@@ -688,9 +676,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.fusion_source =
         prediction_object.fusion_obstacle.additional_info.fusion_source;
     // todo:后面接口变化时，取trajectory的时间戳
-    cur_predicion_obj.timestamp_us = prediction_result.header.timestamp;
+    cur_predicion_obj.timestamp_us = prediction_result.msg_header.stamp;
     double prediction_relative_time =
-        clip(prediction_result.header.timestamp / 1.e+6 - current_time / 1.e+3 -
+        clip(prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3 -
                  init_relative_time,
              0.0, -1.0);
     if (std::abs(prediction_relative_time) > 0.3) {
@@ -698,8 +686,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
           "[prediction delay time] obstacle[%d] absolute start time %lu "
           "relative time %f start time %f "
           "init_relative_time %f \n",
-          cur_predicion_obj.id, prediction_result.header.timestamp,
-          prediction_result.header.timestamp / 1.e+6 - current_time / 1.e+3,
+          cur_predicion_obj.id, prediction_result.msg_header.stamp,
+          prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3,
           prediction_relative_time, init_relative_time);
     }
     cur_predicion_obj.delay_time = prediction_relative_time;
@@ -1290,12 +1278,15 @@ void EnvironmentalModelManager::RunBlinkState(
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool is_LC_LCHANGE =
-      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
-      (lc_request_direction == LEFT_CHANGE);
-  bool is_LC_RCHANGE =
-      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
-      (lc_request_direction == RIGHT_CHANGE);
+  const auto lc_source = lane_change_decider_output.lc_request_source;
+  bool is_ilc_left_change =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
+       (state == kLaneChangePropose)) &&
+      (lc_request_direction == LEFT_CHANGE) && (lc_source == INT_REQUEST);
+  bool is_ilc_right_change =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
+       (state == kLaneChangePropose)) &&
+      (lc_request_direction == RIGHT_CHANGE) && (lc_source == INT_REQUEST);
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
@@ -1312,11 +1303,11 @@ void EnvironmentalModelManager::RunBlinkState(
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
-          is_LC_RCHANGE) {
+          is_ilc_right_change) {
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_LC_RCHANGE) {
-        // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+      } else if (is_ilc_right_change) {
+        //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::LEFT;
@@ -1327,9 +1318,9 @@ void EnvironmentalModelManager::RunBlinkState(
       if (history_lc_source_[0] == INT_REQUEST &&
           history_lc_source_[1] == INT_REQUEST &&
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
-          is_LC_LCHANGE) {
+          is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_LC_LCHANGE) {
+      } else if (is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::RIGHT;

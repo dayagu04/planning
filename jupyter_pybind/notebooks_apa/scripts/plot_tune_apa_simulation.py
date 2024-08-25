@@ -14,7 +14,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240814/20240814-21-02-00/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-14-21-02-00_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240824/20240824-16-14-11/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-24-16-14-12_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -217,9 +217,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     obs_x_vec = plan_debug_msg['obstaclesX']
     obs_y_vec = plan_debug_msg['obstaclesY']
 
-  current_ego_x = loc_msg.pose.local_position.x
-  current_ego_y = loc_msg.pose.local_position.y
-  sim_ego_heading = loc_msg.pose.euler_angles.yaw + heading_dif / 57.2958
+  current_ego_x = loc_msg.position.position_boot.x
+  current_ego_y = loc_msg.position.position_boot.y
+  sim_ego_heading = loc_msg.orientation.euler_boot.yaw + heading_dif / 57.2958
 
   sim_ego_x = current_ego_x + lon_pos_dif * math.cos(sim_ego_heading) - lat_pos_dif * math.sin(sim_ego_heading)
   sim_ego_y = current_ego_y + lon_pos_dif * math.sin(sim_ego_heading) + lat_pos_dif * math.cos(sim_ego_heading)
@@ -229,10 +229,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     sim_ego_y = last_plan_pose_[1]
     sim_ego_heading = last_plan_pose_[2]
 
-  loc_msg.pose.local_position.x = sim_ego_x
-  loc_msg.pose.local_position.y = sim_ego_y
-  loc_msg.pose.euler_angles.yaw = sim_ego_heading
-  loc_msg.pose.heading = sim_ego_heading
+  loc_msg.position.position_boot.x = sim_ego_x
+  loc_msg.position.position_boot.y = sim_ego_y
+  loc_msg.orientation.euler_boot.yaw = sim_ego_heading
 
   data_sim_pos.data.update({
     'x': [sim_ego_x],
@@ -254,6 +253,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   soc_state_msg_buff = BytesIO()
   soc_state_msg.serialize(soc_state_msg_buff)
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
+  current_state = soc_state_msg.current_state
 
   fus_parking_msg_buff = BytesIO()
   fus_parking_msg.serialize(fus_parking_msg_buff)
@@ -266,6 +266,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   vs_msg_buff = BytesIO()
   vs_msg.serialize(vs_msg_buff)
   vs_msg_bytes = vs_msg_buff.getvalue()
+  steering_wheel_angle = vs_msg.steering_wheel_angle
 
   wave_msg_buff = BytesIO()
   wave_msg.serialize(wave_msg_buff)
@@ -291,8 +292,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   fus_obj_msg.serialize(fus_obj_msg_buff)
   fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
   fus_obj_coord = []
-  for i in range(fus_obj_msg.fusion_object_num):
-    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_num
+  for i in range(fus_obj_msg.fusion_object_size):
+    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_size
     polygon_points = fus_obj_msg.fusion_object[i].additional_info.polygon_points
     single_fus_obj_coord = []
     for j in range(num):
@@ -303,8 +304,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
   fus_occ_obj_coord = []
-  for i in range(fus_occ_obj_msg.fusion_object_num):
-    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_num
+  for i in range(fus_occ_obj_msg.fusion_object_size):
+    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_size
     polygon_points = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points
     single_fus_occ_obj_coord = []
     for j in range(num):
@@ -326,7 +327,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
                                     obs_x_vec, obs_y_vec,
-                                    gl_coord, fus_obj_coord, fus_occ_obj_coord)
+                                    gl_coord, fus_obj_coord, fus_occ_obj_coord, current_state, steering_wheel_angle)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

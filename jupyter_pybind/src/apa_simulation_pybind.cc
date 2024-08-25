@@ -20,6 +20,7 @@
 #include "func_state_machine_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
+#include "ifly_localization_c.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -28,7 +29,7 @@
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
-#include "struct_convert/localization_c.h"
+#include "struct_convert/ifly_localization_c.h"
 #include "struct_convert/planning_plan_c.h"
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
@@ -37,7 +38,7 @@
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
-#include "struct_msgs/LocalizationEstimate.h"
+#include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/UssPerceptInfo.h"
@@ -73,28 +74,33 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
                            py::bytes &localization_info_bytes,
                            py::bytes &vehicle_service_output_info_bytes,
                            py::bytes &uss_wave_info_bytes) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+
+  iflyauto::FuncStateMachine func_statemachine;
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
   iflyauto::UssWaveInfo uss_wave_info =
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
           uss_wave_info_bytes);
 
-  local_view.localization_estimate = localization_info;
+  local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
@@ -110,24 +116,27 @@ const bool InterfaceUpdateClosedLoop(
     py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
     py::bytes &localization_info_bytes,
     py::bytes &vehicle_service_output_info_bytes) {
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
 
-  local_view.localization_estimate = localization_info;
+  local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
@@ -155,7 +164,8 @@ const bool InterfaceUpdateParam(
     std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
     std::vector<std::vector<Eigen::Vector2d>> gl_coord,
     std::vector<std::vector<Eigen::Vector2d>> fus_obj_coord,
-    std::vector<std::vector<Eigen::Vector2d>> fus_occ_obj_coord) {
+    std::vector<std::vector<Eigen::Vector2d>> fus_occ_obj_coord,
+    int current_state, double steering_wheel_angle) {
   apa_planner::ApaPlannerBase::SimulationParam param;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
@@ -179,22 +189,28 @@ const bool InterfaceUpdateParam(
     planner->SetSimuParam(param);
   }
 
-  iflyauto::FuncStateMachine func_statemachine =
-      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-          func_statemachine_bytes);
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
+  func_statemachine.current_state = static_cast<FunctionalState>(current_state);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
                     struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
 
-  iflyauto::LocalizationEstimate localization_info =
-      BytesToStruct<iflyauto::LocalizationEstimate,
-                    struct_msgs::LocalizationEstimate>(localization_info_bytes);
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
 
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
+  vehicle_service_output_info.steering_wheel_angle =
+      static_cast<double>(steering_wheel_angle);
 
   iflyauto::UssWaveInfo uss_wave_info =
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
@@ -233,12 +249,12 @@ const bool InterfaceUpdateParam(
       ground_line_info.ground_lines[i].points_3d[j].y = gl_coord[i][j].y();
     }
   }
-  fus_obj_info.fusion_object_num = fus_obj_coord.size();
-  for (size_t i = 0; i < fus_obj_info.fusion_object_num; ++i) {
-    fus_obj_info.fusion_object[i].additional_info.polygon_points_num =
+  fus_obj_info.fusion_object_size = fus_obj_coord.size();
+  for (size_t i = 0; i < fus_obj_info.fusion_object_size; ++i) {
+    fus_obj_info.fusion_object[i].additional_info.polygon_points_size =
         fus_obj_coord[i].size();
     for (size_t j = 0;
-         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_num;
+         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
          ++j) {
       fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
           fus_obj_coord[i][j].x();
@@ -246,13 +262,13 @@ const bool InterfaceUpdateParam(
           fus_obj_coord[i][j].y();
     }
   }
-  fus_occ_obj_info.fusion_object_num = fus_occ_obj_coord.size();
-  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_num; ++i) {
+  fus_occ_obj_info.fusion_object_size = fus_occ_obj_coord.size();
+  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_size; ++i) {
     fus_occ_obj_info.fusion_object[i]
-        .additional_occupancy_info.polygon_points_num =
+        .additional_occupancy_info.polygon_points_size =
         fus_occ_obj_coord[i].size();
     for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
-                               .additional_occupancy_info.polygon_points_num;
+                               .additional_occupancy_info.polygon_points_size;
          ++j) {
       fus_occ_obj_info.fusion_object[i]
           .additional_occupancy_info.polygon_points[j]
@@ -263,7 +279,7 @@ const bool InterfaceUpdateParam(
     }
   }
 
-  local_view.localization_estimate = localization_info;
+  local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.uss_wave_info = uss_wave_info;
@@ -287,7 +303,7 @@ const bool InterfaceUpdateParam(
   // Note: currently plan once when slot selected in searching state
   if (force_plan) {
     local_view.function_state_machine_info.current_state =
-        iflyauto::FunctionalState_PARK_IN_SEARCHING;
+        iflyauto::FunctionalState_PARK_GUIDANCE;
   }
   if (select_id > 0) {
     local_view.parking_fusion_info.select_slot_id = select_id;

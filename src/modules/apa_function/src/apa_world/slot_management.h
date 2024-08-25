@@ -22,7 +22,6 @@
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
 #include "local_view.h"
-#include "localization_c.h"
 #include "perpendicular_path_planner.h"
 #include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
@@ -364,7 +363,7 @@ class SlotManagement {
   struct Frame {
     const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
-    const iflyauto::LocalizationEstimate* localization_ptr;
+    const iflyauto::IFLYLocalization* localization_ptr;
     // slot state check by uss
     const iflyauto::UssWaveInfo* uss_wave_info_ptr;
     const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
@@ -439,7 +438,7 @@ class SlotManagement {
   bool Update(
       const iflyauto::FuncStateMachine* func_statemachine,
       const iflyauto::ParkingFusionInfo* parking_slot_info,
-      const iflyauto::LocalizationEstimate* localization_info,
+      const iflyauto::IFLYLocalization* localization,
       const iflyauto::UssWaveInfo* uss_wave_info,
       const iflyauto::UssPerceptInfo* uss_percept_info,
       const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info,
@@ -557,8 +556,6 @@ class SlotManagement {
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
 
   void Log();
-
-  const bool CheckIfSlotSelectedInFusion() const;
 
   void FinishApa();
 };

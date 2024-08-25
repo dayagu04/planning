@@ -85,7 +85,15 @@ bool LaneChangeDecider::Execute() {
           return false;
         }
       }
+      const auto cur_frame_lc_req_source = lc_req_mgr_->request_source();
+      //如果正在进行其他类型变道过程中，有交互式变道，优先响应交互式变道。
+      if (last_frame_lc_req_source_ != NO_REQUEST &&
+          last_frame_lc_req_source_ != INT_REQUEST &&
+          cur_frame_lc_req_source == INT_REQUEST) {
+        lc_sm_mgr_->ResetStateMachine();
+      }
       lc_sm_mgr_->Update();
+      last_frame_lc_req_source_ = lc_req_mgr_->request_source();
     } else {
       return false;
     }
@@ -185,7 +193,9 @@ void LaneChangeDecider::UpdateFixLaneVirtualId() {
   auto fix_reference_path = reference_path_mgr->get_reference_path_by_lane(
       fix_lane_virtual_id, false);
   if (fix_reference_path == nullptr) {
-    lc_lane_mgr_->reset_lc_lanes();
+    const auto lane_change_status = static_cast<StateMachineLaneChangeStatus>(
+        lane_change_decider_output.curr_state);
+    lc_lane_mgr_->reset_lc_lanes(lane_change_status);
     lane_change_decider_output.fix_lane_virtual_id = current_lane_virtual_id;
     lane_change_decider_output.origin_lane_virtual_id = current_lane_virtual_id;
     lane_change_decider_output.target_lane_virtual_id = current_lane_virtual_id;

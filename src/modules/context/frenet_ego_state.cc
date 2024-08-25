@@ -29,28 +29,28 @@ void FrenetEgoState::update(
   acc_ = ego_state.ego_acc();
   jerk_ = ego_state.jerk();
   corners_.s_front_left =
-      s_ + vehicle_param.rear_axis_to_front_edge * std::cos(heading_angle_) -
+      s_ + vehicle_param.front_edge_to_rear_axle * std::cos(heading_angle_) -
       vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_front_left =
-      l_ + vehicle_param.rear_axis_to_front_edge * std::sin(heading_angle_) +
+      l_ + vehicle_param.front_edge_to_rear_axle * std::sin(heading_angle_) +
       vehicle_param.width / 2.0 * std::cos(heading_angle_);
   corners_.s_front_right =
-      s_ + vehicle_param.rear_axis_to_front_edge * std::cos(heading_angle_) +
+      s_ + vehicle_param.front_edge_to_rear_axle * std::cos(heading_angle_) +
       vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_front_right =
-      l_ + vehicle_param.rear_axis_to_front_edge * std::sin(heading_angle_) -
+      l_ + vehicle_param.front_edge_to_rear_axle * std::sin(heading_angle_) -
       vehicle_param.width / 2.0 * std::cos(heading_angle_);
   corners_.s_rear_left =
-      s_ - vehicle_param.back_edge_to_rear_axis * std::cos(heading_angle_) -
+      s_ - vehicle_param.rear_edge_to_rear_axle * std::cos(heading_angle_) -
       vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_rear_left =
-      l_ - vehicle_param.back_edge_to_rear_axis * std::sin(heading_angle_) +
+      l_ - vehicle_param.rear_edge_to_rear_axle * std::sin(heading_angle_) +
       vehicle_param.width / 2.0 * std::cos(heading_angle_);
   corners_.s_rear_right =
-      s_ - vehicle_param.back_edge_to_rear_axis * std::cos(heading_angle_) +
+      s_ - vehicle_param.rear_edge_to_rear_axle * std::cos(heading_angle_) +
       vehicle_param.width / 2.0 * std::sin(heading_angle_);
   corners_.l_rear_right =
-      l_ - vehicle_param.back_edge_to_rear_axis * std::sin(heading_angle_) -
+      l_ - vehicle_param.rear_edge_to_rear_axle * std::sin(heading_angle_) -
       vehicle_param.width / 2.0 * std::cos(heading_angle_);
 
   // Step 2) update polygon
@@ -105,9 +105,9 @@ void FrenetEgoState::update(
 
   planning_math::Vec2d center(
       planning_init_point_.x + std::cos(planning_init_point_.heading_angle) *
-                                   vehicle_param.rear_axis_to_center,
+                                   vehicle_param.rear_axle_to_center,
       planning_init_point_.y + std::sin(planning_init_point_.heading_angle) *
-                                   vehicle_param.rear_axis_to_center);
+                                   vehicle_param.rear_axle_to_center);
   planning_math::Box2d ego_init_box(center, planning_init_point_.heading_angle,
                                     vehicle_param.length, vehicle_param.width);
 

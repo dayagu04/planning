@@ -240,6 +240,8 @@ std::string GetFileName(const std::string &path);
 void GetFileNamesInFolderById(const std::string &folder, const std::string &ext,
                               std::vector<std::string> *ret);
 
+std::string ReadFile(const std::string &path);
+
 }  // namespace util
 }  // namespace common
 }  // namespace planning

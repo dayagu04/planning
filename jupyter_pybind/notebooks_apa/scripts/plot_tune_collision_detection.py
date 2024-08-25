@@ -11,11 +11,10 @@ sys.path.append('../../../')
 from jupyter_pybind import collision_detection_py
 
 from bokeh.models import Arrow, NormalHead
+from bokeh.events import Tap
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
-
-car_xb, car_yb = load_car_params_patch_parking()
 
 data_car_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_car_start = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -37,6 +36,7 @@ data_col_pt_ego = ColumnDataSource(data = {'x':[], 'y':[]})
 data_remain_dist_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_car_collision_line = ColumnDataSource(data = {'x':[], 'y':[]})
 
+data_traj_bound = ColumnDataSource(data = {'x':[], 'y':[]})
 
 fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
 
@@ -58,6 +58,8 @@ fig1.circle(x ='x', y ='y', radius = 'r', source=data_obstacle_turn_circle, line
 
 fig1.circle('x','y', source = data_col_pt_ego, size=8, color='orange', legend_label = 'col_pt_ego')
 
+fig1.patch('x', 'y', source = data_traj_bound, fill_color = "red", line_color = "black", line_width = 1, legend_label = 'traj_bound', fill_alpha=0.0)
+
 # fig1.line('x', 'y', source = data_remain_dist_line, line_width = 5.0, line_color = 'green', line_dash = 'solid', legend_label = 'remain_dist', visible = False)
 
 data_simu_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
@@ -73,11 +75,69 @@ columns = [
 debug_data = ColumnDataSource(data = {'names':[], 'datas':[]})
 debug_table = DataTable(source=debug_data, columns=columns, width=600, height=500)
 
+source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
+line_source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
+text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
+
+# Define the JavaScript callback code
+callback_code = """
+    var x = cb_obj.x;
+    var y = cb_obj.y;
+
+    source.data['x'].push(x);
+    source.data['y'].push(y);
+
+    if (source.data['x'].length > 2) {
+        source.data['x'].shift();
+        source.data['y'].shift();
+        source.data['x'].shift();
+        source.data['y'].shift();
+    }
+    source.change.emit();
+
+    if (source.data['x'].length >= 2) {
+        var x1 = source.data['x'][source.data['x'].length - 2];
+        var y1 = source.data['y'][source.data['y'].length - 2];
+        var x2 = x;
+        var y2 = y;
+        var x3 = (x1 + x2) / 2;
+        var y3 = (y1 + y2) / 2;
+
+        var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+        console.log("Distance between the last two points: " + distance);
+
+        distance = distance.toFixed(4);
+        text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+        text_source.change.emit();
+
+        line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+        line_source.change.emit();
+    }
+
+    if (source.data['x'].length == 1) {
+        text_source.data['x'].shift();
+        text_source.data['y'].shift();
+        text_source.data['text'].shift();
+    }
+    text_source.change.emit();
+"""
+
+# Create a CustomJS callback with the defined code
+callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+
+# Attach the callback to the Tap event on the plot
+fig1.js_on_event(Tap, callback)
+
 collision_detection_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=1, step=1)
+    self.traj_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "traj_bound",min=0.2, max=2, value=0.5, step=0.1)
     # obstacle info
     self.obstacle_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obstacle_x",min=-15, max=15, value=-0.7, step=0.01)
     self.obstacle_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obstacle_y",min=-15, max=15, value=4.4, step=0.01)
@@ -91,11 +151,11 @@ class LocalViewSlider:
     self.ego_heading_start_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading_start",min=-180, max=180, value=90.0, step=1)
     self.turn_radius_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "turn_radius",min=0.0, max=10, value=5.5, step=0.01)
     self.traj_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "traj_length",min=0, max=10, value=9.0, step=0.05)
-    self.straight_left_right_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "straight_left_right",min=0, max=2, value=0, step=1)
+    self.straight_left_right_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "straight_left_right",min=0, max=2, value=2, step=1)
     self.forward_back_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "forward_back",min=0, max=1, value=0, step=1)
 
     # car inflation
-    self.lat_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lat_inflation",min=0.0, max=0.3, value=0.0, step=0.01)
+    self.lat_inflation_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "lat_inflation",min=0.0, max=0.3, value=0.07, step=0.01)
 
     # use directly car traj
     self.start_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "start_x",min=-10, max=10, value=6.99931, step=0.01)
@@ -109,7 +169,9 @@ class LocalViewSlider:
 
 
 
-    ipywidgets.interact(slider_callback, obstacle_x = self.obstacle_x_slider,
+    ipywidgets.interact(slider_callback, vehicle_type = self.vehicle_type_slider,
+                                         traj_bound = self.traj_bound_slider,
+                                         obstacle_x = self.obstacle_x_slider,
                                          obstacle_y = self.obstacle_y_slider,
                                          obstacle_heading = self.obstacle_heading_slider,
                                          obstacle_length = self.obstacle_length_slider,
@@ -149,10 +211,19 @@ def round_list(lst, decimals):
     return rounded_list
 
 ### sliders callback
-def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, is_line_obs,
+def slider_callback(vehicle_type, traj_bound, obstacle_x, obstacle_y, obstacle_heading, obstacle_length, is_line_obs,
                     ego_x_start, ego_y_start, ego_heading_start, turn_radius, traj_length, straight_left_right, forward_back,
                     lat_inflation,
                     start_x, start_y, start_heading, end_x, end_y,  end_heading, turn_center_x, turn_center_y):
+
+  if vehicle_type == 0:
+    vehicle_type = 'JAC_S811'
+  elif vehicle_type == 1:
+    vehicle_type = 'CHERY_T26'
+  elif vehicle_type == 2:
+    vehicle_type = 'CHERY_E0X'
+
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
 
   kwargs = locals()
 
@@ -299,7 +370,7 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
   collision_detection_py.SetObstacle(obstacle_x, obstacle_y)
 
   # set param
-  collision_detection_py.SetParam(lat_inflation)
+  collision_detection_py.SetParam(lat_inflation, traj_bound)
 
   # collision detect
   if straight_left_right == 0:
@@ -316,6 +387,8 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
   pt_vec = collision_detection_py.GetSamplePt()
   col_pt_ego = collision_detection_py.GetCollisionPointEgoGlobal()
   is_obs_in_car = collision_detection_py.GetObsIsInCar()
+  traj_bound_vec = collision_detection_py.GetTrajBound()
+  is_line_intersect_arc = collision_detection_py.GetLineIntersectArc()
 
   if car_remain_dist < obstacle_remain_dist:
     collision_flag = False
@@ -350,6 +423,17 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
     'y_vec': car_box_y_vec,
   })
 
+  traj_x, traj_y = [], []
+
+  for i in range(len(traj_bound_vec)):
+    traj_x.append(traj_bound_vec[i][0])
+    traj_y.append(traj_bound_vec[i][1])
+
+  data_traj_bound.data.update({
+    'x': traj_x,
+    'y': traj_y,
+  })
+
   names = []
   datas = []
   names.append("ego_pos_start")
@@ -364,6 +448,9 @@ def slider_callback(obstacle_x, obstacle_y, obstacle_heading, obstacle_length, i
 
   names.append("is_obs_in_car")
   datas.append(is_obs_in_car)
+
+  names.append("is_line_intersect_arc")
+  datas.append(is_line_intersect_arc)
 
   # update car_remain_dist
   names.append("car_remain_dist")

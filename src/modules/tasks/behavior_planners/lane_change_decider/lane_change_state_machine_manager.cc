@@ -1,8 +1,10 @@
 #include "lane_change_state_machine_manager.h"
+
 #include <cmath>
 #include <complex>
 #include <cstddef>
 #include <vector>
+
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
@@ -53,7 +55,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else {
           //在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
           //在这重新维护lc_lane的值，可以保证fix lane不会跳变
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         }
       }
       break;
@@ -101,7 +103,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_execution_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         } else if (is_execution_to_hold) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeHold;
@@ -133,7 +135,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_hold_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
           lane_change_stage_info_.Reset();
         } else if (is_hold_to_execution) {
           transition_info_.lane_change_status =
@@ -156,7 +158,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_complete_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeCancel;
-          lc_lane_mgr_->reset_lc_lanes();
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         }
       }
       break;
@@ -506,8 +508,11 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   std::vector<TrackInfo> near_cars_target;
   std::vector<TrackedObject> side_target_tracks;
   std::vector<TrackedObject> front_target_tracks;
-  auto tlane_obstacles =
-      target_lane->get_reference_path()->get_lane_obstacles_ids();
+  auto target_lane_reference_path = target_lane->get_reference_path();
+  if (target_lane_reference_path == nullptr) {
+    return lc_state_info;
+  }
+  auto tlane_obstacles = target_lane_reference_path->get_lane_obstacles_ids();
   //处理目标车车道后方障碍物
   for (auto &obstacle : lateral_obstacle->side_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
@@ -532,7 +537,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
       return lc_state_info;
     }
   }
-  //处理目标车车道前方障碍物，整体逻辑同上处理后方障碍物
+  // 处理目标车车道前方障碍物，整体逻辑同上处理后方障碍物
   for (auto &obstacle : lateral_obstacle->front_tracks()) {
     if (std::count(tlane_obstacles.begin(), tlane_obstacles.end(),
                    obstacle.track_id) > 0) {
@@ -583,7 +588,9 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(lc_lane_mgr_->fix_lane_virtual_id());
-
+  if (fix_lane == nullptr) {
+    return lc_state_info;
+  }
   if (!lateral_obstacle->sensors_okay()) {
     if (lateral_obstacle->fvf_dead()) {
       lc_state_info.lc_back_reason = "no front view";
@@ -593,9 +600,12 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     lc_state_info.lc_should_back = true;
     return lc_state_info;
   }
-
+  auto fix_lane_reference_path = fix_lane->get_reference_path();
+  if (fix_lane_reference_path == nullptr) {
+    return lc_state_info;
+  }
   const auto &tlane_obstacles =
-      fix_lane->get_reference_path()->get_lane_obstacles_ids();
+      fix_lane_reference_path->get_lane_obstacles_ids();
 
   near_cars_target_.clear();
   std::vector<TrackInfo> near_cars_target;
@@ -872,6 +882,19 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_valid_cnt = lc_valid_cnt_;
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
   lane_change_decider_output.start_move_dist_lane = start_move_dist_lane_;
+  int merge_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
+  lane_change_decider_output.is_merge_region =
+      IsMergeRegion(&merge_lane_virtual_id);
+  lane_change_decider_output.merge_lane_virtual_id = merge_lane_virtual_id;
+  JSON_DEBUG_VALUE("is_merge_region",
+                   lane_change_decider_output.is_merge_region);
+  JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
+
+  GenerateTurnSignalForSplitRegion();
+  lane_change_decider_output.dir_turn_signal_road_to_ramp =
+      road_to_ramp_turn_signal_;
+  lane_change_decider_output.int_request_cancel_reason =
+      lc_req_mgr_->int_request_cancel_reason();
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const std::vector<TrackedObject> &vec_side_obstacles,
@@ -911,9 +934,9 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
       lc_state_info->lc_invalid_reason = "side view invalid";
       return;
     }
-    //（2）相对速度小于100，且纵向上在自车后方5米以内（相当于一个车的长度）
+    // （2）相对速度小于100，且纵向上在自车后方5米以内（相当于一个车的长度）
     if (tr.v_rel < 100.0 && tr.d_rel > -5.0) {
-      //根据相对速度大于0，或者小于0计算mss
+      // 根据相对速度大于0，或者小于0计算mss
       if (tr.v_rel < 0) {
         mss = tr.v_rel * tr.v_rel / 2 + safety_dist;
         mss_t = mss;
@@ -944,7 +967,7 @@ void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     }
     //(3) 相对速度小于100，纵向上在自车后方5米以外
     if (tr.v_rel < 100.0 && tr.d_rel <= -5.0) {
-      //根据自车车速小于17m/s，自车速度大于17m/s分别计算mss
+      // 根据自车车速小于17m/s，自车速度大于17m/s分别计算mss
       if (v_ego < 17 && vel_sequence.size() > 1) {
         double temp1 = tr.v_rel;
         double temp2 = tr.v_rel - (vel_sequence[5] - v_ego);
@@ -1029,7 +1052,7 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     std::array<double, 5> a_dec_v{2.0, 1.5, 1.3, 1.2, 1.0};
     std::array<double, 5> a_ace_v{0.3, 0.6, 0.8, 1.0, 1.5};
     std::array<double, 5> v_ego_bp{0, 10, 15, 20, 30};
-    //插值计算当前速度下的减速度a_dflc、加速度a_aflc
+    // 插值计算当前速度下的减速度a_dflc、加速度a_aflc
     double a_dflc = interp(v_ego, v_ego_bp, a_dec_v);
     double a_aflc = interp(v_ego, v_ego_bp, a_ace_v);
     // (2)如果相对速度小于0，即前方的障碍物车辆比自车慢
@@ -1077,7 +1100,7 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
 
     std::array<double, 2> xp{0, 3.5};
     std::array<double, 2> fp{1, 0.7};
-    //该值表示前车速度越大，那么变道安全距离可以在原来基础上更小一点
+    // 该值表示前车速度越大，那么变道安全距离可以在原来基础上更小一点
     const double real_safety_dist = interp(tr.v_rel, xp, fp) * safety_dist;
     if (tr.d_rel < real_safety_dist || tr.d_rel < mss) {
       lc_invalid_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
@@ -1115,7 +1138,7 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
   const double t_reaction =
       (dist_mline == DBL_MAX) ? 1.0 : 1.0 * dist_mline / 1.8;
   const double l_ego = frenet_ego_state.l();
-  //根据车道边界的曲率插值计算横向移动阈值 move_thre，曲率越大，move越大
+  // 根据车道边界的曲率插值计算横向移动阈值 move_thre，曲率越大，move越大
   std::array<double, 3> xp_heading{0, 0.5, 1};
   std::array<double, 3> fp_l{0, 0.4, 0.6};
   double c1 = 0;
@@ -1383,7 +1406,7 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
 
 void LaneChangeStateMachineManager::ResetStateMachine() {
   transition_info_.Rest();
-  lc_lane_mgr_->reset_lc_lanes();
+  lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
   lc_req_mgr_->FinishRequest();
   lane_change_stage_info_.Reset();
   lc_timer_.Reset();
@@ -1429,46 +1452,6 @@ void LaneChangeStateMachineManager::UpdateAdInfo() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  ad_info->lane_change_direction =
-      iflyauto::LaneChangeDirection::LC_DIR_NO_CHANGE;
-  if (transition_info_.lane_change_status == kLaneChangePropose) {
-    ad_info->lane_change_status = iflyauto::LC_STATE_WAITING;
-    if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
-    } else {
-      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
-    }
-  } else if (transition_info_.lane_change_status == kLaneChangeExecution ||
-             transition_info_.lane_change_status == kLaneChangeComplete) {
-    if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-      ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
-    } else {
-      ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
-    }
-    ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
-  } else if (transition_info_.lane_change_status == kLaneChangeCancel) {
-    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
-  } else if (transition_info_.lane_change_status == kLaneChangeHold) {
-    ad_info->lane_change_status = iflyauto::LC_STATE_CANCELLED;
-  } else if (transition_info_.lane_change_status == kLaneKeeping) {
-    if (coarse_planning_info.source_state != kLaneKeeping) {
-      ad_info->lane_change_status = iflyauto::LC_STATE_COMPLETE;
-      ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
-    } else {
-      GenerateTurnSignalForSplitRegion();
-      if (road_to_ramp_turn_signal_ == RAMP_NONE) {
-        ad_info->lane_change_status = iflyauto::LC_STATE_NO_CHANGE;
-        ad_info->lane_change_direction = iflyauto::LC_DIR_NO_CHANGE;
-      } else if (road_to_ramp_turn_signal_ == RAMP_ON_LEFT) {
-        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
-        ad_info->lane_change_direction = iflyauto::LC_DIR_LEFT;
-      } else if (road_to_ramp_turn_signal_ == RAMP_ON_RIGHT) {
-        ad_info->lane_change_status = iflyauto::LC_STATE_STARTING;
-        ad_info->lane_change_direction = iflyauto::LC_DIR_RIGHT;
-      }
-    }
-  }
-
   if (coarse_planning_info.source_state == kLaneChangePropose ||
       coarse_planning_info.source_state == kLaneChangeExecution ||
       coarse_planning_info.source_state == kLaneChangeComplete) {
@@ -1579,6 +1562,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
       virtual_lane_manager->origin_relative_id_zero_nums();
   bool is_ego_on_expressway = virtual_lane_manager->is_ego_on_expressway();
   bool is_on_ramp = virtual_lane_manager->is_on_ramp();
+  JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
+                   origin_relative_id_zero_nums);
   if (origin_relative_id_zero_nums > 1) {
     RampDirection ramp_direction = RAMP_NONE;
     if (IsSplitRegion(&ramp_direction)) {
@@ -1594,7 +1579,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
       }
     }
   }
-
+  JSON_DEBUG_VALUE("origin_road_to_ramp_turn_signal",
+                   static_cast<int>(road_to_ramp_turn_signal_));
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
     if (IsOffTurnLight(road_to_ramp_turn_signal_)) {
       road_to_ramp_turn_signal_ = RAMP_NONE;
@@ -1646,7 +1632,7 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
       right_ego_s = right_frenet_ego_state.s();
     }
   }
-  //目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
+  // 目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
 
   if (std::abs(left_ego_l) < left_lane_width / 2) {
     cur_lane_overlap_left_lane = true;
@@ -1654,11 +1640,13 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
   if (std::abs(right_ego_l) < right_lane_width / 2) {
     cur_lane_overlap_right_lane = true;
   }
+  double left_lat_diff = 0;
+  double right_lat_diff = 0;
   if (cur_lane_overlap_left_lane && left_reference_path) {
-    double lat_diff = 0;
-    CalculateLatOffsetOfOverlappedLanes(&lat_diff, left_reference_path);
-    if (std::abs(lat_diff) > lane_lat_diff_threshold) {
-      if (lat_diff > 0) {
+    CalculateLatOffsetOfOverlappedLanes(&left_lat_diff, left_reference_path);
+    JSON_DEBUG_VALUE("left_lat_diff", left_lat_diff);
+    if (std::abs(left_lat_diff) > lane_lat_diff_threshold) {
+      if (left_lat_diff > 0) {
         *ramp_direction = RAMP_ON_LEFT;
       } else {
         *ramp_direction = RAMP_ON_RIGHT;
@@ -1667,11 +1655,10 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
     }
   }
   if (cur_lane_overlap_right_lane && right_reference_path) {
-    double lat_diff = 0;
-    CalculateLatOffsetOfOverlappedLanes(&lat_diff, right_reference_path);
-    JSON_DEBUG_VALUE("lat_diff", lat_diff);
-    if (std::abs(lat_diff) > lane_lat_diff_threshold) {
-      if (lat_diff > 0) {
+    CalculateLatOffsetOfOverlappedLanes(&right_lat_diff, right_reference_path);
+    JSON_DEBUG_VALUE("right_lat_diff", right_lat_diff);
+    if (std::abs(right_lat_diff) > lane_lat_diff_threshold) {
+      if (right_lat_diff > 0) {
         *ramp_direction = RAMP_ON_LEFT;
       } else {
         *ramp_direction = RAMP_ON_RIGHT;
@@ -1796,4 +1783,140 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
   }
   return true;
 }
+
+bool LaneChangeStateMachineManager::IsMergeRegion(int *merge_lane_virtual_id) {
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto left_lane = virtual_lane_manager->get_left_lane();
+  const auto right_lane = virtual_lane_manager->get_right_lane();
+  const auto cur_ref_path =
+      reference_path_manager->get_reference_path_by_current_lane();
+  //目前仅考虑二合一的场景，后续城区城区可能还会有二以上合一的场景
+  //判断与左车道是否merge
+  if (left_lane == nullptr) {
+    return false;
+  }
+  const auto left_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          left_lane->get_virtual_id());
+  if (left_reference_path == nullptr) {
+    return false;
+  }
+  if (IsOverlapWithOtherLaneOnEndRegion(left_reference_path, ON_LEFT)) {
+    *merge_lane_virtual_id = left_lane->get_virtual_id();
+    return true;
+  }
+  //判断与右车道是否merge
+  if (right_lane == nullptr) {
+    return false;
+  }
+  const auto right_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          right_lane->get_virtual_id());
+  if (right_reference_path == nullptr) {
+    return false;
+  }
+  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path, ON_RIGHT)) {
+    *merge_lane_virtual_id = right_lane->get_virtual_id();
+    return true;
+  }
+  return false;
+}
+
+bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
+    const std::shared_ptr<ReferencePath> reference_path,
+    const RelativeDirection rel_dir) {
+  const double standard_lane_width = 3.8;
+  const double cur_lane_lat_diff_threshold = standard_lane_width - 0.8;
+  const double end_lane_lat_diff_threshold = standard_lane_width / 2;
+  double cur_to_other_lane_end_lat_diff = NL_NMAX;
+  double ref_ego_l = NL_NMAX;
+  double cur_ego_l = NL_NMAX;
+  double cur_ego_s = NL_NMAX;
+  double abs_lat_diff = 0.0;
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto ref_frenet_ego_state = reference_path->get_frenet_ego_state();
+  ref_ego_l = ref_frenet_ego_state.l();
+  const auto ref_lane_coord = reference_path->get_frenet_coord();
+  const auto cur_reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
+  if (cur_reference_path == nullptr) {
+    return false;
+  }
+  //计算当前位置的abs_lat_diff
+  cur_ego_l = cur_reference_path->get_frenet_ego_state().l();
+  cur_ego_s = cur_reference_path->get_frenet_ego_state().s();
+  ReferencePathPoint cur_ref_path_point{};
+  cur_reference_path->get_reference_point_by_lon(cur_ego_s, cur_ref_path_point);
+  Point2D cur_ref_point = {cur_ref_path_point.path_point.x,
+                           cur_ref_path_point.path_point.y};
+  Point2D frenet_ref_point;
+  if (ref_lane_coord->XYToSL(cur_ref_point, frenet_ref_point)) {
+    abs_lat_diff = std::abs(frenet_ref_point.y);
+  } else {
+    //特殊情况如果进入到这，这会有些误差 TODO(fengwang31)
+    abs_lat_diff = std::abs(ref_ego_l) + std::abs(cur_ego_l);
+  }
+  const auto cur_lane_coord = cur_reference_path->get_frenet_coord();
+  const auto cur_ref_path_end_point = cur_reference_path->get_points().back();
+  //计算两条车道起始点的lat_diff
+  double start_abs_lat_diff = 0.0;
+  Point2D frenet_point_start;
+  Point2D cur_ref_path_start_point_temp = {
+      cur_reference_path->get_points().begin()->path_point.x,
+      cur_reference_path->get_points().begin()->path_point.y};
+  Point2D ref_path_start_point_temp = {
+      reference_path->get_points().begin()->path_point.x,
+      reference_path->get_points().begin()->path_point.y};
+  if (ref_lane_coord->XYToSL(cur_ref_path_start_point_temp,
+                             frenet_point_start)) {
+    start_abs_lat_diff = std::abs(frenet_point_start.y);
+  } else {
+    if (cur_lane_coord->XYToSL(ref_path_start_point_temp, frenet_point_start)) {
+      start_abs_lat_diff = std::abs(frenet_point_start.y);
+    }
+  }
+  //计算两条车道终点的lat_diff
+  Point2D frenet_point;
+  Point2D cur_ref_path_end_point_temp = {cur_ref_path_end_point.path_point.x,
+                                         cur_ref_path_end_point.path_point.y};
+  Point2D ref_path_end_point_temp = {
+      reference_path->get_points().back().path_point.x,
+      reference_path->get_points().back().path_point.y};
+  bool lane_end_satisfied_merge_condition = false;
+  if (ref_lane_coord->XYToSL(cur_ref_path_end_point_temp, frenet_point)) {
+    cur_to_other_lane_end_lat_diff = frenet_point.y;
+    if (rel_dir == ON_LEFT && cur_to_other_lane_end_lat_diff > 0) {
+      lane_end_satisfied_merge_condition = true;
+    } else if (rel_dir == ON_RIGHT && cur_to_other_lane_end_lat_diff < 0) {
+      lane_end_satisfied_merge_condition = true;
+    } else if (std::abs(cur_to_other_lane_end_lat_diff) <
+               end_lane_lat_diff_threshold) {
+      lane_end_satisfied_merge_condition = true;
+    }
+  } else {
+    if (cur_lane_coord->XYToSL(ref_path_end_point_temp, frenet_point)) {
+      cur_to_other_lane_end_lat_diff = frenet_point.y;
+      if (rel_dir == ON_LEFT && cur_to_other_lane_end_lat_diff < 0) {
+        lane_end_satisfied_merge_condition = true;
+      } else if (rel_dir == ON_RIGHT && cur_to_other_lane_end_lat_diff > 0) {
+        lane_end_satisfied_merge_condition = true;
+      } else if (std::abs(cur_to_other_lane_end_lat_diff) <
+                 end_lane_lat_diff_threshold) {
+        lane_end_satisfied_merge_condition = true;
+      }
+    }
+  }
+  if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
+       start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
+      lane_end_satisfied_merge_condition) {
+    std::cout << "is merge region!!!" << std::endl;
+    return true;
+  }
+  return false;
+}
+
 }  // namespace planning

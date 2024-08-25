@@ -137,6 +137,10 @@ void StGraphGenerator::Update(
   CalcSpeedWithRamp(distance_to_ramp, distance_to_merge, is_on_ramp,
                     is_continuous_ramp, ramp_v_limit, acc_to_ramp, v_ego);
 
+  if (config_.enable_intersection_v_limit) {
+    CalcSpeedInfoWithIntersection();
+  }
+
   // 2. 计算障碍物s-t
   // 2.1 计算leads: lead one, 选择性使用lead two
   std::vector<planning::common::RealTimeLonObstacleSTInfo> leads_st_info;
@@ -168,9 +172,14 @@ void StGraphGenerator::Update(
                        lon_behav_input_->lat_output().lc_status(),
                        lane_change_st_info);
 
+  // 2.5 计算virtual obstacle st相关信息
+  std::vector<planning::common::RealTimeLonObstacleSTInfo> virtual_obs_st_info;
+  CalcSpeedInfoWithVirtualObstacle(dynamic_world, virtual_obs_st_info);
+
   std::vector<common::RealTimeLonObstacleSTInfo> st_infos;
   int st_infos_num = leads_st_info.size() + temp_leads_st_info.size() +
-                     cut_in_st_info.size() + lane_change_st_info.size();
+                     cut_in_st_info.size() + lane_change_st_info.size() +
+                     virtual_obs_st_info.size();
   st_infos.resize(st_infos_num);
   for (int i = 0; i < leads_st_info.size(); ++i) {
     st_infos[i].CopyFrom(leads_st_info[i]);
@@ -186,6 +195,11 @@ void StGraphGenerator::Update(
     st_infos[leads_st_info.size() + temp_leads_st_info.size() +
              cut_in_st_info.size() + i]
         .CopyFrom(lane_change_st_info[i]);
+  }
+  for (int i = 0; i < virtual_obs_st_info.size(); ++i) {
+    st_infos[leads_st_info.size() + temp_leads_st_info.size() +
+             cut_in_st_info.size() + lane_change_st_info.size() + i]
+        .CopyFrom(virtual_obs_st_info[i]);
   }
 
   // filter v target
@@ -205,7 +219,9 @@ void StGraphGenerator::Update(
     v_target_ = accel_vel_filter_.GetOutput();
   } else if (v_target_ < v_ego &&
              ((is_on_ramp && v_limit_on_ramp_ == v_target_) ||
-              v_limit_lc_ == v_target_)) {
+              v_limit_lc_ == v_target_ ||
+              (v_limit_with_intersection_ == v_target_ &&
+               v_limit_with_intersection_ > 0.1))) {
     if (v_ego < v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
@@ -599,6 +615,7 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   LOG_DEBUG("----calc_speed_for_ramp--- \n");
   auto ref_path_points = lon_behav_input_->ref_path_points();
   double v_target_ramp = 40;
+  double v_target_near_ramp_zone = 40;
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > 50 || is_continuous_ramp) {
@@ -613,10 +630,19 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
     LOG_DEBUG("v_target : [%f] \n", v_target_);
     return true;
   }
+  if (dis_to_ramp <= config_.dis_near_ramp_zone) {
+    double pre_brake_dis_near_ramp_zone =
+        std::max(dis_to_ramp - config_.brake_dis_near_ramp_zone, 0.0);
+    v_target_near_ramp_zone =
+        std::pow(std::pow(config_.v_limit_near_ramp_zone, 2.0) -
+                     2 * pre_brake_dis_near_ramp_zone * acc_to_ramp,
+                 0.5);
+  }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
   v_target_ramp = std::pow(
       std::pow(ramp_v_limit, 2.0) - 2 * pre_brake_dis_to_ramp * acc_to_ramp,
       0.5);
+  v_target_ramp = std::min(v_target_near_ramp_zone, v_target_ramp);
   v_limit_on_ramp_ = v_target_ramp;
   v_target_ = std::min(v_target_ramp, v_target_);
   LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
@@ -1581,6 +1607,103 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
   }
   // acc_target_.second = std::max(acc_target_.second, a_target_lc);
   v_target_ = std::min(v_target_, v_limit_lc_);
+}
+
+bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
+    const std::shared_ptr<planning::planning_data::DynamicWorld> &dynamic_world,
+    std::vector<planning::common::RealTimeLonObstacleSTInfo>
+        &virtual_obs_st_info) {
+  LOG_DEBUG("----calc_speed_for_virtual_obstacle--- \n");
+  double virtual_obs_a_processed = 0.0;
+  double virtual_obs_desired_distance = 0.0;
+  double safe_distance = 0.0;
+  double virtual_obs_desired_velocity = 40.0;
+  double desired_distance_filtered = 0.0;
+  double v_ego = lon_behav_input_->ego_info().ego_v();
+
+  bool is_virtual_obs_exist = false;
+  const planning::agent::Agent *virtual_obs = NULL;
+  const auto agent_manager = dynamic_world->agent_manager();
+  const auto &all_current_agents = agent_manager->GetAllCurrentAgents();
+  for (int i = 0; i < all_current_agents.size(); i++) {
+    const auto agt = all_current_agents[i];
+    if (agt->is_tfl_virtual_obs()) {
+      is_virtual_obs_exist = true;
+      virtual_obs = agt;
+      break;
+    }
+  }
+  if (is_virtual_obs_exist) {
+    virtual_obs_a_processed = ProcessObstacleAcc(virtual_obs->accel());
+    safe_distance = CalcSafeDistance(virtual_obs->speed(), v_ego);
+    virtual_obs_desired_distance = GetCalibratedDistance(
+        virtual_obs->speed(), v_ego,
+        lon_behav_input_->lat_output().lc_request(), false, false, false);
+    double dis_to_virtual_obs =
+        std::min(lon_behav_input_->dis_to_stopline() - 1,
+                 lon_behav_input_->dis_to_crosswalk() - 3);
+    if (dis_to_virtual_obs < 1.0) {
+      dis_to_virtual_obs = 1.0;
+    }
+    virtual_obs_desired_velocity = CalcDesiredVelocity(
+        dis_to_virtual_obs, virtual_obs_desired_distance, virtual_obs->speed());
+
+    // desired_distance_filtered = DesiredDistanceFilter(
+    //    lead_one, v_ego, safe_distance, virtual_obs_desired_distance);
+
+    // update virtual obs st
+    common::RealTimeLonObstacleSTInfo virtual_obs_st;
+    virtual_obs_st.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
+    virtual_obs_st.set_id(virtual_obs->agent_id());
+    virtual_obs_st.set_a_lead(virtual_obs_a_processed);
+    virtual_obs_st.set_v_lead(virtual_obs->speed());
+    virtual_obs_st.set_s_lead(dis_to_virtual_obs);
+    virtual_obs_st.set_desired_distance(virtual_obs_desired_distance);
+    virtual_obs_st.set_desired_velocity(virtual_obs_desired_velocity);
+    virtual_obs_st.set_safe_distance(safe_distance);
+    virtual_obs_st.set_start_time(0.0);  // TBD:使用可配置参数
+    virtual_obs_st.set_end_time(5.0);    // TBD:使用可配置参数
+    virtual_obs_st.set_start_s(dis_to_virtual_obs);
+    virtual_obs_st_info.emplace_back(virtual_obs_st);
+    v_target_ = std::min(v_target_, virtual_obs_desired_velocity);
+
+    JSON_DEBUG_VALUE("virtual_obs_id", virtual_obs->agent_id());
+    JSON_DEBUG_VALUE("virtual_obs_dis", dis_to_virtual_obs);
+    JSON_DEBUG_VALUE("virtual_obs_vel", virtual_obs->speed());
+    JSON_DEBUG_VALUE("v_target_virtual_obs", virtual_obs_desired_velocity);
+    JSON_DEBUG_VALUE("desired_distance_virtual_obs",
+                     virtual_obs_desired_distance);
+  } else {
+    JSON_DEBUG_VALUE("virtual_obs_id", -1);
+    JSON_DEBUG_VALUE("v_target_virtual_obs", virtual_obs_desired_velocity);
+  }
+
+  return true;
+}
+
+bool StGraphGenerator::CalcSpeedInfoWithIntersection() {
+  LOG_DEBUG("----calc_speed_for_intersection--- \n");
+  double v_ego = lon_behav_input_->ego_info().ego_v();
+  double v_target_intersection = 40.0;
+  current_intersection_state_ = lon_behav_input_->intersection_state();
+  if (current_intersection_state_ == planning::common::APPROACH_INTERSECTION ||
+      current_intersection_state_ == planning::common::IN_INTERSECTION) {
+    if (v_limit_with_intersection_ < 8.33) {
+      /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
+      v_limit_with_intersection_ = std::max(v_ego - 3.0, 8.33);
+    }
+    v_target_intersection = v_limit_with_intersection_;
+  } else {
+    v_limit_with_intersection_ = 0.0;
+  }
+  v_target_ = std::min(v_target_intersection, v_target_);
+  JSON_DEBUG_VALUE("v_target_intersection", v_target_intersection);
+  JSON_DEBUG_VALUE("current_intersection_state",
+                   int(current_intersection_state_));
+  JSON_DEBUG_VALUE("last_intersection_state", int(last_intersection_state_));
+  last_intersection_state_ = current_intersection_state_;
+  LOG_DEBUG("v_target : [%f] \n", v_target_);
+  return true;
 }
 
 std::pair<double, double> StGraphGenerator::CalculateMaxAcc(double ego_v) {

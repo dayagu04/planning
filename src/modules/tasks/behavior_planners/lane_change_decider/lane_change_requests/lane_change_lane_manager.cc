@@ -1,4 +1,6 @@
 #include "lane_change_lane_manager.h"
+#include "config/basic_type.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -29,10 +31,29 @@ void LaneChangeLaneManager::assign_lc_lanes(int lane_virtual_id) {
   fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
 }
 
-void LaneChangeLaneManager::reset_lc_lanes() {
-  target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
-  origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
-  fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+void LaneChangeLaneManager::reset_lc_lanes(
+    const StateMachineLaneChangeStatus state_machine_lc_state) {
+  if (state_machine_lc_state == kLaneChangeExecution ||
+      state_machine_lc_state == kLaneChangeCancel ||
+      state_machine_lc_state == kLaneChangeHold) {
+    const auto& origin_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
+    if (origin_lane) {
+      target_lane_virtual_id_ = origin_lane_virtual_id_;
+      fix_lane_virtual_id_ = origin_lane_virtual_id_;
+    } else {
+      std::cout
+          << "origin lane disappear ,set cur_lane as origin/target/fix_lane"
+          << std::endl;
+      target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    }
+  } else {
+    target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+  }
 }
 
 void LaneChangeLaneManager::copy_lane_change_lanes(

@@ -8,7 +8,7 @@ void StaticMapToProto(Map::StaticMap &obj, proto_msgs::StaticMap &msg) {
   // static start
   // header
   Common::Header *header = obj.mutable_header();
-  header->set_timestamp(msg.msg_header.timestamp);
+  header->set_timestamp(msg.msg_header.stamp);
   header->set_version(msg.msg_header.version);
   // road_map
   Map::RoadMap *road_map = obj.mutable_road_map();

@@ -1,5 +1,7 @@
 #include "lane_change_request.h"
+
 #include <cmath>
+
 #include "common_c.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -125,7 +127,13 @@ bool LaneChangeRequest::IsDashedLineEnough(
       current_lane != nullptr
           ? virtual_lane_mgr_->must_change_lane(current_lane, distance_thld)
           : false;
-  if (!must_change_lane && cal_lat_offset(ego_vel, dash_length) < 3.6) {
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double max_front_wheel_angle = vehicle_param.max_front_wheel_angle;
+  const double wheel_base = vehicle_param.wheel_base;
+  if (!must_change_lane &&
+      cal_lat_offset(ego_vel, dash_length, max_front_wheel_angle, wheel_base) <
+          3.6) {
     LOG_ERROR("!dashed_enough \n");
     return false;
   }
@@ -336,8 +344,8 @@ bool LaneChangeRequest::compute_lc_valid_info(RequestType direction) {
             }
           }
 
-          //如果目标车道上后车的相对车速较自车快2m/s以上,
-          //最小安全距离的阈值再增加2m，以免产生变道恐慌感
+          // 如果目标车道上后车的相对车速较自车快2m/s以上,
+          // 最小安全距离的阈值再增加2m，以免产生变道恐慌感
           if (tr.v_rel > 2.0) {
             mss = mss + 2;
           }
@@ -619,8 +627,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
                                                       sample_path_point)) {
     return true;
   }
-  for (double s = ego_frenet_point.x - vehicle_param.back_edge_to_rear_axis;
-       s < ego_frenet_point.x + vehicle_param.rear_axis_to_front_edge +
+  for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
+       s < ego_frenet_point.x + vehicle_param.front_edge_to_rear_axle +
                sample_forward_distance;
        s += cut_length) {
     if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {

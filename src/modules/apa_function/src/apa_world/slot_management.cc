@@ -41,8 +41,7 @@ constexpr double kEps = 1e-6;
 bool SlotManagement::Update(const LocalView *local_view_ptr) {
   return Update(&local_view_ptr->function_state_machine_info,
                 &local_view_ptr->parking_fusion_info,
-                &local_view_ptr->localization_estimate,
-                &local_view_ptr->uss_wave_info,
+                &local_view_ptr->localization, &local_view_ptr->uss_wave_info,
                 &local_view_ptr->uss_percept_info,
                 &local_view_ptr->ground_line_perception,
                 &local_view_ptr->fusion_objects_info,
@@ -52,7 +51,7 @@ bool SlotManagement::Update(const LocalView *local_view_ptr) {
 bool SlotManagement::Update(
     const iflyauto::FuncStateMachine *func_statemachine,
     const iflyauto::ParkingFusionInfo *parking_slot_info,
-    const iflyauto::LocalizationEstimate *localization_info,
+    const iflyauto::IFLYLocalization *localization_info,
     const iflyauto::UssWaveInfo *uss_wave_info,
     const iflyauto::UssPerceptInfo *uss_percept_info,
     const iflyauto::GroundLinePerceptionInfo *ground_line_perception_info,
@@ -138,9 +137,9 @@ void SlotManagement::AddFusionObjects() {
   uint8 fusion_object_num;
   if (use_fus_occ_obj) {
     fusion_object_num =
-        frame_.fusion_occupancy_objects_info_ptr->fusion_object_num;
+        frame_.fusion_occupancy_objects_info_ptr->fusion_object_size;
   } else {
-    fusion_object_num = frame_.fusion_objects_info_ptr->fusion_object_num;
+    fusion_object_num = frame_.fusion_objects_info_ptr->fusion_object_size;
   }
 
   if (fusion_object_num == 0) {
@@ -159,7 +158,7 @@ void SlotManagement::AddFusionObjects() {
       fusion_occupancy_object =
           frame_.fusion_occupancy_objects_info_ptr->fusion_object[i]
               .additional_occupancy_info;
-      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_num; ++j) {
+      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_size; ++j) {
         fs_pt << fusion_occupancy_object.polygon_points[j].x,
             fusion_occupancy_object.polygon_points[j].y;
         frame_.obs_pt_vec.emplace_back(fs_pt);
@@ -170,7 +169,7 @@ void SlotManagement::AddFusionObjects() {
     for (uint8 i = 0; i < fusion_object_num; ++i) {
       fusion_object =
           frame_.fusion_objects_info_ptr->fusion_object[i].additional_info;
-      for (uint32 j = 0; j < fusion_object.polygon_points_num; ++j) {
+      for (uint32 j = 0; j < fusion_object.polygon_points_size; ++j) {
         fs_pt << fusion_object.polygon_points[j].x,
             fusion_object.polygon_points[j].y;
         frame_.obs_pt_vec.emplace_back(fs_pt);
@@ -267,11 +266,11 @@ void SlotManagement::Reset() { frame_.Reset(); }
 
 void SlotManagement::Preprocess() {
   auto &measurement = frame_.measurement;
-  const auto &local_pos = frame_.localization_ptr->pose;
 
-  measurement.ego_pos << local_pos.local_position.x, local_pos.local_position.y;
+  measurement.ego_pos << frame_.localization_ptr->position.position_boot.x,
+      frame_.localization_ptr->position.position_boot.y;
 
-  measurement.heading = local_pos.heading;
+  measurement.heading = frame_.localization_ptr->orientation.euler_boot.yaw;
   measurement.ego_heading_vec =
       pnc::geometry_lib::GetUnitTangVecByHeading(measurement.heading);
 
@@ -295,7 +294,9 @@ void SlotManagement::Preprocess() {
       apa_param.GetParam().lat_dist_mirror_to_center *
           ego_heading_vec_turn_left;
 
-  measurement.v_ego = frame_.localization_ptr->pose.linear_velocity_from_wheel;
+  measurement.v_ego =
+      std::hypot(frame_.localization_ptr->velocity.velocity_boot.vx,
+                 frame_.localization_ptr->velocity.velocity_boot.vy);
 }
 
 bool SlotManagement::IsInSearchingState() const {
@@ -305,7 +306,7 @@ bool SlotManagement::IsInSearchingState() const {
        frame_.func_state_ptr->current_state ==
            iflyauto::FunctionalState_PARK_OUT_SEARCHING);
 
-  if ((is_searching_stm && !CheckIfSlotSelectedInFusion()) ||
+  if ((is_searching_stm) ||
       (frame_.param.force_apa_on && (!frame_.param.is_switch_parking))) {
     return true;
   }
@@ -1018,6 +1019,15 @@ bool SlotManagement::GenObstacles(
     std::pair<Eigen::Vector2d, Eigen::Vector2d> slot_pt =
         std::make_pair(ego_slot_info.pt_1, ego_slot_info.pt_0);
     CollisionDetector::ObsSlotType obs_slot_type;
+    std::vector<Eigen::Vector2d> tlane_vec;
+    tlane_vec.emplace_back(A);
+    tlane_vec.emplace_back(B);
+    tlane_vec.emplace_back(C);
+    tlane_vec.emplace_back(D);
+    tlane_vec.emplace_back(E);
+    tlane_vec.emplace_back(F);
+    tlane_vec.emplace_back(channel_point_2);
+    tlane_vec.emplace_back(channel_point_1);
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
       obs_slot_type = collision_detector_ptr->GetObsSlotType(obs_pos, slot_pt,
                                                              is_left_side);
@@ -1070,20 +1080,8 @@ bool SlotManagement::GenObstacles(
         }
       }
 
-      if (std::fabs(obs_pos.y()) > std::fabs(A.y()) ||
-          std::fabs(obs_pos.y()) > std::fabs(F.y()) ||
-          obs_pos.x() > channel_point_1.x()) {
-        // obs is outside channel, lose it
-        continue;
-      }
-
-      if (obs_pos.y() > pt_left.y() && obs_pos.x() < pt_left.x()) {
-        // obs is in the lower left T-lane area, lose it
-        continue;
-      }
-
-      if (obs_pos.y() < pt_right.y() && obs_pos.x() < pt_right.x()) {
-        // obs is in the lower right T-lane area, lose it
+      // if obs is in tlane area lose it
+      if (!pnc::geometry_lib::IsPointInPolygon(tlane_vec, obs_pos)) {
         continue;
       }
 
@@ -2347,15 +2345,7 @@ const double SlotManagement::CalAngleSlot2Car(
 }
 
 bool SlotManagement::IsInParkingState() const {
-  bool is_searching_slot_select =
-      (frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_IN_SEARCHING ||
-       frame_.func_state_ptr->current_state ==
-           iflyauto::FunctionalState_PARK_OUT_SEARCHING) &&
-      CheckIfSlotSelectedInFusion();
-
-  if ((is_searching_slot_select ||
-       frame_.func_state_ptr->current_state ==
+  if ((frame_.func_state_ptr->current_state ==
            iflyauto::FunctionalState_PARK_GUIDANCE ||
        frame_.func_state_ptr->current_state ==
            iflyauto::FunctionalState_PARK_SUSPEND) ||
@@ -2614,20 +2604,22 @@ bool SlotManagement::UpdateEgoSlotInfo(
     }
     const auto &obs_pt_vec = frame_.obs_pt_map[select_slot.id()];
     ego_slot_info.obs_pt_vec_slot.reserve(obs_pt_vec.size());
-    for (const auto &obs_pt : obs_pt_vec) {
-      const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-    }
+    ego_slot_info.obs_pt_vec_slot = obs_pt_vec;
+    // for (const auto &obs_pt : obs_pt_vec) {
+    //   const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+    //   ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+    // }
   }
 
   else {
     // use fus obj and ground line
     ego_slot_info.obs_pt_vec_slot.reserve(frame_.obs_pt_vec.size());
     // obs global coord transform to local coord
-    for (const auto &obs_pt : frame_.obs_pt_vec) {
-      const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-    }
+    ego_slot_info.obs_pt_vec_slot = frame_.obs_pt_vec;
+    // for (const auto &obs_pt : frame_.obs_pt_vec) {
+    //   const auto obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
+    //   ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
+    // }
   }
 
   return true;
@@ -2954,24 +2946,8 @@ void SlotManagement::UpdateLimiterInfoInParking() {
     const auto &select_slot_filter = ego_slot_info.select_slot_filter;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_global;
     std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter_slot;
-    double move_dist;
-    const double limiter_len =
-        std::hypot(select_fusion_slot.limiter_position[0].x -
-                       select_fusion_slot.limiter_position[1].x,
-                   select_fusion_slot.limiter_position[0].y -
-                       select_fusion_slot.limiter_position[1].y);
-    if (limiter_len > kEps) {
-      // there is limiter in slot
-      limiter_global.first << select_fusion_slot.limiter_position[0].x,
-          select_fusion_slot.limiter_position[0].y;
-      // std::cout << "fus has limiter\n";
-
-      limiter_global.second << select_fusion_slot.limiter_position[1].x,
-          select_fusion_slot.limiter_position[1].y;
-
-      move_dist = apa_param.GetParam().limiter_move_dist;
-
-    } else {
+    double move_dist = 0.0;
+    if (select_fusion_slot.limiters_size == 0) {
       // there is no limiter in slot
       // std::cout << "fus has not limiter\n";
       limiter_global.first
@@ -2983,6 +2959,24 @@ void SlotManagement::UpdateLimiterInfoInParking() {
           select_slot_filter.corner_points().corner_point(3).y();
 
       move_dist = apa_param.GetParam().terminal_target_x;
+    } else if (select_fusion_slot.limiters_size == 1) {
+      // there is one limiter in slot
+      limiter_global.first << select_fusion_slot.limiters[0].end_points[0].x,
+          select_fusion_slot.limiters[0].end_points[0].y;
+
+      limiter_global.second << select_fusion_slot.limiters[0].end_points[1].x,
+          select_fusion_slot.limiters[0].end_points[1].y;
+
+      move_dist = apa_param.GetParam().limiter_move_dist;
+    } else {
+      // there are two limiter in slot
+      limiter_global.first << select_fusion_slot.limiters[0].end_points[0].x,
+          select_fusion_slot.limiters[0].end_points[0].y;
+
+      limiter_global.second << select_fusion_slot.limiters[1].end_points[1].x,
+          select_fusion_slot.limiters[1].end_points[1].y;
+
+      move_dist = apa_param.GetParam().limiter_move_dist;
     }
 
     limiter_slot.first = ego_slot_info.g2l_tf.GetPos(limiter_global.first);
@@ -3135,10 +3129,6 @@ void SlotManagement::Log() {
   }
   JSON_DEBUG_VECTOR("slm_selected_obs_x", nearby_obs_x_vec, 2)
   JSON_DEBUG_VECTOR("slm_selected_obs_y", nearby_obs_y_vec, 2)
-}
-
-const bool SlotManagement::CheckIfSlotSelectedInFusion() const {
-  return frame_.parking_slot_ptr->select_slot_id != 0;
 }
 
 void SlotManagement::FinishApa() {

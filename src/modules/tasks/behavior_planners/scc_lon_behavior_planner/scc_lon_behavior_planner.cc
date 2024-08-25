@@ -132,21 +132,22 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   const auto &planning_init_point = ego_state_mgr->planning_init_point();
 
   const auto &lane_status = session_->mutable_planning_context()->lane_status();
-  const auto *agent_manager =
-      session_->environmental_model().get_dynamic_world()->agent_manager();
+  const auto &agent_manager =
+      session_->environmental_model().get_agent_manager();
 
   // 0. set dbw (Drive-by-Wire)
   lon_behav_plan_input_->set_dbw_status(dbw_status);
   // 1. set ego_info & lon_decision_info, ego_info needs to be recieved from
   // init point rather than real-time vehicle state
   auto ego_info = lon_behav_plan_input_->mutable_ego_info();
-  ego_info->set_ego_v(planning_init_point.lon_init_state.v());
+  ego_info->set_ego_v(ego_state_mgr->ego_v());
   ego_info->set_ego_cruise(std::max(ego_state_mgr->ego_v_cruise(), 0.0));
-  ego_info->set_ego_acc(planning_init_point.lon_init_state.a());
+  ego_info->set_ego_acc(ego_state_mgr->ego_acc());
   ego_info->set_ego_steer_angle(ego_state_mgr->ego_steer_angle());
   ego_info->set_ego_pose_x(ego_state_mgr->ego_pose().x);
   ego_info->set_ego_pose_y(ego_state_mgr->ego_pose().y);
-  lon_init_state_ = {0, ego_info->ego_v(), ego_info->ego_acc()};
+  lon_init_state_ = {0, planning_init_point.lon_init_state.v(),
+                     planning_init_point.lon_init_state.a()};
   auto lon_decision_info_input =
       lon_behav_plan_input_->mutable_lon_decision_info();
   lon_decision_info_input->CopyFrom(lon_decision_info);
@@ -293,8 +294,6 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_is_accident_car(track.is_accident_car);
     one_obs->set_is_lead(track.is_lead);
     one_obs->set_is_temp_lead(track.is_temp_lead);
-    one_obs->set_is_new_cutin(
-        agent_manager->GetAgent(track.track_id)->is_cutin());
     one_obs->set_cutinp(track.cutinp);
     one_obs->set_y_min(track.y_min);
     one_obs->set_y_x0(track.y_x0);
@@ -302,6 +301,12 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
     one_obs->set_location_tail(track.location_tail);
     one_obs->set_vy_rel(track.vy_rel);
     one_obs->set_y_rel(track.y_rel);
+    const auto *agent = agent_manager->GetAgent(track.track_id);
+    if (agent != nullptr) {
+      one_obs->set_is_new_cutin(agent->is_cutin());
+    } else {
+      one_obs->set_is_new_cutin(false);
+    }
   }
 
   lat_obs_info->mutable_side_tracks()->Clear();
@@ -457,11 +462,18 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   double dis_to_merge = virtual_lane_manager->distance_to_first_road_merge();
   bool is_on_ramp = virtual_lane_manager->is_on_ramp();
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
+  double dis_to_stopline = virtual_lane_manager->GetEgoDistanceToStopline();
+  double dis_to_crosswalk = virtual_lane_manager->GetEgoDistanceToCrosswalk();
+  planning::common::IntersectionState intersection_state =
+      virtual_lane_manager->GetIntersectionState();
 
   lon_behav_plan_input_->set_dis_to_ramp(dis_to_ramp);
   lon_behav_plan_input_->set_dis_to_merge(dis_to_merge);
   lon_behav_plan_input_->set_is_on_ramp(is_on_ramp);
   lon_behav_plan_input_->set_is_continuous_ramp(is_continuous_ramp);
+  lon_behav_plan_input_->set_dis_to_stopline(dis_to_stopline);
+  lon_behav_plan_input_->set_dis_to_crosswalk(dis_to_crosswalk);
+  lon_behav_plan_input_->set_intersection_state(intersection_state);
 
   // set lon_init_state
   auto lon_init_state_ptr = lon_behav_plan_input_->mutable_lon_init_state();

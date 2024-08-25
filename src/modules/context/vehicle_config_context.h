@@ -49,7 +49,9 @@ class VehicleConfigurationContext {
 
   const VehicleParam &get_vehicle_param() const { return vehicle_param_; }
 
-  void set_vehicle_param(const VehicleParam &vehicle_param) {
+  void set_vehicle_param(std::string vehicle_param_config_path) {
+    std::string path = vehicle_param_config_path + "/vehicle_params.json";
+    VehicleParam vehicle_param(path);
     vehicle_param_ = vehicle_param;
   }
 

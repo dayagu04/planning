@@ -6,7 +6,7 @@
 #include <iostream>
 #include <iterator>
 
-#include "config/vehicle_param_tmp.h"
+// #include "config/vehicle_param_tmp.h"
 #include "config_context.h"
 #include "mjson/mjson.hpp"
 
@@ -90,16 +90,20 @@ VehicleState VehicleModel::Predict(
       VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL) {
     auto rear_center_state = cur_vehicle_state;
     // rear_center_state.x -= std::cos(rear_center_state.yaw) *
-    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    //     (vehicle_param::length / 2.0 -
+    //     vehicle_param::rear_edge_to_rear_axle);
     // rear_center_state.y -= std::sin(rear_center_state.yaw) *
-    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    //     (vehicle_param::length / 2.0 -
+    //     vehicle_param::rear_edge_to_rear_axle);
     RearCenteredKinematicBicycleModel(vehicle_model_config,
                                       predicted_time_horizon, rear_center_state,
                                       &predicted_vehicle_state);
     // predicted_vehicle_state.x += std::cos(rear_center_state.yaw) *
-    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    //     (vehicle_param::length / 2.0 -
+    //     vehicle_param::rear_edge_to_rear_axle);
     // predicted_vehicle_state.y += std::sin(rear_center_state.yaw) *
-    //     (vehicle_param::length / 2.0 - vehicle_param::back_edge_to_center);
+    //     (vehicle_param::length / 2.0 -
+    //     vehicle_param::rear_edge_to_rear_axle);
   }
 
   return predicted_vehicle_state;

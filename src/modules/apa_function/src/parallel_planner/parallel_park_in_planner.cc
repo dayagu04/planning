@@ -1802,6 +1802,8 @@ void ParallelParInPlanner::UpdateRemainDist() {
   // 2.calculate remain dist uss according to uss
   frame_.remain_dist_uss = CalRemainDistFromUss();
 
+  planning_hmi_output_.apa_info.distance_to_parking_space = frame_.remain_dist;
+
   return;
 }
 
@@ -1923,8 +1925,6 @@ void ParallelParInPlanner::Log() const {
   }
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
-
-  DEBUG_PRINT("obs " << obstaclesX.front() << ", " << obstaclesY.front());
 
   std::vector<double> slot_corner_X;
   slot_corner_X.clear();
