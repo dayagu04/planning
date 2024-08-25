@@ -86,6 +86,7 @@ bool LaneChangeRequestManager::Update(
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
     int_request_cancel_reason_ = int_request_.request_cancel_reason();
+    ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
     int_request_.reset_int_cnt();
   }

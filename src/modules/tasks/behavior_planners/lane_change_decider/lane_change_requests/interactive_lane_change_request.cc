@@ -33,6 +33,7 @@ void IntRequest::Update(int lc_status) {
   }
   // ego_blinker 0-lane follow, 1-left, 2-right
   request_cancel_reason_ = NO_CANCEL;
+  ilc_virtual_req_ = NO_CHANGE;
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();
@@ -92,6 +93,7 @@ void IntRequest::Update(int lc_status) {
     if (left_boundary_type ==
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       request_cancel_reason_ = SOLID_LC;
+      ilc_virtual_req_ = LEFT_CHANGE;
       counter_left_ = -5;
     }
 
@@ -154,6 +156,7 @@ void IntRequest::Update(int lc_status) {
     if (right_boundary_type ==
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       request_cancel_reason_ = SOLID_LC;
+      ilc_virtual_req_ = RIGHT_CHANGE;
       counter_right_ = -5;
     }
 

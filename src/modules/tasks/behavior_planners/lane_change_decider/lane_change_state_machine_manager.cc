@@ -895,6 +895,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
       road_to_ramp_turn_signal_;
   lane_change_decider_output.int_request_cancel_reason =
       lc_req_mgr_->int_request_cancel_reason();
+      
+  lane_change_decider_output.ilc_virtual_req = lc_req_mgr_->get_ilc_virtual_request();
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const std::vector<TrackedObject> &vec_side_obstacles,
