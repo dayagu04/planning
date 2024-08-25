@@ -610,7 +610,6 @@ void PlanningScheduler::FillPlanningHmiInfo(
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
   } else if (lc_invalid_reason == "side view invalid" ||
              lc_invalid_reason == "front view invalid" ||
-             lc_invalid_reason == "valid cnt below threshold" ||
              lc_back_reason == "side view back" ||
              lc_back_reason == "front view back" ||
              lc_back_reason == "but back cnt below threshold") {
