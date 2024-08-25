@@ -39,9 +39,9 @@ void UssObstacleAvoidance::Init() {
   }
 
   for (size_t i = 0; i < car_local_vertex_vec_.size(); ++i) {
-    if (car_local_vertex_vec_[i].y() > 0) {
+    if (car_local_vertex_vec_[i].y() > 0.46) {
       car_local_vertex_vec_[i].y() += param_.lat_inflation;
-    } else {
+    } else if (car_local_vertex_vec_[i].y() < -0.46) {
       car_local_vertex_vec_[i].y() -= param_.lat_inflation;
     }
   }
@@ -147,11 +147,27 @@ void UssObstacleAvoidance::GenUssArc() {
     const double upa_scan_angle_deg =
         apa_param.GetParam().uss_upa_scan_angle_deg;
 
+    double corner_uss_upa_scan_angle_deg = 0.0;
+
+    if (std::fabs(car_motion_info_.steer_angle * 57.3) <
+        apa_param.GetParam().corner_uss_steer_angle) {
+      corner_uss_upa_scan_angle_deg =
+          apa_param.GetParam().corner_uss_scan_angle_deg_straight;
+    } else {
+      corner_uss_upa_scan_angle_deg =
+          apa_param.GetParam().corner_uss_scan_angle_deg_turn;
+    }
+    std::cout << "corner_uss_upa_scan_angle_deg = "
+              << corner_uss_upa_scan_angle_deg << std::endl;
+
     const auto rot_matrix_apa = pnc::geometry_lib::GetRotm2dFromTheta(
         pnc::mathlib::Deg2Rad(apa_scan_angle_deg * 0.5));
 
     const auto rot_matrix_upa = pnc::geometry_lib::GetRotm2dFromTheta(
         pnc::mathlib::Deg2Rad(upa_scan_angle_deg * 0.5));
+
+    const auto rot_matrix_corner_uss = pnc::geometry_lib::GetRotm2dFromTheta(
+        pnc::mathlib::Deg2Rad(corner_uss_upa_scan_angle_deg));
 
     Eigen::Matrix2d rot_matrix;
 
@@ -180,8 +196,6 @@ void UssObstacleAvoidance::GenUssArc() {
            Eigen::Vector2d(std::cos(uss_local_normal_angle),
                            std::sin(uss_local_normal_angle));
 
-      const auto C = OC + uss_local_vertex;
-
       if (i == 0 || i == 5 || i == 6 || i == 11) {
         rot_matrix = rot_matrix_apa;
       } else {
@@ -199,11 +213,12 @@ void UssObstacleAvoidance::GenUssArc() {
       // hack: avoid corner uss invalid stuck
       // todo: need move when uss can be trust
       if (i == 1 || i == 7) {
-        uss_local_arc.pA = C;
+        uss_local_arc.pA = rot_matrix_corner_uss.transpose() * OC +
+                           uss_local_arc.circle_info.center;
       } else if (i == 4 || i == 10) {
-        uss_local_arc.pB = C;
+        uss_local_arc.pB =
+            rot_matrix_corner_uss * OC + uss_local_arc.circle_info.center;
       }
-
       uss_local_arc_vec_.emplace_back(uss_local_arc);
     }
     return;
@@ -351,6 +366,12 @@ const bool UssObstacleAvoidance::Preprocess() {
     }
   }
 
+  std::cout << "uss_raw_dist = ";
+  for (const double dist : uss_raw_dist_vec_) {
+    std::cout << dist << " ";
+  }
+  std::cout << "\n";
+
   JSON_DEBUG_VECTOR("uss_raw_dist_vec", uss_raw_dist_vec_, 2)
 
   return true;
@@ -398,6 +419,8 @@ void UssObstacleAvoidance::CalRemainDist() {
       }
     }
   }
+  std::cout << "uss_index = " << remain_dist_info_.uss_index
+            << "  car_index = " << remain_dist_info_.car_index << std::endl;
 }
 
 void UssObstacleAvoidance::Update(

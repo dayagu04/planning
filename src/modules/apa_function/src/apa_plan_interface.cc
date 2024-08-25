@@ -368,6 +368,15 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().uss_upa_scan_angle_deg, double,
                   "uss_upa_scan_angle_deg");
 
+  JSON_READ_VALUE(apa_param.SetPram().corner_uss_scan_angle_deg_straight,
+                  double, "corner_uss_scan_angle_deg_straight");
+
+  JSON_READ_VALUE(apa_param.SetPram().corner_uss_scan_angle_deg_turn, double,
+                  "corner_uss_scan_angle_deg_turn");
+
+  JSON_READ_VALUE(apa_param.SetPram().corner_uss_steer_angle, double,
+                  "corner_uss_steer_angle");
+
   JSON_READ_VALUE(apa_param.SetPram().enable_corner_uss_process, bool,
                   "enable_corner_uss_process");
 
