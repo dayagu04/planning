@@ -252,8 +252,12 @@ const bool PerpendicularPathPlanner::PreparePlan() {
       std::max(tlane.corner_inside_slot.x(), tlane.pt_inside.x());
 
   const std::vector<double> dy_tab = {0.0, 0.25, 0.5};
-  const std::vector<double> max_heading_tab = {30.8, 42.8, 53.8};
-  const std::vector<double> min_heading_tab = {-3.68, 24.8, 35.8};
+  const std::vector<double> max_heading_tab = {
+      apa_param.GetParam().prepare_line_max_heading_offset_slot_deg, 42.8,
+      53.8};
+  const std::vector<double> min_heading_tab = {
+      apa_param.GetParam().prepare_line_min_heading_offset_slot_deg, 24.8,
+      35.8};
   const double dheading = 3.08;
   const double max_heading = 90.0 - input_.origin_pt_0_heading;
 
