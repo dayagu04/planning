@@ -612,9 +612,11 @@ bool SlotManagement::GenTLane(
     }
   }
 
+  apa_param.SetPram().actual_mono_plan_enable =
+      apa_param.GetParam().mono_plan_enable;
   if (apa_param.GetParam().conservative_mono_enable) {
     if (!left_pq_for_x.empty() || !right_pq_for_x.empty()) {
-      apa_param.SetPram().mono_plan_enable = false;
+      apa_param.SetPram().actual_mono_plan_enable = false;
     }
   }
 
