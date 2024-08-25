@@ -340,6 +340,7 @@ class VirtualLaneManager {
   bool in_intersection_ = false;
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
   double nearest_s_ = 0.0;
+  int lane_num_except_emergency_ = 0;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;

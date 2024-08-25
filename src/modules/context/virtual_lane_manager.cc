@@ -438,7 +438,6 @@ void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
 
 bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
-  const double allow_error = 5.0;
   current_lane_ = nullptr;
   left_lane_ = nullptr;
   right_lane_ = nullptr;
@@ -503,12 +502,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // CalculateDistanceToTargetSlot(session_);
   // CalculateDistanceToNextSpeedBump(session_);
   // }
-
-  double dis_between_first_road_split_and_ramp =
-      distance_to_first_road_split_ - dis_to_ramp_;
-  is_nearing_ramp_ =
-      fabs(dis_between_first_road_split_and_ramp) < allow_error &&
-      dis_to_ramp_ < 3000.;
   LOG_DEBUG(
       "dis_to_ramp: %f, dis_to_first_road_split: %f, "
       "distance_to_first_road_merge_: %f \n",
@@ -1670,6 +1663,34 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     std::cout << "not find toll station" << std::endl;
     distance_to_toll_station_ = NL_NMAX;
   }
+
+  //判断是否在匝道汇入主路场景，2个条件满足一个即可：
+  // 1、在匝道上接近汇入点100米以内；
+  // 2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
+  lane_num_except_emergency_ = lane_num_;
+  if (lane_num_ > 0) {
+    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
+        iflyauto::LANETYPE_EMERGENCY) {
+      lane_num_except_emergency_ -= 1;
+    }
+  }
+  is_leaving_ramp_ = false;
+  if (lane_num_except_emergency_ > 0) {
+    if (distance_to_first_road_merge_ < 100 ||
+        (sum_dis_to_last_merge_point_ > 0 &&
+         sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
+         is_ego_on_expressway_)) {
+      is_leaving_ramp_ = true;
+    }
+  }
+
+  //判断是否是正在接近匝道
+  const double dis_between_first_road_split_and_ramp =
+      distance_to_first_road_split_ - dis_to_ramp_;
+  const double allow_error = 5.0;
+  is_nearing_ramp_ =
+      fabs(dis_between_first_road_split_and_ramp) < allow_error &&
+      dis_to_ramp_ < 3000.;
 }
 
 bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
@@ -2122,26 +2143,6 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
 }
 
 void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
-  int lane_num_except_emergency = lane_num_;
-  if (lane_num_ > 0) {
-    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
-        iflyauto::LANETYPE_EMERGENCY) {
-      lane_num_except_emergency -= 1;
-    }
-  }
-  //(1)判断是否在匝道汇入主路场景，2个条件满足一个即可：
-  // 1、在匝道上接近汇入点100米以内；
-  // 2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
-  is_leaving_ramp_ = false;
-  if (lane_num_except_emergency > 0) {
-    if (distance_to_first_road_merge_ < 100 ||
-        (sum_dis_to_last_merge_point_ > 0 &&
-         sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
-         is_ego_on_expressway_)) {
-      is_leaving_ramp_ = true;
-    }
-  }
-
   // 判断ego是否在最右边车道上
   bool is_ego_on_rightest_lane = true;
   for (const auto& relative_id_lane : relative_id_lanes_) {
@@ -2171,7 +2172,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       relative_id_lane->update_lane_tasks(
           dis_to_ramp_, distance_to_first_road_merge_,
           distance_to_first_road_split_, is_nearing_ramp_, ramp_direction_,
-          first_split_direction_, is_leaving_ramp_, lane_num_except_emergency,
+          first_split_direction_, is_leaving_ramp_, lane_num_except_emergency_,
           is_on_ramp_);
     }
   }
