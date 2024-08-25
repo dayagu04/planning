@@ -1570,7 +1570,7 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
     RampDirection ramp_direction = RAMP_NONE;
     if (IsSplitRegion(&ramp_direction)) {
       if (is_ego_on_expressway &&
-          transition_info_.lane_change_status == kLaneKeeping && !is_on_ramp) {
+          transition_info_.lane_change_status == kLaneKeeping) {
         if (ramp_direction == RAMP_ON_RIGHT) {
           road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
         } else if (ramp_direction == RAMP_ON_LEFT) {
