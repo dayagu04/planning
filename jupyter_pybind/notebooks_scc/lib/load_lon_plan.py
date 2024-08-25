@@ -29,7 +29,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                              'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
+                              'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead', "max_brake_distance", \
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \

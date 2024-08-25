@@ -214,6 +214,7 @@ class StGraphGenerator {
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
   pnc::filters::SlopeFilter lead_two_desired_distance_filter_;
+  bool is_far_slow_safe_lead_ = false;
   // cut in障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter cut_in_desired_distance_filter_;
   pnc::filters::SlopeFilter accel_vel_filter_;

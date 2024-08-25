@@ -29,6 +29,7 @@ constexpr double kHalfEgoWidth = 1.1;
 constexpr double kHalfEgoLength = 2.55;
 constexpr double kEgoWidth = 2.2;
 constexpr double kEgoLength = 5.1;
+constexpr double kFarLead = 100.0;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -233,6 +234,10 @@ void StGraphGenerator::Update(
     }
     accel_vel_in_turns_filter_.Update(v_target_);
     v_target_ = accel_vel_in_turns_filter_.GetOutput();
+  } else if (v_target_ < v_ego && is_far_slow_safe_lead_) {
+    accel_vel_filter_.SetRate(-1.0, 2.0);
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
   }
 
   // 0. get start & stop state
@@ -275,6 +280,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_two_desired_velocity = 40.0;
   double desired_distance_filtered = 0.0;
   double lead_two_desired_distance_filtered = 0.0;
+  double max_brake_distance = 0.0;
+  double max_brake_acc = 4.0;
   std::pair<double, double> acc_target = {-0.5, 0.5};
 
   // 纵向只使用融合成功障碍物
@@ -295,6 +302,19 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
     desired_distance_filtered = DesiredDistanceFilter(
         lead_one, v_ego, safe_distance, lead_one_desired_distance);
+
+    if (lead_one.v_lead() < v_ego) {
+      max_brake_distance =
+          (std::pow(v_ego, 2) - std::pow(lead_one.v_lead(), 2)) /
+          (2 * max_brake_acc);
+    }
+    JSON_DEBUG_VALUE("max_brake_distance", max_brake_distance)
+
+    is_far_slow_safe_lead_ = lead_one_desired_velocity < v_target_ &&
+                                lead_one.d_rel() > kFarLead &&
+                                max_brake_distance < lead_one.d_rel()
+                            ? true
+                            : false;
 
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;

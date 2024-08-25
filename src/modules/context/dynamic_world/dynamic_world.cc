@@ -5,6 +5,7 @@
 #include <vector>
 #include "agent/agent_manager.h"
 #include "debug_info_log.h"
+#include "dynamic_world/dynamic_agent_node.h"
 #include "environmental_model.h"
 #include "log.h"
 // #include "trajectory/path_point.h"
@@ -114,6 +115,7 @@ bool DynamicWorld::ConstructDynamicWorld() {
   bool is_success = BuildConnections(&lane_manager, ego_state);
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("agent connection cost:%f\n", time_end - time_start);
+  StoreNodeInfoInJsonDebug();
   return is_success;
 }
 
@@ -252,8 +254,6 @@ void DynamicWorld::BuildConnectionForEgoLane(
   }
   ego_front_node_id_ = front_agent_node_id;
   ego_rear_node_id_ = rear_agent_node_id;
-  JSON_DEBUG_VALUE("front_node_id", front_agent_node_id & 0xFFFF)
-  JSON_DEBUG_VALUE("rear_node_id", rear_agent_node_id & 0xFFFF)
 }
 
 void DynamicWorld::BuildConnectionForNeighborLane(
@@ -384,16 +384,10 @@ void DynamicWorld::BuildConnectionForNeighborLane(
     ego_left_node_id_ = neighbor_node_id;
     ego_left_front_node_id_ = neighbor_front_id;
     ego_left_rear_node_id_ = neighbor_rear_id;
-    JSON_DEBUG_VALUE("ego_left_node", neighbor_node_id & 0xFFFF)
-    JSON_DEBUG_VALUE("ego_left_front_node", neighbor_front_id & 0xFFFF)
-    JSON_DEBUG_VALUE("ego_left_rear_node", neighbor_rear_id & 0xFFFF)
   } else {
     ego_right_node_id_ = neighbor_node_id;
     ego_right_front_node_id_ = neighbor_front_id;
     ego_right_rear_node_id_ = neighbor_rear_id;
-    JSON_DEBUG_VALUE("ego_right_node", neighbor_node_id & 0xFFFF)
-    JSON_DEBUG_VALUE("ego_right_front_node", neighbor_front_id & 0xFFFF)
-    JSON_DEBUG_VALUE("ego_right_rear_node", neighbor_rear_id & 0xFFFF)
   }
 }
 
@@ -469,6 +463,50 @@ std::vector<const DynamicAgentNode*> DynamicWorld::GetNodesByLaneId(
     nodes_on_lane.emplace_back(node);
   }
   return nodes_on_lane;
+}
+
+void DynamicWorld::StoreNodeInfoInJsonDebug() {
+  // json debug
+  if (ego_front_node_id_ != -1) {
+    JSON_DEBUG_VALUE("front_node_id", ego_front_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("front_node_id", kInvalidId)
+  }
+  if (ego_rear_node_id_ != -1) {
+    JSON_DEBUG_VALUE("rear_node_id", ego_rear_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("rear_node_id", kInvalidId)
+  }
+  if (ego_left_node_id_ != -1) {
+    JSON_DEBUG_VALUE("ego_left_node", ego_left_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("ego_left_node", kInvalidId)
+  }
+  if (ego_right_node_id_ != -1) {
+    JSON_DEBUG_VALUE("ego_right_node", ego_right_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("ego_right_node", kInvalidId)
+  }
+  if (ego_left_front_node_id_ != -1) {
+    JSON_DEBUG_VALUE("ego_left_front_node", ego_left_front_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("ego_left_front_node", kInvalidId)
+  }
+  if (ego_right_front_node_id_ != -1) {
+    JSON_DEBUG_VALUE("ego_right_front_node", ego_right_front_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("ego_right_front_node", kInvalidId)
+  }
+  if (ego_left_rear_node_id_ != -1) {
+    JSON_DEBUG_VALUE("ego_left_rear_node", ego_left_rear_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("ego_left_rear_node", kInvalidId)
+  }
+  if (ego_right_rear_node_id_ != -1) {
+    JSON_DEBUG_VALUE("ego_right_rear_node", ego_right_rear_node_id_ & 0xFFFF)
+  } else {
+    JSON_DEBUG_VALUE("ego_right_rear_node", kInvalidId)
+  }
 }
 
 std::vector<const DynamicAgentNode*> DynamicWorld::GetConeNodes() const {
