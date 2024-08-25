@@ -78,7 +78,7 @@ bool LaneChangeRequestManager::Update(
       config_.enable_use_emergency_avoidence_lane_change_request;
   const bool enable_use_cone_change_request =
       config_.enable_use_cone_change_request;
-  const bool enable_use_merge_lc_request = 
+  const bool enable_use_merge_lc_request =
       config_.enable_use_merge_change_request;
   const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
 
@@ -289,7 +289,7 @@ bool LaneChangeRequestManager::Update(
       }
       request_ = merge_change_request_.request_type();
       request_source_ = MERGE_REQUEST;
-      target_lane_virtual_id_ = merge_change_request_.target_lane_virtual_id();      
+      target_lane_virtual_id_ = merge_change_request_.target_lane_virtual_id();
     } else {
       LOG_DEBUG("overtake_request_.request_type(): %d",
                 overtake_request_.request_type());

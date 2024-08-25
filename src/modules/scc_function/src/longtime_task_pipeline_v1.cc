@@ -14,6 +14,8 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
       std::make_unique<GapSelectorDecider>(config_builder, session);
   general_lateral_decider_ =
       std::make_unique<GeneralLateralDecider>(config_builder, session);
+  traffic_light_decider_ =
+      std::make_unique<TrafficLightDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
   agent_longitudinal_decider_ =
@@ -27,7 +29,13 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
 }
 
 bool LongTimeTaskPipelineV1::Run() {
-  bool ok = lane_change_decider_->Execute();
+  bool ok = traffic_light_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(traffic_light_decider_->Name());
+    return false;
+  }
+
+  ok = lane_change_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lane_change_decider_->Name());
     return false;

@@ -883,13 +883,18 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
   lane_change_decider_output.start_move_dist_lane = start_move_dist_lane_;
   int merge_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
-  lane_change_decider_output.is_merge_region = IsMergeRegion(&merge_lane_virtual_id);
+  lane_change_decider_output.is_merge_region =
+      IsMergeRegion(&merge_lane_virtual_id);
   lane_change_decider_output.merge_lane_virtual_id = merge_lane_virtual_id;
-  JSON_DEBUG_VALUE("is_merge_region", lane_change_decider_output.is_merge_region);
+  JSON_DEBUG_VALUE("is_merge_region",
+                   lane_change_decider_output.is_merge_region);
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
-  
+
   GenerateTurnSignalForSplitRegion();
-  lane_change_decider_output.dir_turn_signal_road_to_ramp = road_to_ramp_turn_signal_;
+  lane_change_decider_output.dir_turn_signal_road_to_ramp =
+      road_to_ramp_turn_signal_;
+  lane_change_decider_output.int_request_cancel_reason =
+      lc_req_mgr_->int_request_cancel_reason();
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const std::vector<TrackedObject> &vec_side_obstacles,
@@ -1557,7 +1562,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
       virtual_lane_manager->origin_relative_id_zero_nums();
   bool is_ego_on_expressway = virtual_lane_manager->is_ego_on_expressway();
   bool is_on_ramp = virtual_lane_manager->is_on_ramp();
-  JSON_DEBUG_VALUE("origin_relative_id_zero_nums", origin_relative_id_zero_nums);
+  JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
+                   origin_relative_id_zero_nums);
   if (origin_relative_id_zero_nums > 1) {
     RampDirection ramp_direction = RAMP_NONE;
     if (IsSplitRegion(&ramp_direction)) {
@@ -1573,7 +1579,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
       }
     }
   }
-  JSON_DEBUG_VALUE("origin_road_to_ramp_turn_signal", static_cast<int>(road_to_ramp_turn_signal_));
+  JSON_DEBUG_VALUE("origin_road_to_ramp_turn_signal",
+                   static_cast<int>(road_to_ramp_turn_signal_));
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
     if (IsOffTurnLight(road_to_ramp_turn_signal_)) {
       road_to_ramp_turn_signal_ = RAMP_NONE;
@@ -1777,25 +1784,27 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
   return true;
 }
 
-bool LaneChangeStateMachineManager::IsMergeRegion(int* merge_lane_virtual_id) {
+bool LaneChangeStateMachineManager::IsMergeRegion(int *merge_lane_virtual_id) {
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
   const auto left_lane = virtual_lane_manager->get_left_lane();
   const auto right_lane = virtual_lane_manager->get_right_lane();
-  const auto cur_ref_path = reference_path_manager->get_reference_path_by_current_lane();
+  const auto cur_ref_path =
+      reference_path_manager->get_reference_path_by_current_lane();
   //目前仅考虑二合一的场景，后续城区城区可能还会有二以上合一的场景
   //判断与左车道是否merge
   if (left_lane == nullptr) {
     return false;
   }
-  const auto left_reference_path = reference_path_manager->get_reference_path_by_lane(
-      left_lane->get_virtual_id());
+  const auto left_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          left_lane->get_virtual_id());
   if (left_reference_path == nullptr) {
     return false;
   }
-  if (IsOverlapWithOtherLaneOnEndRegion(left_reference_path,ON_LEFT)) {
+  if (IsOverlapWithOtherLaneOnEndRegion(left_reference_path, ON_LEFT)) {
     *merge_lane_virtual_id = left_lane->get_virtual_id();
     return true;
   }
@@ -1803,19 +1812,22 @@ bool LaneChangeStateMachineManager::IsMergeRegion(int* merge_lane_virtual_id) {
   if (right_lane == nullptr) {
     return false;
   }
-  const auto right_reference_path = reference_path_manager->get_reference_path_by_lane(
-      right_lane->get_virtual_id());
+  const auto right_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          right_lane->get_virtual_id());
   if (right_reference_path == nullptr) {
     return false;
   }
-  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path,ON_RIGHT)) {
+  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path, ON_RIGHT)) {
     *merge_lane_virtual_id = right_lane->get_virtual_id();
     return true;
   }
   return false;
 }
 
-bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(const std::shared_ptr<ReferencePath> reference_path, const RelativeDirection rel_dir) {
+bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
+    const std::shared_ptr<ReferencePath> reference_path,
+    const RelativeDirection rel_dir) {
   const double standard_lane_width = 3.8;
   const double cur_lane_lat_diff_threshold = standard_lane_width - 0.8;
   const double end_lane_lat_diff_threshold = standard_lane_width / 2;
@@ -1825,12 +1837,12 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(const std:
   double cur_ego_s = NL_NMAX;
   double abs_lat_diff = 0.0;
   const auto reference_path_manager =
-    session_->environmental_model().get_reference_path_manager();
-  const auto ref_frenet_ego_state =
-      reference_path->get_frenet_ego_state();
+      session_->environmental_model().get_reference_path_manager();
+  const auto ref_frenet_ego_state = reference_path->get_frenet_ego_state();
   ref_ego_l = ref_frenet_ego_state.l();
   const auto ref_lane_coord = reference_path->get_frenet_coord();
-  const auto cur_reference_path = reference_path_manager->get_reference_path_by_current_lane();
+  const auto cur_reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
   if (cur_reference_path == nullptr) {
     return false;
   }
@@ -1839,60 +1851,67 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(const std:
   cur_ego_s = cur_reference_path->get_frenet_ego_state().s();
   ReferencePathPoint cur_ref_path_point{};
   cur_reference_path->get_reference_point_by_lon(cur_ego_s, cur_ref_path_point);
-  Point2D cur_ref_point = {cur_ref_path_point.path_point.x,cur_ref_path_point.path_point.y};
+  Point2D cur_ref_point = {cur_ref_path_point.path_point.x,
+                           cur_ref_path_point.path_point.y};
   Point2D frenet_ref_point;
-  if (ref_lane_coord->XYToSL(cur_ref_point,frenet_ref_point)) {
+  if (ref_lane_coord->XYToSL(cur_ref_point, frenet_ref_point)) {
     abs_lat_diff = std::abs(frenet_ref_point.y);
   } else {
     //特殊情况如果进入到这，这会有些误差 TODO(fengwang31)
-    abs_lat_diff = std::abs(ref_ego_l) + std::abs(cur_ego_l); 
+    abs_lat_diff = std::abs(ref_ego_l) + std::abs(cur_ego_l);
   }
   const auto cur_lane_coord = cur_reference_path->get_frenet_coord();
   const auto cur_ref_path_end_point = cur_reference_path->get_points().back();
   //计算两条车道起始点的lat_diff
   double start_abs_lat_diff = 0.0;
   Point2D frenet_point_start;
-  Point2D cur_ref_path_start_point_temp = {cur_reference_path->get_points().begin()->path_point.x,cur_reference_path->get_points().begin()->path_point.y};
-  Point2D ref_path_start_point_temp = {reference_path->get_points().begin()->path_point.x,reference_path->get_points().begin()->path_point.y};
-  if (ref_lane_coord->XYToSL(cur_ref_path_start_point_temp,frenet_point_start)) {
+  Point2D cur_ref_path_start_point_temp = {
+      cur_reference_path->get_points().begin()->path_point.x,
+      cur_reference_path->get_points().begin()->path_point.y};
+  Point2D ref_path_start_point_temp = {
+      reference_path->get_points().begin()->path_point.x,
+      reference_path->get_points().begin()->path_point.y};
+  if (ref_lane_coord->XYToSL(cur_ref_path_start_point_temp,
+                             frenet_point_start)) {
     start_abs_lat_diff = std::abs(frenet_point_start.y);
   } else {
-    if(cur_lane_coord->XYToSL(ref_path_start_point_temp,frenet_point_start)) {
+    if (cur_lane_coord->XYToSL(ref_path_start_point_temp, frenet_point_start)) {
       start_abs_lat_diff = std::abs(frenet_point_start.y);
     }
   }
   //计算两条车道终点的lat_diff
   Point2D frenet_point;
-  Point2D cur_ref_path_end_point_temp = {cur_ref_path_end_point.path_point.x,cur_ref_path_end_point.path_point.y};
-  Point2D ref_path_end_point_temp = {reference_path->get_points().back().path_point.x,reference_path->get_points().back().path_point.y};
+  Point2D cur_ref_path_end_point_temp = {cur_ref_path_end_point.path_point.x,
+                                         cur_ref_path_end_point.path_point.y};
+  Point2D ref_path_end_point_temp = {
+      reference_path->get_points().back().path_point.x,
+      reference_path->get_points().back().path_point.y};
   bool lane_end_satisfied_merge_condition = false;
-  if (ref_lane_coord->XYToSL(cur_ref_path_end_point_temp,frenet_point)) {
+  if (ref_lane_coord->XYToSL(cur_ref_path_end_point_temp, frenet_point)) {
     cur_to_other_lane_end_lat_diff = frenet_point.y;
-    if (rel_dir == ON_LEFT &&
-        cur_to_other_lane_end_lat_diff > 0) {
+    if (rel_dir == ON_LEFT && cur_to_other_lane_end_lat_diff > 0) {
       lane_end_satisfied_merge_condition = true;
-    } else if (rel_dir == ON_RIGHT &&
-        cur_to_other_lane_end_lat_diff < 0) {
+    } else if (rel_dir == ON_RIGHT && cur_to_other_lane_end_lat_diff < 0) {
       lane_end_satisfied_merge_condition = true;
-    } else if (std::abs(cur_to_other_lane_end_lat_diff) < end_lane_lat_diff_threshold){
+    } else if (std::abs(cur_to_other_lane_end_lat_diff) <
+               end_lane_lat_diff_threshold) {
       lane_end_satisfied_merge_condition = true;
     }
   } else {
-    if (cur_lane_coord->XYToSL(ref_path_end_point_temp,frenet_point)) {
+    if (cur_lane_coord->XYToSL(ref_path_end_point_temp, frenet_point)) {
       cur_to_other_lane_end_lat_diff = frenet_point.y;
-      if (rel_dir == ON_LEFT &&
-          cur_to_other_lane_end_lat_diff < 0) {
+      if (rel_dir == ON_LEFT && cur_to_other_lane_end_lat_diff < 0) {
         lane_end_satisfied_merge_condition = true;
-      } else if (rel_dir == ON_RIGHT &&
-          cur_to_other_lane_end_lat_diff > 0) {
+      } else if (rel_dir == ON_RIGHT && cur_to_other_lane_end_lat_diff > 0) {
         lane_end_satisfied_merge_condition = true;
-      } else if (std::abs(cur_to_other_lane_end_lat_diff) < end_lane_lat_diff_threshold) {
+      } else if (std::abs(cur_to_other_lane_end_lat_diff) <
+                 end_lane_lat_diff_threshold) {
         lane_end_satisfied_merge_condition = true;
       }
     }
   }
   if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
-        start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
+       start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
       lane_end_satisfied_merge_condition) {
     std::cout << "is merge region!!!" << std::endl;
     return true;

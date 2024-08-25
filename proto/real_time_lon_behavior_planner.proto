@@ -133,6 +133,9 @@ message RealTimeLonBehaviorInput {
   optional bool is_in_intersection = 13;
   optional LongitudinalInitState lon_init_state = 14;
   optional bool is_continuous_ramp = 15;
+  optional double dis_to_stopline = 16;
+  optional double dis_to_crosswalk = 17;
+  optional IntersectionState intersection_state = 18;
 }
 
 // The output of real time lon behavior

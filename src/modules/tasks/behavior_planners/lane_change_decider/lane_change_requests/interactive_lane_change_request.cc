@@ -32,6 +32,7 @@ void IntRequest::Update(int lc_status) {
     return;
   }
   // ego_blinker 0-lane follow, 1-left, 2-right
+  request_cancel_reason_ = NO_CANCEL;
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();
@@ -90,6 +91,7 @@ void IntRequest::Update(int lc_status) {
     // 实线禁止换道
     if (left_boundary_type ==
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+      request_cancel_reason_ = SOLID_LC;
       counter_left_ = -5;
     }
 
@@ -99,14 +101,17 @@ void IntRequest::Update(int lc_status) {
       std::shared_ptr<VirtualLane> origin_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
       int origin_lane_order_id = origin_lane->get_order_id();
-      std::shared_ptr<VirtualLane> tem_target_lane = 
-          virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
+      std::shared_ptr<VirtualLane> tem_target_lane =
+          virtual_lane_mgr_->get_lane_with_virtual_id(
+              target_lane_virtual_id_tmp);
       if (tem_target_lane != nullptr) {
         int temp_target_lane_order_id = tem_target_lane->get_order_id();
-        auto origin_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                              zero_relative_id_order_ids.end(), origin_lane_order_id);
+        auto origin_id_iter =
+            std::find(zero_relative_id_order_ids.begin(),
+                      zero_relative_id_order_ids.end(), origin_lane_order_id);
         auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                              zero_relative_id_order_ids.end(), temp_target_lane_order_id);
+                                        zero_relative_id_order_ids.end(),
+                                        temp_target_lane_order_id);
         if (origin_id_iter != zero_relative_id_order_ids.end() &&
             target_id_iter != zero_relative_id_order_ids.end()) {
           is_in_diverted_lane_change_ = true;
@@ -148,6 +153,7 @@ void IntRequest::Update(int lc_status) {
     counter_right_ = counter_right_ + 1;
     if (right_boundary_type ==
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
+      request_cancel_reason_ = SOLID_LC;
       counter_right_ = -5;
     }
 
@@ -157,18 +163,21 @@ void IntRequest::Update(int lc_status) {
       std::shared_ptr<VirtualLane> origin_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
       int origin_lane_order_id = origin_lane->get_order_id();
-      std::shared_ptr<VirtualLane> tem_target_lane = 
-          virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
+      std::shared_ptr<VirtualLane> tem_target_lane =
+          virtual_lane_mgr_->get_lane_with_virtual_id(
+              target_lane_virtual_id_tmp);
       if (tem_target_lane != nullptr) {
         int temp_target_lane_order_id = tem_target_lane->get_order_id();
-        auto origin_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                              zero_relative_id_order_ids.end(), origin_lane_order_id);
+        auto origin_id_iter =
+            std::find(zero_relative_id_order_ids.begin(),
+                      zero_relative_id_order_ids.end(), origin_lane_order_id);
         auto target_id_iter = std::find(zero_relative_id_order_ids.begin(),
-                              zero_relative_id_order_ids.end(), temp_target_lane_order_id);
+                                        zero_relative_id_order_ids.end(),
+                                        temp_target_lane_order_id);
         if (origin_id_iter != zero_relative_id_order_ids.end() &&
             target_id_iter != zero_relative_id_order_ids.end()) {
           is_in_diverted_lane_change_ = true;
-        } 
+        }
       } else {
         is_in_diverted_lane_change_ = false;
       }
@@ -214,6 +223,7 @@ void IntRequest::Update(int lc_status) {
           "[IntRequest::update]: Cancel int lc blinker when ego car on target "
           "lane and continue lc state  \n");
     } else {
+      request_cancel_reason_ = MANUAL_CANCEL;
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
       counter_left_ = 0;
@@ -237,6 +247,7 @@ void IntRequest::Update(int lc_status) {
         (request_type_ == RIGHT_CHANGE &&
          right_boundary_type ==
              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
+      request_cancel_reason_ = SOLID_LC;
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
       counter_left_ = 0;

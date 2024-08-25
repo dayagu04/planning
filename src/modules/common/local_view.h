@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "camera_preception_groundline_c.h"
+#include "camera_preception_tsr_c.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
@@ -15,7 +16,6 @@
 #include "interface/src/legacy/interface2.4.5/hmi_mcu_inner_c.h"
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
-#include "localization_c.h"
 #include "planning_plan_c.h"
 #include "prediction_c.h"
 #include "uss_perception_info_c.h"
@@ -34,9 +34,6 @@ struct LocalView {
 
   iflyauto::RoadInfo road_info;
   double road_info_recv_time = 0.0;
-
-  iflyauto::LocalizationEstimate localization_estimate;
-  double localization_estimate_recv_time = 0.0;
 
   iflyauto::IFLYLocalization localization;
   double localization_recv_time = 0.0;
@@ -76,6 +73,8 @@ struct LocalView {
 
   SdMapSwtx::SdMap sd_map_info;
   double sd_map_info_recv_time = 0.0;
+  iflyauto::CameraPerceptionTsrInfo perception_tsr_info;
+  double perception_tsr_info_recv_time = 0.0;
 
   // iflyauto::ParkingInfo parking_map_info;
   // double parking_map_info_recv_time = 0.0;

@@ -96,8 +96,7 @@ void MergeRequest::Update(int lc_status) {
             is_merge_lane_change_situation_);
   JSON_DEBUG_VALUE("is_merge_lane_change_situation_",
                    is_merge_lane_change_situation_);
-  JSON_DEBUG_VALUE("merge_alc_trigger_counter_", 
-                    merge_alc_trigger_counter_);
+  JSON_DEBUG_VALUE("merge_alc_trigger_counter_", merge_alc_trigger_counter_);
 
   if (!is_merge_lane_change_situation_) {
     if (request_type_ != NO_CHANGE &&
@@ -149,7 +148,7 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
   const int lane_nums = virtual_lane_mgr_->get_lane_num();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
   const int current_lane_order_id = current_lane->get_order_id();
-  bool is_edge_side_lane = 
+  bool is_edge_side_lane =
       (current_lane_order_id == 0 || current_lane_order_id == lane_nums - 1);
 
   if (is_edge_side_lane && is_merge_region) {
@@ -173,7 +172,7 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   int target_lane_virtual_id_tmp{origin_lane_virtual_id_};
-  
+
   MakesureLaneMergeDirection(origin_lane_virtual_id_);
 
   if (merge_lane_change_direction_ == LEFT_CHANGE && enable_l_) {
@@ -192,9 +191,9 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
               iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
           request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-          (lc_status == kLaneChangeCancel &&
-              (lane_change_lane_mgr_->has_origin_lane() &&
-              lane_change_lane_mgr_->is_ego_on(olane))))) {
+           (lc_status == kLaneChangeCancel &&
+            (lane_change_lane_mgr_->has_origin_lane() &&
+             lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
@@ -219,9 +218,9 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
               iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
           request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-          (lc_status == kLaneChangeCancel &&
-              (lane_change_lane_mgr_->has_origin_lane() &&
-              lane_change_lane_mgr_->is_ego_on(olane))))) {
+           (lc_status == kLaneChangeCancel &&
+            (lane_change_lane_mgr_->has_origin_lane() &&
+             lane_change_lane_mgr_->is_ego_on(olane))))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         LOG_DEBUG(
@@ -260,7 +259,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     auto left_lane_boundarys = base_lane->get_left_lane_boundary();
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
       if (left_lane_boundarys.type_segments[i].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         left_boundary_exist_virtual_type = true;
         break;
       } else {
@@ -271,7 +270,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     auto right_lane_boundarys = base_lane->get_right_lane_boundary();
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
       if (right_lane_boundarys.type_segments[i].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         right_boundary_exist_virtual_type = true;
         break;
       } else {
@@ -285,14 +284,16 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   if (left_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = LEFT_CHANGE;
   } else if (right_boundary_exist_virtual_type &&
-      !left_boundary_exist_virtual_type) {
+             !left_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
   } else {
     merge_lane_change_direction_ = NO_CHANGE;
   }
 
-  JSON_DEBUG_VALUE("left_boundary_exist_virtual_type", left_boundary_exist_virtual_type);
-  JSON_DEBUG_VALUE("right_boundary_exist_virtual_type", right_boundary_exist_virtual_type);
+  JSON_DEBUG_VALUE("left_boundary_exist_virtual_type",
+                   left_boundary_exist_virtual_type);
+  JSON_DEBUG_VALUE("right_boundary_exist_virtual_type",
+                   right_boundary_exist_virtual_type);
 }
 
 void MergeRequest::Reset() {

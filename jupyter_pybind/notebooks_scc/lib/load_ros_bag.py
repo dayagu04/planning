@@ -133,12 +133,12 @@ class LoadRosbag:
     """ try:
       loc_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
-        loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
       loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
         self.loc_msg['t'].append(t)
         self.loc_msg['data'].append(msg)
-        self.loc_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.loc_msg['timestamp'].append(msg.msg_header.stamp)
       t0 = self.loc_msg['t'][0]
       print("T0 in loc msg:",t0)
       self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
@@ -163,12 +163,12 @@ class LoadRosbag:
       try:
         loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
-          loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+          loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
         loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in loc_msg_dict.items():
           self.loc_msg['t'].append(t)
           self.loc_msg['data'].append(msg)
-          self.loc_msg['timestamp'].append(msg.msg_header.timestamp)
+          self.loc_msg['timestamp'].append(msg.msg_header.stamp)
         t0 = self.loc_msg['t'][0]
         print("T0 in loc msg:",t0)
         self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
@@ -232,11 +232,11 @@ class LoadRosbag:
       try:
         loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
-          loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+          loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
         sorted_loc_msg_dict = OrderedDict(sorted(loc_msg_dict.items(), key=lambda ele: ele[0]))
         for t, msg in sorted_loc_msg_dict.items():
           self.loc_msg['t'].append(t)
-          self.loc_msg['timestamp'].append(msg.msg_header.timestamp)
+          self.loc_msg['timestamp'].append(msg.msg_header.stamp)
           cvt_msg = OldCvtNewLoc()
           cvt_msg.position.position_boot.x = msg.pose.local_position.x
           cvt_msg.position.position_boot.y = msg.pose.local_position.y
@@ -260,11 +260,11 @@ class LoadRosbag:
       try:
         origin_loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose_origin"):
-          origin_loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+          origin_loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
         sorted_loc_msg_dict = OrderedDict(sorted(origin_loc_msg_dict.items(), key=lambda ele: ele[0]))
         for t, msg in sorted_loc_msg_dict.items():
           self.origin_loc_msg['t'].append(t)
-          self.origin_loc_msg['timestamp'].append(msg.msg_header.timestamp)
+          self.origin_loc_msg['timestamp'].append(msg.msg_header.stamp)
           cvt_msg = OldCvtNewLoc()
           cvt_msg.position.position_boot.x = msg.pose.local_position.x
           cvt_msg.position.position_boot.y = msg.pose.local_position.y
@@ -288,11 +288,11 @@ class LoadRosbag:
     try:
       road_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
-        road_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        road_msg_dict[msg.msg_header.stamp / 1e6] = msg
       road_msg_dict = {key: val for key, val in sorted(road_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in road_msg_dict.items():
         self.road_msg['t'].append(t)
-        self.road_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.road_msg['timestamp'].append(msg.msg_header.stamp)
         self.road_msg['data'].append(msg)
       if t0 == 0:
         t0 = self.road_msg['t'][0]
@@ -311,12 +311,12 @@ class LoadRosbag:
     try:
       mobileye_lane_lines_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/lane_lines"):
-        # print(msg.msg_header.timestamp)
-        mobileye_lane_lines_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        # print(msg.msg_header.stamp)
+        mobileye_lane_lines_msg_dict[msg.msg_header.stamp / 1e6] = msg
       sorted_mobileye_lane_lines_msg_dict = OrderedDict(sorted(mobileye_lane_lines_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_mobileye_lane_lines_msg_dict.items():
         self.mobileye_lane_lines_msg['t'].append(t)
-        self.mobileye_lane_lines_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.mobileye_lane_lines_msg['timestamp'].append(msg.msg_header.stamp)
         self.mobileye_lane_lines_msg['data'].append(msg)
       self.mobileye_lane_lines_msg['t'] = [tmp - t0  for tmp in self.mobileye_lane_lines_msg['t']]
       print('mobileye_lane_lines_msg time:',self.mobileye_lane_lines_msg['t'][-1])
@@ -354,11 +354,11 @@ class LoadRosbag:
     try:
       lane_topo_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_topo"):
-        lane_topo_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        lane_topo_msg_dict[msg.msg_header.stamp / 1e6] = msg
       sorted_lane_topo_msg_dict = OrderedDict(sorted(lane_topo_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_lane_topo_msg_dict.items():
         self.lane_topo_msg['t'].append(t)
-        self.lane_topo_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.lane_topo_msg['timestamp'].append(msg.msg_header.stamp)
         self.lane_topo_msg['data'].append(msg)
       self.lane_topo_msg['t'] = [tmp - t0  for tmp in self.lane_topo_msg['t']]
       print('lane_topo_msg time:',self.lane_topo_msg['t'][-1])
@@ -373,13 +373,13 @@ class LoadRosbag:
     try:
       fus_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
-        fus_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        fus_msg_dict[msg.msg_header.stamp / 1e6] = msg
       # fus_msg_dict = {key: val for key, val in sorted(fus_msg_dict.items(), key = lambda ele: ele[0])}
       sorted_fus_msg_dict = OrderedDict(sorted(fus_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_fus_msg_dict.items():
         self.fus_msg['t'].append(t)
         self.fus_msg['data'].append(msg)
-        self.fus_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.fus_msg['timestamp'].append(msg.msg_header.stamp)
       self.fus_msg['t'] = [tmp - t0  for tmp in self.fus_msg['t']]
       print('fus_msg time:',self.fus_msg['t'][-1])
       if len(self.fus_msg['t']) > 0:
@@ -394,12 +394,12 @@ class LoadRosbag:
     try:
       mobileye_objects_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/objects"):
-        mobileye_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        mobileye_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
       sorted_mobileye_objects_msg_dict = OrderedDict(sorted(mobileye_objects_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_mobileye_objects_msg_dict.items():
         self.mobileye_objects_msg['t'].append(t)
         self.mobileye_objects_msg['data'].append(msg)
-        self.mobileye_objects_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.mobileye_objects_msg['timestamp'].append(msg.msg_header.stamp)
       self.mobileye_objects_msg['t'] = [tmp - t0  for tmp in self.mobileye_objects_msg['t']]
       print('mobileye_objects_msg time:',self.mobileye_objects_msg['t'][-1])
       if len(self.mobileye_objects_msg['t']) > 0:
@@ -414,12 +414,12 @@ class LoadRosbag:
     try:
       rdg_objects_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/objects"):
-        rdg_objects_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        rdg_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
       sorted_rdg_objects_msg_dict = OrderedDict(sorted(rdg_objects_msg_dict.items(), key=lambda ele: ele[0]))
       for t, msg in sorted_rdg_objects_msg_dict.items():
         self.rdg_objects_msg['t'].append(t)
         self.rdg_objects_msg['data'].append(msg)
-        self.rdg_objects_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.rdg_objects_msg['timestamp'].append(msg.msg_header.stamp)
       self.rdg_objects_msg['t'] = [tmp - t0  for tmp in self.rdg_objects_msg['t']]
       print('rdg_objects_msg time:',self.rdg_objects_msg['t'][-1])
       if len(self.rdg_objects_msg['t']) > 0:
@@ -434,12 +434,12 @@ class LoadRosbag:
     try:
       lidar_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/lidar_objects"):
-        lidar_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        lidar_msg_dict[msg.msg_header.stamp / 1e6] = msg
       lidar_msg_dict = {key: val for key, val in sorted(lidar_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in lidar_msg_dict.items():
         self.lidar_msg['t'].append(t)
         self.lidar_msg['data'].append(msg)
-        self.lidar_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.lidar_msg['timestamp'].append(msg.msg_header.stamp)
       self.lidar_msg['t'] = [tmp - t0  for tmp in self.lidar_msg['t']]
       print('lidar_msg time:',self.lidar_msg['t'][-1])
       if len(self.lidar_msg['t']) > 0:
@@ -460,24 +460,24 @@ class LoadRosbag:
         radar_msg_dict = {}
         if i == 0:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_fm_perception_info"):
-            radar_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
         elif i == 1:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
-            radar_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
         elif i == 2:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_fr_perception_info"):
-            radar_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
         elif i == 3:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_rl_perception_info"):
-            radar_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
         elif i == 4:
           for topic, msg, t in self.bag.read_messages("/iflytek/radar_rr_perception_info"):
-            radar_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
         radar_msg_dict = {key: val for key, val in sorted(radar_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in radar_msg_dict.items():
           radar_msg[i]['t'].append(t)
           radar_msg[i]['data'].append(msg)
-          radar_msg[i]['timestamp'].append(msg.msg_header.timestamp)
+          radar_msg[i]['timestamp'].append(msg.msg_header.stamp)
           #temp_t = radar_msg[i]['t']
         radar_msg[i]['t'] = [tmp - t0  for tmp in radar_msg[i]['t']]
           #print("load message:",i)
@@ -496,7 +496,7 @@ class LoadRosbag:
     # try:
     #   radar_fl_msg_dict = {}
     #   for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
-    #     radar_fl_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+    #     radar_fl_msg_dict[msg.msg_header.stamp / 1e6] = msg
     #   radar_fl_msg_dict = {key: val for key, val in sorted(radar_fl_msg_dict.items(), key = lambda ele: ele[0])}
     #   for t, msg in radar_fl_msg_dict.items():
     #     self.radar_fl_msg['t'].append(t)
@@ -515,12 +515,12 @@ class LoadRosbag:
     try:
       vs_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
-        vs_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        vs_msg_dict[msg.msg_header.stamp / 1e6] = msg
       vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vs_msg_dict.items():
         self.vs_msg['t'].append(t)
         self.vs_msg['data'].append(msg)
-        self.vs_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.vs_msg['timestamp'].append(msg.msg_header.stamp)
       self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
       print('vs time:',self.vs_msg['t'][-1])
@@ -537,12 +537,12 @@ class LoadRosbag:
     try:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
-        plan_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        plan_msg_dict[msg.msg_header.stamp / 1e6] = msg
       plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
         self.plan_msg['t'].append(t)
         self.plan_msg['data'].append(msg)
-        self.plan_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.plan_msg['timestamp'].append(msg.msg_header.stamp)
       self.plan_msg['t'] = [tmp - t0  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
@@ -559,12 +559,12 @@ class LoadRosbag:
     try:
       prediction_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/prediction/prediction_result"):
-        prediction_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        prediction_msg_dict[msg.msg_header.stamp / 1e6] = msg
       prediction_msg_dict = {key: val for key, val in sorted(prediction_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in prediction_msg_dict.items():
         self.prediction_msg['t'].append(t)
         self.prediction_msg['data'].append(msg)
-        self.prediction_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.prediction_msg['timestamp'].append(msg.msg_header.stamp)
       self.prediction_msg['t'] = [tmp - t0  for tmp in self.prediction_msg['t']]
       self.prediction_msg['enable'] = True
       max_time = max(max_time, self.prediction_msg['t'][-1])
@@ -657,12 +657,12 @@ class LoadRosbag:
     try:
       ctrl_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
-        ctrl_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        ctrl_msg_dict[msg.msg_header.stamp / 1e6] = msg
       ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_msg_dict.items():
         self.ctrl_msg['t'].append(t)
         self.ctrl_msg['data'].append(msg)
-        self.ctrl_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.ctrl_msg['timestamp'].append(msg.msg_header.stamp)
       self.ctrl_msg['t'] = [tmp - t0  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
       print('ctrl_msg time:',self.ctrl_msg['t'][-1])
@@ -720,12 +720,12 @@ class LoadRosbag:
     try:
       fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
-        fus_parking_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        fus_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
       fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_parking_msg_dict.items():
         self.fus_parking_msg['t'].append(t)
         self.fus_parking_msg['data'].append(msg)
-        self.fus_parking_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.fus_parking_msg['timestamp'].append(msg.msg_header.stamp)
       self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][0]  for tmp in self.fus_parking_msg['t']]
       max_time = max(max_time, self.fus_parking_msg['t'][-1])
       print('fus_parking_msg time:',self.fus_parking_msg['t'][-1])
@@ -741,12 +741,12 @@ class LoadRosbag:
     try:
       soc_state_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fsm/soc_state"):
-        soc_state_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        soc_state_msg_dict[msg.msg_header.stamp / 1e6] = msg
       soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in soc_state_msg_dict.items():
         self.soc_state_msg['t'].append(t)
         self.soc_state_msg['data'].append(msg)
-        self.soc_state_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -762,12 +762,12 @@ class LoadRosbag:
     try:
       ehr_static_map_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/static_map"):
-        ehr_static_map_msg_dict[msg.msg_header.timestamp / 1e3] = msg
+        ehr_static_map_msg_dict[msg.msg_header.stamp / 1e3] = msg
       ehr_static_map_msg_dict = {key: val for key, val in sorted(ehr_static_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_static_map_msg_dict.items():
         self.ehr_static_map_msg['t'].append(t)
         self.ehr_static_map_msg['data'].append(msg)
-        self.ehr_static_map_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.ehr_static_map_msg['timestamp'].append(msg.msg_header.stamp)
       self.ehr_static_map_msg['t'] = [tmp - t0  for tmp in self.ehr_static_map_msg['t']]
       print('ehr_static_map_msg time:',self.ehr_static_map_msg['t'][-1])
       if len(self.ehr_static_map_msg['t']) > 0:
@@ -804,12 +804,12 @@ class LoadRosbag:
     try:
       ehr_parking_map_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/ehr/parking_map"):
-        ehr_parking_map_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        ehr_parking_map_msg_dict[msg.msg_header.stamp / 1e6] = msg
       ehr_parking_map_msg_dict = {key: val for key, val in sorted(ehr_parking_map_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ehr_parking_map_msg_dict.items():
         self.ehr_parking_map_msg['t'].append(t)
         self.ehr_parking_map_msg['data'].append(msg)
-        self.ehr_parking_map_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.ehr_parking_map_msg['timestamp'].append(msg.msg_header.stamp)
       self.ehr_parking_map_msg['t'] = [tmp - t0  for tmp in self.ehr_parking_map_msg['t']]
       print('ehr_parking_map_msg time:',self.ehr_parking_map_msg['t'][-1])
       if len(self.ehr_parking_map_msg['t']) > 0:
@@ -824,12 +824,12 @@ class LoadRosbag:
     try:
       ground_line_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
-        ground_line_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
       ground_line_msg_dict = {key: val for key, val in sorted(ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ground_line_msg_dict.items():
         self.ground_line_msg['t'].append(t)
         self.ground_line_msg['data'].append(msg)
-        self.ground_line_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.ground_line_msg['timestamp'].append(msg.msg_header.stamp)
       self.ground_line_msg['t'] = [tmp - t0  for tmp in self.ground_line_msg['t']]
       print('ground_line_msg time:',self.ground_line_msg['t'][-1])
       if len(self.ground_line_msg['t']) > 0:
@@ -844,12 +844,12 @@ class LoadRosbag:
     try:
       planning_hmi_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/hmi"):
-        planning_hmi_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        planning_hmi_msg_dict[msg.msg_header.stamp / 1e6] = msg
       planning_hmi_msg_dict = {key: val for key, val in sorted(planning_hmi_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in planning_hmi_msg_dict.items():
         self.planning_hmi_msg['t'].append(t)
         self.planning_hmi_msg['data'].append(msg)
-        self.planning_hmi_msg['timestamp'].append(msg.msg_header.timestamp)
+        self.planning_hmi_msg['timestamp'].append(msg.msg_header.stamp)
       self.planning_hmi_msg['t'] = [tmp - t0  for tmp in self.planning_hmi_msg['t']]
       print('planning_hmi_msg time:',self.planning_hmi_msg['t'][-1])
       if len(self.planning_hmi_msg['t']) > 0:

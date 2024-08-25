@@ -74,12 +74,18 @@ class VirtualLane {
   const iflyauto::LaneBoundary &get_right_lane_boundary() {
     return right_lane_boundary_;
   }
+  const iflyauto::LaneBoundary &get_stop_line() { return stop_line_; }
+
   const std::vector<double> &get_center_line() const { return c_poly_; };
   const iflyauto::LaneMergeSplitPoint &get_lane_merge_split_point() {
     return lane_merge_split_point_;
   }
   const std::vector<iflyauto::ReferencePoint> &lane_points() const {
     return virtual_lane_refline_points_;
+  }
+
+  const std::vector<iflyauto::LaneTypeMsg> &get_lane_types() {
+    return lane_types_;
   }
   void update_reference_path(
       std::shared_ptr<LaneReferencePath> reference_path) {
@@ -116,9 +122,7 @@ class VirtualLane {
                ? lane_marks_[0].lane_mark
                : iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
   };
-  std::vector<iflyauto::LaneMarkMsg> lane_marks() const {
-    return lane_marks_;
-  }
+  std::vector<iflyauto::LaneMarkMsg> lane_marks() const { return lane_marks_; }
   iflyauto::LaneSource get_lane_source() const {
     return lane_sources_.size() > 0 ? lane_sources_[0].source
                                     : iflyauto::LaneSource_SOURCE_UNKNOWN;
@@ -176,6 +180,8 @@ class VirtualLane {
   iflyauto::LaneMergeSplitPoint lane_merge_split_point_;
   iflyauto::LaneBoundary left_lane_boundary_;
   iflyauto::LaneBoundary right_lane_boundary_;
+
+  iflyauto::LaneBoundary stop_line_;
 
   std::vector<std::string> center_line_points_track_id_;
   // todo:clren 后面改成map，适配多种reference_path

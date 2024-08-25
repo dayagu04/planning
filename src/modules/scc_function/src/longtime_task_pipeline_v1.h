@@ -17,6 +17,7 @@
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
+#include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -38,6 +39,7 @@ class LongTimeTaskPipelineV1 : public BaseTaskPipeline {
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
+  std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
   std::unique_ptr<SccLongitudinalMotionPlanner>

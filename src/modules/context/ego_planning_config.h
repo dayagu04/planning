@@ -1744,14 +1744,17 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "brake_dis_near_ramp_zone"});
     t_curv = read_json_keys<double>(
-        json, std::vector<std::string>{"real_time_long_behavior_planner",
-                                       "t_curv"});
+        json,
+        std::vector<std::string>{"real_time_long_behavior_planner", "t_curv"});
     dis_curv = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "dis_curv"});
     pre_accelerate_distance_for_merge = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "pre_accelerate_distance_for_merge"});
+    enable_intersection_v_limit = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_intersection_v_limit"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1818,6 +1821,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double dis_near_ramp_zone = 1100.0;
   double brake_dis_near_ramp_zone = 800.0;
   double pre_accelerate_distance_for_merge = 80.0;
+  bool enable_intersection_v_limit = false;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -1977,7 +1981,12 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    enable_tfl_decider = read_json_keys<bool>(
+        json, std::vector<std::string>{"traffic_light_decider",
+                                       "enable_tfl_decider"});
   }
+
+  bool enable_tfl_decider = false;
 };
 
 struct MapRequestConfig : public EgoPlanningConfig {
@@ -2079,6 +2088,16 @@ struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
         json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
   }
   bool is_select_split_nearing_ramp = true;
+};
+
+struct EgoPlanningTrafficLightDecisionManagerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    enable_traffic_light =
+        read_json_key<bool>(json, "enable_traffic_light", enable_traffic_light);
+  }
+  bool enable_traffic_light = true;
 };
 
 struct EgoPlanningMapInfoManagerConfig : public EgoPlanningConfig {

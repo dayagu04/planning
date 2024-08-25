@@ -3,7 +3,6 @@
 #include "dubins_lib.h"
 #include "func_state_machine_c.h"
 #include "fusion_parking_slot_c.h"
-#include "localization_c.h"
 #include "math/polygon2d.h"
 #include "planning_plan_c.h"
 #include "session.h"

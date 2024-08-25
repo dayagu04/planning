@@ -231,7 +231,7 @@ bool UssObstacle::Preprocess() {
 
   // std::cout << "reverse_flag = " << reverse_flag_ << std::endl;
 
-  heading_ = local_view_ptr_->localization_estimate.pose.heading;
+  heading_ = local_view_ptr_->localization.orientation.euler_boot.yaw;
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();

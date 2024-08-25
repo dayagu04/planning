@@ -55,6 +55,16 @@ double LineSegment2d::length() const { return length_; }
 
 double LineSegment2d::length_sqr() const { return length_ * length_; }
 
+double LineSegment2d::RawDistanceTo(const Vec2d &point) const {
+  if (length_ <= kMathEpsilon) {
+    return point.DistanceTo(start_);
+  }
+  const double x0 = point.x() - start_.x();
+  const double y0 = point.y() - start_.y();
+  const double proj = x0 * unit_direction_.x() + y0 * unit_direction_.y();
+  return x0 * unit_direction_.y() - y0 * unit_direction_.x();
+}
+
 double LineSegment2d::DistanceTo(const Vec2d &point) const {
   if (length_ <= kMathEpsilon) {
     return point.DistanceTo(start_);

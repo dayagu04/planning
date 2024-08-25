@@ -44,6 +44,9 @@ static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 
+static constexpr auto TOPIC_TRAFFIC_SIGN =
+    "/iflytek/camera_perception/traffic_sign_recognition";
+
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
                           const std::string& scene_type, bool no_debug) {
   std::cout << "===========planning player init, is_close_loop="
@@ -141,11 +144,11 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
             *iflyauto::struct_cast<iflyauto::PlanningOutput>(planning_output);
         ros::Time ros_time;
         if (no_debug) {
-          planning_output_struct.header.timestamp = local_time_;
+          planning_output_struct.msg_header.stamp = local_time_;
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_output_struct.header.timestamp = planning_header_time_us_;
+          planning_output_struct.msg_header.stamp = planning_header_time_us_;
           ros_time = planning_msg_time_s_;
         }
         struct_msgs::PlanningOutput planning_output_ros_msg{};
@@ -199,11 +202,11 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
                 planning_hmi_ouput_info);
         ros::Time ros_time;
         if (no_debug) {
-          planning_hmi_ouput_info_struct.header.timestamp = local_time_;
+          planning_hmi_ouput_info_struct.msg_header.stamp = local_time_;
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_hmi_ouput_info_struct.header.timestamp =
+          planning_hmi_ouput_info_struct.msg_header.stamp =
               planning_hmi_header_time_us_;
           ros_time = planning_hmi_msg_time_ns_;
         }
@@ -274,8 +277,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_PLANNING_HMI) {
       cache_with_ros_msg_time<struct_msgs::PlanningHMIOutputInfoStr>(msg);
-    } else if (msg.getTopic() == TOPIC_HD_MAP) {
-      cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
+      // } else if (msg.getTopic() == TOPIC_HD_MAP) {
+      //   cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
     } else if (msg.getTopic() == TOPIC_SD_MAP) {
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
@@ -285,6 +288,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
           msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_TRAFFIC_SIGN) {
+      cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionTsrInfo>(
+          msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.getTopic() << std::endl;
     }
@@ -373,6 +379,9 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
       } else if (it_msg.first == TOPIC_GROUND_LINE) {
         write_ros_msg<struct_msgs::GroundLinePerceptionInfo::Ptr>(
             it_msg.second, TOPIC_GROUND_LINE, bag);
+      } else if (it_msg.first == TOPIC_TRAFFIC_SIGN) {
+        write_ros_msg<struct_msgs::CameraPerceptionTsrInfo::Ptr>(
+            it_msg.second, TOPIC_TRAFFIC_SIGN, bag);
       } else {
         // std::cerr << "unsupported channel:" << msg.channel_name << std::endl;
       }
@@ -458,25 +467,26 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
+  // //
   // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
-  auto input_time_localization_estimate =
-      input_time_list.localization_estimate();
-  if (0 == input_time_localization_estimate) {
-    input_time_localization_estimate = input_time_list.localization();
-  }
-  auto localization_estimate_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs::LocalizationEstimate>(
-          TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
-  if (localization_estimate_ros_msg) {
-    iflyauto::LocalizationEstimate localization_estimate_msg{};
-    convert(localization_estimate_msg, *localization_estimate_ros_msg,
-            ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedLocalizationEstimateOutput(
-        localization_estimate_msg);
-  } else {
-    // std::cerr << "frame_num " << frame_num_
-    //           << " missing /iflytek/localization/ego_pose" << std::endl;
-  }
+  // auto input_time_localization_estimate =
+  //     input_time_list.localization_estimate();
+  // if (0 == input_time_localization_estimate) {
+  //   input_time_localization_estimate = input_time_list.localization();
+  // }
+  // auto localization_estimate_ros_msg =
+  //     find_ros_msg_with_header_time<struct_msgs::LocalizationEstimate>(
+  //         TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
+  // if (localization_estimate_ros_msg) {
+  //   iflyauto::LocalizationEstimate localization_estimate_msg{};
+  //   convert(localization_estimate_msg, *localization_estimate_ros_msg,
+  //           ConvertTypeInfo::TO_STRUCT);
+  //   planning_adapter_->FeedLocalizationEstimateOutput(
+  //       localization_estimate_msg);
+  // } else {
+  //   // std::cerr << "frame_num " << frame_num_
+  //   //           << " missing /iflytek/localization/ego_pose" << std::endl;
+  // }
 
   auto localization_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::IFLYLocalization>(
@@ -551,6 +561,20 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/fusion/parking_slot" << std::endl;
+  }
+
+  auto perception_tsr_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs::CameraPerceptionTsrInfo>(
+          TOPIC_TRAFFIC_SIGN, input_time_list.perception_tsr());
+  if (perception_tsr_ros_msg) {
+    iflyauto::CameraPerceptionTsrInfo perception_tsr_msg{};
+    convert(perception_tsr_msg, *perception_tsr_ros_msg,
+            ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedPerceptionTsrInfo(perception_tsr_msg);
+  } else {
+    std::cerr << "frame_num " << frame_num_
+              << " missing /iflytek/camera_perception/traffic_sign_recognition"
+              << std::endl;
   }
 
   // 不再使用，注释掉
@@ -698,11 +722,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
 
   auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
       it_planning_msg->second);
-  if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
+  if (planning_debug_info->timestamp() > planning_msg->msg_header.stamp) {
     it_planning_msg++;
     auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
         it_planning_msg->second);
-    if (planning_debug_info->timestamp() > planning_msg->msg_header.timestamp) {
+    if (planning_debug_info->timestamp() > planning_msg->msg_header.stamp) {
       std::cerr << "timestamp error!!! planning output and planning debug do "
                    "not match"
                 << std::endl;
@@ -785,11 +809,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
-    planning_header_time_us_ = planning_msg->msg_header.timestamp;
+    planning_header_time_us_ = planning_msg->msg_header.stamp;
     planning_msg_time_s_ = it_planning_msg->first;
     it_planning_msg++;
 
-    planning_hmi_header_time_us_ = planning_hmi_msg->msg_header.timestamp;
+    planning_hmi_header_time_us_ = planning_hmi_msg->msg_header.stamp;
     planning_hmi_msg_time_ns_ = it_planning_hmi_msg->first;
     it_planning_hmi_msg++;
 
@@ -829,7 +853,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -844,7 +868,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
         if (loc_header_time_i > loc_esti_header_time_us_) {
           if (loc_header_time_i <= next_loc_esti_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
@@ -875,7 +899,7 @@ void PlanningPlayer::RunCloseLoop(
          it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
       auto loc_msg_i =
           boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-      auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+      auto loc_header_time_i = loc_msg_i->msg_header.stamp;
       if (loc_header_time_i > loc_esti_header_time_us_ &&
           loc_header_time_i < loc_esti_header_time_us_ + 1000 * 1000) {
         auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
@@ -1156,7 +1180,7 @@ void PlanningPlayer::UpdateVehicleServiceData() {
        it != msg_cache_[TOPIC_VEHICLE_SERVICE].end(); it++) {
     auto vehi_svc_msg_i =
         boost::any_cast<struct_msgs::VehicleServiceOutputInfo::Ptr>(it->second);
-    auto vehi_svc_header_time_i = vehi_svc_msg_i->msg_header.timestamp;
+    auto vehi_svc_header_time_i = vehi_svc_msg_i->msg_header.stamp;
     if (vehi_svc_header_time_i > vehi_svc_header_time_us_) {
       if (vehi_svc_header_time_i <= next_vehi_svc_header_time_us_) {
         auto delta_t = vehi_svc_header_time_i - vehi_svc_header_time_us_;
@@ -1271,26 +1295,26 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
     }
 
-    auto localization_estimate_ros_msg =
-        find_ros_msg_with_header_time_upper_bound<
-            struct_msgs::LocalizationEstimate>(TOPIC_LOCALIZATION_ESTIMATE,
-                                               start_time);
-    if (localization_estimate_ros_msg) {
-      local_time_ = localization_estimate_ros_msg->msg_header.timestamp;
-      iflyauto::LocalizationEstimate localization_estimate_msg{};
-      convert(localization_estimate_msg, *localization_estimate_ros_msg,
-              ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedLocalizationEstimateOutput(
-          localization_estimate_msg);
-    } else {
-      // std::cerr << "frame_num " << frame_num_
-      //           << " missing /iflytek/localization/ego_pose" << std::endl;
-    }
+    // auto localization_estimate_ros_msg =
+    //     find_ros_msg_with_header_time_upper_bound<
+    //         struct_msgs::LocalizationEstimate>(TOPIC_LOCALIZATION_ESTIMATE,
+    //                                            start_time);
+    // if (localization_estimate_ros_msg) {
+    //   local_time_ = localization_estimate_ros_msg->msg_header.stamp;
+    //   iflyauto::LocalizationEstimate localization_estimate_msg{};
+    //   convert(localization_estimate_msg, *localization_estimate_ros_msg,
+    //           ConvertTypeInfo::TO_STRUCT);
+    //   planning_adapter_->FeedLocalizationEstimateOutput(
+    //       localization_estimate_msg);
+    // } else {
+    //   // std::cerr << "frame_num " << frame_num_
+    //   //           << " missing /iflytek/localization/ego_pose" << std::endl;
+    // }
 
     auto localization_ros_msg = find_ros_msg_with_header_time_upper_bound<
         struct_msgs::IFLYLocalization>(TOPIC_LOCALIZATION, start_time);
     if (localization_ros_msg) {
-      local_time_ = localization_ros_msg->msg_header.timestamp;
+      local_time_ = localization_ros_msg->msg_header.stamp;
       iflyauto::IFLYLocalization localization_msg{};
       convert(localization_msg, *localization_ros_msg,
               ConvertTypeInfo::TO_STRUCT);

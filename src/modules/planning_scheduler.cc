@@ -155,7 +155,7 @@ bool PlanningScheduler::RunOnce(
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.timestamp = start_timestamp;
-  planning_output->header.start_timestamp = start_timestamp_us;
+  // planning_output->msg_header.stamp = start_timestamp_us; 统一放在adapter处
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -451,7 +451,7 @@ void PlanningScheduler::FillPlanningTrajectory(
 void PlanningScheduler::GenerateStopTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 更新输出
-  planning_output->header.start_timestamp = IflyTime::Now_ms();
+  // planning_output->msg_header.stamp = IflyTime::Now_ms();
 
   auto trajectory = &(planning_output->trajectory);
   // Hack: 长时规划
@@ -484,7 +484,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const auto &lat_offset_decider_output =
       session_.planning_context().lateral_offset_decider_output();
 
-  planning_hmi_info->header.timestamp = IflyTime::Now_us();
+  planning_hmi_info->msg_header.stamp = IflyTime::Now_us();
   // HMI for ldw
   const auto &lkas_info =
       session_.mutable_planning_context()->lane_keep_assit_function();
@@ -557,11 +557,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
 
   // planning_hmi_info->ad_info.lane_change_status =
-  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state; update
-  // LaneChangeStatus
+  // (iflyauto::LaneChangeStatus)lane_change_decider_output.curr_state;
+  // update LaneChangeStatus
   const auto curr_state = lane_change_decider_output.curr_state;
-  const auto lasr_frame_state = session_.planning_context().
-      lane_change_decider_output().coarse_planning_info.source_state;
+  const auto lasr_frame_state = session_.planning_context()
+                                    .lane_change_decider_output()
+                                    .coarse_planning_info.source_state;
   if (curr_state == kLaneKeeping) {
     if (lasr_frame_state != kLaneKeeping) {
       planning_hmi_info->ad_info.lane_change_status =
@@ -569,8 +570,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
     } else {
       planning_hmi_info->ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-        //for turn signal road to ramp
-      const auto dir_turn_signal_road_to_ramp = 
+      // for turn signal road to ramp
+      const auto dir_turn_signal_road_to_ramp =
           lane_change_decider_output.dir_turn_signal_road_to_ramp;
       if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
         planning_hmi_info->ad_info.lane_change_status =
@@ -578,12 +579,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
       } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
         planning_hmi_info->ad_info.lane_change_status =
             iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-        planning_hmi_info->ad_info.lane_change_direction = 
+        planning_hmi_info->ad_info.lane_change_direction =
             iflyauto::LaneChangeDirection::LC_DIR_LEFT;
       } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
         planning_hmi_info->ad_info.lane_change_status =
             iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-        planning_hmi_info->ad_info.lane_change_direction = 
+        planning_hmi_info->ad_info.lane_change_direction =
             iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
       }
     }
@@ -598,14 +599,22 @@ void PlanningScheduler::FillPlanningHmiInfo(
         iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
   }
   // update StatusUpdateReason
+  const auto int_request_cancel_reason =
+      lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (lc_invalid_reason == "side view invalid" ||
-      lc_invalid_reason == "front view invalid" ||
-      lc_invalid_reason == "valid cnt below threshold" ||
-      lc_back_reason == "side view back" ||
-      lc_back_reason == "front view back" ||
-      lc_back_reason == "but back cnt below threshold") {
+  if (int_request_cancel_reason == SOLID_LC) {
+    planning_hmi_info->ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (int_request_cancel_reason == MANUAL_CANCEL) {
+    planning_hmi_info->ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
+  } else if (lc_invalid_reason == "side view invalid" ||
+             lc_invalid_reason == "front view invalid" ||
+             lc_invalid_reason == "valid cnt below threshold" ||
+             lc_back_reason == "side view back" ||
+             lc_back_reason == "front view back" ||
+             lc_back_reason == "but back cnt below threshold") {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
   } else {
@@ -657,11 +666,14 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.distance_to_merge =
       virtual_lane_manager->distance_to_first_road_merge();
   planning_hmi_info->ad_info.distance_to_toll_station =
-      (uint)virtual_lane_manager
-          ->ramp_direction();  // 临时将toll_station改为ramp_direction
+      virtual_lane_manager->get_distance_to_toll_station();
+  planning_hmi_info->ad_info.noa_exit_warning_level_distance =
+      virtual_lane_manager->get_distance_to_route_end();
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
   // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
-  // planning_hmi_info->ad_info.ramp_direction = ;      // 义龙填写
+  const int ramp_direction = virtual_lane_manager->ramp_direction();
+  planning_hmi_info->ad_info.ramp_direction =
+      (iflyauto::RampDirection)ramp_direction;
   // planning_hmi_info->ad_info.ramp_pass_sts = ;       // 义龙填写
   auto fix_reference_path =
       lane_change_decider_output.coarse_planning_info.reference_path;
@@ -674,9 +686,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   planning_hmi_info->ad_info.is_in_sdmaproad =
       virtual_lane_manager->is_in_sdmaproad();
-  if (virtual_lane_manager->is_ego_on_expressway()) {
+  if (virtual_lane_manager->is_ego_on_expressway_hmi()) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+  } else if (virtual_lane_manager->is_ego_on_city_expressway_hmi()) {
+    planning_hmi_info->ad_info.road_type =
+        iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
   } else {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;

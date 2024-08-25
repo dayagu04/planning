@@ -758,14 +758,10 @@ def draw_local_view(dataLoader, layer_manager):
       #print(input_topic_timestamp)
       fusion_object_timestamp = input_topic_timestamp.fusion_object
       fusion_road_timestamp = input_topic_timestamp.fusion_road
-      if is_new_loc:
+      if 0 != input_topic_timestamp.localization:
         localization_timestamp = input_topic_timestamp.localization
-        #localization_timestamp = input_topic_timestamp.localization_estimate
       else :
-        if is_bag_main:
-          localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
-        else:
-          localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
+        localization_timestamp = input_topic_timestamp.localization_estimate
 
       prediction_timestamp = input_topic_timestamp.prediction
       vehicle_service_timestamp = input_topic_timestamp.vehicle_service
@@ -1354,13 +1350,13 @@ def draw_local_view(dataLoader, layer_manager):
               cur_yaw = loc_msg.orientation.euler_boot.yaw
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
             local_points = lane.lane_points_set
-            point_num = lane.lane_points_set_num
+            point_num = lane.lane_points_set_size
             line_x = [local_points[j].x for j in range(point_num)]
             line_y = [local_points[j].y for j in range(point_num)]
             line_x, line_y = coord_tf.local_to_global(line_x, line_y)
           else:
             local_points = lane.lane_points_set
-            point_num = lane.lane_points_set_num
+            point_num = lane.lane_points_set_size
             line_x = [local_points[j].x for j in range(point_num)]
             line_y = [local_points[j].y for j in range(point_num)]
 

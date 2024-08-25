@@ -22,7 +22,6 @@
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
 #include "local_view.h"
-#include "localization_c.h"
 #include "perpendicular_path_planner.h"
 #include "planning_plan_c.h"
 #include "slot_management_info.pb.h"

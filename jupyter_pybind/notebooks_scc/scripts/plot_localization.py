@@ -30,8 +30,8 @@ class LocalizationPlotter(object):
     start_egomotion_time = None
     for topic, msg, t in bag.read_messages('/iflytek/localization/egomotion'):
       if start_egomotion_time is None:
-        start_egomotion_time = msg.msg_header.timestamp
-      time = (msg.msg_header.timestamp - start_egomotion_time) * 1e-6
+        start_egomotion_time = msg.msg_header.stamp
+      time = (msg.msg_header.stamp - start_egomotion_time) * 1e-6
       self.egomotion_time_vec.append(time)
 
       self.egomotion_available_vec.append(msg.position.position_boot.available)
