@@ -57,6 +57,28 @@ double CalDesireStaticLateralDistance(const double base_distance,
   return base_distance + lateral_extra_buffer;
 }
 
+double GetBoundWeight(BoundType type, std::vector<double> map_bound_weight) {
+  switch (type) {
+    //  the same level
+    case BoundType::DYNAMIC_AGENT:
+      // return 0.4;
+      return map_bound_weight[0];
+    //  the same level
+    case BoundType::AGENT:
+      // return 0.4;
+      return map_bound_weight[1];
+    case BoundType::ROAD_BORDER:
+      // return 0.6;
+      return map_bound_weight[2];
+    //  the same level
+    // case BoundType::PURNE_VEHICLE_WIDTH:
+    //   return 4;
+    default:
+      // return 0.1;
+      return map_bound_weight[3];
+  }
+}
+
 int GetBoundTypePriority(BoundType type) {
   // higher priority, larger value
   switch (type) {
@@ -70,7 +92,7 @@ int GetBoundTypePriority(BoundType type) {
       return 1;
     //  the same level
     case BoundType::DYNAMIC_AGENT:
-      return 2;
+      return 3;
     //  the same level
     case BoundType::AGENT:
       return 3;

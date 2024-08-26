@@ -213,7 +213,8 @@
     "extra_lateral_buffer_3":0.6,
     "extra_lateral_buffer_4":0.632,
     "extra_lateral_buffer_5":0.725,
-    "extra_lateral_buffer_6":0.77
+    "extra_lateral_buffer_6":0.77,
+    "map_bound_weight": [0.4, 0.4, 0.6, 0.1]
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1":1,

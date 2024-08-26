@@ -93,6 +93,11 @@ class GeneralLateralDecider : public Task {
   void PostProcessBound(std::vector<WeightedBound> &bounds_input,
                         std::pair<double, double> &bound_output,
                         std::pair<BoundInfo, BoundInfo> &bound_info);
+
+  void PostProcessBoundVersion2(const std::vector<WeightedBound> &bounds_input,
+                                std::pair<double, double> &bound_output,
+                                std::pair<BoundInfo, BoundInfo> &bound_info);
+
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,

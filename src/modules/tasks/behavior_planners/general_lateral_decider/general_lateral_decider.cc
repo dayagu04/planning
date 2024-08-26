@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -1266,7 +1267,8 @@ void GeneralLateralDecider::ExtractBoundary(
   for (int i = 0; i < hard_bounds_.size(); i++) {
     std::pair<double, double> hard_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> hard_bound_info;  // <lower ,upper>
-    PostProcessBound(hard_bounds_[i], hard_bound, hard_bound_info);
+    // PostProcessBound(hard_bounds_[i], hard_bound, hard_bound_info);
+    PostProcessBoundVersion2(hard_bounds_[i], hard_bound, hard_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
@@ -1274,10 +1276,11 @@ void GeneralLateralDecider::ExtractBoundary(
     hard_bounds_info.emplace_back(hard_bound_info);
   }
 
-  for (int i = 0; i < hard_bounds_.size(); i++) {
+  for (int i = 0; i < soft_bounds_.size(); i++) {
     std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
-    PostProcessBound(soft_bounds_[i], soft_bound, soft_bound_info);
+    // PostProcessBound(soft_bounds_[i], soft_bound, soft_bound_info);
+    PostProcessBoundVersion2(soft_bounds_[i], soft_bound, soft_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(soft_bound, soft_bound_info);
     }
@@ -1354,6 +1357,123 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
       }
     }
   }
+}
+
+void GeneralLateralDecider::PostProcessBoundVersion2(
+    const std::vector<WeightedBound> &bounds_input,
+    std::pair<double, double> &bound_output,
+    std::pair<BoundInfo, BoundInfo> &bound_info) {
+  const size_t bounds_size = bounds_input.size();
+  if (bounds_size == 0) {
+    return;
+  }
+  auto compare_bound_upper = [&](WeightedBound bound1,
+                                    WeightedBound bound2) {
+    return bound1.upper < bound2.upper;
+  };
+  auto compare_bound_lower = [&](WeightedBound bound1,
+                                    WeightedBound bound2) {
+    return bound1.lower > bound2.lower;
+  };
+  std::vector<WeightedBound> upper_bounds;
+  std::vector<WeightedBound> lower_bounds;
+  upper_bounds.resize(bounds_size);
+  lower_bounds.resize(bounds_size);
+  std::copy(bounds_input.begin(), bounds_input.end(), upper_bounds.begin());
+  std::copy(bounds_input.begin(), bounds_input.end(), lower_bounds.begin());
+  std::sort(upper_bounds.begin(), upper_bounds.end(), compare_bound_upper);
+  std::sort(lower_bounds.begin(), lower_bounds.end(), compare_bound_lower);
+  double min_lower = std::max(lower_bounds.back().lower, bound_output.first);
+  double max_upper = std::min(upper_bounds.back().upper, bound_output.second);
+  BoundInfo lower_bound_info;
+  BoundInfo upper_bound_info;
+  lower_bound_info = lower_bounds.begin()->bound_info;
+  upper_bound_info = upper_bounds.begin()->bound_info;
+  size_t lower_index = 0;
+  size_t upper_index = 0;
+  double lower_bound = min_lower;
+  double upper_bound = max_upper;
+  while ((lower_index < bounds_size) && (upper_index < bounds_size)) {
+    // hack: only road border and agent in hard bounds
+    if ((upper_bounds[upper_index].weight < 0.0) &&
+        ((upper_bounds[upper_index].bound_info.type != BoundType::ROAD_BORDER) &&
+         (upper_bounds[upper_index].bound_info.type != BoundType::AGENT))) {
+      upper_index += 1;
+      continue;
+    }
+    if ((lower_bounds[lower_index].weight < 0.0) &&
+        ((lower_bounds[lower_index].bound_info.type != BoundType::ROAD_BORDER) &&
+         (lower_bounds[lower_index].bound_info.type != BoundType::AGENT))) {
+      lower_index += 1;
+      continue;
+    }
+    double lower = lower_bounds[lower_index].lower;
+    double upper = upper_bounds[upper_index].upper;
+    // const int last_lower_priority =
+    //     general_lateral_decider_utils::GetBoundTypePriority(
+    //         lower_bound_info.type);
+    // const int last_upper_priority =
+    //     general_lateral_decider_utils::GetBoundTypePriority(
+    //         upper_bound_info.type);
+    const int lower_priority =
+        general_lateral_decider_utils::GetBoundTypePriority(
+            lower_bounds[lower_index].bound_info.type);
+    const int upper_priority =
+        general_lateral_decider_utils::GetBoundTypePriority(
+            upper_bounds[upper_index].bound_info.type);
+    const double lower_weight =
+        general_lateral_decider_utils::GetBoundWeight(
+            lower_bounds[lower_index].bound_info.type, config_.map_bound_weight);
+    const double upper_weight =
+        general_lateral_decider_utils::GetBoundWeight(
+            upper_bounds[upper_index].bound_info.type, config_.map_bound_weight);
+    if (upper >= lower) {
+      if (upper_bound == lower_bound) {
+      } else {
+        if (upper < upper_bound) {
+          upper_bound = upper;
+          upper_bound_info = upper_bounds[upper_index].bound_info;
+        }
+        if (lower > lower_bound) {
+          lower_bound = lower;
+          lower_bound_info = lower_bounds[lower_index].bound_info;
+        }
+      }
+      break;
+    } else {
+      if (upper_priority > lower_priority) {
+        upper_bound = upper;
+        lower_bound = upper;
+        upper_bound_info = upper_bounds[upper_index].bound_info;
+        lower_bound_info = lower_bounds[lower_index].bound_info;
+        lower_index += 1;
+      } else if (upper_priority < lower_priority) {
+        upper_bound = lower;
+        lower_bound = lower;
+        upper_bound_info = upper_bounds[upper_index].bound_info;
+        lower_bound_info = lower_bounds[lower_index].bound_info;
+        upper_index += 1;
+      } else {
+        // if ((lower_index == 0 && upper_index == 0) || (upper_priority > last_upper_priority) || (lower_priority > last_lower_priority)) {
+        //   double mid_bound = std::min(std::max(upper + (std::max(lower - upper, 0.0) * (lower_weight / (upper_weight + lower_weight))), min_lower), max_upper);
+        //   upper_bound = mid_bound;
+        //   lower_bound = mid_bound;
+        //   upper_bound_info = upper_bounds[upper_index].bound_info;
+        //   lower_bound_info = lower_bounds[lower_index].bound_info;
+        // }
+        double mid_bound = std::min(std::max(upper + (std::max(lower - upper, 0.0) * (lower_weight / (upper_weight + lower_weight))), min_lower), max_upper);
+        upper_bound = mid_bound;
+        lower_bound = mid_bound;
+        upper_bound_info = upper_bounds[upper_index].bound_info;
+        lower_bound_info = lower_bounds[lower_index].bound_info;
+        break;
+      }
+    }
+  }
+  bound_output.first = lower_bound;
+  bound_output.second = upper_bound;
+  bound_info.first = lower_bound_info;
+  bound_info.second = upper_bound_info;
 }
 
 void GeneralLateralDecider::PostProcessBound(
