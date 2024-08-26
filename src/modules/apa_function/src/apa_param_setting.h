@@ -231,6 +231,7 @@ struct ApaParameters {
   double target_heading_err = 0.88;
   double target_radius_err = 0.036;
   double path_extend_distance = 0.3;
+  bool actual_mono_plan_enable = false;
   bool mono_plan_enable = false;
   bool conservative_mono_enable = false;
   double multi_plan_min_lat_err = 0.5;

@@ -575,7 +575,7 @@ const bool PerpendicularPathPlanner::PreparePlanOnce(
   std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
   while (!prepare_success) {
     // first use mono prepare to find target point
-    if (apa_param.GetParam().mono_plan_enable &&
+    if (apa_param.GetParam().actual_mono_plan_enable &&
         MonoPreparePlan(target_pose.pos)) {
       prepare_success =
           DubinsPlan(input_.ego_pose, target_pose, radius,
@@ -1356,6 +1356,10 @@ const bool PerpendicularPathPlanner::MultiPlan() {
       bool continue_to_adjust = true;
       if (input_.is_simulation) {
         continue_to_adjust = !output_.multi_reach_target_pose;
+      }
+      if (!apa_param.GetParam().actual_mono_plan_enable &&
+          calc_params_.first_multi_plan) {
+        continue_to_adjust = false;
       }
       if (continue_to_adjust &&
           path_num_gear < static_cast<int>(multi_out_put.gear_cmd_vec.size()) &&
@@ -2293,8 +2297,9 @@ const bool PerpendicularPathPlanner::AlignBodyPlan(
     //           << "  heading = " << arc.headingB * kRad2Deg);
     if (success) {
       DEBUG_PRINT("align body plan success");
-      path_seg_vec.emplace_back(
-          pnc::geometry_lib::PathSegment(steer, gear, arc));
+      pnc::geometry_lib::PathSegment path_seg(steer, gear, arc);
+      path_seg.plan_type = pnc::geometry_lib::PLAN_TYPE_ALIGN_BODY;
+      path_seg_vec.emplace_back(std::move(path_seg));
     }
   }
   if (!success) {
@@ -2624,7 +2629,7 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
           line.pA = current_pose.pos;
           line.heading = current_pose.heading;
           const std::vector<double> ratio_tab = {0.48, 0.68, 0.88, 0.98};
-          const std::vector<double> length_tab = {0.28, 1.18, 2.18, 2.68};
+          const std::vector<double> length_tab = {0.68, 1.78, 2.78, 3.48};
 
           const double length = pnc::mathlib::Interp1(
               ratio_tab, length_tab, input_.slot_occupied_ratio);
@@ -2643,6 +2648,29 @@ const bool PerpendicularPathPlanner::CalSinglePathInAdjust(
           if (tmp_path_seg_vec[j - 1].plan_type ==
               pnc::geometry_lib::PLAN_TYPE_S_TURN) {
             path_seg_vec.pop_back();
+          }
+          if (path_seg_vec.size() == 1) {
+            const pnc::geometry_lib::PathSegment& path_seg =
+                path_seg_vec.back();
+            if (path_seg.plan_type == pnc::geometry_lib::PLAN_TYPE_ALIGN_BODY &&
+                current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+                input_.slot_occupied_ratio > 0.48) {
+              pnc::geometry_lib::LineSegment line;
+              line.pA = path_seg.GetEndPos();
+              line.heading = path_seg.GetEndHeading();
+              const std::vector<double> ratio_tab = {0.48, 0.68, 0.88, 0.98};
+              const std::vector<double> length_tab = {0.68, 1.78, 2.78, 3.48};
+
+              const double length =
+                  pnc::mathlib::Interp1(ratio_tab, length_tab,
+                                        input_.slot_occupied_ratio) -
+                  path_seg.Getlength();
+              line.pB = line.pA +
+                        length * pnc::geometry_lib::GenHeadingVec(line.heading);
+              line.length = (line.pB - line.pA).norm();
+              pnc::geometry_lib::PathSegment line_seg(current_gear, line);
+              path_seg_vec.emplace_back(std::move(line_seg));
+            }
           }
         } else {
           path_seg_vec.emplace_back(tmp_path_seg);
