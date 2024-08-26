@@ -469,7 +469,8 @@
     "enable_jlt" : false,
     "enable_narrow_agent_limit" : true,
     "pre_accelerate_distance_for_merge" : 80.0,
-    "enable_intersection_v_limit" : false
+    "enable_intersection_v_limit" : false,
+    "v_lc_speed_adjust":0.5
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false

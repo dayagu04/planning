@@ -1562,7 +1562,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
               v_limit_lc_ * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                    _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc_ = std::max(v_ego - 0.5, v_ego + v_limit_lc_);
+        v_limit_lc_ = std::max(v_ego - config_.v_lc_speed_adjust, v_ego + v_limit_lc_);
         // a_target_lc = 0.6;
       }
       if (v_limit_lc_ < 6.0) {

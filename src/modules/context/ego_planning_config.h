@@ -1818,6 +1818,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     enable_intersection_v_limit = read_json_keys<bool>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "enable_intersection_v_limit"});
+    v_lc_speed_adjust = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "v_lc_speed_adjust"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1885,6 +1888,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double brake_dis_near_ramp_zone = 800.0;
   double pre_accelerate_distance_for_merge = 80.0;
   bool enable_intersection_v_limit = false;
+
+  double v_lc_speed_adjust = 0.5;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
