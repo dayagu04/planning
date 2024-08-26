@@ -112,25 +112,6 @@ bool LaneChangeRequestManager::Update(
       merge_change_request_.Update(lc_status);
     }
     if (location_valid && use_overtake_lane_change_request) {
-      // 添加至可运行区域边界的距离小于一定值时overtake_count_ = 0
-      const auto& clane = virtual_lane_mgr_->get_current_lane();
-      const int left_car_point_size =
-          clane->get_left_lane_boundary().car_points_size;
-      const int right_car_points_size =
-          clane->get_right_lane_boundary().car_points_size;
-      if (clane->get_left_lane_boundary()
-                  .car_points[left_car_point_size - 1]
-                  .x <=
-              intersection_distance_of_suppression_active_lane_change &&
-          clane->get_right_lane_boundary()
-                  .car_points[right_car_points_size - 1]
-                  .x <=
-              intersection_distance_of_suppression_active_lane_change) {
-        overtake_request_.Reset();
-        LOG_DEBUG(
-            "cann't generate overtake lane change close to the intersection");
-        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
-      }
       // lcc功能抑制超车变道
       if (function_info.function_mode() != common::DrivingFunctionInfo::NOA) {
         overtake_request_.Reset();
