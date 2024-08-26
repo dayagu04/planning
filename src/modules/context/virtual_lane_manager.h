@@ -211,6 +211,8 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
+  const bool is_on_highway() const {return is_on_highway_; }
+
   const double sum_dis_to_last_merge_point() const {
     return sum_dis_to_last_merge_point_;
   }

@@ -1562,14 +1562,13 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
   }
   int origin_relative_id_zero_nums =
       virtual_lane_manager->origin_relative_id_zero_nums();
-  bool is_ego_on_expressway = virtual_lane_manager->is_ego_on_expressway();
-  bool is_on_ramp = virtual_lane_manager->is_on_ramp();
+  bool is_on_highway = virtual_lane_manager->is_on_highway();
   JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
                    origin_relative_id_zero_nums);
   if (origin_relative_id_zero_nums > 1) {
     RampDirection ramp_direction = RAMP_NONE;
     if (IsSplitRegion(&ramp_direction)) {
-      if (is_ego_on_expressway &&
+      if (is_on_highway &&
           transition_info_.lane_change_status == kLaneKeeping) {
         if (ramp_direction == RAMP_ON_RIGHT) {
           road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
