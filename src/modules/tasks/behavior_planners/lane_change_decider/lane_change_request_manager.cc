@@ -1,6 +1,7 @@
 #include "lane_change_request_manager.h"
 
 #include "adas_function/mrc_condition.h"
+#include "basic_types.pb.h"
 #include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
@@ -82,6 +83,9 @@ bool LaneChangeRequestManager::Update(
       config_.enable_use_merge_change_request;
   const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
   const auto& function_info = session_->environmental_model().function_info();
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double default_velocity_trigger_emergence_avoid_request = 13.88;
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -96,7 +100,8 @@ bool LaneChangeRequestManager::Update(
       cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request && is_on_highway &&
-        cone_change_request_.request_type() == RequestType::NO_CHANGE) {
+        cone_change_request_.request_type() == RequestType::NO_CHANGE &&
+        ego_state->ego_v() > default_velocity_trigger_emergence_avoid_request) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
