@@ -1539,7 +1539,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
             gap.base_car_vrel +
             clip((safe_distance + 5.0 + gap.base_car_drel) / safe_distance, 2.0,
                  0.0) +
-            1.0;
+            1.5;
         if (v_limit_lc_ < 0) {
           // no need to decel when front car is far away
           const std::vector<double> _V_LIMIT_DISTANCE_BP{
@@ -1550,7 +1550,7 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
               v_limit_lc_ * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                    _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc_ = std::max(v_ego - 2.8, v_ego + v_limit_lc_);
+        v_limit_lc_ = std::max(v_ego - 0.5, v_ego + v_limit_lc_);
         // a_target_lc = 0.6;
       }
       if (v_limit_lc_ < 6.0) {
