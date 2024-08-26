@@ -284,6 +284,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->is_traffic_facilities = p.is_traffic_facilities;
     origin->is_car = p.is_car;
     origin->can_not_avoid = false;
+    origin->lane_borrow = false;
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
@@ -511,6 +512,14 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->a_lead_k = p.relative_acceleration_x + ego_state->ego_acc();
 
     origin->oncoming = (origin->v_lead < -3.9);
+    origin->motion_pattern_current = p.motion_pattern_current;
+    origin->is_static = p.is_static;
+    origin->is_oversize_vehicle = p.is_oversize_vehicle;
+    origin->is_VRU = p.is_VRU;
+    origin->is_traffic_facilities = p.is_traffic_facilities;
+    origin->is_car = p.is_car;
+    origin->can_not_avoid = false;
+    origin->lane_borrow = false;
 
     // calculate fisheye related for cutin
     fisheye_helper(p, *origin);
@@ -710,6 +719,19 @@ void TrackletMaintainer::calc(
         dist_intersect, intersect_length, isRedLightStop, farthest_distance);
     if (tr->is_avd_car) {
       avd_car_id.emplace_back(tr->track_id);
+    }
+  }
+
+  is_static_scene_ = false;
+  for (auto tr : tracked_objects) {
+    // ignore obj without camera source
+    if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
+        !tr->frenet_transform_valid) {
+      continue;
+    }
+    if (tr->lane_borrow) {
+      is_static_scene_ = true;
+      break;
     }
   }
 
@@ -2037,12 +2059,35 @@ bool TrackletMaintainer::is_potential_avoiding_car(
           item.can_not_avoid = true;
         }
 
-        is_static_scene_ =
-            enable_static_scene && is_need_avoid && item.is_static &&
+        auto reference_path_ptr = session_->planning_context()
+                                      .lane_change_decider_output()
+                                      .coarse_planning_info.reference_path;
+        ReferencePathPoint refpath_pt{};
+        double distance_to_left_road_border = 100;
+        double distance_to_right_road_border = 100;
+        if (reference_path_ptr != nullptr &&
+            reference_path_ptr->get_reference_point_by_lon(item.s,
+                                                           refpath_pt)) {
+          distance_to_left_road_border =
+              refpath_pt.distance_to_left_road_border;
+          distance_to_right_road_border =
+              refpath_pt.distance_to_right_road_border;
+        }
+
+        constexpr double encroach_thr = 0.4;
+        item.lane_borrow =
+            enable_static_scene && is_need_avoid && can_avoid &&
+            item.is_static &&
             ((item.d_min_cpath > 0 &&
-              item.d_min_cpath < lane_width / 2 - 0.4) ||
+              item.d_min_cpath < lane_width / 2 - encroach_thr) ||
              (item.d_max_cpath < 0 &&
-              std::fabs(item.d_max_cpath) < lane_width / 2 - 0.4));
+              std::fabs(item.d_max_cpath) < lane_width / 2 - encroach_thr)) &&
+            ((item.d_min_cpath > 0 &&
+              item.d_min_cpath > (ego_car_width + static_obs_buffer) -
+                                     distance_to_right_road_border) ||
+             (item.d_max_cpath < 0 &&
+              item.d_max_cpath < distance_to_left_road_border -
+                                     (ego_car_width + static_obs_buffer)));
 
         if (dist_intersect == 1000 && lane_width > 5. && lead_one != nullptr &&
             !lead_one->is_accident_car) {
