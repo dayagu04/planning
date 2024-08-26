@@ -234,9 +234,9 @@ void StGraphGenerator::Update(
     v_target_ = accel_vel_filter_.GetOutput();
   } else if (v_target_ < v_ego &&
              ((is_on_ramp && v_limit_on_ramp_ == v_target_) ||
-              v_limit_lc_ == v_target_ ||
               (v_limit_with_intersection_ == v_target_ &&
                v_limit_with_intersection_ > 0.1))) {
+    accel_vel_filter_.SetRate(-1.0, 1.0);
     if (v_ego < v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
