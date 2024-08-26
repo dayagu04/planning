@@ -202,7 +202,7 @@
   "prepare_directly_use_tangent_heading_err": 1.68,
   "prepare_adjust_drive_max_length": 2.08,
   "prepare_adjust_reverse_max_length": 3.6,
-  "prepare_single_max_allow_time": 6.68,
+  "prepare_single_max_allow_time": 12.68,
   "prepare_max_try_count": 1,
   "third_prepare_heading_threshold": 26.68,
   "static_pos_eps": 0.01,

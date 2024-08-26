@@ -31,6 +31,7 @@ class PerpendicularInPlanner : public ApaPlannerBase {
   void GenObstacles();
   virtual void Log() const override;
   virtual void GenPlanningOutput() override;
+  virtual void GenPlanningHmiOutput() override;
   virtual void GenPlanningPath() override;
   void SetParkingStatus(uint8_t status);
   const bool UpdateEgoSlotInfo();

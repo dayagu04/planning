@@ -70,6 +70,8 @@ void PerpendicularInPlanner::Update() {
   // generate planning output
   GenPlanningOutput();
 
+  GenPlanningHmiOutput();
+
   // log json debug
   Log();
 }
@@ -1953,6 +1955,16 @@ void PerpendicularInPlanner::GenPlanningOutput() {
   //          );
 }
 
+void PerpendicularInPlanner::GenPlanningHmiOutput() {
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+
+  if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
+      frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
+      frame_.plan_stm.planning_status == PARKING_RUNNING) {
+    apa_hmi_.distance_to_parking_space = frame_.remain_dist;
+  }
+}
+
 void PerpendicularInPlanner::GenPlanningPath() {
   // planning_output_.Clear();
   memset(&planning_output_, 0, sizeof(planning_output_));
@@ -2115,8 +2127,6 @@ void PerpendicularInPlanner::UpdateRemainDist() {
 
   // 2.calculate remain dist uss according to uss
   frame_.remain_dist_uss = CalRemainDistFromUss();
-
-  planning_hmi_output_.apa_info.distance_to_parking_space = frame_.remain_dist;
 
   return;
 }
