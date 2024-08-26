@@ -1,5 +1,6 @@
 #include "lane_change_state_machine_manager.h"
 
+#include <climits>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -1602,11 +1603,13 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
   const auto left_lane = virtual_lane_manager->get_left_lane();
   const auto right_lane = virtual_lane_manager->get_right_lane();
   const auto current_lane = virtual_lane_manager->get_current_lane();
+  const auto current_reference_path = reference_path_manager->get_reference_path_by_current_lane();
   const double lane_lat_diff_threshold = 3.8 - 0.8;
   std::shared_ptr<ReferencePath> left_reference_path;
   std::shared_ptr<ReferencePath> right_reference_path;
   double left_ego_l = NL_NMAX;
   double right_ego_l = NL_NMAX;
+  double ego_l = current_reference_path->get_frenet_ego_state().l();
   double left_lane_width = 0;
   double right_lane_width = 0;
 
@@ -1632,14 +1635,14 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
   }
   // 目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
   bool is_overlap = false;
-  if (std::abs(left_ego_l) < left_lane_width / 2) {
+  if (std::abs(left_ego_l - ego_l) < left_lane_width / 2) {
     // cur_lane_overlap_left_lane = true;
     // overlap_lane_virtual_id = 
     // overlap_reference_path = left_reference_path;
     // *overlap_lane_virtual_id = left_lane->get_virtual_id();
     overlap_lane_virtual_id_ = left_lane->get_virtual_id();
     is_overlap = true;
-  }else if (std::abs(right_ego_l) < right_lane_width / 2) {
+  }else if (std::abs(right_ego_l - ego_l) < right_lane_width / 2) {
     // cur_lane_overlap_right_lane = true;
     // overlap_lane_virtual_id = right_lane->get_virtual_id();
     // overlap_reference_path = right_reference_path;
