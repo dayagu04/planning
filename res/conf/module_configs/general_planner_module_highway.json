@@ -331,6 +331,7 @@
     "q_jerk_bound": 5000.0,
     "q_soft_corridor": 2000.0,
     "q_hard_corridor": 5000.0,
+    "q_soft_corridor_intersection": 3000,
     "avoid_back_time": 2.5,
     "q_ref_x_avoid": 200.0,
     "q_ref_y_avoid": 200.0,

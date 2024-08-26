@@ -12,12 +12,17 @@ LateralMotionPlanningWeight::LateralMotionPlanningWeight(
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
     const LateralMotionSceneEnum scene,
-    planning::common::LateralPlanningInput &planning_input) {
+    planning::common::LateralPlanningInput &planning_input,  bool is_in_intersection) {
   lateral_motion_scene_ = scene;
   // CalculateInitInfo(planning_input);
   planning_input.set_q_acc_bound(config_.q_acc_bound);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
-  planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  if (is_in_intersection) {
+    planning_input.set_q_soft_corridor(config_.q_soft_corridor_intersection);
+  } else {
+    planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  }
+
   planning_input.set_q_hard_corridor(config_.q_hard_corridor);
   end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
   end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;

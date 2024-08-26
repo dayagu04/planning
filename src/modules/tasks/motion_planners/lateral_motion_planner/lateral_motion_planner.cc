@@ -325,6 +325,8 @@ void LateralMotionPlanner::AssembleInput() {
     enter_split_time_ = 0.0;
   }
 
+  auto intersection_state = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState();
+  bool is_in_intersection = intersection_state == planning::common::IntersectionState::IN_INTERSECTION;
   bool avoid_back_status = false;
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
@@ -358,14 +360,14 @@ void LateralMotionPlanner::AssembleInput() {
                  .get_lateral_obstacle()
                  ->is_static_avoid_scene()) {
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::STATIC_AVOID, planning_input_);
+        pnc::lateral_planning::STATIC_AVOID, planning_input_, is_in_intersection);
   } else if ((lateral_offset_decider_output.is_valid) ||
              ((avoid_back_status) && (ego_v > config_.avoid_high_vel))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
-                                                 planning_input_);
+                                                 planning_input_, is_in_intersection);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LANE_KEEP, planning_input_);
+        pnc::lateral_planning::LANE_KEEP, planning_input_, is_in_intersection);
   }
 
   const double ego_s = reference_path_ptr->get_frenet_ego_state().s();

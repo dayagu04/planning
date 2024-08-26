@@ -29,7 +29,7 @@ class LateralMotionPlanningWeight {
 
   void SetLateralMotionWeight(
       const LateralMotionSceneEnum scene,
-      planning::common::LateralPlanningInput &planning_input);
+      planning::common::LateralPlanningInput &planning_input, bool is_in_intersection = false);
 
   void SetInitDisToRef(const double init_dis_to_ref) {
     init_dis_to_ref_ = init_dis_to_ref;

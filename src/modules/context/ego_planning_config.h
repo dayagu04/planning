@@ -864,6 +864,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound"});
     q_soft_corridor = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_soft_corridor"});
+    q_soft_corridor_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_soft_corridor_intersection"});
     q_hard_corridor = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_hard_corridor"});
     avoid_back_time = read_json_keys<double>(
@@ -1067,6 +1069,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   double q_soft_corridor = 200.0;
   double q_hard_corridor = 0.0;
+  double q_soft_corridor_intersection = 200.0;
 
   double q_ref_x = 20.0;
   double q_ref_y = 20.0;
