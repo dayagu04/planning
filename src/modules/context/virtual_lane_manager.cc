@@ -2348,7 +2348,7 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
 }
 
 void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
-  const double default_consider_lane_length = 50.0;
+  const double default_consider_lane_length = 100.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = 0;
@@ -2446,8 +2446,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
           return;
         }
         if (road_radius > kDefaultRoadRadius) {
-          int default_point_nums = 30;
-          int select_lane_point_interval = 1;
+          int default_point_nums = 24;
+          int select_lane_point_interval = 2;
           for (int i = 0; i < lane_points.size();
                i += select_lane_point_interval) {
             iflyauto::ReferencePoint point = lane_points[i];
@@ -2881,7 +2881,7 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
     int virtual_id,
     const std::shared_ptr<VirtualLane> current_relative_id_lane) {
   const double default_lane_mapping_cost = 10.0;
-  const double default_consider_lane_length = 60.0;
+  const double default_consider_lane_length = 90.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -2915,8 +2915,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
       }
 
       if (road_radius > kDefaultRoadRadius) {
-        int default_point_nums = 30;
-        int select_lane_point_interval = 1;
+        int default_point_nums = 22;
+        int select_lane_point_interval = 2;
         for (int i = 0; i < lane_points.size();
              i += select_lane_point_interval) {
           iflyauto::ReferencePoint point = lane_points[i];
@@ -2989,6 +2989,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
 double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
     const std::shared_ptr<VirtualLane> virtual_lane) {
   double average_curv = 0.0;
+  const double default_begin_length = 50.0;
+  const double default_end_length = 100.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   std::shared_ptr<KDPath> frenet_coord = virtual_lane->get_lane_frenet_coord();
@@ -3002,12 +3004,12 @@ double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
     return average_curv;
   }
   planning_math::PathPoint ego_s_nearest_point =
-      frenet_coord->GetPathPointByS(ego_s);
+      frenet_coord->GetPathPointByS(ego_s + default_begin_length);
   int iter_count = 0;
   double total_curv = 0.0;
   for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
        s += kLaneLineSegmentLength) {
-    if (s > kConsiderLaneLineLength + ego_s) {
+    if (s > default_end_length + ego_s) {
       break;
     }
     double curv = 0.0;
