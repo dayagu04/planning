@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
@@ -211,6 +212,16 @@ class PlanningContext {
     return lateral_offset_decider_output_;
   }
 
+  const CipvLostProhibitAccelerationDeciderOutput &
+  cipv_lost_prohibit_acceleration_decider_output() const {
+    return cipv_lost_prohibit_acceleration_decider_output_;
+  }
+
+  CipvLostProhibitAccelerationDeciderOutput &
+  mutable_cipv_lost_prohibit_acceleration_decider_output() {
+    return cipv_lost_prohibit_acceleration_decider_output_;
+  }
+
   const std::shared_ptr<AdaptiveCruiseControl>
       &adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
@@ -342,6 +353,8 @@ class PlanningContext {
   // used in LateralMotionPlanner, SccLongitudinalMotionPlanner,
   // LongitudinalMotionPlanner
   MotionPlannerOutput motion_planner_output_;  // TODO: 拆分到独立的Task里面
+  CipvLostProhibitAccelerationDeciderOutput
+      cipv_lost_prohibit_acceleration_decider_output_;
 
   // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;

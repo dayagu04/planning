@@ -81,11 +81,17 @@ StGraphGenerator::StGraphGenerator(const SccLonBehaviorPlannerConfig &config)
 
 void StGraphGenerator::Update(
     std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
-    const TrajectoryPoints &last_traj,
-    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-    std::shared_ptr<VirtualLane> current_lane) {
+    framework::Session *session) {
   lon_behav_input_ = std::move(lon_behav_input);
   LOG_DEBUG("=======Entering StGraphGenerator::Update======= \n");
+  const auto &last_traj =
+      session->planning_context().last_planning_result().traj_points;
+  const auto &dynamic_world =
+      session->environmental_model().get_dynamic_world();
+  const auto &current_lane = session->environmental_model()
+                                 .get_virtual_lane_manager()
+                                 ->get_current_lane();
+
   double v_ego = lon_behav_input_->ego_info().ego_v();
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double acc_ego = lon_behav_input_->ego_info().ego_acc();
@@ -202,6 +208,12 @@ void StGraphGenerator::Update(
              cut_in_st_info.size() + lane_change_st_info.size() + i]
         .CopyFrom(virtual_obs_st_info[i]);
   }
+
+  // CipvLostProhibitAccelerationDecider
+  const auto &mutable_output =
+      session->planning_context()
+          .cipv_lost_prohibit_acceleration_decider_output();
+  v_target_ = fmin(v_target_, mutable_output.speed_limit_);
 
   // filter v target
   if (v_target_ > v_ego) {

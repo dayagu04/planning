@@ -503,15 +503,7 @@ void SccLonBehaviorPlanner::SetInput(
 bool SccLonBehaviorPlanner::Update() {
   LOG_DEBUG("=======Entering SccLonBehaviorPlanner::Update======= \n");
   // 1.ST
-  const auto &last_traj =
-      session_->planning_context().last_planning_result().traj_points;
-  const auto &dynamic_world =
-      session_->environmental_model().get_dynamic_world();
-  const auto &current_lane = session_->environmental_model()
-                                 .get_virtual_lane_manager()
-                                 ->get_current_lane();
-  st_graph_->Update(lon_behav_plan_input_, last_traj, dynamic_world,
-                    current_lane);
+  st_graph_->Update(lon_behav_plan_input_, session_);
 
   // 2.SV
   sv_graph_->Update(lon_behav_plan_input_);

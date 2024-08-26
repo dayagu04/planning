@@ -29,11 +29,8 @@ class StGraphGenerator {
   virtual ~StGraphGenerator() = default;
 
   // 更新
-  void Update(
-      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
-      const TrajectoryPoints &last_traj,
-      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-      std::shared_ptr<VirtualLane> current_lane);
+  void Update(std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
+              framework::Session *session);
 
   void SetConfig(
       planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
