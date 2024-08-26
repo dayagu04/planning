@@ -891,9 +891,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
                    lane_change_decider_output.is_merge_region);
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
 
-  GenerateTurnSignalForSplitRegion();
-  lane_change_decider_output.dir_turn_signal_road_to_ramp =
-      road_to_ramp_turn_signal_;
+  // GenerateTurnSignalForSplitRegion();
+  lane_change_decider_output.dir_turn_signal_road_to_ramp = RAMP_NONE;
   lane_change_decider_output.int_request_cancel_reason =
       lc_req_mgr_->int_request_cancel_reason();
       
