@@ -49,9 +49,7 @@ class ApaPlanInterface {
   const iflyauto::PlanningOutput& GetPlaningOutput() const {
     return planning_output_;
   }
-  const iflyauto::PlanningHMIOutputInfoStr& GetPlaningHmi() const {
-    return planning_hmi_;
-  }
+  const iflyauto::APAHMIData& GetAPAHmi() const { return apa_hmi_; }
 
  private:
   std::shared_ptr<ApaPlannerBase> GetPlannerByType(
@@ -67,7 +65,7 @@ class ApaPlanInterface {
   std::shared_ptr<ApaPlannerBase> planner_ptr_ = nullptr;
 
   iflyauto::PlanningOutput planning_output_;
-  iflyauto::PlanningHMIOutputInfoStr planning_hmi_;
+  iflyauto::APAHMIData apa_hmi_;
   std::shared_ptr<plan_interface::PlanData> plan_data_ptr_;
 
   // for simulation

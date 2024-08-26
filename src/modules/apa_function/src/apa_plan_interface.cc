@@ -56,7 +56,7 @@ void ApaPlanInterface::Reset() {
 
   planning_output_.successful_slot_info_list_size = 0;
 
-  memset(&planning_hmi_, 0, sizeof(planning_hmi_));
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   // reset apa world
   apa_world_ptr_->Reset();
@@ -123,7 +123,8 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
-    planning_hmi_ = planner_ptr_->GetHmiOutput();
+    apa_hmi_ = planner_ptr_->GetAPAHmi();
+    DEBUG_PRINT("remain dist in hmi = " << apa_hmi_.distance_to_parking_space);
   }
 
   AddReleasedSlotInfo(planning_output_);

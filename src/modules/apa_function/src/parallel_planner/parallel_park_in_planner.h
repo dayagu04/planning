@@ -45,6 +45,7 @@ class ParallelParInPlanner : public ApaPlannerBase {
 
   virtual void Log() const override;
   virtual void GenPlanningOutput() override;
+  virtual void GenPlanningHmiOutput() override;
   virtual void GenPlanningPath() override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;

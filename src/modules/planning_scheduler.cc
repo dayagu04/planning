@@ -145,7 +145,6 @@ bool PlanningScheduler::RunOnce(
     }
     planning_success = apa_function_->Plan();
     *planning_output = session_.planning_context().planning_output();
-    *planning_hmi_info = session_.planning_context().planning_hmi_info();
     return planning_success;
   }
 

@@ -1422,8 +1422,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
     # load uss wave from uss_percept_msg
     #get cur pose and uss wave
-    # uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
-    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[0].dis_from_car_to_obj
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
+    # uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[0].dis_from_car_to_obj
 
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
