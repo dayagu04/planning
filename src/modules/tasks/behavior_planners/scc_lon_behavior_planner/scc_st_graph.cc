@@ -20,7 +20,7 @@
 namespace {
 
 constexpr double kStaticAgentSpeedThr = 3;
-constexpr double kStaticAgentPosThr = 1.4;
+constexpr double kStaticAgentPosThr = 1.1;
 constexpr double kStaticAgentBuffer = 0.12;
 constexpr double kStaticLeadThr = 1.0;
 constexpr double kHalfLaneWidth = 1.75;
@@ -2361,6 +2361,9 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   if (!config_.enable_narrow_agent_limit) {
     return;
   }
+  if (current_lane == nullptr) {
+    return;
+  }
   // 1) 构造横向KDPath
   std::vector<planning_math::PathPoint> lat_path_points;
   lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size());
@@ -2440,8 +2443,14 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     // 3.1 check intrude into ego lane (using current lane reference path)
     double agent_s = 0.0;
     double agent_l = 0.0;
-    const auto current_lane_frenet_coord =
-        current_lane->get_reference_path()->get_frenet_coord();
+    const auto current_ref_path = current_lane->get_reference_path();
+    if (current_ref_path == nullptr) {
+      continue;
+    }
+    const auto current_lane_frenet_coord = current_ref_path->get_frenet_coord();
+    if (current_lane_frenet_coord == nullptr) {
+      continue;
+    }
     if (!(current_lane_frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s,
                                             &agent_l))) {
       continue;

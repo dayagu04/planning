@@ -219,6 +219,9 @@ void DynamicWorld::BuildConnectionForEgoLane(
     ego_lane_coord_ = ego_ref_line->get_frenet_coord();
   }
 
+  if (ego_lane_coord_ == nullptr) {
+    return;
+  }
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!ego_lane_coord_->XYToSL(ego_state.x(), ego_state.y(), &ego_s, &ego_l)) {
@@ -310,6 +313,9 @@ void DynamicWorld::BuildConnectionForNeighborLane(
     neighbor_lane_coord_ = neighbor_ref_line->get_frenet_coord();
   }
 
+  if (neighbor_lane_coord_ == nullptr) {
+    return;
+  }
   if (!neighbor_lane_coord_->XYToSL(ego_state.x(), ego_state.y(), &ego_s,
                                     &ego_l)) {
     return;
