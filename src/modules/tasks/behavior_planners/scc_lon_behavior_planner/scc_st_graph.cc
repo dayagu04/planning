@@ -1664,10 +1664,11 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       // a_target_lc = 0.0;
       JSON_DEBUG_VALUE("gap_v_limit_lc", v_limit_lc_);
     }
+    acc_target_.second = std::max(acc_target_.second, 1.0);
+    acc_target_.first = std::min(acc_target_.first, -1.0);
   } else {
     JSON_DEBUG_VALUE("gap_v_limit_lc", 0);
   }
-  // acc_target_.second = std::max(acc_target_.second, a_target_lc);
   v_target_ = std::min(v_target_, v_limit_lc_);
 }
 
