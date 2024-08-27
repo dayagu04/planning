@@ -782,7 +782,7 @@ void SccLonBehaviorPlanner::UpdateHMI() {
 
 bool SccLonBehaviorPlanner::IsLeadVehicle(
     const planning::common::TrackedObjectInfo &lead) {
-  return lead.track_id() != -1 && lead.is_lead();
+  return lead.track_id() != -1 && lead.is_lead() && lead.is_car();
 }
 
 void SccLonBehaviorPlanner::GetHardBounds() {
