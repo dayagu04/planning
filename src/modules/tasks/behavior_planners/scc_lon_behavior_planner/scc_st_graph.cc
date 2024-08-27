@@ -672,7 +672,12 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
-      v_target_ramp = ramp_v_limit;
+      if(lon_behav_input_->sdmap_has_curv()) {
+        v_target_ramp = ramp_v_limit;
+      } else {
+        v_target_ramp = config_.straight_ramp_v_limit;
+      }
+
     }
     v_target_ = std::min(v_target_ramp, v_target_);
     v_limit_on_ramp_ = v_target_ramp;

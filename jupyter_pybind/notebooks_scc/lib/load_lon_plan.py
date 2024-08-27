@@ -40,7 +40,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
-                              "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate"]
+                              "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                              'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                              "SccLonBehaviorCostTime", "SccLonMotionCostTime", 'sdmap_min_curv_radius']
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']

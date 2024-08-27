@@ -1829,6 +1829,18 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     v_lc_speed_adjust = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "v_lc_speed_adjust"});
+    search_sdmap_curv_dis = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "search_sdmap_curv_dis"});
+    sdmap_curv_thred = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "sdmap_curv_thred"});
+    straight_ramp_v_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "straight_ramp_v_limit"});
+    enable_sdmap_curv_v_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "enable_sdmap_curv_v_adjust"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1898,6 +1910,10 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   bool enable_intersection_v_limit = false;
 
   double v_lc_speed_adjust = 0.5;
+  double search_sdmap_curv_dis = 300.0;
+  double sdmap_curv_thred = 1000.0;
+  double straight_ramp_v_limit = 22.22;
+  bool enable_sdmap_curv_v_adjust = true;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {

@@ -472,7 +472,11 @@
     "enable_narrow_agent_limit" : true,
     "pre_accelerate_distance_for_merge" : 80.0,
     "enable_intersection_v_limit" : false,
-    "v_lc_speed_adjust":0.5
+    "v_lc_speed_adjust":0.5,
+    "search_sdmap_curv_dis":300.0,
+    "sdmap_curv_thred":1000.0,
+    "straight_ramp_v_limit":22.22,
+    "enable_sdmap_curv_v_adjust": true
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false
