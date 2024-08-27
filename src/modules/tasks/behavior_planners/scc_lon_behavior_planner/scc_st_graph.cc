@@ -345,6 +345,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     desired_distance_filtered = DesiredDistanceFilter(
         lead_one, v_ego, safe_distance, lead_one_desired_distance);
 
+    const double kwidth = 3.5;
+    auto end_time =
+        std::min(5.0, kwidth / std::max(0.01, std::fabs(lead_one.v_lat())));
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -356,7 +359,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_st_info.set_desired_velocity(lead_one_desired_velocity);
     lead_one_st_info.set_safe_distance(safe_distance);
     lead_one_st_info.set_start_time(0.0);  // TBD:使用可配置参数
-    lead_one_st_info.set_end_time(5.0);    // TBD:使用可配置参数
+    lead_one_st_info.set_end_time(end_time);    // TBD:使用可配置参数
     lead_one_st_info.set_start_s(lead_one.d_rel());
     leads_st_info.emplace_back(lead_one_st_info);
     v_target_ = std::min(v_target_, lead_one_desired_velocity);
