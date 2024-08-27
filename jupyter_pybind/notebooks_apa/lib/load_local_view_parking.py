@@ -1135,11 +1135,16 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       # 1.2 update slots limiter points in same slot_plot_vec
       single_limiter_x_vec = []
       single_limiter_y_vec = []
-      if slot.limiters_size!= 0:
+      if slot.limiters_size == 1:
         single_limiter_x_vec.append(slot.limiters[0].end_points[0].x - cur_pos_xn0)
         single_limiter_x_vec.append(slot.limiters[0].end_points[1].x - cur_pos_xn0)
         single_limiter_y_vec.append(slot.limiters[0].end_points[0].y - cur_pos_yn0)
         single_limiter_y_vec.append(slot.limiters[0].end_points[1].y - cur_pos_yn0)
+      elif slot.limiters_size == 2:
+        single_limiter_x_vec.append(slot.limiters[0].end_points[0].x - cur_pos_xn0)
+        single_limiter_x_vec.append(slot.limiters[1].end_points[1].x - cur_pos_xn0)
+        single_limiter_y_vec.append(slot.limiters[0].end_points[0].y - cur_pos_yn0)
+        single_limiter_y_vec.append(slot.limiters[1].end_points[1].y - cur_pos_yn0)
       if slot.fusion_source == 1:
         slots_x1_vec.append(single_limiter_x_vec)
         slots_y1_vec.append(single_limiter_y_vec)
@@ -3103,11 +3108,16 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                 # 1.2 update slots limiter points in same slot_plot_vec
                 single_limiter_x_vec = []
                 single_limiter_y_vec = []
-                if len(slot.limiter_position)!= 0:
-                  single_limiter_x_vec.append(slot.limiter_position[0].x)
-                  single_limiter_x_vec.append(slot.limiter_position[1].x)
-                  single_limiter_y_vec.append(slot.limiter_position[0].y)
-                  single_limiter_y_vec.append(slot.limiter_position[1].y)
+                if slot.limiters_size == 1:
+                  single_limiter_x_vec.append(slot.limiters[0].end_points[0].x)
+                  single_limiter_x_vec.append(slot.limiters[0].end_points[1].x)
+                  single_limiter_y_vec.append(slot.limiters[0].end_points[0].y)
+                  single_limiter_y_vec.append(slot.limiters[0].end_points[1].y)
+                elif slot.limiters_size == 2:
+                  single_limiter_x_vec.append(slot.limiters[0].end_points[0].x)
+                  single_limiter_x_vec.append(slot.limiters[1].end_points[1].x)
+                  single_limiter_y_vec.append(slot.limiters[0].end_points[0].y)
+                  single_limiter_y_vec.append(slot.limiters[1].end_points[1].y)
                 if slot.fusion_source == 1:
                   temp_corner_x1_list.append(single_limiter_x_vec)
                   temp_corner_y1_list.append(single_limiter_y_vec)
