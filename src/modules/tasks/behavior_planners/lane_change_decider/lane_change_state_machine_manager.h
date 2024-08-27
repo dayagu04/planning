@@ -181,7 +181,7 @@ class LaneChangeStateMachineManager {
   bool IsSplitRegion(RampDirection* ramp_direction);
   void CalculateLatOffsetOfOverlappedLanes(
       double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
-  bool IsOffTurnLight();
+  bool IsOffTurnLight(const RampDirection ramp_direction);
   bool IsMergeRegion(int* merge_lane_virtual_id);
   bool IsOverlapWithOtherLaneOnEndRegion(
       const std::shared_ptr<ReferencePath> reference_path,

@@ -396,6 +396,10 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   const auto &clane_virtual_id = virtual_lane_mgr->current_lane_virtual_id();
 
   double dist_threshold = 0.15;
+  if (road_to_ramp_turn_signal_ != RAMP_NONE) {
+    //匝道汇主路打灯时，关灯阈值可以增大一点
+    dist_threshold = 0.3;
+  }
   double v_ego =
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
@@ -1566,6 +1570,7 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
   JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
                    origin_relative_id_zero_nums);
   // overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
+  bool is_off_turn_signal = false;
   if (origin_relative_id_zero_nums > 1) {
     RampDirection ramp_direction = RAMP_NONE;
     if (IsSplitRegion(&ramp_direction)) {
@@ -1581,18 +1586,14 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
       }
     }
   } else  {
-    road_to_ramp_turn_signal_ = RAMP_NONE;
+    if (road_to_ramp_turn_signal_ != RAMP_NONE &&
+        IsOffTurnLight(road_to_ramp_turn_signal_)) {
+      road_to_ramp_turn_signal_ = RAMP_NONE;
+      is_off_turn_signal = true;
+    }
   }
-  // JSON_DEBUG_VALUE("origin_road_to_ramp_turn_signal",
-  //                  static_cast<int>(road_to_ramp_turn_signal_));
-  // if (road_to_ramp_turn_signal_ != RAMP_NONE) {
-  //   if (IsOffTurnLight()) {
-  //     road_to_ramp_turn_signal_ = RAMP_NONE;
-  //     overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
-  //   }
-  // }
-  int road_to_ramp_turn_signal = static_cast<int>(road_to_ramp_turn_signal_);
-  JSON_DEBUG_VALUE("road_to_ramp_turn_signal", road_to_ramp_turn_signal);
+  JSON_DEBUG_VALUE("is_off_turn_signal", static_cast<int>(is_off_turn_signal));
+  JSON_DEBUG_VALUE("road_to_ramp_turn_signal", static_cast<int>(road_to_ramp_turn_signal_));
 }
 
 bool LaneChangeStateMachineManager::IsSplitRegion(
@@ -1639,16 +1640,9 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
   JSON_DEBUG_VALUE("right_lat_err:", std::abs(right_ego_l - ego_l));
   bool is_overlap = false;
   if (std::abs(left_ego_l - ego_l) < left_lane_width / 2) {
-    // cur_lane_overlap_left_lane = true;
-    // overlap_lane_virtual_id = 
-    // overlap_reference_path = left_reference_path;
-    // *overlap_lane_virtual_id = left_lane->get_virtual_id();
     overlap_lane_virtual_id_ = left_lane->get_virtual_id();
     is_overlap = true;
   }else if (std::abs(right_ego_l - ego_l) < right_lane_width / 2) {
-    // cur_lane_overlap_right_lane = true;
-    // overlap_lane_virtual_id = right_lane->get_virtual_id();
-    // overlap_reference_path = right_reference_path;
     overlap_lane_virtual_id_ = right_lane->get_virtual_id();
     is_overlap = true;
   }
@@ -1723,16 +1717,41 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
   }
 }
 
-bool LaneChangeStateMachineManager::IsOffTurnLight() {
+bool LaneChangeStateMachineManager::IsOffTurnLight(const RampDirection ramp_direction) {
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
-  const auto& overlap_reference_path = reference_path_manager->get_reference_path_by_lane(overlap_lane_virtual_id_);
+  std::shared_ptr<ReferencePath> overlap_reference_path;
+  std::shared_ptr<VirtualLane> overlap_lane;
+  if (ramp_direction == RAMP_ON_LEFT) {
+    const auto right_lane = virtual_lane_manager->get_right_lane();
+    if (!right_lane) {
+      return true;
+    }
+    overlap_lane = right_lane;
+    const auto& right_path = reference_path_manager->get_reference_path_by_lane(right_lane->get_virtual_id());
+    if (!right_path) {
+      return true;
+    }
+    overlap_reference_path = right_path;
+  } else if (ramp_direction == RAMP_ON_RIGHT) {
+    const auto left_lane = virtual_lane_manager->get_left_lane();
+    if (!left_lane) {
+      return true;
+    }
+    overlap_lane = left_lane;
+    const auto& left_path = reference_path_manager->get_reference_path_by_lane(left_lane->get_virtual_id());
+    if (!left_path) {
+      return true;
+    }
+    overlap_reference_path = left_path;
+  } else {
+    return true;
+  }
   if (!overlap_reference_path) {
     return true;
   }
-  const auto& overlap_lane = virtual_lane_manager->get_lane_with_virtual_id(overlap_lane_virtual_id_);
   if (!overlap_lane) {
     return true;
   }
@@ -1756,10 +1775,8 @@ bool LaneChangeStateMachineManager::IsOffTurnLight() {
       }
     }
   }
-  if (ego_dis_to_ref_lane < overlap_lane_width / 2) {
-    return false;
-  }
-  if (!CheckIfInPerfectLaneKeeping()) {
+  if (ego_dis_to_ref_lane < overlap_lane_width / 2 ||
+      !CheckIfInPerfectLaneKeeping()) {
     return false;
   }
   return true;
