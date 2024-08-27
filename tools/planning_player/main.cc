@@ -10,9 +10,12 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type,
                         const std::string mileage_path, bool no_debug,
-                        bool interface_check) {
+                        bool interface_check, bool no_version_check) {
   planning::planning_player::PlanningPlayer player;
 
+  if (!no_version_check) {
+    player.VersinCheck(bag_path);
+  }
   if (!player.LoadRosBag(bag_path, out_bag, is_close_loop, no_debug,
                          interface_check)) {
     return -1;
@@ -33,6 +36,7 @@ int main(int argc, char **argv) {
   bool is_close_loop = false;
   bool no_debug = false;
   bool interface_check = false;
+  bool no_version_check = false;
   std::string mileage_path = "";
   double auto_time_sec = 1.5;
   std::string scene_type = "scc";
@@ -48,7 +52,8 @@ int main(int argc, char **argv) {
       {"scene-type", required_argument, &lopt, 6},
       {"mileage-path", required_argument, &lopt, 7},
       {"no-debug", no_argument, &lopt, 8},
-      {"interface-check", no_argument, &lopt, 9}};
+      {"interface-check", no_argument, &lopt, 9},
+      {"no-version-check", no_argument, &lopt, 10}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -75,6 +80,8 @@ int main(int argc, char **argv) {
         std::cout
             << "--interface-check   exit when interface version check failed"
             << std::endl;
+        std::cout
+            << "--no-version-check   disable version check" << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);
@@ -104,6 +111,9 @@ int main(int argc, char **argv) {
       case 9:
         interface_check = true;
         break;
+      case 10:
+        no_version_check = true;
+        break;
       default:
         std::cerr << "unknown option " << opt << std::endl;
         return -1;
@@ -124,5 +134,5 @@ int main(int argc, char **argv) {
 
   return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
                              scene_type, mileage_path, no_debug,
-                             interface_check);
+                             interface_check, no_version_check);
 }

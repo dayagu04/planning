@@ -43,6 +43,7 @@ static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
+static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
@@ -226,6 +227,84 @@ void PlanningPlayer::Clear() {
   planning_header_time_us_ = 0;
   loc_header_time_us_ = 0;
   frame_num_before_enter_auto_ = 0;
+}
+
+void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
+                                   std::string& outVersion) {
+  const std::string command =
+      "cd " + directory + " && git rev-parse --short=" + std::to_string(num) +
+      " HEAD";
+  FILE* pipe = popen(command.c_str(), "r");
+  if (!pipe) {
+    std::cerr << "Failed to run command: " << command << std::endl;
+    return;
+  }
+  std::array<char, 41> buffer;
+  if (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+    std::string commitHash(buffer.data());
+    size_t newlinePos = commitHash.find('\n');
+    if (newlinePos != std::string::npos) {
+      outVersion = commitHash.substr(0, newlinePos);
+    } else {
+      outVersion = commitHash;  // No newline, use the whole string
+    }
+  }
+  pclose(pipe);
+}
+
+void PlanningPlayer::VersinCheck(const std::string& bag_path) {
+  std::cout << "=========== 版本信息 ===========" << std::endl;
+  // bag version
+  rosbag::Bag bag;
+  try {
+    bag.open(bag_path, rosbag::bagmode::Read);
+  } catch (rosbag::BagException& e) {
+    ROS_ERROR("Error opening bag file: %s", e.what());
+    return;
+  }
+  std::vector<std::string> topics;
+  topics.push_back(TOPIC_PLANNING_PLAN);
+  topics.push_back(TOPIC_SYSTEM_VERSION);
+  rosbag::View view(bag, rosbag::TopicQuery(topics));
+  for (const auto& m : view) {
+    if (m.getTopic() == TOPIC_PLANNING_PLAN) {
+      struct_msgs::PlanningOutput::ConstPtr planning_output =
+          m.instantiate<struct_msgs::PlanningOutput>();
+      if (planning_output != nullptr) {
+        std::string str(planning_output->msg_meta.version.begin(),
+                        planning_output->msg_meta.version.end());
+        bag_planning_version_ = str;
+      }
+    }
+    if (m.getTopic() == TOPIC_SYSTEM_VERSION) {
+      struct_msgs::SystemVersion::ConstPtr system_version =
+          m.instantiate<struct_msgs::SystemVersion>();
+      if (system_version != nullptr) {
+        std::string str(system_version->interface_version.begin(),
+                        system_version->interface_version.end());
+        bag_interface_version_ = str;
+      }
+    }
+    if (!bag_interface_version_.empty() && !bag_planning_version_.empty()) {
+      break;
+    }
+  }
+  bag.close();
+  if (bag_planning_version_.size() > 24) {
+    bag_planning_version_ = bag_planning_version_.substr(14, 8);
+  }
+
+  // local version
+  getCommitHash(".", 8, local_planning_version_);
+  getCommitHash("interface", 8, local_interface_version_);
+
+  std::cout << std::endl;
+  std::cout << "bag中planning版本: " << bag_planning_version_ << std::endl;
+  std::cout << "本 地planning版本: " << local_planning_version_ << std::endl;
+  std::cout << std::endl;
+  std::cout << "bag中interface版本: " << bag_interface_version_ << std::endl;
+  std::cout << "本 地interface版本: " << local_interface_version_ << std::endl;
+  std::cout << std::endl;
 }
 
 bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
