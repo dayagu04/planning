@@ -891,8 +891,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
                    lane_change_decider_output.is_merge_region);
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
 
-  // GenerateTurnSignalForSplitRegion();
-  lane_change_decider_output.dir_turn_signal_road_to_ramp = RAMP_NONE;
+  GenerateTurnSignalForSplitRegion();
+  lane_change_decider_output.dir_turn_signal_road_to_ramp = road_to_ramp_turn_signal_;
   lane_change_decider_output.int_request_cancel_reason =
       lc_req_mgr_->int_request_cancel_reason();
       
@@ -1580,15 +1580,17 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
         }
       }
     }
+  } else  {
+    road_to_ramp_turn_signal_ = RAMP_NONE;
   }
-  JSON_DEBUG_VALUE("origin_road_to_ramp_turn_signal",
-                   static_cast<int>(road_to_ramp_turn_signal_));
-  if (road_to_ramp_turn_signal_ != RAMP_NONE) {
-    if (IsOffTurnLight()) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
-    }
-  }
+  // JSON_DEBUG_VALUE("origin_road_to_ramp_turn_signal",
+  //                  static_cast<int>(road_to_ramp_turn_signal_));
+  // if (road_to_ramp_turn_signal_ != RAMP_NONE) {
+  //   if (IsOffTurnLight()) {
+  //     road_to_ramp_turn_signal_ = RAMP_NONE;
+  //     overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
+  //   }
+  // }
   int road_to_ramp_turn_signal = static_cast<int>(road_to_ramp_turn_signal_);
   JSON_DEBUG_VALUE("road_to_ramp_turn_signal", road_to_ramp_turn_signal);
 }
@@ -1633,6 +1635,8 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
     }
   }
   // 目前只有一分二的场景，后续一分二以上的场景需要进一步处理  TODO(fengwang31)
+  JSON_DEBUG_VALUE("left_lat_err:", std::abs(left_ego_l - ego_l));
+  JSON_DEBUG_VALUE("right_lat_err:", std::abs(right_ego_l - ego_l));
   bool is_overlap = false;
   if (std::abs(left_ego_l - ego_l) < left_lane_width / 2) {
     // cur_lane_overlap_left_lane = true;
