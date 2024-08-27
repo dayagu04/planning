@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "agent/agent_manager.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "lateral_obstacle.h"
@@ -138,7 +139,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     end_time_ = -1;
     speed_limit_ = std::numeric_limits<double>::max();
   }
-
+  JSON_DEBUG_VALUE("prohibit_acc_", prohibit_acc_);
   // 5、更新历史cipv信息
   Update();
   auto &mutable_output =
