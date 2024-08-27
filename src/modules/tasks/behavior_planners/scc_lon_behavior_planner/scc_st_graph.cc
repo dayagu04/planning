@@ -219,8 +219,13 @@ void StGraphGenerator::Update(
   if (v_target_ > v_ego) {
     if (start_stop_info_.state() == common::StartStopInfo::START) {
       accel_vel_filter_.SetRate(-config_.acc_start, config_.acc_start);
-    } else if (lon_behav_input_->lat_output().lc_request() != "none") {
-      accel_vel_filter_.SetRate(-2.0, 2.0);  //换道调速滤波
+    } else if (lon_behav_input_->lat_output().lc_request() != "none" &&
+               (lon_behav_input_->lat_output().lc_status() ==
+                    "right_lane_change_wait" ||
+                lon_behav_input_->lat_output().lc_status() ==
+                    "left_lane_change_wait" ||
+                lon_behav_input_->lat_output().lc_status() == "none")) {
+      accel_vel_filter_.SetRate(-2.0, 2.0);  // 换道调速滤波
     } else {
       accel_vel_filter_.SetRate(-1.0, 1.0);
     }
@@ -242,8 +247,13 @@ void StGraphGenerator::Update(
     }
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
-    } else if (v_target_ < v_ego &&
-             lon_behav_input_->lat_output().lc_request() != "none" ){
+  } else if (v_target_ < v_ego &&
+             lon_behav_input_->lat_output().lc_request() != "none" &&
+             (lon_behav_input_->lat_output().lc_status() ==
+                  "right_lane_change_wait" ||
+              lon_behav_input_->lat_output().lc_status() ==
+                  "left_lane_change_wait" ||
+              lon_behav_input_->lat_output().lc_status() == "none")) {
     if (v_ego < v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
     }
@@ -257,7 +267,7 @@ void StGraphGenerator::Update(
     accel_vel_in_turns_filter_.Update(v_target_);
     v_target_ = accel_vel_in_turns_filter_.GetOutput();
   } else if (v_target_ < v_ego && is_far_slow_safe_lead_) {
-    accel_vel_filter_.SetRate(-1.0, 2.0);
+    accel_vel_filter_.SetRate(-1.0, 1.0);
     accel_vel_filter_.Update(v_target_);
     v_target_ = accel_vel_filter_.GetOutput();
   }
@@ -1544,6 +1554,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                                    _V_LIMIT_DISTANCE_V);
         }
         v_limit_lc_ = std::max(v_ego - 3.0, v_ego + v_limit_lc_);
+        JSON_DEBUG_VALUE("gap_base_car_id", gap.base_car_id)
+        JSON_DEBUG_VALUE("gap_front_car_id", gap.front_id)
         // a_target_lc = 0.0;
       } else {
         // safe_distance = CalcSafeDistance(gap.v_rear, v_ego);
@@ -1563,6 +1575,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
                                    _V_LIMIT_DISTANCE_V);
         }
         v_limit_lc_ = std::max(v_ego - config_.v_lc_speed_adjust, v_ego + v_limit_lc_);
+        JSON_DEBUG_VALUE("gap_base_car_id", gap.base_car_id)
+        JSON_DEBUG_VALUE("gap_front_car_id", gap.front_id)
         // a_target_lc = 0.6;
       }
       if (v_limit_lc_ < 6.0) {

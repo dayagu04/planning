@@ -25,9 +25,7 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                              "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                              "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead', "max_brake_distance", \
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
@@ -37,14 +35,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
                               'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', \
                               "dis_to_ramp", "v_target_ramp", "narrow_agent_id", "narrow_agent_v_limit",\
-                              'gap_v_limit_lc', \
+                              'gap_v_limit_lc', "gap_base_car_id", "gap_front_car_id",\
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
-                              "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                              'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                              "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
+                              "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate"]
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
