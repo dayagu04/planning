@@ -707,6 +707,11 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     read_json_vec<double>(
         json, std::vector<std::string>{"general_lateral_decider", "map_bound_weight"},
         map_bound_weight);
+    nudge_buffer_cutout_obstacle = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "nudge_buffer_cutout_obstacle"},
+        nudge_buffer_cutout_obstacle);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -777,6 +782,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_lateral_buffer_6 = 0.7;
 
   std::vector<double> map_bound_weight{0.4, 0.4, 0.6, 0.1};
+  double nudge_buffer_cutout_obstacle = 0.1;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

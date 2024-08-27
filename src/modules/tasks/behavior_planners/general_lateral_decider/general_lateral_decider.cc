@@ -994,6 +994,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   double limit_overlap_min_y = -1000;
   double limit_overlap_max_y = 1000;
+  bool is_cut_out_side_obstacle = false;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -1015,13 +1016,15 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
 
     // hack: consider that the obstacle is not completely over the car
+
     if (i == 0) {
-      if (obstacle->frenet_obstacle_boundary().s_start < ego_s - vehicle_param.rear_edge_to_rear_axle &&
-          obstacle->frenet_obstacle_boundary().s_end > ego_s - vehicle_param.rear_edge_to_rear_axle) {
+      double ego_s_tmp = reference_path_ptr_->get_frenet_ego_state().s();
+      if (reference_path_ptr_->get_ego_frenet_boundary().s_start <= obstacle->frenet_obstacle_boundary().s_end &&
+           reference_path_ptr_->get_ego_frenet_boundary().s_end >= obstacle->frenet_obstacle_boundary().s_start) {
         const double care_area_s_start_tmp =
-          ego_s - vehicle_param.rear_edge_to_rear_axle;
+          ego_s_tmp - vehicle_param.rear_edge_to_rear_axle;
         const double care_area_s_end_tmp =
-            ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
+            ego_s_tmp + 10;
         const auto care_area_center_tmp =
             Vec2d((care_area_s_start_tmp + care_area_s_end_tmp) * 0.5, ego_l);
         const double care_area_length_tmp = care_area_s_end_tmp - care_area_s_start_tmp;
@@ -1041,6 +1044,13 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
           limit_overlap_max_y = care_overlap_polygon_tmp.max_y();
         } else {
           continue;
+        }
+        const auto lateral_obstacle_manager = session_->environmental_model().get_lateral_obstacle();
+        TrackedObject tr;
+        if (lateral_obstacle_manager->find_track(obstacle->id(), tr)) {
+          if (tr.v_lat > 0.4) {
+            is_cut_out_side_obstacle = true;
+          }
         }
       }
     }
@@ -1076,7 +1086,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const double lat_buf_dis =
         general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
-            is_nudge_left);
+            is_nudge_left, is_cut_out_side_obstacle, config_.nudge_buffer_cutout_obstacle);
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
