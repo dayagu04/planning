@@ -470,7 +470,7 @@
     "acc_stop_max_bound" : 1.5,
     "enable_jlt" : false,
     "enable_narrow_agent_limit" : true,
-    "pre_accelerate_distance_for_merge" : 80.0,
+    "pre_accelerate_distance_for_merge" : 150.0,
     "enable_intersection_v_limit" : false,
     "v_lc_speed_adjust":0.5,
     "search_sdmap_curv_dis":300.0,
