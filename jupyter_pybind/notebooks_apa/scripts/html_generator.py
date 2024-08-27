@@ -31,7 +31,7 @@ def find_and_run_files(path, command, vehicle_type):
             with ThreadPoolExecutor() as executor:
                 for root, dirs, files in os.walk(path):
                     for file in files:
-                        if ".0000" in file or ".record" in file:
+                        if ".0000" in file or ".record" in file or "_no_camera.bag" in file:
                             file_path = os.path.join(root, file)
                             executor.submit(run_command_by_path, file_path, vehicle_type)
 
