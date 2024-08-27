@@ -20,6 +20,26 @@ void UssObstacleAvoidance::Init() {
     car_local_vertex_vec_.emplace_back(
         Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                         apa_param.GetParam().car_vertex_y_vec[i]));
+    if (i == 0) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[0] +
+                           apa_param.GetParam().car_vertex_x_vec[1]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[0] +
+                           apa_param.GetParam().car_vertex_y_vec[1]) *
+                              0.5));
+    }
+
+    if (i == 4) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[4] +
+                           apa_param.GetParam().car_vertex_x_vec[5]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[4] +
+                           apa_param.GetParam().car_vertex_y_vec[5]) *
+                              0.5));
+    }
+
     if (i == 2) {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
@@ -28,6 +48,17 @@ void UssObstacleAvoidance::Init() {
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[3]));
     }
+
+    if (i == 10) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[10] +
+                           apa_param.GetParam().car_vertex_x_vec[11]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[10] +
+                           apa_param.GetParam().car_vertex_y_vec[11]) *
+                              0.5));
+    }
+
     if (i == 12) {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
@@ -35,6 +66,16 @@ void UssObstacleAvoidance::Init() {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[9]));
+    }
+
+    if (i == 14) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[14] +
+                           apa_param.GetParam().car_vertex_x_vec[15]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[14] +
+                           apa_param.GetParam().car_vertex_y_vec[15]) *
+                              0.5));
     }
   }
 
@@ -157,6 +198,7 @@ void UssObstacleAvoidance::GenUssArc() {
       corner_uss_upa_scan_angle_deg =
           apa_param.GetParam().corner_uss_scan_angle_deg_turn;
     }
+
     std::cout << "corner_uss_upa_scan_angle_deg = "
               << corner_uss_upa_scan_angle_deg << std::endl;
 
