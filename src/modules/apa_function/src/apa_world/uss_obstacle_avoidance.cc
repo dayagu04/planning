@@ -188,28 +188,19 @@ void UssObstacleAvoidance::GenUssArc() {
     const double upa_scan_angle_deg =
         apa_param.GetParam().uss_upa_scan_angle_deg;
 
-    double corner_uss_upa_scan_angle_deg = 0.0;
-
-    if (std::fabs(car_motion_info_.steer_angle * 57.3) <
-        apa_param.GetParam().corner_uss_steer_angle) {
-      corner_uss_upa_scan_angle_deg =
-          apa_param.GetParam().corner_uss_scan_angle_deg_straight;
-    } else {
-      corner_uss_upa_scan_angle_deg =
-          apa_param.GetParam().corner_uss_scan_angle_deg_turn;
-    }
-
-    std::cout << "corner_uss_upa_scan_angle_deg = "
-              << corner_uss_upa_scan_angle_deg << std::endl;
-
     const auto rot_matrix_apa = pnc::geometry_lib::GetRotm2dFromTheta(
         pnc::mathlib::Deg2Rad(apa_scan_angle_deg * 0.5));
 
     const auto rot_matrix_upa = pnc::geometry_lib::GetRotm2dFromTheta(
         pnc::mathlib::Deg2Rad(upa_scan_angle_deg * 0.5));
 
-    const auto rot_matrix_corner_uss = pnc::geometry_lib::GetRotm2dFromTheta(
-        pnc::mathlib::Deg2Rad(corner_uss_upa_scan_angle_deg));
+    const auto rot_matrix_corner_uss_straight =
+        pnc::geometry_lib::GetRotm2dFromTheta(pnc::mathlib::Deg2Rad(
+            apa_param.GetParam().corner_uss_scan_angle_deg_straight));
+
+    const auto rot_matrix_corner_uss_turn =
+        pnc::geometry_lib::GetRotm2dFromTheta(pnc::mathlib::Deg2Rad(
+            apa_param.GetParam().corner_uss_scan_angle_deg_turn));
 
     Eigen::Matrix2d rot_matrix;
 
@@ -254,12 +245,51 @@ void UssObstacleAvoidance::GenUssArc() {
 
       // hack: avoid corner uss invalid stuck
       // todo: need move when uss can be trust
-      if (i == 1 || i == 7) {
-        uss_local_arc.pA = rot_matrix_corner_uss.transpose() * OC +
-                           uss_local_arc.circle_info.center;
-      } else if (i == 4 || i == 10) {
-        uss_local_arc.pB =
-            rot_matrix_corner_uss * OC + uss_local_arc.circle_info.center;
+      if (std::fabs(car_motion_info_.steer_angle * 57.3) <
+          apa_param.GetParam().corner_uss_steer_angle) {
+        if (i == 1 || i == 7) {
+          uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
+                             uss_local_arc.circle_info.center;
+        } else if (i == 4 || i == 10) {
+          uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                             uss_local_arc.circle_info.center;
+        }
+      } else {
+        if (car_motion_info_.steer_angle > 0.0) {
+          if (i == 1) {
+            uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 4) {
+            uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 7) {
+            uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 10) {
+            uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                               uss_local_arc.circle_info.center;
+          }
+        } else {
+          if (i == 1) {
+            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 4) {
+            uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 7) {
+            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 10) {
+            uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
+                               uss_local_arc.circle_info.center;
+          }
+        }
       }
       uss_local_arc_vec_.emplace_back(uss_local_arc);
     }

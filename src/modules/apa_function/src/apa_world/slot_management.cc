@@ -2985,8 +2985,23 @@ void SlotManagement::UpdateLimiterInfoInParking() {
     limiter_slot.second = ego_slot_info.g2l_tf.GetPos(limiter_global.second);
     limiter_slot.first.y() = ego_slot_info.slot_width * 0.5;
     limiter_slot.second.y() = -ego_slot_info.slot_width * 0.5;
-    limiter_slot.first.x() += move_dist;
-    limiter_slot.second.x() += move_dist;
+
+    if (apa_param.GetParam().limiter_length > 0.0) {
+      const double limiter_x =
+          (limiter_slot.first.x() + limiter_slot.second.x()) * 0.5;
+
+      const double virtual_x =
+          std::min(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x()) -
+          apa_param.GetParam().front_overhanging -
+          apa_param.GetParam().wheel_base - apa_param.GetParam().limiter_length;
+
+      limiter_slot.first.x() = std::max(virtual_x, limiter_x);
+      limiter_slot.second.x() = limiter_slot.first.x();
+    } else {
+      limiter_slot.first.x() += move_dist;
+      limiter_slot.second.x() += move_dist;
+    }
+
     frame_.limiter_point_window.Add(limiter_slot);
   }
 
