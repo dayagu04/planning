@@ -52,7 +52,7 @@ class PlanningPlayer {
   ~PlanningPlayer() = default;
 
   void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type, bool no_debug);
+            const std::string &scene_type, bool no_debug, const std::string &car);
   void Clear();
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
                   bool is_close_loop, bool no_debug, bool interface_check);

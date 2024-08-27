@@ -1,6 +1,7 @@
 #include <getopt.h>
 
 #include <chrono>
+#include <iostream>
 #include <string>
 
 // #include "modules_register.h"
@@ -10,7 +11,7 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type,
                         const std::string mileage_path, bool no_debug,
-                        bool interface_check, bool no_version_check) {
+                        bool interface_check, bool no_version_check, const std::string &car) {
   planning::planning_player::PlanningPlayer player;
 
   if (!no_version_check) {
@@ -20,7 +21,7 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                          interface_check)) {
     return -1;
   }
-  player.Init(is_close_loop, auto_time_sec, scene_type, no_debug);
+  player.Init(is_close_loop, auto_time_sec, scene_type, no_debug, car);
   if (no_debug) {
     player.NoDebugInfoMode(is_close_loop);
   } else {
@@ -37,6 +38,7 @@ int main(int argc, char **argv) {
   bool no_debug = false;
   bool interface_check = false;
   bool no_version_check = false;
+  std::string car = "CHERY_E0X";
   std::string mileage_path = "";
   double auto_time_sec = 1.5;
   std::string scene_type = "scc";
@@ -53,7 +55,8 @@ int main(int argc, char **argv) {
       {"mileage-path", required_argument, &lopt, 7},
       {"no-debug", no_argument, &lopt, 8},
       {"interface-check", no_argument, &lopt, 9},
-      {"no-version-check", no_argument, &lopt, 10}};
+      {"no-version-check", no_argument, &lopt, 10},
+      {"car", required_argument, &lopt, 11}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -82,6 +85,7 @@ int main(int argc, char **argv) {
             << std::endl;
         std::cout
             << "--no-version-check   disable version check" << std::endl;
+        std::cout << "--car   car type" << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);
@@ -114,6 +118,9 @@ int main(int argc, char **argv) {
       case 10:
         no_version_check = true;
         break;
+      case 11:
+        car = std::string(optarg);
+        break;
       default:
         std::cerr << "unknown option " << opt << std::endl;
         return -1;
@@ -132,7 +139,13 @@ int main(int argc, char **argv) {
     }
   }
 
+  std::array<std::string, 3> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811"};
+  if (std::find(car_type.begin(), car_type.end(), car) == car_type.end()) {
+    std::cerr << "Error car type!!!" << std::endl;
+    return -1;
+  }
+
   return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
                              scene_type, mileage_path, no_debug,
-                             interface_check, no_version_check);
+                             interface_check, no_version_check, car);
 }

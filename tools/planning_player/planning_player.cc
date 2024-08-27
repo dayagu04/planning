@@ -44,15 +44,45 @@ static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
-
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
 
+namespace fs = boost::filesystem;
+
+void copy_confif_files(const fs::path& source, const fs::path& destination) {
+  if (!fs::exists(source) || !fs::is_directory(source)) {
+    std::cerr << "Source directory does not exist or is not a directory."
+              << std::endl;
+    return;
+  }
+  if (!fs::exists(destination)) {
+    fs::create_directories(destination);
+  }
+  for (const auto& entry : fs::recursive_directory_iterator(source)) {
+    fs::path target = destination / entry.path().filename();
+    try {
+      if (fs::is_directory(entry.status())) {
+        fs::create_directory(target);
+      } else {
+        fs::copy_file(entry.path(), target,
+                      fs::copy_option::overwrite_if_exists);
+      }
+    } catch (const fs::filesystem_error& e) {
+      std::cerr << "Error in copy file : " << e.what() << std::endl;
+    }
+  }
+}
+
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
-                          const std::string& scene_type, bool no_debug) {
+                          const std::string& scene_type, bool no_debug, const std::string& car) {
   std::cout << "===========planning player init, is_close_loop="
             << is_close_loop << ", auto_time_sec=" << auto_time_sec
             << ", scene_type=" << scene_type << "==========" << std::endl;
+  // 车辆配置文件
+  fs::path source = "res/conf/" + car;
+  fs::path destination = "/asw/planning/res/conf/";
+  copy_confif_files(source, destination);
+
   // 找到第几帧进自动
   if (scene_type == "scc" || scene_type == "hpp" || scene_type == "noa") {
     uint64_t auto_timestamp = 0;
