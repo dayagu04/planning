@@ -1303,22 +1303,41 @@ void PlanningPlayer::UpdateVehicleService(
 void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   if (mileage_path != "") {
     double pathLength = 0.0;
-    if (scene_type_ == "scc") {
-      auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-      for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1;
-           ++i) {
-        auto loc_msg_i = boost::any_cast<
-            struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
-            it_loc_esti_msg->second);
-        auto x1 = loc_msg_i->pose.local_position.x;
-        auto y1 = loc_msg_i->pose.local_position.y;
-        it_loc_esti_msg++;
-        auto loc_msg_i_next = boost::any_cast<
-            struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
-            it_loc_esti_msg->second);
-        auto x2 = loc_msg_i_next->pose.local_position.x;
-        auto y2 = loc_msg_i_next->pose.local_position.y;
-        pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+    if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp") {
+      if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+        auto it_loc_msg = msg_cache_[TOPIC_LOCALIZATION].begin();
+        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1;
+            ++i) {
+          auto loc_msg_i = boost::any_cast<
+              struct_msgs::IFLYLocalization::Ptr>(
+              it_loc_msg->second);
+          auto x1 = loc_msg_i->position.position_boot.x;
+          auto y1 = loc_msg_i->position.position_boot.y;
+          it_loc_msg++;
+          auto loc_msg_i_next = boost::any_cast<
+              struct_msgs::IFLYLocalization::Ptr>(
+              it_loc_msg->second);
+          auto x2 = loc_msg_i_next->position.position_boot.x;
+          auto y2 = loc_msg_i_next->position.position_boot.y;
+          pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+        }
+      } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+        auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1;
+            ++i) {
+          auto loc_msg_i = boost::any_cast<
+              struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it_loc_esti_msg->second);
+          auto x1 = loc_msg_i->pose.local_position.x;
+          auto y1 = loc_msg_i->pose.local_position.y;
+          it_loc_esti_msg++;
+          auto loc_msg_i_next = boost::any_cast<
+              struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it_loc_esti_msg->second);
+          auto x2 = loc_msg_i_next->pose.local_position.x;
+          auto y2 = loc_msg_i_next->pose.local_position.y;
+          pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+        }
       }
     }
     nlohmann::json j;
