@@ -423,16 +423,16 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
                             use_lat_offset_in_tracklet_maintainer);
     enable_static_scene =
         read_json_key<bool>(json, "enable_static_scene", enable_static_scene);
-    car_addition_decre_factor =
-        read_json_key<double>(json, "car_addition_decre_factor", car_addition_decre_factor);
-    car_addition_decre_buffer =
-        read_json_key<double>(json, "car_addition_decre_buffer", car_addition_decre_buffer);
-    emegency_cutin_ttc_lower =
-        read_json_key<double>(json, "emegency_cutin_ttc_lower", emegency_cutin_ttc_lower);
-    emegency_cutin_ttc_upper =
-        read_json_key<double>(json, "emegency_cutin_ttc_upper", emegency_cutin_ttc_upper);
-    emegency_cutin_front_area =
-        read_json_key<double>(json, "emegency_cutin_front_area", emegency_cutin_front_area);
+    car_addition_decre_factor = read_json_key<double>(
+        json, "car_addition_decre_factor", car_addition_decre_factor);
+    car_addition_decre_buffer = read_json_key<double>(
+        json, "car_addition_decre_buffer", car_addition_decre_buffer);
+    emegency_cutin_ttc_lower = read_json_key<double>(
+        json, "emegency_cutin_ttc_lower", emegency_cutin_ttc_lower);
+    emegency_cutin_ttc_upper = read_json_key<double>(
+        json, "emegency_cutin_ttc_upper", emegency_cutin_ttc_upper);
+    emegency_cutin_front_area = read_json_key<double>(
+        json, "emegency_cutin_front_area", emegency_cutin_front_area);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -517,8 +517,7 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
                               care_dynamic_object_t_threshold);
     care_static_object_t_threshold = read_json_key<double>(
         json, "care_static_object_t_threshold", care_static_object_t_threshold);
-    v_limit_max =
-        read_json_key<double>(json, "v_limit_max", v_limit_max);
+    v_limit_max = read_json_key<double>(json, "v_limit_max", v_limit_max);
   }
   double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
@@ -581,10 +580,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json, "hard_min_distance_road2center", hard_min_distance_road2center);
     care_lon_area_road_border = read_json_key<double>(
         json, "care_lon_area_road_border", care_lon_area_road_border);
-    ramp_limit_v = read_json_key<double>(
-        json, "ramp_limit_v", ramp_limit_v);
-    ramp_limit_v_valid = read_json_key<bool>(
-        json, "ramp_limit_v_valid", ramp_limit_v_valid);
+    ramp_limit_v = read_json_key<double>(json, "ramp_limit_v", ramp_limit_v);
+    ramp_limit_v_valid =
+        read_json_key<bool>(json, "ramp_limit_v_valid", ramp_limit_v_valid);
 
     lateral_road_boader_collision_ttc_bp_1 = read_json_keys<double>(
         json,

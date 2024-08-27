@@ -11,7 +11,8 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type,
                         const std::string mileage_path, bool no_debug,
-                        bool interface_check, bool no_version_check, const std::string &car) {
+                        bool interface_check, bool no_version_check,
+                        const std::string &car) {
   planning::planning_player::PlanningPlayer player;
 
   if (!no_version_check) {
@@ -83,8 +84,7 @@ int main(int argc, char **argv) {
         std::cout
             << "--interface-check   exit when interface version check failed"
             << std::endl;
-        std::cout
-            << "--no-version-check   disable version check" << std::endl;
+        std::cout << "--no-version-check   disable version check" << std::endl;
         std::cout << "--car   car type" << std::endl;
         break;
       case 2:

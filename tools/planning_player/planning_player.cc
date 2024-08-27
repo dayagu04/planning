@@ -74,7 +74,8 @@ void copy_confif_files(const fs::path& source, const fs::path& destination) {
 }
 
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
-                          const std::string& scene_type, bool no_debug, const std::string& car) {
+                          const std::string& scene_type, bool no_debug,
+                          const std::string& car) {
   std::cout << "===========planning player init, is_close_loop="
             << is_close_loop << ", auto_time_sec=" << auto_time_sec
             << ", scene_type=" << scene_type << "==========" << std::endl;
@@ -261,9 +262,8 @@ void PlanningPlayer::Clear() {
 
 void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
                                    std::string& outVersion) {
-  const std::string command =
-      "cd " + directory + " && git rev-parse --short=" + std::to_string(num) +
-      " HEAD";
+  const std::string command = "cd " + directory + " && git rev-parse --short=" +
+                              std::to_string(num) + " HEAD";
   FILE* pipe = popen(command.c_str(), "r");
   if (!pipe) {
     std::cerr << "Failed to run command: " << command << std::endl;
@@ -1336,25 +1336,23 @@ void PlanningPlayer::GenMileage(const std::string& mileage_path) {
     if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp") {
       if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
         auto it_loc_msg = msg_cache_[TOPIC_LOCALIZATION].begin();
-        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1;
-            ++i) {
-          auto loc_msg_i = boost::any_cast<
-              struct_msgs::IFLYLocalization::Ptr>(
+        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1; ++i) {
+          auto loc_msg_i = boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(
               it_loc_msg->second);
           auto x1 = loc_msg_i->position.position_boot.x;
           auto y1 = loc_msg_i->position.position_boot.y;
           it_loc_msg++;
-          auto loc_msg_i_next = boost::any_cast<
-              struct_msgs::IFLYLocalization::Ptr>(
-              it_loc_msg->second);
+          auto loc_msg_i_next =
+              boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(
+                  it_loc_msg->second);
           auto x2 = loc_msg_i_next->position.position_boot.x;
           auto y2 = loc_msg_i_next->position.position_boot.y;
           pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
         }
       } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
         auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1;
-            ++i) {
+        for (size_t i = 0;
+             i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1; ++i) {
           auto loc_msg_i = boost::any_cast<
               struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
               it_loc_esti_msg->second);

@@ -52,7 +52,8 @@ class PlanningPlayer {
   ~PlanningPlayer() = default;
 
   void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type, bool no_debug, const std::string &car);
+            const std::string &scene_type, bool no_debug,
+            const std::string &car);
   void Clear();
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
                   bool is_close_loop, bool no_debug, bool interface_check);
@@ -78,8 +79,9 @@ class PlanningPlayer {
       uint64_t delta_t,
       struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
   void UpdateVehicleServiceData();
-  void getCommitHash(const std::string& directory, const int num, std::string& outVersion);
-  void VersinCheck(const std::string& bag_path);
+  void getCommitHash(const std::string &directory, const int num,
+                     std::string &outVersion);
+  void VersinCheck(const std::string &bag_path);
 
  private:
   DynamicState state_;

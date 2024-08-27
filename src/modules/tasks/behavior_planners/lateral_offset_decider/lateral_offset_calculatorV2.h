@@ -1,13 +1,13 @@
 #pragma once
 
+#include <utility>
 #include "avoid_obstacle_maintainer5V.h"
 #include "config/basic_type.h"
 #include "define/planning_status.h"
 #include "lateral_obstacle.h"
+#include "utils/hysteresis_decision.h"
 #include "utils/pose2d_utils.h"
 #include "virtual_lane_manager.h"
-#include <utility>
-#include "utils/hysteresis_decision.h"
 
 namespace planning {
 
