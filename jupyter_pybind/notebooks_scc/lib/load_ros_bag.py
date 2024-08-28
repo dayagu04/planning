@@ -148,7 +148,7 @@ class LoadRosbag:
         self.loc_msg['enable'] = True
       else:
         self.loc_msg['enable'] = False
-    except:
+    except Exception as e:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!') """
 
@@ -178,7 +178,7 @@ class LoadRosbag:
           self.loc_msg['enable'] = True
         else:
           self.loc_msg['enable'] = False
-      except:
+      except Exception as e:
         self.loc_msg['enable'] = False
         print('missing /iflytek/localization/egomotion !!!')
     else: #加载 旧定位
@@ -232,11 +232,11 @@ class LoadRosbag:
       try:
         loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
-          loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
+          loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
         sorted_loc_msg_dict = OrderedDict(sorted(loc_msg_dict.items(), key=lambda ele: ele[0]))
         for t, msg in sorted_loc_msg_dict.items():
           self.loc_msg['t'].append(t)
-          self.loc_msg['timestamp'].append(msg.msg_header.stamp)
+          self.loc_msg['timestamp'].append(msg.msg_header.timestamp)
           cvt_msg = OldCvtNewLoc()
           cvt_msg.position.position_boot.x = msg.pose.local_position.x
           cvt_msg.position.position_boot.y = msg.pose.local_position.y
@@ -253,18 +253,19 @@ class LoadRosbag:
           self.loc_msg['enable'] = True
         else:
           self.loc_msg['enable'] = False
-      except:
+      except Exception as e:
         self.loc_msg['enable'] = False
         print('missing /iflytek/localization/ego_pose !!!')
+        print(e)
 
       try:
         origin_loc_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose_origin"):
-          origin_loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
+          origin_loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
         sorted_loc_msg_dict = OrderedDict(sorted(origin_loc_msg_dict.items(), key=lambda ele: ele[0]))
         for t, msg in sorted_loc_msg_dict.items():
           self.origin_loc_msg['t'].append(t)
-          self.origin_loc_msg['timestamp'].append(msg.msg_header.stamp)
+          self.origin_loc_msg['timestamp'].append(msg.msg_header.timestamp)
           cvt_msg = OldCvtNewLoc()
           cvt_msg.position.position_boot.x = msg.pose.local_position.x
           cvt_msg.position.position_boot.y = msg.pose.local_position.y
@@ -280,7 +281,7 @@ class LoadRosbag:
           self.origin_loc_msg['enable'] = True
         else:
           self.origin_loc_msg['enable'] = False
-      except:
+      except Exception as e:
         self.origin_loc_msg['enable'] = False
         print('missing /iflytek/localization/ego_pose_origin !!!')
 
@@ -302,7 +303,7 @@ class LoadRosbag:
         self.road_msg['enable'] = True
       else:
         self.road_msg['enable'] = False
-    except:
+    except Exception as e:
       self.road_msg['enable'] = False
       print('missing /iflytek/fusion/road_fusion topic !!!')
 
@@ -324,7 +325,7 @@ class LoadRosbag:
         self.mobileye_lane_lines_msg['enable'] = True
       else:
         self.mobileye_lane_lines_msg['enable'] = False
-    except:
+    except Exception as e:
       self.mobileye_lane_lines_msg['enable'] = False
       print('missing /mobileye/camera_perception/lane_lines topic !!!')
     print('mobileye_lane_lines_msg[enable]:', self.mobileye_lane_lines_msg['enable'])
@@ -346,7 +347,7 @@ class LoadRosbag:
         self.rdg_lane_lines_msg['enable'] = True
       else:
         self.rdg_lane_lines_msg['enable'] = False
-    except:
+    except Exception as e:
       self.rdg_lane_lines_msg['enable'] = False
       print('missing /iflytek/camera_perception/lane_lines topic !!!')
 
@@ -366,7 +367,7 @@ class LoadRosbag:
         self.lane_topo_msg['enable'] = True
       else:
         self.lane_topo_msg['enable'] = False
-    except:
+    except Exception as e:
       self.lane_topo_msg['enable'] = False
       print('missing /iflytek/camera_perception/lane_topo topic !!!')
     # load fusion objects msg
@@ -386,7 +387,7 @@ class LoadRosbag:
         self.fus_msg['enable'] = True
       else:
         self.fus_msg['enable'] = False
-    except:
+    except Exception as e:
       self.fus_msg['enable'] = False
       print('missing /iflytek/fusion/objects !!!')
 
@@ -406,7 +407,7 @@ class LoadRosbag:
         self.mobileye_objects_msg['enable'] = True
       else:
         self.mobileye_objects_msg['enable'] = False
-    except:
+    except Exception as e:
       self.mobileye_objects_msg['enable'] = False
       print('missing /mobileye/camera_perception/objects !!!')
 
@@ -426,7 +427,7 @@ class LoadRosbag:
         self.rdg_objects_msg['enable'] = True
       else:
         self.rdg_objects_msg['enable'] = False
-    except:
+    except Exception as e:
       self.rdg_objects_msg['enable'] = False
       print('missing /iflytek/camera_perception/objects !!!')
 
@@ -446,7 +447,7 @@ class LoadRosbag:
         self.lidar_msg['enable'] = True
       else:
         self.lidar_msg['enable'] = False
-    except:
+    except Exception as e:
       self.lidar_msg['enable'] = False
       print('missing /iflytek/lidar_objects !!!')
 
@@ -488,7 +489,7 @@ class LoadRosbag:
           #print("size:",len(radar_msg[i]['t']))
         else:
           radar_msg[i]['enable'] = False
-      except:
+      except Exception as e:
         radar_msg[i]['enable'] = False
         print('missing',topic[i])
 
@@ -507,7 +508,7 @@ class LoadRosbag:
     #     self.radar_fl_msg['enable'] = True
     #   else:
     #     self.radar_fl_msg['enable'] = False
-    # except:
+    # except Exception as e:
     #   self.radar_fl_msg['enable'] = False
     #   print('missing /iflytek/radar_fl/objects !!!')
 
@@ -529,7 +530,7 @@ class LoadRosbag:
         self.vs_msg['enable'] = True
       else:
         self.vs_msg['enable'] = False
-    except:
+    except Exception as e:
       self.vs_msg['enable'] = False
       print("missing /iflytek/vehicle_service !!!")
 
@@ -550,7 +551,7 @@ class LoadRosbag:
         self.plan_msg['enable'] = True
       else:
         self.plan_msg['enable'] = False
-    except:
+    except Exception as e:
       self.plan_msg['enable'] = False
       print("missing /iflytek/planning/plan !!!")
 
@@ -573,7 +574,7 @@ class LoadRosbag:
         self.prediction_msg['enable'] = True
       else:
         self.prediction_msg['enable'] = False
-    except:
+    except Exception as e:
       self.prediction_msg['enable'] = False
       print("missing /iflytek/prediction/prediction_result !!!")
 
@@ -597,7 +598,7 @@ class LoadRosbag:
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
-                         'gap_v_limit_lc', \
+                         'gap_v_limit_lc', 'target_gap_front_id', 'target_gap_rear_id',\
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                          'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
@@ -635,7 +636,7 @@ class LoadRosbag:
           try:
             # print(json_struct['assembled_omega'])
             print(json_struct['limit_v_type'])
-          except:
+          except Exception as e:
             pass
           self.plan_debug_msg['json'].append(json_data)
         except json.decoder.JSONDecodeError as jserr:
@@ -648,7 +649,7 @@ class LoadRosbag:
         self.plan_debug_msg['enable'] = True
       else:
         self.plan_debug_msg['enable'] = False
-    except:
+    except Exception as e:
       self.plan_debug_msg['enable'] = False
       print("missing /iflytek/planning/debug_info !!!")
 
@@ -670,7 +671,7 @@ class LoadRosbag:
         self.ctrl_msg['enable'] = True
       else:
         self.ctrl_msg['enable'] = False
-    except:
+    except Exception as e:
       self.ctrl_msg['enable'] = False
       print("missing /iflytek/control/control_command !!!")
 
@@ -712,7 +713,7 @@ class LoadRosbag:
         self.ctrl_debug_msg['enable'] = True
       else:
         self.ctrl_debug_msg['enable'] = False
-    except:
+    except Exception as e:
       self.ctrl_debug_msg['enable'] = False
       print("missing /iflytek/control/debug_info !!!")
 
@@ -733,7 +734,7 @@ class LoadRosbag:
         self.fus_parking_msg['enable'] = True
       else:
         self.fus_parking_msg['enable'] = False
-    except:
+    except Exception as e:
       self.fus_parking_msg['enable'] = False
       print('missing /iflytek/fusion/parking_slot !!!')
 
@@ -754,7 +755,7 @@ class LoadRosbag:
         self.soc_state_msg['enable'] = True
       else:
         self.soc_state_msg['enable'] = False
-    except:
+    except Exception as e:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/fsm/soc_state !!!')
 
@@ -774,7 +775,7 @@ class LoadRosbag:
         self.ehr_static_map_msg['enable'] = True
       else:
         self.ehr_static_map_msg['enable'] = False
-    except:
+    except Exception as e:
       self.ehr_static_map_msg['enable'] = False
       print('missing /iflytek/ehr/static_map topic !!!')
 
@@ -796,7 +797,7 @@ class LoadRosbag:
         self.ehr_sd_map_msg['enable'] = True
       else:
         self.ehr_sd_map_msg['enable'] = False
-    except:
+    except Exception as e:
       self.ehr_sd_map_msg['enable'] = False
       print('missing /iflytek/ehr/sdmap topic !!!')
 
@@ -816,7 +817,7 @@ class LoadRosbag:
         self.ehr_parking_map_msg['enable'] = True
       else:
         self.ehr_parking_map_msg['enable'] = False
-    except:
+    except Exception as e:
       self.ehr_parking_map_msg['enable'] = False
       print('missing /iflytek/ehr/parking_map topic !!!')
 
@@ -836,7 +837,7 @@ class LoadRosbag:
         self.ground_line_msg['enable'] = True
       else:
         self.ground_line_msg['enable'] = False
-    except:
+    except Exception as e:
       self.ground_line_msg['enable'] = False
       print('missing /iflytek/fusion/ground_line topic !!!')
 
@@ -856,7 +857,7 @@ class LoadRosbag:
         self.planning_hmi_msg['enable'] = True
       else:
         self.planning_hmi_msg['enable'] = False
-    except:
+    except Exception as e:
       self.planning_hmi_msg['enable'] = False
       print('missing /iflytek/planning/hmi topic !!!')
 
