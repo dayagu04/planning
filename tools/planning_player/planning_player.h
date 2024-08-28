@@ -52,7 +52,8 @@ class PlanningPlayer {
   ~PlanningPlayer() = default;
 
   void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type, bool no_debug);
+            const std::string &scene_type, bool no_debug,
+            const std::string &car);
   void Clear();
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
                   bool is_close_loop, bool no_debug, bool interface_check);
@@ -78,6 +79,9 @@ class PlanningPlayer {
       uint64_t delta_t,
       struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
   void UpdateVehicleServiceData();
+  void getCommitHash(const std::string &directory, const int num,
+                     std::string &outVersion);
+  void VersinCheck(const std::string &bag_path);
 
  private:
   DynamicState state_;
@@ -122,6 +126,10 @@ class PlanningPlayer {
   pnc::mathlib::spline yaw_rate_t_spline_;
   pnc::mathlib::spline curvature_t_spline_;
   bool instant_error_ = false;
+  std::string local_planning_version_;
+  std::string local_interface_version_;
+  std::string bag_planning_version_;
+  std::string bag_interface_version_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);

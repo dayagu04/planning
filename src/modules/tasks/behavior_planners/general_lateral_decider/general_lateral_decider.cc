@@ -210,8 +210,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
 
   bool limit_ref_vel_on_ramp_valid = false;
-  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
 
   if (config_.lateral_ref_traj_type ||
@@ -383,7 +384,8 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
   // auto ego_s = ego_frenet_state_.s();
   if (ego_s <= plan_history_traj_tmp.front().s) {
-    for (double t = 0; t <= plan_history_traj_tmp.back().t; t += config_.delta_t) {
+    for (double t = 0; t <= plan_history_traj_tmp.back().t;
+         t += config_.delta_t) {
       TrajectoryPoint pt =
           general_lateral_decider_utils::GetTrajectoryPointAtTime(
               plan_history_traj_tmp, t);
@@ -532,8 +534,9 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
                                          .coarse_planning_info;
   const auto &lc_request_direction =
       session_->planning_context().lane_change_decider_output().lc_request;
-  bool is_LC_CHANGE = ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-                        (coarse_planning_info.target_state == kLaneChangeComplete));
+  bool is_LC_CHANGE =
+      ((coarse_planning_info.target_state == kLaneChangeExecution) ||
+       (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = is_LC_CHANGE || is_LC_BACK;
   const double kDefaultDistanceToRoad = 10.0;
@@ -596,20 +599,26 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   double max_collision_t, left_collision_t, right_collision_t;
   GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
   const std::array<double, 5> _COLLISION_TTC_BP = {
-      config_.lateral_road_boader_collision_ttc_bp_1, config_.lateral_road_boader_collision_ttc_bp_2,
-      config_.lateral_road_boader_collision_ttc_bp_3, config_.lateral_road_boader_collision_ttc_bp_4,
+      config_.lateral_road_boader_collision_ttc_bp_1,
+      config_.lateral_road_boader_collision_ttc_bp_2,
+      config_.lateral_road_boader_collision_ttc_bp_3,
+      config_.lateral_road_boader_collision_ttc_bp_4,
       config_.lateral_road_boader_collision_ttc_bp_5};
   const std::array<double, 5> _COLLISION_BUFFER = {
-      config_.extra_collision_lateral_buffer_1, config_.extra_collision_lateral_buffer_2, config_.extra_collision_lateral_buffer_3,
-      config_.extra_collision_lateral_buffer_4, config_.extra_collision_lateral_buffer_5};
+      config_.extra_collision_lateral_buffer_1,
+      config_.extra_collision_lateral_buffer_2,
+      config_.extra_collision_lateral_buffer_3,
+      config_.extra_collision_lateral_buffer_4,
+      config_.extra_collision_lateral_buffer_5};
 
   const std::array<double, 6> _V_ROAD_BORDER_EXTRA_BUFFER_BP = {
       config_.lateral_road_boader_v_bp_1, config_.lateral_road_boader_v_bp_2,
       config_.lateral_road_boader_v_bp_3, config_.lateral_road_boader_v_bp_4,
       config_.lateral_road_boader_v_bp_5, config_.lateral_road_boader_v_bp_6};
   const std::array<double, 6> _V_ROAD_BORDER_EXTRA_BUFFER = {
-      config_.extra_lateral_buffer_1, config_.extra_lateral_buffer_2, config_.extra_lateral_buffer_3,
-      config_.extra_lateral_buffer_4, config_.extra_lateral_buffer_5, config_.extra_lateral_buffer_6};
+      config_.extra_lateral_buffer_1, config_.extra_lateral_buffer_2,
+      config_.extra_lateral_buffer_3, config_.extra_lateral_buffer_4,
+      config_.extra_lateral_buffer_5, config_.extra_lateral_buffer_6};
 
   *left_road_extra_buffer =
       interp(left_collision_t, _COLLISION_TTC_BP, _COLLISION_BUFFER);
@@ -622,8 +631,8 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   // 36     60         80          100          120           130     kph
   // 0.3    0.43       0.53        0.632        0.725         0.77    m
   // double extra_buffer =
-  double extra_buffer =
-      interp(ego_v * 3.6, _V_ROAD_BORDER_EXTRA_BUFFER_BP, _V_ROAD_BORDER_EXTRA_BUFFER);
+  double extra_buffer = interp(ego_v * 3.6, _V_ROAD_BORDER_EXTRA_BUFFER_BP,
+                               _V_ROAD_BORDER_EXTRA_BUFFER);
   extra_buffer = std::max(extra_buffer, kMinExtraBuffer);
   *left_road_extra_buffer += extra_buffer;
   *right_road_extra_buffer += extra_buffer;
@@ -884,9 +893,9 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     GenerateObstaclePreliminaryDecision(
         ego_l, ref_path_points_[i].distance_to_right_lane_border,
         ref_path_points_[i].distance_to_left_lane_border, overlap_min_y,
-        overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_nudge_left,
-        is_cross_obj, pre_lateral_decision, reset_conflict_decision,
-        obstacle_decision, lat_decision, lon_decision);
+        overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+        is_nudge_left, is_cross_obj, pre_lateral_decision,
+        reset_conflict_decision, obstacle_decision, lat_decision, lon_decision);
     has_lat_decision =
         has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
     has_lon_decision =
@@ -1041,9 +1050,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       GenerateObstaclePreliminaryDecision(
           ego_l, ref_path_points_[index].distance_to_right_lane_border,
           ref_path_points_[index].distance_to_left_lane_border, overlap_min_y,
-          overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_nudge_left,
-          is_cross_obj, pre_lateral_decision, reset_conflict_decision,
-          obstacle_decision, lat_decision, lon_decision);
+          overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+          is_nudge_left, is_cross_obj, pre_lateral_decision,
+          reset_conflict_decision, obstacle_decision, lat_decision,
+          lon_decision);
       has_lat_decision =
           has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
       has_lon_decision =
@@ -1270,8 +1280,11 @@ void GeneralLateralDecider::ExtractBoundary(
   assert(frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
-void GeneralLateralDecider::ProtectBoundByInitPoint(std::pair<double, double> &bound, std::pair<BoundInfo, BoundInfo> &bound_info) {
-  const double planning_init_point_l = ego_frenet_state_.planning_init_point().frenet_state.r;
+void GeneralLateralDecider::ProtectBoundByInitPoint(
+    std::pair<double, double> &bound,
+    std::pair<BoundInfo, BoundInfo> &bound_info) {
+  const double planning_init_point_l =
+      ego_frenet_state_.planning_init_point().frenet_state.r;
   if (bound.first > planning_init_point_l) {
     bound.first = planning_init_point_l;
     bound_info.first.type = BoundType::EGO_POSITION;

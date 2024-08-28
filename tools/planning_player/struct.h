@@ -1,10 +1,10 @@
 #pragma once
 
 // c struct
+#include "interface/src/c/camera_preception_tsr_c.h"
 #include "interface/src/c/common_c.h"
 #include "interface/src/c/control_command_c.h"
 #include "interface/src/c/func_state_machine_c.h"
-#include "interface/src/c/camera_preception_tsr_c.h"
 #include "interface/src/c/fusion_objects_c.h"
 #include "interface/src/c/fusion_occupancy_objects_c.h"
 #include "interface/src/c/fusion_parking_slot_c.h"
@@ -38,16 +38,15 @@
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/PredictionResult.h"
 #include "struct_msgs/RoadInfo.h"
+#include "struct_msgs/SystemVersion.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "struct_msgs_legacy_v2_4_6/LocalizationEstimate.h"
 
 // struct schema
+#include "interface/type_convert/struct_convert/camera_preception_tsr_c.h"
 #include "interface/type_convert/struct_convert/common_c.h"
 #include "interface/type_convert/struct_convert/control_command_c.h"
 #include "interface/type_convert/struct_convert/func_state_machine_c.h"
-#include "interface/type_convert/struct_convert_legacy/interface2.4.5/common_c.h"
-#include "interface/type_convert/struct_convert_legacy/interface2.4.6/common_c.h"
-#include "interface/type_convert/struct_convert/camera_preception_tsr_c.h"
 #include "interface/type_convert/struct_convert/fusion_objects_c.h"
 #include "interface/type_convert/struct_convert/fusion_occupancy_objects_c.h"
 #include "interface/type_convert/struct_convert/fusion_parking_slot_c.h"
@@ -59,7 +58,9 @@
 #include "interface/type_convert/struct_convert/planning_plan_c.h"
 #include "interface/type_convert/struct_convert/prediction_c.h"
 #include "interface/type_convert/struct_convert/vehicle_service_c.h"
+#include "interface/type_convert/struct_convert_legacy/interface2.4.5/common_c.h"
 #include "interface/type_convert/struct_convert_legacy/interface2.4.5/hmi_mcu_inner_c.h"
+#include "interface/type_convert/struct_convert_legacy/interface2.4.6/common_c.h"
 #include "interface/type_convert/struct_convert_legacy/interface2.4.6/localization_c.h"
 
 // proto

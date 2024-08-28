@@ -43,15 +43,47 @@ static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
-
+static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
 
+namespace fs = boost::filesystem;
+
+void copy_confif_files(const fs::path& source, const fs::path& destination) {
+  if (!fs::exists(source) || !fs::is_directory(source)) {
+    std::cerr << "Source directory does not exist or is not a directory."
+              << std::endl;
+    return;
+  }
+  if (!fs::exists(destination)) {
+    fs::create_directories(destination);
+  }
+  for (const auto& entry : fs::recursive_directory_iterator(source)) {
+    fs::path target = destination / entry.path().filename();
+    try {
+      if (fs::is_directory(entry.status())) {
+        fs::create_directory(target);
+      } else {
+        fs::copy_file(entry.path(), target,
+                      fs::copy_option::overwrite_if_exists);
+      }
+    } catch (const fs::filesystem_error& e) {
+      std::cerr << "Error in copy file : " << e.what() << std::endl;
+    }
+  }
+}
+
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
-                          const std::string& scene_type, bool no_debug) {
+                          const std::string& scene_type, bool no_debug,
+                          const std::string& car) {
   std::cout << "===========planning player init, is_close_loop="
             << is_close_loop << ", auto_time_sec=" << auto_time_sec
             << ", scene_type=" << scene_type << "==========" << std::endl;
+  // 车辆配置文件
+  fs::path source = "res/conf/" + car;
+  fs::path destination = "/asw/planning/res/conf/";
+  copy_confif_files(source, destination);
+
   // 找到第几帧进自动
   if (scene_type == "scc" || scene_type == "hpp" || scene_type == "noa") {
     uint64_t auto_timestamp = 0;
@@ -226,6 +258,83 @@ void PlanningPlayer::Clear() {
   planning_header_time_us_ = 0;
   loc_header_time_us_ = 0;
   frame_num_before_enter_auto_ = 0;
+}
+
+void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
+                                   std::string& outVersion) {
+  const std::string command = "cd " + directory + " && git rev-parse --short=" +
+                              std::to_string(num) + " HEAD";
+  FILE* pipe = popen(command.c_str(), "r");
+  if (!pipe) {
+    std::cerr << "Failed to run command: " << command << std::endl;
+    return;
+  }
+  std::array<char, 41> buffer;
+  if (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+    std::string commitHash(buffer.data());
+    size_t newlinePos = commitHash.find('\n');
+    if (newlinePos != std::string::npos) {
+      outVersion = commitHash.substr(0, newlinePos);
+    } else {
+      outVersion = commitHash;  // No newline, use the whole string
+    }
+  }
+  pclose(pipe);
+}
+
+void PlanningPlayer::VersinCheck(const std::string& bag_path) {
+  std::cout << "=========== 版本信息 ===========" << std::endl;
+  // bag version
+  rosbag::Bag bag;
+  try {
+    bag.open(bag_path, rosbag::bagmode::Read);
+  } catch (rosbag::BagException& e) {
+    ROS_ERROR("Error opening bag file: %s", e.what());
+    return;
+  }
+  std::vector<std::string> topics;
+  topics.push_back(TOPIC_PLANNING_PLAN);
+  topics.push_back(TOPIC_SYSTEM_VERSION);
+  rosbag::View view(bag, rosbag::TopicQuery(topics));
+  for (const auto& m : view) {
+    if (m.getTopic() == TOPIC_PLANNING_PLAN) {
+      struct_msgs::PlanningOutput::ConstPtr planning_output =
+          m.instantiate<struct_msgs::PlanningOutput>();
+      if (planning_output != nullptr) {
+        std::string str(planning_output->msg_meta.version.begin(),
+                        planning_output->msg_meta.version.end());
+        bag_planning_version_ = str;
+      }
+    }
+    if (m.getTopic() == TOPIC_SYSTEM_VERSION) {
+      struct_msgs::SystemVersion::ConstPtr system_version =
+          m.instantiate<struct_msgs::SystemVersion>();
+      if (system_version != nullptr) {
+        std::string str(system_version->interface_version.begin(),
+                        system_version->interface_version.end());
+        bag_interface_version_ = str;
+      }
+    }
+    if (!bag_interface_version_.empty() && !bag_planning_version_.empty()) {
+      break;
+    }
+  }
+  bag.close();
+  if (bag_planning_version_.size() > 24) {
+    bag_planning_version_ = bag_planning_version_.substr(14, 8);
+  }
+
+  // local version
+  getCommitHash(".", 8, local_planning_version_);
+  getCommitHash("interface", 8, local_interface_version_);
+
+  std::cout << std::endl;
+  std::cout << "bag中planning版本: " << bag_planning_version_ << std::endl;
+  std::cout << "本 地planning版本: " << local_planning_version_ << std::endl;
+  std::cout << std::endl;
+  std::cout << "bag中interface版本: " << bag_interface_version_ << std::endl;
+  std::cout << "本 地interface版本: " << local_interface_version_ << std::endl;
+  std::cout << std::endl;
 }
 
 bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
@@ -1224,22 +1333,39 @@ void PlanningPlayer::UpdateVehicleService(
 void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   if (mileage_path != "") {
     double pathLength = 0.0;
-    if (scene_type_ == "scc") {
-      auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-      for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1;
-           ++i) {
-        auto loc_msg_i = boost::any_cast<
-            struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
-            it_loc_esti_msg->second);
-        auto x1 = loc_msg_i->pose.local_position.x;
-        auto y1 = loc_msg_i->pose.local_position.y;
-        it_loc_esti_msg++;
-        auto loc_msg_i_next = boost::any_cast<
-            struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
-            it_loc_esti_msg->second);
-        auto x2 = loc_msg_i_next->pose.local_position.x;
-        auto y2 = loc_msg_i_next->pose.local_position.y;
-        pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+    if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp") {
+      if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+        auto it_loc_msg = msg_cache_[TOPIC_LOCALIZATION].begin();
+        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1; ++i) {
+          auto loc_msg_i = boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(
+              it_loc_msg->second);
+          auto x1 = loc_msg_i->position.position_boot.x;
+          auto y1 = loc_msg_i->position.position_boot.y;
+          it_loc_msg++;
+          auto loc_msg_i_next =
+              boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(
+                  it_loc_msg->second);
+          auto x2 = loc_msg_i_next->position.position_boot.x;
+          auto y2 = loc_msg_i_next->position.position_boot.y;
+          pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+        }
+      } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+        auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+        for (size_t i = 0;
+             i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1; ++i) {
+          auto loc_msg_i = boost::any_cast<
+              struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it_loc_esti_msg->second);
+          auto x1 = loc_msg_i->pose.local_position.x;
+          auto y1 = loc_msg_i->pose.local_position.y;
+          it_loc_esti_msg++;
+          auto loc_msg_i_next = boost::any_cast<
+              struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it_loc_esti_msg->second);
+          auto x2 = loc_msg_i_next->pose.local_position.x;
+          auto y2 = loc_msg_i_next->pose.local_position.y;
+          pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+        }
       }
     }
     nlohmann::json j;
