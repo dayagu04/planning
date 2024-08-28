@@ -55,6 +55,7 @@ static double kEps = 1e-5;
 void ParallelParkInPlanner::Reset() {
   frame_.Reset();
   t_lane_.Reset();
+  parallel_path_planner_.Reset();
 }
 
 void ParallelParkInPlanner::PlanCore() {

@@ -3,12 +3,8 @@
 
 #include <cstdint>
 #include <string>
-#include <unordered_map>
 #include <vector>
-
 #include "Eigen/Core"
-#include "func_state_machine_c.h"
-#include "ifly_localization_c.h"
 #include "local_view.h"
 
 namespace planning {
@@ -73,6 +69,13 @@ struct MeasurementData {
     steer_wheel_angle = 0.0;
     brake_flag = false;
   }
+};
+
+enum class ApaFunction : uint8_t {
+  PARK_IN,
+  PARK_OUT,
+  COUNT,
+  INVALID,
 };
 
 enum class ApaPlannerType : uint8_t {
@@ -228,6 +231,7 @@ struct ApaData {
 
   ApaStateMachine cur_state = ApaStateMachine::INVALID;
   ApaPlannerType planner_type = ApaPlannerType::INVALID_PLANNER;
+  ApaFunction apa_function = ApaFunction::INVALID;
 
   MeasurementData measurement_data;
   ApaSlots apa_slots;
@@ -244,6 +248,7 @@ struct ApaData {
   void Reset() {
     cur_state = ApaStateMachine::INVALID;
     planner_type = ApaPlannerType::INVALID_PLANNER;
+    apa_function = ApaFunction::INVALID;
 
     measurement_data.Reset();
     apa_slots.Reset();

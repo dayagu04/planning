@@ -168,20 +168,20 @@ void ApaWorld::UpdateStateMachine() {
 
   if (state == iflyauto::FunctionalState_PARK_IN_SEARCHING) {
     cur_state = ApaStateMachine::SEARCH_IN;
+    apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
   }
 
   if (state == iflyauto::FunctionalState_PARK_GUIDANCE) {
-    if (apa_data_ptr_->current_state ==
-        iflyauto::FunctionalState_PARK_IN_SEARCHING) {
+    if (apa_data_ptr_->apa_function == ApaFunction::PARK_IN) {
       cur_state = ApaStateMachine::ACTIVE_IN;
-    } else if (apa_data_ptr_->current_state ==
-               iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
+    } else if (apa_data_ptr_->apa_function == ApaFunction::PARK_OUT) {
       cur_state = ApaStateMachine::ACTIVE_OUT;
     }
   }
 
   if (state == iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
     cur_state = ApaStateMachine::SEARCH_OUT;
+    apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
   }
 
   apa_data_ptr_->current_state = state;
