@@ -29,7 +29,8 @@ class LateralMotionPlanningWeight {
 
   void SetLateralMotionWeight(
       const LateralMotionSceneEnum scene,
-      planning::common::LateralPlanningInput &planning_input, bool is_in_intersection = false);
+      planning::common::LateralPlanningInput &planning_input,
+      bool is_in_intersection = false);
 
   void SetInitDisToRef(const double init_dis_to_ref) {
     init_dis_to_ref_ = init_dis_to_ref;
@@ -51,7 +52,9 @@ class LateralMotionPlanningWeight {
 
   double GetConcernedEndRatioForXY() const { return end_ratio_for_qrefxy_; }
 
-  double GetConcernedEndRatioForTheta() const { return end_ratio_for_qreftheta_; }
+  double GetConcernedEndRatioForTheta() const {
+    return end_ratio_for_qreftheta_;
+  }
 
   void MakeLaneChangeDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);

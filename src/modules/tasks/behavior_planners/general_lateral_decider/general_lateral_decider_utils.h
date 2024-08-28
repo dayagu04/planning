@@ -8,7 +8,9 @@ namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 iflyauto::ObjectType type,
-                                const bool is_nudge_left, bool is_cut_out_side_obstacle, double nudge_buffer_cutout_obstacle);
+                                const bool is_nudge_left,
+                                bool is_cut_out_side_obstacle,
+                                double nudge_buffer_cutout_obstacle);
 
 double CalDesireLonDistance(double ego_vel, double agent_vel);
 double CalDesireStaticLateralDistance(const double base_distance,

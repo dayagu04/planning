@@ -211,8 +211,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
   const auto &frenet_coord =
       coarse_planning_info.reference_path->get_frenet_coord();
-  Eigen::Vector2d cart_init_point(ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
-                                  ego_cart_state_manager_->planning_init_point().lat_init_state.y());
+  Eigen::Vector2d cart_init_point(
+      ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
+      ego_cart_state_manager_->planning_init_point().lat_init_state.y());
   Point2D frenet_init_pt{0.0, 3.0};
   Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
   frenet_coord->XYToSL(cart_init_pt, frenet_init_pt);
@@ -223,10 +224,15 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
 
-  const double lateral_offset = session_->mutable_planning_context()->lateral_offset_decider_output().lateral_offset;
-  if (config_.lateral_ref_traj_type || (((ego_cart_state_manager_->ego_v() <= config_.lc_high_vel_thr) || (std::fabs(frenet_init_pt.y - lateral_offset) > config_.lc_second_dist_thr)) &&
-      (is_LC_CHANGE || is_LC_BACK) &&
-        gap_selector_decider_output.gap_selector_trustworthy)) {
+  const double lateral_offset = session_->mutable_planning_context()
+                                    ->lateral_offset_decider_output()
+                                    .lateral_offset;
+  if (config_.lateral_ref_traj_type ||
+      (((ego_cart_state_manager_->ego_v() <= config_.lc_high_vel_thr) ||
+        (std::fabs(frenet_init_pt.y - lateral_offset) >
+         config_.lc_second_dist_thr)) &&
+       (is_LC_CHANGE || is_LC_BACK) &&
+       gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
     // generate traj_points based on kMaxAcc or kMinAcc
@@ -305,11 +311,15 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   } else {
     general_lateral_decider_output.ramp_scene = false;
   }
-  if ((is_LC_CHANGE || is_LC_BACK) && (((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) && (config_.not_use_gap_flag)) ||
-      gap_selector_decider_output.gap_selector_trustworthy)) {
+  if ((is_LC_CHANGE || is_LC_BACK) &&
+      (((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) &&
+        (config_.not_use_gap_flag)) ||
+       gap_selector_decider_output.gap_selector_trustworthy)) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
-    if ((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) && (std::fabs(frenet_init_pt.y - lateral_offset) < config_.lc_second_dist_thr)) {
+    if ((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) &&
+        (std::fabs(frenet_init_pt.y - lateral_offset) <
+         config_.lc_second_dist_thr)) {
       HandleAvoidScene(traj_points);
     }
   } else {
@@ -1019,33 +1029,37 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
     if (i == 0) {
       double ego_s_tmp = reference_path_ptr_->get_frenet_ego_state().s();
-      if (reference_path_ptr_->get_ego_frenet_boundary().s_start <= obstacle->frenet_obstacle_boundary().s_end &&
-           reference_path_ptr_->get_ego_frenet_boundary().s_end >= obstacle->frenet_obstacle_boundary().s_start) {
+      if (reference_path_ptr_->get_ego_frenet_boundary().s_start <=
+              obstacle->frenet_obstacle_boundary().s_end &&
+          reference_path_ptr_->get_ego_frenet_boundary().s_end >=
+              obstacle->frenet_obstacle_boundary().s_start) {
         const double care_area_s_start_tmp =
-          ego_s_tmp - vehicle_param.rear_edge_to_rear_axle;
-        const double care_area_s_end_tmp =
-            ego_s_tmp + 10;
+            ego_s_tmp - vehicle_param.rear_edge_to_rear_axle;
+        const double care_area_s_end_tmp = ego_s_tmp + 10;
         const auto care_area_center_tmp =
             Vec2d((care_area_s_start_tmp + care_area_s_end_tmp) * 0.5, ego_l);
-        const double care_area_length_tmp = care_area_s_end_tmp - care_area_s_start_tmp;
-        const auto care_polygon_tmp =
-            Polygon2d(Box2d(care_area_center_tmp, 0, care_area_length_tmp, l_care_width));
+        const double care_area_length_tmp =
+            care_area_s_end_tmp - care_area_s_start_tmp;
+        const auto care_polygon_tmp = Polygon2d(
+            Box2d(care_area_center_tmp, 0, care_area_length_tmp, l_care_width));
         Polygon2d obstacle_sl_polygon_tmp;
-        auto ok = obstacle->get_polygon_at_time_tmp(
-            0, reference_path_ptr_, obstacle_sl_polygon_tmp);
+        auto ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
+                                                    obstacle_sl_polygon_tmp);
         if (!ok) {
           // TBD add log
           return;
         }
         Polygon2d care_overlap_polygon_tmp;
 
-        if (obstacle_sl_polygon_tmp.ComputeOverlap(care_polygon_tmp, &care_overlap_polygon_tmp)) {
+        if (obstacle_sl_polygon_tmp.ComputeOverlap(care_polygon_tmp,
+                                                   &care_overlap_polygon_tmp)) {
           limit_overlap_min_y = care_overlap_polygon_tmp.min_y();
           limit_overlap_max_y = care_overlap_polygon_tmp.max_y();
         } else {
           continue;
         }
-        const auto lateral_obstacle_manager = session_->environmental_model().get_lateral_obstacle();
+        const auto lateral_obstacle_manager =
+            session_->environmental_model().get_lateral_obstacle();
         TrackedObject tr;
         if (lateral_obstacle_manager->find_track(obstacle->id(), tr)) {
           if (tr.v_lat > 0.4) {
@@ -1086,7 +1100,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const double lat_buf_dis =
         general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
-            is_nudge_left, is_cut_out_side_obstacle, config_.nudge_buffer_cutout_obstacle);
+            is_nudge_left, is_cut_out_side_obstacle,
+            config_.nudge_buffer_cutout_obstacle);
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1207,9 +1222,10 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
 }
 
 void GeneralLateralDecider::AddObstacleDecisionBound(
-    int id, double t, double overlap_min_y, double overlap_max_y, double lat_buf_dis,
-    LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision,
-    ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
+    int id, double t, double overlap_min_y, double overlap_max_y,
+    double lat_buf_dis, LatObstacleDecisionType lat_decision,
+    LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision,
+    bool is_update_hard_bound) {
   const double l_offset_limit = 10.0;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1416,12 +1432,10 @@ void GeneralLateralDecider::PostProcessBoundVersion2(
   if (bounds_size == 0) {
     return;
   }
-  auto compare_bound_upper = [&](WeightedBound bound1,
-                                    WeightedBound bound2) {
+  auto compare_bound_upper = [&](WeightedBound bound1, WeightedBound bound2) {
     return bound1.upper < bound2.upper;
   };
-  auto compare_bound_lower = [&](WeightedBound bound1,
-                                    WeightedBound bound2) {
+  auto compare_bound_lower = [&](WeightedBound bound1, WeightedBound bound2) {
     return bound1.lower > bound2.lower;
   };
   std::vector<WeightedBound> upper_bounds;
@@ -1445,13 +1459,15 @@ void GeneralLateralDecider::PostProcessBoundVersion2(
   while ((lower_index < bounds_size) && (upper_index < bounds_size)) {
     // hack: only road border and agent in hard bounds
     if ((upper_bounds[upper_index].weight < 0.0) &&
-        ((upper_bounds[upper_index].bound_info.type != BoundType::ROAD_BORDER) &&
+        ((upper_bounds[upper_index].bound_info.type !=
+          BoundType::ROAD_BORDER) &&
          (upper_bounds[upper_index].bound_info.type != BoundType::AGENT))) {
       upper_index += 1;
       continue;
     }
     if ((lower_bounds[lower_index].weight < 0.0) &&
-        ((lower_bounds[lower_index].bound_info.type != BoundType::ROAD_BORDER) &&
+        ((lower_bounds[lower_index].bound_info.type !=
+          BoundType::ROAD_BORDER) &&
          (lower_bounds[lower_index].bound_info.type != BoundType::AGENT))) {
       lower_index += 1;
       continue;
@@ -1470,12 +1486,10 @@ void GeneralLateralDecider::PostProcessBoundVersion2(
     const int upper_priority =
         general_lateral_decider_utils::GetBoundTypePriority(
             upper_bounds[upper_index].bound_info.type);
-    const double lower_weight =
-        general_lateral_decider_utils::GetBoundWeight(
-            lower_bounds[lower_index].bound_info.type, config_.map_bound_weight);
-    const double upper_weight =
-        general_lateral_decider_utils::GetBoundWeight(
-            upper_bounds[upper_index].bound_info.type, config_.map_bound_weight);
+    const double lower_weight = general_lateral_decider_utils::GetBoundWeight(
+        lower_bounds[lower_index].bound_info.type, config_.map_bound_weight);
+    const double upper_weight = general_lateral_decider_utils::GetBoundWeight(
+        upper_bounds[upper_index].bound_info.type, config_.map_bound_weight);
     if (upper >= lower) {
       if (upper_bound == lower_bound) {
       } else {
@@ -1503,14 +1517,19 @@ void GeneralLateralDecider::PostProcessBoundVersion2(
         lower_bound_info = lower_bounds[lower_index].bound_info;
         upper_index += 1;
       } else {
-        // if ((lower_index == 0 && upper_index == 0) || (upper_priority > last_upper_priority) || (lower_priority > last_lower_priority)) {
-        //   double mid_bound = std::min(std::max(upper + (std::max(lower - upper, 0.0) * (lower_weight / (upper_weight + lower_weight))), min_lower), max_upper);
-        //   upper_bound = mid_bound;
-        //   lower_bound = mid_bound;
-        //   upper_bound_info = upper_bounds[upper_index].bound_info;
+        // if ((lower_index == 0 && upper_index == 0) || (upper_priority >
+        // last_upper_priority) || (lower_priority > last_lower_priority)) {
+        //   double mid_bound = std::min(std::max(upper + (std::max(lower -
+        //   upper, 0.0) * (lower_weight / (upper_weight + lower_weight))),
+        //   min_lower), max_upper); upper_bound = mid_bound; lower_bound =
+        //   mid_bound; upper_bound_info = upper_bounds[upper_index].bound_info;
         //   lower_bound_info = lower_bounds[lower_index].bound_info;
         // }
-        double mid_bound = std::min(std::max(upper + (std::max(lower - upper, 0.0) * (lower_weight / (upper_weight + lower_weight))), min_lower), max_upper);
+        double mid_bound = std::min(
+            std::max(upper + (std::max(lower - upper, 0.0) *
+                              (lower_weight / (upper_weight + lower_weight))),
+                     min_lower),
+            max_upper);
         upper_bound = mid_bound;
         lower_bound = mid_bound;
         upper_bound_info = upper_bounds[upper_index].bound_info;

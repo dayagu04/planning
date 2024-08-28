@@ -896,11 +896,13 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
 
   GenerateTurnSignalForSplitRegion();
-  lane_change_decider_output.dir_turn_signal_road_to_ramp = road_to_ramp_turn_signal_;
+  lane_change_decider_output.dir_turn_signal_road_to_ramp =
+      road_to_ramp_turn_signal_;
   lane_change_decider_output.int_request_cancel_reason =
       lc_req_mgr_->int_request_cancel_reason();
-      
-  lane_change_decider_output.ilc_virtual_req = lc_req_mgr_->get_ilc_virtual_request();
+
+  lane_change_decider_output.ilc_virtual_req =
+      lc_req_mgr_->get_ilc_virtual_request();
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const std::vector<TrackedObject> &vec_side_obstacles,
@@ -1585,7 +1587,7 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
         }
       }
     }
-  } else  {
+  } else {
     if (road_to_ramp_turn_signal_ != RAMP_NONE &&
         IsOffTurnLight(road_to_ramp_turn_signal_)) {
       road_to_ramp_turn_signal_ = RAMP_NONE;
@@ -1593,7 +1595,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
     }
   }
   JSON_DEBUG_VALUE("is_off_turn_signal", static_cast<int>(is_off_turn_signal));
-  JSON_DEBUG_VALUE("road_to_ramp_turn_signal", static_cast<int>(road_to_ramp_turn_signal_));
+  JSON_DEBUG_VALUE("road_to_ramp_turn_signal",
+                   static_cast<int>(road_to_ramp_turn_signal_));
 }
 
 bool LaneChangeStateMachineManager::IsSplitRegion(
@@ -1605,7 +1608,8 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
   const auto left_lane = virtual_lane_manager->get_left_lane();
   const auto right_lane = virtual_lane_manager->get_right_lane();
   const auto current_lane = virtual_lane_manager->get_current_lane();
-  const auto current_reference_path = reference_path_manager->get_reference_path_by_current_lane();
+  const auto current_reference_path =
+      reference_path_manager->get_reference_path_by_current_lane();
   const double lane_lat_diff_threshold = 3.8 - 0.8;
   std::shared_ptr<ReferencePath> left_reference_path;
   std::shared_ptr<ReferencePath> right_reference_path;
@@ -1642,14 +1646,16 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
   if (std::abs(left_ego_l - ego_l) < left_lane_width / 2) {
     overlap_lane_virtual_id_ = left_lane->get_virtual_id();
     is_overlap = true;
-  }else if (std::abs(right_ego_l - ego_l) < right_lane_width / 2) {
+  } else if (std::abs(right_ego_l - ego_l) < right_lane_width / 2) {
     overlap_lane_virtual_id_ = right_lane->get_virtual_id();
     is_overlap = true;
   }
   if (is_overlap) {
     double lat_diff = 0;
-    const auto& overlap_reference_path = reference_path_manager->get_reference_path_by_lane(overlap_lane_virtual_id_);
-    if (!overlap_reference_path){
+    const auto &overlap_reference_path =
+        reference_path_manager->get_reference_path_by_lane(
+            overlap_lane_virtual_id_);
+    if (!overlap_reference_path) {
       return false;
     }
     CalculateLatOffsetOfOverlappedLanes(&lat_diff, overlap_reference_path);
@@ -1717,7 +1723,8 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
   }
 }
 
-bool LaneChangeStateMachineManager::IsOffTurnLight(const RampDirection ramp_direction) {
+bool LaneChangeStateMachineManager::IsOffTurnLight(
+    const RampDirection ramp_direction) {
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto reference_path_manager =
@@ -1730,7 +1737,8 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(const RampDirection ramp_dire
       return true;
     }
     overlap_lane = right_lane;
-    const auto& right_path = reference_path_manager->get_reference_path_by_lane(right_lane->get_virtual_id());
+    const auto &right_path = reference_path_manager->get_reference_path_by_lane(
+        right_lane->get_virtual_id());
     if (!right_path) {
       return true;
     }
@@ -1741,7 +1749,8 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(const RampDirection ramp_dire
       return true;
     }
     overlap_lane = left_lane;
-    const auto& left_path = reference_path_manager->get_reference_path_by_lane(left_lane->get_virtual_id());
+    const auto &left_path = reference_path_manager->get_reference_path_by_lane(
+        left_lane->get_virtual_id());
     if (!left_path) {
       return true;
     }
@@ -1769,7 +1778,7 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(const RampDirection ramp_dire
     Point2D ego_vertices_point_tem = {ego_vertices_point.x(),
                                       ego_vertices_point.y()};
     if (overlap_path_frenet_coordinate->XYToSL(ego_vertices_point_tem,
-                                                 frenet_point)) {
+                                               frenet_point)) {
       if (std::abs(frenet_point.y) < ego_dis_to_ref_lane) {
         ego_dis_to_ref_lane = std::abs(frenet_point.y);
       }
@@ -1816,7 +1825,8 @@ bool LaneChangeStateMachineManager::IsMergeRegion(int *merge_lane_virtual_id) {
   if (right_reference_path == nullptr) {
     return false;
   }
-  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path, RIGHT_DIRECTION)) {
+  if (IsOverlapWithOtherLaneOnEndRegion(right_reference_path,
+                                        RIGHT_DIRECTION)) {
     *merge_lane_virtual_id = right_lane->get_virtual_id();
     return true;
   }
@@ -1889,7 +1899,8 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
     cur_to_other_lane_end_lat_diff = frenet_point.y;
     if (rel_dir == LEFT_DIRECTION && cur_to_other_lane_end_lat_diff > 0) {
       lane_end_satisfied_merge_condition = true;
-    } else if (rel_dir == RIGHT_DIRECTION && cur_to_other_lane_end_lat_diff < 0) {
+    } else if (rel_dir == RIGHT_DIRECTION &&
+               cur_to_other_lane_end_lat_diff < 0) {
       lane_end_satisfied_merge_condition = true;
     } else if (std::abs(cur_to_other_lane_end_lat_diff) <
                end_lane_lat_diff_threshold) {
@@ -1900,7 +1911,8 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
       cur_to_other_lane_end_lat_diff = frenet_point.y;
       if (rel_dir == LEFT_DIRECTION && cur_to_other_lane_end_lat_diff < 0) {
         lane_end_satisfied_merge_condition = true;
-      } else if (rel_dir == RIGHT_DIRECTION && cur_to_other_lane_end_lat_diff > 0) {
+      } else if (rel_dir == RIGHT_DIRECTION &&
+                 cur_to_other_lane_end_lat_diff > 0) {
         lane_end_satisfied_merge_condition = true;
       } else if (std::abs(cur_to_other_lane_end_lat_diff) <
                  end_lane_lat_diff_threshold) {

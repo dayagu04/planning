@@ -68,7 +68,8 @@ void LateralMotionPlanningProblem::Init() {
 }
 
 uint8_t LateralMotionPlanningProblem::Update(
-    const double end_ratio_for_qxy, const double end_ratio_for_qtheta, const double end_ratio_for_qjerk,
+    const double end_ratio_for_qxy, const double end_ratio_for_qtheta,
+    const double end_ratio_for_qjerk,
     const size_t motion_plan_concerned_start_index,
     const double concerned_start_q_jerk, const double ego_vel,
     planning::common::LateralPlanningInput &planning_input) {
@@ -286,7 +287,8 @@ uint8_t LateralMotionPlanningProblem::Update(
 }
 
 uint8_t LateralMotionPlanningProblem::Update(
-    double end_ratio_for_qxy, double end_ratio_for_qtheta, double end_ratio_for_qjerk, double max_iter,
+    double end_ratio_for_qxy, double end_ratio_for_qtheta,
+    double end_ratio_for_qjerk, double max_iter,
     const size_t motion_plan_concerned_start_index,
     const double concerned_start_q_jerk, const double ego_vel,
     planning::common::LateralPlanningInput &planning_input) {

@@ -23,10 +23,8 @@ class LateralMotionPlanningProblem {
                  const double concerned_start_q_jerk, const double ego_vel,
                  planning::common::LateralPlanningInput &planning_input);
 
-  uint8_t Update(double end_ratio_for_qxy,
-                 double end_ratio_for_qtheta,
-                 double end_ratio_for_qjerk,
-                 double max_iter,
+  uint8_t Update(double end_ratio_for_qxy, double end_ratio_for_qtheta,
+                 double end_ratio_for_qjerk, double max_iter,
                  const size_t motion_plan_concerned_start_index,
                  const double concerned_start_q_jerk, const double ego_vel,
                  planning::common::LateralPlanningInput &planning_input);

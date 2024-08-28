@@ -28,9 +28,10 @@ IntRequest::IntRequest(
 }
 
 void IntRequest::Update(int lc_status) {
-  const auto& lc_req_source = session_->planning_context().lane_change_decider_output().lc_request_source;
-  if (lc_status != kLaneKeeping && 
-      lc_status != kLaneChangePropose &&
+  const auto& lc_req_source = session_->planning_context()
+                                  .lane_change_decider_output()
+                                  .lc_request_source;
+  if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
       lc_req_source != INT_REQUEST) {
     LOG_DEBUG("IntRequest::Update: ego not in lane keeping!");
     return;

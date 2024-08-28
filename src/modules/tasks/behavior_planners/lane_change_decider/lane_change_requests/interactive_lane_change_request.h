@@ -34,9 +34,7 @@ class IntRequest : public LaneChangeRequest {
     return left_cancel_freeze_cnt_;
   }
 
-  const RequestType get_ilc_virtual_req () const {
-    return ilc_virtual_req_;
-  }
+  const RequestType get_ilc_virtual_req() const { return ilc_virtual_req_; }
   const int get_right_cancel_freeze_cnt() const {
     return right_cancel_freeze_cnt_;
   }

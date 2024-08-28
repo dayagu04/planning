@@ -113,9 +113,8 @@ class GeneralLateralDecider : public Task {
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t,
-                                double overlap_min_y, double overlap_max_y,
-                                double lat_buf_dis,
+  void AddObstacleDecisionBound(int id, double t, double overlap_min_y,
+                                double overlap_max_y, double lat_buf_dis,
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,

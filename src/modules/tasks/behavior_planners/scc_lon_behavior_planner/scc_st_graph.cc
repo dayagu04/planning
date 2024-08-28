@@ -343,10 +343,10 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("max_brake_distance", max_brake_distance)
 
     is_far_slow_safe_lead_ = lead_one_desired_velocity < v_target_ &&
-                                lead_one.d_rel() > kFarLead &&
-                                max_brake_distance < lead_one.d_rel()
-                            ? true
-                            : false;
+                                     lead_one.d_rel() > kFarLead &&
+                                     max_brake_distance < lead_one.d_rel()
+                                 ? true
+                                 : false;
 
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
@@ -672,12 +672,11 @@ bool StGraphGenerator::CalcSpeedWithRamp(double dis_to_ramp,
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
-      if(lon_behav_input_->sdmap_has_curv()) {
+      if (lon_behav_input_->sdmap_has_curv()) {
         v_target_ramp = ramp_v_limit;
       } else {
         v_target_ramp = config_.straight_ramp_v_limit;
       }
-
     }
     v_target_ = std::min(v_target_ramp, v_target_);
     v_limit_on_ramp_ = v_target_ramp;
@@ -1579,7 +1578,8 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
               v_limit_lc_ * interp(-gap.base_car_drel, _V_LIMIT_DISTANCE_BP,
                                    _V_LIMIT_DISTANCE_V);
         }
-        v_limit_lc_ = std::max(v_ego - config_.v_lc_speed_adjust, v_ego + v_limit_lc_);
+        v_limit_lc_ =
+            std::max(v_ego - config_.v_lc_speed_adjust, v_ego + v_limit_lc_);
         JSON_DEBUG_VALUE("gap_base_car_id", gap.base_car_id)
         JSON_DEBUG_VALUE("gap_front_car_id", gap.front_id)
         // a_target_lc = 0.6;

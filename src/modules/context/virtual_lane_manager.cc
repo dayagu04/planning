@@ -1599,7 +1599,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (split_info.begin()->second > 0 && split_segment) {
       distance_to_first_road_split_ = split_info.begin()->second;
       first_split_direction_ = MakesureSplitDirection(*split_segment, sd_map);
-      first_split_dir_dis_info_ = std::make_pair(static_cast<SplitRelativeDirection>(first_split_direction_), distance_to_first_road_split_);
+      first_split_dir_dis_info_ = std::make_pair(
+          static_cast<SplitRelativeDirection>(first_split_direction_),
+          distance_to_first_road_split_);
       if (is_on_ramp_ &&
           distance_to_first_road_split_ < distance_to_first_road_merge_) {
         ramp_direction_ = first_split_direction_;
@@ -1633,12 +1635,11 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (sum_dis_to_last_merge_point > dis_threshold_to_last_merge_point_) {
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
-    if (last_merge_seg &&
-        last_merge_seg->in_link().size() == 2) {
-      //fengwang31:目前仅针对inlink是2的情况做处理
-      const auto& merge_last_seg = sd_map.GetPreviousRoadSegment(last_merge_seg->id());
-      if (merge_last_seg &&
-          merge_last_seg->usage() == SdMapSwtx::RAMP &&
+    if (last_merge_seg && last_merge_seg->in_link().size() == 2) {
+      // fengwang31:目前仅针对inlink是2的情况做处理
+      const auto& merge_last_seg =
+          sd_map.GetPreviousRoadSegment(last_merge_seg->id());
+      if (merge_last_seg && merge_last_seg->usage() == SdMapSwtx::RAMP &&
           last_merge_seg->usage() != SdMapSwtx::RAMP) {
         sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
       }
@@ -1694,15 +1695,15 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   is_nearing_ramp_ =
       fabs(dis_between_first_road_split_and_ramp) < allow_error &&
       dis_to_ramp_ < 3000.;
-  
+
   //判断哪个场景在前
-  if (is_leaving_ramp_ && is_nearing_ramp_ && 
+  if (is_leaving_ramp_ && is_nearing_ramp_ &&
       distance_to_first_road_merge_ < 100) {
     if (distance_to_first_road_merge_ < dis_to_ramp_) {
-      //merge在ramp的前面
-      is_nearing_ramp_ =false;
+      // merge在ramp的前面
+      is_nearing_ramp_ = false;
     } else {
-      //ramp在merge的前面
+      // ramp在merge的前面
       is_leaving_ramp_ = false;
     }
   }
@@ -2174,8 +2175,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //  4、当前是在expressway上。
   if (!is_on_ramp_ && dis_to_ramp_ > 1300 &&
       !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
-      is_ego_on_rightest_lane &&
-      is_on_highway_) {
+      is_ego_on_rightest_lane && is_on_highway_) {
     is_leaving_ramp_ = true;
   }
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
@@ -2231,7 +2231,7 @@ void VirtualLaneManager::TrackEgoLane() {
         SelectEgoLaneWithoutPlan();
         return;
       }
-      if (is_ego_on_expressway_  && zero_relative_id_nums >= 2) {
+      if (is_ego_on_expressway_ && zero_relative_id_nums >= 2) {
         if (!is_on_ramp_ && dis_to_ramp_ < 3000 && !is_leaving_ramp_ &&
             lane_keep_status) {
           // hack::针对分流 感知未提供分汇流点信息 作如下后处理
