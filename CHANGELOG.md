@@ -7,6 +7,10 @@
 5. 信号灯通行的基础功能: 红灯停绿灯行（默认关闭）
 6. 移除中间件adapter层
 7. 加入计算merge区域
+8. 修复CIPV显示bug、换道调速强度
+9. 加入长直匝道使用SD Map
+10. 分岔道路打灯
+11. 优化对后向接近车辆的横向bound
 ### [fix]
 1. fix latent coredump
 2. fix heading_diff not normalize in SelectEgoLaneWithoutPlan
