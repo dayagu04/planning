@@ -515,16 +515,21 @@ def load_lon_global_figure(bag_loader):
   lead_one_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
+  t_new_localisation_vec = bag_loader.loc_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
     acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
     lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
-  for ind in range(len(bag_loader.vs_msg['data'])):
-    ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+  # for ind in range(len(bag_loader.vs_msg['data'])):
+  #   ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+  for ind in range(len(bag_loader.loc_msg['data'])):
+    ego_acc_vec.append(round(bag_loader.loc_msg['data'][ind].acceleration.acceleration_body.ax, 2))
 
   acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
                               legend_label='acc_min', color="brown")
-  acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+  # acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+  #                               legend_label='ego_acc',color="blue")
+  acc_fig.line(t_new_localisation_vec, ego_acc_vec, line_width=1,
                                 legend_label='ego_acc',color="blue")
   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                               legend_label='acc_max', color="red")
