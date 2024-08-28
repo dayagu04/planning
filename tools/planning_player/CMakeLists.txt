@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   struct_msgs
+  struct_msgs_legacy_v2_4_5
+  struct_msgs_legacy_v2_4_6
   proto_msgs
   sensor_interface
 )
@@ -16,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 include_directories(
   ${catkin_INCLUDE_DIRS}
   ${CMAKE_CURRENT_LIST_DIR}/../../interface/src
+  ${CMAKE_CURRENT_LIST_DIR}/../../interface/src/legacy
   ${CMAKE_CURRENT_LIST_DIR}/../../interface/type_convert
 )
 
@@ -29,8 +32,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   ${catkin_LIBRARIES}
   modules
   cyber
-  fastrtps #?
+  fastrtps
   autoplt
+  legacy_c_interface
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
