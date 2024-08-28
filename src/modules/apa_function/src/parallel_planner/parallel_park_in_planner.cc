@@ -316,20 +316,34 @@ const bool ParallelParkInPlanner::UpdateEgoSlotInfo() {
   const pnc::geometry_lib::PathPoint ego_pose(ego_slot_info.ego_pos_slot,
                                               ego_slot_info.ego_heading_slot);
 
+  DEBUG_PRINT("parallel slot_manager_ptr->GetRealTimeObsPtVec() = "
+              << slot_manager_ptr->GetRealTimeObsPtVec().size())
+  // size_t dist_fail_cnt = 0;
+  // size_t total_box_x_fail_cnt = 0;
+  // size_t total_box_y_fail_cnt = 0;
+  // size_t front_box_fail_cnt = 0;
+  // size_t rear_box_fail_cnt = 0;
+  // size_t in_ego_cnt = 0;
+
   for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
     if ((obs_pt_global - slot_center).norm() > 13.3) {
+      // dist_fail_cnt++;
       continue;
     }
 
     const auto obs_pt_local = frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global);
     // outof total box range
-    if (obs_pt_local.x() > apa_param.GetParam().parallel_channel_x_mag ||
-        obs_pt_local.x() < -1.6 ||
-        obs_pt_local.y() * slot_side_sgn >
-            apa_param.GetParam().parallel_channel_y_mag * slot_side_sgn ||
+    if (!pnc::mathlib::IsInBound(obs_pt_local.x(), -1.6,
+                                 apa_param.GetParam().parallel_channel_x_mag)) {
+      // total_box_x_fail_cnt++;
+      continue;
+    }
+
+    if (obs_pt_local.y() * slot_side_sgn >
+            apa_param.GetParam().parallel_channel_y_mag ||
         obs_pt_local.y() * slot_side_sgn <
-            (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset) *
-                slot_side_sgn) {
+            (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset)) {
+      // total_box_y_fail_cnt++;
       continue;
     }
 
@@ -337,21 +351,33 @@ const bool ParallelParkInPlanner::UpdateEgoSlotInfo() {
     if (obs_pt_local.x() >
             t_lane_.slot_length + kFrontDetaXMagWhenFrontVacant &&
         obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
+      // front_box_fail_cnt++;
       continue;
     }
 
     // remote rear T-boundary obs
     if (obs_pt_local.x() < -1.6 &&
         obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
+      // rear_box_fail_cnt++;
       continue;
     }
 
     if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs_pt_local, ego_pose, 0.3)) {
+      // in_ego_cnt++;
       continue;
     }
     ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_local));
   }
+
+  // DEBUG_PRINT("dist_fail_cnt = " << dist_fail_cnt);
+  // DEBUG_PRINT("total_box_x_fail_cnt = " << total_box_x_fail_cnt);
+  // DEBUG_PRINT("total_box_y_fail_cnt = " << total_box_y_fail_cnt);
+  // DEBUG_PRINT("front_box_fail_cnt = " << front_box_fail_cnt);
+  // DEBUG_PRINT("rear_box_fail_cnt = " << rear_box_fail_cnt);
+  // DEBUG_PRINT("in_ego_cnt = " << in_ego_cnt);
+  // DEBUG_PRINT("ego_slot_info.obs_pt_vec_slot size = "
+  //             << ego_slot_info.obs_pt_vec_slot.size());
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&

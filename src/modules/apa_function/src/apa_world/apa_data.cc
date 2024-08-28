@@ -66,8 +66,14 @@ void PrintApaStateMachine(const ApaStateMachine apa_state) {
     case ApaStateMachine::ACTIVE_IN:
       DEBUG_PRINT("apa_state = ACTIVE_IN");
       break;
+    case ApaStateMachine::ACTIVE_WAIT_IN:
+      DEBUG_PRINT("apa_state = ACTIVE_WAIT_IN");
+      break;
     case ApaStateMachine::ACTIVE_OUT:
       DEBUG_PRINT("apa_state = ACTIVE_OUT");
+      break;
+    case ApaStateMachine::ACTIVE_WAIT_OUT:
+      DEBUG_PRINT("apa_state = ACTIVE_WAIT_OUT");
       break;
     case ApaStateMachine::SEARCH_IN:
       DEBUG_PRINT("apa_state = SEARCH_IN");

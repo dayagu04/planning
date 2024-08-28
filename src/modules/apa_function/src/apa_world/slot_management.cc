@@ -60,11 +60,12 @@ bool SlotManagement::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
   bool update_slot_in_searching_flag = false;
   bool update_slot_in_parking_flag = false;
   // update_slot_in_searching_flag is always false, only update slot
-  if (apa_data_ptr->cur_state == ApaStateMachine::SEARCH_IN) {
+  if (frame_.apa_state == ApaStateMachine::SEARCH_IN) {
     update_slot_in_searching_flag = UpdateSlotsInSearching();
-  } else if (apa_data_ptr->cur_state == ApaStateMachine::ACTIVE_IN) {
+  } else if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+             frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
-  } else if (apa_data_ptr->cur_state == ApaStateMachine::SUSPEND) {
+  } else if (frame_.apa_state == ApaStateMachine::SUSPEND) {
   } else {
     Reset();
   }
@@ -1707,7 +1708,8 @@ common::SlotInfo SlotManagement::SlotInfoTransfer(
     slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
   }
 
-  if (frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
+  if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+      frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
     // the selected slot in parking state is forced to release
     slot_info.set_is_release(true);
     slot_info.set_is_occupied(false);
@@ -1749,7 +1751,8 @@ const bool SlotManagement::SlotInfoTransfer(
     slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
   }
 
-  if (frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
+  if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+      frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
     // the selected slot in parking state is forced to release
     slot_info.set_is_release(true);
     slot_info.set_is_occupied(false);
@@ -2951,7 +2954,8 @@ void SlotManagement::UpdateReleaseSlotIdVec() {
       frame_.release_slot_id_vec.emplace_back(static_cast<int>(slot_info.id()));
     } else {
       // if in parking, force set the slot release and send to hmi
-      if (frame_.apa_state == ApaStateMachine::ACTIVE_IN &&
+      if ((frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+           frame_.apa_state == ApaStateMachine::ACTIVE_IN) &&
           (static_cast<int>(slot_info.id()) ==
            static_cast<int>(frame_.ego_slot_info.select_slot_id))) {
         frame_.release_slot_id_vec.emplace_back(

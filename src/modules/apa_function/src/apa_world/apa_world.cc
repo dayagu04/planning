@@ -227,7 +227,8 @@ const bool ApaWorld::Update() {
   DEBUG_PRINT(
       "fixed slot type =" << static_cast<int>(apa_data_ptr_->slot_type));
 
-  if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_IN) {
+  if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+      apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_IN) {
     if (apa_data_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_IN!");
