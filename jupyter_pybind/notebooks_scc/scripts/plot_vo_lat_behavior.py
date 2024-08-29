@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240824/20240824-15-12-53/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-24-15-12-53_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240824/20240824-22-55-39/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-24-22-55-39_no_camera.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec

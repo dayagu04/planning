@@ -76,6 +76,10 @@ class LaneChangeRequestManager {
     return false;
   }
 
+  const RequestType get_ilc_virtual_request() const {
+    return ilc_virtual_request_;
+  }
+
   void GenerateHMIInfo();
   void GenerateHMIInfoForOvertake();
 
@@ -96,6 +100,7 @@ class LaneChangeRequestManager {
 
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_;
   framework::Session* session_;
+  RequestType ilc_virtual_request_ = NO_CHANGE;
 };
 
 }  // namespace planning

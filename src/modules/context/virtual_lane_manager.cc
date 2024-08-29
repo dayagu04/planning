@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include "Eigen/src/Core/Matrix.h"
@@ -438,7 +439,6 @@ void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
 
 bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("update VirtualLaneManager\n");
-  const double allow_error = 5.0;
   current_lane_ = nullptr;
   left_lane_ = nullptr;
   right_lane_ = nullptr;
@@ -503,12 +503,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // CalculateDistanceToTargetSlot(session_);
   // CalculateDistanceToNextSpeedBump(session_);
   // }
-
-  double dis_between_first_road_split_and_ramp =
-      distance_to_first_road_split_ - dis_to_ramp_;
-  is_nearing_ramp_ =
-      fabs(dis_between_first_road_split_and_ramp) < allow_error &&
-      dis_to_ramp_ < 3000.;
   LOG_DEBUG(
       "dis_to_ramp: %f, dis_to_first_road_split: %f, "
       "distance_to_first_road_merge_: %f \n",
@@ -1597,6 +1591,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
   is_on_ramp_ = current_segment->usage() == SdMapSwtx::RoadUsage::RAMP;
   // 计算split信息
+  first_split_dir_dis_info_ = std::make_pair(None, NL_NMAX);
   const auto& split_info = sd_map.GetSplitInfoList(
       current_segment->id(), nearest_s, max_search_length);
   if (!split_info.empty()) {
@@ -1604,6 +1599,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (split_info.begin()->second > 0 && split_segment) {
       distance_to_first_road_split_ = split_info.begin()->second;
       first_split_direction_ = MakesureSplitDirection(*split_segment, sd_map);
+      first_split_dir_dis_info_ = std::make_pair(
+          static_cast<SplitRelativeDirection>(first_split_direction_),
+          distance_to_first_road_split_);
       if (is_on_ramp_ &&
           distance_to_first_road_split_ < distance_to_first_road_merge_) {
         ramp_direction_ = first_split_direction_;
@@ -1637,8 +1635,14 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     if (sum_dis_to_last_merge_point > dis_threshold_to_last_merge_point_) {
       is_accumulate_dis_to_last_merge_point_more_than_threshold_ = true;
     }
-    if (last_merge_seg) {
-      sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
+    if (last_merge_seg && last_merge_seg->in_link().size() == 2) {
+      // fengwang31:目前仅针对inlink是2的情况做处理
+      const auto& merge_last_seg =
+          sd_map.GetPreviousRoadSegment(last_merge_seg->id());
+      if (merge_last_seg && merge_last_seg->usage() == SdMapSwtx::RAMP &&
+          last_merge_seg->usage() != SdMapSwtx::RAMP) {
+        sum_dis_to_last_merge_point_ = sum_dis_to_last_merge_point;
+      }
     }
   }
   JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
@@ -1662,6 +1666,46 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   } else {
     std::cout << "not find toll station" << std::endl;
     distance_to_toll_station_ = NL_NMAX;
+  }
+
+  //判断是否在匝道汇入主路场景，2个条件满足一个即可：
+  // 1、在匝道上接近汇入点100米以内；
+  // 2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
+  lane_num_except_emergency_ = lane_num_;
+  if (lane_num_ > 0) {
+    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
+        iflyauto::LANETYPE_EMERGENCY) {
+      lane_num_except_emergency_ -= 1;
+    }
+  }
+  is_leaving_ramp_ = false;
+  if (lane_num_except_emergency_ > 0) {
+    if (distance_to_first_road_merge_ < 100 ||
+        (sum_dis_to_last_merge_point_ > 0 &&
+         sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
+         is_on_highway_)) {
+      is_leaving_ramp_ = true;
+    }
+  }
+
+  //判断是否是正在接近匝道
+  const double dis_between_first_road_split_and_ramp =
+      distance_to_first_road_split_ - dis_to_ramp_;
+  const double allow_error = 5.0;
+  is_nearing_ramp_ =
+      fabs(dis_between_first_road_split_and_ramp) < allow_error &&
+      dis_to_ramp_ < 3000.;
+
+  //判断哪个场景在前
+  if (is_leaving_ramp_ && is_nearing_ramp_ &&
+      distance_to_first_road_merge_ < 100) {
+    if (distance_to_first_road_merge_ < dis_to_ramp_) {
+      // merge在ramp的前面
+      is_nearing_ramp_ = false;
+    } else {
+      // ramp在merge的前面
+      is_leaving_ramp_ = false;
+    }
   }
 }
 
@@ -2115,26 +2159,6 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
 }
 
 void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
-  int lane_num_except_emergency = lane_num_;
-  if (lane_num_ > 0) {
-    if (relative_id_lanes_[lane_num_ - 1]->get_lane_type() ==
-        iflyauto::LANETYPE_EMERGENCY) {
-      lane_num_except_emergency -= 1;
-    }
-  }
-  //(1)判断是否在匝道汇入主路场景，2个条件满足一个即可：
-  // 1、在匝道上接近汇入点100米以内；
-  // 2、在离开汇入点后超过500米，则视为已经完成匝道汇入主路；
-  is_leaving_ramp_ = false;
-  if (lane_num_except_emergency > 0) {
-    if (distance_to_first_road_merge_ < 100 ||
-        (sum_dis_to_last_merge_point_ > 0 &&
-         sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
-         is_ego_on_expressway_)) {
-      is_leaving_ramp_ = true;
-    }
-  }
-
   // 判断ego是否在最右边车道上
   bool is_ego_on_rightest_lane = true;
   for (const auto& relative_id_lane : relative_id_lanes_) {
@@ -2151,7 +2175,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //  4、当前是在expressway上。
   if (!is_on_ramp_ && dis_to_ramp_ > 1300 &&
       !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
-      is_ego_on_rightest_lane && is_ego_on_expressway_) {
+      is_ego_on_rightest_lane && is_on_highway_) {
     is_leaving_ramp_ = true;
   }
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
@@ -2164,7 +2188,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       relative_id_lane->update_lane_tasks(
           dis_to_ramp_, distance_to_first_road_merge_,
           distance_to_first_road_split_, is_nearing_ramp_, ramp_direction_,
-          first_split_direction_, is_leaving_ramp_, lane_num_except_emergency,
+          first_split_direction_, is_leaving_ramp_, lane_num_except_emergency_,
           is_on_ramp_);
     }
   }
@@ -2207,7 +2231,7 @@ void VirtualLaneManager::TrackEgoLane() {
         SelectEgoLaneWithoutPlan();
         return;
       }
-      if (is_on_highway_ && zero_relative_id_nums >= 2) {
+      if (is_ego_on_expressway_ && zero_relative_id_nums >= 2) {
         if (!is_on_ramp_ && dis_to_ramp_ < 3000 && !is_leaving_ramp_ &&
             lane_keep_status) {
           // hack::针对分流 感知未提供分汇流点信息 作如下后处理
@@ -2324,7 +2348,7 @@ void VirtualLaneManager::SelectEgoLaneWithoutPlan() {
 }
 
 void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
-  const double default_consider_lane_length = 50.0;
+  const double default_consider_lane_length = 100.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = 0;
@@ -2422,8 +2446,8 @@ void VirtualLaneManager::SelectEgoLaneWithPlan(int zero_relative_id_nums) {
           return;
         }
         if (road_radius > kDefaultRoadRadius) {
-          int default_point_nums = 30;
-          int select_lane_point_interval = 1;
+          int default_point_nums = 24;
+          int select_lane_point_interval = 2;
           for (int i = 0; i < lane_points.size();
                i += select_lane_point_interval) {
             iflyauto::ReferencePoint point = lane_points[i];
@@ -2680,11 +2704,11 @@ void VirtualLaneManager::PreprocessRoadSplit(
     return;
   }
 
-  if (ramp_direction_ == RAMP_ON_RIGHT) {
+  if (first_split_dir_dis_info_.first == ON_RIGHT) {
     is_exist_ramp_on_road_ = true;
     relative_id_lanes_[order_ids[1]]->set_relative_id(0);
     origin_order_id = relative_id_lanes_[order_ids[1]]->get_order_id();
-  } else if (ramp_direction_ == RAMP_ON_LEFT) {
+  } else if (first_split_dir_dis_info_.first == ON_LEFT) {
     is_exist_ramp_on_road_ = true;
     relative_id_lanes_[order_ids[0]]->set_relative_id(0);
     origin_order_id = relative_id_lanes_[order_ids[0]]->get_order_id();
@@ -2710,10 +2734,10 @@ void VirtualLaneManager::PreprocessRampSplit(
 
   if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
     is_exist_split_on_ramp_ = true;
-    if (first_split_direction_ == RAMP_ON_RIGHT) {
+    if (first_split_dir_dis_info_.first == ON_RIGHT) {
       relative_id_lanes_[order_ids[1]]->set_relative_id(0);
       origin_order_id = relative_id_lanes_[order_ids[1]]->get_order_id();
-    } else if (first_split_direction_ == RAMP_ON_LEFT) {
+    } else if (first_split_dir_dis_info_.first == ON_LEFT) {
       relative_id_lanes_[order_ids[0]]->set_relative_id(0);
       origin_order_id = relative_id_lanes_[order_ids[0]]->get_order_id();
     } else {
@@ -2857,7 +2881,7 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
     int virtual_id,
     const std::shared_ptr<VirtualLane> current_relative_id_lane) {
   const double default_lane_mapping_cost = 10.0;
-  const double default_consider_lane_length = 60.0;
+  const double default_consider_lane_length = 90.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -2891,8 +2915,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
       }
 
       if (road_radius > kDefaultRoadRadius) {
-        int default_point_nums = 30;
-        int select_lane_point_interval = 1;
+        int default_point_nums = 22;
+        int select_lane_point_interval = 2;
         for (int i = 0; i < lane_points.size();
              i += select_lane_point_interval) {
           iflyauto::ReferencePoint point = lane_points[i];
@@ -2965,6 +2989,8 @@ double VirtualLaneManager::ComputeLanesMatchlaterakDisCost(
 double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
     const std::shared_ptr<VirtualLane> virtual_lane) {
   double average_curv = 0.0;
+  const double default_begin_length = 50.0;
+  const double default_end_length = 100.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   std::shared_ptr<KDPath> frenet_coord = virtual_lane->get_lane_frenet_coord();
@@ -2978,12 +3004,12 @@ double VirtualLaneManager::ComputeTargetLaneSpecifiedRangeCurvature(
     return average_curv;
   }
   planning_math::PathPoint ego_s_nearest_point =
-      frenet_coord->GetPathPointByS(ego_s);
+      frenet_coord->GetPathPointByS(ego_s + default_begin_length);
   int iter_count = 0;
   double total_curv = 0.0;
   for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
        s += kLaneLineSegmentLength) {
-    if (s > kConsiderLaneLineLength + ego_s) {
+    if (s > default_end_length + ego_s) {
       break;
     }
     double curv = 0.0;

@@ -598,7 +598,7 @@ class LoadRosbag:
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
-                         'gap_v_limit_lc', 'target_gap_front_id', 'target_gap_rear_id',\
+                         'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                          'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
@@ -614,7 +614,7 @@ class LoadRosbag:
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                          "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
-                         "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region','merge_lane_virtual_id']
+                         "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region','merge_lane_virtual_id', 'sdmap_min_curv_radius']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
 

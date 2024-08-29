@@ -93,6 +93,11 @@ class GeneralLateralDecider : public Task {
   void PostProcessBound(std::vector<WeightedBound> &bounds_input,
                         std::pair<double, double> &bound_output,
                         std::pair<BoundInfo, BoundInfo> &bound_info);
+
+  void PostProcessBoundVersion2(const std::vector<WeightedBound> &bounds_input,
+                                std::pair<double, double> &bound_output,
+                                std::pair<BoundInfo, BoundInfo> &bound_info);
+
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -108,9 +113,8 @@ class GeneralLateralDecider : public Task {
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t,
-                                Polygon2d &care_overlap_polygon,
-                                double lat_buf_dis,
+  void AddObstacleDecisionBound(int id, double t, double overlap_min_y,
+                                double overlap_max_y, double lat_buf_dis,
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,

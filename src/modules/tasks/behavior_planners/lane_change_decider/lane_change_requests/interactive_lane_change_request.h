@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/basic_type.h"
 #include "lane_change_request.h"
 
 namespace planning {
@@ -32,6 +33,8 @@ class IntRequest : public LaneChangeRequest {
   const int get_left_cancel_freeze_cnt() const {
     return left_cancel_freeze_cnt_;
   }
+
+  const RequestType get_ilc_virtual_req() const { return ilc_virtual_req_; }
   const int get_right_cancel_freeze_cnt() const {
     return right_cancel_freeze_cnt_;
   }
@@ -63,6 +66,7 @@ class IntRequest : public LaneChangeRequest {
   bool is_lever_status_valid_ = true;  //拨杆未回正，只执行一次变道的标志
   bool is_lever_status_valid_last_frame_ = true;
   bool is_in_diverted_lane_change_ = false;
+  RequestType ilc_virtual_req_ = NO_CHANGE;
 };
 
 }  // namespace planning

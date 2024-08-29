@@ -593,6 +593,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
   } else if (curr_state == kLaneChangeExecution) {
     planning_hmi_info->ad_info.lane_change_status =
         iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+  } else if (curr_state == kLaneChangeComplete) {
+    planning_hmi_info->ad_info.lane_change_status =
+        iflyauto::LaneChangeStatus::LC_STATE_STARTING;
   } else if (curr_state == kLaneChangeCancel) {
     planning_hmi_info->ad_info.lane_change_status =
         iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
@@ -605,12 +608,19 @@ void PlanningScheduler::FillPlanningHmiInfo(
   if (int_request_cancel_reason == SOLID_LC) {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+    //暂时为了满足实线变道时打灯合planing_hmi的提示需求
+    //在此更新变道状态和变道方向的值！！！！！！！
+    // TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
+    planning_hmi_info->ad_info.lane_change_direction =
+        (iflyauto::LaneChangeDirection)
+            lane_change_decider_output.ilc_virtual_req;
+    planning_hmi_info->ad_info.lane_change_status =
+        iflyauto::LaneChangeStatus::LC_STATE_WAITING;
   } else if (int_request_cancel_reason == MANUAL_CANCEL) {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
   } else if (lc_invalid_reason == "side view invalid" ||
              lc_invalid_reason == "front view invalid" ||
-             lc_invalid_reason == "valid cnt below threshold" ||
              lc_back_reason == "side view back" ||
              lc_back_reason == "front view back" ||
              lc_back_reason == "but back cnt below threshold") {

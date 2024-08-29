@@ -112,6 +112,53 @@ void SccLonBehaviorPlanner::SetConfig(
   sv_graph_->SetConfig(tuned_params);
 }
 
+bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
+  if (!config_.enable_sdmap_curv_v_adjust) {
+    return true;
+  }
+  if (!session_->environmental_model().get_sdmap_valid()) {
+    std::cout << "sd_map is invalid!!!" << std::endl;
+    return true;
+  }
+  ad_common::math::Vec2d current_point;
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &pose = ego_state->location_enu();
+  std::cout << "ego_pose_x_:" << pose.position.x
+            << "ego_pose_y_:" << pose.position.y << std::endl;
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  const auto &sd_map = session_->environmental_model().get_sd_map();
+  double nearest_s = 0;
+  double nearest_l = 0;
+  // const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto current_segment = sd_map.GetNearestRoadWithHeading(
+      current_point, search_distance, ego_heading_angle, max_heading_diff,
+      nearest_s, nearest_l);
+  if (!current_segment) {
+    return true;  //返回true,代表判断出弯道，不加速，有异常就不加速
+  }
+  std::vector<std::pair<double, double>> curv_list;
+  curv_list = sd_map.GetCurvatureList(current_segment->id(), nearest_s,
+                                      config_.search_sdmap_curv_dis);
+  double min_curv_radius = 10000.0;
+  bool has_curv = true;
+  for (int i = 0; i < curv_list.size(); i++) {
+    double one_curv_radius = 1.0 / (std::abs(curv_list[i].second));
+    if (one_curv_radius < min_curv_radius) {
+      min_curv_radius = one_curv_radius;
+    }
+  }
+  if (min_curv_radius > config_.sdmap_curv_thred) {
+    has_curv = false;
+  }
+  JSON_DEBUG_VALUE("sdmap_min_curv_radius", min_curv_radius)
+  return has_curv;
+}
+
 void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   const auto &environmental_model = session_->environmental_model();
   const bool dbw_status = environmental_model.GetVehicleDbwStatus();
@@ -482,6 +529,7 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   lon_behav_plan_input_->set_dis_to_stopline(dis_to_stopline);
   lon_behav_plan_input_->set_dis_to_crosswalk(dis_to_crosswalk);
   lon_behav_plan_input_->set_intersection_state(intersection_state);
+  lon_behav_plan_input_->set_sdmap_has_curv(JudgeCurvBySDMap());
 
   // set lon_init_state
   auto lon_init_state_ptr = lon_behav_plan_input_->mutable_lon_init_state();
@@ -503,15 +551,7 @@ void SccLonBehaviorPlanner::SetInput(
 bool SccLonBehaviorPlanner::Update() {
   LOG_DEBUG("=======Entering SccLonBehaviorPlanner::Update======= \n");
   // 1.ST
-  const auto &last_traj =
-      session_->planning_context().last_planning_result().traj_points;
-  const auto &dynamic_world =
-      session_->environmental_model().get_dynamic_world();
-  const auto &current_lane = session_->environmental_model()
-                                 .get_virtual_lane_manager()
-                                 ->get_current_lane();
-  st_graph_->Update(lon_behav_plan_input_, last_traj, dynamic_world,
-                    current_lane);
+  st_graph_->Update(lon_behav_plan_input_, session_);
 
   // 2.SV
   sv_graph_->Update(lon_behav_plan_input_);
@@ -790,7 +830,7 @@ void SccLonBehaviorPlanner::UpdateHMI() {
 
 bool SccLonBehaviorPlanner::IsLeadVehicle(
     const planning::common::TrackedObjectInfo &lead) {
-  return lead.track_id() != -1 && lead.is_lead();
+  return lead.track_id() != -1 && lead.is_lead() && lead.is_car();
 }
 
 void SccLonBehaviorPlanner::GetHardBounds() {

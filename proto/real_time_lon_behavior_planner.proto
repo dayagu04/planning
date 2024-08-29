@@ -136,6 +136,7 @@ message RealTimeLonBehaviorInput {
   optional double dis_to_stopline = 16;
   optional double dis_to_crosswalk = 17;
   optional IntersectionState intersection_state = 18;
+  optional bool sdmap_has_curv = 19;
 }
 
 // The output of real time lon behavior

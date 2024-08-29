@@ -29,11 +29,8 @@ class StGraphGenerator {
   virtual ~StGraphGenerator() = default;
 
   // 更新
-  void Update(
-      std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
-      const TrajectoryPoints &last_traj,
-      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-      std::shared_ptr<VirtualLane> current_lane);
+  void Update(std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input,
+              framework::Session *session);
 
   void SetConfig(
       planning::common::RealTimeLonBehaviorTunedParams &tuned_params);
@@ -214,6 +211,7 @@ class StGraphGenerator {
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
   pnc::filters::SlopeFilter lead_two_desired_distance_filter_;
+  bool is_far_slow_safe_lead_ = false;
   // cut in障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter cut_in_desired_distance_filter_;
   pnc::filters::SlopeFilter accel_vel_filter_;
@@ -243,7 +241,7 @@ class StGraphGenerator {
   const std::vector<double> _AY_MAX_ABS_BP{5.0, 10.0, 15.0, 30.0};
   const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.6, 1.6};
   const std::vector<double> _AY_MAX_CURV_BP{100, 200, 400, 600};
-  const std::vector<double> _AY_MAX_CURV_V{1.2, 0.6, 0.4, 0.3};
+  const std::vector<double> _AY_MAX_CURV_V{1.6, 0.9, 0.5, 0.4};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
   // linear slope

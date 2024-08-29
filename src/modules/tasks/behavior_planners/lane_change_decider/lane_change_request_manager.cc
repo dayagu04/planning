@@ -1,6 +1,7 @@
 #include "lane_change_request_manager.h"
 
 #include "adas_function/mrc_condition.h"
+#include "basic_types.pb.h"
 #include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
@@ -81,11 +82,16 @@ bool LaneChangeRequestManager::Update(
   const bool enable_use_merge_lc_request =
       config_.enable_use_merge_change_request;
   const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double default_velocity_trigger_emergence_avoid_request = 13.88;
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
     int_request_cancel_reason_ = int_request_.request_cancel_reason();
+    ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
     int_request_.reset_int_cnt();
   }
@@ -93,8 +99,10 @@ bool LaneChangeRequestManager::Update(
     if (enable_use_cone_change_request) {
       cone_change_request_.Update(lc_status);
     }
-    if (enable_use_emergency_avoidence_lc_request && is_on_highway &&
-        cone_change_request_.request_type() == RequestType::NO_CHANGE) {
+    if (enable_use_emergency_avoidence_lc_request &&
+        function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+        cone_change_request_.request_type() == RequestType::NO_CHANGE &&
+        ego_state->ego_v() > default_velocity_trigger_emergence_avoid_request) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
@@ -104,23 +112,10 @@ bool LaneChangeRequestManager::Update(
       merge_change_request_.Update(lc_status);
     }
     if (location_valid && use_overtake_lane_change_request) {
-      // 添加至可运行区域边界的距离小于一定值时overtake_count_ = 0
-      const auto& clane = virtual_lane_mgr_->get_current_lane();
-      const int left_car_point_size =
-          clane->get_left_lane_boundary().car_points_size;
-      const int right_car_points_size =
-          clane->get_right_lane_boundary().car_points_size;
-      if (clane->get_left_lane_boundary()
-                  .car_points[left_car_point_size - 1]
-                  .x <=
-              intersection_distance_of_suppression_active_lane_change &&
-          clane->get_right_lane_boundary()
-                  .car_points[right_car_points_size - 1]
-                  .x <=
-              intersection_distance_of_suppression_active_lane_change) {
+      // lcc功能抑制超车变道
+      if (function_info.function_mode() != common::DrivingFunctionInfo::NOA) {
         overtake_request_.Reset();
-        LOG_DEBUG(
-            "cann't generate overtake lane change close to the intersection");
+        LOG_DEBUG("cann't generate overtake lane change in non-NOA functions");
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
