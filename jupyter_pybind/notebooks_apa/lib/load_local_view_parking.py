@@ -71,7 +71,7 @@ smallest_abs_t = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
-    self.bag = rosbag.Bag(path)
+    self.bag = rosbag.Bag(path,'r',rosbag.Compression.BZ2, 768 * 1024,True, None, True)
     # loclization msg
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
@@ -959,8 +959,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'car_circle_rn': car_circle_rn,
     })
 
-    vel_ego =  math.hypot(bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vx,
-                          bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vy)
+    vel_ego = bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_body.vx
     remain_s_ctrl = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
     if bag_loader.vs_msg['enable'] == True:
       steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
@@ -2994,8 +2993,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find loc_msg error')
       else:
-        vel_ego = math.hypot(loc_msg.velocity.velocity_boot.vx,
-                             loc_msg.velocity.velocity_boot.vy)
+        vel_ego = dataLoader.loc_msg['data'][loc_msg_idx].velocity.velocity_body.vx
 
         if dataLoader.soc_state_msg['enable'] == True:
           flag, soc_msg = findt(dataLoader.soc_state_msg, soc_timestamps[loc_i])

@@ -2,6 +2,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <memory>
+
 #include "camera_preception_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
@@ -33,7 +35,7 @@
 
 namespace py = pybind11;
 using namespace planning;
-
+using namespace planning::apa_planner;
 static SlotManagement *pBase = nullptr;
 
 int Init() {
@@ -86,10 +88,8 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
                     struct_msgs::FusionOccupancyObjectsInfo>(
           fusion_occupancy_objects_info_bytes);
 
-  pBase->Update(&func_statemachine, &parking_slot_info, &localization_info,
-                &uss_wave_info, &uss_perception_info,
-                &ground_line_perception_info, &fusion_objects_info,
-                &fusion_occupancy_objects_info);
+  std::shared_ptr<ApaData> apa_data_ptr = std::make_shared<ApaData>();
+  pBase->Update(apa_data_ptr);
 
   return 0;
 }
@@ -154,10 +154,8 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
   param.outside_lon_dist_min_slot2mirror = outside_lon_dist_min_slot2mirror;
 
   pBase->SetParam(param);
-  pBase->Update(&func_statemachine, &parking_slot_info, &localization_info,
-                &uss_wave_info, &uss_perception_info,
-                &ground_line_perception_info, &fusion_objects_info,
-                &fusion_occupancy_objects_info);
+  std::shared_ptr<ApaData> apa_data_ptr = std::make_shared<ApaData>();
+  pBase->Update(apa_data_ptr);
 
   return 0;
 }

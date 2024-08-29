@@ -1,8 +1,11 @@
 #include "apa_plan_interface.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <vector>
 
+#include "apa_data.h"
 #include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_world.h"
@@ -11,16 +14,15 @@
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
+#include "hybrid_astar_planer/hybrid_astar_park_planner.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "parallel_park_in_planner.h"
+#include "perpendicular_park_heading_in_planner.h"
 #include "perpendicular_park_in_planner.h"
+#include "perpendicular_park_out_planner.h"
 #include "planning_context.h"
-#include "utils/file.h"
-
-// #define PERPENDICULAR_SIMULATION
-
-// #define PERPENDICULAR_SIMULATION
+#include "planning_plan_c.h"
 
 namespace planning {
 namespace apa_planner {
@@ -33,20 +35,23 @@ void ApaPlanInterface::Init(const bool is_simulation) {
   apa_world_ptr_ = std::make_shared<ApaWorld>();
 
   // init planners
-  apa_planner_stack_.clear();
-  apa_planner_stack_.resize(ApaWorld::ApaPlannerType::PLANNER_COUNT);
+  apa_planner_map_[ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER] =
+      std::make_shared<PerpendicularParkInPlanner>(apa_world_ptr_);
 
-  // perpendicular park in planner
-  apa_planner_stack_[ApaWorld::ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER] =
-      std::make_shared<PerpendicularInPlanner>(apa_world_ptr_);
+  apa_planner_map_[ApaPlannerType::SLANT_PARK_IN_PLANNER] =
+      std::make_shared<PerpendicularParkInPlanner>(apa_world_ptr_);
 
-  // parallel park in planner
-  apa_planner_stack_[ApaWorld::ApaPlannerType::PARALLEL_PARK_IN_PLANNER] =
-      std::make_shared<ParallelParInPlanner>(apa_world_ptr_);
+  apa_planner_map_[ApaPlannerType::PARALLEL_PARK_IN_PLANNER] =
+      std::make_shared<ParallelParkInPlanner>(apa_world_ptr_);
 
-  if (apa_planner_stack_.size() > 0) {
-    planner_ptr_ = apa_planner_stack_.front();
-  }
+  apa_planner_map_[ApaPlannerType::PERPENDICULAR_PARK_OUT_PLANNER] =
+      std::make_shared<PerpendicularParkOutPlanner>(apa_world_ptr_);
+
+  apa_planner_map_[ApaPlannerType::PERPENDICULAR_PARK_HEADING_IN_PLANNER] =
+      std::make_shared<PerpendicularParkHeadingInPlanner>(apa_world_ptr_);
+
+  apa_planner_map_[ApaPlannerType::HYBRID_ASTAR_PLANNER] =
+      std::make_shared<HybridAStarParkPlanner>(apa_world_ptr_);
 }
 
 void ApaPlanInterface::Reset() {
@@ -62,17 +67,8 @@ void ApaPlanInterface::Reset() {
   apa_world_ptr_->Reset();
 
   // reset all planner
-  for (const auto &planner : apa_planner_stack_) {
-    planner->Reset();
-  }
-}
-
-std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
-    const uint8_t apa_planner_id) {
-  if (apa_planner_id < apa_planner_stack_.size()) {
-    return apa_planner_stack_[apa_planner_id];
-  } else {
-    return nullptr;
+  for (const auto &apa_planner : apa_planner_map_) {
+    apa_planner.second->Reset();
   }
 }
 
@@ -83,18 +79,17 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
     std::cout << "\nlocal_view_ptr is nullptr, quit apa\n";
     return false;
   }
+
   RecordNodeReceiveTime(local_view_ptr);
 
   const double start_timestamp_ms = IflyTime::Now_ms();
-  const uint8_t last_state =
-      apa_world_ptr_->GetMeasurementsPtr()->current_state;
+  const uint8_t last_state = apa_world_ptr_->GetApaDataPtr()->current_state;
 
   const uint8_t current_state =
       local_view_ptr->function_state_machine_info.current_state;
 
   // just used for pybind simulation to clear previous state varible
-  if ((last_state == iflyauto::FunctionalState_MANUAL ||
-       last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
+  if ((last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
       (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
        current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
     Reset();
@@ -106,20 +101,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
 
   // run planner
   bool success = false;
-#ifdef PERPENDICULAR_SIMULATION
-  std::cout << "PERPENDICULAR_SIMULATION\n";
-  success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
-  // if (current_state == iflyauto::FunctionalState_PARK_IN_ACTIVATE_WAIT ||
-  //     current_state == iflyauto::FunctionalState_PARK_GUIDANCE ||
-  //     current_state == iflyauto::FunctionalState_PARK_IN_SECURE) {
-  //   success = ApaPlanOnce(ApaWorld::PERPENDICULAR_PARK_IN_PLANNER);
-  // }
-#else
-  if (apa_world_ptr_->GetMeasurementsPtr()->planner_type <
-      ApaWorld::NONE_PLANNER) {
-    success = ApaPlanOnce(apa_world_ptr_->GetMeasurementsPtr()->planner_type);
-  }
-#endif
+  success = ApaPlanOnce(apa_world_ptr_->GetApaDataPtr()->planner_type);
 
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
@@ -138,30 +120,33 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   return success;
 }
 
-const bool ApaPlanInterface::ApaPlanOnce(const uint8_t planner_type) {
-  const auto planner_ptr = GetPlannerByType(planner_type);
-
-  if (planner_ptr != nullptr) {
-    planner_ptr_ = planner_ptr;
-    planner_ptr_->Update();
-    return true;
-  } else {
-    std::cout << "planner type error!" << std::endl;
-    return false;
+const bool ApaPlanInterface::ApaPlanOnce(const ApaPlannerType planner_type) {
+  for (const auto &apa_planner : apa_planner_map_) {
+    if (apa_planner.first == planner_type) {
+      planner_ptr_ = apa_planner_map_[planner_type];
+      planner_ptr_->Update();
+      return true;
+    }
   }
+  std::cout << "planner type error!" << std::endl;
+  return false;
 }
 
 void ApaPlanInterface::AddReleasedSlotInfo(
     iflyauto::PlanningOutput &planning_output) {
   planning_output.successful_slot_info_list_size = 0;
+  const std::vector<int> &release_slot_id_vec =
+      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
 
-  for (const auto &successful_slot_info :
-       apa_world_ptr_->GetSlotManagerPtr()->GetReleasedSlotInfoVec()) {
-    auto &slot_info_list =
-        planning_output.successful_slot_info_list
-            [planning_output.successful_slot_info_list_size++];
-    slot_info_list = successful_slot_info;
+  std::cout << "plan release slot id = ";
+  for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
+    iflyauto::SuccessfulSlotsInfo slot_id;
+    slot_id.id = static_cast<uint32>(release_slot_id_vec[i]);
+    planning_output.successful_slot_info_list[i] = slot_id;
+    planning_output.successful_slot_info_list_size++;
+    std::cout << "[" << slot_id.id << "]  ";
   }
+  std::cout << "\n";
 }
 
 void ApaPlanInterface::UpdateDebugInfo() {
@@ -374,6 +359,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().corner_uss_scan_angle_deg_turn, double,
                   "corner_uss_scan_angle_deg_turn");
+
+  JSON_READ_VALUE(apa_param.SetPram().corner_uss_dist_diff, double,
+                  "corner_uss_dist_diff");
 
   JSON_READ_VALUE(apa_param.SetPram().corner_uss_steer_angle, double,
                   "corner_uss_steer_angle");

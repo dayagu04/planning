@@ -14,7 +14,7 @@
 #include "transform_lib.h"
 
 namespace planning {
-
+namespace apa_planner {
 class CollisionDetector {
  public:
   enum ObsType {
@@ -198,6 +198,6 @@ class CollisionDetector {
 
   Paramters param_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning
 #endif

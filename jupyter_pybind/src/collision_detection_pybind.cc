@@ -17,7 +17,7 @@
 
 namespace py = pybind11;
 using namespace planning;
-
+using namespace planning::apa_planner;
 namespace Eigen {
 typedef Eigen::Matrix<double, 5, 1> Vector5d;
 }
@@ -59,7 +59,7 @@ void SetObstacle(const double obstacles_x, const double obstacles_y) {
   obs = obstacle_global;
 
   pBaseColDetAir->SetObstacles(obstacle_global_vec,
-                               planning::CollisionDetector::TLANE_OBS);
+                               CollisionDetector::TLANE_OBS);
 }
 
 void SetObstacleLine(const double obstacles_x1, const double obstacles_y1,

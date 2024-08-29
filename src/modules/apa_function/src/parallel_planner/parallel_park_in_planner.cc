@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_data.h"
 #include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_utils.h"
@@ -51,49 +52,19 @@ static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.3;
 static double kEps = 1e-5;
 
-void ParallelParInPlanner::Init(const bool c_ilqr_enable) {
-  lateral_path_optimizer_ptr_ = std::make_shared<LateralPathOptimizer>();
-  lateral_path_optimizer_ptr_->Init(c_ilqr_enable);
-  // reset
-  Reset();
-}
-
-void ParallelParInPlanner::Reset() {
+void ParallelParkInPlanner::Reset() {
   frame_.Reset();
   t_lane_.Reset();
-  gear_command_ = 0;
+  parallel_path_planner_.Reset();
 }
 
-void ParallelParInPlanner::SetParkingStatus(uint8_t status) {
-  if (status == PARKING_IDLE || status == PARKING_FAILED) {
-    frame_.plan_stm.path_plan_success = false;
-  } else if (status == PARKING_RUNNING || status == PARKING_GEARCHANGE ||
-             status == PARKING_PLANNING || status == PARKING_FINISHED) {
-    frame_.plan_stm.path_plan_success = true;
-  }
-
-  frame_.plan_stm.planning_status = status;
-}
-
-void ParallelParInPlanner::Update() {
-  // run plan core
-  PlanCore();
-
-  // generate planning output
-  GenPlanningOutput();
-
-  GenPlanningHmiOutput();
-
-  // log json debug
-  Log();
-}
-
-void ParallelParInPlanner::PlanCore() {
+void ParallelParkInPlanner::PlanCore() {
   // init simulation
   InitSimulation();
 
   // check planning status
-  if (!simu_param_.force_plan && CheckPlanSkip()) {
+  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan &&
+      CheckPlanSkip()) {
     return;
   }
 
@@ -130,7 +101,7 @@ void ParallelParInPlanner::PlanCore() {
   }
 
   // check replan
-  if (CheckReplan() || simu_param_.force_plan) {
+  if (CheckReplan() || apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
     std::cout << "replan is required!" << std::endl;
 
     // generate t-lane
@@ -171,28 +142,14 @@ void ParallelParInPlanner::PlanCore() {
     SetParkingStatus(PARKING_RUNNING);
   }
 
-  // check finish
-  if (CheckFinished()) {
-    std::cout << "check apa finished again!" << std::endl;
-    SetParkingStatus(PARKING_FINISHED);
-    return;
-  }
-
-  // check failed
-  if (CheckStuckFailed()) {
-    std::cout << "check stuck failed again!" << std::endl;
-    SetParkingStatus(PARKING_FAILED);
-    return;
-  }
-
   // print planning status
   // std::cout << "parking status = "
   //           << static_cast<int>(GetPlannerStates().planning_status)
   //           << std::endl;
 }
 
-const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
-  const auto measures_ptr = apa_world_ptr_->GetMeasurementsPtr();
+const bool ParallelParkInPlanner::UpdateEgoSlotInfo() {
+  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
   const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
 
   const auto& select_slot_slm =
@@ -293,11 +250,10 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
                             ego_slot_info.slot_origin_heading);
 
-  ego_slot_info.ego_pos_slot =
-      ego_slot_info.g2l_tf.GetPos(measures_ptr->pos_ego);
+  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
 
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading_ego);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
@@ -337,7 +293,7 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
 
   std::cout << "slot_side = " << static_cast<int>(t_lane_.slot_side)
             << std::endl;
-  std::cout << "vel_ego = " << measures_ptr->vel_ego << std::endl;
+  std::cout << "vel_ego = " << measures_ptr->vel << std::endl;
 
   // calc slot occupied ratio
 
@@ -361,20 +317,34 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   const pnc::geometry_lib::PathPoint ego_pose(ego_slot_info.ego_pos_slot,
                                               ego_slot_info.ego_heading_slot);
 
+  DEBUG_PRINT("parallel slot_manager_ptr->GetRealTimeObsPtVec() = "
+              << slot_manager_ptr->GetRealTimeObsPtVec().size())
+  // size_t dist_fail_cnt = 0;
+  // size_t total_box_x_fail_cnt = 0;
+  // size_t total_box_y_fail_cnt = 0;
+  // size_t front_box_fail_cnt = 0;
+  // size_t rear_box_fail_cnt = 0;
+  // size_t in_ego_cnt = 0;
+
   for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
     if ((obs_pt_global - slot_center).norm() > 13.3) {
+      // dist_fail_cnt++;
       continue;
     }
 
     const auto obs_pt_local = frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global);
     // outof total box range
-    if (obs_pt_local.x() > apa_param.GetParam().parallel_channel_x_mag ||
-        obs_pt_local.x() < -1.6 ||
-        obs_pt_local.y() * slot_side_sgn >
-            apa_param.GetParam().parallel_channel_y_mag * slot_side_sgn ||
+    if (!pnc::mathlib::IsInBound(obs_pt_local.x(), -1.6,
+                                 apa_param.GetParam().parallel_channel_x_mag)) {
+      // total_box_x_fail_cnt++;
+      continue;
+    }
+
+    if (obs_pt_local.y() * slot_side_sgn >
+            apa_param.GetParam().parallel_channel_y_mag ||
         obs_pt_local.y() * slot_side_sgn <
-            (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset) *
-                slot_side_sgn) {
+            (-0.5 * t_lane_.slot_width - apa_param.GetParam().curb_offset)) {
+      // total_box_y_fail_cnt++;
       continue;
     }
 
@@ -382,27 +352,39 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
     if (obs_pt_local.x() >
             t_lane_.slot_length + kFrontDetaXMagWhenFrontVacant &&
         obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
+      // front_box_fail_cnt++;
       continue;
     }
 
     // remote rear T-boundary obs
     if (obs_pt_local.x() < -1.6 &&
         obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
+      // rear_box_fail_cnt++;
       continue;
     }
 
     if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs_pt_local, ego_pose, 0.3)) {
+      // in_ego_cnt++;
       continue;
     }
     ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_local));
   }
 
+  // DEBUG_PRINT("dist_fail_cnt = " << dist_fail_cnt);
+  // DEBUG_PRINT("total_box_x_fail_cnt = " << total_box_x_fail_cnt);
+  // DEBUG_PRINT("total_box_y_fail_cnt = " << total_box_y_fail_cnt);
+  // DEBUG_PRINT("front_box_fail_cnt = " << front_box_fail_cnt);
+  // DEBUG_PRINT("rear_box_fail_cnt = " << rear_box_fail_cnt);
+  // DEBUG_PRINT("in_ego_cnt = " << in_ego_cnt);
+  // DEBUG_PRINT("ego_slot_info.obs_pt_vec_slot size = "
+  //             << ego_slot_info.obs_pt_vec_slot.size());
+
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      apa_world_ptr_->GetMeasurementsPtr()->static_flag &&
-      apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-          iflyauto::FunctionalState_PARK_GUIDANCE) {
+      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      apa_world_ptr_->GetApaDataPtr()->cur_state ==
+          ApaStateMachine::ACTIVE_IN) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -418,44 +400,7 @@ const bool ParallelParInPlanner::UpdateEgoSlotInfo() {
   return true;
 }
 
-void ParallelParInPlanner::UpdateSlotRealtime() {
-  bool update_slot = false;
-
-  const size_t replan_reaon = frame_.replan_reason;
-  if (replan_reaon == FIRST_PLAN || replan_reaon == DYNAMIC) {
-    update_slot = true;
-  }
-
-  if (replan_reaon == SEG_COMPLETED_USS) {
-    if (frame_.ego_slot_info.slot_occupied_ratio >
-        apa_param.GetParam().uss_slot_occupied_ratio) {
-      update_slot = true;
-    }
-  }
-
-  if (replan_reaon == SEG_COMPLETED_PATH) {
-    if (std::fabs(frame_.ego_slot_info.ego_heading_slot) <
-            apa_param.GetParam().path_heading_slot / 57.3 &&
-        frame_.ego_slot_info.terminal_err.pos.norm() <
-            apa_param.GetParam().path_pos_err) {
-      update_slot = true;
-    }
-  }
-
-  if (update_slot && frame_.need_update_slot) {
-    std::cout << " real time update slot\n";
-    apa_world_ptr_->GetSlotManagerPtr()->SetRealtime();
-    apa_world_ptr_->Update();
-    UpdateEgoSlotInfo();
-  }
-
-  if (frame_.ego_slot_info.slot_occupied_ratio >
-      apa_param.GetParam().last_update_slot_occupied_ratio) {
-    frame_.need_update_slot = false;
-  }
-}
-
-void ParallelParInPlanner::GenTlane() {
+void ParallelParkInPlanner::GenTlane() {
   // Todo: generate t-lane according to nearby obstacles
   const auto& ego_slot_info = frame_.ego_slot_info;
 
@@ -825,7 +770,7 @@ void ParallelParInPlanner::GenTlane() {
   JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
 }
 
-void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
+void ParallelParkInPlanner::UpdateTlaneOnceInSlot() {
   if (frame_.ego_slot_info.slot_occupied_ratio < kEnterMultiPlanSlotRatio) {
     DEBUG_PRINT("ego not in slot!");
     return;
@@ -894,7 +839,7 @@ void ParallelParInPlanner::UpdateTlaneOnceInSlot() {
   }
 }
 
-void ParallelParInPlanner::GenTBoundaryObstacles() {
+void ParallelParkInPlanner::GenTBoundaryObstacles() {
   //                                                  |
   //                         c-------------D
   //                         |             |  pin
@@ -1082,7 +1027,7 @@ void ParallelParInPlanner::GenTBoundaryObstacles() {
   }
 }
 
-void ParallelParInPlanner::GenObstacles() {
+void ParallelParkInPlanner::GenObstacles() {
   // set obstacles.
 
   //                         ^ y                      |
@@ -1217,27 +1162,29 @@ void ParallelParInPlanner::GenObstacles() {
   }
 }
 
-const bool ParallelParInPlanner::IsEgoInSlot() const {
+const bool ParallelParkInPlanner::IsEgoInSlot() const {
   return std::fabs(frame_.ego_slot_info.ego_pos_slot.y() -
                    t_lane_.pt_terminal_pos.y()) <=
          0.5 * (frame_.ego_slot_info.slot_width +
                 apa_param.GetParam().car_width - 0.2);
 }
 
-const bool ParallelParInPlanner::IsEgoInSlot(
+const bool ParallelParkInPlanner::IsEgoInSlot(
     const pnc::geometry_lib::PathPoint& pose) const {
   return pose.pos.y() * t_lane_.slot_side_sgn <=
          t_lane_.slot_side_sgn * t_lane_.corner_inside_slot.y();
 }
 
-const uint8_t ParallelParInPlanner::PathPlanOnce() {
+const uint8_t ParallelParkInPlanner::PathPlanOnce() {
   // construct input
 
   ParallelPathPlanner::Input path_planner_input;
   path_planner_input.tlane = t_lane_;
-  path_planner_input.sample_ds = simu_param_.sample_ds;
+  path_planner_input.sample_ds =
+      apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
   path_planner_input.is_replan_first = frame_.is_replan_first;
-  path_planner_input.is_complete_path = simu_param_.is_complete_path;
+  path_planner_input.is_complete_path =
+      apa_world_ptr_->GetApaDataPtr()->simu_param.is_complete_path;
 
   const auto& ego_slot_info = frame_.ego_slot_info;
   path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
@@ -1359,7 +1306,7 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   frame_.is_replan_first = false;
 
   const auto& planner_output = parallel_path_planner_.GetOutput();
-  gear_command_ = planner_output.current_gear;
+  frame_.gear_command = planner_output.current_gear;
 
   std::cout << "start lat optimizer!" << std::endl;
 
@@ -1384,14 +1331,16 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
 
   bool cilqr_optimization_enable = true;
   bool parallel_optimization_enable = true;
-  if (!is_simulation_) {
+  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
     parallel_optimization_enable = apa_param.GetParam().parallel_lat_opt_enable;
     cilqr_optimization_enable =
         apa_param.GetParam().cilqr_path_optimization_enable;
 
   } else {
-    parallel_optimization_enable = simu_param_.is_path_optimization;
-    cilqr_optimization_enable = simu_param_.is_cilqr_optimization;
+    parallel_optimization_enable =
+        apa_world_ptr_->GetApaDataPtr()->simu_param.is_path_optimization;
+    cilqr_optimization_enable =
+        apa_world_ptr_->GetApaDataPtr()->simu_param.is_cilqr_optimization;
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
@@ -1400,36 +1349,39 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
                  "------------------------"
               << std::endl;
 
-    std::cout << "gear_command_= " << static_cast<int>(gear_command_)
-              << std::endl;
+    std::cout << "frame_.gear_command_= "
+              << static_cast<int>(frame_.gear_command) << std::endl;
 
     std::cout << "origin path size= " << planner_output.path_point_vec.size()
               << std::endl;
 
     LateralPathOptimizer::Parameter param;
-    param.sample_ds = simu_param_.sample_ds;
-    param.q_ref_xy = simu_param_.q_ref_xy;
-    param.q_ref_theta = simu_param_.q_ref_theta;
-    param.q_terminal_xy = simu_param_.q_terminal_xy;
-    param.q_terminal_theta = simu_param_.q_terminal_theta;
-    param.q_k = simu_param_.q_k;
-    param.q_u = simu_param_.q_u;
-    param.q_k_bound = simu_param_.q_k_bound;
-    param.q_u_bound = simu_param_.q_u_bound;
+    param.sample_ds = apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
+    param.q_ref_xy = apa_world_ptr_->GetApaDataPtr()->simu_param.q_ref_xy;
+    param.q_ref_theta = apa_world_ptr_->GetApaDataPtr()->simu_param.q_ref_theta;
+    param.q_terminal_xy =
+        apa_world_ptr_->GetApaDataPtr()->simu_param.q_terminal_xy;
+    param.q_terminal_theta =
+        apa_world_ptr_->GetApaDataPtr()->simu_param.q_terminal_theta;
+    param.q_k = apa_world_ptr_->GetApaDataPtr()->simu_param.q_k;
+    param.q_u = apa_world_ptr_->GetApaDataPtr()->simu_param.q_u;
+    param.q_k_bound = apa_world_ptr_->GetApaDataPtr()->simu_param.q_k_bound;
+    param.q_u_bound = apa_world_ptr_->GetApaDataPtr()->simu_param.q_u_bound;
 
-    lateral_path_optimizer_ptr_->Init(cilqr_optimization_enable);
+    apa_world_ptr_->GetLateralPathOptimizerPtr()->Init(
+        cilqr_optimization_enable);
 
-    lateral_path_optimizer_ptr_->SetParam(param);
+    apa_world_ptr_->GetLateralPathOptimizerPtr()->SetParam(param);
 
     auto time_start = IflyTime::Now_ms();
-    lateral_path_optimizer_ptr_->Update(planner_output.path_point_vec,
-                                        gear_command_);
+    apa_world_ptr_->GetLateralPathOptimizerPtr()->Update(
+        planner_output.path_point_vec, frame_.gear_command);
 
     auto time_end = IflyTime::Now_ms();
     lat_path_opt_cost_time_ms = time_end - time_start;
 
     const auto& optimized_path_vec =
-        lateral_path_optimizer_ptr_->GetOutputPathVec();
+        apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputPathVec();
 
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_.reserve(optimized_path_vec.size());
@@ -1443,7 +1395,7 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
     }
 
     const auto plan_debug_info =
-        lateral_path_optimizer_ptr_->GetOutputDebugInfo();
+        apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
 
     std::cout << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms
               << std::endl;
@@ -1476,7 +1428,7 @@ const uint8_t ParallelParInPlanner::PathPlanOnce() {
   return plan_result;
 }
 
-const bool ParallelParInPlanner::CheckSegCompleted() {
+const bool ParallelParkInPlanner::CheckSegCompleted() {
   frame_.is_replan_by_uss = false;
 
   bool is_seg_complete = false;
@@ -1485,7 +1437,7 @@ const bool ParallelParInPlanner::CheckSegCompleted() {
         std::min(frame_.remain_dist_uss, frame_.remain_dist);
 
     if (min_remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetMeasurementsPtr()->static_flag) {
+        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
       frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
 
       if (!frame_.is_replan_by_uss) {
@@ -1505,8 +1457,9 @@ const bool ParallelParInPlanner::CheckSegCompleted() {
   return is_seg_complete;
 }
 
-const bool ParallelParInPlanner::CheckReplan() {
-  if (frame_.is_replan_first == true || simu_param_.force_plan) {
+const bool ParallelParkInPlanner::CheckReplan() {
+  if (frame_.is_replan_first == true ||
+      apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
     DEBUG_PRINT("first plan");
     frame_.replan_reason = FIRST_PLAN;
     return true;
@@ -1533,20 +1486,7 @@ const bool ParallelParInPlanner::CheckReplan() {
   return false;
 }
 
-const bool ParallelParInPlanner::CheckPaused() {
-  if (apa_world_ptr_->GetMeasurementsPtr()->current_state ==
-      iflyauto::FunctionalState_PARK_SUSPEND) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-const bool ParallelParInPlanner::CheckStuckFailed() {
-  return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
-}
-
-const bool ParallelParInPlanner::CheckFinished() {
+const bool ParallelParkInPlanner::CheckFinished() {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const Eigen::Vector2d rear_bumper_center =
@@ -1628,7 +1568,7 @@ const bool ParallelParInPlanner::CheckFinished() {
   }
 
   const bool static_condition =
-      apa_world_ptr_->GetMeasurementsPtr()->static_flag;
+      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
 
   DEBUG_PRINT("static_condition = " << static_condition);
 
@@ -1636,264 +1576,7 @@ const bool ParallelParInPlanner::CheckFinished() {
          static_condition;
 }
 
-void ParallelParInPlanner::GenPlanningOutput() {
-  pnc::geometry_lib::PathPoint current_ego_pose(
-      apa_world_ptr_->GetMeasurementsPtr()->pos_ego,
-      apa_world_ptr_->GetMeasurementsPtr()->heading_ego);
-
-  if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
-    SetFinishedPlanningOutput(planning_output_, current_ego_pose);
-  } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
-    SetFailedPlanningOutput(planning_output_, current_ego_pose);
-  } else if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
-             frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
-             frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    GenPlanningPath();
-  } else if (frame_.plan_stm.planning_status == PARKING_IDLE) {
-    SetIdlePlanningOutput(planning_output_, current_ego_pose);
-  }
-
-  // std::cout << "planning_output:" << planning_output_.DebugString()
-  //           << std::endl;
-}
-
-void ParallelParInPlanner::GenPlanningHmiOutput() {
-  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
-
-  if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
-      frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
-      frame_.plan_stm.planning_status == PARKING_RUNNING) {
-    apa_hmi_.distance_to_parking_space = frame_.remain_dist;
-  }
-}
-
-void ParallelParInPlanner::GenPlanningPath() {
-  // planning_output_.Clear();
-  memset(&planning_output_, 0, sizeof(planning_output_));
-  planning_output_.planning_status.apa_planning_status =
-      iflyauto::APA_IN_PROGRESS;
-
-  auto trajectory = &(planning_output_.trajectory);
-  trajectory->available = true;
-
-  trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
-
-  size_t N = current_path_point_global_vec_.size();
-  if (N > PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM) {
-    std::cout << "sample ds is possible err\n";
-    N = PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
-  }
-  trajectory->trajectory_points_size = N;
-
-  for (size_t i = 0; i < N; ++i) {
-    const auto& global_point = current_path_point_global_vec_[i];
-    trajectory->trajectory_points[i].x = global_point.pos.x();
-    trajectory->trajectory_points[i].y = global_point.pos.y();
-    trajectory->trajectory_points[i].heading_yaw = global_point.heading;
-    trajectory->trajectory_points[i].v = 0.5;
-  }
-
-  // set target velocity to control as a limit
-  const std::vector<double> ratio_tab = {0.0, 0.4, 0.8, 1.0};
-  const std::vector<double> vel_limit_tab = {apa_param.GetParam().max_velocity,
-                                             apa_param.GetParam().max_velocity,
-                                             0.45, 0.35};
-  const double vel_limit = pnc::mathlib::Interp1(
-      ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
-
-  planning_output_.trajectory.target_reference.target_velocity = vel_limit;
-
-  // send uss remain dist to control
-  planning_output_.trajectory.trajectory_points[0].distance =
-      frame_.remain_dist_uss;
-
-  // send slot occupation ratio to control
-  planning_output_.trajectory.trajectory_points[1].distance =
-      frame_.ego_slot_info.slot_occupied_ratio;
-
-  // send slot type to control
-  planning_output_.trajectory.trajectory_points[2].distance =
-      static_cast<double>(iflyauto::PARKING_SLOT_TYPE_HORIZONTAL);
-
-  // set plan gear cmd
-  auto gear_command = &(planning_output_.gear_command);
-  gear_command->available = true;
-
-  if (gear_command_ == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-  } else {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
-  }
-
-  // // for debug, incase of same last several points
-  //   if (current_path_point_global_vec_.size() > 5) {
-  //     for (size_t i = current_path_point_global_vec_.size() - 4;
-  //          i < current_path_point_global_vec_.size(); i++) {
-  //       pnc::geometry_lib::PrintPose("last several points",
-  //                                    current_path_point_global_vec_[i]);
-  //     }
-  //   }
-}
-
-void ParallelParInPlanner::InitSimulation() {
-  if (is_simulation_ && simu_param_.force_plan && simu_param_.is_reset) {
-    Reset();
-  }
-}
-
-const bool ParallelParInPlanner::CheckPlanSkip() const {
-  if (frame_.plan_stm.planning_status == PARKING_FINISHED ||
-      frame_.plan_stm.planning_status == PARKING_FAILED) {
-    std::cout << "plan has been finished or failed, need reset" << std::endl;
-
-    if (!is_simulation_) {
-      apa_world_ptr_->GetSlotManagerPtr()->Reset();
-    }
-
-    return true;
-  } else {
-    return false;
-  }
-}
-
-const double ParallelParInPlanner::CalRemainDistFromPath() {
-  double remain_dist = 5.01;
-
-  if (frame_.is_replan_first) {
-    return remain_dist;
-  }
-
-  if (frame_.spline_success) {
-    double s_proj = 0.0;
-    bool success = pnc::geometry_lib::CalProjFromSplineByBisection(
-        0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
-        apa_world_ptr_->GetMeasurementsPtr()->pos_ego, frame_.x_s_spline,
-        frame_.y_s_spline);
-
-    if (success == true) {
-      remain_dist = frame_.current_path_length - s_proj;
-
-      std::cout << "remain_dist = " << remain_dist << "  s_proj = " << s_proj
-                << "  current_path_length = " << frame_.current_path_length
-                << std::endl;
-    } else {
-      std::cout << "remain_dist calculation error:input is error" << std::endl;
-    }
-  } else {
-    std::cout << "remain_dist calculation error: path spline failed!"
-              << std::endl;
-  }
-
-  return remain_dist;
-}
-
-const double ParallelParInPlanner::CalRemainDistFromUss() {
-  double remain_dist = 5.01;
-
-  // if (frame_.is_replan_first) {
-  //   return remain_dist;
-  // }
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
-
-  uss_obstacle_avoider_ptr->Update(&planning_output_,
-                                   apa_world_ptr_->GetLocalViewPtr());
-
-  const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
-
-  remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-                safe_uss_remain_dist;
-
-  std::cout << "uss remain dist = " << remain_dist << std::endl;
-
-  return remain_dist;
-}
-
-void ParallelParInPlanner::UpdateRemainDist() {
-  // 1. calculate remain dist according to plan path
-  frame_.remain_dist = CalRemainDistFromPath();
-
-  // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss();
-
-  return;
-}
-
-const bool ParallelParInPlanner::PostProcessPath() {
-  const size_t origin_trajectory_size = current_path_point_global_vec_.size();
-
-  if (origin_trajectory_size < 2) {
-    frame_.spline_success = false;
-    std::cout << "error: origin_trajectory_size = " << origin_trajectory_size
-              << std::endl;
-    return false;
-  }
-
-  const size_t trajectory_size = origin_trajectory_size + 1;
-
-  std::vector<double> x_vec;
-  std::vector<double> y_vec;
-  std::vector<double> s_vec;
-  x_vec.clear();
-  y_vec.clear();
-  s_vec.clear();
-
-  x_vec.resize(trajectory_size);
-  y_vec.resize(trajectory_size);
-  s_vec.resize(trajectory_size);
-
-  double s = 0.0;
-  double ds = 0.0;
-  for (size_t i = 0; i < origin_trajectory_size; ++i) {
-    x_vec[i] = current_path_point_global_vec_[i].pos.x();
-    y_vec[i] = current_path_point_global_vec_[i].pos.y();
-    if (i == 0) {
-      s_vec[i] = s;
-    } else {
-      ds = std::hypot(x_vec[i] - x_vec[i - 1], y_vec[i] - y_vec[i - 1]);
-      s += std::max(ds, 1e-3);
-      s_vec[i] = s;
-    }
-  }
-
-  frame_.current_path_length = s;
-
-  // calculate the extended point and insert
-  Eigen::Vector2d start_point(x_vec[origin_trajectory_size - 2],
-                              y_vec[origin_trajectory_size - 2]);
-
-  Eigen::Vector2d end_point(x_vec[origin_trajectory_size - 1],
-                            y_vec[origin_trajectory_size - 1]);
-
-  Eigen::Vector2d extended_point;
-
-  bool success = pnc::geometry_lib::CalExtendedPointByTwoPoints(
-      start_point, end_point, extended_point, frame_.path_extended_dist);
-
-  if (success == false) {
-    frame_.spline_success = false;
-    std::cout << "fit line by spline error!" << std::endl;
-    // return false;
-  }
-
-  x_vec[origin_trajectory_size] = extended_point.x();
-  y_vec[origin_trajectory_size] = extended_point.y();
-
-  s_vec[origin_trajectory_size] =
-      s_vec[origin_trajectory_size - 1] + frame_.path_extended_dist;
-
-  frame_.x_s_spline.set_points(s_vec, x_vec);
-  frame_.y_s_spline.set_points(s_vec, y_vec);
-
-  frame_.spline_success = true;
-
-  return true;
-}
-
-const double ParallelParInPlanner::CalcSlotOccupiedRatio(
+const double ParallelParkInPlanner::CalcSlotOccupiedRatio(
     const Eigen::Vector2d& terminal_err, const double slot_width,
     const bool is_right_side) const {
   double slot_occupied_ratio = 0.0;
@@ -1909,7 +1592,7 @@ const double ParallelParInPlanner::CalcSlotOccupiedRatio(
   return slot_occupied_ratio;
 }
 
-void ParallelParInPlanner::Log() const {
+void ParallelParkInPlanner::Log() const {
   const auto& l2g_tf = frame_.ego_slot_info.l2g_tf;
   const auto p0_g = l2g_tf.GetPos(t_lane_.obs_pt_outside);
   const auto p1_g = l2g_tf.GetPos(t_lane_.obs_pt_inside);
@@ -2008,7 +1691,7 @@ void ParallelParInPlanner::Log() const {
 
   // lateral optimization
   const auto plan_debug_info =
-      lateral_path_optimizer_ptr_->GetOutputDebugInfo();
+      apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
 
   if (plan_debug_info.has_terminal_pos_error()) {
     JSON_DEBUG_VALUE("optimization_terminal_pose_error",

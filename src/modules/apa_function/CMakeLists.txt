@@ -8,10 +8,14 @@ file(GLOB_RECURSE SRC_FILES
 set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}
   ${CMAKE_CURRENT_LIST_DIR}/src
-  ${CMAKE_CURRENT_LIST_DIR}/src/lateral_path_optimizer
+  ${CMAKE_CURRENT_LIST_DIR}/src/apa_world/lateral_path_optimizer
   ${CMAKE_CURRENT_LIST_DIR}/src/apa_world
   ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner
-  ${CMAKE_CURRENT_LIST_DIR}/src/parallel_planner)
+  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner/perpendicular_park_in_planner
+  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner/perpendicular_park_heading_in_planner
+  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner/perpendicular_park_out_planner
+  ${CMAKE_CURRENT_LIST_DIR}/src/parallel_planner
+  ${CMAKE_CURRENT_LIST_DIR}/src/hybrid_astar_planner)
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 

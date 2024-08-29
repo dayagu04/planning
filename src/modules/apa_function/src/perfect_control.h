@@ -4,6 +4,8 @@
 #include "Eigen/Core"
 #include "planning_plan_c.h"
 namespace planning {
+
+namespace apa_planner {
 class PerfectControl {
  public:
   struct DynamicState {
@@ -38,6 +40,6 @@ class PerfectControl {
  private:
   DynamicState state_;
 };
-
+}  // namespace apa_planner
 }  // namespace planning
 #endif

@@ -17,7 +17,7 @@ namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
-static planning::CollisionDetector col_det;
+static planning::apa_planner::CollisionDetector col_det;
 
 int Init() {
   pBase = new ParallelPathPlanner();
@@ -77,8 +77,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
     channel_obstacle_vec.insert(channel_obstacle_vec.end(), point_set.begin(),
                                 point_set.end());
   }
-  col_det.SetObstacles(channel_obstacle_vec,
-                       planning::CollisionDetector::CHANNEL_OBS);
+  col_det.SetObstacles(channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -118,7 +117,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
 
   for (const auto &obs_pos : tlane_obstacle_vec) {
     if (!col_det.IsObstacleInCar(obs_pos, ego_pose, safe_dist)) {
-      col_det.AddObstacles(obs_pos, planning::CollisionDetector::TLANE_OBS);
+      col_det.AddObstacles(obs_pos, CollisionDetector::TLANE_OBS);
       // std::cout << "obs_pos = " << obs_pos.transpose() << std::endl;
     }
   }
@@ -178,7 +177,7 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   const Eigen::Vector2d terminal_err =
       input.ego_pose.pos - Eigen::Vector2d(p_target_x, p_target_y);
 
-  ParallelParInPlanner park_planner;
+  ParallelParkInPlanner park_planner;
   const double slot_occupied_ratio = park_planner.CalcSlotOccupiedRatio(
       terminal_err, 0.5 * slot_width, !set_left_side);
 
@@ -187,8 +186,8 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
                   p_target_y, channel_y, channel_max_x, curb_y, obs_ds,
                   set_left_side);
 
-  std::shared_ptr<planning::CollisionDetector> obs_det_ptr =
-      std::make_shared<planning::CollisionDetector>(col_det);
+  std::shared_ptr<CollisionDetector> obs_det_ptr =
+      std::make_shared<CollisionDetector>(col_det);
 
   pBase->Update(obs_det_ptr);
   // pBase->PrintOutputSegmentsInfo();

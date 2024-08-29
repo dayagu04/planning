@@ -92,6 +92,7 @@ struct ApaParameters {
   double uss_upa_scan_angle_deg = 120;
   double corner_uss_scan_angle_deg_straight = 6.8;
   double corner_uss_scan_angle_deg_turn = 6.8;
+  double corner_uss_dist_diff = 0.1068;
   double corner_uss_steer_angle = 240.0;
   bool enable_corner_uss_process = false;
   double uss_corner_scan_angle_gain = 1.0;

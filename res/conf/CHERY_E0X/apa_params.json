@@ -76,6 +76,7 @@
   "uss_upa_scan_angle_deg": 100.0,
   "corner_uss_scan_angle_deg_straight": 2.68,
   "corner_uss_scan_angle_deg_turn": 32.68,
+  "corner_uss_dist_diff": 0.1068,
   "corner_uss_steer_angle": 226.8,
   "enable_corner_uss_process": true,
   "uss_corner_scan_angle_gain": 0.948,
