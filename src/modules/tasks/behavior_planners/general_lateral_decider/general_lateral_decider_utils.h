@@ -17,7 +17,7 @@ double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,
                                       bool is_update_hard_bound);
-double GetBoundWeight(BoundType type, std::vector<double> map_bound_weight);
+double GetBoundWeight(BoundType type, const std::unordered_map<BoundType, double> &map_bound_weight);
 int GetBoundTypePriority(BoundType type);
 
 std::vector<int> MatchRefTrajPoints(int s,

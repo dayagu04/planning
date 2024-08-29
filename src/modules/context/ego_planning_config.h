@@ -8,6 +8,7 @@
 #include "general_planning_context.h"
 #include "log.h"
 #include "nlohmann_json.hpp"
+#include "task_basic_types.h"
 
 namespace planning {
 
@@ -760,10 +761,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "extra_lateral_buffer_6"},
         extra_lateral_buffer_6);
-    read_json_vec<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "map_bound_weight"},
-        map_bound_weight);
+
     nudge_buffer_cutout_obstacle = read_json_keys<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -774,6 +772,27 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "nudge_extra_buffer_in_intersection"},
         nudge_extra_buffer_in_intersection);
+
+    map_bound_weight[BoundType::AGENT] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_static_agent_weight"},
+        0.1);
+    map_bound_weight[BoundType::DYNAMIC_AGENT] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_dynamic_agent_weight"},
+        0.1);
+    map_bound_weight[BoundType::ADJACENT_AGENT] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_adjacent_agent_weight"},
+        0.1);
+    map_bound_weight[BoundType::ROAD_BORDER] = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "bound_road_border_weight"},
+        0.1);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -843,7 +862,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_lateral_buffer_5 = 0.725;
   double extra_lateral_buffer_6 = 0.7;
 
-  std::vector<double> map_bound_weight{0.4, 0.4, 0.6, 0.1};
+  std::unordered_map<BoundType, double> map_bound_weight;
   double nudge_buffer_cutout_obstacle = 0.1;
   double nudge_extra_buffer_in_intersection = 0.1;
 };

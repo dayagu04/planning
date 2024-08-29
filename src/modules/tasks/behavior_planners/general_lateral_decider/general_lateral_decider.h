@@ -33,7 +33,7 @@ class GeneralLateralDecider : public Task {
   bool ExecuteTest(bool pipeline_test);
 
   bool InitInfo();
-
+  void UnitTest();
  private:
   bool CalCruiseVelByCurvature(const double ego_v,
                                const std::vector<double> &d_poly,
@@ -90,14 +90,11 @@ class GeneralLateralDecider : public Task {
   void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
   void ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision);
 
-  void PostProcessBound(std::vector<WeightedBound> &bounds_input,
-                        std::pair<double, double> &bound_output,
-                        std::pair<BoundInfo, BoundInfo> &bound_info);
-
-  void PostProcessBoundVersion2(const std::vector<WeightedBound> &bounds_input,
-                                std::pair<double, double> &bound_output,
-                                std::pair<BoundInfo, BoundInfo> &bound_info);
-
+  void PostProcessBound(
+    const double planning_init_point_l,
+    const std::vector<WeightedBound> &bounds_input,
+    std::pair<double, double> &bound_output,
+    std::pair<BoundInfo, BoundInfo> &bound_info);
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
