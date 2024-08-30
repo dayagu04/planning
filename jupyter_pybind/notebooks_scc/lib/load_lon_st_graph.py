@@ -33,10 +33,11 @@ def load_st_polygen_points(st_graph_data):
   default_lower_points_t_vec = [0 for _ in range(vec_size)]
   default_upper_points_s_vec = [0 for _ in range(vec_size)]
   default_upper_points_t_vec = [0 for _ in range(vec_size)]
+  default_agent_id_vec = [-1] * vec_size
   for i in range(20):
     if i < st_boundary_size:
       st_boundary = st_boundary_list[i]
-      st_polygen_line_info = {#'boundary_id':[],
+      st_polygen_line_info = {'agent_id_vec':[],
                               'polygen_lower_points_s_vec':[],
                               'polygen_lower_points_t_vec':[],
                               'polygen_upper_points_s_vec':[],
@@ -47,25 +48,28 @@ def load_st_polygen_points(st_graph_data):
       lower_point_t_vec = []
       upper_point_s_vec = []
       upper_point_t_vec = []
+      agent_id_vec = []
       for point in st_boundary.lower_points:
         lower_point_s_vec.append(point.s)
         lower_point_t_vec.append(point.t)
       for point in st_boundary.upper_points:
         upper_point_s_vec.append(point.s)
         upper_point_t_vec.append(point.t)
+        agent_id_vec.append(point.agent_id)
 
+      st_polygen_line_info['agent_id_vec'] = agent_id_vec
       st_polygen_line_info['polygen_lower_points_s_vec'] = lower_point_s_vec
       st_polygen_line_info['polygen_lower_points_t_vec'] = lower_point_t_vec
       st_polygen_line_info['polygen_upper_points_s_vec'] = upper_point_s_vec
       st_polygen_line_info['polygen_upper_points_t_vec'] = upper_point_t_vec
       st_info.append(st_polygen_line_info)
     else:
-      st_polygen_line_info = {#'boundary_id':[],
+      st_polygen_line_info = {'agent_id_vec':[],
                               'polygen_lower_points_s_vec':[],
                               'polygen_lower_points_t_vec':[],
                               'polygen_upper_points_s_vec':[],
                               'polygen_upper_points_t_vec':[]}
-      # st_polygen_line_info['boundary_id'] = -1
+      st_polygen_line_info['agent_id_vec'] = default_agent_id_vec
       st_polygen_line_info['polygen_lower_points_s_vec'] = default_lower_points_s_vec
       st_polygen_line_info['polygen_lower_points_t_vec'] = default_lower_points_t_vec
       st_polygen_line_info['polygen_upper_points_s_vec'] = default_upper_points_s_vec
@@ -78,11 +82,10 @@ def load_st_polygen_lower_upper_point(st_graph_data):
   st_info = []
   st_boundary_list = st_graph_data.st_boundaries
   st_boundary_size = len(st_boundary_list)
-  for i in range(5):
+  for i in range(20):
     if i < st_boundary_size:
       st_boundary = st_boundary_list[i]
-      st_point_info = {#'boundary_id':[],
-                       'left_point_s':[],
+      st_point_info = {'left_point_s':[],
                        'left_point_t':[],
                        'right_point_s':[],
                        'right_point_t':[]}
@@ -98,7 +101,6 @@ def load_st_polygen_lower_upper_point(st_graph_data):
         upper_point_s_vec.append(point.s)
         upper_point_t_vec.append(point.t)
 
-      #st_point_info['boundary_id'] = st_boundary.boundary_id
       left_point_s = [lower_point_s_vec[0], upper_point_s_vec[0]]
       left_point_t = [lower_point_t_vec[0], upper_point_t_vec[0]]
       right_point_s = [lower_point_s_vec[-1], upper_point_s_vec[-1]]
@@ -110,12 +112,11 @@ def load_st_polygen_lower_upper_point(st_graph_data):
       st_point_info['right_point_t'] = right_point_t
       st_info.append(st_point_info)
     else:
-      st_point_info = {#'boundary_id':[],
-                       'left_point_s':[],
+      st_point_info = {'left_point_s':[],
                        'left_point_t':[],
                        'right_point_s':[],
                        'right_point_t':[]}
-      #st_point_info['boundary_id'] = -1
+
       st_point_info['left_point_s'] = [0.0, 0.0]
       st_point_info['left_point_t'] = [0.0, 0.0]
       st_point_info['right_point_s'] = [0.0, 0.0]
@@ -182,6 +183,21 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         2:lon_plan_data['st_point_2'],
         3:lon_plan_data['st_point_3'],
         4:lon_plan_data['st_point_4'],
+        5:lon_plan_data['st_point_5'],
+        6:lon_plan_data['st_point_6'],
+        7:lon_plan_data['st_point_7'],
+        8:lon_plan_data['st_point_8'],
+        9:lon_plan_data['st_point_9'],
+        10:lon_plan_data['st_point_10'],
+        11:lon_plan_data['st_point_11'],
+        12:lon_plan_data['st_point_12'],
+        13:lon_plan_data['st_point_13'],
+        14:lon_plan_data['st_point_14'],
+        15:lon_plan_data['st_point_15'],
+        16:lon_plan_data['st_point_16'],
+        17:lon_plan_data['st_point_17'],
+        18:lon_plan_data['st_point_18'],
+        19:lon_plan_data['st_point_19'],
   }
 
   for i in range(20):
@@ -191,12 +207,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
             'lower_points_{}_t_vec'.format(i): st_info_all[i]['polygen_lower_points_t_vec'],
             'upper_points_{}_s_vec'.format(i): st_info_all[i]['polygen_upper_points_s_vec'],
             'upper_points_{}_t_vec'.format(i): st_info_all[i]['polygen_upper_points_t_vec'],
+            'agent_{}_id_vec'.format(i): st_info_all[i]['agent_id_vec'],
     })
 
-  for i in range(5):
+  for i in range(20):
     data_st_point = data_st_points[i]
     data_st_point.data.update({
-       #'boundary_{}_id'.format(i): st_point_all[i]['boundary_id'],
        'left_point_{}_s'.format(i): st_point_all[i]['left_point_s'],
        'left_point_{}_t'.format(i): st_point_all[i]['left_point_t'],
        'right_point_{}_s'.format(i): st_point_all[i]['right_point_s'],
@@ -916,31 +932,46 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
-  st_boundary_0 = ColumnDataSource(data = {'lower_points_0_s_vec':[], 'lower_points_0_t_vec':[], 'upper_points_0_s_vec':[], 'upper_points_0_t_vec':[]})
-  st_boundary_1 = ColumnDataSource(data = {'lower_points_1_s_vec':[], 'lower_points_1_t_vec':[], 'upper_points_1_s_vec':[], 'upper_points_1_t_vec':[]})
-  st_boundary_2 = ColumnDataSource(data = {'lower_points_2_s_vec':[], 'lower_points_2_t_vec':[], 'upper_points_2_s_vec':[], 'upper_points_2_t_vec':[]})
-  st_boundary_3 = ColumnDataSource(data = {'lower_points_3_s_vec':[], 'lower_points_3_t_vec':[], 'upper_points_3_s_vec':[], 'upper_points_3_t_vec':[]})
-  st_boundary_4 = ColumnDataSource(data = {'lower_points_4_s_vec':[], 'lower_points_4_t_vec':[], 'upper_points_4_s_vec':[], 'upper_points_4_t_vec':[]})
-  st_boundary_5 = ColumnDataSource(data = {'lower_points_5_s_vec':[], 'lower_points_5_t_vec':[], 'upper_points_5_s_vec':[], 'upper_points_5_t_vec':[]})
-  st_boundary_6 = ColumnDataSource(data = {'lower_points_6_s_vec':[], 'lower_points_6_t_vec':[], 'upper_points_6_s_vec':[], 'upper_points_6_t_vec':[]})
-  st_boundary_7 = ColumnDataSource(data = {'lower_points_7_s_vec':[], 'lower_points_7_t_vec':[], 'upper_points_7_s_vec':[], 'upper_points_7_t_vec':[]})
-  st_boundary_8 = ColumnDataSource(data = {'lower_points_8_s_vec':[], 'lower_points_8_t_vec':[], 'upper_points_8_s_vec':[], 'upper_points_8_t_vec':[]})
-  st_boundary_9 = ColumnDataSource(data = {'lower_points_9_s_vec':[], 'lower_points_9_t_vec':[], 'upper_points_9_s_vec':[], 'upper_points_9_t_vec':[]})
-  st_boundary_10 = ColumnDataSource(data = {'lower_points_10_s_vec':[], 'lower_points_10_t_vec':[], 'upper_points_10_s_vec':[], 'upper_points_10_t_vec':[]})
-  st_boundary_11 = ColumnDataSource(data = {'lower_points_11_s_vec':[], 'lower_points_11_t_vec':[], 'upper_points_11_s_vec':[], 'upper_points_11_t_vec':[]})
-  st_boundary_12 = ColumnDataSource(data = {'lower_points_12_s_vec':[], 'lower_points_12_t_vec':[], 'upper_points_12_s_vec':[], 'upper_points_12_t_vec':[]})
-  st_boundary_13 = ColumnDataSource(data = {'lower_points_13_s_vec':[], 'lower_points_13_t_vec':[], 'upper_points_13_s_vec':[], 'upper_points_13_t_vec':[]})
-  st_boundary_14 = ColumnDataSource(data = {'lower_points_14_s_vec':[], 'lower_points_14_t_vec':[], 'upper_points_14_s_vec':[], 'upper_points_14_t_vec':[]})
-  st_boundary_15 = ColumnDataSource(data = {'lower_points_15_s_vec':[], 'lower_points_15_t_vec':[], 'upper_points_15_s_vec':[], 'upper_points_15_t_vec':[]})
-  st_boundary_16 = ColumnDataSource(data = {'lower_points_16_s_vec':[], 'lower_points_16_t_vec':[], 'upper_points_16_s_vec':[], 'upper_points_16_t_vec':[]})
-  st_boundary_17 = ColumnDataSource(data = {'lower_points_17_s_vec':[], 'lower_points_17_t_vec':[], 'upper_points_17_s_vec':[], 'upper_points_17_t_vec':[]})
-  st_boundary_18 = ColumnDataSource(data = {'lower_points_18_s_vec':[], 'lower_points_18_t_vec':[], 'upper_points_18_s_vec':[], 'upper_points_18_t_vec':[]})
-  st_boundary_19 = ColumnDataSource(data = {'lower_points_19_s_vec':[], 'lower_points_19_t_vec':[], 'upper_points_19_s_vec':[], 'upper_points_19_t_vec':[]})
+  st_boundary_0 = ColumnDataSource(data = {'agent_0_id_vec':[], 'lower_points_0_s_vec':[], 'lower_points_0_t_vec':[], 'upper_points_0_s_vec':[], 'upper_points_0_t_vec':[]})
+  st_boundary_1 = ColumnDataSource(data = {'agent_1_id_vec':[], 'lower_points_1_s_vec':[], 'lower_points_1_t_vec':[], 'upper_points_1_s_vec':[], 'upper_points_1_t_vec':[]})
+  st_boundary_2 = ColumnDataSource(data = {'agent_2_id_vec':[], 'lower_points_2_s_vec':[], 'lower_points_2_t_vec':[], 'upper_points_2_s_vec':[], 'upper_points_2_t_vec':[]})
+  st_boundary_3 = ColumnDataSource(data = {'agent_3_id_vec':[], 'lower_points_3_s_vec':[], 'lower_points_3_t_vec':[], 'upper_points_3_s_vec':[], 'upper_points_3_t_vec':[]})
+  st_boundary_4 = ColumnDataSource(data = {'agent_4_id_vec':[], 'lower_points_4_s_vec':[], 'lower_points_4_t_vec':[], 'upper_points_4_s_vec':[], 'upper_points_4_t_vec':[]})
+  st_boundary_5 = ColumnDataSource(data = {'agent_5_id_vec':[], 'lower_points_5_s_vec':[], 'lower_points_5_t_vec':[], 'upper_points_5_s_vec':[], 'upper_points_5_t_vec':[]})
+  st_boundary_6 = ColumnDataSource(data = {'agent_6_id_vec':[], 'lower_points_6_s_vec':[], 'lower_points_6_t_vec':[], 'upper_points_6_s_vec':[], 'upper_points_6_t_vec':[]})
+  st_boundary_7 = ColumnDataSource(data = {'agent_7_id_vec':[], 'lower_points_7_s_vec':[], 'lower_points_7_t_vec':[], 'upper_points_7_s_vec':[], 'upper_points_7_t_vec':[]})
+  st_boundary_8 = ColumnDataSource(data = {'agent_8_id_vec':[], 'lower_points_8_s_vec':[], 'lower_points_8_t_vec':[], 'upper_points_8_s_vec':[], 'upper_points_8_t_vec':[]})
+  st_boundary_9 = ColumnDataSource(data = {'agent_9_id_vec':[], 'lower_points_9_s_vec':[], 'lower_points_9_t_vec':[], 'upper_points_9_s_vec':[], 'upper_points_9_t_vec':[]})
+  st_boundary_10 = ColumnDataSource(data = {'agent_10_id_vec':[], 'lower_points_10_s_vec':[], 'lower_points_10_t_vec':[], 'upper_points_10_s_vec':[], 'upper_points_10_t_vec':[]})
+  st_boundary_11 = ColumnDataSource(data = {'agent_11_id_vec':[], 'lower_points_11_s_vec':[], 'lower_points_11_t_vec':[], 'upper_points_11_s_vec':[], 'upper_points_11_t_vec':[]})
+  st_boundary_12 = ColumnDataSource(data = {'agent_12_id_vec':[], 'lower_points_12_s_vec':[], 'lower_points_12_t_vec':[], 'upper_points_12_s_vec':[], 'upper_points_12_t_vec':[]})
+  st_boundary_13 = ColumnDataSource(data = {'agent_13_id_vec':[], 'lower_points_13_s_vec':[], 'lower_points_13_t_vec':[], 'upper_points_13_s_vec':[], 'upper_points_13_t_vec':[]})
+  st_boundary_14 = ColumnDataSource(data = {'agent_14_id_vec':[], 'lower_points_14_s_vec':[], 'lower_points_14_t_vec':[], 'upper_points_14_s_vec':[], 'upper_points_14_t_vec':[]})
+  st_boundary_15 = ColumnDataSource(data = {'agent_15_id_vec':[], 'lower_points_15_s_vec':[], 'lower_points_15_t_vec':[], 'upper_points_15_s_vec':[], 'upper_points_15_t_vec':[]})
+  st_boundary_16 = ColumnDataSource(data = {'agent_16_id_vec':[], 'lower_points_16_s_vec':[], 'lower_points_16_t_vec':[], 'upper_points_16_s_vec':[], 'upper_points_16_t_vec':[]})
+  st_boundary_17 = ColumnDataSource(data = {'agent_17_id_vec':[], 'lower_points_17_s_vec':[], 'lower_points_17_t_vec':[], 'upper_points_17_s_vec':[], 'upper_points_17_t_vec':[]})
+  st_boundary_18 = ColumnDataSource(data = {'agent_18_id_vec':[], 'lower_points_18_s_vec':[], 'lower_points_18_t_vec':[], 'upper_points_18_s_vec':[], 'upper_points_18_t_vec':[]})
+  st_boundary_19 = ColumnDataSource(data = {'agent_19_id_vec':[], 'lower_points_19_s_vec':[], 'lower_points_19_t_vec':[], 'upper_points_19_s_vec':[], 'upper_points_19_t_vec':[]})
   st_point_0 = ColumnDataSource(data = {'left_point_0_s':[], 'left_point_0_t':[], 'right_point_0_s':[], 'right_point_0_t':[]})
   st_point_1 = ColumnDataSource(data = {'left_point_1_s':[], 'left_point_1_t':[], 'right_point_1_s':[], 'right_point_1_t':[]})
   st_point_2 = ColumnDataSource(data = {'left_point_2_s':[], 'left_point_2_t':[], 'right_point_2_s':[], 'right_point_2_t':[]})
   st_point_3 = ColumnDataSource(data = {'left_point_3_s':[], 'left_point_3_t':[], 'right_point_3_s':[], 'right_point_3_t':[]})
   st_point_4 = ColumnDataSource(data = {'left_point_4_s':[], 'left_point_4_t':[], 'right_point_4_s':[], 'right_point_4_t':[]})
+  st_point_5 = ColumnDataSource(data = {'left_point_5_s':[], 'left_point_5_t':[], 'right_point_5_s':[], 'right_point_5_t':[]})
+  st_point_6 = ColumnDataSource(data = {'left_point_6_s':[], 'left_point_6_t':[], 'right_point_6_s':[], 'right_point_6_t':[]})
+  st_point_7 = ColumnDataSource(data = {'left_point_7_s':[], 'left_point_7_t':[], 'right_point_7_s':[], 'right_point_7_t':[]})
+  st_point_8 = ColumnDataSource(data = {'left_point_8_s':[], 'left_point_8_t':[], 'right_point_8_s':[], 'right_point_8_t':[]})
+  st_point_9 = ColumnDataSource(data = {'left_point_9_s':[], 'left_point_9_t':[], 'right_point_9_s':[], 'right_point_9_t':[]})
+  st_point_10 = ColumnDataSource(data = {'left_point_10_s':[], 'left_point_10_t':[], 'right_point_10_s':[], 'right_point_10_t':[]})
+  st_point_11 = ColumnDataSource(data = {'left_point_11_s':[], 'left_point_11_t':[], 'right_point_11_s':[], 'right_point_11_t':[]})
+  st_point_12 = ColumnDataSource(data = {'left_point_12_s':[], 'left_point_12_t':[], 'right_point_12_s':[], 'right_point_12_t':[]})
+  st_point_13 = ColumnDataSource(data = {'left_point_13_s':[], 'left_point_13_t':[], 'right_point_13_s':[], 'right_point_13_t':[]})
+  st_point_14 = ColumnDataSource(data = {'left_point_14_s':[], 'left_point_14_t':[], 'right_point_14_s':[], 'right_point_14_t':[]})
+  st_point_15 = ColumnDataSource(data = {'left_point_15_s':[], 'left_point_15_t':[], 'right_point_15_s':[], 'right_point_15_t':[]})
+  st_point_16 = ColumnDataSource(data = {'left_point_16_s':[], 'left_point_16_t':[], 'right_point_16_s':[], 'right_point_16_t':[]})
+  st_point_17 = ColumnDataSource(data = {'left_point_17_s':[], 'left_point_17_t':[], 'right_point_17_s':[], 'right_point_17_t':[]})
+  st_point_18 = ColumnDataSource(data = {'left_point_18_s':[], 'left_point_18_t':[], 'right_point_18_s':[], 'right_point_18_t':[]})
+  st_point_19 = ColumnDataSource(data = {'left_point_19_s':[], 'left_point_19_t':[], 'right_point_19_s':[], 'right_point_19_t':[]})
 
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
@@ -1005,6 +1036,21 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'st_point_2':st_point_2, \
                    'st_point_3':st_point_3, \
                    'st_point_4':st_point_4, \
+                   'st_point_5':st_point_5, \
+                   'st_point_6':st_point_6, \
+                   'st_point_7':st_point_7, \
+                   'st_point_8':st_point_8, \
+                   'st_point_9':st_point_9, \
+                   'st_point_10':st_point_10, \
+                   'st_point_11':st_point_11, \
+                   'st_point_12':st_point_12, \
+                   'st_point_13':st_point_13, \
+                   'st_point_14':st_point_14, \
+                   'st_point_15':st_point_15, \
+                   'st_point_16':st_point_16, \
+                   'st_point_17':st_point_17, \
+                   'st_point_18':st_point_18, \
+                   'st_point_19':st_point_19, \
   }
 
   columns = [
@@ -1107,7 +1153,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('upper_points_18_t_vec', 'upper_points_18_s_vec', source = st_boundary_18, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('lower_points_19_t_vec', 'lower_points_19_s_vec', source = st_boundary_19, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('upper_points_19_t_vec', 'upper_points_19_s_vec', source = st_boundary_19, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
-  fx = fig3.line('left_point_0_t', 'left_point_0_s', source = st_point_0, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_0_t', 'left_point_0_s', source = st_point_0, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('right_point_0_t', 'right_point_0_s', source = st_point_0, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('left_point_1_t', 'left_point_1_s', source = st_point_1, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('right_point_1_t', 'right_point_1_s', source = st_point_1, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
@@ -1117,6 +1163,36 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('right_point_3_t', 'right_point_3_s', source = st_point_3, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('left_point_4_t', 'left_point_4_s', source = st_point_4, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
   fig3.line('right_point_4_t', 'right_point_4_s', source = st_point_4, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_5_t', 'left_point_5_s', source = st_point_5, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_5_t', 'right_point_5_s', source = st_point_5, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_6_t', 'left_point_6_s', source = st_point_6, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_6_t', 'right_point_6_s', source = st_point_6, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_7_t', 'left_point_7_s', source = st_point_7, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_7_t', 'right_point_7_s', source = st_point_7, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_8_t', 'left_point_8_s', source = st_point_8, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_8_t', 'right_point_8_s', source = st_point_8, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_9_t', 'left_point_9_s', source = st_point_9, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_9_t', 'right_point_9_s', source = st_point_9, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_10_t', 'left_point_10_s', source = st_point_10, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_10_t', 'right_point_10_s', source = st_point_10, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_11_t', 'left_point_11_s', source = st_point_11, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_11_t', 'right_point_11_s', source = st_point_11, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_12_t', 'left_point_12_s', source = st_point_12, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_12_t', 'right_point_12_s', source = st_point_12, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_13_t', 'left_point_13_s', source = st_point_13, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_13_t', 'right_point_13_s', source = st_point_13, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_14_t', 'left_point_14_s', source = st_point_14, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_14_t', 'right_point_14_s', source = st_point_14, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_15_t', 'left_point_15_s', source = st_point_15, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_15_t', 'right_point_15_s', source = st_point_15, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_16_t', 'left_point_16_s', source = st_point_16, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_16_t', 'right_point_16_s', source = st_point_16, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_17_t', 'left_point_17_s', source = st_point_17, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_17_t', 'right_point_17_s', source = st_point_17, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_18_t', 'left_point_18_s', source = st_point_18, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_18_t', 'right_point_18_s', source = st_point_18, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('left_point_19_t', 'left_point_19_s', source = st_point_19, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
+  fig3.line('right_point_19_t', 'right_point_19_s', source = st_point_19, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'st_boundnary')
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
@@ -1151,15 +1227,17 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
 
-  hover3 = HoverTool(renderers=[f3], tooltips=[('lower_points_0_t_vec', '@lower_points_0_t_vec'),
+  hover3 = HoverTool(renderers=[f3], tooltips=[('agent_0_id_vec', '@agent_0_id_vec',),
+                                               ('lower_points_0_t_vec', '@lower_points_0_t_vec'),
                                                ('lower_points_0_s_vec', '@lower_points_0_s_vec'),
                                                ('upper_points_0_t_vec', '@upper_points_0_t_vec'),
-                                               ('upper_points_0_t_vec', '@upper_points_0_t_vec')])
+                                               ('upper_points_0_s_vec', '@upper_points_0_s_vec')])
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('s_lb', '@soft_pos_min_vec'), ('origin s_ref', '@ref_pos_vec_origin'), ('s_ref', '@ref_pos_vec'), ('s_plan', '@pos_vec'), ('s_ub', '@soft_pos_max_vec')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
 
+  fig3.add_tools(hover3)
   fig4.add_tools(hover4)
   fig5.add_tools(hover5)
   fig6.add_tools(hover6)
