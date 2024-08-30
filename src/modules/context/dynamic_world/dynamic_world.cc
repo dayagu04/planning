@@ -34,6 +34,14 @@ agent::AgentManager* DynamicWorld::mutable_agent_manager() {
 void DynamicWorld::Reset() {
   dynamic_agent_node_table_.clear();
   assigned_dynamic_agents_.clear();
+  ego_front_node_id_ = kInvalidId;
+  ego_rear_node_id_ = kInvalidId;
+  ego_left_node_id_ = kInvalidId;
+  ego_right_node_id_ = kInvalidId;
+  ego_left_front_node_id_ = kInvalidId;
+  ego_right_front_node_id_ = kInvalidId;
+  ego_left_rear_node_id_ = kInvalidId;
+  ego_right_rear_node_id_ = kInvalidId;
 }
 
 bool DynamicWorld::ConstructDynamicWorld() {
@@ -552,10 +560,8 @@ void DynamicWorld::DebugEgoNearByAgentNodesTrajectory() const {
     const auto ego_front_agent_node = GetNode(ego_front_node_id_);
     if (ego_front_agent_node != nullptr) {
       auto prediction_traj = ego_front_agent_node->node_trajectories().at(0);
-      JSON_DEBUG_VECTOR("ego_front_agent_traj_x_vec",
-                        prediction_traj.x_vec_, 4)
-      JSON_DEBUG_VECTOR("ego_front_agent_traj_y_vec",
-                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_front_agent_traj_x_vec", prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_front_agent_traj_y_vec", prediction_traj.y_vec_, 4)
       JSON_DEBUG_VECTOR("ego_front_agent_traj_theta_vec",
                         prediction_traj.theta_vec_, 4)
     }
@@ -569,10 +575,8 @@ void DynamicWorld::DebugEgoNearByAgentNodesTrajectory() const {
     const auto ego_rear_agent_node = GetNode(ego_rear_node_id_);
     if (ego_rear_agent_node != nullptr) {
       auto prediction_traj = ego_rear_agent_node->node_trajectories().at(0);
-      JSON_DEBUG_VECTOR("ego_rear_agent_traj_x_vec",
-                        prediction_traj.x_vec_, 4)
-      JSON_DEBUG_VECTOR("ego_rear_agent_traj_y_vec",
-                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_rear_agent_traj_x_vec", prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_rear_agent_traj_y_vec", prediction_traj.y_vec_, 4)
       JSON_DEBUG_VECTOR("ego_rear_agent_traj_theta_vec",
                         prediction_traj.theta_vec_, 4)
     }
@@ -586,10 +590,8 @@ void DynamicWorld::DebugEgoNearByAgentNodesTrajectory() const {
     auto ego_left_agent_node = GetNode(ego_left_node_id_);
     if (ego_left_agent_node != nullptr) {
       auto prediction_traj = ego_left_agent_node->node_trajectories().at(0);
-      JSON_DEBUG_VECTOR("ego_left_agent_traj_x_vec",
-                        prediction_traj.x_vec_, 4)
-      JSON_DEBUG_VECTOR("ego_left_agent_traj_y_vec",
-                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_agent_traj_x_vec", prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_left_agent_traj_y_vec", prediction_traj.y_vec_, 4)
       JSON_DEBUG_VECTOR("ego_left_agent_traj_theta_vec",
                         prediction_traj.theta_vec_, 4)
     }
@@ -603,10 +605,8 @@ void DynamicWorld::DebugEgoNearByAgentNodesTrajectory() const {
     const auto ego_right_agent_node = GetNode(ego_right_node_id_);
     if (ego_right_agent_node != nullptr) {
       auto prediction_traj = ego_right_agent_node->node_trajectories().at(0);
-      JSON_DEBUG_VECTOR("ego_right_agent_traj_x_vec",
-                        prediction_traj.x_vec_, 4)
-      JSON_DEBUG_VECTOR("ego_right_agent_traj_y_vec",
-                        prediction_traj.y_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_agent_traj_x_vec", prediction_traj.x_vec_, 4)
+      JSON_DEBUG_VECTOR("ego_right_agent_traj_y_vec", prediction_traj.y_vec_, 4)
       JSON_DEBUG_VECTOR("ego_right_agent_traj_theta_vec",
                         prediction_traj.theta_vec_, 4)
     }
