@@ -201,7 +201,7 @@ const bool PerpendicularPathInPlanner::UpdateByPrePlan() {
 
 // prepare plan start
 const bool PerpendicularPathInPlanner::PreparePlan() {
-  std::cout << "\nenter prepare plan\n";
+  std::cout << "enter prepare plan\n";
   // using namespace only to reduce unvalid code
   using namespace pnc::geometry_lib;
   const ApaParameters& params = apa_param.GetParam();
@@ -224,7 +224,7 @@ const bool PerpendicularPathInPlanner::PreparePlan() {
 
   // prepare plan set bigger lat_inflation to lat 1R more safe
   CollisionDetector::Paramters param;
-  param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict + 0.0168;
+  param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict + 0.068;
   collision_detector_ptr_->SetParam(param);
 
   // if the safe circle tang pt is close to the ego pose, use ego to multi plan

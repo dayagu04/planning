@@ -144,12 +144,17 @@ void PerpendicularParkInPlanner::PlanCore() {
         DEBUG_PRINT("replan failed from PLAN_HOLD!");
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
-      if (PostProcessPath()) {
+      if (frame_.dynamic_plan_fail_flag) {
         SetParkingStatus(PARKING_PLANNING);
         DEBUG_PRINT("replan from PARKING_PLANNING!");
       } else {
-        SetParkingStatus(PARKING_FAILED);
-        DEBUG_PRINT("replan failed from PARKING_PLANNING!");
+        if (PostProcessPath()) {
+          SetParkingStatus(PARKING_PLANNING);
+          DEBUG_PRINT("replan from PARKING_PLANNING!");
+        } else {
+          SetParkingStatus(PARKING_FAILED);
+          DEBUG_PRINT("replan failed from PARKING_PLANNING!");
+        }
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
       SetParkingStatus(PARKING_FAILED);
@@ -1026,8 +1031,8 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.pt_inside.x() =
         std::min(real_right_x, ego_slot_info.pt_0.x()) +
         apa_param.GetParam().tlane_safe_dx;
-    slot_t_lane_.pt_inside.y() =
-        std::min(real_right_y, ego_slot_info.pt_0.y() + 0.05);
+    // slot_t_lane_.pt_inside.y() =
+    //     std::min(real_right_y, ego_slot_info.pt_0.y() + 0.05);
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // outside is right, inside is left
     slot_t_lane_.corner_outside_slot = corner_right_slot;
@@ -1036,8 +1041,8 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.pt_inside = corner_left_slot;
     slot_t_lane_.pt_inside.x() = std::min(real_left_x, ego_slot_info.pt_1.x()) +
                                  apa_param.GetParam().tlane_safe_dx;
-    slot_t_lane_.pt_inside.y() =
-        std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
+    // slot_t_lane_.pt_inside.y() =
+    //     std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
   }
 
   slot_t_lane_.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),

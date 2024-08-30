@@ -556,13 +556,13 @@ const bool SlotManagement::GenTLane(
   bool right_empty = false;
 
   if (left_pq_for_x.empty()) {
-    // DEBUG_PRINT("left space is empty");
+    DEBUG_PRINT("left space is empty");
     left_empty = true;
     left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_pq_for_x.empty()) {
-    // DEBUG_PRINT("right space is empty");
+    DEBUG_PRINT("right space is empty");
     right_empty = true;
     right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
@@ -713,8 +713,8 @@ const bool SlotManagement::GenTLane(
     slot_tlane.pt_inside = corner_right_slot;
     slot_tlane.pt_inside.x() = std::min(real_right_x, ego_slot_info.pt_0.x()) +
                                apa_param.GetParam().tlane_safe_dx;
-    slot_tlane.pt_inside.y() =
-        std::max(real_right_y, ego_slot_info.pt_0.y() + 0.05);
+    // slot_tlane.pt_inside.y() =
+    //     std::max(real_right_y, ego_slot_info.pt_0.y() + 0.05);
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
     // outside is right, inside is left
     slot_tlane.corner_outside_slot = corner_right_slot;
@@ -723,8 +723,8 @@ const bool SlotManagement::GenTLane(
     slot_tlane.pt_inside = corner_left_slot;
     slot_tlane.pt_inside.x() = std::min(real_left_x, ego_slot_info.pt_1.x()) +
                                apa_param.GetParam().tlane_safe_dx;
-    slot_tlane.pt_inside.y() =
-        std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
+    // slot_tlane.pt_inside.y() =
+    //     std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
   }
 
   slot_tlane.pt_terminal_pos << ego_slot_info.target_ego_pos_slot.x(),
@@ -1253,9 +1253,9 @@ bool SlotManagement::UpdateSlotsInSearching() {
         continue;
       }
 
-      DEBUG_PRINT("slot id = " << slot->id()
-                               << "  slot type = " << slot->slot_type()
-                               << "  is_release = " << slot->is_release());
+      DEBUG_PRINT("slot id = "
+                  << slot->id() << "  slot type = " << slot->slot_type()
+                  << "  is_release = " << slot->is_release() << "\n");
     } else if (slot->slot_type() ==
                    Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
                slot->is_release()) {
@@ -1263,7 +1263,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
       if (!UpdateEgoParallelSlotInfoInSearching(ego_slot_info, slot)) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
-        DEBUG_PRINT("UpdateEgoParallelSlotInfoInSearching slot id = "
+        DEBUG_PRINT("\nUpdateEgoParallelSlotInfoInSearching slot id = "
                     << slot->id() << "  slot type = " << slot->slot_type()
                     << "  is_release = " << slot->is_release());
         continue;
@@ -1310,7 +1310,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
 
       DEBUG_PRINT("Parallel slot id = "
                   << slot->id() << "  is_release = " << slot->is_release()
-                  << "  is_occupied = " << slot->is_occupied());
+                  << "  is_occupied = " << slot->is_occupied() << "\n");
     }
   }
 

@@ -305,6 +305,10 @@ const bool InterfaceUpdateParam(
   apa_interface_ptr->SetSimuParam(param);
 
   const bool result = apa_interface_ptr->Update(&local_view);
+  if (apa_interface_ptr->GetPlaningOutput()
+          .planning_status.apa_planning_status != iflyauto::APA_IN_PROGRESS) {
+    return false;
+  }
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;
