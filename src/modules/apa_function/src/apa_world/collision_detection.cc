@@ -1170,7 +1170,7 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const double max_obs_lon_invasion_slot_dist =
         apa_param.GetParam().max_obs_lon_invasion_slot_dist;
     const Eigen::Vector2d unit_01_vec =
-        (slot_left_pt - slot_right_pt).transpose();
+        (slot_left_pt - slot_right_pt).normalized();
     const Eigen::Vector2d unit_02_vec(-1.0, 0.0);
     std::vector<Eigen::Vector2d> area_vec;
     area_vec.resize(4);
