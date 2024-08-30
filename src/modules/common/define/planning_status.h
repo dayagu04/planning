@@ -14,7 +14,7 @@
 namespace planning {
 namespace common {
 
-typedef struct {
+struct ChangeLaneStatus {
   enum Status {
     CHANGE_LANE_PREPARATION = 0,  // before change lane state
     IN_CHANGE_LANE = 1,           // during change lane state
@@ -37,9 +37,9 @@ typedef struct {
   int origin_lane_leader_id;
   double left_dash_line_length;
   double lane_change_wait_time;
-} ChangeLaneStatus;
+};
 
-typedef struct {
+struct BorrowLaneStatus {
   enum Status {
     IN_BORROW_LANE = 1,        // during borrow lane state
     BORROW_LANE_KEEP = 2,      // stay in borrowed lane
@@ -53,9 +53,9 @@ typedef struct {
   double last_succeed_timestamp;
   bool is_current_opt_succeed;
   double lat_offset{0.0};
-} BorrowLaneStatus;
+};
 
-typedef struct {
+struct LaneStatus {
   enum Status {
     LANE_KEEP = 1,    // during change lane state
     LANE_CHANGE = 2,  // change lane failed
@@ -67,48 +67,48 @@ typedef struct {
   int target_lane_id = 0;
   int target_lane_map_id;
   double target_lane_lat_offset;
-} LaneStatus;
+};
 
-typedef struct {
+struct StopTime {
   int id;
   double start_stopstamp;
-} StopTime;
+};
 
-typedef struct {
+struct CrosswalkStatus {
   int crosswalk_id;
   std::unordered_map<int, double> stop_times;
   // std::vector<StopTime> stop_times;
-} CrosswalkStatus;
+};
 
-typedef struct {
+struct ReroutingStatus {
   double last_rerouting_time;
   bool need_rerouting;
   std::string routing_request;
-} ReroutingStatus;
+};
 
-typedef struct {
+struct RightOfWayStatus {
   std::unordered_map<int, bool> junction;
-} RightOfWayStatus;
+};
 
-typedef struct {
+struct ScenarioStatus {
   std::string scenario_type;
   std::string stage_type;
-} ScenarioStatus;
+};
 
-typedef struct {
+struct SidePassStatus {
   int front_blocking_obstacle_id;
-} SidePassStatus;
+};
 
-typedef struct {
+struct TrafficLightStatus {
   std::string traffic_light_status;
-} TrafficLightStatus;
+};
 
-typedef struct {
+struct BrokenDownCarStatus {
   std::unordered_map<int, int> broken_down_cars_map;
   std::vector<int> detected_broken_down_cars_vector;
-} BrokenDownCarStatus;
+};
 
-typedef struct {
+struct PreActionResults {
   double prebrake_acc;
   double prebrake_duration;
   double preacc_duration;
@@ -119,7 +119,7 @@ typedef struct {
   int n_preacc;
   double v_lim_curv;
   int n_prebrake_curv;
-} PreActionResults;
+};
 
 struct AvdInfo {
   int priority;
@@ -128,7 +128,7 @@ struct AvdInfo {
   double time_buffer;
 };
 
-typedef struct {
+struct PlanningResult {
   double timestamp;
   double next_timestamp;
 
@@ -150,15 +150,15 @@ typedef struct {
 
   // for control
   std::string extra_json;
-} PlanningResult;
+};
 
-typedef enum {
+enum SchemeStage {
   PRIMARY,
   SECONDARY,
   BACKUP,
-} SchemeStage;
+};
 
-typedef struct {
+struct PlanningStatus {
   int64_t planning_loop = 0;
   bool planning_success = false;
   bool last_planning_success = false;
@@ -183,7 +183,7 @@ typedef struct {
   std::string backup_reason = "none";
   double time_consumption = 0.0;
   std::string trigger_msg_id;
-} PlanningStatus;
+};
 
 }  // namespace common
 }  // namespace planning
