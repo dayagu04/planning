@@ -678,12 +678,22 @@ void TrackletMaintainer::calc(
     farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
   }
 
+  auto last_fix_lane_id = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->get_last_fix_lane_id();
+  auto current_fix_lane_id = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .fix_lane_virtual_id;
+
   std::vector<double> avd_car_id;
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
-        !tr->frenet_transform_valid) {
+        !tr->frenet_transform_valid ||
+        last_fix_lane_id != current_fix_lane_id) {
       tr->is_avd_car = false;
+      tr->ncar_count = 0;
+      tr->ncar_count_in = false;
       continue;
     }
     if (tr->d_rel <= 0) {
