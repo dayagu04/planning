@@ -2,35 +2,36 @@
 
 #include <cmath>
 #include <string>
+
 #include "config/message_type.h"
 
 namespace planning {
 namespace common {
 
-typedef struct {
-  typedef enum {
+struct VehicleModelConfig {
+  enum ModelType {
     REAR_CENTERED_KINEMATIC_BICYCLE_MODEL = 0,
     COM_CENTERED_DYNAMIC_BICYCLE_MODEL = 1,
     MLP_MODEL = 2,
-  } ModelType;
+  };
 
-  typedef struct {
+  struct RearCenteredKinematicBicycleModelConfig {
     double dt{0.1};
-  } RearCenteredKinematicBicycleModelConfig;
+  };
 
-  typedef struct {
+  struct ComCenteredDynamicBicycleModelConfig {
     double dt{0.1};
-  } ComCenteredDynamicBicycleModelConfig;
+  };
 
-  typedef struct {
+  struct MlpModelConfig {
     double dt{0.1};
-  } MlpModelConfig;
+  };
 
   ModelType model_type = ModelType::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL;
   RearCenteredKinematicBicycleModelConfig rc_kinematic_bicycle_model;
   ComCenteredDynamicBicycleModelConfig comc_dynamic_bicycle_model;
   MlpModelConfig mlp_model;
-} VehicleModelConfig;
+};
 
 class VehicleModel {
  public:
