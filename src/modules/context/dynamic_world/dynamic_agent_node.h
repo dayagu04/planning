@@ -15,8 +15,6 @@ constexpr int32_t kInvalidId = -1;
 
 class DynamicAgentNode {
  public:
-  DynamicAgentNode() = default;
-
   DynamicAgentNode(const agent::Agent* agent, const VirtualLane& lane,
                    const ReferencePath& ref_line,
                    const trajectory::TrajectoryPoint ego_state);
