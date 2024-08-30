@@ -14,7 +14,7 @@
   "dump_mdebug": false,
   "enable_use_emergency_avoidence_lane_change_request": true,
   "enable_use_cone_change_request": true,
-  "enable_use_merge_change_request": true,
+  "enable_use_merge_change_request": false,
   "active_lane_change_min_duration_threshold": 100,
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
   "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,

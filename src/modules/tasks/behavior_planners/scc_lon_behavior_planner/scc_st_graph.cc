@@ -2674,8 +2674,9 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   if (current_lane == nullptr) {
     merge_split_points_.Reset();
     LOG_DEBUG("[MergeSplitPointsProcess] no current_lane!!! \n");
-    JSON_DEBUG_VALUE("merge_point_x", -99.0);
-    JSON_DEBUG_VALUE("merge_point_y", -99.0);
+    JSON_DEBUG_VALUE("merge_point_x", -999.0)
+    JSON_DEBUG_VALUE("merge_point_y", -999.0)
+    SetDefaultDebugValues({"is_merge_region_plan", "merge_direction_plan"});
     return;
   }
   const auto &merge_split_points = current_lane->get_lane_merge_split_point();
@@ -2732,11 +2733,13 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   if (lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id_) !=
           nullptr &&
       is_merge_region_) {
-    if (lane_manager->get_left_lane()->get_virtual_id() ==
-        merge_lane_virtual_id_) {
+    if (lane_manager->get_left_lane() != nullptr and
+        lane_manager->get_left_lane()->get_virtual_id() ==
+            merge_lane_virtual_id_) {
       merge_direction_ = MergeSplitPoints::LEFT;
-    } else if (lane_manager->get_right_lane()->get_virtual_id() ==
-               merge_lane_virtual_id_) {
+    } else if (lane_manager->get_right_lane() != nullptr and
+               lane_manager->get_right_lane()->get_virtual_id() ==
+                   merge_lane_virtual_id_) {
       merge_direction_ = MergeSplitPoints::RIGHT;
     }
   }
@@ -2841,7 +2844,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         !ego_has_right_of_target_lane_) {
       // CalculateMergeInfoWithAgent(dynamic_world, ego_left_node_id, true);
       CalculateMergeInfoWithAgent(
-          dynamic_world->GetNode(ego_left_node_id)->node_agent_id(), true);
+          dynamic_world->GetNode(ego_left_node_id)->node_agent_id(), true,
+          "ego_left");
     } else if (ego_left_node_id == planning_data::kInvalidId &&
                ego_left_rear_node_id != planning_data::kInvalidId &&
                dynamic_world->GetNode(ego_left_rear_node_id) != nullptr &&
@@ -2852,7 +2856,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
           dynamic_world->GetNode(ego_left_rear_node_id)->node_agent_id();
       if (not FilterEgoRearAgentsWhenMerge(left_rear_agent_id, dynamic_world,
                                            current_lane)) {
-        CalculateMergeInfoWithAgent(left_rear_agent_id, true);
+        CalculateMergeInfoWithAgent(left_rear_agent_id, true, "ego_left_rear");
       }
     }
     if (ego_left_front_node_id != planning_data::kInvalidId &&
@@ -2868,7 +2872,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
           lon_behav_input_->lat_obs_info().lead_two().track_id();
       if (lead_one_id != ego_left_front_agent_id &&
           lead_two_id != ego_left_front_agent_id) {
-        CalculateMergeInfoWithAgent(ego_left_front_agent_id, true);
+        CalculateMergeInfoWithAgent(ego_left_front_agent_id, true,
+                                    "ego_left_front");
       }
     }
   } else if (is_merge_region_ && merge_direction_ == MergeSplitPoints::RIGHT) {
@@ -2879,7 +2884,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         !ego_has_right_of_target_lane_) {
       // CalculateMergeInfoWithAgent(dynamic_world, ego_right_node_id, false);
       CalculateMergeInfoWithAgent(
-          dynamic_world->GetNode(ego_right_node_id)->node_agent_id(), false);
+          dynamic_world->GetNode(ego_right_node_id)->node_agent_id(), false,
+          "ego_right");
     } else if (ego_right_node_id == planning_data::kInvalidId &&
                ego_right_rear_node_id != planning_data::kInvalidId &&
                dynamic_world->GetNode(ego_right_rear_node_id) != nullptr &&
@@ -2890,7 +2896,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
           dynamic_world->GetNode(ego_right_rear_node_id)->node_agent_id();
       if (not FilterEgoRearAgentsWhenMerge(right_rear_agent_id, dynamic_world,
                                            current_lane)) {
-        CalculateMergeInfoWithAgent(right_rear_agent_id, false);
+        CalculateMergeInfoWithAgent(right_rear_agent_id, false,
+                                    "ego_right_rear");
       }
     }
     if (ego_right_front_node_id != planning_data::kInvalidId &&
@@ -2906,7 +2913,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
           lon_behav_input_->lat_obs_info().lead_two().track_id();
       if (lead_one_id != ego_right_front_agent_id &&
           lead_two_id != ego_right_front_agent_id) {
-        CalculateMergeInfoWithAgent(ego_right_front_agent_id, false);
+        CalculateMergeInfoWithAgent(ego_right_front_agent_id, false,
+                                    "ego_right_front");
       }
     }
   }
@@ -3052,10 +3060,9 @@ bool StGraphGenerator::FilterEgoRearAgentsWhenMerge(
     ego_current_sl_to_ego_lane.x = 200.0;
     ego_current_sl_to_ego_lane.y = 0.0;
   }
-
   const double distance_current_relative =
-      agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x -
-      agent_length * 0.5 - ego_rear_edge_to_rear_axle;
+      agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x +
+      agent_length * 0.5 + ego_rear_edge_to_rear_axle;
   if (distance_current_relative < -kRearAgentFollowEgoSafeDistance &&
       fabs(ego_current_sl_to_ego_lane.y) <
           0.5 * ego_lane_width + kLaneWidthBuffer) {
@@ -3161,7 +3168,8 @@ void StGraphGenerator::EgoNearByAgentsPredictionTrajProcess(
 
 // calculate entry time, start s, merge s and merging v in ego st graph of agent
 void StGraphGenerator::CalculateMergeInfoWithAgent(
-    const int64_t agent_id, const bool is_merging_to_left) {
+    const int64_t agent_id, const bool is_merging_to_left,
+    const string semantic_orientation_to_ego) {
   LOG_DEBUG("----> CalculateMergeInfoWithAgent <--- \n");
   const auto agent_prediction =
       is_merging_to_left ? agent_node_left_neibor_lane_map_[agent_id]
@@ -3196,6 +3204,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  const auto ego_front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
 
   constexpr double step_t = 0.1;
   double t_overlap = std::numeric_limits<double>::max();
@@ -3330,8 +3339,16 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
             ego_current_sl.x = 200.0;
             ego_current_sl.y = 0.0;
           }
-          d_current_relative = agent_current_sl.x - ego_current_sl.x -
-                               agent_length * 0.5 - ego_rear_edge_to_rear_axle;
+
+          if (semantic_orientation_to_ego.find("front") != string::npos) {
+            d_current_relative = agent_current_sl.x - ego_current_sl.x -
+                               agent_length * 0.5 - ego_front_edge_to_rear_axle;
+          } else if (semantic_orientation_to_ego.find("rear") != string::npos) {
+            d_current_relative = agent_current_sl.x - ego_current_sl.x +
+                               agent_length * 0.5 + ego_rear_edge_to_rear_axle;
+          } else {
+            d_current_relative = agent_current_sl.x - ego_current_sl.x; //aproximate distance
+          }
         }
         break;
       }
@@ -3359,8 +3376,16 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
             ego_current_sl.x = 200.0;
             ego_current_sl.y = 0.0;
           }
-          d_current_relative = agent_current_sl.x - ego_current_sl.x -
-                               agent_length * 0.5 - ego_rear_edge_to_rear_axle;
+          
+          if (semantic_orientation_to_ego.find("front") != string::npos) {
+            d_current_relative = agent_current_sl.x - ego_current_sl.x -
+                               agent_length * 0.5 - ego_front_edge_to_rear_axle;
+          } else if (semantic_orientation_to_ego.find("rear") != string::npos) {
+            d_current_relative = agent_current_sl.x - ego_current_sl.x +
+                               agent_length * 0.5 + ego_rear_edge_to_rear_axle;
+          } else {
+            d_current_relative = agent_current_sl.x - ego_current_sl.x; //aproximate distance
+          }
         }
         break;
       }

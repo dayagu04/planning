@@ -216,7 +216,8 @@ class StGraphGenerator {
 
   // use prediction info in agent node manager
   void CalculateMergeInfoWithAgent(const int64_t agent_id,
-                                   const bool is_merging_to_left);
+                                   const bool is_merging_to_left,
+                                   const string semantic_orientation_to_ego);
 
   double CalcDesiredDistance(const double intersection_front_one_velocity,
                              const bool is_lead, const bool is_accident_car,
