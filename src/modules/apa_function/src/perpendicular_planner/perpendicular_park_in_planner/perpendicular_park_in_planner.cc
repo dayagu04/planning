@@ -613,6 +613,7 @@ const bool PerpendicularParkInPlanner::UpdateEgoSlotInfo() {
     if (dist_ego_limiter < apa_param.GetParam().car_to_limiter_dis) {
       DEBUG_PRINT("should correct path according limiter");
       ego_slot_info.fix_limiter = true;
+      frame_.is_fix_slot = true;
       PostProcessPathAccordingLimiter();
       frame_.correct_path_for_limiter = true;
     }
@@ -651,6 +652,7 @@ const bool PerpendicularParkInPlanner::UpdateEgoSlotInfo() {
           apa_param.GetParam().fix_slot_occupied_ratio &&
       !frame_.is_fix_slot && measures_ptr->static_flag) {
     frame_.is_fix_slot = true;
+    ego_slot_info.fix_limiter = true;
   }
 
   DEBUG_PRINT("slot_side = " << static_cast<int>(slot_t_lane_.slot_side));

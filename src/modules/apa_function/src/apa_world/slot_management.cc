@@ -2902,7 +2902,7 @@ void SlotManagement::UpdateLimiterInfoInParking() {
           apa_param.GetParam().front_overhanging -
           apa_param.GetParam().wheel_base - apa_param.GetParam().limiter_length;
 
-      limiter_slot.first.x() = std::max(virtual_x, limiter_x);
+      limiter_slot.first.x() = std::max(virtual_x, limiter_x + move_dist);
       limiter_slot.second.x() = limiter_slot.first.x();
     } else {
       limiter_slot.first.x() += move_dist;
