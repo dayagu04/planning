@@ -62,11 +62,11 @@ ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
 ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
     const LonState& init_state, const StateLimit& state_limit,
     const double p_precision)
-    : init_state_(init_state),
+    : p_precision_(p_precision),
+      init_state_(init_state),
       state_limit_(state_limit),
       state_limit_pa_(state_limit),
-      state_limit_pb_(state_limit),
-      p_precision_(p_precision) {
+      state_limit_pb_(state_limit) {
   const bool is_input_valid =
       (state_limit_.v_min < 0.0 && state_limit_.v_max > 0.0 &&
        state_limit_.a_min < 0.0 && state_limit_.a_max > 0.0 &&
@@ -84,11 +84,11 @@ ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
 ThirdOrderTimeOptimalTrajectory::ThirdOrderTimeOptimalTrajectory(
     const LonState& init_state, const StateLimit& state_limit_pa,
     const StateLimit& state_limit_pb, const double p_precision)
-    : init_state_(init_state),
+    : p_precision_(p_precision),
+      init_state_(init_state),
       state_limit_(state_limit_pa),
       state_limit_pa_(state_limit_pa),
-      state_limit_pb_(state_limit_pb),
-      p_precision_(p_precision) {
+      state_limit_pb_(state_limit_pb) {
   const bool is_input_valid =
       (state_limit_.v_min < 0.0 && state_limit_.v_max > 0.0 &&
        state_limit_.a_min < 0.0 && state_limit_.a_max > 0.0 &&

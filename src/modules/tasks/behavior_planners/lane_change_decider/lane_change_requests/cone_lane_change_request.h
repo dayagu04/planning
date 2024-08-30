@@ -30,25 +30,25 @@ class ConeRequest : public LaneChangeRequest {
 
     // Default constructor
     ConePoint()
-        : id(0),
-          x(0.0),
+        : x(0.0),
           y(0.0),
           s(0.0),
           l(0.0),
           left_dist(0.0),
           right_dist(0.0),
+          id(0),
           cluster(-1),
           visited(false) {}
     // Parameterized constructor
     ConePoint(int32_t id, double x, double y, double s, double l,
               double left_dist, double right_dist)
-        : id(id),
-          x(x),
+        : x(x),
           y(y),
           s(s),
           l(l),
           left_dist(left_dist),
           right_dist(right_dist),
+          id(id),
           cluster(-1),
           visited(false) {}
   };
