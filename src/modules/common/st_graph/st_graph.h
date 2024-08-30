@@ -13,8 +13,10 @@
 #include "math/geometry_object.h"
 #include "math/line_segment2d.h"
 #include "math/vec2d.h"
+#include "planning_debug_info.pb.h"
 #include "speed/st_point.h"
 #include "st_boundary.h"
+#include "st_graph.pb.h"
 #include "st_graph_input.h"
 
 namespace planning {
@@ -122,8 +124,12 @@ class STGraph {
 
   void AddStGraphDataToProto();
 
+  void Reset();
+
  private:
   StGraphInput st_graph_input_;
+
+  planning::common::StGraphData st_graph_data_pb_;
 
   std::unordered_map<int64_t, std::unique_ptr<STBoundary>>
       boundary_id_st_boundaries_map_;

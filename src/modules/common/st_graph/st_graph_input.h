@@ -136,6 +136,8 @@ class StGraphInput {
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<EgoStateManager>& ego_state_manager);
 
+  void Reset();
+
  private:
   planning::framework::Session* session_ = nullptr;
   STGraphConfig config_;

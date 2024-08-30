@@ -32,11 +32,7 @@ message StGraphData {
   optional double end_path = 2;
   optional double start_time = 3;
   optional double end_time = 4;
-  repeated AgentStBoundary agent_st_boundary = 5;
-  repeated StBoundary st_boundaries = 6;
-  repeated Point2D planned_path = 7;
-  optional string status = 8;
-  repeated StBoundary neighbor_st_boundaries = 9;
-  repeated StBoundary expand_st_boundaries = 10;
-  repeated StBoundary caution_yield_st_boundaries = 11;
+  repeated StBoundary st_boundaries = 5;
+  repeated Point2D planned_path = 6;
+  repeated StBoundary neighbor_st_boundaries = 7;
 }

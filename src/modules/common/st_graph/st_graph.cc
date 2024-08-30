@@ -45,6 +45,7 @@ constexpr double kTimeResolution = 0.2;
 
 bool STGraph::Init(const StGraphInput& st_graph_input) {
   st_graph_input_ = st_graph_input;
+  Reset();
   MakeAgentStBoundaries();
   if (st_graph_input_.enable_backward_extend_st_boundary()) {
     BackwardExtendStBoundaries();
@@ -59,6 +60,8 @@ bool STGraph::Init(const StGraphInput& st_graph_input) {
   MakeStPointsTable();
 
   ConstructDefaultStPassCorridor();
+
+  AddStGraphDataToProto();
 
   return true;
 }
@@ -784,7 +787,7 @@ const std::vector<int32_t>& STGraph::caution_yield_agent_ids() const {
 }
 
 void STGraph::AddStGraphDataToProto() {
-  auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   const auto& path_range = st_graph_input_.path_range();
   const auto& time_range = st_graph_input_.time_range();
   const auto& boundary_id_st_boundaries_map = boundary_id_st_boundaries_map_;
@@ -792,10 +795,94 @@ void STGraph::AddStGraphDataToProto() {
       neighbor_boundary_id_st_boundaries_map_;
 
   auto mutable_st_graph_data = debug_info_pb->mutable_st_graph_data();
-  mutable_st_graph_data->set_start_path(path_range.first);
-  mutable_st_graph_data->set_end_path(path_range.second);
-  mutable_st_graph_data->set_start_time(time_range.first);
-  mutable_st_graph_data->set_end_time(time_range.second);
+
+  st_graph_data_pb_.set_start_path(path_range.first);
+  st_graph_data_pb_.set_end_path(path_range.second);
+  st_graph_data_pb_.set_start_time(time_range.first);
+  st_graph_data_pb_.set_end_time(time_range.second);
+
+  for (auto it = boundary_id_st_boundaries_map.begin();
+       it != boundary_id_st_boundaries_map.end(); ++it) {
+    auto* boundary = st_graph_data_pb_.add_st_boundaries();
+    boundary->set_boundary_id(it->first);
+    auto lower_points = it->second->lower_points();
+    auto upper_points = it->second->upper_points();
+    for (int i = 0; i < lower_points.size(); ++i) {
+      auto* point = boundary->add_lower_points();
+      point->set_s(lower_points.at(i).s());
+      point->set_t(lower_points.at(i).t());
+      point->set_vel(lower_points.at(i).velocity());
+      point->set_acc(lower_points.at(i).acceleration());
+      point->set_valid(lower_points.at(i).valid());
+      point->set_agent_id(lower_points.at(i).agent_id());
+    }
+    for (int i = 0; i < upper_points.size(); ++i) {
+      auto* point = boundary->add_upper_points();
+      point->set_s(upper_points.at(i).s());
+      point->set_t(upper_points.at(i).t());
+      point->set_vel(upper_points.at(i).velocity());
+      point->set_acc(upper_points.at(i).acceleration());
+      point->set_valid(upper_points.at(i).valid());
+      point->set_agent_id(upper_points.at(i).agent_id());
+    }
+  }
+
+  for (auto it = neighbor_boundary_id_st_boundaries_map.begin();
+       it != neighbor_boundary_id_st_boundaries_map.end(); ++it) {
+    auto* boundary = st_graph_data_pb_.add_neighbor_st_boundaries();
+    boundary->set_boundary_id(it->first);
+    auto lower_points = it->second->lower_points();
+    auto upper_points = it->second->upper_points();
+    for (int i = 0; i < lower_points.size(); ++i) {
+      auto* point = boundary->add_lower_points();
+      point->set_s(lower_points.at(i).s());
+      point->set_t(lower_points.at(i).t());
+      point->set_vel(lower_points.at(i).velocity());
+      point->set_acc(lower_points.at(i).acceleration());
+      point->set_valid(lower_points.at(i).valid());
+      point->set_agent_id(lower_points.at(i).agent_id());
+    }
+    for (int i = 0; i < upper_points.size(); ++i) {
+      auto* point = boundary->add_upper_points();
+      point->set_s(upper_points.at(i).s());
+      point->set_t(upper_points.at(i).t());
+      point->set_vel(upper_points.at(i).velocity());
+      point->set_acc(upper_points.at(i).acceleration());
+      point->set_valid(upper_points.at(i).valid());
+      point->set_agent_id(upper_points.at(i).agent_id());
+    }
+  }
+
+  const auto processed_path = st_graph_input_.processed_path();
+  if (nullptr != processed_path) {
+    const auto& path_points = processed_path->path_points();
+    for (const auto& point : path_points) {
+      auto* p = st_graph_data_pb_.add_planned_path();
+      p->set_x(point.x());
+      p->set_y(point.y());
+    }
+  }
+  mutable_st_graph_data->CopyFrom(st_graph_data_pb_);
+}
+
+void STGraph::Reset() {
+  st_graph_data_pb_.Clear();
+
+  boundary_id_st_boundaries_map_.clear();
+  agent_id_st_boundaries_map_.clear();
+  neighbor_boundary_id_st_boundaries_map_.clear();
+  neighbor_agent_id_st_boundaries_map_.clear();
+  expand_boundary_id_st_boundaries_map_.clear();
+  expand_agent_id_st_boundaries_map_.clear();
+  st_points_table_.clear();
+  st_pass_corridor_.clear();
+  neighbor_corridor_.clear();
+  caution_yield_agent_ids_.clear();
+  ignore_agent_ids_.clear();
+  static_close_pass_candicate_agent_ids_.clear();
+  dynamic_close_pass_candicate_agent_ids_.clear();
+  close_pass_boundary_id_st_boundaries_map_.clear();
+  close_pass_agent_id_st_boundaries_map_.clear();
 }
 
 }  // namespace speed

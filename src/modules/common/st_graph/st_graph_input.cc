@@ -50,14 +50,21 @@ void GenerateParallelMap(
     const auto& back_point =
         ptr_neighbor_lane->lane_points().back().local_point;
 
-    const auto& frenet_coord =
-        ptr_base_lane->get_reference_path()->get_frenet_coord();
+    const auto& frenet_coord = ptr_base_lane->get_lane_frenet_coord();
+    if (frenet_coord == nullptr) {
+      continue;
+    }
     double front_s = 0.0;
     double front_l = 0.0;
-    frenet_coord->XYToSL(front_point.x, front_point.y, &front_s, &front_l);
+    if (!frenet_coord->XYToSL(front_point.x, front_point.y, &front_s,
+                              &front_l)) {
+      continue;
+    }
     double back_s = 0.0;
     double back_l = 0.0;
-    frenet_coord->XYToSL(back_point.x, back_point.y, &back_s, &back_l);
+    if (!frenet_coord->XYToSL(back_point.x, back_point.y, &back_s, &back_l)) {
+      continue;
+    }
     constexpr double kParallelLateralThresholdM = 1.5;
     constexpr double kMinLaneWidthM = 2.5;
     const bool is_parallel =
@@ -83,6 +90,7 @@ StGraphInput::StGraphInput(const EgoPlanningConfigBuilder* config_builder,
 }
 
 void StGraphInput::Update() {
+  Reset();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& lateral_behavior_planner_output =
@@ -802,6 +810,10 @@ SecondOrderTimeOptimalTrajectory StGraphInput::GenerateMaxAccelerationCurve(
   state_limit.j_max = kSlowJerkUpperBound;
   state_limit.j_min = kSlowJerkLowerBound;
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
+}
+
+void StGraphInput::Reset() {
+  is_parallel_lane_map_.clear();
 }
 
 }  // namespace speed
