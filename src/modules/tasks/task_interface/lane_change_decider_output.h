@@ -6,6 +6,7 @@
 
 #include "../adas_function/display_state_types.h"
 #include "config/basic_type.h"
+#include "define/geometry.h"
 #include "virtual_lane.h"
 namespace planning {
 
@@ -113,6 +114,8 @@ struct LaneChangeDeciderOutput {
   RampDirection dir_turn_signal_road_to_ramp = RAMP_NONE;
   IntCancelReasonType int_request_cancel_reason = NO_CANCEL;
   RequestType ilc_virtual_req = NO_CHANGE;
+  Point2D merge_point;
+  Point2D boundary_merge_point;
 };
 
 }  // namespace planning

@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
+#include "define/geometry.h"
 #include "session.h"
 #include "virtual_lane.h"
 namespace planning {
@@ -186,6 +187,9 @@ class LaneChangeStateMachineManager {
   bool IsOverlapWithOtherLaneOnEndRegion(
       const std::shared_ptr<ReferencePath> reference_path,
       const RelativeDirection rel_dir);
+  const double CalculateEgoFrontLineLength();
+  const std::vector<Point2D> CalculateMergePoint(const int merge_lane_virtual_id);
+  void VisionMergePoint();
 
  private:
   ScenarioStateMachineConfig config_;
