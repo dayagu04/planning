@@ -1,4 +1,4 @@
-#include "cipv_lost_prohibit_adcceleration_decider.h"
+#include "cipv_lost_prohibit_acceleration_decider.h"
 
 #include <assert.h>
 

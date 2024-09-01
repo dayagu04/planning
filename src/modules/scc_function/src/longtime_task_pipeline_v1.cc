@@ -30,7 +30,7 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
-  cipv_lost_prohibit_adcceleration_decider_ =
+  cipv_lost_prohibit_acceleration_decider_ =
       std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
                                                             session);
 }
@@ -84,9 +84,9 @@ bool LongTimeTaskPipelineV1::Run() {
     return false;
   }
 
-  ok = cipv_lost_prohibit_adcceleration_decider_->Execute();
+  ok = cipv_lost_prohibit_acceleration_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(cipv_lost_prohibit_adcceleration_decider_->Name());
+    AddErrorInfo(cipv_lost_prohibit_acceleration_decider_->Name());
     return false;
   }
 
