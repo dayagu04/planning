@@ -14,7 +14,7 @@
 
 extern double kDeg2Rad;
 extern double kRad2Deg;
-
+extern double kEqualHeadingEps;
 namespace pnc {
 
 namespace geometry_lib {
@@ -360,6 +360,8 @@ struct TangentOutput {
   Eigen::Vector2d cross_point;
 };
 
+const double NormalizeAngle(const double angle);
+const double NormalizeAnglePI(const double angle);
 struct GlobalToLocalTf {
   Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
@@ -433,6 +435,7 @@ struct Compare {
   }
 };
 
+const bool IsHeadingEqual(const double heading_1, const double heading_2);
 const Eigen::Vector2d GenHeadingVec(const double heading);
 
 const double NormSquareOfTwoVector2d(const Eigen::Vector2d &p1,

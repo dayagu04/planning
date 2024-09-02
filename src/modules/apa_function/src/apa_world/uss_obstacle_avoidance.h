@@ -92,6 +92,7 @@ class UssObstacleAvoidance {
   }
 
   const bool CheckIsDirectlyBehindUss();
+  const bool CheckIsDirectlyFrontUss();
 
   void SetLatInflation();
 

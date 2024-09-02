@@ -13,7 +13,7 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241016/20241016-20-26-06/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-16-20-26-06_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241022/20241022-19-09-22/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-22-19-09-22_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -160,7 +160,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     vehicle_type = 'CHERY_E0X'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type)
   index_map = bag_loader.get_msg_index(bag_time)
 
   if bag_loader.plan_debug_msg['enable'] == True:
@@ -211,7 +211,10 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     fus_occ_obj_msg = FusionOccupancyObjectsInfo()
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
-  select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
+  try:
+    select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
+  except:
+    select_slot_id = -1
   target_managed_slot_x_vec = []
   target_managed_slot_y_vec = []
   for i in range(len(slot_management_info.slot_info_vec)):

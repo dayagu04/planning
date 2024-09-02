@@ -391,10 +391,14 @@ const bool ApaWorld::Update() {
       apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_IN) {
     if (apa_data_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-      ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
-
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
+      if (apa_param.GetParam().is_heading_in) {
+        apa_data_ptr_->planner_type =
+            ApaPlannerType::PERPENDICULAR_PARK_HEADING_IN_PLANNER;
+
+        ILOG_INFO << "planner_type = PERPENDICULAR_PARK_HEADING_IN!";
+      } else {
         apa_data_ptr_->planner_type =
             ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
 
@@ -403,11 +407,14 @@ const bool ApaWorld::Update() {
           apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
         }
 
+        ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
+      }
       } else {
         apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
       }
       ILOG_INFO << "path plan method = "
                 << static_cast<int>(apa_data_ptr_->planner_type);
+
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       ILOG_INFO << "planner_type = PARALLEL_PARK_IN!";

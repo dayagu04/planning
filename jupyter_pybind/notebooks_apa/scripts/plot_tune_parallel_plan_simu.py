@@ -18,7 +18,7 @@ import sys
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-car_xb, car_yb = load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0)
+car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0)
 coord_tf = coord_transformer()
 
 data_fix_car_pos = ColumnDataSource(data = {'x':[], 'y':[]})

@@ -1,4 +1,5 @@
 import sys, os
+import copy
 sys.path.append("..")
 from io import BytesIO
 from lib.load_local_view_parking import *
@@ -98,8 +99,14 @@ def slider_callback(bag_time, force_apa, force_clear,
                     outside_lon_dist_max_slot2mirror,
                     outside_lon_dist_min_slot2mirror):
   kwargs = locals()
-  update_local_view_data_parking(fig1, bag_loader, bag_time, local_view_data)
-
+  vehicle_type = 0
+  if vehicle_type == 0:
+    vehicle_type = 'JAC_S811'
+  elif vehicle_type == 1:
+    vehicle_type = 'CHERY_T26'
+  elif vehicle_type == 2:
+    vehicle_type = 'CHERY_E0X'
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
   soc_state_msg_idx = local_view_data['data_index']['soc_state_msg_idx']
   fus_parking_msg_idx = local_view_data['data_index']['fus_parking_msg_idx']
   loc_msg_idx = local_view_data['data_index']['loc_msg_idx']

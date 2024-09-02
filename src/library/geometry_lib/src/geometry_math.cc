@@ -21,13 +21,31 @@ namespace geometry_lib {
 
 static const double kRadiusCalcTolerance = 1e-6;
 static const double kSameHeadingEps = 0.5 * kDeg2Rad;
-
+static const double kEqualHeadingEps = 1e-2 * kDeg2Rad;
 const double NormalizeAngle(const double angle) {
   double a = std::fmod(angle + M_PI, 2.0 * M_PI);
   if (a < 0.0) {
     a += (2.0 * M_PI);
   }
   return a - M_PI;
+}
+
+const double NormalizeAnglePI(const double angle) {
+  double a = std::fmod(std::fabs(angle), M_PI);
+  if (a > 0.5 * M_PI) {
+    a -= M_PI;
+  }
+  return std::fabs(a);
+}
+
+const bool IsHeadingEqual(const double heading_1, const double heading_2) {
+  const double heading_tmp = NormalizeAnglePI(heading_1 - heading_2);
+  if (heading_tmp <= kEqualHeadingEps) {
+    return true;
+  }
+  // std::cout << "heading1 = " << heading_1 << " heading2 = " << heading_2
+  //           << " heading error = " << heading_tmp << std::endl;
+  return false;
 }
 
 const double NormSquareOfVector2d(const Eigen::Vector2d &p1) {
@@ -1425,7 +1443,7 @@ const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err) {
   if (!CompleteArcInfo(arc)) {
     return LogErr(__func__, 3);
   };
-  if (!mathlib::IsDoubleEqual(arc.headingB, line.heading)) {
+  if (!IsHeadingEqual(arc.headingB, line.heading)) {
     return LogErr(__func__, 3);
   }
   return true;
@@ -1600,7 +1618,7 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
   if (!CompleteArcInfo(arc2)) {
     return LogErr(__func__, 5);
   }
-  if (!mathlib::IsDoubleEqual(arc2.headingB, line.heading)) {
+  if (!IsHeadingEqual(arc2.headingB, line.heading)) {
     std::cout << "arc2.headingB = " << arc2.headingB * kRad2Deg
               << "  line.heading = " << line.heading * kRad2Deg << std::endl;
     return LogErr(__func__, 6);
@@ -2368,7 +2386,7 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
   // the line_norm_vec should from pose to line
   Eigen::Vector2d line_norm_vec;
   if (!CalLineUnitNormVecByPos(arc.pA, line, line_norm_vec) ||
-      mathlib::IsDoubleEqual(arc.headingA, line.heading)) {
+      IsHeadingEqual(arc.headingA, line.heading)) {
     return LogErr(__func__, 0);
   }
 
@@ -2406,11 +2424,10 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
   if (!CompleteArcInfo(arc)) {
     return LogErr(__func__, 1);
   }
-  if (!mathlib::IsDoubleEqual(arc.headingB, line.heading)) {
-    // ILOG_INFO << "arc.headingB = " << arc.headingB * kRad2Deg
-    //           << "  line.heading = " << line.heading;
-    return false;
-    // return LogErr(__func__, 2);
+  if (!IsHeadingEqual(arc.headingB, line.heading)) {
+    std::cout << "arc.headingB = " << arc.headingB * kRad2Deg
+              << "  line.heading = " << line.heading * kRad2Deg << std::endl;
+    return LogErr(__func__, 2);
   }
   return true;
 }
@@ -2468,7 +2485,7 @@ const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t current_seg_gear,
   if ((current_seg_gear != SEG_GEAR_DRIVE &&
        current_seg_gear != SEG_GEAR_REVERSE) ||
       !IsDoublePositive(arc.circle_info.radius) ||
-      IsDoubleEqual(arc.headingA, target_heading)) {
+      IsHeadingEqual(arc.headingA, target_heading)) {
     return LogErr(__func__, 0);
   }
 
@@ -2490,7 +2507,7 @@ const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t current_seg_gear,
     return LogErr(__func__, 1);
   }
 
-  if (!mathlib::IsDoubleEqual(arc.headingB, target_heading)) {
+  if (!IsHeadingEqual(arc.headingB, target_heading)) {
     std::cout << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
               << "target_heading =" << target_heading * kRad2Deg << std::endl;
     return LogErr(__func__, 2);

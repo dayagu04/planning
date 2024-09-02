@@ -223,7 +223,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   # vehicle_type = 'CHERY_T26'
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
   car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
-  car_polygon_x, car_polygon_y = load_car_params_patch_parking(
+  car_polygon_x, car_polygon_y, wheel_base = load_car_params_patch_parking(
       vehicle_type, 0.0)
   index_map = bag_loader.get_msg_index(bag_time)
 
