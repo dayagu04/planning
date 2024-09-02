@@ -36,7 +36,7 @@ static const double kSearchOutLineSampleDistance = 0.3;
 static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;
-static const double kColBufferInSlot = 0.15;
+static const double kColBufferInSlot = 0.2;
 static const double kColBufferOutSlot = 0.3;
 static const double kSmallColBufferInSlot = 0.1;
 
@@ -57,7 +57,8 @@ static const double kMinTlaneAddedLength = 0.8;
 static const double kNarrowChannelLastArcCrossLength = 1.2;
 static const double kNarrowChannelArcRadius = 7.0;
 
-static const double kLineStepLength = 0.15;
+static const double kLineStepLength = 0.20;
+static const double k1dExtendLength = 0.3;
 
 static const size_t kInvalidInteger = 666;
 
@@ -193,6 +194,8 @@ const bool ParallelPathPlanner::Update() {
 
     if (success) {
       DEBUG_PRINT("OutsideSlotPlan success!");
+      ReversePathSegVec(calc_params_.park_out_path_in_slot);
+      AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
       return true;
     } else {
       DEBUG_PRINT("OutsideSlotPlan failed!");
@@ -835,7 +838,7 @@ const bool ParallelPathPlanner::MonoStepPlanOnceWithShift(
     return false;
   }
 
-  if (!is_drive_out_safe) {
+  if (!CheckParkOutCornerSafeWithObsPin(forward_arc)) {
     DEBUG_PRINT("park out failed in backward line limit!");
     return false;
   }
@@ -1392,22 +1395,6 @@ void ParallelPathPlanner::AddLastArc() {
   output_.path_segment_vec.emplace_back(last_path_seg);
 }
 
-void ParallelPathPlanner::GenTriplePath() {
-  if (output_.gear_cmd_vec.back() != pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    output_.gear_change_count++;
-  }
-
-  output_.path_segment_vec.insert(output_.path_segment_vec.end(),
-                                  calc_params_.triple_step_path.begin(),
-                                  calc_params_.triple_step_path.end());
-
-  for (const auto& path_seg : calc_params_.triple_step_path) {
-    output_.length += path_seg.Getlength();
-    output_.gear_cmd_vec.emplace_back(path_seg.seg_gear);
-    output_.steer_vec.emplace_back(path_seg.seg_steer);
-  }
-}
-
 const bool ParallelPathPlanner::IsDubinsCollided(const double buffer) {
   bool is_collided = false;
   bool is_arc = false;
@@ -1465,7 +1452,7 @@ const bool ParallelPathPlanner::CheckEgoInSlot() const {
 
 // search from the inside parking space to outside
 const bool ParallelPathPlanner::CalMinSafeCircle() {
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.05));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
   std::vector<pnc::geometry_lib::PathSegment> search_out_res;
 
   auto time0 = IflyTime::Now_ms();
@@ -1623,6 +1610,19 @@ const bool ParallelPathPlanner::CalcParkOutPose(
   return success;
 }
 
+const bool ParallelPathPlanner::ReversePathSegVec(
+    std::vector<pnc::geometry_lib::PathSegment>& park_out_res) {
+  if (park_out_res.size() <= 1) {
+    return false;
+  }
+  park_out_res.pop_back();
+  for (auto& path_seg : park_out_res) {
+    pnc::geometry_lib::ReversePathSegInfo(path_seg);
+  }
+  std::reverse(park_out_res.begin(), park_out_res.end());
+  return true;
+}
+
 const bool ParallelPathPlanner::InverseSearchLoopInSlot(
     std::vector<pnc::geometry_lib::PathSegment>& search_out_res,
     const pnc::geometry_lib::PathPoint& terminal_pose) {
@@ -1774,55 +1774,10 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
   DEBUG_PRINT("---------AdvancedInversedTrialsInSlot --------------");
   using namespace pnc::geometry_lib;
 
-  const Eigen::Vector2d v_heading =
-      GetUnitTangVecByHeading(target_pose.heading);
-  PrintPose("terminal pose", target_pose);
-
   std::vector<Eigen::Vector2d> line_step_vec;
-  line_step_vec.emplace_back(target_pose.pos);
-
-  auto first_line = GetEgoHeadingLine(target_pose.pos, target_pose.heading);
-
-  std::vector<uint8_t> gear_vec = {SEG_GEAR_REVERSE, SEG_GEAR_DRIVE};
-
-  for (const auto& gear : gear_vec) {
-    const double lon_buffer = gear == SEG_GEAR_DRIVE ? kColBufferInSlot : 0.4;
-
-    if (!CalcLineStepLimitPose(first_line, gear, lon_buffer)) {
-      DEBUG_PRINT("gear = " << gear << " failed!");
-      continue;
-    }
-
-    if (CheckSamePos(first_line.pB, target_pose.pos)) {
-      DEBUG_PRINT("first_line limit == target pose failed!");
-      continue;
-    }
-
-    const double max_line_length =
-        std::min((first_line.pB - target_pose.pos).norm(), 1.0);
-
-    if (max_line_length < apa_param.GetParam().min_line_length) {
-      DEBUG_PRINT("line_length" << max_line_length
-                                << "smaller than min line length");
-      continue;
-    }
-
-    const double dir_sgn = (gear == SEG_GEAR_DRIVE ? 1.0 : -1.0);
-    double length_diff = apa_param.GetParam().min_line_length;
-
-    while (length_diff < max_line_length) {
-      const Eigen::Vector2d line_end_pos =
-          target_pose.pos + dir_sgn * length_diff * v_heading;
-
-      line_step_vec.emplace_back(line_end_pos);
-      length_diff += kLineStepLength;
-    }
-    line_step_vec.emplace_back(first_line.pB);
-  }
-
-  DEBUG_PRINT("line step pos ");
-  for (const auto& pos : line_step_vec) {
-    DEBUG_PRINT(pos.transpose());
+  if (!GenLineStepValidEnd(line_step_vec, target_pose)) {
+    DEBUG_PRINT("cal first step failed!");
+    return false;
   }
 
   std::vector<GeometryPath> total_path_vec;
@@ -1834,7 +1789,7 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
   uint success_cnt = 0;
   uint dirve_success_cnt = 0;
   uint reverse_success_cnt = 0;
-
+  std::vector<uint8_t> gear_vec = {SEG_GEAR_REVERSE, SEG_GEAR_DRIVE};
   // size_t cal_cnt = 0;
   for (const auto& gear : gear_vec) {
     for (const auto& start_pos : line_step_vec) {
@@ -1843,8 +1798,18 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
       // if (cal_cnt > 1) {
       //   break;
       // }
-      start_pose.pos = start_pos;
 
+      if ((start_pos - line_step_vec.front()).norm() <= 0.23 &&
+          gear == SEG_GEAR_REVERSE) {
+        continue;
+      }
+
+      if ((start_pos - line_step_vec.back()).norm() <= 0.23 &&
+          gear == SEG_GEAR_REVERSE) {
+        continue;
+      }
+
+      start_pose.pos = start_pos;
       std::vector<PathSegment> path_seg_vec;
       if (!InversedTrialsByGivenGear(path_seg_vec, start_pose, gear)) {
         // DEBUG_PRINT("InversedTrialsByGivenGear failed with x = "
@@ -1928,6 +1893,83 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
 
   if (success) {
     path_seg_vec = total_path_vec[best_idx].path_segment_vec;
+  }
+
+  return success;
+}
+
+const bool ParallelPathPlanner::GenLineStepValidEnd(
+    std::vector<Eigen::Vector2d>& line_end_vec,
+    const pnc::geometry_lib::PathPoint& target_pose) {
+  using namespace pnc::geometry_lib;
+
+  line_end_vec.clear();
+  line_end_vec.reserve(10);
+
+  const Eigen::Vector2d v_heading =
+      GetUnitTangVecByHeading(target_pose.heading);
+  PrintPose("terminal pose", target_pose);
+
+  std::vector<Eigen::Vector2d> line_step_vec;
+  line_step_vec.emplace_back(target_pose.pos);
+
+  auto first_line = GetEgoHeadingLine(target_pose.pos, target_pose.heading);
+
+  std::vector<uint8_t> gear_vec = {SEG_GEAR_REVERSE, SEG_GEAR_DRIVE};
+
+  for (const auto& gear : gear_vec) {
+    const double lon_buffer = 0.2;
+
+    if (!CalcLineStepLimitPose(first_line, gear, lon_buffer)) {
+      DEBUG_PRINT("gear = " << gear << " failed!");
+      continue;
+    }
+
+    if (CheckSamePos(first_line.pB, target_pose.pos)) {
+      DEBUG_PRINT("first_line limit == target pose failed!");
+      continue;
+    }
+
+    const double max_line_length =
+        std::min((first_line.pB - target_pose.pos).norm(), 1.0);
+
+    if (max_line_length < apa_param.GetParam().min_line_length) {
+      DEBUG_PRINT("line_length" << max_line_length
+                                << "smaller than min line length");
+      continue;
+    }
+
+    const double dir_sgn = (gear == SEG_GEAR_DRIVE ? 1.0 : -1.0);
+    double length_diff = apa_param.GetParam().min_line_length;
+
+    while (length_diff < max_line_length) {
+      const Eigen::Vector2d line_end_pos =
+          target_pose.pos + dir_sgn * length_diff * v_heading;
+
+      line_step_vec.emplace_back(std::move(line_end_pos));
+      length_diff += kLineStepLength;
+    }
+
+    if ((first_line.pB - line_step_vec.back()).norm() > 0.5 * kLineStepLength) {
+      line_step_vec.emplace_back(first_line.pB);
+    }
+  }
+
+  bool success = false;
+  if (line_step_vec.size() != 0) {
+    success = true;
+    auto comp = [](const Eigen::Vector2d& v1, const Eigen::Vector2d& v2) {
+      return v1.x() < v2.x();
+    };
+    std::sort(line_step_vec.begin(), line_step_vec.end(), comp);
+    line_end_vec = std::move(line_step_vec);
+
+    // debug for line step pos
+    DEBUG_PRINT("line step pos ");
+    for (const auto& pos : line_end_vec) {
+      std::cout << pos.x() << "  ";
+    }
+    std::cout << std::endl;
   }
 
   return success;
@@ -2249,14 +2291,15 @@ const bool ParallelPathPlanner::TwoSameGearArcPlanToLine(
 
   bool is_prolonged = false;
   auto prolonged_line = last_line;
-  if (last_line_gear != gear && last_line.length < 0.3) {
+  if (last_line_gear != gear) {
     const double gear_sgn =
         (gear == pnc::geometry_lib::SEG_GEAR_DRIVE ? 1.0 : -1.0);
 
     const auto v_line_heading =
         pnc::geometry_lib::GetUnitTangVecByHeading(arc_2.headingB);
 
-    const auto prolonged_pt = arc_2.pB + 0.3 * v_line_heading * gear_sgn;
+    const auto prolonged_pt =
+        arc_2.pB + k1dExtendLength * v_line_heading * gear_sgn;
     prolonged_line.SetPoints(arc_2.pB, prolonged_pt);
 
     col_res = collision_detector_ptr_->UpdateByObsMap(prolonged_line,
@@ -3521,9 +3564,9 @@ const uint8_t ParallelPathPlanner::TrimPathByCollisionDetection(
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
-  std::cout << "  remain_car_dist = " << remain_car_dist
-            << "  remain_obs_dist = " << remain_obs_dist
-            << "  safe_remain_dist = " << safe_remain_dist << std::endl;
+  // std::cout << "  remain_car_dist = " << remain_car_dist
+  //           << "  remain_obs_dist = " << remain_obs_dist
+  //           << "  safe_remain_dist = " << safe_remain_dist << std::endl;
 
   if (safe_remain_dist < 0.0) {
     // std::cout << "the distance between obstacle and ego is smaller than "

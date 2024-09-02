@@ -71,8 +71,8 @@ smallest_abs_t = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
-    self.bag = rosbag.Bag(path,'r',rosbag.Compression.BZ2, 768 * 1024,True, None, True)
-    # loclization msg
+    self.bag = rosbag.Bag(path,'r',rosbag.Compression.NONE, 768 * 1024,True, None, True)
+    # loclization msg 
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # vehicle service msg
