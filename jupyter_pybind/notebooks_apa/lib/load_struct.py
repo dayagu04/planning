@@ -19,7 +19,7 @@ JAC_S811 = 'JAC_S811'
 CHERY_T26 = 'CHERY_T26'
 CHERY_E0X = 'CHERY_E0X'
 
-def load_car_params_patch_parking(vehicle_type = JAC_S811):
+def load_car_params_patch_parking(vehicle_type = JAC_S811,  car_lat_inflation = 0.07):
 
   if vehicle_type == JAC_S811:
     # for JAC_S811
@@ -39,8 +39,6 @@ def load_car_params_patch_parking(vehicle_type = JAC_S811):
     car_y = [0.9875, 0.7875, -0.7875, -0.9875, -0.9875, -1.1145, -1.1145, -0.9875, -0.9875, -0.7875, 0.7875, 0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
     car_x = [3.4655, 3.7711, 3.9250,  3.9250,  3.7711,  3.4655,  2.235,   2.235,   2.035,   2.035,  -0.5150, -0.8653, -1.0250, -1.0250, -0.8653, -0.5150, 2.0350, 2.0350, 2.2350, 2.2350]
     car_y = [0.9875, 0.8375, 0.6875, -0.6875, -0.8375, -0.9875, -0.9875, -1.1145, -1.1145, -0.9875, -0.9875, -0.8375, -0.6875,  0.6875,  0.8375,  0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
-
-  car_lat_inflation = 0.07
   for i in range(len(car_x)):
     if car_y[i] > 0.0:
       car_y[i] = car_y[i] + car_lat_inflation

@@ -8,6 +8,7 @@
 
 #include "apa_plan_base.h"
 #include "collision_detection.h"
+#include "config_context.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "parallel_park_in_planner.h"
@@ -20,6 +21,7 @@ static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
 int Init() {
+  (void)planning::common::ConfigurationContext::Instance();
   pBase = new ParallelPathPlanner();
   pBase->Reset();
   return 0;
@@ -126,10 +128,9 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
 
 int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
            double obs_pt_in_y, double obs_pt_out_x, double obs_pt_out_y,
-           double p_target_x, double p_target_y, double p_outside_x,
-           double p_outside_y, double p_inside_x, double p_inside_y,
-           double channel_max_x, double channel_y, double curb_y,
-           double slot_width, double ds, double obs_ds, bool is_complete_path,
+           double slot_length, double slot_width, double p_target_x,
+           double p_target_y, double channel_max_x, double channel_y,
+           double curb_y, double ds, double obs_ds, bool is_complete_path,
            bool is_plan_first, bool set_left_side, bool ref_gear_drive,
            bool ref_steer_left) {
   col_det.Reset();
@@ -150,8 +151,8 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   input.tlane.obs_pt_outside << obs_pt_out_x, obs_pt_out_y;
   input.tlane.pt_terminal_pos << p_target_x, p_target_y;
 
-  input.tlane.pt_inside << p_inside_x, p_inside_y;
-  input.tlane.pt_outside << p_outside_x, p_outside_y;
+  input.tlane.pt_inside << slot_length, 0.5 * slot_side_sgn * slot_width;
+  input.tlane.pt_outside << 0.0, 0.5 * slot_side_sgn * slot_width;
 
   input.tlane.curb_y = curb_y;
 

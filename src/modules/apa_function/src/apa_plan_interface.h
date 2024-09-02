@@ -23,6 +23,8 @@ class ApaPlanInterface {
 
   void Reset();
 
+  void ResetForSearching();
+
   const bool Update(const LocalView* local_view_ptr);
 
   void SyncParameters(const bool is_simulation = false);

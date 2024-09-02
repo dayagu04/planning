@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 
+#include "apa_utils.h"
 #include "common.pb.h"
 #include "common/config_context.h"
 #include "debug_info_log.h"
@@ -326,10 +327,9 @@ void PlanningAdapter::Proc() {
 
   const auto &last_state = g_context.GetStatemachine().current_state;
 
-  if ((last_state == iflyauto::FunctionalState_MANUAL ||
-       last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
-      (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-       current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
+  if (!IsValidParkingState(
+          static_cast<iflyauto::FunctionalState>(last_state)) &&
+      IsValidParkingState(current_state)) {
     state_machine_g.apa_reset_flag = true;
   } else {
     state_machine_g.apa_reset_flag = false;
