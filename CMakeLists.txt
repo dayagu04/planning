@@ -81,6 +81,7 @@ if (PYBIND_TOOL_ENABLE)
                     RESULT_VARIABLE result
                     OUTPUT_VARIABLE output
                     ERROR_VARIABLE error)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/legacy)
   if(NOT STRUCT_MSGS_ADDED)
     add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs)
     set(STRUCT_MSGS_ADDED TRUE CACHE INTERNAL "Flag to indicate that subdir has been added")
