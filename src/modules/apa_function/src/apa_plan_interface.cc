@@ -57,14 +57,23 @@ void ApaPlanInterface::Init(const bool is_simulation) {
 void ApaPlanInterface::Reset() {
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
-  planning_output_.planning_status.apa_planning_status = iflyauto::APA_NONE;
-
-  planning_output_.successful_slot_info_list_size = 0;
 
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   // reset apa world
   apa_world_ptr_->Reset();
+
+  // reset all planner
+  for (const auto &apa_planner : apa_planner_map_) {
+    apa_planner.second->Reset();
+  }
+}
+
+void ApaPlanInterface::ResetForSearching() {
+  // reset planning output
+  memset(&planning_output_, 0, sizeof(planning_output_));
+
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   // reset all planner
   for (const auto &apa_planner : apa_planner_map_) {
@@ -98,6 +107,15 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   // run apa world, always run when enter apa
   DEBUG_PRINT("---- apa_world: Update() ---");
   apa_world_ptr_->Update(local_view_ptr);
+
+  if (apa_world_ptr_->GetApaDataPtr()->cur_state == ApaStateMachine::INVALID) {
+    Reset();
+  } else if (apa_world_ptr_->GetApaDataPtr()->cur_state ==
+                 ApaStateMachine::SEARCH_IN ||
+             apa_world_ptr_->GetApaDataPtr()->cur_state ==
+                 ApaStateMachine::SEARCH_OUT) {
+    ResetForSearching();
+  }
 
   // run planner
   bool success = false;

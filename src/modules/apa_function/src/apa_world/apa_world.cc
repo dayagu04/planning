@@ -158,6 +158,10 @@ void ApaWorld::UpdateStateMachine() {
   ApaStateMachine& cur_state = apa_data_ptr_->cur_state;
   const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
 
+  if (state == iflyauto::FunctionalState_PARK_STANDBY) {
+    cur_state = ApaStateMachine::INVALID;
+  }
+
   if (state == iflyauto::FunctionalState_PARK_SUSPEND) {
     cur_state = ApaStateMachine::SUSPEND;
   }
@@ -205,6 +209,14 @@ const bool ApaWorld::Update() {
   PrintApaStateMachine(apa_data_ptr_->cur_state);
 
   apa_data_ptr_->planner_type = ApaPlannerType::INVALID_PLANNER;
+
+  // only for hack if outter machine no reset
+  if (apa_data_ptr_->cur_state == ApaStateMachine::SEARCH_IN ||
+      apa_data_ptr_->cur_state == ApaStateMachine::SEARCH_OUT) {
+    apa_data_ptr_->is_slot_type_fixed = false;
+    apa_data_ptr_->slot_id = 0;
+    apa_data_ptr_->slot_type = Common::PARKING_SLOT_TYPE_INVALID;
+  }
 
   // run slot manager
   // currently path planning starts once id is selected in searching state

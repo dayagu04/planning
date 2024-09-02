@@ -75,10 +75,7 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
     std::vector<Eigen::Vector2d> front_corner_obs_vec;
     std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
-    std::vector<pnc::geometry_lib::PathSegment> inversed_park_out_path;
     std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
-    std::vector<pnc::geometry_lib::PathSegment> triple_step_path;
-
     void Reset() {
       is_left_side = true;
       slot_side_sgn = 1.0;
@@ -90,12 +87,8 @@ class ParallelPathPlanner : public ApaPathPlanner {
       prepare_line.Reset();
       v_target_line.setZero();
       v_prepare_line.setZero();
-      inversed_park_out_path.clear();
-      inversed_park_out_path.reserve(3);
       park_out_path_in_slot.clear();
       park_out_path_in_slot.reserve(10);
-      triple_step_path.clear();
-      triple_step_path.reserve(6);
       valid_target_pt_vec.clear();
       valid_target_pt_vec.reserve(20);
       front_corner_obs_vec.clear();
@@ -106,6 +99,14 @@ class ParallelPathPlanner : public ApaPathPlanner {
       v_ego_farest_front_corner = Eigen::Vector2d::Zero();
       v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
     }
+  };
+
+  struct GeometryPath {
+    size_t gear_change_count = 0;
+    double length = 0.0;
+    double park_out_heading_deg = 0.0;
+    std::vector<uint8_t> gear_cmd_vec;
+    std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
   };
 
  public:
@@ -132,12 +133,12 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
   const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
+  const std::vector<Eigen::Vector2d> &GetVirtualObs() {
+    return calc_params_.front_corner_obs_vec;
+  }
+
  private:
   virtual void Preprocess() override;
-
-  const bool PrepareStepFromEgo(
-      const std::vector<pnc::geometry_lib::PathSegment>
-          &inversed_park_out_path);
 
   const bool CalcParkOutPath(
       std::vector<pnc::geometry_lib::PathSegment> &reversed_park_out_path,
@@ -201,6 +202,9 @@ class ParallelPathPlanner : public ApaPathPlanner {
   const bool CalMinSafeCircle();
   const bool CalcParkOutPose(pnc::geometry_lib::PathSegment &park_out_seg);
 
+  const bool ReversePathSegVec(
+      std::vector<pnc::geometry_lib::PathSegment> &park_out_res);
+
   // inverse search from target in slot
   const bool InverseSearchLoopInSlot(
       std::vector<pnc::geometry_lib::PathSegment> &search_out_res,
@@ -208,6 +212,19 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
   const bool ReduceRootPoseHeadingInSlot(
       std::vector<pnc::geometry_lib::PathSegment> &search_out_res);
+
+  const bool AdvancedInversedTrialsInSlot(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &target_pose);
+
+  const bool GenLineStepValidEnd(
+      std::vector<Eigen::Vector2d> &line_end_vec,
+      const pnc::geometry_lib::PathPoint &target_pose);
+
+  const bool InversedTrialsByGivenGear(
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const uint8_t current_gear);
 
   const bool CalcLineStepLimitPose(
       pnc::geometry_lib::LineSegment &line, const uint8_t gear,
@@ -243,7 +260,6 @@ class ParallelPathPlanner : public ApaPathPlanner {
   void AddPathSegToOutPut(
       const std::vector<pnc::geometry_lib::PathSegment> &path_seg);
   void AddLastArc();
-  void GenTriplePath();
   void AddPathSegToOutPut(const pnc::geometry_lib::PathSegment &path_seg);
   void AddPathSegVecToOutput(
       const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
