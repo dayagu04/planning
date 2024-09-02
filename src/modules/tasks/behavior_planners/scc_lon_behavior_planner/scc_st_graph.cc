@@ -2926,6 +2926,20 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
   //     dynamic_world->GetNode(t_merge_with_agent_.first);
   const auto *merge_target_one =
       dynamic_world->agent_manager()->GetAgent(t_merge_with_agent_.first);
+  if ((merge_target_one &&
+       last_merge_target_one_id_ == planning_data::kInvalidId) ||
+      (merge_target_one &&
+       last_merge_target_one_id_ != merge_target_one->agent_id())) {
+    merge_target_one_has_changed_ = true;
+    last_merge_target_one_id_ = merge_target_one->agent_id();
+  } else {
+    merge_target_one_has_changed_ = false;
+    if (merge_target_one) {
+      last_merge_target_one_id_ = merge_target_one->agent_id();
+    } else {
+      last_merge_target_one_id_ = planning_data::kInvalidId;
+    }
+  }
 
   double merge_rear_one_a_processed = 0.0;
   double merge_rear_one_desired_distance = 0.0;
@@ -2944,7 +2958,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
         d_relative_merge_with_agent_.second, merge_rear_one_desired_distance,
         v_agent_merge_with_ego_.second);
     desired_distance_filtered = MergeDesiredDistanceFilter(
-        v_ego, safe_distance, merge_rear_one_desired_distance);
+        v_ego, safe_distance, merge_rear_one_desired_distance,
+        merge_target_one);
 
     // update st info for merge
     common::RealTimeLonObstacleSTInfo merge_rear_one_st_info;
@@ -3204,7 +3219,8 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
-  const auto ego_front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
+  const auto ego_front_edge_to_rear_axle =
+      vehicle_param.front_edge_to_rear_axle;
 
   constexpr double step_t = 0.1;
   double t_overlap = std::numeric_limits<double>::max();
@@ -3342,12 +3358,15 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
 
           if (semantic_orientation_to_ego.find("front") != string::npos) {
             d_current_relative = agent_current_sl.x - ego_current_sl.x -
-                               agent_length * 0.5 - ego_front_edge_to_rear_axle;
+                                 agent_length * 0.5 -
+                                 ego_front_edge_to_rear_axle;
           } else if (semantic_orientation_to_ego.find("rear") != string::npos) {
             d_current_relative = agent_current_sl.x - ego_current_sl.x +
-                               agent_length * 0.5 + ego_rear_edge_to_rear_axle;
+                                 agent_length * 0.5 +
+                                 ego_rear_edge_to_rear_axle;
           } else {
-            d_current_relative = agent_current_sl.x - ego_current_sl.x; //aproximate distance
+            d_current_relative =
+                agent_current_sl.x - ego_current_sl.x;  // aproximate distance
           }
         }
         break;
@@ -3376,15 +3395,18 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
             ego_current_sl.x = 200.0;
             ego_current_sl.y = 0.0;
           }
-          
+
           if (semantic_orientation_to_ego.find("front") != string::npos) {
             d_current_relative = agent_current_sl.x - ego_current_sl.x -
-                               agent_length * 0.5 - ego_front_edge_to_rear_axle;
+                                 agent_length * 0.5 -
+                                 ego_front_edge_to_rear_axle;
           } else if (semantic_orientation_to_ego.find("rear") != string::npos) {
             d_current_relative = agent_current_sl.x - ego_current_sl.x +
-                               agent_length * 0.5 + ego_rear_edge_to_rear_axle;
+                                 agent_length * 0.5 +
+                                 ego_rear_edge_to_rear_axle;
           } else {
-            d_current_relative = agent_current_sl.x - ego_current_sl.x; //aproximate distance
+            d_current_relative =
+                agent_current_sl.x - ego_current_sl.x;  // aproximate distance
           }
         }
         break;
@@ -3401,6 +3423,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
     d_relative_merge_with_agent_.second = distance_overlap;
     v_agent_merge_with_ego_.first = agent_id;
     v_agent_merge_with_ego_.second = v_overlap;
+    merge_target_one_semantic_orientation_to_ego_ = semantic_orientation_to_ego;
   }
 
   // if (distance_overlap < d_relative_merge_with_agent_.second) {
@@ -3546,33 +3569,85 @@ double StGraphGenerator::CalcDesiredDistance(
   return desired_distance;
 }
 
-double StGraphGenerator::MergeDesiredDistanceFilter(const double v_ego,
-                                                    double safe_distance,
-                                                    double desired_distance) {
+double StGraphGenerator::MergeDesiredDistanceFilter(
+    const double v_ego, double safe_distance, double desired_distance,
+    const agent::Agent *merge_target_one) {
+  if (merge_target_one_has_changed_) {
+    merge_desired_distance_filter_.SetState(
+        std::min(safe_distance, desired_distance));
+  }
+
   double desired_distance_new = desired_distance;
-  merge_desired_distance_filter_.SetState(desired_distance);
   if (!(lon_behav_input_->dbw_status())) {
     merge_desired_distance_filter_.SetState(
         std::min(desired_distance, safe_distance));
   }
 
-  if (t_merge_with_agent_.second < config_.dangerous_ttc_thrd) {
+  const double merge_target_one_relative_speed =
+      merge_target_one->speed() - v_ego;
+  bool merge_target_one_slow = merge_target_one_relative_speed <= 0.5;
+
+  if (t_merge_with_agent_.second < config_.dangerous_ttc_thrd &&
+      merge_target_one_slow) {
     merge_desired_distance_filter_.SetRate(
-        -4.0, config_.merge_desired_distance_sharp_rate);
+        -4.0, /*config_.merge_desired_distance_sharp_rate*/ config_
+                      .merge_desired_distance_sharp_rate -
+                  merge_target_one_relative_speed);
     merge_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = merge_desired_distance_filter_.GetOutput();
   } else if (t_merge_with_agent_.second >= config_.dangerous_ttc_thrd &&
-             t_merge_with_agent_.second < config_.tense_ttc_thrd) {
+             t_merge_with_agent_.second < config_.tense_ttc_thrd &&
+             merge_target_one_slow) {
     merge_desired_distance_filter_.SetRate(
-        -4.0, config_.merge_desired_distance_slow_rate);
+        -4.0, /*config_.merge_desired_distance_slow_rate*/ config_
+                      .merge_desired_distance_slow_rate -
+                  merge_target_one_relative_speed);
     merge_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = merge_desired_distance_filter_.GetOutput();
   } else {
     merge_desired_distance_filter_.SetRate(
-        -4.0, std::max(0.3, config_.merge_desired_distance_slow_rate - 0.5));
+        -4.0, /*std::max(0.3, config_.merge_desired_distance_slow_rate -
+                 0.5)*/
+        desired_distance / 3.2);
     merge_desired_distance_filter_.Update(desired_distance);
     desired_distance_new = merge_desired_distance_filter_.GetOutput();
   }
+
+  // if (merge_target_one_semantic_orientation_to_ego_ == "ego_left" ||
+  //     (merge_target_one_semantic_orientation_to_ego_ == "ego_left_rear" &&
+  //      merge_target_one->speed() > v_ego + 0.35) ||
+  //     (merge_target_one_semantic_orientation_to_ego_ == "ego_left_front" &&
+  //      merge_target_one->speed() < v_ego - 0.35)) {
+  //   if (t_merge_with_agent_.second < config_.dangerous_ttc_thrd) {
+  //     merge_desired_distance_filter_.SetRate(
+  //         -4.0, /*config_.merge_desired_distance_sharp_rate*/
+  //         desired_distance /
+  //                   t_merge_with_agent_.second);
+  //     merge_desired_distance_filter_.Update(desired_distance);
+  //     desired_distance_new = merge_desired_distance_filter_.GetOutput();
+  //   } else if (t_merge_with_agent_.second >= config_.dangerous_ttc_thrd &&
+  //              t_merge_with_agent_.second < config_.tense_ttc_thrd) {
+  //     merge_desired_distance_filter_.SetRate(
+  //         -4.0, /*config_.merge_desired_distance_slow_rate*/ desired_distance
+  //         /
+  //                   config_.tense_ttc_thrd);
+  //     merge_desired_distance_filter_.Update(desired_distance);
+  //     desired_distance_new = merge_desired_distance_filter_.GetOutput();
+  //   } else {
+  //     merge_desired_distance_filter_.SetRate(
+  //         -4.0, /*std::max(0.3, config_.merge_desired_distance_slow_rate -
+  //                  0.5)*/
+  //         desired_distance / 3.0);
+  //     merge_desired_distance_filter_.Update(desired_distance);
+  //     desired_distance_new = merge_desired_distance_filter_.GetOutput();
+  //   }
+  // } else {
+  //   merge_desired_distance_filter_.SetRate(
+  //       -4.0, /*std::max(0.3, config_.merge_desired_distance_slow_rate -
+  //                0.5)*/
+  //       desired_distance / 3.0);
+  // }
+
   return desired_distance_new;
 }
 
@@ -3592,6 +3667,7 @@ void StGraphGenerator::MergeInfoReset() {
                              std::numeric_limits<double>::lowest()};
   d_current_relative_to_ego_ = {planning_data::kInvalidId,
                                 std::numeric_limits<double>::max()};
+  merge_target_one_semantic_orientation_to_ego_.clear();
 
   agent_node_origin_lane_map_.clear();
   agent_node_left_neibor_lane_map_.clear();

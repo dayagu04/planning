@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "agent/agent.h"
 #include "agent_node_manager.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -224,7 +225,8 @@ class StGraphGenerator {
                              const bool is_temp_lead, const double v_ego,
                              const std::string &lc_request);
   double MergeDesiredDistanceFilter(const double v_ego, double safe_distance,
-                                    double desired_distance);
+                                    double desired_distance,
+                                    const agent::Agent *merge_target_one);
 
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
                              const double &agent_min_l);
@@ -378,8 +380,11 @@ class StGraphGenerator {
       planning_data::kInvalidId, std::numeric_limits<double>::lowest()};
   std::pair<int64_t, double> d_current_relative_to_ego_{
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
+  string merge_target_one_semantic_orientation_to_ego_{};
   pnc::filters::SlopeFilter merge_desired_distance_filter_;
   bool ego_has_right_of_target_lane_{false};
+  bool merge_target_one_has_changed_{false};
+  int64_t last_merge_target_one_id_{planning_data::kInvalidId};
 };
 
 }  // namespace scc
