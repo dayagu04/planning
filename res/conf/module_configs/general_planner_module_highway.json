@@ -215,7 +215,8 @@
     "extra_lateral_buffer_5":0.725,
     "extra_lateral_buffer_6":0.77,
     "map_bound_weight": [0.4, 0.4, 0.6, 0.1],
-    "nudge_buffer_cutout_obstacle": 0.6
+    "nudge_buffer_cutout_obstacle": 0.6,
+    "nudge_extra_buffer_in_intersection": 0.0
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1":1,

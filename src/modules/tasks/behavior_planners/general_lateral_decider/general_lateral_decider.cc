@@ -20,6 +20,7 @@
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
 #include "vehicle_config_context.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 
@@ -960,6 +961,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &lat_obstacle_decision = session_->environmental_model()
                                           .get_lateral_obstacle()
                                           ->lat_obstacle_decision();
+  bool in_intersection = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState() == common::IntersectionState::IN_INTERSECTION;
+
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
 
@@ -1100,8 +1103,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const double lat_buf_dis =
         general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
-            is_nudge_left, is_cut_out_side_obstacle,
-            config_.nudge_buffer_cutout_obstacle);
+            is_nudge_left, in_intersection, is_cut_out_side_obstacle, config_);
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;

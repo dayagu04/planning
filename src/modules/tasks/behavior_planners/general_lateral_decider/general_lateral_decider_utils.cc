@@ -9,17 +9,19 @@ namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 iflyauto::ObjectType type,
-                                const bool is_nudge_left,
-                                bool is_cut_out_side_obstacle,
-                                double nudge_buffer_cutout_obstacle) {
+                                const bool is_nudge_left, bool in_intersection,
+                                bool is_cut_out_side_obstacle, GeneralLateralDeciderConfig& config) {
   double base_dis = 0.8;
   if (IsVRU(type)) {
     base_dis = 1.0;
   } else if (IsTruck(type)) {
     base_dis = 0.8;
   }
+  if (in_intersection) {
+    base_dis += config.nudge_extra_buffer_in_intersection;
+  }
   if (is_cut_out_side_obstacle) {
-    base_dis = nudge_buffer_cutout_obstacle;
+    base_dis = config.nudge_buffer_cutout_obstacle;
   }
   return std::fmax(base_dis + 0.015 * ego_vel - 0.05 * pred_ts, 0.);
 }
