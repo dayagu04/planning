@@ -348,9 +348,11 @@ const bool ParallelPathPlanner::PlanFromTargetToLine(
       const Eigen::Vector2d v_ego =
           pnc::geometry_lib::GenHeadingVec(ego_line.heading);
 
-      if (ego_line.length < 0.35) {
-        ego_line.SetPoints(ego_line.pA, ego_line.pA + kControlLonError * v_ego);
-      }
+      const double ori_length = ego_line.length;
+
+      ego_line.SetPoints(
+          start_pose.pos,
+          start_pose.pos + (ori_length + k1dExtendLength) * v_ego);
 
       // make sure first line step length are more than min_leng during dirve
       // gear
@@ -458,13 +460,13 @@ const bool ParallelPathPlanner::PlanFromTargetToLine(
           pnc::geometry_lib::CalLineSegGear(ego_line_in_channel);
       DEBUG_PRINT("ego_line_gear = " << static_cast<int>(ego_line_gear));
 
-      if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-          ego_line_in_channel.length < 0.25) {
+      if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
         const auto v_extend =
             (ego_line_in_channel.pB - ego_line_in_channel.pA).normalized();
 
-        ego_line_in_channel.SetPoints(ego_line_in_channel.pA,
-                                      ego_line_in_channel.pA + 0.25 * v_extend);
+        ego_line_in_channel.SetPoints(
+            ego_line_in_channel.pA,
+            ego_line_in_channel.pA + k1dExtendLength * v_extend);
       }
       path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
           pnc::geometry_lib::CalLineSegGear(ego_line_in_channel),
