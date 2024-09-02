@@ -33,21 +33,24 @@ target_link_libraries(lateral_motion_planning_py PRIVATE
   autoplt
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(longitudinal_motion_planning_py MODULE src/longitudinal_motion_planning_pybind.cc)
 target_link_libraries(longitudinal_motion_planning_py PRIVATE
   autoplt
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(scc_lon_motion_planning_py MODULE src/scc_lon_motion_planning_pybind.cc)
 target_link_libraries(scc_lon_motion_planning_py PRIVATE
   autoplt
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(slot_management_py MODULE src/slot_management_pybind.cc)
 target_link_libraries(slot_management_py PRIVATE
@@ -56,7 +59,8 @@ target_link_libraries(slot_management_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(dubins_lib_py MODULE src/dubins_lib_pybind.cc)
 target_link_libraries(dubins_lib_py PRIVATE
@@ -64,7 +68,8 @@ target_link_libraries(dubins_lib_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(collision_detection_py MODULE src/collision_detection_pybind.cc)
 target_link_libraries(collision_detection_py PRIVATE
@@ -72,7 +77,8 @@ target_link_libraries(collision_detection_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(perpendicular_planning_py MODULE src/perpendicular_planning_pybind.cc)
 target_link_libraries(perpendicular_planning_py PRIVATE
@@ -80,7 +86,8 @@ target_link_libraries(perpendicular_planning_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(slant_planning_py MODULE src/slant_planning_pybind.cc)
 target_link_libraries(slant_planning_py PRIVATE
@@ -88,7 +95,8 @@ target_link_libraries(slant_planning_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(vertical_planning_py MODULE src/vertical_planning_pybind.cc)
 target_link_libraries(vertical_planning_py PRIVATE
@@ -96,7 +104,8 @@ target_link_libraries(vertical_planning_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(parallel_planning_py MODULE src/parallel_planning_pybind.cc)
 target_link_libraries(parallel_planning_py PRIVATE
@@ -104,7 +113,8 @@ target_link_libraries(parallel_planning_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(uss_obstacle_avoidance_py MODULE src/uss_obstacle_avoidance_pybind.cc)
 target_link_libraries(uss_obstacle_avoidance_py PRIVATE
@@ -112,7 +122,8 @@ target_link_libraries(uss_obstacle_avoidance_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(apa_simulation_py MODULE src/apa_simulation_pybind.cc)
 target_link_libraries(apa_simulation_py PRIVATE
@@ -121,7 +132,8 @@ target_link_libraries(apa_simulation_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
 target_link_libraries(geometry_math_validation_py PRIVATE
@@ -129,7 +141,8 @@ target_link_libraries(geometry_math_validation_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(lateral_path_optimizer_py MODULE src/lateral_path_optimizer_pybind.cc)
 target_link_libraries(lateral_path_optimizer_py PRIVATE
@@ -137,7 +150,8 @@ target_link_libraries(lateral_path_optimizer_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulation_pybind.cc)
   target_link_libraries(optimizer_apa_simulation_py PRIVATE
@@ -145,7 +159,8 @@ pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulat
     modules
     modules_common
     modules_context
-    modules_tasks)
+    modules_tasks
+    legacy_c_interface)
 
 pybind11_add_module(jerk_limited_trajectory_py MODULE src/jerk_limited_trajectory_pybind.cc)
 target_link_libraries(jerk_limited_trajectory_py PRIVATE
@@ -153,7 +168,8 @@ target_link_libraries(jerk_limited_trajectory_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
 
 pybind11_add_module(gap_selector_py MODULE src/gap_selector_pybind.cc)
 target_link_libraries(gap_selector_py PRIVATE
@@ -161,4 +177,5 @@ target_link_libraries(gap_selector_py PRIVATE
   modules
   modules_common
   modules_context
-  modules_tasks)
+  modules_tasks
+  legacy_c_interface)
