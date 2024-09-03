@@ -254,8 +254,8 @@ const bool SlotManagement::UpdateEgoSlotInfo(
   const double real_slot_length = (pM01 - pM23).norm();
   const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
   // n is vec that slot opening orientation
-  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
-  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
+  Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+  n = (pM01 - pM23).normalized();
   pt[2] = pt[0] - real_slot_length * n;
   pt[3] = pt[1] - real_slot_length * n;
 
@@ -1113,12 +1113,26 @@ bool SlotManagement::UpdateSlotsInSearching() {
 
   // assemble slot_management_info
   frame_.slot_management_info.mutable_slot_info_vec()->Clear();
+
+  // Sort by the distance between the slot and the car
+  const double time_start = IflyTime::Now_ms();
+  std::map<double, SlotInfoWindow *> slot_map;
   for (auto &pair : frame_.slot_info_window_map) {
+    const auto &slot = pair.second.GetFusedInfo();
+    Eigen::Vector2d car_mirror =
+        frame_.measurement_data_ptr->pos +
+        frame_.measurement_data_ptr->heading_vec *
+            apa_param.GetParam().lon_dist_mirror_to_rear_axle;
+
+    const double dist =
+        (car_mirror - Eigen::Vector2d(slot.center().x(), slot.center().y()))
+            .norm();
+    slot_map[dist] = &pair.second;
+  }
+
+  for (auto &pair : slot_map) {
     auto slot = frame_.slot_management_info.add_slot_info_vec();
-    // auto slot_info = frame_.slot_info_window_vec[j].GetFusedInfo();
-    // ModifySlot2Rectangle(slot_info);
-    // *slot = slot_info;
-    *slot = pair.second.GetFusedInfo();
+    *slot = pair.second->GetFusedInfo();
 
     // only extra protect, it can delete to be fast
     if (fusion_slot_map.count(slot->id()) == 0) {
@@ -1137,6 +1151,13 @@ bool SlotManagement::UpdateSlotsInSearching() {
         slot->is_release() &&
         apa_param.GetParam().path_generator_type ==
             apa_planner::ParkPathGenerationType::GEOMETRY_BASED) {
+      if (IflyTime::Now_ms() - time_start >
+          apa_param.GetParam().prepare_single_max_allow_time) {
+        slot->set_is_release(false);
+        slot->set_is_occupied(true);
+        continue;
+      }
+
       if (slot->slot_type() ==
               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
           frame_.slot_info_direction.count(slot->id()) != 0) {
@@ -1149,28 +1170,6 @@ bool SlotManagement::UpdateSlotsInSearching() {
         }
       }
 
-      Eigen::Vector2d car_center = frame_.measurement_data_ptr->pos +
-                                   frame_.measurement_data_ptr->heading_vec *
-                                       (apa_param.GetParam().car_length * 0.5 -
-                                        apa_param.GetParam().rear_overhanging);
-
-      const double dist =
-          (car_center - Eigen::Vector2d(slot->center().x(), slot->center().y()))
-              .norm();
-
-      if (dist > apa_param.GetParam().max_dist_from_slot2car_release) {
-        slot->set_is_release(false);
-        slot->set_is_occupied(true);
-        DEBUG_PRINT("the slot is so far to list slot id = "
-                    << slot->id() << "  slot type = " << slot->slot_type()
-                    << "  is_release = " << slot->is_release());
-        DEBUG_PRINT("car center = "
-                    << car_center.transpose() << "  slot center = "
-                    << Eigen::Vector2d(slot->center().x(), slot->center().y())
-                           .transpose());
-        continue;
-      }
-
       if (!frame_.fus_obj_valid_flag) {
         // no fus obs, should consider uss obs
         AddUssPerceptObstacles(*slot);
@@ -1181,11 +1180,10 @@ bool SlotManagement::UpdateSlotsInSearching() {
       // DEBUG_PRINT("angle = " << CalAngleSlot2Car(*slot) * kRad2Deg);
       const double min_slot_release_long_dist =
           frame_.fus_obj_valid_flag
-              ? (apa_param.GetParam().min_slot_release_long_dist_slot2mirror *
-                 0.088)
+              ? -1.68
               : apa_param.GetParam().min_slot_release_long_dist_slot2mirror;
 
-      if (lon_dist < min_slot_release_long_dist && pair.second.GetOccupied()) {
+      if (lon_dist < min_slot_release_long_dist && pair.second->GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
         DEBUG_PRINT("CalLonDistSlot2Car slot id = "
@@ -1193,7 +1191,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
                     << "  is_release = " << slot->is_release());
         continue;
       } else {
-        pair.second.SetOccupied(false);
+        pair.second->SetOccupied(false);
       }
 
       EgoSlotInfo ego_slot_info;
@@ -1286,11 +1284,11 @@ bool SlotManagement::UpdateSlotsInSearching() {
         if (lon_dist <
                 apa_param.GetParam()
                     .min_parallel_vis_slot_release_long_dist_slot2mirror &&
-            pair.second.GetOccupied()) {
+            pair.second->GetOccupied()) {
           slot->set_is_release(false);
           slot->set_is_occupied(true);
         } else {
-          pair.second.SetOccupied(false);
+          pair.second->SetOccupied(false);
           slot->set_is_release(true);
           slot->set_is_occupied(false);
         }
@@ -1302,11 +1300,11 @@ bool SlotManagement::UpdateSlotsInSearching() {
         if (lon_dist <
                 apa_param.GetParam()
                     .min_parallel_uss_slot_release_long_dist_slot2mirror &&
-            pair.second.GetOccupied()) {
+            pair.second->GetOccupied()) {
           slot->set_is_release(false);
           slot->set_is_occupied(true);
         } else {
-          pair.second.SetOccupied(false);
+          pair.second->SetOccupied(false);
           slot->set_is_release(true);
           slot->set_is_occupied(false);
         }
@@ -2407,8 +2405,8 @@ bool SlotManagement::UpdateEgoSlotInfo(
     const double real_slot_length = (pM01 - pM23).norm();
     const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
     // n is vec that slot opening orientation
-    const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
-    // const Eigen::Vector2d n = (pM01 - pM23).normalized();
+    Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+    n = (pM01 - pM23).normalized();
     pt[2] = pt[0] - real_slot_length * n;
     pt[3] = pt[1] - real_slot_length * n;
 

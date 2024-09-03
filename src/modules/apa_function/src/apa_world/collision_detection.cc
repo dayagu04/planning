@@ -604,6 +604,35 @@ const double CollisionDetector::CalMinDistObs2Car(
 }
 
 const bool CollisionDetector::IsObstacleInCar(
+    const pnc::geometry_lib::PathPoint &ego_pose) {
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.clear();
+  car_polygon.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+    car_polygon.emplace_back(car_line_global.pA);
+  }
+
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {
+      if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt_global)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+const bool CollisionDetector::IsObstacleInCar(
     const Eigen::Vector2d &obs_pos,
     const pnc::geometry_lib::PathPoint &ego_pose) {
   // car line segment
@@ -624,6 +653,141 @@ const bool CollisionDetector::IsObstacleInCar(
   }
 
   return pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pos);
+}
+
+const bool CollisionDetector::IsObstacleInPath(
+    const pnc::geometry_lib::PathSegment &temp_path_seg,
+    const double long_safe_dist, const bool need_reverse) {
+  pnc::geometry_lib::PathSegment path_seg = temp_path_seg;
+  if (need_reverse) {
+    pnc::geometry_lib::ReversePathSegInfo(path_seg);
+  }
+
+  const bool is_drive =
+      (temp_path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE);
+
+  pnc::geometry_lib::PathPoint pose;
+  std::vector<pnc::geometry_lib::PathPoint> pose_vec;
+  pose_vec.emplace_back(path_seg.GetStartPose());
+  const double car_length = apa_param.GetParam().car_length + long_safe_dist;
+  for (double length = car_length; length < path_seg.Getlength();
+       length += car_length) {
+    if (pnc::geometry_lib::CalPtFromPathSeg(pose, path_seg, length)) {
+      pose_vec.emplace_back(pose);
+    }
+  }
+  pose_vec.emplace_back(path_seg.GetEndPose());
+
+  Eigen::Vector2d temp_pt;
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.reserve(car_local_vertex_vec_.size());
+  for (const Eigen::Vector2d &pt : car_local_vertex_vec_) {
+    temp_pt = pt;
+
+    if (long_safe_dist > 0.01) {
+      if (is_drive) {
+        if (temp_pt.x() > apa_param.GetParam().wheel_base) {
+          temp_pt.x() += long_safe_dist;
+        }
+      } else {
+        if (temp_pt.x() < 0.0) {
+          temp_pt.x() -= long_safe_dist;
+        }
+      }
+    }
+
+    car_polygon.emplace_back(temp_pt);
+  }
+
+  std::vector<std::vector<Eigen::Vector2d>> car_polygon_vec;
+  car_polygon_vec.reserve(pose_vec.size());
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  for (const pnc::geometry_lib::PathPoint &temp_pose : pose_vec) {
+    l2g_tf.Init(temp_pose.pos, temp_pose.heading);
+    std::vector<Eigen::Vector2d> temp_car_polygon;
+    temp_car_polygon.reserve(car_polygon.size());
+    for (const Eigen::Vector2d &vertex : car_polygon) {
+      temp_car_polygon.emplace_back(l2g_tf.GetPos(vertex));
+    }
+    car_polygon_vec.emplace_back(temp_car_polygon);
+  }
+
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {
+      for (const std::vector<Eigen::Vector2d> &temp_car_polygon :
+           car_polygon_vec) {
+        if (pnc::geometry_lib::IsPointInPolygon(temp_car_polygon,
+                                                obs_pt_global)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+const bool CollisionDetector::IsObstacleInPath(
+    const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+    const double sample_ds, const bool need_reverse) {
+  using namespace pnc;
+  double length = 0.0;
+  for (const auto &path_seg : path_seg_vec) {
+    length += path_seg.Getlength();
+  }
+
+  geometry_lib::PathPoint pose;
+  std::vector<geometry_lib::PathPoint> pose_vec;
+  pose_vec.reserve(length / sample_ds + path_seg_vec.size() + 3);
+  for (size_t i = 0; i < path_seg_vec.size(); ++i) {
+    const geometry_lib::PathSegment &path_seg = path_seg_vec[i];
+    for (double s = 0; s < path_seg.Getlength(); s += sample_ds) {
+      geometry_lib::CalPtFromPathSeg(pose, path_seg, s);
+      pose_vec.emplace_back(pose);
+    }
+    if (i == path_seg_vec.size() - 1) {
+      pose_vec.emplace_back(path_seg.GetEndPose());
+    }
+  }
+
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.resize(car_local_vertex_vec_.size());
+  std::vector<std::vector<Eigen::Vector2d>> car_polygon_vec;
+  car_polygon_vec.reserve(pose_vec.size());
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+
+  int pose_number = static_cast<int>(pose_vec.size());
+  if (!need_reverse) {
+    for (int i = 0; i < pose_number; ++i) {
+      const geometry_lib::PathPoint &pose = pose_vec[i];
+      l2g_tf.Init(pose.pos, pose.heading);
+      for (size_t j = 0; j < car_local_vertex_vec_.size(); ++j) {
+        car_polygon[j] = l2g_tf.GetPos(car_local_vertex_vec_[j]);
+      }
+      car_polygon_vec.emplace_back(car_polygon);
+    }
+  } else {
+    for (int i = pose_number - 1; i >= 0; --i) {
+      const geometry_lib::PathPoint &pose = pose_vec[i];
+      l2g_tf.Init(pose.pos, pose.heading);
+      for (size_t j = 0; j < car_local_vertex_vec_.size(); ++j) {
+        car_polygon[j] = l2g_tf.GetPos(car_local_vertex_vec_[j]);
+      }
+      car_polygon_vec.emplace_back(car_polygon);
+    }
+  }
+
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {
+      for (const std::vector<Eigen::Vector2d> &car_polygon : car_polygon_vec) {
+        if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt_global)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 const bool CollisionDetector::IsObstacleInCar(
@@ -1176,13 +1340,15 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     area_vec.resize(4);
     const double max_x = std::max(slot_left_pt.x(), slot_right_pt.x());
 
+    const double max_obs_x = 2.268;
+
     const Eigen::Vector2d pt_1 = slot_left_pt -
                                  max_obs_lat_invasion_slot_dist * unit_01_vec -
-                                 1.068 * unit_02_vec;
+                                 max_obs_x * unit_02_vec;
 
     const Eigen::Vector2d pt_0 = slot_right_pt +
                                  max_obs_lat_invasion_slot_dist * unit_01_vec -
-                                 1.068 * unit_02_vec;
+                                 max_obs_x * unit_02_vec;
 
     const Eigen::Vector2d pt_2 = slot_right_pt + max_x * unit_02_vec +
                                  max_obs_lat_invasion_slot_dist * unit_01_vec -
@@ -1210,18 +1376,30 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
       return ObsSlotType::SLOT_DIRECTLY_BEHIND_OBS;
     }
 
-    area_vec[0] = pt_1 + 0.86 * unit_01_vec - 3.468 * unit_02_vec;
-    area_vec[1] = pt_0 - 0.86 * unit_01_vec - 3.468 * unit_02_vec;
-    area_vec[2] = pt_0 - 0.86 * unit_01_vec;
-    area_vec[3] = pt_1 + 0.86 * unit_01_vec;
+    const double lat_extend = 1.68;
+    if (is_left_side) {
+      area_vec[0] = pt_1 - 3.468 * unit_02_vec;
+      area_vec[1] = pt_0 - lat_extend * unit_01_vec - 3.468 * unit_02_vec;
+      area_vec[2] = pt_0 - lat_extend * unit_01_vec;
+      area_vec[3] = pt_1;
+    } else {
+      area_vec[0] = pt_1 + lat_extend * unit_01_vec - 3.468 * unit_02_vec;
+      area_vec[1] = pt_0 - 3.468 * unit_02_vec;
+      area_vec[2] = pt_0;
+      area_vec[3] = pt_1 + lat_extend * unit_01_vec;
+    }
+    // area_vec[0] = pt_1 + lat_extend * unit_01_vec - 3.468 * unit_02_vec;
+    // area_vec[1] = pt_0 - lat_extend * unit_01_vec - 3.468 * unit_02_vec;
+    // area_vec[2] = pt_0 - lat_extend * unit_01_vec;
+    // area_vec[3] = pt_1 + lat_extend * unit_01_vec;
 
     if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
       return ObsSlotType::SLOT_ENTRANCE_OBS;
     }
 
     area_vec[0] = pt_0;
-    area_vec[1] = pt_0 - 0.86 * unit_01_vec;
-    area_vec[2] = pt_2 - 0.86 * unit_01_vec;
+    area_vec[1] = pt_0 - lat_extend * unit_01_vec;
+    area_vec[2] = pt_2 - lat_extend * unit_01_vec;
     area_vec[3] = pt_2;
 
     if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
@@ -1232,10 +1410,10 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
       }
     }
 
-    area_vec[0] = pt_1 + 0.86 * unit_01_vec;
+    area_vec[0] = pt_1 + lat_extend * unit_01_vec;
     area_vec[1] = pt_1;
     area_vec[2] = pt_3;
-    area_vec[3] = pt_3 + 0.86 * unit_01_vec;
+    area_vec[3] = pt_3 + lat_extend * unit_01_vec;
 
     if (pnc::geometry_lib::IsPointInPolygon(area_vec, obs)) {
       if (is_left_side) {

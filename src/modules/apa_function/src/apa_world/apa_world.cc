@@ -159,7 +159,9 @@ void ApaWorld::UpdateEgoState() {
 void ApaWorld::UpdateStateMachine() {
   ApaStateMachine& cur_state = apa_data_ptr_->cur_state;
   const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
+  apa_data_ptr_->current_state = state;
 
+  cur_state = ApaStateMachine::INVALID;
   if (state == iflyauto::FunctionalState_PARK_STANDBY) {
     cur_state = ApaStateMachine::INVALID;
   }
@@ -189,8 +191,6 @@ void ApaWorld::UpdateStateMachine() {
     cur_state = ApaStateMachine::SEARCH_OUT;
     apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
   }
-
-  apa_data_ptr_->current_state = state;
 }
 
 void ApaWorld::UpdateSlots() {}

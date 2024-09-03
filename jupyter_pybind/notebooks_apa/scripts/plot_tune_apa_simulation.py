@@ -14,10 +14,7 @@ from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, LocalizationEstimate
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240824/20240824-17-07-50/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-24-17-07-50_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240824/20240824-17-04-24/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-24-17-04-24_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240825/20240825-16-55-11/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-25-16-55-12_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240904/20240904-15-19-55/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-04-15-19-56_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240904/20240904-14-48-23/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-04-14-48-23_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -190,9 +187,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     soc_state_msg = FuncStateMachine()
 
   if bag_loader.loc_msg['enable'] == True:
-    loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
+    loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
   else:
-    loc_msg = LocalizationEstimate()
+    loc_msg = copy.deepcopy(LocalizationEstimate())
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]

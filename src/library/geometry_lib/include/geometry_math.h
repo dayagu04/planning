@@ -92,11 +92,12 @@ struct PathPoint {
   Eigen::Vector2d pos = Eigen::Vector2d::Zero();
   double heading = 0.0;
   // todo: path point related codes is too much, unify them.
-  double kappa;
+  double kappa = 0.0;
 
   void Reset() {
     pos.setZero();
     heading = 0.0;
+    kappa = 0.0;
   }
 };
 
@@ -638,6 +639,12 @@ void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
 
 const double GetTwoPointDist(const PathPoint &start, const PathPoint &end);
+const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
+                        const double length, const double radius,
+                        const PathPoint pose, PathSegment &arc_seg);
+
+const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
+                            const double length);
 
 }  // namespace geometry_lib
 }  // namespace pnc
