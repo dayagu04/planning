@@ -22,7 +22,7 @@ void VehicleModel::RearCenteredKinematicBicycleModel(
   // Kinematic bicycle model centered at rear axis center by Euler forward
   // discretization
   // Assume constant control command and constant z axis position
-  assert(predicted_time_horizon > 0.0);
+  assert(predicted_time_horizon >= 0.0);
   double dt = vehicle_model_config.rc_kinematic_bicycle_model.dt;
   double cur_x = cur_vehicle_state.x;
   double cur_y = cur_vehicle_state.y;
