@@ -1292,11 +1292,22 @@ const uint8_t ParallelParkInPlanner::PathPlanOnce() {
   //       extend_lenth);
   // }
 
-  // if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
-  //   const double extend_lenth = 0.15;
-  //   parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-  //       extend_lenth);
-  // }
+  const auto path_planner_output = parallel_path_planner_.GetOutput();
+
+  if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    double current_path_length = 0.0;
+    for (size_t i = path_planner_output.path_seg_index.first;
+         i <= path_planner_output.path_seg_index.second; i++) {
+      current_path_length +=
+          path_planner_output.path_segment_vec[i].Getlength();
+    }
+
+    if (current_path_length < apa_param.GetParam().min_line_length) {
+      const double extend_lenth = 0.15;
+      parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+          extend_lenth);
+    }
+  }
   parallel_path_planner_.SampleCurrentPathSeg();
 
   // print segment info
