@@ -1,3 +1,9 @@
+# planning.2.5.2
+####  修改说明
+
+### [fix]
+1. 取消横向距离对障碍物的剔除
+
 # planning.2.5.0
 ####  修改说明
 1. 使用新定位，弃用老定位接口:/iflytek/localization/ego_pose

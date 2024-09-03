@@ -194,10 +194,9 @@ void TrackletMaintainer::recv_prediction_objects(
         (tan(HALF_FOV) > fabs(p.relative_position_y / p.relative_position_x));
     bool is_fusion_with_camera = p.fusion_source & OBSTACLE_SOURCE_CAMERA;
     bool is_ignore_by_fov = is_in_fov && (is_fusion_with_camera == false);
-    bool is_ignore_by_lat = fabs(p.relative_position_y) > 10.0;
     bool is_ignore_by_size = p.length == 0 || p.width == 0;
 
-    if (is_ignore_by_fov || is_ignore_by_lat || is_ignore_by_size) {
+    if (is_ignore_by_fov || is_ignore_by_size) {
       LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
                 p.id);
       continue;
