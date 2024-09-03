@@ -1757,7 +1757,7 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     lead_d_path_thr = result;
   } else if (item.v_lead <= 2.0 && item.motion_pattern_current ==
                                        iflyauto::OBJECT_MOTION_TYPE_STATIC) {
-    lead_d_path_thr = 1.15;
+    lead_d_path_thr = 1.1;
   } else {
     lead_d_path_thr = 1.2;
   }
