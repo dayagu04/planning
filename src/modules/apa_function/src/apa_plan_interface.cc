@@ -378,6 +378,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_slot, double,
                   "safe_uss_remain_dist_in_slot");
 
+  JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_in_parallel_slot,
+                  double, "safe_uss_remain_dist_in_parallel_slot");
+
   JSON_READ_VALUE(apa_param.SetPram().safe_uss_remain_dist_out_slot, double,
                   "safe_uss_remain_dist_out_slot");
 

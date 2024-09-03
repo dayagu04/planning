@@ -57,7 +57,7 @@ static const double kMinTlaneAddedLength = 0.8;
 static const double kNarrowChannelLastArcCrossLength = 1.2;
 static const double kNarrowChannelArcRadius = 7.0;
 
-static const double kLineStepLength = 0.20;
+static const double kLineStepLength = 0.25;
 static const double k1dExtendLength = 0.3;
 
 static const size_t kInvalidInteger = 666;
@@ -1687,7 +1687,7 @@ const bool ParallelPathPlanner::InverseSearchLoopInSlot(
     return false;
   }
 
-  if (is_dirve_out_safe) {
+  if (CheckParkOutCornerSafeWithObsPin(forward_arc)) {
     search_out_res.emplace_back(pnc::geometry_lib::PathSegment(
         forward_steer, pnc::geometry_lib::SEG_GEAR_DRIVE, forward_arc));
     std::cout << "ego can park out at first!" << std::endl;
