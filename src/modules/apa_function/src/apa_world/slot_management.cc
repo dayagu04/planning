@@ -2894,15 +2894,20 @@ void SlotManagement::UpdateLimiterInfoInParking() {
     limiter_slot.second.y() = -ego_slot_info.slot_width * 0.5;
 
     if (apa_param.GetParam().limiter_length > 0.0) {
-      const double limiter_x =
-          (limiter_slot.first.x() + limiter_slot.second.x()) * 0.5;
+      double limiter_x =
+          (limiter_slot.first.x() + limiter_slot.second.x()) * 0.5 + move_dist;
+
+      limiter_x = std::min(
+          limiter_x, std::min(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x()) -
+                         apa_param.GetParam().wheel_base +
+                         apa_param.GetParam().limiter_length);
 
       const double virtual_x =
           std::min(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x()) -
           apa_param.GetParam().front_overhanging -
           apa_param.GetParam().wheel_base - apa_param.GetParam().limiter_length;
 
-      limiter_slot.first.x() = std::max(virtual_x, limiter_x + move_dist);
+      limiter_slot.first.x() = std::max(virtual_x, limiter_x);
       limiter_slot.second.x() = limiter_slot.first.x();
     } else {
       limiter_slot.first.x() += move_dist;

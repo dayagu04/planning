@@ -96,6 +96,8 @@ void ApaPlannerBase::GenPlanningOutput() {
     frame_.ego_slot_info.Reset();
     apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   }
+
+  DEBUG_PRINT("gen plan output success.");
 }
 
 void ApaPlannerBase::GenPlanningHmiOutput() {

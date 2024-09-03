@@ -143,6 +143,7 @@ const bool ApaPlanInterface::ApaPlanOnce(const ApaPlannerType planner_type) {
     if (apa_planner.first == planner_type) {
       planner_ptr_ = apa_planner_map_[planner_type];
       planner_ptr_->Update();
+      DEBUG_PRINT(GetApaPlannerTypeString(planner_type) << " update.");
       return true;
     }
   }

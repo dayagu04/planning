@@ -75,6 +75,7 @@ class LocalViewSlider:
 
 ### sliders callback
 for bag_time in np.arange(0.0, max_time, 0.1):
+  print("bag_time = " , bag_time)
   select_id = 0
   force_plan = False
   is_path_optimization = False
