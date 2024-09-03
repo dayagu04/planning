@@ -115,6 +115,7 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
+  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds);
   GenerateLateralDeciderOutput(frenet_soft_bounds, frenet_hard_bounds,
                                general_lateral_decider_output);
 
@@ -1688,6 +1689,12 @@ void GeneralLateralDecider::SaveLatDebugInfo(
       ->CopyFrom(lat_debug_info_);
 }
 
+void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
+  for (size_t i = 0; i < ref_traj_points_.size(); i++) {
+    ref_traj_points_[i].l = std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first), frenet_soft_bounds[i].second);
+  }
+}
+
 void GeneralLateralDecider::GenerateLateralDeciderOutput(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -1756,12 +1763,21 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
 
 void GeneralLateralDecider::GenerateEnuReferenceTraj(
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
+  const std::shared_ptr<KDPath> frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());
 
+  Point2D ref_point;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    enu_ref_path[i].first = ref_traj_points_[i].x;
-    enu_ref_path[i].second = ref_traj_points_[i].y;
+    if (!frenet_coord->SLToXY(
+            Point2D(ref_traj_points_[i].s, ref_traj_points_[i].l),
+            ref_point))  // soft lower
+    {
+      // TODO: add logs
+    }
+    enu_ref_path[i].first = ref_point.x;
+    enu_ref_path[i].second = ref_point.y;
   }
 
   const auto &s_start = ref_traj_points_.front().s;
