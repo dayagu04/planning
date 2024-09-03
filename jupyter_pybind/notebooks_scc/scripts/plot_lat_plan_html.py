@@ -20,6 +20,7 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
+import lib.load_ros_bag
 
 # 先手动写死bag
 bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240607/20240607-16-37-00/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-07-16-37-00_no_camera.bag"
@@ -290,7 +291,7 @@ def draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager):
     if plan_debug_msg['enable'] == True:
       for i, plan_debug in enumerate(plan_debug_msg['data']):
         input_topic_timestamp = plan_debug.input_topic_timestamp
-        if is_new_loc:
+        if lib.load_ros_bag.is_new_loc:
           localization_timestamp = input_topic_timestamp.localization
         else :
           if is_bag_main:
@@ -462,7 +463,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         lat_motion_plan_input = plan_debug.lateral_motion_planning_input
         lat_motion_plan_output = plan_debug.lateral_motion_planning_output
         input_topic_timestamp = plan_debug.input_topic_timestamp
-        if is_new_loc:
+        if lib.load_ros_bag.is_new_loc:
           localization_timestamp = input_topic_timestamp.localization
           #localization_timestamp = input_topic_timestamp.localization_estimate
         else :
