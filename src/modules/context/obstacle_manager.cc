@@ -17,6 +17,7 @@ ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
 }
 
 void ObstacleManager::update() {
+  const double HALF_FOV = 25.0;
   clear();
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
@@ -27,14 +28,35 @@ void ObstacleManager::update() {
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
-    if (prediction_object.type == 0 ||
-        ((!(prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
-         (prediction_object.relative_position_x > 0 &&
-          tan(25) > fabs(prediction_object.relative_position_y /
-                         prediction_object.relative_position_x))) ||
-        fabs(prediction_object.relative_position_y) > 10 ||
-        prediction_object.length == 0 || prediction_object.width == 0) {
-      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+    // if (prediction_object.type == 0 ||
+    //     ((!(prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
+    //      (prediction_object.relative_position_x > 0 &&
+    //       tan(25) > fabs(prediction_object.relative_position_y /
+    //                      prediction_object.relative_position_x))) ||
+    //     fabs(prediction_object.relative_position_y) > 10 ||
+    //     prediction_object.length == 0 || prediction_object.width == 0) {
+    //   LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+    //             prediction_object.id);
+    //   continue;
+    // }
+
+    if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      LOG_DEBUG("[ObstacleManager Update] ignore unknown obstacle : [%d] \n",
+                prediction_object.id);
+      continue;
+    }
+    bool is_in_fov =
+        prediction_object.relative_position_x > 0 &&
+        (tan(HALF_FOV) > fabs(prediction_object.relative_position_y /
+                              prediction_object.relative_position_x));
+    bool is_fusion_with_camera =
+        prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA;
+    bool is_ignore_by_fov = is_in_fov && (is_fusion_with_camera == false);
+    bool is_ignore_by_size =
+        prediction_object.length == 0 || prediction_object.width == 0;
+
+    if (is_ignore_by_fov || is_ignore_by_size) {
+      LOG_DEBUG("[ObstacleManager Update] ignore obstacle! : [%d] \n",
                 prediction_object.id);
       continue;
     }
