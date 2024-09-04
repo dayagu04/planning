@@ -12,13 +12,12 @@ LateralMotionPlanningWeight::LateralMotionPlanningWeight(
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
     const LateralMotionSceneEnum scene,
-    planning::common::LateralPlanningInput &planning_input,
-    bool is_in_intersection) {
+    planning::common::LateralPlanningInput &planning_input) {
   lateral_motion_scene_ = scene;
   // CalculateInitInfo(planning_input);
   planning_input.set_q_acc_bound(config_.q_acc_bound);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
-  if (is_in_intersection) {
+  if (is_in_intersection_) {
     planning_input.set_q_soft_corridor(config_.q_soft_corridor_intersection);
   } else {
     planning_input.set_q_soft_corridor(config_.q_soft_corridor);
@@ -30,20 +29,31 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
   // set cost weight by scene
   switch (scene) {
     case LANE_KEEP: {
-      planning_input.set_q_ref_x(config_.q_ref_x);
-      planning_input.set_q_ref_y(config_.q_ref_y);
-      planning_input.set_q_ref_theta(config_.q_ref_theta);
-      planning_input.set_q_continuity(config_.q_continuity);
-      planning_input.set_q_acc(config_.q_acc);
-      planning_input.set_q_jerk(config_.q_jerk);
-      concerned_start_q_jerk_ = config_.q_jerk;
-      SetAccJerkBoundByVelocity(planning_input);
-      MakeDynamicWeight(planning_input);
-      if ((std::fabs(init_dis_to_ref_) < 0.3) &&
-          (std::fabs(init_ref_theta_error_) >
-           config_.big_theta_thr)) {  // config_.big_theta_dist_thr
-        planning_input.set_q_jerk(config_.q_jerk_for_big_theta);
-        concerned_start_q_jerk_ = config_.q_jerk_for_big_theta;
+      if (is_in_intersection_) {
+        planning_input.set_q_ref_x(config_.q_ref_xy_intersection);
+        planning_input.set_q_ref_y(config_.q_ref_xy_intersection);
+        planning_input.set_q_ref_theta(config_.q_ref_theta_intersection);
+        planning_input.set_q_continuity(config_.q_continuity_intersection);
+        planning_input.set_q_acc(config_.q_acc_intersection);
+        planning_input.set_q_jerk(config_.q_jerk_intersection_mid);
+        concerned_start_q_jerk_ = config_.q_jerk_intersection_close;
+        planning_input.set_jerk_bound(config_.jerk_bound_intersection);
+        planning_input.set_q_jerk_bound(config_.q_jerk_bound_intersection);
+      } else {
+        planning_input.set_q_ref_x(config_.q_ref_x);
+        planning_input.set_q_ref_y(config_.q_ref_y);
+        planning_input.set_q_ref_theta(config_.q_ref_theta);
+        planning_input.set_q_continuity(config_.q_continuity);
+        planning_input.set_q_acc(config_.q_acc);
+        planning_input.set_q_jerk(config_.q_jerk);
+        concerned_start_q_jerk_ = config_.q_jerk;
+        SetAccJerkBoundByVelocity(planning_input);
+        MakeDynamicWeight(planning_input);
+        // [hack]
+        if ((std::fabs(init_dis_to_ref_) < 0.3) && (std::fabs(init_ref_theta_error_) > config_.big_theta_thr)) {
+          planning_input.set_q_jerk(config_.q_jerk_for_big_theta);
+          concerned_start_q_jerk_ = config_.q_jerk_for_big_theta;
+        }
       }
       break;
     }
@@ -81,10 +91,6 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         planning_input.set_q_jerk(config_.q_jerk_lane_change2);
         concerned_start_q_jerk_ = config_.q_jerk_lane_change2;
       }
-      if ((is_lane_change_back_)) {
-        planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
-        concerned_start_q_jerk_ = config_.q_jerk_lane_change_back;
-      }
 
       if (ego_vel_ > config_.lane_change_high_vel) {
         end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_qreftheta;
@@ -97,6 +103,14 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
         planning_input.set_q_jerk_bound(
             config_.q_jerk_bound_lane_change_high_vel);
+      }
+
+      if (is_lane_change_back_) {
+        planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
+        planning_input.set_q_ref_y(config_.q_ref_y_lane_change);
+        planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
+        planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
+        concerned_start_q_jerk_ = config_.q_jerk_lane_change;
       }
       break;
     }

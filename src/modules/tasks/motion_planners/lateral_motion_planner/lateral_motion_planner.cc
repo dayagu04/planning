@@ -199,16 +199,27 @@ void LateralMotionPlanner::AssembleInput() {
           i, motion_planner_output.lateral_x_t_spline(tmp_t));
       planning_input_.mutable_last_y_vec()->Set(
           i, motion_planner_output.lateral_y_t_spline(tmp_t));
+      double lateral_ref_theta = planning_input_.ref_theta_vec(i);
+      double last_lateral_theta = motion_planner_output.lateral_theta_t_spline(tmp_t);
+      double theta_err = lateral_ref_theta - last_lateral_theta;
+      const double pi2 = 2.0 * M_PI;
+      if (theta_err > M_PI) {
+        last_lateral_theta += pi2;
+      } else if (theta_err < -M_PI) {
+        last_lateral_theta -= pi2;
+      }
       planning_input_.mutable_last_theta_vec()->Set(
-          i, motion_planner_output.lateral_theta_t_spline(tmp_t));
+          i, last_lateral_theta);
     }
-
+    planning_input_.set_q_continuity(config_.q_continuity);
   } else {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       planning_input_.mutable_last_x_vec()->Set(i, enu_ref_path[i].first);
       planning_input_.mutable_last_y_vec()->Set(i, enu_ref_path[i].second);
-      planning_input_.mutable_last_theta_vec()->Set(i, enu_ref_theta[i]);
+      // planning_input_.mutable_last_theta_vec()->Set(i, enu_ref_theta[i]);
+      planning_input_.mutable_last_theta_vec()->Set(i, planning_input_.ref_theta_vec(i));
     }
+    planning_input_.set_q_continuity(0.0);
   }
 
   // set soft and hard bound
@@ -280,7 +291,7 @@ void LateralMotionPlanner::AssembleInput() {
 
   planning_input_.set_curv_factor(config_.curv_factor);
 
-  // set weights
+  // set init info
   Point2D cart_ref0(planning_input_.ref_x_vec(0), planning_input_.ref_y_vec(0));
   Point2D frenet_ref0;
   Point2D cart_init(planning_input_.init_state().x(),
@@ -302,8 +313,8 @@ void LateralMotionPlanner::AssembleInput() {
   const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
-  planning_weight_ptr_->SetLCBackFlag(false);
 
+  // split
   bool split_scene = false;
   const bool is_exist_ramp_on_road = session_->environmental_model()
                                          .get_virtual_lane_manager()
@@ -325,12 +336,19 @@ void LateralMotionPlanner::AssembleInput() {
     enter_split_time_ = 0.0;
   }
 
-  auto intersection_state = session_->environmental_model()
-                                .get_virtual_lane_manager()
-                                ->GetIntersectionState();
-  bool is_in_intersection =
-      intersection_state ==
-      planning::common::IntersectionState::IN_INTERSECTION;
+  // intersection
+  auto intersection_state = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState();
+  bool is_approach_intersection = intersection_state == planning::common::IntersectionState::APPROACH_INTERSECTION;
+  bool is_in_intersection = intersection_state == planning::common::IntersectionState::IN_INTERSECTION;
+  bool is_off_intersection = intersection_state == planning::common::IntersectionState::OFF_INTERSECTION;
+  // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
+  if (is_approach_intersection || is_in_intersection || is_off_intersection) {
+    planning_weight_ptr_->SetIsInIntersection(true);
+  } else {
+    planning_weight_ptr_->SetIsInIntersection(false);
+  }
+
+  // avoid back
   bool avoid_back_status = false;
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
@@ -345,13 +363,15 @@ void LateralMotionPlanner::AssembleInput() {
     avoid_back_status = false;
   }
 
+  // lane change back
   const auto target_state = session_->planning_context()
                                 .lane_change_decider_output()
                                 .coarse_planning_info.target_state;
+  bool lane_change_back = target_state == kLaneChangeCancel;
+  planning_weight_ptr_->SetLCBackFlag(lane_change_back);
+
+  // set weight
   if (lane_change_scene) {
-    if (target_state == kLaneChangeCancel) {
-      planning_weight_ptr_->SetLCBackFlag(true);
-    }
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
   } else if (split_scene) {
@@ -364,17 +384,17 @@ void LateralMotionPlanner::AssembleInput() {
                  .get_lateral_obstacle()
                  ->is_static_avoid_scene()) {
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::STATIC_AVOID, planning_input_,
-        is_in_intersection);
-  } else if ((lateral_offset_decider_output.is_valid) ||
-             ((avoid_back_status) && (ego_v > config_.avoid_high_vel))) {
-    planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::AVOID, planning_input_, is_in_intersection);
+        pnc::lateral_planning::STATIC_AVOID, planning_input_);
+  } else if (lateral_offset_decider_output.is_valid ||
+             (avoid_back_status && ((ego_v > config_.avoid_high_vel) || is_in_intersection))) {
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
+                                                 planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LANE_KEEP, planning_input_, is_in_intersection);
+        pnc::lateral_planning::LANE_KEEP, planning_input_);
   }
 
+  // set motion_plan_concerned_end_index
   const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
   double motion_plan_concerned_end_index =
       config_.motion_plan_concerned_end_index;
@@ -395,6 +415,7 @@ void LateralMotionPlanner::AssembleInput() {
       }
     }
   }
+
   if (split_scene) {
     motion_plan_concerned_end_index = 17;
     if (!is_exist_ramp_on_road || !is_exist_split_on_ramp) {
@@ -403,7 +424,7 @@ void LateralMotionPlanner::AssembleInput() {
   }
 
   const double lateral_offset = lateral_offset_decider_output.lateral_offset;
-  if ((lane_change_scene) && (ego_v > config_.lane_change_high_vel)) {
+  if ((lane_change_scene) && (ego_v > config_.lane_change_high_vel) && (!lane_change_back)) {
     if (config_.use_high_vel_lc_version_two) {
       complete_follow = false;
     }

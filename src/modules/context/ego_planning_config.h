@@ -956,6 +956,22 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                                        "q_soft_corridor_intersection"});
     q_hard_corridor = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_hard_corridor"});
+    jerk_bound_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_intersection"});
+    q_ref_xy_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_xy_intersection"});
+    q_ref_theta_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_intersection"});
+    q_continuity_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_continuity_intersection"});
+    q_acc_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_intersection"});
+    q_jerk_intersection_mid = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_intersection_mid"});
+    q_jerk_intersection_close = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_intersection_close"});
+    q_jerk_bound_intersection = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound_intersection"});
     avoid_back_time = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "avoid_back_time"});
     q_ref_x_avoid = read_json_keys<double>(
@@ -1169,6 +1185,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_continuity = 0.;
   double q_acc = 0.5;
   double q_jerk = 0.6;
+
+  double jerk_bound_intersection = 0.25;
+  double q_ref_xy_intersection = 50.0;
+  double q_ref_theta_intersection = 500.0;
+  double q_continuity_intersection = 2.0;
+  double q_acc_intersection = 100.0;
+  double q_jerk_intersection_mid = 500.0;
+  double q_jerk_intersection_close = 500.0;
+  double q_jerk_bound_intersection = 10000.0;
 
   double avoid_back_time = 2.0;
   double q_ref_x_avoid = 20.0;
