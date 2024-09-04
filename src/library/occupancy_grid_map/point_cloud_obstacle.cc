@@ -6,7 +6,7 @@
 #include "./../collision_detection/gjk2d_interface.h"
 #include "polygon_base.h"
 #include "./../../modules/apa_function/src/apa_param_setting.h"
-#include "./../hybrid_astar_lib/virtual_wall_decider.h"
+#include "virtual_wall_decider.h"
 
 namespace planning {
 

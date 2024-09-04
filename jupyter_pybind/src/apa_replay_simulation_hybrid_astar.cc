@@ -40,7 +40,7 @@
 #include "src/library/collision_detection/gjk2d_interface.h"
 #include "polygon_base.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
-#include "src/library/hybrid_astar_lib/virtual_wall_decider.h"
+#include "src/library/occupancy_grid_map/virtual_wall_decider.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"

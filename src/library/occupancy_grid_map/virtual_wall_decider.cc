@@ -1,5 +1,4 @@
 #include "virtual_wall_decider.h"
-#include "hybrid_astar_common.h"
 #include "pose2d.h"
 #include "polygon_base.h"
 #include "utils_math.h"
@@ -7,7 +6,8 @@
 namespace planning {
 
 void VirtualWallDecider::Process(const Pose2D& start, const Pose2D& end) {
-  AstarDecider::Process(start, end);
+  start_ = start;
+  end_ = end;
 
   return;
 }
@@ -178,7 +178,8 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
                                 const double slot_width,
                                 const double slot_length,
                                 const Pose2D& ego_pose, const Pose2D& end) {
-  AstarDecider::Process(ego_pose, end);
+  start_ = ego_pose;
+  end_ = end;
 
   GenerateCarRelativePosition(ego_pose);
 

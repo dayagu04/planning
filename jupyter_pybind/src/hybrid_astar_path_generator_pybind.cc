@@ -31,7 +31,7 @@
 #include "src/library/hybrid_astar_lib/hybrid_a_star.h"
 #include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
-#include "src/library/hybrid_astar_lib/virtual_wall_decider.h"
+#include "src/library/occupancy_grid_map/virtual_wall_decider.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
 
