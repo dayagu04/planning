@@ -1121,12 +1121,21 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     enter_ramp_on_road_time = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "enter_ramp_on_road_time"});
-    q_jerk_ramp_on_road = read_json_keys<double>(
+    q_ref_xy_split = read_json_keys<double>(
         json,
-        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_ramp_on_road"});
-    jerk_bound_ramp_on_road = read_json_keys<double>(
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_xy_split"});
+    q_ref_theta_split = read_json_keys<double>(
         json,
-        std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_ramp_on_road"});
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_split"});
+    q_jerk_split = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_split"});
+    q_jerk_bound_split = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound_split"});
+    jerk_bound_split = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_split"});
     ramp_valid = read_json_keys<bool>(
         json, std::vector<std::string>{"lat_motion_ilqr", "ramp_valid"});
     acc_bound_ramp = read_json_keys<double>(
@@ -1234,8 +1243,11 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_lane_change_back = 10.0;
 
   double enter_ramp_on_road_time = 2.0;
-  double q_jerk_ramp_on_road = 50.0;
-  double jerk_bound_ramp_on_road = 0.4;
+  double q_ref_xy_split = 20.0;
+  double q_ref_theta_split = 5000.0;
+  double q_jerk_split = 5.0;
+  double q_jerk_bound_split = 10000.0;
+  double jerk_bound_split = 0.5;
 
   bool ramp_valid = false;
   double acc_bound_ramp = 3.0;

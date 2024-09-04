@@ -77,6 +77,7 @@ void LateralMotionPlanner::Init() {
 
   avoid_back_time_ = 0.0;
   enter_split_time_ = 0.0;
+  is_divide_lane_into_two_ = false;
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -336,6 +337,13 @@ void LateralMotionPlanner::AssembleInput() {
     enter_split_time_ = 0.0;
   }
 
+  if (is_exist_split_on_ramp) {
+    is_divide_lane_into_two_ = true;
+  }
+  if (is_divide_lane_into_two_ && split_scene == false) {
+    is_divide_lane_into_two_ = false;
+  }
+
   // intersection
   auto intersection_state = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState();
   bool is_approach_intersection = intersection_state == planning::common::IntersectionState::APPROACH_INTERSECTION;
@@ -374,12 +382,6 @@ void LateralMotionPlanner::AssembleInput() {
   if (lane_change_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LANE_CHANGE, planning_input_);
-  } else if (split_scene) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
-                                                 planning_input_);
-  } else if ((ramp_scene) && (config_.ramp_valid)) {
-    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
-                                                 planning_input_);
   } else if (session_->environmental_model()
                  .get_lateral_obstacle()
                  ->is_static_avoid_scene()) {
@@ -388,6 +390,12 @@ void LateralMotionPlanner::AssembleInput() {
   } else if (lateral_offset_decider_output.is_valid ||
              (avoid_back_status && ((ego_v > config_.avoid_high_vel) || is_in_intersection))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
+                                                 planning_input_);
+  } else if (split_scene) {
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
+                                                 planning_input_);
+  } else if ((ramp_scene) && (config_.ramp_valid)) {
+    planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
                                                  planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
@@ -418,7 +426,7 @@ void LateralMotionPlanner::AssembleInput() {
 
   if (split_scene) {
     motion_plan_concerned_end_index = 17;
-    if (!is_exist_ramp_on_road || !is_exist_split_on_ramp) {
+    if (!is_divide_lane_into_two_) {
       planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
     }
   }
