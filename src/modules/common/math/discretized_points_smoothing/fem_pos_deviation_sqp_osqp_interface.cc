@@ -25,7 +25,7 @@
 #include <iostream>
 #include <limits>
 
-// #include "log_glog.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace planning_math {
@@ -33,23 +33,23 @@ namespace planning_math {
 bool FemPosDeviationSqpOsqpInterface::Solve() {
   // Sanity Check
   if (ref_points_.empty()) {
-    std::cout << "reference points empty, solver early terminates";
+    ILOG_ERROR << "reference points empty, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() != bounds_around_refs_.size()) {
-    std::cout
+    ILOG_ERROR
         << "ref_points and bounds size not equal, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() < 3) {
-    std::cout << "ref_points size smaller than 3, solver early terminates";
+    ILOG_ERROR << "ref_points size smaller than 3, solver early terminates";
     return false;
   }
 
   if (ref_points_.size() > std::numeric_limits<int>::max()) {
-    std::cout << "ref_points size too large, solver early terminates";
+    ILOG_ERROR << "ref_points size too large, solver early terminates";
     return false;
   }
 
@@ -123,7 +123,7 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
   bool initial_solve_res = OptimizeWithOsqp(primal_warm_start, &work);
 
   if (!initial_solve_res) {
-    std::cout << "initial iteration solving fails";
+    ILOG_ERROR << "initial iteration solving fails";
     osqp_cleanup(work);
     c_free(data->A);
     c_free(data->P);
@@ -156,8 +156,8 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
 
       bool iterative_solve_res = OptimizeWithOsqp(primal_warm_start, &work);
       if (!iterative_solve_res) {
-        std::cout << "iteration at " << sub_itr
-                  << ", solving fails with max sub iter " << sqp_sub_max_iter_;
+        ILOG_ERROR << "iteration at " << sub_itr
+                   << ", solving fails with max sub iter " << sqp_sub_max_iter_;
         weight_curvature_constraint_slack_var_ = original_slack_penalty;
         osqp_cleanup(work);
         c_free(data->A);
@@ -170,13 +170,12 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
       const double cur_fvalue = work->info->obj_val;
       const double ftol = std::abs((last_fvalue - cur_fvalue) / last_fvalue);
 
-      std::cout << "cur_fvalue:" << cur_fvalue << ", ftol:" << ftol;
+      ILOG_INFO << "cur_fvalue:" << cur_fvalue << ", ftol:" << ftol;
 
       if (ftol < sqp_ftol_) {
-        std::cout << "merit function value converges at sub iter num "
-                  << sub_itr;
-        std::cout << "merit function value converges to " << cur_fvalue
-                  << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
+        ILOG_INFO << "merit function value converges at sub iter num " << sub_itr;
+        ILOG_INFO << "merit function value converges to " << cur_fvalue
+              << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
         fconverged = true;
         break;
       }
@@ -186,7 +185,7 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
     }
 
     if (!fconverged) {
-      std::cout << "Max number of iteration reached";
+      ILOG_ERROR << "Max number of iteration reached";
       weight_curvature_constraint_slack_var_ = original_slack_penalty;
       osqp_cleanup(work);
       c_free(data->A);
@@ -198,11 +197,11 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
 
     ctol = CalculateConstraintViolation(opt_xy_);
 
-    std::cout << "ctol is " << ctol << ", pre_ctol:" << pre_ctol
-              << ", at pen itr " << pen_itr;
+    ILOG_INFO << "ctol is " << ctol << ", pre_ctol:" << pre_ctol << ", at pen itr "
+          << pen_itr;
 
     if (ctol < sqp_ctol_) {
-      std::cout << "constraint satisfied";
+      ILOG_INFO << "constraint satisfied";
       weight_curvature_constraint_slack_var_ = original_slack_penalty;
       osqp_cleanup(work);
       c_free(data->A);
@@ -217,7 +216,7 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
     ++pen_itr;
   }
 
-  std::cout << "constraint not satisfied with total itr num " << pen_itr;
+  ILOG_INFO << "constraint not satisfied with total itr num " << pen_itr;
   weight_curvature_constraint_slack_var_ = original_slack_penalty;
   osqp_cleanup(work);
   c_free(data->A);
@@ -508,12 +507,12 @@ bool FemPosDeviationSqpOsqpInterface::OptimizeWithOsqp(
   auto status = (*work)->info->status_val;
 
   if (status < 0) {
-    std::cout << "failed optimization status:" << (*work)->info->status;
+    ILOG_ERROR << "failed optimization status:" << (*work)->info->status;
     return false;
   }
 
   if (status != 1 && status != 2) {
-    std::cout << "failed optimization status:" << (*work)->info->status;
+    ILOG_ERROR << "failed optimization status:" << (*work)->info->status;
     return false;
   }
 

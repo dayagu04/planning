@@ -44,7 +44,7 @@ class Arena {
   ::google::protobuf::Arena arena_;
   static ::google::protobuf::Arena persist_arena_;
 
-  DISALLOW_COPY_AND_ASSIGN(Arena);
+  IFLY_DISALLOW_COPY_AND_ASSIGN(Arena);
 };
 
 }  // namespace common

@@ -29,15 +29,6 @@ struct Quaternion {
       : x(xx), y(yy), z(zz), w(ww) {}
 };
 
-struct Pose2D {
-  double x = 0.0;
-  double y = 0.0;
-  double theta = 0.0;
-
-  Pose2D() = default;
-  Pose2D(double xx, double yy, double _theta) : x(xx), y(yy), theta(_theta) {}
-};
-
 struct Pose {
   Point3D position{};
   Quaternion orientation{};

@@ -2510,5 +2510,9 @@ void PrintSegmentsVecInfo(
   }
 }
 
+const double GetTwoPointDist(const PathPoint &start, const PathPoint &end) {
+  return (start.pos - end.pos).norm();
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

@@ -58,6 +58,9 @@ class ApaPlanInterface {
     apa_world_ptr_->GetApaDataPtr()->simu_param = param;
   }
 
+  std::shared_ptr<ApaPlannerBase> GetPlannerByType(
+      const ApaPlannerType planner_type);
+
  private:
   const bool ApaPlanOnce(const ApaPlannerType planner_type);
   void AddReleasedSlotInfo(iflyauto::PlanningOutput& planning_output);

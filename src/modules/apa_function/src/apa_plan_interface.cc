@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <memory>
 #include <vector>
 
@@ -14,9 +15,10 @@
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
-#include "hybrid_astar_planer/hybrid_astar_park_planner.h"
+#include "hybrid_astar_planner/hybrid_astar_park_planner.h"
 #include "ifly_time.h"
 #include "local_view.h"
+#include "log_glog.h"
 #include "parallel_park_in_planner.h"
 #include "perpendicular_park_heading_in_planner.h"
 #include "perpendicular_park_in_planner.h"
@@ -79,6 +81,8 @@ void ApaPlanInterface::ResetForSearching() {
   for (const auto &apa_planner : apa_planner_map_) {
     apa_planner.second->Reset();
   }
+
+  return;
 }
 
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
@@ -197,7 +201,12 @@ void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
 
 static std::string ReadFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
-  assert(file != nullptr);
+  if (file == nullptr) {
+    ILOG_INFO <<" file is null";
+
+    return "null";
+  }
+
   std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
   fseek(fp.get(), 0, SEEK_END);
   std::vector<char> content(ftell(fp.get()));
@@ -213,6 +222,17 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   if (!is_simulation) {
     auto engine_config =
         common::ConfigurationContext::Instance()->engine_config();
+
+    if (engine_config.vehicle_cfg_dir.empty()) {
+      std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
+      common::ConfigurationContext::Instance()->load_engine_config_from_json(
+          engine_config_path);
+
+      ILOG_INFO << "load vehicle config: " << engine_config_path;
+      engine_config = common::ConfigurationContext::Instance()->engine_config();
+      ILOG_INFO << "vehicle config path: " << engine_config.vehicle_cfg_dir;
+    }
+
     path = engine_config.vehicle_cfg_dir + "/apa_params.json";
   }
 
@@ -772,6 +792,33 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
                   "parallel_search_out_heading");
 
+  int path_generator_type = 0;
+  JSON_READ_VALUE(path_generator_type, int, "path_generator_type");
+  switch (path_generator_type) {
+    case 0:
+      apa_param.SetPram().path_generator_type =
+          ParkPathGenerationType::GEOMETRY_BASED;
+      break;
+    case 1:
+      apa_param.SetPram().path_generator_type =
+          ParkPathGenerationType::SEARCH_BASED;
+      break;
+    default:
+      break;
+  }
+  ILOG_INFO << "path_generator_type "
+            << static_cast<int>(apa_param.GetParam().path_generator_type);
+
+  JSON_READ_VALUE(apa_param.SetPram().vertical_slot_target_adjust_dist, double,
+                  "vertical_slot_target_adjust_dist");
+  ILOG_INFO << "vertical_slot_target_adjust_dist "
+            << apa_param.SetPram().vertical_slot_target_adjust_dist;
+
+  JSON_READ_VALUE(apa_param.SetPram().enable_delete_fusion_obj_in_slot, bool,
+                  "enable_delete_fusion_obj_in_slot");
+  ILOG_INFO << "enable_delete_fusion_obj_in_slot "
+            << apa_param.SetPram().enable_delete_fusion_obj_in_slot;
+
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
                   "release_slot_by_prepare");
@@ -867,6 +914,24 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   // gen output params
   JSON_READ_VALUE(apa_param.SetPram().max_velocity, double, "max_velocity");
+
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_x, std::vector<double>,
+                  "footprint_circle_x");
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_y, std::vector<double>,
+                  "footprint_circle_y");
+  JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<double>,
+                  "footprint_circle_r");
+}
+
+std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
+    const ApaPlannerType planner_type) {
+  auto it = apa_planner_map_.find(planner_type);
+  if (it != apa_planner_map_.end()) {
+    return apa_planner_map_[planner_type];
+  }
+
+  ILOG_ERROR << "invalid index";
+  return nullptr;
 }
 
 }  // namespace apa_planner

@@ -138,6 +138,7 @@ class ApaPlannerBase {
     void Reset() {
       gear_change_count = 0;
       is_replan = false;
+      // parking stage: go to prepare point; go to slot point;
       is_replan_first = true;
       is_replan_second = false;
       is_replan_dynamic = false;
@@ -219,6 +220,7 @@ class ApaPlannerBase {
     PLAN_FAILED,  // path plan failed
     PLAN_HOLD,    // follow last
     PLAN_UPDATE,
+    WAIT_PATH,
   };
 
   enum ParkingStatus {

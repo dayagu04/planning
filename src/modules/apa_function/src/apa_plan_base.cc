@@ -151,6 +151,10 @@ void ApaPlannerBase::GenPlanningPath() {
   planning_output_.trajectory.trajectory_points[0].distance =
       frame_.remain_dist_uss;
 
+  if (current_path_point_global_vec_.size() <= 1) {
+    return;
+  }
+
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
       frame_.ego_slot_info.slot_occupied_ratio;

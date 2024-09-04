@@ -34,7 +34,7 @@ struct AlgorithmParam {
 class ConfigurationContext {
  private:
   // this is a singleton class
-  DECLARE_SINGLETON(ConfigurationContext);
+  IFLY_DECLARE_SINGLETON(ConfigurationContext);
 
  public:
   common::SceneTypeConfig scene_type_config() { return scene_type_config_; }

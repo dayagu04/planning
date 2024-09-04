@@ -12,15 +12,16 @@
  *        DISALLOW_COPY, DISALLOW_ASSIGN, DISALLOW_COPY_AND_ASSIGN,
  *        DISALLOW_IMPLICIT_CONSTRUCTORS and DECLARE_SINGLETON
  */
-#define DISALLOW_COPY(ClassName) \
+#define IFLY_DISALLOW_COPY(ClassName) \
  public:                         \
   ClassName(ClassName const &) = delete;
 
-#define DISALLOW_ASSIGN(ClassName) \
+#define IFLY_DISALLOW_ASSIGN(ClassName) \
  public:                           \
   void operator=(ClassName const &) = delete;
 
-#define DISALLOW_COPY_AND_ASSIGN(ClassName) \
+// todo: redefine API, same with cyber rt， need to delete this api.
+#define IFLY_DISALLOW_COPY_AND_ASSIGN(ClassName) \
  public:                                    \
   ClassName(ClassName const &) = delete;    \
   void operator=(ClassName const &) = delete;
@@ -28,9 +29,9 @@
 #define DISALLOW_IMPLICIT_CONSTRUCTORS(ClassName) \
  private:                                         \
   ClassName() = default;                          \
-  DISALLOW_COPY_AND_ASSIGN(ClassName);
+  IFLY_DISALLOW_COPY_AND_ASSIGN(ClassName);
 
-#define DECLARE_SINGLETON(ClassName)                                      \
+#define IFLY_DECLARE_SINGLETON(ClassName)                                      \
  public:                                                                  \
   static ClassName *Instance(bool create_if_needed = true) {              \
     static ClassName *instance = nullptr;                                 \
@@ -42,7 +43,7 @@
     return instance;                                                      \
   }                                                                       \
   ClassName() = default;                                                  \
-  DISALLOW_COPY_AND_ASSIGN(ClassName);                                    \
+  IFLY_DISALLOW_COPY_AND_ASSIGN(ClassName);                                    \
                                                                           \
  private:
 

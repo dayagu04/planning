@@ -4,7 +4,6 @@
 #include "config/vehicle_param.h"
 #include "reference_path.h"
 #include "trajectory/center_line_point.h"
-// #include "trajectory/kd_path.h"
 #include "trajectory/trajectory_point.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"

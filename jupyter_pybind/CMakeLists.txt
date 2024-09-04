@@ -27,6 +27,7 @@ install(
   DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../build/devel/lib/python3/dist-packages/struct_msgs
   DESTINATION ${CMAKE_CURRENT_LIST_DIR}/../jupyter_pybind/notebooks_apa/scripts
 )
+find_package(OpenCV REQUIRED)
 
 pybind11_add_module(lateral_motion_planning_py MODULE src/lateral_motion_planning_pybind.cc)
 target_link_libraries(lateral_motion_planning_py PRIVATE
@@ -60,7 +61,8 @@ target_link_libraries(slot_management_py PRIVATE
   modules_common
   modules_context
   modules_tasks
-  legacy_c_interface)
+  legacy_c_interface
+  modules_apa_function)
 
 pybind11_add_module(dubins_lib_py MODULE src/dubins_lib_pybind.cc)
 target_link_libraries(dubins_lib_py PRIVATE
@@ -127,13 +129,30 @@ target_link_libraries(uss_obstacle_avoidance_py PRIVATE
 
 pybind11_add_module(apa_simulation_py MODULE src/apa_simulation_pybind.cc)
 target_link_libraries(apa_simulation_py PRIVATE
- ${catkin_LIBRARIES}
+  ${catkin_LIBRARIES}
   autoplt
   modules
   modules_common
   modules_context
   modules_tasks
-  legacy_c_interface)
+  legacy_c_interface
+  common
+  )
+
+pybind11_add_module(replay_simulation_hybrid_astar MODULE src/apa_replay_simulation_hybrid_astar.cc)
+target_link_libraries(replay_simulation_hybrid_astar PRIVATE
+  ${catkin_LIBRARIES}
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  ad_common
+  hybrid_astar_lib
+  reeds_shepp
+  occupancy_grid_map
+  ${OpenCV_LIBRARIES}
+  )
 
 pybind11_add_module(geometry_math_validation_py MODULE src/geometry_math_validation_pybind.cc)
 target_link_libraries(geometry_math_validation_py PRIVATE
@@ -154,7 +173,7 @@ target_link_libraries(lateral_path_optimizer_py PRIVATE
   legacy_c_interface)
 
 pybind11_add_module(optimizer_apa_simulation_py MODULE src/optimizer_apa_simulation_pybind.cc)
-  target_link_libraries(optimizer_apa_simulation_py PRIVATE
+target_link_libraries(optimizer_apa_simulation_py PRIVATE
     autoplt
     modules
     modules_common
@@ -177,5 +196,20 @@ target_link_libraries(gap_selector_py PRIVATE
   modules
   modules_common
   modules_context
+  legacy_c_interface
+  modules_tasks)
+
+pybind11_add_module(hybrid_astar_py MODULE src/hybrid_astar_path_generator_pybind.cc)
+target_link_libraries(hybrid_astar_py PRIVATE
+  autoplt
+  ad_common
+  modules
+  modules_apa_function
+  modules_common
+  modules_context
   modules_tasks
-  legacy_c_interface)
+  hybrid_astar_lib
+  reeds_shepp
+  occupancy_grid_map
+  ${OpenCV_LIBRARIES}
+  )

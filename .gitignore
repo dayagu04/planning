@@ -14,3 +14,4 @@ jupyter_pybind/python_proto
 target/*.tar
 bags/
 src/modules/version.h
+build.sh

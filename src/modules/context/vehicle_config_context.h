@@ -18,7 +18,7 @@ namespace planning {
 class VehicleConfigurationContext {
  private:
   // this is a singleton class
-  DECLARE_SINGLETON(VehicleConfigurationContext);
+  IFLY_DECLARE_SINGLETON(VehicleConfigurationContext);
 
  public:
   std::string get_vehicle_param_dir() {
@@ -35,6 +35,7 @@ class VehicleConfigurationContext {
 
   void load_vehicle_param() {
     std::string vehicle_param_path = get_vehicle_param_dir() + "/vehicle.yaml";
+
     LOG_DEBUG("load_vehicle_param: vehicle_param_path: %s",
               vehicle_param_path.c_str());
     if (access(vehicle_param_path.c_str(), F_OK) == -1) {

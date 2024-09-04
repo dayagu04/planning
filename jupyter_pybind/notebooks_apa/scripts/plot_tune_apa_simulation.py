@@ -259,6 +259,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
 
   car_xn = []
   car_yn = []
+  # car_xb is car param
   for i in range(len(car_xb)):
     tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], sim_ego_x, sim_ego_y, sim_ego_heading)
     car_xn.append(tmp_x)

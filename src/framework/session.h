@@ -73,7 +73,7 @@ class Session : public planning::common::Arena {
 
   SimulationContext *simulation_context_;
 
-  DISALLOW_COPY_AND_ASSIGN(Session);
+  IFLY_DISALLOW_COPY_AND_ASSIGN(Session);
 };
 
 }  // namespace framework

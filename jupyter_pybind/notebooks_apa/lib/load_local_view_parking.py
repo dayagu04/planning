@@ -788,6 +788,14 @@ class LoadCyberbag:
 
     return out
 
+  def get_localization_msg_index(self, bag_time):
+    loc_msg_idx = 0
+    if self.loc_msg['enable'] == True:
+      while self.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(self.loc_msg['t'])-1):
+          loc_msg_idx = loc_msg_idx + 1
+
+    return loc_msg_idx
+
 
 def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag=False):
 
