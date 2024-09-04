@@ -79,6 +79,8 @@ class GeneralLateralDecider : public Task {
 
   void RefineConflictLatDecisions(const double &ego_l,
                                   ObstacleDecision &obstacle_decision);
+  bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, double& limit_overlap_min_y,
+                            double& limit_overlap_max_y);
   void PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
@@ -110,7 +112,7 @@ class GeneralLateralDecider : public Task {
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t, double overlap_min_y,
+  void AddObstacleDecisionBound(int id, double t, BoundType bound_type, double overlap_min_y,
                                 double overlap_max_y, double lat_buf_dis,
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,

@@ -762,11 +762,6 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                                  "extra_lateral_buffer_6"},
         extra_lateral_buffer_6);
 
-    nudge_buffer_cutout_obstacle = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "nudge_buffer_cutout_obstacle"},
-        nudge_buffer_cutout_obstacle);
     nudge_extra_buffer_in_intersection = read_json_keys<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -863,7 +858,6 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_lateral_buffer_6 = 0.7;
 
   std::unordered_map<BoundType, double> map_bound_weight;
-  double nudge_buffer_cutout_obstacle = 0.1;
   double nudge_extra_buffer_in_intersection = 0.1;
 };
 
