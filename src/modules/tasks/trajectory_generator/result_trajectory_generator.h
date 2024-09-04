@@ -25,7 +25,7 @@ class ResultTrajectoryGenerator : public Task {
   void Init();
 
   inline bool is_abnormal_number(double number) {
-    return (isnan(number) == 1) || (isinf(number) != 0);
+    return (std::isnan(number) == 1) || (std::isinf(number) != 0);
   }
 
  private:

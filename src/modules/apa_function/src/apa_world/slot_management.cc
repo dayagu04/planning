@@ -27,9 +27,11 @@
 #include "fusion_objects_c.h"
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
+#include "log_glog.h"
 #include "math_lib.h"
 #include "slot_management_info.pb.h"
 #include "transform_lib.h"
+#include "ifly_time.h"
 
 namespace planning {
 
@@ -1132,7 +1134,9 @@ bool SlotManagement::UpdateSlotsInSearching() {
              Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
          slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) &&
-        slot->is_release()) {
+        slot->is_release() &&
+        apa_param.GetParam().path_generator_type ==
+            apa_planner::ParkPathGenerationType::GEOMETRY_BASED) {
       if (slot->slot_type() ==
               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
           frame_.slot_info_direction.count(slot->id()) != 0) {

@@ -57,6 +57,14 @@ enum PathSegGear {
   SEG_GEAR_COUNT,
 };
 
+enum class RotateDirection {
+  NONE,
+  COUNTER_CLOCKWISE,
+  CLOCKWISE,
+  SAME_DIRECTION,
+  ROTATE_DIRECTION_MAX_NUM,
+};
+
 struct PlanSegState {
   uint8_t cur_seg_type = SEG_TYPE_LINE;
   uint8_t cur_seg_steer = SEG_STEER_STRAIGHT;
@@ -70,12 +78,21 @@ struct PathPoint {
     heading = heading_in;
   }
 
+  PathPoint(const Eigen::Vector2d &pos_in, const double heading_in,
+            const double kappa_in) {
+    pos = pos_in;
+    heading = heading_in;
+    kappa = kappa_in;
+  }
+
   void Set(const Eigen::Vector2d &pos_in, const double heading_in) {
     pos = pos_in, heading = heading_in;
   }
 
   Eigen::Vector2d pos = Eigen::Vector2d::Zero();
   double heading = 0.0;
+  // todo: path point related codes is too much, unify them.
+  double kappa;
 
   void Reset() {
     pos.setZero();
@@ -214,7 +231,6 @@ struct PathSegment {
   const PathPoint GetStartPose() const {
     return PathPoint(GetStartPos(), GetStartHeading());
   }
-
   const PathPoint GetEndPose() const {
     return PathPoint(GetEndPos(), GetEndHeading());
   }
@@ -338,6 +354,9 @@ const double NormSquareOfTwoVector2d(const Eigen::Vector2d &p1,
 
 const double NormSquareOfVector2d(const Eigen::Vector2d &p1);
 
+/**
+ * return value range [-PI, PI)
+ */
 double GetAngleFromTwoVec(const Eigen::Vector2d &a, const Eigen::Vector2d &b);
 
 const Eigen::Matrix2d GetRotm2dFromTheta(const double theta);
@@ -388,6 +407,11 @@ const std::pair<Eigen::Vector2d, Eigen::Vector2d> GetTwoCircleIntersection(
 
 const bool GetTwoArcIntersection(Eigen::Vector2d &intersection, const Arc &arc1,
                                  const Arc &arc2);
+
+/**
+ * if return value > 0, then vec1 is counter clockwise
+ * if return value < 0, then vec1 is clockwise
+ */
 const double GetCrossFromTwoVec2d(const Eigen::Vector2d &vec0,
                                   const Eigen::Vector2d &vec1);
 
@@ -612,6 +636,8 @@ void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
 void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg);
 void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
+
+const double GetTwoPointDist(const PathPoint &start, const PathPoint &end);
 
 }  // namespace geometry_lib
 }  // namespace pnc

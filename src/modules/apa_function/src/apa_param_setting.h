@@ -13,6 +13,18 @@
 namespace planning {
 namespace apa_planner {
 
+enum class ParkPathGenerationType {
+  GEOMETRY_BASED = 0,
+  SEARCH_BASED = 1,
+  OPTIMIZATION_BASED = 2,
+  PARK_PATH_GENERATION_MAX_NUM,
+};
+
+// todo
+// 1. system should use same vehicle configuration file for on lane driving and
+// parking.
+// 2. for the atom development principle, we should decouple vehicle parameters
+// and algorithm parameters into different configurature file or struct.
 struct ApaParameters {
   // length unit: m   deg unit: deg  time unit: s
 
@@ -21,6 +33,7 @@ struct ApaParameters {
 
   // car params
   double front_overhanging = 0.924;
+  // back edge to rear axis
   double rear_overhanging = 0.94;
   double wheel_base = 2.7;
   double car_width = 1.89;
@@ -244,6 +257,12 @@ struct ApaParameters {
   double min_gear_path_length = 0.25;
   double parallel_multi_plan_radius_eps = 0.03;
   double parallel_search_out_heading = 0.0;
+  ParkPathGenerationType path_generator_type =
+      ParkPathGenerationType::GEOMETRY_BASED;
+  // move target point in slot to another point for easy tracking
+  double vertical_slot_target_adjust_dist = 1.0;
+  bool enable_delete_fusion_obj_in_slot = true;
+
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
   bool perpendicular_lat_opt_enable = true;
@@ -288,6 +307,13 @@ struct ApaParameters {
 
   // gen output params
   double max_velocity = 0.6;
+
+  std::vector<double> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
+                                            2.02, 2.7, 1.8, 0.9,  0.0};
+  std::vector<double> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
+                                            0.88, 0.0,  0.0,   0.0,   0.0};
+  std::vector<double> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
+                                           0.18, 0.95, 0.95, 0.95, 0.95};
 };
 
 class ApaParametersSetting {

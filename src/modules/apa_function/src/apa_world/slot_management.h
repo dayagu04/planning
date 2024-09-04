@@ -30,6 +30,7 @@
 #include "task_basic_types.pb.h"
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
+#include "log_glog.h"
 
 static const size_t slot_corner_pt_nums = 4;
 
@@ -270,7 +271,9 @@ class SlotManagement {
     double heading = 0.0;
     Eigen::Vector2d ego_heading_vec = Eigen::Vector2d::Zero();
     Eigen::Vector2d ego_pos = Eigen::Vector2d::Zero();
+    // move ego pose to right side by params
     Eigen::Vector2d right_mirror_pos = Eigen::Vector2d::Zero();
+    // move ego pose to left side by params
     Eigen::Vector2d left_mirror_pos = Eigen::Vector2d::Zero();
   };
 

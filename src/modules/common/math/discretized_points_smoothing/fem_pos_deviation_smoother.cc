@@ -24,7 +24,7 @@
 
 #include "fem_pos_deviation_osqp_interface.h"
 #include "fem_pos_deviation_sqp_osqp_interface.h"
-// #include "log_glog.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace planning_math {
@@ -56,7 +56,7 @@ bool FemPosDeviationSmoother::QpWithOsqp(
     const std::vector<double>& bounds, std::vector<double>* opt_x,
     std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
-    std::cout << "opt_x or opt_y is nullptr";
+    ILOG_ERROR << "opt_x or opt_y is nullptr";
     return false;
   }
 
@@ -91,7 +91,7 @@ bool FemPosDeviationSmoother::SqpWithOsqp(
     const std::vector<double>& bounds, std::vector<double>* opt_x,
     std::vector<double>* opt_y) {
   if (opt_x == nullptr || opt_y == nullptr) {
-    std::cout << "opt_x or opt_y is nullptr";
+    ILOG_ERROR << "opt_x or opt_y is nullptr";
     return false;
   }
 

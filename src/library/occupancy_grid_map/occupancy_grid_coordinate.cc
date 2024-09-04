@@ -1,0 +1,52 @@
+#include "occupancy_grid_coordinate.h"
+
+namespace planning {
+
+void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose) {
+  ogm_tf_.SetBasePose(ogm_pose);
+  ogm_base_pose_ = ogm_pose;
+
+  ogm_resolution_inv_ = 1.0 / ogm_resolution;
+
+  bound_.min_x = ogm_base_pose_.x;
+  bound_.max_x = ogm_base_pose_.x + ogm_grid_x_max * ogm_resolution + 1.0;
+
+  bound_.min_y = ogm_base_pose_.y;
+  bound_.max_y = ogm_base_pose_.y + ogm_grid_y_max * ogm_resolution + 1.0;
+
+  return;
+}
+
+const bool OccupancyGridCoordinate::IsIndexValid(const OgmIndex &id) {
+  if (id.x >= ogm_grid_x_max || id.y >= ogm_grid_y_max) {
+    return false;
+  }
+
+  if (id.x < 0 || id.y < 0) {
+    return false;
+  }
+
+  return true;
+}
+
+void OccupancyGridCoordinate::OgmPoseToIndex(OgmIndex *index,
+                                             const Pose2D &point) {
+  index->x = std::round(point.x * ogm_resolution_inv_);
+  index->y = std::round(point.y * ogm_resolution_inv_);
+
+  return;
+}
+
+const bool OccupancyGridCoordinate::SlotPoseToIndex(OgmIndex *index,
+                                                    const Pose2D &point) {
+  index->x = std::round((point.x - bound_.min_x) * ogm_resolution_inv_);
+  index->y = std::round((point.y - bound_.min_y) * ogm_resolution_inv_);
+
+  if (IsIndexValid(*index)) {
+    return true;
+  }
+
+  return false;
+}
+
+}  // namespace planning

@@ -1,7 +1,5 @@
 #include "virtual_lane_manager.h"
 
-// #include <cyber/common/log.h>
-
 #include <algorithm>
 #include <cmath>
 #include <complex>

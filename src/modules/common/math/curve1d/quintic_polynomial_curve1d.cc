@@ -23,7 +23,6 @@
 // #include "absl/strings/str_cat.h"
 // #include "absl/strings/str_join.h"
 
-// #include "cyber/common/log.h"
 
 namespace planning {
 namespace planning_math {

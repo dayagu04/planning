@@ -18,7 +18,6 @@
 
 #include <cmath>
 
-// #include "cyber/common/log.h"
 #include "math/math_utils.h"
 
 namespace planning {

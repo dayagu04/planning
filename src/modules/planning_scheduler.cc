@@ -23,6 +23,7 @@
 #include "func_state_machine_c.h"
 #include "ifly_time.h"
 #include "log.h"
+#include "log_glog.h"
 #include "math/math_utils.h"
 #include "planning_context.h"
 #include "planning_debug_info.pb.h"
@@ -137,11 +138,13 @@ bool PlanningScheduler::RunOnce(
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
 
+  ILOG_INFO << "scene_type " << scene_type;
   bool planning_success = false;
   if (scene_type == common::PARKING_APA) {
     // 泊车规划部分
     if (g_context.GetStatemachine().apa_reset_flag) {
       apa_function_->Reset();
+      ILOG_INFO << "reset parking";
     }
     planning_success = apa_function_->Plan();
     *planning_output = session_.planning_context().planning_output();

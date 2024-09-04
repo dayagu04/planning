@@ -901,7 +901,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     fix_lane_ralative_id = lat_behavior_common.fix_lane_virtual_id - current_lane_virtual_id
     target_lane_ralative_id = lat_behavior_common.target_lane_virtual_id - current_lane_virtual_id
     origin_lane_ralative_id = lat_behavior_common.origin_lane_virtual_id - current_lane_virtual_id
+
+    print('center_line_list', len(center_line_list))
     for i in range(10):
+      if i >= len(center_line_list):
+        break
+
       if center_line_list[i]['relative_id'] == fix_lane_ralative_id:
         local_view_data['data_fix_lane'].data.update({
           'fix_lane_x': center_line_list[i]['line_x_vec'],
@@ -923,6 +928,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'text_xn': [text_xn],
       'text_yn': [text_yn],
     })
+
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:

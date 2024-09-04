@@ -22,6 +22,10 @@
   "car_vertex_y_vec": [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945,
                       -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945],
 
+  "footprint_circle_x": [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0],
+  "footprint_circle_y": [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0],
+  "footprint_circle_r": [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95],
+
   "comment_3": "slot params",
   "normal_slot_length": 4.871,
   "normal_slot_width": 2.39,
@@ -227,6 +231,9 @@
   "min_opt_path_length": 0.9,
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,
+  "path_generator_type": 1,
+  "vertical_slot_target_adjust_dist": 1.5,
+  "enable_delete_fusion_obj_in_slot": true,
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,

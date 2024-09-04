@@ -13,6 +13,9 @@
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "ifly_time.h"
+#include "local_view.h"
+#include "log_glog.h"
+#include "planning_debug_info.pb.h"
 #include "version.h"
 
 namespace planning {
@@ -33,6 +36,11 @@ void PlanningAdapter::Init() {
 
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
+
+  // Init glog
+  FilePath::SetName("planning_node");
+  InitGlog(FilePath::GetName().c_str());
+  ILOG_INFO << "log init finish";
 
   std::string log_file = engine_config.log_conf.log_file;
   // Nanolog
@@ -416,6 +424,7 @@ void PlanningAdapter::Proc() {
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
+  ILOG_INFO << "planning loop time(ms): " << planning_cost_time;
 }
 
 void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {

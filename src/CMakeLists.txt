@@ -52,6 +52,10 @@ add_subdirectory(library/advanced_ctrl_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/ilqr_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/geometry_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/jlt_lib EXCLUDE_FROM_ALL)
+add_subdirectory(library/hybrid_astar_lib EXCLUDE_FROM_ALL)
+add_subdirectory(library/collision_detection EXCLUDE_FROM_ALL)
+add_subdirectory(library/reeds_shepp EXCLUDE_FROM_ALL)
+add_subdirectory(library/occupancy_grid_map EXCLUDE_FROM_ALL)
 
 add_subdirectory(thirdparty/mjson EXCLUDE_FROM_ALL)
 

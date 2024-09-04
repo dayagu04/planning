@@ -71,7 +71,8 @@ static inline std::string DateString() {
   auto tt = std::chrono::system_clock::to_time_t(tp);
   std::tm* now = std::gmtime(&tt);
   return std::to_string(now->tm_year + 1900) + std::to_string(now->tm_mon + 1) +
-         std::to_string(now->tm_mday);
+         std::to_string(now->tm_mday) + std::to_string(now->tm_hour) +
+         std::to_string(now->tm_min) + std::to_string(now->tm_sec);
 }
 
 }  // namespace IflyTime

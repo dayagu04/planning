@@ -53,6 +53,7 @@ add_subdirectory(proto)
 add_subdirectory(src)
 if(ADAPTER STREQUAL "cyber")
   add_subdirectory(ad_common)
+  add_subdirectory(tools)
 endif()
 
 if (UNIT_TEST_ENABLE)
