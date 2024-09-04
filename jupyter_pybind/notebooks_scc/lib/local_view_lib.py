@@ -18,7 +18,8 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.basic_data_generator import *
 from lib.load_struct import *
-from lib.load_ros_bag import is_new_loc, is_bag_main, get_g_is_display_enu
+from lib.load_ros_bag import is_bag_main, get_g_is_display_enu
+import lib.load_ros_bag
 
 plan_debug_ts = []
 plan_debug_timestamps = []

@@ -2,6 +2,7 @@ from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
 from lib.load_ros_bag import LoadRosbag, g_is_display_enu, is_match_planning, is_vis_map, is_bag_main, is_vis_sdmap
+import lib.load_ros_bag
 import numpy as np
 
 from bokeh.io import output_notebook, push_notebook
@@ -69,10 +70,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   input_topic_timestamp = plan_debug_msg.input_topic_timestamp
   fusion_object_timestamp = input_topic_timestamp.fusion_object
   fusion_road_timestamp = input_topic_timestamp.fusion_road
-  if is_bag_main:
-    localization_timestamp = input_topic_timestamp.localization_estimate
-  else:
+  if lib.load_ros_bag.is_new_loc:
     localization_timestamp = input_topic_timestamp.localization
+  else :
+    if is_bag_main:
+      localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+    else:
+      localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
   # prediction_timestamp = input_topic_timestamp.prediction
   # vehicle_service_timestamp = input_topic_timestamp.vehicle_service
   # control_output_timestamp = input_topic_timestamp.control_output

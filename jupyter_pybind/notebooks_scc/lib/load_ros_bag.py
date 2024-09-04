@@ -125,6 +125,13 @@ class LoadRosbag:
     # time offset
     t0 = 0
 
+    # is_new_loc
+    global is_new_loc
+    topics = self.bag.get_type_and_topic_info().topics
+    for topic in topics:
+      if topic == "/iflytek/localization/egomotion":
+        is_new_loc = True
+
   def load_all_data(self, normal_print = True):
     print('load bag')
     start_time = time.time()
@@ -151,14 +158,7 @@ class LoadRosbag:
     except Exception as e:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!') """
-
-    # load localization msg
-    global is_new_loc
-    topics = self.bag.get_type_and_topic_info().topics
-    for topic in topics:
-      if topic == "/iflytek/localization/egomotion":
-        is_new_loc = True
-
+    
     if is_new_loc:
       try:
         loc_msg_dict = {}
