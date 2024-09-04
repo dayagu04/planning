@@ -1541,6 +1541,18 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   std::array<double, 5> fp3{1.28, 1.28, 1.21, 1.19, 1.1};
   double result = interp(item.d_rel, xp3, fp3);
 
+  // hysteresis
+  const double lead_hysteresis = 1.1;
+  if (item.is_lead) {
+    result = result * lead_hysteresis;
+  }
+
+  // increase threshold for vru
+  const double lead_vru = 1.2;
+  if(item.is_VRU){
+    result = result * lead_vru;
+  }
+
   double d_path = std::max(item.d_path_pos + lat_corr, 0.0);
   LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
             item.track_id, item.d_rel, item.v_lat);
@@ -1550,7 +1562,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     lead_d_path_thr = result;
   } else if (item.v_lead <= 2.0 && item.motion_pattern_current ==
                                        iflyauto::OBJECT_MOTION_TYPE_STATIC) {
-    lead_d_path_thr = 1.15;
+    lead_d_path_thr = 1.1;
   } else {
     lead_d_path_thr = 1.2;
   }
@@ -1559,37 +1571,27 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     lead_d_path_thr = 0.3;
   }
   LOG_DEBUG("lead_d_path_thr is: [%f]\n", lead_d_path_thr);
-  if (hdmap_valid_) {
-    item.leadone_confidence_cnt = 0.0;
-    item.is_lead = d_path < lead_d_path_thr && item.d_rel >= 0.0;
-  } else {
-    LOG_DEBUG("the gap is : [%f]ms \n", gap);
-    if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
-      item.leadone_confidence_cnt =
-          std::min(item.leadone_confidence_cnt + gap, 50 * planning_cycle_time);
-    } else {
-      LOG_DEBUG("!!!!!!!gap is : [%f] \n", gap);
-      int count = (int)((gap + 0.01) / planning_cycle_time);
-      item.leadone_confidence_cnt = std::max(
-          item.leadone_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
-      LOG_DEBUG("!!!!!!!leadone_confidence_cnt is : [%f] \n",
-                item.leadone_confidence_cnt);
-    }
+  LOG_DEBUG("the gap is : [%f]ms \n", gap);
 
-    std::array<double, 5> xp4{0, 30, 60, 90, 120};
-    std::array<double, 5> fp4{1, 1, 1, 5, 10};
-    std::array<double, 5> fp4_1{1, 1, 1, 5, 5};
-    std::array<double, 5> fp4_2{1, 1, 1, 1, 1};
-    double lead_confidence_thrshld = 1.0;
-    if (item.type == 1) {
-      lead_confidence_thrshld = interp(item.d_rel, xp4, fp4_2);
-    } else {
-      lead_confidence_thrshld = interp(item.d_rel, xp4, fp4_1);
-    }
-    LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
-    item.is_lead = item.leadone_confidence_cnt >=
-                   lead_confidence_thrshld * planning_cycle_time;
+  if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
+    item.leadone_confidence_cnt =
+        std::min(item.leadone_confidence_cnt + gap, 10 * planning_cycle_time);
+  } else {
+    LOG_DEBUG("gap is : [%f] \n", gap);
+    int count = (int)((gap + 0.01) / planning_cycle_time);
+    item.leadone_confidence_cnt = std::max(
+        item.leadone_confidence_cnt - 2 * count * planning_cycle_time, 0.0);
+    LOG_DEBUG("leadone_confidence_cnt is : [%f] \n",
+              item.leadone_confidence_cnt);
   }
+
+  std::array<double, 5> xp4{0, 30, 60, 90, 120};
+  std::array<double, 5> fp4{1, 1, 2, 5, 5};
+  double lead_confidence_thrshld = 1.0;
+  lead_confidence_thrshld = interp(item.d_rel, xp4, fp4);
+  LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
+  item.is_lead = item.leadone_confidence_cnt >=
+                  lead_confidence_thrshld * planning_cycle_time;
   LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
 
   // calculate cutin
