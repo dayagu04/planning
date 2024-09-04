@@ -1,13 +1,13 @@
 #pragma once
 
-#include "astar_decider.h"
-#include "hybrid_astar_common.h"
-#include "./../occupancy_grid_map/point_cloud_obstacle.h"
+#include "point_cloud_obstacle.h"
 
 namespace planning {
 
+enum CarSlotRelativePosition { none, car_is_right, car_is_left, car_is_middle };
+
 // generate virtual wall by ego pose and slot, need refact.
-class VirtualWallDecider : public AstarDecider {
+class VirtualWallDecider {
  public:
   VirtualWallDecider() = default;
 
@@ -29,6 +29,10 @@ class VirtualWallDecider : public AstarDecider {
   void GenerateCarRelativePosition(const Pose2D& ego_pose);
 
  private:
+  std::string name_;
+  Pose2D start_;
+  Pose2D end_;
+
   CarSlotRelativePosition relative_position_;
 };
 

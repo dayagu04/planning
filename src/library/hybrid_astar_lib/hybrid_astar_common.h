@@ -231,8 +231,6 @@ struct QueueCompare {
   }
 };
 
-enum CarSlotRelativePosition { none, car_is_right, car_is_left, car_is_middle };
-
 #define astar_max_angle_number (16)
 struct AstarSamplingAngle {
   size_t size;

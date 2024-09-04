@@ -2,7 +2,7 @@ project (modules_apa_function)
 cmake_minimum_required (VERSION 3.0)
 
 file(GLOB_RECURSE SRC_FILES
-  ${CMAKE_CURRENT_LIST_DIR}/**.cc
+  ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 
 set(INCLUDE_DIRS
@@ -26,7 +26,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_common
   geometry_lib
   modules_base_function
-  planning_proto
   hybrid_astar_lib
   reeds_shepp
   occupancy_grid_map
