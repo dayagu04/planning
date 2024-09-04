@@ -322,6 +322,15 @@ GapSelectorStatus GapSelectorDecider::Update() {
   coarse_planning_info.reference_path->get_frenet_coord()->XYToSL(
       ego_cart_pose, ego_frenet_pose);
 
+  const double ego_v = ego_state_mgr->ego_v();
+  std::vector<double> xp_ego_v{10.0, 15.0, 20.0, 25.0};
+  double lat_ref_offset = interp(ego_v, xp_ego_v, config_.lat_ref_offset);
+  if (ego_frenet_pose.y > 1e-6) {
+    avoid_lat_offset += lat_ref_offset;
+  } else {
+    avoid_lat_offset -= lat_ref_offset;
+  }
+
   if (coarse_planning_info.target_state != last_target_state_) {
     if (coarse_planning_info.target_state == kLaneKeeping ||
         coarse_planning_info.target_state == kLaneChangePropose) {

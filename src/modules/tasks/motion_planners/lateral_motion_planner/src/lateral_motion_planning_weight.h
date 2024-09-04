@@ -51,6 +51,8 @@ class LateralMotionPlanningWeight {
     is_in_intersection_ = is_in_intersection;
   }
 
+  double GetInitDisToRef() const { return init_dis_to_ref_; }
+
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
 
   double GetConcernedEndRatioForXY() const { return end_ratio_for_qrefxy_; }
@@ -60,6 +62,9 @@ class LateralMotionPlanningWeight {
   }
 
   void MakeLaneChangeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void MakeSplitDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
  private:

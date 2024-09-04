@@ -77,6 +77,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       break;
     }
     case LANE_CHANGE: {
+      end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_qreftheta;
       planning_input.set_acc_bound(config_.acc_bound_lane_change);
       planning_input.set_jerk_bound(config_.jerk_bound_lane_change);
       planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
@@ -84,26 +85,34 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
       planning_input.set_q_continuity(config_.q_continuity);
       planning_input.set_q_acc(config_.q_acc_lane_change);
-      if (std::fabs(ego_l_) > config_.lane_change_ego_l_thr) {
-        planning_input.set_q_jerk(config_.q_jerk_lane_change);
-        concerned_start_q_jerk_ = config_.q_jerk_lane_change;
+      planning_input.set_q_jerk(config_.q_jerk_lane_change);
+      concerned_start_q_jerk_ = config_.q_jerk_lane_change;
+      planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change);
+      // if (std::fabs(ego_l_) > config_.lane_change_ego_l_thr) {
+      //   planning_input.set_q_jerk(config_.q_jerk_lane_change);
+      //   concerned_start_q_jerk_ = config_.q_jerk_lane_change;
+      // } else {
+      //   planning_input.set_q_jerk(config_.q_jerk_lane_change2);
+      //   concerned_start_q_jerk_ = config_.q_jerk_lane_change2;
+      // }
+      if (ego_vel_ <= config_.lane_change_high_vel) {
+        end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
       } else {
-        planning_input.set_q_jerk(config_.q_jerk_lane_change2);
-        concerned_start_q_jerk_ = config_.q_jerk_lane_change2;
+        if (config_.use_new_lc_param) {
+          end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
+          planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_high_vel);
+        } else {
+          planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_high_vel1);
+        }
       }
 
-      if (ego_vel_ > config_.lane_change_high_vel) {
-        end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_qreftheta;
-        planning_input.set_q_ref_x(config_.q_ref_xy_lane_change_high_vel);
-        planning_input.set_q_ref_y(config_.q_ref_xy_lane_change_high_vel);
-        planning_input.set_q_ref_theta(
-            config_.q_ref_theta_lane_change_high_vel);
-        // planning_input.set_q_jerk(5.0);
-        // concerned_start_q_jerk_ = config_.q_jerk_lane_change_high_vel;
-        planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
-        planning_input.set_q_jerk_bound(
-            config_.q_jerk_bound_lane_change_high_vel);
-      }
+      // planning_input.set_q_ref_x(config_.q_ref_xy_lane_change_high_vel);
+      // planning_input.set_q_ref_y(config_.q_ref_xy_lane_change_high_vel);
+      // planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_high_vel);
+      // planning_input.set_q_jerk(config_.q_jerk_lane_change);
+      // concerned_start_q_jerk_ = config_.q_jerk_lane_change;
+      // planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
+      // planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change);
 
       if (is_lane_change_back_) {
         planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
@@ -215,16 +224,47 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
 
 void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
-  end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_qrefxy;
+  end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
   std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
-  double q_jerk1 = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                    config_.map_qjerk_lc_high_vel);
-  concerned_start_q_jerk_ = q_jerk1;
-  planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
+  if (ego_vel_ <= config_.lane_change_high_vel || config_.use_new_lc_param) {
+    double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
+                                      config_.map_qjerk_lc_high_vel);
+    concerned_start_q_jerk_ = q_jerk;
+    planning_input.set_q_jerk(q_jerk);
+  } else {
+    double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
+                                    config_.map_qjerk_lc_high_vel_old);
+    concerned_start_q_jerk_ = q_jerk;
+    planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
+    std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
+    double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
+                                      config_.map_qrefxy_lc_high_vel);
+    planning_input.set_q_ref_x(q_ref_xy);
+    planning_input.set_q_ref_y(q_ref_xy);
 
+    std::vector<double> xp_xy3{0.15, 0.5, 1.5};
+    std::vector<double> fp_qtheta{config_.q_ref_theta_lane_change_high_vel3,
+                                  config_.q_ref_theta_lane_change_high_vel2,
+                                  config_.q_ref_theta_lane_change_high_vel};
+    double q_ref_theta =
+        planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta);
+    planning_input.set_q_ref_theta(q_ref_theta);
+    planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
+    planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+  }
+}
+
+void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
+    planning::common::LateralPlanningInput &planning_input) {
+  end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
+  std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
+  double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
+                                  config_.map_qjerk_lc_high_vel_old);
+  concerned_start_q_jerk_ = q_jerk;
+  planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
   std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
   double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
-                                     config_.map_qrefxy_lc_high_vel);
+                                    config_.map_qrefxy_lc_high_vel);
   planning_input.set_q_ref_x(q_ref_xy);
   planning_input.set_q_ref_y(q_ref_xy);
 
@@ -235,8 +275,8 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   double q_ref_theta =
       planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta);
   planning_input.set_q_ref_theta(q_ref_theta);
-
-  // planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_high_vel2);
+  planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
+  planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
 }
 
 }  // namespace lateral_planning

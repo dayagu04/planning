@@ -427,34 +427,35 @@ void LateralMotionPlanner::AssembleInput() {
   if (split_scene) {
     motion_plan_concerned_end_index = 17;
     if (!is_divide_lane_into_two_) {
-      planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
+      planning_weight_ptr_->MakeSplitDynamicWeight(planning_input_);
     }
   }
 
-  const double lateral_offset = lateral_offset_decider_output.lateral_offset;
-  if ((lane_change_scene) && (ego_v > config_.lane_change_high_vel) && (!lane_change_back)) {
-    if (config_.use_high_vel_lc_version_two) {
+  // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
+  if ((lane_change_scene) && (!lane_change_back)) {
+    if (ego_v <= config_.lane_change_high_vel || config_.use_new_lc_param) {
       complete_follow = false;
+      motion_plan_concerned_end_index = 20;
     }
     // complete_follow = false;
-    motion_plan_concerned_end_index = 17;
-    for (size_t i = 1; i < 17; ++i) {
-      Point2D cart_refi(planning_input_.ref_x_vec(i),
-                        planning_input_.ref_y_vec(i));
-      Point2D frenet_refi;
-      if (reference_path_ptr->get_frenet_coord() != nullptr &&
-          reference_path_ptr->get_frenet_coord()->XYToSL(cart_refi,
-                                                         frenet_refi)) {
-        if (std::fabs(frenet_refi.y - lateral_offset) < 0.05) {
-          motion_plan_concerned_end_index = i - 1;
-          break;
-        }
-      }
-    }
-    if (motion_plan_concerned_end_index < 1) {
-      if (!config_.use_high_vel_lc_version_two) {
-        complete_follow = false;
-      }
+    // motion_plan_concerned_end_index = 17;
+    // for (size_t i = 1; i < 17; ++i) {
+    //   Point2D cart_refi(planning_input_.ref_x_vec(i),
+    //                     planning_input_.ref_y_vec(i));
+    //   Point2D frenet_refi;
+    //   if (reference_path_ptr->get_frenet_coord() != nullptr &&
+    //       reference_path_ptr->get_frenet_coord()->XYToSL(cart_refi,
+    //                                                      frenet_refi)) {
+    //     if (std::fabs(frenet_refi.y - lateral_offset) < 0.05) {
+    //       motion_plan_concerned_end_index = i - 1;
+    //       break;
+    //     }
+    //   }
+    // }
+    // if (motion_plan_concerned_end_index < 1 || std::fabs(frenet_init.y - frenet_ref0.y) > 1e-6) {
+    const double init_dis_to_ref = planning_weight_ptr_->GetInitDisToRef();
+    if (std::fabs(init_dis_to_ref) > 0.01) {
+      complete_follow = false;
       motion_plan_concerned_end_index = 17;
       planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
     }

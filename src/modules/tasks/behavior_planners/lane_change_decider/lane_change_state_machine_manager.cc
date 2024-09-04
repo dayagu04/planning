@@ -401,13 +401,15 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
       virtual_lane_mgr->origin_relative_id_zero_nums();
   bool perfect_in_diversion_lane = false;
 
-  double dist_threshold = 0.15;
+  const double v_ego =
+      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
+  std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
+  double dist_threshold = interp(v_ego, xp_v_ego, config_.lc_finished_dist_thr);
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
     //匝道汇主路打灯时，关灯阈值可以增大一点
     dist_threshold = 0.3;
   }
-  double v_ego =
-      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
+
   std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
   std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
   double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
