@@ -12,6 +12,7 @@ namespace planning {
 
 class PerceptionRangeEstimator {
  public:
+  virtual ~PerceptionRangeEstimator() = default;
   // Update frenet coordinate transformer
   virtual void updateFrenet(
       const std::shared_ptr<FrenetCoordinateSystem> &frenet) = 0;
