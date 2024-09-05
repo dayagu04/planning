@@ -19,7 +19,7 @@ JAC_S811 = 'JAC_S811'
 CHERY_T26 = 'CHERY_T26'
 CHERY_E0X = 'CHERY_E0X'
 
-def load_car_params_patch_parking(vehicle_type = JAC_S811,  car_lat_inflation = 0.07):
+def load_car_params_patch_parking(vehicle_type = JAC_S811,  car_lat_inflation = 0.0):
 
   if vehicle_type == JAC_S811:
     # for JAC_S811

@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240824/20240824-17-07-50/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-24-17-07-50_no_camera.bag'
 bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240824/20240824-17-04-24/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-24-17-04-24_no_camera.bag'
 bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240825/20240825-16-55-11/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-25-16-55-12_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240827/20240827-17-30-40/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-27-17-30-40_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240904/20240904-15-19-55/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-04-15-19-56_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -117,7 +117,7 @@ fig1.circle('obs_y', 'obs_x', source = data_sim_obs, size=6.0, color='red', lege
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=2, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.use_slot_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_slot_in_bag",min=0, max=1, value=1, step=1)
     self.use_obs_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_obs_in_bag",min=0, max=1, value=1, step=1)

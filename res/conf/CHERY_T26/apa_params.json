@@ -38,8 +38,8 @@
   "terminal_target_y": 0.0,
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
-  "terminal_parallel_y_offset": -0.1,
-  "terminal_parallel_y_offset_with_curb": 0.25,
+  "terminal_parallel_y_offset": -0.08,
+  "terminal_parallel_y_offset_with_curb": 0.28,
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.086,
