@@ -1722,7 +1722,7 @@ bool VirtualLaneManager::UpdateIntersectionState() {
       ((distance_to_crosswalk_ < 28.0 && distance_to_crosswalk_ > 5.0) &&
        !IsPosXOnVirtualLaneType(ego_pos_x))) {
     Intersection_state_ = planning::common::APPROACH_INTERSECTION;
-  } else if (distance_to_stopline_ <= 3.0) {
+  } else if (-1.0 < distance_to_stopline_ <= 3.0) {
     Intersection_state_ = planning::common::IN_INTERSECTION;
   } else {
     if ((0 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) &&
@@ -1745,18 +1745,92 @@ bool VirtualLaneManager::UpdateIntersectionState() {
 
 bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
   bool rslt = false;
+  bool lane_is_virtual = false;
   const auto& lane_types_vec = current_lane_->get_lane_types();
   for (int ind = 0; ind < lane_types_vec.size(); ind++) {
     if (lane_types_vec[ind].begin <= x_pos &&
         x_pos <= lane_types_vec[ind].end) {
       if (lane_types_vec[ind].type == iflyauto::LANETYPE_VIRTUAL) {
-        rslt = true;
+        lane_is_virtual = true;
       } else {
-        rslt = false;
+        lane_is_virtual = false;
       }
       break;
     }
   }
+
+  const auto& l_boundry = current_lane_->get_left_lane_boundary();
+  bool l_boundry_is_virtual = false;
+  for (int j = 0; j < l_boundry.type_segments_size; j++) {
+    double seg_begin = -1;
+    double seg_end = -1;
+    if (j == 0) {
+      seg_begin = 0;
+      seg_end = l_boundry.type_segments[j].length;
+      if (seg_begin <= x_pos && x_pos <= seg_end) {
+        if (l_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          l_boundry_is_virtual = true;
+        } else {
+          l_boundry_is_virtual = false;
+        }
+        break;
+      }
+    } else {
+      seg_begin = 0;
+      for (int i = 0; i <= j - 1; i++) {
+        seg_begin += l_boundry.type_segments[i].length;
+      }
+      seg_end = 0;
+      for (int i = 0; i <= j; i++) {
+        seg_end += l_boundry.type_segments[i].length;
+      }
+      if (seg_begin <= x_pos && x_pos <= seg_end) {
+        if (l_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          l_boundry_is_virtual = true;
+        } else {
+          l_boundry_is_virtual = false;
+        }
+        break;
+      }
+    }
+  }
+
+  const auto& r_boundry = current_lane_->get_right_lane_boundary();
+  bool r_boundry_is_virtual = false;
+  for (int j = 0; j < r_boundry.type_segments_size; j++) {
+    double seg_begin = -1;
+    double seg_end = -1;
+    if (j == 0) {
+      seg_begin = 0;
+      seg_end = r_boundry.type_segments[j].length;
+      if (seg_begin <= x_pos && x_pos <= seg_end) {
+        if (r_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          r_boundry_is_virtual = true;
+        } else {
+          r_boundry_is_virtual = false;
+        }
+        break;
+      }
+    } else {
+      seg_begin = 0;
+      for (int i = 0; i <= j - 1; i++) {
+        seg_begin += r_boundry.type_segments[i].length;
+      }
+      seg_end = 0;
+      for (int i = 0; i <= j; i++) {
+        seg_end += r_boundry.type_segments[i].length;
+      }
+      if (seg_begin <= x_pos && x_pos <= seg_end) {
+        if (r_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          r_boundry_is_virtual = true;
+        } else {
+          r_boundry_is_virtual = false;
+        }
+        break;
+      }
+    }
+  }
+  rslt = lane_is_virtual && (l_boundry_is_virtual && r_boundry_is_virtual);
   return rslt;
 }
 // void VirtualLaneManager::CalculateHPPInfo(
