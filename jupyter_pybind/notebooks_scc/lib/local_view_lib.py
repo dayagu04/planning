@@ -946,7 +946,7 @@ def draw_local_view(dataLoader, layer_manager):
             continue
           line_info = line_info_list[idx]
           #line_info['fig_index'] = [idx]
-          lane_generator_dict[lane_generator_key].xys.append((line_info['line_y_vec'] , line_info['line_x_vec'] ,line_info['type'], [idx]))
+          lane_generator_dict[lane_generator_key].xys.append((line_info['line_y_vec'] , line_info['line_x_vec'] ,line_info['type_vec'][0], [idx]))
         # 加载车道中心线
         if fusion_road_msg != None:
           center_line_list = load_lane_center_lines(fusion_road_msg, is_enu_to_car, loc_msg, g_is_display_enu)

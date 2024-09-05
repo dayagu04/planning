@@ -1883,6 +1883,11 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double potential_near_car_v_ub = config.potential_near_car_v_ub;
   double potential_near_car_v_lb = config.potential_near_car_v_lb;
   bool enable_static_scene = config.enable_static_scene;
+  double car_addition_decre_factor = config.car_addition_decre_factor;
+  double car_addition_decre_buffer = config.car_addition_decre_buffer;
+  double emegency_cutin_ttc_lower = config.emegency_cutin_ttc_lower;
+  double emegency_cutin_ttc_upper = config.emegency_cutin_ttc_upper;
+  double emegency_cutin_front_area = config.emegency_cutin_front_area;
 
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
@@ -1892,6 +1897,17 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // TODO: ego_state relative
   double l_ego = 0.;
   double dist_limit;
+
+  const auto &state =
+      session_->planning_context().lane_change_decider_output().curr_state;
+  const auto lc_request_direction =
+      session_->planning_context().lane_change_decider_output().lc_request;
+  bool is_LC_LCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == LEFT_CHANGE);
+  bool is_LC_RCHANGE =
+      ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
+      (lc_request_direction == RIGHT_CHANGE);
 
   // for Intersection
   if (item.d_rel > farthest_distance + ego_car_length ||
@@ -1905,6 +1921,14 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   std::array<double, 3> xp{20, 40, 60};
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
   double near_car_d_lane_thr = interp(item.d_rel, xp, fp);
+  // lower buffer for car
+  if (item.type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+      item.type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+      item.type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+      item.type == iflyauto::ObjectType::OBJECT_TYPE_BUS) {
+    // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
+    near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
+  }
   // addition buffer for oversize vehicle
   if (item.is_oversize_vehicle) {
     std::array<double, 2> vel_xp_oversize_veh{2.7, 5.6};
@@ -1936,8 +1960,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // hysteresis
   const auto lat_offset =
       session_->planning_context().lateral_behavior_planner_output().lat_offset;
-  if ((lat_offset > 0 && item.d_max_cpath < 0) ||
-      (lat_offset < 0 && item.d_min_cpath > 0)) {
+  if (((lat_offset > 0 || is_LC_RCHANGE) && item.d_max_cpath < 0) ||
+      ((lat_offset < 0 || is_LC_LCHANGE) && item.d_min_cpath > 0)) {
     if (item.is_oversize_vehicle) {
       ttc_for_obs = 8.0;
     } else {
@@ -2121,8 +2145,9 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
   bool in_lon_near_area =
       (item.v_rel < 0 &&
-       ((item.d_rel / (-item.v_rel) < 3) ||
-        ((item.d_rel / (-item.v_rel) < 5 && item.d_rel < 10))));
+       ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_lower) ||
+        ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_upper &&
+          item.d_rel < emegency_cutin_front_area))));
 
   // for lead one
   // if (lead_one != nullptr && item.track_id == lead_one->track_id &&

@@ -50,6 +50,7 @@ bool LateralOffsetDecider::Execute() {
   lat_offset = lateral_offset_calculatorv2_.lat_offset();
   SmoothLateralOffset(lat_offset);
   GenerateOutput();
+
   SaveDebugInfo();
   return true;
 }
@@ -154,18 +155,37 @@ void LateralOffsetDecider::GenerateOutput() {
   lateral_offset_decider_output.is_valid =
       config_.is_valid_lateral_offset && fabs(lateral_offset_) > 1e-2;
   lateral_offset_decider_output.lateral_offset = lateral_offset_;
+  lateral_offset_decider_output.enable_bound =
+      lateral_offset_calculatorv2_.enable_bound();
 
+  // for hmi
   const std::array<AvoidObstacleInfo, 2> avd_obstacles =
       avoid_obstacle_maintainer5v_.avd_obstacles();
   lateral_offset_decider_output.avoid_id = -1;
   lateral_offset_decider_output.avoid_direction = 0;
   if (avd_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
     if (lateral_offset_ > 0.2) {
-      lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
-      lateral_offset_decider_output.avoid_direction = 1;
+      if (avd_obstacles[0].max_l_to_ref < 0) {
+        lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
+        lateral_offset_decider_output.avoid_direction = 1;
+      } else {
+        if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
+            avd_obstacles[1].max_l_to_ref < 0) {
+          lateral_offset_decider_output.avoid_id = avd_obstacles[1].track_id;
+          lateral_offset_decider_output.avoid_direction = 1;
+        }
+      }
     } else if (lateral_offset_ < -0.2) {
-      lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
-      lateral_offset_decider_output.avoid_direction = 2;
+      if (avd_obstacles[0].min_l_to_ref > 0) {
+        lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
+        lateral_offset_decider_output.avoid_direction = 2;
+      } else {
+        if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
+            avd_obstacles[1].min_l_to_ref > 0) {
+          lateral_offset_decider_output.avoid_id = avd_obstacles[1].track_id;
+          lateral_offset_decider_output.avoid_direction = 2;
+        }
+      }
     }
   }
 }

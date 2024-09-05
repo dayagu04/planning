@@ -606,7 +606,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
 
     for i in range(20):
       try:
-        if line_info_list[i]['type'] == ['dashed']:
+        if line_info_list[i]['type_vec'][0] == ['dashed']:
           fig7.renderers[0 + i].glyph.line_dash = 'dashed'
         else:
           fig7.renderers[0 + i].glyph.line_dash = 'solid'
@@ -682,7 +682,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
 
     for i in range(20):
       try:
-        if next_line_info_list[i]['type'] == ['dashed']:
+        if next_line_info_list[i]['type_vec'][0] == ['dashed']:
           fig7.renderers[20 + i].glyph.line_dash = 'dashed'
         else:
           fig7.renderers[20 + i].glyph.line_dash = 'solid'

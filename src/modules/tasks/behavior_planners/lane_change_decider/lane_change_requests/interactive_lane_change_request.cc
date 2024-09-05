@@ -7,6 +7,7 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "interactive_lane_change_request.h"
+#include "planning_context.h"
 
 namespace planning {
 // class: IntRequest
@@ -27,12 +28,17 @@ IntRequest::IntRequest(
 }
 
 void IntRequest::Update(int lc_status) {
-  if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
+  const auto& lc_req_source = session_->planning_context()
+                                  .lane_change_decider_output()
+                                  .lc_request_source;
+  if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
+      lc_req_source != INT_REQUEST) {
     LOG_DEBUG("IntRequest::Update: ego not in lane keeping!");
     return;
   }
   // ego_blinker 0-lane follow, 1-left, 2-right
   request_cancel_reason_ = NO_CANCEL;
+  ilc_virtual_req_ = NO_CHANGE;
   lane_change_cmd_ = session_->mutable_environmental_model()
                          ->get_ego_state_manager()
                          ->ego_blinker();
@@ -92,6 +98,7 @@ void IntRequest::Update(int lc_status) {
     if (left_boundary_type ==
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       request_cancel_reason_ = SOLID_LC;
+      ilc_virtual_req_ = LEFT_CHANGE;
       counter_left_ = -5;
     }
 
@@ -154,6 +161,7 @@ void IntRequest::Update(int lc_status) {
     if (right_boundary_type ==
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       request_cancel_reason_ = SOLID_LC;
+      ilc_virtual_req_ = RIGHT_CHANGE;
       counter_right_ = -5;
     }
 

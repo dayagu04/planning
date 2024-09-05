@@ -47,7 +47,7 @@
 
 namespace py = pybind11;
 using namespace planning;
-
+using namespace planning::apa_planner;
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
 
@@ -166,7 +166,8 @@ const bool InterfaceUpdateParam(
     std::vector<std::vector<Eigen::Vector2d>> fus_obj_coord,
     std::vector<std::vector<Eigen::Vector2d>> fus_occ_obj_coord,
     int current_state, double steering_wheel_angle) {
-  apa_planner::ApaPlannerBase::SimulationParam param;
+  SimulationParam param;
+  param.is_simulation = true;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
@@ -183,16 +184,6 @@ const bool InterfaceUpdateParam(
   param.obs_x_vec = obs_x_vec;
   param.obs_y_vec = obs_y_vec;
 
-  const auto &apa_planner_stack = apa_interface_ptr->GetPlannerStack();
-
-  for (const auto &planner : apa_planner_stack) {
-    planner->SetSimuParam(param);
-  }
-
-  // iflyauto::FuncStateMachine func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine,
-  //     struct_msgs::FuncStateMachine>(
-  //         func_statemachine_bytes);
   iflyauto::FuncStateMachine func_statemachine;
   func_statemachine.current_state = static_cast<FunctionalState>(current_state);
 
@@ -311,7 +302,13 @@ const bool InterfaceUpdateParam(
               << local_view.parking_fusion_info.select_slot_id << std::endl;
   }
 
+  apa_interface_ptr->SetSimuParam(param);
+
   const bool result = apa_interface_ptr->Update(&local_view);
+  if (apa_interface_ptr->GetPlaningOutput()
+          .planning_status.apa_planning_status != iflyauto::APA_IN_PROGRESS) {
+    return false;
+  }
   apa_interface_ptr->UpdateDebugInfo();
 
   return result;

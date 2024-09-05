@@ -17,8 +17,8 @@ struct StateTransitionInfo {
 };
 
 enum RelativeDirection {
-  ON_LEFT = 0,
-  ON_RIGHT = 1,
+  LEFT_DIRECTION = 0,
+  RIGHT_DIRECTION = 1,
 };
 struct LaneChangeTimer {
   bool propose_time_count_ = false;
@@ -212,5 +212,6 @@ class LaneChangeStateMachineManager {
   int scenario_ = SCENARIO_CRUISE;
   RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
   bool is_front_merge_region_ = false;
+  double overlap_lane_virtual_id_ = 0;
 };
 }  // namespace planning

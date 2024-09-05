@@ -31,32 +31,6 @@ class ApaPlannerBase {
     DYNAMIC,
     SEG_COMPLETED_COL_DET,
   };
-  struct SimulationParam {
-    bool is_complete_path = false;
-    bool force_plan = false;
-    bool sim_to_target = false;
-    bool use_slot_in_bag = true;
-    bool use_obs_in_bag = true;
-    bool is_path_optimization = false;
-    bool is_cilqr_optimization = false;
-    bool is_reset = false;
-    double sample_ds = 0.02;
-    std::vector<double> target_managed_slot_x_vec;
-    std::vector<double> target_managed_slot_y_vec;
-    std::vector<double> target_managed_limiter_x_vec;
-    std::vector<double> target_managed_limiter_y_vec;
-    std::vector<double> obs_x_vec;
-    std::vector<double> obs_y_vec;
-
-    double q_ref_xy = 100.0;
-    double q_ref_theta = 100.0;
-    double q_terminal_xy = 1000.0;
-    double q_terminal_theta = 9000.0;
-    double q_k = 10.0;
-    double q_u = 10.0;
-    double q_k_bound = 100.0;
-    double q_u_bound = 50.0;
-  };
 
   struct EgoSlotInfo {
     common::SlotInfo target_managed_slot;
@@ -195,6 +169,7 @@ class ApaPlannerBase {
       correct_path_for_limiter = false;
       replan_flag = false;
       dynamic_plan_fail_flag = false;
+      gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
     }
 
     bool is_replan = false;
@@ -236,6 +211,8 @@ class ApaPlannerBase {
     bool correct_path_for_limiter = false;
     bool replan_flag = false;
     bool dynamic_plan_fail_flag = false;
+
+    uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
   };
 
   enum PathPlannerResult {
@@ -268,15 +245,11 @@ class ApaPlannerBase {
   };
 
  public:
-  virtual void Init(const bool c_ilqr_enable);
-  virtual void Reset() = 0;
-  virtual void Update() = 0;
-  virtual std::string GetName() = 0;
+  virtual void Init();
+  virtual void Update();
 
-  virtual void SetSimuParam(const SimulationParam &param) {
-    simu_param_ = param;
-    is_simulation_ = true;
-  }
+  virtual void Reset() = 0;
+  virtual std::string GetName() = 0;
 
   const PlannerStateMachine &GetPlannerStates() const {
     return frame_.plan_stm;
@@ -286,42 +259,43 @@ class ApaPlannerBase {
 
   const iflyauto::PlanningOutput &GetOutput() const { return planning_output_; }
 
-  const iflyauto::PlanningHMIOutputInfoStr &GetHmiOutput() const {
-    return planning_hmi_output_;
-  }
+  const iflyauto::APAHMIData &GetAPAHmi() const { return apa_hmi_; }
 
   void SetApaWorldPtr(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
     apa_world_ptr_ = apa_world_ptr;
   }
 
-  const std::shared_ptr<LateralPathOptimizer> GetLateralPathOptimizerPtr()
-      const {
-    return lateral_path_optimizer_ptr_;
-  }
-
  protected:
-  virtual void GenPlanningOutput() = 0;
-  virtual void GenPlanningPath() = 0;
   virtual const bool CheckFinished() = 0;
-  virtual const bool CheckStuckFailed() = 0;
   virtual const bool CheckReplan() = 0;
-  virtual void UpdateRemainDist() = 0;
-  virtual const double CalRemainDistFromPath() = 0;
-  virtual const double CalRemainDistFromUss() = 0;
-  virtual const bool PostProcessPath() = 0;
+  virtual void PlanCore() = 0;
   virtual void Log() const = 0;
+  virtual void GenTlane() = 0;
+  virtual void GenObstacles() = 0;
+  virtual const bool UpdateEgoSlotInfo() = 0;
+  virtual const uint8_t PathPlanOnce() = 0;
+
+  virtual void InitSimulation();
+  virtual const bool CheckPaused() const;
+  virtual const bool CheckPlanSkip() const;
+  virtual void SetParkingStatus(uint8_t status);
+  virtual void GenPlanningOutput();
+  virtual void GenPlanningHmiOutput();
+  virtual void GenPlanningPath();
+  virtual const bool CheckStuckFailed();
+  virtual void UpdateRemainDist();
+  virtual const double CalRemainDistFromPath();
+  virtual const double CalRemainDistFromUss();
+  virtual const bool PostProcessPath();
 
   std::shared_ptr<ApaWorld> apa_world_ptr_;
-  std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
 
   iflyauto::PlanningOutput planning_output_;
-  iflyauto::PlanningHMIOutputInfoStr planning_hmi_output_;
+  iflyauto::APAHMIData apa_hmi_;
 
   Frame frame_;
 
-  SimulationParam simu_param_;
-  bool is_simulation_ = false;
-  bool update_optimizer_ptr_enable = false;
+  std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
 };
 
 }  // namespace apa_planner

@@ -90,6 +90,10 @@ struct ApaParameters {
   double uss_scan_angle_deg = 60;
   double uss_apa_scan_angle_deg = 80;
   double uss_upa_scan_angle_deg = 120;
+  double corner_uss_scan_angle_deg_straight = 6.8;
+  double corner_uss_scan_angle_deg_turn = 6.8;
+  double corner_uss_dist_diff = 0.1068;
+  double corner_uss_steer_angle = 240.0;
   bool enable_corner_uss_process = false;
   double uss_corner_scan_angle_gain = 1.0;
   double uss_face_scan_angle_gain = 1.0;
@@ -228,6 +232,7 @@ struct ApaParameters {
   double target_heading_err = 0.88;
   double target_radius_err = 0.036;
   double path_extend_distance = 0.3;
+  bool actual_mono_plan_enable = false;
   bool mono_plan_enable = false;
   bool conservative_mono_enable = false;
   double multi_plan_min_lat_err = 0.5;

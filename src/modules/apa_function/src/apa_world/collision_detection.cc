@@ -13,10 +13,9 @@
 #include "geometry_math.h"
 #include "ifly_time.h"
 
-const bool box = true;
-
 namespace planning {
-
+namespace apa_planner {
+const bool box = true;
 void CollisionDetector::Init() {
   car_line_local_vec_.clear();
   car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
@@ -1171,7 +1170,7 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const double max_obs_lon_invasion_slot_dist =
         apa_param.GetParam().max_obs_lon_invasion_slot_dist;
     const Eigen::Vector2d unit_01_vec =
-        (slot_left_pt - slot_right_pt).transpose();
+        (slot_left_pt - slot_right_pt).normalized();
     const Eigen::Vector2d unit_02_vec(-1.0, 0.0);
     std::vector<Eigen::Vector2d> area_vec;
     area_vec.resize(4);
@@ -1251,5 +1250,5 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
 
   return ObsSlotType::OBS_INVALID;
 }
-
+}  // namespace apa_planner
 }  // namespace planning

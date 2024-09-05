@@ -12,17 +12,19 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "apa_data.h"
 #include "apa_param_setting.h"
 #include "basic_types.pb.h"
 #include "camera_preception_parking_slot_c.h"
 #include "collision_detection.h"
 #include "common_c.h"
+#include "common_platform_type_soc.h"
 #include "func_state_machine_c.h"
 #include "fusion_occupancy_objects_c.h"
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
 #include "local_view.h"
-#include "perpendicular_path_planner.h"
+#include "perpendicular_path_in_planner.h"
 #include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
 #include "task_basic_types.pb.h"
@@ -32,6 +34,7 @@
 static const size_t slot_corner_pt_nums = 4;
 
 namespace planning {
+namespace apa_planner {
 class SlotInfoWindow {
  public:
   SlotInfoWindow() {
@@ -361,6 +364,8 @@ class SlotManagement {
   };
 
   struct Frame {
+    ApaStateMachine apa_state;
+    const MeasurementData* measurement_data_ptr;
     const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
     const iflyauto::IFLYLocalization* localization_ptr;
@@ -372,8 +377,7 @@ class SlotManagement {
     const iflyauto::FusionOccupancyObjectsInfo*
         fusion_occupancy_objects_info_ptr;
 
-    std::vector<double> uss_raw_dist_vec;
-    std::vector<iflyauto::SuccessfulSlotsInfo> released_slot_info_vec;
+    std::vector<int> release_slot_id_vec;
 
     std::unordered_map<size_t, size_t> slot_info_map;
     std::unordered_map<size_t, std::pair<double, double>> slot_info_angle;
@@ -411,8 +415,7 @@ class SlotManagement {
     bool is_fix_slot = false;
 
     void Reset() {
-      uss_raw_dist_vec.clear();
-      released_slot_info_vec.clear();
+      release_slot_id_vec.clear();
       slot_info_map.clear();
       slot_info_window_vec.clear();
       slot_management_info.Clear();
@@ -433,18 +436,7 @@ class SlotManagement {
     }
   };
 
-  bool Update(const LocalView* local_view_ptr);
-
-  bool Update(
-      const iflyauto::FuncStateMachine* func_statemachine,
-      const iflyauto::ParkingFusionInfo* parking_slot_info,
-      const iflyauto::IFLYLocalization* localization,
-      const iflyauto::UssWaveInfo* uss_wave_info,
-      const iflyauto::UssPerceptInfo* uss_percept_info,
-      const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info,
-      const iflyauto::FusionObjectsInfo* fusion_objects_info,
-      const iflyauto::FusionOccupancyObjectsInfo*
-          fusion_occupancy_objects_info);
+  bool Update(const std::shared_ptr<ApaData> apa_data_ptr);
 
   void AddUssPerceptObstacles();
 
@@ -486,22 +478,17 @@ class SlotManagement {
   const bool GetSelectedLimiter(
       std::pair<Eigen::Vector2d, Eigen::Vector2d>& fused_limiter) const;
 
-  const std::vector<iflyauto::SuccessfulSlotsInfo>& GetReleasedSlotInfoVec()
-      const {
-    return frame_.released_slot_info_vec;
+  const std::vector<int>& GetReleaseSlotIdVec() const {
+    return frame_.release_slot_id_vec;
   }
 
  private:
   Frame frame_;
 
-  bool IsInAPAState() const;
-  void Preprocess();
   void AddObstacles();
 
-  bool IsInSearchingState() const;
   bool UpdateSlotsInSearching();
 
-  bool IsInParkingState() const;
   bool UpdateSlotsInParking();
   bool UpdateEgoSlotInfo(const google::protobuf::uint32& select_slot_id,
                          const common::SlotInfo& select_slot,
@@ -510,19 +497,20 @@ class SlotManagement {
       const google::protobuf::uint32& select_slot_id,
       const common::SlotInfo& select_slot,
       const iflyauto::ParkingFusionSlot& select_fusion_slot);
-  bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
-                         const common::SlotInfo* slot_info);
+  const bool UpdateEgoSlotInfo(EgoSlotInfo& ego_slot_info,
+                               const common::SlotInfo* slot_info);
 
   const bool UpdateEgoParallelSlotInfoInSearching(
       EgoSlotInfo& ego_slot_info, const common::SlotInfo* slot_info);
 
-  bool GenTLane(EgoSlotInfo& ego_slot_info,
-                apa_planner::PerpendicularPathPlanner::Tlane& slot_tlane,
-                apa_planner::PerpendicularPathPlanner::Tlane& obs_tlane);
-  bool GenObstacles(
+  const bool GenTLane(EgoSlotInfo& ego_slot_info,
+                      PerpendicularPathInPlanner::Tlane& slot_tlane,
+                      PerpendicularPathInPlanner::Tlane& obs_tlane);
+
+  const bool GenObstacles(
       std::shared_ptr<CollisionDetector>& collision_detector_ptr,
-      const apa_planner::PerpendicularPathPlanner::Tlane& slot_tlane,
-      apa_planner::PerpendicularPathPlanner::Tlane& obs_tlane,
+      const PerpendicularPathInPlanner::Tlane& slot_tlane,
+      PerpendicularPathInPlanner::Tlane& obs_tlane,
       const EgoSlotInfo& ego_slot_info);
 
   void UpdateSlotInfoInParking();
@@ -549,17 +537,15 @@ class SlotManagement {
 
   const double CalAngleSlot2Car(const common::SlotInfo& new_slot_info) const;
 
-  void UpdateReleasedSlotInfo();
+  void UpdateReleaseSlotIdVec();
 
   const bool ProcessSlantSlot(
       common::SlotInfo& slot_info,
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
 
   void Log();
-
-  void FinishApa();
 };
-
+}  // namespace apa_planner
 }  // namespace planning
 
 #endif

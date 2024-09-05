@@ -48,7 +48,7 @@ class LaneReferencePath
 
  private:
   void update_refined_lane_points();
-  virtual void update_obstacles();
+  virtual void update_obstacles() override;
   ReferencePathPoint CalculateExtendedReferencePathPoint(
       const ReferencePathPoint &p1, const ReferencePathPoint &p2,
       const double length) const;

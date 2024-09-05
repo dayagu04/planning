@@ -8,6 +8,7 @@
 
 #include "apa_plan_base.h"
 #include "collision_detection.h"
+#include "config_context.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "parallel_park_in_planner.h"
@@ -17,9 +18,10 @@ namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
-static planning::CollisionDetector col_det;
+static planning::apa_planner::CollisionDetector col_det;
 
 int Init() {
+  (void)planning::common::ConfigurationContext::Instance();
   pBase = new ParallelPathPlanner();
   pBase->Reset();
   return 0;
@@ -77,8 +79,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
     channel_obstacle_vec.insert(channel_obstacle_vec.end(), point_set.begin(),
                                 point_set.end());
   }
-  col_det.SetObstacles(channel_obstacle_vec,
-                       planning::CollisionDetector::CHANNEL_OBS);
+  col_det.SetObstacles(channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -118,7 +119,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
 
   for (const auto &obs_pos : tlane_obstacle_vec) {
     if (!col_det.IsObstacleInCar(obs_pos, ego_pose, safe_dist)) {
-      col_det.AddObstacles(obs_pos, planning::CollisionDetector::TLANE_OBS);
+      col_det.AddObstacles(obs_pos, CollisionDetector::TLANE_OBS);
       // std::cout << "obs_pos = " << obs_pos.transpose() << std::endl;
     }
   }
@@ -127,10 +128,9 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
 
 int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
            double obs_pt_in_y, double obs_pt_out_x, double obs_pt_out_y,
-           double p_target_x, double p_target_y, double p_outside_x,
-           double p_outside_y, double p_inside_x, double p_inside_y,
-           double channel_max_x, double channel_y, double curb_y,
-           double slot_width, double ds, double obs_ds, bool is_complete_path,
+           double slot_length, double slot_width, double p_target_x,
+           double p_target_y, double channel_max_x, double channel_y,
+           double curb_y, double ds, double obs_ds, bool is_complete_path,
            bool is_plan_first, bool set_left_side, bool ref_gear_drive,
            bool ref_steer_left) {
   col_det.Reset();
@@ -151,8 +151,8 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   input.tlane.obs_pt_outside << obs_pt_out_x, obs_pt_out_y;
   input.tlane.pt_terminal_pos << p_target_x, p_target_y;
 
-  input.tlane.pt_inside << p_inside_x, p_inside_y;
-  input.tlane.pt_outside << p_outside_x, p_outside_y;
+  input.tlane.pt_inside << slot_length, 0.5 * slot_side_sgn * slot_width;
+  input.tlane.pt_outside << 0.0, 0.5 * slot_side_sgn * slot_width;
 
   input.tlane.curb_y = curb_y;
 
@@ -178,7 +178,7 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   const Eigen::Vector2d terminal_err =
       input.ego_pose.pos - Eigen::Vector2d(p_target_x, p_target_y);
 
-  ParallelParInPlanner park_planner;
+  ParallelParkInPlanner park_planner;
   const double slot_occupied_ratio = park_planner.CalcSlotOccupiedRatio(
       terminal_err, 0.5 * slot_width, !set_left_side);
 
@@ -187,8 +187,8 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
                   p_target_y, channel_y, channel_max_x, curb_y, obs_ds,
                   set_left_side);
 
-  std::shared_ptr<planning::CollisionDetector> obs_det_ptr =
-      std::make_shared<planning::CollisionDetector>(col_det);
+  std::shared_ptr<CollisionDetector> obs_det_ptr =
+      std::make_shared<CollisionDetector>(col_det);
 
   pBase->Update(obs_det_ptr);
   // pBase->PrintOutputSegmentsInfo();

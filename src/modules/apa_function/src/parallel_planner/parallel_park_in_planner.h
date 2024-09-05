@@ -12,18 +12,14 @@
 namespace planning {
 namespace apa_planner {
 
-class ParallelParInPlanner : public ApaPlannerBase {
+class ParallelParkInPlanner : public ApaPlannerBase {
  public:
-  ParallelParInPlanner() = default;
-  ParallelParInPlanner(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
+  ParallelParkInPlanner() = default;
+  ParallelParkInPlanner(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
-    const bool c_ilqr_enable = false;
-    Init(c_ilqr_enable);
   }
 
-  virtual void Init(const bool c_ilqr_enable) override;
   virtual void Reset() override;
-  virtual void Update() override;
   virtual std::string GetName() override { return typeid(this).name(); };
 
   const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,
@@ -31,42 +27,24 @@ class ParallelParInPlanner : public ApaPlannerBase {
                                      const bool is_right_side) const;
 
  private:
-  void PlanCore();
-  void GenTlane();
-  void UpdateTlaneOnceInSlot();
-  void GenTBoundaryObstacles();
-  void GenObstacles();
-  void SetParkingStatus(uint8_t status);
-  const bool IsEgoInSlot() const;
-  const bool IsEgoInSlot(const pnc::geometry_lib::PathPoint& pose) const;
-  const bool UpdateEgoSlotInfo();
-  void UpdateSlotRealtime();
-  const uint8_t PathPlanOnce();
-
+  // virtual func
+  virtual const uint8_t PathPlanOnce() override;
+  virtual const bool UpdateEgoSlotInfo() override;
+  virtual void GenTlane() override;
+  virtual void GenObstacles() override;
+  virtual void PlanCore() override;
   virtual void Log() const override;
-  virtual void GenPlanningOutput() override;
-  virtual void GenPlanningPath() override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
-  virtual const bool CheckStuckFailed() override;
-  virtual void UpdateRemainDist() override;
-  virtual const double CalRemainDistFromPath() override;
-  virtual const double CalRemainDistFromUss() override;
-  virtual const bool PostProcessPath() override;
 
-  const bool CheckPaused();
+  void UpdateTlaneOnceInSlot();
+  void GenTBoundaryObstacles();
+  const bool IsEgoInSlot() const;
+  const bool IsEgoInSlot(const pnc::geometry_lib::PathPoint& pose) const;
   const bool CheckSegCompleted();
-  const uint8_t CheckParkingStatus();
-
-  void InitSimulation();
-  void PrepareSimulation();
-  const bool CheckPlanSkip() const;
 
   ParallelPathPlanner::Tlane t_lane_;
   ParallelPathPlanner parallel_path_planner_;
-  uint8_t gear_command_ = 0;
-
-  std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
 };
 
 }  // namespace apa_planner

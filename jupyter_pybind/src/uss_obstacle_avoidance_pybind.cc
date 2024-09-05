@@ -13,7 +13,7 @@
 
 namespace py = pybind11;
 using namespace planning;
-
+using namespace planning::apa_planner;
 static UssObstacleAvoidance* pBaseUssOaAir = nullptr;
 
 static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;

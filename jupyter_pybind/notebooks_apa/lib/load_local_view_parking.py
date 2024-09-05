@@ -63,7 +63,7 @@ enter_parking_time = 0.0
 load_uss_wave_from_uss_percept_msg = True
 load_fusion_object_from_occupancy = True
 version_245 = True
-read_uss_per_msg = False
+read_uss_per_msg = True
 read_fus_obj_msg = False
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
@@ -71,8 +71,8 @@ smallest_abs_t = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
-    self.bag = rosbag.Bag(path)
-    # loclization msg
+    self.bag = rosbag.Bag(path,'r',rosbag.Compression.NONE, 768 * 1024,True, None, True)
+    # loclization msg 
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # vehicle service msg
@@ -959,8 +959,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       'car_circle_rn': car_circle_rn,
     })
 
-    vel_ego =  math.hypot(bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vx,
-                          bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_boot.vy)
+    vel_ego = bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_body.vx
     remain_s_ctrl = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
     if bag_loader.vs_msg['enable'] == True:
       steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
@@ -1135,11 +1134,16 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
       # 1.2 update slots limiter points in same slot_plot_vec
       single_limiter_x_vec = []
       single_limiter_y_vec = []
-      if slot.limiters_size!= 0:
+      if slot.limiters_size == 1:
         single_limiter_x_vec.append(slot.limiters[0].end_points[0].x - cur_pos_xn0)
         single_limiter_x_vec.append(slot.limiters[0].end_points[1].x - cur_pos_xn0)
         single_limiter_y_vec.append(slot.limiters[0].end_points[0].y - cur_pos_yn0)
         single_limiter_y_vec.append(slot.limiters[0].end_points[1].y - cur_pos_yn0)
+      elif slot.limiters_size == 2:
+        single_limiter_x_vec.append(slot.limiters[0].end_points[0].x - cur_pos_xn0)
+        single_limiter_x_vec.append(slot.limiters[1].end_points[1].x - cur_pos_xn0)
+        single_limiter_y_vec.append(slot.limiters[0].end_points[0].y - cur_pos_yn0)
+        single_limiter_y_vec.append(slot.limiters[1].end_points[1].y - cur_pos_yn0)
       if slot.fusion_source == 1:
         slots_x1_vec.append(single_limiter_x_vec)
         slots_y1_vec.append(single_limiter_y_vec)
@@ -1422,8 +1426,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
   if bag_loader.uss_percept_msg['enable'] == True and bag_loader.loc_msg['enable'] == True and load_uss_wave_from_uss_percept_msg:
     # load uss wave from uss_percept_msg
     #get cur pose and uss wave
-    # uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
-    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[0].dis_from_car_to_obj
+    uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].dis_from_car_to_obj
+    # uss_dis_info = bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].out_line_dataori[0].dis_from_car_to_obj
 
     cur_pos_xn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.x
     cur_pos_yn = bag_loader.loc_msg['data'][loc_msg_idx].position.position_boot.y
@@ -2989,8 +2993,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find loc_msg error')
       else:
-        vel_ego = math.hypot(loc_msg.velocity.velocity_boot.vx,
-                             loc_msg.velocity.velocity_boot.vy)
+        vel_ego = dataLoader.loc_msg['data'][loc_msg_idx].velocity.velocity_body.vx
 
         if dataLoader.soc_state_msg['enable'] == True:
           flag, soc_msg = findt(dataLoader.soc_state_msg, soc_timestamps[loc_i])
@@ -3103,11 +3106,16 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
                 # 1.2 update slots limiter points in same slot_plot_vec
                 single_limiter_x_vec = []
                 single_limiter_y_vec = []
-                if len(slot.limiter_position)!= 0:
-                  single_limiter_x_vec.append(slot.limiter_position[0].x)
-                  single_limiter_x_vec.append(slot.limiter_position[1].x)
-                  single_limiter_y_vec.append(slot.limiter_position[0].y)
-                  single_limiter_y_vec.append(slot.limiter_position[1].y)
+                if slot.limiters_size == 1:
+                  single_limiter_x_vec.append(slot.limiters[0].end_points[0].x)
+                  single_limiter_x_vec.append(slot.limiters[0].end_points[1].x)
+                  single_limiter_y_vec.append(slot.limiters[0].end_points[0].y)
+                  single_limiter_y_vec.append(slot.limiters[0].end_points[1].y)
+                elif slot.limiters_size == 2:
+                  single_limiter_x_vec.append(slot.limiters[0].end_points[0].x)
+                  single_limiter_x_vec.append(slot.limiters[1].end_points[1].x)
+                  single_limiter_y_vec.append(slot.limiters[0].end_points[0].y)
+                  single_limiter_y_vec.append(slot.limiters[1].end_points[1].y)
                 if slot.fusion_source == 1:
                   temp_corner_x1_list.append(single_limiter_x_vec)
                   temp_corner_y1_list.append(single_limiter_y_vec)

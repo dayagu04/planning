@@ -85,13 +85,19 @@ class GeneralLateralDecider : public Task {
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
       std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
-
+  void ProtectBoundByInitPoint(std::pair<double, double> &bound,
+                               std::pair<BoundInfo, BoundInfo> &bound_info);
   void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
   void ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision);
 
   void PostProcessBound(std::vector<WeightedBound> &bounds_input,
                         std::pair<double, double> &bound_output,
                         std::pair<BoundInfo, BoundInfo> &bound_info);
+
+  void PostProcessBoundVersion2(const std::vector<WeightedBound> &bounds_input,
+                                std::pair<double, double> &bound_output,
+                                std::pair<BoundInfo, BoundInfo> &bound_info);
+
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -102,14 +108,13 @@ class GeneralLateralDecider : public Task {
       double ego_l, double distance_to_right_lane_border,
       double distance_to_left_lane_border, double overlap_min_y,
       double overlap_max_y, double lat_buf_dis, bool b_overlap_side,
-      bool init_lon_no_overlap, bool is_cross_obj,
+      bool init_lon_no_overlap, bool is_nudge_left, bool is_cross_obj,
       LatObstacleDecisionType pre_lateral_decision,
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t,
-                                Polygon2d &care_overlap_polygon,
-                                double lat_buf_dis,
+  void AddObstacleDecisionBound(int id, double t, double overlap_min_y,
+                                double overlap_max_y, double lat_buf_dis,
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,

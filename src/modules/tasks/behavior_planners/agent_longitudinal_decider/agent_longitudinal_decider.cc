@@ -210,7 +210,9 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     return;
   }
   const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
-
+  if (ego_lane_coord == nullptr) {
+    return;
+  }
   double ego_s = 0;
   double ego_l = 0;
   if (!ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {

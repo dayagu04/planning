@@ -20,24 +20,24 @@ class PathPoint : public Vec2d {
 
   PathPoint(double x, double y, double s, double l, double theta, double kappa,
             double dkappa, double ddkappa) noexcept
-      : s_(s),
-        l_(l),
-        theta_(theta),
-        kappa_(kappa),
-        dkappa_(dkappa),
-        ddkappa_(ddkappa),
-        Vec2d(x, y) {}
-
-  PathPoint(double x, double y, double z, double s, double l, double theta,
-            double kappa, double dkappa, double ddkappa) noexcept
-      : z_(z),
+      : Vec2d(x, y),
         s_(s),
         l_(l),
         theta_(theta),
         kappa_(kappa),
         dkappa_(dkappa),
-        ddkappa_(ddkappa),
-        Vec2d(x, y) {}
+        ddkappa_(ddkappa) {}
+
+  PathPoint(double x, double y, double z, double s, double l, double theta,
+            double kappa, double dkappa, double ddkappa) noexcept
+      : Vec2d(x, y),
+        z_(z),
+        s_(s),
+        l_(l),
+        theta_(theta),
+        kappa_(kappa),
+        dkappa_(dkappa),
+        ddkappa_(ddkappa) {}
 
   double x() const { return x_; }
 

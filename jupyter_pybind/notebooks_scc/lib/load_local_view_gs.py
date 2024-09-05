@@ -600,10 +600,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data
 
     for i in range(10):
       try:
-        if line_info_list[i]['type'] == 0 or \
-          line_info_list[i]['type'] == 1 or \
-          line_info_list[i]['type'] == 3 or \
-          line_info_list[i]['type'] == 4:
+        if line_info_list[i]['type_vec'][0] == 0 or \
+          line_info_list[i]['type_vec'][0] == 1 or \
+          line_info_list[i]['type_vec'][0] == 3 or \
+          line_info_list[i]['type_vec'][0] == 4:
           fig1.renderers[3 + i].glyph.line_dash = 'dashed'
         else:
           fig1.renderers[3 + i].glyph.line_dash = 'solid'

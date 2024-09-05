@@ -25,26 +25,24 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                              "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                              "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                              'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
+                              'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead', "max_brake_distance", \
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                               'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                              'new_cutin_id', 'new_cutin_id_count', \
+                              'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
                               'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', \
                               "dis_to_ramp", "v_target_ramp", "narrow_agent_id", "narrow_agent_v_limit",\
-                              'gap_v_limit_lc', \
+                              'gap_v_limit_lc', "gap_base_car_id", "gap_front_car_id",\
                               "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                              "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
+                              "SccLonBehaviorCostTime", "SccLonMotionCostTime", 'sdmap_min_curv_radius']
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
@@ -515,16 +513,21 @@ def load_lon_global_figure(bag_loader):
   lead_one_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
+  t_new_localisation_vec = bag_loader.loc_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
     acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
     lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
-  for ind in range(len(bag_loader.vs_msg['data'])):
-    ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+  # for ind in range(len(bag_loader.vs_msg['data'])):
+  #   ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
+  for ind in range(len(bag_loader.loc_msg['data'])):
+    ego_acc_vec.append(round(bag_loader.loc_msg['data'][ind].acceleration.acceleration_body.ax, 2))
 
   acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
                               legend_label='acc_min', color="brown")
-  acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+  # acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+  #                               legend_label='ego_acc',color="blue")
+  acc_fig.line(t_new_localisation_vec, ego_acc_vec, line_width=1,
                                 legend_label='ego_acc',color="blue")
   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
                               legend_label='acc_max', color="red")

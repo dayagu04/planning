@@ -105,6 +105,9 @@ void LateralObstacle::LateralObstacleDecision(
       session_->planning_context().lateral_behavior_planner_output();
   auto lane_width = lateral_output.flane_width;
   double ref_dis = 1;
+  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto environment_model_debug_info =
+      planning_debug_data->mutable_environment_model_info();
 
   lat_obstacle_decision_.clear();
   for (auto &item : tracked_objects) {
@@ -140,6 +143,10 @@ void LateralObstacle::LateralObstacleDecision(
       } else {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
       }
+      // 防止感知误检，同时有横向和纵向overlap
+      if (lat_overlap) {
+        lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
+      }
       // 后方车辆
     } else {
       if (item.d_max_cpath < 0 && !lat_overlap && item.d_max_cpath < -ref_dis) {
@@ -149,6 +156,16 @@ void LateralObstacle::LateralObstacleDecision(
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       } else {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
+      }
+    }
+    // log
+    for (size_t i = 0; i < environment_model_debug_info->obstacle_size(); ++i) {
+      auto obstacle = environment_model_debug_info->mutable_obstacle(i);
+      if (obstacle->id() == item.track_id) {
+        obstacle->set_lat_decision(
+            static_cast<uint32_t>(lat_obstacle_decision_[item.track_id]));
+      } else {
+        continue;
       }
     }
   }

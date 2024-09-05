@@ -2,6 +2,7 @@
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
 #include <climits>
+#include <utility>
 #include <vector>
 
 #include "ad_common/hdmap/hdmap.h"
@@ -28,6 +29,11 @@ enum LaneChangeStatus {
   ON_RIGHT_LANE = 2,
 };
 
+enum SplitRelativeDirection {
+  None = 0,
+  ON_LEFT = 1,
+  ON_RIGHT = 2,
+};
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
@@ -205,6 +211,8 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
+  const bool is_on_highway() const { return is_on_highway_; }
+
   const double sum_dis_to_last_merge_point() const {
     return sum_dis_to_last_merge_point_;
   }
@@ -340,6 +348,7 @@ class VirtualLaneManager {
   bool in_intersection_ = false;
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
   double nearest_s_ = 0.0;
+  int lane_num_except_emergency_ = 0;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;
@@ -366,6 +375,7 @@ class VirtualLaneManager {
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;
   bool is_within_hdmap_ = false;
+  std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
 
   //到停止线的距离，可以为负，表示停止线在车后
   double distance_to_stopline_ = NL_NMAX;

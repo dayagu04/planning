@@ -66,6 +66,8 @@ class DynamicWorld {
 
   const int64_t GetNodeRearNotConeNode(const DynamicAgentNode* node);
 
+  void StoreNodeInfoInJsonDebug();
+
  private:
   framework::Session* session_ = nullptr;
   agent::AgentManager& agent_manager_;

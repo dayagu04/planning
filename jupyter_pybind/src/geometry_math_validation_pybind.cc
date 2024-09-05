@@ -10,7 +10,7 @@
 #include "apa_plan_base.h"
 #include "geometry_math.h"
 #include "math_lib.h"
-#include "perpendicular_path_planner.h"
+#include "perpendicular_path_in_planner.h"
 #include "config_context.h"
 
 namespace py = pybind11;
@@ -243,7 +243,7 @@ int UpdateLineArcLine(double ego_x, double ego_y, double ego_heading,
                       bool is_advance, bool is_turn_left, double radius) {
   std::vector<pnc::geometry_lib::PathSegment> line_arc_line_segments;
 
-  planning::apa_planner::PerpendicularPathPlanner::DebugInfo debug_info;
+  planning::apa_planner::PerpendicularPathInPlanner::DebugInfo debug_info;
 
   const pnc::geometry_lib::PathPoint start_pose(Eigen::Vector2d(ego_x, ego_y),
                                                 ego_heading);
@@ -256,7 +256,7 @@ int UpdateLineArcLine(double ego_x, double ego_y, double ego_heading,
   const uint8_t steer = (is_turn_left ? pnc::geometry_lib::SEG_STEER_LEFT
                                       : pnc::geometry_lib::SEG_STEER_RIGHT);
 
-  // planning::apa_planner::PerpendicularPathPlanner perpen_planner;
+  // planning::apa_planner::PerpendicularPathInPlanner perpen_planner;
 
   // perpen_planner.LineArcLinePlan(line_arc_line_segments, debug_info,
   // start_pose,

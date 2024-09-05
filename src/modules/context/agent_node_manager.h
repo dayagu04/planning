@@ -26,10 +26,10 @@ class AgentNodeManager {
                    std::unordered_map<int, Obstacle> map_gs_care_obstacles,
                    std::vector<int> map_target_lane_obstacles,
                    std::vector<int> map_origin_lane_obstacles, int target_state)
-      : map_gs_care_obstacles_(map_gs_care_obstacles),
+      : target_state_(target_state),
+        map_gs_care_obstacles_(map_gs_care_obstacles),
         map_target_lane_obstacles_(map_target_lane_obstacles),
-        map_origin_lane_obstacles_(map_origin_lane_obstacles),
-        target_state_(target_state) {
+        map_origin_lane_obstacles_(map_origin_lane_obstacles) {
     for (auto i = 0; i < origin_refline_points.size(); i++) {
       x_vec_origin_lane_.emplace_back(origin_refline_points[i].first);
       y_vec_origin_lane_.emplace_back(origin_refline_points[i].second);

@@ -26,6 +26,9 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
+  cipv_lost_prohibit_adcceleration_decider_ =
+      std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
+                                                            session);
 }
 
 bool LongTimeTaskPipelineV1::Run() {
@@ -68,6 +71,12 @@ bool LongTimeTaskPipelineV1::Run() {
   ok = agent_longitudinal_decider_->Execute();
   if (!ok) {
     AddErrorInfo(agent_longitudinal_decider_->Name());
+    return false;
+  }
+
+  ok = cipv_lost_prohibit_adcceleration_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(cipv_lost_prohibit_adcceleration_decider_->Name());
     return false;
   }
 

@@ -43,45 +43,82 @@ static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
 static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
-
+static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
 
+namespace fs = boost::filesystem;
+
+void copy_confif_files(const fs::path& source, const fs::path& destination) {
+  if (!fs::exists(source) || !fs::is_directory(source)) {
+    std::cerr << "Source directory does not exist or is not a directory."
+              << std::endl;
+    return;
+  }
+  if (!fs::exists(destination)) {
+    fs::create_directories(destination);
+  }
+  for (const auto& entry : fs::recursive_directory_iterator(source)) {
+    fs::path target = destination / entry.path().filename();
+    try {
+      if (fs::is_directory(entry.status())) {
+        fs::create_directory(target);
+      } else {
+        fs::copy_file(entry.path(), target,
+                      fs::copy_option::overwrite_if_exists);
+      }
+    } catch (const fs::filesystem_error& e) {
+      std::cerr << "Error in copy file : " << e.what() << std::endl;
+    }
+  }
+}
+
 void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
-                          const std::string& scene_type, bool no_debug) {
+                          const std::string& scene_type, bool no_debug,
+                          const std::string& car) {
   std::cout << "===========planning player init, is_close_loop="
             << is_close_loop << ", auto_time_sec=" << auto_time_sec
             << ", scene_type=" << scene_type << "==========" << std::endl;
+  // 车辆配置文件
+  fs::path source = "res/conf/" + car;
+  fs::path destination = "/asw/planning/res/conf/";
+  copy_confif_files(source, destination);
+
   // 找到第几帧进自动
   if (scene_type == "scc" || scene_type == "hpp" || scene_type == "noa") {
     uint64_t auto_timestamp = 0;
-    for (const auto& it : msg_cache_[TOPIC_FUNC_STATE_MACHINE]) {
-      auto fsm_msg =
-          boost::any_cast<struct_msgs::FuncStateMachine::Ptr>(it.second);
-      auto current_state = fsm_msg->current_state;
-      bool acc_mode =
-          (current_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_ACC_OVERRIDE);
-      bool scc_mode =
-          (current_state == iflyauto::FunctionalState_SCC_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_SCC_OVERRIDE);
-      bool noa_mode =
-          (current_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
-          (current_state == iflyauto::FunctionalState_NOA_OVERRIDE);
-      bool hpp_mode =
-          (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY) ||
-          (current_state ==
-           iflyauto::FunctionalState_HPP_IN_READY_EXISTROUTE) ||
-          (current_state ==
-           iflyauto::FunctionalState_HPP_IN_READY_REENTRYROUTE) ||
-          (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_READY) ||
-          (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE) ||
-          (current_state == iflyauto::FunctionalState_HPP_IN_SECURE);
-      bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
-      if (dbw_status == true) {
-        auto_timestamp = fsm_msg->msg_header.stamp;
-        break;
+    if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
+      for (const auto& it : msg_cache_[TOPIC_FUNC_STATE_MACHINE]) {
+        auto fsm_msg =
+            boost::any_cast<struct_msgs::FuncStateMachine::Ptr>(it.second);
+        auto current_state = fsm_msg->current_state;
+        bool acc_mode =
+            (current_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
+            (current_state == iflyauto::FunctionalState_ACC_OVERRIDE);
+        bool scc_mode =
+            (current_state == iflyauto::FunctionalState_SCC_ACTIVATE) ||
+            (current_state == iflyauto::FunctionalState_SCC_OVERRIDE);
+        bool noa_mode =
+            (current_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
+            (current_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+        bool hpp_mode =
+            (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY) ||
+            (current_state ==
+             iflyauto::FunctionalState_HPP_IN_READY_EXISTROUTE) ||
+            (current_state ==
+             iflyauto::FunctionalState_HPP_IN_READY_REENTRYROUTE) ||
+            (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_READY) ||
+            (current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE) ||
+            (current_state == iflyauto::FunctionalState_HPP_IN_SECURE);
+        bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
+        if (dbw_status == true) {
+          auto_timestamp = fsm_msg->msg_header.stamp;
+          break;
+        }
       }
+    } else {
+      std::cerr << "Error !!!!! missing FUNC_STATE_MACHINE" << std::endl;
+      return;
     }
 
     for (const auto& it : msg_cache_[TOPIC_PLANNING_DEBUG_INFO]) {
@@ -223,6 +260,83 @@ void PlanningPlayer::Clear() {
   frame_num_before_enter_auto_ = 0;
 }
 
+void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
+                                   std::string& outVersion) {
+  const std::string command = "cd " + directory + " && git rev-parse --short=" +
+                              std::to_string(num) + " HEAD";
+  FILE* pipe = popen(command.c_str(), "r");
+  if (!pipe) {
+    std::cerr << "Failed to run command: " << command << std::endl;
+    return;
+  }
+  std::array<char, 41> buffer;
+  if (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+    std::string commitHash(buffer.data());
+    size_t newlinePos = commitHash.find('\n');
+    if (newlinePos != std::string::npos) {
+      outVersion = commitHash.substr(0, newlinePos);
+    } else {
+      outVersion = commitHash;  // No newline, use the whole string
+    }
+  }
+  pclose(pipe);
+}
+
+void PlanningPlayer::VersinCheck(const std::string& bag_path) {
+  std::cout << "=========== 版本信息 ===========" << std::endl;
+  // bag version
+  rosbag::Bag bag;
+  try {
+    bag.open(bag_path, rosbag::bagmode::Read);
+  } catch (rosbag::BagException& e) {
+    ROS_ERROR("Error opening bag file: %s", e.what());
+    return;
+  }
+  std::vector<std::string> topics;
+  topics.push_back(TOPIC_PLANNING_PLAN);
+  topics.push_back(TOPIC_SYSTEM_VERSION);
+  rosbag::View view(bag, rosbag::TopicQuery(topics));
+  for (const auto& m : view) {
+    if (m.getTopic() == TOPIC_PLANNING_PLAN) {
+      struct_msgs::PlanningOutput::ConstPtr planning_output =
+          m.instantiate<struct_msgs::PlanningOutput>();
+      if (planning_output != nullptr) {
+        std::string str(planning_output->msg_meta.version.begin(),
+                        planning_output->msg_meta.version.end());
+        bag_planning_version_ = str;
+      }
+    }
+    if (m.getTopic() == TOPIC_SYSTEM_VERSION) {
+      struct_msgs::SystemVersion::ConstPtr system_version =
+          m.instantiate<struct_msgs::SystemVersion>();
+      if (system_version != nullptr) {
+        std::string str(system_version->interface_version.begin(),
+                        system_version->interface_version.end());
+        bag_interface_version_ = str;
+      }
+    }
+    if (!bag_interface_version_.empty() && !bag_planning_version_.empty()) {
+      break;
+    }
+  }
+  bag.close();
+  if (bag_planning_version_.size() > 24) {
+    bag_planning_version_ = bag_planning_version_.substr(14, 8);
+  }
+
+  // local version
+  getCommitHash(".", 8, local_planning_version_);
+  getCommitHash("interface", 8, local_interface_version_);
+
+  std::cout << std::endl;
+  std::cout << "bag中planning版本: " << bag_planning_version_ << std::endl;
+  std::cout << "本 地planning版本: " << local_planning_version_ << std::endl;
+  std::cout << std::endl;
+  std::cout << "bag中interface版本: " << bag_interface_version_ << std::endl;
+  std::cout << "本 地interface版本: " << local_interface_version_ << std::endl;
+  std::cout << std::endl;
+}
+
 bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
                                 const std::string& out_bag, bool is_close_loop,
                                 bool no_debug, bool interface_check) {
@@ -248,8 +362,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
     } else if (msg.getTopic() == TOPIC_ROAD_FUSION) {
       cache_with_ros_msg_and_header_time<struct_msgs::RoadInfo>(msg);
     } else if (msg.getTopic() == TOPIC_LOCALIZATION_ESTIMATE) {
-      cache_with_ros_msg_and_header_time_local<
-          struct_msgs::LocalizationEstimate>(msg, new_bag, is_close_loop);
+      cache_with_ros_msg_and_header_time_local_old<
+          struct_msgs_legacy_v2_4_6::LocalizationEstimate>(msg, new_bag,
+                                                           is_close_loop);
     } else if (msg.getTopic() == TOPIC_LOCALIZATION) {
       cache_with_ros_msg_and_header_time_local<struct_msgs::IFLYLocalization>(
           msg, new_bag, is_close_loop);
@@ -260,8 +375,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
           msg);
     } else if (msg.getTopic() == TOPIC_CONTROL_COMMAN) {
       cache_with_ros_msg_and_header_time<struct_msgs::ControlOutput>(msg);
-      // } else if (msg.getTopic() == TOPIC_HMI_MCU_INNER) {
-      //   cache_with_ros_msg_and_header_time<struct_msgs::HmiMcuInner>(msg);
+    } else if (msg.getTopic() == TOPIC_HMI_MCU_INNER) {
+      cache_with_ros_msg_and_header_time_old<
+          struct_msgs_legacy_v2_4_5::HmiMcuInner>(msg);
     } else if (msg.getTopic() == TOPIC_PARKING_FUSION) {
       cache_with_ros_msg_and_header_time<struct_msgs::ParkingFusionInfo>(msg);
     } else if (msg.getTopic() == TOPIC_FUNC_STATE_MACHINE) {
@@ -339,7 +455,7 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
         write_ros_msg<struct_msgs::RoadInfo::Ptr>(it_msg.second,
                                                   TOPIC_ROAD_FUSION, bag);
       } else if (it_msg.first == TOPIC_LOCALIZATION_ESTIMATE) {
-        write_ros_msg<struct_msgs::LocalizationEstimate::Ptr>(
+        write_ros_msg<struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
             it_msg.second, TOPIC_LOCALIZATION_ESTIMATE, bag);
       } else if (it_msg.first == TOPIC_LOCALIZATION) {
         write_ros_msg<struct_msgs::IFLYLocalization::Ptr>(
@@ -353,10 +469,9 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
       } else if (it_msg.first == TOPIC_CONTROL_COMMAN) {
         write_ros_msg<struct_msgs::ControlOutput::Ptr>(
             it_msg.second, TOPIC_CONTROL_COMMAN, bag);
-        // } else if (it_msg.first == TOPIC_HMI_MCU_INNER) {
-        //   write_ros_msg<struct_msgs::HmiMcuInner::Ptr>(it_msg.second,
-        //                                                TOPIC_HMI_MCU_INNER,
-        //                                                bag);
+      } else if (it_msg.first == TOPIC_HMI_MCU_INNER) {
+        write_ros_msg<struct_msgs_legacy_v2_4_5::HmiMcuInner::Ptr>(
+            it_msg.second, TOPIC_HMI_MCU_INNER, bag);
       } else if (it_msg.first == TOPIC_PARKING_FUSION) {
         write_ros_msg<struct_msgs::ParkingFusionInfo::Ptr>(
             it_msg.second, TOPIC_PARKING_FUSION, bag);
@@ -463,26 +578,25 @@ void PlanningPlayer::PlayOneFrame(
     }
   }
 
-  // //
   // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
-  // auto input_time_localization_estimate =
-  //     input_time_list.localization_estimate();
-  // if (0 == input_time_localization_estimate) {
-  //   input_time_localization_estimate = input_time_list.localization();
-  // }
-  // auto localization_estimate_ros_msg =
-  //     find_ros_msg_with_header_time<struct_msgs::LocalizationEstimate>(
-  //         TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
-  // if (localization_estimate_ros_msg) {
-  //   iflyauto::LocalizationEstimate localization_estimate_msg{};
-  //   convert(localization_estimate_msg, *localization_estimate_ros_msg,
-  //           ConvertTypeInfo::TO_STRUCT);
-  //   planning_adapter_->FeedLocalizationEstimateOutput(
-  //       localization_estimate_msg);
-  // } else {
-  //   // std::cerr << "frame_num " << frame_num_
-  //   //           << " missing /iflytek/localization/ego_pose" << std::endl;
-  // }
+  auto input_time_localization_estimate =
+      input_time_list.localization_estimate();
+  if (0 == input_time_localization_estimate) {
+    input_time_localization_estimate = input_time_list.localization();
+  }
+  auto localization_estimate_ros_msg = find_ros_msg_with_header_time<
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate>(
+      TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
+  if (localization_estimate_ros_msg) {
+    iflyauto::interface_2_4_6::LocalizationEstimate localization_estimate_msg{};
+    convert(localization_estimate_msg, *localization_estimate_ros_msg,
+            ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedLocalizationEstimateOutput(
+        localization_estimate_msg);
+  } else {
+    // std::cerr << "frame_num " << frame_num_
+    //           << " missing /iflytek/localization/ego_pose" << std::endl;
+  }
 
   auto localization_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::IFLYLocalization>(
@@ -535,16 +649,16 @@ void PlanningPlayer::PlayOneFrame(
     // std::cerr << "missing /iflytek/control/control_command" << std::endl;
   }
 
-  // auto hmi_mcu_ros_msg =
-  // find_ros_msg_with_header_time<struct_msgs::HmiInner>(
-  //     TOPIC_HMI_MCU_INNER, input_time_list.hmi());
-  // if (hmi_mcu_ros_msg) {
-  //   iflyauto::HmiInner hmi_inner_msg{};
-  //   convert(hmi_inner_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
-  //   planning_adapter_->FeedHmiInner(hmi_inner_msg);
-  // } else {
-  //   // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
-  // }
+  auto hmi_mcu_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs_legacy_v2_4_5::HmiMcuInner>(
+          TOPIC_HMI_MCU_INNER, input_time_list.hmi());
+  if (hmi_mcu_ros_msg) {
+    iflyauto::interface_2_4_5::HmiMcuInner hmi_inner_msg{};
+    convert(hmi_inner_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedHmiMcuInner(hmi_inner_msg);
+  } else {
+    // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
+  }
 
   auto parking_fusion_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::ParkingFusionInfo>(
@@ -635,66 +749,71 @@ void PlanningPlayer::PlayOneFrame(
   //   //           << " missing /iflytek/fusion/ground_line" << std::endl;
   // }
 
-  bool find_function_state_machine = false;
-  struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
-  uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
-  if (input_time_list.function_state_machine()) {
-    auto cached_func_state_machine_ros_msg =
-        find_ros_msg_with_header_time<struct_msgs::FuncStateMachine>(
-            TOPIC_FUNC_STATE_MACHINE, input_time_list.function_state_machine());
-    if (cached_func_state_machine_ros_msg) {
-      func_state_machine_ros_msg = *cached_func_state_machine_ros_msg;
-      find_function_state_machine = true;
-    } else {
-      std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/fsm/soc_state" << std::endl;
-    }
-  }
-  if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
-    if (scene_type_ == "acc") {
-      functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
-    } else if (scene_type_ == "apa") {
-      functional_state = iflyauto::FunctionalState_PARK_GUIDANCE;
-    } else if (scene_type_ == "scc" || scene_type_ == "noa") {
-      if (find_function_state_machine) {
-        if (is_close_loop) {
-          if (iflyauto::FunctionalState_SCC_STANDBY <=
-                  func_state_machine_ros_msg.current_state &&
-              func_state_machine_ros_msg.current_state <=
-                  iflyauto::FunctionalState_SCC_OVERRIDE) {
-            functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
-          } else if (iflyauto::FunctionalState_NOA_STANDBY <=
-                         func_state_machine_ros_msg.current_state &&
-                     func_state_machine_ros_msg.current_state <=
-                         iflyauto::FunctionalState_NOA_OVERRIDE) {
-            functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
-          } else if (iflyauto::FunctionalState_ACC_STANDBY <=
-                         func_state_machine_ros_msg.current_state &&
-                     func_state_machine_ros_msg.current_state <=
-                         iflyauto::FunctionalState_ACC_OVERRIDE) {
-            functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
-          } else {
-            functional_state = last_functional_state;
-          }
-        } else {
-          functional_state = func_state_machine_ros_msg.current_state;
-        }
-      } else if (scene_type_ == "scc") {
-        functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
-      } else if (scene_type_ == "noa") {
-        functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+  if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
+    bool find_function_state_machine = false;
+    struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
+    uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
+    if (input_time_list.function_state_machine()) {
+      auto cached_func_state_machine_ros_msg =
+          find_ros_msg_with_header_time<struct_msgs::FuncStateMachine>(
+              TOPIC_FUNC_STATE_MACHINE,
+              input_time_list.function_state_machine());
+      if (cached_func_state_machine_ros_msg) {
+        func_state_machine_ros_msg = *cached_func_state_machine_ros_msg;
+        find_function_state_machine = true;
+      } else {
+        std::cerr << "frame_num " << frame_num_
+                  << " missing /iflytek/fsm/soc_state" << std::endl;
       }
-    } else if (scene_type_ == "hpp") {
-      functional_state = iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE;
     }
+    if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
+      if (scene_type_ == "acc") {
+        functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
+      } else if (scene_type_ == "apa") {
+        functional_state = iflyauto::FunctionalState_PARK_GUIDANCE;
+      } else if (scene_type_ == "scc" || scene_type_ == "noa") {
+        if (find_function_state_machine) {
+          if (is_close_loop) {
+            if (iflyauto::FunctionalState_SCC_STANDBY <=
+                    func_state_machine_ros_msg.current_state &&
+                func_state_machine_ros_msg.current_state <=
+                    iflyauto::FunctionalState_SCC_OVERRIDE) {
+              functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
+            } else if (iflyauto::FunctionalState_NOA_STANDBY <=
+                           func_state_machine_ros_msg.current_state &&
+                       func_state_machine_ros_msg.current_state <=
+                           iflyauto::FunctionalState_NOA_OVERRIDE) {
+              functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+            } else if (iflyauto::FunctionalState_ACC_STANDBY <=
+                           func_state_machine_ros_msg.current_state &&
+                       func_state_machine_ros_msg.current_state <=
+                           iflyauto::FunctionalState_ACC_OVERRIDE) {
+              functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+            } else {
+              functional_state = last_functional_state;
+            }
+          } else {
+            functional_state = func_state_machine_ros_msg.current_state;
+          }
+        } else if (scene_type_ == "scc") {
+          functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
+        } else if (scene_type_ == "noa") {
+          functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+        }
+      } else if (scene_type_ == "hpp") {
+        functional_state = iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE;
+      }
+    }
+    func_state_machine_ros_msg.current_state = functional_state;
+    last_functional_state = functional_state;
+    iflyauto::FuncStateMachine func_state_machine_msg{};
+    convert(func_state_machine_msg, func_state_machine_ros_msg,
+            ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+  } else {
+    std::cerr << "Error !!!!! missing FUNC_STATE_MACHINE" << std::endl;
+    return;
   }
-
-  func_state_machine_ros_msg.current_state = functional_state;
-  last_functional_state = functional_state;
-  iflyauto::FuncStateMachine func_state_machine_msg{};
-  convert(func_state_machine_msg, func_state_machine_ros_msg,
-          ConvertTypeInfo::TO_STRUCT);
-  planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
 
   planning_adapter_->Proc();
 }
@@ -857,9 +976,9 @@ void PlanningPlayer::RunCloseLoop(
     } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
       for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
            it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
-        auto loc_msg_i =
-            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+        auto loc_msg_i = boost::any_cast<
+            struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(it->second);
+        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
         if (loc_header_time_i > loc_esti_header_time_us_) {
           if (loc_header_time_i <= next_loc_esti_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
@@ -889,8 +1008,9 @@ void PlanningPlayer::RunCloseLoop(
     for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
          it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
       auto loc_msg_i =
-          boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(it->second);
-      auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+          boost::any_cast<struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it->second);
+      auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
       if (loc_header_time_i > loc_esti_header_time_us_ &&
           loc_header_time_i < loc_esti_header_time_us_ + 1000 * 1000) {
         auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
@@ -967,22 +1087,22 @@ void PlanningPlayer::PerfectControlEgoMotion(
   q = pnc::transform::EulerZYX2Quat(euler_zxy);
 
   // vel
-  // loc_msg->velocity.velocity_boot.vx = v * cos(theta);
-  // loc_msg->velocity.velocity_boot.vy = v * sin(theta);
-  // loc_msg->velocity.velocity_boot.vz = 0;
-
-  loc_msg->velocity.velocity_body.vx = v;
-  loc_msg->velocity.velocity_boot.vy = 0;
+  loc_msg->velocity.velocity_boot.vx = v * cos(theta);
+  loc_msg->velocity.velocity_boot.vy = v * sin(theta);
   loc_msg->velocity.velocity_boot.vz = 0;
 
-  // acc
-  // loc_msg->acceleration.acceleration_boot.ax = a * cos(theta);
-  // loc_msg->acceleration.acceleration_boot.ay = a * sin(theta);
-  // loc_msg->acceleration.acceleration_boot.az = 0;
+  loc_msg->velocity.velocity_body.vx = v;
+  loc_msg->velocity.velocity_body.vy = 0;
+  loc_msg->velocity.velocity_body.vz = 0;
 
-  loc_msg->acceleration.acceleration_boot.ax = a;
-  loc_msg->acceleration.acceleration_boot.ay = 0;
+  // acc
+  loc_msg->acceleration.acceleration_boot.ax = a * cos(theta);
+  loc_msg->acceleration.acceleration_boot.ay = a * sin(theta);
   loc_msg->acceleration.acceleration_boot.az = 0;
+
+  loc_msg->acceleration.acceleration_body.ax = a;
+  loc_msg->acceleration.acceleration_body.ay = 0;
+  loc_msg->acceleration.acceleration_body.az = 0;
 
   // atti
   loc_msg->orientation.euler_boot.yaw = euler_zxy[0];
@@ -999,7 +1119,7 @@ void PlanningPlayer::PerfectControlEgoMotion(
 
 void PlanningPlayer::PerfectControlAPA(
     const struct_msgs::PlanningOutput& plan_msg, uint64_t delta_t,
-    struct_msgs::LocalizationEstimate::Ptr loc_msg) {
+    struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const auto path_size = plan_msg.trajectory.trajectory_points_size;
 
@@ -1131,7 +1251,8 @@ void PlanningPlayer::PerfectControlAPA(
 }
 
 void PlanningPlayer::PerfectControlEgoPose(
-    uint64_t delta_t, struct_msgs::LocalizationEstimate::Ptr loc_msg) {
+    uint64_t delta_t,
+    struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg) {
   const double dt = static_cast<double>(delta_t) / 1e6;
   const double x = x_t_spline_(dt);
   const double y = y_t_spline_(dt);
@@ -1212,22 +1333,39 @@ void PlanningPlayer::UpdateVehicleService(
 void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   if (mileage_path != "") {
     double pathLength = 0.0;
-    if (scene_type_ == "scc") {
-      auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-      for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1;
-           ++i) {
-        auto loc_msg_i =
-            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(
-                it_loc_esti_msg->second);
-        auto x1 = loc_msg_i->pose.local_position.x;
-        auto y1 = loc_msg_i->pose.local_position.y;
-        it_loc_esti_msg++;
-        auto loc_msg_i_next =
-            boost::any_cast<struct_msgs::LocalizationEstimate::Ptr>(
-                it_loc_esti_msg->second);
-        auto x2 = loc_msg_i_next->pose.local_position.x;
-        auto y2 = loc_msg_i_next->pose.local_position.y;
-        pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+    if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp") {
+      if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+        auto it_loc_msg = msg_cache_[TOPIC_LOCALIZATION].begin();
+        for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1; ++i) {
+          auto loc_msg_i = boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(
+              it_loc_msg->second);
+          auto x1 = loc_msg_i->position.position_boot.x;
+          auto y1 = loc_msg_i->position.position_boot.y;
+          it_loc_msg++;
+          auto loc_msg_i_next =
+              boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(
+                  it_loc_msg->second);
+          auto x2 = loc_msg_i_next->position.position_boot.x;
+          auto y2 = loc_msg_i_next->position.position_boot.y;
+          pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+        }
+      } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+        auto it_loc_esti_msg = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+        for (size_t i = 0;
+             i < msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].size() - 1; ++i) {
+          auto loc_msg_i = boost::any_cast<
+              struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it_loc_esti_msg->second);
+          auto x1 = loc_msg_i->pose.local_position.x;
+          auto y1 = loc_msg_i->pose.local_position.y;
+          it_loc_esti_msg++;
+          auto loc_msg_i_next = boost::any_cast<
+              struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
+              it_loc_esti_msg->second);
+          auto x2 = loc_msg_i_next->pose.local_position.x;
+          auto y2 = loc_msg_i_next->pose.local_position.y;
+          pathLength += sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+        }
       }
     }
     nlohmann::json j;
@@ -1288,7 +1426,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
 
     // auto localization_estimate_ros_msg =
     //     find_ros_msg_with_header_time_upper_bound<
-    //         struct_msgs::LocalizationEstimate>(TOPIC_LOCALIZATION_ESTIMATE,
+    //         struct_msgs_legacy_v2_4_6::LocalizationEstimate>(TOPIC_LOCALIZATION_ESTIMATE,
     //                                            start_time);
     // if (localization_estimate_ros_msg) {
     //   local_time_ = localization_estimate_ros_msg->msg_header.stamp;
@@ -1352,16 +1490,16 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
       // std::cerr << "missing /iflytek/control/control_command" << std::endl;
     }
 
-    // auto hmi_mcu_ros_msg =
-    //     find_ros_msg_with_header_time_upper_bound<struct_msgs::HmiMcuInner>(
-    //         TOPIC_HMI_MCU_INNER, start_time);
-    // if (hmi_mcu_ros_msg) {
-    //   iflyauto::HmiMcuInner hmi_mcu_msg{};
-    //   convert(hmi_mcu_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    //   planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
-    // } else {
-    //   // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
-    // }
+    auto hmi_mcu_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs_legacy_v2_4_5::HmiMcuInner>(TOPIC_HMI_MCU_INNER,
+                                                start_time);
+    if (hmi_mcu_ros_msg) {
+      iflyauto::interface_2_4_5::HmiMcuInner hmi_mcu_msg{};
+      convert(hmi_mcu_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
+    } else {
+      // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
+    }
 
     auto parking_fusion_ros_msg = find_ros_msg_with_header_time_upper_bound<
         struct_msgs::ParkingFusionInfo>(TOPIC_PARKING_FUSION, start_time);
@@ -1414,67 +1552,73 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     //   //           << " missing /iflytek/fusion/ground_line" << std::endl;
     // }
 
-    bool find_function_state_machine = false;
-    struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
-    uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
+    if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
+      bool find_function_state_machine = false;
+      struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
+      uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
 
-    auto cached_func_state_machine_ros_msg =
-        find_ros_msg_with_header_time_upper_bound<
-            struct_msgs::FuncStateMachine>(TOPIC_FUNC_STATE_MACHINE,
-                                           start_time);
-    if (cached_func_state_machine_ros_msg) {
-      func_state_machine_ros_msg = *cached_func_state_machine_ros_msg;
-      find_function_state_machine = true;
-    } else {
-      std::cerr << "frame_num " << frame_num_
-                << " missing /iflytek/fsm/soc_state" << std::endl;
-    }
-
-    if (frame_num_ >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
-      if (scene_type_ == "acc") {
-        functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
-      } else if (scene_type_ == "apa") {
-        functional_state = iflyauto::FunctionalState_PARK_GUIDANCE;
-      } else if (scene_type_ == "scc" || scene_type_ == "noa") {
-        if (find_function_state_machine) {
-          if (is_close_loop) {
-            if (iflyauto::FunctionalState_SCC_STANDBY <=
-                    func_state_machine_ros_msg.current_state &&
-                func_state_machine_ros_msg.current_state <=
-                    iflyauto::FunctionalState_SCC_OVERRIDE) {
-              functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
-            } else if (iflyauto::FunctionalState_NOA_STANDBY <=
-                           func_state_machine_ros_msg.current_state &&
-                       func_state_machine_ros_msg.current_state <=
-                           iflyauto::FunctionalState_NOA_OVERRIDE) {
-              functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
-            } else if (iflyauto::FunctionalState_ACC_STANDBY <=
-                           func_state_machine_ros_msg.current_state &&
-                       func_state_machine_ros_msg.current_state <=
-                           iflyauto::FunctionalState_ACC_OVERRIDE) {
-              functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
-            } else {
-              functional_state = last_functional_state;
-            }
-          } else {
-            functional_state = func_state_machine_ros_msg.current_state;
-          }
-        } else if (scene_type_ == "scc") {
-          functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
-        } else if (scene_type_ == "noa") {
-          functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
-        }
-      } else if (scene_type_ == "hpp") {
-        functional_state = iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE;
+      auto cached_func_state_machine_ros_msg =
+          find_ros_msg_with_header_time_upper_bound<
+              struct_msgs::FuncStateMachine>(TOPIC_FUNC_STATE_MACHINE,
+                                             start_time);
+      if (cached_func_state_machine_ros_msg) {
+        func_state_machine_ros_msg = *cached_func_state_machine_ros_msg;
+        find_function_state_machine = true;
+      } else {
+        std::cerr << "frame_num " << frame_num_
+                  << " missing /iflytek/fsm/soc_state" << std::endl;
       }
-    }
 
-    func_state_machine_ros_msg.current_state = functional_state;
-    last_functional_state = functional_state;
-    iflyauto::FuncStateMachine func_state_machine_msg{};
-    convert(func_state_machine_msg, func_state_machine_ros_msg,
-            ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+      if (frame_num_ >=
+          frame_num_before_enter_auto_) {  // enter auto after 1.5s
+        if (scene_type_ == "acc") {
+          functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
+        } else if (scene_type_ == "apa") {
+          functional_state = iflyauto::FunctionalState_PARK_GUIDANCE;
+        } else if (scene_type_ == "scc" || scene_type_ == "noa") {
+          if (find_function_state_machine) {
+            if (is_close_loop) {
+              if (iflyauto::FunctionalState_SCC_STANDBY <=
+                      func_state_machine_ros_msg.current_state &&
+                  func_state_machine_ros_msg.current_state <=
+                      iflyauto::FunctionalState_SCC_OVERRIDE) {
+                functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
+              } else if (iflyauto::FunctionalState_NOA_STANDBY <=
+                             func_state_machine_ros_msg.current_state &&
+                         func_state_machine_ros_msg.current_state <=
+                             iflyauto::FunctionalState_NOA_OVERRIDE) {
+                functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+              } else if (iflyauto::FunctionalState_ACC_STANDBY <=
+                             func_state_machine_ros_msg.current_state &&
+                         func_state_machine_ros_msg.current_state <=
+                             iflyauto::FunctionalState_ACC_OVERRIDE) {
+                functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+              } else {
+                functional_state = last_functional_state;
+              }
+            } else {
+              functional_state = func_state_machine_ros_msg.current_state;
+            }
+          } else if (scene_type_ == "scc") {
+            functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
+          } else if (scene_type_ == "noa") {
+            functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+          }
+        } else if (scene_type_ == "hpp") {
+          functional_state = iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE;
+        }
+      }
+
+      func_state_machine_ros_msg.current_state = functional_state;
+      last_functional_state = functional_state;
+      iflyauto::FuncStateMachine func_state_machine_msg{};
+      convert(func_state_machine_msg, func_state_machine_ros_msg,
+              ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+    } else {
+      std::cerr << "Error !!!!! missing FUNC_STATE_MACHINE" << std::endl;
+      return;
+    }
 
     planning_adapter_->Proc();
   }

@@ -11,6 +11,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   common
   modules_context
   c_interface
+  legacy_c_interface
   planning_proto
   mjson
   framework

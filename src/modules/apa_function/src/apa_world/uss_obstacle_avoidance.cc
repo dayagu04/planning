@@ -10,7 +10,7 @@
 #include "transform_lib.h"
 
 namespace planning {
-
+namespace apa_planner {
 void UssObstacleAvoidance::Init() {
   // init car local vertex
   car_local_vertex_vec_.clear();
@@ -20,7 +20,27 @@ void UssObstacleAvoidance::Init() {
     car_local_vertex_vec_.emplace_back(
         Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                         apa_param.GetParam().car_vertex_y_vec[i]));
-    if (i == 1) {
+    if (i == 0) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[0] +
+                           apa_param.GetParam().car_vertex_x_vec[1]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[0] +
+                           apa_param.GetParam().car_vertex_y_vec[1]) *
+                              0.5));
+    }
+
+    if (i == 4) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[4] +
+                           apa_param.GetParam().car_vertex_x_vec[5]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[4] +
+                           apa_param.GetParam().car_vertex_y_vec[5]) *
+                              0.5));
+    }
+
+    if (i == 2) {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[2]));
@@ -28,7 +48,18 @@ void UssObstacleAvoidance::Init() {
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[3]));
     }
-    if (i == 9) {
+
+    if (i == 10) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[10] +
+                           apa_param.GetParam().car_vertex_x_vec[11]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[10] +
+                           apa_param.GetParam().car_vertex_y_vec[11]) *
+                              0.5));
+    }
+
+    if (i == 12) {
       car_local_vertex_vec_.emplace_back(
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[8]));
@@ -36,12 +67,22 @@ void UssObstacleAvoidance::Init() {
           Eigen::Vector2d(apa_param.GetParam().car_vertex_x_vec[i],
                           apa_param.GetParam().uss_vertex_y_vec[9]));
     }
+
+    if (i == 14) {
+      car_local_vertex_vec_.emplace_back(
+          Eigen::Vector2d((apa_param.GetParam().car_vertex_x_vec[14] +
+                           apa_param.GetParam().car_vertex_x_vec[15]) *
+                              0.5,
+                          (apa_param.GetParam().car_vertex_y_vec[14] +
+                           apa_param.GetParam().car_vertex_y_vec[15]) *
+                              0.5));
+    }
   }
 
   for (size_t i = 0; i < car_local_vertex_vec_.size(); ++i) {
-    if (car_local_vertex_vec_[i].y() > 0) {
+    if (car_local_vertex_vec_[i].y() > 0.46) {
       car_local_vertex_vec_[i].y() += param_.lat_inflation;
-    } else {
+    } else if (car_local_vertex_vec_[i].y() < -0.46) {
       car_local_vertex_vec_[i].y() -= param_.lat_inflation;
     }
   }
@@ -153,6 +194,16 @@ void UssObstacleAvoidance::GenUssArc() {
     const auto rot_matrix_upa = pnc::geometry_lib::GetRotm2dFromTheta(
         pnc::mathlib::Deg2Rad(upa_scan_angle_deg * 0.5));
 
+    const auto rot_matrix_corner_uss_straight =
+        pnc::geometry_lib::GetRotm2dFromTheta(pnc::mathlib::Deg2Rad(
+            apa_param.GetParam().corner_uss_scan_angle_deg_straight));
+
+    const auto rot_matrix_corner_uss_turn =
+        pnc::geometry_lib::GetRotm2dFromTheta(pnc::mathlib::Deg2Rad(
+            apa_param.GetParam().corner_uss_scan_angle_deg_turn));
+
+    const double corner_uss_dist_diff = 0.1068;
+
     Eigen::Matrix2d rot_matrix;
 
     pnc::geometry_lib::Arc uss_local_arc;
@@ -180,8 +231,6 @@ void UssObstacleAvoidance::GenUssArc() {
            Eigen::Vector2d(std::cos(uss_local_normal_angle),
                            std::sin(uss_local_normal_angle));
 
-      const auto C = OC + uss_local_vertex;
-
       if (i == 0 || i == 5 || i == 6 || i == 11) {
         rot_matrix = rot_matrix_apa;
       } else {
@@ -198,12 +247,75 @@ void UssObstacleAvoidance::GenUssArc() {
 
       // hack: avoid corner uss invalid stuck
       // todo: need move when uss can be trust
-      if (i == 1 || i == 7) {
-        uss_local_arc.pA = C;
-      } else if (i == 4 || i == 10) {
-        uss_local_arc.pB = C;
+      if (std::fabs(car_motion_info_.steer_angle * 57.3) <
+          apa_param.GetParam().corner_uss_steer_angle) {
+        if (i == 1 || i == 7) {
+          uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
+                             uss_local_arc.circle_info.center;
+        } else if (i == 4 || i == 10) {
+          uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                             uss_local_arc.circle_info.center;
+        }
+      } else {
+        if (car_motion_info_.steer_angle > 0.0) {
+          if (i == 1) {
+            if (uss_raw_dist_vec_[1] > uss_raw_dist_vec_[0] + corner_uss_dist_diff) {
+              uss_local_arc.pA =
+                  rot_matrix_corner_uss_straight.transpose() * OC +
+                  uss_local_arc.circle_info.center;
+            } else {
+              uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
+                                 uss_local_arc.circle_info.center;
+            }
+          }
+          if (i == 4) {
+            uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 7) {
+            if (uss_raw_dist_vec_[7] > uss_raw_dist_vec_[6] + corner_uss_dist_diff) {
+              uss_local_arc.pA =
+                  rot_matrix_corner_uss_straight.transpose() * OC +
+                  uss_local_arc.circle_info.center;
+            } else {
+              uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
+                                 uss_local_arc.circle_info.center;
+            }
+          }
+          if (i == 10) {
+            uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                               uss_local_arc.circle_info.center;
+          }
+        } else {
+          if (i == 1) {
+            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 4) {
+            if (uss_raw_dist_vec_[4] > uss_raw_dist_vec_[5] + corner_uss_dist_diff) {
+              uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                                 uss_local_arc.circle_info.center;
+            } else {
+              uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
+                                 uss_local_arc.circle_info.center;
+            }
+          }
+          if (i == 7) {
+            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
+                               uss_local_arc.circle_info.center;
+          }
+          if (i == 10) {
+            if (uss_raw_dist_vec_[10] >
+                uss_raw_dist_vec_[11] + corner_uss_dist_diff) {
+              uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                                 uss_local_arc.circle_info.center;
+            } else {
+              uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
+                                 uss_local_arc.circle_info.center;
+            }
+          }
+        }
       }
-
       uss_local_arc_vec_.emplace_back(uss_local_arc);
     }
     return;
@@ -265,13 +377,13 @@ void UssObstacleAvoidance::GenUssArc() {
 }
 
 const bool UssObstacleAvoidance::Preprocess() {
-  if (local_view_ptr_ == nullptr) {
-    DEBUG_PRINT("uss local_view_ptr is nullptr!");
+  if (apa_data_ptr_ == nullptr) {
+    DEBUG_PRINT("uss apa_data_ptr_ is nullptr!");
     return false;
   }
 
   car_motion_info_.steer_angle =
-      local_view_ptr_->vehicle_service_output_info.steering_wheel_angle;
+      apa_data_ptr_->measurement_data.steer_wheel_angle;
 
   const bool trajectory_available =
       planning_output_->trajectory.available &&
@@ -301,7 +413,7 @@ const bool UssObstacleAvoidance::Preprocess() {
 
   if (apa_param.GetParam().is_uss_dist_from_perception) {
     const auto &uss_dis_info_buf =
-        local_view_ptr_->uss_percept_info.dis_from_car_to_obj;
+        apa_data_ptr_->uss_percept_info_ptr->dis_from_car_to_obj;
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // TODO(xjli32): NOTE
@@ -334,7 +446,7 @@ const bool UssObstacleAvoidance::Preprocess() {
   } else {
     // load uss dist from uss wave, m id f
     const auto &upa_dis_info_buf =
-        local_view_ptr_->uss_wave_info.upa_dis_info_buf;
+        apa_data_ptr_->uss_wave_info_ptr->upa_dis_info_buf;
 
     const std::vector<int> front_wids_idx_vec = {0, 9, 6, 3, 1, 11};
     const std::vector<int> rear_wids_idx_vec = {0, 1, 3, 6, 9, 11};
@@ -350,6 +462,12 @@ const bool UssObstacleAvoidance::Preprocess() {
       }
     }
   }
+
+  std::cout << "uss_raw_dist = ";
+  for (const double dist : uss_raw_dist_vec_) {
+    std::cout << dist << " ";
+  }
+  std::cout << "\n";
 
   JSON_DEBUG_VECTOR("uss_raw_dist_vec", uss_raw_dist_vec_, 2)
 
@@ -398,13 +516,15 @@ void UssObstacleAvoidance::CalRemainDist() {
       }
     }
   }
+  std::cout << "uss_index = " << remain_dist_info_.uss_index
+            << "  car_index = " << remain_dist_info_.car_index << std::endl;
 }
 
 void UssObstacleAvoidance::Update(
     iflyauto::PlanningOutput *const planning_output,
-    const LocalView *local_view_ptr) {
+    const std::shared_ptr<ApaData> apa_data_ptr) {
   // update local_view
-  local_view_ptr_ = local_view_ptr;
+  apa_data_ptr_ = apa_data_ptr;
 
   // update planning output
   planning_output_ = planning_output;
@@ -524,5 +644,5 @@ void UssObstacleAvoidance::UpdateByPybind() {
     remain_dist_info_.is_available = false;
   }
 }
-
+}  // namespace apa_planner
 }  // namespace planning

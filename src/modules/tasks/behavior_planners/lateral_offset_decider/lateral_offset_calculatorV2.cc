@@ -15,7 +15,9 @@
 #include "lateral_offset_decider_utils.h"
 #include "planning_context.h"
 #include "real_time_lon_behavior_planner.pb.h"
+#include "utils/hysteresis_decision.h"
 #include "utils/pose2d_utils.h"
+
 namespace planning {
 
 LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
@@ -40,6 +42,9 @@ LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
       hysteresis_map2;
   avoid_hysteresis_maps_[HysteresisType::IsInConsiderLateralRangeHysteresis] =
       hysteresis_map2;
+
+  has_enough_speed_hysteresis_.SetThreValue(config_.v_limit_max + 5,
+                                            config_.v_limit_max - 5);
 }
 
 bool LateralOffsetCalculatorV2::Process(
@@ -77,6 +82,11 @@ bool LateralOffsetCalculatorV2::Process(
 
   virtual_lane_manager_ =
       session_->environmental_model().get_virtual_lane_manager();
+
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+  has_enough_speed_hysteresis_.SetIsValidByValue(ego_v * 3.6);
+  enable_bound_ = !has_enough_speed_hysteresis_.IsValid();
 
   b_success =
       update(status, flag_avd, accident_ahead, should_premove, should_suspend,
@@ -162,24 +172,19 @@ void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
   if (!has_left_lane && !has_right_lane) {
     avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = road_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
   } else if (!has_right_lane) {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = road_avoid_threshold;
   } else if (!has_left_lane) {
     avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   } else {
     avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
     avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
-    avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
   }
+
+  avoid_info_.static_left_avoid_threshold = static_lane_avoid_threshold;
+  avoid_info_.static_right_avoid_threshold = static_lane_avoid_threshold;
 
   auto last_fix_lane_virtual_id = session_->environmental_model()
                                       .get_virtual_lane_manager()
@@ -1099,7 +1104,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
     }
 
     if (config_.care_dynamic_object_t_threshold < 0.0 ||
-        config_.care_static_object_t_threshold < 0.0) {
+        config_.care_static_object_t_threshold < 0.0 || !enable_bound_) {
       CalcFrontMaxOppositeOffset(front_ids, !is_left, avoid_obstacle,
                                  enough_space_hysteresis_map);
       CalcSideMaxOppositeOffset(side_max_opposite_offset_ids, avoid_obstacle,

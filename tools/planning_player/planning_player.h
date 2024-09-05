@@ -52,7 +52,8 @@ class PlanningPlayer {
   ~PlanningPlayer() = default;
 
   void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type, bool no_debug);
+            const std::string &scene_type, bool no_debug,
+            const std::string &car);
   void Clear();
   bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
                   bool is_close_loop, bool no_debug, bool interface_check);
@@ -68,15 +69,19 @@ class PlanningPlayer {
   void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
   void PerfectControlEgoMotion(uint64_t delta_t,
                                struct_msgs::IFLYLocalization::Ptr loc_msg);
-  void PerfectControlEgoPose(uint64_t delta_t,
-                             struct_msgs::LocalizationEstimate::Ptr loc_msg);
-  void PerfectControlAPA(const struct_msgs::PlanningOutput &plan_msg,
-                         uint64_t delta_t,
-                         struct_msgs::LocalizationEstimate::Ptr loc_msg);
+  void PerfectControlEgoPose(
+      uint64_t delta_t,
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
+  void PerfectControlAPA(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
   void UpdateVehicleService(
       uint64_t delta_t,
       struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
   void UpdateVehicleServiceData();
+  void getCommitHash(const std::string &directory, const int num,
+                     std::string &outVersion);
+  void VersinCheck(const std::string &bag_path);
 
  private:
   DynamicState state_;
@@ -121,6 +126,10 @@ class PlanningPlayer {
   pnc::mathlib::spline yaw_rate_t_spline_;
   pnc::mathlib::spline curvature_t_spline_;
   bool instant_error_ = false;
+  std::string local_planning_version_;
+  std::string local_interface_version_;
+  std::string bag_planning_version_;
+  std::string bag_interface_version_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);
@@ -129,7 +138,16 @@ class PlanningPlayer {
   void cache_with_ros_msg_and_header_time(const rosbag::MessageInstance &msg);
 
   template <class T>
+  void cache_with_ros_msg_and_header_time_old(
+      const rosbag::MessageInstance &msg);
+
+  template <class T>
   void cache_with_ros_msg_and_header_time_local(
+      const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+      bool is_close_loop);
+
+  template <class T>
+  void cache_with_ros_msg_and_header_time_local_old(
       const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
       bool is_close_loop);
 
@@ -205,6 +223,24 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
 }
 
 template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time_old(
+    const rosbag::MessageInstance &msg) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
+              << std::endl;
+    instant_error_ = true;
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
+        obj_msg;  // us
+  }
+}
+
+template <class T>
 void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
     const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
     bool is_close_loop) {
@@ -219,6 +255,29 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
     msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
     header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
+    if (is_close_loop) {
+      auto origin_topic = msg.getTopic() + "_origin";
+      new_bag.write(origin_topic, msg.getTime(), obj_msg);
+    }
+  }
+}
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time_local_old(
+    const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+    bool is_close_loop) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    std::cout << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
+              << std::endl;
+    instant_error_ = true;
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
+        obj_msg;  // us
     if (is_close_loop) {
       auto origin_topic = msg.getTopic() + "_origin";
       new_bag.write(origin_topic, msg.getTime(), obj_msg);

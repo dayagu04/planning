@@ -65,6 +65,10 @@ class SccLonBehaviorPlanner : public Task {
 
   bool GenerateStableFollowSlowCurve(std::vector<double> &s_refs);
 
+  bool IsLeadVehicle(const planning::common::TrackedObjectInfo &lead);
+
+  bool JudgeCurvBySDMap();
+
   struct STBound {
     double lower = -1.0e4;
     double upper = 1.0e4;
