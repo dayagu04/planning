@@ -98,6 +98,7 @@ struct ApaParameters {
   double detection_distance = 2.5;
   double lat_inflation = 0.1;
   double safe_uss_remain_dist_in_slot = 0.35;
+  double safe_uss_remain_dist_in_parallel_slot = 0.25;
   double safe_uss_remain_dist_out_slot = 0.55;
   double uss_stuck_replan_wait_time = 2.0;
   double uss_scan_angle_deg = 60;

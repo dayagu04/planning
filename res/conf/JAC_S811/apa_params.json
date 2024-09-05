@@ -38,8 +38,8 @@
   "terminal_target_y": 0.0,
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
-  "terminal_parallel_y_offset": 0.0,
-  "terminal_parallel_y_offset_with_curb": 0.3,
+  "terminal_parallel_y_offset": -0.08,
+  "terminal_parallel_y_offset_with_curb": 0.28,
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.086,
@@ -73,6 +73,7 @@
   "lat_inflation": 0.086,
   "detection_distance": 2.5,
   "safe_uss_remain_dist_in_slot": 0.3286,
+  "safe_uss_remain_dist_in_parallel_slot": 0.25,
   "safe_uss_remain_dist_out_slot": 0.4286,
   "uss_stuck_replan_wait_time": 2.5,
   "uss_scan_angle_deg": 60.0,
