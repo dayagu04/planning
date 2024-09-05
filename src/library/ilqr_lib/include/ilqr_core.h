@@ -109,7 +109,7 @@ class iLqr {
  public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   iLqr() = default;
-  ~iLqr() = default;
+  virtual ~iLqr() = default;
   void Init(const std::shared_ptr<iLqrModel> ilqr_model,
             const iLqrSolverConfig &ilqr_sovler_config);
 

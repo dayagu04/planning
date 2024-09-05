@@ -20,7 +20,7 @@ class iLqrModel {
     cost_stack_.reserve(MAX_COST_SIZE);
   }
 
-  ~iLqrModel() = default;
+  virtual ~iLqrModel() = default;
 
   virtual State UpdateDynamicsOneStep(const State &x, const Control &u,
                                       const size_t &step) const = 0;

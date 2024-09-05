@@ -247,6 +247,7 @@ class ApaPlannerBase {
   };
 
  public:
+  virtual ~ApaPlannerBase() = default;
   virtual void Init();
   virtual void Update();
 
