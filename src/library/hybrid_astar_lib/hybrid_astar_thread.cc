@@ -17,7 +17,7 @@ HybridAStarThreadSolver::HybridAStarThreadSolver() {
 }
 
 void HybridAStarThreadSolver::HybridAStarThreadFunction() {
-  while (true) {
+  while (thread_state_ == AstarThreadState::RUNNING) {
     // sleep 100 ms
     usleep(100 * 1000);
 
@@ -51,6 +51,7 @@ int HybridAStarThreadSolver::Init(
 
   init_ = true;
   response_.search_state = SearchState::none;
+  thread_state_ = AstarThreadState::INITTED;
   ILOG_INFO << "HybridAStarThreadSolver init success";
 
   return 0;
@@ -288,6 +289,7 @@ void HybridAStarThreadSolver::Start() {
     return;
   }
 
+  thread_state_ = AstarThreadState::RUNNING;
   const auto& update_func = [this] { HybridAStarThreadFunction(); };
 
   thread_.reset(new std::thread(update_func));
@@ -344,6 +346,11 @@ void HybridAStarThreadSolver::GetRefLine(ParkReferenceLine* ref_line) {
   *ref_line = const_ref_line;
 
   return;
+}
+
+HybridAStarThreadSolver::~HybridAStarThreadSolver() {
+  thread_state_ = AstarThreadState::STOPPED;
+  Stop();
 }
 
 }  // namespace planning

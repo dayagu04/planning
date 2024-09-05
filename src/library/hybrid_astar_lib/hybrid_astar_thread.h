@@ -22,6 +22,8 @@ enum class RequestResponseState {
   max_num,
 };
 
+enum class AstarThreadState { INITTED, RUNNING, STOPPED };
+
 // this is a thread version for astar, because control module need planning
 // process heartbreak. So main thread need to publish message to control and
 // call astar thread's result. Of course you can directly use
@@ -30,6 +32,8 @@ enum class RequestResponseState {
 class HybridAStarThreadSolver {
  public:
   HybridAStarThreadSolver();
+
+  ~HybridAStarThreadSolver();
 
   static HybridAStarThreadSolver* GetInstance() {
     static HybridAStarThreadSolver instance_;
@@ -125,6 +129,7 @@ class HybridAStarThreadSolver {
 
   std::shared_ptr<HybridAStarInterface> solver_interface_;
 
+  AstarThreadState thread_state_;
   std::unique_ptr<std::thread> thread_;
 };
 

@@ -12,6 +12,7 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
  public:
   HybridAStarParkPlanner() = default;
   HybridAStarParkPlanner(const std::shared_ptr<ApaWorld>& apa_world_ptr);
+  ~HybridAStarParkPlanner();
 
   void Init() override;
 

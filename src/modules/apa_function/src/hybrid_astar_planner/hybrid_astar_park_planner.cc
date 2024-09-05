@@ -1002,5 +1002,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   return true;
 }
 
+HybridAStarParkPlanner::~HybridAStarParkPlanner() {}
+
 }  // namespace apa_planner
 }  // namespace planning
