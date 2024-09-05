@@ -202,7 +202,7 @@ void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
 static std::string ReadFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
   if (file == nullptr) {
-    ILOG_INFO <<" file is null";
+    ILOG_INFO << " file is null";
 
     return "null";
   }

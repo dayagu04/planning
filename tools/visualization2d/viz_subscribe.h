@@ -33,15 +33,14 @@
 #include "ifly_time.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"
+#include "planning_debug_info.pb.h"
 #include "planning_plan.pb.h"
 #include "prediction.pb.h"
 #include "uss_percept_info.pb.h"
 #include "uss_wave_info.pb.h"
 #include "vehicle_service.pb.h"
-#include "planning_debug_info.pb.h"
 
-namespace planning
-{
+namespace planning {
 /**
  * @struct local_view
  * @brief LocalView contains all necessary data as viz input,
@@ -49,8 +48,7 @@ namespace planning
  * rt传输的数据最好拷贝到这里
  */
 
-struct VizSubscribe
-{
+struct VizSubscribe {
   LocalizationOutput::LocalizationEstimate localization_estimate;
 
   IFLYLocalization::IFLYLocalization localization;
@@ -76,4 +74,4 @@ struct VizSubscribe
   planning::common::PlanningDebugInfo planning_debug_;
 };
 
-}
+}  // namespace planning

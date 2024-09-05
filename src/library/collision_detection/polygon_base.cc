@@ -97,11 +97,11 @@ int UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
         polygon->center_pt.x = center_pose->x;
         polygon->center_pt.y = center_pose->y;
       } else {
-        double x= 0.0;
-        double y= 0.0;
+        double x = 0.0;
+        double y = 0.0;
         for (i = 0; i < polygon->vertex_num; i++) {
-          x +=polygon->vertexes[i].x;
-          y +=polygon->vertexes[i].y;
+          x += polygon->vertexes[i].x;
+          y += polygon->vertexes[i].y;
         }
 
         polygon->center_pt.x = x / polygon->vertex_num;

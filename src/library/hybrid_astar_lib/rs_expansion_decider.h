@@ -1,9 +1,9 @@
 #pragma once
 
 #include "astar_decider.h"
-#include "pose2d.h"
-#include "node3d.h"
 #include "hybrid_astar_request.h"
+#include "node3d.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -20,11 +20,11 @@ class RSExpansionDecider : public AstarDecider {
 
   const double GetEndPointMaxDepth();
 
-  const Pose2D& GetRSEndPose();
+  const Pose2D &GetRSEndPose();
 
   const bool IsSameEndPointForRsWithAtar();
 
-  bool IsNeedRsExpansion(const Node3d* node);
+  bool IsNeedRsExpansion(const Node3d *node);
 
   static void UpdateRSPathRequest(RSPathRequestType *rs_request,
                                   const bool is_single_shot,

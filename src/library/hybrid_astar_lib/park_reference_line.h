@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pose2d.h"
 #include "ad_common/math/line_segment2d.h"
+#include "pose2d.h"
 
 namespace planning {
 

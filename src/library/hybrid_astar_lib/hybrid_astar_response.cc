@@ -1,10 +1,10 @@
+#include "hybrid_astar_response.h"
 #include <string>
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
+#include "ifly_time.h"
 #include "log_glog.h"
 #include "node3d.h"
-#include "hybrid_astar_response.h"
-#include "ifly_time.h"
 
 namespace planning {
 
@@ -70,9 +70,11 @@ const bool IsResponseNice(const AstarRequest& request,
     return false;
   }
 
-  // if (request.path_generate_method != response.request.path_generate_method) {
+  // if (request.path_generate_method != response.request.path_generate_method)
+  // {
   //   ILOG_INFO << "method is change, cur method: "
-  //             << static_cast<int>(request.path_generate_method) << " , last: "
+  //             << static_cast<int>(request.path_generate_method) << " , last:
+  //             "
   //             << static_cast<int>(response.request.path_generate_method);
 
   //   return false;

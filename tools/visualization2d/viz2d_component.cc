@@ -4,21 +4,20 @@
 #include <cstdint>
 
 #include "common.pb.h"
-#include "cyber/common/global_data.h"
-#include "opencv_viz.h"
-#include "log_glog.h"
-#include "pose2d.h"
-#include "src/common/utils_math.h"
 #include "config/vehicle_param.h"
+#include "cyber/common/global_data.h"
+#include "log_glog.h"
+#include "opencv_viz.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "src/common/ifly_time.h"
+#include "src/common/utils_math.h"
 #include "tools/visualization2d/opencv_viz.h"
+#include "transform2d.h"
 #include "viz2d_path.h"
 #include "viz2d_perception.h"
 #include "viz_text.h"
 #include "viz_window.h"
-#include "src/common/ifly_time.h"
-#include "transform2d.h"
 
 namespace planning {
 Viz2dComponent::Viz2dComponent(/* args */) {
@@ -181,12 +180,12 @@ int Viz2dComponent::Process(double max_steering_wheel_angle_) {
   UpdateLocalView(max_steering_wheel_angle_);
 
   RULocalPolygonToGlobal(&veh_global_polygon, &veh_local_polygon,
-                              &car_global_pose_);
+                         &car_global_pose_);
 
   viz2d_draw_xy_axis(main_window_);
 
-  ILOG_INFO << car_global_pose_.x << " y " << car_global_pose_.y
-            << " theta " << car_global_pose_.theta;
+  ILOG_INFO << car_global_pose_.x << " y " << car_global_pose_.y << " theta "
+            << car_global_pose_.theta;
 
   // use map ref frame as base pose in plot.
   bool ref_pose_is_map_ref_frame = false;
@@ -332,7 +331,7 @@ int Viz2dComponent::Process(double max_steering_wheel_angle_) {
       Polygon2D global_polygon;
       for (size_t i = 0; i < obs_list.size(); i++) {
         RULocalPolygonToGlobal(&global_polygon, &obs_list[i],
-                                    &target_slot_pose_);
+                               &target_slot_pose_);
 
         cv_draw_polygon(main_window_, &global_polygon, &global_base_pose_,
                         viz2d_colors_yellow, 1.0, ref_pose_is_map_ref_frame);
@@ -411,8 +410,7 @@ int Viz2dComponent::GetMouseOrKeyBoardMsg() {
   switch (key_value_) {
     case 'h':
       target_slot_pose_.theta += 15.0 * M_PI / 180.0;
-      target_slot_pose_.theta =
-          IflyUnifyTheta(target_slot_pose_.theta, M_PI);
+      target_slot_pose_.theta = IflyUnifyTheta(target_slot_pose_.theta, M_PI);
 
       park_info_updated_ = true;
       break;
@@ -487,7 +485,7 @@ int Viz2dComponent::GetMouseOrKeyBoardMsg() {
       local_position = slot_box.vertexes[i];
 
       CvtPosLocalToGlobal(&global_position, &local_position,
-                              &target_slot_pose_);
+                          &target_slot_pose_);
 
       Common::Point2f* point = slot->add_corner_points();
       point->set_x(global_position.x);

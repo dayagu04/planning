@@ -7,10 +7,10 @@
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "hybrid_astar_response.h"
 #include "log_glog.h"
 #include "park_reference_line.h"
 #include "pose2d.h"
-#include "hybrid_astar_response.h"
 
 namespace planning {
 
@@ -66,7 +66,7 @@ class HybridAStarThreadSolver {
 
   const bool HasResponse();
 
-  void GetThreadState(RequestResponseState *state);
+  void GetThreadState(RequestResponseState* state);
 
   void ResetResponse();
 
@@ -102,8 +102,7 @@ class HybridAStarThreadSolver {
       std::vector<std::vector<ad_common::math::Vec2d>>& path_list);
 
   // for debug
-  void GetRSPathLinkInThread(
-      std::vector<ad_common::math::Vec2d>& path);
+  void GetRSPathLinkInThread(std::vector<ad_common::math::Vec2d>& path);
 
   // for debug
   void GetRefLine(ParkReferenceLine* ref_line);

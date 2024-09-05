@@ -1,16 +1,16 @@
 
 #include "virtual_chassis_component.h"
 
-#include "cyber/cyber.h"
-#include "log_glog.h"
-#include "src/modules/common/config/vehicle_param_tmp.h"
-#include "pose2d.h"
-#include "tools/virtual_chassis/virtual_chassis_state.h"
-#include "vehicle_service.pb.h"
-#include "src/common/ifly_time.h"
 #include "basic_types.pb.h"
+#include "cyber/cyber.h"
 #include "func_state_machine.pb.h"
+#include "log_glog.h"
+#include "pose2d.h"
+#include "src/common/ifly_time.h"
+#include "src/modules/common/config/vehicle_param_tmp.h"
+#include "tools/virtual_chassis/virtual_chassis_state.h"
 #include "transform2d.h"
+#include "vehicle_service.pb.h"
 
 namespace planning {
 
@@ -181,7 +181,7 @@ int VirtualChassisComponent::Process() {
 
   if (is_control_cmd_valid && use_control_update_veh) {
     GetVirtualChassisCommandByControl(&virtual_chassis_cmd_,
-                                     local_view_.control_);
+                                      local_view_.control_);
 
     // ILOG_INFO << local_view_.control_.DebugString();
 
@@ -247,7 +247,6 @@ int VirtualChassisComponent::Process() {
       traj_min_pose.x = point.x();
       traj_min_pose.y = point.y();
       traj_min_pose.theta = point.heading_yaw();
-
 
       // get projection point
       Pose2D local_pos;
@@ -362,8 +361,6 @@ int VirtualChassisComponent::GetVirtualChassisCommandByTraj(
   CalcRadiusByThreePoint(&r, &left, &middle, &right);
 
   front_wheel_angle = std::atan(veh_param_.wheel_base / r);
-
-
 
   // set virtual cmd
   virtual_cmd->steer_ = front_wheel_angle;

@@ -12,9 +12,7 @@ namespace planning {
 // of course you can store nodes in heap by malloc function.
 class CompactNodePool {
  public:
-  CompactNodePool() {
-    pool_size_ = 0;
-  }
+  CompactNodePool() { pool_size_ = 0; }
 
   static void Clear();
 

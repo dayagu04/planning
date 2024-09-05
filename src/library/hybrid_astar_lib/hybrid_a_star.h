@@ -11,31 +11,31 @@
 #include <utility>
 #include <vector>
 
-#include "ad_common/math/vec2d.h"
+#include "./../../modules/common/config/vehicle_param.h"
+#include "./../../modules/context/vehicle_config_context.h"
+#include "./../collision_detection//gjk2d_interface.h"
+#include "./../collision_detection/aabb2d.h"
+#include "./../collision_detection/types.h"
+#include "./../occupancy_grid_map/euler_distance_transform.h"
+#include "./../occupancy_grid_map/point_cloud_obstacle.h"
+#include "./../reeds_shepp/reeds_shepp_interface.h"
 #include "ad_common/math/line_segment2d.h"
+#include "ad_common/math/vec2d.h"
+#include "basic_types.pb.h"
+#include "compact_node_pool.h"
 #include "dynamic_programing_cost.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
+#include "hybrid_astar_request.h"
 #include "node3d.h"
-#include "./../../modules/common/config/vehicle_param.h"
-#include "rs_path_interpolate.h"
-#include "./../collision_detection/aabb2d.h"
+#include "node_shrink_decider.h"
+#include "obstacle_clear_zone.h"
+#include "park_reference_line.h"
+#include "planning_debug_info.pb.h"
 #include "polygon_base.h"
 #include "pose2d.h"
-#include "./../collision_detection/types.h"
-#include "./../../modules/context/vehicle_config_context.h"
-#include "./../collision_detection//gjk2d_interface.h"
-#include "planning_debug_info.pb.h"
-#include "basic_types.pb.h"
-#include "./../reeds_shepp/reeds_shepp_interface.h"
-#include "hybrid_astar_request.h"
-#include "./../occupancy_grid_map/point_cloud_obstacle.h"
-#include "./../occupancy_grid_map/euler_distance_transform.h"
-#include "compact_node_pool.h"
-#include "obstacle_clear_zone.h"
 #include "rs_expansion_decider.h"
-#include "node_shrink_decider.h"
-#include "park_reference_line.h"
+#include "rs_path_interpolate.h"
 
 namespace planning {
 
@@ -99,7 +99,7 @@ class HybridAStar {
   // for debug
   void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
-  const ParkReferenceLine &GetConstRefLine() const;
+  const ParkReferenceLine& GetConstRefLine() const;
 
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
@@ -164,28 +164,25 @@ class HybridAStar {
 
   bool IsRSPathSingleShot(const RSPath* reeds_shepp_to_end);
 
-  bool IsRSPathSafeByConvexHull(const RSPath* reeds_shepp_path,
-                                Node3d* node);
+  bool IsRSPathSafeByConvexHull(const RSPath* reeds_shepp_path, Node3d* node);
 
-  const bool IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
-                               Node3d* node);
+  const bool IsRSPathSafeByEDT(const RSPath* reeds_shepp_path, Node3d* node);
 
   void LinkRsToAstarEndPoint(HybridAStarResult* result,
                              const Pose2D& astar_end);
 
   void DebugEDTCheck(HybridAStarResult* path);
 
-  Polygon2D *GetVehPolygon(const AstarPathGear &gear);
+  Polygon2D* GetVehPolygon(const AstarPathGear& gear);
 
   // radius:left is positve
-  void KineticsModel(const Pose2D* old_pose, const double radius,
-                     Pose2D* pose, const bool is_forward);
+  void KineticsModel(const Pose2D* old_pose, const double radius, Pose2D* pose,
+                     const bool is_forward);
 
   // radius:left is positve
   // arc: is always positive
   void GetPathByBicycleModel(NodePath* path, const double arc,
-                             const double radius,
-                             const bool is_forward);
+                             const double radius, const bool is_forward);
 
   void GetPathByLine(NodePath* path, const double arc, const bool is_forward);
 
@@ -209,13 +206,12 @@ class HybridAStar {
                              const double inverse_radius);
 
   void UpdatePoseByPathPointInterval(const Pose2D* old_pose,
-                                     const double radius,
-                                     const double interval, Pose2D* pose,
-                                     const bool is_forward);
+                                     const double radius, const double interval,
+                                     Pose2D* pose, const bool is_forward);
 
-  void UpdatePoseBySamplingNumber(const Pose2D* old_pose,
-                                  const double radius, const int number,
-                                  Pose2D* pose, const bool is_forward);
+  void UpdatePoseBySamplingNumber(const Pose2D* old_pose, const double radius,
+                                  const int number, Pose2D* pose,
+                                  const bool is_forward);
 
   size_t GetPathCollisionIndex(HybridAStarResult* result);
 
@@ -225,7 +221,7 @@ class HybridAStar {
                         const RSPathRequestType rs_request,
                         const double rs_radius);
 
-  double CalcSafeDistCost(Node3d *node);
+  double CalcSafeDistCost(Node3d* node);
 
   // for debug
   void DebugObstacleString() const;
@@ -280,7 +276,7 @@ class HybridAStar {
   Node3d* start_node_;
   Node3d* astar_end_node_;
 
-  const ParkObstacleList *obstacles_;
+  const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;
   ObstacleClearZone clear_zone_;
 

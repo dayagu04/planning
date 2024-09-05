@@ -4,9 +4,9 @@
 #include <opencv2/opencv.hpp>
 
 #include "footprint_circle_model.h"
+#include "occupancy_grid_coordinate.h"
 #include "occupancy_grid_map.h"
 #include "ogm_common.h"
-#include "occupancy_grid_coordinate.h"
 
 namespace planning {
 
@@ -39,7 +39,6 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   const EDTData &GetConstEDTData() const { return data_; }
 
  private:
-
   EDTData data_;
 
   FootPrintCircleList global_circles_;

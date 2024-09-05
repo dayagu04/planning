@@ -319,4 +319,4 @@ const string& LogFileObject::hostname() {
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning

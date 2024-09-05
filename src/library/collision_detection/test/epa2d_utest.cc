@@ -97,8 +97,7 @@ TEST(test_collision_detection_epa2d, test_enableCounterClockwise) {
 
   /* Verify the distance from the simplex edge to the origin */
   EXPECT_FLOAT_EQ(epa2d.epa_edges_[0].distance_to_origin, 2.0 / ifly_sqrt(5));
-  EXPECT_FLOAT_EQ(epa2d.epa_edges_[1].distance_to_origin,
-                  12.0 / ifly_sqrt(65));
+  EXPECT_FLOAT_EQ(epa2d.epa_edges_[1].distance_to_origin, 12.0 / ifly_sqrt(65));
   EXPECT_FLOAT_EQ(epa2d.epa_edges_[2].distance_to_origin, 4.0 / 5.0);
 
   /* Record the coordinates of the original polygon corresponding

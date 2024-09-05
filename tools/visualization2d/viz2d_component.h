@@ -1,13 +1,13 @@
 #pragma once
 
-#include "opencv_viz.h"
-#include "pose2d.h"
 #include "config/vehicle_param.h"
-#include "viz2d_geometry.h"
-#include "viz_subscribe.h"
 #include "cyber/cyber.h"
 #include "cyber/time/rate.h"
 #include "cyber/time/time.h"
+#include "opencv_viz.h"
+#include "pose2d.h"
+#include "viz2d_geometry.h"
+#include "viz_subscribe.h"
 
 namespace planning {
 class Viz2dComponent {
@@ -19,8 +19,7 @@ class Viz2dComponent {
 
   LocalizationOutput::LocalizationEstimate localization_;
 
-  std::shared_ptr<
-      apollo::cyber::Reader<FusionObjects::FusionObjectsInfo>>
+  std::shared_ptr<apollo::cyber::Reader<FusionObjects::FusionObjectsInfo>>
       fusion_obj_reader_;
 
   FusionObjects::FusionObjectsInfo fusion_objs_;
@@ -50,8 +49,7 @@ class Viz2dComponent {
   ControlCommand::ControlOutput control_command_;
 
   // publish
-  std::shared_ptr<
-      apollo::cyber::Writer<ParkingFusion::ParkingFusionInfo>>
+  std::shared_ptr<apollo::cyber::Writer<ParkingFusion::ParkingFusionInfo>>
       park_slot_info_writer_;
 
   std::shared_ptr<apollo::cyber::Writer<FuncStateMachine::FuncStateMachine>>
@@ -85,7 +83,6 @@ class Viz2dComponent {
   Pose2D global_base_pose_;
 
   Pose2D target_slot_pose_;
-
 
   double wheel_base;
   double front_wheel_angle;

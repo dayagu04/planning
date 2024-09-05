@@ -103,7 +103,8 @@ int cv_draw_polygon(viz2d_image *viz2d, const Polygon2D *poly,
     CvtPosGlobalToLocal(&poly_pts_local[i], &poly_pts[i], ref_pose);
 
     // ILOG_INFO << "global " << poly_pts[i].x << " " << poly_pts[i].y;
-    // ILOG_INFO << "local " << poly_pts_local[i].x << " " << poly_pts_local[i].y;
+    // ILOG_INFO << "local " << poly_pts_local[i].x << " " <<
+    // poly_pts_local[i].y;
   }
 
   for (i = 0; i < poly->vertex_num; i++) {
@@ -146,9 +147,9 @@ int viz2d_draw_line(viz2d_image *viz2d, const Position2D *start,
   return 0;
 }
 
-int viz2d_draw_line(viz2d_image *viz2d, const Pose2D *start,
-                    const Pose2D *end, const Pose2D *ref_pose,
-                    viz2d_color color_index, int width) {
+int viz2d_draw_line(viz2d_image *viz2d, const Pose2D *start, const Pose2D *end,
+                    const Pose2D *ref_pose, viz2d_color color_index,
+                    int width) {
   int i;
   CvPoint pt1, pt2;
   CvScalar color;
@@ -466,10 +467,11 @@ int viz_draw_box_in_cv_frame(viz2d_image *viz2d, const CvPoint *center,
 
 #define SLOT_VIRTUAL_WALL_LATERAL_OFFSET (1.0)
 #define SLOT_VIRTUAL_WALL_LON_OFFSET (2.0)
-const int GenerateVirtualWall(
-    std::vector<Polygon2D>& obs_list, const double channel_length,
-    const double channel_width, const double slot_width,
-    const double slot_length) {
+const int GenerateVirtualWall(std::vector<Polygon2D> &obs_list,
+                              const double channel_length,
+                              const double channel_width,
+                              const double slot_width,
+                              const double slot_length) {
   // width is the slot upper edge to a virtual wall
   const double lower_channel_length = (channel_length - slot_width) * 0.5;
 
@@ -543,18 +545,16 @@ const int GenerateVirtualWall(
 
   obs_list.emplace_back(polygon);
 
-  GenerateLineSegmentPolygon(&polygon, upper_channel_left,
-                                upper_channel_right);
+  GenerateLineSegmentPolygon(&polygon, upper_channel_left, upper_channel_right);
 
   obs_list.emplace_back(polygon);
 
   GenerateLineSegmentPolygon(&polygon, right_channel_lower,
-                                right_channel_upper);
+                             right_channel_upper);
 
   obs_list.emplace_back(polygon);
 
-  GenerateLineSegmentPolygon(&polygon, left_channel_lower,
-                                left_channel_upper);
+  GenerateLineSegmentPolygon(&polygon, left_channel_lower, left_channel_upper);
 
   obs_list.emplace_back(polygon);
 
@@ -562,9 +562,7 @@ const int GenerateVirtualWall(
 
   obs_list.emplace_back(polygon);
 
-
   return 0;
 }
-
 
 }  // namespace planning

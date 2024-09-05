@@ -3,6 +3,7 @@
 
 #include <bits/stdint-intn.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -12,17 +13,16 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
+#include "./../collision_detection/gjk2d_interface.h"
+#include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "ad_common/math/line_segment2d.h"
 #include "hybrid_astar_config.h"
 #include "log_glog.h"
 #include "node2d.h"
 #include "node3d.h"
-#include "pose2d.h"
-#include "./../collision_detection/gjk2d_interface.h"
 #include "polygon_base.h"
-#include "./../occupancy_grid_map/point_cloud_obstacle.h"
+#include "pose2d.h"
 
 namespace planning {
 

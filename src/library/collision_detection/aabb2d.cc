@@ -172,36 +172,36 @@ AABB &AABB::expand(const Vector2r &delta) {
 void AABB::ExtendX(const double x) {
   min_[0] -= x;
   max_[0] += x;
-  return ;
+  return;
 }
 
 void AABB::ExtendXlower(const double x) {
   min_[0] -= x;
-  return ;
+  return;
 }
 
 void AABB::ExtendXupper(const double x) {
   max_[0] += x;
-  return ;
+  return;
 }
 
 void AABB::ExtendY(const double y) {
   min_[1] -= y;
   max_[1] += y;
 
-  return ;
+  return;
 }
 
 void AABB::ExtendYlower(const double y) {
   min_[1] -= y;
 
-  return ;
+  return;
 }
 
 void AABB::ExtendYupper(const double y) {
   max_[1] += y;
 
-  return ;
+  return;
 }
 
 AABB &AABB::expand(const AABB &core, real ratio) {

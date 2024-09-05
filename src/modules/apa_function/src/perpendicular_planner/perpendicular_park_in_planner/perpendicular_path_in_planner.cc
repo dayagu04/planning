@@ -192,7 +192,6 @@ const bool PerpendicularPathInPlanner::Update() {
   }
 }
 
-
 const bool PerpendicularPathInPlanner::UpdateByPrePlan() {
   Preprocess();
 

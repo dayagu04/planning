@@ -96,6 +96,6 @@ class LogFileObject : public google::base::Logger {
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning
 
 #endif  // CYBER_LOGGER_LOG_FILE_OBJECT_H_

@@ -1,12 +1,12 @@
 #pragma once
 #include <opencv2/core/types.hpp>
 
+#include "occupancy_grid_coordinate.h"
 #include "ogm_common.h"
 #include "opencv2/opencv.hpp"
 #include "point_cloud_obstacle.h"
 #include "pose2d.h"
 #include "transform2d.h"
-#include "occupancy_grid_coordinate.h"
 
 namespace planning {
 
@@ -30,7 +30,7 @@ class OccupancyGridMap : public OccupancyGridCoordinate {
 
   void AddParkingObs(const ParkObstacleList &obs);
 
-  template<typename T>
+  template <typename T>
   void AddLineSegment(const T &start, const T &end);
 
   void TransformToMatrix(cv::Mat *mat) const;

@@ -41,6 +41,6 @@ class Logger : public google::base::Logger {
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning
 
 #endif  // CYBER_LOGGER_LOGGER_H_

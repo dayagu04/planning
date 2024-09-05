@@ -1,7 +1,7 @@
 #include <opencv2/core/types.hpp>
 #include <opencv2/imgproc.hpp>
-#include "opencv2/opencv.hpp"
 #include "log_glog.h"
+#include "opencv2/opencv.hpp"
 
 // 导入window ip地址,ipconfig可以查询
 // export DISPLAY=10.5.166.104:0.0

@@ -41,8 +41,7 @@ int viz2d_draw_global_trajectory(viz2d_image *viz2d,
     global_pose.y = traj.trajectory_points(i).y();
     global_pose.theta = traj.trajectory_points(i).heading_yaw();
 
-    RULocalPolygonToGlobal(&global_polygon, &traj_local_polygon,
-                                &global_pose);
+    RULocalPolygonToGlobal(&global_polygon, &traj_local_polygon, &global_pose);
 
     viz2d_draw_filled_polygon(viz2d, &global_polygon, viz2d_colors_dodgerblue1,
                               base_pose, ref_pose_is_map_ref_frame);

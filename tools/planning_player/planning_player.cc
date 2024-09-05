@@ -192,7 +192,8 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_output_struct.msg_header.stamp = planning_dubug_info_header_time_us_;
+          planning_output_struct.msg_header.stamp =
+              planning_dubug_info_header_time_us_;
           ros_time = planning_dubug_info_msg_time_s_;
         }
         struct_msgs::PlanningOutput planning_output_ros_msg{};
@@ -274,9 +275,8 @@ void PlanningPlayer::Clear() {
 
 void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
                                    std::string& outVersion) {
-  const std::string command =
-      "cd " + directory + " && git rev-parse --short=" + std::to_string(num) +
-      " HEAD";
+  const std::string command = "cd " + directory + " && git rev-parse --short=" +
+                              std::to_string(num) + " HEAD";
   FILE* pipe = popen(command.c_str(), "r");
   if (!pipe) {
     std::cerr << "Failed to run command: " << command << std::endl;

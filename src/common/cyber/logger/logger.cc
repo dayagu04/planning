@@ -76,4 +76,4 @@ uint32_t Logger::LogSize() { return wrapped_->LogSize(); }
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning

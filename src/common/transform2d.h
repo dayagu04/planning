@@ -67,7 +67,7 @@ class Transform2d {
 
   const Pose2D &GetConstBasePose() const { return base_pose_; }
 
-  Pose2D* GetMutableBasePose() { return &base_pose_; }
+  Pose2D *GetMutableBasePose() { return &base_pose_; }
 
   const double GetSinTheta() const { return sin_theta_; }
 

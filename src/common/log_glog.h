@@ -5,11 +5,10 @@
 #ifndef __PLANNING_COMMON_GLOG_H__
 #define __PLANNING_COMMON_GLOG_H__
 
-
+#include <string>
+#include <vector>
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
-#include <vector>
-#include <string>
 
 namespace planning {
 
@@ -145,7 +144,7 @@ struct GlogFlag {
   bool is_init = false;
 };
 
-void InitGlog(const char *file);
+void InitGlog(const char* file);
 
 void StopGlog();
 

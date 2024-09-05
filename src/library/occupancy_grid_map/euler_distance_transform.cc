@@ -6,9 +6,9 @@
 #include <opencv2/imgproc.hpp>
 
 #include "log_glog.h"
-#include "transform2d.h"
 #include "occupancy_grid_map.h"
 #include "ogm_common.h"
+#include "transform2d.h"
 
 namespace planning {
 
@@ -228,7 +228,6 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
 
       return true;
     }
-
   }
 
   return false;

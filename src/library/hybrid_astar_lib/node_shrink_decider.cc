@@ -7,7 +7,6 @@
 namespace planning {
 
 void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
-
   AstarDecider::Process(start, end);
 
   heading_shrink_.limit_search_heading_ = false;

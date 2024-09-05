@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include "./../hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
-#include "./../hybrid_astar_lib/hybrid_astar_common.h"
 
 namespace planning {
 
@@ -49,19 +49,18 @@ class FootPrintCircleModel {
   void LocalToGlobalByGear(FootPrintCircleList *global_circle, Transform2d *tf,
                            const AstarPathGear gear);
 
-private:
+ private:
   void DebugCircle(FootPrintCircle *circle);
 
   void DebugCircles(FootPrintCircleList *circles);
 
  private:
-
   // vehicle coordinate system
- FootPrintCircleList local_circles_;
+  FootPrintCircleList local_circles_;
 
- // for different gear, use different safe buffer
- FootPrintCircleList drive_gear_circles_;
- FootPrintCircleList reverse_gear_circles_;
+  // for different gear, use different safe buffer
+  FootPrintCircleList drive_gear_circles_;
+  FootPrintCircleList reverse_gear_circles_;
 };
 
 }  // namespace planning

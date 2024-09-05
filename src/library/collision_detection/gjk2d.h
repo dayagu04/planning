@@ -9,7 +9,6 @@
 
 namespace cdl {
 
-
 enum struct CollisionStatus {
   SEPERATION, /**< Shapes seperation */
   CONTACT,

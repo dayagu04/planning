@@ -20,7 +20,6 @@
 
 #include "quartic_polynomial_curve1d.h"
 
-
 namespace planning {
 namespace planning_math {
 

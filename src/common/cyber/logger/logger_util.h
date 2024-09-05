@@ -32,8 +32,8 @@
 #include <string>
 #include <vector>
 
-#include "glog/logging.h"
 #include "./../../log_glog.h"
+#include "glog/logging.h"
 
 namespace planning {
 namespace cyber {
@@ -81,6 +81,6 @@ inline void FindModuleName(std::string* log_message, std::string* module_name) {
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning
 
 #endif  // CYBER_LOGGER_LOGGER_UTIL_H_

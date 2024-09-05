@@ -2,10 +2,10 @@
 
 #pragma once
 
+#include <array>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <array>
 
 #include "log_glog.h"
 #include "osqp.h"

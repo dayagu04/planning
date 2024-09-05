@@ -1,6 +1,6 @@
 #include "virtual_wall_decider.h"
-#include "pose2d.h"
 #include "polygon_base.h"
+#include "pose2d.h"
 #include "utils_math.h"
 
 namespace planning {
@@ -83,10 +83,10 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
     }
   } else if (relative_position_ == CarSlotRelativePosition::car_is_left) {
     if (theta < 0.0) {
-      channel_right_bound_y = -slot_width/2 - 4.0 - 10.0;
+      channel_right_bound_y = -slot_width / 2 - 4.0 - 10.0;
       channel_left_bound_y = ego_pose.y + 1.0 + 5.0;
     } else if (theta > 0.0) {
-      channel_right_bound_y = -slot_width/2 - 0.9 - 10.0;
+      channel_right_bound_y = -slot_width / 2 - 0.9 - 10.0;
 
       channel_left_bound_y = ego_pose.y + 4.0 + 10.0;
     } else {
@@ -108,11 +108,10 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
   Eigen::Vector2d left_channel_lower;
   Eigen::Vector2d left_channel_upper;
 
-  left_channel_lower =
-      Eigen::Vector2d(slot_length - SLOT_VIRTUAL_WALL_X_OFFSET,
-                      channel_left_bound_y);
-  left_channel_upper = Eigen::Vector2d(
-      slot_length + channel_width, channel_left_bound_y);
+  left_channel_lower = Eigen::Vector2d(slot_length - SLOT_VIRTUAL_WALL_X_OFFSET,
+                                       channel_left_bound_y);
+  left_channel_upper =
+      Eigen::Vector2d(slot_length + channel_width, channel_left_bound_y);
 
   // slot back wall
   double lower_bound_x = -0.8;
@@ -147,20 +146,18 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
   convex_obs_list.emplace_back(polygon);
 
   //
-  GenerateLineSegmentPolygon(&polygon, upper_channel_left,
-                                upper_channel_right);
+  GenerateLineSegmentPolygon(&polygon, upper_channel_left, upper_channel_right);
 
   convex_obs_list.emplace_back(polygon);
 
   //
   GenerateLineSegmentPolygon(&polygon, right_channel_lower,
-                                right_channel_upper);
+                             right_channel_upper);
 
   convex_obs_list.emplace_back(polygon);
 
   //
-  GenerateLineSegmentPolygon(&polygon, left_channel_lower,
-                                left_channel_upper);
+  GenerateLineSegmentPolygon(&polygon, left_channel_lower, left_channel_upper);
 
   convex_obs_list.emplace_back(polygon);
 
@@ -219,7 +216,7 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
 
   // limit upper
   if (channel_up_bound_x > slot_length + 9.0) {
-    channel_up_bound_x = slot_length+ 9.0;
+    channel_up_bound_x = slot_length + 9.0;
   }
 
   // limit lower
@@ -282,11 +279,10 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
   Eigen::Vector2d left_channel_lower;
   Eigen::Vector2d left_channel_upper;
 
-  left_channel_lower =
-      Eigen::Vector2d(slot_length - SLOT_VIRTUAL_WALL_X_OFFSET,
-                      channel_left_bound_y);
-  left_channel_upper = Eigen::Vector2d(
-      slot_length + channel_width, channel_left_bound_y);
+  left_channel_lower = Eigen::Vector2d(slot_length - SLOT_VIRTUAL_WALL_X_OFFSET,
+                                       channel_left_bound_y);
+  left_channel_upper =
+      Eigen::Vector2d(slot_length + channel_width, channel_left_bound_y);
 
   // slot back wall
   double lower_bound_x = -1.0;
