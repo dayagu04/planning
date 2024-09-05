@@ -16,7 +16,7 @@ namespace planning {
 class PlanningAdapter {
  public:
   PlanningAdapter() = default;
-  ~PlanningAdapter() = default;
+  ~PlanningAdapter() { StopGlog(); };
 
   void Init();
   void Proc();
