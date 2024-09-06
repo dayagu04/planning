@@ -53,9 +53,9 @@ try:
     result = subprocess.run(command, shell=True, text=True, check=True, capture_output=True)
 except Exception as e:
     print(f"Runing PP error: {e}")
-    sys.exit(1)
 if (result.returncode != 0):
     print(f"Runing PP error")
+if not os.path.exists(PP_bag):
     sys.exit(1)
 print("Run PP successfully !")
 
