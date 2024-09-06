@@ -3,24 +3,40 @@
 
 ### [fix]
 1. 取消横向距离对障碍物的剔除
+# planning.2.5.1
+#### 修改说明
+1. 移除中间件adapter层
+2. 加入计算merge区域
+3. 修复CIPV显示bug、换道调速强度
+4. 加入长直匝道使用SD Map
+5. 分岔道路打灯
+6. 优化对后向接近车辆的横向bound
+7. 废弃原路口判断用于抑制主动变道
+8. 低速场景抑制紧急避障变道
+9. 非NOA功能下抑制主动变道
+10. 添加城区高架目标分岔路选择
+11. 换道调速强化、CIPV抑制加速
+12. apa新架构、调整状态机、增加泊入泊出内部状态机
+13. 平行泊车反向揉库功能升级、规划算法优化、泊车重置逻辑优化、平行泊车1d阶段统一延长0.3m
+#### [fix]
+1. 修复了一处程序崩溃bug：分流场景拨杆变道，对目标车道添加空指针检查
+2. 非自动状态下跟踪自车当前车道时对航向角之差添加归一化处理。
+3. 修复了计算到上一个merge点距离的bug
+4. 修复一处由重复定义的枚举而引发的编译错误
+5. 修复CIPV显示bug
+6. 修复泊车终点位置，根据融合限位器和车位前两个角点决定
+7. 修复障碍物分类单位向量
+8. 代码优化，清除了部分编译告警
 
 # planning.2.5.0
-####  修改说明
+
+#### 修改说明
+
 1. 使用新定位，弃用老定位接口:/iflytek/localization/ego_pose
 2. 增加hmi信息: 收费站距离、道路类型、信息; 实线抑制、手动取消信息
 3. Track ego lane consider of Large curvature scene
 4. APA适配新状态机 & 新定位
 5. 信号灯通行的基础功能: 红灯停绿灯行（默认关闭）
-6. 移除中间件adapter层
-7. 加入计算merge区域
-8. 修复CIPV显示bug、换道调速强度
-9. 加入长直匝道使用SD Map
-10. 分岔道路打灯
-11. 优化对后向接近车辆的横向bound
-### [fix]
-1. fix latent coredump
-2. fix heading_diff not normalize in SelectEgoLaneWithoutPlan
-3. fix bug for calculate dis to last merge point
 
 # planning.2.4.9
 ####  修改说明
