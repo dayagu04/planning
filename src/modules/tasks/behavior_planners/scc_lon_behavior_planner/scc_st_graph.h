@@ -193,6 +193,10 @@ class StGraphGenerator {
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
                              const double &agent_min_l);
 
+  // HACK: cross障碍物判断
+  bool FastCrossAgentChecker(const double lead_one_v_lat, double &end_time,
+                                   const double kwidth);
+
  private:
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;
   SccLonBehaviorPlannerConfig config_;
@@ -280,7 +284,7 @@ class StGraphGenerator {
 
   // cutin calibration value
   const double CUIIN_WIDTH = 1.6;          // 类似半个车道宽，取窄
-  const double CUIIN_WIDTH_STATIC = 1.35;  //静态车辆cutin
+  const double CUIIN_WIDTH_STATIC = 1.35;  // 静态车辆cutin
   const double p1min_speed = 2.0;
   const double p2min_speed = 3.0;
   double v_limit_on_turns_and_road_;

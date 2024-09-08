@@ -345,9 +345,11 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     desired_distance_filtered = DesiredDistanceFilter(
         lead_one, v_ego, safe_distance, lead_one_desired_distance);
 
-    const double kwidth = 3.5;
-    auto end_time =
-        std::min(5.0, kwidth / std::max(0.01, std::fabs(lead_one.v_lat())));
+    // HACK: 解决问题的时间太短，先粗略快速判断cross agent后更新st info
+    // lead的信息太少，缺少s,l信息
+    double end_time = 5.0;
+    bool is_fast_cross_agent =
+        FastCrossAgentChecker(lead_one.v_lat(), end_time, 3.5);
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -358,11 +360,13 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_st_info.set_desired_distance(desired_distance_filtered);
     lead_one_st_info.set_desired_velocity(lead_one_desired_velocity);
     lead_one_st_info.set_safe_distance(safe_distance);
-    lead_one_st_info.set_start_time(0.0);  // TBD:使用可配置参数
-    lead_one_st_info.set_end_time(end_time);    // TBD:使用可配置参数
+    lead_one_st_info.set_start_time(0.0);     // TBD:使用可配置参数
+    lead_one_st_info.set_end_time(end_time);  // TBD:使用可配置参数
     lead_one_st_info.set_start_s(lead_one.d_rel());
     leads_st_info.emplace_back(lead_one_st_info);
-    v_target_ = std::min(v_target_, lead_one_desired_velocity);
+    v_target_ = is_fast_cross_agent
+                    ? v_target_
+                    : std::min(v_target_, lead_one_desired_velocity);
 
     JSON_DEBUG_VALUE("lead_one_id", lead_one.track_id());
     JSON_DEBUG_VALUE("lead_one_dis", lead_one.d_rel());
@@ -371,8 +375,6 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("desired_distance_lead_one", desired_distance_filtered);
 
     // 对lead two进行类似的计算
-    bool is_camera_and_lidar =
-        lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
@@ -391,6 +393,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       lead_two_desired_distance_filtered = LeadtwoDesiredDistanceFilter(
           lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
+      bool is_lead_two_fast_cross_agent =
+          FastCrossAgentChecker(lead_two.v_lat(), end_time, 3.5);
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
       lead_two_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -401,12 +405,14 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       lead_two_st_info.set_desired_distance(lead_two_desired_distance_filtered);
       lead_two_st_info.set_desired_velocity(lead_two_desired_velocity);
       lead_two_st_info.set_safe_distance(safe_distance);
-      lead_two_st_info.set_start_time(0.0);  // TBD:使用可配置参数
-      lead_two_st_info.set_end_time(5.0);    // TBD:使用可配置参数
+      lead_two_st_info.set_start_time(0.0);     // TBD:使用可配置参数
+      lead_two_st_info.set_end_time(end_time);  // TBD:使用可配置参数
       lead_two_st_info.set_start_s(lead_two.d_rel());
       leads_st_info.emplace_back(lead_two_st_info);
 
-      v_target_ = std::min(v_target_, lead_two_desired_velocity);
+      v_target_ = is_lead_two_fast_cross_agent
+                      ? v_target_
+                      : std::min(v_target_, lead_two_desired_velocity);
 
       if (lead_two_desired_velocity < lead_one_desired_velocity) {
         CalcAccLimits(lead_two, lead_two_desired_distance,
@@ -515,8 +521,6 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     JSON_DEBUG_VALUE("v_target_temp_lead_one", temp_lead_one_desired_velocity);
 
     // 对lead two进行类似的计算
-    bool is_camera_and_lidar =
-        temp_lead_two.fusion_source() == OBSTACLE_SOURCE_F_RADAR_CAMERA;
     if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       LOG_DEBUG(
@@ -2665,6 +2669,19 @@ void StGraphGenerator::SetConfig(
   config_.v_start = tuned_params.v_start();
   config_.distance_stop = tuned_params.distance_stop();
   config_.distance_start = tuned_params.distance_start();
+}
+
+bool StGraphGenerator::FastCrossAgentChecker(double lead_v_lat,
+                                             double &end_time,
+                                             double lane_width = 3.5) {
+  // 横穿障碍物从lead中获取信息太少，粗暴给一个2.0
+  double agent_width = 2.0;
+  // 计算 end_time
+  end_time = std::min(
+      5.0, (lane_width + agent_width) / std::max(0.01, std::fabs(lead_v_lat)));
+  // 根据 end_time 判断是否为快速cross
+  bool is_fast_cross_agent = end_time < 2.0;
+  return is_fast_cross_agent;
 }
 
 }  // namespace scc
