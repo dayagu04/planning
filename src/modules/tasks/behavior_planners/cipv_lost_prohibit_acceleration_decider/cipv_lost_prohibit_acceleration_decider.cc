@@ -1,4 +1,4 @@
-#include "cipv_lost_prohibit_adcceleration_decider.h"
+#include "cipv_lost_prohibit_acceleration_decider.h"
 
 #include <assert.h>
 
@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "agent/agent_manager.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "lateral_obstacle.h"
@@ -101,9 +102,9 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     if (pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ && continous_flag &&
         (pre_cipv_ttc_ < kCipvLostTtcThr ||
          planning_init_point.v > cipv_ptr->speed())) {
-      pre_cipv_lost_id_ = cipv_id_;  //当cipv稳定时存储
+      pre_cipv_lost_id_ = cipv_id_;  // 当cipv稳定时存储
       ++counter_;
-      //当前cipv没变动
+      // 当前cipv没变动
     } else if (pre_cipv_lost_id_ > 0 && cipv_id_ == pre_cipv_lost_id_) {
       ++counter_;
     } else {
@@ -115,7 +116,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     counter_ = 0;
   }
 
-  //设置禁止加速标志位，禁止10帧
+  // 设置禁止加速标志位，禁止10帧
   if (counter_ < 10 && counter_) {
     prohibit_acc_ = true;
   } else {
@@ -124,13 +125,13 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
 
   // 4、设置禁止加速的速度限制开始时间
   if (prohibit_acc_ && planning_init_point.v > kStopEgoHoldSpdMps) {
-    //设置速度限制
+    // 设置速度限制
     speed_limit_ = planning_init_point.v;
     start_time_ = IflyTime::Now_s();
   }
 
   if (prohibit_acc_) {
-    //记录禁止了多长时间
+    // 记录禁止了多长时间
     duration_ = IflyTime::Now_s() - start_time_;
   } else {
     duration_ = 0.0;
@@ -138,7 +139,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     end_time_ = -1;
     speed_limit_ = std::numeric_limits<double>::max();
   }
-
+  JSON_DEBUG_VALUE("prohibit_acc_", prohibit_acc_);
   // 5、更新历史cipv信息
   Update();
   auto &mutable_output =
@@ -219,13 +220,11 @@ void CipvLostProhibitAccelerationDecider::Update() {
     pre_cipv_ttc_ = std::numeric_limits<double>::max();
   }
 
-  if (history_cipv_ids_.size() < kHistoryCipvSaveNum) {
-    history_cipv_ids_.emplace_back(pre_cipv_id_);
-  } else {
-    for (size_t i = 0; i <= 3; ++i) {
-      history_cipv_ids_[i] = history_cipv_ids_[i + 1];
-    }
-    history_cipv_ids_[4] = pre_cipv_id_;
+  history_cipv_ids_.emplace_back(pre_cipv_id_);
+
+  if (history_cipv_ids_.size() > kHistoryCipvSaveNum) {
+    // 如果超出保存数量，移除第一个元素
+    history_cipv_ids_.erase(history_cipv_ids_.begin());
   }
 }
 }  // namespace planning
