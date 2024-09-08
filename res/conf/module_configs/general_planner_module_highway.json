@@ -437,7 +437,8 @@
     "q_vel_bound": 100.0,
     "q_acc_bound": 1600.0,
     "q_jerk_bound": 100.0,
-    "q_stop_s": 2000.0
+    "q_stop_s": 2000.0,
+    "q_ref_pos_speed_adjust": 10.0
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,
@@ -501,5 +502,23 @@
     "lb_t_max": 4.0,
     "lb_t_min":3.5,
     "use_gs": true
+  },
+  "speed_adjust": {
+    "max_acc_limit_lower": 0.9,
+    "max_acc_limit_upper": 1.8,
+    "min_acc_limit_lower": -1.9,
+    "min_acc_limit_upper": -0.8,
+    "min_jerk_limit_upper": -1.0,
+    "min_jerk_limit_lower": -2.5,
+    "min_acc_limit": -1.5,
+    "max_jerk_limit_lower": 1.0,
+    "max_jerk_limit_upper": 2.5,
+    "min_jerk_limit": -3.0,
+    "min_dec_adjust_limit": 9.0,
+    "max_acc_adjust_ratio_lower": 1.09,
+    "max_acc_adjust_ratio_upper": 1.15,
+    "min_dec_filter_speed": 10.0,
+    "max_acc_filter_speed": 10.0,
+    "enable_speed_adjust": true
   }
 }

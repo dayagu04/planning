@@ -125,11 +125,25 @@ void StGraphGenerator::Update(
   // 1.1 acceleration limits for cruising
   CalcCruiseAccelLimits(v_ego);
 
+  // lane change vel hold
+  double v_cruise_in_lane_change = v_cruise;
+  const auto &coarse_planning_info = session->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  if (coarse_planning_info.target_state == kLaneChangePropose) {
+    // v_hold_ = lon_behav_input_->lon_init_state().v();
+    v_hold_ = v_ego;
+  } else if (coarse_planning_info.target_state == kLaneChangeExecution) {
+    v_cruise_in_lane_change = v_hold_;
+  } else {
+    v_hold_ = v_cruise;
+  }
+
   // 1.2 初始化v_refs
-  v_target_ = v_cruise;
+  v_target_ = v_cruise_in_lane_change;
   vt_refs_.resize(config_.lon_num_step + 1);
   for (int i = 0; i < config_.lon_num_step + 1; ++i) {
-    vt_refs_[i] = v_cruise;
+    vt_refs_[i] = v_cruise_in_lane_change;
   }
 
   // calc target v for noa curv and ramp
@@ -174,10 +188,12 @@ void StGraphGenerator::Update(
 
   // 2.4 计算lane change，gap相关信息
   std::vector<planning::common::RealTimeLonObstacleSTInfo> lane_change_st_info;
-  CalcSpeedInfoWithGap(lon_behav_input_->lat_obs_info().lead_one(), v_cruise,
-                       v_ego, lon_behav_input_->lat_output().lc_request(),
-                       lon_behav_input_->lat_output().lc_status(),
-                       lane_change_st_info);
+  if (!config_.enable_speed_adjust) {
+    CalcSpeedInfoWithGap(lon_behav_input_->lat_obs_info().lead_one(), v_cruise,
+                         v_ego, lon_behav_input_->lat_output().lc_request(),
+                         lon_behav_input_->lat_output().lc_status(),
+                         lane_change_st_info);
+  }
 
   // 2.5 计算virtual obstacle st相关信息
   std::vector<planning::common::RealTimeLonObstacleSTInfo> virtual_obs_st_info;

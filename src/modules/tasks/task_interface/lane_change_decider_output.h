@@ -103,6 +103,9 @@ struct LaneChangeDeciderOutput {
       false;  // session_->mutable_planning_context()->mutable_planning_result().turn_signal
   double start_move_dist_lane;
 
+  bool s_search_status = false;
+  std::vector<double> st_search_vec;
+
   CoarsePlanningInfo coarse_planning_info;
   bool is_merge_region = false;
   MergeDirection merge_direction = NONE_LANE_MERGE;

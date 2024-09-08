@@ -13,7 +13,7 @@ from jupyter_pybind import lateral_motion_planning_py
 
 # bag path and frame dt
 bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
-bag_path = "/share/data_cold/abu_zone/autoparse/jac_s811_35kw2/trigger/20240228/20240228-10-24-47/data_collection_JAC_S811_35KW2_EVENT_MANUAL_2024-02-28-10-24-47_no_camera.record.1710230100.plan"
+bag_path = "/data_cold/abu_zone/cailiu2/0802/165_66a1bb682933546a92b11980_66a77fb17af211090bc13d38.bag.PP"
 frame_dt = 0.1 # sec
 steer_ratio = 13.0 # e0y
 

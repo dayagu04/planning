@@ -213,3 +213,12 @@ target_link_libraries(hybrid_astar_py PRIVATE
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
   )
+
+pybind11_add_module(st_search_py MODULE src/st_search_pybind.cc)
+target_link_libraries(st_search_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  st_search_lib
+  modules_tasks)

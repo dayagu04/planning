@@ -240,6 +240,8 @@ void SccLongitudinalMotionPlanner::AssembleInput() {
   // 4. set weights
   auto start_stop_info =
       session_->planning_context().start_stop_result().state();
+  const auto &lane_change_info =
+      session_->planning_context().lane_change_decider_output();
   if (start_stop_info == common::StartStopInfo::START) {
     planning_input_.set_q_ref_pos(config_.q_ref_pos_startmode);
     planning_input_.set_q_ref_vel(config_.q_ref_vel_startmode);
@@ -271,6 +273,19 @@ void SccLongitudinalMotionPlanner::AssembleInput() {
     planning_input_.set_q_vel_bound(config_.q_vel_bound_stopmode);
     planning_input_.set_q_acc_bound(config_.q_acc_bound_stopmode);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound_stopmode);
+  } else if (config_.enable_speed_adjust && lane_change_info.s_search_status) {
+    planning_input_.set_q_ref_pos(config_.q_ref_pos_speed_adjust);
+    planning_input_.set_q_ref_vel(config_.q_ref_vel);
+    planning_input_.set_q_acc(config_.q_acc);
+    planning_input_.set_q_jerk(config_.q_jerk);
+    planning_input_.set_q_stop_s(config_.q_stop_s);
+
+    planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
+    planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
+    planning_input_.set_q_sv_bound(config_.q_sv_bound);
+    planning_input_.set_q_vel_bound(config_.q_vel_bound);
+    planning_input_.set_q_acc_bound(config_.q_acc_bound);
+    planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
   } else {
     planning_input_.set_q_ref_pos(config_.q_ref_pos);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);

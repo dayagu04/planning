@@ -19,6 +19,7 @@
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
+#include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -49,6 +50,7 @@ class LongTimeTaskPipelineV1 : public BaseTaskPipeline {
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
   std::unique_ptr<CipvLostProhibitAccelerationDecider>
       cipv_lost_prohibit_adcceleration_decider_;
+  std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
 };
 
 }  // namespace planning
