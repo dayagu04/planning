@@ -79,6 +79,34 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   except:
         print("there is no long_ref_path.soft_bounds")
 
+
+  try:
+    search_path_s_vec = list(plan_debug_info.st_search_decider_info.search_s_vec)
+    search_path_t_vec = list(plan_debug_info.st_search_decider_info.search_t_vec)
+    print("search path s vec: ", search_path_s_vec)
+    print("search path t vec: ", search_path_t_vec)
+  except:
+    print("no speed search search info ")
+
+  try:
+    # print("obstacle st info: ",plan_debug_info.st_search_decider_info.obstacle_st_infos)
+    for idx in range(len(plan_debug_info.st_search_decider_info.obstacle_st_infos)):
+      print("idx: ",idx)
+      obj_s_upper_vec =[]
+      obj_s_lower_vec =[]
+      obj_t_vec =[]
+      obj_s_upper_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].s_vec_upper)
+      obj_s_lower_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].s_vec_lower)
+      obj_t_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].t_vec)
+      print("s_upper: ", obj_s_upper_vec)
+      print("s_lower: ", obj_s_lower_vec)
+      try:
+        lon_plan_data['data_search_obj_{}'.format(idx)].data.update({'t': obj_t_vec,'s_upper':obj_s_upper_vec,'s_lower':obj_s_lower_vec})
+      except:
+        print("update speed search st failed, obj idx:", idx)
+  except:
+    print("update speed search obj failed!")
+
   obs_low_vec = []
   obs_high_vec = []
   obs_low_id_vec = []
@@ -232,6 +260,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'cutinVal': cutin_attr_vec
   })
 
+  lon_plan_data['data_search_path'].data.update({'t':search_path_t_vec, 's':search_path_s_vec })
   # motion planning
   lon_motion_plan_input = plan_debug_info.longitudinal_motion_planning_input
   lon_motion_plan_output = plan_debug_info.longitudinal_motion_planning_output
@@ -792,6 +821,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                     'plan_traj_x':[],})
+  data_search_path = ColumnDataSource(data = {'t':[], 's':[]})
 
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
@@ -803,9 +833,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_tj':data_tj, \
                    'data_obs_st':data_obs_st, \
                    'data_lon_motion_plan': data_lon_motion_plan, \
-                   'data_planning':data_planning,
+                   'data_planning':data_planning,\
+                   'data_search_path':data_search_path,\
   }
-
   columns = [
         TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
         TableColumn(field="VisionLonVal", title="VisionLonVal"),
@@ -847,7 +877,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig2.line('t', 'obs_high', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
   fig2.triangle('t', 'obs_low', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
   fig2.inverted_triangle ('t', 'obs_high', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
-
+  fig2.line('t', 's', source = data_search_path, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'search path')
   # 添加障碍物s-t bound
   for obs_id in data_obs_st.keys():
      if(obs_id != ''):

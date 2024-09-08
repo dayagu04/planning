@@ -288,6 +288,7 @@ class StGraphGenerator {
   double v_limit_lc_;
   double v_last_target_ = 0.0;
   double v_limit_with_intersection_ = 0.0;
+  double v_hold_ = 0.0;
   planning::common::IntersectionState last_intersection_state_ =
       planning::common::UNKNOWN;
   planning::common::IntersectionState current_intersection_state_ =

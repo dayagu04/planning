@@ -61,6 +61,31 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for item in (plan_debug_info.long_ref_path.s_refs):
      s_ref_vec.append(item.first)
 
+  try:
+    search_path_s_vec = list(plan_debug_info.st_search_decider_info.search_s_vec)
+    search_path_t_vec = list(plan_debug_info.st_search_decider_info.search_t_vec)
+  except:
+    print("no speed search search info ")
+
+  try:
+    # print("obstacle st info: ",plan_debug_info.st_search_decider_info.obstacle_st_infos)
+    for idx in range(len(plan_debug_info.st_search_decider_info.obstacle_st_infos)):
+      print("idx: ",idx)
+      obj_s_upper_vec =[]
+      obj_s_lower_vec =[]
+      obj_t_vec =[]
+      obj_s_upper_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].s_vec_upper)
+      obj_s_lower_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].s_vec_lower)
+      obj_t_vec = list(plan_debug_info.st_search_decider_info.obstacle_st_infos[idx].t_vec)
+      print("s_upper: ", obj_s_upper_vec)
+      print("s_lower: ", obj_s_lower_vec)
+      try:
+        lon_plan_data['data_search_obj_{}'.format(idx)].data.update({'t': obj_t_vec,'s_upper':obj_s_upper_vec,'s_lower':obj_s_lower_vec})
+      except:
+        print("update speed search st failed, obj idx:", idx)
+  except:
+    print("update speed search obj failed!")
+
   obs_low_vec = []
   obs_high_vec = []
   obs_low_id_vec = []
@@ -155,7 +180,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'VisionLonAttr': planning_json_value_list,
     'VisionLonVal': vision_lon_attr_vec
   })
-
+  lon_plan_data['data_search_path'].data.update({'t':search_path_t_vec, 's':search_path_s_vec })
   # motion planning
   lon_motion_plan_input = plan_debug_info.longitudinal_motion_planning_input
   lon_motion_plan_output = plan_debug_info.longitudinal_motion_planning_output
@@ -337,6 +362,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                     'plan_traj_x':[],})
+  data_search_path = ColumnDataSource(data = {'t':[], 's':[]})
 
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
@@ -346,7 +372,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig):
                    'data_ta':data_ta, \
                    'data_tj':data_tj, \
                    'data_lon_motion_plan': data_lon_motion_plan, \
-                   'data_planning':data_planning,
+                   'data_planning':data_planning,\
+                   'data_search_path':data_search_path,
   }
 
   columns = [

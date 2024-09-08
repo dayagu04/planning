@@ -1,9 +1,11 @@
 #include "scc_lon_behavior_planner.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <vector>
 
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "planning_context.h"
@@ -37,6 +39,7 @@ constexpr double kPositionPrecision = 0.3;
 constexpr double kLowAgentSpeed = 20.0 / 3.6;
 // TODO: 后续取参考线的长度为s bound upper
 constexpr double kSUpperBound = 200.0;
+constexpr double kVelBoundCoeff = 1.1;
 }  // namespace
 namespace planning {
 
@@ -139,7 +142,7 @@ bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (!current_segment) {
-    return true;  //返回true,代表判断出弯道，不加速，有异常就不加速
+    return true;  // 返回true,代表判断出弯道，不加速，有异常就不加速
   }
   std::vector<std::pair<double, double>> curv_list;
   curv_list = sd_map.GetCurvatureList(current_segment->id(), nearest_s,
@@ -596,6 +599,15 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   LonLeadBounds s_lead_bounds;
   s_lead_bounds.emplace_back(LonLeadBound{kSUpperBound, 0.0, 0.0, -1});
   Bound lon_v_bound{-0.1, std::min(v_cruise, config_.velocity_upper_bound)};
+  // get lane change info
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  if (coarse_planning_info.target_state == kLaneChangePropose ||
+      coarse_planning_info.target_state == kLaneChangeExecution) {
+    lon_v_bound.upper = std::min(v_cruise * kVelBoundCoeff,
+                                 config_.velocity_upper_bound_in_lane_change);
+  }
   Bound lon_a_bound{a_bounds.first, a_bounds.second};
   Bound lon_j_bound{j_bounds.first, j_bounds.second};
 
@@ -664,6 +676,21 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     }
   }
   JSON_DEBUG_VALUE("jlt_status_farslow", jlt_status)
+
+  // 11. use speed adjust s search ref
+  const auto &lane_change_info =
+      session_->planning_context().lane_change_decider_output();
+  if (lane_change_info.s_search_status && config_.enable_speed_adjust) {
+    if (lane_change_info.st_search_vec.size() == config_.lon_num_step + 1) {
+      for (size_t i = 0; i <= config_.lon_num_step; i++) {
+        lon_behav_output_.s_refs[i].first = lane_change_info.st_search_vec[i];
+      }
+      std::cout << "use search path in lc wait!" << std::endl;
+    } else {
+      std::cout << "search path num is error:  "
+                << lane_change_info.st_search_vec.size() << std::endl;
+    }
+  }
 
   // 10.update sv boundary
   SVBoundary sv_boundary_tmp = sv_boundaries.front();

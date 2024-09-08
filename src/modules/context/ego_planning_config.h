@@ -274,6 +274,63 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   double lc_finish_heading_deg_thr = 1.0;
 };
 
+struct SpeedAdjustDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    min_dec_adjust_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_dec_adjust_limit"});
+    max_acc_adjust_ratio_lower = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_adjust", "max_acc_adjust_ratio_lower"});
+    max_acc_adjust_ratio_upper = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_adjust", "max_acc_adjust_ratio_upper"});
+    enable_speed_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
+    min_acc_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_acc_limit"});
+    min_jerk_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_jerk_limit"});
+    min_dec_filter_speed = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_dec_filter_speed"});
+    max_acc_filter_speed = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "max_acc_filter_speed"});
+    max_acc_limit_lower = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "max_acc_limit_lower"});
+    max_acc_limit_upper = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "max_acc_limit_upper"});
+    max_jerk_limit_lower = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "max_jerk_limit_lower"});
+    max_jerk_limit_upper = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "max_jerk_limit_upper"});
+    min_acc_limit_upper = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_acc_limit_upper"});
+    min_acc_limit_lower = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_acc_limit_lower"});
+    min_jerk_limit_lower = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_jerk_limit_lower"});
+    min_jerk_limit_upper = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_adjust", "min_jerk_limit_upper"});
+  }
+
+  double min_acc_limit = -4.0;
+  double min_jerk_limit = -6.0;
+  double min_dec_adjust_limit = 9.0;         // kph
+  double max_acc_adjust_ratio_lower = 1.07;  // lower ratio
+  double max_acc_adjust_ratio_upper = 1.15;  // upper ratio
+  double min_dec_filter_speed = 12.0;        // filter lower slot speed
+  double max_acc_filter_speed = 12.0;        // filter lower slot speed
+  bool enable_speed_adjust = true;
+  double max_acc_limit_lower = 0.9;
+  double max_acc_limit_upper = 1.8;
+  double max_jerk_limit_lower = 1.0;
+  double max_jerk_limit_upper = 2.5;
+  double min_acc_limit_upper = -0.8;
+  double min_acc_limit_lower = -1.8;
+  double min_jerk_limit_upper= -1.0;
+  double min_jerk_limit_lower = -2.5;
+};
+
 struct ActRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -1852,6 +1909,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     enable_sdmap_curv_v_adjust = read_json_keys<bool>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "enable_sdmap_curv_v_adjust"});
+    enable_speed_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -1877,7 +1936,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double ttc_brake_hysteresis = 0.3;
   double t_curv = 2.0;
   double dis_curv = 50.0;
-  double velocity_upper_bound = 33.33;  // 120km/h
+  double velocity_upper_bound_in_lane_change = 37.5;  // 135km/h
+  double velocity_upper_bound = 33.33;                // 135km/h
   // The param for StartStopState
   double v_start = 0.3;
   double v_startmode = 5.0;
@@ -1925,6 +1985,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double sdmap_curv_thred = 1000.0;
   double straight_ramp_v_limit = 22.22;
   bool enable_sdmap_curv_v_adjust = true;
+  bool enable_speed_adjust = true;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -2023,6 +2084,11 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
     v_target_stop_thrd = read_json_keys<double>(
         json,
         std::vector<std::string>{"long_motion_ilqr", "v_target_stop_thrd"});
+    q_ref_pos_speed_adjust = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"long_motion_ilqr", "q_ref_pos_speed_adjust"});
+    enable_speed_adjust = read_json_keys<bool>(
+        json, std::vector<std::string>{"speed_adjust", "enable_speed_adjust"});
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -2065,6 +2131,9 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound_stopmode = 400.0;
   double q_jerk_bound_stopmode = 100.0;
   double q_stop_s_stopmode = 2000.0;
+
+  bool enable_speed_adjust = true;
+  double q_ref_pos_speed_adjust = 10.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
