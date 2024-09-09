@@ -171,7 +171,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   if (prediction_object.bottom_polygon_points.size() < 3) {
     perception_bounding_box_.GetAllCorners(&polygon_points);
   } else {
-    LOG_DEBUG("raw size %d", prediction_object.bottom_polygon_points.size());
+    LOG_DEBUG("raw size %lu", prediction_object.bottom_polygon_points.size());
     for (size_t i = 0; i < prediction_object.bottom_polygon_points.size() - 1;
          ++i) {
       auto &point = prediction_object.bottom_polygon_points[i];

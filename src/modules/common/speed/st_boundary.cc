@@ -99,7 +99,7 @@ void STBoundary::RemoveRedundantPoints(
 bool STBoundary::IsValid(
     const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const {
   if (point_pairs.size() < 2) {
-    LOG_DEBUG("point_pairs.size() must > 2. current point_pairs.size() = %d",
+    LOG_DEBUG("point_pairs.size() must > 2. current point_pairs.size() = %u",
               point_pairs.size());
     return false;
   }
