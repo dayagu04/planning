@@ -2399,12 +2399,9 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  // acc_bound_.first = (std::fmin(lon_init_state_[2],
-  // config_.acc_lower_bound)); acc_bound_.second =
-  //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
-  acc_bound_.second =
-      std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
+
+  acc_bound_.first = acc_target_.first;
+  acc_bound_.second = acc_target_.second;
   // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
   // in gasoline car
   if (start_stop_info_.state() == common::StartStopInfo::START) {

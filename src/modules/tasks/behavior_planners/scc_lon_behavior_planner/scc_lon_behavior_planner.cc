@@ -583,6 +583,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     const std::pair<double, double> &a_bounds,
     const std::pair<double, double> &j_bounds) {
   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
+  auto init_state_a = lon_init_state_[2];
   lon_behav_output_.t_list.resize(config_.lon_num_step + 1);
   lon_behav_output_.s_refs.resize(config_.lon_num_step + 1);
   lon_behav_output_.ds_refs.resize(config_.lon_num_step + 1);
@@ -612,6 +613,11 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   Bound lon_j_bound{j_bounds.first, j_bounds.second};
 
   for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+    // 0. 避免init a 超出 a bound
+    lon_a_bound.lower =
+        std::fmin(a_bounds.first, init_state_a + kAccMax * config_.delta_time);
+    lon_a_bound.upper = std::fmax(a_bounds.second,
+                                  init_state_a + kJerkMin * config_.delta_time);
     // 1.update t_list
     lon_behav_output_.t_list[i] = i * config_.delta_time;
     // 2.update s_refs <s_ref, weight>
