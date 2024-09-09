@@ -217,6 +217,7 @@ ThirdOrderParam ThirdOrderTimeOptimalTrajectory::PositionTargetSolver(
     double tl = 0.0;
     int count = 0;
     double cur_pfb = pfb;
+    tpb = Pa.t3;
     // std::cout << "p_precision: " << p_precision << std::endl;
     // std::cout << "cur_pfb: " << cur_pfb << std::endl;
     // std::cout << "start to run while loop, th: " << th << " tl: " << tl <<
