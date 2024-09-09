@@ -386,7 +386,7 @@ void TrackletMaintainer::recv_prediction_objects(
       trajectory_idx++;
     }
   }
-  LOG_DEBUG("1map size= : [%d] \n", lt_fusion_object_history_map_.size());
+  LOG_DEBUG("1map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = lt_fusion_object_history_map_.begin();
@@ -405,7 +405,7 @@ void TrackletMaintainer::recv_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", lt_fusion_object_history_map_.size());
+  LOG_DEBUG("2map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 }
 
 // use relative interface when hdmap valid is false
@@ -526,7 +526,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     objects.push_back(origin);
     id_sets.insert(p.id);
   }
-  LOG_DEBUG("1map size= : [%d] \n", fusion_object_history_map_.size());
+  LOG_DEBUG("1map size= : [%lu] \n", fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = fusion_object_history_map_.begin();
@@ -546,7 +546,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", fusion_object_history_map_.size());
+  LOG_DEBUG("2map size= : [%lu] \n", fusion_object_history_map_.size());
 }
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
