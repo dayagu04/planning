@@ -37,6 +37,8 @@ class DynamicWorld {
 
   std::vector<const DynamicAgentNode*> GetConeNodes() const;
 
+  void DebugTrajectoryForNode(const int node_id, const std::string& prefix) const;
+
   void DebugEgoNearByAgentNodesTrajectory() const;
 
   const int64_t ego_front_node_id() const;

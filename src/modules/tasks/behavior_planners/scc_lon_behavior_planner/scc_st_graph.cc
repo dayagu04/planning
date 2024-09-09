@@ -12,8 +12,8 @@
 #include <memory>
 #include <vector>
 
-#include "agent/agent.h"
 #include "agent_node_manager.h"
+#include "basic_types.pb.h"
 #include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
@@ -2683,6 +2683,8 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   merge_split_points_.merge_split_points_size =
       merge_split_points.merge_split_point_data_size;
   merge_split_points_.merge_split_existence = merge_split_points.existence;
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
 
   for (size_t i = 0; i < merge_split_points_.merge_split_points_size; ++i) {
     const auto distance_to_ego =
@@ -2743,6 +2745,7 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
       merge_direction_ = MergeSplitPoints::RIGHT;
     }
   }
+  // intersection_state_ = virtual_lane_manager->GetIntersectionState();
   // merge_direction_ = MergeSplitPoints::LEFT;
   // is_merge_region_ = true;
   JSON_DEBUG_VALUE("is_merge_region_plan", is_merge_region_)
@@ -2765,6 +2768,9 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
 
   const auto lc_status = lon_behav_input_->lat_output().lc_status();
   const auto lc_request = lon_behav_input_->lat_output().lc_request();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_status = lane_change_decider_output.curr_state;
   const bool is_in_lane_change =
       ((lc_request != "none") && (lc_status != "none"));
   if (!config_.enable_merge_decision_process) {
@@ -2776,6 +2782,11 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     LOG_DEBUG("[CalculateMergeSpeedLimit] no merge region!!! \n");
     return;
   }
+  if (current_intersection_state_ == common::IntersectionState::IN_INTERSECTION) {
+    SetDefaultDebugValues(debug_msg_names);
+    LOG_DEBUG("[CalculateMergeSpeedLimit] in intersection!!! \n");
+    return;
+  }
   if (!config_.enabe_right_lane_merge_to_ego_lane_decision_process &&
       is_merge_region_ && merge_direction_ == MergeSplitPoints::RIGHT) {
     LOG_DEBUG(
@@ -2784,9 +2795,10 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     SetDefaultDebugValues(debug_msg_names);
     return;
   }
-  if (is_in_lane_change) {
+  if (lane_change_status ==
+      planning::StateMachineLaneChangeStatus::kLaneChangeExecution) {
     SetDefaultDebugValues(debug_msg_names);
-    LOG_DEBUG("[CalculateMergeSpeedLimit] lane change, no lon decision!!! \n");
+    LOG_DEBUG("[CalculateMergeSpeedLimit] lane change execution!!! \n");
     return;
   }
 
@@ -2854,8 +2866,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       // true);
       const auto left_rear_agent_id =
           dynamic_world->GetNode(ego_left_rear_node_id)->node_agent_id();
-      if (not FilterEgoRearAgentsWhenMerge(left_rear_agent_id, dynamic_world,
-                                           current_lane)) {
+      if (!FilterEgoRearAgentsWhenMerge(left_rear_agent_id, dynamic_world,
+                                        current_lane)) {
         CalculateMergeInfoWithAgent(left_rear_agent_id, true, "ego_left_rear");
       }
     }
@@ -2894,8 +2906,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       // false);
       const auto right_rear_agent_id =
           dynamic_world->GetNode(ego_right_rear_node_id)->node_agent_id();
-      if (not FilterEgoRearAgentsWhenMerge(right_rear_agent_id, dynamic_world,
-                                           current_lane)) {
+      if (!FilterEgoRearAgentsWhenMerge(right_rear_agent_id, dynamic_world,
+                                        current_lane)) {
         CalculateMergeInfoWithAgent(right_rear_agent_id, false,
                                     "ego_right_rear");
       }
@@ -3290,7 +3302,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       }
       planning_math::PathPoint path_point{spline_x_vec[i], spline_y_vec[i]};
       lat_path_points.emplace_back(path_point);
-      if (not lat_path_points.empty()) {
+      if (!lat_path_points.empty()) {
         auto &last_pt = lat_path_points.back();
         if (planning_math::Vec2d(last_pt.x() - path_point.x(),
                                  last_pt.y() - path_point.y())
@@ -3483,7 +3495,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       }
       planning_math::PathPoint path_point{spline_x_vec[i], spline_y_vec[i]};
       lat_path_points.emplace_back(path_point);
-      if (not lat_path_points.empty()) {
+      if (!lat_path_points.empty()) {
         auto &last_pt = lat_path_points.back();
         if (planning_math::Vec2d(last_pt.x() - path_point.x(),
                                  last_pt.y() - path_point.y())
@@ -3657,6 +3669,8 @@ void StGraphGenerator::MergeInfoReset() {
   // upstream decider merge info reset
   merge_direction_ = MergeSplitPoints::UNKNOWN;
   is_merge_region_ = false;
+  // intersection_state_ = common::IntersectionState::UNKNOWN;
+
   // lon merge decision info reset
   ego_has_right_of_target_lane_ = false;
   t_merge_with_agent_ = {planning_data::kInvalidId,

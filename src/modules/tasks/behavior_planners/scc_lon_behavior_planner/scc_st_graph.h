@@ -12,6 +12,7 @@
 
 #include "agent/agent.h"
 #include "agent_node_manager.h"
+#include "basic_types.pb.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "dynamic_world/dynamic_agent_node.h"
@@ -385,6 +386,8 @@ class StGraphGenerator {
   bool ego_has_right_of_target_lane_{false};
   bool merge_target_one_has_changed_{false};
   int64_t last_merge_target_one_id_{planning_data::kInvalidId};
+//   common::IntersectionState intersection_state_ =
+//       common::IntersectionState::UNKNOWN;
 };
 
 }  // namespace scc

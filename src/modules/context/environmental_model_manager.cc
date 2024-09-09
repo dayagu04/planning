@@ -1129,97 +1129,24 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
     prediction_object.relative_theta = 0;
   }
 
-  if (!FLAGS_enable_easy_agent_traj_prediction) {
-    PredictionTrajectoryPoint trajectory_point;
-    trajectory_point.relative_time = 0;
-    trajectory_point.x = prediction_object.position_x;
-    trajectory_point.y = prediction_object.position_y;
-    trajectory_point.yaw = prediction_object.yaw;
-    trajectory_point.speed = prediction_object.speed;
+  PredictionTrajectoryPoint trajectory_point;
+  trajectory_point.relative_time = 0;
+  trajectory_point.x = prediction_object.position_x;
+  trajectory_point.y = prediction_object.position_y;
+  trajectory_point.yaw = prediction_object.yaw;
+  trajectory_point.speed = prediction_object.speed;
 
-    trajectory_point.theta = prediction_object.theta;
-    trajectory_point.prob = 1;
-    trajectory_point.relative_ego_x = prediction_object.relative_position_x;
-    trajectory_point.relative_ego_y = prediction_object.relative_position_y;
-    trajectory_point.relative_ego_yaw = prediction_object.relative_theta;
-    trajectory_point.relative_ego_speed = std::hypot(
-        prediction_object.relative_speed_x, prediction_object.relative_speed_y);
-    PredictionTrajectory tra;
-    tra.trajectory.emplace_back(std::move(trajectory_point));
-    prediction_object.trajectory_array.emplace_back(std::move(tra));
-    objects_infos.emplace_back(std::move(prediction_object));
-  } else {
-    PredictionTrajectoryPoint cur_agent_traj_point, next_agent_traj_point;
-    cur_agent_traj_point.relative_time = 0;
-    cur_agent_traj_point.x = prediction_object.position_x;
-    cur_agent_traj_point.y = prediction_object.position_y;
-    cur_agent_traj_point.yaw = prediction_object.yaw;
-    cur_agent_traj_point.speed = prediction_object.speed;
-    cur_agent_traj_point.acc = prediction_object.acc;
-
-    cur_agent_traj_point.theta = prediction_object.theta;
-    cur_agent_traj_point.prob = 1;
-    cur_agent_traj_point.relative_ego_x = prediction_object.relative_position_x;
-    cur_agent_traj_point.relative_ego_y = prediction_object.relative_position_y;
-    cur_agent_traj_point.relative_ego_yaw = prediction_object.relative_theta;
-    cur_agent_traj_point.relative_ego_speed = std::hypot(
-        prediction_object.relative_speed_x, prediction_object.relative_speed_y);
-    cur_agent_traj_point.relative_ego_acc_x =
-        prediction_object.relative_acceleration_x;
-    cur_agent_traj_point.relative_ego_acc_y =
-        prediction_object.relative_acceleration_y;
-    constexpr double step_t = 0.1;
-    double v = cur_agent_traj_point.speed;
-    double a = cur_agent_traj_point.acc;
-    a = 0.0;
-    PredictionTrajectory tra;
-    tra.trajectory.emplace_back(cur_agent_traj_point);
-    for (size_t i = 1; i < 31; ++i) {
-      const double t = i * step_t;
-      double distance_to_current_position = v * t + 0.5 * a * t * t;
-      next_agent_traj_point.relative_time = i * step_t;
-      next_agent_traj_point.x =
-          cur_agent_traj_point.x +
-          distance_to_current_position * cos(cur_agent_traj_point.yaw);
-      next_agent_traj_point.y =
-          cur_agent_traj_point.y +
-          distance_to_current_position * sin(cur_agent_traj_point.yaw);
-      next_agent_traj_point.yaw = cur_agent_traj_point.yaw;
-      next_agent_traj_point.speed = v + a * t;
-      next_agent_traj_point.acc = a;
-
-      next_agent_traj_point.theta = cur_agent_traj_point.theta;
-      next_agent_traj_point.prob = 1;
-      next_agent_traj_point.relative_ego_x =
-          cur_agent_traj_point.relative_ego_x +
-          distance_to_current_position *
-              cos(cur_agent_traj_point.relative_ego_yaw);
-      next_agent_traj_point.relative_ego_y =
-          cur_agent_traj_point.relative_ego_y +
-          distance_to_current_position *
-              sin(cur_agent_traj_point.relative_ego_yaw);
-      next_agent_traj_point.relative_ego_yaw =
-          cur_agent_traj_point.relative_ego_yaw;
-      next_agent_traj_point.relative_ego_acc_x =
-          cur_agent_traj_point.relative_ego_acc_x;
-      next_agent_traj_point.relative_ego_acc_y =
-          cur_agent_traj_point.relative_ego_acc_y;
-      const double relative_cur_speed_x =
-          cur_agent_traj_point.relative_ego_speed *
-          cos(cur_agent_traj_point.relative_ego_yaw);
-      const double relative_cur_speed_y =
-          cur_agent_traj_point.relative_ego_speed *
-          sin(cur_agent_traj_point.relative_ego_yaw);
-      next_agent_traj_point.relative_ego_speed = std::hypot(
-          relative_cur_speed_x + next_agent_traj_point.relative_ego_acc_x * t,
-          relative_cur_speed_y + next_agent_traj_point.relative_ego_acc_y * t);
-      tra.trajectory.emplace_back(next_agent_traj_point);
-      next_agent_traj_point = {};
-    }
-    prediction_object.trajectory_array.emplace_back(std::move(tra));
-    prediction_object.is_static = IsStatic(prediction_object);
-    objects_infos.emplace_back(std::move(prediction_object));
-  }
+  trajectory_point.theta = prediction_object.theta;
+  trajectory_point.prob = 1;
+  trajectory_point.relative_ego_x = prediction_object.relative_position_x;
+  trajectory_point.relative_ego_y = prediction_object.relative_position_y;
+  trajectory_point.relative_ego_yaw = prediction_object.relative_theta;
+  trajectory_point.relative_ego_speed = std::hypot(
+      prediction_object.relative_speed_x, prediction_object.relative_speed_y);
+  PredictionTrajectory tra;
+  tra.trajectory.emplace_back(std::move(trajectory_point));
+  prediction_object.trajectory_array.emplace_back(std::move(tra));
+  objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
 
@@ -1422,7 +1349,7 @@ void EnvironmentalModelManager::RunBlinkState(
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else if (is_ilc_right_change) {
-        //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+        // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::LEFT;
