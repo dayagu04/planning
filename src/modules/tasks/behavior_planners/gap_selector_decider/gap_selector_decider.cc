@@ -395,7 +395,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
         remain_lc_time < 1.0 ? false : true;
 
   } else if (is_lc_back_scene) {
-    double lb_end_s, lb_target_l,
+    double lb_end_s{0.0}, lb_target_l,
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
     if (remain_lb_time > 1.0) {
       lb_target_l =
