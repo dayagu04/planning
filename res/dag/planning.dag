@@ -1,7 +1,7 @@
 # 通过dag文件对planning进行启动
 # Define all coms in DAG streaming.
 module_config {
-  module_library : "/asw/planning/Lib/libplanning_component.so"
+  module_library : "/asw/planning/lib/libplanning_component.so"
   timer_components {
     class_name : "PlanningComponent"
     config {
