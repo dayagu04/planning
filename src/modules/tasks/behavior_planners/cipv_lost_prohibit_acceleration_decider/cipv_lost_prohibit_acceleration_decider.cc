@@ -20,7 +20,7 @@
 namespace planning {
 
 namespace {
-constexpr size_t kHistoryCipvSaveNum = 5;
+constexpr size_t kHistoryCipvSaveNum = 3;
 constexpr double kCipvLostTtcThr = 5.0;
 constexpr double kStopEgoHoldSpdMps = 0.5 / 3.6;
 constexpr double kMinSpeedThr = 0.5;
@@ -57,6 +57,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
 
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto &planning_init_point = ego_state_mgr->planning_init_point();
+  const auto &v_ego = ego_state_mgr->ego_v();
   const auto &dynamic_world = environmental_model.get_dynamic_world();
   const bool dbw_status = environmental_model.GetVehicleDbwStatus();
   const auto lateral_obstacle = environmental_model.get_lateral_obstacle();
@@ -94,14 +95,15 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
   }
 
   // 3、判断：存在cipv，当前车速度大于kStopEgoHoldSpdMps，处在ACC或PILOT模式
-  if (cipv_has_ && planning_init_point.v > kStopEgoHoldSpdMps && dbw_status) {
+  if (cipv_has_ && v_ego > kStopEgoHoldSpdMps && dbw_status) {
     const auto &agent_manager = dynamic_world->agent_manager();
     const planning::agent::Agent *cipv_ptr = agent_manager->GetAgent(cipv_id_);
 
     // 新cipv开始稳定稳定，并且ttc小于阈值，自车速度比它大
-    if (pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ && continous_flag &&
+    if (cipv_ptr != nullptr && pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ &&
+        continous_flag &&
         (pre_cipv_ttc_ < kCipvLostTtcThr ||
-         planning_init_point.v > cipv_ptr->speed())) {
+         v_ego > cipv_ptr->speed())) {
       pre_cipv_lost_id_ = cipv_id_;  // 当cipv稳定时存储
       ++counter_;
       // 当前cipv没变动
@@ -124,9 +126,9 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
   }
 
   // 4、设置禁止加速的速度限制开始时间
-  if (prohibit_acc_ && planning_init_point.v > kStopEgoHoldSpdMps) {
+  if (prohibit_acc_ && v_ego > kStopEgoHoldSpdMps) {
     // 设置速度限制
-    speed_limit_ = planning_init_point.v;
+    speed_limit_ = v_ego;
     start_time_ = IflyTime::Now_s();
   }
 
@@ -204,6 +206,7 @@ void CipvLostProhibitAccelerationDecider::Update() {
     const auto &environmental_model = session_->environmental_model();
     const auto ego_state_mgr = environmental_model.get_ego_state_manager();
     const auto &planning_init_point = ego_state_mgr->planning_init_point();
+    const auto &v_ego = ego_state_mgr->ego_v();
 
     const auto &current_lane =
         environmental_model.get_virtual_lane_manager()->get_current_lane();
@@ -213,7 +216,7 @@ void CipvLostProhibitAccelerationDecider::Update() {
     pre_cipv_rel_s_ = CalculateRelativeDistance(planned_path, *cipv);
     pre_cipv_ttc_ =
         pre_cipv_rel_s_ /
-        std::fmax(kMinSpeedThr, planning_init_point.v - cipv->speed());
+        std::fmax(kMinSpeedThr, v_ego - cipv->speed());
     pre_cipv_id_ = cipv->agent_id();
   } else {
     pre_cipv_rel_s_ = std::numeric_limits<double>::max();
