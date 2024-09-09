@@ -34,7 +34,6 @@ if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/struct_msgs_legacy/interface2.4.6 interface2.4.6.out)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/proto_msgs proto_msgs.out)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/sensor_interface sensor_interface.out)
-
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/nlohmann_json)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/osqp)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/rapidjson)
