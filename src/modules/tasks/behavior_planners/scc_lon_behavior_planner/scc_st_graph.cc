@@ -282,10 +282,6 @@ void StGraphGenerator::Update(
     }
     accel_vel_in_turns_filter_.Update(v_target_);
     v_target_ = accel_vel_in_turns_filter_.GetOutput();
-  } else if (v_target_ < v_ego && is_far_slow_safe_lead_) {
-    accel_vel_filter_.SetRate(-1.0, 1.0);
-    accel_vel_filter_.Update(v_target_);
-    v_target_ = accel_vel_filter_.GetOutput();
   }
 
   // 0. get start & stop state
@@ -328,8 +324,6 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double lead_two_desired_velocity = 40.0;
   double desired_distance_filtered = 0.0;
   double lead_two_desired_distance_filtered = 0.0;
-  double max_brake_distance = 0.0;
-  double max_brake_acc = 4.0;
   std::pair<double, double> acc_target = {-0.5, 0.5};
 
   // 纵向只使用融合成功障碍物
@@ -350,19 +344,6 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
     desired_distance_filtered = DesiredDistanceFilter(
         lead_one, v_ego, safe_distance, lead_one_desired_distance);
-
-    if (lead_one.v_lead() < v_ego) {
-      max_brake_distance =
-          (std::pow(v_ego, 2) - std::pow(lead_one.v_lead(), 2)) /
-          (2 * max_brake_acc);
-    }
-    JSON_DEBUG_VALUE("max_brake_distance", max_brake_distance)
-
-    is_far_slow_safe_lead_ = lead_one_desired_velocity < v_target_ &&
-                                     lead_one.d_rel() > kFarLead &&
-                                     max_brake_distance < lead_one.d_rel()
-                                 ? true
-                                 : false;
 
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
@@ -1307,9 +1288,9 @@ double StGraphGenerator::GetCalibratedDistance(
   double v_lead_clip = std::max(v_lead, 0.0);
   // 这里查表、魔数都要优化
   double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
-  if (lc_request != "none") {
-    t_gap = t_gap * (0.6 + v_ego * 0.01);
-  }
+  // if (lc_request != "none") {
+  //   t_gap = t_gap * (0.6 + v_ego * 0.01);
+  // }
   // 同一个障碍物从temp_lead_one变成lead_one后，temp_lead的标志未清除，导致t_gap计算有问题，这里先加一个二者互斥的判断
   if (is_temp_lead && !is_lead) {
     t_gap = t_gap * 0.3;
