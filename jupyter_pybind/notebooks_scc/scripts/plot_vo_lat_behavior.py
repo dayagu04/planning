@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240824/20240824-22-55-39/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-08-24-22-55-39_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240903/20240903-17-25-29/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-09-03-17-25-29_no_camera.bag"
 # bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
 # bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
 frame_dt = 0.02 # sec
@@ -84,7 +84,7 @@ columns = [
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=350, height=600)
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=600)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=800)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=500)
 data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=300)
 data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=300)
@@ -197,8 +197,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
   push_notebook()
 
 def update_lc_data (noa_info, plan_debug_json):
-  vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge','virtual_lane_relative_id_switch_flag',
-              'is_exist_split_on_ramp','is_exist_ramp_on_road','current_segment_passed_distance']
+  vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge']
   names  = []
   datas = []
   for name in vars_noa:
@@ -209,8 +208,12 @@ def update_lc_data (noa_info, plan_debug_json):
       pass
   vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
              'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
-             'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
-             "is_leaving_ramp","is_nearing_ramp",'road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region']
+             'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
+             'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',
+             'virtual_lane_relative_id_switch_flag',
+             'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_intersection_split',
+             'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
+             'select_ego_lane_without_plan', 'select_ego_lane_with_plan']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))
@@ -228,7 +231,8 @@ def update_overtake_request_lc_data (plan_debug_json):
   datas = []
   overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
                        "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
-                       "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len"]
+                       "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len",
+                       "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold"]
   for name in overtake_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))

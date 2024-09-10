@@ -88,6 +88,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
+  is_emergency_avoidance_situation_ = false;
 
   UpdateEmergencyAvoidanceSituation(lc_status);
 
@@ -228,16 +229,24 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-
-  is_emergency_avoidance_situation_ = false;
-
   auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(base_lane_virtual_id);
   if (base_lane == nullptr) {
-    LOG_DEBUG("base lane not exist");
+    LOG_DEBUG("EmergenceAvoidRequest::base lane not exist");
     Reset();
     return;
   }
+
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  // const double default_velocity_trigger_emergence_avoid_request = 13.88;
+
+  // if (ego_state->ego_v() < default_velocity_trigger_emergence_avoid_request) {
+  //   LOG_DEBUG("EmergenceAvoidRequest::ego_v < 50km/h");
+  //   return;
+  // }
+
   std::shared_ptr<ReferencePath> origin_refline =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
@@ -248,7 +257,7 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG("fail to get ego position on base lane");
+    LOG_DEBUG("EmergenceAvoidRequest::fail to get ego position on base lane");
     Reset();
     return;
   }
@@ -258,8 +267,6 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
       ego_left_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
   const double lateral_right_offset =
       ego_right_edge + kEmergencyAvoidanceLateralSafeDistanceThreshold;
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   bool has_emergency_leading_vehicle = false;
   int leading_vehicle_id_ = -1;
   double leading_vehicle_speed = std::numeric_limits<double>::max();
@@ -272,22 +279,24 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
       if (front_vehicle_iter->second.track_id == kInvalidAgentId) {
         continue;
       }
-      bool object_type_static =
-          front_vehicle_iter->second.motion_pattern_current ==
-          iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC;
-      if ((!object_type_static ||
-           (front_vehicle_iter->second.type !=
-                Common::ObjectType::OBJECT_TYPE_COUPE &&
-            front_vehicle_iter->second.type !=
-                Common::ObjectType::OBJECT_TYPE_TRUCK)) &&
-          front_vehicle_iter->second.type !=
+      // bool object_type_static =
+      //     front_vehicle_iter->second.motion_pattern_current ==
+      //     iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC;
+      // if ((!object_type_static ||
+      //      (front_vehicle_iter->second.type !=
+      //           Common::ObjectType::OBJECT_TYPE_COUPE &&
+      //       front_vehicle_iter->second.type !=
+      //           Common::ObjectType::OBJECT_TYPE_TRUCK) ||
+      //       function_info.function_mode() == common::DrivingFunctionInfo::NOA) &&
+      // 对静止车暂时不做处理
+      if (front_vehicle_iter->second.type !=
               Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
-          (front_vehicle_iter->second.type !=
-               Common::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
-           front_vehicle_iter->second.type !=
-               Common::ObjectType::OBJECT_TYPE_CRASH_BARREL &&
-           front_vehicle_iter->second.type !=
-               Common::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN)) {
+          front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+          front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_CRASH_BARREL &&
+          front_vehicle_iter->second.type !=
+              Common::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
         continue;
       }
       const double long_dis = front_vehicle_iter->second.d_rel;

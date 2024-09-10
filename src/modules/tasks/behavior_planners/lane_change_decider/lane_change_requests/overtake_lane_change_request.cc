@@ -333,6 +333,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   updateRouteTrafficSpeed(false, &right_route_traffic_speed);
   const double leading_vehicle_speed = lead_one->v;
 
+  JSON_DEBUG_VALUE("left_route_traffic_speed", left_route_traffic_speed);
+  JSON_DEBUG_VALUE("right_route_traffic_speed", right_route_traffic_speed);
+
   const bool is_left_overtake =
       enable_l_
           ? isCouldOvertakeByRoute(
@@ -645,6 +648,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   if (!is_left && !inhibit_extra_speed) {
     speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
   }
+  JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
   if (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum && !is_left &&

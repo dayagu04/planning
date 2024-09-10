@@ -22,7 +22,7 @@ class EmergenceAvoidRequest : public LaneChangeRequest {
   void UpdateEmergencyAvoidanceSituation(int lc_status);
 
   bool is_emergency_avoidance_situation_ = false;
-  double emergency_situation_timetstamp_ = std::numeric_limits<double>::max();
+    double emergency_situation_timetstamp_ = std::numeric_limits<double>::max();
   int leading_vehicle_id_ = -1;
   std::shared_ptr<KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
