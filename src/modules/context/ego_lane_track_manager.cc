@@ -1380,11 +1380,9 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
           }
         } else {
           return false;
-          ;
         }
       } else {
         return false;
-        ;
       }
     } else {
       return false;
