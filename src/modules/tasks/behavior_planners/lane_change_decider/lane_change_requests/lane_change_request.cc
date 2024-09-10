@@ -480,10 +480,12 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
         break;
       }
     }
-    current_segment_already_pass_length = 
-        left_lane_boundarys.type_segments[current_segment_count].length - (lane_line_length - ego_s);
+    current_segment_already_pass_length =
+        left_lane_boundarys.type_segments[current_segment_count].length -
+        (lane_line_length - ego_s);
 
-    for (int iter = current_segment_count; iter < left_lane_boundarys.type_segments_size; iter++) {
+    for (int iter = current_segment_count;
+         iter < left_lane_boundarys.type_segments_size; iter++) {
       if (left_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_DASHED ||
           left_lane_boundarys.type_segments[iter].type ==
@@ -515,10 +517,12 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
         break;
       }
     }
-    current_segment_already_pass_length = 
-        right_lane_boundarys.type_segments[current_segment_count].length - (lane_line_length - ego_s);
+    current_segment_already_pass_length =
+        right_lane_boundarys.type_segments[current_segment_count].length -
+        (lane_line_length - ego_s);
 
-    for (int iter = current_segment_count; iter < right_lane_boundarys.type_segments_size; iter++) {
+    for (int iter = current_segment_count;
+         iter < right_lane_boundarys.type_segments_size; iter++) {
       if (right_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_DASHED ||
           right_lane_boundarys.type_segments[iter].type ==

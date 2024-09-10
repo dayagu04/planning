@@ -106,44 +106,52 @@ void EgoLaneTrackManger::track_ego_lane(
       }
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
         if (is_ego_on_expressway_ && zero_relative_id_nums >= 2) {
-          bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(relative_id_lanes,
-              order_ids_of_same_zero_relative_id);
+          bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
+              relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
-          LOG_DEBUG("EgoLaneTrackManger::is_on_road_select_ramp_situation: %d \n", is_on_road_select_ramp_situation_);
+          LOG_DEBUG(
+              "EgoLaneTrackManger::is_on_road_select_ramp_situation: %d \n",
+              is_on_road_select_ramp_situation_);
 
-          if (is_on_road_select_ramp_situation_ && dis_to_ramp_ < dis_to_ramp_threshold &&
-              !is_leaving_ramp_ && lane_keep_status) {
+          if (is_on_road_select_ramp_situation_ &&
+              dis_to_ramp_ < dis_to_ramp_threshold && !is_leaving_ramp_ &&
+              lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
-            LOG_DEBUG("EgoLaneTrackManger::is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
+            LOG_DEBUG("EgoLaneTrackManger::is_exist_ramp_on_road: %d \n",
+                      is_exist_ramp_on_road_);
 
             if (is_exist_ramp_on_road_) {
               return;
             }
           }
-          
-          bool is_in_ramp_select_split = CheckIfInRampSelectSplit(relative_id_lanes,
-              order_ids_of_same_zero_relative_id);
+
+          bool is_in_ramp_select_split = CheckIfInRampSelectSplit(
+              relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_in_ramp_select_split_situation_ = is_in_ramp_select_split;
-          LOG_DEBUG("EgoLaneTrackManger::is_in_ramp_select_split_situation: %d \n", is_in_ramp_select_split_situation_);
+          LOG_DEBUG(
+              "EgoLaneTrackManger::is_in_ramp_select_split_situation: %d \n",
+              is_in_ramp_select_split_situation_);
           if (is_in_ramp_select_split_situation_ && lane_keep_status) {
             //选择匝道上的分叉
             PreprocessRampSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
-            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
+            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_ramp: %d \n",
+                      is_exist_split_on_ramp_);
 
             if (is_exist_split_on_ramp_) {
               return;
             }
           }
         }
-      } else if (function_info.function_mode() == common::DrivingFunctionInfo::SCC) {
+      } else if (function_info.function_mode() ==
+                 common::DrivingFunctionInfo::SCC) {
         if (zero_relative_id_nums > 1 && lane_keep_status) {
           PreprocessIntersectionSplit(relative_id_lanes,
                                       order_ids_of_same_zero_relative_id);
           LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
-                     is_exist_split_on_intersection_);
+                    is_exist_split_on_intersection_);
 
           if (is_exist_split_on_intersection_) {
             return;
@@ -214,7 +222,7 @@ void EgoLaneTrackManger::update_lane_virtual_id(
       }
     }
     LOG_DEBUG("target_lane_maping_diff_total: %f \n",
-            target_lane_maping_diff_total);
+              target_lane_maping_diff_total);
 
     if (target_lane_maping_diff_total <
         lane_point_match_lateral_dis_threshold) {
@@ -253,7 +261,7 @@ void EgoLaneTrackManger::update_lane_virtual_id(
       }
     }
     LOG_DEBUG("origin_lane_maping_diff_total: %f \n",
-            origin_lane_maping_diff_total);
+              origin_lane_maping_diff_total);
 
     if (origin_lane_maping_diff_total <
         lane_point_match_lateral_dis_threshold) {
@@ -337,7 +345,8 @@ void EgoLaneTrackManger::update(
     const double distance_to_first_road_merge,
     const double distance_to_first_road_split,
     const double current_segment_passed_distance,
-    const std::vector<std::pair<SplitRelativeDirection, double>> split_dir_dis_info_list) {
+    const std::vector<std::pair<SplitRelativeDirection, double>>
+        split_dir_dis_info_list) {
   is_ego_on_expressway_ = is_ego_on_expressway;
   is_on_ramp_ = is_on_ramp;
   dis_to_ramp_ = dis_to_ramp;
@@ -535,7 +544,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         double target_ego_s = 0.0;
         double target_ego_l = 0.0;
         Point2D ego_cart_target_frenet;
-        if (!track_lane_frenet_coord->XYToSL(ego_cart_point, ego_cart_target_frenet)) {
+        if (!track_lane_frenet_coord->XYToSL(ego_cart_point,
+                                             ego_cart_target_frenet)) {
           return;
         } else {
           target_ego_s = ego_cart_target_frenet.x;
@@ -622,7 +632,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     if (!frenet_coord->XYToSL(ego_cart_point, ego_cart_frenet_in_lane)) {
       init_pose_cost = 0.0;
     } else {
-      init_pose_cost = std::fabs(ego_cart_frenet_in_lane.y) / kInitPosCostStandardThr;
+      init_pose_cost =
+          std::fabs(ego_cart_frenet_in_lane.y) / kInitPosCostStandardThr;
     }
     total_cost = lateral_distance_cost_weight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
@@ -836,7 +847,8 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   }
 
   if (!is_on_ramp_ && split_direction_dis_info_list_.size() > 1) {
-    if (distance_to_first_road_merge_ > split_direction_dis_info_list_[1].second) {
+    if (distance_to_first_road_merge_ >
+        split_direction_dis_info_list_[1].second) {
       is_exist_split_on_ramp_ = true;
       if (split_direction_dis_info_list_[1].first == ON_RIGHT) {
         relative_id_lanes[order_ids[1]]->set_relative_id(0);
@@ -851,7 +863,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     } else {
       is_exist_split_on_ramp_ = false;
       return;
-    }  
+    }
   } else {
     if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
       is_exist_split_on_ramp_ = true;
@@ -901,18 +913,21 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     if (relative_id_lanes.size() >= order_ids[i] + 1) {
       std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
       if (base_lane != nullptr) {
-        std::shared_ptr<KDPath> base_lane_frenet_crd = base_lane->get_lane_frenet_coord();
+        std::shared_ptr<KDPath> base_lane_frenet_crd =
+            base_lane->get_lane_frenet_coord();
         if (base_lane_frenet_crd != nullptr) {
           // bool only_exist_straight_direction = true;
           bool exist_only_left_or_right_direction = false;
           Point2D ego_cart_frenet_point;
           double ego_s = 0.0;
-          if (!base_lane_frenet_crd->XYToSL(ego_cart_point, ego_cart_frenet_point)) {
+          if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                            ego_cart_frenet_point)) {
             continue;
           } else {
             ego_s = ego_cart_frenet_point.x;
           }
-          std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+          std::vector<iflyauto::LaneMarkMsg> lane_marks =
+              base_lane->lane_marks();
           double lane_line_length = 0.0;
           int segment = -1;
           for (int i = 0; i < lane_marks.size(); i++) {
@@ -925,21 +940,33 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
             }
           }
           for (int i = segment; i < lane_marks.size(); i++) {
-            if (lane_marks[i].begin > ego_s + default_consider_lane_marks_length) {
+            if (lane_marks[i].begin >
+                ego_s + default_consider_lane_marks_length) {
               break;
             }
-            if (lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_LEFT ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_RIGHT ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_UTURN_LEFT ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_UTURN_RIGHT ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_LEFT_UTURN ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT ||
-                lane_marks[i].lane_mark == iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT) {
+            if (lane_marks[i].lane_mark ==
+                    iflyauto::LaneDrivableDirection_DIRECTION_LEFT ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::LaneDrivableDirection_DIRECTION_RIGHT ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::LaneDrivableDirection_DIRECTION_UTURN_LEFT ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::LaneDrivableDirection_DIRECTION_UTURN_RIGHT ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::LaneDrivableDirection_DIRECTION_LEFT_UTURN ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::
+                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT ||
+                lane_marks[i].lane_mark ==
+                    iflyauto::
+                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT) {
               exist_only_left_or_right_direction = true;
               break;
             }
-            // if (lane_marks[i].lane_mark != iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT) {
+            // if (lane_marks[i].lane_mark !=
+            // iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT) {
             //   only_exist_straight_direction = false;
             //   break;
             // }
@@ -950,7 +977,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
             relative_id_lanes[order_ids[i]]->set_relative_id(0);
             origin_order_id = relative_id_lanes[order_ids[i]]->get_order_id();
             is_exist_split_on_intersection_ = true;
-            break; 
+            break;
           }
         } else {
           continue;
@@ -966,9 +993,11 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   if (!is_exist_split_on_intersection_) {
     for (int i = 0; i < order_ids.size(); i++) {
       if (relative_id_lanes.size() >= order_ids[i] + 1) {
-        std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
+        std::shared_ptr<VirtualLane> base_lane =
+            relative_id_lanes[order_ids[i]];
         double heading_angle_cost = 0.0;
-        heading_angle_cost = ComputeAverageHeadingDiff(base_lane, ego_heading_angle);
+        heading_angle_cost =
+            ComputeAverageHeadingDiff(base_lane, ego_heading_angle);
 
         if (heading_angle_cost < ego2lane_heading_min) {
           is_exist_split_on_intersection_ = true;
@@ -1243,8 +1272,7 @@ double EgoLaneTrackManger::ComputeAverageHeadingDiff(
     if (base_lane->get_lane_frenet_coord() != nullptr) {
       double average_heading_angle_cost = 0.0;
       double heading_angle_cost = 0.0;
-      std::shared_ptr<KDPath> frenet_coord =
-          base_lane->get_lane_frenet_coord();
+      std::shared_ptr<KDPath> frenet_coord = base_lane->get_lane_frenet_coord();
       double ego_s = 0.0;
       double ego_l = 0.0;
       Point2D ego_frenet_point;
@@ -1261,7 +1289,7 @@ double EgoLaneTrackManger::ComputeAverageHeadingDiff(
           frenet_coord->GetPathPointByS(ego_s);
       int iter_count = 0;
       for (int s = ego_s_nearest_point.s(); s < frenet_coord->Length();
-          s += kLaneLineSegmentLength) {
+           s += kLaneLineSegmentLength) {
         if (s > kConsiderLaneLineLength + ego_s) {
           break;
         }
@@ -1318,29 +1346,31 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
     if (relative_id_lanes.size() >= order_ids[i] + 1) {
       std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
       if (base_lane != nullptr) {
-        std::shared_ptr<KDPath> base_lane_frenet_crd = base_lane->get_lane_frenet_coord();
+        std::shared_ptr<KDPath> base_lane_frenet_crd =
+            base_lane->get_lane_frenet_coord();
         if (base_lane_frenet_crd != nullptr) {
           Point2D ego_cart_frenet_point;
           double ego_s = 0.0;
-          if (!base_lane_frenet_crd->XYToSL(ego_cart_point, ego_cart_frenet_point)) {
+          if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                            ego_cart_frenet_point)) {
             return false;
           } else {
             ego_s = ego_cart_frenet_point.x;
           }
           double target_s = std::min(ego_s + default_consider_lane_length,
-                                    base_lane_frenet_crd->Length());
+                                     base_lane_frenet_crd->Length());
           planning_math::PathPoint ego_s_nearest_point =
               base_lane_frenet_crd->GetPathPointByS(target_s);
-          
+
           ad_common::math::Vec2d segment_target_point;
           segment_target_point.set_x(ego_s_nearest_point.x());
           segment_target_point.set_y(ego_s_nearest_point.y());
           double nearest_s = 0;
           double nearest_l = 0;
           const auto target_segment = sd_map.GetNearestRoadWithHeading(
-              segment_target_point, search_distance, ego_heading_angle, max_heading_diff,
-              nearest_s, nearest_l);
-          
+              segment_target_point, search_distance, ego_heading_angle,
+              max_heading_diff, nearest_s, nearest_l);
+
           if (target_segment != nullptr) {
             if (target_segment->usage() != SdMapSwtx::RoadUsage::RAMP) {
               return false;
@@ -1349,10 +1379,12 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
             return false;
           }
         } else {
-          return false;;
+          return false;
+          ;
         }
       } else {
-        return false;;
+        return false;
+        ;
       }
     } else {
       return false;
@@ -1392,30 +1424,33 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
     if (relative_id_lanes.size() >= order_ids[i] + 1) {
       std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
       if (base_lane != nullptr) {
-        std::shared_ptr<KDPath> base_lane_frenet_crd = base_lane->get_lane_frenet_coord();
+        std::shared_ptr<KDPath> base_lane_frenet_crd =
+            base_lane->get_lane_frenet_coord();
         if (base_lane_frenet_crd != nullptr) {
           Point2D ego_cart_frenet_point;
           double ego_s = 0.0;
-          if (!base_lane_frenet_crd->XYToSL(ego_cart_point, ego_cart_frenet_point)) {
+          if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                            ego_cart_frenet_point)) {
             return false;
           } else {
             ego_s = ego_cart_frenet_point.x;
           }
           double target_s = std::min(ego_s + default_consider_lane_length,
-                                    base_lane_frenet_crd->Length());
+                                     base_lane_frenet_crd->Length());
           planning_math::PathPoint ego_s_nearest_point =
               base_lane_frenet_crd->GetPathPointByS(target_s);
-          
+
           ad_common::math::Vec2d segment_target_point;
           segment_target_point.set_x(ego_s_nearest_point.x());
           segment_target_point.set_y(ego_s_nearest_point.y());
           double nearest_s = 0;
           double nearest_l = 0;
           const auto target_segment = sd_map.GetNearestRoadWithHeading(
-              segment_target_point, search_distance, ego_heading_angle, max_heading_diff,
-              nearest_s, nearest_l);
+              segment_target_point, search_distance, ego_heading_angle,
+              max_heading_diff, nearest_s, nearest_l);
           if (target_segment != nullptr) {
-            if (target_segment->usage() == SdMapSwtx::RoadUsage::ORDINARY_ROAD ||
+            if (target_segment->usage() ==
+                    SdMapSwtx::RoadUsage::ORDINARY_ROAD ||
                 target_segment->usage() == SdMapSwtx::RoadUsage::SEPARATE) {
               return true;
             }

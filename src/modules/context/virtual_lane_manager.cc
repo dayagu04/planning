@@ -544,7 +544,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   ego_lane_track_manager_->update(
       is_ego_on_expressway_, is_on_ramp_, dis_to_ramp_, is_leaving_ramp_,
       first_split_dir_dis_info_, distance_to_first_road_merge_,
-      distance_to_first_road_split_, current_segment_passed_distance_, 
+      distance_to_first_road_split_, current_segment_passed_distance_,
       split_dir_dis_info_list_);
 
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
@@ -566,17 +566,20 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     ego_lane_track_manager_->track_ego_lane(relative_id_lanes_,
                                             order_ids_of_same_zero_relative_id_,
                                             virtual_id_mapped_lane_);
-    const bool select_ego_lane_without_plan = ego_lane_track_manager_->is_select_ego_lane_without_plan();
-    LOG_DEBUG("select_ego_lane_without_plan: %d \n", select_ego_lane_without_plan);
-    JSON_DEBUG_VALUE("select_ego_lane_without_plan", select_ego_lane_without_plan);
+    const bool select_ego_lane_without_plan =
+        ego_lane_track_manager_->is_select_ego_lane_without_plan();
+    LOG_DEBUG("select_ego_lane_without_plan: %d \n",
+              select_ego_lane_without_plan);
+    JSON_DEBUG_VALUE("select_ego_lane_without_plan",
+                     select_ego_lane_without_plan);
 
-    const bool select_ego_lane_with_plan = ego_lane_track_manager_->is_select_ego_lane_with_plan();
+    const bool select_ego_lane_with_plan =
+        ego_lane_track_manager_->is_select_ego_lane_with_plan();
     LOG_DEBUG("select_ego_lane_with_plan: %d \n", select_ego_lane_with_plan);
     JSON_DEBUG_VALUE("select_ego_lane_with_plan", select_ego_lane_with_plan);
   }
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
-
 
   // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
@@ -606,23 +609,24 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 
-  set_is_exist_intersection_split(ego_lane_track_manager_->is_exist_intersection_split());
-  LOG_DEBUG("is_exist_intersection_split: %d \n",
-              is_exist_intersection_split_);
-  JSON_DEBUG_VALUE("is_exist_intersection_split", 
-                    is_exist_intersection_split_);
-  
-  const bool is_in_ramp_select_split_situation = ego_lane_track_manager_->is_in_ramp_select_split_situation();
-  LOG_DEBUG("is_in_ramp_select_split_situation: %d \n",
-              is_in_ramp_select_split_situation);
-  JSON_DEBUG_VALUE("is_in_ramp_select_split_situation", 
-                    is_in_ramp_select_split_situation);
+  set_is_exist_intersection_split(
+      ego_lane_track_manager_->is_exist_intersection_split());
+  LOG_DEBUG("is_exist_intersection_split: %d \n", is_exist_intersection_split_);
+  JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
-  const bool is_on_road_select_ramp_situation = ego_lane_track_manager_->is_on_road_select_ramp_situation();
+  const bool is_in_ramp_select_split_situation =
+      ego_lane_track_manager_->is_in_ramp_select_split_situation();
+  LOG_DEBUG("is_in_ramp_select_split_situation: %d \n",
+            is_in_ramp_select_split_situation);
+  JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
+                   is_in_ramp_select_split_situation);
+
+  const bool is_on_road_select_ramp_situation =
+      ego_lane_track_manager_->is_on_road_select_ramp_situation();
   LOG_DEBUG("is_on_road_select_ramp_situation: %d \n",
-              is_on_road_select_ramp_situation);
-  JSON_DEBUG_VALUE("is_on_road_select_ramp_situation", 
-                    is_on_road_select_ramp_situation);
+            is_on_road_select_ramp_situation);
+  JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
+                   is_on_road_select_ramp_situation);
 
   // 9.计算自车到停止线的距离
   UpdateEgoDistanceToStopline();
@@ -1494,9 +1498,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
           distance_to_road_split = NL_NMAX;
           split_direction = RAMP_NONE;
         }
-        split_dir_dis_info = std::make_pair(
-          static_cast<SplitRelativeDirection>(split_direction),
-          distance_to_road_split);
+        split_dir_dis_info =
+            std::make_pair(static_cast<SplitRelativeDirection>(split_direction),
+                           distance_to_road_split);
         split_dir_dis_info_list_.emplace_back(split_dir_dis_info);
       }
     }

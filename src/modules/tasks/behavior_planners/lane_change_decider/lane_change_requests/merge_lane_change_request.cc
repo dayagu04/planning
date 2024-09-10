@@ -158,7 +158,8 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
   bool is_edge_side_lane =
       (current_lane_order_id == 0 || current_lane_order_id == lane_nums - 1);
 
-  if (is_edge_side_lane && is_merge_region && !both_lane_line_exist_virtual_or_not_) {
+  if (is_edge_side_lane && is_merge_region &&
+      !both_lane_line_exist_virtual_or_not_) {
     merge_alc_trigger_counter_++;
   } else {
     merge_alc_trigger_counter_ =
@@ -255,9 +256,9 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
       virtual_lane_mgr_->get_virtual_lanes();
-  const auto &ego_state =
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto &plannig_init_point = ego_state->planning_init_point();
+  const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
   merge_lane_change_direction_ = NO_CHANGE;
@@ -266,7 +267,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
 
   std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
   std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
-  
+
   if (base_lane != nullptr) {
     double left_lane_line_length = 0.0;
     int left_current_segment_count = 0;
@@ -276,7 +277,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     left_base_boundary_path =
         virtual_lane_mgr_->MakeBoundaryPath(left_lane_boundarys);
     if (left_base_boundary_path != nullptr) {
-      if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s, &left_ego_l)) {
+      if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
+                                           &left_ego_l)) {
         return;
       }
     } else {
@@ -289,7 +291,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         break;
       }
     }
-    for (int i = left_current_segment_count; i < left_lane_boundarys.type_segments_size; i++) {
+    for (int i = left_current_segment_count;
+         i < left_lane_boundarys.type_segments_size; i++) {
       if (left_lane_boundarys.type_segments[i].type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         left_boundary_exist_virtual_type = true;
@@ -312,7 +315,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     right_base_boundary_path =
         virtual_lane_mgr_->MakeBoundaryPath(left_lane_boundarys);
     if (right_base_boundary_path != nullptr) {
-      if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s, &right_ego_l)) {
+      if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
+                                            &right_ego_l)) {
         return;
       }
     } else {
@@ -325,7 +329,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         break;
       }
     }
-    for (int i = right_current_segment_count; i < right_lane_boundarys.type_segments_size; i++) {
+    for (int i = right_current_segment_count;
+         i < right_lane_boundarys.type_segments_size; i++) {
       if (right_lane_boundarys.type_segments[i].type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         right_boundary_exist_virtual_type = true;
@@ -346,7 +351,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   if (left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = NO_CHANGE;
     both_lane_line_exist_virtual_or_not_ = true;
-  } else if(left_boundary_exist_virtual_type) {
+  } else if (left_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = LEFT_CHANGE;
   } else if (right_boundary_exist_virtual_type &&
              !left_boundary_exist_virtual_type) {

@@ -35,7 +35,8 @@ class EgoLaneTrackManger {
       const double distance_to_first_road_merge,
       const double distance_to_first_road_split,
       const double current_segment_passed_distance,
-      const std::vector<std::pair<SplitRelativeDirection, double>> split_dir_dis_info_list);
+      const std::vector<std::pair<SplitRelativeDirection, double>>
+          split_dir_dis_info_list);
 
   void reset();
 
@@ -80,8 +81,8 @@ class EgoLaneTrackManger {
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRamp(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
-    const std::vector<int>& order_ids);
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
 
   double ComputeTargetLaneSpecifiedRangeCurvature(
       const std::shared_ptr<VirtualLane> virtual_lane);
@@ -102,15 +103,25 @@ class EgoLaneTrackManger {
 
   bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
 
-  bool is_exist_intersection_split() const {return is_exist_split_on_intersection_; };
+  bool is_exist_intersection_split() const {
+    return is_exist_split_on_intersection_;
+  };
 
-  bool is_in_ramp_select_split_situation() const {return is_in_ramp_select_split_situation_; };
+  bool is_in_ramp_select_split_situation() const {
+    return is_in_ramp_select_split_situation_;
+  };
 
-  bool is_on_road_select_ramp_situation() const {return is_on_road_select_ramp_situation_; };
+  bool is_on_road_select_ramp_situation() const {
+    return is_on_road_select_ramp_situation_;
+  };
 
-  bool is_select_ego_lane_without_plan() const {return is_select_ego_lane_without_plan_;};
+  bool is_select_ego_lane_without_plan() const {
+    return is_select_ego_lane_without_plan_;
+  };
 
-  bool is_select_ego_lane_with_plan() const {return is_select_ego_lane_with_plan_;};
+  bool is_select_ego_lane_with_plan() const {
+    return is_select_ego_lane_with_plan_;
+  };
 
   bool is_virtual_lane_relative_id_switch() const {
     return virtual_lane_relative_id_switch_flag_;
@@ -124,8 +135,8 @@ class EgoLaneTrackManger {
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
           virtual_id_mapped_lane);
 
-    double ComputeAverageHeadingDiff(
-        std::shared_ptr<VirtualLane> base_lane, const double ego_heading_angle);
+  double ComputeAverageHeadingDiff(std::shared_ptr<VirtualLane> base_lane,
+                                   const double ego_heading_angle);
 
   planning::framework::Session *session_ = nullptr;
   int last_fix_lane_virtual_id_ = 0;
@@ -140,7 +151,8 @@ class EgoLaneTrackManger {
   bool dis_to_ramp_ = NL_NMAX;
   bool is_leaving_ramp_ = false;
   std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
-  std::vector<std::pair<SplitRelativeDirection, double>> split_direction_dis_info_list_;
+  std::vector<std::pair<SplitRelativeDirection, double>>
+      split_direction_dis_info_list_;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
   bool virtual_lane_relative_id_switch_flag_ = false;

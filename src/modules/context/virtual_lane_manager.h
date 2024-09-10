@@ -152,7 +152,9 @@ class VirtualLaneManager {
     is_exist_intersection_split_ = is_exist_intersection_split;
   }
 
-  bool get_is_exist_intersection_split() const { return is_exist_intersection_split_; };
+  bool get_is_exist_intersection_split() const {
+    return is_exist_intersection_split_;
+  };
 
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
@@ -359,7 +361,8 @@ class VirtualLaneManager {
   std::vector<int> order_ids_of_same_zero_relative_id_;
   bool is_within_hdmap_ = false;
   std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
-  std::vector<std::pair<SplitRelativeDirection, double>> split_dir_dis_info_list_;
+  std::vector<std::pair<SplitRelativeDirection, double>>
+      split_dir_dis_info_list_;
 
   //到停止线的距离，可以为负，表示停止线在车后
   double distance_to_stopline_ = NL_NMAX;

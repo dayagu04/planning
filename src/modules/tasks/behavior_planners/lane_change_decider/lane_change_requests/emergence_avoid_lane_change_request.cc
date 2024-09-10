@@ -242,7 +242,8 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
       session_->environmental_model().get_ego_state_manager();
   // const double default_velocity_trigger_emergence_avoid_request = 13.88;
 
-  // if (ego_state->ego_v() < default_velocity_trigger_emergence_avoid_request) {
+  // if (ego_state->ego_v() < default_velocity_trigger_emergence_avoid_request)
+  // {
   //   LOG_DEBUG("EmergenceAvoidRequest::ego_v < 50km/h");
   //   return;
   // }
@@ -287,7 +288,8 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
       //           Common::ObjectType::OBJECT_TYPE_COUPE &&
       //       front_vehicle_iter->second.type !=
       //           Common::ObjectType::OBJECT_TYPE_TRUCK) ||
-      //       function_info.function_mode() == common::DrivingFunctionInfo::NOA) &&
+      //       function_info.function_mode() ==
+      //       common::DrivingFunctionInfo::NOA) &&
       // 对静止车暂时不做处理
       if (front_vehicle_iter->second.type !=
               Common::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
