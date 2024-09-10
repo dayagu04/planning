@@ -24,10 +24,13 @@ void HybridAStarParkPlanner::Reset() {
   frame_.Reset();
   current_path_point_global_vec_.clear();
 
-  HybridAStarThreadSolver* thread_solver =
-      HybridAStarThreadSolver::GetInstance();
+  const ApaParameters& params = apa_param.GetParam();
+  if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
+    HybridAStarThreadSolver* thread_solver =
+        HybridAStarThreadSolver::GetInstance();
 
-  thread_solver->Clear();
+    thread_solver->Clear();
+  }
 
   return;
 }
@@ -39,14 +42,16 @@ void HybridAStarParkPlanner::Init() {
   // data structure.
   ILOG_INFO << "init astar thread";
 
-  HybridAStarThreadSolver* solver = HybridAStarThreadSolver::GetInstance();
+  if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
+    HybridAStarThreadSolver* solver = HybridAStarThreadSolver::GetInstance();
 
-  solver->Init(params.rear_overhanging, params.car_length, params.car_width,
-               params.steer_ratio, params.wheel_base,
-               params.min_turn_radius + 0.1,
-               (params.max_car_width - params.car_width) * 0.5);
+    solver->Init(params.rear_overhanging, params.car_length, params.car_width,
+                 params.steer_ratio, params.wheel_base,
+                 params.min_turn_radius + 0.1,
+                 (params.max_car_width - params.car_width) * 0.5);
 
-  solver->Start();
+    solver->Start();
+  }
 
   return;
 }
