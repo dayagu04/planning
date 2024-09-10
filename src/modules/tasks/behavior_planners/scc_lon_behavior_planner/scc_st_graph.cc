@@ -30,6 +30,7 @@
 // #include "scenario_state_machine.h"
 #include "task_basic_types.h"
 #include "task_basic_types.pb.h"
+#include "trajectory1d/second_order_time_optimal_trajectory.h"
 #include "utils/kd_path.h"
 #include "utils_math.h"
 #include "vec2d.h"
@@ -300,11 +301,13 @@ void StGraphGenerator::Update(
   // 6. calculate sref by vref
   std::vector<double> sref_vec;
   sref_vec.resize(config_.lon_num_step + 1);
+  std::vector<double> sref_vec_jlt;
+  sref_vec_jlt.resize(config_.lon_num_step + 1);
   CalculateSrefsByVref(v_ego, vt_refs_, acc_ego, sref_vec);
-  // sref_vec.clear();
-  // CalculateCruiseSrefs(v_ego, v_cruise, acc_ego, sref_vec);
+  GenerateSrefByVrefJLT(sref_vec_jlt);
+
   // 6. update STboundaries & sref
-  UpdateSTGraphs(st_infos, sref_vec);
+  UpdateSTGraphs(st_infos, sref_vec_jlt);
 }
 
 bool StGraphGenerator::CalcSpeedInfoWithLead(
@@ -783,7 +786,7 @@ void StGraphGenerator::UpdateSTGraphs(
           st_obs_j = 0.0;
         }
       } else {
-        s_step += st.v_lead() * t;
+        s_step += std::max(st.v_lead() * t, 0.0);
       }
       // 只更新关注的t区间内
       if (sample_time >= st.start_time() && sample_time <= st.end_time()) {
@@ -3973,6 +3976,30 @@ void StGraphGenerator::SetDefaultDebugValues(std::vector<string> names) {
     } else {
       JSON_DEBUG_VALUE(name, -1.0);
     }
+  }
+}
+
+void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
+  LonState init_state;
+  init_state.p = lon_init_state_[0];
+  init_state.v = lon_init_state_[1];
+  init_state.a = std::fmax(-3.0, lon_init_state_[2]);
+
+  StateLimit state_limit;
+  state_limit.v_end = v_target_;
+  state_limit.a_min = acc_target_.first;
+  state_limit.a_max = acc_target_.second;
+  state_limit.j_min = -1.0;
+  state_limit.j_max = 1.0;
+
+  auto s_ref_curve = SecondOrderTimeOptimalTrajectory(init_state, state_limit);
+  const double delta_time = 0.2;
+  s_refs[0] = 0.0;
+  for (int i = 1; i <= 25; i++) {
+    double time = i * delta_time;
+    double s_ego = std::fmax(s_ref_curve.Evaluate(0, time), s_refs[i - 1]);
+    // double v_ego = far_slow_curve.Evaluate(1, time);
+    s_refs[i] = s_ego;
   }
 }
 

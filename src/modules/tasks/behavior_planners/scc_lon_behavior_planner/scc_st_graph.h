@@ -257,6 +257,8 @@ class StGraphGenerator {
   bool FastCrossAgentChecker(const double lead_one_v_lat, double &end_time,
                              const double kwidth);
 
+  void GenerateSrefByVrefJLT(std::vector<double> &s_refs);
+
  private:
   framework::Session *session_;
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;
