@@ -106,7 +106,7 @@ bool LaneChangeRequestManager::Update(
     if (hd_map_valid) {
       map_request_.update(lc_status, map_request_.tfinish());
     }
-    if (enable_use_merge_lc_request) {
+    if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST) {
       merge_change_request_.Update(lc_status);
     }
     if (location_valid && use_overtake_lane_change_request) {

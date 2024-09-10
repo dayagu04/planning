@@ -394,6 +394,8 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   const auto &clane = virtual_lane_mgr->get_current_lane();
   const auto &clane_virtual_id = virtual_lane_mgr->current_lane_virtual_id();
+  const int origin_relative_id_zero_nums = virtual_lane_mgr->origin_relative_id_zero_nums();
+  bool perfect_in_diversion_lane = false;
 
   double dist_threshold = 0.15;
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
@@ -412,10 +414,17 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
       reference_path_mgr->get_reference_path_by_lane(clane_virtual_id);
   const auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
 
-  bool perfect_in_lane{false};
+  bool perfect_in_lane = false;
   perfect_in_lane =
       ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
        (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
+
+  if (origin_relative_id_zero_nums > 1) {
+    perfect_in_diversion_lane =
+        (std::fabs(frenet_ego_state.l()) < dist_threshold); 
+  }
+  perfect_in_lane = perfect_in_lane || perfect_in_diversion_lane;
+
   return perfect_in_lane;
 }
 

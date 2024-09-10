@@ -265,8 +265,9 @@ def update_cone_request_lc_data (plan_debug_json):
 def update_merge_request_lc_data (plan_debug_json):
   names  = []
   datas = []
-  merge_lc_vars_ = ["is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type",
-                   "right_boundary_exist_virtual_type"]
+  merge_lc_vars_ = ["both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_",
+                    "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type",
+                    "right_boundary_exist_virtual_type"]
   for name in merge_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))

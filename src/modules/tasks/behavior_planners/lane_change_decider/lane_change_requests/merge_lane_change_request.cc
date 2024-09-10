@@ -90,6 +90,13 @@ void MergeRequest::Update(int lc_status) {
     origin_lane_virtual_id_ = current_lane_virtual_id;
   }
   is_merge_lane_change_situation_ = false;
+  both_lane_line_exist_virtual_or_not_ = false;
+
+  MakesureLaneMergeDirection(origin_lane_virtual_id_);
+  LOG_DEBUG("MergeRequest::Update: both_lane_line_exist_virtual_or_not_ %d",
+            both_lane_line_exist_virtual_or_not_);
+  JSON_DEBUG_VALUE("both_lane_line_exist_virtual_or_not_",
+                   both_lane_line_exist_virtual_or_not_);
 
   UpdateLaneMergeSituation(lc_status);
   LOG_DEBUG("MergeRequest::Update: is_merge_lane_change_situation_ %d",
@@ -151,7 +158,7 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
   bool is_edge_side_lane =
       (current_lane_order_id == 0 || current_lane_order_id == lane_nums - 1);
 
-  if (is_edge_side_lane && is_merge_region) {
+  if (is_edge_side_lane && is_merge_region && !both_lane_line_exist_virtual_or_not_) {
     merge_alc_trigger_counter_++;
   } else {
     merge_alc_trigger_counter_ =
@@ -172,8 +179,6 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   int target_lane_virtual_id_tmp{origin_lane_virtual_id_};
-
-  MakesureLaneMergeDirection(origin_lane_virtual_id_);
 
   if (merge_lane_change_direction_ == LEFT_CHANGE && enable_l_) {
     if (request_type_ != LEFT_CHANGE && compute_lc_valid_info(LEFT_CHANGE)) {
@@ -250,14 +255,41 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
       virtual_lane_mgr_->get_virtual_lanes();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
   merge_lane_change_direction_ = NO_CHANGE;
   bool left_boundary_exist_virtual_type = false;
   bool right_boundary_exist_virtual_type = false;
 
+  std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
+  std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
+  
   if (base_lane != nullptr) {
+    double left_lane_line_length = 0.0;
+    int left_current_segment_count = 0;
+    double left_ego_s = 0.0, left_ego_l = 0.0;
     // 判断左侧车道线类型
     auto left_lane_boundarys = base_lane->get_left_lane_boundary();
+    left_base_boundary_path =
+        virtual_lane_mgr_->MakeBoundaryPath(left_lane_boundarys);
+    if (left_base_boundary_path != nullptr) {
+      if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s, &left_ego_l)) {
+        return;
+      }
+    } else {
+      return;
+    }
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+      left_lane_line_length += left_lane_boundarys.type_segments[i].length;
+      if (left_lane_line_length > left_ego_s) {
+        left_current_segment_count = i;
+        break;
+      }
+    }
+    for (int i = left_current_segment_count; i < left_lane_boundarys.type_segments_size; i++) {
       if (left_lane_boundarys.type_segments[i].type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         left_boundary_exist_virtual_type = true;
@@ -266,9 +298,34 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         continue;
       }
     }
+
+    if (left_lane_boundarys.type_segments[left_current_segment_count].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      left_boundary_exist_virtual_type = false;
+    }
+
     // 判断右侧车道线类型
+    double right_lane_line_length = 0.0;
+    int right_current_segment_count = 0;
+    double right_ego_s = 0.0, right_ego_l = 0.0;
     auto right_lane_boundarys = base_lane->get_right_lane_boundary();
-    for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+    right_base_boundary_path =
+        virtual_lane_mgr_->MakeBoundaryPath(left_lane_boundarys);
+    if (right_base_boundary_path != nullptr) {
+      if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s, &right_ego_l)) {
+        return;
+      }
+    } else {
+      return;
+    }
+    for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+      right_lane_line_length += left_lane_boundarys.type_segments[i].length;
+      if (right_lane_line_length > right_ego_s) {
+        right_current_segment_count = i;
+        break;
+      }
+    }
+    for (int i = right_current_segment_count; i < right_lane_boundarys.type_segments_size; i++) {
       if (right_lane_boundarys.type_segments[i].type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         right_boundary_exist_virtual_type = true;
@@ -277,15 +334,27 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         continue;
       }
     }
+
+    if (left_lane_boundarys.type_segments[right_current_segment_count].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      right_boundary_exist_virtual_type = false;
+    }
   } else {
     return;
   }
 
-  if (left_boundary_exist_virtual_type) {
+  if (left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
+    merge_lane_change_direction_ = NO_CHANGE;
+    both_lane_line_exist_virtual_or_not_ = true;
+  } else if(left_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = LEFT_CHANGE;
   } else if (right_boundary_exist_virtual_type &&
              !left_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
+  } else if (!right_boundary_exist_virtual_type &&
+             !left_boundary_exist_virtual_type) {
+    merge_lane_change_direction_ = NO_CHANGE;
+    both_lane_line_exist_virtual_or_not_ = true;
   } else {
     merge_lane_change_direction_ = NO_CHANGE;
   }

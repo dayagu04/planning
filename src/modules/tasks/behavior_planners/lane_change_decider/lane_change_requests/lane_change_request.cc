@@ -1,5 +1,6 @@
 #include "lane_change_request.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "common_c.h"
@@ -445,6 +446,9 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       session_->environmental_model().get_ego_state_manager();
   const double ego_v = ego_state->ego_v();
   double dash_length = 0.0;
+  double lane_line_length = 0.0;
+  double current_segment_already_pass_length = 0.0;
+  int current_segment_count = 0;
   bool all_lane_boundary_types_are_dashed = true;
   double default_lc_boundary_length = 100.0;
   bool first_solid_second_dashed = false;
@@ -468,27 +472,30 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     } else {
       return false;
     }
-    if (left_lane_boundarys.type_segments[0].type ==
-            iflyauto::LaneBoundaryType_MARKING_SOLID &&
-        ego_s > left_lane_boundarys.type_segments[0].length &&
-        ((left_lane_boundarys.type_segments[1].type ==
-          iflyauto::LaneBoundaryType_MARKING_DASHED) ||
-         (left_lane_boundarys.type_segments[1].type ==
-          iflyauto::LaneBoundaryType_MARKING_VIRTUAL))) {
-      first_solid_second_dashed = true;
-    }
+
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-      if (left_lane_boundarys.type_segments[i].type ==
+      lane_line_length += left_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
+        current_segment_count = i;
+        break;
+      }
+    }
+    current_segment_already_pass_length = 
+        left_lane_boundarys.type_segments[current_segment_count].length - (lane_line_length - ego_s);
+
+    for (int iter = current_segment_count; iter < left_lane_boundarys.type_segments_size; iter++) {
+      if (left_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_DASHED ||
-          left_lane_boundarys.type_segments[i].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
-          (first_solid_second_dashed && i == 0)) {
-        dash_length += left_lane_boundarys.type_segments[i].length;
+          left_lane_boundarys.type_segments[iter].type ==
+              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        dash_length += left_lane_boundarys.type_segments[iter].length;
       } else {
         all_lane_boundary_types_are_dashed = false;
         break;
       }
     }
+    dash_length -= current_segment_already_pass_length;
+    dash_length = std::max(0.0, dash_length);
   } else if (lc_request == RIGHT_CHANGE) {
     const auto &right_lane_boundarys = current_lane->get_right_lane_boundary();
     target_boundary_path =
@@ -500,31 +507,33 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     } else {
       return false;
     }
-    if (right_lane_boundarys.type_segments[0].type ==
-            iflyauto::LaneBoundaryType_MARKING_SOLID &&
-        ego_s > right_lane_boundarys.type_segments[0].length &&
-        ((right_lane_boundarys.type_segments[1].type ==
-          iflyauto::LaneBoundaryType_MARKING_DASHED) ||
-         (right_lane_boundarys.type_segments[1].type ==
-          iflyauto::LaneBoundaryType_MARKING_VIRTUAL))) {
-      first_solid_second_dashed = true;
-    }
+
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-      if (right_lane_boundarys.type_segments[i].type ==
+      lane_line_length += right_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
+        current_segment_count = i;
+        break;
+      }
+    }
+    current_segment_already_pass_length = 
+        right_lane_boundarys.type_segments[current_segment_count].length - (lane_line_length - ego_s);
+
+    for (int iter = current_segment_count; iter < right_lane_boundarys.type_segments_size; iter++) {
+      if (right_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_DASHED ||
-          right_lane_boundarys.type_segments[i].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
-          (first_solid_second_dashed && i == 0)) {
-        dash_length += right_lane_boundarys.type_segments[i].length;
+          right_lane_boundarys.type_segments[iter].type ==
+              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        dash_length += right_lane_boundarys.type_segments[iter].length;
       } else {
         all_lane_boundary_types_are_dashed = false;
         break;
       }
     }
+    dash_length -= current_segment_already_pass_length;
+    dash_length = std::max(0.0, dash_length);
   }
 
   double lc_response_dist = ego_v * need_lane_change_time;  // hack
-  dash_length -= ego_s;
   JSON_DEBUG_VALUE("dash_line_len", dash_length);
   std::cout << "dash_length:" << dash_length
             << ",lc_response_dist:" << lc_response_dist << std::endl;
