@@ -75,6 +75,9 @@ class PlanningPlayer {
   void PerfectControlAPA(
       const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
       struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
+  void PerfectControlAPANewLocalization(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs::IFLYLocalization::Ptr loc_msg);
   void UpdateVehicleService(
       uint64_t delta_t,
       struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
