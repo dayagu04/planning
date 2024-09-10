@@ -686,6 +686,18 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     // update jerk bounds
     lon_behav_output_.lon_bound_jerk[i] = lon_j_bound;
   }
+  if (config_.enable_jlt) {
+    for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+      if (jlt_farslow_status) {
+        lon_behav_output_.s_refs[i].first =
+            std::fmin(lon_behav_output_.s_refs[i].first, sref_farslow[i]);
+      }
+      if (jlt_stable_status) {
+        lon_behav_output_.s_refs[i].first =
+            std::fmin(lon_behav_output_.s_refs[i].first, sref_stable[i]);
+      }
+    }
+  }
 
   // 11. use speed adjust s search ref
   const auto &lane_change_info =
