@@ -1722,7 +1722,7 @@ bool VirtualLaneManager::UpdateIntersectionState() {
       ((distance_to_crosswalk_ < 28.0 && distance_to_crosswalk_ > 5.0) &&
        !IsPosXOnVirtualLaneType(ego_pos_x))) {
     Intersection_state_ = planning::common::APPROACH_INTERSECTION;
-  } else if (-1.0 < distance_to_stopline_ <= 3.0) {
+  } else if (-1.0 < distance_to_stopline_ && distance_to_stopline_ <= 3.0) {
     Intersection_state_ = planning::common::IN_INTERSECTION;
   } else {
     if ((0 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) &&
@@ -1742,6 +1742,7 @@ bool VirtualLaneManager::UpdateIntersectionState() {
   }
   return true;
 }
+
 
 bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
   bool rslt = false;
