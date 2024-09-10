@@ -167,8 +167,19 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
   planning_adapter_->Init();
 
   ros::Time::init();
-  auto ros_start_time = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin()->first +
-                        ros::Duration(2.0);
+
+  ros::Time ros_start_time;
+  if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+    ros_start_time =
+        msg_cache_[TOPIC_LOCALIZATION].begin()->first + ros::Duration(2.0);
+  } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+    ros_start_time = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin()->first +
+                     ros::Duration(2.0);
+  } else {
+    std::cerr << "Error !!!!! missing localization msg" << std::endl;
+    return;
+  }
+
   planning_adapter_->RegisterOutputWriter(
       [this, is_close_loop, no_debug, ros_start_time](
           const std::shared_ptr<iflyauto::StructContainer>& planning_output) {
@@ -1005,17 +1016,40 @@ void PlanningPlayer::RunCloseLoop(
       return;
     }
 
-    for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
-         it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
-      auto loc_msg_i =
-          boost::any_cast<struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(
-              it->second);
-      auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
-      if (loc_header_time_i > loc_esti_header_time_us_ &&
-          loc_header_time_i < loc_esti_header_time_us_ + 1000 * 1000) {
-        auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
-        PerfectControlAPA(planning_output, delta_t, loc_msg_i);
+    if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+      for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
+           it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
+        auto loc_msg_i =
+            boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
+        auto loc_header_time_i = loc_msg_i->msg_header.stamp;
+        if (loc_header_time_i > loc_header_time_us_) {
+          if (loc_header_time_i <= next_loc_header_time_us_) {
+            auto delta_t = loc_header_time_i - loc_header_time_us_;
+            PerfectControlAPANewLocalization(planning_output, delta_t,
+                                             loc_msg_i);
+          } else {
+            break;
+          }
+        }
       }
+    } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+      for (auto it = msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin();
+           it != msg_cache_[TOPIC_LOCALIZATION_ESTIMATE].end(); it++) {
+        auto loc_msg_i = boost::any_cast<
+            struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr>(it->second);
+        auto loc_header_time_i = loc_msg_i->msg_header.timestamp;
+        if (loc_header_time_i > loc_esti_header_time_us_) {
+          if (loc_header_time_i <= next_loc_esti_header_time_us_) {
+            auto delta_t = loc_header_time_i - loc_esti_header_time_us_;
+            PerfectControlAPA(planning_output, delta_t, loc_msg_i);
+          } else {
+            break;
+          }
+        }
+      }
+    } else {
+      std::cerr << "Error !!!!! missing localization msg" << std::endl;
+      return;
     }
   } else {
     std::cerr << "Error, unknown scene_type !" << std::endl;
@@ -1250,6 +1284,150 @@ void PlanningPlayer::PerfectControlAPA(
   pose.local_position.y = state_.pos.y();
 }
 
+void PlanningPlayer::PerfectControlAPANewLocalization(
+    const struct_msgs::PlanningOutput& plan_msg, uint64_t delta_t,
+    struct_msgs::IFLYLocalization::Ptr loc_msg) {
+  const double dt = static_cast<double>(delta_t) / 1e6;
+  const auto path_size = plan_msg.trajectory.trajectory_points_size;
+
+  if (path_size < 2) {
+    std::cout << "planning error: path_size = " << path_size << std::endl;
+    return;
+  }
+
+  std::vector<double> path_s_vec;
+  std::vector<double> path_x_vec;
+  std::vector<double> path_y_vec;
+  std::vector<double> path_heading_vec;
+  path_x_vec.reserve(path_size);
+  path_y_vec.reserve(path_size);
+  path_s_vec.reserve(path_size);
+  path_heading_vec.reserve(path_size);
+
+  double s = 0.0;
+  double ds = 0.0;
+  double angle_offset = 0.0;
+
+  static const double pi_const = 3.141592654;
+  static const double apa_vel_simulation = 0.5;
+  for (int i = 0; i < path_size; ++i) {
+    const auto& traj_point = plan_msg.trajectory.trajectory_points[i];
+
+    path_x_vec.emplace_back(traj_point.x);
+    path_y_vec.emplace_back(traj_point.y);
+    path_s_vec.emplace_back(s);
+
+    if (i <= path_size - 2) {
+      const auto& traj_point_next =
+          plan_msg.trajectory.trajectory_points[i + 1];
+
+      ds = std::hypot(traj_point_next.x - traj_point.x,
+                      traj_point_next.y - traj_point.y);
+      s += std::max(ds, 0.01);
+    }
+
+    auto heading = traj_point.heading_yaw;
+
+    if (i > 0) {
+      const auto& traj_point_last =
+          plan_msg.trajectory.trajectory_points[i - 1];
+
+      const auto d_heading =
+          traj_point.heading_yaw - traj_point_last.heading_yaw;
+
+      if (d_heading > 1.5 * pi_const) {
+        angle_offset -= 2.0 * pi_const;
+      } else if (d_heading < -1.5 * pi_const) {
+        angle_offset += 2.0 * pi_const;
+      }
+
+      heading += angle_offset;
+    }
+
+    path_heading_vec.emplace_back(heading);
+  }
+
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  pnc::mathlib::spline heading_s_spline;
+
+  x_s_spline.set_points(path_s_vec, path_x_vec);
+  y_s_spline.set_points(path_s_vec, path_y_vec);
+  heading_s_spline.set_points(path_s_vec, path_heading_vec);
+
+  const auto& current_pos = state_.pos;
+  double path_length = path_s_vec.back();
+  double s_proj = 0.0;
+  bool success = pnc::geometry_lib::CalProjFromSplineByBisection(
+      0.0, path_length, s_proj, current_pos, x_s_spline, y_s_spline);
+
+  double remain_dist = 5.01;
+  if (success == true) {
+    remain_dist = path_length - s_proj;
+  } else {
+    std::cout << "remain_dist calculation error:input is error" << std::endl;
+  }
+
+  if (state_.static_flag) {
+    if (state_.static_time > 0.6) {
+      state_.static_flag = false;
+    } else {
+      state_.static_time += dt;
+      state_.vel = 0.0;
+      return;
+    }
+  }
+
+  if (fabs(remain_dist) <= 0.06) {
+    state_.vel = 0.0;
+    state_.static_flag = true;
+  } else {
+    auto s_next = s_proj + state_.vel * dt;
+    state_.vel = apa_vel_simulation;
+    state_.pos << x_s_spline(s_next), y_s_spline(s_next);
+
+    state_.heading =
+        pnc::geometry_lib::NormalizeAngle(heading_s_spline(s_next));
+  }
+
+  Eigen::Vector3d euler_zxy;
+  Eigen::Quaterniond q;
+
+  // euler_zxy << state_.heading, 0.0, 0.0;
+
+  q = pnc::transform::EulerZYX2Quat(euler_zxy);
+
+  // vel
+  // loc_msg->velocity.velocity_boot.vx = state_.vel * cos(theta);
+  // loc_msg->velocity.velocity_boot.vy = state_.vel * sin(theta);
+  // loc_msg->velocity.velocity_boot.vz = 0;
+
+  loc_msg->velocity.velocity_body.vx = state_.vel;
+  loc_msg->velocity.velocity_body.vy = 0;
+  loc_msg->velocity.velocity_body.vz = 0;
+
+  // acc
+  loc_msg->acceleration.acceleration_boot.ax = 0;
+  loc_msg->acceleration.acceleration_boot.ay = 0;
+  loc_msg->acceleration.acceleration_boot.az = 0;
+
+  loc_msg->acceleration.acceleration_body.ax = 0;
+  loc_msg->acceleration.acceleration_body.ay = 0;
+  loc_msg->acceleration.acceleration_body.az = 0;
+
+  // atti
+  loc_msg->orientation.euler_boot.yaw = euler_zxy[0];
+
+  loc_msg->orientation.quaternion_boot.w = q.w();
+  loc_msg->orientation.quaternion_boot.x = q.x();
+  loc_msg->orientation.quaternion_boot.y = q.y();
+  loc_msg->orientation.quaternion_boot.z = q.z();
+
+  // pos
+  loc_msg->position.position_boot.x = state_.pos.x();
+  loc_msg->position.position_boot.y = state_.pos.y();
+}
+
 void PlanningPlayer::PerfectControlEgoPose(
     uint64_t delta_t,
     struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg) {
@@ -1377,10 +1555,20 @@ void PlanningPlayer::GenMileage(const std::string& mileage_path) {
 }
 
 void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
-  auto start_time =
-      header_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin()->first + 2E6;
-  auto end_time =
-      header_cache_[TOPIC_LOCALIZATION_ESTIMATE].rbegin()->first - 2E6;
+  uint64_t start_time = 0;
+  uint64_t end_time = 0;
+  if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
+    start_time = header_cache_[TOPIC_LOCALIZATION].begin()->first + 2E6;
+    end_time = header_cache_[TOPIC_LOCALIZATION].rbegin()->first - 2E6;
+  } else if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION_ESTIMATE)) {
+    start_time =
+        header_cache_[TOPIC_LOCALIZATION_ESTIMATE].begin()->first + 2E6;
+    end_time = header_cache_[TOPIC_LOCALIZATION_ESTIMATE].rbegin()->first - 2E6;
+  } else {
+    std::cerr << "Error !!!!! missing localization msg" << std::endl;
+    return;
+  }
+
   while (start_time < end_time) {
     std::cout << "************************************** frame " << frame_num_
               << " **************************************" << std::endl;
