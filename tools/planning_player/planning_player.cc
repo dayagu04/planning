@@ -916,9 +916,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
         planning_debug_info->input_topic_timestamp().localization();
     loc_esti_header_time_us_ =
         planning_debug_info->input_topic_timestamp().localization_estimate();
-    // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
-    if (0 == loc_esti_header_time_us_) {
+    // 兼容老版本的包，定位时间戳的存放位置较混乱
+    if (0 == loc_esti_header_time_us_ && 0 != loc_header_time_us_) {
       loc_esti_header_time_us_ = loc_header_time_us_;
+    } else if (0 == loc_header_time_us_ && 0 != loc_esti_header_time_us_) {
+      loc_header_time_us_ = loc_esti_header_time_us_;
     }
     vehi_svc_header_time_us_ =
         planning_debug_info->input_topic_timestamp().vehicle_service();
