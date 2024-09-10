@@ -100,15 +100,13 @@ bool LaneChangeRequestManager::Update(
       cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request &&
-        function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
-        cone_change_request_.request_type() == RequestType::NO_CHANGE &&
-        ego_state->ego_v() > default_velocity_trigger_emergence_avoid_request) {
+        cone_change_request_.request_type() == RequestType::NO_CHANGE) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
       map_request_.update(lc_status, map_request_.tfinish());
     }
-    if (enable_use_merge_lc_request) {
+    if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST) {
       merge_change_request_.Update(lc_status);
     }
     if (location_valid && use_overtake_lane_change_request) {

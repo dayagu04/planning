@@ -224,9 +224,6 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
-
-  bool curr_direct_exist = (clane->get_lane_marks() ==
-                            iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT);
   double v_ego = ego_state->ego_v();
 
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
@@ -333,6 +330,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   updateRouteTrafficSpeed(false, &right_route_traffic_speed);
   const double leading_vehicle_speed = lead_one->v;
 
+  JSON_DEBUG_VALUE("left_route_traffic_speed", left_route_traffic_speed);
+  JSON_DEBUG_VALUE("right_route_traffic_speed", right_route_traffic_speed);
+
   const bool is_left_overtake =
       enable_l_
           ? isCouldOvertakeByRoute(
@@ -386,7 +386,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "\n");
     }
     if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE, origin_lane_virtual_id_) &&
-        curr_direct_exist && request_type_ != NO_CHANGE &&
+        request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
          (lc_status == kLaneChangeCancel &&
           (lane_change_lane_mgr_->has_origin_lane() &&
@@ -412,7 +412,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "\n");
     }
     if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE, origin_lane_virtual_id_) &&
-        curr_direct_exist && request_type_ != NO_CHANGE &&
+        request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
          (lc_status == kLaneChangeCancel &&
           (lane_change_lane_mgr_->has_origin_lane() &&
@@ -548,10 +548,16 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
   std::vector<TrackedObject> side_front_obstacle_array;
   if (is_left) {
     for (auto& tr : front_tracks_l) {
+      if (!(tr.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       side_front_obstacle_array.push_back(tr);
     }
   } else {
     for (auto& tr : front_tracks_r) {
+      if (!(tr.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
       side_front_obstacle_array.push_back(tr);
     }
   }
@@ -645,6 +651,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   if (!is_left && !inhibit_extra_speed) {
     speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
   }
+  JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
   if (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum && !is_left &&
@@ -1276,6 +1283,9 @@ void OvertakeRequest::selectTargetObstacleIds(
 
   for (int i = begin_index; i != end_index; i += step) {
     auto obs_info = candidate_obs_info.at(i);
+    if (!(obs_info.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+      continue;
+    }
     const auto id = obs_info.track_id;
     if (tracks_map_.find(id) == tracks_map_.end()) {
       continue;
