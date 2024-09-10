@@ -541,14 +541,14 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 #endif
 
   // 获取track_ego_lane的依赖
-  ego_lane_track_manager_->update(
+  ego_lane_track_manager_->Update(
       is_ego_on_expressway_, is_on_ramp_, dis_to_ramp_, is_leaving_ramp_,
       first_split_dir_dis_info_, distance_to_first_road_merge_,
       distance_to_first_road_split_, current_segment_passed_distance_,
       split_dir_dis_info_list_);
 
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
-  ego_lane_track_manager_->calculate_virtual_Lane_attributes(
+  ego_lane_track_manager_->CalculateVirtualLaneAttributes(
       relative_id_lanes_);
 
   // 5.track自车道
@@ -563,7 +563,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   const auto& location_valid = session_->environmental_model().location_valid();
   auto time_start = IflyTime::Now_ms();
   if (location_valid) {
-    ego_lane_track_manager_->track_ego_lane(relative_id_lanes_,
+    ego_lane_track_manager_->TrackEgoLane(relative_id_lanes_,
                                             order_ids_of_same_zero_relative_id_,
                                             virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
@@ -597,7 +597,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
 
   // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
-  ego_lane_track_manager_->update_lane_virtual_id(
+  ego_lane_track_manager_->UpdateLaneVirtualId(
       relative_id_lanes_, virtual_id_mapped_lane_, &last_fix_lane_virtual_id_);
 
   // 对下游输出是否处于主路下匝道、匝道选分叉场景

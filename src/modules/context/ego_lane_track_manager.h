@@ -1,5 +1,4 @@
-#ifndef ZNQC_MODULES_CONTEXT_EGO_LANE_TRACK_MANAGER_H_
-#define ZNQC_MODULES_CONTEXT_EGO_LANE_TRACK_MANAGER_H_
+#pragma once
 
 #include <climits>
 #include <utility>
@@ -24,57 +23,56 @@ enum SplitRelativeDirection {
 
 class EgoLaneTrackManger {
  public:
-  EgoLaneTrackManger(planning::framework::Session *session);
+  explicit EgoLaneTrackManger(planning::framework::Session *session);
   // EgoLaneTrackManger() = default;
   ~EgoLaneTrackManger(){};
 
-  void update(
+  void Update(
       const bool is_ego_on_expressway, const bool is_on_ramp,
       const double dis_to_ramp, const bool is_leaving_ramp,
       const std::pair<SplitRelativeDirection, double> first_split_dir_dis_info,
       const double distance_to_first_road_merge,
       const double distance_to_first_road_split,
       const double current_segment_passed_distance,
-      const std::vector<std::pair<SplitRelativeDirection, double>>
-          split_dir_dis_info_list);
+      const std::vector<std::pair<SplitRelativeDirection, double>> &split_dir_dis_info_list);
 
-  void reset();
+  void Reset();
 
-  void calculate_virtual_Lane_attributes(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+  void CalculateVirtualLaneAttributes(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes);
 
-  void track_ego_lane(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
-      std::vector<int> order_ids_of_same_zero_relative_id,
+  void TrackEgoLane(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      std::vector<int> &order_ids_of_same_zero_relative_id,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
-          virtual_id_mapped_lane);
+          &virtual_id_mapped_lane);
 
-  void update_lane_virtual_id(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+  void UpdateLaneVirtualId(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       std::unordered_map<int, std::shared_ptr<VirtualLane>>
           &virtual_id_mapped_lane,
       int *last_fix_lane_virtual_id);
 
   void PreprocessRoadSplit(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   void PreprocessRampSplit(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   void PreprocessIntersectionSplit(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   void SelectEgoLaneWithoutPlan(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes);
 
   void SelectEgoLaneWithPlan(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       int zero_relative_id_nums,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
-          virtual_id_mapped_lane);
+          &virtual_id_mapped_lane);
 
   bool CheckIfInRampSelectSplit(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
@@ -131,13 +129,14 @@ class EgoLaneTrackManger {
   double ComputeLanesMatchlaterakDisCost(
       int virtual_id,
       const std::shared_ptr<VirtualLane> current_relative_id_lane,
-      const std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
-          virtual_id_mapped_lane);
+          &virtual_id_mapped_lane);
 
   double ComputeAverageHeadingDiff(std::shared_ptr<VirtualLane> base_lane,
                                    const double ego_heading_angle);
 
+ private:
   planning::framework::Session *session_ = nullptr;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
@@ -167,4 +166,3 @@ class EgoLaneTrackManger {
 };
 
 }  // namespace planning
-#endif
