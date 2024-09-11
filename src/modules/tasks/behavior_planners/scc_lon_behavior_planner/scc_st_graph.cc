@@ -348,8 +348,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // HACK: 解决问题的时间太短，先粗略快速判断cross agent后更新st info
     // lead的信息太少，缺少s,l信息
     double end_time = 5.0;
+    double default_lane_width = 3.5;
     bool is_fast_cross_agent =
-        FastCrossAgentChecker(lead_one.v_lat(), end_time, 3.5);
+        FastCrossAgentChecker(lead_one.v_lat(), end_time, default_lane_width);
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -394,7 +395,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
           lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
       bool is_lead_two_fast_cross_agent =
-          FastCrossAgentChecker(lead_two.v_lat(), end_time, 3.5);
+          FastCrossAgentChecker(lead_two.v_lat(), end_time, default_lane_width);
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
       lead_two_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -2673,7 +2674,7 @@ void StGraphGenerator::SetConfig(
 
 bool StGraphGenerator::FastCrossAgentChecker(double lead_v_lat,
                                              double &end_time,
-                                             double lane_width = 3.5) {
+                                             double lane_width) {
   // 横穿障碍物从lead中获取信息太少，粗暴给一个2.0
   double agent_width = 2.0;
   // 计算 end_time
