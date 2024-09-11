@@ -505,14 +505,13 @@ void GapSelectorInterface::Parse(planning::common::GapSelectorInput &input) {
   spline_info.path_spline_status = input.gap_selector_info()
                                        .last_gap_selector_path_spline()
                                        .path_spline_status();
-  if ((input.gap_selector_info()
-           .last_gap_selector_path_spline()
-           .path_spline_status() == 2) ||
-      (input.gap_selector_info()
-           .last_gap_selector_path_spline()
-           .path_spline_status() == 3) &&
-          s_vec.size() >
-              3) {  // this hack for spline s_vec, x_vec size problems
+  if (((input.gap_selector_info()
+            .last_gap_selector_path_spline()
+            .path_spline_status() == 2) ||
+       (input.gap_selector_info()
+            .last_gap_selector_path_spline()
+            .path_spline_status() == 3)) &&
+      s_vec.size() > 3) {  // this hack for spline s_vec, x_vec size problems
     spline_info.x_s_spline.set_points(s_vec, x_vec);
     spline_info.y_s_spline.set_points(s_vec, y_vec);
   }
