@@ -102,8 +102,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     // 新cipv开始稳定稳定，并且ttc小于阈值，自车速度比它大
     if (cipv_ptr != nullptr && pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ &&
         continous_flag &&
-        (pre_cipv_ttc_ < kCipvLostTtcThr ||
-         v_ego > cipv_ptr->speed())) {
+        (pre_cipv_ttc_ < kCipvLostTtcThr || v_ego > cipv_ptr->speed())) {
       pre_cipv_lost_id_ = cipv_id_;  // 当cipv稳定时存储
       ++counter_;
       // 当前cipv没变动
@@ -159,28 +158,36 @@ double CipvLostProhibitAccelerationDecider::CalculateRelativeDistance(
     return project_dist;
   }
   const auto &corners = cipv.box().GetAllCorners();
+  // 遍历每个角点，并计算投影距离
   for (const auto &corner : corners) {
     double project_s = 0.0;
     double project_l = 0.0;
-    if (!planned_path->XYToSL(corner.x(), corner.y(), &project_s, &project_l)) {
-      continue;
+    // 将每个角点从 XY 坐标转为 SL 坐标系
+    if (planned_path->XYToSL(corner.x(), corner.y(), &project_s, &project_l)) {
+      project_dist = std::fmin(project_dist, project_s);
     }
-    project_dist = std::fmin(project_dist, project_s);
   }
   const double front_edge_to_center = VehicleConfigurationContext::Instance()
                                           ->get_vehicle_param()
                                           .front_edge_to_rear_axle;
+  // 获取自车的状态
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
 
   Point2D frenet_point, cart_point;
   cart_point.x = ego_state->ego_carte().x;
   cart_point.y = ego_state->ego_carte().y;
+  // 检查是否成功转换为 SL 坐标，并计算相对距离
   if (planned_path->XYToSL(cart_point, frenet_point)) {
-    auto ego_s = frenet_point.x;
+    const double ego_s = frenet_point.x;
+    // 返回自车与 CIPV 的相对距离，确保距离为正值
     return std::fmax(0.0, project_dist - front_edge_to_center - ego_s);
   }
+
+  // 如果转换失败，返回最大距离
+  return std::numeric_limits<double>::max();
 }
+
 const planning::agent::Agent *CipvLostProhibitAccelerationDecider::QuerryCipv(
     std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
     const planning::agent::Agent *cipv) {
@@ -215,8 +222,7 @@ void CipvLostProhibitAccelerationDecider::Update() {
 
     pre_cipv_rel_s_ = CalculateRelativeDistance(planned_path, *cipv);
     pre_cipv_ttc_ =
-        pre_cipv_rel_s_ /
-        std::fmax(kMinSpeedThr, v_ego - cipv->speed());
+        pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, v_ego - cipv->speed());
     pre_cipv_id_ = cipv->agent_id();
   } else {
     pre_cipv_rel_s_ = std::numeric_limits<double>::max();
