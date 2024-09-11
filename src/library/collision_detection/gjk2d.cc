@@ -42,7 +42,8 @@ real GJK2D::Distance(const ShapeProxy2D &P, const ShapeProxy2D &Q,
 
     /** 3rd exit condition */
     for (std::size_t i = 0; i < simplex_.num; ++i) {
-      tennorm = GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
+      tennorm =
+          GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
       if (tennorm > norm2Wmax) {
         norm2Wmax = tennorm;
       }
@@ -161,7 +162,8 @@ real GJK2D::Distance2(const ShapeProxy2D &P, const ShapeProxy2D &Q,
     SubDistance(simplex_, v);
     /** 3rd exit condition */
     for (std::size_t i = 0; i < simplex_.num; ++i) {
-      tennorm = GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
+      tennorm =
+          GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
       if (tennorm > norm2Wmax) {
         norm2Wmax = tennorm;
       }
@@ -224,7 +226,8 @@ real GJK2D::Distance3(const ShapeProxy2D &P, const ShapeProxy2D &Q,
     SubDistance(simplex_, v);
     /** 3rd exit condition */
     for (std::size_t i = 0; i < simplex_.num; ++i) {
-      tennorm = GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
+      tennorm =
+          GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
       if (tennorm > norm2Wmax) {
         norm2Wmax = tennorm;
       }
@@ -293,7 +296,8 @@ bool GJK2D::Collision(const ShapeProxy2D &P, const ShapeProxy2D &Q) {
     SubDistance(simplex_, v);
     /** 3rd exit condition */
     for (std::size_t i = 0; i < simplex_.num; ++i) {
-      tennorm = GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
+      tennorm =
+          GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
       if (tennorm > norm2Wmax) {
         norm2Wmax = tennorm;
       }
@@ -328,7 +332,8 @@ bool GJK2D::traversalRayCast(RayCastRequest *input, RayCastResult *output) {
   int upper_index = 0;
   real numerator, denominator;
   for (int i = 0; i < num; ++i) {
-    numerator = GetVectorDot(normals[i], input->shape.vertices[i] - input->source);
+    numerator =
+        GetVectorDot(normals[i], input->shape.vertices[i] - input->source);
     denominator = GetVectorDot(normals[i], input->direction);
 
     if (fabs(denominator) < eps_tol) {
@@ -566,7 +571,8 @@ bool GJK2D::shapeCast(ShapeCastResult *output, ShapeCastRequest *input) {
     }
 
     for (i = 0; i < simplex_.num; ++i) {
-      tennorm = GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
+      tennorm =
+          GetVectorDot(simplex_.vertices.row(i), simplex_.vertices.row(i));
       if (tennorm > norm2Wmax) {
         norm2Wmax = tennorm;
       }

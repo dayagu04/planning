@@ -48,10 +48,9 @@ namespace planning {
 #define ifly_fgreater(x, y) (((x) > (y)) && !ifly_fequal(x, y))
 #define ifly_fless(x, y) (((x) < (y)) && !ifly_fequal(x, y))
 
-#define ifly_sign(x) \
-  (ifly_fgreater(x, 0.0) ? 1 : (ifly_fless(x, 0.0) ? -1 : 0))
+#define ifly_sign(x) (ifly_fgreater(x, 0.0) ? 1 : (ifly_fless(x, 0.0) ? -1 : 0))
 
-#define IFLY_SQRT_PI         (1.77245385090551602729)
-#define IFLY_SQRT_PI_INV     (0.56418958354775628695)
+#define IFLY_SQRT_PI (1.77245385090551602729)
+#define IFLY_SQRT_PI_INV (0.56418958354775628695)
 
 }  // namespace planning

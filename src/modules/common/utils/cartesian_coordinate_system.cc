@@ -115,7 +115,8 @@ Point2D CartesianCoordinateSystem::CurCartCoord2CartCoord(
   return future_rel_coord;
 }
 planning::Pose2D CartesianCoordinateSystem::CurCartPose2CartPose(
-    const planning::Pose2D& future_origin, const planning::Pose2D& cur_rel_pos) {
+    const planning::Pose2D& future_origin,
+    const planning::Pose2D& cur_rel_pos) {
   // Need further validation
   double dis_to_cur_origin =
       sqrt(pow(cur_rel_pos.x, 2) + pow(cur_rel_pos.y, 2));

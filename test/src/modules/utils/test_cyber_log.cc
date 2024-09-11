@@ -22,8 +22,8 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
-#include "src/common/cyber/logger/async_logger.h"
 #include "log_glog.h"
+#include "src/common/cyber/logger/async_logger.h"
 
 int main(int argc, char* argv[]) {
   FilePath::SetName("test_cyber_log");

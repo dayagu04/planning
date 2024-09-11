@@ -46,9 +46,9 @@ Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
 
   path_.path_dist = 0;
   path_.point_size = 1;
-  path_.points[0].x  = x;
-  path_.points[0].y  = y;
-  path_.points[0].theta  = phi;
+  path_.points[0].x = x;
+  path_.points[0].y = y;
+  path_.points[0].theta = phi;
 
   visited_type_ = AstarNodeVisitedType::not_visited;
 
@@ -136,7 +136,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
 
 void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {
   if (collision_id_ >= 3) {
-    path_.point_size = collision_id_ ;
+    path_.point_size = collision_id_;
     x_ = path_.points[path_.point_size - 1].x;
     y_ = path_.points[path_.point_size - 1].y;
     phi_ = IflyUnifyTheta(path_.points[path_.point_size - 1].theta, M_PI);
@@ -148,7 +148,7 @@ void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {
   path_.path_dist -= shink_dist;
   dist_to_start_ -= shink_dist;
 
-  return ;
+  return;
 }
 
 Box2d Node3d::GetBoundingBox(const VehicleParam& vehicle_param,
@@ -156,8 +156,7 @@ Box2d Node3d::GetBoundingBox(const VehicleParam& vehicle_param,
                              const double y, const double phi) {
   double ego_length = vehicle_param.length;
   double ego_width = vehicle_param.width;
-  double shift_distance =
-      ego_length / 2.0 - rear_overhanging;
+  double shift_distance = ego_length / 2.0 - rear_overhanging;
   Box2d ego_box(
       {x + shift_distance * std::cos(phi), y + shift_distance * std::sin(phi)},
       phi, ego_length, ego_width);

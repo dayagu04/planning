@@ -133,6 +133,7 @@ class PlanningPlayer {
   std::string local_interface_version_;
   std::string bag_planning_version_;
   std::string bag_interface_version_;
+  std::string car_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);

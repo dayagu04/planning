@@ -32,8 +32,6 @@ void control_viz2d_init();
 int viz2d_draw_system_state(viz2d_image *viz2d, const SystemState &states,
                             const Pose2D *base_pose);
 
-
-
 // use radian
 int viz2d_draw_front_wheel_state(viz2d_image *viz2d, const Pose2D *veh_pose,
                                  double wheel_base, double steering,

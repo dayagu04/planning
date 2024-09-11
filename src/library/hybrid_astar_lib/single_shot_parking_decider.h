@@ -3,9 +3,9 @@
 #include <cstddef>
 #include <string>
 #include "astar_decider.h"
+#include "hybrid_astar_common.h"
 #include "node3d.h"
 #include "pose2d.h"
-#include "hybrid_astar_common.h"
 
 namespace planning {
 
@@ -15,7 +15,7 @@ enum class PathShotNumber {
   multi_shot_path,
 };
 
-struct NextShotPathInfo  {
+struct NextShotPathInfo {
   PathShotNumber shot_number_;
 
   double start_point_s_;
@@ -48,8 +48,8 @@ class SingleShotParkingDecider : public AstarDecider {
   // use this info as an heuristic info
   NextShotPathInfo next_shot_path_info_;
 
-  private:
-   std::string PathShotNumberString(const PathShotNumber &shot_number);
+ private:
+  std::string PathShotNumberString(const PathShotNumber &shot_number);
 };
 
 }  // namespace planning

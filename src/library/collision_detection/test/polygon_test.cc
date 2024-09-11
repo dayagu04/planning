@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <cmath>
 
-#include "src/library/collision_detection/gjk2d_interface.h"
-#include "src/library/collision_detection/math.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "src/library/collision_detection/gjk2d_interface.h"
+#include "src/library/collision_detection/math.h"
 
 using namespace planning;
 
@@ -131,7 +131,7 @@ TEST(UpdatePolygonValue, test01) {
   radius_known = false;
 
   ret = UpdatePolygonValue(NULL, &center_pose, use_center_pose, radius_known,
-                             radius);
+                           radius);
   EXPECT_EQ(ret, -1);
 
   /* Illegal input data */
@@ -140,12 +140,12 @@ TEST(UpdatePolygonValue, test01) {
 
   polygon.vertex_num = 13;
   ret = UpdatePolygonValue(&polygon, &center_pose, use_center_pose,
-                             radius_known, radius);
+                           radius_known, radius);
   EXPECT_EQ(ret, -1);
 
   polygon.vertex_num = 0;
   ret = UpdatePolygonValue(&polygon, &center_pose, use_center_pose,
-                             radius_known, radius);
+                           radius_known, radius);
   EXPECT_EQ(ret, -1);
 }
 
@@ -175,8 +175,8 @@ TEST(UpdatePolygonValue, test02) {
   /* Radius is unknown */
   use_center_pose = false;
   radius_known = false;
-  ret = UpdatePolygonValue(&polygon, NULL, use_center_pose, radius_known,
-                             radius);
+  ret =
+      UpdatePolygonValue(&polygon, NULL, use_center_pose, radius_known, radius);
   EXPECT_EQ(ret, 1);
 
   Position2D center_point = {1.5, 1.0};
@@ -417,8 +417,7 @@ TEST(test_local_global_poly, transform2) {
   local_polygon.vertexes[3].x = back;
   local_polygon.vertexes[3].y = -half;
 
-  UpdatePolygonValue(&local_polygon, nullptr, false, false,
-                       POLYGON_MAX_RADIUS);
+  UpdatePolygonValue(&local_polygon, nullptr, false, false, POLYGON_MAX_RADIUS);
 
   Polygon2D global_polygon;
   // east- north coordinate

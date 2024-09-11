@@ -7,17 +7,17 @@
 #include <string>
 #include <utility>
 
+#include "h_cost.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
 #include "src/common/ifly_time.h"
-#include "h_cost.h"
 
+#include "./../reeds_shepp/rs_path_interpolate.h"
+#include "ad_common/math/math_utils.h"
 #include "transform2d.h"
 #include "utils_math.h"
-#include "ad_common/math/math_utils.h"
-#include "./../reeds_shepp/rs_path_interpolate.h"
 
 namespace planning {
 
@@ -244,7 +244,8 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
     if (rs_path_.total_length < 0.01 || !is_connected_to_goal) {
       ILOG_INFO << "rs path fail";
 
-      continue;;
+      continue;
+      ;
     }
 
     // check gear
@@ -315,7 +316,7 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
     // collision check
     size_t collision_id = GetPathCollisionIndex(result);
     if (collision_id > 2) {
-      collision_id -=2;
+      collision_id -= 2;
     }
 
     size_t path_safe_point_id = std::min(expected_dist_id, collision_id);
@@ -381,7 +382,6 @@ bool HybridAStar::AnalyticExpansion(Node3d* current_node) {
 
   // request check
   if (request_.first_action_request.has_request) {
-
     // start node rs gear is not expectation
     if (current_node->IsStartNode()) {
       if (request_.first_action_request.gear_request !=
@@ -440,17 +440,17 @@ bool HybridAStar::AnalyticExpansion(Node3d* current_node) {
     return false;
   }
 
-  // gear check
-  // for vertical space park in, the last rs segment gear must be reverse
-  // todo, for other parking type, use different rules in parking scenerio
-  // decider module.
-  // size_t end_path_seg_id = reeds_shepp_to_end->segs_lengths.size() - 1;
-  // if (reeds_shepp_to_end->segs_lengths[end_path_seg_id] > 0.0) {
-  //   ILOG_INFO << " rs last path seg gear is d ";
-  //   return false;
-  // }
+    // gear check
+    // for vertical space park in, the last rs segment gear must be reverse
+    // todo, for other parking type, use different rules in parking scenerio
+    // decider module.
+    // size_t end_path_seg_id = reeds_shepp_to_end->segs_lengths.size() - 1;
+    // if (reeds_shepp_to_end->segs_lengths[end_path_seg_id] > 0.0) {
+    //   ILOG_INFO << " rs last path seg gear is d ";
+    //   return false;
+    // }
 
-  // interpolation
+    // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -523,14 +523,14 @@ bool HybridAStar::AnalyticExpansion(Node3d* current_node) {
   return true;
 }
 
-bool HybridAStar::IsAllPathSegmentLongEnough(
-    const RSPath* reeds_shepp_to_end, const double father_node_dist) {
+bool HybridAStar::IsAllPathSegmentLongEnough(const RSPath* reeds_shepp_to_end,
+                                             const double father_node_dist) {
   double same_gear_path_min_dist;
 
   // 双指针搜索
   int rs_path_seg_size = reeds_shepp_to_end->size;
-  int left_pointer_id  = 0;
-  int right_pointer_id  = 1;
+  int left_pointer_id = 0;
+  int right_pointer_id = 1;
 
   while (left_pointer_id < rs_path_seg_size) {
     AstarPathGear gear = reeds_shepp_to_end->paths[left_pointer_id].gear;
@@ -572,8 +572,8 @@ bool HybridAStar::IsRsPathFirstSegmentLongEnough(
   double same_gear_path_min_dist;
 
   int rs_path_seg_size = reeds_shepp_to_end->size;
-  int left_pointer_id  = 0;
-  int right_pointer_id  = 1;
+  int left_pointer_id = 0;
+  int right_pointer_id = 1;
 
   AstarPathGear gear = reeds_shepp_to_end->paths[left_pointer_id].gear;
   double len = reeds_shepp_to_end->paths[left_pointer_id].length;
@@ -588,9 +588,8 @@ bool HybridAStar::IsRsPathFirstSegmentLongEnough(
   // search same gear path
   for (right_pointer_id = left_pointer_id + 1;
        right_pointer_id < rs_path_seg_size; right_pointer_id++) {
-
     // same gear
-    if (gear == reeds_shepp_to_end->paths[right_pointer_id].gear ) {
+    if (gear == reeds_shepp_to_end->paths[right_pointer_id].gear) {
       same_gear_path_min_dist +=
           std::fabs(reeds_shepp_to_end->paths[right_pointer_id].length);
 
@@ -600,7 +599,8 @@ bool HybridAStar::IsRsPathFirstSegmentLongEnough(
   }
 
   if (same_gear_path_min_dist < rs_path_seg_advised_dist) {
-    // ILOG_INFO << " rs path first seg len is small " << same_gear_path_min_dist;
+    // ILOG_INFO << " rs path first seg len is small " <<
+    // same_gear_path_min_dist;
     return false;
   }
 
@@ -667,15 +667,15 @@ bool HybridAStar::RSPathCollisionCheck(Node3d* current_node,
     return false;
   }
 
-  // collision check
+    // collision check
 #if LOG_TIME_PROFILE
   double check_start_time = IflyTime::Now_ms();
 #endif
 
   bool is_valid = IsRSPathSafeByEDT(reeds_shepp_to_end, &rs_end_node_);
   // if (!is_valid) {
-    // ILOG_INFO << "rs collision "
-    //           << static_cast<int>(rs_end_node_.GetConstCollisionType());
+  // ILOG_INFO << "rs collision "
+  //           << static_cast<int>(rs_end_node_.GetConstCollisionType());
   // }
 
 #if LOG_TIME_PROFILE
@@ -720,7 +720,7 @@ bool HybridAStar::ValidityCheckByConvex(Node3d* node) {
   bool is_collision = false;
   cdl::AABB path_point_aabb;
 
-  Polygon2D *veh_local_polygon = GetVehPolygon(node->GetGearType());
+  Polygon2D* veh_local_polygon = GetVehPolygon(node->GetGearType());
 
   for (size_t i = check_start_index; i < node_step_size; ++i) {
     // check bound
@@ -731,8 +731,7 @@ bool HybridAStar::ValidityCheckByConvex(Node3d* node) {
 
     global_pose = path.points[i];
 
-    RULocalPolygonToGlobal(&global_polygon, veh_local_polygon,
-                                &global_pose);
+    RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
 
     GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
     if (clear_zone_.IsContain(path_point_aabb)) {
@@ -911,9 +910,8 @@ void HybridAStar::DebugEDTCheck(HybridAStarResult* path) {
     global_pose.theta = path->phi[i];
     tf.SetBasePose(global_pose);
 
-    RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon,
-                                     &global_pose, tf.GetCosTheta(),
-                                     tf.GetSinTheta());
+    RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon, &global_pose,
+                               tf.GetCosTheta(), tf.GetSinTheta());
 
     GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
     if (clear_zone_.IsContain(path_point_aabb)) {
@@ -928,7 +926,6 @@ void HybridAStar::DebugEDTCheck(HybridAStarResult* path) {
     }
 
     if (edt_->IsCollisionForPoint(&tf, gear)) {
-
       ILOG_INFO << "collision";
 
       break;
@@ -989,8 +986,7 @@ bool HybridAStar::IsRSPathSafeByConvexHull(const RSPath* reeds_shepp_path,
 
       veh_local_polygon = GetVehPolygon(segment->gear);
 
-      RULocalPolygonToGlobal(&global_polygon, veh_local_polygon,
-                                  &global_pose);
+      RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
 
       GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
       if (clear_zone_.IsContain(path_point_aabb)) {
@@ -1055,7 +1051,6 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
   // configuration of search problem
   size_t check_start_index = 0;
 
-
   Polygon2D global_polygon;
   Pose2D global_pose;
   // bool is_collision;
@@ -1092,8 +1087,8 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
       // ILOG_INFO << "gear " << PathGearDebugString(segment->gear);
 
       RULocalPolygonToGlobalFast(&global_polygon, veh_local_polygon,
-                                       &global_pose, tf.GetCosTheta(),
-                                       tf.GetSinTheta());
+                                 &global_pose, tf.GetCosTheta(),
+                                 tf.GetSinTheta());
 
       GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
       if (clear_zone_.IsContain(path_point_aabb)) {
@@ -1143,7 +1138,6 @@ size_t HybridAStar::GetPathCollisionIndex(HybridAStarResult* result) {
   for (size_t i = 0; i <= path_end_id; ++i) {
     // check bound
     if (IsPointBeyondBound(result->x[i], result->y[i])) {
-
       collision_index = i;
       break;
     }
@@ -1220,12 +1214,11 @@ void HybridAStar::GetPathByBicycleModel(NodePath* path, const double arc,
 
   path->path_dist = 0;
 
-  Pose2D *old_point;
+  Pose2D* old_point;
   old_point = &path->points[0];
 
   for (int i = 0; i < path_point_num; ++i) {
-    UpdatePoseBySamplingNumber(old_point, radius,
-                               kinetics_model_number,
+    UpdatePoseBySamplingNumber(old_point, radius, kinetics_model_number,
                                &path->points[path->point_size], is_forward);
 
     old_point = &path->points[path->point_size];
@@ -1261,8 +1254,8 @@ void HybridAStar::GetPathByCircle(NodePath* path, const double arc,
   // interpolate
   path->path_dist = 0;
 
-  Pose2D *start_pose;
-  Pose2D *next_pose;
+  Pose2D* start_pose;
+  Pose2D* next_pose;
   start_pose = &path->points[0];
 
   double acc_s = 0.0;
@@ -1307,8 +1300,8 @@ void HybridAStar::GetPathByLine(NodePath* path, const double arc,
   unit_vector.x = std::cos(path->points[0].GetPhi());
   unit_vector.y = std::sin(path->points[0].GetPhi());
 
-  Pose2D *start_pose = &path->points[0];
-  Pose2D *next_pose;
+  Pose2D* start_pose = &path->points[0];
+  Pose2D* next_pose;
 
   for (int j = 0; j < path_point_num; j++) {
     next_pose = &path->points[path->point_size];
@@ -1316,7 +1309,8 @@ void HybridAStar::GetPathByLine(NodePath* path, const double arc,
 
     GetStraightLinePoint(next_pose, start_pose, acc_s, &unit_vector);
 
-    // ILOG_INFO << "start " << state_next->x << " " << state_next->y << " acc_s "
+    // ILOG_INFO << "start " << state_next->x << " " << state_next->y << " acc_s
+    // "
     //           << acc_s;
 
     path->point_size++;
@@ -1459,7 +1453,7 @@ void HybridAStar::CalculateNodeHeuristicCost(Node3d* father_node,
     rs_path_cost = GenerateHeuristicCostByRsPath(next_node, &cost);
   }
 
-  optimal_path_cost  = std::max(dp_path_cost, rs_path_cost);
+  optimal_path_cost = std::max(dp_path_cost, rs_path_cost);
 
   // heading cost
   double ref_line_heading_cost = 0.0;
@@ -1500,8 +1494,8 @@ void HybridAStar::CalculateNodeGCost(Node3d* current_node, Node3d* next_node) {
   return;
 }
 
-double HybridAStar::GenerateHeuristicCostByRsPath(
-    Node3d* next_node, NodeHeuristicCost* cost) {
+double HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
+                                                  NodeHeuristicCost* cost) {
   RSPathRequestType rs_request = RSPathRequestType::none;
   if (!CalcRSPathToGoal(next_node, false, rs_request,
                         vehicle_param_.min_turn_radius)) {
@@ -1538,7 +1532,7 @@ double HybridAStar::GenerateHeuristicCostByRsPath(
 
   // gear cost
   if (next_node->GetGearType() != rs_path_.paths[0].gear) {
-      gear_cost += config_.traj_gear_switch_penalty;
+    gear_cost += config_.traj_gear_switch_penalty;
   }
 
   // steer cost
@@ -1623,7 +1617,7 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
 
 double HybridAStar::ObstacleHeuristicWithHolonomic(Node3d* next_node) {
   return dp_heuristic_generator_->CheckDpMap(next_node->GetX(),
-                                                      next_node->GetY());
+                                             next_node->GetY());
 }
 
 double HybridAStar::GenerateHeuristicCost(Node3d* next_node) {
@@ -1654,9 +1648,8 @@ double HybridAStar::GenerateRefLineHeuristicCost(Node3d* next_node,
   double theta2 = ref_line_.GetHeading();
 
   double heading_cost_weight = 2.0;
-  double heading_cost =
-      dist_to_go +
-      std::fabs(GetThetaDiff(theta1, theta2)) * heading_cost_weight;
+  double heading_cost = dist_to_go + std::fabs(GetThetaDiff(theta1, theta2)) *
+                                         heading_cost_weight;
 
   // double heading_cost = std::fabs(GetThetaDiff(theta1, theta2)) *
   //                       config_.ref_line_heading_penalty;
@@ -1782,11 +1775,12 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
   AstarPathGear gear;
   if (child_node != nullptr && child_node->IsRsPath()) {
     for (int seg_id = 0; seg_id < rs_path_.size; seg_id++) {
-      const RSPathSegment *segment = &rs_path_.paths[seg_id];
+      const RSPathSegment* segment = &rs_path_.paths[seg_id];
 
       if (segment->size < 1) {
         ILOG_ERROR << "result size check failed";
-        continue;;
+        continue;
+        ;
       }
 
       gear = segment->gear;
@@ -1862,7 +1856,7 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
 }
 
 void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
-                                                 const Pose2D& astar_end) {
+                                        const Pose2D& astar_end) {
   if (result->x.size() < 1) {
     ILOG_INFO << "no path";
     return;
@@ -1964,7 +1958,8 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
 
   shrink_map_bounds_ = XYbounds_;
   // ILOG_INFO << "map bound,xmin " << shrink_map_bounds_.x_min << " , ymin "
-  //           << shrink_map_bounds_.y_min << " ,xmax " << shrink_map_bounds_.x_max
+  //           << shrink_map_bounds_.y_min << " ,xmax " <<
+  //           shrink_map_bounds_.x_max
   //           << " , ymax " << shrink_map_bounds_.y_max << " car_half_width_ "
   //           << car_half_width_;
 
@@ -1973,7 +1968,8 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   shrink_map_bounds_.y_min += car_half_width_;
   shrink_map_bounds_.y_max -= car_half_width_;
   // ILOG_INFO << "map bound,xmin " << shrink_map_bounds_.x_min << " , ymin "
-  //           << shrink_map_bounds_.y_min << " ,xmax " << shrink_map_bounds_.x_max
+  //           << shrink_map_bounds_.y_min << " ,xmax " <<
+  //           shrink_map_bounds_.x_max
   //           << " , ymax " << shrink_map_bounds_.y_max;
 
   clear_zone_.GenerateBoundingBox(start, obstacles_);
@@ -2187,7 +2183,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -2266,7 +2262,6 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
       } else if (vis_type == AstarNodeVisitedType::in_open) {
         // in open set and need update
         if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
-
           CalculateNodeHeuristicCost(current_node, &new_node);
 
           h_cost_rs_path_num++;
@@ -2434,14 +2429,17 @@ void HybridAStar::DebugObstacleString() const {
   // ILOG_INFO << "obs size " << obstacles_->obs_list.size();
 
   // for (size_t i = 0; i < obstacles_->obs_list.size(); i++) {
-  //   ILOG_INFO << "type " << static_cast<int>(obstacles_->obs_list[i].obs_type)
+  //   ILOG_INFO << "type " <<
+  //   static_cast<int>(obstacles_->obs_list[i].obs_type)
   //             << "pt size " << obstacles_->obs_list[i].polygons.size();
 
   //   for (size_t j = 0; j < obstacles_->obs_list[i].polygons.size(); j++) {
   //     ILOG_INFO << " r " << obstacles_->obs_list[i].polygons[j].radius
-  //               << " center " << obstacles_->obs_list[i].polygons[j].center_pt.x
+  //               << " center " <<
+  //               obstacles_->obs_list[i].polygons[j].center_pt.x
   //               << " " << obstacles_->obs_list[i].polygons[j].center_pt.y
-  //               << "pt size" << obstacles_->obs_list[i].polygons[j].vertex_num;
+  //               << "pt size" <<
+  //               obstacles_->obs_list[i].polygons[j].vertex_num;
   //   }
   // }
 
@@ -2452,7 +2450,8 @@ void HybridAStar::DebugPathString(const HybridAStarResult* result) const {
   // ILOG_INFO << "result, x size " << result->x.size() << " gear size "
   //           << result->gear.size() << "y size " << result->y.size()
   //           << "phi size " << result->phi.size() << "type size "
-  //           << result->type.size() << "s size " << result->accumulated_s.size();
+  //           << result->type.size() << "s size " <<
+  //           result->accumulated_s.size();
 
   // for (size_t i = 0; i < result->x.size(); i++) {
   //   ILOG_INFO << "i " << i << " x,y, theta, gear:  " << result->x[i] << " "
@@ -2468,8 +2467,8 @@ void HybridAStar::DebugPathString(const HybridAStarResult* result) const {
 }
 
 void HybridAStar::DebugRSPath(const RSPath* reeds_shepp_path) {
-  ILOG_INFO << "rs seg size " << reeds_shepp_path->size
-            << " total len " << reeds_shepp_path->total_length;
+  ILOG_INFO << "rs seg size " << reeds_shepp_path->size << " total len "
+            << reeds_shepp_path->total_length;
 
   for (int i = 0; i < reeds_shepp_path->size; i++) {
     ILOG_INFO << "rs seg len " << reeds_shepp_path->paths[i].length << " steer "
@@ -2600,9 +2599,8 @@ const std::vector<RSPath>& HybridAStar::GetRSPathHeuristic() const {
   return rs_path_h_cost_debug_;
 }
 
-void HybridAStar::KineticsModel(const Pose2D* old_pose,
-                                const double radius, Pose2D* pose,
-                                const bool is_forward) {
+void HybridAStar::KineticsModel(const Pose2D* old_pose, const double radius,
+                                Pose2D* pose, const bool is_forward) {
   double dist = is_forward ? kinetics_model_step_ : -kinetics_model_step_;
   pose->x = old_pose->x + dist * std::cos(old_pose->theta);
   pose->y = old_pose->y + dist * std::sin(old_pose->theta);
@@ -2705,7 +2703,7 @@ int HybridAStar::InterpolateByArcOffset(Pose2D* pose,
   return 1;
 }
 
-  // radius: if left turn, radius is positive
+// radius: if left turn, radius is positive
 int HybridAStar::GetVehCircleByPose(VehicleCircle* veh_circle,
                                     const Pose2D* pose, const double radius,
                                     const AstarPathGear gear) {

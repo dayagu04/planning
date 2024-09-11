@@ -11,7 +11,7 @@ class AstarDecider {
 
   virtual ~AstarDecider() = default;
 
-  const std::string& Name() const;
+  const std::string &Name() const;
 
   virtual void Process(const Pose2D &start, const Pose2D &end);
 

@@ -37,7 +37,7 @@ class Node2d {
   Node2d() {}
 
   Node2d(const double x, const double y, const double inv_xy_resolution,
-         const MapBound& XYbounds,const int32_t id) {
+         const MapBound& XYbounds, const int32_t id) {
     // XYbounds with xmin, xmax, ymin, ymax
 
     x_ = x;
@@ -46,7 +46,7 @@ class Node2d {
     grid_index_.x = std::round((x - XYbounds.x_min) * inv_xy_resolution);
     grid_index_.y = std::round((y - XYbounds.y_min) * inv_xy_resolution);
 
-    id_  = id;
+    id_ = id;
   }
 
   Node2d(const int grid_x, const int grid_y, const MapBound& XYbounds,
@@ -68,7 +68,7 @@ class Node2d {
     grid_index_.x = std::round((x - XYbounds.x_min) * inv_xy_resolution);
     grid_index_.y = std::round((y - XYbounds.y_min) * inv_xy_resolution);
 
-    id_  = id;
+    id_ = id;
 
     cost_ = 0.0;
   }
@@ -111,8 +111,8 @@ class Node2d {
   }
 
   static std::string CalcStringIndex(const double x, const double y,
-                               const double xy_resolution,
-                               const MapBound& XYbounds) {
+                                     const double xy_resolution,
+                                     const MapBound& XYbounds) {
     // XYbounds with xmin, xmax, ymin, ymax
     int grid_x = std::round((x - XYbounds.x_min) / xy_resolution);
     int grid_y = std::round((y - XYbounds.y_min) / xy_resolution);
@@ -122,15 +122,15 @@ class Node2d {
 
   bool operator==(const Node2d& right) const {
     if (right.GetGridX() != x_ || right.GetGridY() != y_) {
-      return  false;
+      return false;
     }
 
     return true;
   }
 
   void Clear(const int grid_x, const int grid_y) {
-    grid_index_.x  = grid_x;
-    grid_index_.y  = grid_y;
+    grid_index_.x = grid_x;
+    grid_index_.y = grid_y;
 
     x_ = 0.0;
     y_ = 0.0;
@@ -173,9 +173,7 @@ class Node2d {
 
   const AstarNodeVisitedType GetVisitedType() { return visited_type_; }
 
-  void SetIter(std::multimap<double, Node2d*>::iterator i) {
-    open_set_it_ = i;
-  }
+  void SetIter(std::multimap<double, Node2d*>::iterator i) { open_set_it_ = i; }
 
   std::multimap<double, Node2d*>::iterator GetOpenSetIter() {
     return open_set_it_;

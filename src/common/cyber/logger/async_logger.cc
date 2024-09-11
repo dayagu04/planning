@@ -21,8 +21,8 @@
 #include <thread>
 #include <unordered_map>
 
-#include "logger_util.h"
 #include "log_macros.h"
+#include "logger_util.h"
 
 namespace planning {
 namespace cyber {
@@ -126,4 +126,4 @@ void AsyncLogger::FlushBuffer(const std::unique_ptr<std::deque<Msg>>& buffer) {
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning

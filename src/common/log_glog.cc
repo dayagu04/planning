@@ -77,26 +77,26 @@ void InitGlog(const char *file) {
     //  google::InstallFailureSignalHandler();
     //  google::InstallFailureWriter(&SignalHandler);
 
-     google::InitGoogleLogging("");
-     google::SetLogDestination(google::ERROR, "");
-     google::SetLogDestination(google::WARNING, "");
-     google::SetLogDestination(google::FATAL, "");
+    google::InitGoogleLogging("");
+    google::SetLogDestination(google::ERROR, "");
+    google::SetLogDestination(google::WARNING, "");
+    google::SetLogDestination(google::FATAL, "");
 
-     // Init async logger
-     async_logger_ = new planning::cyber::logger::AsyncLogger(
-         google::base::GetLogger(FLAGS_minloglevel));
+    // Init async logger
+    async_logger_ = new planning::cyber::logger::AsyncLogger(
+        google::base::GetLogger(FLAGS_minloglevel));
 
-     google::base::SetLogger(FLAGS_minloglevel, async_logger_);
+    google::base::SetLogger(FLAGS_minloglevel, async_logger_);
 
-     async_logger_->Start();
+    async_logger_->Start();
 
-     auto thread = const_cast<std::thread *>(async_logger_->LogThread());
-     // apollo::cyber::scheduler::Instance()->SetInnerThreadAttr("async_log",
-     //                                                          thread);
+    auto thread = const_cast<std::thread *>(async_logger_->LogThread());
+    // apollo::cyber::scheduler::Instance()->SetInnerThreadAttr("async_log",
+    //                                                          thread);
 
-     FLAGS_stop_logging_if_full_disk = true;
-     ILOG_INFO << "glog init ";
-     glog_flag_.is_init = true;
+    FLAGS_stop_logging_if_full_disk = true;
+    ILOG_INFO << "glog init ";
+    glog_flag_.is_init = true;
   }
 
   return;

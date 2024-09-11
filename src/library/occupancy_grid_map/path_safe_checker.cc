@@ -48,7 +48,7 @@ void PathSafeChecker::Excute(
   Transform2d tf;
   PolygonFootPrint* tmp_foot_print;
 
-  // 做安全检查时，使用不同安全宽度. 
+  // 做安全检查时，使用不同安全宽度.
   double advised_lat_buffer = 0.2;
   global_pose = ego_pose;
   tf.SetBasePose(global_pose);

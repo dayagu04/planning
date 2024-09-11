@@ -3,12 +3,11 @@
 
 #include <cmath>
 
-#include "reeds_shepp.h"
+#include "./../hybrid_astar_lib/hybrid_astar_common.h"
 #include "log_glog.h"
 #include "math_utils.h"
 #include "pose2d.h"
-#include "./../hybrid_astar_lib/hybrid_astar_common.h"
-
+#include "reeds_shepp.h"
 
 namespace planning {
 #define DEBUG_RS_INTERPOLATE (0)
@@ -75,10 +74,12 @@ int RSPathInterpolator::CalcShortestRSPathKappa(
   return 0;
 }
 
-int RSPathInterpolator::CalcSCSPathKappa(
-    RSPathKappaParam *kappa_list, const Pose2D *start_pose,
-    const Pose2D *goal_pose, double min_turn_radius,
-    const double inverse_radius, const RSPathRequestType request_type) {
+int RSPathInterpolator::CalcSCSPathKappa(RSPathKappaParam *kappa_list,
+                                         const Pose2D *start_pose,
+                                         const Pose2D *goal_pose,
+                                         double min_turn_radius,
+                                         const double inverse_radius,
+                                         const RSPathRequestType request_type) {
   bool is_same;
   RSPathParam *path;
   RSPathInfo *path_info = GetRSPathGlobalInfo();
@@ -151,7 +152,6 @@ int RSPathInterpolator::CalcRSPathKappa(RSPathKappaParam *kappa_list,
       kappa_list->size++;
     }
   }
-
 
 #if DEBUG_RS_INTERPOLATE
   ILOG_INFO << "size " << kappa_list->size;
@@ -249,7 +249,6 @@ int RSPathInterpolator::InterpolateByKappa(RSPoint *next_point,
                                            const RSPoint *point,
                                            const AstarPathGear dir,
                                            const double abs_len) {
-
   if (!ifly_fequal(point->kappa, 0.0)) {
     GetCirclePoint(next_point, point, dir, abs_len);
   } else {
@@ -511,14 +510,15 @@ int RSPathInterpolator::PathSegmentInterpolateByLine(
 
     acc_s += inc_dist;
     if (!ifly_fless(acc_s, abs_length)) {
-      acc_s  = abs_length;
+      acc_s = abs_length;
       is_last = true;
     }
 
     GetStraightLinePoint(state_next, start_pose, path->points[0].dir, acc_s,
                          &unit_vector);
 
-    // ILOG_INFO << "start " << state_next->x << " " << state_next->y << " acc_s "
+    // ILOG_INFO << "start " << state_next->x << " " << state_next->y << " acc_s
+    // "
     //           << acc_s;
 
     path->size++;

@@ -4,9 +4,8 @@
 
 namespace planning {
 
-int viz_func_state_machine(
-    const FuncStateMachine::FuncStateMachine &state, viz2d_image *viz2d,
-    const Pose2D *veh_pose) {
+int viz_func_state_machine(const FuncStateMachine::FuncStateMachine &state,
+                           viz2d_image *viz2d, const Pose2D *veh_pose) {
   CvPoint text_center;
 
   text_center.x = 100;
@@ -216,4 +215,4 @@ int viz2d_draw_control_commond_info(viz2d_image *viz2d, const double acc,
   return 0;
 }
 
-}
+}  // namespace planning

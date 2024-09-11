@@ -1,11 +1,11 @@
 
 #include "point_cloud_obstacle.h"
 
-#include "pose2d.h"
-#include "transform2d.h"
+#include "./../../modules/apa_function/src/apa_param_setting.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "polygon_base.h"
-#include "./../../modules/apa_function/src/apa_param_setting.h"
+#include "pose2d.h"
+#include "transform2d.h"
 #include "virtual_wall_decider.h"
 
 namespace planning {
@@ -25,7 +25,7 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
 
   // hack: delete obstacle around ego and slot. In the future, it will be
   // retired.
-  const apa_planner::ApaParameters &config = apa_param.GetParam();
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
   Polygon2D ego_local_polygon;
   Polygon2D ego_global_polygon;
   double veh_x_buffer = 0.3;
@@ -45,18 +45,19 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
     return 0;
   }
 
-  ILOG_INFO << "obs, size: " << obs_list.point_cloud_list.size()
-            << ", fusion_object_num: "
-            << (size_t)(local_view->fusion_objects_info.fusion_object_size)
-            << ", ground_lines_size: "
-            << static_cast<size_t>(
-                   local_view->ground_line_perception.ground_lines_size)
-            << ", fusion_occupancy_objects_info size: "
-            << (size_t)(
-                   local_view->fusion_occupancy_objects_info.fusion_object_size);
+  ILOG_INFO
+      << "obs, size: " << obs_list.point_cloud_list.size()
+      << ", fusion_object_num: "
+      << (size_t)(local_view->fusion_objects_info.fusion_object_size)
+      << ", ground_lines_size: "
+      << static_cast<size_t>(
+             local_view->ground_line_perception.ground_lines_size)
+      << ", fusion_occupancy_objects_info size: "
+      << (size_t)(local_view->fusion_occupancy_objects_info.fusion_object_size);
 
-  uint8_t number = local_view->fusion_occupancy_objects_info.fusion_object_size +
-                  local_view->ground_line_perception.ground_lines_size;
+  uint8_t number =
+      local_view->fusion_occupancy_objects_info.fusion_object_size +
+      local_view->ground_line_perception.ground_lines_size;
 
   obs_list.point_cloud_list.resize(number);
 
@@ -197,18 +198,19 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
     return;
   }
 
-  ILOG_INFO << "obs, size: " << obs_list.point_cloud_list.size()
-            << ", fusion_object_num: "
-            << (size_t)(local_view->fusion_objects_info.fusion_object_size)
-            << ", ground_lines_size: "
-            << static_cast<size_t>(
-                   local_view->ground_line_perception.ground_lines_size)
-            << ", fusion_occupancy_objects_info size: "
-            << (size_t)(
-                   local_view->fusion_occupancy_objects_info.fusion_object_size);
+  ILOG_INFO
+      << "obs, size: " << obs_list.point_cloud_list.size()
+      << ", fusion_object_num: "
+      << (size_t)(local_view->fusion_objects_info.fusion_object_size)
+      << ", ground_lines_size: "
+      << static_cast<size_t>(
+             local_view->ground_line_perception.ground_lines_size)
+      << ", fusion_occupancy_objects_info size: "
+      << (size_t)(local_view->fusion_occupancy_objects_info.fusion_object_size);
 
-  uint8_t number = local_view->fusion_occupancy_objects_info.fusion_object_size +
-                  local_view->ground_line_perception.ground_lines_size;
+  uint8_t number =
+      local_view->fusion_occupancy_objects_info.fusion_object_size +
+      local_view->ground_line_perception.ground_lines_size;
 
   obs_list.point_cloud_list.resize(number);
 

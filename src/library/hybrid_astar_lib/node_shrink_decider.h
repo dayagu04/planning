@@ -22,7 +22,6 @@ class NodeShrinkDecider : public AstarDecider {
   bool IsLegalForHeading(const double heading);
 
  private:
-
   // [-pi,+pi)
   NodeHeadingShrink heading_shrink_;
 };

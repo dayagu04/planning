@@ -18,5 +18,4 @@ struct NodeHeuristicCost {
   double total_cost;
 };
 
-
 }  // namespace planning

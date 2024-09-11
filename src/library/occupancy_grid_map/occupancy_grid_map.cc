@@ -3,8 +3,8 @@
 
 #include <cstdint>
 
-#include "pose2d.h"
 #include "ogm_common.h"
+#include "pose2d.h"
 
 namespace planning {
 

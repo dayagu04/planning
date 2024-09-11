@@ -11,14 +11,14 @@
 
 #include "ad_common/math/box2d.h"
 
+#include "./../../modules/common/config/vehicle_param.h"
+#include "g_cost.h"
+#include "h_cost.h"
+#include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
 #include "log_glog.h"
-#include "pose2d.h"
-#include "./../../modules/common/config/vehicle_param.h"
 #include "node2d.h"
-#include "hybrid_astar_common.h"
-#include "h_cost.h"
-#include "g_cost.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -53,7 +53,7 @@ struct NodePath {
     points[0].theta = theta;
   }
 
-  NodePath(const Pose2D &pose) {
+  NodePath(const Pose2D& pose) {
     point_size = 1;
     points[0].x = pose.x;
     points[0].y = pose.y;

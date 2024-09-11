@@ -173,9 +173,10 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
       ILOG_INFO << "cur_fvalue:" << cur_fvalue << ", ftol:" << ftol;
 
       if (ftol < sqp_ftol_) {
-        ILOG_INFO << "merit function value converges at sub iter num " << sub_itr;
+        ILOG_INFO << "merit function value converges at sub iter num "
+                  << sub_itr;
         ILOG_INFO << "merit function value converges to " << cur_fvalue
-              << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
+                  << ", with ftol " << ftol << ", under max_ftol " << sqp_ftol_;
         fconverged = true;
         break;
       }
@@ -197,8 +198,8 @@ bool FemPosDeviationSqpOsqpInterface::Solve() {
 
     ctol = CalculateConstraintViolation(opt_xy_);
 
-    ILOG_INFO << "ctol is " << ctol << ", pre_ctol:" << pre_ctol << ", at pen itr "
-          << pen_itr;
+    ILOG_INFO << "ctol is " << ctol << ", pre_ctol:" << pre_ctol
+              << ", at pen itr " << pen_itr;
 
     if (ctol < sqp_ctol_) {
       ILOG_INFO << "constraint satisfied";

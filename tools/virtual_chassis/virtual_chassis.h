@@ -4,9 +4,9 @@
 #include <Eigen/Dense>
 #include <cmath>
 
+#include "config/vehicle_param.h"
 #include "localization.pb.h"
 #include "pose2d.h"
-#include "config/vehicle_param.h"
 #include "vehicle_service.pb.h"
 #include "virtual_chassis_state.h"
 
@@ -80,7 +80,7 @@ class VirtualChassis {
       const LocalizationOutput::Quaternion &orientation,
       const Eigen::Vector3d &rotated) {
     Eigen::Quaterniond quaternion(orientation.qw(), orientation.qx(),
-                                         orientation.qy(), orientation.qz());
+                                  orientation.qy(), orientation.qz());
 
     return static_cast<Eigen::Vector3d>(
         quaternion.toRotationMatrix().inverse() * rotated);

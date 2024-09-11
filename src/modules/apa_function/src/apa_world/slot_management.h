@@ -24,13 +24,13 @@
 #include "fusion_parking_slot_c.h"
 #include "geometry_math.h"
 #include "local_view.h"
+#include "log_glog.h"
 #include "perpendicular_path_in_planner.h"
 #include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
 #include "task_basic_types.pb.h"
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
-#include "log_glog.h"
 
 static const size_t slot_corner_pt_nums = 4;
 

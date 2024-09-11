@@ -11,7 +11,8 @@ namespace apa_planner {
 class PerpendicularParkHeadingInPlanner : public PerpendicularParkPlanner {
  public:
   PerpendicularParkHeadingInPlanner() = default;
-  PerpendicularParkHeadingInPlanner(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
+  PerpendicularParkHeadingInPlanner(
+      const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
   }
   virtual void Reset() override;

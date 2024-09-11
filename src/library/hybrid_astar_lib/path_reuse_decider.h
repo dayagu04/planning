@@ -20,7 +20,7 @@ class PathReuseDecider : public AstarDecider {
   const bool IsReusePath();
 
  private:
- bool reuse_path_;
+  bool reuse_path_;
 };
 
 }  // namespace planning

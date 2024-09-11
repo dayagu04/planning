@@ -65,7 +65,7 @@ void PathReuseDecider::Process(HybridAStarResult* path,
 
 const bool PathReuseDecider::IsReusePath() { return reuse_path_; }
 
-void PathReuseDecider::Process(const Pose2D &start, const Pose2D &end) {
+void PathReuseDecider::Process(const Pose2D& start, const Pose2D& end) {
   AstarDecider::Process(start, end);
 
   return;

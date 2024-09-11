@@ -3,12 +3,7 @@
 
 namespace planning {
 
-enum class ChassisGearMode {
-  park = 0,
-  normal,
-  drive,
-  reverse
-};
+enum class ChassisGearMode { park = 0, normal, drive, reverse };
 
 enum class ChassisControlMode {
   none = 0,

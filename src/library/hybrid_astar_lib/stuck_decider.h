@@ -2,7 +2,6 @@
 
 namespace planning {
 
-
 class StuckDecider {
  public:
   StuckDecider() = default;

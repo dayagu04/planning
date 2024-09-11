@@ -21,9 +21,12 @@ if "http" in bag_file:
     file_path = f"/root/planning/{task_id}_{scene_lib_id}_{case_id}.bag"
     command = 'curl ' + '"' + bag_file + '"' + ' -o ' + file_path
     try:
-        subprocess.run(command, shell=True, text=True, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Downloading bag error: {e.output}")
+        result = subprocess.run(command, shell=True, text=True, check=True)
+    except Exception as e:
+        print(f"Downloading bag error: {e}")
+        sys.exit(1)
+    if (result.returncode != 0):
+        print(f"Downloading bag error")
         sys.exit(1)
 else:
     if os.path.exists(bag_file):
@@ -48,20 +51,23 @@ mileage_path = f"{out_dir}/case_result.json"
 command = export_command + f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {mileage_path} --close-loop --interface-check --no-version-check'"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True, capture_output=True)
-except subprocess.CalledProcessError as e:
-    print(f"Runing PP error: {e.output}")
-    sys.exit(1)
+except Exception as e:
+    print(f"Runing PP error: {e}")
 if (result.returncode != 0):
     print(f"Runing PP error")
+if not os.path.exists(PP_bag):
     sys.exit(1)
 print("Run PP successfully !")
 
 # 运行checker
 command = f"cd /root/common_tools/ && git fetch && git checkout -b {task_id}_{scene_lib_id}_{case_id} origin/{common_tools_branch}"
 try:
-    subprocess.run(command, shell=True, text=True, check=True)
-except subprocess.CalledProcessError as e:
-    print(f"Pulling common_tools error: {e.output}")
+    result = subprocess.run(command, shell=True, text=True, check=True)
+except Exception as e:
+    print(f"Pulling common_tools error: {e}")
+    sys.exit(1)
+if (result.returncode != 0):
+    print(f"Pulling common_tools error")
     sys.exit(1)
 print("Pulling common_tools successfully !")
 
@@ -81,24 +87,32 @@ print("Update json successfully !")
 
 command = export_command + f"cd {checker_path} && /root/miniconda3/bin/python scc_checker_task.py scc_checker_task.json simulation_mode'"
 try:
-    subprocess.run(command, shell=True, text=True, check=True)
-except subprocess.CalledProcessError as e:
-    print(f"Runing checker error: {e.output}")
+    result = subprocess.run(command, shell=True, text=True, check=True)
+except Exception as e:
+    print(f"Runing checker error: {e}")
+    sys.exit(1)
+if (result.returncode != 0):
+    print(f"Runing checker error")
     sys.exit(1)
 print("Run checker successfully !")
 
 # 生成html
 script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
-command_lat = export_command + f"cd {script_path} && /root/miniconda3/bin/python html_generator.py plot_lat_plan_html {PP_bag}'"
-command_lon = export_command + f"cd {script_path} && /root/miniconda3/bin/python html_generator.py plot_lon_plan_html {PP_bag}'"
-command_behavior = export_command + f"cd {script_path} && /root/miniconda3/bin/python html_generator.py plot_vo_lat_behavior_html {PP_bag}'"
-command_local_view = export_command + f"cd {script_path} && /root/miniconda3/bin/python html_generator.py plot_local_view_html {PP_bag}'"
+command_proto = export_command + f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py'"
+command_lat = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lat_plan_html.py {PP_bag}'"
+command_lon = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lon_plan_html.py {PP_bag}'"
+command_behavior = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_vo_lat_behavior_html.py {PP_bag}'"
+command_local_view = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_local_view_html.py {PP_bag}'"
 try:
-    subprocess.run(command_lat, shell=True, text=True, check=True)
-    subprocess.run(command_lon, shell=True, text=True, check=True)
-    subprocess.run(command_local_view, shell=True, text=True, check=True)
-    subprocess.run(command_behavior, shell=True, text=True, check=True)
-except subprocess.CalledProcessError as e:
-    print(f"Creating html error: {e.output}")
+    result0 = subprocess.run(command_proto, shell=True, text=True, check=True)
+    result1 = subprocess.run(command_lat, shell=True, text=True, check=True)
+    result2 = subprocess.run(command_lon, shell=True, text=True, check=True)
+    result3 = subprocess.run(command_local_view, shell=True, text=True, check=True)
+    result4 = subprocess.run(command_behavior, shell=True, text=True, check=True)
+except Exception as e:
+    print(f"Creating html error: {e}")
+    sys.exit(1)
+if (result0.returncode != 0 or result1.returncode != 0 or result2.returncode != 0 or result3.returncode != 0 or result4.returncode != 0):
+    print(f"Creating html error")
     sys.exit(1)
 print("Creat html successfully !")

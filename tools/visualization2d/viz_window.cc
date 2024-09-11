@@ -3,9 +3,9 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <cyber/time/time.h>
 #include "display_config.h"
 #include "viz2d_geometry.h"
-#include <cyber/time/time.h>
 
 namespace planning {
 static viz2d_image main_window_;
@@ -390,8 +390,6 @@ int viz2d_draw_replay_info(viz2d_image *viz2d, int64_t ratio) {
   return 0;
 }
 
-
-
 static double CalcTurnRadius(double lfr, double steering) {
   double rad = steering;
 
@@ -438,8 +436,8 @@ int viz2d_draw_front_wheel_state(viz2d_image *viz2d, const Pose2D *veh_pose,
   }
 
   inc_angle = inc_dist / ifly_fabs(radius);
-  start_theta = GetThetaByPoint(center_point.x, center_point.y,
-                                         start_point.x, start_point.y);
+  start_theta = GetThetaByPoint(center_point.x, center_point.y, start_point.x,
+                                start_point.y);
 
   end_theta = start_theta;
 

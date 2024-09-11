@@ -3,8 +3,8 @@
 
 #include <algorithm>
 
-#include "log_glog.h"
 #include "./../collision_detection/aabb2d.h"
+#include "log_glog.h"
 
 namespace planning {
 
@@ -12,7 +12,6 @@ bool ObstacleClearZone::IsCollisionForBox(const cdl::AABB& box,
                                           const ParkObstacleList* obstacles) {
   cdl::AABB obs_box;
   for (size_t i = 0; i < obstacles->virtual_obs.size(); i++) {
-
     if (box.contain(obstacles->virtual_obs[i])) {
       return true;
     }

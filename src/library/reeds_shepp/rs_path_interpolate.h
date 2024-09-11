@@ -2,9 +2,9 @@
 #pragma once
 
 #include <cmath>
-#include "reeds_shepp.h"
-#include "pose2d.h"
 #include "./../hybrid_astar_lib/hybrid_astar_common.h"
+#include "pose2d.h"
+#include "reeds_shepp.h"
 #include "rs_path_request.h"
 
 namespace planning {
@@ -51,7 +51,7 @@ struct RSPath {
 
     *point = back_seg->points[back_seg->size - 1];
 
-    return ;
+    return;
   }
 };
 
@@ -94,7 +94,7 @@ class RSPathInterpolator {
                                 double dist_thres);
 
   int UpdateGearSwitchNum(RSPathKappaParam *kappa_list,
-                           const AstarPathGear initial_pose_dir);
+                          const AstarPathGear initial_pose_dir);
 
   int UpdateAnchorPoint(RSAnchorPoints *point_set, const Pose2D *start_pose,
                         const RSPathKappaParam *path_list);
@@ -134,8 +134,6 @@ class RSPathInterpolator {
 
   int InterpolateByKappa(RSPoint *next_point, const RSPoint *point,
                          const AstarPathGear dir, const double abs_len);
-
-
 
   int CopyRSPathKappaParam(RSPathKappaParam *dst_list,
                            const RSPathKappaParam *src_list);

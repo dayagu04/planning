@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include "pose2d.h"
 #include "./../hybrid_astar_lib/hybrid_astar_common.h"
+#include "pose2d.h"
 #include "rs_path_request.h"
 
 namespace planning {

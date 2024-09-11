@@ -196,6 +196,6 @@ class AsyncLogger : public google::base::Logger {
 
 }  // namespace logger
 }  // namespace cyber
-}  // namespace apollo
+}  // namespace planning
 
 #endif  // CYBER_LOGGER_ASYNC_LOGGER_H_

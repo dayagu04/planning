@@ -39,10 +39,10 @@ class CartesianCoordinateSystem {
   Point2D CartCoord2CurCartCoord(const planning::Pose2D& prev_origin,
                                  const Point2D& prev_rel_coord);
   planning::Pose2D CartPose2CurCartPose(const planning::Pose2D& prev_origin,
-                              const planning::Pose2D& prev_rel_pos);
+                                        const planning::Pose2D& prev_rel_pos);
   Point2D CurCartCoord2CartCoord(const planning::Pose2D& future_origin,
                                  const Point2D& cur_rel_coord);
   planning::Pose2D CurCartPose2CartPose(const planning::Pose2D& future_origin,
-                              const planning::Pose2D& cur_rel_pos);
+                                        const planning::Pose2D& cur_rel_pos);
 };
 #endif

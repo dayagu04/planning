@@ -29,8 +29,8 @@ int main(int argc, const char** argv) {
 
   chassis.UpdateChassisPose(&cur_pose, front_wheel_angle, dist, &veh_params);
 
-  std::cout << "pose, x " << cur_pose.x << "y " << cur_pose.y
-            << "heading " << cur_pose.theta << "\n";
+  std::cout << "pose, x " << cur_pose.x << "y " << cur_pose.y << "heading "
+            << cur_pose.theta << "\n";
 
   // test 2
   front_wheel_angle = -M_PI / 4;
@@ -39,8 +39,8 @@ int main(int argc, const char** argv) {
 
   chassis.UpdateChassisPose(&cur_pose, front_wheel_angle, dist, &veh_params);
 
-  std::cout << "pose, x " << cur_pose.x << "y " << cur_pose.y
-            << "heading " << cur_pose.theta << "\n";
+  std::cout << "pose, x " << cur_pose.x << "y " << cur_pose.y << "heading "
+            << cur_pose.theta << "\n";
 
   // test 3
   front_wheel_angle = -M_PI / 4;
@@ -50,8 +50,8 @@ int main(int argc, const char** argv) {
 
   chassis.UpdateChassisPose(&cur_pose, front_wheel_angle, dist, &veh_params);
 
-  std::cout << "pose, x " << cur_pose.x << "y " << cur_pose.y
-            << "heading " << cur_pose.theta << "\n";
+  std::cout << "pose, x " << cur_pose.x << "y " << cur_pose.y << "heading "
+            << cur_pose.theta << "\n";
 
   return 0;
 }

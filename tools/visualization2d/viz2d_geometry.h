@@ -19,9 +19,8 @@ int viz2d_draw_line(viz2d_image *viz2d, const Position2D *start,
                     const Position2D *end, const Pose2D *ref_pose,
                     viz2d_color color_index, int width);
 
-int viz2d_draw_line(viz2d_image *viz2d, const Pose2D *start,
-                    const Pose2D *end, const Pose2D *ref_pose,
-                    viz2d_color color_index, int width);
+int viz2d_draw_line(viz2d_image *viz2d, const Pose2D *start, const Pose2D *end,
+                    const Pose2D *ref_pose, viz2d_color color_index, int width);
 
 int viz2d_draw_direction(viz2d_image *viz2d, const Pose2D *start, double len,
                          const Pose2D *ref_pose, viz2d_color color_index,

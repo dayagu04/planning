@@ -754,108 +754,108 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
 
   EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
 
-    ego_slot_info.target_managed_slot =
-        slot_manager_ptr_->GetEgoSlotInfo().select_slot_filter;
+  ego_slot_info.target_managed_slot =
+      slot_manager_ptr_->GetEgoSlotInfo().select_slot_filter;
 
-    const auto& slot_points =
-        ego_slot_info.target_managed_slot.corner_points().corner_point();
-    std::vector<Eigen::Vector2d> pt;
-    pt.resize(4);
-    for (size_t i = 0; i < 4; ++i) {
-      if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
+  const auto& slot_points =
+      ego_slot_info.target_managed_slot.corner_points().corner_point();
+  std::vector<Eigen::Vector2d> pt;
+  pt.resize(4);
+  for (size_t i = 0; i < 4; ++i) {
+    if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
+        apa_world_ptr_->GetApaDataPtr()
+                ->simu_param.target_managed_slot_x_vec.size() == 4 &&
+        apa_world_ptr_->GetApaDataPtr()->simu_param.use_slot_in_bag) {
+      pt[i] << apa_world_ptr_->GetApaDataPtr()
+                   ->simu_param.target_managed_slot_x_vec[i],
           apa_world_ptr_->GetApaDataPtr()
-                  ->simu_param.target_managed_slot_x_vec.size() == 4 &&
-          apa_world_ptr_->GetApaDataPtr()->simu_param.use_slot_in_bag) {
-        pt[i] << apa_world_ptr_->GetApaDataPtr()
-                     ->simu_param.target_managed_slot_x_vec[i],
-            apa_world_ptr_->GetApaDataPtr()
-                ->simu_param.target_managed_slot_y_vec[i];
-      } else {
-        pt[i] << slot_points[i].x(), slot_points[i].y();
-      }
-    }
-    const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
-    const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
-    const double real_slot_length = (pM01 - pM23).norm();
-    const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
-    // n is vec that slot opening orientation
-    const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
-    // const Eigen::Vector2d n = (pM01 - pM23).normalized();
-    pt[2] = pt[0] - real_slot_length * n;
-    pt[3] = pt[1] - real_slot_length * n;
-
-    ego_slot_info.slot_corner = pt;
-
-    ego_slot_info.slot_center = (pt[0] + pt[1] + pt[2] + pt[3]) * 0.25;
-
-    // const double virtual_slot_length =
-    //     apa_param.GetParam().car_length +
-    //     apa_param.GetParam().slot_compare_to_car_length;
-
-    // const double use_slot_length =
-    //     std::min(real_slot_length, virtual_slot_length);
-
-    const double use_slot_length = real_slot_length;
-
-    ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
-    ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
-    ego_slot_info.slot_origin_heading_vec = n;
-    ego_slot_info.slot_length = use_slot_length;
-    ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
-
-    ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
-
-    ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
-
-    if (ego_slot_info.target_managed_slot.slot_type() ==
-        Common::PARKING_SLOT_TYPE_SLANTING) {
-      const Eigen::Vector2d origin_pt_0 =
-          Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[0]
-                              .x,
-                          slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[0]
-                              .y);
-
-      const Eigen::Vector2d origin_pt_1 =
-          Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[1]
-                              .x,
-                          slot_manager_ptr_->GetEgoSlotInfo()
-                              .select_fusion_slot.corner_points[1]
-                              .y);
-
-      ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(origin_pt_0);
-      ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
-
-      if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
-        std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
-      }
-
-      const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
-
-      double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                         Eigen::Vector2d(real_slot_length, 0.0), pt_01_vec)) *
-                     kRad2Deg;
-
-      if (angle > 90.0) {
-        angle = 180.0 - angle;
-      }
-
-      angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
-      ego_slot_info.sin_angle = std::sin(angle * kDeg2Rad);
-      ego_slot_info.origin_pt_0_heading = 90.0 - angle;
+              ->simu_param.target_managed_slot_y_vec[i];
     } else {
-      ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(pt[0]);
-      ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(pt[1]);
-      if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
-        std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
-      }
-      ego_slot_info.sin_angle = 1.0;
-      ego_slot_info.origin_pt_0_heading = 0.0;
+      pt[i] << slot_points[i].x(), slot_points[i].y();
     }
+  }
+  const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
+  const Eigen::Vector2d pM23 = 0.5 * (pt[2] + pt[3]);
+  const double real_slot_length = (pM01 - pM23).norm();
+  const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
+  // n is vec that slot opening orientation
+  const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+  // const Eigen::Vector2d n = (pM01 - pM23).normalized();
+  pt[2] = pt[0] - real_slot_length * n;
+  pt[3] = pt[1] - real_slot_length * n;
+
+  ego_slot_info.slot_corner = pt;
+
+  ego_slot_info.slot_center = (pt[0] + pt[1] + pt[2] + pt[3]) * 0.25;
+
+  // const double virtual_slot_length =
+  //     apa_param.GetParam().car_length +
+  //     apa_param.GetParam().slot_compare_to_car_length;
+
+  // const double use_slot_length =
+  //     std::min(real_slot_length, virtual_slot_length);
+
+  const double use_slot_length = real_slot_length;
+
+  ego_slot_info.slot_origin_pos = pM01 - use_slot_length * n;
+  ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
+  ego_slot_info.slot_origin_heading_vec = n;
+  ego_slot_info.slot_length = use_slot_length;
+  ego_slot_info.slot_width = (pt[0] - pt[1]).norm();
+
+  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+
+  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+
+  if (ego_slot_info.target_managed_slot.slot_type() ==
+      Common::PARKING_SLOT_TYPE_SLANTING) {
+    const Eigen::Vector2d origin_pt_0 =
+        Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
+                            .select_fusion_slot.corner_points[0]
+                            .x,
+                        slot_manager_ptr_->GetEgoSlotInfo()
+                            .select_fusion_slot.corner_points[0]
+                            .y);
+
+    const Eigen::Vector2d origin_pt_1 =
+        Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
+                            .select_fusion_slot.corner_points[1]
+                            .x,
+                        slot_manager_ptr_->GetEgoSlotInfo()
+                            .select_fusion_slot.corner_points[1]
+                            .y);
+
+    ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(origin_pt_0);
+    ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(origin_pt_1);
+
+    if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
+      std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
+    }
+
+    const Eigen::Vector2d pt_01_vec = ego_slot_info.pt_1 - ego_slot_info.pt_0;
+
+    double angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
+                       Eigen::Vector2d(real_slot_length, 0.0), pt_01_vec)) *
+                   kRad2Deg;
+
+    if (angle > 90.0) {
+      angle = 180.0 - angle;
+    }
+
+    angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
+    ego_slot_info.sin_angle = std::sin(angle * kDeg2Rad);
+    ego_slot_info.origin_pt_0_heading = 90.0 - angle;
+  } else {
+    ego_slot_info.pt_0 = ego_slot_info.g2l_tf.GetPos(pt[0]);
+    ego_slot_info.pt_1 = ego_slot_info.g2l_tf.GetPos(pt[1]);
+    if (ego_slot_info.pt_0.y() > ego_slot_info.pt_1.y()) {
+      std::swap(ego_slot_info.pt_0, ego_slot_info.pt_1);
+    }
+    ego_slot_info.sin_angle = 1.0;
+    ego_slot_info.origin_pt_0_heading = 0.0;
+  }
 
   ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
 

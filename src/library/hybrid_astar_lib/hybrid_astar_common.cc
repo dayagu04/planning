@@ -19,8 +19,7 @@ std::string PathGearDebugString(const AstarPathGear gear) {
   return "none";
 }
 
-std::string GetPathSteerDebugString(
-    const AstarPathSteer type) {
+std::string GetPathSteerDebugString(const AstarPathSteer type) {
   switch (type) {
     case AstarPathSteer::left:
       return "left";
@@ -35,4 +34,4 @@ std::string GetPathSteerDebugString(
   return "none";
 }
 
-}
+}  // namespace planning

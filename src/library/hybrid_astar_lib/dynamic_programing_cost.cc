@@ -1,11 +1,11 @@
 
+#include "dynamic_programing_cost.h"
 #include <bits/stdint-intn.h>
 #include <algorithm>
 #include <cstddef>
 #include "log_glog.h"
 #include "node2d.h"
 #include "polygon_base.h"
-#include "dynamic_programing_cost.h"
 
 namespace planning {
 
@@ -213,7 +213,6 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
 
   // update dp cost
   while (!open_set_.empty()) {
-
     current_node = open_set_.begin()->second;
     open_set_.erase(open_set_.begin());
 

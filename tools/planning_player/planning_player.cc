@@ -80,6 +80,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
             << is_close_loop << ", auto_time_sec=" << auto_time_sec
             << ", scene_type=" << scene_type << "==========" << std::endl;
   // 车辆配置文件
+  car_ = car;
   fs::path source = "res/conf/" + car;
   fs::path destination = "/asw/planning/res/conf/";
   copy_confif_files(source, destination);
@@ -191,8 +192,9 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
           ros::Duration duration(0.1 * frame_num_);
           ros_time = ros_start_time + duration;
         } else {
-          planning_output_struct.msg_header.stamp = planning_header_time_us_;
-          ros_time = planning_msg_time_s_;
+          planning_output_struct.msg_header.stamp =
+              planning_dubug_info_header_time_us_;
+          ros_time = planning_dubug_info_msg_time_s_;
         }
         struct_msgs::PlanningOutput planning_output_ros_msg{};
         convert(planning_output_struct, planning_output_ros_msg,
@@ -831,29 +833,7 @@ void PlanningPlayer::PlayOneFrame(
 
 void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
   auto it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
-  auto it_planning_msg = msg_cache_[TOPIC_PLANNING_PLAN].begin();
   auto it_planning_hmi_msg = msg_cache_[TOPIC_PLANNING_HMI].begin();
-
-  // 理论上，planning/plan 和 planning/debug_info 成对出现，即一个周期内，
-  // 两个topic都有一帧。但是如果录包开始时刻正好卡在生成这两帧之间，
-  // 那包内两个topic的时间就不是对齐的，为了应对这种小概率特殊情况：
-  auto debug_info = boost::any_cast<sensor_interface::DebugInfo::Ptr>(
-      it_debug_info_msg->second);
-  auto planning_debug_info = convert_debug_info(debug_info);
-
-  auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
-      it_planning_msg->second);
-  if (planning_debug_info->timestamp() > planning_msg->msg_header.stamp) {
-    it_planning_msg++;
-    auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
-        it_planning_msg->second);
-    if (planning_debug_info->timestamp() > planning_msg->msg_header.stamp) {
-      std::cerr << "timestamp error!!! planning output and planning debug do "
-                   "not match"
-                << std::endl;
-      return;
-    }
-  }
 
   for (size_t i = 0; i < msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 2;
        ++i) {
@@ -861,8 +841,6 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
         it_debug_info_msg->second);
     auto planning_debug_info = convert_debug_info(debug_info);
 
-    auto planning_msg = boost::any_cast<struct_msgs::PlanningOutput::Ptr>(
-        it_planning_msg->second);
     auto planning_hmi_msg =
         boost::any_cast<struct_msgs::PlanningHMIOutputInfoStr::Ptr>(
             it_planning_hmi_msg->second);
@@ -930,10 +908,6 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
 
-    planning_header_time_us_ = planning_msg->msg_header.stamp;
-    planning_msg_time_s_ = it_planning_msg->first;
-    it_planning_msg++;
-
     planning_hmi_header_time_us_ = planning_hmi_msg->msg_header.stamp;
     planning_hmi_msg_time_ns_ = it_planning_hmi_msg->first;
     it_planning_hmi_msg++;
@@ -942,9 +916,11 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
         planning_debug_info->input_topic_timestamp().localization();
     loc_esti_header_time_us_ =
         planning_debug_info->input_topic_timestamp().localization_estimate();
-    // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
-    if (0 == loc_esti_header_time_us_) {
+    // 兼容老版本的包，定位时间戳的存放位置较混乱
+    if (0 == loc_esti_header_time_us_ && 0 != loc_header_time_us_) {
       loc_esti_header_time_us_ = loc_header_time_us_;
+    } else if (0 == loc_header_time_us_ && 0 != loc_esti_header_time_us_) {
+      loc_header_time_us_ = loc_esti_header_time_us_;
     }
     vehi_svc_header_time_us_ =
         planning_debug_info->input_topic_timestamp().vehicle_service();
@@ -1500,12 +1476,20 @@ void PlanningPlayer::UpdateVehicleService(
   vehi_svc_msg->yaw_rate = yaw_rate;
 
   // steering_angle = 1/R * L * steering_ratio * 补偿系数
-  // for S811
-  auto compensation_factor = curvature > 0 ? 1.5 : 1;
-  // hack: for E0Y   后续根据配置文件选择
-  compensation_factor = 1;
+  double compensation_factor = 1.0;
+  double steer_ratio = 15.7;
+  double wheel_base = 3.0;
+  if (car_ == "CHERY_E0X") {
+    compensation_factor = 1;
+    steer_ratio = 13;
+    wheel_base = 3.0;
+  } else if (car_ == "JAC_S811") {
+    compensation_factor = curvature > 0 ? 1.5 : 1;
+    steer_ratio = 15.7;
+    wheel_base = 2.7;
+  }
   vehi_svc_msg->steering_wheel_angle =
-      curvature * 3.33 * 15.7 * compensation_factor;
+      curvature * wheel_base * steer_ratio * compensation_factor;
 }
 
 void PlanningPlayer::GenMileage(const std::string& mileage_path) {

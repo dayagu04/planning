@@ -314,7 +314,7 @@ struct ApaParameters {
   std::vector<double> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,
                                             0.88, 0.0,  0.0,   0.0,   0.0};
   std::vector<double> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
-                                           0.18, 0.95, 0.95, 0.95, 0.95};
+                                            0.18, 0.95, 0.95, 0.95, 0.95};
 };
 
 class ApaParametersSetting {

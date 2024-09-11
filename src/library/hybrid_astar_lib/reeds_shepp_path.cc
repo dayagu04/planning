@@ -103,7 +103,7 @@ bool ReedShepp::GenerateRSPathList(
     const Pose2D* start_node, const Pose2D* end_node,
     std::vector<ReedSheppPath>* all_possible_paths) {
 #if DEBUG_RS_PATH
-  // ILOG_INFO << "one thread to generate rs path";
+// ILOG_INFO << "one thread to generate rs path";
 #endif
 
   if (!GenerateRSP(start_node, end_node, all_possible_paths)) {
@@ -1235,7 +1235,7 @@ bool ReedShepp::GenerateGlobalRSPath(const Pose2D* start_node,
   int next_point_id = 0;
   Pose2D seg_base_pose;
 
-  for (size_t i=0; i < shortest_path->seg_list_steer_type.size(); ++i) {
+  for (size_t i = 0; i < shortest_path->seg_list_steer_type.size(); ++i) {
     AstarPathSteer steer = shortest_path->seg_list_steer_type.at(i);
 
     double length = shortest_path->segs_lengths.at(i);

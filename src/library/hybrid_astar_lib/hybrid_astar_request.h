@@ -1,9 +1,9 @@
 #pragma once
 
-#include "node3d.h"
-#include "hybrid_astar_common.h"
-#include "pose2d.h"
 #include "./../reeds_shepp/rs_path_request.h"
+#include "hybrid_astar_common.h"
+#include "node3d.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -51,4 +51,4 @@ struct AstarRequest {
 
 void DebugAstarRequestString(const AstarRequest &request);
 
-}
+}  // namespace planning
