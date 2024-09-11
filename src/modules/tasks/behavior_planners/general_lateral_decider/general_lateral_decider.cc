@@ -2210,7 +2210,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
             virtual_lane_manager->get_lane_num() - 2 &&
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            MSD_LANE_TYPE_NON_MOTOR)) &&
+            iflyauto::LANETYPE_NON_MOTOR)) &&
       ((!isRedLightStop && lateral_output.accident_ahead &&
         lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
@@ -2238,7 +2238,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
             virtual_lane_manager->get_lane_num() - 2 &&
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            MSD_LANE_TYPE_NON_MOTOR)) &&
+            iflyauto::LANETYPE_NON_MOTOR)) &&
       virtual_lane_manager->current_lane_virtual_id() - 1 >= 0) {
     lateral_output.rightest_lane = true;
   } else {

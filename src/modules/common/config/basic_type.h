@@ -33,31 +33,6 @@ enum LeverStatus {
   LEVER_STATE_RESERVED2
 };
 
-enum LaneBoundaryType {
-  MARKING_UNKNOWN = 0,                  // 未知线型
-  MARKING_DASHED = 1,                   // 虚线
-  MARKING_SOLID = 2,                    // 实线
-  MARKING_SHORT_DASHED = 3,             // 短虚线
-  MARKING_DOUBLE_DASHED = 4,            // 双虚线
-  MARKING_DOUBLE_SOLID = 5,             // 双实线
-  MARKING_LEFT_DASHED_RIGHT_SOLID = 6,  // 左虚右实线
-  MARKING_LEFT_SOLID_RIGHT_DASHED = 7   // 左实右虚线
-};
-enum MSDLaneType {
-  MSD_LANE_TYPE_UNKNOWN = 0,
-  MSD_LANE_TYPE_NORMAL = 1,
-  MSD_LANE_TYPE_VIRTUAL = 2,
-  MSD_LANE_TYPE_PARKING = 3,
-  MSD_LANE_TYPE_ACCELERATE = 4,
-  MSD_LANE_TYPE_DECELERATE = 5,
-  MSD_LANE_TYPE_BUS = 6,
-  MSD_LANE_TYPE_EMERGENCY = 7,
-  MSD_LANE_TYPE_ACCELERATE_DECELERATE = 8,
-  MSD_LANE_TYPE_LEFT_TURN_WAITTING_AREA = 9,
-  MSD_LANE_TYPE_NON_MOTOR = 10,
-  MSD_LANE_TYPE_RAMP = 11,
-};
-
 typedef enum {
   UNKNOWN_POS = -100,
   LEFT_LEFT_POS = -2,
