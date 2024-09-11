@@ -455,7 +455,7 @@
     "q_acc_bound": 1600.0,
     "q_jerk_bound": 800.0,
     "q_stop_s": 2000.0,
-    "q_ref_pos_speed_adjust": 10.0
+    "q_ref_pos_speed_adjust": 35.0
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,

@@ -678,7 +678,10 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   jlt_stable_status = GenerateStableFollowSlowCurve(sref_farslow);
   JSON_DEBUG_VALUE("jlt_status_farslow", jlt_farslow_status)
   JSON_DEBUG_VALUE("jlt_status_stable", jlt_stable_status)
-  if (jlt_farslow_status || jlt_stable_status) {
+  const auto &lane_change_info =
+      session_->planning_context().lane_change_decider_output();
+  if (jlt_farslow_status || jlt_stable_status ||
+      (lane_change_info.s_search_status && config_.enable_speed_adjust)) {
     lon_j_bound.lower = -1.0;
     lon_j_bound.upper = 1.0;
   }
@@ -700,8 +703,6 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   }
 
   // 11. use speed adjust s search ref
-  const auto &lane_change_info =
-      session_->planning_context().lane_change_decider_output();
   if (lane_change_info.s_search_status && config_.enable_speed_adjust) {
     if (lane_change_info.st_search_vec.size() == config_.lon_num_step + 1) {
       for (size_t i = 0; i <= config_.lon_num_step; i++) {
