@@ -176,7 +176,6 @@ class LaneChangeStateMachineManager {
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
                const double& threshold);
   void UpdateCoarsePlanningInfo();
-  void UpdateAdInfo();
   void UpdateStateMachineDebugInfo();
   void GenerateTurnSignalForSplitRegion();
   bool IsSplitRegion(RampDirection* ramp_direction);

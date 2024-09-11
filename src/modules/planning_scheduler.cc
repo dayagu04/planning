@@ -5,6 +5,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <memory>
 
 #include "adas_function/adaptive_cruise_control.h"
 #include "adas_function/ihc_function/intelligent_headlight_control.h"
@@ -566,7 +567,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
                                     .lane_change_decider_output()
                                     .coarse_planning_info.source_state;
   if (curr_state == kLaneKeeping) {
-    if (lasr_frame_state != kLaneKeeping) {
+    if (lasr_frame_state == kLaneChangeComplete) {
       planning_hmi_info->ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
     } else {
@@ -579,13 +580,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
         planning_hmi_info->ad_info.lane_change_status =
             iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
       } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
-        planning_hmi_info->ad_info.lane_change_status =
-            iflyauto::LaneChangeStatus::LC_STATE_STARTING;
         planning_hmi_info->ad_info.lane_change_direction =
             iflyauto::LaneChangeDirection::LC_DIR_LEFT;
       } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
-        planning_hmi_info->ad_info.lane_change_status =
-            iflyauto::LaneChangeStatus::LC_STATE_STARTING;
         planning_hmi_info->ad_info.lane_change_direction =
             iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
       }
@@ -671,12 +668,20 @@ void PlanningScheduler::FillPlanningHmiInfo(
       static_cast<iflyauto::AvoidObstacleDirection>(
           lat_offset_decider_output.avoid_direction);
 
-  planning_hmi_info->ad_info.distance_to_ramp =
-      virtual_lane_manager->dis_to_ramp();
+  if (!virtual_lane_manager->is_on_ramp()) {
+    planning_hmi_info->ad_info.distance_to_ramp =
+        virtual_lane_manager->dis_to_ramp();
+  } else {
+    planning_hmi_info->ad_info.distance_to_ramp = NL_NMAX;
+  }
   planning_hmi_info->ad_info.distance_to_split =
       virtual_lane_manager->distance_to_first_road_split();
-  planning_hmi_info->ad_info.distance_to_merge =
-      virtual_lane_manager->distance_to_first_road_merge();
+  if (virtual_lane_manager->is_ramp_merge_to_road_on_expressway()) {
+    planning_hmi_info->ad_info.distance_to_merge =
+        virtual_lane_manager->distance_to_first_road_merge();
+  } else {
+    planning_hmi_info->ad_info.distance_to_merge = NL_NMAX;
+  }
   planning_hmi_info->ad_info.distance_to_toll_station =
       virtual_lane_manager->get_distance_to_toll_station();
   planning_hmi_info->ad_info.noa_exit_warning_level_distance =
@@ -691,7 +696,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       lane_change_decider_output.coarse_planning_info.reference_path;
   if (fix_reference_path != nullptr) {
     planning_hmi_info->ad_info.dis_to_reference_line =
-        fix_reference_path->get_frenet_ego_state().l();
+        std::abs(fix_reference_path->get_frenet_ego_state().l() * 100);
     planning_hmi_info->ad_info.angle_to_roaddirection =
         fix_reference_path->get_frenet_ego_state().heading_angle();
   }
@@ -707,6 +712,46 @@ void PlanningScheduler::FillPlanningHmiInfo(
   } else {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  }
+
+  if (curr_state == kLaneChangePropose ||
+      curr_state == kLaneChangeExecution ||
+      curr_state == kLaneChangeComplete ||
+      curr_state == kLaneChangeCancel) {
+    int target_reference_virtual_id;
+    if (curr_state == kLaneChangeCancel) {
+      target_reference_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
+    } else {
+      target_reference_virtual_id = lane_change_decider_output.target_lane_virtual_id;
+    }
+    auto target_reference =
+        session_.environmental_model()
+            .get_reference_path_manager()
+            ->get_reference_path_by_lane(target_reference_virtual_id,
+                                         false);
+    if (target_reference != nullptr) {
+      Point2D cart_point;
+      if (target_reference->get_frenet_coord()->SLToXY(
+              Point2D(target_reference->get_frenet_ego_state().s(), 0),
+              cart_point)) {
+        const auto& ego_pose = session_.environmental_model().get_ego_state_manager()->ego_pose();
+        const double theta_ori = ego_pose.theta;
+        double landing_point_theta_global = 0;
+        ReferencePathPoint reference_path_point{};
+        if (target_reference->get_reference_point_by_lon(target_reference->get_frenet_ego_state().s(), reference_path_point)) {
+          landing_point_theta_global = reference_path_point.path_point.theta;
+        }
+        Eigen::Vector2d pos_n_ori (ego_pose.x, ego_pose.y);
+        pnc::geometry_lib::GlobalToLocalTf global_to_local_tf (pos_n_ori, theta_ori);
+        Eigen::Vector2d p_n (cart_point.x, cart_point.y);
+        Eigen::Vector2d  landing_point_body = global_to_local_tf.GetPos(p_n);
+        const double landing_point_theta_local = global_to_local_tf.GetHeading(landing_point_theta_global);
+        planning_hmi_info->ad_info.landing_point.relative_pos.x = landing_point_body.x();
+        planning_hmi_info->ad_info.landing_point.relative_pos.y = landing_point_body.y();
+        planning_hmi_info->ad_info.landing_point.relative_pos.z = 0;
+        planning_hmi_info->ad_info.landing_point.heading = landing_point_theta_local;
+      }
+    }
   }
 
   // HMI for hpp

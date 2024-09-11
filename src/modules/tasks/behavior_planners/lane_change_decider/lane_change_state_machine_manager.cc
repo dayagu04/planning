@@ -1,4 +1,5 @@
 #include "lane_change_state_machine_manager.h"
+#include <Eigen/src/Core/Matrix.h>
 
 #include <algorithm>
 #include <climits>
@@ -36,7 +37,6 @@ void LaneChangeStateMachineManager::Update() {
   RunStateMachine();
   GenerateStateMachineOutput();
   UpdateCoarsePlanningInfo();
-  UpdateAdInfo();
   UpdateStateMachineDebugInfo();
 }
 
@@ -1474,36 +1474,7 @@ bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
   }
   return false;
 }
-void LaneChangeStateMachineManager::UpdateAdInfo() {
-  auto ad_info = &(session_->mutable_planning_context()
-                       ->mutable_planning_hmi_info()
-                       ->ad_info);
 
-  // feed hmi
-  const auto &coarse_planning_info = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
-  if (coarse_planning_info.source_state == kLaneChangePropose ||
-      coarse_planning_info.source_state == kLaneChangeExecution ||
-      coarse_planning_info.source_state == kLaneChangeComplete) {
-    auto target_reference =
-        session_->environmental_model()
-            .get_reference_path_manager()
-            ->get_reference_path_by_lane(lc_lane_mgr_->target_lane_virtual_id(),
-                                         false);
-    if (target_reference != nullptr) {
-      Point2D cart_point;
-      if (target_reference->get_frenet_coord()->SLToXY(
-              Point2D(target_reference->get_frenet_ego_state().s() + 5, 0),
-              cart_point)) {
-        ad_info->landing_point.relative_pos.x = cart_point.x;
-        ad_info->landing_point.relative_pos.y = cart_point.y;
-        ad_info->landing_point.relative_pos.z = 0;
-        ad_info->landing_point.heading = 0;
-      }
-    }
-  }
-}
 void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -1617,6 +1588,13 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
       is_off_turn_signal = true;
     }
   }
+  const auto distance_to_toll_station = virtual_lane_manager->get_distance_to_toll_station();
+  const auto distance_to_route_end = virtual_lane_manager->get_distance_to_route_end();
+  //接近收费站或者终点时，抑制分流点的判断
+  if (distance_to_toll_station < 400 ||
+      distance_to_route_end < 400) {
+    road_to_ramp_turn_signal_ = RAMP_NONE;
+  }
   JSON_DEBUG_VALUE("is_off_turn_signal", static_cast<int>(is_off_turn_signal));
   JSON_DEBUG_VALUE("road_to_ramp_turn_signal",
                    static_cast<int>(road_to_ramp_turn_signal_));
@@ -1713,29 +1691,40 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
   bool is_cur_path_project_to_ref_path = true;
   const auto cur_ref_path_finally_point =
       current_reference_path->get_points().back().path_point;
-  Point2D projection_point = {cur_ref_path_finally_point.x,
-                              cur_ref_path_finally_point.y};
   std::shared_ptr<KDPath> reference_path_frenet_coordinate =
       reference_path->get_frenet_coord();
-  if (std::abs(length_diff_cur_lane_with_overlap_lane) >
-      length_diff_threshold) {
-    if (length_diff_cur_lane_with_overlap_lane > length_diff_threshold) {
-      is_cur_path_project_to_ref_path = false;
-      const auto ref_path_finally_point =
-          current_reference_path->get_points().back().path_point;
-      projection_point = {ref_path_finally_point.x, ref_path_finally_point.y};
-      reference_path_frenet_coordinate =
-          current_reference_path->get_frenet_coord();
-    }
-  } else {
+  Point2D projection_point = {cur_ref_path_finally_point.x,
+                              cur_ref_path_finally_point.y};
+  bool is_on_ramp = session_->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  if (is_on_ramp) {
     ReferencePathPoint refpoint = {};
     if (current_reference_path->get_reference_point_by_lon(
-        current_reference_path->get_frenet_coord()->Length() -
-            length_diff_threshold,
+        current_reference_path->get_frenet_ego_state().s() + 50,
         refpoint)) {
       projection_point = {refpoint.path_point.x, refpoint.path_point.y};
     }
+  } else {
+    if (std::abs(length_diff_cur_lane_with_overlap_lane) >
+        length_diff_threshold) {
+      if (length_diff_cur_lane_with_overlap_lane > length_diff_threshold) {
+        is_cur_path_project_to_ref_path = false;
+        const auto ref_path_finally_point =
+            current_reference_path->get_points().back().path_point;
+        projection_point = {ref_path_finally_point.x, ref_path_finally_point.y};
+        reference_path_frenet_coordinate =
+            current_reference_path->get_frenet_coord();
+      }
+    } else {
+      ReferencePathPoint refpoint = {};
+      if (current_reference_path->get_reference_point_by_lon(
+          current_reference_path->get_frenet_coord()->Length() -
+              length_diff_threshold,
+          refpoint)) {
+        projection_point = {refpoint.path_point.x, refpoint.path_point.y};
+      }
+    }
   }
+
   Point2D frenet_point;
   if (reference_path_frenet_coordinate->XYToSL(projection_point,
                                                frenet_point)) {
@@ -1862,7 +1851,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   bool lane_end_satisfied_merge_condition = false;
   const double standard_lane_width = 3.8;
   const double cur_lane_lat_diff_threshold = standard_lane_width - 0.8;
-  const double end_lane_lat_diff_threshold = standard_lane_width / 2;
+  const double end_lane_lat_diff_threshold = standard_lane_width / 4;
   double cur_to_other_lane_end_lat_diff = NL_NMAX;
   double ref_ego_l = NL_NMAX;
   double ref_ego_s = NL_NMAX;
