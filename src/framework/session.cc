@@ -26,18 +26,6 @@ void Session::Reset() {
   // planning_output_context_->reset();
 }
 
-static common::SceneType parse_scene_type_str(const std::string& str) {
-  if (str == "apa") {
-    return planning::common::SceneType::PARKING_APA;
-  } else if (str == "highway") {
-    return planning::common::SceneType::HIGHWAY;
-  } else if (str == "hpp") {
-    return planning::common::SceneType::HPP;
-  } else {
-    return planning::common::NOT_DEFINED;
-  }
-}
-
 bool Session::Init() {
   auto engine_config =
       common::ConfigurationContext::Instance()->engine_config();
