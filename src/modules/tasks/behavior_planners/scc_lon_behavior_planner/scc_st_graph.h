@@ -180,6 +180,9 @@ class StGraphGenerator {
   void CalculateSrefsByVref(const double v_ego, std::vector<double> &v_refs,
                             const double acc_ego, std::vector<double> &s_refs);
 
+  // 根据加速度bound对v target进行滤波
+  void UpdateTargetVelocityByFilter(const bool is_on_ramp, const double v_ego);
+
   // 计算启停状态，避免二次起步
   common::StartStopInfo::StateType UpdateStartStopState(
       const planning::common::TrackedObjectInfo &lead_one, const double v_ego,
