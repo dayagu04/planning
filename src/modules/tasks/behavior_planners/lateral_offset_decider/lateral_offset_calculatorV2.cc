@@ -899,6 +899,8 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
       }
       break;
     }
+    default:
+      break;
   }
 }
 
