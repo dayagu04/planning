@@ -163,11 +163,12 @@ void LaneKeepAssistManager::Update() {
 
         auto left_line_type =
             ptr_current_lane_left_boundary.type_segments[0].type;
-        if (left_line_type == Common::LaneBoundaryType::MARKING_DASHED ||
-            left_line_type == Common::LaneBoundaryType::MARKING_SHORT_DASHED ||
-            left_line_type == Common::LaneBoundaryType::MARKING_DOUBLE_DASHED ||
+        if (left_line_type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+            left_line_type == iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
             left_line_type ==
-                Common::LaneBoundaryType::MARKING_LEFT_SOLID_RIGHT_DASHED) {
+                iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
+            left_line_type ==
+                iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED) {
           lkas_input_.road_info.left_line_type = 0;  // 可跨越道线
         } else {
           lkas_input_.road_info.left_line_type = 1;  // 不可跨越道线
@@ -241,13 +242,13 @@ void LaneKeepAssistManager::Update() {
 
         auto right_line_type =
             ptr_current_lane_right_boundary.type_segments[0].type;
-        if ((right_line_type == Common::LaneBoundaryType::MARKING_DASHED) ||
+        if ((right_line_type == iflyauto::LaneBoundaryType_MARKING_DASHED) ||
             (right_line_type ==
-             Common::LaneBoundaryType::MARKING_SHORT_DASHED) ||
+             iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED) ||
             (right_line_type ==
-             Common::LaneBoundaryType::MARKING_DOUBLE_DASHED) ||
+             iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) ||
             (right_line_type ==
-             Common::LaneBoundaryType::MARKING_LEFT_DASHED_RIGHT_SOLID)) {
+             iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID)) {
           lkas_input_.road_info.right_line_type = 0;
         } else {
           lkas_input_.road_info.right_line_type = 1;
