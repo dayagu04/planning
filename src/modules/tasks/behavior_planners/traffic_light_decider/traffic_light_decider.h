@@ -25,5 +25,9 @@ class TrafficLightDecider : public Task {
   TrafficLightDeciderConfig config_;
   bool is_first_car_ = false;
   bool is_pass_stopline_ = false;
+  bool can_pass_ = true;
+  double green_light_timer_ = 0.0;
+  double green_blink_timer_ = 0.0;
+  double yellow_light_timer_ = 0.0;
 };
 }  // namespace planning
