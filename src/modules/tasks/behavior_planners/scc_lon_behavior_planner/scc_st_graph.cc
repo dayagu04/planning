@@ -292,7 +292,7 @@ void StGraphGenerator::Update(
                 lon_behav_input_->lat_output().lc_status() == "none")) {
       accel_vel_filter_.SetRate(-2.0, 2.0);  // 换道调速滤波
     } else {
-      accel_vel_filter_.SetRate(-1.0, 1.0);
+      accel_vel_filter_.SetRate(-1.0, 0.8);
     }
     if (v_ego > v_last_target_) {
       accel_vel_filter_.SetState(v_ego);
