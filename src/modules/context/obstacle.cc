@@ -194,7 +194,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     LOG_DEBUG("polygon_debug invalid cart polygon");
   }
   std::vector<planning_math::Vec2d> ego_polygon_points;
-  LOG_DEBUG("obstacle[%d] polygon size : %d %d, ego x %f y %f\n", id_,
+  LOG_DEBUG("obstacle[%d] polygon size : %lu %lu, ego x %f y %f\n", id_,
             prediction_object.bottom_polygon_points.size(),
             polygon_points.size(), x_center_, y_center_);
   for (const auto &point : perception_polygon_.points()) {

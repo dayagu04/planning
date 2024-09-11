@@ -3883,8 +3883,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
       premover_ = false;
     }
     LOG_DEBUG(
-        "WRDEBUG left_alc_car_.size()[%d], left_lb_car_.size()[%d], "
-        "right_alc_car_.size()[%d], right_lb_car_.size()[%d]",
+        "WRDEBUG left_alc_car_.size()[%lu], left_lb_car_.size()[%lu], "
+        "right_alc_car_.size()[%lu], right_lb_car_.size()[%lu]",
         left_alc_car_.size(), left_lb_car_.size(), right_alc_car_.size(),
         right_lb_car_.size());
 
