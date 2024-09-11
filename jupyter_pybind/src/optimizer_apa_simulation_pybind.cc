@@ -29,7 +29,6 @@
 #include "struct_convert/vehicle_service_c.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/IFLYLocalization.h"
-#include "struct_msgs/LocalizationEstimate.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/UssPerceptInfo.h"

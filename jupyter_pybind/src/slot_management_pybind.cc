@@ -26,7 +26,6 @@
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
 #include "struct_msgs/GroundLinePerceptionInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
-#include "struct_msgs/LocalizationEstimate.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/UssPerceptInfo.h"
