@@ -473,7 +473,7 @@
     "enable_jlt" : false,
     "enable_narrow_agent_limit" : true,
     "pre_accelerate_distance_for_merge" : 150.0,
-    "enable_intersection_v_limit" : false,
+    "enable_intersection_v_limit" : true,
     "v_lc_speed_adjust":0.5,
     "search_sdmap_curv_dis":300.0,
     "sdmap_curv_thred":1000.0,
@@ -484,7 +484,7 @@
     "enable_lat_traj": false
   },
   "traffic_light_decider": {
-    "enable_tfl_decider": false
+    "enable_tfl_decider": true
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,
