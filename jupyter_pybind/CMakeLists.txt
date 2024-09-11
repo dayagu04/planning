@@ -4,9 +4,8 @@ cmake_minimum_required(VERSION 3.2)
 set(CMAKE_CXX_STANDARD 14)
 set(PYBIND11_PYTHON_VERSION 3.7)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
-set(CMAKE_CXX_FLAGS "-DX86")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -DX86")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -DX86")
 
 find_package(pybind11 REQUIRED PATHS ~/miniconda3/lib/python3.7/site-packages/pybind11/share/cmake/pybind11)
 
