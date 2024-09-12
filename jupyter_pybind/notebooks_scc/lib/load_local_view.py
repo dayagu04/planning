@@ -669,12 +669,17 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       })
       local_view_data['data_merge_point'].data.update({
         'merge_point_x': [merge_point_x],
-        'merge_point_y': [merge_point_y],
-      })
+        'merge_point_y': [merge_point_y]})
+      macroeconomic_decider_merge_point_x, macroeconomic_decider_merge_point_y = coord_tf.global_to_local([macroeconomic_decider_merge_point_x], [macroeconomic_decider_merge_point_y])
+      macroeconomic_decider_merge_point_x = macroeconomic_decider_merge_point_x[0]
+      macroeconomic_decider_merge_point_y = macroeconomic_decider_merge_point_y[0]
       local_view_data['macroeconomic_decider_data_merge_point'].data.update({
         'macroeconomic_decider_merge_point_x': [macroeconomic_decider_merge_point_x],
         'macroeconomic_decider_merge_point_y': [macroeconomic_decider_merge_point_y],
       })
+      boundary_line_merge_point_x, boundary_line_merge_point_y = coord_tf.global_to_local([boundary_line_merge_point_x], [boundary_line_merge_point_y])
+      boundary_line_merge_point_x = boundary_line_merge_point_x[0]
+      boundary_line_merge_point_y = boundary_line_merge_point_y[0]
       local_view_data['boundary_line_merge_point'].data.update({
         'boundary_line_merge_point_x': [boundary_line_merge_point_x],
         'boundary_line_merge_point_y': [boundary_line_merge_point_y],
