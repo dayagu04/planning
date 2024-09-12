@@ -10,6 +10,10 @@ const std::string BoundType2String(BoundType in) {
       return "LANE";
     case BoundType::AGENT:
       return "AGENT";
+    case BoundType::DYNAMIC_AGENT:
+      return "DYNAMIC_AGENT";
+    case BoundType::ADJACENT_AGENT:
+      return "ADJACENT_AGENT";
     case BoundType::ROAD_BORDER:
       return "ROAD_BORDER";
     case BoundType::EGO_POSITION:

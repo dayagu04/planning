@@ -143,7 +143,7 @@
   "emegency_cutin_ttc_lower": 1.5,
   "emegency_cutin_ttc_upper": 3,
   "emegency_cutin_front_area": 5,
-  "base_nudge_distance": 1.2,
+  "base_nudge_distance": 1.0,
   "nudge_value_way" :false,
   "static_obj_safe_buffer": 0.8,
   "hard_buffer2static_agent": 0.35,
@@ -215,7 +215,11 @@
     "extra_lateral_buffer_5":0.725,
     "extra_lateral_buffer_6":0.77,
     "map_bound_weight": [0.4, 0.4, 0.6, 0.1],
-    "nudge_buffer_cutout_obstacle": 0.6
+    "nudge_extra_buffer_in_intersection": 0.15,
+    "bound_static_agent_weight":0.4,
+    "bound_dynamic_agent_weight":0.4,
+    "bound_adjacent_agent_weight":0.4,
+    "bound_road_border_weight":0.6
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1":1,
