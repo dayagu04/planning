@@ -1,12 +1,14 @@
 #include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <stddef.h>
 
 #include <cstdint>
 #include <iostream>
 #include <vector>
 
 #include "apa_plan_base.h"
+#include "apa_plan_interface.h"
 #include "collision_detection.h"
 #include "config_context.h"
 #include "debug_info_log.h"
@@ -18,12 +20,16 @@ namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
 int Init() {
   (void)planning::common::ConfigurationContext::Instance();
   pBase = new ParallelPathPlanner();
   pBase->Reset();
+
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface->Init(true);
   return 0;
 }
 
@@ -224,24 +230,49 @@ std::vector<double> GetObsY() {
   return obs_y_vec;
 }
 
+std::vector<double> GetVirtualObsX() {
+  std::vector<double> obs_x_vec;
+  obs_x_vec.reserve(15);
+  for (const auto &virtual_obs : pBase->GetVirtualObs()) {
+    obs_x_vec.emplace_back(virtual_obs.x());
+  }
+  return obs_x_vec;
+}
+
+std::vector<double> GetVirtualObsY() {
+  std::vector<double> obs_y_vec;
+  obs_y_vec.reserve(15);
+  for (const auto &virtual_obs : pBase->GetVirtualObs()) {
+    obs_y_vec.emplace_back(virtual_obs.y());
+  }
+  return obs_y_vec;
+}
+
 std::vector<double> GetInverseArcVec() {
   std::vector<double> res;
   res.reserve(80);
 
-  for (const auto &path_seg : pBase->GetPlannerParams().park_out_path_in_slot) {
-    if (path_seg.seg_type == pnc::geometry_lib::PathSegType::SEG_TYPE_ARC) {
-      const auto arc = path_seg.arc_seg;
-      res.emplace_back(arc.circle_info.center.x());
-      res.emplace_back(arc.circle_info.center.y());
-      res.emplace_back(arc.circle_info.radius);
+  // for (size_t i = 0; i < pBase->GetPlannerParams().park_out_path_in_slot.size();
+  //      i++) {
+  //   // tmp debug for last arc
+  //   if (i != pBase->GetPlannerParams().park_out_path_in_slot.size() - 1) {
+  //     continue;
+  //   }
+  //   const auto &path_seg = pBase->GetPlannerParams().park_out_path_in_slot[i];
 
-      res.emplace_back(arc.pA.x());
-      res.emplace_back(arc.pA.y());
+  //   if (path_seg.seg_type == pnc::geometry_lib::PathSegType::SEG_TYPE_ARC) {
+  //     const auto arc = path_seg.arc_seg;
+  //     res.emplace_back(arc.circle_info.center.x());
+  //     res.emplace_back(arc.circle_info.center.y());
+  //     res.emplace_back(arc.circle_info.radius);
 
-      res.emplace_back(arc.pB.x());
-      res.emplace_back(arc.pB.y());
-    }
-  }
+  //     res.emplace_back(arc.pA.x());
+  //     res.emplace_back(arc.pA.y());
+
+  //     res.emplace_back(arc.pB.x());
+  //     res.emplace_back(arc.pB.y());
+  //   }
+  // }
 
   for (const auto &arc : pBase->GetDebugInfo().debug_arc_vec) {
     res.emplace_back(arc.circle_info.center.x());
@@ -266,5 +297,7 @@ PYBIND11_MODULE(parallel_planning_py, m) {
       .def("UpdateObstacles", &UpdateObstacles)
       .def("GetObsX", &GetObsX)
       .def("GetObsY", &GetObsY)
+      .def("GetVirtualObsX", &GetVirtualObsX)
+      .def("GetVirtualObsY", &GetVirtualObsY)
       .def("GetInverseArcVec", &GetInverseArcVec);
 }

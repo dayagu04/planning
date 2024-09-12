@@ -128,7 +128,11 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   if (success) {
     planning_output_ = planner_ptr_->GetOutput();
     apa_hmi_ = planner_ptr_->GetAPAHmi();
-    DEBUG_PRINT("remain dist in hmi = " << apa_hmi_.distance_to_parking_space);
+    // DEBUG_PRINT("interface planning hmi----------------");
+    // DEBUG_PRINT("remain dist in hmi = " << apa_hmi_.distance_to_parking_space);
+    // DEBUG_PRINT(
+    //     "is_parking_pause = " << static_cast<int>(apa_hmi_.is_parking_pause));
+    // DEBUG_PRINT("parking_pause_reason = " << apa_hmi_.parking_pause_reason);
   }
 
   AddReleasedSlotInfo(planning_output_);
@@ -794,6 +798,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
                   "parallel_search_out_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
+                  "is_parallel_advanced_method");
 
   int path_generator_type = 0;
   JSON_READ_VALUE(path_generator_type, int, "path_generator_type");
