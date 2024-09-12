@@ -1602,11 +1602,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   }
   is_leaving_ramp_ = false;
   if (lane_num_except_emergency_ > 0) {
-    if ((is_ramp_merge_to_road_on_expressway_ &&
-        distance_to_first_road_merge_ < 100) ||
-        (sum_dis_to_last_merge_point_ > 0 &&
-         sum_dis_to_last_merge_point_ < 500 && !is_on_ramp_ &&
-         is_on_highway_)) {
+    if (is_ramp_merge_to_road_on_expressway_ &&
+        distance_to_first_road_merge_ < 100) {
       is_leaving_ramp_ = true;
     }
   }
@@ -1620,8 +1617,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       dis_to_ramp_ < 3000.;
 
   //判断哪个场景在前
-  if (is_leaving_ramp_ && is_nearing_ramp_ &&
-      distance_to_first_road_merge_ < 100) {
+  if (is_leaving_ramp_ && is_nearing_ramp_) {
     if (distance_to_first_road_merge_ < dis_to_ramp_) {
       // merge在ramp的前面
       is_nearing_ramp_ = false;
@@ -2235,10 +2231,19 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //  2、且距离下一个匝道距离在1300m以上,距离上一个merge点在700m以内；
   //  3、当前在最右边车道上；
   //  4、当前是在expressway上。
-  if (!is_on_ramp_ && dis_to_ramp_ > 1300 &&
+  if (!is_on_ramp_ && dis_to_ramp_ > dis_threshold_to_last_merge_point_ &&
       !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
       is_ego_on_rightest_lane && is_on_highway_) {
     is_leaving_ramp_ = true;
+  }
+  //这里是hack匝道延长线800m范围内不在最右侧车道，如果也接近匝道了
+  //根据到匝道的距离判断是匝道延长线汇入在前还是匝道在前
+  if (is_nearing_ramp_ &&
+      !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
+      !is_on_ramp_ &&
+      dis_to_ramp_ > dis_threshold_to_last_merge_point_ &&
+      is_on_highway_) {
+    is_nearing_ramp_ = false;
   }
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
   JSON_DEBUG_VALUE("is_nearing_ramp", is_nearing_ramp_);
