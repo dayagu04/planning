@@ -17,7 +17,7 @@ namespace planning_data {
 namespace {
 
 constexpr double kMaxThresholdForInLaneCheck = 0.2;
-constexpr double kMinSafeDistance = 0.5;
+constexpr double kMinSafeDistance = 0.6;
 constexpr double kHeadingDiffForAgainstTrafficRad = 1.0472;
 constexpr double kMaxSpeedValueForExtremelySlowMps = 0.5;
 constexpr double kMaxAccelValueForExtremelySlowMps2 = 0.5;
@@ -48,9 +48,11 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
                                    const ReferencePath& ref_line,
                                    const trajectory::TrajectoryPoint ego_state)
     : agent_(agent) {
-  double kEgoWidth = vehicle_param_.width;
-  double kEgoFrontEdgeToCenterDistance = vehicle_param_.front_edge_to_rear_axle;
-  double kEgoBackEdgeToCenterDistance = vehicle_param_.rear_edge_to_rear_axle;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double kEgoWidth = vehicle_param.width;
+  double kEgoFrontEdgeToCenterDistance = vehicle_param.front_edge_to_rear_axle;
+  double kEgoBackEdgeToCenterDistance = vehicle_param.rear_edge_to_rear_axle;
   is_valid_ = false;
   if (agent == nullptr) {
     return;

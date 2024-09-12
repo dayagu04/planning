@@ -71,7 +71,11 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
                                                 trajectory[i - 1].y() - tp.y());
     }
     trajectory.emplace_back(tp);
+    trajectory.x_vec_.emplace_back(traj_point.x);
+    trajectory.y_vec_.emplace_back(traj_point.y);
+    trajectory.theta_vec_.emplace_back(traj_point.theta);
   }
+  trajectory.traj_elements_vec_ready_flag_ = true;
   trajectories_.emplace_back(trajectory);
 }
 

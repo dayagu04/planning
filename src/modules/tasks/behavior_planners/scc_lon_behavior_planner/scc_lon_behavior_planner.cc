@@ -69,7 +69,7 @@ bool SccLonBehaviorPlanner::Execute() {
 
 void SccLonBehaviorPlanner::Init() {
   lon_behav_plan_input_ = std::make_shared<common::RealTimeLonBehaviorInput>();
-  st_graph_ = std::make_shared<scc::StGraphGenerator>(config_);
+  st_graph_ = std::make_shared<scc::StGraphGenerator>(config_, session_);
   sv_graph_ = std::make_shared<scc::SvGraphGenerator>(config_);
 }
 
