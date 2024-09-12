@@ -280,76 +280,24 @@ void StGraphGenerator::Update(
           .cipv_lost_prohibit_acceleration_decider_output();
   v_target_ = fmin(v_target_, mutable_output.speed_limit_);
 
-  // filter v target
-  if (v_target_ > v_ego) {
-    if (start_stop_info_.state() == common::StartStopInfo::START) {
-      accel_vel_filter_.SetRate(-config_.acc_start, config_.acc_start);
-    } else if (lon_behav_input_->lat_output().lc_request() != "none" &&
-               (lon_behav_input_->lat_output().lc_status() ==
-                    "right_lane_change_wait" ||
-                lon_behav_input_->lat_output().lc_status() ==
-                    "left_lane_change_wait" ||
-                lon_behav_input_->lat_output().lc_status() == "none")) {
-      accel_vel_filter_.SetRate(-2.0, 2.0);  // 换道调速滤波
-    } else {
-      accel_vel_filter_.SetRate(-1.0, 1.0);
-    }
-    if (v_ego > v_last_target_) {
-      accel_vel_filter_.SetState(v_ego);
-    }
-    if (v_last_target_ > v_target_) {
-      accel_vel_filter_.SetState(v_target_);
-    }
-    accel_vel_filter_.Update(v_target_);
-    v_target_ = accel_vel_filter_.GetOutput();
-  } else if (v_target_ < v_ego &&
-             ((is_on_ramp && v_limit_on_ramp_ == v_target_) ||
-              (v_limit_with_intersection_ == v_target_ &&
-               v_limit_with_intersection_ > 0.1))) {
-    accel_vel_filter_.SetRate(-1.0, 1.0);
-    if (v_ego < v_last_target_) {
-      accel_vel_filter_.SetState(v_ego);
-    }
-    accel_vel_filter_.Update(v_target_);
-    v_target_ = accel_vel_filter_.GetOutput();
-  } else if (v_target_ < v_ego &&
-             lon_behav_input_->lat_output().lc_request() != "none" &&
-             (lon_behav_input_->lat_output().lc_status() ==
-                  "right_lane_change_wait" ||
-              lon_behav_input_->lat_output().lc_status() ==
-                  "left_lane_change_wait" ||
-              lon_behav_input_->lat_output().lc_status() == "none")) {
-    if (v_ego < v_last_target_) {
-      accel_vel_filter_.SetState(v_ego);
-    }
-    accel_vel_filter_.SetRate(-2.0, 2.0);
-    accel_vel_filter_.Update(v_target_);
-    v_target_ = accel_vel_filter_.GetOutput();
-  } else if (v_target_ < v_ego && v_limit_on_turns_and_road_ == v_target_) {
-    if (v_ego < v_last_target_) {
-      accel_vel_in_turns_filter_.SetState(v_ego);
-    }
-    accel_vel_in_turns_filter_.Update(v_target_);
-    v_target_ = accel_vel_in_turns_filter_.GetOutput();
-  }
+  UpdateTargetVelocityByFilter(is_on_ramp, v_ego);
 
-  // 0. get start & stop state
+  // 3. get start & stop state
   common::StartStopInfo::StateType stop_start_state = UpdateStartStopState(
       lon_behav_input_->lat_obs_info().lead_one(), v_ego, last_traj);
   v_target_ = stop_start_state == common::StartStopInfo::STOP ? 0.0 : v_target_;
   JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
-  JSON_DEBUG_VALUE("v_target_start_stop", v_cruise);
-
+  JSON_DEBUG_VALUE("v_target_start_stop", v_target_);
   v_last_target_ = v_target_;
 
-  // 3. update vref
+  // 4. update v_target & v_ref
   UpdateVelRefs();
 
-  // 4. update bound
+  // 5. update bound
   MakeAccBound();
   MakeJerkBound();
 
-  // 5. calculate sref by vref
+  // 6. calculate sref by vref
   std::vector<double> sref_vec;
   sref_vec.resize(config_.lon_num_step + 1);
   CalculateSrefsByVref(v_ego, vt_refs_, acc_ego, sref_vec);
@@ -2399,12 +2347,9 @@ void StGraphGenerator::MakeAccBound() {
       config_.low_speed_threshold_with_acc_upper_bound,
       acc_upper_bound_with_high_speed,
       config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
-  // acc_bound_.first = (std::fmin(lon_init_state_[2],
-  // config_.acc_lower_bound)); acc_bound_.second =
-  //     (std::fmax(lon_init_state_[2], acc_upper_bound_with_speed));
-  acc_bound_.first = (std::fmin(lon_init_state_[2], acc_target_.first));
-  acc_bound_.second =
-      std::fmin((std::fmax(lon_init_state_[2], acc_target_.second)), 1.0);
+
+  acc_bound_.first = acc_target_.first;
+  acc_bound_.second = acc_target_.second;
   // TODO: config_.v_target_stop_thrd(0.3) doesn't work in eoy, but need to work
   // in gasoline car
   if (start_stop_info_.state() == common::StartStopInfo::START) {
@@ -3717,6 +3662,75 @@ bool StGraphGenerator::LateralCollisionCheck(const double &start_s,
     }
   }
   return false;
+}
+
+void StGraphGenerator::UpdateTargetVelocityByFilter(const bool is_on_ramp,
+                                                    const double v_ego) {
+  // 如果目标速度大于当前车速
+  if (v_target_ > v_ego) {
+    // 如果车辆状态为启动
+    if (start_stop_info_.state() == common::StartStopInfo::START) {
+      accel_vel_filter_.SetRate(-config_.acc_start, config_.acc_start);
+    }
+    // 如果有换道请求且换道状态为等待或无换道请求
+    else if (lon_behav_input_->lat_output().lc_request() != "none" &&
+             (lon_behav_input_->lat_output().lc_status() ==
+                  "right_lane_change_wait" ||
+              lon_behav_input_->lat_output().lc_status() ==
+                  "left_lane_change_wait" ||
+              lon_behav_input_->lat_output().lc_status() == "none")) {
+      accel_vel_filter_.SetRate(-2.0, 2.0);  // 换道调速滤波
+    } else {
+      accel_vel_filter_.SetRate(-1.0, 0.8);
+    }
+    // 如果当前车速大于上次目标速度
+    if (v_ego > v_last_target_) {
+      accel_vel_filter_.SetState(v_ego);
+    }
+    // 如果上次目标速度大于当前目标速度
+    if (v_last_target_ > v_target_) {
+      accel_vel_filter_.SetState(v_target_);
+    }
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+  }
+  // 如果目标速度小于当前车速并且在匝道或交叉口限制速度
+  else if (v_target_ < v_ego &&
+           ((is_on_ramp && v_limit_on_ramp_ == v_target_) ||
+            (v_limit_with_intersection_ == v_target_ &&
+             v_limit_with_intersection_ > 0.1))) {
+    accel_vel_filter_.SetRate(-1.0, 1.0);
+
+    // 如果当前车速小于上次目标速度
+    if (v_ego < v_last_target_) {
+      accel_vel_filter_.SetState(v_ego);
+    }
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+  }
+  // 如果目标速度小于当前车速并且有换道请求
+  else if (v_target_ < v_ego &&
+           lon_behav_input_->lat_output().lc_request() != "none" &&
+           (lon_behav_input_->lat_output().lc_status() ==
+                "right_lane_change_wait" ||
+            lon_behav_input_->lat_output().lc_status() ==
+                "left_lane_change_wait" ||
+            lon_behav_input_->lat_output().lc_status() == "none")) {
+    if (v_ego < v_last_target_) {
+      accel_vel_filter_.SetState(v_ego);
+    }
+    accel_vel_filter_.SetRate(-2.0, 2.0);
+    accel_vel_filter_.Update(v_target_);
+    v_target_ = accel_vel_filter_.GetOutput();
+  }
+  // 如果目标速度小于当前车速并且限速在转弯或道路中
+  else if (v_target_ < v_ego && v_limit_on_turns_and_road_ == v_target_) {
+    if (v_ego < v_last_target_) {
+      accel_vel_in_turns_filter_.SetState(v_ego);
+    }
+    accel_vel_in_turns_filter_.Update(v_target_);
+    v_target_ = accel_vel_in_turns_filter_.GetOutput();
+  }
 }
 
 void StGraphGenerator::SetConfig(
