@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
+#include "define/geometry.h"
 #include "session.h"
 #include "virtual_lane.h"
 namespace planning {
@@ -175,7 +176,6 @@ class LaneChangeStateMachineManager {
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
                const double& threshold);
   void UpdateCoarsePlanningInfo();
-  void UpdateAdInfo();
   void UpdateStateMachineDebugInfo();
   void GenerateTurnSignalForSplitRegion();
   bool IsSplitRegion(RampDirection* ramp_direction);
@@ -186,6 +186,8 @@ class LaneChangeStateMachineManager {
   bool IsOverlapWithOtherLaneOnEndRegion(
       const std::shared_ptr<ReferencePath> reference_path,
       const RelativeDirection rel_dir);
+  const double CalculateEgoFrontLineLength();
+  void CalculateMergePoint(std::vector<Point2D>* merge_point, const int merge_lane_virtual_id);
 
  private:
   ScenarioStateMachineConfig config_;

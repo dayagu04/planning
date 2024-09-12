@@ -197,19 +197,20 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
   push_notebook()
 
 def update_lc_data (noa_info, plan_debug_json):
-  vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge']
+  # vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge']
   names  = []
   datas = []
-  for name in vars_noa:
-    try:
-      datas.append(getattr(noa_info,name))
-      names.append(name)
-    except:
-      pass
+  # for name in vars_noa:
+  #   try:
+  #     datas.append(getattr(noa_info,name))
+  #     names.append(name)
+  #   except:
+  #     pass
   vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
              'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
              'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',
+             'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'virtual_lane_relative_id_switch_flag',
              'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_intersection_split',
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',

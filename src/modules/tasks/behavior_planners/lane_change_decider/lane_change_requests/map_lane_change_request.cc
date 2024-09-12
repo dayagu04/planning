@@ -186,14 +186,7 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
         }
 
         if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE,
-                                           origin_lane_virtual_id_) &&
-            request_type_ != NO_CHANGE &&
-            (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-             (lc_status == kLaneChangeCancel &&
-              (lane_change_lane_mgr_->has_origin_lane() &&
-               lane_change_lane_mgr_->is_ego_on(olane)))) &&
-            virtual_lane_mgr_->dis_to_ramp() >
-                300 + 300 * std::fabs(lc_map_decision)) {
+                                           origin_lane_virtual_id_)) {
           Finish();
           set_target_lane_virtual_id(current_lane_virtual_id);
           LOG_DEBUG("[MapRequest::update] : finish request, dashed not enough");

@@ -244,23 +244,6 @@ void IntRequest::Update(int lc_status) {
     counter_left_ = 0;
     counter_right_ = 0;
     is_in_diverted_lane_change_ = false;
-  } else if (lane_change_lane_mgr_->has_target_lane() &&
-             (std::fabs(frenet_ego_state_l) >=
-              tlane->width() / 2 +
-                  int_request_config_.disallow_cancel_int_lc_lateral_thr) &&
-             !is_in_diverted_lane_change_) {
-    if ((request_type_ == LEFT_CHANGE &&
-         left_boundary_type ==
-             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) ||
-        (request_type_ == RIGHT_CHANGE &&
-         right_boundary_type ==
-             iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID)) {
-      request_cancel_reason_ = SOLID_LC;
-      Finish();
-      set_target_lane_virtual_id(current_lane_virtual_id);
-      counter_left_ = 0;
-      counter_right_ = 0;
-    }
   }
 }
 

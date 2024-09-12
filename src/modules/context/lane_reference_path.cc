@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "environmental_model.h"
 #include "ifly_time.h"
 #include "obstacle_manager.h"
 #include "session.h"
@@ -271,9 +272,12 @@ bool LaneReferencePath::IsObstacleOn(
   if (1) {
     std::array<double, 5> xp_rel_s{-30, -20, 20, 30, 60};
     std::array<double, 5> fp_l2{0.45, 0.2, 0.3, 0.45, 0.6};
-    check_offset = interp(frenet_obstacle->rel_s(), xp_rel_s, fp_l2) +
-                   interp(frenet_obstacle->frenet_velocity_s(), xp_vs, fp_l1);
-
+    if (frenet_obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+      check_offset = interp(frenet_obstacle->rel_s(), xp_rel_s, fp_l2);
+    } else {
+      check_offset = interp(frenet_obstacle->rel_s(), xp_rel_s, fp_l2) +
+                    interp(frenet_obstacle->frenet_velocity_s(), xp_vs, fp_l1);
+    }
     return (distance_to_left_line < -check_offset &&
             distance_to_right_line > check_offset);
   } else {

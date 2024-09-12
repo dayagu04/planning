@@ -545,13 +545,27 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       all_lane_boundary_types_are_dashed || dash_length > lc_response_dist) {
     return true;
   }
-
+  if (virtual_lane_mgr_->dis_to_ramp() < 100) {
+    if (lc_request == LEFT_CHANGE) {
+      iflyauto::LaneBoundaryType left_boundary_type =
+          MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
+      if (left_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED) {
+        return true;
+      }
+    } else if (lc_request == RIGHT_CHANGE) {
+      iflyauto::LaneBoundaryType right_boundary_type =
+         MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_id);
+      if (right_boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED) {
+        return true;
+      }
+    }
+  }
   std::cout << "dash lengh less than lc response dist!!!!" << std::endl;
   return false;
 }
 
 iflyauto::LaneBoundaryType LaneChangeRequest::MakesureCurrentBoundaryType(
-    const RequestType lc_request, const int origin_lane_id) {
+    const RequestType lc_request, const int origin_lane_id) const {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   double lane_line_length = 0.0;

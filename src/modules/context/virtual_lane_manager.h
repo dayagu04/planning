@@ -205,8 +205,18 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
 
+  bool is_road_merged_by_other_lane() const { return is_road_merged_by_other_lane_; }
+
+  const double dis_threshold_to_merged_point() const {
+    return dis_threshold_to_is_merged_point_;
+  }
+
   bool is_ego_on_city_expressway_hmi() const {
     return is_ego_on_city_expressway_hmi_;
+  }
+
+  bool is_ramp_merge_to_road_on_expressway() const {
+    return is_ramp_merge_to_road_on_expressway_;
   }
 
   const double dis_threshold_to_last_merge_point() const {
@@ -356,7 +366,14 @@ class VirtualLaneManager {
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
   double distance_to_toll_station_ = NL_NMAX;
+  bool is_exist_toll_station_ = false;
+  bool is_ramp_merge_to_road_on_expressway_ = false;
+  bool is_ramp_merge_to_ramp_on_expressway_ = false;
+  bool is_road_merged_by_other_lane_ = false;
+  bool is_nearing_other_lane_merge_to_road_point_ = false;
+  RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
   const double dis_threshold_to_last_merge_point_ = 800.0;
+  const double dis_threshold_to_is_merged_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;
   bool is_within_hdmap_ = false;
