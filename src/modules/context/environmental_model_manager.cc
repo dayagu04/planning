@@ -1146,6 +1146,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   PredictionTrajectory tra;
   tra.trajectory.emplace_back(std::move(trajectory_point));
   prediction_object.trajectory_array.emplace_back(std::move(tra));
+  prediction_object.is_static = IsStatic(prediction_object);
   objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
