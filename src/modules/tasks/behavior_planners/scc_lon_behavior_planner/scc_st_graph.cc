@@ -287,7 +287,7 @@ void StGraphGenerator::Update(
       lon_behav_input_->lat_obs_info().lead_one(), v_ego, last_traj);
   v_target_ = stop_start_state == common::StartStopInfo::STOP ? 0.0 : v_target_;
   JSON_DEBUG_VALUE("stop_start_state", (int)stop_start_state);
-  JSON_DEBUG_VALUE("v_target_start_stop", v_cruise);
+  JSON_DEBUG_VALUE("v_target_start_stop", v_target_);
   v_last_target_ = v_target_;
 
   // 4. update v_target & v_ref
