@@ -60,32 +60,23 @@ if (UNIT_TEST_ENABLE)
   add_subdirectory(test)
 endif()
 
-if (PP_ENABLE)
+if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   execute_process(COMMAND pip install empy==3.3.4
                     RESULT_VARIABLE result
                     OUTPUT_VARIABLE output
                     ERROR_VARIABLE error)
-  if(NOT STRUCT_MSGS_ADDED)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/legacy)
-    set(STRUCT_MSGS_ADDED TRUE CACHE INTERNAL "Flag to indicate that subdir has been added")
-  endif()
-  add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs_legacy/interface2.4.5)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs_legacy/interface2.4.6)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/proto_msgs)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/sensor_interface)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/src/legacy)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/struct_msgs struct_msgs.out)
+endif()
+
+if (PP_ENABLE)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/struct_msgs_legacy/interface2.4.5 interface2.4.5.out)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/struct_msgs_legacy/interface2.4.6 interface2.4.6.out)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/proto_msgs proto_msgs.out)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/interface/type_convert/sensor_interface sensor_interface.out)
   add_subdirectory(tools/planning_player)
 endif()
 
 if (PYBIND_TOOL_ENABLE)
-  execute_process(COMMAND pip install empy==3.3.4
-                    RESULT_VARIABLE result
-                    OUTPUT_VARIABLE output
-                    ERROR_VARIABLE error)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/interface/src/legacy)
-  if(NOT STRUCT_MSGS_ADDED)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/interface/type_convert/struct_msgs)
-    set(STRUCT_MSGS_ADDED TRUE CACHE INTERNAL "Flag to indicate that subdir has been added")
-  endif()
   add_subdirectory(jupyter_pybind)
 endif()
