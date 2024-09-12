@@ -614,8 +614,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
 
   for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
     // 0. 避免init a 超出 a bound
-    lon_a_bound.lower = std::fmin(
-        a_bounds.first, init_state_a + kJerkMax * config_.delta_time * i);
+    lon_a_bound.lower = std::fmin(a_bounds.first, init_state_a);
     lon_a_bound.upper = std::fmax(
         a_bounds.second, init_state_a + kJerkMin * config_.delta_time * i);
 
