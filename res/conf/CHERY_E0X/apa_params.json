@@ -161,7 +161,7 @@
   "parallel_channel_y_mag": 7.9,
   "parallel_channel_x_mag": 20.0,
   "parallel_ego_side_to_obs_in_buffer": 0.25,
-  "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
+  "parallel_ego_front_corner_to_obs_in_buffer": 0.05,
 
   "comment_12": "dynamic update path params",
   "car_to_limiter_dis": 1.0,
@@ -232,6 +232,7 @@
   "min_opt_path_length": 0.9,
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,
+  "is_parallel_advanced_method": true,
   "path_generator_type": 0,
   "vertical_slot_target_adjust_dist": 1.5,
   "enable_delete_fusion_obj_in_slot": true,

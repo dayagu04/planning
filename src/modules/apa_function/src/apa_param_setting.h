@@ -258,6 +258,7 @@ struct ApaParameters {
   double min_gear_path_length = 0.25;
   double parallel_multi_plan_radius_eps = 0.03;
   double parallel_search_out_heading = 0.0;
+  bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
   // move target point in slot to another point for easy tracking
