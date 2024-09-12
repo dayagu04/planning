@@ -22,6 +22,7 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
   enum class PrePlanCase : uint8_t {
     FAIL,
     EGO_POSE,
+    MID_POINT,
     FIRST_MID_POINT,
     SECOND_MID_POINT,
     MOVE_TO_TARGET_LINE,
@@ -45,9 +46,18 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
     LINE_ARC,
     COUNT,
   };
+
+  enum class DubinsPlanResult {
+    SUCCESS,
+    PATH_COLLISION,
+    NO_PATH,
+  };
+
   struct PlannerParams {
     bool is_left_side = true;
     double slot_side_sgn = 1.0;
+
+    bool is_searching_stage = false;
 
     PrePlanCase pre_plan_case = PrePlanCase::FAIL;
 
@@ -83,6 +93,7 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
     Eigen::Vector2d pre_line_normal_vec = Eigen::Vector2d::Zero();
 
     void Reset() {
+      is_searching_stage = false;
       is_left_side = true;
       slot_side_sgn = 1.0;
 
@@ -161,11 +172,35 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
  private:
   // member function
   virtual void Preprocess() override;
+
+  // new prepare plan
+  const bool PreparePathPlan();
+
+  const bool PrepareSinglePathPlan(
+      const pnc::geometry_lib::PathPoint &cur_pose,
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+          &all_path_seg_vec);
+
+  const bool PreparePathPlanSecond();
+
+  const bool UpdatePath();
+  const DubinsPlanResult DubinsPathPlan(
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
+      const double min_length, const bool need_col_det,
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+
+  const bool IsPathSafe(const pnc::geometry_lib::PathSegment &path_seg,
+                        const double lat_inflation, const double lon_safe_dist);
+
+  const PathColDetRes TrimPathByObs(pnc::geometry_lib::PathSegment &path_seg,
+                                    const double lat_inflation,
+                                    const double lon_safe_dist);
+
   // prepare plan start
   const bool PreparePlan();
-  const bool PreparePlanOnce(const double &x_offset,
-                             const double &heading_offset,
-                             const double &radius);
+  const bool PreparePlanOnce(const double x_offset, const double heading_offset,
+                             const double radius);
 
   const bool CalTurnAroundPose();
 
@@ -186,6 +221,16 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
   const bool MultiPreparePlan(Eigen::Vector2d &tag_point);
   bool CalMultiSafeCircle();
   // prepare plan end
+
+  //   const bool MultiAdjustPlan();
+  const bool OneArcPathPlan(
+      const pnc::geometry_lib::PathPoint &pose,
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+  //   const bool LineArcPathPlan();
+  const bool TwoArcPathPlan(
+      const pnc::geometry_lib::PathPoint &pose,
+      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+  //   const bool OneLinePathPlan();
 
   // multi plan start
   const bool CheckMultiPlanSuitable(

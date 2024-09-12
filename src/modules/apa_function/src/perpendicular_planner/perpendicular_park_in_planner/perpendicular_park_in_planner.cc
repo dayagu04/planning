@@ -206,8 +206,8 @@ const bool PerpendicularParkInPlanner::UpdateEgoSlotInfo() {
     const double real_slot_length = (pM01 - pM23).norm();
     const Eigen::Vector2d t = (pt[1] - pt[0]).normalized();
     // n is vec that slot opening orientation
-    const Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
-    // const Eigen::Vector2d n = (pM01 - pM23).normalized();
+    Eigen::Vector2d n = Eigen::Vector2d(t.y(), -t.x());
+    n = (pM01 - pM23).normalized();
     pt[2] = pt[0] - real_slot_length * n;
     pt[3] = pt[1] - real_slot_length * n;
 
@@ -1029,8 +1029,11 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.pt_outside = corner_left_slot;
     slot_t_lane_.pt_inside = corner_right_slot;
     slot_t_lane_.pt_inside.x() =
-        std::min(real_right_x, ego_slot_info.pt_0.x()) +
+        std::min(real_right_x, ego_slot_info.pt_0.x() + 0.368) +
         apa_param.GetParam().tlane_safe_dx;
+    slot_t_lane_.pt_inside.y() =
+        pnc::mathlib::Constrain(real_right_y, corner_right_slot.y() - 0.128,
+                                corner_right_slot.y() + 0.068);
     // slot_t_lane_.pt_inside.y() =
     //     std::min(real_right_y, ego_slot_info.pt_0.y() + 0.05);
   } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
@@ -1039,8 +1042,12 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.corner_inside_slot = corner_left_slot;
     slot_t_lane_.pt_outside = corner_right_slot;
     slot_t_lane_.pt_inside = corner_left_slot;
-    slot_t_lane_.pt_inside.x() = std::min(real_left_x, ego_slot_info.pt_1.x()) +
-                                 apa_param.GetParam().tlane_safe_dx;
+    slot_t_lane_.pt_inside.x() =
+        std::min(real_left_x, ego_slot_info.pt_1.x() + 0.368) +
+        apa_param.GetParam().tlane_safe_dx;
+    slot_t_lane_.pt_inside.y() =
+        pnc::mathlib::Constrain(real_left_y, corner_left_slot.y() - 0.068,
+                                corner_left_slot.y() + 0.128);
     // slot_t_lane_.pt_inside.y() =
     //     std::max(real_left_y, ego_slot_info.pt_1.y() - 0.05);
   }
@@ -1375,8 +1382,6 @@ const uint8_t PerpendicularParkInPlanner::PathPlanOnce() {
   // construct input
   const auto& ego_slot_info = frame_.ego_slot_info;
   PerpendicularPathInPlanner::Input path_planner_input;
-  path_planner_input.is_simulation =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation;
   path_planner_input.pt_0 = ego_slot_info.pt_0;
   path_planner_input.pt_1 = ego_slot_info.pt_1;
   path_planner_input.sin_angle = ego_slot_info.sin_angle;
@@ -2217,7 +2222,7 @@ void PerpendicularParkInPlanner::Log() const {
     }
     for (const auto& obstacle : obs_pair.second) {
       if (obs_pair.first == CollisionDetector::FUSION_OBS &&
-          !(std::fabs(obstacle.y()) < 1.568 && obstacle.x() < 5.568 &&
+          !(std::fabs(obstacle.y()) < 1.568 && obstacle.x() < 7.568 &&
             obstacle.x() > -0.468)) {
         continue;
       }
