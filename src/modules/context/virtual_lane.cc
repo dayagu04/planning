@@ -383,8 +383,7 @@ void VirtualLane::update_lane_tasks(
       current_tasks_.emplace_back(-1);
       std::cout << "在高速主路最右侧车道上,且接近前方汇入点时,向左产生一个变道任务" << std::endl;
     }
-  } else if (is_nearing_ramp &&
-             !is_on_ramp) {
+  } else if (is_nearing_ramp && !is_on_ramp) {
     if (ramp_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);

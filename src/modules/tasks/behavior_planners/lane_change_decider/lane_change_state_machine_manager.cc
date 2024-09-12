@@ -908,7 +908,9 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
                    lane_change_decider_output.is_merge_region);
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id);
   if (lane_change_decider_output.is_merge_region) {
-    const auto merge_point_list = CalculateMergePoint(lane_change_decider_output.merge_lane_virtual_id);
+    std::vector <Point2D> merge_point_list;
+    merge_point_list.resize(2);
+    CalculateMergePoint(&merge_point_list,lane_change_decider_output.merge_lane_virtual_id);
     lane_change_decider_output.merge_point = merge_point_list[0];
     lane_change_decider_output.boundary_merge_point = merge_point_list[1];
   } else {
@@ -917,7 +919,18 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
     lane_change_decider_output.merge_point = ego_point;
     lane_change_decider_output.boundary_merge_point = ego_point;
   }
-  VisionMergePoint();
+  JSON_DEBUG_VALUE(
+      "macroeconomic_decider_merge_point_x",
+      lane_change_decider_output.merge_point.x);
+  JSON_DEBUG_VALUE(
+      "macroeconomic_decider_merge_point_y",
+      lane_change_decider_output.merge_point.y);
+  JSON_DEBUG_VALUE(
+      "boundary_line_merge_point_x",
+      lane_change_decider_output.boundary_merge_point.x);
+  JSON_DEBUG_VALUE(
+      "boundary_line_merge_point_y",
+      lane_change_decider_output.boundary_merge_point.y);
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp =
       road_to_ramp_turn_signal_;
@@ -1980,33 +1993,30 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   return false;
 }
 
-const std::vector<Point2D> LaneChangeStateMachineManager::CalculateMergePoint(const int merge_lane_virtual_id) {
-  std::vector <Point2D> merge_point_list;
-  merge_point_list.resize(2);
+void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* merge_point_list, const int merge_lane_virtual_id) {
   const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
   Point2D merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
   Point2D boundary_line_merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
-  merge_point_list[0] = merge_point;
-  merge_point_list[1] = boundary_line_merge_point;
+  (*merge_point_list)[0] = merge_point;
+  (*merge_point_list)[1] = boundary_line_merge_point;
   const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
   const auto& reference_path_manager = session_->environmental_model().get_reference_path_manager();
   const auto& overlap_lane = virtual_lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id);
-
   if (!overlap_lane) {
-    return merge_point_list;
+    return;
   }
   const auto& cur_path = reference_path_manager->get_reference_path_by_current_lane();
   if (!cur_path) {
-    return merge_point_list;
+    return;
   }
   const auto& overlap_path = reference_path_manager->get_reference_path_by_lane(merge_lane_virtual_id);
   if (!overlap_path) {
-    return merge_point_list;
+    return;
   }
   const auto& overlap_path_coordinate = overlap_path->get_frenet_coord();
   const double ego_front_line_length = CalculateEgoFrontLineLength();
   if (ego_front_line_length < 0) {
-    return merge_point_list;
+    return;
   }
   const double cur_ego_s = cur_path->get_frenet_ego_state().s();
   const double ego_front_center_line_length = cur_path->get_frenet_coord()->Length() - cur_ego_s;
@@ -2051,9 +2061,8 @@ const std::vector<Point2D> LaneChangeStateMachineManager::CalculateMergePoint(co
     }
   }
 
-  merge_point_list[0] = merge_point;
-  merge_point_list[1] = boundary_line_merge_point;
-  return merge_point_list;
+  (*merge_point_list)[0] = merge_point;
+  (*merge_point_list)[1] = boundary_line_merge_point;
 }
 
 const double LaneChangeStateMachineManager::CalculateEgoFrontLineLength(){
@@ -2079,33 +2088,4 @@ const double LaneChangeStateMachineManager::CalculateEgoFrontLineLength(){
   const double ego_front_length = target_boundary_path->Length() - ego_s;
   return ego_front_length;
 }
-
-void LaneChangeStateMachineManager::VisionMergePoint () {
-  //转化为body坐标，为了可视化方便
-  const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
-  const auto& lane_change_decider_output = session_->planning_context().lane_change_decider_output();
-  const Point2D merge_point = lane_change_decider_output.merge_point;
-  const Point2D boundary_line_merge_point = lane_change_decider_output.boundary_merge_point;
-  Eigen::Vector2d pos_n_ori (ego_stete->ego_pose().x, ego_stete->ego_pose().y);
-  const double theta_ori = ego_stete->ego_pose().theta;
-  pnc::geometry_lib::GlobalToLocalTf global_to_local_tf (pos_n_ori, theta_ori);
-  Eigen::Vector2d p_n (merge_point.x, merge_point.y);
-  Eigen::Vector2d  merge_point_temp = global_to_local_tf.GetPos(p_n);
-  JSON_DEBUG_VALUE(
-      "macroeconomic_decider_merge_point_x",
-      merge_point_temp.x());
-  JSON_DEBUG_VALUE(
-      "macroeconomic_decider_merge_point_y",
-      merge_point_temp.y());
-
-  Eigen::Vector2d p_n_temp (boundary_line_merge_point.x, boundary_line_merge_point.y);
-  Eigen::Vector2d  boundary_line_merge_point_temp = global_to_local_tf.GetPos(p_n_temp);
-  JSON_DEBUG_VALUE(
-      "boundary_line_merge_point_x",
-      boundary_line_merge_point_temp.x());
-  JSON_DEBUG_VALUE(
-      "boundary_line_merge_point_y",
-      boundary_line_merge_point_temp.y());
-}
-
 }  // namespace planning

@@ -585,15 +585,9 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
   if (is_ego_on_expressway_) {
-    if (is_on_highway_) {
-      if (is_exist_toll_station_ &&
-          distance_to_toll_station_ > cancel_mlc_dis_threshold_to_route_end) {
-        GenerateLaneChangeTasksForNOA();
-      } else if (!is_exist_toll_station_ &&
-                  distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
-        GenerateLaneChangeTasksForNOA();
-      }
-    }else if (distance_to_route_end_ > cancel_mlc_dis_threshold_to_route_end) {
+    const bool is_inhibitory_noa_task = (is_exist_toll_station_ && distance_to_toll_station_ < cancel_mlc_dis_threshold_to_route_end)
+        || distance_to_route_end_ < cancel_mlc_dis_threshold_to_route_end;
+    if (!is_inhibitory_noa_task) {
       GenerateLaneChangeTasksForNOA();
     }
   }
@@ -1452,15 +1446,19 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       const auto& merge_info_temp = merge_info[i];
       if (merge_info_temp.second > kEpsilon) {
         const auto& merge_seg = merge_info_temp.first;
+        if (!merge_seg) {
+          break;
+        }
         const auto& merge_seg_last_seg = sd_map.GetPreviousRoadSegment(merge_seg->id());
-        if (merge_seg_last_seg &&
-            merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
+        if (!merge_seg_last_seg) {
+          break;
+        }
+        if (merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
             merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
             is_on_ramp_) {
           is_ramp_merge_to_road_on_expressway_ = true;
         }
-        if (merge_seg_last_seg &&
-            merge_seg_last_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
+        if (merge_seg_last_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
             merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
             !is_on_ramp_ &&
             is_on_highway_) {

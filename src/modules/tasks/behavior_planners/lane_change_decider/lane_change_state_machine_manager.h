@@ -187,8 +187,7 @@ class LaneChangeStateMachineManager {
       const std::shared_ptr<ReferencePath> reference_path,
       const RelativeDirection rel_dir);
   const double CalculateEgoFrontLineLength();
-  const std::vector<Point2D> CalculateMergePoint(const int merge_lane_virtual_id);
-  void VisionMergePoint();
+  void CalculateMergePoint(std::vector<Point2D>* merge_point, const int merge_lane_virtual_id);
 
  private:
   ScenarioStateMachineConfig config_;
