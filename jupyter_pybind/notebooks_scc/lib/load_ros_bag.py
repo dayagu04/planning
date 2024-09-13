@@ -158,7 +158,7 @@ class LoadRosbag:
     except Exception as e:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!') """
-    
+
     if is_new_loc:
       try:
         loc_msg_dict = {}
@@ -594,7 +594,7 @@ class LoadRosbag:
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
-                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
+                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_intersection_split', 'current_segment_passed_distance', \

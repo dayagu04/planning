@@ -20,7 +20,7 @@ constexpr double check_time = 1.6;
 constexpr double kMinFarTimeGap = 1.8;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 10.0;
+constexpr double kSpeedBuffer = 5.0;
 constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
 constexpr double kFarDistFollowTimeGap = 1.8;
 constexpr double kNearDistFollowTimeGap = 1.2;
@@ -598,7 +598,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   WeightedBounds s_soft_bounds;
   s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, kSUpperBound, -1.0});
   LonLeadBounds s_lead_bounds;
-  s_lead_bounds.emplace_back(LonLeadBound{kSUpperBound, 0.0, 0.0, -1});
+  s_lead_bounds.emplace_back(LonLeadBound{300.0, 0.0, 0.0, -1});
   Bound lon_v_bound{-0.1, std::min(v_cruise, config_.velocity_upper_bound)};
   // get lane change info
   const auto &coarse_planning_info = session_->planning_context()
@@ -667,25 +667,42 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     }
   }
   // 10. using JLT to update Sref in farslow and stable car case
-  bool jlt_status = false;
+  bool jlt_farslow_status = false;
+  bool jlt_stable_status = false;
   GetHardBounds();
   std::vector<double> sref_farslow;
   std::vector<double> sref_stable;
   sref_farslow.resize(config_.lon_num_step + 1);
   sref_stable.resize(config_.lon_num_step + 1);
-  jlt_status = GenerateFarSlowCarFollowCurve(sref_farslow);
-  if (jlt_status && config_.enable_jlt) {
-    for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
-      // lon_behav_output_.s_refs[i].first =
-      //     std::fmin(lon_behav_output_.s_refs[i].first, sref_farslow[i]);
-      lon_behav_output_.s_refs[i].first = sref_farslow[i];
-    }
-  }
-  JSON_DEBUG_VALUE("jlt_status_farslow", jlt_status)
-
-  // 11. use speed adjust s search ref
+  jlt_farslow_status = GenerateFarSlowCarFollowCurve(sref_farslow);
+  jlt_stable_status = GenerateStableFollowSlowCurve(sref_farslow);
+  JSON_DEBUG_VALUE("jlt_status_farslow", jlt_farslow_status)
+  JSON_DEBUG_VALUE("jlt_status_stable", jlt_stable_status)
   const auto &lane_change_info =
       session_->planning_context().lane_change_decider_output();
+  if (jlt_farslow_status || jlt_stable_status ||
+      (lane_change_info.s_search_status && config_.enable_speed_adjust)) {
+    lon_j_bound.lower = -1.0;
+    lon_j_bound.upper = 1.0;
+  }
+  for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+    // update jerk bounds
+    lon_behav_output_.lon_bound_jerk[i] = lon_j_bound;
+  }
+  if (config_.enable_jlt) {
+    for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+      if (jlt_farslow_status) {
+        lon_behav_output_.s_refs[i].first =
+            std::fmin(lon_behav_output_.s_refs[i].first, sref_farslow[i]);
+      }
+      if (jlt_stable_status) {
+        lon_behav_output_.s_refs[i].first =
+            std::fmin(lon_behav_output_.s_refs[i].first, sref_stable[i]);
+      }
+    }
+  }
+
+  // 11. use speed adjust s search ref
   if (lane_change_info.s_search_status && config_.enable_speed_adjust) {
     if (lane_change_info.st_search_vec.size() == config_.lon_num_step + 1) {
       for (size_t i = 0; i <= config_.lon_num_step; i++) {
@@ -698,7 +715,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     }
   }
 
-  // 10.update sv boundary
+  // 12.update sv boundary
   SVBoundary sv_boundary_tmp = sv_boundaries.front();
   for (auto it = std::next(sv_boundaries.begin()); it != sv_boundaries.end();
        ++it) {
@@ -963,7 +980,7 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   StateLimit state_limit;
   state_limit.p_end = 0.0;
   state_limit.v_min = -0.1;
-  state_limit.v_max = 25.0;
+  state_limit.v_max = 40.0;
   state_limit.a_min = acc_min;
   state_limit.a_max = kAccMax;
   state_limit.j_min = kJerkMin;
@@ -1096,6 +1113,10 @@ bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
     double s_ego = follow_stable_target_trajectory.Evaluate(0, time);
     // double v_ego = follow_stable_target_trajectory.Evaluate(1, time);
     s_refs[i] = s_ego;
+    // safty check
+    if (s_ego > hard_bounds_[i].upper) {
+      return false;
+    }
   }
   return true;
 }
