@@ -1,0 +1,258 @@
+
+#include "euler_distance_transform.h"
+
+#include <opencv2/imgproc/types_c.h>
+
+#include <opencv2/imgproc.hpp>
+
+#include "log_glog.h"
+#include "occupancy_grid_map.h"
+#include "ogm_common.h"
+#include "transform2d.h"
+
+namespace planning {
+
+#define write_debug_file (0)
+
+#define DEBUG_EDT (0)
+
+// a1000, opencv version:4.0.0
+// x86, opencv version:3.2.0
+// todo
+
+void EulerDistanceTransform::Process(const Pose2D &ogm_pose) {
+  OccupancyGridCoordinate::Process(ogm_pose);
+
+  return;
+}
+
+bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
+                                    const Pose2D &ogm_pose) {
+  OccupancyGridCoordinate::Process(ogm_pose);
+
+  cv::Mat map_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1, cv::Scalar(200));
+
+  map.TransformToMatrix(&map_matrix);
+
+  // cv::Mat edt_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_32FC1,
+  // cv::Scalar(200));
+  cv::Mat edt_matrix;
+
+  // 计算每一个像素到其他零像素的最近距离
+  cv::distanceTransform(map_matrix, edt_matrix, CV_DIST_L2,
+                        CV_DIST_MASK_PRECISE);
+
+  CVMatrixToArray(&edt_matrix);
+
+#if write_debug_file
+  cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
+  cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
+#endif
+
+  return true;
+}
+
+void EulerDistanceTransform::CVMatrixToArray(cv::Mat *edt_matrix) {
+  int row_num = edt_matrix->rows;
+  int column_num = edt_matrix->cols;
+
+  ILOG_INFO << "r " << row_num << " max x " << ogm_grid_x_max;
+  ILOG_INFO << "c " << column_num << " max y " << ogm_grid_y_max;
+
+  for (int j = 0; j < row_num; j++) {
+    float *data = edt_matrix->ptr<float>(j);
+    for (int i = 0; i < column_num; i++) {
+      data_.dist[j][i] = data[i] * float(ogm_resolution);
+    }
+  }
+
+  return;
+}
+
+const float EulerDistanceTransform::GetDistanceByIndex(const OgmIndex &id) {
+  return data_.dist[id.x][id.y];
+}
+
+void EulerDistanceTransform::CopyEDT(const EDTData &data) {
+  data_ = data;
+  return;
+}
+
+const bool EulerDistanceTransform::DistanceCheckForPoint(
+    float *min_dist, Transform2d *tf, const AstarPathGear gear) {
+  OgmIndex index;
+
+  FootPrintCircle *circle;
+
+  FootPrintCircleList *global_circles;
+  global_circles = &global_circles_;
+
+  footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
+
+  float dist;
+
+  // check max circle
+  circle = &global_circles->max_circle;
+
+  index.x = std::round((circle->pos.x - bound_.min_x) * ogm_resolution_inv_);
+  index.y = std::round((circle->pos.y - bound_.min_y) * ogm_resolution_inv_);
+
+  // out of bound
+  if (!IsIndexValid(index)) {
+#if DEBUG_EDT
+    ILOG_INFO << "out of bound";
+#endif
+
+    return true;
+  }
+
+  dist = data_.dist[index.x][index.y] - circle->radius;
+  if (dist > 0.0f) {
+#if DEBUG_EDT
+    ILOG_INFO << "dist " << dist << " r " << circle->radius << " ,safe "
+              << circle->safe_buffer;
+#endif
+
+    *min_dist = dist + circle->safe_buffer;
+
+    return false;
+  }
+
+  // check other
+  float close_dist = 100.0f;
+  for (int i = 0; i < global_circles->size; i++) {
+    circle = &global_circles->circles[i];
+
+    index.x = std::round((circle->pos.x - bound_.min_x) * ogm_resolution_inv_);
+    index.y = std::round((circle->pos.y - bound_.min_y) * ogm_resolution_inv_);
+
+    // out of bound
+    if (!IsIndexValid(index)) {
+#if DEBUG_EDT
+      ILOG_INFO << "out of bound " << index.x << " y" << index.y
+                << " x_diff_frame_ " << bound_.min_x << " y_diff_frame_ "
+                << bound_.min_y << "  circle->pos.x " << circle->pos.x
+                << " circle->pos.y " << circle->pos.y << " r "
+                << circle->radius;
+#endif
+      *min_dist = 0.0f;
+      return true;
+    }
+
+    dist = data_.dist[index.x][index.y] - circle->radius;
+    if (dist < 0.0f) {
+#if DEBUG_EDT
+      ILOG_INFO << "collision " << i << " dist " << dist << " "
+                << circle->radius;
+#endif
+
+      *min_dist = dist + circle->safe_buffer;
+
+      return true;
+    }
+
+    if ((dist + circle->safe_buffer) < close_dist) {
+      close_dist = dist + circle->safe_buffer;
+
+#if DEBUG_EDT
+      ILOG_INFO << "dist " << dist << " r " << circle->radius << " ,safe "
+                << circle->safe_buffer;
+#endif
+    }
+  }
+
+  *min_dist = close_dist;
+
+  return false;
+}
+
+const bool EulerDistanceTransform::IsCollisionForPoint(
+    Transform2d *tf, const AstarPathGear gear) {
+  FootPrintCircle *circle;
+  FootPrintCircleList *global_circles;
+  global_circles = &global_circles_;
+
+  footprint_model_.LocalToGlobalByGear(global_circles, tf, gear);
+
+  // check max circle
+  circle = &global_circles->max_circle;
+
+  OgmIndex index;
+  index.x = std::round((circle->pos.x - bound_.min_x) * ogm_resolution_inv_);
+  index.y = std::round((circle->pos.y - bound_.min_y) * ogm_resolution_inv_);
+
+  // out of bound
+  if (!IsIndexValid(index)) {
+#if DEBUG_EDT
+    ILOG_INFO << "out of bound";
+#endif
+
+    return true;
+  }
+
+  float dist;
+  dist = data_.dist[index.x][index.y] - circle->radius;
+  if (dist > 0.0f) {
+#if DEBUG_EDT
+    ILOG_INFO << "dist " << dist << " r " << circle->radius;
+#endif
+
+    return false;
+  }
+
+  // check other
+  for (int i = 0; i < global_circles->size; i++) {
+    circle = &global_circles->circles[i];
+
+    index.x = std::round((circle->pos.x - bound_.min_x) * ogm_resolution_inv_);
+    index.y = std::round((circle->pos.y - bound_.min_y) * ogm_resolution_inv_);
+
+    // out of bound
+    if (!IsIndexValid(index)) {
+#if DEBUG_EDT
+      ILOG_INFO << "out of bound " << index.x << " y" << index.y
+                << " x_diff_frame_ " << bound_.min_x << " y_diff_frame_ "
+                << bound_.min_y << "  circle->pos.x " << circle->pos.x
+                << " circle->pos.y " << circle->pos.y << " r "
+                << circle->radius;
+#endif
+      return true;
+    }
+
+    dist = data_.dist[index.x][index.y] - circle->radius;
+    if (dist < 0.0f) {
+#if DEBUG_EDT
+      ILOG_INFO << "collision " << i << " dist " << dist << " "
+                << circle->radius;
+#endif
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void EulerDistanceTransform::Init(const float car_body_lat_safe_buffer,
+                                  const float lon_safe_buffer,
+                                  const float mirror_buffer) {
+  UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer, mirror_buffer);
+
+  return;
+}
+
+void EulerDistanceTransform::UpdateSafeBuffer(
+    const float car_body_lat_safe_buffer, const float lon_safe_buffer,
+    const float mirror_buffer) {
+  footprint_model_.UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer,
+                                    mirror_buffer);
+
+  global_circles_ = footprint_model_.GetLocalFootPrintCircle();
+
+  latetal_safe_buffer_ = car_body_lat_safe_buffer;
+  lon_safe_buffer_ = lon_safe_buffer;
+
+  return;
+}
+
+}  // namespace planning

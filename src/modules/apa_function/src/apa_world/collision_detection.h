@@ -159,6 +159,16 @@ class CollisionDetector {
   const double CalMinDistObs2Car(const Eigen::Vector2d &obs,
                                  const pnc::geometry_lib::PathPoint &ego_pose);
 
+  const bool IsObstacleInPath(
+      const pnc::geometry_lib::PathSegment &temp_path_seg,
+      const double long_safe_dist, const bool need_reverse);
+
+  const bool IsObstacleInPath(
+      const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const double sample_ds, const bool need_reverse);
+
+  const bool IsObstacleInCar(const pnc::geometry_lib::PathPoint &ego_pose);
+
   const bool IsObstacleInCar(const Eigen::Vector2d &obs_pos,
                              const pnc::geometry_lib::PathPoint &ego_pose);
 

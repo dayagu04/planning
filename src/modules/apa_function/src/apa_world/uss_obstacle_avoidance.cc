@@ -202,7 +202,7 @@ void UssObstacleAvoidance::GenUssArc() {
         pnc::geometry_lib::GetRotm2dFromTheta(pnc::mathlib::Deg2Rad(
             apa_param.GetParam().corner_uss_scan_angle_deg_turn));
 
-    const double corner_uss_dist_diff = 0.1068;
+    const double corner_uss_dist_diff = 0.0068;
 
     Eigen::Matrix2d rot_matrix;
 
@@ -259,7 +259,8 @@ void UssObstacleAvoidance::GenUssArc() {
       } else {
         if (car_motion_info_.steer_angle > 0.0) {
           if (i == 1) {
-            if (uss_raw_dist_vec_[1] > uss_raw_dist_vec_[0] + corner_uss_dist_diff) {
+            if (uss_raw_dist_vec_[1] >
+                uss_raw_dist_vec_[0] + corner_uss_dist_diff) {
               uss_local_arc.pA =
                   rot_matrix_corner_uss_straight.transpose() * OC +
                   uss_local_arc.circle_info.center;
@@ -273,7 +274,8 @@ void UssObstacleAvoidance::GenUssArc() {
                                uss_local_arc.circle_info.center;
           }
           if (i == 7) {
-            if (uss_raw_dist_vec_[7] > uss_raw_dist_vec_[6] + corner_uss_dist_diff) {
+            if (uss_raw_dist_vec_[7] >
+                uss_raw_dist_vec_[6] + corner_uss_dist_diff) {
               uss_local_arc.pA =
                   rot_matrix_corner_uss_straight.transpose() * OC +
                   uss_local_arc.circle_info.center;
@@ -292,7 +294,8 @@ void UssObstacleAvoidance::GenUssArc() {
                                uss_local_arc.circle_info.center;
           }
           if (i == 4) {
-            if (uss_raw_dist_vec_[4] > uss_raw_dist_vec_[5] + corner_uss_dist_diff) {
+            if (uss_raw_dist_vec_[4] >
+                uss_raw_dist_vec_[5] + corner_uss_dist_diff) {
               uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
                                  uss_local_arc.circle_info.center;
             } else {

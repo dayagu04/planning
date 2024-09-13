@@ -1,0 +1,42 @@
+#pragma once
+
+#include "astar_decider.h"
+#include "hybrid_astar_request.h"
+#include "node3d.h"
+#include "pose2d.h"
+
+namespace planning {
+
+// todo: add all rs expansion related scenarios to this decider.
+class RSExpansionDecider : public AstarDecider {
+ public:
+  RSExpansionDecider() = default;
+
+  void Process(const double min_radius, const double slot_width,
+               const double slot_length, const Pose2D &ego_pose,
+               const Pose2D &astar_end, const double veh_width);
+
+  void Process(const Pose2D &start, const Pose2D &end) override;
+
+  const double GetEndPointMaxDepth();
+
+  const Pose2D &GetRSEndPose();
+
+  const bool IsSameEndPointForRsWithAtar();
+
+  bool IsNeedRsExpansion(const Node3d *node);
+
+  static void UpdateRSPathRequest(RSPathRequestType *rs_request,
+                                  const bool is_single_shot,
+                                  const AstarPathGear single_shot_gear,
+                                  const Pose2D &ego_pose,
+                                  const double slot_width);
+
+ private:
+  bool same_point_for_rs_with_astar_;
+
+  double rs_end_max_depth_;
+  Pose2D rs_end_pose_;
+};
+
+}  // namespace planning

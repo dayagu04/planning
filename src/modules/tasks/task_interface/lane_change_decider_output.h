@@ -6,6 +6,7 @@
 
 #include "../adas_function/display_state_types.h"
 #include "config/basic_type.h"
+#include "define/geometry.h"
 #include "virtual_lane.h"
 namespace planning {
 
@@ -103,6 +104,9 @@ struct LaneChangeDeciderOutput {
       false;  // session_->mutable_planning_context()->mutable_planning_result().turn_signal
   double start_move_dist_lane;
 
+  bool s_search_status = false;
+  std::vector<double> st_search_vec;
+
   CoarsePlanningInfo coarse_planning_info;
   bool is_merge_region = false;
   MergeDirection merge_direction = NONE_LANE_MERGE;
@@ -110,6 +114,8 @@ struct LaneChangeDeciderOutput {
   RampDirection dir_turn_signal_road_to_ramp = RAMP_NONE;
   IntCancelReasonType int_request_cancel_reason = NO_CANCEL;
   RequestType ilc_virtual_req = NO_CHANGE;
+  Point2D merge_point;
+  Point2D boundary_merge_point;
 };
 
 }  // namespace planning

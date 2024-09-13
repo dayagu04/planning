@@ -1,9 +1,11 @@
 #include "scc_lon_behavior_planner.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <vector>
 
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "planning_context.h"
@@ -18,7 +20,7 @@ constexpr double check_time = 1.6;
 constexpr double kMinFarTimeGap = 1.8;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 10.0;
+constexpr double kSpeedBuffer = 5.0;
 constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
 constexpr double kFarDistFollowTimeGap = 1.8;
 constexpr double kNearDistFollowTimeGap = 1.2;
@@ -31,12 +33,13 @@ constexpr double kSpeedUpper = 20.0;
 constexpr double kAccMinLower = -0.7;
 constexpr double kAccMinUpper = -0.3;
 constexpr double kAccMax = 1.5;
-constexpr double kJerkMin = -1.0;
+constexpr double kJerkMin = -2.0;
 constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
 constexpr double kLowAgentSpeed = 20.0 / 3.6;
 // TODO: 后续取参考线的长度为s bound upper
 constexpr double kSUpperBound = 200.0;
+constexpr double kVelBoundCoeff = 1.1;
 }  // namespace
 namespace planning {
 
@@ -66,7 +69,7 @@ bool SccLonBehaviorPlanner::Execute() {
 
 void SccLonBehaviorPlanner::Init() {
   lon_behav_plan_input_ = std::make_shared<common::RealTimeLonBehaviorInput>();
-  st_graph_ = std::make_shared<scc::StGraphGenerator>(config_);
+  st_graph_ = std::make_shared<scc::StGraphGenerator>(config_, session_);
   sv_graph_ = std::make_shared<scc::SvGraphGenerator>(config_);
 }
 
@@ -139,7 +142,7 @@ bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (!current_segment) {
-    return true;  //返回true,代表判断出弯道，不加速，有异常就不加速
+    return true;  // 返回true,代表判断出弯道，不加速，有异常就不加速
   }
   std::vector<std::pair<double, double>> curv_list;
   curv_list = sd_map.GetCurvatureList(current_segment->id(), nearest_s,
@@ -580,6 +583,7 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     const std::pair<double, double> &a_bounds,
     const std::pair<double, double> &j_bounds) {
   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
+  auto init_state_a = lon_init_state_[2];
   lon_behav_output_.t_list.resize(config_.lon_num_step + 1);
   lon_behav_output_.s_refs.resize(config_.lon_num_step + 1);
   lon_behav_output_.ds_refs.resize(config_.lon_num_step + 1);
@@ -594,12 +598,26 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
   WeightedBounds s_soft_bounds;
   s_soft_bounds.emplace_back(WeightedBound{0.0 - 10.0, kSUpperBound, -1.0});
   LonLeadBounds s_lead_bounds;
-  s_lead_bounds.emplace_back(LonLeadBound{kSUpperBound, 0.0, 0.0, -1});
+  s_lead_bounds.emplace_back(LonLeadBound{300.0, 0.0, 0.0, -1});
   Bound lon_v_bound{-0.1, std::min(v_cruise, config_.velocity_upper_bound)};
+  // get lane change info
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  if (coarse_planning_info.target_state == kLaneChangePropose ||
+      coarse_planning_info.target_state == kLaneChangeExecution) {
+    lon_v_bound.upper = std::min(v_cruise * kVelBoundCoeff,
+                                 config_.velocity_upper_bound_in_lane_change);
+  }
   Bound lon_a_bound{a_bounds.first, a_bounds.second};
   Bound lon_j_bound{j_bounds.first, j_bounds.second};
 
   for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+    // 0. 避免init a 超出 a bound
+    lon_a_bound.lower = std::fmin(a_bounds.first, init_state_a);
+    lon_a_bound.upper = std::fmax(
+        a_bounds.second, init_state_a + kJerkMin * config_.delta_time * i);
+
     // 1.update t_list
     lon_behav_output_.t_list[i] = i * config_.delta_time;
     // 2.update s_refs <s_ref, weight>
@@ -649,23 +667,55 @@ void SccLonBehaviorPlanner::UpdateLonRefPath(
     }
   }
   // 10. using JLT to update Sref in farslow and stable car case
-  bool jlt_status = false;
+  bool jlt_farslow_status = false;
+  bool jlt_stable_status = false;
   GetHardBounds();
   std::vector<double> sref_farslow;
   std::vector<double> sref_stable;
   sref_farslow.resize(config_.lon_num_step + 1);
   sref_stable.resize(config_.lon_num_step + 1);
-  jlt_status = GenerateFarSlowCarFollowCurve(sref_farslow);
-  if (jlt_status && config_.enable_jlt) {
+  jlt_farslow_status = GenerateFarSlowCarFollowCurve(sref_farslow);
+  jlt_stable_status = GenerateStableFollowSlowCurve(sref_farslow);
+  JSON_DEBUG_VALUE("jlt_status_farslow", jlt_farslow_status)
+  JSON_DEBUG_VALUE("jlt_status_stable", jlt_stable_status)
+  const auto &lane_change_info =
+      session_->planning_context().lane_change_decider_output();
+  if (jlt_farslow_status || jlt_stable_status ||
+      (lane_change_info.s_search_status && config_.enable_speed_adjust)) {
+    lon_j_bound.lower = -1.0;
+    lon_j_bound.upper = 1.0;
+  }
+  for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
+    // update jerk bounds
+    lon_behav_output_.lon_bound_jerk[i] = lon_j_bound;
+  }
+  if (config_.enable_jlt) {
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
-      // lon_behav_output_.s_refs[i].first =
-      //     std::fmin(lon_behav_output_.s_refs[i].first, sref_farslow[i]);
-      lon_behav_output_.s_refs[i].first = sref_farslow[i];
+      if (jlt_farslow_status) {
+        lon_behav_output_.s_refs[i].first =
+            std::fmin(lon_behav_output_.s_refs[i].first, sref_farslow[i]);
+      }
+      if (jlt_stable_status) {
+        lon_behav_output_.s_refs[i].first =
+            std::fmin(lon_behav_output_.s_refs[i].first, sref_stable[i]);
+      }
     }
   }
-  JSON_DEBUG_VALUE("jlt_status_farslow", jlt_status)
 
-  // 10.update sv boundary
+  // 11. use speed adjust s search ref
+  if (lane_change_info.s_search_status && config_.enable_speed_adjust) {
+    if (lane_change_info.st_search_vec.size() == config_.lon_num_step + 1) {
+      for (size_t i = 0; i <= config_.lon_num_step; i++) {
+        lon_behav_output_.s_refs[i].first = lane_change_info.st_search_vec[i];
+      }
+      std::cout << "use search path in lc wait!" << std::endl;
+    } else {
+      std::cout << "search path num is error:  "
+                << lane_change_info.st_search_vec.size() << std::endl;
+    }
+  }
+
+  // 12.update sv boundary
   SVBoundary sv_boundary_tmp = sv_boundaries.front();
   for (auto it = std::next(sv_boundaries.begin()); it != sv_boundaries.end();
        ++it) {
@@ -930,7 +980,7 @@ bool SccLonBehaviorPlanner::GenerateFarSlowCarFollowCurve(
   StateLimit state_limit;
   state_limit.p_end = 0.0;
   state_limit.v_min = -0.1;
-  state_limit.v_max = 25.0;
+  state_limit.v_max = 40.0;
   state_limit.a_min = acc_min;
   state_limit.a_max = kAccMax;
   state_limit.j_min = kJerkMin;
@@ -1063,6 +1113,10 @@ bool SccLonBehaviorPlanner::GenerateStableFollowSlowCurve(
     double s_ego = follow_stable_target_trajectory.Evaluate(0, time);
     // double v_ego = follow_stable_target_trajectory.Evaluate(1, time);
     s_refs[i] = s_ego;
+    // safty check
+    if (s_ego > hard_bounds_[i].upper) {
+      return false;
+    }
   }
   return true;
 }

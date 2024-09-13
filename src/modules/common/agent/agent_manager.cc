@@ -1,8 +1,10 @@
 #include "agent_manager.h"
+
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+
 #include "agent/agent.h"
 #include "common_c.h"
 #include "environmental_model.h"
@@ -39,17 +41,29 @@ void AgentManager::Update() {
   double init_time = ego_state.planning_init_point().relative_time;
   const auto& prediction_objects =
       session_->environmental_model().get_prediction_info();
+  const double HALF_FOV = 25.0;
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
     // TBD:后续前移至EnvironmentalModelManager::obstacle_prediction_update中
-    if (prediction_object.type == 0 ||
-        ((!(prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA)) &&
-         (prediction_object.relative_position_x > 0 &&
-          tan(25) > fabs(prediction_object.relative_position_y /
-                         prediction_object.relative_position_x))) ||
-        fabs(prediction_object.relative_position_y) > 10 ||
-        prediction_object.length == 0 || prediction_object.width == 0) {
+    // Ignore the agent which is within the FOV and is fail to fusion with the
+    // camera，or too small, or unknown
+    if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+      LOG_DEBUG("[AgentManager Update] ignore unknown obstacle : [%d] \n",
+                prediction_object.id);
+      continue;
+    }
+    bool is_in_fov =
+        prediction_object.relative_position_x > 0 &&
+        (tan(HALF_FOV) > fabs(prediction_object.relative_position_y /
+                              prediction_object.relative_position_x));
+    bool is_fusion_with_camera =
+        prediction_object.fusion_source & OBSTACLE_SOURCE_CAMERA;
+    bool is_ignore_by_fov = is_in_fov && (is_fusion_with_camera == false);
+    bool is_ignore_by_size =
+        prediction_object.length == 0 || prediction_object.width == 0;
+
+    if (is_ignore_by_fov || is_ignore_by_size) {
       LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
                 prediction_object.id);
       continue;

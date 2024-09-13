@@ -7,7 +7,9 @@ void PerpendicularPathHeadingInPlanner::Reset() { return; }
 
 const bool PerpendicularPathHeadingInPlanner::Update() { return false; };
 
-const bool PerpendicularPathHeadingInPlanner::UpdateByPrePlan() { return false; };
+const bool PerpendicularPathHeadingInPlanner::UpdateByPrePlan() {
+  return false;
+};
 
 void PerpendicularPathHeadingInPlanner::Preprocess() { return; }
 

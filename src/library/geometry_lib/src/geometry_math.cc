@@ -2510,5 +2510,91 @@ void PrintSegmentsVecInfo(
   }
 }
 
+const double GetTwoPointDist(const PathPoint &start, const PathPoint &end) {
+  return (start.pos - end.pos).norm();
+}
+
+const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
+                        const double length, const double radius,
+                        const PathPoint pose, PathSegment &arc_seg) {
+  bool is_anti_clockwise = false;
+  if (!CalcArcDirection(is_anti_clockwise, gear, steer) ||
+      std::fabs(length) < 1e-3 || radius < 1e-3) {
+    return false;
+  }
+  const Eigen::Vector2d tang_vec = GenHeadingVec(pose.heading);
+  Eigen::Vector2d norm_vec;
+  if (steer == SEG_STEER_LEFT) {
+    norm_vec << -tang_vec.y(), tang_vec.x();
+  } else if (steer == SEG_STEER_RIGHT) {
+    norm_vec << tang_vec.y(), -tang_vec.x();
+  }
+
+  const Eigen::Vector2d center = pose.pos + radius * norm_vec;
+  const Eigen::Vector2d OA = pose.pos - center;
+  double rot_angle = NormalizeAngle(length / radius);
+  rot_angle = is_anti_clockwise ? rot_angle : -rot_angle;
+  const auto rot_m = GetRotm2dFromTheta(rot_angle);
+  const Eigen::Vector2d OB = rot_m * OA;
+
+  const Eigen::Vector2d B = OB + center;
+  const double headingB = pose.heading + rot_angle;
+
+  Arc arc;
+  arc.headingA = pose.heading;
+  arc.pA = pose.pos;
+  arc.length = length;
+  arc.pB = B;
+  arc.headingB = headingB;
+  arc.circle_info.center = center;
+  arc.circle_info.radius = radius;
+  arc.is_anti_clockwise = is_anti_clockwise;
+
+  arc_seg.arc_seg = arc;
+  arc_seg.seg_gear = gear;
+  arc_seg.seg_steer = steer;
+  arc_seg.seg_type = SEG_TYPE_ARC;
+
+  return true;
+}
+
+const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
+                            const double length) {
+  if (length < 1e-3) {
+    pose.pos = path_seg.GetStartPos();
+    pose.heading = path_seg.GetStartHeading();
+    return true;
+  }
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    Eigen::Vector2d dir_vec = GenHeadingVec(path_seg.GetStartHeading());
+    if (path_seg.seg_gear == SEG_GEAR_REVERSE) {
+      dir_vec *= -1.0;
+    }
+
+    pose.heading = path_seg.GetStartHeading();
+    pose.pos = path_seg.GetStartPos() + length * dir_vec;
+  } else {
+    bool is_anti_clockwise = false;
+    if (!CalcArcDirection(is_anti_clockwise, path_seg.seg_gear,
+                          path_seg.seg_steer)) {
+      return false;
+    }
+    const Arc &arc = path_seg.arc_seg;
+    double rot_angle = NormalizeAngle(length / arc.circle_info.radius);
+
+    rot_angle = is_anti_clockwise ? rot_angle : -rot_angle;
+
+    const auto rot_m = GetRotm2dFromTheta(rot_angle);
+
+    const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+
+    pose.pos = rot_m * OA + arc.circle_info.center;
+
+    pose.heading = NormalizeAngle(arc.headingA + rot_angle);
+  }
+
+  return true;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

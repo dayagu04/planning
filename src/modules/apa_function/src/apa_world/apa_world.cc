@@ -1,6 +1,7 @@
 #include "apa_world.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <vector>
 
 #include "apa_data.h"
@@ -11,6 +12,7 @@
 #include "func_state_machine_c.h"
 #include "general_planning_context.h"
 #include "geometry_math.h"
+#include "log_glog.h"
 #include "slot_management_info.pb.h"
 
 namespace planning {
@@ -157,7 +159,9 @@ void ApaWorld::UpdateEgoState() {
 void ApaWorld::UpdateStateMachine() {
   ApaStateMachine& cur_state = apa_data_ptr_->cur_state;
   const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
+  apa_data_ptr_->current_state = state;
 
+  cur_state = ApaStateMachine::INVALID;
   if (state == iflyauto::FunctionalState_PARK_STANDBY) {
     cur_state = ApaStateMachine::INVALID;
   }
@@ -187,8 +191,6 @@ void ApaWorld::UpdateStateMachine() {
     cur_state = ApaStateMachine::SEARCH_OUT;
     apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
   }
-
-  apa_data_ptr_->current_state = state;
 }
 
 void ApaWorld::UpdateSlots() {}
@@ -244,8 +246,16 @@ const bool ApaWorld::Update() {
     if (apa_data_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_IN!");
-      apa_data_ptr_->planner_type =
-          ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
+
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::GEOMETRY_BASED) {
+        apa_data_ptr_->planner_type =
+            ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
+      } else {
+        apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+      }
+      ILOG_INFO << "path plan method = "
+                << static_cast<int>(apa_data_ptr_->planner_type);
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       DEBUG_PRINT("planner_type = PARALLEL_PARK_IN!");

@@ -25,7 +25,6 @@ namespace apa_planner {
 
 class ApaWorld {
  public:
-
   ApaWorld() { Init(); }
   ~ApaWorld() {}
 
@@ -53,7 +52,6 @@ class ApaWorld {
   }
 
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
-
 
  private:
   void Preprocess();

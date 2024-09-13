@@ -5,9 +5,18 @@
  *  @brief Construct obstacle S-T graph for generating S-bounds and performing
  *velocity planning
  **/
+#include <cstdint>
+#include <memory>
 #include <utility>
+#include <vector>
 
+#include "agent/agent.h"
+#include "agent_node_manager.h"
+#include "basic_types.pb.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
+#include "dynamic_world/dynamic_agent_node.h"
 #include "filters.h"
 #include "lateral_obstacle.h"
 #include "lon_behavior_planner.pb.h"
@@ -16,6 +25,7 @@
 #include "task_basic_types.h"
 #include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
 #include "utils_math.h"
+#include "virtual_lane.h"
 namespace planning {
 namespace scc {
 
@@ -24,7 +34,8 @@ using ObstacleStGraphs = std::map<int, Bounds>;
 
 class StGraphGenerator {
  public:
-  explicit StGraphGenerator(const SccLonBehaviorPlannerConfig &config);
+  explicit StGraphGenerator(const SccLonBehaviorPlannerConfig &config,
+                            framework::Session *session);
 
   virtual ~StGraphGenerator() = default;
 
@@ -170,6 +181,9 @@ class StGraphGenerator {
   void CalculateSrefsByVref(const double v_ego, std::vector<double> &v_refs,
                             const double acc_ego, std::vector<double> &s_refs);
 
+  // 根据加速度bound对v target进行滤波
+  void UpdateTargetVelocityByFilter(const bool is_on_ramp, const double v_ego);
+
   // 计算启停状态，避免二次起步
   common::StartStopInfo::StateType UpdateStartStopState(
       const planning::common::TrackedObjectInfo &lead_one, const double v_ego,
@@ -190,10 +204,63 @@ class StGraphGenerator {
       std::shared_ptr<VirtualLane> current_lane,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
 
+  void CalculateMergeSpeedLimit(
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      std::vector<planning::common::RealTimeLonObstacleSTInfo> &merge_st_info,
+      const double v_ego);
+
+  void MergeSplitStaitcInfoProcess(std::shared_ptr<VirtualLane> current_lane);
+
+  // use prediction info in dynamic word
+  void CalculateMergeInfoWithAgent(
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      const int64_t agent_node_id, const bool is_merging_to_left);
+
+  bool EgoHasRightOfTargetLaneJudge(
+      const std::shared_ptr<VirtualLane> target_lane,
+      const std::shared_ptr<VirtualLane> ego_lane);
+
+  // use prediction info in agent node manager
+  void CalculateMergeInfoWithAgent(const int64_t agent_id,
+                                   const bool is_merging_to_left,
+                                   const string semantic_orientation_to_ego);
+
+  double CalcDesiredDistance(const double intersection_front_one_velocity,
+                             const bool is_lead, const bool is_accident_car,
+                             const bool is_temp_lead, const double v_ego,
+                             const std::string &lc_request);
+  double MergeDesiredDistanceFilter(const double v_ego, double safe_distance,
+                                    double desired_distance,
+                                    const agent::Agent *merge_target_one);
+
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
                              const double &agent_min_l);
+  // TODO: need to remove when apply prediction from upstream
+  // get prediction info from agent node manager
+  void EgoNearByAgentsPredictionTrajProcess(
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);
+
+  void DebugAgentsPredictionTraj(
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);
+
+  bool FilterEgoNearByAgentsWhenMerge(
+      const int32_t agent_id,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      const std::shared_ptr<VirtualLane> ego_lane);
+
+  void MergeInfoReset();
+
+  void SetDefaultDebugValues(const std::vector<string> *names);
+  void SetDefaultDebugValues(std::vector<string> names);
+
+  // HACK: cross障碍物判断
+  bool FastCrossAgentChecker(const double lead_one_v_lat, double &end_time,
+                             const double kwidth);
+
+  void GenerateSrefByVrefJLT(std::vector<double> &s_refs);
 
  private:
+  framework::Session *session_;
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;
   SccLonBehaviorPlannerConfig config_;
   std::shared_ptr<RealTimeLaneChangeDecider> lane_changing_decider_ = nullptr;
@@ -249,7 +316,7 @@ class StGraphGenerator {
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};
   // parabola slope
   const std::vector<double> _P_SLOPE_BP{0., 40.0};
-  const std::vector<double> _P_SLOPE_V{1.0, 0.2};
+  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
   // do not consider a_lead at 0m/s, fully consider it at 5m/s
   const std::vector<double> _A_LEAD_LOW_SPEED_BP{0.0, 5.0};
   const std::vector<double> _A_LEAD_LOW_SPEED_V{0.0, 1.0};
@@ -280,7 +347,7 @@ class StGraphGenerator {
 
   // cutin calibration value
   const double CUIIN_WIDTH = 1.6;          // 类似半个车道宽，取窄
-  const double CUIIN_WIDTH_STATIC = 1.35;  //静态车辆cutin
+  const double CUIIN_WIDTH_STATIC = 1.35;  // 静态车辆cutin
   const double p1min_speed = 2.0;
   const double p2min_speed = 3.0;
   double v_limit_on_turns_and_road_;
@@ -288,10 +355,47 @@ class StGraphGenerator {
   double v_limit_lc_;
   double v_last_target_ = 0.0;
   double v_limit_with_intersection_ = 0.0;
+  double v_hold_ = 0.0;
   planning::common::IntersectionState last_intersection_state_ =
       planning::common::UNKNOWN;
   planning::common::IntersectionState current_intersection_state_ =
       planning::common::UNKNOWN;
+
+  // merge info
+  std::shared_ptr<AgentNodeManager> agent_node_manager_;
+  std::unordered_map<int64_t, ObstaclePredicatedInfo>
+      agent_node_origin_lane_map_;
+  std::unordered_map<int64_t, ObstaclePredicatedInfo>
+      agent_node_left_neibor_lane_map_;
+  std::unordered_map<int64_t, ObstaclePredicatedInfo>
+      agent_node_right_neibor_lane_map_;
+
+  MergeSplitPoints merge_split_points_;  // from perception
+  // merge info from plan
+  bool is_merge_region_ = false;
+  //   MergeDirection merge_direction_ = MergeDirection::NONE_LANE_MERGE;
+  MergeSplitPoints::MergeSplitOrientation merge_direction_ =
+      MergeSplitPoints::UNKNOWN;
+  int merge_lane_virtual_id_ = -1;
+  // first: agent_node_id, second: t_intersect
+  std::pair<int64_t, double> t_merge_with_agent_{
+      planning_data::kInvalidId, std::numeric_limits<double>::max()};
+  // first: angent_node_id, seconde: d_reletive_intersect
+  std::pair<int64_t, double> d_relative_merge_with_agent_{
+      planning_data::kInvalidId, std::numeric_limits<double>::max()};
+  std::pair<int64_t, double> v_agent_merge_with_ego_{
+      planning_data::kInvalidId, std::numeric_limits<double>::lowest()};
+  std::pair<int64_t, double> d_current_relative_to_ego_{
+      planning_data::kInvalidId, std::numeric_limits<double>::max()};
+  string merge_target_one_semantic_orientation_to_ego_{};
+  pnc::filters::SlopeFilter merge_desired_distance_filter_;
+  bool ego_has_right_of_target_lane_{false};
+  bool merge_target_one_has_changed_{false};
+  int64_t last_merge_target_one_id_{planning_data::kInvalidId};
+  Point2D merge_point_plan_{std::numeric_limits<double>::lowest(),
+                            std::numeric_limits<double>::lowest()};
+  //   common::IntersectionState intersection_state_ =
+  //       common::IntersectionState::UNKNOWN;
 };
 
 }  // namespace scc

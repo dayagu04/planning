@@ -39,8 +39,11 @@ bool ApaFunction::Plan() {
   session_->mutable_planning_context()->mutable_planning_output() =
       apa_plan_interface_->GetPlaningOutput();
 
-  session_->mutable_planning_context()->mutable_planning_hmi_info()->apa_info =
-      apa_plan_interface_->GetAPAHmi();
+  // currently only remaining distance is sent to planning hmi!
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.distance_to_parking_space =
+      apa_plan_interface_->GetAPAHmi().distance_to_parking_space;
   return true;
 }
 

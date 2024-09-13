@@ -1047,7 +1047,9 @@ const bool DubinsLibrary::OneStepDubinsUpdateByVer(const double min_length) {
   const double dist = dist_tol;
   dist_tol = 0.016;
   if (OneStepDubinsUpdateByVer()) {
-    if (output_.current_length >= min_length) {
+    if (output_.current_gear_cmd == pnc::geometry_lib::SEG_GEAR_REVERSE ||
+        (output_.current_gear_cmd == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+         output_.current_length >= min_length)) {
       success = true;
     }
   }

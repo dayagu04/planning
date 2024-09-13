@@ -2,6 +2,7 @@ from lib.load_struct import *
 from lib.load_rotate import *
 from lib.load_json import *
 from lib.load_ros_bag import LoadRosbag, g_is_display_enu, is_match_planning, is_vis_map, is_bag_main, is_vis_sdmap
+import lib.load_ros_bag
 import numpy as np
 
 from bokeh.io import output_notebook, push_notebook
@@ -69,10 +70,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   input_topic_timestamp = plan_debug_msg.input_topic_timestamp
   fusion_object_timestamp = input_topic_timestamp.fusion_object
   fusion_road_timestamp = input_topic_timestamp.fusion_road
-  if is_bag_main:
-    localization_timestamp = input_topic_timestamp.localization_estimate
-  else:
+  if lib.load_ros_bag.is_new_loc:
     localization_timestamp = input_topic_timestamp.localization
+  else :
+    if is_bag_main:
+      localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+    else:
+      localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
   # prediction_timestamp = input_topic_timestamp.prediction
   # vehicle_service_timestamp = input_topic_timestamp.vehicle_service
   # control_output_timestamp = input_topic_timestamp.control_output
@@ -535,6 +539,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
     try:
+      intersection_state = plan_debug_msg.real_time_lon_behavior_planning_input.intersection_state
+      print("intersection_state: ", intersection_state)
+    except:
+      print("no intersection_state")
+
+    try:
       global first_frame_num
       if bag_time <= 0.1:
         first_frame_num = int(plan_debug_msg.frame_info.frame_num)
@@ -616,6 +626,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       init_state_delta = lat_init_state.delta
       ego_pos_compensation_x = plan_debug_json_msg['predicted_ego_x']
       ego_pos_compensation_y = plan_debug_json_msg['predicted_ego_y']
+      merge_point_x = plan_debug_json_msg['merge_point_x']
+      merge_point_y = plan_debug_json_msg['merge_point_y']
+      macroeconomic_decider_merge_point_x = plan_debug_json_msg['macroeconomic_decider_merge_point_x']
+      macroeconomic_decider_merge_point_y = plan_debug_json_msg['macroeconomic_decider_merge_point_y']
+      boundary_line_merge_point_x = plan_debug_json_msg['boundary_line_merge_point_x']
+      boundary_line_merge_point_y = plan_debug_json_msg['boundary_line_merge_point_y']
       lon_init_state = plan_debug_msg.longitudinal_motion_planning_input.init_state
       init_state_s = lon_init_state.s
       init_state_v = lon_init_state.v
@@ -650,6 +666,18 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'replan_status': [replan_status],
         'ego_pos_compensation_x': ego_pos_compensation_x_,
         'ego_pos_compensation_y': ego_pos_compensation_y_
+      })
+      local_view_data['data_merge_point'].data.update({
+        'merge_point_x': [merge_point_x],
+        'merge_point_y': [merge_point_y],
+      })
+      local_view_data['macroeconomic_decider_data_merge_point'].data.update({
+        'macroeconomic_decider_merge_point_x': [macroeconomic_decider_merge_point_x],
+        'macroeconomic_decider_merge_point_y': [macroeconomic_decider_merge_point_y],
+      })
+      local_view_data['boundary_line_merge_point'].data.update({
+        'boundary_line_merge_point_x': [boundary_line_merge_point_x],
+        'boundary_line_merge_point_y': [boundary_line_merge_point_y],
       })
 
       lat_motion_planning_output = plan_debug_msg.lateral_motion_planning_output
@@ -1096,6 +1124,12 @@ def load_local_view_figure():
                                                  'replan_status':[],
                                                  'ego_pos_compensation_x': [],
                                                  'ego_pos_compensation_y': []})
+  data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
+                                              'merge_point_y':[]})
+  macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
+                                              'macroeconomic_decider_merge_point_y':[]})
+  boundary_line_merge_point = ColumnDataSource(data = {'boundary_line_merge_point_x':[],
+                                              'boundary_line_merge_point_y':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[], 'text_xn': [],  'text_yn': []})
   data_lane_dashed_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
   data_lane_solid_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
@@ -1341,6 +1375,9 @@ def load_local_view_figure():
                      'origin_data_ego':origin_data_ego, \
                      'data_ego_pos_point': data_ego_pos_point, \
                      'data_init_pos_point': data_init_pos_point, \
+                     'data_merge_point': data_merge_point, \
+                     'macroeconomic_decider_data_merge_point': macroeconomic_decider_data_merge_point, \
+                     'boundary_line_merge_point': boundary_line_merge_point, \
                      'data_text':data_text, \
                      'data_lane_dashed_line':data_lane_dashed_line, \
                      'data_lane_solid_line':data_lane_solid_line, \
@@ -1604,10 +1641,12 @@ def load_local_view_figure():
   f86 = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
   fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')
   f88 = fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
+  fig1.circle('merge_point_y', 'merge_point_x', source = data_merge_point, radius = 0.2, line_width = 3,  line_color = 'orange', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'merge_point')
+  fig1.circle('macroeconomic_decider_merge_point_y', 'macroeconomic_decider_merge_point_x', source = macroeconomic_decider_data_merge_point, radius = 0.2, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'macroeconomic_decider_merge_point')
+  fig1.circle('boundary_line_merge_point_y', 'boundary_line_merge_point_x', source = boundary_line_merge_point, radius = 0.2, line_width = 3,  line_color = 'red', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'boundary_line_merge_point')
   fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
   fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
   fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
-
 
   if is_vis_map:
     for i in range (len(ehr_data_lanes)):

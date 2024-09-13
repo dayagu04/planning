@@ -47,7 +47,7 @@ class SimulationContext {
 
  private:
   // this is a singleton class
-  DECLARE_SINGLETON(SimulationContext);
+  IFLY_DECLARE_SINGLETON(SimulationContext);
 
   double planning_loop_dt_ = 0.1;
   double prediction_relative_time_ = 0;

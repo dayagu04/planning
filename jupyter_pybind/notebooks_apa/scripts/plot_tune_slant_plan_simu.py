@@ -140,7 +140,7 @@ class LocalViewSlider:
 
     self.is_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
-    self.slot_inside_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs",min=0.66, max=9.9, value=1.91, step=0.25)
+    self.slot_inside_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs",min=0.66, max=9.9, value=5.56, step=0.25)
 
     self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.3, step=0.05)
     self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
@@ -184,13 +184,13 @@ def slider_callback(vehicle_type, ego_x, ego_y, ego_heading, is_left, is_astar, 
   kwargs = locals()
 
   if vehicle_type == 0:
-    vehicle_type = 'JAC_S811'
+    vehicle_type = JAC_S811
   elif vehicle_type == 1:
-    vehicle_type = 'CHERY_T26'
+    vehicle_type = CHERY_T26
   elif vehicle_type == 2:
-    vehicle_type = 'CHERY_E0X'
+    vehicle_type = CHERY_E0X
 
-  car_xb, car_yb = load_car_params_patch_parking(JAC_S811)
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
 
   car_xn = []
   car_yn = []

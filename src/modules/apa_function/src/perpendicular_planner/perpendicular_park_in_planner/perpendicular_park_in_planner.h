@@ -32,7 +32,8 @@ class PerpendicularParkInPlanner : public PerpendicularParkPlanner {
   virtual const bool CheckFinished() override;
 
   virtual const bool PostProcessPathAccordingLimiter() override;
-  virtual const bool PostProcessPathAccordingObs(const double car_remain_dist) override;
+  virtual const bool PostProcessPathAccordingObs(
+      const double car_remain_dist) override;
   virtual const bool CheckSegCompleted() override;
   virtual const bool CheckUssStucked() override;
   virtual const bool CheckColDetStucked() override;

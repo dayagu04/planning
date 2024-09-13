@@ -1,6 +1,8 @@
 #include "longtime_task_pipeline_v1.h"
 #include <memory>
 
+#include "behavior_planners/speed_search_decider/speed_adjust_decider.h"
+
 namespace planning {
 
 LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
@@ -8,6 +10,8 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
     : BaseTaskPipeline(config_builder, session) {
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
+  speed_adjust_decider_ =
+      std::make_unique<SpeedAdjustDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -26,7 +30,7 @@ LongTimeTaskPipelineV1::LongTimeTaskPipelineV1(
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
-  cipv_lost_prohibit_adcceleration_decider_ =
+  cipv_lost_prohibit_acceleration_decider_ =
       std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
                                                             session);
 }
@@ -41,6 +45,12 @@ bool LongTimeTaskPipelineV1::Run() {
   ok = lane_change_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lane_change_decider_->Name());
+    return false;
+  }
+
+  ok = speed_adjust_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(speed_adjust_decider_->Name());
     return false;
   }
 
@@ -74,9 +84,9 @@ bool LongTimeTaskPipelineV1::Run() {
     return false;
   }
 
-  ok = cipv_lost_prohibit_adcceleration_decider_->Execute();
+  ok = cipv_lost_prohibit_acceleration_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(cipv_lost_prohibit_adcceleration_decider_->Name());
+    AddErrorInfo(cipv_lost_prohibit_acceleration_decider_->Name());
     return false;
   }
 

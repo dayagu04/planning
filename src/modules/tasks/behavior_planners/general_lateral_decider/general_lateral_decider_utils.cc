@@ -9,19 +9,19 @@ namespace general_lateral_decider_utils {
 double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 iflyauto::ObjectType type,
-                                const bool is_nudge_left,
-                                bool is_cut_out_side_obstacle,
-                                double nudge_buffer_cutout_obstacle) {
+                                const bool is_nudge_left, bool in_intersection,
+                                GeneralLateralDeciderConfig& config) {
   double base_dis = 0.8;
   if (IsVRU(type)) {
     base_dis = 1.0;
   } else if (IsTruck(type)) {
     base_dis = 0.8;
   }
-  if (is_cut_out_side_obstacle) {
-    base_dis = nudge_buffer_cutout_obstacle;
+  if (in_intersection) {
+    base_dis += config.nudge_extra_buffer_in_intersection;
   }
-  return std::fmax(base_dis + 0.015 * ego_vel - 0.05 * pred_ts, 0.);
+
+  return std::fmax(base_dis + 0.015 * ego_vel, 0.);
 }
 
 double CalDesireLonDistance(double ego_vel, double agent_vel) {
@@ -61,25 +61,11 @@ double CalDesireStaticLateralDistance(const double base_distance,
   return base_distance + lateral_extra_buffer;
 }
 
-double GetBoundWeight(BoundType type, std::vector<double> map_bound_weight) {
-  switch (type) {
-    //  the same level
-    case BoundType::DYNAMIC_AGENT:
-      // return 0.4;
-      return map_bound_weight[0];
-    //  the same level
-    case BoundType::AGENT:
-      // return 0.4;
-      return map_bound_weight[1];
-    case BoundType::ROAD_BORDER:
-      // return 0.6;
-      return map_bound_weight[2];
-    //  the same level
-    // case BoundType::PURNE_VEHICLE_WIDTH:
-    //   return 4;
-    default:
-      // return 0.1;
-      return map_bound_weight[3];
+double GetBoundWeight(BoundType type, const std::unordered_map<BoundType, double>& map_bound_weight) {
+  if (map_bound_weight.find(type) != map_bound_weight.end()) {
+    return map_bound_weight.at(type);
+  } else {
+    return 0.1;
   }
 }
 
@@ -99,6 +85,8 @@ int GetBoundTypePriority(BoundType type) {
       return 3;
     //  the same level
     case BoundType::AGENT:
+      return 3;
+    case BoundType::ADJACENT_AGENT:
       return 3;
     case BoundType::ROAD_BORDER:
       return 3;

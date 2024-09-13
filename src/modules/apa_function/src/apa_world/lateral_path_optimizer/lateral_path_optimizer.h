@@ -58,6 +58,7 @@ class LateralPathOptimizer {
   planning::common::LateralPathOptimizerInput planning_input_;
   planning::common::LateralPathOptimizerOutput optimizer_planning_output_;
 
+  // local path
   std::vector<pnc::geometry_lib::PathPoint> output_path_vec_;
   Parameter param_;
 };

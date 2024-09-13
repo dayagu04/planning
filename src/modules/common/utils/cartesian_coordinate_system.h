@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "define/geometry.h"
+#include "pose2d.h"
 
 const double PI = 3.1415926;
 
@@ -31,17 +32,17 @@ struct CartesianState {
 
 class CartesianCoordinateSystem {
  private:
-  Pose2D m_origin;
+  planning::Pose2D m_origin;
 
  public:
-  CartesianCoordinateSystem(Pose2D origin);
-  Point2D CartCoord2CurCartCoord(const Pose2D& prev_origin,
+  CartesianCoordinateSystem(planning::Pose2D origin);
+  Point2D CartCoord2CurCartCoord(const planning::Pose2D& prev_origin,
                                  const Point2D& prev_rel_coord);
-  Pose2D CartPose2CurCartPose(const Pose2D& prev_origin,
-                              const Pose2D& prev_rel_pos);
-  Point2D CurCartCoord2CartCoord(const Pose2D& future_origin,
+  planning::Pose2D CartPose2CurCartPose(const planning::Pose2D& prev_origin,
+                                        const planning::Pose2D& prev_rel_pos);
+  Point2D CurCartCoord2CartCoord(const planning::Pose2D& future_origin,
                                  const Point2D& cur_rel_coord);
-  Pose2D CurCartPose2CartPose(const Pose2D& future_origin,
-                              const Pose2D& cur_rel_pos);
+  planning::Pose2D CurCartPose2CartPose(const planning::Pose2D& future_origin,
+                                        const planning::Pose2D& cur_rel_pos);
 };
 #endif

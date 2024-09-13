@@ -40,7 +40,7 @@ class LaneChangeRequest {
   bool IsDashEnoughForRepeatSegments(const RequestType lc_request,
                                      const int origin_lane_id) const;
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
-      const RequestType lc_request, const int origin_lane_id);
+      const RequestType lc_request, const int origin_lane_id) const;
   bool IsRoadBorderSurpressLaneChange(const RequestType lc_request,
                                       const int origin_lane_id,
                                       const int target_lane_id);

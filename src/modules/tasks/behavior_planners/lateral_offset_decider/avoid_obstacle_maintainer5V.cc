@@ -238,6 +238,9 @@ void AvoidObstacleMaintainer5V::Reset() {
   for (int i = 0; i < avd_obstacles_.size(); i++) {
     avd_obstacles_[i].Reset();
   }
+  for (int i = 0; i < avd_obstacles_history_.size(); i++) {
+    avd_obstacles_history_[i].Reset();
+  }
   for (int i = 0; i < avd_obstacles_.size(); i++) {
     avd_sp_obstacles_[i].Reset();
   }

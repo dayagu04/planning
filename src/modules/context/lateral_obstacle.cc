@@ -87,6 +87,7 @@ bool LateralObstacle::update_sensors(
       warning_timer_[1] = abs_time;
     }
   }
+  JSON_DEBUG_VALUE("is_static_avoid_scene", is_static_avoid_scene_);
 
   return true;
 }

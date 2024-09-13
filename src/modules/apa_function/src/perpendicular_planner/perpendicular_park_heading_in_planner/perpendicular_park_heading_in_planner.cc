@@ -5,7 +5,6 @@ namespace apa_planner {
 
 void PerpendicularParkHeadingInPlanner::Reset() { return; }
 
-
 }  // namespace apa_planner
 
 }  // namespace planning

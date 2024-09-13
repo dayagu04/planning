@@ -74,6 +74,8 @@ class ParallelPathPlanner : public ApaPathPlanner {
     Eigen::Vector2d v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
 
     std::vector<Eigen::Vector2d> front_corner_obs_vec;
+    std::vector<Eigen::Vector2d> channel_obs_vec;
+    std::vector<Eigen::Vector2d> virtual_channel_obs_vec;
     std::vector<pnc::geometry_lib::PathPoint> valid_target_pt_vec;
     std::vector<pnc::geometry_lib::PathSegment> park_out_path_in_slot;
     void Reset() {
@@ -93,6 +95,10 @@ class ParallelPathPlanner : public ApaPathPlanner {
       valid_target_pt_vec.reserve(20);
       front_corner_obs_vec.clear();
       front_corner_obs_vec.reserve(20);
+      channel_obs_vec.clear();
+      channel_obs_vec.reserve(50);
+      virtual_channel_obs_vec.clear();
+      virtual_channel_obs_vec.reserve(50);
       min_outer_front_corner_radius = 5.5;
       min_inner_rear_corner_radius = 5.5;
       min_outer_front_corner_deta_y = 0.8;
@@ -119,6 +125,8 @@ class ParallelPathPlanner : public ApaPathPlanner {
   void ExpandPInObstacles();
   void AddPInVirtualObstacles();
   void DeletePInVirtualObstacles();
+  void MoveChannelObstacles();
+  void RecorverChannelObstacles();
 
   const bool CheckTlaneAvailable() const;
 
@@ -133,10 +141,15 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
   const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
-  const std::vector<Eigen::Vector2d> &GetVirtualObs() {
-    return calc_params_.front_corner_obs_vec;
+  const std::vector<Eigen::Vector2d> GetVirtualObs() {
+    std::vector<Eigen::Vector2d> obs_vec;
+    obs_vec = calc_params_.virtual_channel_obs_vec;
+    for (const auto &obs_pt : calc_params_.front_corner_obs_vec) {
+      obs_vec.emplace_back(obs_pt);
+    }
+    return obs_vec;
   }
-
+  
  private:
   virtual void Preprocess() override;
 
@@ -217,6 +230,9 @@ class ParallelPathPlanner : public ApaPathPlanner {
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &target_pose);
 
+  const size_t CalPathGearChangeCounts(
+      const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+
   const bool GenLineStepValidEnd(
       std::vector<Eigen::Vector2d> &line_end_vec,
       const pnc::geometry_lib::PathPoint &target_pose);
@@ -231,8 +247,7 @@ class ParallelPathPlanner : public ApaPathPlanner {
       const double buffer = 0.3);  // start pose should be given in line
 
   const bool CalcArcStepLimitPose(
-      pnc::geometry_lib::Arc &arc, bool &is_drive_out_safe, const uint8_t gear,
-      const uint8_t steer,
+      pnc::geometry_lib::Arc &arc, const uint8_t gear, const uint8_t steer,
       const double buffer =
           0.15);  // start pose and radius should be given in arc
 
@@ -347,10 +362,6 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
   const uint8_t TrimPathByCollisionDetection(
       pnc::geometry_lib::PathSegment &path_seg, const double buffer = 0.3);
-
-  const uint8_t TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg, Eigen::Vector2d &collision_pt,
-      const double buffer = 0.3);
 
   const bool CheckPathSegCollided(
       const pnc::geometry_lib::PathSegment &path_seg,

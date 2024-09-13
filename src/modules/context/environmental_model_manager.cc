@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <set>
@@ -28,6 +29,7 @@
 #include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
+#include "planning_gflags.h"
 #include "reference_path_manager.h"
 #include "scene_type_config.pb.h"
 #include "traffic_light_decision_manager.h"
@@ -340,6 +342,7 @@ bool EnvironmentalModelManager::Run() {
   time_start = IflyTime::Now_ms();
   dynamic_world_->ConstructDynamicWorld();
   time_end = IflyTime::Now_ms();
+  // dynamic_world_->DebugEgoNearByAgentNodesTrajectory();
   LOG_DEBUG("dynamic world update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
 
@@ -1347,7 +1350,7 @@ void EnvironmentalModelManager::RunBlinkState(
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else if (is_ilc_right_change) {
-        //由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+        // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::LEFT;

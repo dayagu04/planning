@@ -61,6 +61,9 @@ int Init() {
 
   apa_interface_ptr = new apa_planner::ApaPlanInterface();
 
+  FilePath::SetName("apa_simulation_py");
+  InitGlog(FilePath::GetName().c_str());
+
   apa_interface_ptr->Init(true);
 
   perfect_control_ptr = new PerfectControl();

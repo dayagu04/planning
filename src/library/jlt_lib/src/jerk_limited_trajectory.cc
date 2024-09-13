@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include "jerk_limited_trajectory_define.h"
 #include "src/common/log.h"
 namespace {
 

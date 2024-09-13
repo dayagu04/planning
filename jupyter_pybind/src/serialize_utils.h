@@ -20,7 +20,7 @@ inline T BytesToProto(pybind11::bytes &bytes) {
 }
 
 template <class T>
-pybind11::bytes ProtoToBytes(T proto) {
+inline pybind11::bytes ProtoToBytes(T proto) {
   std::string serialized_message;
   proto.SerializeToString(&serialized_message);
   return serialized_message;
@@ -43,7 +43,7 @@ inline T1 BytesToStruct(const pybind11::bytes &bytes) {
 }
 
 template <typename T1, typename T2>
-pybind11::bytes StructToBytes(T1 &c_struct) {
+inline pybind11::bytes StructToBytes(T1 &c_struct) {
   T2 ros_msg;
   convert(c_struct, ros_msg, ConvertTypeInfo::TO_ROS);
 

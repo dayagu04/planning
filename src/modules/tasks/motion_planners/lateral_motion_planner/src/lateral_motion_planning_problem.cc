@@ -28,6 +28,7 @@ void LateralMotionPlanningProblem::Init() {
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = false;
   solver_config.du_tol = 0.01 / 57.3 / 13.0;
+  solver_config.max_iter = 15;
   init_state_.resize(STATE_SIZE);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();
@@ -37,8 +38,8 @@ void LateralMotionPlanningProblem::Init() {
   // STEP 2: add cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<ReferenceCostTerm>());  // reference cost
-  // ilqr_core_ptr_->AddCost(
-  //     std::make_shared<ContinuityCostTerm>()); // continuity cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<ContinuityCostTerm>()); // continuity cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatAccCostTerm>());  // lateral acc cost
   ilqr_core_ptr_->AddCost(

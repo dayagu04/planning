@@ -34,11 +34,11 @@ double PointsSquareDistance(const Point2D& p1, const Point2D& p2) {
   return pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2);
 }
 
-CartesianCoordinateSystem::CartesianCoordinateSystem(Pose2D origin)
+CartesianCoordinateSystem::CartesianCoordinateSystem(planning::Pose2D origin)
     : m_origin(origin) {}
 
 Point2D CartesianCoordinateSystem::CartCoord2CurCartCoord(
-    const Pose2D& prev_origin, const Point2D& prev_rel_coord) {
+    const planning::Pose2D& prev_origin, const Point2D& prev_rel_coord) {
   // Need further validation
   double dis_to_prev_origin =
       sqrt(pow(prev_rel_coord.x, 2) + pow(prev_rel_coord.y, 2));
@@ -59,8 +59,8 @@ Point2D CartesianCoordinateSystem::CartCoord2CurCartCoord(
   cur_rel_coord.y = dis_to_cur_origin * sin(cur_vector_angle);
   return cur_rel_coord;
 }
-Pose2D CartesianCoordinateSystem::CartPose2CurCartPose(
-    const Pose2D& prev_origin, const Pose2D& prev_rel_pos) {
+planning::Pose2D CartesianCoordinateSystem::CartPose2CurCartPose(
+    const planning::Pose2D& prev_origin, const planning::Pose2D& prev_rel_pos) {
   // Need further validation
   double dis_to_prev_origin =
       sqrt(pow(prev_rel_pos.x, 2) + pow(prev_rel_pos.y, 2));
@@ -76,7 +76,7 @@ Pose2D CartesianCoordinateSystem::CartPose2CurCartPose(
   double dis_to_cur_origin =
       sqrt(pow(yabs - m_origin.y, 2) + pow(xabs - m_origin.x, 2));
 
-  Pose2D cur_rel_pose;
+  planning::Pose2D cur_rel_pose;
   cur_rel_pose.x = dis_to_cur_origin * cos(cur_vector_angle);
   cur_rel_pose.y = dis_to_cur_origin * sin(cur_vector_angle);
 
@@ -92,7 +92,7 @@ Pose2D CartesianCoordinateSystem::CartPose2CurCartPose(
 }
 
 Point2D CartesianCoordinateSystem::CurCartCoord2CartCoord(
-    const Pose2D& future_origin, const Point2D& cur_rel_coord) {
+    const planning::Pose2D& future_origin, const Point2D& cur_rel_coord) {
   // Need further validation
   double dis_to_cur_origin =
       sqrt(pow(cur_rel_coord.x, 2) + pow(cur_rel_coord.y, 2));
@@ -114,8 +114,9 @@ Point2D CartesianCoordinateSystem::CurCartCoord2CartCoord(
   future_rel_coord.y = dis_to_future_origin * sin(future_vector_angle);
   return future_rel_coord;
 }
-Pose2D CartesianCoordinateSystem::CurCartPose2CartPose(
-    const Pose2D& future_origin, const Pose2D& cur_rel_pos) {
+planning::Pose2D CartesianCoordinateSystem::CurCartPose2CartPose(
+    const planning::Pose2D& future_origin,
+    const planning::Pose2D& cur_rel_pos) {
   // Need further validation
   double dis_to_cur_origin =
       sqrt(pow(cur_rel_pos.x, 2) + pow(cur_rel_pos.y, 2));
@@ -132,7 +133,7 @@ Pose2D CartesianCoordinateSystem::CurCartPose2CartPose(
   double dis_to_future_origin =
       sqrt(pow(yabs - future_origin.y, 2) + pow(xabs - future_origin.x, 2));
 
-  Pose2D future_rel_pose;
+  planning::Pose2D future_rel_pose;
   future_rel_pose.x = dis_to_future_origin * cos(future_vector_angle);
   future_rel_pose.y = dis_to_future_origin * sin(future_vector_angle);
   double yawshift = future_origin.theta - m_origin.theta;

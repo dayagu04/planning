@@ -7,7 +7,6 @@
 #include "camera_preception_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
-#include "ifly_localization_c.h"
 #include "planning_debug_info.pb.h"
 #include "serialize_utils.h"
 #include "slot_management.h"

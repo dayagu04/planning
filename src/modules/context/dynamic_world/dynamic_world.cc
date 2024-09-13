@@ -1,8 +1,10 @@
 #include "dynamic_world.h"
+
 #include <cstdint>
 #include <memory>
 #include <utility>
 #include <vector>
+
 #include "agent/agent_manager.h"
 #include "debug_info_log.h"
 #include "dynamic_world/dynamic_agent_node.h"
@@ -32,6 +34,14 @@ agent::AgentManager* DynamicWorld::mutable_agent_manager() {
 void DynamicWorld::Reset() {
   dynamic_agent_node_table_.clear();
   assigned_dynamic_agents_.clear();
+  ego_front_node_id_ = kInvalidId;
+  ego_rear_node_id_ = kInvalidId;
+  ego_left_node_id_ = kInvalidId;
+  ego_right_node_id_ = kInvalidId;
+  ego_left_front_node_id_ = kInvalidId;
+  ego_right_front_node_id_ = kInvalidId;
+  ego_left_rear_node_id_ = kInvalidId;
+  ego_right_rear_node_id_ = kInvalidId;
 }
 
 bool DynamicWorld::ConstructDynamicWorld() {
@@ -542,6 +552,34 @@ const int64_t DynamicWorld::ego_left_rear_node_id() const {
 }
 const int64_t DynamicWorld::ego_right_rear_node_id() const {
   return ego_right_rear_node_id_;
+}
+
+void DynamicWorld::DebugTrajectoryForNode(const int node_id,
+                                          const std::string& prefix) const {
+  std::vector<double> empty_traj{};
+  const auto agent_node = GetNode(node_id);
+  if (node_id != planning_data::kInvalidId && agent_node) {
+    const auto& prediction_traj = agent_node->node_trajectories().at(0);
+    JSON_DEBUG_VECTOR(prefix + "_x_vec", prediction_traj.x_vec_, 4);
+    JSON_DEBUG_VECTOR(prefix + "_y_vec", prediction_traj.y_vec_, 4);
+    JSON_DEBUG_VECTOR(prefix + "_theta_vec", prediction_traj.theta_vec_, 4);
+    return;
+  }  // If node is invalid or null, use empty trajectory
+  JSON_DEBUG_VECTOR(prefix + "_x_vec", empty_traj, 4);
+  JSON_DEBUG_VECTOR(prefix + "_y_vec", empty_traj, 4);
+  JSON_DEBUG_VECTOR(prefix + "_theta_vec", empty_traj, 4);
+}
+
+void DynamicWorld::DebugEgoNearByAgentNodesTrajectory() const {
+  DebugTrajectoryForNode(ego_front_node_id_, "ego_front_agent_traj");
+  DebugTrajectoryForNode(ego_rear_node_id_, "ego_rear_agent_traj");
+  DebugTrajectoryForNode(ego_left_node_id_, "ego_left_agent_traj");
+  DebugTrajectoryForNode(ego_right_node_id_, "ego_right_agent_traj");
+  DebugTrajectoryForNode(ego_left_front_node_id_, "ego_left_front_agent_traj");
+  DebugTrajectoryForNode(ego_right_front_node_id_,
+                         "ego_right_front_agent_traj");
+  DebugTrajectoryForNode(ego_left_rear_node_id_, "ego_left_rear_agent_traj");
+  DebugTrajectoryForNode(ego_right_rear_node_id_, "ego_right_rear_agent_traj");
 }
 
 }  // namespace planning_data

@@ -31,6 +31,9 @@ class VariableCoordinateTimeOptimalTrajectory
 
   virtual double Evaluate(const int32_t order,
                           const double param) const override;
+  double SecondOrderParamLength() {
+    return third_order_param_.tpb + third_order_param_.Pb.t3;
+  }
 
  private:
   const CoordinateParam relative_coordinate_param_;

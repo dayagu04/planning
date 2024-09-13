@@ -24,6 +24,7 @@ import "gap_selector.proto";
 import "basic_types.proto";
 import "generated_refline.proto";
 import "lateral_offset_decider_info.proto";
+import "st_search_decider.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -69,6 +70,14 @@ message LocationLatency {
   optional uint64 location_latency = 4;        // 定位收到-定位发出 定位耗时
 }
 
+message AstarNode {
+  repeated TrajectoryPoint path_point = 1;
+}
+
+message AstarNodeList {
+  repeated AstarNode nodes = 1;
+}
+
 message PlanningDebugInfo {
   optional uint64 timestamp = 1;  // us
   // TBD: 存在多条candidates时，应该使用repeated
@@ -103,4 +112,6 @@ message PlanningDebugInfo {
   repeated TrajectoryPoint refline_info = 26;
   repeated ReferenceLine generated_refline_info = 27;
   optional LateralOffsetDeciderInfo lateral_offset_decider_info = 28;
+  optional AstarNodeList node_list = 29;
+  optional StSearchDeciderInfo st_search_decider_info = 30;
 }

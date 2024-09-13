@@ -1,0 +1,147 @@
+
+#include "occupancy_grid_map.h"
+
+#include <cstdint>
+
+#include "ogm_common.h"
+#include "pose2d.h"
+
+namespace planning {
+
+void OccupancyGridMap::Process(const Pose2D &ogm_pose) {
+  OccupancyGridCoordinate::Process(ogm_pose);
+
+  return;
+}
+
+void OccupancyGridMap::Clear() {
+  for (int32_t i = 0; i < ogm_grid_x_max; i++) {
+    for (int32_t j = 0; j < ogm_grid_y_max; j++) {
+      ogm[i][j] = false;
+    }
+  }
+  return;
+}
+
+template <typename T>
+void OccupancyGridMap::AddSlotPoint(const T &point) {
+  Pose2D local;
+
+  local.x = point.x - bound_.min_x;
+  local.y = point.y - bound_.min_y;
+
+  OgmIndex index;
+  OgmPoseToIndex(&index, local);
+
+  if (IsIndexValid(index)) {
+    ogm[index.x][index.y] = true;
+  }
+
+  return;
+}
+
+void OccupancyGridMap::AddSlotCoordinatePoints(
+    const std::vector<Position2D> &points) {
+  Pose2D local;
+  OgmIndex index;
+
+  for (size_t i = 0; i < points.size(); i++) {
+    local.x = points[i].x - bound_.min_x;
+    local.y = points[i].y - bound_.min_y;
+
+    OgmPoseToIndex(&index, local);
+
+    if (IsIndexValid(index)) {
+      ogm[index.x][index.y] = true;
+    }
+  }
+
+  return;
+}
+
+template <typename T>
+void OccupancyGridMap::AddLineSegment(const T &start, const T &end) {
+  Pose2D local;
+  OgmIndex index;
+
+  ad_common::math::Vec2d dir(end.x - start.x, end.y - start.y);
+  double len = dir.Length();
+
+  dir.Normalize();
+
+  double s = 0.0;
+  double ds = 0.2;
+
+  Position2D point;
+  while (s < len) {
+    point.x = start.x + s * dir.x();
+    point.y = start.y + s * dir.y();
+
+    local.x = point.x - bound_.min_x;
+    local.y = point.y - bound_.min_y;
+
+    OgmPoseToIndex(&index, local);
+
+    if (IsIndexValid(index)) {
+      ogm[index.x][index.y] = true;
+    }
+
+    s += ds;
+  }
+
+  local.x = end.x - bound_.min_x;
+  local.y = end.y - bound_.min_y;
+  OgmPoseToIndex(&index, local);
+  if (IsIndexValid(index)) {
+    ogm[index.x][index.y] = true;
+  }
+
+  return;
+}
+
+void OccupancyGridMap::AddSlotCoordinatePointCloud(
+    const std::vector<PointCloudObstacle> &point_cloud_list) {
+  Pose2D local;
+  OgmIndex index;
+
+  for (size_t i = 0; i < point_cloud_list.size(); i++) {
+    const std::vector<Position2D> &points = point_cloud_list[i].points;
+
+    for (size_t j = 0; j < points.size(); j++) {
+      local.x = points[j].x - bound_.min_x;
+      local.y = points[j].y - bound_.min_y;
+
+      OgmPoseToIndex(&index, local);
+
+      if (IsIndexValid(index)) {
+        ogm[index.x][index.y] = true;
+      }
+    }
+  }
+  return;
+}
+
+void OccupancyGridMap::TransformToMatrix(cv::Mat *mat) const {
+  for (int32_t i = 0; i < ogm_grid_x_max; i++) {
+    uchar *data = mat->ptr<uchar>(i);
+
+    for (int32_t j = 0; j < ogm_grid_y_max; j++) {
+      if (ogm[i][j]) {
+        data[j] = 0;
+      }
+    }
+  }
+
+  return;
+}
+
+void OccupancyGridMap::Init() { return; }
+
+void OccupancyGridMap::AddParkingObs(const ParkObstacleList &obs) {
+  AddSlotCoordinatePoints(obs.virtual_obs);
+  AddSlotCoordinatePointCloud(obs.point_cloud_list);
+
+  return;
+}
+
+}  // namespace planning

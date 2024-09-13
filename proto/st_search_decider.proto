@@ -1,0 +1,35 @@
+syntax = "proto2";
+package planning.common;
+message LaneChangeVehInfo {
+  optional int32 id = 1;
+  optional double center_s = 2;
+  optional double half_length = 3;
+  optional double v = 4;
+};
+
+message ObstacleSTInfo {
+  optional int32 id = 1;
+  repeated double s_vec_upper = 2;
+  repeated double s_vec_lower = 3;
+  repeated double t_vec = 4;
+};
+
+message StSearchDeciderInfo {
+  repeated LaneChangeVehInfo lane_change_veh_info = 1;
+  optional LaneChangeVehInfo leading_veh_info = 2;
+  optional double ego_s = 3;
+  optional double ego_l = 4;
+  optional double ego_x = 5;
+  optional double ego_y = 6;
+  optional double ego_v = 7;
+  optional double ego_a = 8;
+  repeated double search_s_vec = 9;
+  repeated double search_t_vec = 10;
+  repeated int32 rear_target_lane_id_set_info = 11;
+  repeated int32 front_target_lane_id_set_info = 12;
+  optional double ego_v_cruise = 13;
+  repeated ObstacleSTInfo obstacle_st_infos = 14;
+  optional bool st_search_status = 15;
+  optional int32 front_gap_id = 16;
+  optional int32 back_gap_id = 17;
+};

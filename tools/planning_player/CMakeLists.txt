@@ -2,7 +2,7 @@ project (pp)
 cmake_minimum_required (VERSION 3.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "-O0 -DX86 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -DX86 -g")
 
 find_package(catkin REQUIRED COMPONENTS
   rosbag
@@ -17,9 +17,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_LIST_DIR}/../../interface/src
-  ${CMAKE_CURRENT_LIST_DIR}/../../interface/src/legacy
-  ${CMAKE_CURRENT_LIST_DIR}/../../interface/type_convert
+  ${SYSTEM_INTEGRATION_PROJECT_SOURCE_DIR}/components/interface/src
+  ${SYSTEM_INTEGRATION_PROJECT_SOURCE_DIR}/components/interface/src/legacy
+  ${SYSTEM_INTEGRATION_PROJECT_SOURCE_DIR}/components/interface/type_convert
 )
 
 file(GLOB_RECURSE SRC_FILES
@@ -38,3 +38,5 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

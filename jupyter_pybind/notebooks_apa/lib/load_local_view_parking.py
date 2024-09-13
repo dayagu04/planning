@@ -61,9 +61,9 @@ replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
 load_uss_wave_from_uss_percept_msg = True
+read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
-read_uss_per_msg = True
 read_fus_obj_msg = False
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
@@ -72,7 +72,7 @@ class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
     self.bag = rosbag.Bag(path,'r',rosbag.Compression.NONE, 768 * 1024,True, None, True)
-    # loclization msg 
+    # loclization msg
     self.loc_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
 
     # vehicle service msg
@@ -130,8 +130,6 @@ class LoadCyberbag:
     self.parking_flag = parking_flag
 
     self.max_time = 0
-
-
 
     # time offset
     t0 = 0
@@ -204,7 +202,7 @@ class LoadCyberbag:
       t0_plan = self.plan_msg['t'][0]
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
-      # print('plan_msg time:',self.plan_msg['t'][-1])
+      print('plan_msg time:',self.plan_msg['t'][-1])
       if len(self.plan_msg['t']) > 0:
         self.plan_msg['enable'] = True
       else:
@@ -789,6 +787,14 @@ class LoadCyberbag:
     out['uss_percept_msg_idx'] = uss_percept_msg_idx
 
     return out
+
+  def get_localization_msg_index(self, bag_time):
+    loc_msg_idx = 0
+    if self.loc_msg['enable'] == True:
+      while self.loc_msg['t'][loc_msg_idx] <= bag_time and loc_msg_idx < (len(self.loc_msg['t'])-1):
+          loc_msg_idx = loc_msg_idx + 1
+
+    return loc_msg_idx
 
 
 def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag=False):
@@ -2013,7 +2019,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
 
   if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
-    print("bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size = ", bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size)
 
     for i in range(bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object_size):
       obj  =  bag_loader.fus_occupancy_objects_msg['data'][fus_occupancy_objects_msg_idx].fusion_object[i]

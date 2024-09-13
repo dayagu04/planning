@@ -428,6 +428,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     print("dist_err = ", planning_json['dist_err'])
     print("solver_condition = ", planning_json['solver_condition'])
     print("iLqr_lat_update_time = ", planning_json['iLqr_lat_update_time'], " ms")
+    print("is_static_avoid_scene = ", planning_json['is_static_avoid_scene'])
     print("min cost = ", lat_motion_plan_output.solver_info.iter_info[max(lat_motion_plan_output.solver_info.iter_count - 1, 0)].cost)
 
   if bag_loader.plan_msg['enable'] == True:

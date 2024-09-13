@@ -22,7 +22,6 @@
 
 #include <utility>
 
-// #include "cyber/common/log.h"
 #include "math/angle.h"
 #include "math/integral.h"
 #include "quintic_polynomial_curve1d.h"

@@ -125,6 +125,13 @@ class LoadRosbag:
     # time offset
     t0 = 0
 
+    # is_new_loc
+    global is_new_loc
+    topics = self.bag.get_type_and_topic_info().topics
+    for topic in topics:
+      if topic == "/iflytek/localization/egomotion":
+        is_new_loc = True
+
   def load_all_data(self, normal_print = True):
     print('load bag')
     start_time = time.time()
@@ -151,13 +158,6 @@ class LoadRosbag:
     except Exception as e:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!') """
-
-    # load localization msg
-    global is_new_loc
-    topics = self.bag.get_type_and_topic_info().topics
-    for topic in topics:
-      if topic == "/iflytek/localization/egomotion":
-        is_new_loc = True
 
     if is_new_loc:
       try:
@@ -594,29 +594,45 @@ class LoadRosbag:
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
-                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow',\
+                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', \
-                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'current_segment_passed_distance', \
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_intersection_split', 'current_segment_passed_distance', \
+                         'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', \
+                         'select_ego_lane_without_plan', 'select_ego_lane_with_plan', \
                          'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                          'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
                          "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","left_boundary_type","right_boundary_type", \
                          "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
+                         "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
                          "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", \
-                         "is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
+                         "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                          "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
-                         "front_node_id", "rear_node_id", \
+                         "front_node_id", "rear_node_id","prohibit_acc_", \
                          "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                          "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",\
-                         "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region','merge_lane_virtual_id', 'sdmap_min_curv_radius']
+                         "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region','merge_lane_virtual_id', 'sdmap_min_curv_radius',"is_static_avoid_scene",
+                         "is_overlap", "merge_agent_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
+                         'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y",
+                         'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
+                         'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y',
+                         'boundary_line_merge_point_x','boundary_line_merge_point_y']
 
-      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type"]
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type", 
+                         "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
+                         "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
+                         "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",
+                         "ego_right_agent_traj_x_vec","ego_right_agent_traj_y_vec","ego_right_agent_traj_theta_vec",
+                         "ego_left_front_agent_traj_x_vec","ego_left_front_agent_traj_y_vec","ego_left_front_agent_traj_theta_vec",
+                         "ego_right_front_agent_traj_x_vec","ego_right_front_agent_traj_y_vec","ego_right_front_agent_traj_theta_vec",
+                         "ego_left_rear_agent_traj_x_vec","ego_left_rear_agent_traj_y_vec","ego_left_rear_agent_traj_theta_vec",
+                         "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

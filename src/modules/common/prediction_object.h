@@ -16,6 +16,7 @@ struct PredictionTrajectoryPoint {
   float y{0.0};
   float yaw{0.0};  // for obs
   float speed{0.0};
+  float acc{0.0};
   float theta{0.0};  // for speed
   float prob{1.0};
 
@@ -28,6 +29,8 @@ struct PredictionTrajectoryPoint {
   float relative_ego_y{0.0};
   float relative_ego_yaw{0.0};
   float relative_ego_speed{0.0};
+  float relative_ego_acc_x{0.0};
+  float relative_ego_acc_y{0.0};
 
   float relative_ego_std_dev_x{0.0};
   float relative_ego_std_dev_y{0.0};

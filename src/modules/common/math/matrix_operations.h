@@ -27,7 +27,6 @@
 
 #include "Eigen/Core"
 #include "Eigen/SVD"
-// #include "cyber/common/log.h"
 
 /**
  * @namespace apollo::common::math

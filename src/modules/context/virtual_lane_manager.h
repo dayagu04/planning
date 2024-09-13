@@ -2,10 +2,12 @@
 #define ZNQC_MODULES_CONTEXT_VIRTUAL_LANE_MANAGER_H_
 
 #include <climits>
+#include <memory>
 #include <utility>
 #include <vector>
 
 #include "ad_common/hdmap/hdmap.h"
+#include "ego_lane_track_manager.h"
 #include "ego_planning_config.h"
 #include "fusion_road_c.h"
 #include "generated_refline.pb.h"
@@ -29,17 +31,14 @@ enum LaneChangeStatus {
   ON_RIGHT_LANE = 2,
 };
 
-enum SplitRelativeDirection {
-  None = 0,
-  ON_LEFT = 1,
-  ON_RIGHT = 2,
-};
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
                      planning::framework::Session *session);
   // VirtualLaneManager() = default;
   ~VirtualLaneManager(){};
+
+  void UpdateAllVirtualLaneInfo();
 
   std::shared_ptr<VirtualLane> get_left_neighbor(
       std::shared_ptr<VirtualLane> this_lane) const {
@@ -73,9 +72,11 @@ class VirtualLaneManager {
   const std::shared_ptr<VirtualLane> get_left_lane() const {
     return left_lane_;
   }
+
   const std::shared_ptr<VirtualLane> get_right_lane() const {
     return right_lane_;
   }
+
   const std::shared_ptr<VirtualLane> get_lane_with_virtual_id(
       int virtual_id) const;
   const std::shared_ptr<VirtualLane> get_lane_with_order_id(
@@ -129,48 +130,31 @@ class VirtualLaneManager {
 
   void reset();
 
-  void CalculateVirtualLaneAttributes();
-
-  void UpdateAllVirtualLaneInfo();
-
-  void TrackEgoLane();
-
-  void PreprocessRoadSplit(const std::vector<int> &order_ids);
-
-  void PreprocessRampSplit(const std::vector<int> &order_ids);
-
-  void SelectEgoLaneWithoutPlan();
-
-  void SelectEgoLaneWithPlan(int zero_relative_id_nums);
-
-  std::vector<int> GetZeroRelativeIdOrderIds() {
-    return order_ids_of_same_zero_relative_id_;
-  }
-
-  double ComputeTargetLaneSpecifiedRangeCurvature(
-      const std::shared_ptr<VirtualLane> virtual_lane);
-
-  bool CalcCrosslaneStatus(
-      const std::shared_ptr<VirtualLane> lane,
-      const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints);
-
-  std::shared_ptr<planning_math::KDPath> MakeBoundaryPath(
-      const iflyauto::LaneBoundary &boundary);
-
-  void CalcBoundaryCross(
-      const planning_math::KDPath &lane_boundary_path,
-      const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
-      bool *cross_lane);
-
   double get_distance_to_route_end() const { return distance_to_route_end_; }
 
   double get_distance_to_toll_station() const {
     return distance_to_toll_station_;
   }
 
+  void set_is_exist_split_on_ramp(const bool is_exist_split_on_ramp) {
+    is_exist_split_on_ramp_ = is_exist_split_on_ramp;
+  }
+
   bool get_is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
 
+  void set_is_exist_ramp_on_road(const bool is_exist_ramp_on_road) {
+    is_exist_ramp_on_road_ = is_exist_ramp_on_road;
+  }
+
   bool get_is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
+
+  void set_is_exist_intersection_split(const bool is_exist_intersection_split) {
+    is_exist_intersection_split_ = is_exist_intersection_split;
+  }
+
+  bool get_is_exist_intersection_split() const {
+    return is_exist_intersection_split_;
+  };
 
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
@@ -221,8 +205,18 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
 
+  bool is_road_merged_by_other_lane() const { return is_road_merged_by_other_lane_; }
+
+  const double dis_threshold_to_merged_point() const {
+    return dis_threshold_to_is_merged_point_;
+  }
+
   bool is_ego_on_city_expressway_hmi() const {
     return is_ego_on_city_expressway_hmi_;
+  }
+
+  bool is_ramp_merge_to_road_on_expressway() const {
+    return is_ramp_merge_to_road_on_expressway_;
   }
 
   const double dis_threshold_to_last_merge_point() const {
@@ -262,14 +256,14 @@ class VirtualLaneManager {
     return Intersection_state_;
   };
 
+  std::vector<int> GetZeroRelativeIdOrderIds() {
+    return order_ids_of_same_zero_relative_id_;
+  }
+
+  std::shared_ptr<planning_math::KDPath> MakeBoundaryPath(
+      const iflyauto::LaneBoundary &boundary);
+
  private:
-  LaneChangeStatus is_lane_change();
-  void UpdateLaneVirtualId();
-
-  double ComputeLanesMatchlaterakDisCost(
-      int virtual_id,
-      const std::shared_ptr<VirtualLane> current_relative_id_lane);
-
   double JudgeIfTheRamp(const int current_index,
                         const CurrentRouting &current_routing,
                         const ad_common::hdmap::HDMap &hd_map);
@@ -315,6 +309,7 @@ class VirtualLaneManager {
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
+  std::shared_ptr<EgoLaneTrackManger> ego_lane_track_manager_;
   int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::unordered_map<int, std::shared_ptr<VirtualLane>> virtual_id_mapped_lane_;
@@ -371,11 +366,20 @@ class VirtualLaneManager {
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
   double distance_to_toll_station_ = NL_NMAX;
+  bool is_exist_toll_station_ = false;
+  bool is_ramp_merge_to_road_on_expressway_ = false;
+  bool is_ramp_merge_to_ramp_on_expressway_ = false;
+  bool is_road_merged_by_other_lane_ = false;
+  bool is_nearing_other_lane_merge_to_road_point_ = false;
+  RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
   const double dis_threshold_to_last_merge_point_ = 800.0;
+  const double dis_threshold_to_is_merged_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;
   bool is_within_hdmap_ = false;
   std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
+  std::vector<std::pair<SplitRelativeDirection, double>>
+      split_dir_dis_info_list_;
 
   //到停止线的距离，可以为负，表示停止线在车后
   double distance_to_stopline_ = NL_NMAX;

@@ -20,6 +20,8 @@ struct MotionPlannerOutput {
   pnc::mathlib::spline lateral_x_t_spline;
   pnc::mathlib::spline lateral_y_t_spline;
   pnc::mathlib::spline lateral_theta_t_spline;
+  pnc::mathlib::spline lateral_s_t_spline;
+  pnc::mathlib::spline lateral_t_s_spline;
 
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline v_t_spline;

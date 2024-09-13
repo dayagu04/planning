@@ -322,6 +322,15 @@ GapSelectorStatus GapSelectorDecider::Update() {
   coarse_planning_info.reference_path->get_frenet_coord()->XYToSL(
       ego_cart_pose, ego_frenet_pose);
 
+  const double ego_v = ego_state_mgr->ego_v();
+  std::vector<double> xp_ego_v{10.0, 15.0, 20.0, 25.0};
+  double lat_ref_offset = interp(ego_v, xp_ego_v, config_.lat_ref_offset);
+  if (ego_frenet_pose.y > 1e-6) {
+    avoid_lat_offset += lat_ref_offset;
+  } else {
+    avoid_lat_offset -= lat_ref_offset;
+  }
+
   if (coarse_planning_info.target_state != last_target_state_) {
     if (coarse_planning_info.target_state == kLaneKeeping ||
         coarse_planning_info.target_state == kLaneChangePropose) {
@@ -508,6 +517,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   Eigen::Vector2d sample_point;
   Point2D frenet_point;
   size_t truncation_idx = 0;
+  double s_truncation{0.0};
   for (size_t i = 0; i < traj_points.size(); i++) {
     if (traj_points[i].t < remain_lc_duration) {
       sample_point = lane_change_quintic_path(traj_points[i].t);
@@ -526,7 +536,6 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
       traj_points[i] = point;
       truncation_idx = i;
     } else {
-      double s_truncation;
       if (i == truncation_idx + 1) {
         Eigen::Vector2d truncation_point(traj_points[truncation_idx].x,
                                          traj_points[truncation_idx].y);
