@@ -185,6 +185,8 @@ struct ApaParameters {
   double max_obs_lat_invasion_slot_dist = -0.026;
   double max_obs_lat_invasion_slot_dist_dynamic_col = -0.026;
   double max_obs_lon_invasion_slot_dist = -0.026;
+  double max_obs_lon_invasion_slot_dist_dynamic_col = -0.068;
+  double slot_entrance_obs_x = 2.468;
   double col_obs_safe_dist_strict = 0.2;
   double parallel_obs2slot_max_dist = 16.66;
   double parallel_channel_y_mag = 8.5;
@@ -273,7 +275,7 @@ struct ApaParameters {
   // slot managent params
   bool release_slot_by_prepare = false;
   size_t max_slot_window_size = 3;
-  size_t max_limiter_window_size = 6;
+  size_t max_limiter_window_size = 3;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;

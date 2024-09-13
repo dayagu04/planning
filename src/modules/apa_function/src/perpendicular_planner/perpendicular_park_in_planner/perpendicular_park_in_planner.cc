@@ -796,7 +796,7 @@ void PerpendicularParkInPlanner::GenTlane() {
     //   continue;
     // }
     obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
-        obstacle_point_slot, slot_pt, is_left_side);
+        obstacle_point_slot, slot_pt, is_left_side, frame_.replan_flag);
 
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
         !apa_param.GetParam().believe_in_fus_obs) {
@@ -1305,7 +1305,7 @@ void PerpendicularParkInPlanner::GenObstacles() {
 
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
       obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
-          obs_pos, slot_pt, is_left_side);
+          obs_pos, slot_pt, is_left_side, frame_.is_replan);
 
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pos, ego_pose, safe_dist)) {
@@ -2222,7 +2222,7 @@ void PerpendicularParkInPlanner::Log() const {
     }
     for (const auto& obstacle : obs_pair.second) {
       if (obs_pair.first == CollisionDetector::FUSION_OBS &&
-          !(std::fabs(obstacle.y()) < 1.568 && obstacle.x() < 7.568 &&
+          !(std::fabs(obstacle.y()) < 1.168 && obstacle.x() < 5.068 &&
             obstacle.x() > -0.468)) {
         continue;
       }
@@ -2232,8 +2232,8 @@ void PerpendicularParkInPlanner::Log() const {
     }
   }
 
-  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 6)
-  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 6)
+  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 3)
+  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 3)
 
   std::vector<double> slot_corner_X;
   const size_t corner_size = ego_slot_info.slot_corner.size();
