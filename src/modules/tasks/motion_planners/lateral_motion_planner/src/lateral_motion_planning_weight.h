@@ -29,8 +29,7 @@ class LateralMotionPlanningWeight {
 
   void SetLateralMotionWeight(
       const LateralMotionSceneEnum scene,
-      planning::common::LateralPlanningInput &planning_input,
-      bool is_in_intersection = false);
+      planning::common::LateralPlanningInput &planning_input);
 
   void SetInitDisToRef(const double init_dis_to_ref) {
     init_dis_to_ref_ = init_dis_to_ref;
@@ -48,6 +47,12 @@ class LateralMotionPlanningWeight {
     is_lane_change_back_ = is_lane_change_back;
   }
 
+  void SetIsInIntersection(const bool is_in_intersection) {
+    is_in_intersection_ = is_in_intersection;
+  }
+
+  double GetInitDisToRef() const { return init_dis_to_ref_; }
+
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
 
   double GetConcernedEndRatioForXY() const { return end_ratio_for_qrefxy_; }
@@ -57,6 +62,9 @@ class LateralMotionPlanningWeight {
   }
 
   void MakeLaneChangeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void MakeSplitDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
  private:
@@ -77,6 +85,7 @@ class LateralMotionPlanningWeight {
   double end_ratio_for_qrefxy_;
   double end_ratio_for_qreftheta_;
   bool is_lane_change_back_;
+  bool is_in_intersection_;
 };
 
 }  // namespace lateral_planning

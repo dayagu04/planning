@@ -465,10 +465,21 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   const double lateral_offset = session_->mutable_planning_context()
                                     ->lateral_offset_decider_output()
                                     .lateral_offset;
+  const double v_ego =
+      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
+  std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
+  double dynamic_ref_buffer = interp(v_ego, xp_v_ego, config_.dynamic_ref_buffer);
+  double init_dist_to_ref = std::fabs(frenet_init_pt.y - lateral_offset) - dynamic_ref_buffer;
+  double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
+  if (dist_to_second_stage < -1e-6) {
+    dynamic_ref_buffer = std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
+  }
+  if (frenet_init_pt.y < -1e-6) {
+    dynamic_ref_buffer = -dynamic_ref_buffer;
+  }
+
   if (config_.lateral_ref_traj_type ||
-      (((ego_cart_state_manager_->ego_v() <= config_.lc_high_vel_thr) ||
-        (std::fabs(frenet_init_pt.y - lateral_offset) >
-         config_.lc_second_dist_thr)) &&
+      ((dist_to_second_stage >= 1e-6) &&
        (is_LC_CHANGE || is_LC_BACK) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
@@ -550,26 +561,23 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     general_lateral_decider_output.ramp_scene = false;
   }
   if ((is_LC_CHANGE || is_LC_BACK) &&
-      (((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) &&
-        (config_.not_use_gap_flag)) ||
+      ((config_.not_use_gap_flag) ||
        gap_selector_decider_output.gap_selector_trustworthy)) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
-    if ((ego_cart_state_manager_->ego_v() > config_.lc_high_vel_thr) &&
-        (std::fabs(frenet_init_pt.y - lateral_offset) <
-         config_.lc_second_dist_thr)) {
-      HandleAvoidScene(traj_points);
+    if (dist_to_second_stage < -1e-6) {
+      HandleAvoidScene(traj_points, dynamic_ref_buffer);
     }
   } else {
     general_lateral_decider_output.complete_follow =
         false;  // fusion is unsteady, lane keep weight need decay in end of
                 // ref
     general_lateral_decider_output.lane_change_scene = false;
-    HandleAvoidScene(traj_points);
+    HandleAvoidScene(traj_points, 0.0);
   }
 }
 
-void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points) {
+void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer) {
   const auto &frenet_coord =
       session_->planning_context()
           .lane_change_decider_output()
@@ -577,8 +585,8 @@ void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points) {
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  if (lateral_offset_decider_output.is_valid) {
-    double lateral_offset = lateral_offset_decider_output.lateral_offset;
+  if (lateral_offset_decider_output.is_valid || std::fabs(dynamic_ref_buffer) > 1e-6) {
+    double lateral_offset = lateral_offset_decider_output.lateral_offset + dynamic_ref_buffer;
     Point2D first_offset_xy_point;
     if (frenet_coord->SLToXY(Point2D(traj_points[0].s, lateral_offset),
                              first_offset_xy_point)) {

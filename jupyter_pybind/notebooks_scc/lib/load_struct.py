@@ -306,28 +306,28 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
           for j in range(point_num):
             line_x.append(local_points[j].x)
             line_y.append(local_points[j].y)
-            if j > 0:
-              left_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
-              if left_length >= left_line.type_segments[k].length or j == (point_num - 1):
-                left_length = 0
-                tp = left_line.type_segments[k].type
-                k += 1
-                k = min(k, type_num)
-                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-                  dash_line_x.append(line_x)
-                  dash_line_y.append(line_y)
-                  dash_line_id.append(relative_id)
-                elif tp == 9:
-                  dot_line_x.append(line_x)
-                  dot_line_y.append(line_y)
-                  dot_line_id.append(relative_id)
-                else:
-                  solid_line_x.append(line_x)
-                  solid_line_y.append(line_y)
-                  solid_line_id.append(relative_id)
-                line_x, line_y = [], []
-                line_x.append(local_points[j].x)
-                line_y.append(local_points[j].y)
+            if j < (point_num - 1):
+              left_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+            if left_length > left_line.type_segments[k].length or j == (point_num - 1):
+              left_length = 0
+              tp = left_line.type_segments[k].type
+              k += 1
+              k = max(min(k, type_num - 1), 0)
+              if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                dash_line_x.append(line_x)
+                dash_line_y.append(line_y)
+                dash_line_id.append(relative_id)
+              elif tp == 9:
+                dot_line_x.append(line_x)
+                dot_line_y.append(line_y)
+                dot_line_id.append(relative_id)
+              else:
+                solid_line_x.append(line_x)
+                solid_line_y.append(line_y)
+                solid_line_id.append(relative_id)
+              line_x, line_y = [], []
+              line_x.append(local_points[j].x)
+              line_y.append(local_points[j].y)
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
@@ -343,48 +343,14 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
               for j in range(point_num):
                 line_x.append(local_points[j].x)
                 line_y.append(local_points[j].y)
-                if j > 0:
-                  left_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
-                  if left_length >= left_line.type_segments[k].length or j == (point_num - 1):
-                    left_length = 0
-                    tp = left_line.type_segments[k].type
-                    k += 1
-                    k = min(k, type_num)
-                    line_x, line_y = coord_tf.global_to_local(line_x, line_y)
-                    if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-                      dash_line_x.append(line_x)
-                      dash_line_y.append(line_y)
-                      dash_line_id.append(relative_id)
-                    elif tp == 9:
-                      dot_line_x.append(line_x)
-                      dot_line_y.append(line_y)
-                      dot_line_id.append(relative_id)
-                    else:
-                      solid_line_x.append(line_x)
-                      solid_line_y.append(line_y)
-                      solid_line_id.append(relative_id)
-                    line_x, line_y = [], []
-                    line_x.append(local_points[j].x)
-                    line_y.append(local_points[j].y)
-            else:
-              dash_line_x.append(default_line_x)
-              dash_line_y.append(default_line_y)
-              dash_line_id.append(relative_id)
-          else:
-            car_points = left_line.car_points
-            point_num = left_line.car_points_size
-            type_num = left_line.type_segments_size
-            k = 0
-            for j in range(point_num):
-              line_x.append(car_points[j].x)
-              line_y.append(car_points[j].y)
-              if j > 0:
-                left_length += math.sqrt((car_points[j].x - car_points[j - 1].x)**2 + (car_points[j].y - car_points[j - 1].y)**2)
-                if left_length >= left_line.type_segments[k].length or j == (point_num - 1):
+                if j < (point_num - 1):
+                  left_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+                if left_length > left_line.type_segments[k].length or j == (point_num - 1):
                   left_length = 0
                   tp = left_line.type_segments[k].type
                   k += 1
-                  k = min(k, type_num)
+                  k = max(min(k, type_num - 1), 0)
+                  line_x, line_y = coord_tf.global_to_local(line_x, line_y)
                   if tp == 0 or tp == 1 or tp == 3 or tp == 4:
                     dash_line_x.append(line_x)
                     dash_line_y.append(line_y)
@@ -398,8 +364,42 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
                     solid_line_y.append(line_y)
                     solid_line_id.append(relative_id)
                   line_x, line_y = [], []
-                  line_x.append(car_points[j].x)
-                  line_y.append(car_points[j].y)
+                  line_x.append(local_points[j].x)
+                  line_y.append(local_points[j].y)
+            else:
+              dash_line_x.append(default_line_x)
+              dash_line_y.append(default_line_y)
+              dash_line_id.append(relative_id)
+          else:
+            car_points = left_line.car_points
+            point_num = left_line.car_points_size
+            type_num = left_line.type_segments_size
+            k = 0
+            for j in range(point_num):
+              line_x.append(car_points[j].x)
+              line_y.append(car_points[j].y)
+              if j < (point_num - 1):
+                left_length += math.sqrt((car_points[j + 1].x - car_points[j].x)**2 + (car_points[j + 1].y - car_points[j].y)**2)
+              if left_length > left_line.type_segments[k].length or j == (point_num - 1):
+                left_length = 0
+                tp = left_line.type_segments[k].type
+                k += 1
+                k = max(min(k, type_num - 1), 0)
+                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                  dash_line_x.append(line_x)
+                  dash_line_y.append(line_y)
+                  dash_line_id.append(relative_id)
+                elif tp == 9:
+                  dot_line_x.append(line_x)
+                  dot_line_y.append(line_y)
+                  dot_line_id.append(relative_id)
+                else:
+                  solid_line_x.append(line_x)
+                  solid_line_y.append(line_y)
+                  solid_line_id.append(relative_id)
+                line_x, line_y = [], []
+                line_x.append(car_points[j].x)
+                line_y.append(car_points[j].y)
       except:
         dash_line_x.append(default_line_x)
         dash_line_y.append(default_line_y)
@@ -417,28 +417,28 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
           for j in range(point_num):
             line_x.append(local_points[j].x)
             line_y.append(local_points[j].y)
-            if j > 0:
-              right_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
-              if right_length >= right_line.type_segments[k].length or j == (point_num - 1):
-                right_length = 0
-                tp = right_line.type_segments[k].type
-                k += 1
-                k = min(k, type_num)
-                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-                  dash_line_x.append(line_x)
-                  dash_line_y.append(line_y)
-                  dash_line_id.append(relative_id)
-                elif tp == 9:
-                  dot_line_x.append(line_x)
-                  dot_line_y.append(line_y)
-                  dot_line_id.append(relative_id)
-                else:
-                  solid_line_x.append(line_x)
-                  solid_line_y.append(line_y)
-                  solid_line_id.append(relative_id)
-                line_x, line_y = [], []
-                line_x.append(local_points[j].x)
-                line_y.append(local_points[j].y)
+            if j < (point_num - 1):
+              right_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+            if right_length > right_line.type_segments[k].length or j == (point_num - 1):
+              right_length = 0
+              tp = right_line.type_segments[k].type
+              k += 1
+              k = max(min(k, type_num - 1), 0)
+              if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                dash_line_x.append(line_x)
+                dash_line_y.append(line_y)
+                dash_line_id.append(relative_id)
+              elif tp == 9:
+                dot_line_x.append(line_x)
+                dot_line_y.append(line_y)
+                dot_line_id.append(relative_id)
+              else:
+                solid_line_x.append(line_x)
+                solid_line_y.append(line_y)
+                solid_line_id.append(relative_id)
+              line_x, line_y = [], []
+              line_x.append(local_points[j].x)
+              line_y.append(local_points[j].y)
         else :
           if is_enu_to_car:
             coord_tf = coord_transformer()
@@ -454,48 +454,14 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
               for j in range(point_num):
                 line_x.append(local_points[j].x)
                 line_y.append(local_points[j].y)
-                if j > 0:
-                  right_length += math.sqrt((local_points[j].x - local_points[j - 1].x)**2 + (local_points[j].y - local_points[j - 1].y)**2)
-                  if right_length >= right_line.type_segments[k].length or j == (point_num - 1):
-                    right_length = 0
-                    tp = right_line.type_segments[k].type
-                    k += 1
-                    k = min(k, type_num)
-                    line_x, line_y = coord_tf.global_to_local(line_x, line_y)
-                    if tp == 0 or tp == 1 or tp == 3 or tp == 4:
-                      dash_line_x.append(line_x)
-                      dash_line_y.append(line_y)
-                      dash_line_id.append(relative_id)
-                    elif tp == 9:
-                      dot_line_x.append(line_x)
-                      dot_line_y.append(line_y)
-                      dot_line_id.append(relative_id)
-                    else:
-                      solid_line_x.append(line_x)
-                      solid_line_y.append(line_y)
-                      solid_line_id.append(relative_id)
-                    line_x, line_y = [], []
-                    line_x.append(local_points[j].x)
-                    line_y.append(local_points[j].y)
-            else:
-              dash_line_x.append(default_line_x)
-              dash_line_y.append(default_line_y)
-              dash_line_id.append(relative_id)
-          else:
-            car_points = right_line.car_points
-            point_num = right_line.car_points_size
-            type_num = right_line.type_segments_size
-            k = 0
-            for j in range(point_num):
-              line_x.append(car_points[j].x)
-              line_y.append(car_points[j].y)
-              if j > 0:
-                right_length += math.sqrt((car_points[j].x - car_points[j - 1].x)**2 + (car_points[j].y - car_points[j - 1].y)**2)
-                if right_length >= right_line.type_segments[k].length or j == (point_num - 1):
+                if j < (point_num - 1):
+                  right_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+                if right_length > right_line.type_segments[k].length or j == (point_num - 1):
                   right_length = 0
                   tp = right_line.type_segments[k].type
                   k += 1
-                  k = min(k, type_num)
+                  k = max(min(k, type_num - 1), 0)
+                  line_x, line_y = coord_tf.global_to_local(line_x, line_y)
                   if tp == 0 or tp == 1 or tp == 3 or tp == 4:
                     dash_line_x.append(line_x)
                     dash_line_y.append(line_y)
@@ -509,8 +475,42 @@ def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_
                     solid_line_y.append(line_y)
                     solid_line_id.append(relative_id)
                   line_x, line_y = [], []
-                  line_x.append(car_points[j].x)
-                  line_y.append(car_points[j].y)
+                  line_x.append(local_points[j].x)
+                  line_y.append(local_points[j].y)
+            else:
+              dash_line_x.append(default_line_x)
+              dash_line_y.append(default_line_y)
+              dash_line_id.append(relative_id)
+          else:
+            car_points = right_line.car_points
+            point_num = right_line.car_points_size
+            type_num = right_line.type_segments_size
+            k = 0
+            for j in range(point_num):
+              line_x.append(car_points[j].x)
+              line_y.append(car_points[j].y)
+              if j < (point_num - 1):
+                right_length += math.sqrt((car_points[j + 1].x - car_points[j].x)**2 + (car_points[j + 1].y - car_points[j].y)**2)
+              if right_length > right_line.type_segments[k].length or j == (point_num - 1):
+                right_length = 0
+                tp = right_line.type_segments[k].type
+                k += 1
+                k = max(min(k, type_num - 1), 0)
+                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                  dash_line_x.append(line_x)
+                  dash_line_y.append(line_y)
+                  dash_line_id.append(relative_id)
+                elif tp == 9:
+                  dot_line_x.append(line_x)
+                  dot_line_y.append(line_y)
+                  dot_line_id.append(relative_id)
+                else:
+                  solid_line_x.append(line_x)
+                  solid_line_y.append(line_y)
+                  solid_line_id.append(relative_id)
+                line_x, line_y = [], []
+                line_x.append(car_points[j].x)
+                line_y.append(car_points[j].y)
       except:
         dash_line_x.append(default_line_x)
         dash_line_y.append(default_line_y)

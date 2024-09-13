@@ -539,6 +539,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # fix_lane,origin_lane
   if bag_loader.plan_debug_msg['enable'] == True:
     try:
+      intersection_state = plan_debug_msg.real_time_lon_behavior_planning_input.intersection_state
+      print("intersection_state: ", intersection_state)
+    except:
+      print("no intersection_state")
+
+    try:
       global first_frame_num
       if bag_time <= 0.1:
         first_frame_num = int(plan_debug_msg.frame_info.frame_num)
@@ -1118,11 +1124,11 @@ def load_local_view_figure():
                                                  'replan_status':[],
                                                  'ego_pos_compensation_x': [],
                                                  'ego_pos_compensation_y': []})
-  data_merge_point = ColumnDataSource(data = {'merge_point_x':[], 
+  data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
-  macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[], 
+  macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
                                               'macroeconomic_decider_merge_point_y':[]})
-  boundary_line_merge_point = ColumnDataSource(data = {'boundary_line_merge_point_x':[], 
+  boundary_line_merge_point = ColumnDataSource(data = {'boundary_line_merge_point_x':[],
                                               'boundary_line_merge_point_y':[]})
   data_text = ColumnDataSource(data = {'vel_ego_text':[], 'text_xn': [],  'text_yn': []})
   data_lane_dashed_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})

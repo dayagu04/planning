@@ -137,7 +137,7 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
-  void HandleAvoidScene(TrajectoryPoints &traj_points);
+  void HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer);
   void CalcLateralBehaviorOutput();
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsRearObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
