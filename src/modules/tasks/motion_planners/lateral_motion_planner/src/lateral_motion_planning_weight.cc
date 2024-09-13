@@ -37,6 +37,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         planning_input.set_q_acc(config_.q_acc_intersection);
         planning_input.set_q_jerk(config_.q_jerk_intersection_mid);
         concerned_start_q_jerk_ = config_.q_jerk_intersection_close;
+        planning_input.set_acc_bound(config_.acc_bound);
         planning_input.set_jerk_bound(config_.jerk_bound_intersection);
         planning_input.set_q_jerk_bound(config_.q_jerk_bound_intersection);
       } else {
@@ -67,7 +68,6 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       SetAccJerkBoundByVelocity(planning_input);
       concerned_start_q_jerk_ = config_.q_jerk_avoid;
       if (ego_vel_ > config_.avoid_high_vel) {
-        planning_input.set_acc_bound(config_.acc_bound);
         planning_input.set_jerk_bound(config_.jerk_bound_avoid);
         planning_input.set_q_ref_theta(config_.q_ref_theta_avoid_high_vel);
         planning_input.set_q_jerk(config_.q_jerk_avoid_high_vel_middle);
