@@ -215,9 +215,9 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
                     right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x,traj_s, car_move_mode):
   kwargs = locals()
 
-  vehicle_type = 'CHERY_T26'
-  # vehicle_type = 'CHERY_E0X'
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  # vehicle_type = 'CHERY_T26'
+  vehicle_type = 'CHERY_E0X'
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, 0.0)
 
   car_xn = []
   car_yn = []

@@ -32,7 +32,7 @@ static GlogFlag glog_flag_;
 //   return;
 // }
 
-void CreateLogDirectory(const std::string &path) {
+const bool CreateLogDirectory(const std::string &path) {
   DIR *log_dir = nullptr;
   log_dir = opendir(path.c_str());
 
@@ -40,8 +40,8 @@ void CreateLogDirectory(const std::string &path) {
     int ret = mkdir(path.c_str(), 0755);
 
     if (ret != 0) {
-      printf("make dir fail\n");
-      return;
+      printf("make dir fail, %s \n", path.c_str());
+      return false;
     }
 
     printf("make dir is success\n");
@@ -51,7 +51,7 @@ void CreateLogDirectory(const std::string &path) {
 
   closedir(log_dir);
 
-  return;
+  return true;
 }
 
 void InitGlog(const char *file) {
@@ -70,12 +70,12 @@ void InitGlog(const char *file) {
   //  50 Mb
   // FLAGS_max_log_size = 50;
 
-  CreateLogDirectory(path_dir);
+  bool create_path = CreateLogDirectory(path_dir);
 
   // Init glog
   if (glog_flag_.is_init == false) {
-    //  google::InstallFailureSignalHandler();
-    //  google::InstallFailureWriter(&SignalHandler);
+    // google::InstallFailureSignalHandler();
+    // google::InstallFailureWriter(&SignalHandler);
 
     google::InitGoogleLogging("");
     google::SetLogDestination(google::ERROR, "");
@@ -95,7 +95,7 @@ void InitGlog(const char *file) {
     //                                                          thread);
 
     FLAGS_stop_logging_if_full_disk = true;
-    ILOG_INFO << "glog init ";
+    ILOG_INFO << "glog init, create_path = " << create_path;
     glog_flag_.is_init = true;
   }
 

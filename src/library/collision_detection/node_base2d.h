@@ -1,7 +1,7 @@
 #pragma once
 
 #include "aabb2d.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 #define b2_nullNode (-1)

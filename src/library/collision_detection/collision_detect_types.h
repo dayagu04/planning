@@ -6,7 +6,7 @@
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 
-#include "macro.h"
+#include "collision_detect_macro.h"
 
 #define CDL_USE_DOUBLE_PRECISION (1)
 
@@ -111,5 +111,35 @@ using AngleAxisr = AngleAxis<real>;
 
 template <typename _Tp>
 using aligned_vector = std::vector<_Tp, Eigen::aligned_allocator<_Tp>>;
+
+/** convex hull vertex number */
+static constexpr uint32_t MAX_CONVEX_VERTEX_NUM = 12;
+
+/** max number of the collision pair in the struct CollisionResult */
+static constexpr uint32_t MAX_COLLISION_NUM = 10000;
+
+/** malloc a memory pool for the obstacle trajectory set tree */
+static constexpr uint32_t MAX_NODE_POOL_SIZE = 10000;
+
+struct CDL_EXPORT constants {
+  static constexpr real pi() { return real(M_PI); }
+  static constexpr real eps() { return real(1.e-7); }
+  static constexpr real gjk_tolorance() { return real(1e-5); }
+};
+
+struct UserData {
+  /** id of collision object in the collision object array */
+  int32 id;
+  /** id of the trajecotry array in predicted trajectory set */
+  int32 traj_id;
+  /** id of the pose along a certain trajectory */
+  int32 pose_id;
+
+  void setUserData(const UserData &ud) {
+    id = ud.id;
+    traj_id = ud.traj_id;
+    pose_id = ud.pose_id;
+  }
+};
 
 }  // namespace cdl
