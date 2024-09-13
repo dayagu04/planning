@@ -258,6 +258,10 @@ class StGraphGenerator {
                              const double kwidth);
 
   void GenerateSrefByVrefJLT(std::vector<double> &s_refs);
+  
+  void IsReverseAgentInLargeCurvature(
+      const double v_ego, std::shared_ptr<VirtualLane> current_lane,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);
 
  private:
   framework::Session *session_;
@@ -274,6 +278,8 @@ class StGraphGenerator {
   std::array<double, 3> lon_init_state_;
   std::shared_ptr<KDPath> lat_path_coord_;
   std::vector<NarrowLead> narrow_agent_;
+  double curv_ = 1 / 10000.0;
+  double road_radius_ = 10000.0;
 
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
