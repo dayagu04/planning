@@ -468,7 +468,7 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
               : &avoid_obstacle_2;
     }
     avoid_id_ = nearest_avoid_obstacle->track_id;
-    CalcMaxOppositeOffset(avoid_obstacle_1, -1);
+    CalcMaxOppositeOffset(*nearest_avoid_obstacle, -1);
     lateral_offset = DesireLateralOffsetSideWay(
         *nearest_avoid_obstacle, avoid_info_.avoid_way, 0.5,
         lat_offset_compensate_1, config_.base_nudge_distance);
@@ -816,7 +816,7 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
   const auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
 
-  const auto &front_obstacles = lateral_obstacle->front_tracks_copy();
+  const auto &obstacles = lateral_obstacle->all_tracks();
 
   switch (type) {
     case HysteresisType::IsObstacleConsideredHysteresis: {
@@ -828,13 +828,13 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
            it != is_obstacle_considered_hysteresis_map.end();) {
         int obstacle_id = it->first;
         auto iter = std::find_if(
-            front_obstacles.begin(), front_obstacles.end(),
+            obstacles.begin(), obstacles.end(),
             [=](const TrackedObject &tr) {
               return lateral_offset_decider::IsCameraObstacle(tr) &&
                      tr.track_id == obstacle_id;
             });
 
-        if (iter == front_obstacles.end()) {
+        if (iter == obstacles.end()) {
           it = is_obstacle_considered_hysteresis_map.erase(it);
         } else {
           it++;
@@ -853,13 +853,13 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
            it != is_in_consider_lateral_range_hysteresis_map.end();) {
         int obstacle_id = it->first;
         auto iter = std::find_if(
-            front_obstacles.begin(), front_obstacles.end(),
+            obstacles.begin(), obstacles.end(),
             [=](const TrackedObject &tr) {
               return lateral_offset_decider::IsCameraObstacle(tr) &&
                      tr.track_id == obstacle_id;
             });
 
-        if (iter == front_obstacles.end()) {
+        if (iter == obstacles.end()) {
           it = is_in_consider_lateral_range_hysteresis_map.erase(it);
         } else {
           it++;
@@ -883,13 +883,13 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
                it != enough_space_hysteresis_map.end();) {
             int obstacle_id = it->first.second;
             auto iter = std::find_if(
-                front_obstacles.begin(), front_obstacles.end(),
+                obstacles.begin(), obstacles.end(),
                 [=](const TrackedObject &tr) {
                   return lateral_offset_decider::IsCameraObstacle(tr) &&
                          tr.track_id == obstacle_id;
                 });
 
-            if (iter == front_obstacles.end()) {
+            if (iter == obstacles.end()) {
               it = enough_space_hysteresis_map.erase(it);
             } else {
               it++;
