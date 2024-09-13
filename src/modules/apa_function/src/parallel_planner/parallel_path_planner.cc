@@ -51,7 +51,6 @@ static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.0;
 static const double kFirstStepForwardLineLonBuffer = 0.26;
 static const double kFirstStepArcLatBuffer = 0.12;
-static const double kControlLonError = 0.35;
 static const double kVirtualObsDetaXMag = 0.03;
 static const double kVirtualObsDetaYMag = 0.2;
 static const double kMinTlaneAddedLength = 0.8;
@@ -59,7 +58,7 @@ static const double kNarrowChannelLastArcCrossLength = 1.38;
 static const double kNarrowChannelArcRadius = 7.0;
 
 static const double kLineStepLength = 0.2;
-static const double k1dExtendLength = 0.3;
+static const double k1dExtendLength = 0.36;
 
 static const size_t kInvalidInteger = 666;
 
