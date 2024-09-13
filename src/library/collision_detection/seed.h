@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "macro.h"
+#include "collision_detect_macro.h"
 
 namespace cdl {
 class CDL_EXPORT Seed {
