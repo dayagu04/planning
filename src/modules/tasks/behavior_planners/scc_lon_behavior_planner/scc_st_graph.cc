@@ -1756,9 +1756,9 @@ bool StGraphGenerator::CalcSpeedInfoWithIntersection() {
   current_intersection_state_ = lon_behav_input_->intersection_state();
   if (current_intersection_state_ == planning::common::APPROACH_INTERSECTION ||
       current_intersection_state_ == planning::common::IN_INTERSECTION) {
-    if (v_limit_with_intersection_ < 8.33) {
+    if (v_limit_with_intersection_ < config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
-      v_limit_with_intersection_ = std::max(v_ego - 3.0, 8.33);
+      v_limit_with_intersection_ = std::max(v_ego - 3.0, config_.v_intersection_min_limit);
     }
     v_target_intersection = v_limit_with_intersection_;
   } else {
