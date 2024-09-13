@@ -2693,6 +2693,9 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   // intersection_state_ = virtual_lane_manager->GetIntersectionState();
   // merge_direction_ = MergeSplitPoints::LEFT;
   // is_merge_region_ = true;
+  merge_point_plan_ = session_->planning_context()
+                          .lane_change_decider_output()
+                          .boundary_merge_point;
   JSON_DEBUG_VALUE("is_merge_region_plan", is_merge_region_)
   JSON_DEBUG_VALUE("merge_direction_plan", static_cast<int>(merge_direction_))
 }
@@ -2727,7 +2730,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     LOG_DEBUG("[CalculateMergeSpeedLimit] no merge region!!! \n");
     return;
   }
-  if (current_intersection_state_ == common::IntersectionState::IN_INTERSECTION) {
+  if (current_intersection_state_ ==
+      common::IntersectionState::IN_INTERSECTION) {
     SetDefaultDebugValues(debug_msg_names);
     LOG_DEBUG("[CalculateMergeSpeedLimit] in intersection!!! \n");
     return;
@@ -2811,8 +2815,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       // true);
       const auto left_rear_agent_id =
           dynamic_world->GetNode(ego_left_rear_node_id)->node_agent_id();
-      if (!FilterEgoRearAgentsWhenMerge(left_rear_agent_id, dynamic_world,
-                                        current_lane)) {
+      if (!FilterEgoNearByAgentsWhenMerge(left_rear_agent_id, dynamic_world,
+                                          current_lane)) {
         CalculateMergeInfoWithAgent(left_rear_agent_id, true, "ego_left_rear");
       }
     }
@@ -2828,7 +2832,9 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       const auto lead_two_id =
           lon_behav_input_->lat_obs_info().lead_two().track_id();
       if (lead_one_id != ego_left_front_agent_id &&
-          lead_two_id != ego_left_front_agent_id) {
+          lead_two_id != ego_left_front_agent_id &&
+          !FilterEgoNearByAgentsWhenMerge(ego_left_front_agent_id,
+                                          dynamic_world, current_lane)) {
         CalculateMergeInfoWithAgent(ego_left_front_agent_id, true,
                                     "ego_left_front");
       }
@@ -2851,8 +2857,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       // false);
       const auto right_rear_agent_id =
           dynamic_world->GetNode(ego_right_rear_node_id)->node_agent_id();
-      if (!FilterEgoRearAgentsWhenMerge(right_rear_agent_id, dynamic_world,
-                                        current_lane)) {
+      if (!FilterEgoNearByAgentsWhenMerge(right_rear_agent_id, dynamic_world,
+                                          current_lane)) {
         CalculateMergeInfoWithAgent(right_rear_agent_id, false,
                                     "ego_right_rear");
       }
@@ -2869,7 +2875,9 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       const auto lead_two_id =
           lon_behav_input_->lat_obs_info().lead_two().track_id();
       if (lead_one_id != ego_right_front_agent_id &&
-          lead_two_id != ego_right_front_agent_id) {
+          lead_two_id != ego_right_front_agent_id &&
+          !FilterEgoNearByAgentsWhenMerge(ego_right_front_agent_id,
+                                          dynamic_world, current_lane)) {
         CalculateMergeInfoWithAgent(ego_right_front_agent_id, false,
                                     "ego_right_front");
       }
@@ -2988,7 +2996,7 @@ bool StGraphGenerator::EgoHasRightOfTargetLaneJudge(
   }
 }
 
-bool StGraphGenerator::FilterEgoRearAgentsWhenMerge(
+bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
     const int32_t agent_id,
     std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
     const std::shared_ptr<VirtualLane> ego_lane) {
@@ -2999,6 +3007,7 @@ bool StGraphGenerator::FilterEgoRearAgentsWhenMerge(
   if (agent == nullptr || ego_lane == nullptr) {
     return true;
   }
+  // filter rear agent
   const double agent_length = agent->length();
   const auto ego_lane_width = ego_lane->width();
   const auto &vehicle_param =
@@ -3038,6 +3047,24 @@ bool StGraphGenerator::FilterEgoRearAgentsWhenMerge(
   if (distance_current_relative < -kRearAgentFollowEgoSafeDistance &&
       fabs(ego_current_sl_to_ego_lane.y) <
           0.5 * ego_lane_width + kLaneWidthBuffer) {
+    return true;
+  }
+
+  // filter front agent which is beyond merge point
+  Point2D merge_point_sl_to_ego_lane{0.0, 0.0};
+  const auto status_merge_point =
+      ego_lane->get_lane_frenet_coord()->XYPointToSLPoint(
+          merge_point_plan_, merge_point_sl_to_ego_lane);
+  if (status_merge_point == planning_math::ERROR) {
+    return true;
+  } else if (status_merge_point == planning_math::FALL) {
+    merge_point_sl_to_ego_lane.x = -100.0;
+    merge_point_sl_to_ego_lane.y = 0.0;
+  } else if (status_merge_point == planning_math::EXCEED) {
+    merge_point_sl_to_ego_lane.x = 200.0;
+    merge_point_sl_to_ego_lane.y = 0.0;
+  }
+  if (agent_current_sl_to_ego_lane.x > merge_point_sl_to_ego_lane.x) {
     return true;
   }
 
@@ -3614,6 +3641,8 @@ void StGraphGenerator::MergeInfoReset() {
   // upstream decider merge info reset
   merge_direction_ = MergeSplitPoints::UNKNOWN;
   is_merge_region_ = false;
+  merge_point_plan_ = {std::numeric_limits<double>::lowest(),
+                       std::numeric_limits<double>::lowest()};
   // intersection_state_ = common::IntersectionState::UNKNOWN;
 
   // lon merge decision info reset

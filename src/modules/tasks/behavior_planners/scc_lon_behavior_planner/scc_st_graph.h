@@ -15,6 +15,7 @@
 #include "basic_types.pb.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
 #include "dynamic_world/dynamic_agent_node.h"
 #include "filters.h"
 #include "lateral_obstacle.h"
@@ -242,7 +243,7 @@ class StGraphGenerator {
   void DebugAgentsPredictionTraj(
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);
 
-  bool FilterEgoRearAgentsWhenMerge(
+  bool FilterEgoNearByAgentsWhenMerge(
       const int32_t agent_id,
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
       const std::shared_ptr<VirtualLane> ego_lane);
@@ -254,7 +255,7 @@ class StGraphGenerator {
 
   // HACK: cross障碍物判断
   bool FastCrossAgentChecker(const double lead_one_v_lat, double &end_time,
-                                   const double kwidth);
+                             const double kwidth);
 
  private:
   framework::Session *session_;
@@ -389,8 +390,10 @@ class StGraphGenerator {
   bool ego_has_right_of_target_lane_{false};
   bool merge_target_one_has_changed_{false};
   int64_t last_merge_target_one_id_{planning_data::kInvalidId};
-//   common::IntersectionState intersection_state_ =
-//       common::IntersectionState::UNKNOWN;
+  Point2D merge_point_plan_{std::numeric_limits<double>::lowest(),
+                            std::numeric_limits<double>::lowest()};
+  //   common::IntersectionState intersection_state_ =
+  //       common::IntersectionState::UNKNOWN;
 };
 
 }  // namespace scc
