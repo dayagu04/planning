@@ -37,8 +37,8 @@ bool TrafficLightDecider::Execute() {
 
     const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
     const auto traffic_status = tfl_manager->GetTrafficStatus();
-    if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 || traffic_status.go_straight == 11) {
-      //red light
+    if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 || traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
+      //red light or(==) red blink
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
@@ -63,7 +63,7 @@ bool TrafficLightDecider::Execute() {
       yellow_light_timer_ += 0.1;
       green_blink_timer_ = 0.0;
     
-    } else if (traffic_status.go_straight == 32 || traffic_status.go_straight == 33) {
+    } else if (traffic_status.go_straight == 30 || traffic_status.go_straight == 32 || traffic_status.go_straight == 33) {
     //green blink
       if (can_pass_ && (v_ego * (5.0 - green_blink_timer_) > dis_to_stopline)) {
         can_pass_ = true;
@@ -73,6 +73,13 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ += 0.1;
+
+    } else if (traffic_status.go_straight == 20 || traffic_status.go_straight == 22) {
+      //yellow blink and use last frame  
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      //can_pass_ = true;
 
     } else {
       //others, can go
