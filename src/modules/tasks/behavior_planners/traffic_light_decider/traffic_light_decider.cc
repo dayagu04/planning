@@ -32,8 +32,8 @@ bool TrafficLightDecider::Execute() {
   } else {
     is_first_car_ = true;
   }
-  if (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5 && intersection_state != planning::common::IN_INTERSECTION 
-    && config_.enable_tfl_decider && is_first_car_) {
+  if (config_.enable_tfl_decider && is_first_car_ && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5) && 
+      (intersection_state != planning::common::IN_INTERSECTION || (intersection_state == planning::common::IN_INTERSECTION && !can_pass_))) {
 
     const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
     const auto traffic_status = tfl_manager->GetTrafficStatus();
