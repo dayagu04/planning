@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 /** Returns the clockwise normal of a vector.(x,y) ---> (y,-x) */

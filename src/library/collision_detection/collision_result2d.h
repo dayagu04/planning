@@ -3,9 +3,8 @@
 #include <set>
 #include <vector>
 
-#include "constants.h"
 #include "contact2d.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 inline bool compareID(const Contact &ct1, const Contact &ct2) {

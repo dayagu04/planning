@@ -5,7 +5,7 @@
 #include "collision_data2d.h"
 #include "geometry_utils.h"
 #include "rng.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 enum class Status { Separated, Near, Penetrated };
 

@@ -4,11 +4,11 @@
 #include "./../../modules/apa_function/src/apa_param_setting.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "polygon_base.h"
-#include "pose2d.h"
-#include "transform2d.h"
 #include "virtual_wall_decider.h"
 
 namespace planning {
+
+#define DEBUG_POINT_CLOUD_OBS (0)
 
 const int PointCloudObstacleTransform::GenerateLocalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
@@ -243,6 +243,10 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
       GeneratePolygonByAABB(&obs->envelop_polygon, box);
       obs->box = box;
     }
+
+#if DEBUG_POINT_CLOUD_OBS
+    PolygonDebugString(&obs->envelop_polygon);
+#endif
   }
 
   // ground line, todo: ground line is veh reference frame, so need transform.
