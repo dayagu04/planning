@@ -96,14 +96,15 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
       speed_adjust_status_buffer_.last_frame_status;
   speed_adjust_status_buffer_.last_frame_status =
       speed_adjust_status_buffer_.current_frame_status;
-  // speed_adjust_status_buffer_[0] = speed_adjust_status_buffer_[1];
-  // speed_adjust_status_buffer_[1] = speed_adjust_status_buffer_[2];
 
   const auto& coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
   const auto& lc_request =
       session_->planning_context().lane_change_decider_output().lc_request;
+  const auto& lc_request_source = session_->planning_context()
+                                      .lane_change_decider_output()
+                                      .lc_request_source;
 
   if (coarse_planning_info.target_state != kLaneChangePropose) {
     ClearStatus();
@@ -116,8 +117,8 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
     return false;
   }
 
-  if ((coarse_planning_info.target_state == kLaneChangePropose &&
-       lc_request == last_request_)) {
+  if (coarse_planning_info.target_state == kLaneChangePropose &&
+      lc_request == last_request_ && lc_request_source != MERGE_REQUEST) {
     count_wait_state_++;
   } else {
     count_wait_state_ = 0;
