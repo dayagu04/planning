@@ -18,11 +18,6 @@ add_subdirectory(library/occupancy_grid_map EXCLUDE_FROM_ALL)
 
 add_subdirectory(thirdparty/mjson EXCLUDE_FROM_ALL)
 
-if (ADAPTER STREQUAL "cyber")
-  install(FILES ${CMAKE_CURRENT_LIST_DIR}/../res/dag/planning.dag
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/)
-endif()
-
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf
   DESTINATION ${CMAKE_INSTALL_PREFIX}/res)
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/../CHANGELOG.md
