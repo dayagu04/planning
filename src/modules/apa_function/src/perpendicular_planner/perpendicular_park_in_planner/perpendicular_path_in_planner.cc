@@ -3867,7 +3867,8 @@ PerpendicularPathInPlanner::TrimPathByCollisionDetection(
 
     CollisionDetector::ObsSlotType obs_slot_type =
         collision_detector_ptr_->GetObsSlotType(
-            col_res.col_pt_obs_global, slot_pt, calc_params_.is_left_side);
+            col_res.col_pt_obs_global, slot_pt, calc_params_.is_left_side,
+            true);
 
     DEBUG_PRINT("col_pt_ego_global = "
                 << col_res.col_pt_ego_global.transpose()
@@ -4028,7 +4029,7 @@ const bool PerpendicularPathInPlanner::CheckReachTargetPose(
           current_pose.heading - input_.tlane.pt_terminal_heading)) *
       kRad2Deg;
 
-  if (lon_err < 0.2 && lat_err < 0.0308 && heading_err < 0.268) {
+  if (lon_err < 0.268 && lat_err < 0.0308 && heading_err < 0.268) {
     return true;
   }
   return false;

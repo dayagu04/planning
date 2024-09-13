@@ -128,8 +128,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
+  GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 
@@ -193,7 +193,8 @@ class CollisionDetector {
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
       const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-      const bool is_left_side, const bool is_vertical_slot = true);
+      const bool is_left_side, const bool is_replan,
+      const bool is_vertical_slot = true);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;
