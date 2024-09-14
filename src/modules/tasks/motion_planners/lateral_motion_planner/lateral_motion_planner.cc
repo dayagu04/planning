@@ -428,6 +428,8 @@ void LateralMotionPlanner::AssembleInput() {
     motion_plan_concerned_end_index = 17;
     if (!is_divide_lane_into_two_) {
       planning_weight_ptr_->MakeSplitDynamicWeight(planning_input_);
+    } else {
+      complete_follow = true;
     }
   }
 
