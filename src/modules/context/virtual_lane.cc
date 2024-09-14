@@ -370,18 +370,25 @@ void VirtualLane::update_lane_tasks(
     double dis_to_ramp, double dis_to_first_merge, double dis_to_first_split,
     bool is_nearing_ramp, RampDirection ramp_direction,
     RampDirection first_split_direction, bool is_leaving_ramp, uint lane_num,
-    bool is_on_ramp, bool is_nearing_other_lane_merge_to_road_point) {
+    bool is_on_ramp, bool is_nearing_other_lane_merge_to_road_point,
+    RampDirection first_merge_direction) {
   current_tasks_.clear();
   const double trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp =
       266;
-  const double
-      trigger_mlc_distance_threshold_to_first_ramp_when_ego_on_expressway =
-          3000;
   if (order_id_ + 1 > lane_num) return;
   if (is_nearing_other_lane_merge_to_road_point) {
-    if (order_id_ + 1 == lane_num) {
-      current_tasks_.emplace_back(-1);
-      std::cout << "在高速主路最右侧车道上,且接近前方汇入点时,向左产生一个变道任务" << std::endl;
+    if (first_merge_direction == RAMP_ON_RIGHT) {
+      if (order_id_ + 1 == lane_num) {
+        current_tasks_.emplace_back(-1);
+        std::cout << "高速前方右侧有汇入车道，最右侧车道产生一个变道任务"
+                  << std::endl;
+      }
+    } else if (first_merge_direction == RAMP_ON_LEFT) {
+      if (order_id_ == 0) {
+        current_tasks_.emplace_back(1);
+        std::cout << "高速前方左侧有汇入车道，最左侧车道产生一个变道任务"
+                  << std::endl;
+      }
     }
   } else if (is_nearing_ramp && !is_on_ramp) {
     if (ramp_direction == RAMP_ON_RIGHT) {

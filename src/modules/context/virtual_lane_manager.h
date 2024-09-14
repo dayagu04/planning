@@ -205,7 +205,9 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
 
-  bool is_road_merged_by_other_lane() const { return is_road_merged_by_other_lane_; }
+  bool is_road_merged_by_other_lane() const {
+    return is_road_merged_by_other_lane_;
+  }
 
   const double dis_threshold_to_merged_point() const {
     return dis_threshold_to_is_merged_point_;

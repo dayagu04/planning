@@ -151,7 +151,8 @@ class VirtualLane {
                          RampDirection ramp_direction,
                          RampDirection first_split_direction,
                          bool is_leaving_ramp, uint lane_num, bool is_on_ramp,
-                         bool is_nearing_other_lane_merge_to_road_point);
+                         bool is_nearing_other_lane_merge_to_road_point,
+                         RampDirection first_merge_direction);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
