@@ -1,19 +1,16 @@
 
 #include "hybrid_astar_thread.h"
 
-#include "hybrid_a_star.h"
-#include "hybrid_astar_common.h"
-#include "log_glog.h"
+#include <cstdio>
+
 #include "park_reference_line.h"
-#include "pose2d.h"
 #include "transform2d.h"
 
 namespace planning {
 
 HybridAStarThreadSolver::HybridAStarThreadSolver() {
-  has_request_ = false;
-  has_response_ = false;
-  request_response_state_ = RequestResponseState::none;
+  printf("HybridAStarThreadSolver init\n");
+  request_response_state_.store(RequestResponseState::NONE);
 }
 
 void HybridAStarThreadSolver::HybridAStarThreadFunction() {
@@ -23,7 +20,7 @@ void HybridAStarThreadSolver::HybridAStarThreadFunction() {
 
     // ILOG_INFO << "astar thread loop";
 
-    if (!has_request_) {
+    if (request_response_state_ != RequestResponseState::HAS_REQUEST) {
       continue;
     }
 
@@ -41,17 +38,15 @@ int HybridAStarThreadSolver::Init(
     const double min_turn_radius, const double mirror_width) {
   solver_interface_ = std::make_shared<HybridAStarInterface>();
 
-  has_request_ = false;
-  has_response_ = false;
-  request_response_state_ = RequestResponseState::none;
+  request_response_state_.store(RequestResponseState::NONE);
 
   solver_interface_->Init(back_edge_to_rear_axis, car_length, car_width,
                           steer_ratio, wheel_base, min_turn_radius,
                           mirror_width);
 
   init_ = true;
-  response_.search_state = SearchState::none;
-  thread_state_ = AstarThreadState::INITTED;
+  search_state_.store(AstarSearchState::NONE);
+  thread_state_.store(AstarThreadState::INITTED);
   ILOG_INFO << "HybridAStarThreadSolver init success";
 
   return 0;
@@ -61,29 +56,27 @@ void HybridAStarThreadSolver::SetRequest(const ParkObstacleList& obs_list,
                                          const AstarRequest& request) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  if (response_.search_state == SearchState::searching) {
+  if (search_state_ == AstarSearchState::SEARCHING) {
     ILOG_INFO << "searching";
     return;
   }
 
-  if (has_request_) {
+  if (request_response_state_ == RequestResponseState::HAS_REQUEST) {
     ILOG_INFO << "has path request, please use it and wait result";
     return;
   }
 
-  if (has_response_) {
+  if (request_response_state_ == RequestResponseState::HAS_RESPONSE) {
     ILOG_INFO << "has path, please get it ";
     return;
   }
 
-  request_ = request;
+  thread_request_data_ = request;
 
-  solver_interface_->UpdateInput(obs_list, request);
+  solver_interface_->UpdateInput(obs_list, thread_request_data_);
 
-  has_request_ = true;
-  has_response_ = false;
-  response_.search_state = SearchState::none;
-  request_response_state_ = RequestResponseState::has_request;
+  search_state_.store(AstarSearchState::NONE);
+  request_response_state_.store(RequestResponseState::HAS_REQUEST);
 
   ILOG_INFO << "thread, set input";
 
@@ -95,25 +88,17 @@ void HybridAStarThreadSolver::SetResponse() {
 
   ILOG_INFO << "set output init in thread";
 
-  response_.result.Clear();
-  solver_interface_->GetFullLengthPath(&response_.result);
+  thread_response_data_.result.Clear();
+  solver_interface_->GetFullLengthPath(&thread_response_data_.result);
 
-  response_.first_seg_path.clear();
-  response_.kappa_change_too_much =
-      solver_interface_->GetFirstSegmentPath(response_.first_seg_path);
+  thread_response_data_.first_seg_path.clear();
+  thread_response_data_.kappa_change_too_much =
+      solver_interface_->GetFirstSegmentPath(
+          thread_response_data_.first_seg_path);
 
-  response_.search_state = SearchState::success;
+  search_state_.store(AstarSearchState::SUCCESS);
 
-  if (response_.result.gear.size() > 0) {
-    if (response_.result.gear[0] == AstarPathGear::drive) {
-      request_.history_gear = AstarPathGear::drive;
-    } else if (response_.result.gear[0] == AstarPathGear::reverse) {
-      request_.history_gear = AstarPathGear::reverse;
-    } else {
-      request_.history_gear = AstarPathGear::parking;
-    }
-  }
-  response_.request = request_;
+  thread_response_data_.request = thread_request_data_;
 
   // child node
   all_child_node_list_.clear();
@@ -123,9 +108,7 @@ void HybridAStarThreadSolver::SetResponse() {
   rs_path_list_.clear();
   solver_interface_->GetRSPathHeuristic(rs_path_list_);
 
-  has_response_ = true;
-  has_request_ = false;
-  request_response_state_ = RequestResponseState::has_response;
+  request_response_state_.store(RequestResponseState::HAS_RESPONSE);
 
   ILOG_INFO << "set output finish in thread";
 
@@ -134,13 +117,13 @@ void HybridAStarThreadSolver::SetResponse() {
 
 const int HybridAStarThreadSolver::PublishResponse(AstarResponse* response) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (!has_response_) {
+  if (request_response_state_ != RequestResponseState::HAS_RESPONSE) {
     return 0;
   }
 
-  *response = response_;
+  *response = thread_response_data_;
 
-  request_response_state_ = RequestResponseState::has_published_response;
+  request_response_state_.store(RequestResponseState::HAS_PUBLISHED_RESPONSE);
 
   return 0;
 }
@@ -162,37 +145,45 @@ const int HybridAStarThreadSolver::PublishResponse(AstarResponse* response) {
 
 const bool HybridAStarThreadSolver::HasRequest() {
   std::lock_guard<std::mutex> lock(mutex_);
-  return has_request_;
+  if (request_response_state_ == RequestResponseState::HAS_REQUEST) {
+    return true;
+  }
+
+  return false;
 }
 
 const bool HybridAStarThreadSolver::HasResponse() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return has_response_;
+  if (request_response_state_.load() == RequestResponseState::HAS_RESPONSE) {
+    return true;
+  }
+
+  return false;
 }
 
 void HybridAStarThreadSolver::GetThreadState(RequestResponseState* state) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  *state = request_response_state_;
+  *state = request_response_state_.load();
+
   return;
 }
 
-const int HybridAStarThreadSolver::GetFullLengthPathInThread(
+const void HybridAStarThreadSolver::GetFullLengthPathInThread(
     HybridAStarResult* result, Pose2D* base_pose) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (response_.search_state != SearchState::success) {
+  if (search_state_ != AstarSearchState::SUCCESS) {
     ILOG_INFO << "no output";
-    return -1;
+    return;
   }
 
-  *result = response_.result;
+  *result = thread_response_data_.result;
 
-  *base_pose = response_.request.base_pose_;
+  *base_pose = thread_response_data_.request.base_pose_;
 
   ILOG_INFO << "result size " << result->x.size() << " dist "
             << result->accumulated_s.back();
 
-  return 0;
+  return;
 }
 
 const Pose2D HybridAStarThreadSolver::GetAstarTargetPose() {
@@ -208,13 +199,13 @@ const Pose2D HybridAStarThreadSolver::GetAstarTargetPose() {
 AstarRequest HybridAStarThreadSolver::GetAstarRequest() {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  return request_;
+  return thread_request_data_;
 }
 
 void HybridAStarThreadSolver::GetNodeListMessageInThread(
     std::vector<std::vector<Eigen::Vector2d>>& list) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (response_.search_state != SearchState::success) {
+  if (search_state_ != AstarSearchState::SUCCESS) {
     return;
   }
 
@@ -228,17 +219,19 @@ void HybridAStarThreadSolver::GetNodeListMessageInThread(
 void HybridAStarThreadSolver::GetRSPathHeuristicInThread(
     std::vector<std::vector<ad_common::math::Vec2d>>& path_list) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (response_.search_state != SearchState::success) {
+  if (search_state_ != AstarSearchState::SUCCESS) {
     return;
   }
 
   path_list = rs_path_list_;
+
+  return;
 }
 
 void HybridAStarThreadSolver::GetRSPathLinkInThread(
     std::vector<ad_common::math::Vec2d>& path) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (response_.search_state != SearchState::success) {
+  if (search_state_ != AstarSearchState::SUCCESS) {
     return;
   }
 
@@ -260,7 +253,7 @@ void HybridAStarThreadSolver::GetNodeListMessagePublish(
     planning::common::AstarNodeList* list) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  if (response_.search_state == SearchState::success) {
+  if (search_state_ == AstarSearchState::SUCCESS) {
     planning::common::TrajectoryPoint point;
 
     for (size_t i = 0; i < all_child_node_list_.size(); i++) {
@@ -289,12 +282,13 @@ void HybridAStarThreadSolver::Start() {
     return;
   }
 
-  thread_state_ = AstarThreadState::RUNNING;
-  const auto& update_func = [this] { HybridAStarThreadFunction(); };
-
-  thread_.reset(new std::thread(update_func));
+  thread_state_.store(AstarThreadState::RUNNING);
+  thread_ =
+      std::thread(&HybridAStarThreadSolver::HybridAStarThreadFunction, this);
 
   ILOG_INFO << "HybridAStarThreadSolver start thread success";
+
+  return;
 }
 
 void HybridAStarThreadSolver::Stop() {
@@ -303,37 +297,23 @@ void HybridAStarThreadSolver::Stop() {
     return;
   }
 
-  if (thread_ != nullptr && thread_->joinable()) {
-    thread_->join();
-    thread_.reset();
+  if (thread_.joinable()) {
+    thread_.join();
   }
 
   return;
 }
 
 int HybridAStarThreadSolver::Process() {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    response_.search_state = SearchState::searching;
-  }
-
+  search_state_.store(AstarSearchState::SEARCHING);
   solver_interface_->UpdateOutput();
 
   return 0;
 }
 
-void HybridAStarThreadSolver::ResetResponse() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  has_response_ = false;
-}
-
 void HybridAStarThreadSolver::Clear() {
-  std::lock_guard<std::mutex> lock(mutex_);
-
-  has_request_ = false;
-  has_response_ = false;
-  response_.search_state = SearchState::none;
-  request_response_state_ = RequestResponseState::none;
+  printf("HybridAStarThreadSolver clear\n");
+  request_response_state_.store(RequestResponseState::NONE);
   return;
 }
 
@@ -349,7 +329,8 @@ void HybridAStarThreadSolver::GetRefLine(ParkReferenceLine* ref_line) {
 }
 
 HybridAStarThreadSolver::~HybridAStarThreadSolver() {
-  thread_state_ = AstarThreadState::STOPPED;
+  thread_state_.store(AstarThreadState::STOPPED);
+  printf("HybridAStarThreadSolver\n");
   Stop();
 }
 

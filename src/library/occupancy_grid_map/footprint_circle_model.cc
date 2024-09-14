@@ -200,7 +200,7 @@ void FootPrintCircleModel::DebugCircle(FootPrintCircle *circle) {
 void FootPrintCircleModel::DebugCircles(FootPrintCircleList *circles) {
   DebugCircle(&circles->max_circle);
 
-  for (size_t i = 0; i < circles->size; i++) {
+  for (int i = 0; i < circles->size; i++) {
     DebugCircle(&circles->circles[i]);
   }
 }

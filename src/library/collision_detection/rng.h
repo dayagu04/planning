@@ -3,8 +3,7 @@
 #include <cassert>
 #include <iostream>
 #include <random>
-
-#include "constants.h"
+#include "collision_detect_types.h"
 #include "seed.h"
 
 namespace cdl {
