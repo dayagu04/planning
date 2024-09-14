@@ -83,7 +83,7 @@ bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,
   if (!is_same_lat_direction) {
     LOG_DEBUG("stupid ground line obstacle!!!");
     for (size_t i = 0; i < frenet_pts.size(); i++) {
-      LOG_DEBUG("Point number [%d], x is %f, y is %f", i, frenet_pts.at(i).x(),
+      LOG_DEBUG("Point number [%zu], x is %f, y is %f", i, frenet_pts.at(i).x(),
                 frenet_pts.at(i).y());
     }
   }

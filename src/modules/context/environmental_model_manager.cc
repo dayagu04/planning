@@ -1272,8 +1272,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
       LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,
                 current_time - last_feed_time_[i], "\n");
       if (current_time - last_feed_time_[i] > 200) {
-        LOG_ERROR("(%s)input_delay: %d, %s", __FUNCTION__, i, feed_type_str,
-                  "\n");
+        LOG_ERROR("(%s)input_delay: %d, %s\n", __FUNCTION__, i, feed_type_str);
         error_msg += std::string(feed_type_str) + "; ";
         setFaultcode(39001);
         res = false;
@@ -1296,8 +1295,8 @@ bool EnvironmentalModelManager::InputReady(double current_time,
               current_time - last_feed_time_[i] >=
                   kpredictionCheckTimeDiff * 0.8)
             continue;
-          LOG_ERROR("(%s)input_rate_error: %d, %s", __FUNCTION__, i,
-                    feed_type_str, "\n");
+          LOG_ERROR("(%s)input_rate_error: %d, %s \n", __FUNCTION__, i,
+                    feed_type_str);
           error_msg += std::string(feed_type_str) + "; ";
           setFaultcode(39000);
           res = false;

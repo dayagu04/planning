@@ -203,24 +203,6 @@ void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
                    local_view_ptr->fusion_occupancy_objects_info_recv_time)
 }
 
-static std::string ReadFile(const std::string &path) {
-  FILE *file = fopen(path.c_str(), "r");
-  if (file == nullptr) {
-    ILOG_INFO << " file is null";
-
-    return "null";
-  }
-
-  std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
-  fseek(fp.get(), 0, SEEK_END);
-  std::vector<char> content(ftell(fp.get()));
-  fseek(fp.get(), 0, SEEK_SET);
-  auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
-  assert(read_bytes == content.size());
-  (void)read_bytes;
-  return std::string(content.begin(), content.end());
-}
-
 void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   std::string path = "/asw/planning/res/conf/apa_params.json";
   if (!is_simulation) {

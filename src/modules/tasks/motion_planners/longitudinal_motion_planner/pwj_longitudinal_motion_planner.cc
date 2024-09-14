@@ -246,7 +246,7 @@ bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
     size_t max_check_index = std::min(kMaxCheckIndex, s.size());
     if (!check_invalid_speed_bound && after_hot_start && i < max_check_index) {
       if (s[i] < s_lower - 2.0 || s[i] > s_upper + 2.0) {
-        LOG_ERROR("NP_DEBUG: Error! speed bound collide! %d %f [%f %f] \n", i,
+        LOG_ERROR("NP_DEBUG: Error! speed bound collide! %zu %f [%f %f] \n", i,
                   s[i], s_lower, s_upper);
         if (option.enable_log) {
           planning_result.extra_json["lon_motion_error_info"] =

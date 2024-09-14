@@ -1676,7 +1676,6 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
 
 bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
     const iflyauto::RoadInfo* roads_ptr) {
-  planning::planning_math::Vec2d;
   std::vector<std::vector<iflyauto::Point2f>> cross_walk_pts_vec;
   for (int i = 0; i < roads_ptr->lane_ground_markings_size; i++) {
     const auto& cross_walk = roads_ptr->lane_ground_markings[i];

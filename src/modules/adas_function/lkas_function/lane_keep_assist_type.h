@@ -34,7 +34,7 @@ namespace planning {
 #define width_distance_max 3.5F;  // G线离车身距离
 extern uint16 uint16_bit[16];
 
-typedef struct MeasurementPoint {
+struct MeasurementPoint {
   uint8 state;
   bool main_switch;  // LDW功能开关状态 0:Off  1:On
   uint16 enable_code;
@@ -49,9 +49,9 @@ typedef struct MeasurementPoint {
   double tlc_line_threshold;
   uint8 left_bsd_lca_code;   // 0,无风险，1有风险
   uint8 right_bsd_lca_code;  // 0,无风险，1有风险
-} MeasurementPoint;
+};
 
-typedef struct CalibrationParameter {
+struct CalibrationParameter {
   bool enable_roadedge_switch;  // 是否使能功能的路沿场景开关 0:不使能 1:使能
   double enable_vehspd_display_min;  // 激活的最小仪表车速，单位：m/s
   double enable_vehspd_display_max;  // 激活的最大仪表车速，单位：m/s
@@ -69,9 +69,10 @@ typedef struct CalibrationParameter {
       suppression_driver_hand_trq;  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
   double
       kickdown_driver_hand_trq;  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
-} CalibrationParameter;
+};
 
-typedef struct RoadInfo {
+// 道线和路缘信息结构体定义
+struct RoadInfo {
   bool left_line_existence;  // 本车道左侧道线存在性
   bool left_line_valid;      // 本车道左侧道线有效性 0:Invalid 1:Valid
   uint8 left_line_type;  // 本车道左侧车道线类型 0：虚线  1：实线
@@ -100,9 +101,9 @@ typedef struct RoadInfo {
   double right_roadedge_c3;   // 本车道右侧路缘方程系数c3
   bool lane_width_valid;  // 当前车道宽度信息有效性 0:Invalid 1:Valid
   double lane_width;      // 当前车道宽度,单位:m
-} RoadInfo;               // 道线和路缘信息结构体定义
+};
 
-typedef struct VehInfo {
+struct VehInfo {
   double veh_left_departure_speed;
   double veh_right_departure_speed;
   double veh_display_speed;
@@ -119,14 +120,14 @@ typedef struct VehInfo {
   double common_rear_over;
   double common_wheel_base;
   double common_veh_width;
-} VehInfo;
+};
 
-typedef struct WheelToLine {
+struct WheelToLine {
   double fl_wheel_distance_to_line;
   double fl_wheel_distance_to_roadedge;
   double fr_wheel_distance_to_line;
   double fr_wheel_distance_to_roadedge;
-} WheelToLine;
+};
 
 struct Param {
   double ldp_tlc_thrd = 1.0;
@@ -134,13 +135,13 @@ struct Param {
   double ldp_ttlc_right_hack = 1.1;
 };
 
-typedef struct LkasInput {
+struct LkasInput {
   VehInfo vehicle_info;
   RoadInfo road_info;
   WheelToLine wheel_to_line;
   iflyauto::FunctionalState function_state;
   Param param;
-} LkasInput;
+};
 
 /*
 0:Unavailable
@@ -149,14 +150,14 @@ typedef struct LkasInput {
 3:Active(No Intervention)
 4:Active(Left Intervention)
 5:Active(Right Intervention)*/
-typedef struct LkasState {
+struct LkasState {
   uint8 ldw_state;
   uint8 ldp_state;
   uint8 elk_state;
-} LkasState;
+};
 
 // for bsd&lca
-typedef struct {
+struct RadarObjData {
   uint8 pos;  // 0代表左，1代表右
   uint8 obj_class;
   double obj_x;
@@ -165,9 +166,9 @@ typedef struct {
   double obj_vy;
   double obj_length;
   double obj_width;
-} RadarObjData;
+};
 
-typedef struct {
+struct AeraVel {
   double area_length_distance;
   double b_x;
   double c_x;
@@ -176,7 +177,7 @@ typedef struct {
   double l_y;
   double k_y;
   double obstacle_velocity_limit;
-} AeraVel;
+};
 
 bool LKALineLeftIntervention(double tlc_to_line_threshold,
                              planning::LkasInput *lkas_input);

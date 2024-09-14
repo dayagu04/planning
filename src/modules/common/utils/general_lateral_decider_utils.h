@@ -10,9 +10,9 @@
 
 namespace planning {
 
-static bool ConstructLinePolygons(
-    const std::vector<planning_math::Vec2d> &line, double y_width,
-    std::vector<planning_math::Polygon2d> &polygons);
+bool ConstructLinePolygons(const std::vector<planning_math::Vec2d> &line,
+                           double y_width,
+                           std::vector<planning_math::Polygon2d> &polygons);
 
 bool OnLeftSide(const std::vector<planning_math::Vec2d> &vec2ds);
 bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,

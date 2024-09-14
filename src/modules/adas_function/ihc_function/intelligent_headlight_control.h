@@ -15,27 +15,27 @@ namespace planning {
 #define IHC_StateMachine_IN_STANDBY 4  // IHC一级主状态
 
 // IHC算法输入信号结构体定义
-typedef struct IHCSysInput {
+struct IHCSysInput {
   bool ihc_main_switch;               // IHC开关 0:Off 1:On
   float32 vehicle_speed_display_kph;  // 本车车速 单位:kph
   bool auto_light_state;              // 自动灯光控制状态 0:Off 1:On
-} IHCSysInput;
+};
 
 // IHC算法状态结构体定义
-typedef struct IHCSysState {
+struct IHCSysState {
   uint16 ihc_enable_code;
   uint16 ihc_disable_code;
   uint16 ihc_fault_code;
   uint8 ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
   bool ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
-} IHCSysState;
+};
 
 // IHC算法结构体定义
-typedef struct IHCSys {
+struct IHCSys {
   IHCSysInput input;
   IHCSysState state;
-} IHCSys;
+};
 
 class IntelligentHeadlightControl {
  public:

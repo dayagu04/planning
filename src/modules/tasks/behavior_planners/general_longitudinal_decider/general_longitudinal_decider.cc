@@ -1345,7 +1345,7 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
         (b_high_speed_diff || b_on_ego_path || (is_cross_obj && able_to_yield));
     LOG_DEBUG(
         "[GeneralLongitudinalDecider]: lon cost: id=%d  t=%f  ttc_pre=%f  "
-        "ttc_buff=%f  t_ego=%f  enable_ttc_cost=%d  able_to_yield=%d  "
+        "ttc_buff=%f  t_ego=%f  enable_ttc_cost=%d  able_to_yield=%f  "
         "is_cross=%d  on_ego_path=%d \n",
         obstacle->id(), t, ttc_pre, ttc_buff, t_ego, enable_ttc_cost,
         able_to_yield, is_cross_obj, b_on_ego_path);
