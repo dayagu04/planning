@@ -671,9 +671,7 @@ void AgentNodeManager::SortNodeByS() {
   return;
 }
 
-bool AgentNodeManager::InferAllObjPredInfoByKDPath(){
-
-};
+bool AgentNodeManager::InferAllObjPredInfoByKDPath() { return true; };
 
 bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
   // Recheck unreasonable objs

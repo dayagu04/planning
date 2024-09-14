@@ -1248,6 +1248,7 @@ bool GapSelectorDecider::MakeInteractiveDecision(
               << std::endl;
     return false;
   }
+  return true;
 };
 
 void GapSelectorDecider::DriveStyleTimeOptimalTrajEvaluation(
