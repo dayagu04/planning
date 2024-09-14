@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240902/20240902-11-18-47/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-02-11-18-47_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240914/20240914-10-34-21/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-14-10-34-21_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -516,7 +516,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         loc_msg_bytes,
         vs_msg_bytes,
         wave_msg_bytes,
-        # uss_perception_msg.SerializeToString(),
+        uss_perception_msg_bytes,
         # ground_line_msg,
         fus_obj_msg_bytes,
         fus_occ_obj_msg_bytes,

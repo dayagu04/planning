@@ -459,20 +459,18 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
-const bool PlanOnce(py::bytes &func_statemachine_bytes,
-                    py::bytes &parking_slot_info_bytes,
-                    py::bytes &localization_info_bytes,
-                    py::bytes &vehicle_service_output_info_bytes,
-                    py::bytes &uss_wave_info_bytes,
-                    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes,
-                    int select_id, bool force_plan, bool is_path_optimization,
-                    bool is_cilqr_optimization, bool is_reset,
-                    bool is_complete_path, double sample_ds,
-                    std::vector<double> target_managed_slot_x_vec,
-                    std::vector<double> target_managed_slot_y_vec,
-                    std::vector<double> target_managed_limiter_x_vec,
-                    std::vector<double> target_managed_limiter_y_vec,
-                    int current_state) {
+const bool PlanOnce(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, int select_id,
+    bool force_plan, bool is_path_optimization, bool is_cilqr_optimization,
+    bool is_reset, bool is_complete_path, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec, int current_state) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -527,16 +525,16 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     struct_msgs::FusionOccupancyObjectsInfo>(
           fus_occ_obj_msg_bytes);
 
-  // iflyauto::UssPerceptInfo uss_perception_info =
-  //     BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
-  //         uss_perception_info_bytes);
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
 
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
-  // local_view.uss_percept_info = uss_perception_info;
+  local_view.uss_percept_info = uss_perception_info;
   // local_view.ground_line_perception = ground_line_;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
