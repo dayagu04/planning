@@ -18,7 +18,83 @@ bool TrafficLightDecider::Execute() {
                                ->GetEgoDistanceToStopline();
   double dis_to_crosswalk = environmental_model.get_virtual_lane_manager()
                                 ->GetEgoDistanceToCrosswalk();
+
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+
+  planning::common::IntersectionState intersection_state = 
+           environmental_model.get_virtual_lane_manager()->GetIntersectionState();
+
+  const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
+  if (lateral_obstacles->leadone() != nullptr &&
+        lateral_obstacles->leadone()->d_rel + 4.0 < dis_to_stopline) {
+    is_first_car_ = false;
+  } else {
+    is_first_car_ = true;
+  }
+  if (config_.enable_tfl_decider && is_first_car_ && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5) && 
+      (intersection_state != planning::common::IN_INTERSECTION || (intersection_state == planning::common::IN_INTERSECTION && !can_pass_))) {
+
+    const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
+    const auto traffic_status = tfl_manager->GetTrafficStatus();
+    if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 || traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
+      //red light or(==) red blink
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = false;
+
+    } else if (traffic_status.go_straight == 3 || traffic_status.go_straight == 43) {
+      //green light
+      green_light_timer_ += 0.1;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = true;
+
+    } else if (traffic_status.go_straight == 2 || traffic_status.go_straight == 42) {
+      //yellow light
+      if (can_pass_  && (v_ego * (3.0 - yellow_light_timer_) > dis_to_stopline)) {
+        can_pass_ = true;
+      } else {
+        can_pass_ = false;
+      }
+      
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ += 0.1;
+      green_blink_timer_ = 0.0;
+    
+    } else if (traffic_status.go_straight == 30 || traffic_status.go_straight == 32 || traffic_status.go_straight == 33) {
+    //green blink
+      if (can_pass_ && (v_ego * (5.0 - green_blink_timer_) > dis_to_stopline)) {
+        can_pass_ = true;
+      } else {
+        can_pass_ = false;
+      }
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ += 0.1;
+
+    } else if (traffic_status.go_straight == 20 || traffic_status.go_straight == 22) {
+      //yellow blink and use last frame  
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      //can_pass_ = true;
+
+    } else {
+      //others, can go
+      green_light_timer_ = 0.0;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = true;
+
+    }
+    if (!can_pass_) {
+      AddVirtualObstacle();
+    }
+  }
   //此外认为已经进入路口
+  /*
   if (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5) {
     const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
     if (lateral_obstacles->leadone() != nullptr &&
@@ -36,6 +112,8 @@ bool TrafficLightDecider::Execute() {
       }
     }
   }
+  */
+
   return true;
 }
 

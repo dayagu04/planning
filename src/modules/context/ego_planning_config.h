@@ -1997,6 +1997,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{
                   "real_time_long_behavior_planner",
                   "enabe_right_lane_merge_to_ego_lane_decision_process"});
+    v_intersection_min_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "v_intersection_min_limit"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -2070,6 +2073,7 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double search_sdmap_curv_dis = 300.0;
   double sdmap_curv_thred = 1000.0;
   double straight_ramp_v_limit = 22.22;
+  double v_intersection_min_limit = 11.11;
   bool enable_sdmap_curv_v_adjust = true;
   bool enable_speed_adjust = true;
   // merge
