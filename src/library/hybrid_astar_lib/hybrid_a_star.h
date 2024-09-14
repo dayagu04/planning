@@ -1,9 +1,7 @@
 
 #pragma once
 
-#include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <map>
 #include <memory>
 #include <string>
@@ -13,15 +11,12 @@
 
 #include "./../../modules/common/config/vehicle_param.h"
 #include "./../../modules/context/vehicle_config_context.h"
-#include "./../collision_detection//gjk2d_interface.h"
 #include "./../collision_detection/aabb2d.h"
-#include "./../collision_detection/types.h"
+#include "./../collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/euler_distance_transform.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "./../reeds_shepp/reeds_shepp_interface.h"
 #include "ad_common/math/line_segment2d.h"
-#include "ad_common/math/vec2d.h"
-#include "basic_types.pb.h"
 #include "compact_node_pool.h"
 #include "dynamic_programing_cost.h"
 #include "hybrid_astar_common.h"
@@ -73,7 +68,8 @@ class HybridAStar {
 
   // use rs path sampling to link start point and end point.
   bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2D& start,
-                            const Pose2D& end, const double expected_path_dist,
+                            const Pose2D& end,
+                            const double lon_min_sampling_length,
                             const MapBound& XYbounds,
                             const ParkObstacleList& obstacles,
                             const AstarRequest& request);
@@ -91,7 +87,7 @@ class HybridAStar {
   const std::vector<ad_common::math::Vec2d>& GetQueuePathForDebug();
 
   // for debug
-  const std::vector<RSPath>& GetRSPathHeuristic() const;
+  const std::vector<RSPath>& GetRSPathHeuristic();
 
   // for debug
   void GetNodeListMessage(planning::common::AstarNodeList* list);
@@ -100,6 +96,10 @@ class HybridAStar {
   void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
   const ParkReferenceLine& GetConstRefLine() const;
+
+  void Clear();
+
+  void CopyFallbackPath(HybridAStarResult* path);
 
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
@@ -134,8 +134,6 @@ class HybridAStar {
 
   double GenerateRefLineHeuristicCost(Node3d* next_node,
                                       const double dist_to_go);
-
-  bool GetTemporalProfile(HybridAStarResult* result);
 
   double GenerateHeuristicCostByRsPath(Node3d* next_node,
                                        NodeHeuristicCost* cost);
@@ -250,7 +248,7 @@ class HybridAStar {
   AstarSamplingAngle next_node_angles_;
 
   // child node shrink related
-  NodeShrinkDecider node_shrink_;
+  NodeShrinkDecider node_shrink_decider_;
 
   //  front wheel angle, not steering wheel angle
   double max_steer_angle_ = 0.0;
@@ -270,7 +268,6 @@ class HybridAStar {
 
   // xmin, xmax, ymin, ymax
   MapBound XYbounds_;
-  MapBound shrink_map_bounds_;
 
   // astar start, end
   Node3d* start_node_;
@@ -303,6 +300,8 @@ class HybridAStar {
   AstarRequest request_;
 
   GJK2DInterface gjk_interface_;
+
+  HybridAStarResult fallback_path_;
 
   // just for debug, display all result in hmi/plot
   std::vector<ad_common::math::Vec2d> child_node_debug_;

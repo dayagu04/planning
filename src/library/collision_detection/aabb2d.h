@@ -2,7 +2,7 @@
 #include "cdl_math.h"
 #include "log_glog.h"
 #include "pose2d.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 

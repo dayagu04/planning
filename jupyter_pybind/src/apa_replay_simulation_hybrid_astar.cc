@@ -63,13 +63,19 @@
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "path_safe_checker.h"
+#include "hybrid_astar_park_planner.h"
 
 namespace py = pybind11;
 using namespace planning;
 using namespace planning::apa_planner;
 
+typedef std::vector<Eigen::Vector2d> EigenPath2d;
+typedef std::vector<Eigen::Vector2d> EigenPointSet2d;
+
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
+static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
+std::shared_ptr<apa_planner::HybridAStarParkPlanner> hybrid_astar_park_;
 HybridAStarThreadSolver *thread_solver_;
 planning::apa_planner::ApaPlannerBase::EgoSlotInfo ego_slot_info_;
 
@@ -79,16 +85,18 @@ std::vector<double> global_path_s_;
 // record rs path in astar total path.
 std::vector<Eigen::Vector3d> static_rs_path_;
 Eigen::Vector3d astar_end_pose_;
-Eigen::Vector3d path_collision_pose_;
+Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
-std::vector<Eigen::Vector2d> virtual_wall_points_;
-std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
-std::vector<std::vector<Eigen::Vector2d>> static_rs_path_list_;
+EigenPointSet2d virtual_wall_points_;
+std::vector<EigenPath2d> real_time_node_list_;
+// 所有启发项的rs path，record in here
+std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
-std::vector<Eigen::Vector2d> static_ref_line_;
+EigenPath2d static_ref_line_;
 
 // bit 4 is flag
 Eigen::Vector4d car_pose_by_s_;
+EigenPointSet2d search_sequence_path_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -101,7 +109,13 @@ int Init() {
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
 
-  thread_solver_ = HybridAStarThreadSolver::GetInstance();
+  std::shared_ptr<apa_planner::ApaPlannerBase> planner =
+      apa_interface_ptr->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
+  hybrid_astar_park_ =
+      std::dynamic_pointer_cast<apa_planner::HybridAStarParkPlanner>(planner);
+
+  thread_solver_ = hybrid_astar_park_->GetThread();
+  hybrid_astar_interface_ = thread_solver_->GetHybridAStarInterface();
   ILOG_INFO << "replay init success";
 
   return 0;
@@ -220,6 +234,8 @@ int GetPathFromHybridAstar() {
 
   static_rs_path_list_.emplace_back(tmp_path);
 
+  ILOG_INFO << "rs path size = " << static_rs_path_list_.size();
+
   // update ref line
   ParkReferenceLine ref_line;
   thread_solver_->GetRefLine(&ref_line);
@@ -244,10 +260,27 @@ int GetPathFromHybridAstar() {
       Eigen::Vector2d(global_position.x, global_position.y));
 
   // get collision pose in path
-  Pose2D *collision_pose = PathSafeChecker::GetCollisionPose();
-  path_collision_pose_[0] = collision_pose->x;
-  path_collision_pose_[1] = collision_pose->y;
-  path_collision_pose_[2] = collision_pose->theta;
+  const size_t collision_id = hybrid_astar_park_->GetPathCollisionID();
+  path_collision_info_[0] = static_cast<int>(collision_id);
+  if (hybrid_astar_park_->IsPathCollision()) {
+    path_collision_info_[1] = 1;
+  } else {
+    path_collision_info_[1] = 0;
+  }
+
+  // 为了调试搜索过程，plot it
+  search_sequence_path_.clear();
+  const std::vector<ad_common::math::Vec2d> &search_path =
+      hybrid_astar_interface_->GetPriorQueueNode();
+
+  for (i = 0; i < search_path.size(); i++) {
+    local_position.x = search_path[i].x();
+    local_position.y = search_path[i].y();
+    tf.ULFLocalPoseToGlobal(&global_position, local_position);
+
+    search_sequence_path_.emplace_back(
+        Eigen::Vector2d(global_position.x, global_position.y));
+  }
 
   return 0;
 }
@@ -430,7 +463,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     py::bytes &parking_slot_info_bytes,
                     py::bytes &localization_info_bytes,
                     py::bytes &vehicle_service_output_info_bytes,
-                    // py::bytes &uss_wave_info_bytes,
+                    py::bytes &uss_wave_info_bytes,
                     py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes,
                     int select_id, bool force_plan, bool is_path_optimization,
                     bool is_cilqr_optimization, bool is_reset,
@@ -477,9 +510,9 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  // iflyauto::UssWaveInfo uss_wave_info =
-  //     BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-  //         uss_wave_info_bytes);
+  iflyauto::UssWaveInfo uss_wave_info =
+      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
+          uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -501,7 +534,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
-  // local_view.uss_wave_info = uss_wave_info;
+  local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
   // local_view.uss_percept_info = uss_perception_info;
   // local_view.ground_line_perception = ground_line_;
@@ -790,7 +823,7 @@ const std::vector<Eigen::Vector3d> &GetReedsShapePath() {
 
 const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
 
-const Eigen::Vector3d GetAstarCollisionPose() { return path_collision_pose_; }
+const Eigen::Vector2i GetAstarPathCollisionID() { return path_collision_info_; }
 
 const std::vector<Eigen::Vector3d> &GetAstarPath() {
   // ILOG_INFO << " check  astar path ";
@@ -870,6 +903,10 @@ const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
   return static_rs_path_list_;
 }
 
+const std::vector<Eigen::Vector2d> &GetSearchSequencePath() {
+  return search_sequence_path_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -890,10 +927,11 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("SetFusionObject", &SetFusionObject)
       .def("GetTrajPoseByDist", &GetTrajPoseByDist)
       .def("GetAstarEndPose", &GetAstarEndPose)
-      .def("GetAstarCollisionPose", &GetAstarCollisionPose)
+      .def("GetAstarPathCollisionID", &GetAstarPathCollisionID)
       .def("GetAstarAllNodes", &GetAstarAllNodes)
       .def("GetRSHeuristicPath", &GetRSHeuristicPath)
       .def("RefreshThreadResult", &RefreshThreadResult)
       .def("GetPlotRefLine", &GetPlotRefLine)
+      .def("GetSearchSequencePath", &GetSearchSequencePath)
       .def("GetDynamicState", &GetDynamicState);
 }

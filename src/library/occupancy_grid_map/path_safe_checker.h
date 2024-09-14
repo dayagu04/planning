@@ -19,10 +19,11 @@ struct PolygonFootPrint {
 };
 
 enum class VehCollisionPosition {
-  none = 0,
-  left_mirror = 1,
-  right_mirror,
-  body
+  NONE = 0,
+  LEFT_MIRROR = 1,
+  RIGHT_MIRROR,
+  BODY,
+  MAX_POLYGON_NO_COLLISION
 };
 
 // check path safe for polygon obs and ogm obstacle
@@ -45,12 +46,6 @@ class PathSafeChecker {
   const double GetPathValidDist() const { return path_valid_dist_; }
 
   const size_t GetPathCollisionID() const { return path_collision_idx_; }
-
-  // just for debug
-  static Pose2D* GetCollisionPose() {
-    static Pose2D collision_pose_;
-    return &collision_pose_;
-  }
 
  private:
   void GenerateVehBox(const pnc::geometry_lib::PathSegGear gear,
@@ -90,7 +85,7 @@ class PathSafeChecker {
   // Polygon2D veh_polygon_;
   // Polygon2D veh_end_polygon_;
 
-  PolygonFootPrint foot_print_;
+  PolygonFootPrint polygon_foot_print_;
   PolygonFootPrint path_end_foot_print_;
 
   std::vector<double> hierarchy_lateral_safe_buffer_;

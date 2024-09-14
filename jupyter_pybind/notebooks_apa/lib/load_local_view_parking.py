@@ -1867,8 +1867,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
       for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
         for corner_index in [0,3,2,1]:
-          parking_slot_x.append(parking_slot.corner_point[corner_index].x)
-          parking_slot_y.append(parking_slot.corner_point[corner_index].y)
+          parking_slot_x.append(parking_slot.globle_corner_point[corner_index].x)
+          parking_slot_y.append(parking_slot.globle_corner_point[corner_index].y)
     local_view_data['data_spatial_parking_slot'].data.update({
       'corner_point_x': [parking_slot_x],
       'corner_point_y': [parking_slot_y],

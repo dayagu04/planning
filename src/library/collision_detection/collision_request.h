@@ -2,7 +2,7 @@
 #include <unordered_set>
 
 #include "collision_result2d.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 /**
