@@ -1464,6 +1464,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
             is_on_highway_) {
           is_road_merged_by_other_lane_ = true;
         }
+        first_merge_direction_ = MakesureMergeDirection(*merge_seg, sd_map);
         distance_to_first_road_merge_ = merge_info_temp.second;
         break;
       } else {
@@ -2054,6 +2055,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_in_sdmaproad_ = false;
   is_ego_on_expressway_ = false;
   first_split_direction_ = RampDirection::RAMP_NONE;
+  first_merge_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
   distance_to_toll_station_ = NL_NMAX;
@@ -2078,6 +2080,10 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
   if (out_link_size == 2) {
     const auto split_next_segment =
         sd_map.GetNextRoadSegment(split_segment.id());
+    if (!split_next_segment) {
+      std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
+      return ramp_direction;
+    }
     ad_common::math::Vec2d segment_in_route_dir_vec;
     ad_common::math::Vec2d segment_not_in_route_dir_vec;
     Point2D anchor_point_of_cur_seg_to_next_seg = {
@@ -2092,10 +2098,6 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
                              ? out_link[1]
                              : out_link[0];
     // const auto other_segment = sd_map.GetRoadSegmentById(other_segment_id);
-    if (!split_next_segment) {
-      std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
-      return ramp_direction;
-    }
     const auto& split_next_segment_enu_point = split_next_segment->enu_points();
     const auto& other_segment_enu_point = other_segment.enu_points();
     if (split_next_segment_enu_point.size() > 1 &&
@@ -2122,6 +2124,63 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
   }
   return ramp_direction;
 }
+
+RampDirection VirtualLaneManager::MakesureMergeDirection(
+    const ::SdMapSwtx::Segment& merge_segment,
+    const ad_common::sdmap::SDMap& sd_map) {
+  const auto in_link_size = merge_segment.in_link_size();
+  RampDirection merge_direction = RAMP_NONE;
+  const auto& in_link = merge_segment.in_link();
+  // fengwang31(TODO):暂时假设在merge处只有两个方向
+  if (in_link_size == 2) {
+    const auto merge_last_segment =
+        sd_map.GetPreviousRoadSegment(merge_segment.id());
+    if (!merge_last_segment) {
+      std::cout << "in segment is nullptr!!!!!!!!" << std::endl;
+      return merge_direction;
+    }
+    ad_common::math::Vec2d segment_in_route_dir_vec;
+    ad_common::math::Vec2d segment_not_in_route_dir_vec;
+    Point2D anchor_point_of_cur_seg_to_last_seg = {
+        merge_segment.enu_points().begin()->x(),
+        merge_segment.enu_points().begin()->y()};
+    std::cout << "out_link[0].id():" << in_link[0].id() << std::endl;
+    std::cout << "out_link[1].id():" << in_link[1].id() << std::endl;
+    std::cout << "split_next_segment->id()" << merge_last_segment->id()
+              << std::endl;
+
+    auto other_segment = in_link[0].id() == merge_last_segment->id()
+                             ? in_link[1]
+                             : in_link[0];
+    const auto& merge_last_segment_enu_point = merge_last_segment->enu_points();
+    const auto& other_segment_enu_point = other_segment.enu_points();
+    const int point_num = merge_last_segment_enu_point.size();
+    const int other_point_num = other_segment_enu_point.size();
+    if (point_num > 1 && other_point_num > 1) {
+      segment_in_route_dir_vec.set_x(merge_last_segment_enu_point[point_num - 1].x() -
+                                     anchor_point_of_cur_seg_to_last_seg.x);
+      segment_in_route_dir_vec.set_y(merge_last_segment_enu_point[point_num - 1].y() -
+                                     anchor_point_of_cur_seg_to_last_seg.y);
+      segment_not_in_route_dir_vec.set_x(other_segment_enu_point[other_point_num - 1].x() -
+                                         anchor_point_of_cur_seg_to_last_seg.x);
+      segment_not_in_route_dir_vec.set_y(other_segment_enu_point[other_point_num - 1].y() -
+                                         anchor_point_of_cur_seg_to_last_seg.y);
+      if (segment_in_route_dir_vec.CrossProd(segment_not_in_route_dir_vec) >
+          0.0) {
+        merge_direction = RampDirection::RAMP_ON_LEFT;
+      } else {
+        merge_direction = RampDirection::RAMP_ON_RIGHT;
+      }
+    } else {
+      std::cout << "enu points error!!!!!!!!!!" << std::endl;
+    }
+  } else {
+    std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
+  }
+  return merge_direction;
+}
+
+
 
 std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
     const iflyauto::RoadInfo* roads_ptr) {
