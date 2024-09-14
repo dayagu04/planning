@@ -384,7 +384,7 @@
     "q_jerk_lane_change2": 2.0,
     "lane_change_ego_l_thr": 1.0,
     "q_jerk_lane_change_back": 10.0,
-    "q_ref_xy_split": 20.0,
+    "q_ref_xy_split": 100.0,
     "q_ref_theta_split": 8000.0,
     "q_jerk_split": 5.0,
     "jerk_bound_split": 0.6,
