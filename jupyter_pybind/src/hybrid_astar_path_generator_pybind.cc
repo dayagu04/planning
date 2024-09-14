@@ -27,13 +27,13 @@
 #include "src/library/collision_detection/aabb2d.h"
 #include "polygon_base.h"
 #include "ad_common/math/linear_interpolation.h"
-#include "src/library/collision_detection/types.h"
 #include "src/library/hybrid_astar_lib/hybrid_a_star.h"
 #include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/virtual_wall_decider.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
+#include "hybrid_astar_park_planner.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -62,7 +62,7 @@ ParkObstacleList hybrid_astar_obs_;
 std::vector<Eigen::Vector4d> obs_line_list_;
 
 std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
-std::vector<Eigen::Vector2d> astar_search_path_;
+std::vector<Eigen::Vector2d> search_sequence_path_;
 std::vector<std::vector<Eigen::Vector2d>> rs_h_path_;
 
 #define OBS_SAMPLING_DIST (0.1)
@@ -78,8 +78,14 @@ int Init() {
 
   parking_interface->Init();
 
-  hybrid_astar_interface_ =
-      HybridAStarThreadSolver::GetInstance()->GetHybridAStarInterface();
+  std::shared_ptr<apa_planner::ApaPlannerBase> planner =
+      parking_interface->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
+
+  std::shared_ptr<apa_planner::HybridAStarParkPlanner> hybrid_astar_park_ =
+      std::dynamic_pointer_cast<apa_planner::HybridAStarParkPlanner>(planner);
+
+  HybridAStarThreadSolver* thread = hybrid_astar_park_->GetThread();
+  hybrid_astar_interface_ = thread->GetHybridAStarInterface();
 
   if (hybrid_astar_interface_ == nullptr) {
     ILOG_INFO << "hybrid_astar_interface_ is null";
@@ -96,7 +102,7 @@ int StopPybind() {
 void ResetHybridAstarPath() {
   global_path_.clear();
   global_path_s_.clear();
-  astar_search_path_.clear();
+  search_sequence_path_.clear();
   rs_h_path_.clear();
   rs_path_.clear();
 
@@ -188,7 +194,7 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
   double heading;
 
   HybridAStarResult result;
-  SearchState state;
+  AstarSearchState state;
   state = hybrid_astar_interface_->GetFullLengthPath(&result);
   if (result.x.size() > 0) {
 
@@ -234,23 +240,24 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
   const std::vector<ad_common::math::Vec2d> &search_path =
       hybrid_astar_interface_->GetPriorQueueNode();
 
-  astar_search_path_.clear();
+  search_sequence_path_.clear();
   for (i = 0; i < search_path.size(); i++) {
     local_position[0] = search_path[i].x();
     local_position[1] = search_path[i].y();
 
     global_position = ego_slot_info.l2g_tf.GetPos(local_position);
 
-    astar_search_path_.emplace_back(
+    search_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position[0], global_position[1]));
   }
 
+  ILOG_INFO << "rs path copy ";
   std::vector<std::vector<ad_common::math::Vec2d>> path_list;
   hybrid_astar_interface_->GetRSPathHeuristic(path_list);
 
   rs_h_path_.clear();
   for (i = 0; i < path_list.size(); i++) {
-
+    ILOG_INFO << "path id = " << i;
     std::vector<Eigen::Vector2d> path;
     for (size_t j = 0; j < path_list[i].size(); j++) {
       local_position[0] = path_list[i][j].x();
@@ -260,6 +267,9 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
 
       path.emplace_back(
           Eigen::Vector2d(global_position[0], global_position[1]));
+
+      ILOG_INFO << "pos id= " << j << "pos =" << global_position[0] << ","
+                << global_position[1];
     }
 
     rs_h_path_.emplace_back(path);
@@ -873,10 +883,11 @@ const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
 }
 
 const std::vector<Eigen::Vector2d> &GetSearchPathPoint() {
-  return astar_search_path_;
+  return search_sequence_path_;
 }
 
 const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
+  ILOG_INFO << "rs path size=" << rs_h_path_.size();
   return rs_h_path_;
 }
 

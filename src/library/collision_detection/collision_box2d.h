@@ -3,7 +3,7 @@
 
 #include "collision_geometry2d.h"
 #include "gjk2d.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 /**

@@ -15,11 +15,11 @@
 namespace planning {
 
 enum class RequestResponseState {
-  none = 0,
-  has_request,
-  has_response,
-  has_published_response,
-  max_num,
+  NONE = 0,
+  HAS_REQUEST,
+  HAS_RESPONSE,
+  HAS_PUBLISHED_RESPONSE,
+  MAX_NUM,
 };
 
 enum class AstarThreadState { INITTED, RUNNING, STOPPED };
@@ -34,11 +34,6 @@ class HybridAStarThreadSolver {
   HybridAStarThreadSolver();
 
   ~HybridAStarThreadSolver();
-
-  static HybridAStarThreadSolver* GetInstance() {
-    static HybridAStarThreadSolver instance_;
-    return &instance_;
-  }
 
   int Init(const double back_edge_to_rear_axis, const double car_length,
            const double car_width, const double steer_ratio,
@@ -58,6 +53,7 @@ class HybridAStarThreadSolver {
 
   int Process();
 
+  // for debug
   std::shared_ptr<HybridAStarInterface> GetHybridAStarInterface() {
     return solver_interface_;
   }
@@ -67,8 +63,6 @@ class HybridAStarThreadSolver {
   const bool HasResponse();
 
   void GetThreadState(RequestResponseState* state);
-
-  void ResetResponse();
 
   void Clear();
 
@@ -80,6 +74,8 @@ class HybridAStarThreadSolver {
   // for publish
   void GetNodeListMessagePublish(planning::common::AstarNodeList* list);
 
+  const bool IsInit() const { return init_; }
+
  public:
   // get result api
   // const int PublishSearchPath(HybridAStarResult* result,
@@ -87,8 +83,8 @@ class HybridAStarThreadSolver {
   //                             Pose2D* base_pose);
 
   // for debug
-  const int GetFullLengthPathInThread(HybridAStarResult* result,
-                                      Pose2D* base_pose);
+  const void GetFullLengthPathInThread(HybridAStarResult* result,
+                                       Pose2D* base_pose);
 
   // for debug
   const Pose2D GetAstarTargetPose();
@@ -110,26 +106,26 @@ class HybridAStarThreadSolver {
  private:
   // in
   std::mutex mutex_;
-  bool has_request_;
-  AstarRequest request_;
+  AstarRequest thread_request_data_;
 
   // out
-  // if you have got result, please make has_output_ = false;
-  bool has_response_;
-  AstarResponse response_;
+  AstarResponse thread_response_data_;
 
+  std::atomic<AstarSearchState> search_state_{AstarSearchState::NONE};
+
+  // only main thread read/write it, so not use std::atomic.
   bool init_ = false;
-  RequestResponseState request_response_state_;
+  std::atomic<RequestResponseState> request_response_state_;
+
+  std::atomic<AstarThreadState> thread_state_{AstarThreadState::INITTED};
+  std::thread thread_;
 
   // for debug
   std::vector<std::vector<Eigen::Vector2d>> all_child_node_list_;
   // for debug
   std::vector<std::vector<ad_common::math::Vec2d>> rs_path_list_;
-
+  // for debug
   std::shared_ptr<HybridAStarInterface> solver_interface_;
-
-  AstarThreadState thread_state_;
-  std::unique_ptr<std::thread> thread_;
 };
 
 }  // namespace planning

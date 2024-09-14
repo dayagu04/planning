@@ -1,6 +1,7 @@
 #ifndef __HYBRID_ASTAR_PARK_H__
 #define __HYBRID_ASTAR_PARK_H__
 
+#include <cstddef>
 #include "apa_plan_base.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
@@ -16,9 +17,15 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   void Init() override;
 
-  virtual void Reset() override;
+  void Reset() override;
 
   virtual std::string GetName() override { return typeid(this).name(); }
+
+  HybridAStarThreadSolver* GetThread() { return &thread_; }
+
+  const size_t GetPathCollisionID() const { return path_collision_id_; }
+
+  const bool IsPathCollision() const { return is_path_collision_; }
 
  private:
   virtual const bool CheckReplan() override;
@@ -84,8 +91,13 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
   void ShrinkPathByFusionObj();
 
   RequestResponseState thread_state_;
+  HybridAStarThreadSolver thread_;
 
   bool is_ego_collision_;
+  bool is_path_collision_;
+  size_t path_collision_id_;
+
+  AstarPathGear current_gear_;
 };
 
 }  // namespace apa_planner
