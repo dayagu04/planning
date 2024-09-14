@@ -203,6 +203,7 @@ class LoadCyberbag:
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
+      print('plan version:', self.plan_msg['data'][0].msg_meta.version)
       if len(self.plan_msg['t']) > 0:
         self.plan_msg['enable'] = True
       else:

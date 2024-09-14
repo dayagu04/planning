@@ -202,7 +202,8 @@ void UssObstacleAvoidance::GenUssArc() {
         pnc::geometry_lib::GetRotm2dFromTheta(pnc::mathlib::Deg2Rad(
             apa_param.GetParam().corner_uss_scan_angle_deg_turn));
 
-    const double corner_uss_dist_diff = 0.0068;
+    const double corner_uss_dist_diff =
+        apa_param.GetParam().corner_uss_dist_diff;
 
     Eigen::Matrix2d rot_matrix;
 

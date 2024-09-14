@@ -340,10 +340,13 @@ const bool SlotManagement::UpdateEgoSlotInfo(
     const uint8_t max_obs_in_slot_count = 5;
     for (const auto &obs_pt : frame_.obs_pt_vec) {
       const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-      if (std::fabs(obs_pt_slot.y()) < 0.6 &&
-          obs_pt_slot.x() > ego_slot_info.pt_0.x() -
-                                apa_param.GetParam().car_length + 0.168 &&
-          obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
+      if (std::fabs(obs_pt_slot.y()) < 0.98 &&
+          obs_pt_slot.x() >
+              std::min(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x()) -
+                  apa_param.GetParam().car_length + 0.86 &&
+          obs_pt_slot.x() <
+              std::min(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x()) +
+                  0.168) {
         obs_in_slot_count++;
       }
       ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
@@ -479,8 +482,8 @@ const bool SlotManagement::GenTLane(
     //     std::fabs(obstacle_point_slot.y()) < y_min) {
     //   continue;
     // }
-    obs_slot_type = CollisionDetector::GetObsSlotType(obstacle_point_slot,
-                                                      slot_pt, is_left_side);
+    obs_slot_type = CollisionDetector::GetObsSlotType(
+        obstacle_point_slot, slot_pt, is_left_side, frame_.replan_flag);
 
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
         !apa_param.GetParam().believe_in_fus_obs) {
@@ -949,8 +952,8 @@ const bool SlotManagement::GenObstacles(
     tlane_vec.emplace_back(channel_point_2);
     tlane_vec.emplace_back(channel_point_1);
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
-      obs_slot_type = collision_detector_ptr->GetObsSlotType(obs_pos, slot_pt,
-                                                             is_left_side);
+      obs_slot_type = collision_detector_ptr->GetObsSlotType(
+          obs_pos, slot_pt, is_left_side, frame_.replan_flag);
 
       if (!apa_param.GetParam().believe_in_fus_obs) {
         if (obs_slot_type ==
@@ -2895,9 +2898,14 @@ void SlotManagement::UpdateLimiterInfoInParking() {
     limiter_slot.first.y() = ego_slot_info.slot_width * 0.5;
     limiter_slot.second.y() = -ego_slot_info.slot_width * 0.5;
 
+    const double init_limiter_x =
+        (limiter_slot.first.x() + limiter_slot.second.x()) * 0.5;
+
+    limiter_slot.first.x() = init_limiter_x;
+    limiter_slot.second.x() = init_limiter_x;
+
     if (apa_param.GetParam().limiter_length > 0.0) {
-      double limiter_x =
-          (limiter_slot.first.x() + limiter_slot.second.x()) * 0.5 + move_dist;
+      double limiter_x = init_limiter_x + move_dist;
 
       limiter_x = std::min(
           limiter_x, std::min(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x()) -

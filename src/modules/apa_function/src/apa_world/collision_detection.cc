@@ -1321,7 +1321,8 @@ const bool CollisionDetector::CalTrajBound(
 const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const Eigen::Vector2d &obs,
     const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-    const bool is_left_side, const bool is_vertical_slot) {
+    const bool is_left_side, const bool is_replan,
+    const bool is_vertical_slot) {
   if (is_vertical_slot) {
     // the slot origin pt is on the line(pt2->pt3)
     Eigen::Vector2d slot_left_pt = slot_pt.first;
@@ -1329,10 +1330,16 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     if (slot_left_pt.y() < slot_right_pt.y()) {
       std::swap(slot_left_pt, slot_right_pt);
     }
+    const auto &params = apa_param.GetParam();
+
     const double max_obs_lat_invasion_slot_dist =
-        apa_param.GetParam().max_obs_lat_invasion_slot_dist;
+        is_replan ? params.max_obs_lat_invasion_slot_dist
+                  : params.max_obs_lat_invasion_slot_dist_dynamic_col;
+
     const double max_obs_lon_invasion_slot_dist =
-        apa_param.GetParam().max_obs_lon_invasion_slot_dist;
+        is_replan ? params.max_obs_lon_invasion_slot_dist
+                  : params.max_obs_lon_invasion_slot_dist_dynamic_col;
+
     const Eigen::Vector2d unit_01_vec =
         (slot_left_pt - slot_right_pt).normalized();
     const Eigen::Vector2d unit_02_vec(-1.0, 0.0);
@@ -1340,7 +1347,7 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     area_vec.resize(4);
     const double max_x = std::max(slot_left_pt.x(), slot_right_pt.x());
 
-    const double max_obs_x = 2.268;
+    const double max_obs_x = params.slot_entrance_obs_x;
 
     const Eigen::Vector2d pt_1 = slot_left_pt -
                                  max_obs_lat_invasion_slot_dist * unit_01_vec -
