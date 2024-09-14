@@ -236,6 +236,9 @@ void HybridAStarParkPlanner::PlanCore() {
   bool update_thread_path = UpdateThreadPath();
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
 
+  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
+            << ",is_replan = " << is_replan;
+
   // check replan
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan || is_replan ||
       update_thread_path) {
