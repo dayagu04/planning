@@ -1500,69 +1500,108 @@ const bool ParallelPathPlanner::CheckEgoInSlot() const {
 
 // search from the inside parking space to outside
 const bool ParallelPathPlanner::CalMinSafeCircle() {
+  const auto time0 = IflyTime::Now_ms();
+
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
 
-  auto time0 = IflyTime::Now_ms();
   std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
-  bool success =
+  const bool success_tra =
       InverseSearchLoopInSlot(tra_search_out_res, calc_params_.target_pose);
-
-  auto time1 = IflyTime::Now_ms();
+  const auto time1 = IflyTime::Now_ms();
 
   std::vector<pnc::geometry_lib::PathSegment> adv_search_out_res;
-  success = AdvancedInversedTrialsInSlot(adv_search_out_res,
-                                         calc_params_.target_pose);
-  auto time2 = IflyTime::Now_ms();
+  const bool success_adv = AdvancedInversedTrialsInSlot(
+      adv_search_out_res, calc_params_.target_pose);
+  const auto time2 = IflyTime::Now_ms();
 
   DEBUG_PRINT("Traditional vs Advanced Method");
-  DEBUG_PRINT("park out heading(deg) = "
-              << tra_search_out_res.back().GetStartHeading() * 57.3 << " vs "
-              << adv_search_out_res.back().GetStartHeading() * 57.3);
+  // heading
+  double tra_heading_deg = 0.0;
+  double opt_heading_deg = 0.0;
 
-  double adv_first_back_limit_x = adv_search_out_res.front().GetEndPos().x();
-  if (adv_search_out_res.size() >= 2) {
-    if (adv_search_out_res[0].seg_gear == adv_search_out_res[1].seg_gear &&
-        adv_search_out_res[0].seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-      adv_first_back_limit_x = adv_search_out_res[1].GetEndPos().x();
-    }
+  double tra_back_x = 999.9;
+  double adv_back_x = 999.9;
+
+  size_t tra_shifting_cnt = 0;
+  size_t adv_shifting_cnt = 0;
+
+  if (tra_search_out_res.size() > 0) {
+    tra_heading_deg = tra_search_out_res.back().GetStartHeading() * 57.3;
+
+    tra_back_x = tra_search_out_res.front().GetEndPos().x();
+
+    tra_shifting_cnt = CalPathGearChangeCounts(tra_search_out_res);
   }
 
-  DEBUG_PRINT("first backward limit x(m) = "
-              << tra_search_out_res.front().GetEndPos().x() << " vs "
-              << adv_first_back_limit_x);
+  if (adv_search_out_res.size() > 0) {
+    opt_heading_deg = adv_search_out_res.back().GetStartHeading() * 57.3;
 
-  DEBUG_PRINT("gear change cnt "
-              << CalPathGearChangeCounts(tra_search_out_res) << " vs "
-              << CalPathGearChangeCounts(adv_search_out_res));
+    adv_back_x = adv_search_out_res.front().GetEndPos().x();
+    if (adv_search_out_res.size() >= 2) {
+      if (adv_search_out_res[0].seg_gear == adv_search_out_res[1].seg_gear &&
+          adv_search_out_res[0].seg_gear ==
+              pnc::geometry_lib::SEG_GEAR_REVERSE) {
+        adv_back_x = adv_search_out_res[1].GetEndPos().x();
+      }
+    }
+
+    adv_shifting_cnt = CalPathGearChangeCounts(adv_search_out_res);
+  }
+
+  DEBUG_PRINT("park out heading(deg) = " << tra_heading_deg << " vs "
+                                         << opt_heading_deg);
+
+  DEBUG_PRINT("first backward limit x(m) = " << tra_back_x << " vs "
+                                             << adv_back_x);
+
+  DEBUG_PRINT("gear change cnt " << tra_shifting_cnt << " vs "
+                                 << adv_shifting_cnt);
 
   DEBUG_PRINT("Time cost (ms) =" << time1 - time0 << " vs " << time2 - time1);
 
-  if (success) {
-    std::vector<pnc::geometry_lib::PathSegment> search_out_res;
-    DEBUG_PRINT("apa_param.GetParam().is_parallel_advanced_method = "
-                << apa_param.GetParam().is_parallel_advanced_method);
-    search_out_res = apa_param.GetParam().is_parallel_advanced_method
-                         ? adv_search_out_res
-                         : tra_search_out_res;
+  DEBUG_PRINT("apa_param.GetParam().is_parallel_advanced_method = "
+              << apa_param.GetParam().is_parallel_advanced_method);
 
-    ReduceRootPoseHeadingInSlot(search_out_res);
+  std::vector<pnc::geometry_lib::PathSegment> search_out_res;
 
-    // calc pose with ego had just cross pt_inside'y, which is used to
-    // connect  the prepare point
-
-    CalcParkOutPose(search_out_res.back());
-    calc_params_.park_out_path_in_slot = search_out_res;
-    calc_params_.park_out_pose = search_out_res.back().GetEndPose();
-    calc_params_.safe_circle_root_pose = search_out_res.back().GetStartPose();
-    calc_params_.valid_target_pt_vec.emplace_back(
-        calc_params_.safe_circle_root_pose);
-    pnc::geometry_lib::PrintPose("corrected multi root pose",
-                                 calc_params_.safe_circle_root_pose);
-    pnc::geometry_lib::PrintPose("corrected park out pose",
-                                 calc_params_.park_out_pose);
+  if (!apa_param.GetParam().is_parallel_advanced_method) {
+    if (success_tra) {
+      search_out_res = tra_search_out_res;
+    } else {
+      return false;
+    }
   }
 
-  return success;
+  if (apa_param.GetParam().is_parallel_advanced_method) {
+    if (success_adv) {
+      search_out_res = adv_search_out_res;
+    } else {
+      return false;
+    }
+  }
+
+  if (search_out_res.size() == 0) {
+    DEBUG_PRINT("search_out_res size = 0");
+    return false;
+  }
+
+  ReduceRootPoseHeadingInSlot(search_out_res);
+
+  // calc pose with ego had just cross pt_inside'y, which is used to
+  // connect  the prepare point
+
+  CalcParkOutPose(search_out_res.back());
+  calc_params_.park_out_path_in_slot = search_out_res;
+  calc_params_.park_out_pose = search_out_res.back().GetEndPose();
+  calc_params_.safe_circle_root_pose = search_out_res.back().GetStartPose();
+  calc_params_.valid_target_pt_vec.emplace_back(
+      calc_params_.safe_circle_root_pose);
+  pnc::geometry_lib::PrintPose("corrected multi root pose",
+                               calc_params_.safe_circle_root_pose);
+  pnc::geometry_lib::PrintPose("corrected park out pose",
+                               calc_params_.park_out_pose);
+
+  return true;
 }
 
 const bool ParallelPathPlanner::ReduceRootPoseHeadingInSlot(
