@@ -549,8 +549,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       split_dir_dis_info_list_);
 
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
-  ego_lane_track_manager_->CalculateVirtualLaneAttributes(
-      relative_id_lanes_);
+  ego_lane_track_manager_->CalculateVirtualLaneAttributes(relative_id_lanes_);
 
   // 5.track自车道
   order_ids_of_same_zero_relative_id_.clear();
@@ -565,8 +564,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_start = IflyTime::Now_ms();
   if (location_valid) {
     ego_lane_track_manager_->TrackEgoLane(relative_id_lanes_,
-                                            order_ids_of_same_zero_relative_id_,
-                                            virtual_id_mapped_lane_);
+                                          order_ids_of_same_zero_relative_id_,
+                                          virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_->is_select_ego_lane_without_plan();
     LOG_DEBUG("select_ego_lane_without_plan: %d \n",
@@ -585,8 +584,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
   if (is_ego_on_expressway_) {
-    const bool is_inhibitory_noa_task = (is_exist_toll_station_ && distance_to_toll_station_ < cancel_mlc_dis_threshold_to_route_end)
-        || distance_to_route_end_ < cancel_mlc_dis_threshold_to_route_end;
+    const bool is_inhibitory_noa_task =
+        (is_exist_toll_station_ &&
+         distance_to_toll_station_ < cancel_mlc_dis_threshold_to_route_end) ||
+        distance_to_route_end_ < cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
       GenerateLaneChangeTasksForNOA();
     }
@@ -1449,18 +1450,17 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
         if (!merge_seg) {
           break;
         }
-        const auto& merge_seg_last_seg = sd_map.GetPreviousRoadSegment(merge_seg->id());
+        const auto& merge_seg_last_seg =
+            sd_map.GetPreviousRoadSegment(merge_seg->id());
         if (!merge_seg_last_seg) {
           break;
         }
         if (merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
-            merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-            is_on_ramp_) {
+            merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP && is_on_ramp_) {
           is_ramp_merge_to_road_on_expressway_ = true;
         }
         if (merge_seg_last_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-            merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-            !is_on_ramp_ &&
+            merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP && !is_on_ramp_ &&
             is_on_highway_) {
           is_road_merged_by_other_lane_ = true;
         }
@@ -1768,7 +1768,6 @@ bool VirtualLaneManager::UpdateIntersectionState() {
   return true;
 }
 
-
 bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
   bool rslt = false;
   bool lane_is_virtual = false;
@@ -1794,7 +1793,8 @@ bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
       seg_begin = 0;
       seg_end = l_boundry.type_segments[j].length;
       if (seg_begin <= x_pos && x_pos <= seg_end) {
-        if (l_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        if (l_boundry.type_segments[j].type ==
+            iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
           l_boundry_is_virtual = true;
         } else {
           l_boundry_is_virtual = false;
@@ -1811,7 +1811,8 @@ bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
         seg_end += l_boundry.type_segments[i].length;
       }
       if (seg_begin <= x_pos && x_pos <= seg_end) {
-        if (l_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        if (l_boundry.type_segments[j].type ==
+            iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
           l_boundry_is_virtual = true;
         } else {
           l_boundry_is_virtual = false;
@@ -1830,7 +1831,8 @@ bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
       seg_begin = 0;
       seg_end = r_boundry.type_segments[j].length;
       if (seg_begin <= x_pos && x_pos <= seg_end) {
-        if (r_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        if (r_boundry.type_segments[j].type ==
+            iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
           r_boundry_is_virtual = true;
         } else {
           r_boundry_is_virtual = false;
@@ -1847,7 +1849,8 @@ bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
         seg_end += r_boundry.type_segments[i].length;
       }
       if (seg_begin <= x_pos && x_pos <= seg_end) {
-        if (r_boundry.type_segments[j].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        if (r_boundry.type_segments[j].type ==
+            iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
           r_boundry_is_virtual = true;
         } else {
           r_boundry_is_virtual = false;
@@ -2145,22 +2148,25 @@ RampDirection VirtualLaneManager::MakesureMergeDirection(
     std::cout << "split_next_segment->id()" << merge_last_segment->id()
               << std::endl;
 
-    auto other_segment = in_link[0].id() == merge_last_segment->id()
-                             ? in_link[1]
-                             : in_link[0];
+    auto other_segment =
+        in_link[0].id() == merge_last_segment->id() ? in_link[1] : in_link[0];
     const auto& merge_last_segment_enu_point = merge_last_segment->enu_points();
     const auto& other_segment_enu_point = other_segment.enu_points();
     const int point_num = merge_last_segment_enu_point.size();
     const int other_point_num = other_segment_enu_point.size();
     if (point_num > 1 && other_point_num > 1) {
-      segment_in_route_dir_vec.set_x(merge_last_segment_enu_point[point_num - 1].x() -
-                                     anchor_point_of_cur_seg_to_last_seg.x);
-      segment_in_route_dir_vec.set_y(merge_last_segment_enu_point[point_num - 1].y() -
-                                     anchor_point_of_cur_seg_to_last_seg.y);
-      segment_not_in_route_dir_vec.set_x(other_segment_enu_point[other_point_num - 1].x() -
-                                         anchor_point_of_cur_seg_to_last_seg.x);
-      segment_not_in_route_dir_vec.set_y(other_segment_enu_point[other_point_num - 1].y() -
-                                         anchor_point_of_cur_seg_to_last_seg.y);
+      segment_in_route_dir_vec.set_x(
+          merge_last_segment_enu_point[point_num - 1].x() -
+          anchor_point_of_cur_seg_to_last_seg.x);
+      segment_in_route_dir_vec.set_y(
+          merge_last_segment_enu_point[point_num - 1].y() -
+          anchor_point_of_cur_seg_to_last_seg.y);
+      segment_not_in_route_dir_vec.set_x(
+          other_segment_enu_point[other_point_num - 1].x() -
+          anchor_point_of_cur_seg_to_last_seg.x);
+      segment_not_in_route_dir_vec.set_y(
+          other_segment_enu_point[other_point_num - 1].y() -
+          anchor_point_of_cur_seg_to_last_seg.y);
       if (segment_in_route_dir_vec.CrossProd(segment_not_in_route_dir_vec) >
           0.0) {
         merge_direction = RampDirection::RAMP_ON_LEFT;
@@ -2175,8 +2181,6 @@ RampDirection VirtualLaneManager::MakesureMergeDirection(
   }
   return merge_direction;
 }
-
-
 
 std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
     const iflyauto::RoadInfo* roads_ptr) {
@@ -2270,8 +2274,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   JSON_DEBUG_VALUE("distance_to_first_road_split", distance_to_first_road_split_);
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (dis_to_ramp_ < 3000.0 ||
-        is_leaving_ramp_ ||
+    if (dis_to_ramp_ < 3000.0 || is_leaving_ramp_ ||
         (is_on_ramp_ &&
          distance_to_first_road_merge_ > distance_to_first_road_split_) ||
         is_nearing_other_lane_merge_to_road_point_) {
@@ -2279,7 +2282,8 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
           dis_to_ramp_, distance_to_first_road_merge_,
           distance_to_first_road_split_, is_nearing_ramp_, ramp_direction_,
           first_split_direction_, is_leaving_ramp_, lane_num_except_emergency_,
-          is_on_ramp_,is_nearing_other_lane_merge_to_road_point_);
+          is_on_ramp_, is_nearing_other_lane_merge_to_road_point_,
+          first_merge_direction_);
     }
   }
 }
