@@ -2265,31 +2265,36 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
 
   //(3)、判断高速前方汇入点在前，还是匝道在前
  if (is_nearing_ramp_ &&
-    is_road_merged_by_other_lane_ &&
-    dis_to_ramp_ > distance_to_first_road_merge_ &&
-    !is_on_ramp_ &&
-    is_on_highway_) {
-  is_nearing_ramp_ = false;
-}
+      is_road_merged_by_other_lane_ &&
+      dis_to_ramp_ > distance_to_first_road_merge_ &&
+      !is_on_ramp_ &&
+      is_on_highway_) {
+    is_nearing_ramp_ = false;
+  }
 
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
   JSON_DEBUG_VALUE("is_nearing_ramp", is_nearing_ramp_);
   JSON_DEBUG_VALUE("distance_to_ramp", dis_to_ramp_);
   JSON_DEBUG_VALUE("distance_to_first_road_merge", distance_to_first_road_merge_);
   JSON_DEBUG_VALUE("distance_to_first_road_split", distance_to_first_road_split_);
+  GeneralTaskMapInfo general_task_map_info;
+  general_task_map_info.distance_to_ramp = dis_to_ramp_;
+  general_task_map_info.distance_to_first_road_merge = distance_to_first_road_merge_;
+  general_task_map_info.distance_to_first_road_split = distance_to_first_road_split_;
+  general_task_map_info.lane_num_except_emergency = lane_num_except_emergency_;
+  general_task_map_info.is_nearing_ramp = is_nearing_ramp_;
+  general_task_map_info.is_leaving_ramp = is_leaving_ramp_;
+  general_task_map_info.is_on_ramp = is_on_ramp_;
+  general_task_map_info.is_nearing_other_lane_merge_to_road_point = is_nearing_other_lane_merge_to_road_point_;
+  general_task_map_info.is_ramp_merge_to_road_on_expressway = is_ramp_merge_to_road_on_expressway_;
+  general_task_map_info.is_ramp_merge_to_ramp_on_expressway = is_ramp_merge_to_ramp_on_expressway_;
+  general_task_map_info.ramp_direction = ramp_direction_;
+  general_task_map_info.first_split_direction = first_split_direction_;
+  general_task_map_info.first_merge_direction = first_merge_direction_;
+
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (dis_to_ramp_ < 3000.0 || is_leaving_ramp_ ||
-        (is_on_ramp_ &&
-         distance_to_first_road_merge_ > distance_to_first_road_split_) ||
-        is_nearing_other_lane_merge_to_road_point_) {
-      relative_id_lane->update_lane_tasks(
-          dis_to_ramp_, distance_to_first_road_merge_,
-          distance_to_first_road_split_, is_nearing_ramp_, ramp_direction_,
-          first_split_direction_, is_leaving_ramp_, lane_num_except_emergency_,
-          is_on_ramp_, is_nearing_other_lane_merge_to_road_point_,
-          first_merge_direction_);
-    }
+    relative_id_lane->update_lane_tasks(general_task_map_info);
   }
 }
 
