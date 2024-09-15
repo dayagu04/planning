@@ -496,7 +496,11 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
 }
 
 void HybridAStarParkPlanner::UpdateRemainDist() {
-  ApaPlannerBase::UpdateRemainDist();
+  // 1. calculate remain dist according to plan path
+  frame_.remain_dist = CalRemainDistFromPath();
+
+  // 2.calculate remain dist uss according to uss
+  frame_.remain_dist_uss = CalRemainDistFromUss();
 
   ShrinkPathByFusionObj();
 
@@ -610,8 +614,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
     cur_request.path_generate_method =
         planning::AstarPathGenerateType::reeds_shepp;
 
-    end = real_end;
-    end.x = real_end.x + 20.0;
+    end.y = real_end.y;
+    end.x = start.x + 30.0;
     cur_request.goal_ = end;
 
   } else {
@@ -1120,6 +1124,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   }
 
   // update stuck by uss time
+  // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
       apa_world_ptr_->GetApaDataPtr()->cur_state ==
@@ -1130,6 +1135,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   }
 
   // update stuck time
+  // 车静止不动，这个值一直在更新
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
@@ -1159,6 +1165,29 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
 }
 
 HybridAStarParkPlanner::~HybridAStarParkPlanner() {}
+
+const bool HybridAStarParkPlanner::CheckStuckFailed() {
+  return frame_.stuck_time > 12.0;
+}
+
+const double HybridAStarParkPlanner::CalRemainDistFromUss() {
+  double remain_dist = 10.0;
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+
+  uss_obstacle_avoider_ptr->Update(&planning_output_,
+                                   apa_world_ptr_->GetApaDataPtr());
+
+  const double safe_uss_remain_dist =
+      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+
+  remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - 0.15;
+
+  return remain_dist;
+}
 
 }  // namespace apa_planner
 }  // namespace planning

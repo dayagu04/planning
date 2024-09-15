@@ -13,7 +13,7 @@
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
-#include "single_shot_parking_decider.h"
+#include "drive_distance_decider.h"
 #include "aabb2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
@@ -187,18 +187,18 @@ int HybridAStarInterface::UpdateOutput() {
   hybrid_astar_->Clear();
 
   // update single shot decider
-  SingleShotParkingDecider single_shot_decider;
-  bool is_single_shot;
-  single_shot_decider.Process(&coarse_traj_);
-  is_single_shot = single_shot_decider.IsSingleShotPath();
+  DriveDistanceDecider drive_distance_decider;
+  bool no_gear_switch;
+  drive_distance_decider.Process(&coarse_traj_, request_.plan_reason);
+  no_gear_switch = drive_distance_decider.IsNextPathNoGearSwitch();
 
-  RSExpansionDecider::UpdateRSPathRequest(&request_.rs_request, is_single_shot,
-                                          single_shot_decider.GetNextShotGear(),
-                                          ego_pose_, request_.slot_width);
+  RSExpansionDecider::UpdateRSPathRequest(
+      &request_.rs_request, no_gear_switch,
+      drive_distance_decider.GetNextPathGear(), ego_pose_, request_.slot_width);
 
   if (request_.first_action_request.has_request) {
     request_.first_action_request.dist_request =
-        single_shot_decider.GetNextShotPathLength();
+        drive_distance_decider.GetNextPathLength();
 
     // 1.2-2.5
     if (request_.first_action_request.dist_request > 2.5) {
