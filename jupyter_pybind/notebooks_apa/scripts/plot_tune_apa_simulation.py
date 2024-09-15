@@ -13,10 +13,7 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/APA_data/Parallel/0914/park_in_data_collection_CHERY_E0Y_48160_ALL_FILTER_2024-09-13-21-04-59_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240912/20240912-20-40-40/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-12-20-40-40_no_camera.bag'
-bag_path = '/data_cold3/autoparse/chery_e0y_48160/trigger/20240914/20240914-11-19-21/park_in_data_collection_CHERY_E0Y_48160_ALL_FILTER_2024-09-14-11-19-22_no_camera.bag'
-bag_path = '/data_cold3/autoparse/chery_e0y_48160/trigger/20240914/20240914-10-23-13/park_in_data_collection_CHERY_E0Y_48160_ALL_FILTER_2024-09-14-10-23-13_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240914/20240914-15-03-03/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-14-15-03-04_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -103,14 +100,13 @@ data_sim_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
 data_sim_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_limiter = ColumnDataSource(data = {'x':[], 'y':[]})
 
-fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
+fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan')
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_sim_target_pos, fill_color = "blue", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_limiter, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_limiter', visible = False)
 fig1.circle('obs_y', 'obs_x', source = data_sim_obs, size=6.0, color='red', legend_label='sim obs', visible = False)
-fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_tune, size=4, color='yellow', legend_label = 'sim_tuned_plan')
 fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
 fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
 
