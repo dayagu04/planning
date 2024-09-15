@@ -228,9 +228,24 @@ const bool ParallelPathPlanner::Update() {
       if (calc_params_.park_out_path_in_slot.size() > 1) {
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
-      } else {
       }
 
+      if (output_.path_segment_vec.size() > 0) {
+        const auto& end_pose = output_.path_segment_vec.back().GetEndPose();
+        if (pnc::mathlib::IsDoubleEqual(end_pose.heading * 57.3, 0.0) &&
+            (!pnc::mathlib::IsDoubleEqual(end_pose.pos.x(),
+                                          input_.tlane.pt_terminal_pos.x()))) {
+          const Eigen::Vector2d fixed_target_pos(
+              input_.tlane.pt_terminal_pos.x(), end_pose.pos.y());
+
+          const pnc::geometry_lib::LineSegment last_line(
+              end_pose.pos, fixed_target_pos, end_pose.heading);
+
+          const pnc::geometry_lib::PathSegment last_path_seg(
+              pnc::geometry_lib::CalLineSegGear(last_line), last_line);
+          AddPathSegToOutPut(last_path_seg);
+        }
+      }
       return true;
     } else {
       DEBUG_PRINT("OutsideSlotPlan failed!");
