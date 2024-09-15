@@ -77,7 +77,8 @@ void EgoLaneTrackManger::TrackEgoLane(
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
-  const double dis_to_ramp_threshold = 3000.0;
+  const double dis_to_split_threshold = 1000.0;
+  const double dis_to_last_split_threshold = 150.0;
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int zero_relative_id_nums = order_ids_of_same_zero_relative_id.size();
@@ -114,8 +115,8 @@ void EgoLaneTrackManger::TrackEgoLane(
               is_on_road_select_ramp_situation_);
 
           if (is_on_road_select_ramp_situation_ &&
-              dis_to_ramp_ < dis_to_ramp_threshold && !is_leaving_ramp_ &&
-              lane_keep_status) {
+              distance_to_first_road_split_ < dis_to_split_threshold && !is_leaving_ramp_ &&
+              lane_keep_status && sum_dis_to_last_split_point_ > dis_to_last_split_threshold) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
@@ -345,7 +346,8 @@ void EgoLaneTrackManger::Update(
     const double distance_to_first_road_merge,
     const double distance_to_first_road_split,
     const double current_segment_passed_distance,
-    const std::vector<std::pair<SplitRelativeDirection, double>> &split_dir_dis_info_list) {
+    const std::vector<std::pair<SplitRelativeDirection, double>> &split_dir_dis_info_list,
+    const double sum_dis_to_last_split_point) {
   is_ego_on_expressway_ = is_ego_on_expressway;
   is_on_ramp_ = is_on_ramp;
   dis_to_ramp_ = dis_to_ramp;
@@ -355,6 +357,7 @@ void EgoLaneTrackManger::Update(
   distance_to_first_road_merge_ = distance_to_first_road_merge;
   distance_to_first_road_split_ = distance_to_first_road_split;
   current_segment_passed_distance_ = current_segment_passed_distance;
+  sum_dis_to_last_split_point_ = sum_dis_to_last_split_point;
   split_direction_dis_info_list_.clear();
   if (!split_dir_dis_info_list.empty()) {
     for (int i = 0; i < split_dir_dis_info_list.size(); i++) {
@@ -869,8 +872,9 @@ void EgoLaneTrackManger::PreprocessRampSplit(
         return;
       }
     } else {
-      is_exist_split_on_ramp_ = false;
-      return;
+      is_exist_split_on_ramp_ = true;
+      relative_id_lanes[order_ids[1]]->set_relative_id(0);
+      origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
     }
   }
 

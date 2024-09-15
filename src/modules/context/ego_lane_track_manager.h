@@ -34,7 +34,8 @@ class EgoLaneTrackManger {
       const double distance_to_first_road_merge,
       const double distance_to_first_road_split,
       const double current_segment_passed_distance,
-      const std::vector<std::pair<SplitRelativeDirection, double>> &split_dir_dis_info_list);
+      const std::vector<std::pair<SplitRelativeDirection, double>> &split_dir_dis_info_list,
+      const double sum_dis_to_last_split_point);
 
   void Reset();
 
@@ -147,13 +148,14 @@ class EgoLaneTrackManger {
 
   bool is_ego_on_expressway_ = false;
   bool is_on_ramp_ = false;
-  bool dis_to_ramp_ = NL_NMAX;
+  double dis_to_ramp_ = NL_NMAX;
   bool is_leaving_ramp_ = false;
   std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
   std::vector<std::pair<SplitRelativeDirection, double>>
       split_direction_dis_info_list_;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
+  double sum_dis_to_last_split_point_ = NL_NMAX;
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
