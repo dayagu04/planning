@@ -22,7 +22,7 @@ class RSExpansionDecider : public AstarDecider {
 
   const Pose2D &GetRSEndPose();
 
-  const bool IsSameEndPointForRsWithAtar();
+  const bool IsSameEndPointForRsWithAstar();
 
   bool IsNeedRsExpansion(const Node3d *node);
 

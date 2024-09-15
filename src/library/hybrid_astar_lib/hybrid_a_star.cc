@@ -1807,7 +1807,7 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
   }
 
   // link rs end to astar end
-  if (!rs_expansion_decider_.IsSameEndPointForRsWithAtar()) {
+  if (!rs_expansion_decider_.IsSameEndPointForRsWithAstar()) {
     LinkRsToAstarEndPoint(result, astar_end_node_->GetPose());
   }
 

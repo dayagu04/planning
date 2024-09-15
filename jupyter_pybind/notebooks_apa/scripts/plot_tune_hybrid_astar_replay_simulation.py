@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240914/20240914-16-53-53/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-14-16-53-54_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240914/20240914-10-36-36/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-14-10-36-36_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -141,6 +141,7 @@ data_plot_ref_line = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       })
 data_search_sequence_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
 
 
 fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_left, size = 4, color = 'green', legend_label = 'cur_path_left')
@@ -151,6 +152,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_plot_ref_line, line_width 
 fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'astar_path')
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
+fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
@@ -1089,6 +1091,12 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   end_time6 = time.time()
   print('time6, ms ', (end_time6 - end_time5) * 1000)
   # print('loop over')
+
+  pose = replay_simulation_hybrid_astar.GetCoordinateSystem()
+  data_coordinate_system.data.update({
+    'x': [pose[0]],
+    'y': [pose[1]],
+  })
 
   if (is_reset):
     replay_simulation_hybrid_astar.StopPybind()
