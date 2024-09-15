@@ -1464,6 +1464,10 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
             is_on_highway_) {
           is_road_merged_by_other_lane_ = true;
         }
+        if (merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
+            merge_seg->usage() == SdMapSwtx::RoadUsage::RAMP && is_on_ramp_) {
+          is_ramp_merge_to_ramp_on_expressway_ = true;
+        }
         first_merge_direction_ = MakesureMergeDirection(*merge_seg, sd_map);
         distance_to_first_road_merge_ = merge_info_temp.second;
         break;
@@ -2064,6 +2068,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_exist_toll_station_ = false;
   is_ramp_merge_to_road_on_expressway_ = false;
   is_road_merged_by_other_lane_ = false;
+  is_ramp_merge_to_ramp_on_expressway_ = false;
   other_lane_merge_dir = RampDirection::RAMP_NONE;
   is_nearing_other_lane_merge_to_road_point_ = false;
   is_on_highway_ = false;
