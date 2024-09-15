@@ -42,7 +42,11 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   virtual const uint8_t PathPlanOnce() override;
 
+  const bool CheckStuckFailed() override;
+
   void UpdateRemainDist() override;
+
+  const double CalRemainDistFromUss() override;
 
   const std::string GetPlanReason(const uint8_t type);
 
