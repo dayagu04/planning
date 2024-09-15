@@ -978,6 +978,15 @@ void PerpendicularParkInPlanner::GenTlane() {
     } else if (left_obs_meet_safe_require && !right_obs_meet_safe_require) {
       // right side is dangerous, should move toward left
       ego_slot_info.move_slot_dist = safe_threshold - right_dis_obs_car;
+    } else if (left_obs_meet_safe_require && right_obs_meet_safe_require) {
+      ego_slot_info.move_slot_dist = 0.0;
+    } else if (!left_obs_meet_safe_require && !right_obs_meet_safe_require) {
+      const double mid_dist = (left_dis_obs_car + right_dis_obs_car) * 0.5;
+      if (mid_dist < left_dis_obs_car) {
+        ego_slot_info.move_slot_dist = left_dis_obs_car - mid_dist;
+      } else if (mid_dist < right_dis_obs_car) {
+        ego_slot_info.move_slot_dist = mid_dist - right_dis_obs_car;
+      }
     }
     DEBUG_PRINT("left_dis_obs_car = " << left_dis_obs_car
                                       << "  right_dis_obs_car = "
@@ -1825,16 +1834,16 @@ const bool PerpendicularParkInPlanner::CheckReplan() {
 }
 
 const bool PerpendicularParkInPlanner::CheckFinished() {
-  const auto& ego_slot_info = frame_.ego_slot_info;
+  const auto& terminal_err_pose = frame_.ego_slot_info.terminal_err;
 
   const bool lon_condition =
-      ego_slot_info.terminal_err.pos.x() < apa_param.GetParam().finish_lon_err;
+      terminal_err_pose.pos.x() < apa_param.GetParam().finish_lon_err;
 
-  const double y1 = ego_slot_info.ego_pos_slot.y();
+  const double y1 = terminal_err_pose.pos.y();
   const double y2 =
-      (ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
-                                     apa_param.GetParam().front_overhanging) *
-                                        ego_slot_info.ego_heading_slot_vec)
+      (terminal_err_pose.pos + (apa_param.GetParam().wheel_base +
+                                apa_param.GetParam().front_overhanging) *
+                                   frame_.ego_slot_info.ego_heading_slot_vec)
           .y();
 
   const bool lat_condition_1 =
@@ -1845,11 +1854,11 @@ const bool PerpendicularParkInPlanner::CheckFinished() {
       std::fabs(y2) <= apa_param.GetParam().finish_lat_err_strict;
 
   const bool heading_condition_1 =
-      std::fabs(ego_slot_info.terminal_err.heading) <=
+      std::fabs(terminal_err_pose.heading) <=
       apa_param.GetParam().finish_heading_err * kDeg2Rad;
 
   const bool heading_condition_2 =
-      std::fabs(ego_slot_info.terminal_err.heading) <=
+      std::fabs(terminal_err_pose.heading) <=
       (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
 
   const bool lat_condition = (lat_condition_1 && heading_condition_1) &&
@@ -1891,7 +1900,7 @@ const bool PerpendicularParkInPlanner::CheckFinished() {
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
                    remain_dist_col_det_condition &&
-                   (ego_slot_info.terminal_err.pos.x() < 0.568);
+                   (terminal_err_pose.pos.x() < 0.568);
 
   return parking_finish;
 }
