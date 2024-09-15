@@ -94,6 +94,10 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   void ShrinkPathByFusionObj();
 
+  void PathShrinkBySlotLimiter();
+
+  void PathExpansionBySlotLimiter();
+
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 

@@ -20,6 +20,7 @@
 #include "func_state_machine_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "ifly_parking_map_c.h"
 #include "ifly_time.h"
 #include "interface/src/c/camera_preception_groundline_c.h"
 #include "interface/src/c/fusion_objects_c.h"
@@ -97,6 +98,7 @@ EigenPath2d static_ref_line_;
 // bit 4 is flag
 Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
+Eigen::Vector3d coordinate_system_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -281,6 +283,10 @@ int GetPathFromHybridAstar() {
     search_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position.x, global_position.y));
   }
+
+  // 基坐标位置
+  coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
+  coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
 
   return 0;
 }
@@ -905,6 +911,10 @@ const std::vector<Eigen::Vector2d> &GetSearchSequencePath() {
   return search_sequence_path_;
 }
 
+const Eigen::Vector3d GetCoordinateSystem() {
+  return coordinate_system_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -931,5 +941,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("RefreshThreadResult", &RefreshThreadResult)
       .def("GetPlotRefLine", &GetPlotRefLine)
       .def("GetSearchSequencePath", &GetSearchSequencePath)
+      .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetDynamicState", &GetDynamicState);
 }
