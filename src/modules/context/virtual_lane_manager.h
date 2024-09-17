@@ -336,6 +336,10 @@ class VirtualLaneManager {
   RampDirection first_merge_direction_ = RampDirection::RAMP_NONE;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
+  RampDirection second_split_direction_ = RampDirection::RAMP_NONE;
+  RampDirection second_merge_direction_ = RampDirection::RAMP_NONE;
+  double distance_to_second_road_merge_ = NL_NMAX;
+  double distance_to_second_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
   bool is_select_split_nearing_ramp_ = true;
   std::unordered_set<uint64_t> lane_group_set_;
