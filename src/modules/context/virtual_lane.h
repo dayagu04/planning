@@ -35,6 +35,8 @@ struct GeneralTaskMapInfo {
   double distance_to_ramp;
   double distance_to_first_road_merge;
   double distance_to_first_road_split;
+  double distance_to_second_road_merge;
+  double distance_to_second_road_split;
   int lane_num_except_emergency;
   bool is_nearing_ramp;
   bool is_leaving_ramp;
@@ -45,6 +47,9 @@ struct GeneralTaskMapInfo {
   RampDirection ramp_direction;
   RampDirection first_split_direction;
   RampDirection first_merge_direction;
+  RampDirection second_split_direction;
+  RampDirection second_merge_direction;
+
 };
 
 // hack :clren

@@ -418,6 +418,7 @@ void VirtualLane::ProcessEgoOnRoadMLC(const GeneralTaskMapInfo& general_task_map
 void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map_info) {
   const double dis_to_first_merge = general_task_map_info.distance_to_first_road_merge;
   const double dis_to_first_split = general_task_map_info.distance_to_first_road_split;
+  const RampDirection first_merge_direction = general_task_map_info.first_merge_direction;
   const double trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp =
       266;
   const RampDirection first_split_direction = general_task_map_info.first_split_direction;
@@ -425,6 +426,10 @@ void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map
   const bool is_ramp_merge_to_road_on_expressway = general_task_map_info.is_ramp_merge_to_road_on_expressway;
   const bool is_ramp_merge_to_ramp_on_expressway = general_task_map_info.is_ramp_merge_to_ramp_on_expressway;
   const bool is_leaving_ramp = general_task_map_info.is_leaving_ramp;
+  const double dis_to_second_merge = general_task_map_info.distance_to_second_road_merge;
+  const double dis_to_second_split = general_task_map_info.distance_to_second_road_split;
+  const RampDirection second_split_direction = general_task_map_info.second_split_direction;
+  const RampDirection second_merge_direction = general_task_map_info.second_merge_direction;
   //首先处理匝道上的分叉口
   if (dis_to_first_merge > dis_to_first_split &&
       dis_to_first_split <
@@ -440,8 +445,45 @@ void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map
     }
   } else if (is_ramp_merge_to_road_on_expressway &&
              is_leaving_ramp) {//处理匝道汇入主路的场景
-    for (int i = order_id_; i > 0; i--) {
-      current_tasks_.emplace_back(-1);
+    if (first_merge_direction == RAMP_ON_RIGHT) {
+      for (int i = order_id_; i > 0; i--) {
+        current_tasks_.emplace_back(-1);
+      }
+    } else if (first_merge_direction == RAMP_ON_LEFT) {
+      for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+        current_tasks_.emplace_back(1);
+      }
+    }
+  } else if (is_ramp_merge_to_ramp_on_expressway) {
+    RampDirection next_lc_dir = RAMP_NONE;
+    if (dis_to_second_merge < dis_to_first_split) {
+      //下一个场景还是merge场景
+      next_lc_dir = second_merge_direction;
+      if (first_merge_direction == RAMP_ON_RIGHT &&
+          next_lc_dir == RAMP_ON_RIGHT) {
+        for (int i = order_id_; i > 0; i--) {
+          current_tasks_.emplace_back(-1);
+        }
+      } else if (first_merge_direction == RAMP_ON_LEFT &&
+          next_lc_dir == RAMP_ON_LEFT) {
+        for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+          current_tasks_.emplace_back(1);
+        }
+      }
+    } else if (dis_to_second_merge >= dis_to_first_split) {
+      //下一个是split的场景
+      next_lc_dir = first_split_direction;
+      if (first_merge_direction == RAMP_ON_RIGHT &&
+          next_lc_dir == RAMP_ON_LEFT) {
+        for (int i = order_id_; i > 0; i--) {
+          current_tasks_.emplace_back(-1);
+        }
+      } else if (first_merge_direction == RAMP_ON_LEFT &&
+          next_lc_dir == RAMP_ON_RIGHT) {
+        for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+          current_tasks_.emplace_back(1);
+        }
+      }
     }
   }
   //TODO（fengwang31）：匝道汇入匝道的scean
