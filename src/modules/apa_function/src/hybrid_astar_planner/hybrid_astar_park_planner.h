@@ -42,7 +42,11 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   virtual const uint8_t PathPlanOnce() override;
 
+  const bool CheckStuckFailed() override;
+
   void UpdateRemainDist() override;
+
+  const double CalRemainDistFromUss() override;
 
   const std::string GetPlanReason(const uint8_t type);
 
@@ -89,6 +93,10 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
   const bool CheckUssStucked();
 
   void ShrinkPathByFusionObj();
+
+  void PathShrinkBySlotLimiter();
+
+  void PathExpansionBySlotLimiter();
 
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;

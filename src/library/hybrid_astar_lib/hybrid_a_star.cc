@@ -177,7 +177,7 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
 
   result->base_pose = request.base_pose_;
 
-  DebugRSPath(&rs_path_);
+  // DebugRSPath(&rs_path_);
 
   double astar_end_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar total time (ms): "
@@ -367,7 +367,7 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
     ILOG_INFO << "path invalid, point size= " << path.x.size();
   }
 
-  DebugRSPath(&rs_path_);
+  // DebugRSPath(&rs_path_);
 
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
@@ -535,7 +535,7 @@ bool HybridAStar::AnalyticExpansion(Node3d* current_node) {
     ILOG_INFO << "rs path size " << rs_path_.size;
   }
 
-  DebugRSPath(&rs_path_);
+  // DebugRSPath(&rs_path_);
 
   return true;
 }
@@ -1599,14 +1599,13 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   }
 
   // request dist and gear cost
-  double gear_expect_punish = 5.0;
   if (request_.first_action_request.has_request &&
       next_node->GetDistToStart() <
           request_.first_action_request.dist_request) {
     // gear is different
     if (next_node->GetGearType() !=
         request_.first_action_request.gear_request) {
-      piecewise_cost += gear_expect_punish;
+      piecewise_cost += config_.expect_gear_penalty;
     }
   }
 
@@ -1808,7 +1807,7 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
   }
 
   // link rs end to astar end
-  if (!rs_expansion_decider_.IsSameEndPointForRsWithAtar()) {
+  if (!rs_expansion_decider_.IsSameEndPointForRsWithAstar()) {
     LinkRsToAstarEndPoint(result, astar_end_node_->GetPose());
   }
 

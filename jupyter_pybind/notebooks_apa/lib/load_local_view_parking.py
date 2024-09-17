@@ -2185,7 +2185,7 @@ def load_local_view_figure_parking():
                      }
   ### figures config
 
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=800, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1250, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
   fig1.patch('car_yn', 'car_xn', source = data_car_target, fill_color = "pink", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target')

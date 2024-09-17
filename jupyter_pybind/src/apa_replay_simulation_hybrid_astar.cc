@@ -20,6 +20,7 @@
 #include "func_state_machine_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "ifly_parking_map_c.h"
 #include "ifly_time.h"
 #include "interface/src/c/camera_preception_groundline_c.h"
 #include "interface/src/c/fusion_objects_c.h"
@@ -97,6 +98,7 @@ EigenPath2d static_ref_line_;
 // bit 4 is flag
 Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
+Eigen::Vector3d coordinate_system_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -282,6 +284,10 @@ int GetPathFromHybridAstar() {
         Eigen::Vector2d(global_position.x, global_position.y));
   }
 
+  // 基坐标位置
+  coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
+  coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
+
   return 0;
 }
 
@@ -459,20 +465,18 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
-const bool PlanOnce(py::bytes &func_statemachine_bytes,
-                    py::bytes &parking_slot_info_bytes,
-                    py::bytes &localization_info_bytes,
-                    py::bytes &vehicle_service_output_info_bytes,
-                    py::bytes &uss_wave_info_bytes,
-                    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes,
-                    int select_id, bool force_plan, bool is_path_optimization,
-                    bool is_cilqr_optimization, bool is_reset,
-                    bool is_complete_path, double sample_ds,
-                    std::vector<double> target_managed_slot_x_vec,
-                    std::vector<double> target_managed_slot_y_vec,
-                    std::vector<double> target_managed_limiter_x_vec,
-                    std::vector<double> target_managed_limiter_y_vec,
-                    int current_state) {
+const bool PlanOnce(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, int select_id,
+    bool force_plan, bool is_path_optimization, bool is_cilqr_optimization,
+    bool is_reset, bool is_complete_path, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec, int current_state) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -527,16 +531,16 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     struct_msgs::FusionOccupancyObjectsInfo>(
           fus_occ_obj_msg_bytes);
 
-  // iflyauto::UssPerceptInfo uss_perception_info =
-  //     BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
-  //         uss_perception_info_bytes);
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
 
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
   local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
-  // local_view.uss_percept_info = uss_perception_info;
+  local_view.uss_percept_info = uss_perception_info;
   // local_view.ground_line_perception = ground_line_;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
@@ -907,6 +911,10 @@ const std::vector<Eigen::Vector2d> &GetSearchSequencePath() {
   return search_sequence_path_;
 }
 
+const Eigen::Vector3d GetCoordinateSystem() {
+  return coordinate_system_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -933,5 +941,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("RefreshThreadResult", &RefreshThreadResult)
       .def("GetPlotRefLine", &GetPlotRefLine)
       .def("GetSearchSequencePath", &GetSearchSequencePath)
+      .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetDynamicState", &GetDynamicState);
 }

@@ -56,7 +56,7 @@ const double RSExpansionDecider::GetEndPointMaxDepth() {
 
 const Pose2D &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
 
-const bool RSExpansionDecider::IsSameEndPointForRsWithAtar() {
+const bool RSExpansionDecider::IsSameEndPointForRsWithAstar() {
   return same_point_for_rs_with_astar_;
 }
 

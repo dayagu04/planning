@@ -1,7 +1,10 @@
 #include "hybrid_astar_park_planner.h"
 
+#include <cmath>
+#include <cstddef>
 #include <cstdio>
 
+#include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "hybrid_astar_response.h"
 #include "ifly_time.h"
@@ -218,6 +221,10 @@ void HybridAStarParkPlanner::PlanCore() {
     return;
   }
 
+  PathShrinkBySlotLimiter();
+
+  PathExpansionBySlotLimiter();
+
   // check finish
   if (CheckFinished()) {
     SetParkingStatus(PARKING_FINISHED);
@@ -235,6 +242,9 @@ void HybridAStarParkPlanner::PlanCore() {
   bool is_replan = CheckReplan();
   bool update_thread_path = UpdateThreadPath();
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
+
+  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
+            << ",is_replan = " << is_replan;
 
   // check replan
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan || is_replan ||
@@ -493,8 +503,13 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
 }
 
 void HybridAStarParkPlanner::UpdateRemainDist() {
-  ApaPlannerBase::UpdateRemainDist();
+  // 1. calculate remain dist according to plan path
+  frame_.remain_dist = CalRemainDistFromPath();
 
+  // 2.calculate remain dist uss according to uss
+  frame_.remain_dist_uss = CalRemainDistFromUss();
+
+  return;
   ShrinkPathByFusionObj();
 
   ILOG_INFO << "remain s = " << frame_.remain_dist
@@ -607,8 +622,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
     cur_request.path_generate_method =
         planning::AstarPathGenerateType::reeds_shepp;
 
-    end = real_end;
-    end.x = real_end.x + 20.0;
+    end.y = real_end.y;
+    end.x = start.x + 30.0;
     cur_request.goal_ = end;
 
   } else {
@@ -1063,6 +1078,9 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.target_ego_heading_slot =
       apa_param.GetParam().terminal_target_heading;
 
+  ILOG_INFO << "limiter x=" << ego_slot_info.target_ego_pos_slot[0]
+            << ",y=" << ego_slot_info.target_ego_pos_slot[1];
+
   // cal terminal error
   ego_slot_info.terminal_err.Set(
       ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
@@ -1117,6 +1135,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   }
 
   // update stuck by uss time
+  // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
       apa_world_ptr_->GetApaDataPtr()->cur_state ==
@@ -1127,6 +1146,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   }
 
   // update stuck time
+  // 车静止不动，这个值一直在更新
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
@@ -1156,6 +1176,154 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
 }
 
 HybridAStarParkPlanner::~HybridAStarParkPlanner() {}
+
+const bool HybridAStarParkPlanner::CheckStuckFailed() {
+  return frame_.stuck_time > 12.0;
+}
+
+const double HybridAStarParkPlanner::CalRemainDistFromUss() {
+  double remain_dist = 10.0;
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+
+  uss_obstacle_avoider_ptr->Update(&planning_output_,
+                                   apa_world_ptr_->GetApaDataPtr());
+
+  const double safe_uss_remain_dist =
+      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+
+  remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - 0.15;
+
+  return remain_dist;
+}
+
+void HybridAStarParkPlanner::PathShrinkBySlotLimiter() {
+  if (current_gear_ != AstarPathGear::reverse) {
+    return;
+  }
+
+  if (current_path_point_global_vec_.size() <= 1) {
+    return;
+  }
+
+  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+
+  double limiter_x = ego_slot_info.target_ego_pos_slot[0];
+
+  Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
+  Eigen::Vector2d point_local;
+  point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
+
+  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
+            << ", y=" << point_local[1];
+
+  if (point_local[0] >= limiter_x) {
+    return;
+  }
+
+  double x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
+                            ego_slot_info.ego_pos_slot[0]);
+  double y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
+                            ego_slot_info.ego_pos_slot[1]);
+  if (x_diff > 1.5 || y_diff > 0.5) {
+    return;
+  }
+
+  // shrink path
+  size_t path_size = current_path_point_global_vec_.size();
+  for (size_t i = 0; i < path_size; i++) {
+    Eigen::Vector2d& point_global = current_path_point_global_vec_.back().pos;
+
+    point_local = ego_slot_info.g2l_tf.GetPos(point_global);
+
+    if (point_local[0] >= limiter_x) {
+      break;
+    }
+
+    current_path_point_global_vec_.pop_back();
+  }
+
+  return;
+}
+
+void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
+  if (current_gear_ != AstarPathGear::reverse) {
+    return;
+  }
+
+  if (current_path_point_global_vec_.size() <= 1) {
+    return;
+  }
+
+  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+
+  double limiter_x = ego_slot_info.target_ego_pos_slot[0];
+
+  Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
+  Eigen::Vector2d point_local;
+  point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
+
+  if (point_local[0] <= (limiter_x + 0.1)) {
+    return;
+  }
+
+  double ego_x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
+                                ego_slot_info.ego_pos_slot[0]);
+  double ego_y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
+                            ego_slot_info.ego_pos_slot[1]);
+  if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
+    return;
+  }
+
+  Eigen::Vector2d end_point_global = current_path_point_global_vec_.back().pos;
+
+  Eigen::Vector2d end_point_local =
+      ego_slot_info.g2l_tf.GetPos(end_point_global);
+
+  double x_diff =
+      std::fabs(end_point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
+  double y_diff =
+      std::fabs(end_point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
+  double length = std::sqrt(x_diff * x_diff + y_diff * y_diff);
+
+  if (x_diff > 1.0 || y_diff > 0.5) {
+    return;
+  }
+
+  ILOG_INFO << "x = " << limiter_x << ", end x = " << end_point_local[0]
+            << ", y=" << end_point_local[1];
+
+  double phi = current_path_point_global_vec_.back().heading;
+
+  size_t path_point_size = current_path_point_global_vec_.size();
+
+  Eigen::Vector2d the_last_but_one =
+      current_path_point_global_vec_[path_point_size - 2].pos;
+
+  const Eigen::Vector2d unit_line_vec =
+      Eigen::Vector2d(end_point_global[0] - the_last_but_one[0],
+                      end_point_global[1] - the_last_but_one[1]);
+  double s = 0.1;
+  double ds = 0.1;
+
+  Eigen::Vector2d point;
+  pnc::geometry_lib::PathPoint global_point;
+  while (s < length) {
+    point = end_point_global + s * unit_line_vec;
+
+    global_point.Set(point, phi);
+    global_point.kappa = 0.0;
+
+    current_path_point_global_vec_.push_back(global_point);
+
+    s += ds;
+  }
+
+  return;
+}
 
 }  // namespace apa_planner
 }  // namespace planning

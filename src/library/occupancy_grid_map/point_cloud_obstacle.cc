@@ -29,7 +29,7 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
   Polygon2D ego_local_polygon;
   Polygon2D ego_global_polygon;
   double veh_x_buffer = 0.3;
-  double veh_y_buffer = 0.01;
+  double veh_y_buffer = 0.11;
 
   GenerateUpLeftFrameBox(
       &ego_local_polygon, -config.rear_overhanging - veh_x_buffer,
