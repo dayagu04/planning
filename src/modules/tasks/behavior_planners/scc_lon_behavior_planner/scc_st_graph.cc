@@ -121,6 +121,8 @@ void StGraphGenerator::Update(
   const auto &current_lane = session->environmental_model()
                                  .get_virtual_lane_manager()
                                  ->get_current_lane();
+  const auto traffic_light_decision_manager =
+      session_->environmental_model().get_traffic_light_decision_manager();
 
   double v_ego = lon_behav_input_->ego_info().ego_v();
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
@@ -1834,7 +1836,8 @@ bool StGraphGenerator::CalcSpeedInfoWithIntersection() {
       current_intersection_state_ == planning::common::IN_INTERSECTION) {
     if (v_limit_with_intersection_ < config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
-      v_limit_with_intersection_ = std::max(v_ego - 3.0, config_.v_intersection_min_limit);
+      v_limit_with_intersection_ =
+          std::max(v_ego - 3.0, config_.v_intersection_min_limit);
     }
     v_target_intersection = v_limit_with_intersection_;
   } else {
@@ -2281,7 +2284,9 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
   // 这里有问题
-  if (lead_one.track_id() == 0 || dbw_status == false) {
+  if ((lead_one.track_id() == 0 && current_traffic_light_can_pass_ &&
+       last_traffic_light_can_pass_) ||
+      dbw_status == false) {
     // reset state as default
     start_stop_info_.set_state(common::StartStopInfo::CRUISE);
   } else {
@@ -2289,9 +2294,12 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     std::string lc_request = "none";
     double desire_distance = CalcDesiredDistance(lead_one, v_ego, lc_request);
     bool is_lead_static = std::fabs(lead_one.v_lead()) < obstacle_v_start;
+    const bool traffic_light_stop_condition =
+        !current_traffic_light_can_pass_ && v_ego < v_start;
     bool stop_condition =
         (v_ego < v_start && is_lead_static &&
-         std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
+         std::fabs(lead_one.d_rel() - desire_distance) < distance_stop) ||
+        traffic_light_stop_condition;
     bool cruise_condition = v_ego > v_startmode || (v_last_target_ > v_target_);
     bool lead_one_start =
         (lead_one.v_lead() > obstacle_v_start &&
@@ -2301,7 +2309,11 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     bool lead_one_change =
         (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
         (distance_stop + lead_change_buffer);
-    bool start_condition = lead_one_start || lead_one_change;
+    const bool traffic_light_start_condition =
+        lead_one.track_id() == 0 && current_traffic_light_can_pass_ &&
+        !last_traffic_light_can_pass_;
+    bool start_condition =
+        lead_one_start || lead_one_change || traffic_light_start_condition;
 
     // 2. Update the state
     if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
@@ -2326,6 +2338,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       start_stop_info_.set_state(common::StartStopInfo::STOP);
     }
   }
+  last_traffic_light_can_pass_ = current_traffic_light_can_pass_;
   LOG_DEBUG("The start_stop_state_info is [%d] \n", start_stop_info_.state());
   return start_stop_info_.state();
 }
