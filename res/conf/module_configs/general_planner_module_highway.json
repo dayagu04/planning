@@ -496,6 +496,8 @@
     "sdmap_curv_thred":1000.0,
     "straight_ramp_v_limit":22.22,
     "v_intersection_min_limit":11.11,
+    "stop_dis_before_stopline":2.0,
+    "stop_dis_before_crosswalk":3.5,
     "enable_sdmap_curv_v_adjust": true,
     "enable_merge_decision_process": true,
     "dangerous_ttc_thrd": 1.1,

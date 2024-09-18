@@ -86,7 +86,7 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
-      can_pass_ = true;
+      //can_pass_ = true;
 
     }
     if (!can_pass_) {
