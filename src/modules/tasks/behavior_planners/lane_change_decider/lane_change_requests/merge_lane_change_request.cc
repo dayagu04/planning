@@ -92,6 +92,8 @@ void MergeRequest::Update(int lc_status) {
   }
   is_merge_lane_change_situation_ = false;
   both_lane_line_exist_virtual_or_not_ = false;
+  is_exist_left_merge_direction_ = false;
+  is_exist_right_merge_direction_ = false;
 
   MakesureLaneMergeDirection(origin_lane_virtual_id_);
   LOG_DEBUG("MergeRequest::Update: both_lane_line_exist_virtual_or_not_ %d",
@@ -159,9 +161,11 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
   bool is_edge_side_lane =
       (current_lane_order_id == 0 || current_lane_order_id == lane_nums - 1);
 
-  if (is_edge_side_lane && is_merge_region &&
+  if ((is_edge_side_lane && is_merge_region &&
       !both_lane_line_exist_virtual_or_not_ &&
-      merge_lane_change_direction_ != NO_CHANGE) {
+      merge_lane_change_direction_ != NO_CHANGE) ||
+      is_exist_left_merge_direction_ || 
+      is_exist_right_merge_direction_) {
     merge_alc_trigger_counter_++;
   } else {
     merge_alc_trigger_counter_ =
@@ -405,6 +409,21 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
           exist_right_direction_merge = true;
           break;
         }
+      }
+    }
+
+    if (left_boundary_exist_virtual_type && !right_boundary_exist_virtual_type) {
+      if (exist_left_direction_merge) {
+        is_exist_left_merge_direction_ = true;
+        merge_lane_change_direction_ = LEFT_CHANGE;
+        return;
+      }
+    }
+    if (!left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
+      if (exist_right_direction_merge) {
+        is_exist_right_merge_direction_ = true;
+        merge_lane_change_direction_ = RIGHT_CHANGE;
+        return;
       }
     }
   } else {
