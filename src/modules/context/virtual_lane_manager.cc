@@ -546,7 +546,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       is_ego_on_expressway_, is_on_ramp_, dis_to_ramp_, is_leaving_ramp_,
       first_split_dir_dis_info_, distance_to_first_road_merge_,
       distance_to_first_road_split_, current_segment_passed_distance_,
-      split_dir_dis_info_list_);
+      split_dir_dis_info_list_, sum_dis_to_last_split_point_);
 
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
   ego_lane_track_manager_->CalculateVirtualLaneAttributes(relative_id_lanes_);
@@ -580,6 +580,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
+
+  ego_lane_track_manager_->SetLastZeroRelativeIdNums(origin_relative_id_zero_nums_);
 
   // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
@@ -1597,6 +1599,31 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   }
   JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
 
+  // 计算距离上一个split点的信息
+  const SdMapSwtx::Segment* last_split_seg =
+      sd_map.GetPreviousRoadSegment(current_segment->id());
+  double sum_dis_to_last_split_point = nearest_s;
+  sum_dis_to_last_split_point_ = NL_NMAX;
+  if (current_segment->usage() != SdMapSwtx::RAMP) {
+    if (last_split_seg != nullptr) {
+      while (last_split_seg->out_link().size() == 1) {
+        sum_dis_to_last_split_point =
+            sum_dis_to_last_split_point + last_split_seg->dis();
+        last_split_seg =
+            sd_map.GetPreviousRoadSegment(last_split_seg->id());
+        if (!last_split_seg) {
+          break;
+        }
+      }
+      if (last_split_seg && last_split_seg->out_link().size() == 2) {
+        if (last_split_seg->usage() != SdMapSwtx::RAMP) {
+          sum_dis_to_last_split_point_ = sum_dis_to_last_split_point;
+        }
+      }
+    }
+  }
+  JSON_DEBUG_VALUE("sum_dis_to_last_split_point", sum_dis_to_last_split_point_);
+
   // 计算到路线终点的距离
   double dis_to_end = NL_NMAX;
   int result = sd_map.GetDistanceToRouteEnd(current_segment->id(), nearest_s,
@@ -2091,6 +2118,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   second_merge_direction_ = RampDirection::RAMP_NONE;
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
+  sum_dis_to_last_split_point_ = NL_NMAX;
   distance_to_toll_station_ = NL_NMAX;
   is_ego_on_city_expressway_hmi_ = false;
   is_ego_on_expressway_hmi_ = false;

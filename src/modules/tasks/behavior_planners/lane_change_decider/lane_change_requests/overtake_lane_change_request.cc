@@ -32,7 +32,7 @@ constexpr double kDisancebetweenRoadSplitAndRampAllowError = 5.0;
 constexpr double kSplitTriggleDistance = 3000.0;
 constexpr double kOvertakeUpdateCountTtcThreshold = 24.0;
 constexpr double kOvertakeMaintainCountTtcThreshold = 48.0;
-constexpr double kOvertakeLeadingVehicleDistanceThreshold = 180.0;
+constexpr double kOvertakeLeadingVehicleDistanceThreshold = 130.0;
 constexpr double kOvertakeEgoHighSpeedThreshold = 25.00;           // 90km/h
 constexpr double kOvertakeHighSpeedDiffThreshold = 1.39;           // 5km/h
 constexpr double kOvertakeHighSpeedDiffThresholdRainMode = 3.33;   // 12km/h
@@ -237,10 +237,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   TrackedObject* lead_one = lateral_obstacle_->leadone();
+  const double default_lead_one_consider_range = 120.0;
 
   // 无效的track_id暂时赋值为-1
   if ((lead_one != nullptr && lead_one->track_id == -1) ||
-      lead_one == nullptr) {
+      lead_one == nullptr ||
+      lead_one->d_rel > default_lead_one_consider_range) {
     LOG_DEBUG("not exist stable leading vehicle");
     overtake_count_ = 0;
     Finish();

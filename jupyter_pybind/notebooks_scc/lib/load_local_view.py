@@ -329,6 +329,19 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       9:local_view_data['data_center_line_9'],
     }
 
+    data_lane_mark_dict = {
+      0:local_view_data['lane_mark_data_0'],
+      1:local_view_data['lane_mark_data_1'],
+      2:local_view_data['lane_mark_data_2'],
+      3:local_view_data['lane_mark_data_3'],
+      4:local_view_data['lane_mark_data_4'],
+      5:local_view_data['lane_mark_data_5'],
+      6:local_view_data['lane_mark_data_6'],
+      7:local_view_data['lane_mark_data_7'],
+      8:local_view_data['lane_mark_data_8'],
+      9:local_view_data['lane_mark_data_9'],
+    }    
+
     for i in range(20):
       try:
         if line_info_list[i]['type_vec'][0] == ['dashed']:
@@ -356,6 +369,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
         })
+        lane_mark_data = data_lane_mark_dict[i]
+        # lane_mark_loc_x = []
+        # lane_mark_loc_y = []
+        # lane_mark_loc_x.append((center_line_list[i]['line_x_vec'][0] + center_line_list[i]['lane_mark_point_x'][0]) / 2)
+        # lane_mark_loc_y.append((center_line_list[i]['line_y_vec'][0] + center_line_list[i]['lane_mark_point_y'][0]) / 2)
+        # for j in range(len(center_line_list[i]['lane_mark_point_x'])) :
+          # if j < len(center_line_list[i]['lane_mark_point_x']) - 1:
+          #   lane_mark_loc_x.append((center_line_list[i]['lane_mark_point_x'][j] + center_line_list[i]['lane_mark_point_x'][j+1]) / 2)
+          #   lane_mark_loc_y.append((center_line_list[i]['lane_mark_point_y'][j] + center_line_list[i]['lane_mark_point_y'][j+1]) / 2)
+        lane_mark_data.data.update({
+          'lane_mark_{}'.format(i): center_line_list[i]['lane_mark_vec'],
+          'text_xn_{}'.format(i): center_line_list[i]['lane_mark_point_x'],
+          'text_yn_{}'.format(i): center_line_list[i]['lane_mark_point_y'],
+          'lane_mark_loc_x_{}'.format(i): center_line_list[i]['lane_mark_loc_x'],
+          'lane_mark_loc_y_{}'.format(i): center_line_list[i]['lane_mark_loc_y'],
+        })
+
+
 
 
     # 加载topo车道线和中心线
@@ -1265,6 +1296,16 @@ def load_local_view_figure():
   data_center_line_topo_8 = ColumnDataSource(data = {'center_line_topo_8_y':[], 'center_line_topo_8_x':[]})
   data_center_line_topo_9 = ColumnDataSource(data = {'center_line_topo_9_y':[], 'center_line_topo_9_x':[]})
 
+  lane_mark_data_0 = ColumnDataSource(data = {'lane_mark_0':[], 'text_xn_0': [],  'text_yn_0': [] , 'lane_mark_loc_x_0': [], 'lane_mark_loc_y_0': []})
+  lane_mark_data_1 = ColumnDataSource(data = {'lane_mark_1':[], 'text_xn_1': [],  'text_yn_1': [] , 'lane_mark_loc_x_1': [], 'lane_mark_loc_y_1': []})
+  lane_mark_data_2 = ColumnDataSource(data = {'lane_mark_2':[], 'text_xn_2': [],  'text_yn_2': [] , 'lane_mark_loc_x_2': [], 'lane_mark_loc_y_2': []})
+  lane_mark_data_3 = ColumnDataSource(data = {'lane_mark_3':[], 'text_xn_3': [],  'text_yn_3': [] , 'lane_mark_loc_x_3': [], 'lane_mark_loc_y_3': []})
+  lane_mark_data_4 = ColumnDataSource(data = {'lane_mark_4':[], 'text_xn_4': [],  'text_yn_4': [] , 'lane_mark_loc_x_4': [], 'lane_mark_loc_y_4': []})
+  lane_mark_data_5 = ColumnDataSource(data = {'lane_mark_5':[], 'text_xn_5': [],  'text_yn_5': [] , 'lane_mark_loc_x_5': [], 'lane_mark_loc_y_5': []})
+  lane_mark_data_6 = ColumnDataSource(data = {'lane_mark_6':[], 'text_xn_6': [],  'text_yn_6': [] , 'lane_mark_loc_x_6': [], 'lane_mark_loc_y_6': []})
+  lane_mark_data_7 = ColumnDataSource(data = {'lane_mark_7':[], 'text_xn_7': [],  'text_yn_7': [] , 'lane_mark_loc_x_7': [], 'lane_mark_loc_y_7': []})
+  lane_mark_data_8 = ColumnDataSource(data = {'lane_mark_8':[], 'text_xn_8': [],  'text_yn_8': [] , 'lane_mark_loc_x_8': [], 'lane_mark_loc_y_8': []})
+  lane_mark_data_9 = ColumnDataSource(data = {'lane_mark_9':[], 'text_xn_9': [],  'text_yn_9': [] , 'lane_mark_loc_x_9': [], 'lane_mark_loc_y_9': []})
 
 
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
@@ -1482,7 +1523,16 @@ def load_local_view_figure():
                      'data_center_line_topo_7':data_center_line_topo_7, \
                      'data_center_line_topo_8':data_center_line_topo_8, \
                      'data_center_line_topo_9':data_center_line_topo_9,\
-                     'data_lane_topo_0':data_lane_topo_0,\
+                     'lane_mark_data_0':lane_mark_data_0,\
+                     'lane_mark_data_1':lane_mark_data_1,\
+                     'lane_mark_data_2':lane_mark_data_2,\
+                     'lane_mark_data_3':lane_mark_data_3,\
+                     'lane_mark_data_4':lane_mark_data_4,\
+                     'lane_mark_data_5':lane_mark_data_5,\
+                     'lane_mark_data_6':lane_mark_data_6,\
+                     'lane_mark_data_7':lane_mark_data_7,\
+                     'lane_mark_data_8':lane_mark_data_8,\
+                     'lane_mark_data_9':lane_mark_data_9,\
                      'data_lane_topo_1':data_lane_topo_1,\
                      'data_lane_topo_2':data_lane_topo_2,\
                      'data_lane_topo_3':data_lane_topo_3,\
@@ -1686,6 +1736,17 @@ def load_local_view_figure():
   fig1.circle('center_line_topo_3_y', 'center_line_topo_3_x', source = data_center_line_topo_3, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line_topo')
   fig1.circle('center_line_topo_4_y', 'center_line_topo_4_x', source = data_center_line_topo_4, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line_topo')
 
+  fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
+  fig1.circle('text_yn_1', 'text_xn_1', source = lane_mark_data_1, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
+  fig1.circle('text_yn_2', 'text_xn_2', source = lane_mark_data_2, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
+  fig1.circle('text_yn_3', 'text_xn_3', source = lane_mark_data_3, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
+  fig1.circle('text_yn_4', 'text_xn_4', source = lane_mark_data_4, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
+
+  fig1.text('lane_mark_loc_y_0', 'lane_mark_loc_x_0', text = 'lane_mark_0' ,source = lane_mark_data_0, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
+  fig1.text('lane_mark_loc_y_1', 'lane_mark_loc_x_1', text = 'lane_mark_1' ,source = lane_mark_data_1, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
+  fig1.text('lane_mark_loc_y_2', 'lane_mark_loc_x_2', text = 'lane_mark_2' ,source = lane_mark_data_2, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
+  fig1.text('lane_mark_loc_y_3', 'lane_mark_loc_x_3', text = 'lane_mark_3' ,source = lane_mark_data_3, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
+  fig1.text('lane_mark_loc_y_4', 'lane_mark_loc_x_4', text = 'lane_mark_4' ,source = lane_mark_data_4, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
 
   fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
   fig1.line('target_lane_y', 'target_lane_x', source = data_target_lane, line_width = 1, line_color = 'orange', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'taget_lane')

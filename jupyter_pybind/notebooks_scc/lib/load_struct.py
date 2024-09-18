@@ -704,12 +704,24 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   reference_line_msg_size = road_msg.reference_line_msg_size
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
-    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[]}
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
+                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
       virtual_lane_refline_points_size = lane.lane_reference_line.virtual_lane_refline_points_size
       d_poly = lane.lane_reference_line.poly_coefficient_car
+      virtual_lane_marks_size = lane.lane_marks_size
+      lane_mark_s_vec = [lane.lane_marks[j].end for j in range(virtual_lane_marks_size)]
+      lane_mark_s_begin_vec = [lane.lane_marks[j].begin for j in range(virtual_lane_marks_size)]
+      lane_info['lane_mark_vec'] = [lane.lane_marks[j].lane_mark for j in range(virtual_lane_marks_size)]
+      print("virtual_lane_marks_size: ", virtual_lane_marks_size)
+      print("lane_info['lane_mark_vec']: ", lane_info['lane_mark_vec'])
+
+      lane_mark_point_x = []
+      lane_mark_point_y = []
+      lane_mark_loc_x = []
+      lane_mark_loc_y = []
       line_x = []
       line_y = []
       line_curvature = []
@@ -755,8 +767,31 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['curvature_vec'] = line_curvature
       lane_info['d_poly_curvature_vec'] = d_poly_line_curvature
 
-      line_info_list.append(lane_info)
+      for i in range(10):
+        if i < virtual_lane_marks_size:
+          for j in range(virtual_lane_refline_points_size):
+            if line_s[j] > lane_mark_s_vec[i]:
+              lane_mark_point_x.append(line_x[j])
+              lane_mark_point_y.append(line_y[j])
+              break
+        else:
+          break
+
+      for i in range(10):
+        if i < virtual_lane_marks_size:
+          for j in range(virtual_lane_refline_points_size):
+            if line_s[j] > (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
+              lane_mark_loc_x.append(line_x[j])
+              lane_mark_loc_y.append(line_y[j])
+              break
+        else:
+          break
+
     else:
+      lane_mark_point_x = []
+      lane_mark_point_y = []
+      lane_mark_loc_x = []
+      lane_mark_loc_y = []
       lane_info['line_x_vec'] = default_line_x
       lane_info['line_y_vec'] = default_line_y
       lane_info['relative_id'] = 1000
@@ -764,7 +799,13 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['line_s_vec'] = 0
       lane_info['curvature_vec'] = 0
       lane_info['d_poly_curvature_vec'] = 0
-      line_info_list.append(lane_info)
+      lane_info['lane_mark_vec'] = []
+
+    lane_info['lane_mark_point_x'] = lane_mark_point_x
+    lane_info['lane_mark_point_y'] = lane_mark_point_y
+    lane_info['lane_mark_loc_x'] = lane_mark_loc_x
+    lane_info['lane_mark_loc_y'] = lane_mark_loc_y    
+    line_info_list.append(lane_info)
 
   return line_info_list
 
