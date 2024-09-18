@@ -98,6 +98,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   void PathExpansionBySlotLimiter();
 
+  const bool CheckEgoReplanNumber(const bool is_replan);
+
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 
@@ -106,6 +108,7 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
   size_t path_collision_id_;
 
   AstarPathGear current_gear_;
+  int in_slot_car_adjust_count_;
 };
 
 }  // namespace apa_planner
