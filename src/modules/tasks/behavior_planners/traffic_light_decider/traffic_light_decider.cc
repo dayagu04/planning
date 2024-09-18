@@ -113,7 +113,8 @@ bool TrafficLightDecider::Execute() {
     }
   }
   */
-
+  auto &tfl_decider = session_->mutable_planning_context()->mutable_traffic_light_decider_output();
+  tfl_decider.can_pass = can_pass_;
   return true;
 }
 
