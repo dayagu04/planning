@@ -15,6 +15,7 @@
 #include "reference_path_manager.h"
 #include "refline.h"
 #include "session.h"
+// #include "virtual_lane_manager.h"
 
 namespace planning {
 
@@ -28,6 +29,27 @@ enum RampDirection {
   RAMP_NONE = 0,
   RAMP_ON_LEFT = 1,
   RAMP_ON_RIGHT = 2,
+};
+
+struct GeneralTaskMapInfo {
+  double distance_to_ramp;
+  double distance_to_first_road_merge;
+  double distance_to_first_road_split;
+  double distance_to_second_road_merge;
+  double distance_to_second_road_split;
+  int lane_num_except_emergency;
+  bool is_nearing_ramp;
+  bool is_leaving_ramp;
+  bool is_on_ramp;
+  bool is_nearing_other_lane_merge_to_road_point;
+  bool is_ramp_merge_to_ramp_on_expressway;
+  bool is_ramp_merge_to_road_on_expressway;
+  RampDirection ramp_direction;
+  RampDirection first_split_direction;
+  RampDirection first_merge_direction;
+  RampDirection second_split_direction;
+  RampDirection second_merge_direction;
+
 };
 
 // hack :clren
@@ -146,12 +168,8 @@ class VirtualLane {
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }
-  void update_lane_tasks(double dis_to_ramp, double dis_to_first_merge,
-                         double dis_to_first_split, bool is_nearing_ramp,
-                         RampDirection ramp_direction,
-                         RampDirection first_split_direction,
-                         bool is_leaving_ramp, uint lane_num, bool is_on_ramp,
-                         bool is_nearing_other_lane_merge_to_road_point);
+                         
+  void update_lane_tasks(const GeneralTaskMapInfo& general_task_map_info);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
@@ -162,6 +180,8 @@ class VirtualLane {
   void set_is_in_merge_area(bool is_in_merge_area) {
     is_in_merge_area_ = is_in_merge_area;
   }
+  void ProcessEgoOnRoadMLC(const GeneralTaskMapInfo& general_task_map_info);
+  void ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map_info);
 
  private:
   planning::framework::Session *session_ = nullptr;

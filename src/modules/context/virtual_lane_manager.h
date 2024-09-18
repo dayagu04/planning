@@ -205,7 +205,9 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
 
-  bool is_road_merged_by_other_lane() const { return is_road_merged_by_other_lane_; }
+  bool is_road_merged_by_other_lane() const {
+    return is_road_merged_by_other_lane_;
+  }
 
   const double dis_threshold_to_merged_point() const {
     return dis_threshold_to_is_merged_point_;
@@ -290,6 +292,9 @@ class VirtualLaneManager {
   RampDirection MakesureSplitDirection(
       const ::SdMapSwtx::Segment &split_segment,
       const ad_common::sdmap::SDMap &sd_map);
+  RampDirection MakesureMergeDirection(
+      const ::SdMapSwtx::Segment &merge_segment,
+      const ad_common::sdmap::SDMap &sd_map);
   // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
   // void CalculateDistanceToTargetSlot(planning::framework::Session *session);
@@ -328,8 +333,13 @@ class VirtualLaneManager {
   double dis_to_ramp_ = NL_NMAX;
   RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
   RampDirection first_split_direction_ = RampDirection::RAMP_NONE;
+  RampDirection first_merge_direction_ = RampDirection::RAMP_NONE;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
+  RampDirection second_split_direction_ = RampDirection::RAMP_NONE;
+  RampDirection second_merge_direction_ = RampDirection::RAMP_NONE;
+  double distance_to_second_road_merge_ = NL_NMAX;
+  double distance_to_second_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
   bool is_select_split_nearing_ramp_ = true;
   std::unordered_set<uint64_t> lane_group_set_;
