@@ -51,7 +51,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         SetAccJerkBoundByVelocity(planning_input);
         MakeDynamicWeight(planning_input);
         // [hack]
-        if ((std::fabs(init_dis_to_ref_) < 0.3) && (std::fabs(init_ref_theta_error_) > config_.big_theta_thr)) {
+        if ((std::fabs(init_dis_to_ref_) < 0.3) &&
+            (std::fabs(init_ref_theta_error_) > config_.big_theta_thr)) {
           planning_input.set_q_jerk(config_.q_jerk_for_big_theta);
           concerned_start_q_jerk_ = config_.q_jerk_for_big_theta;
         }
@@ -100,9 +101,11 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       } else {
         if (config_.use_new_lc_param) {
           end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
-          planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_high_vel);
+          planning_input.set_q_ref_theta(
+              config_.q_ref_theta_lane_change_high_vel);
         } else {
-          planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_high_vel1);
+          planning_input.set_q_ref_theta(
+              config_.q_ref_theta_lane_change_high_vel1);
         }
       }
 
@@ -121,7 +124,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
         concerned_start_q_jerk_ = config_.q_jerk_lane_change;
         planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
-        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+        planning_input.set_q_jerk_bound(
+            config_.q_jerk_bound_lane_change_high_vel);
       }
       break;
     }
@@ -146,8 +150,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_acc(config_.q_acc_lane_change);
       planning_input.set_q_jerk(config_.q_jerk_split);
       concerned_start_q_jerk_ = config_.q_jerk_lane_change;
-      planning_input.set_q_jerk_bound(
-          config_.q_jerk_bound_split);
+      planning_input.set_q_jerk_bound(config_.q_jerk_bound_split);
       break;
     }
     case RAMP: {
@@ -228,17 +231,17 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
   if (ego_vel_ <= config_.lane_change_high_vel || config_.use_new_lc_param) {
     double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                      config_.map_qjerk_lc_high_vel);
+                                     config_.map_qjerk_lc_high_vel);
     concerned_start_q_jerk_ = q_jerk;
     planning_input.set_q_jerk(q_jerk);
   } else {
     double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                    config_.map_qjerk_lc_high_vel_old);
+                                     config_.map_qjerk_lc_high_vel_old);
     concerned_start_q_jerk_ = q_jerk;
     planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
     std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
     double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
-                                      config_.map_qrefxy_lc_high_vel);
+                                       config_.map_qrefxy_lc_high_vel);
     planning_input.set_q_ref_x(q_ref_xy);
     planning_input.set_q_ref_y(q_ref_xy);
 
@@ -259,12 +262,12 @@ void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
   end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
   std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
   double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                  config_.map_qjerk_lc_high_vel_old);
+                                   config_.map_qjerk_lc_high_vel_old);
   concerned_start_q_jerk_ = q_jerk;
   planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
   std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
   double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
-                                    config_.map_qrefxy_lc_high_vel);
+                                     config_.map_qrefxy_lc_high_vel);
   planning_input.set_q_ref_x(q_ref_xy);
   planning_input.set_q_ref_y(q_ref_xy);
 

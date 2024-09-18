@@ -34,7 +34,8 @@ class EgoLaneTrackManger {
       const double distance_to_first_road_merge,
       const double distance_to_first_road_split,
       const double current_segment_passed_distance,
-      const std::vector<std::pair<SplitRelativeDirection, double>> &split_dir_dis_info_list,
+      const std::vector<std::pair<SplitRelativeDirection, double>>
+          &split_dir_dis_info_list,
       const double sum_dis_to_last_split_point);
 
   void Reset();
@@ -98,12 +99,14 @@ class EgoLaneTrackManger {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
-  void SetLastZeroRelativeIdNums (int last_zero_relative_id_nums) {
-    last_zero_relative_id_nums_ =last_zero_relative_id_nums;
+  void SetLastZeroRelativeIdNums(int last_zero_relative_id_nums) {
+    last_zero_relative_id_nums_ = last_zero_relative_id_nums;
   }
 
-  void SetLastZeroRelativeIdOrderIdIndex (int last_zero_relative_id_order_id_index) {
-    last_zero_relative_id_order_id_index_ = last_zero_relative_id_order_id_index;
+  void SetLastZeroRelativeIdOrderIdIndex(
+      int last_zero_relative_id_order_id_index) {
+    last_zero_relative_id_order_id_index_ =
+        last_zero_relative_id_order_id_index;
   }
 
   bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };

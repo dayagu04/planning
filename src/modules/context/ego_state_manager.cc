@@ -781,7 +781,8 @@ void EgoStateManager::RealtimeUpdatePlanningInitState() {
 
   planning_init_point_.relative_time = 0.0;
 
-  auto &mutable_motion_planner_output = session_->mutable_planning_context()->mutable_motion_planner_output();
+  auto &mutable_motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
   mutable_motion_planner_output.lat_init_flag = false;
 }
 
@@ -850,7 +851,8 @@ void EgoStateManager::UpdatePlanningInitState() {
   planning_init_point_.relative_time = 0.0;
 
   if (replan_status > 0) {
-    auto &motion_planner_output = session_->mutable_planning_context()->mutable_motion_planner_output();
+    auto &motion_planner_output =
+        session_->mutable_planning_context()->mutable_motion_planner_output();
     motion_planner_output.lat_init_flag = false;
   }
 }

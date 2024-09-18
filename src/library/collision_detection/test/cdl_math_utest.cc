@@ -4,8 +4,8 @@
 
 #include "cdl_math.h"
 #include "cdl_perf.h"
-#include "gjk2d.h"
 #include "collision_detect_types.h"
+#include "gjk2d.h"
 
 TEST(test_collision_detection_cdl_math, test_GetClockwiseNormal) {
   cdl::Vector2r v;

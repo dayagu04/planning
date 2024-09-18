@@ -127,7 +127,7 @@ bool LaneChangeRequestManager::Update(
           virtual_lane_mgr_->dis_to_ramp() <=
               minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
           sum_dis_to_last_merge_point <
-              max_pass_merge_distance_to_surpress_overtake_lane_change || 
+              max_pass_merge_distance_to_surpress_overtake_lane_change ||
           dis_to_first_merge < dis_threshold_to_merged_point) {
         overtake_request_.Reset();
         LOG_DEBUG(

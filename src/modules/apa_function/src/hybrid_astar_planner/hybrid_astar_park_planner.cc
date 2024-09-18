@@ -1291,7 +1291,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   double ego_x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
                                 ego_slot_info.ego_pos_slot[0]);
   double ego_y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
-                            ego_slot_info.ego_pos_slot[1]);
+                                ego_slot_info.ego_pos_slot[1]);
   if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
     return;
   }

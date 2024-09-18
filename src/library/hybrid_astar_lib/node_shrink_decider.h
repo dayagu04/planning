@@ -30,7 +30,6 @@ class NodeShrinkDecider : public AstarDecider {
   bool IsShrinkByGearSwitchNumber(Node3d *child);
 
  private:
-
   void ShrinkChildrenByHeading();
 
   // [-pi,+pi)

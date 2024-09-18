@@ -1581,7 +1581,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 
   // increase threshold for vru
   const double lead_vru = 1.2;
-  if(item.is_VRU){
+  if (item.is_VRU) {
     result = result * lead_vru;
   }
 
@@ -1623,7 +1623,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   lead_confidence_thrshld = interp(item.d_rel, xp4, fp4);
   LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
   item.is_lead = item.leadone_confidence_cnt >=
-                  lead_confidence_thrshld * planning_cycle_time;
+                 lead_confidence_thrshld * planning_cycle_time;
   LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
 
   // calculate cutin

@@ -8,10 +8,10 @@
 #include "../tasks/task_interface/lateral_motion_planner_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
+#include "../tasks/task_interface/traffic_light_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
-#include "../tasks/task_interface/traffic_light_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -135,7 +135,7 @@ class PlanningContext {
   LongitudinalDeciderOutput &mutable_longitudinal_decider_output() {
     return longitudinal_decider_output_;
   }
-  
+
   const TrafficLightDeciderOutput &traffic_light_decider_output() const {
     return traffic_light_decider_output_;
   }

@@ -581,7 +581,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
 
-  ego_lane_track_manager_->SetLastZeroRelativeIdNums(origin_relative_id_zero_nums_);
+  ego_lane_track_manager_->SetLastZeroRelativeIdNums(
+      origin_relative_id_zero_nums_);
 
   // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
@@ -1466,8 +1467,8 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
             is_ramp_merge_to_road_on_expressway_ = true;
           }
           if (merge_seg_last_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
-              merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP && !is_on_ramp_ &&
-              is_on_highway_) {
+              merge_seg->usage() != SdMapSwtx::RoadUsage::RAMP &&
+              !is_on_ramp_ && is_on_highway_) {
             is_road_merged_by_other_lane_ = true;
           }
           if (merge_seg_last_seg->usage() == SdMapSwtx::RoadUsage::RAMP &&
@@ -1477,11 +1478,11 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
           first_merge_direction_ = MakesureMergeDirection(*merge_seg, sd_map);
           distance_to_first_road_merge_ = merge_info_temp.second;
           is_find_first_merge_onfo = true;
-          traverse_num ++;
+          traverse_num++;
         } else if (is_find_first_merge_onfo) {
           second_merge_direction_ = MakesureMergeDirection(*merge_seg, sd_map);
           distance_to_second_road_merge_ = merge_info_temp.second;
-          traverse_num ++;
+          traverse_num++;
         }
 
         if (traverse_num >= 2) {
@@ -1515,9 +1516,10 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       if (split_segment && split_info[i].second > 0) {
         if (!is_find_first_split_info) {
           distance_to_first_road_split_ = split_info[i].second;
-          first_split_direction_ = MakesureSplitDirection(*split_segment, sd_map);
+          first_split_direction_ =
+              MakesureSplitDirection(*split_segment, sd_map);
           is_find_first_split_info = true;
-          traverse_num ++;
+          traverse_num++;
           first_split_dir_dis_info_ = std::make_pair(
               static_cast<SplitRelativeDirection>(first_split_direction_),
               distance_to_first_road_split_);
@@ -1528,13 +1530,14 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
           }
         } else if (is_find_first_split_info) {
           distance_to_second_road_split_ = split_info[i].second;
-          second_split_direction_ = MakesureSplitDirection(*split_segment, sd_map);
-          traverse_num ++;
+          second_split_direction_ =
+              MakesureSplitDirection(*split_segment, sd_map);
+          traverse_num++;
         }
-        if (traverse_num >=2) {
+        if (traverse_num >= 2) {
           break;
         }
-      } 
+      }
     }
   } else {
     distance_to_first_road_split_ = NL_NMAX;
@@ -1609,8 +1612,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       while (last_split_seg->out_link().size() == 1) {
         sum_dis_to_last_split_point =
             sum_dis_to_last_split_point + last_split_seg->dis();
-        last_split_seg =
-            sd_map.GetPreviousRoadSegment(last_split_seg->id());
+        last_split_seg = sd_map.GetPreviousRoadSegment(last_split_seg->id());
         if (!last_split_seg) {
           break;
         }
@@ -2321,8 +2323,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //根据到匝道的距离判断是匝道延长线汇入在前还是匝道在前
   if (is_nearing_ramp_ &&
       !is_accumulate_dis_to_last_merge_point_more_than_threshold_ &&
-      !is_on_ramp_ &&
-      dis_to_ramp_ > dis_threshold_to_last_merge_point_ &&
+      !is_on_ramp_ && dis_to_ramp_ > dis_threshold_to_last_merge_point_ &&
       is_on_highway_) {
     is_nearing_ramp_ = false;
   }
@@ -2342,13 +2343,12 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       is_ego_on_rightest_lane) {
     is_nearing_other_lane_merge_to_road_point_ = true;
   }
-  JSON_DEBUG_VALUE("is_nearing_other_lane_merge_to_road_point", is_nearing_other_lane_merge_to_road_point_);
+  JSON_DEBUG_VALUE("is_nearing_other_lane_merge_to_road_point",
+                   is_nearing_other_lane_merge_to_road_point_);
 
   //(3)、判断高速前方汇入点在前，还是匝道在前
- if (is_nearing_ramp_ &&
-      is_road_merged_by_other_lane_ &&
-      dis_to_ramp_ > distance_to_first_road_merge_ &&
-      !is_on_ramp_ &&
+  if (is_nearing_ramp_ && is_road_merged_by_other_lane_ &&
+      dis_to_ramp_ > distance_to_first_road_merge_ && !is_on_ramp_ &&
       is_on_highway_) {
     is_nearing_ramp_ = false;
   }
@@ -2356,19 +2356,26 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
   JSON_DEBUG_VALUE("is_nearing_ramp", is_nearing_ramp_);
   JSON_DEBUG_VALUE("distance_to_ramp", dis_to_ramp_);
-  JSON_DEBUG_VALUE("distance_to_first_road_merge", distance_to_first_road_merge_);
-  JSON_DEBUG_VALUE("distance_to_first_road_split", distance_to_first_road_split_);
+  JSON_DEBUG_VALUE("distance_to_first_road_merge",
+                   distance_to_first_road_merge_);
+  JSON_DEBUG_VALUE("distance_to_first_road_split",
+                   distance_to_first_road_split_);
   GeneralTaskMapInfo general_task_map_info;
   general_task_map_info.distance_to_ramp = dis_to_ramp_;
-  general_task_map_info.distance_to_first_road_merge = distance_to_first_road_merge_;
-  general_task_map_info.distance_to_first_road_split = distance_to_first_road_split_;
+  general_task_map_info.distance_to_first_road_merge =
+      distance_to_first_road_merge_;
+  general_task_map_info.distance_to_first_road_split =
+      distance_to_first_road_split_;
   general_task_map_info.lane_num_except_emergency = lane_num_except_emergency_;
   general_task_map_info.is_nearing_ramp = is_nearing_ramp_;
   general_task_map_info.is_leaving_ramp = is_leaving_ramp_;
   general_task_map_info.is_on_ramp = is_on_ramp_;
-  general_task_map_info.is_nearing_other_lane_merge_to_road_point = is_nearing_other_lane_merge_to_road_point_;
-  general_task_map_info.is_ramp_merge_to_road_on_expressway = is_ramp_merge_to_road_on_expressway_;
-  general_task_map_info.is_ramp_merge_to_ramp_on_expressway = is_ramp_merge_to_ramp_on_expressway_;
+  general_task_map_info.is_nearing_other_lane_merge_to_road_point =
+      is_nearing_other_lane_merge_to_road_point_;
+  general_task_map_info.is_ramp_merge_to_road_on_expressway =
+      is_ramp_merge_to_road_on_expressway_;
+  general_task_map_info.is_ramp_merge_to_ramp_on_expressway =
+      is_ramp_merge_to_ramp_on_expressway_;
   general_task_map_info.ramp_direction = ramp_direction_;
   general_task_map_info.first_split_direction = first_split_direction_;
   general_task_map_info.first_merge_direction = first_merge_direction_;

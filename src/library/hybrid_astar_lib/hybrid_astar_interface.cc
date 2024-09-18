@@ -6,6 +6,8 @@
 #include <memory>
 #include <utility>
 
+#include "aabb2d.h"
+#include "drive_distance_decider.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
@@ -13,8 +15,6 @@
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
-#include "drive_distance_decider.h"
-#include "aabb2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
@@ -233,8 +233,8 @@ int HybridAStarInterface::UpdateOutput() {
 
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
       edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
-            static_cast<float>(config_.lon_front_safe_buffer),
-            static_cast<float>(lat_buffer));
+                            static_cast<float>(config_.lon_front_safe_buffer),
+                            static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer);
       hybrid_astar_->PlanOnce(initial_state_, goal_state_, map_bounds_, obs_,
@@ -265,13 +265,13 @@ int HybridAStarInterface::UpdateOutput() {
 
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
       edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
-            static_cast<float>(config_.lon_front_safe_buffer),
-            static_cast<float>(lat_buffer));
+                            static_cast<float>(config_.lon_front_safe_buffer),
+                            static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer);
       hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, initial_state_,
-                                        goal_state_, lon_min_sampling_length,
-                                        map_bounds_, obs_, request_);
+                                          goal_state_, lon_min_sampling_length,
+                                          map_bounds_, obs_, request_);
 
       // check time
       if (coarse_traj_.time_ms > 1000.0) {
@@ -587,8 +587,8 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
 }
 
 const AstarSearchState HybridAStarInterface::TransformFirstSegmentPath(
-    std::vector<AStarPathPoint>& result,
-    const HybridAStarResult& full_path, const Pose2D& start) {
+    std::vector<AStarPathPoint>& result, const HybridAStarResult& full_path,
+    const Pose2D& start) {
   // init
   result.clear();
   AstarSearchState state;

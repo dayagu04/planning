@@ -323,8 +323,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       } else {
         ego_s = ego_cart_frenet_point.x;
       }
-      std::vector<iflyauto::LaneMarkMsg> lane_marks =
-          base_lane->lane_marks();
+      std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
       double lane_line_length = 0.0;
       for (int i = 0; i < lane_marks.size(); i++) {
         lane_line_length = lane_marks[i].end;

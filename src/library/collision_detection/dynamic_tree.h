@@ -5,9 +5,9 @@
 
 #include "aabb2d.h"
 #include "collision_data2d.h"
+#include "collision_detect_types.h"
 #include "collision_object2d.h"
 #include "node_base2d.h"
-#include "collision_detect_types.h"
 
 namespace cdl {
 enum struct TreeBuildAlgo2 {

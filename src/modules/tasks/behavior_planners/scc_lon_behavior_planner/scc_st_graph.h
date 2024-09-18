@@ -259,7 +259,7 @@ class StGraphGenerator {
                              const double kwidth);
 
   void GenerateSrefByVrefJLT(std::vector<double> &s_refs);
-  
+
   void IsReverseAgentInLargeCurvature(
       const double v_ego, std::shared_ptr<VirtualLane> current_lane,
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);

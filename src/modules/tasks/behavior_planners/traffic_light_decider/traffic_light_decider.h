@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 #include "debug_info_log.h"
-#include "tasks/task.h"
 #include "planning_context.h"
+#include "tasks/task.h"
 #include "traffic_light_decision_manager.h"
 
 namespace planning {

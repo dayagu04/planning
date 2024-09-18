@@ -1203,7 +1203,6 @@ size_t HybridAStar::GetPathCollisionIndex(HybridAStarResult* result) {
           return collision_index;
         }
       }
-
     }
   }
 
@@ -2233,7 +2232,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -2557,8 +2556,8 @@ void HybridAStar::DebugRSPath(const RSPath* reeds_shepp_path) {
 
 const bool HybridAStar::IsPointBeyondBound(const double x,
                                            const double y) const {
-  if (x > XYbounds_.x_max || x < XYbounds_.x_min ||
-      y > XYbounds_.y_max || y < XYbounds_.y_min) {
+  if (x > XYbounds_.x_max || x < XYbounds_.x_min || y > XYbounds_.y_max ||
+      y < XYbounds_.y_min) {
     return true;
   }
   return false;

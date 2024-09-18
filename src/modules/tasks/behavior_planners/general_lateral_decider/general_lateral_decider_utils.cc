@@ -10,7 +10,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 iflyauto::ObjectType type,
                                 const bool is_nudge_left, bool in_intersection,
-                                GeneralLateralDeciderConfig& config) {
+                                GeneralLateralDeciderConfig &config) {
   double base_dis = 0.8;
   if (IsVRU(type)) {
     base_dis = 1.0;
@@ -61,7 +61,9 @@ double CalDesireStaticLateralDistance(const double base_distance,
   return base_distance + lateral_extra_buffer;
 }
 
-double GetBoundWeight(BoundType type, const std::unordered_map<BoundType, double>& map_bound_weight) {
+double GetBoundWeight(
+    BoundType type,
+    const std::unordered_map<BoundType, double> &map_bound_weight) {
   if (map_bound_weight.find(type) != map_bound_weight.end()) {
     return map_bound_weight.at(type);
   } else {

@@ -962,28 +962,31 @@ bool LateralOffsetCalculator::update_avoidance_path(
                   if (!sb_blane_ || !force_pause_ || !sb_lane_) {
                     lat_offset = std::max(lat_offset, -0.5 * lane_width + 0.9);
                   }
-                } else if (
-                    avd_car_past[0][6] < 0 &&
-                    (avd_car_past[0][2] + v_ego < 0.5 ||
-                     avd_car_past[0][3] < 1) &&
-                    std::fabs(avd_car_past[0][4]) < 0.3 &&
-                    ((virtual_lane_manager_->current_lane_index() ==
-                          virtual_lane_manager_->get_lane_num() - 1 &&
-                      ((virtual_lane_manager_->get_current_lane()
-                                ->get_lane_type() !=
-                            iflyauto::LANETYPE_NON_MOTOR &&
-                        virtual_lane_manager_->current_lane_index() >= 1) ||
-                       (virtual_lane_manager_->get_current_lane()
-                                ->get_lane_type() ==
-                            iflyauto::LANETYPE_NON_MOTOR &&
-                        virtual_lane_manager_->current_lane_index() >= 2))) ||
-                     (virtual_lane_manager_->current_lane_index() ==
-                          virtual_lane_manager_->get_lane_num() - 2 &&
-                      virtual_lane_manager_->get_right_lane() != nullptr &&
-                      virtual_lane_manager_->get_right_lane()
-                              ->get_lane_type() ==
-                          iflyauto::LANETYPE_NON_MOTOR &&
-                      virtual_lane_manager_->current_lane_index() >= 1))) {
+                } else if (avd_car_past[0][6] < 0 &&
+                           (avd_car_past[0][2] + v_ego < 0.5 ||
+                            avd_car_past[0][3] < 1) &&
+                           std::fabs(avd_car_past[0][4]) < 0.3 &&
+                           ((virtual_lane_manager_->current_lane_index() ==
+                                 virtual_lane_manager_->get_lane_num() - 1 &&
+                             ((virtual_lane_manager_->get_current_lane()
+                                       ->get_lane_type() !=
+                                   iflyauto::LANETYPE_NON_MOTOR &&
+                               virtual_lane_manager_->current_lane_index() >=
+                                   1) ||
+                              (virtual_lane_manager_->get_current_lane()
+                                       ->get_lane_type() ==
+                                   iflyauto::LANETYPE_NON_MOTOR &&
+                               virtual_lane_manager_->current_lane_index() >=
+                                   2))) ||
+                            (virtual_lane_manager_->current_lane_index() ==
+                                 virtual_lane_manager_->get_lane_num() - 2 &&
+                             virtual_lane_manager_->get_right_lane() !=
+                                 nullptr &&
+                             virtual_lane_manager_->get_right_lane()
+                                     ->get_lane_type() ==
+                                 iflyauto::LANETYPE_NON_MOTOR &&
+                             virtual_lane_manager_->current_lane_index() >=
+                                 1))) {
                   lat_offset = std::min(
                       1.5 + avd_car_past[0][6],
                       std::min(avd_car_past[0][9], avd_car_past[1][5] - 1.4));

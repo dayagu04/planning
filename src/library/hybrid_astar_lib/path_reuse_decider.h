@@ -1,8 +1,8 @@
 #pragma once
 
 #include "astar_decider.h"
-#include "hybrid_astar_common.h"
 #include "drive_distance_decider.h"
+#include "hybrid_astar_common.h"
 
 namespace planning {
 

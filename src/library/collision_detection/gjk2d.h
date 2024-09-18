@@ -1,8 +1,8 @@
 #pragma once
 
 #include "cdl_math.h"
-#include "math_utils.h"
 #include "collision_detect_types.h"
+#include "math_utils.h"
 
 #define MAX_POLYGON_VERTEX_NUM (12)
 
