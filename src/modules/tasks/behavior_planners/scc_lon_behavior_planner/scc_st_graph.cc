@@ -1768,8 +1768,8 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
         virtual_obs->speed(), v_ego,
         lon_behav_input_->lat_output().lc_request(), false, false, false);
     double dis_to_virtual_obs =
-        std::min(lon_behav_input_->dis_to_stopline() - 1,
-                 lon_behav_input_->dis_to_crosswalk() - 3);
+        std::min(lon_behav_input_->dis_to_stopline() - config_.stop_dis_before_stopline,
+                 lon_behav_input_->dis_to_crosswalk() - config_.stop_dis_before_crosswalk);
     if (dis_to_virtual_obs < 1.0) {
       dis_to_virtual_obs = 1.0;
     }
