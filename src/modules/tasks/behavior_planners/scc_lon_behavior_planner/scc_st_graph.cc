@@ -795,7 +795,7 @@ void StGraphGenerator::UpdateSTGraphs(
     double s_step = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
-    double st_obs_j = 1.0;  //_J_Obj 常规jerk
+    double st_obs_j = 0.5;  //_J_Obj 常规jerk
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
