@@ -98,6 +98,14 @@ class EgoLaneTrackManger {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
+  void SetLastZeroRelativeIdNums (int last_zero_relative_id_nums) {
+    last_zero_relative_id_nums_ =last_zero_relative_id_nums;
+  }
+
+  void SetLastZeroRelativeIdOrderIdIndex (int last_zero_relative_id_order_id_index) {
+    last_zero_relative_id_order_id_index_ = last_zero_relative_id_order_id_index;
+  }
+
   bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
 
   bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
@@ -145,7 +153,8 @@ class EgoLaneTrackManger {
   std::shared_ptr<VirtualLane> left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ = nullptr;
   uint lane_num_ = 0;
-
+  uint last_zero_relative_id_nums_ = 0;
+  uint last_zero_relative_id_order_id_index_ = -1;
   bool is_ego_on_expressway_ = false;
   bool is_on_ramp_ = false;
   double dis_to_ramp_ = NL_NMAX;
