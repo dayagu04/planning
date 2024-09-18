@@ -2006,6 +2006,12 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     jerk_lower_in_large_curv = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "jerk_lower_in_large_curv"});
+    stop_dis_before_stopline = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "stop_dis_before_stopline"});
+    stop_dis_before_crosswalk = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "stop_dis_before_crosswalk"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -2080,6 +2086,8 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double sdmap_curv_thred = 1000.0;
   double straight_ramp_v_limit = 22.22;
   double v_intersection_min_limit = 11.11;
+  double stop_dis_before_stopline = 1.0;
+  double stop_dis_before_crosswalk = 3.0;
   bool enable_sdmap_curv_v_adjust = true;
   bool enable_speed_adjust = true;
   // merge
