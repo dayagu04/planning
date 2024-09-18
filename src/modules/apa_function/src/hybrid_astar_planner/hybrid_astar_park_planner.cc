@@ -593,25 +593,25 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
 
   switch (frame_.replan_reason) {
     case FIRST_PLAN:
-      cur_request.plan_reason = PlanningReason::first_plan;
+      cur_request.plan_reason = PlanningReason::FIRST_PLAN;
       break;
     case SEG_COMPLETED_PATH:
-      cur_request.plan_reason = PlanningReason::path_completed;
+      cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
       break;
     case SEG_COMPLETED_USS:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case STUCKED:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case DYNAMIC:
-      cur_request.plan_reason = PlanningReason::adjust_self_car_pose;
+      cur_request.plan_reason = PlanningReason::ADJUST_SELF_CAR_POSE;
       break;
     case SEG_COMPLETED_COL_DET:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     default:
-      cur_request.plan_reason = PlanningReason::none;
+      cur_request.plan_reason = PlanningReason::NONE;
       break;
   }
 

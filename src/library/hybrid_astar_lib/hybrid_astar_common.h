@@ -81,12 +81,13 @@ enum class AstarPathType {
 };
 
 enum class PlanningReason {
-  none,
-  path_completed,
-  path_stucked,
-  slot_changed,
-  first_plan,
-  adjust_self_car_pose,
+  NONE,
+  PATH_COMPLETED,
+  PATH_STUCKED,
+  SLOT_CHANGED,
+  FIRST_PLAN,
+  ADJUST_SELF_CAR_POSE,
+  SIMULATION_TRIGGER,
 };
 
 enum class AstarPathSteer {
