@@ -123,6 +123,8 @@ class HybridAStar {
 
   double CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
 
+  double CalcGCostToParentNode2(Node3d* current_node, Node3d* next_node);
+
   // holonomic: freedom is equal with controllable variables
   // e.g. car freedom is x,y,theta, but controllable variables are lon speed and
   // wheel. so car is nonholonomic.
@@ -281,8 +283,9 @@ class HybridAStar {
 
   CompactNodePool node_pool_;
 
-  std::priority_queue<QueuePoint, std::vector<QueuePoint>, QueueCompare>
-      open_pq_;
+  // std::priority_queue<QueuePoint, std::vector<QueuePoint>, QueueCompare>
+  //     open_pq_;
+  std::multimap<double, Node3d*> open_pq_;
 
   // open set + close set
   std::unordered_map<size_t, Node3d*> node_set_;

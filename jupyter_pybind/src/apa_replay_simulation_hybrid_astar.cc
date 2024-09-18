@@ -602,7 +602,7 @@ const bool PlanOnce(
   ILOG_INFO << "plan process time ms "
             << (data_process_time - plan_time) / 1000.0;
 
-  return result;
+  return true;
 }
 
 const bool RefreshThreadResult() {
@@ -648,73 +648,79 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     planning::apa_planner::ApaPlannerBase::EgoSlotInfo ego_slot_info =
         frame.ego_slot_info;
 
-    ego_slot_info.slot_origin_pos[0] = end_pose[0];
-    ego_slot_info.slot_origin_pos[1] = end_pose[1];
-    ego_slot_info.slot_origin_heading = end_pose[2];
+    if (1) {
+      ego_slot_info = ego_slot_info_;
+    } else {
+      ego_slot_info.slot_origin_pos[0] = end_pose[0];
+      ego_slot_info.slot_origin_pos[1] = end_pose[1];
+      ego_slot_info.slot_origin_heading = end_pose[2];
 
-    ego_slot_info.slot_origin_heading_vec =
-        Eigen::Vector2d(std::cos(end_pose[2]), std::sin(end_pose[2]));
+      ego_slot_info.slot_origin_heading_vec =
+          Eigen::Vector2d(std::cos(end_pose[2]), std::sin(end_pose[2]));
 
-    ego_slot_info.slot_length = 6;
+      ego_slot_info.slot_length = 6;
 
-    ego_slot_info.slot_width = 2.3;
+      ego_slot_info.slot_width = 2.3;
 
-    // base coordinate
-    ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
+      // base coordinate
+      ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
+                                ego_slot_info.slot_origin_heading);
 
-    ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
+      ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
+                                ego_slot_info.slot_origin_heading);
 
-    // update ego pose
-    Eigen::Vector2d ego_global_position(
-        local_view.localization.position.position_boot.x,
-        local_view.localization.position.position_boot.y);
-    double heading_ego = local_view.localization.orientation.euler_boot.yaw;
+      // update ego pose
+      Eigen::Vector2d ego_global_position(
+          local_view.localization.position.position_boot.x,
+          local_view.localization.position.position_boot.y);
+      double heading_ego = local_view.localization.orientation.euler_boot.yaw;
 
-    Pose2D ego_global_pose = {ego_global_position.x(), ego_global_position.y(),
-                              heading_ego};
+      Pose2D ego_global_pose = {ego_global_position.x(),
+                                ego_global_position.y(), heading_ego};
 
-    ego_slot_info.ego_pos_slot =
-        ego_slot_info.g2l_tf.GetPos(ego_global_position);
-    ego_slot_info.ego_heading_slot =
-        ego_slot_info.g2l_tf.GetHeading(heading_ego);
+      ego_slot_info.ego_pos_slot =
+          ego_slot_info.g2l_tf.GetPos(ego_global_position);
+      ego_slot_info.ego_heading_slot =
+          ego_slot_info.g2l_tf.GetHeading(heading_ego);
 
-    // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x() << " "
-    //           << ego_slot_info.ego_pos_slot.y()
-    //           << "  ego_heading_slot = " << ego_slot_info.ego_heading_slot
-    //           * 57.3;
+      // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x() << "
+      // "
+      //           << ego_slot_info.ego_pos_slot.y()
+      //           << "  ego_heading_slot = " << ego_slot_info.ego_heading_slot
+      //           * 57.3;
 
-    ego_slot_info.ego_heading_slot_vec =
-        Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
-                        std::sin(ego_slot_info.ego_heading_slot));
+      ego_slot_info.ego_heading_slot_vec =
+          Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
+                          std::sin(ego_slot_info.ego_heading_slot));
 
-    // cal target pos
-    const planning::apa_planner::ApaParameters &parking_param =
-        apa_param.GetParam();
+      // cal target pos
+      const planning::apa_planner::ApaParameters &parking_param =
+          apa_param.GetParam();
 
-    ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
-        parking_param.terminal_target_x, parking_param.terminal_target_y);
+      ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
+          parking_param.terminal_target_x, parking_param.terminal_target_y);
 
-    ego_slot_info.target_ego_heading_slot =
-        parking_param.terminal_target_heading;
+      ego_slot_info.target_ego_heading_slot =
+          parking_param.terminal_target_heading;
 
-    // get global
-    const auto &target_ego_pos_global =
-        ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
-    const auto &target_ego_heading_global =
-        ego_slot_info.l2g_tf.GetHeading(ego_slot_info.target_ego_heading_slot);
+      // get global
+      const auto &target_ego_pos_global =
+          ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
+      const auto &target_ego_heading_global = ego_slot_info.l2g_tf.GetHeading(
+          ego_slot_info.target_ego_heading_slot);
 
-    // ILOG_INFO << "target_ego_pos_slot = " <<
-    // ego_slot_info.target_ego_pos_slot[0]
-    //           << ", " << ego_slot_info.target_ego_pos_slot[1]
-    //           << "  target_ego_heading_slot = "
-    //           << ego_slot_info.target_ego_heading_slot * 57.3;
+      // ILOG_INFO << "target_ego_pos_slot = " <<
+      // ego_slot_info.target_ego_pos_slot[0]
+      //           << ", " << ego_slot_info.target_ego_pos_slot[1]
+      //           << "  target_ego_heading_slot = "
+      //           << ego_slot_info.target_ego_heading_slot * 57.3;
 
-    // cal terminal error
-    ego_slot_info.terminal_err.Set(
-        ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-        ego_slot_info.ego_heading_slot - ego_slot_info.target_ego_heading_slot);
+      // cal terminal error
+      ego_slot_info.terminal_err.Set(
+          ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
+          ego_slot_info.ego_heading_slot -
+              ego_slot_info.target_ego_heading_slot);
+    }
 
     hybrid_astar_obs_.Clear();
 
@@ -749,11 +755,12 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     // end
     Eigen::Vector3d end;
     end[0] = ego_slot_info.target_ego_pos_slot[0] +
-             parking_param.vertical_slot_target_adjust_dist;
+             park_param.vertical_slot_target_adjust_dist;
     end[1] = ego_slot_info.target_ego_pos_slot[1];
     end[2] = ego_slot_info.target_ego_heading_slot;
 
     AstarRequest request;
+    request.first_action_request.has_request = false;
     request.path_generate_method =
         planning::AstarPathGenerateType::astar_searching;
 

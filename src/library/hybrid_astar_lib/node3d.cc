@@ -259,6 +259,8 @@ void Node3d::CopyNode(const Node3d* node) {
   collision_type_ = node->GetConstCollisionType();
 
   dist_to_obs_ = node->GetDistToObs();
+
+  // nodeMapIt = node->nodeMapIt;
   return;
 }
 

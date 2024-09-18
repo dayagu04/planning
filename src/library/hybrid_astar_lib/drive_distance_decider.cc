@@ -22,7 +22,7 @@ void DriveDistanceDecider::Process(HybridAStarResult *history_path,
   }
 
   // 如果path被障碍物阻挡，不好推理下次path的信息
-  if (plan_reason == PlanningReason::path_stucked) {
+  if (plan_reason == PlanningReason::PATH_STUCKED) {
     if (history_path->gear.size() > 0) {
       if (history_path->gear[0] == AstarPathGear::drive) {
         next_path_info_.gear_ = AstarPathGear::reverse;

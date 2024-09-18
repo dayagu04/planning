@@ -7,7 +7,7 @@
 namespace planning {
 
 void DebugAstarRequestString(const AstarRequest &request) {
-  ILOG_INFO << "request " << request.first_action_request.has_request
+  ILOG_INFO << "has request = " << request.first_action_request.has_request
             << ", gear "
             << PathGearDebugString(request.first_action_request.gear_request)
             << " dist " << request.first_action_request.dist_request
