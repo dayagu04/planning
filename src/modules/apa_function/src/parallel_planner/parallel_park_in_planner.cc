@@ -1663,6 +1663,11 @@ void ParallelParkInPlanner::Log() const {
   JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
   JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
+  std::vector<double> limiter_corner_X = {-2.0, -2.0};
+  std::vector<double> limiter_corner_Y = {1.2, -1.2};
+  JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2)
+  JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
+
   std::vector<double> slot_corner_X;
   slot_corner_X.clear();
   slot_corner_X.reserve(frame_.ego_slot_info.slot_corner.size());
