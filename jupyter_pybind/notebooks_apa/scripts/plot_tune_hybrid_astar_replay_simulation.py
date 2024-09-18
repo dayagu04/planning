@@ -285,11 +285,11 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   else:
       print('soc_state_msg_idx invalid')
 
-  try:
+  if index_map['uss_percept_msg_idx'] < len(bag_loader.uss_percept_msg['data']):
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
     data_valid['uss_percept_msg_idx'] = True
-  except Exception:
-    uss_perception_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+  else:
+    uss_perception_msg = UssPerceptInfo()
 
   if index_map['loc_msg_idx'] < len(bag_loader.loc_msg['data']):
     loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
@@ -487,10 +487,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
     wave_msg.serialize(wave_msg_buff)
     wave_msg_bytes = wave_msg_buff.getvalue()
 
-  if data_valid['uss_percept_msg_idx'] == True:
-    uss_perception_msg_buff = BytesIO()
-    uss_perception_msg.serialize(uss_perception_msg_buff)
-    uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
+  uss_perception_msg_buff = BytesIO()
+  uss_perception_msg.serialize(uss_perception_msg_buff)
+  uss_perception_msg_bytes = uss_perception_msg_buff.getvalue()
 
   if data_valid['fus_ground_line_msg_idx'] == True:
     ground_line_perception_msg_buff = BytesIO()
