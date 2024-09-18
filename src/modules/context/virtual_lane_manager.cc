@@ -581,6 +581,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
 
+  ego_lane_track_manager_->SetLastZeroRelativeIdNums(origin_relative_id_zero_nums_);
+
   // 6.生成导航变道的任务
   const double cancel_mlc_dis_threshold_to_route_end = 400;
   if (is_ego_on_expressway_) {
