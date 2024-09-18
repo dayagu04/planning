@@ -1710,6 +1710,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
       reference_path->get_frenet_coord();
   Point2D projection_point = {cur_ref_path_finally_point.x,
                               cur_ref_path_finally_point.y};
+  const double front_line_distance = CalculateEgoFrontLineLength();
   bool is_on_ramp = session_->environmental_model().get_virtual_lane_manager()->is_on_ramp();
   if (is_on_ramp) {
     ReferencePathPoint refpoint = {};
@@ -1732,8 +1733,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
     } else {
       ReferencePathPoint refpoint = {};
       if (current_reference_path->get_reference_point_by_lon(
-          current_reference_path->get_frenet_coord()->Length() -
-              length_diff_threshold,
+          current_reference_path->get_frenet_ego_state().s() + front_line_distance,
           refpoint)) {
         projection_point = {refpoint.path_point.x, refpoint.path_point.y};
       }
