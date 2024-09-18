@@ -301,7 +301,7 @@ class StGraphGenerator {
   double lc_front_desired_distance_;
   double lc_rear_desired_distance_;
 
-  //traffic light info
+  // traffic light info
   bool current_traffic_light_can_pass_ = true;
   bool last_traffic_light_can_pass_ = true;
 

@@ -2280,6 +2280,8 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
   constexpr double lead_change_buffer = 1.0;
+  current_traffic_light_can_pass_ =
+      session_->planning_context().traffic_light_decider_output().can_pass;
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
