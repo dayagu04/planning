@@ -448,7 +448,7 @@
     "q_ref_vel": 0.0,
     "q_acc": 30.0,
     "q_jerk": 30.0,
-    "q_soft_pos_bound": 200.0,
+    "q_soft_pos_bound": 100.0,
     "q_hard_pos_bound": 1000.0,
     "q_sv_bound": 10.0,
     "q_vel_bound": 100.0,
@@ -502,7 +502,9 @@
     "tense_ttc_thrd": 2.4,
     "merge_desired_distance_sharp_rate": 2.0,
     "merge_desired_distance_slow_rate": 1.0,
-    "enabe_right_lane_merge_to_ego_lane_decision_process" : false
+    "enabe_right_lane_merge_to_ego_lane_decision_process" : false,
+    "acc_lower_bound_in_large_curv" : -2.0,
+    "jerk_lower_in_large_curv" : -2.0
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false
