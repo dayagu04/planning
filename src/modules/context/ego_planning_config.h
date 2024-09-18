@@ -2000,6 +2000,12 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
     v_intersection_min_limit = read_json_keys<double>(
         json, std::vector<std::string>{"real_time_long_behavior_planner",
                                        "v_intersection_min_limit"});
+    acc_lower_bound_in_large_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "acc_lower_bound_in_large_curv"});
+    jerk_lower_in_large_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"real_time_long_behavior_planner",
+                                       "jerk_lower_in_large_curv"});
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -2083,6 +2089,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double merge_desired_distance_slow_rate = 1.0;
   bool enable_merge_decision_process = false;
   bool enabe_right_lane_merge_to_ego_lane_decision_process = false;
+
+  double acc_lower_bound_in_large_curv = -2.0;
+  double jerk_lower_in_large_curv = -2.0;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {

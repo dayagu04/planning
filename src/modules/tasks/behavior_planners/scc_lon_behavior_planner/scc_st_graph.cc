@@ -53,8 +53,8 @@ constexpr double kExpandLengthBuffer = 0.0;
 constexpr double kFarLead = 100.0;
 constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
-constexpr double kLargeCurvRadius = 300;
-constexpr double kConsiderTimeLargeCurv = 2.5;
+constexpr double kLargeCurvRadius = 350;
+constexpr double kConsiderTimeLargeCurv = 3.0;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -668,6 +668,9 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
         angle_steers, angle_steers_deg, v_limit_road);
     JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
     JSON_DEBUG_VALUE("road_radius", road_radius_);
+  } else {
+    curv_ = 1 / 10000.0;
+    road_radius_ = 10000.0;
   }
 
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
@@ -675,7 +678,7 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   JSON_DEBUG_VALUE("ego_acc_lat", acc_lat);
 
   if (v_limit_in_turns < v_ego - 2) {
-    acc_target_in_turns = -0.2;
+    acc_target_in_turns = config_.acc_lower_bound_in_large_curv;
   }
 
   acc_target_.first = std::min(acc_target_.first, acc_target_in_turns);
@@ -4051,6 +4054,11 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.a_max = acc_target_.second;
   state_limit.j_min = -1.0;
   state_limit.j_max = 1.0;
+
+  if (v_limit_on_turns_and_road_ == v_target_) {
+    state_limit.a_min = config_.acc_lower_bound_in_large_curv;
+    state_limit.j_min = config_.jerk_lower_in_large_curv;
+  }
 
   auto s_ref_curve = SecondOrderTimeOptimalTrajectory(init_state, state_limit);
   const double delta_time = 0.2;

@@ -502,7 +502,9 @@
     "tense_ttc_thrd": 2.4,
     "merge_desired_distance_sharp_rate": 2.0,
     "merge_desired_distance_slow_rate": 1.0,
-    "enabe_right_lane_merge_to_ego_lane_decision_process" : false
+    "enabe_right_lane_merge_to_ego_lane_decision_process" : false,
+    "acc_lower_bound_in_large_curv" : -2.0,
+    "jerk_lower_in_large_curv" : -2.0
   },
   "result_trajectory_generator": {
     "enable_lat_traj": false
