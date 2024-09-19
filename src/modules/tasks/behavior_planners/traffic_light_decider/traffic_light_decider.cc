@@ -32,7 +32,7 @@ bool TrafficLightDecider::Execute() {
   } else {
     is_first_car_ = true;
   }
-  if (config_.enable_tfl_decider && is_first_car_ && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5) && 
+  if (config_.enable_tfl_decider && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2) && 
       (intersection_state != planning::common::IN_INTERSECTION || (intersection_state == planning::common::IN_INTERSECTION && !can_pass_))) {
 
     const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
@@ -86,15 +86,20 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
-      if(dis_to_stopline > 200.0) {
+      if(dis_to_stopline > 200.0 || !is_first_car_) {
         can_pass_ = true;
       }
       //can_pass_ = true;
 
     }
-    if (!can_pass_) {
+  } else if ((dis_to_stopline <= 0.5 || dis_to_crosswalk <= 2) && (intersection_state == planning::common::IN_INTERSECTION && !can_pass_)) {
+    can_pass_ = false;
+  } else {
+    can_pass_ = true;
+  }
+
+  if (!can_pass_) {
       AddVirtualObstacle();
-    }
   }
   //此外认为已经进入路口
   /*
