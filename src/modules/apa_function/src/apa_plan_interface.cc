@@ -314,6 +314,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lon_err, double,
                   "finish_parallel_lon_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lon_overhaing_error,
+                  double, "finish_parallel_lon_overhaing_error");
+
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_heading_err, double,
                   "finish_parallel_heading_err");
 
