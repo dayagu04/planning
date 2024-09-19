@@ -55,6 +55,8 @@ constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
 constexpr double kLargeCurvRadius = 500;
 constexpr double kConsiderTimeLargeCurv = 3.0;
+constexpr double kDistanceToStopLineBufferAgent = 1.8;
+constexpr double kDistanceToStopLineBufferEgo = 6.5;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -2282,8 +2284,10 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   constexpr double lead_change_buffer = 1.0;
   current_traffic_light_can_pass_ =
       session_->planning_context().traffic_light_decider_output().can_pass;
-  ego_is_first_car_nearby_intersection_ =
-      session_->planning_context().traffic_light_decider_output().is_first_car;
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto current_distance_ego_to_stopline =
+      virtual_lane_manager->GetEgoDistanceToStopline();
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
@@ -2313,11 +2317,27 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     bool lead_one_change =
         (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
         (distance_stop + lead_change_buffer);
-    const bool traffic_light_start_condition =
-        lead_one.track_id() == 0 && current_traffic_light_can_pass_ &&
-        !last_traffic_light_can_pass_;
-    bool start_condition =
-        lead_one_start || lead_one_change || traffic_light_start_condition;
+
+    // intersection condition
+    const bool traffic_light_start_condition = current_traffic_light_can_pass_;
+    bool approach_to_stop_line = false;
+    if (NL_NMAX !=
+        current_distance_ego_to_stopline) {  // intersection stop line exits
+      if (fabs(current_distance_ego_to_stopline) <
+          kDistanceToStopLineBufferEgo) {
+        lead_one_start = false;
+        lead_one_change = false;
+      } else if (lead_one.d_rel() >
+                     fabs(fabs(current_distance_ego_to_stopline) -
+                          kDistanceToStopLineBufferAgent) &&
+                 current_distance_ego_to_stopline >
+                     kDistanceToStopLineBufferEgo) {
+        approach_to_stop_line = true;
+      }
+    }
+    bool start_condition = lead_one_start || lead_one_change ||
+                           traffic_light_start_condition ||
+                           approach_to_stop_line;
 
     // 2. Update the state
     if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
