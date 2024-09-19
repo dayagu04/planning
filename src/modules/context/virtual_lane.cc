@@ -428,8 +428,11 @@ void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map
   const bool is_leaving_ramp = general_task_map_info.is_leaving_ramp;
   const double dis_to_second_merge = general_task_map_info.distance_to_second_road_merge;
   const double dis_to_second_split = general_task_map_info.distance_to_second_road_split;
+  const double sum_dis_to_last_split_point_on_ramp = general_task_map_info.sum_dis_to_last_split_point_on_ramp;
   const RampDirection second_split_direction = general_task_map_info.second_split_direction;
   const RampDirection second_merge_direction = general_task_map_info.second_merge_direction;
+  //经过split点50m后再开始触发变道任务，避免自车还在split的区域内
+  const double threshold_for_trigger_front_merge_mlc_on_ramp = 50;
   //首先处理匝道上的分叉口
   if (dis_to_first_merge > dis_to_first_split &&
       dis_to_first_split <
@@ -454,7 +457,8 @@ void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map
         current_tasks_.emplace_back(1);
       }
     }
-  } else if (is_ramp_merge_to_ramp_on_expressway) {
+  } else if (is_ramp_merge_to_ramp_on_expressway &&
+            sum_dis_to_last_split_point_on_ramp > threshold_for_trigger_front_merge_mlc_on_ramp) {
     RampDirection next_lc_dir = RAMP_NONE;
     if (dis_to_second_merge < dis_to_first_split) {
       //下一个场景还是merge场景

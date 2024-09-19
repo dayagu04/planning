@@ -366,6 +366,7 @@ class VirtualLaneManager {
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point_ = NL_NMAX;
   double sum_dis_to_last_split_point_ = NL_NMAX;
+  double sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
   bool is_in_sdmaproad_ = false;
   bool is_ego_on_expressway_ = false;
   bool is_ego_on_expressway_hmi_ = false;

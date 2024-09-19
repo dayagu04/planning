@@ -1599,7 +1599,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   }
   JSON_DEBUG_VALUE("sum_dis_to_last_merge_point", sum_dis_to_last_merge_point_);
 
-  // 计算距离上一个split点的信息
+  // 计算在高速主路上距离上一个split点的信息
   const SdMapSwtx::Segment* last_split_seg =
       sd_map.GetPreviousRoadSegment(current_segment->id());
   double sum_dis_to_last_split_point = nearest_s;
@@ -1623,6 +1623,27 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     }
   }
   JSON_DEBUG_VALUE("sum_dis_to_last_split_point", sum_dis_to_last_split_point_);
+
+  // 计算在匝道上距离上一个split点的信息
+  const SdMapSwtx::Segment* last_split_seg_on_ramp =
+      sd_map.GetPreviousRoadSegment(current_segment->id());
+  double sum_dis_to_last_split_point_on_ramp = nearest_s;
+  sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
+  if (current_segment->usage() == SdMapSwtx::RAMP &&
+      last_split_seg_on_ramp) {
+    while (last_split_seg_on_ramp->out_link().size() == 1) {
+      sum_dis_to_last_split_point_on_ramp =
+          sum_dis_to_last_split_point_on_ramp + last_split_seg_on_ramp->dis();
+      last_split_seg_on_ramp =
+          sd_map.GetPreviousRoadSegment(last_split_seg_on_ramp->id());
+      if (!last_split_seg_on_ramp) {
+        break;
+      }
+    }
+    if (last_split_seg_on_ramp && last_split_seg_on_ramp->out_link().size() == 2) {
+      sum_dis_to_last_split_point_on_ramp_ = sum_dis_to_last_split_point_on_ramp;
+    }
+  }
 
   // 计算到路线终点的距离
   double dis_to_end = NL_NMAX;
@@ -2119,6 +2140,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
   sum_dis_to_last_split_point_ = NL_NMAX;
+  sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
   distance_to_toll_station_ = NL_NMAX;
   is_ego_on_city_expressway_hmi_ = false;
   is_ego_on_expressway_hmi_ = false;
@@ -2345,6 +2367,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   general_task_map_info.second_split_direction = second_split_direction_;
   general_task_map_info.distance_to_second_road_merge = distance_to_second_road_merge_;
   general_task_map_info.distance_to_second_road_split = distance_to_second_road_split_;
+  general_task_map_info.sum_dis_to_last_split_point_on_ramp = sum_dis_to_last_split_point_on_ramp_;
 
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {

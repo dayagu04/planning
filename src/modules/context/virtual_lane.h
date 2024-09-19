@@ -37,6 +37,7 @@ struct GeneralTaskMapInfo {
   double distance_to_first_road_split;
   double distance_to_second_road_merge;
   double distance_to_second_road_split;
+  double sum_dis_to_last_split_point_on_ramp;
   int lane_num_except_emergency;
   bool is_nearing_ramp;
   bool is_leaving_ramp;
