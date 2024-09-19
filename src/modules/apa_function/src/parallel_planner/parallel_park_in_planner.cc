@@ -39,7 +39,7 @@ static double kRearMaxDetaXMagWhenRearOccupied = 0.5;
 
 static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
-static double kCurbInitialOffset = 0.36;
+static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
 
 static double kMaxDistDeleteObsToEgoInSlot = 0.3;
@@ -1540,10 +1540,11 @@ const bool ParallelParkInPlanner::CheckFinished() {
   const bool lon_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.x()) <
                                apa_param.GetParam().finish_parallel_lon_err;
   const bool lon_condition_2 =
-      rear_bumper_center.x() >= apa_param.GetParam().finish_parallel_lon_err &&
+      rear_bumper_center.x() >=
+          apa_param.GetParam().finish_parallel_lon_overhaing_error &&
       front_bumper_center.x() <=
           ego_slot_info.slot_length -
-              apa_param.GetParam().finish_parallel_lon_err;
+              apa_param.GetParam().finish_parallel_lon_overhaing_error;
 
   DEBUG_PRINT("terminal x error = " << ego_slot_info.terminal_err.pos.x());
 

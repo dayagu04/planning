@@ -1517,7 +1517,7 @@ const bool ParallelPathPlanner::CheckEgoInSlot() const {
 const bool ParallelPathPlanner::CalMinSafeCircle() {
   const auto time0 = IflyTime::Now_ms();
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.05));
 
   std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
   const bool success_tra =

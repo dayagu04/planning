@@ -2786,12 +2786,18 @@ void SlotManagement::UpdateSlotInfoInParking() {
 }
 
 void SlotManagement::UpdateParallelSlotInfoInParking() {
-  // DEBUG_PRINT("occupied ratio =" <<
-  // frame_.ego_slot_info.slot_occupied_ratio
-  //           << ", vel mag =" << std::fabs(frame_.measurement_data_ptr->vel)
-  //           << ", !parallel_slot_reseted_once ="
-  //           << !frame_.parallel_slot_reseted_once);
+  // update real time outside slot
+  if (frame_.ego_slot_info.slot_occupied_ratio < 1e-5) {
+    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
+    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
+        frame_.ego_slot_info.select_slot);
 
+    frame_.ego_slot_info.select_slot_filter =
+        frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
+            .GetFusedInfo();
+  }
+
+  // update once in slot
   if ((frame_.ego_slot_info.slot_occupied_ratio > 0.55) &&
       (std::fabs(frame_.measurement_data_ptr->vel) <
        apa_param.GetParam().car_static_velocity_strict) &&
