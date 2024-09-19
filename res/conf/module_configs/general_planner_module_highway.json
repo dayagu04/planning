@@ -464,7 +464,7 @@
     "ttc_brake_hysteresis": 0.5,
     "t_curv": 2.0,
     "dis_curv": 30.0,
-    "v_start": 0.3,
+    "v_start": 0.5,
     "v_startmode": 1.5,
     "obstacle_v_start": 0.5,
     "distance_stop": 2.0,
