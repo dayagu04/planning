@@ -56,6 +56,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   map_bound_min_y = -20.0;
   map_bound_max_x = 20.0;
 
+  tie_breaker_ = 1e-5;
+
   return;
 }
 

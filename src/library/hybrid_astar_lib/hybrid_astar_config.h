@@ -65,6 +65,8 @@ struct PlannerOpenSpaceConfig {
   double rear_overhanging;
   double width_mirror;
 
+  double tie_breaker_;
+
   void InitConfig();
 };
 
