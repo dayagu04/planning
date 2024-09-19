@@ -843,6 +843,12 @@ def load_lon_global_figure(bag_loader):
      traffic_status_vec.append(bag_loader.plan_debug_msg['json'][ind]['traffic_status_straight'])
   tfl_status_fig.line(t_plan_vec, traffic_status_vec, line_width=1,
                               legend_label='tfl_straight_status', color="brown")
+  tfl_status_fig.text(x=x_value, y=48, text=['RED:1.10.11.41'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=44, text=['YELLOW:2.42'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=46, text=['GREEN:3.43'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=38, text=['GREEN_BLINK:30.32.33'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=42, text=['YELLOW_BLINK:20.22'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=40, text=['UNKNOWN:OTHERS'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   tfl_status_fig.legend.click_policy = 'hide'
 
   return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig, tfl_status_fig
