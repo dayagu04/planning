@@ -53,7 +53,7 @@ constexpr double kExpandLengthBuffer = 0.0;
 constexpr double kFarLead = 100.0;
 constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
-constexpr double kLargeCurvRadius = 350;
+constexpr double kLargeCurvRadius = 500;
 constexpr double kConsiderTimeLargeCurv = 3.0;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
@@ -4053,7 +4053,7 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.a_min = acc_target_.first;
   state_limit.a_max = acc_target_.second;
   state_limit.j_min = -1.0;
-  state_limit.j_max = 1.0;
+  state_limit.j_max = 1.5;
 
   if (v_limit_on_turns_and_road_ == v_target_) {
     state_limit.a_min = config_.acc_lower_bound_in_large_curv;
