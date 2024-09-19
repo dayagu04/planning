@@ -292,7 +292,10 @@ def draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager):
       for i, plan_debug in enumerate(plan_debug_msg['data']):
         input_topic_timestamp = plan_debug.input_topic_timestamp
         if lib.load_ros_bag.is_new_loc:
-          localization_timestamp = input_topic_timestamp.localization
+          if 0 != input_topic_timestamp.localization:
+            localization_timestamp = input_topic_timestamp.localization
+          else :
+            localization_timestamp = input_topic_timestamp.localization_estimate
         else :
           if is_bag_main:
             localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
@@ -464,8 +467,10 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         lat_motion_plan_output = plan_debug.lateral_motion_planning_output
         input_topic_timestamp = plan_debug.input_topic_timestamp
         if lib.load_ros_bag.is_new_loc:
-          localization_timestamp = input_topic_timestamp.localization
-          #localization_timestamp = input_topic_timestamp.localization_estimate
+          if 0 != input_topic_timestamp.localization:
+            localization_timestamp = input_topic_timestamp.localization
+          else :
+            localization_timestamp = input_topic_timestamp.localization_estimate
         else :
           if is_bag_main:
             localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
