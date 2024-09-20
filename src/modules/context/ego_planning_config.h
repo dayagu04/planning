@@ -2270,9 +2270,17 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
     enable_tfl_decider = read_json_keys<bool>(
         json, std::vector<std::string>{"traffic_light_decider",
                                        "enable_tfl_decider"});
+    virtual_dis_before_stopline = read_json_keys<double>(
+        json, std::vector<std::string>{"traffic_light_decider",
+                                       "virtual_dis_before_stopline"});
+    stopline_tfl_dis_thred = read_json_keys<double>(
+        json, std::vector<std::string>{"traffic_light_decider",
+                                       "stopline_tfl_dis_thred"});
   }
 
   bool enable_tfl_decider = false;
+  double virtual_dis_before_stopline = 20;
+  double stopline_tfl_dis_thred = 50;
 };
 
 struct MapRequestConfig : public EgoPlanningConfig {

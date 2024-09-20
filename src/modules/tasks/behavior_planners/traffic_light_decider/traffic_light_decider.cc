@@ -42,7 +42,11 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
-      can_pass_ = false;
+      if (dis_to_stopline < 100.0 && IsSmallFrontIntersection() && !IsIntersectionMatchTFL()) {
+        can_pass_ = true;
+      } else {
+        can_pass_ = false;
+      }
 
     } else if (traffic_status.go_straight == 3 || traffic_status.go_straight == 43) {
       //green light
@@ -170,4 +174,53 @@ bool TrafficLightDecider::AddVirtualObstacle() {
 
   return true;
 }
+
+bool TrafficLightDecider::IsSmallFrontIntersection() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto curr_lane = environmental_model.get_virtual_lane_manager()
+                               ->get_current_lane();
+  if (curr_lane == nullptr) {
+    return false;
+  }
+  double ego_pos_x = 0.0;
+  if (curr_lane->get_left_lane_boundary().car_points_size > 0 &&
+      curr_lane->get_right_lane_boundary().car_points_size > 0) {
+    double first_left_x =
+        curr_lane->get_left_lane_boundary().car_points[0].x;
+    double first_right_x =
+        curr_lane->get_right_lane_boundary().car_points[0].x;
+    ego_pos_x = std::max(0 - first_left_x, 0 - first_right_x);
+  } else {
+    return false;
+  }
+  double dis_to_stopline = environmental_model.get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+  double judge_virtual_dis = ego_pos_x + dis_to_stopline + config_.virtual_dis_before_stopline;
+  bool is_virtual_type = environmental_model.get_virtual_lane_manager()
+                               ->IsPosXOnVirtualLaneType(judge_virtual_dis);
+  return !is_virtual_type;
+}
+
+bool TrafficLightDecider::IsIntersectionMatchTFL() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
+  const auto all_tfls = tfl_manager->GetTrafficLightsInfo();
+  
+  double dis_to_tfl = 10000.0;
+  for (int i = 0; i < all_tfls.size(); i++) {
+    if (all_tfls[i].traffic_light_x > 0 && all_tfls[i].traffic_light_x < dis_to_tfl) {
+      dis_to_tfl = all_tfls[i].traffic_light_x;
+    }
+  }
+
+  double dis_to_stopline = environmental_model.get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+  bool is_match = false;
+  if (std::abs(dis_to_tfl - dis_to_stopline) < config_.stopline_tfl_dis_thred) {
+    is_match = true;
+  }
+  return is_match;
+  
+}
+
 }  // namespace planning

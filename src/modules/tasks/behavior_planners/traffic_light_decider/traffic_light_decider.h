@@ -23,6 +23,12 @@ class TrafficLightDecider : public Task {
   // add virtual agent to agent manager
   bool AddVirtualObstacle();
 
+  //intersection before is small intersection or not
+  bool IsSmallFrontIntersection();
+
+  //small intersection is matchable with tfl or not
+  bool IsIntersectionMatchTFL();
+
   TrafficLightDeciderConfig config_;
   bool is_first_car_ = false;
   bool is_pass_stopline_ = false;

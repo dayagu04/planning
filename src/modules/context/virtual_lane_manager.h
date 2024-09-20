@@ -257,6 +257,7 @@ class VirtualLaneManager {
   const planning::common::IntersectionState GetIntersectionState() {
     return Intersection_state_;
   };
+  bool IsPosXOnVirtualLaneType(double x_pos);
 
   std::vector<int> GetZeroRelativeIdOrderIds() {
     return order_ids_of_same_zero_relative_id_;
@@ -310,7 +311,6 @@ class VirtualLaneManager {
   bool UpdateEgoDistanceToStopline();
   bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);
   bool UpdateIntersectionState();
-  bool IsPosXOnVirtualLaneType(double x_pos);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
