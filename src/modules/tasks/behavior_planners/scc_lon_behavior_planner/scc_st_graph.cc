@@ -335,7 +335,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
   // 纵向只使用融合成功障碍物
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
-  const auto& agent_manager = session_->environmental_model().get_dynamic_world()->agent_manager();
+  const auto &agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(lead_one.track_id());
@@ -1787,9 +1788,10 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
     virtual_obs_desired_distance = GetCalibratedDistance(
         virtual_obs->speed(), v_ego,
         lon_behav_input_->lat_output().lc_request(), false, false, false);
-    double dis_to_virtual_obs =
-        std::min(lon_behav_input_->dis_to_stopline() - config_.stop_dis_before_stopline,
-                 lon_behav_input_->dis_to_crosswalk() - config_.stop_dis_before_crosswalk);
+    double dis_to_virtual_obs = std::min(
+        lon_behav_input_->dis_to_stopline() - config_.stop_dis_before_stopline,
+        lon_behav_input_->dis_to_crosswalk() -
+            config_.stop_dis_before_crosswalk);
     if (dis_to_virtual_obs < 1.0) {
       dis_to_virtual_obs = 1.0;
     }
@@ -2288,12 +2290,12 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       session_->environmental_model().get_virtual_lane_manager();
   const auto current_distance_ego_to_stopline =
       virtual_lane_manager->GetEgoDistanceToStopline();
+  const auto current_intersection_state = virtual_lane_manager->GetIntersectionState();
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
   // 这里有问题
-  if ((lead_one.track_id() == 0 && current_traffic_light_can_pass_ &&
-       last_traffic_light_can_pass_) ||
+  if ((lead_one.track_id() == 0 && current_traffic_light_can_pass_) ||
       dbw_status == false) {
     // reset state as default
     start_stop_info_.set_state(common::StartStopInfo::CRUISE);
@@ -2319,7 +2321,9 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
         (distance_stop + lead_change_buffer);
 
     // intersection condition
-    const bool traffic_light_start_condition = current_traffic_light_can_pass_;
+    const bool traffic_light_start_condition = current_traffic_light_can_pass_ && 
+                      (current_intersection_state == common::IntersectionState::APPROACH_INTERSECTION ||
+                      current_intersection_state == common::IntersectionState::IN_INTERSECTION);
     bool approach_to_stop_line = false;
     if (NL_NMAX !=
         current_distance_ego_to_stopline) {  // intersection stop line exits
