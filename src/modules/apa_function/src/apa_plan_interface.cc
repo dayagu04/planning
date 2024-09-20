@@ -129,9 +129,10 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
     planning_output_ = planner_ptr_->GetOutput();
     apa_hmi_ = planner_ptr_->GetAPAHmi();
     // DEBUG_PRINT("interface planning hmi----------------");
-    // DEBUG_PRINT("remain dist in hmi = " << apa_hmi_.distance_to_parking_space);
-    // DEBUG_PRINT(
-    //     "is_parking_pause = " << static_cast<int>(apa_hmi_.is_parking_pause));
+    // DEBUG_PRINT("remain dist in hmi = " <<
+    // apa_hmi_.distance_to_parking_space); DEBUG_PRINT(
+    //     "is_parking_pause = " <<
+    //     static_cast<int>(apa_hmi_.is_parking_pause));
     // DEBUG_PRINT("parking_pause_reason = " << apa_hmi_.parking_pause_reason);
   }
 
@@ -648,6 +649,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().max_slot_jump_heading, double,
                   "max_slot_jump_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().dynamic_plan_interval_time, double,
+                  "dynamic_plan_interval_time");
 
   // slot update params when parking
   JSON_READ_VALUE(apa_param.SetPram().fix_slot_occupied_ratio, double,

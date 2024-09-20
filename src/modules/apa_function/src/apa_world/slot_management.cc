@@ -352,6 +352,7 @@ const bool SlotManagement::UpdateEgoSlotInfo(
       ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
     }
     if (obs_in_slot_count > max_obs_in_slot_count) {
+      DEBUG_PRINT("there are too obs in slot, no release the slot");
       return false;
     }
   }
