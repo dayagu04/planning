@@ -53,7 +53,7 @@ constexpr double kExpandLengthBuffer = 0.0;
 constexpr double kFarLead = 100.0;
 constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
-constexpr double kLargeCurvRadius = 350;
+constexpr double kLargeCurvRadius = 500;
 constexpr double kConsiderTimeLargeCurv = 3.0;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
@@ -489,8 +489,9 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   double temp_lead_two_desired_velocity = 40.0;
 
   LOG_DEBUG("----CalcSpeedInfoWithTempLead--- \n");
-  const auto &agent_manager =
-      session_->environmental_model().get_dynamic_world()->agent_manager();
+  const auto &dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto &agent_manager = dynamic_world->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(temp_lead_one.track_id());
@@ -498,11 +499,26 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
       is_reverse_obs_in_large_curv = agent->is_reverse();
     }
   }
+  const auto ego_left_front_node_id = dynamic_world->ego_left_front_node_id();
+  const auto ego_right_front_node_id = dynamic_world->ego_right_front_node_id();
+  bool is_left_right_front_agent = false;
+  auto left_front_node = dynamic_world->GetNode(ego_left_front_node_id);
+  auto right_front_node = dynamic_world->GetNode(ego_right_front_node_id);
+  if (left_front_node != nullptr) {
+    is_left_right_front_agent =
+        left_front_node->node_agent_id() == temp_lead_one.track_id() ? true
+                                                                     : false;
+  }
+  if (right_front_node != nullptr) {
+    is_left_right_front_agent =
+        right_front_node->node_agent_id() == temp_lead_one.track_id() ? true
+                                                                      : false;
+  }
   // temp leadone
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
       (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
           1.0 &&
-      !is_reverse_obs_in_large_curv &&
+      !is_reverse_obs_in_large_curv && is_left_right_front_agent &&
       temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),
@@ -546,7 +562,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-        !is_reverse_obs_in_large_curv) {
+        !is_reverse_obs_in_large_curv && is_left_right_front_agent) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
@@ -4053,7 +4069,7 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.a_min = acc_target_.first;
   state_limit.a_max = acc_target_.second;
   state_limit.j_min = -1.0;
-  state_limit.j_max = 1.0;
+  state_limit.j_max = 1.5;
 
   if (v_limit_on_turns_and_road_ == v_target_) {
     state_limit.a_min = config_.acc_lower_bound_in_large_curv;
