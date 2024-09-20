@@ -766,6 +766,13 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
     GenerateFallBackPath();
 
     ILOG_INFO << "set input";
+
+    frame_.total_plan_count++;
+    if (current_gear_ == AstarPathGear::reverse &&
+        frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
+      in_slot_car_adjust_count_++;
+    }
+
   } else if (thread_state_ == RequestResponseState::HAS_REQUEST) {
     res = PathPlannerResult::WAIT_PATH;
 
@@ -1339,12 +1346,10 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
 const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
     const bool is_replan) {
   if (is_replan) {
-    frame_.total_plan_count++;
-  }
-
-  // check total plan number
-  if (frame_.total_plan_count > 30) {
-    return false;
+    // check total plan number
+    if (frame_.total_plan_count > 30) {
+      return false;
+    }
   }
 
   // check plan number in slot
@@ -1352,8 +1357,6 @@ const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
       frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
     if (in_slot_car_adjust_count_ >= 3) {
       return false;
-    } else {
-      in_slot_car_adjust_count_++;
     }
   }
 
