@@ -42,6 +42,9 @@ class FootPrintCircleModel {
 
   const FootPrintCircleList GetLocalFootPrintCircleByGear(const bool is_drive);
 
+  const FootPrintCircleList GetLocalFootPrintCircleByGear(
+      const AstarPathGear gear) const;
+
   const FootPrintCircleList GetLocalFootPrintCircle();
 
   void LocalToGlobalByTF(FootPrintCircleList *global_circle, Transform2d *tf);

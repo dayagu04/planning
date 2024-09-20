@@ -10,30 +10,31 @@
 #include <memory>
 #include <vector>
 
+#include "ad_common/math/linear_interpolation.h"
 #include "apa_param_setting.h"
 #include "apa_plan_base.h"
 #include "apa_plan_interface.h"
 #include "collision_detection.h"
 #include "common.h"
 #include "hybrid_a_star.h"
+#include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "hybrid_astar_park_planner.h"
 #include "log_glog.h"
 #include "math_lib.h"
 #include "perpendicular_park_in_planner.h"
+#include "polygon_base.h"
+#include "pose2d.h"
 #include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
-#include "log_glog.h"
-#include "pose2d.h"
 #include "src/library/collision_detection/aabb2d.h"
-#include "polygon_base.h"
-#include "ad_common/math/linear_interpolation.h"
 #include "src/library/hybrid_astar_lib/hybrid_a_star.h"
-#include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
-#include "src/library/occupancy_grid_map/virtual_wall_decider.h"
-#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
-#include "hybrid_astar_park_planner.h"
+#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/library/occupancy_grid_map/virtual_wall_decider.h"
+#include "src/library/reeds_shepp/reeds_shepp_interface.h"
+#include "transform2d.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -64,6 +65,9 @@ std::vector<Eigen::Vector4d> obs_line_list_;
 std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
 std::vector<Eigen::Vector2d> search_sequence_path_;
 std::vector<std::vector<Eigen::Vector2d>> rs_h_path_;
+std::vector<Eigen::Vector3d> footprint_circle_model_;
+std::vector<Eigen::Vector3d> footprint_circle_model_gear_drive_;
+std::vector<Eigen::Vector3d> footprint_circle_model_gear_reverse_;
 
 #define OBS_SAMPLING_DIST (0.1)
 
@@ -84,7 +88,7 @@ int Init() {
   std::shared_ptr<apa_planner::HybridAStarParkPlanner> hybrid_astar_park_ =
       std::dynamic_pointer_cast<apa_planner::HybridAStarParkPlanner>(planner);
 
-  HybridAStarThreadSolver* thread = hybrid_astar_park_->GetThread();
+  HybridAStarThreadSolver *thread = hybrid_astar_park_->GetThread();
   hybrid_astar_interface_ = thread->GetHybridAStarInterface();
 
   if (hybrid_astar_interface_ == nullptr) {
@@ -109,7 +113,6 @@ void ResetHybridAstarPath() {
   return;
 }
 
-
 void GetTrajPoseBySDist(const double s) {
   size_t left_idx = 0;
   size_t right_idx = 0;
@@ -118,8 +121,7 @@ void GetTrajPoseBySDist(const double s) {
     return;
   }
 
-  ILOG_INFO << "s " << s << " path size "
-            << global_path_.size();
+  ILOG_INFO << "s " << s << " path size " << global_path_.size();
 
   // for (size_t i = 0; i < global_path_s_.size(); i++)
   // {
@@ -152,11 +154,11 @@ void GetTrajPoseBySDist(const double s) {
   }
 
   double left_s = global_path_s_[left_idx];
-  double right_s = global_path_s_[right_idx] ;
+  double right_s = global_path_s_[right_idx];
 
   if (left_idx == right_idx) {
-    car_pose_by_s_[0]  = global_path_[left_idx][0];
-    car_pose_by_s_[1]  = global_path_[left_idx][1];
+    car_pose_by_s_[0] = global_path_[left_idx][0];
+    car_pose_by_s_[1] = global_path_[left_idx][1];
     car_pose_by_s_[2] = global_path_[left_idx][2];
   } else {
     car_pose_by_s_[0] =
@@ -180,9 +182,9 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
-
 int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
-                           const double vertical_slot_target_adjust_dist) {
+                           const double vertical_slot_target_adjust_dist,
+                           const Eigen::Vector3d &ego_pose) {
   //
   global_path_.clear();
   global_path_s_.clear();
@@ -197,7 +199,6 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
   AstarSearchState state;
   state = hybrid_astar_interface_->GetFullLengthPath(&result);
   if (result.x.size() > 0) {
-
     global_path_.reserve(result.x.size());
     global_path_s_.reserve(result.x.size());
 
@@ -276,6 +277,36 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
   }
 
   return 0;
+}
+
+void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
+  planning::Pose2D ego_global_pose =
+      planning::Pose2D(ego_pose[0], ego_pose[1], ego_pose[2]);
+  planning::Transform2d tf;
+  tf.SetBasePose(ego_global_pose);
+
+  const EulerDistanceTransform *edt_ =
+      hybrid_astar_interface_->GetEulerDistanceTransform();
+  const FootPrintCircleList circle_footprint =
+      edt_->GetCircleFootPrint(AstarPathGear::reverse);
+  footprint_circle_model_.clear();
+  const FootPrintCircle *circle = &circle_footprint.max_circle;
+
+  planning::Position2D global_position2d;
+  tf.ULFLocalPointToGlobal(&global_position2d, circle->pos);
+
+  footprint_circle_model_.push_back(Eigen::Vector3d(
+      global_position2d.x, global_position2d.y, circle->radius));
+
+  for (int i = 0; i < circle_footprint.size; i++) {
+    circle = &circle_footprint.circles[i];
+    tf.ULFLocalPointToGlobal(&global_position2d, circle->pos);
+
+    footprint_circle_model_.push_back(Eigen::Vector3d(
+        global_position2d.x, global_position2d.y, circle->radius));
+  }
+
+  return;
 }
 
 int GetParkingSpaceOccupiedRatio(const ApaParameters &parking_param,
@@ -436,8 +467,7 @@ int UpdateParkSpaceKeyPoints(
   return 0;
 }
 
-void DebugLineSegment(ad_common::math::LineSegment2d &line)
-{
+void DebugLineSegment(ad_common::math::LineSegment2d &line) {
   // ILOG_INFO << "start " << line.start().x() << " " << line.start().y();
   // ILOG_INFO << "end " << line.end().x() << " " << line.end().y();
 
@@ -515,7 +545,7 @@ int GenerateObstacleByJupyter(
       left_obs_start + unit_vec_02 * (vec_02.norm() - left_obj_dx + 1.0);
 
   const Eigen::Vector2d back_wall_right =
-      right_obs_start_ + unit_vec_02 * (vec_02.norm() - right_obj_dx+1.0);
+      right_obs_start_ + unit_vec_02 * (vec_02.norm() - right_obj_dx + 1.0);
 
   //
   std::vector<pnc::geometry_lib::LineSegment> line_vec;
@@ -723,7 +753,8 @@ std::vector<Eigen::Vector3d> Update(
       Eigen::Vector3d(target_ego_pos_global.x(), target_ego_pos_global.y(),
                       target_ego_heading_global);
 
-  // ILOG_INFO << "target_ego_pos_slot = " << ego_slot_info.target_ego_pos_slot[0]
+  // ILOG_INFO << "target_ego_pos_slot = " <<
+  // ego_slot_info.target_ego_pos_slot[0]
   //           << ", " << ego_slot_info.target_ego_pos_slot[1]
   //           << "  target_ego_heading_slot = "
   //           << ego_slot_info.target_ego_heading_slot * 57.3;
@@ -806,7 +837,8 @@ std::vector<Eigen::Vector3d> Update(
 
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(ego_slot_info,
-                           parking_param.vertical_slot_target_adjust_dist);
+                           parking_param.vertical_slot_target_adjust_dist,
+                           ego_global_pose);
 
     // just test rs library
 
@@ -851,6 +883,8 @@ std::vector<Eigen::Vector3d> Update(
 
   GetTrajPoseBySDist(s);
 
+  UpdateFootprintCircle(ego_global_pose);
+
   return global_path_;
 }
 
@@ -870,13 +904,9 @@ const std::vector<Eigen::Vector2d> &GetRectangleSoltPos() {
   return corrected_park_space_points_;
 }
 
-const std::vector<Eigen::Vector4d> &GetObsLineList() {
-  return obs_line_list_;
-}
+const std::vector<Eigen::Vector4d> &GetObsLineList() { return obs_line_list_; }
 
-const std::vector<Eigen::Vector3d> &GetReedsShapePath() {
-  return rs_path_;
-}
+const std::vector<Eigen::Vector3d> &GetReedsShapePath() { return rs_path_; }
 
 const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
   return real_time_node_list_;
@@ -893,6 +923,10 @@ const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
 
 const std::vector<Eigen::Vector3d> &GetRSLibPath() { return rs_path_alone_; }
 
+const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
+  return footprint_circle_model_;
+}
+
 PYBIND11_MODULE(hybrid_astar_py, m) {
   m.doc() = "m";
 
@@ -902,7 +936,6 @@ PYBIND11_MODULE(hybrid_astar_py, m) {
       .def("GetCircleTangentPose", &GetCircleTangentPose)
       .def("GetPtInsidePose", &GetPtInsidePose)
       .def("GetRectangleSoltPos", &GetRectangleSoltPos)
-      .def("GetPathFromHybridAstar", &GetPathFromHybridAstar)
       .def("GetReedsShapePath", &GetReedsShapePath)
       .def("GetAstarAllNodes", &GetAstarAllNodes)
       .def("GetSearchPathPoint", &GetSearchPathPoint)
@@ -911,6 +944,7 @@ PYBIND11_MODULE(hybrid_astar_py, m) {
       .def("StopPybind", &StopPybind)
       .def("GetTrajPoseByDist", &GetTrajPoseByDist)
       .def("GetRSLibPath", &GetRSLibPath)
+      .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetVirtualWallObstacles", &GetVirtualWallObstacles);
   ;
 }

@@ -42,7 +42,6 @@ struct PlannerOpenSpaceConfig {
   double traj_steer_penalty = 0.0;
   double traj_steer_change_penalty = 0.0;
   double ref_line_heading_penalty = 0.0;
-  double mirror_safe_buffer;
   std::vector<double> lat_hierarchy_safe_buffer;
 
   double expect_gear_penalty;

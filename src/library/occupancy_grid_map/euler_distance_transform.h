@@ -38,6 +38,8 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   const EDTData &GetConstEDTData() const { return data_; }
 
+  const FootPrintCircleList GetCircleFootPrint(const AstarPathGear gear) const;
+
  private:
   EDTData data_;
 
