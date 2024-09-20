@@ -32,11 +32,11 @@ bool TrafficLightDecider::Execute() {
   } else {
     is_first_car_ = true;
   }
+  const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
+  const auto traffic_status = tfl_manager->GetTrafficStatus();
   if (config_.enable_tfl_decider && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2) && 
       (intersection_state != planning::common::IN_INTERSECTION || (intersection_state == planning::common::IN_INTERSECTION && !can_pass_))) {
 
-    const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
-    const auto traffic_status = tfl_manager->GetTrafficStatus();
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 || traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
       //red light or(==) red blink
       green_light_timer_ = 0.0;
@@ -92,8 +92,19 @@ bool TrafficLightDecider::Execute() {
       //can_pass_ = true;
 
     }
-  } else if ((dis_to_stopline <= 0.5 || dis_to_crosswalk <= 2) && (intersection_state == planning::common::IN_INTERSECTION && !can_pass_)) {
-    can_pass_ = false;
+  } else if (config_.enable_tfl_decider && (dis_to_stopline <= 0.5 || dis_to_crosswalk <= 2) && (intersection_state == planning::common::IN_INTERSECTION && !can_pass_)) {
+    //一般是刹停在路口中，这是看到绿灯就设置can_pass_ = true
+    if (traffic_status.go_straight == 3 || traffic_status.go_straight == 43) {
+      //green light
+      green_light_timer_ += 0.1;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = true;
+
+    } else {
+      can_pass_ = false;
+    }
+    
   } else {
     can_pass_ = true;
   }
