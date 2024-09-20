@@ -73,7 +73,7 @@ int HybridAStarInterface::Init(const double back_edge_to_rear_axis,
   if (config_.lat_hierarchy_safe_buffer.size() > 0) {
     edt_.Init(static_cast<float>(config_.lat_hierarchy_safe_buffer[0]),
               static_cast<float>(config_.lon_front_safe_buffer),
-              static_cast<float>(config_.mirror_safe_buffer));
+              static_cast<float>(config_.lat_hierarchy_safe_buffer[0]));
   }
 
   ILOG_INFO << "astar interface success";

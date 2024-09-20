@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240914/20240914-10-36-36/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-14-10-36-36_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240914/20240914-16-56-56/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-14-16-56-56_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -699,7 +699,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       car_box_x_vec.append(car_xn)
       car_box_y_vec.append(car_yn)
 
-    print("tuned_gear_command = ", tuned_planning_output.gear_command)
+    print("tuned_gear_command = ", tuned_planning_output.gear_command.gear_command_value)
 
   print(len(left_turn_path_x_vec))
   print(len(right_turn_path_x_vec))

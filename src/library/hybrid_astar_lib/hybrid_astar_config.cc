@@ -36,7 +36,6 @@ void PlannerOpenSpaceConfig::InitConfig() {
   traj_steer_change_penalty = 0.0;
   lat_hierarchy_safe_buffer.emplace_back(0.2);
   lat_hierarchy_safe_buffer.emplace_back(0.1);
-  mirror_safe_buffer = 0.2;
   lon_front_safe_buffer = 0.4;
   lon_back_safe_buffer = 0.4;
   lon_min_safe_buffer = 0.1;
@@ -55,6 +54,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   map_bound_max_x = 20.0;
   map_bound_min_y = -20.0;
   map_bound_max_x = 20.0;
+
+  tie_breaker_ = 1e-5;
 
   return;
 }

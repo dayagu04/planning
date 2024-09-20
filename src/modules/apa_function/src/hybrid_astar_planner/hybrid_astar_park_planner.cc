@@ -45,6 +45,9 @@ void HybridAStarParkPlanner::Reset() {
     }
   }
 
+  current_gear_ = AstarPathGear::parking;
+  in_slot_car_adjust_count_ = 0;
+
   return;
 }
 
@@ -56,6 +59,7 @@ void HybridAStarParkPlanner::Init() {
   ILOG_INFO << "init astar thread";
 
   current_gear_ = AstarPathGear::parking;
+  in_slot_car_adjust_count_ = 0;
 
   thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
                params.steer_ratio, params.wheel_base, params.min_turn_radius,
@@ -240,6 +244,13 @@ void HybridAStarParkPlanner::PlanCore() {
   }
 
   bool is_replan = CheckReplan();
+
+  if (!CheckEgoReplanNumber(is_replan)) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = PLAN_COUNT_EXCEED_LIMIT;
+    return;
+  }
+
   bool update_thread_path = UpdateThreadPath();
   PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
 
@@ -582,25 +593,25 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
 
   switch (frame_.replan_reason) {
     case FIRST_PLAN:
-      cur_request.plan_reason = PlanningReason::first_plan;
+      cur_request.plan_reason = PlanningReason::FIRST_PLAN;
       break;
     case SEG_COMPLETED_PATH:
-      cur_request.plan_reason = PlanningReason::path_completed;
+      cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
       break;
     case SEG_COMPLETED_USS:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case STUCKED:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case DYNAMIC:
-      cur_request.plan_reason = PlanningReason::adjust_self_car_pose;
+      cur_request.plan_reason = PlanningReason::ADJUST_SELF_CAR_POSE;
       break;
     case SEG_COMPLETED_COL_DET:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     default:
-      cur_request.plan_reason = PlanningReason::none;
+      cur_request.plan_reason = PlanningReason::NONE;
       break;
   }
 
@@ -1091,13 +1102,13 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_slot_info.ego_heading_slot) <
           apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    const std::vector<double> x_tab = {
+    const std::vector<double> x_bound = {
         ego_slot_info.target_ego_pos_slot.x(),
         ego_slot_info.slot_length + apa_param.GetParam().rear_overhanging};
 
-    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    const std::vector<double> occupied_ratio_bound = {1.0, 0.0};
     ego_slot_info.slot_occupied_ratio = pnc::mathlib::Interp1(
-        x_tab, occupied_ratio_tab, ego_slot_info.ego_pos_slot.x());
+        x_bound, occupied_ratio_bound, ego_slot_info.ego_pos_slot.x());
   } else {
     ego_slot_info.slot_occupied_ratio = 0.0;
   }
@@ -1323,6 +1334,30 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   }
 
   return;
+}
+
+const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
+    const bool is_replan) {
+  if (is_replan) {
+    frame_.total_plan_count++;
+  }
+
+  // check total plan number
+  if (frame_.total_plan_count > 30) {
+    return false;
+  }
+
+  // check plan number in slot
+  if (is_replan && current_gear_ == AstarPathGear::reverse &&
+      frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
+    if (in_slot_car_adjust_count_ >= 3) {
+      return false;
+    } else {
+      in_slot_car_adjust_count_++;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace apa_planner

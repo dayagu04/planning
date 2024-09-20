@@ -1625,6 +1625,63 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   return piecewise_cost;
 }
 
+double HybridAStar::CalcGCostToParentNode2(Node3d* current_node,
+                                          Node3d* next_node) {
+  // evaluate cost on the trajectory and add current cost
+  double piecewise_cost = 0.0;
+  double path_dist = 0.0;
+  path_dist = next_node->GetNodePathDistance();
+
+  if (next_node->IsForward()) {
+    piecewise_cost += path_dist * config_.traj_forward_penalty;
+  } else {
+    piecewise_cost += path_dist * config_.traj_reverse_penalty;
+  }
+
+  // gear punish
+  if (current_node->IsPathGearChange(next_node->GetGearType())) {
+    piecewise_cost += 10.0;
+  }
+
+  // // steering wheel angle cost
+  // // for start node, steering angle can be any value
+  // if (!current_node->IsStartNode()) {
+  //   piecewise_cost +=
+  //       config_.traj_steer_penalty * std::fabs(next_node->GetSteer());
+
+  //   // steering wheel change
+  //   piecewise_cost +=
+  //       config_.traj_steer_change_penalty *
+  //       std::fabs(next_node->GetSteer() - current_node->GetSteer());
+  // }
+
+  // // request dist and gear cost
+  // if (request_.first_action_request.has_request &&
+  //     next_node->GetDistToStart() <
+  //         request_.first_action_request.dist_request) {
+  //   // gear is different
+  //   if (next_node->GetGearType() !=
+  //       request_.first_action_request.gear_request) {
+  //     piecewise_cost += config_.expect_gear_penalty;
+  //   }
+  // }
+
+  // // safe dist cost
+  // double safe_punish = 0.0;
+  // if (config_.enable_obs_dist_g_cost) {
+  //   safe_punish = CalcSafeDistCost(next_node);
+  // }
+  // piecewise_cost += safe_punish;
+
+  // ref line heading cost
+  // double heading_cost =
+  //     std::fabs(GetThetaDiff(next_node->GetPhi(), ref_line_.GetHeading())) *
+  //     config_.ref_line_heading_penalty;
+  // piecewise_cost += heading_cost;
+
+  return piecewise_cost;
+}
+
 double HybridAStar::ObstacleHeuristicWithHolonomic(Node3d* next_node) {
   return dp_heuristic_generator_->CheckDpMap(next_node->GetX(),
                                              next_node->GetY());
@@ -1921,7 +1978,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   // clear containers
   ResetNodePool();
   rs_end_node_.Clear();
-  open_pq_ = decltype(open_pq_)();
+  open_pq_.clear();
   node_set_.clear();
 
   // debug
@@ -2034,7 +2091,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   // check end
   check_start_time = IflyTime::Now_ms();
   if (!ValidityCheckByEDT(astar_end_node_)) {
-    ILOG_ERROR << "end_node in collision with obstacles "
+    ILOG_INFO << "end_node in collision with obstacles "
                << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
     astar_end_node_->DebugString();
@@ -2079,8 +2136,9 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
                                 start, end, vehicle_param_.width);
 
   // load open set, pq
-  open_pq_.emplace(
-      QueuePoint(start_node_->GetGlobalID(), start_node_->GetFCost()));
+  start_node_->SetMultiMapIter(
+      open_pq_.insert(std::make_pair(0.0, start_node_)));
+
   node_set_.emplace(start_node_->GetGlobalID(), start_node_);
 
   // Hybrid A*
@@ -2102,10 +2160,13 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
 
-    node_id = open_pq_.top().node_id;
-    open_pq_.pop();
+    current_node = open_pq_.begin()->second;
+    open_pq_.erase(open_pq_.begin());
+    if (current_node == nullptr) {
+      ILOG_INFO <<"pq is null node";
+      continue;
+    }
 
-    current_node = node_set_[node_id];
     current_node->SetVisitedType(AstarNodeVisitedType::in_close);
 
 #if DEBUG_CHILD_NODE
@@ -2232,8 +2293,8 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
         next_node_in_pool->SetFCost();
         next_node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
 
-        open_pq_.emplace(QueuePoint(next_node_in_pool->GetGlobalID(),
-                                    next_node_in_pool->GetFCost()));
+        next_node_in_pool->SetMultiMapIter(open_pq_.insert(
+            std::make_pair(next_node_in_pool->GetFCost(), next_node_in_pool)));
 
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
 
@@ -2251,22 +2312,41 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
 
           h_cost_rs_path_num++;
 
+          open_pq_.erase(next_node_in_pool->GetMultiMapIter());
+
           *next_node_in_pool = new_node;
           next_node_in_pool->SetFCost();
           next_node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
 
           // put node in open set again and record it.
-          open_pq_.emplace(QueuePoint(next_node_in_pool->GetGlobalID(),
-                                      next_node_in_pool->GetFCost()));
+          next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
+              next_node_in_pool->GetFCost(), next_node_in_pool)));
 
 #if DEBUG_CHILD_NODE
           if (explored_node_num < DEBUG_NODE_MAX_NUM) {
-            if (vis_type == AstarNodeVisitedType::in_open) {
-              ILOG_INFO << "node has in open";
-            } else {
-              ILOG_INFO << "node has in close";
-            }
+            ILOG_INFO << "node has in open";
+            next_node_in_pool->DebugCost();
+          }
+#endif
+        }
+      } else {
+        // in close set and need update
+        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
+          CalculateNodeHeuristicCost(current_node, &new_node);
 
+          h_cost_rs_path_num++;
+
+          *next_node_in_pool = new_node;
+          next_node_in_pool->SetFCost();
+          next_node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
+
+          // put node in open set again and record it.
+          next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
+              next_node_in_pool->GetFCost(), next_node_in_pool)));
+
+#if DEBUG_CHILD_NODE
+          if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+            ILOG_INFO << "node has in close";
             next_node_in_pool->DebugCost();
           }
 #endif

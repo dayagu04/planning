@@ -255,4 +255,9 @@ void EulerDistanceTransform::UpdateSafeBuffer(
   return;
 }
 
+const FootPrintCircleList EulerDistanceTransform::GetCircleFootPrint(
+    const AstarPathGear gear) const {
+  return footprint_model_.GetLocalFootPrintCircleByGear(gear);
+}
+
 }  // namespace planning
