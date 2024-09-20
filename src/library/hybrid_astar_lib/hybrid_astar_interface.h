@@ -73,6 +73,10 @@ class HybridAStarInterface {
   // multi-thread, output
   int UpdateOutput();
 
+  const EulerDistanceTransform* GetEulerDistanceTransform() const {
+    return &edt_;
+  }
+
  public:
   // for debug
   void GetRSPathHeuristic(
