@@ -210,6 +210,15 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
+    const pnc::geometry_lib::PathSegment &path_seg) {
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    return UpdateByObsMap(path_seg.line_seg, path_seg.GetStartHeading());
+  } else {
+    return UpdateByObsMap(path_seg.arc_seg, path_seg.GetStartHeading());
+  }
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     const pnc::geometry_lib::LineSegment &line_seg,
     const double heading_start) {
   if (obs_pt_global_map_.empty()) {

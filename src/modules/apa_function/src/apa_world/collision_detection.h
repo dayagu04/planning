@@ -81,6 +81,9 @@ class CollisionDetector {
                                const double heading_start);
 
   const CollisionResult UpdateByObsMap(
+      const pnc::geometry_lib::PathSegment &path_seg);
+
+  const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::LineSegment &line_seg,
       const double heading_start);
 

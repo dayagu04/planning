@@ -95,7 +95,7 @@ void PerpendicularParkInPlanner::PlanCore() {
   }
 
   // check replan
-  if (apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan || CheckReplan()) {
+  if (CheckReplan()) {
     DEBUG_PRINT("replan is required!");
 
     frame_.replan_flag = true;
@@ -109,7 +109,9 @@ void PerpendicularParkInPlanner::PlanCore() {
 
     GenObstacles();
 
-    frame_.total_plan_count++;
+    if (frame_.replan_reason != FORCE_PLAN && frame_.replan_reason != DYNAMIC) {
+      frame_.total_plan_count++;
+    }
 
     uint8_t pathplan_result = PathPlannerResult::PLAN_FAILED;
 
@@ -121,7 +123,17 @@ void PerpendicularParkInPlanner::PlanCore() {
       frame_.plan_fail_reason = PLAN_COUNT_EXCEED_LIMIT;
     }
 
-    if (!frame_.dynamic_plan_fail_flag) {
+    if (frame_.dynamic_plan_fail_flag) {
+      EgoSlotInfo& ego_slot = frame_.ego_slot_info;
+      ego_slot.move_slot_dist = frame_.ego_slot_info.last_move_slot_dist;
+
+      ego_slot.terminal_err.Set(
+          ego_slot.ego_pos_slot -
+              Eigen::Vector2d(
+                  ego_slot.target_ego_pos_slot.x(),
+                  ego_slot.target_ego_pos_slot.y() + ego_slot.move_slot_dist),
+          ego_slot.ego_heading_slot - ego_slot.target_ego_heading_slot);
+    } else {
       frame_.car_already_move_dist = 0.0;
     }
 
@@ -450,13 +462,13 @@ const bool PerpendicularParkInPlanner::UpdateEgoSlotInfo() {
       const pnc::geometry_lib::PathSegment& path_seg_global =
           current_plan_path_vec_[i];
       length += path_seg_global.Getlength();
-      if (length > dmove_dist) {
+      if (dmove_dist < length - 1e-3) {
         trim_id_vec.emplace_back(i);
         break;
-      } else if (pnc::mathlib::IsDoubleEqual(length, dmove_dist)) {
+      } else if (dmove_dist > length - 1e-3 && dmove_dist < length + 1e-3) {
         lose_id_vec.emplace_back(i);
         break;
-      } else if (length < dmove_dist) {
+      } else {
         lose_id_vec.emplace_back(i);
       }
     }
@@ -968,6 +980,7 @@ void PerpendicularParkInPlanner::GenTlane() {
   right_obs_meet_safe_require =
       right_dis_obs_car > safe_threshold ? true : false;
 
+  ego_slot_info.last_move_slot_dist = ego_slot_info.move_slot_dist;
   if (ego_slot_info.slot_occupied_ratio < 0.618 && frame_.replan_flag) {
     // if two side is all no safe, the slot would not release in slot managment,
     // and should not move target pose
@@ -1705,6 +1718,30 @@ const bool PerpendicularParkInPlanner::CheckColDetStucked() {
 }
 
 const bool PerpendicularParkInPlanner::CheckDynamicUpdate() {
+  const bool dynamic_update_flag =
+      frame_.ego_slot_info.slot_occupied_ratio >
+          apa_param.GetParam().pose_slot_occupied_ratio &&
+      frame_.ego_slot_info.slot_occupied_ratio <
+          apa_param.GetParam().pose_slot_occupied_ratio_3 &&
+      std::fabs(frame_.ego_slot_info.terminal_err.heading) <
+          apa_param.GetParam().max_heading_err_3 * kDeg2Rad &&
+      frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+      !apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+
+  if (dynamic_update_flag) {
+    frame_.dynamic_plan_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.dynamic_plan_time = 0.0;
+  }
+
+  if (frame_.dynamic_plan_time >
+      apa_param.GetParam().dynamic_plan_interval_time) {
+    frame_.is_replan_dynamic = true;
+    frame_.dynamic_plan_time = 0.0;
+  }
+
+  return frame_.is_replan_dynamic;
+
   bool update_flag = false;
   // first update, conditions are relatively relaxed
   if (frame_.dynamic_replan_count == 0) {
@@ -1795,6 +1832,12 @@ const bool PerpendicularParkInPlanner::CheckReplan() {
 
   frame_.is_replan_by_uss = false;
   frame_.is_replan_dynamic = false;
+
+  if (apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
+    DEBUG_PRINT("force plan");
+    frame_.replan_reason = FORCE_PLAN;
+    return true;
+  }
 
   if (CheckSegCompleted()) {
     DEBUG_PRINT("replan by current segment completed!");
