@@ -1006,7 +1006,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     const std::vector<int>& order_ids) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const double default_consider_lane_marks_length = 100.0;
+  const double default_consider_lane_marks_length = 80.0;
   const double consider_lane_straight_front_ego = 30.0;
   double ego2lane_heading_min = std::numeric_limits<double>::max();
   const auto& plannig_init_point = ego_state->planning_init_point();
@@ -1066,7 +1066,13 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
               lane_marks[i].lane_mark !=
                   iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT &&
               lane_marks[i].lane_mark !=
-                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT) {
+                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT_RIGHT &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT){
             exist_straight_direction = false;
             break;
           }
@@ -1158,11 +1164,25 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
         }
       }
     }
-  } else {
-    return;
   }
 
   if (!is_exist_split_on_intersection_) {
+    bool is_on_right_side_lane = true;
+    for (size_t i = 0; i < order_ids.size(); i++) {
+      if (order_ids[i] == 0) {
+        is_on_right_side_lane = false;
+        break;
+      }
+    }
+    if (!is_on_right_side_lane) {
+      relative_id_lanes[order_ids[1]]->set_relative_id(0);
+      origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
+    } else {
+      relative_id_lanes[order_ids[0]]->set_relative_id(0);
+      origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();    
+    }
+  
+    is_exist_split_on_intersection_ = true;
     return;
   }
 
