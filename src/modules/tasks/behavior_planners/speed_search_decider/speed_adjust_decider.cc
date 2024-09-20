@@ -231,7 +231,10 @@ void SpeedAdjustDecider::ProcessEnvInfos() {
 
   if (speed_adjust_status_buffer_.current_frame_status == true &&
       speed_adjust_status_buffer_.last_frame_status == false) {
+    retriggered_ego_speed_ = ego_state_manager->ego_v();
     origin_ego_speed_ = ego_state_manager->ego_v();
+    max_ego_speed_in_speed_adjust_ = ego_state_manager->ego_v();
+    min_ego_speed_in_speed_adjust_ = ego_state_manager->ego_v();
   }
 }
 
@@ -363,10 +366,10 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
                                              max_v_max_ego_v_bp_)));
 
     // lower aligned v limit
-    if (slot.aligned_v() <
-            origin_ego_speed_ - config_.min_dec_filter_speed / 3.6 ||
-        slot.aligned_v() >
-            origin_ego_speed_ + config_.max_acc_filter_speed / 3.6) {
+    if (slot.aligned_v() < min_ego_speed_in_speed_adjust_ -
+                               config_.min_dec_filter_speed / 3.6 ||
+        slot.aligned_v() > max_ego_speed_in_speed_adjust_ +
+                               config_.max_acc_filter_speed / 3.6) {
       std::cout << " The slot: <<" << idx << " is too slow" << std::endl;
       continue;
     }
@@ -404,7 +407,9 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     relative_state_limit.a_min =
         interp(init_va_.first, min_acc_ego_v_, min_acc_ego_v_bp_);
     relative_state_limit.v_min =
-        origin_ego_speed_ - config_.min_dec_adjust_limit / 3.6;
+        std::fmax(std::fmin(retriggered_ego_speed_, init_va_.first),
+                  origin_ego_speed_) -
+        config_.min_dec_adjust_limit / 3.6;
     relative_state_limit.v_max =
         v_cruise_ *
         interp(init_va_.first, max_v_max_ego_v_, max_v_max_ego_v_bp_);
@@ -588,7 +593,11 @@ int SpeedAdjustDecider::SelectBestSlot() {
     std::cout
         << "origin ego speed has been register again, beacuse slot changed!"
         << std::endl;
-    origin_ego_speed_ = init_va_.first;
+    retriggered_ego_speed_ = init_va_.first;
+    max_ego_speed_in_speed_adjust_ =
+        std::fmax(max_ego_speed_in_speed_adjust_, init_va_.first);
+    min_ego_speed_in_speed_adjust_ =
+        std::fmin(min_ego_speed_in_speed_adjust_, init_va_.first);
   }
   last_best_slot_ = slot_point_info_[best_slot_id];
 
