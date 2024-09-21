@@ -384,7 +384,7 @@ class VirtualLaneManager {
   bool is_road_merged_by_other_lane_ = false;
   bool is_nearing_other_lane_merge_to_road_point_ = false;
   RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
-  const double dis_threshold_to_last_merge_point_ = 800.0;
+  const double dis_threshold_to_last_merge_point_ = 600.0;
   const double dis_threshold_to_is_merged_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;

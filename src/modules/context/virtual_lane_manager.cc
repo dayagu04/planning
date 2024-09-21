@@ -2326,6 +2326,15 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       is_on_highway_) {
     is_nearing_ramp_ = false;
   }
+  //fengwang31:临时处理合肥测试路线上右边长匝道反复变道问题，后续需要删除
+  if (is_nearing_ramp_ &&
+      dis_to_ramp_ > 1180 &&
+      sum_dis_to_last_merge_point_ > dis_threshold_to_last_merge_point_ &&
+      sum_dis_to_last_merge_point_ < 810 &&
+      is_on_highway_ &&
+      !is_on_ramp_) {
+    is_nearing_ramp_ = false;
+  }
 
   //(2)、判断当前在高速主路上是否在接近汇入点，如果接近汇入点800米以内，不让自车呆最右侧车道上，以避开汇流区域
   if (is_road_merged_by_other_lane_ &&
