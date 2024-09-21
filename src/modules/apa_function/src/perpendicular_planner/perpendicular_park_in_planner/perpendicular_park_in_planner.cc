@@ -420,6 +420,7 @@ const bool PerpendicularParkInPlanner::UpdateEgoSlotInfo() {
   // real time dynamic col det
   frame_.remain_dist_col_det = frame_.remain_dist;
   if (apa_param.GetParam().dynamic_col_det_enable &&
+      !apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
       !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
 
@@ -762,7 +763,13 @@ void PerpendicularParkInPlanner::GenTlane() {
         apa_param.GetParam().channel_width);
   } else {
     // use fus obs
-    ego_slot_info.channel_width = apa_param.GetParam().channel_width;
+    const double channel_width =
+        apa_world_ptr_->GetCollisionDetectorPtr()->GetCarMaxX(
+            pnc::geometry_lib::PathPoint(ego_slot_info.ego_pos_slot,
+                                         ego_slot_info.ego_heading_slot)) +
+        3.168 - std::max(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x());
+    ego_slot_info.channel_width =
+        std::max(channel_width, apa_param.GetParam().channel_width);
   }
 
   DEBUG_PRINT("channel_width = " << ego_slot_info.channel_width);
@@ -1051,7 +1058,7 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.pt_outside = corner_left_slot;
     slot_t_lane_.pt_inside = corner_right_slot;
     slot_t_lane_.pt_inside.x() =
-        std::min(real_right_x, ego_slot_info.pt_0.x() + 0.368) +
+        std::min(real_right_x, ego_slot_info.pt_0.x() + 2.68) +
         apa_param.GetParam().tlane_safe_dx;
     slot_t_lane_.pt_inside.y() =
         pnc::mathlib::Constrain(real_right_y, corner_right_slot.y() - 0.128,
@@ -1065,7 +1072,7 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.pt_outside = corner_right_slot;
     slot_t_lane_.pt_inside = corner_left_slot;
     slot_t_lane_.pt_inside.x() =
-        std::min(real_left_x, ego_slot_info.pt_1.x() + 0.368) +
+        std::min(real_left_x, ego_slot_info.pt_1.x() + 2.68) +
         apa_param.GetParam().tlane_safe_dx;
     slot_t_lane_.pt_inside.y() =
         pnc::mathlib::Constrain(real_left_y, corner_left_slot.y() - 0.068,
@@ -2284,8 +2291,8 @@ void PerpendicularParkInPlanner::Log() const {
     }
   }
 
-  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 3)
-  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 3)
+  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
+  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
   std::vector<double> slot_corner_X;
   const size_t corner_size = ego_slot_info.slot_corner.size();

@@ -193,6 +193,8 @@ class CollisionDetector {
       const pnc::geometry_lib::PathPoint &target_pose,
       const pnc::geometry_lib::Arc &arc);
 
+  const double GetCarMaxX(const pnc::geometry_lib::PathPoint &ego_pose);
+
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
       const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,

@@ -173,6 +173,7 @@ struct ApaParameters {
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
+  bool use_uss_pt_clound = false;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
