@@ -1934,7 +1934,6 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
 
   double phi = result->phi.back();
   AstarPathGear gear = result->gear.back();
-  double astar_end_s = result->accumulated_s.back();
   AstarPathType path_type = AstarPathType::point_interpolate;
 
   const Eigen::Vector2d unit_line_vec = Eigen::Vector2d(-1.0, 0.0);
@@ -1949,7 +1948,6 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
     result->phi.emplace_back(phi);
     result->gear.emplace_back(gear);
     result->type.emplace_back(path_type);
-    result->accumulated_s.emplace_back(astar_end_s + s);
     result->kappa.emplace_back(0.0);
 
     s += ds;
@@ -1961,7 +1959,6 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
   result->phi.emplace_back(astar_end.theta);
   result->gear.emplace_back(gear);
   result->type.emplace_back(path_type);
-  result->accumulated_s.emplace_back(astar_end_s + length);
   result->kappa.emplace_back(0.0);
 
   return;

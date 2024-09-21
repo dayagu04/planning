@@ -13,6 +13,7 @@
 #include "path_safe_checker.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
+#include "pose2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
@@ -616,19 +617,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   }
 
   // generate request
-  // If ego is in slot, use rs path to generate path, not astar searching.
-  double start_lat_offset = std::fabs(start.y);
-  bool need_drive_forward = false;
-  if (start_lat_offset < 1.0 && std::fabs(start.theta) < 5.0 * M_PI / 180.0 &&
-      current_gear_ == AstarPathGear::reverse) {
-    need_drive_forward = true;
-
-    ILOG_INFO << "use rs path";
-  }
-
-  ILOG_INFO << "dist = " << start_lat_offset
-            << " ,theta = " << std::fabs(start.theta) * 180 / M_PI;
-
+  bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
+      start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
     cur_request.path_generate_method =
         planning::AstarPathGenerateType::reeds_shepp;
@@ -1361,6 +1351,34 @@ const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
   }
 
   return true;
+}
+
+const bool HybridAStarParkPlanner::IsEgoNeedDriveForwardInSlot(
+    const Pose2D& ego_pose, const double slot_width, const double slot_len) {
+  if (current_gear_ == AstarPathGear::drive) {
+    return false;
+  }
+
+  double ego_lat_offset = std::fabs(ego_pose.y);
+  bool need_drive_forward = false;
+
+  // if ego is beyond slot, can use spiral/rs/polynomial to adjust ego. Not use
+  // astar because maybe switch gear too much or generate weird path.
+  if (ego_pose.x >= slot_len) {
+    if (ego_lat_offset < 1.0 && std::fabs(ego_pose.theta) < ifly_deg2rad(5.0)) {
+      need_drive_forward = true;
+    }
+  } else {
+    if (ego_lat_offset < 1.0 &&
+        std::fabs(ego_pose.theta) < ifly_deg2rad(15.0)) {
+      need_drive_forward = true;
+    }
+  }
+
+  ILOG_INFO << "dist = " << ego_lat_offset
+            << ",theta = " << ifly_rad2deg(ego_pose.theta);
+
+  return need_drive_forward;
 }
 
 }  // namespace apa_planner
