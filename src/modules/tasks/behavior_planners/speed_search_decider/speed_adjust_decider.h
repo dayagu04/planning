@@ -112,6 +112,9 @@ class SpeedAdjustDecider : public Task {
   double v_cruise_{25.0};
 
   SpeedAdjustStatusBuffer speed_adjust_status_buffer_{false, false, false};
+  double retriggered_ego_speed_{25.0};
+  double max_ego_speed_in_speed_adjust_{25.0};
+  double min_ego_speed_in_speed_adjust_{25.0};
   double origin_ego_speed_{25.0};
   std::vector<SlotInfo> slot_point_info_;
   std::vector<LaneChangeVehInfo> lane_change_veh_info_;
