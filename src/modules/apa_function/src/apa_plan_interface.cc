@@ -549,6 +549,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
 
+  JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
+                  "use_uss_pt_clound");
+
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
 

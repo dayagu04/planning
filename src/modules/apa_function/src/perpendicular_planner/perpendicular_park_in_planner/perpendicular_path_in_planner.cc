@@ -1251,6 +1251,10 @@ const bool PerpendicularPathInPlanner::PrepareSinglePathPlan(
     x += dx;
   }
 
+  std::cout << "x_offset_vec size = " << x_offset_vec.size()
+            << "  heading_offset_vec size = " << heading_offset_vec.size()
+            << std::endl;
+
   std::vector<geometry_lib::LineSegment> prepare_line_vec;
   prepare_line_vec.reserve(heading_offset_vec.size() * x_offset_vec.size() + 1);
   for (const double heading : heading_offset_vec) {
@@ -2392,10 +2396,17 @@ const bool PerpendicularPathInPlanner::CalSinglePathInMulti(
   // avoid line arc length too length whicl let car go too far
   if (play_type == PLAN_TYPE_LINE_ARC &&
       current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    const double channel_width =
+    double channel_width =
+        collision_detector_ptr_->GetCarMaxX(input_.ego_pose) + 3.168 -
+        std::max(input_.pt_0.x(), input_.pt_1.x());
+
+    const double channel_para_width =
         (input_.slot_occupied_ratio < 0.368)
             ? apa_param.GetParam().channel_width
             : apa_param.GetParam().line_arc_obs_channel_width;
+
+    channel_width = std::max(channel_width, channel_para_width);
+
     const double channel_length =
         apa_param.GetParam().line_arc_obs_channel_length;
 
@@ -3427,10 +3438,17 @@ const bool PerpendicularPathInPlanner::CalSinglePathInAdjust(
 
   // avoid line arc length too length whicl let car go too far
   if (line_arc_success && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    const double channel_width =
+    // use fus obs
+    double channel_width =
+        collision_detector_ptr_->GetCarMaxX(input_.ego_pose) + 3.168 -
+        std::max(input_.pt_0.x(), input_.pt_1.x());
+
+    const double channel_para_width =
         (input_.slot_occupied_ratio < 0.368)
             ? apa_param.GetParam().channel_width
             : apa_param.GetParam().line_arc_obs_channel_width;
+
+    channel_width = std::max(channel_width, channel_para_width);
 
     const double channel_length =
         apa_param.GetParam().line_arc_obs_channel_length;
