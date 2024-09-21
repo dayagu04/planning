@@ -1183,7 +1183,6 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     }
   
     is_exist_split_on_intersection_ = true;
-    return;
   }
 
   for (auto& lane : relative_id_lanes) {
