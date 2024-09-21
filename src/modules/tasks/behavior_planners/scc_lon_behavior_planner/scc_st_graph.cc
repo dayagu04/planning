@@ -54,7 +54,7 @@ constexpr double kFarLead = 100.0;
 constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
 constexpr double kLargeCurvRadius = 500;
-constexpr double kConsiderTimeLargeCurv = 3.0;
+constexpr double kConsiderTimeLargeCurv = 5.0;
 constexpr double kDistanceToStopLineBufferAgent = 1.8;
 constexpr double kDistanceToStopLineBufferEgo = 6.5;
 
