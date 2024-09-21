@@ -1262,7 +1262,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
     return;
   }
 
-  if (current_path_point_global_vec_.size() <= 1) {
+  if (current_path_point_global_vec_.size() <= 2) {
     return;
   }
 
@@ -1296,6 +1296,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   double y_diff =
       std::fabs(end_point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
   double length = std::sqrt(x_diff * x_diff + y_diff * y_diff);
+  length = std::min(length, 5.0);
 
   if (x_diff > 1.0 || y_diff > 0.5) {
     return;
@@ -1311,9 +1312,15 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   Eigen::Vector2d the_last_but_one =
       current_path_point_global_vec_[path_point_size - 2].pos;
 
-  const Eigen::Vector2d unit_line_vec =
+  Eigen::Vector2d unit_line_vec =
       Eigen::Vector2d(end_point_global[0] - the_last_but_one[0],
                       end_point_global[1] - the_last_but_one[1]);
+
+  if (unit_line_vec.norm() < 0.01) {
+    return;
+  }
+  unit_line_vec.normalize();
+
   double s = 0.1;
   double ds = 0.1;
 

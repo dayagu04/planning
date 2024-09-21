@@ -209,6 +209,7 @@ int HybridAStarInterface::UpdateOutput() {
   }
 
   double lat_buffer;
+  double lon_buffer;
   if (request_.path_generate_method == AstarPathGenerateType::astar_searching) {
     // never select real goal in slot,
     // 要给控制留一点直线余量来跟踪，所以将最后的目标点移动一定距离，再使用直线连接
@@ -232,11 +233,12 @@ int HybridAStarInterface::UpdateOutput() {
       PathClear(&coarse_traj_);
 
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
+      lon_buffer = config_.lon_hierarchy_safe_buffer[i];
       edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
             static_cast<float>(config_.lon_front_safe_buffer),
             static_cast<float>(lat_buffer));
 
-      hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer);
+      hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
       hybrid_astar_->PlanOnce(initial_state_, goal_state_, map_bounds_, obs_,
                               request_, &coarse_traj_, &edt_);
 
@@ -264,11 +266,12 @@ int HybridAStarInterface::UpdateOutput() {
       PathClear(&coarse_traj_);
 
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
+      lon_buffer = config_.lon_hierarchy_safe_buffer[i];
       edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
-            static_cast<float>(config_.lon_front_safe_buffer),
-            static_cast<float>(lat_buffer));
+                            static_cast<float>(lon_buffer),
+                            static_cast<float>(lat_buffer));
 
-      hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer);
+      hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
       hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, initial_state_,
                                         goal_state_, lon_min_sampling_length,
                                         map_bounds_, obs_, request_);

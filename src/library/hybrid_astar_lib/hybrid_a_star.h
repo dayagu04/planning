@@ -45,7 +45,8 @@ class HybridAStar {
 
   void Init();
 
-  void UpdateCarBoxBySafeBuffer(const double lat_buffer);
+  void UpdateCarBoxBySafeBuffer(const double lat_buffer,
+                                const double lon_buffer);
 
   int UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf);
 
@@ -231,6 +232,13 @@ class HybridAStar {
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
+
+  void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2D& start,
+                               const Pose2D& end,
+                               const double lon_min_sampling_length,
+                               const double radius);
+
+  size_t GetPathCollisionIDByEDT(HybridAStarResult* result);
 
  private:
   PlannerOpenSpaceConfig config_;
