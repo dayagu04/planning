@@ -10,11 +10,10 @@ sys.path.append('../../../')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, LocalizationEstimate
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240826-15-44-44/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-26-15-44-44_no_camera.bag'
-frame_dt = 0.1 # sec
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-15-42-25/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-15-42-26_no_camera.bag'
 parking_flag = True
 vehicle_type = JAC_S811
 
@@ -89,7 +88,8 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   lon_pos_dif = 0.0
   lat_pos_dif = 0.0
   heading_dif = 0.0
-  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
+  car_inflation = 0.07
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
   index_map = bag_loader.get_msg_index(bag_time)
 
   if bag_loader.plan_debug_msg['enable'] == True:

@@ -60,7 +60,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = True
+load_uss_wave_from_uss_percept_msg = False
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
@@ -798,9 +798,9 @@ class LoadCyberbag:
     return loc_msg_idx
 
 
-def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag=False):
+def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag=False):
 
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, car_inflation)
 
   abs_t = bag_time + smallest_abs_t
 

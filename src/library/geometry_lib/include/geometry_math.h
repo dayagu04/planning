@@ -535,9 +535,13 @@ const LineSegment BuildLineSegByPose(const Eigen::Vector2d &current_pos,
                                      const double &current_heading);
 
 const bool CalCommonTangentCircleOfTwoLine(
-    LineSegment &line1, LineSegment &line2, const double &radius,
+    LineSegment &line1, LineSegment &line2, const double radius,
     std::vector<Eigen::Vector2d> &centers,
     std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss);
+
+const bool CalLineArcOfTwoLine(LineSegment &line1, LineSegment &line2,
+                               LineSegment &line, Arc &arc, const double radius,
+                               const bool is_shifted);
 
 const bool CheckTwoVecCollinear(const Eigen::Vector2d &v1,
                                 const Eigen::Vector2d &v2);
@@ -561,6 +565,8 @@ const bool CompleteArcInfo(Arc &arc, const double length,
                            const bool is_anti_clockwise,
                            const bool save_start_pt);
 
+const bool CompleteArcInfo(Arc &arc, const double length, const uint8_t steer);
+
 const bool CompleteLineInfo(LineSegment &line, const double length);
 
 const bool CompleteLineInfo(LineSegment &line, const double length,
@@ -571,6 +577,8 @@ const bool CompleteLineInfo(LineSegment &line, const double length,
 
 const bool CompletePathSeg(PathSegment &path_seg, const double length,
                            const bool save_start_pt = true);
+
+const bool CompletePathSegInfo(PathSegment &path_seg, const double length);
 
 const uint8_t CalArcGear(const Arc &arc);
 
@@ -645,6 +653,14 @@ const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
 
 const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
                             const double length);
+
+const bool IsSameDirGear(const uint8_t gear1, const uint8_t gear2);
+
+const bool IsOppositeDirGear(const uint8_t gear1, const uint8_t gear2);
+
+const bool IsSameSteer(const uint8_t steer1, const uint8_t steer2);
+
+const bool IsOppositeSteer(const uint8_t steer1, const uint8_t steer2);
 
 }  // namespace geometry_lib
 }  // namespace pnc

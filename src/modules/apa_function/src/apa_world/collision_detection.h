@@ -81,6 +81,9 @@ class CollisionDetector {
                                const double heading_start);
 
   const CollisionResult UpdateByObsMap(
+      const pnc::geometry_lib::PathSegment &path_seg);
+
+  const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::LineSegment &line_seg,
       const double heading_start);
 
@@ -189,6 +192,8 @@ class CollisionDetector {
       const pnc::geometry_lib::PathPoint &start_pose,
       const pnc::geometry_lib::PathPoint &target_pose,
       const pnc::geometry_lib::Arc &arc);
+
+  const double GetCarMaxX(const pnc::geometry_lib::PathPoint &ego_pose);
 
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,

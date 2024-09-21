@@ -173,6 +173,7 @@ struct ApaParameters {
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
+  bool use_uss_pt_clound = false;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
@@ -209,6 +210,7 @@ struct ApaParameters {
   double pose_min_remain_dis = 0.4;
   double max_slot_jump_dist = 0.088;
   double max_slot_jump_heading = 0.68;
+  double dynamic_plan_interval_time = 0.4;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;

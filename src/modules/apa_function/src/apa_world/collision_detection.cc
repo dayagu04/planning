@@ -210,6 +210,15 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
+    const pnc::geometry_lib::PathSegment &path_seg) {
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    return UpdateByObsMap(path_seg.line_seg, path_seg.GetStartHeading());
+  } else {
+    return UpdateByObsMap(path_seg.arc_seg, path_seg.GetStartHeading());
+  }
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
     const pnc::geometry_lib::LineSegment &line_seg,
     const double heading_start) {
   if (obs_pt_global_map_.empty()) {
@@ -1318,6 +1327,28 @@ const bool CollisionDetector::CalTrajBound(
   return true;
 }
 
+const double CollisionDetector::GetCarMaxX(
+    const pnc::geometry_lib::PathPoint &ego_pose) {
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+
+  Eigen::Vector2d car_global_vertex;
+  std::vector<Eigen::Vector2d> car_global_vertex_vec;
+  car_global_vertex_vec.reserve(car_local_vertex_vec_.size());
+  for (const Eigen::Vector2d &car_local_vertex : car_local_vertex_vec_) {
+    car_global_vertex = l2g_tf.GetPos(car_local_vertex);
+    car_global_vertex_vec.emplace_back(car_global_vertex);
+  }
+
+  double max_x = -std::numeric_limits<double>::infinity();
+  for (const Eigen::Vector2d &car_vertex : car_global_vertex_vec) {
+    if (car_vertex.x() > max_x) {
+      max_x = car_vertex.x();
+    }
+  }
+  return max_x;
+}
+
 const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const Eigen::Vector2d &obs,
     const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
@@ -1384,14 +1415,17 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     }
 
     const double lat_extend = 1.68;
+    const double slot_entrance_x = std::max(4.068 - max_obs_x, 0.0168);
     if (is_left_side) {
-      area_vec[0] = pt_1 - 3.468 * unit_02_vec;
-      area_vec[1] = pt_0 - lat_extend * unit_01_vec - 3.468 * unit_02_vec;
+      area_vec[0] = pt_1 - slot_entrance_x * unit_02_vec;
+      area_vec[1] =
+          pt_0 - lat_extend * unit_01_vec - slot_entrance_x * unit_02_vec;
       area_vec[2] = pt_0 - lat_extend * unit_01_vec;
       area_vec[3] = pt_1;
     } else {
-      area_vec[0] = pt_1 + lat_extend * unit_01_vec - 3.468 * unit_02_vec;
-      area_vec[1] = pt_0 - 3.468 * unit_02_vec;
+      area_vec[0] =
+          pt_1 + lat_extend * unit_01_vec - slot_entrance_x * unit_02_vec;
+      area_vec[1] = pt_0 - slot_entrance_x * unit_02_vec;
       area_vec[2] = pt_0;
       area_vec[3] = pt_1 + lat_extend * unit_01_vec;
     }
