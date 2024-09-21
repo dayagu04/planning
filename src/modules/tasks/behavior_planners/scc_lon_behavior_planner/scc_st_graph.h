@@ -24,6 +24,7 @@
 #include "scc_lon_behavior_types.h"
 #include "task_basic_types.h"
 #include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
+#include "traffic_light_decision_manager.h"
 #include "utils_math.h"
 #include "virtual_lane.h"
 namespace planning {
@@ -299,6 +300,10 @@ class StGraphGenerator {
   int lc_rear_id_ = -20;
   double lc_front_desired_distance_;
   double lc_rear_desired_distance_;
+
+  // traffic light info
+  bool current_traffic_light_can_pass_ = true;
+  bool last_traffic_light_can_pass_ = true;
 
   // 需要进行优化和剔除
  private:
