@@ -102,30 +102,66 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
                                          .coarse_planning_info;
   const auto& lc_request =
       session_->planning_context().lane_change_decider_output().lc_request;
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& ego_point = ego_state_manager->ego_pose();
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
   const auto& lc_request_source = session_->planning_context()
                                       .lane_change_decider_output()
                                       .lc_request_source;
-  const auto& is_in_merge_area =
-      session_->planning_context().lane_change_decider_output().is_merge_region;
+  const auto& is_merge_region = session_->mutable_planning_context()
+                                    ->mutable_lane_change_decider_output()
+                                    .is_merge_region;
 
-  if (coarse_planning_info.target_state != kLaneChangePropose ||
-      is_in_merge_area) {
+  if (coarse_planning_info.target_state != kLaneChangePropose) {
     ClearStatus();
     last_request_ = lc_request;
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
     speed_adjust_status_buffer_.current_frame_status = false;
-    std::cout << "no wait state or is in merge area:  " << is_in_merge_area
-              << std::endl;
     return false;
   }
 
   if (coarse_planning_info.target_state == kLaneChangePropose &&
-      lc_request == last_request_ && lc_request_source != MERGE_REQUEST) {
+      lc_request == last_request_) {
     count_wait_state_++;
   } else {
     count_wait_state_ = 0;
+  }
+
+  // judge the lane change source and scene
+
+  boundary_merge_point_valid_ = session_->planning_context()
+                                    .lane_change_decider_output()
+                                    .boundary_merge_point_valid;
+  if (boundary_merge_point_valid_ && lc_request_source == MERGE_REQUEST) {
+    const auto& boundary_merge_point = session_->planning_context()
+                                           .lane_change_decider_output()
+                                           .boundary_merge_point;
+    deceleration_priority_scene_ = true;
+    merge_emegency_distance_ = std::hypot(
+        ego_point.x - boundary_merge_point.x,
+        ego_point.y - boundary_merge_point.y);  // cailiu2:no use currently
+  } else if (lc_request_source == MAP_REQUEST) {
+    const double& distance_to_road_merge =
+        virtual_lane_mgr->get_distance_to_first_road_merge();
+    const double& distance_to_road_split =
+        virtual_lane_mgr->get_distance_to_first_road_split();
+    if (distance_to_road_split < kDistanceToMapRequestPoint ||
+        distance_to_road_merge < kDistanceToMapRequestPoint ||
+        is_merge_region) {
+      deceleration_priority_scene_ = true;
+      merge_emegency_distance_ =
+          std::fmin(distance_to_road_split,
+                    distance_to_road_merge);  // cailiu2:no use currently
+    }
+
+  } else {
+    deceleration_priority_scene_ = false;
+    merge_emegency_distance_ =
+        std::numeric_limits<double>::max();  // cailiu2:no use currently
   }
 
   if (count_wait_state_ < 3) {
@@ -295,6 +331,20 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     return false;
   };
 
+  auto filter_in_deceleration_priority_scene =
+      [this](const SlotInfo& slot,
+             const double& aligned_back_safe_dis) -> bool {
+    if (slot.back_veh_info().center_s - slot.back_veh_info().half_length -
+                kNearbyCarFilterDis >
+            kEgoHalfLength &&
+        (init_va_.first - slot.back_veh_info().v) * 3.0 -
+                slot.back_veh_info().center_s <
+            aligned_back_safe_dis) {
+      return true;
+    }
+    return false;
+  };
+
   for (auto idx = 1; idx < lane_change_veh_info_.size(); ++idx) {
     SlotInfo slot(lane_change_veh_info_[idx], lane_change_veh_info_[idx - 1]);
     // safety gap distance
@@ -370,6 +420,19 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     slot.SetAlignedV(std::fmin(
         slot.aligned_v(), v_cruise_ * interp(init_va_.first, max_v_max_ego_v_,
                                              max_v_max_ego_v_bp_)));
+    if (deceleration_priority_scene_) {
+      if (filter_in_deceleration_priority_scene(slot,
+                                                safe_distacne_pair.second)) {
+        std::cout << " The slot: <<" << idx
+                  << " is filter by deceleration priority scene " << std::endl;
+        continue;
+      }
+    }
+
+    double min_dec_filter_speed = config_.min_dec_filter_speed;
+    if (deceleration_priority_scene_) {
+      min_dec_filter_speed = config_.min_dec_filter_speed_in_deceleration_scene;
+    }
 
     // lower aligned v limit
     if (slot.aligned_v() < min_ego_speed_in_speed_adjust_ -

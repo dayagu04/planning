@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 
 #include "config/vehicle_param.h"
@@ -134,6 +135,9 @@ class SpeedAdjustDecider : public Task {
   const std::vector<double> max_v_max_ego_v_{15.0, 36.0};
   std::unordered_set<int32_t> front_target_lane_id_set_;
   std::unordered_set<int32_t> rear_target_lane_id_set_;
+  bool boundary_merge_point_valid_ = false;
+  bool deceleration_priority_scene_ = false;
+  double merge_emegency_distance_ = 1000.0;
 };
 
 }  // namespace planning

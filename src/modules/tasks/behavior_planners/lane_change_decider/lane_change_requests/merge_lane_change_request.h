@@ -16,6 +16,10 @@ class MergeRequest : public LaneChangeRequest {
 
   void Reset();
 
+  bool is_merge_lane_change_situation() {
+    return is_merge_lane_change_situation_;
+  };
+
  private:
   void UpdateLaneMergeSituation(int lc_status);
 
