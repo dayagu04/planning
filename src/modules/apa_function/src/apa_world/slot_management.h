@@ -380,6 +380,9 @@ class SlotManagement {
     const iflyauto::FusionOccupancyObjectsInfo*
         fusion_occupancy_objects_info_ptr;
 
+    std::shared_ptr<CollisionDetector> collision_detector_ptr =
+        std::make_shared<CollisionDetector>();
+
     std::vector<int> release_slot_id_vec;
 
     std::unordered_map<size_t, size_t> slot_info_map;
@@ -436,6 +439,8 @@ class SlotManagement {
       fus_obj_valid_flag = false;
       replan_flag = true;
       is_fix_slot = false;
+
+      collision_detector_ptr->Reset();
     }
   };
 
@@ -510,11 +515,9 @@ class SlotManagement {
                       PerpendicularPathInPlanner::Tlane& slot_tlane,
                       PerpendicularPathInPlanner::Tlane& obs_tlane);
 
-  const bool GenObstacles(
-      std::shared_ptr<CollisionDetector>& collision_detector_ptr,
-      const PerpendicularPathInPlanner::Tlane& slot_tlane,
-      PerpendicularPathInPlanner::Tlane& obs_tlane,
-      const EgoSlotInfo& ego_slot_info);
+  const bool GenObstacles(const PerpendicularPathInPlanner::Tlane& slot_tlane,
+                          PerpendicularPathInPlanner::Tlane& obs_tlane,
+                          const EgoSlotInfo& ego_slot_info);
 
   void UpdateSlotInfoInParking();
   void UpdateParallelSlotInfoInParking();

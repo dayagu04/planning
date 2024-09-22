@@ -3,17 +3,20 @@
 
 namespace planning {
 
-void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose) {
+void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose,
+                                      const double _ogm_resolution) {
   ogm_tf_.SetBasePose(ogm_pose);
   ogm_base_pose_ = ogm_pose;
 
-  ogm_resolution_inv_ = 1.0 / ogm_resolution;
+  ogm_resolution_ = _ogm_resolution;
+
+  ogm_resolution_inv_ = 1.0 / _ogm_resolution;
 
   bound_.min_x = ogm_base_pose_.x;
-  bound_.max_x = ogm_base_pose_.x + ogm_grid_x_max * ogm_resolution + 1.0;
+  bound_.max_x = ogm_base_pose_.x + ogm_grid_x_max * _ogm_resolution + 1.0;
 
   bound_.min_y = ogm_base_pose_.y;
-  bound_.max_y = ogm_base_pose_.y + ogm_grid_y_max * ogm_resolution + 1.0;
+  bound_.max_y = ogm_base_pose_.y + ogm_grid_y_max * _ogm_resolution + 1.0;
 
   return;
 }

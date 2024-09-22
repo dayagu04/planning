@@ -1404,6 +1404,8 @@ void PerpendicularParkInPlanner::GenObstacles() {
     apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
         fus_obs_vec, CollisionDetector::FUSION_OBS);
   }
+
+  apa_world_ptr_->GetCollisionDetectorPtr()->TransObsMapToOccupancyGridMap();
 }
 
 const uint8_t PerpendicularParkInPlanner::PathPlanOnce() {

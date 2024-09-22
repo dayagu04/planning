@@ -14,7 +14,10 @@ class Transform2d {
   Transform2d(const Transform2d &) = default;
   Transform2d &operator=(const Transform2d &) = default;
 
-  Transform2d(const Pose2D &pose) : base_pose_(pose) {}
+  Transform2d(const Pose2D &pose) : base_pose_(pose) {
+    sin_theta_ = std::sin(pose.theta);
+    cos_theta_ = std::cos(pose.theta);
+  }
 
   /**
    *

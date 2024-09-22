@@ -8,8 +8,9 @@
 
 namespace planning {
 
-void OccupancyGridMap::Process(const Pose2D &ogm_pose) {
-  OccupancyGridCoordinate::Process(ogm_pose);
+void OccupancyGridMap::Process(const Pose2D &ogm_pose,
+                               const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   return;
 }

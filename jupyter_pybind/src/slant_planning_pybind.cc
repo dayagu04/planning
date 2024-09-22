@@ -412,6 +412,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   collision_detector_ptr->SetObstacles(obs_local_pts,
                                        CollisionDetector::TLANE_OBS);
 
+  collision_detector_ptr->TransObsMapToOccupancyGridMap();
+
   planning::apa_planner::PerpendicularPathInPlanner::Input input;
   input.pt_0 = ego_slot_info.pt_0;
   input.pt_1 = ego_slot_info.pt_1;

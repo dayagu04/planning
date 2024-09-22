@@ -46,6 +46,17 @@ class DubinsLibrary {
     double heading2 = 0.0;
     double radius = 0.0;
 
+    Input() {}
+    Input(const Eigen::Vector2d& p_start, const Eigen::Vector2d& p_target,
+          const double heading_start, const double heading_target,
+          const double _radius)
+        : p1(p_start),
+          p2(p_target),
+          heading1(heading_start),
+          heading2(heading_target),
+          radius(_radius) {}
+    ~Input() {}
+
     void Set(const Eigen::Vector2d& p_start, const Eigen::Vector2d& p_target,
              const double heading_start, const double heading_target) {
       p1 = p_start;

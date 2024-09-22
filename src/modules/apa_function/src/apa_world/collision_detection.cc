@@ -21,7 +21,9 @@ void CollisionDetector::Init() {
   car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
   car_local_vertex_vec_.clear();
   car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
-
+  origin_car_local_vertex_vec_.clear();
+  origin_car_local_vertex_vec_.resize(
+      apa_param.GetParam().car_vertex_x_vec.size());
   std::vector<double> inflated_car_local_vertex_y_vec;
   inflated_car_local_vertex_y_vec.clear();
   inflated_car_local_vertex_y_vec.reserve(
@@ -34,6 +36,8 @@ void CollisionDetector::Init() {
     } else {
       inflated_car_local_vertex_y_vec[i] -= param_.lat_inflation;
     }
+    origin_car_local_vertex_vec_[i] << apa_param.GetParam().car_vertex_x_vec[i],
+        apa_param.GetParam().car_vertex_y_vec[i];
   }
 
   pnc::geometry_lib::LineSegment car_line;
@@ -57,9 +61,11 @@ void CollisionDetector::Init() {
   }
 }
 
-void CollisionDetector::SetParam(Paramters param) {
-  param_ = param;
-  SetLatInflation();
+void CollisionDetector::SetParam(const Paramters &param) {
+  if (std::fabs(param_.lat_inflation - param.lat_inflation) > 0.001) {
+    param_ = param;
+    SetLatInflation();
+  }
 }
 
 void CollisionDetector::SetLatInflation() { Init(); }
@@ -132,6 +138,64 @@ void CollisionDetector::AddObstacles(const Eigen::Vector2d &obs_pt_global,
                                          1);
     obs_pt_global_map_[obs_type].emplace_back(obs_pt_global);
   }
+}
+
+void CollisionDetector::TransObsMapToParkObstacleList() {
+  obs_list_.Clear();
+  PointCloudObstacle pt_cloud;
+  Position2D pt_2d;
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const auto &obs_pt : obs_pt_pair.second) {
+      pt_2d.x = obs_pt.x();
+      pt_2d.y = obs_pt.y();
+      pt_cloud.points.emplace_back(pt_2d);
+    }
+  }
+  obs_list_.point_cloud_list.emplace_back(pt_cloud);
+}
+
+void CollisionDetector::TransObsMapToOccupancyGridMap(
+    const double _ogm_resolution) {
+  TransObsMapToParkObstacleList();
+  Pose2D ogm_base_pose;
+  // grid map origin, make all indexes positive
+  ogm_base_pose.x = -3.0;
+  ogm_base_pose.y = -20.0;
+  ogm_base_pose.theta = 0.0;
+  occupancy_grid_map_.Clear();
+  occupancy_grid_map_.Process(ogm_base_pose, _ogm_resolution);
+  occupancy_grid_map_.AddParkingObs(obs_list_);
+  edt_col_det_.Excute(occupancy_grid_map_, ogm_base_pose, _ogm_resolution);
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+    const uint8_t gear, const double lat_buffer, const double lon_buffer) {
+  CollisionResult result;
+  if (path_pt_vec.empty()) {
+    return result;
+  }
+
+  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+
+  result.collision_flag = edt_col_det_.IsCollisionForPath(path_pt_vec, gear);
+
+  return result;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const pnc::geometry_lib::GeometryPath &geometry_path,
+    const double lat_buffer, const double lon_buffer) {
+  return UpdateByEDT(
+      pnc::geometry_lib::SamplePathSegVec(geometry_path.path_segment_vec, 0.1),
+      geometry_path.cur_gear, lat_buffer, lon_buffer);
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+    const uint8_t gear, const double lat_buffer, const double lon_buffer) {
+  return UpdateByEDT(pnc::geometry_lib::SamplePathSegVec(path_seg_vec, 0.1),
+                     gear, lat_buffer, lon_buffer);
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::Update(
@@ -1334,8 +1398,8 @@ const double CollisionDetector::GetCarMaxX(
 
   Eigen::Vector2d car_global_vertex;
   std::vector<Eigen::Vector2d> car_global_vertex_vec;
-  car_global_vertex_vec.reserve(car_local_vertex_vec_.size());
-  for (const Eigen::Vector2d &car_local_vertex : car_local_vertex_vec_) {
+  car_global_vertex_vec.reserve(origin_car_local_vertex_vec_.size());
+  for (const Eigen::Vector2d &car_local_vertex : origin_car_local_vertex_vec_) {
     car_global_vertex = l2g_tf.GetPos(car_local_vertex);
     car_global_vertex_vec.emplace_back(car_global_vertex);
   }
