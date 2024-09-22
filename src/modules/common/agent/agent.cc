@@ -224,6 +224,12 @@ const bool Agent::is_reverse() const { return is_reverse_; }
 
 void Agent::set_is_reverse(const bool is_reverse) { is_reverse_ = is_reverse; }
 
+const bool Agent::is_far_in_large_curv() const { return is_far_in_large_curv_; }
+
+void Agent::set_is_far_in_large_curv(const bool is_far_in_large_curv) {
+  is_far_in_large_curv_ = is_far_in_large_curv;
+}
+
 const bool Agent::has_low_spd_unstable_trajectory() const {
   return has_low_spd_unstable_trajectory_;
 }
