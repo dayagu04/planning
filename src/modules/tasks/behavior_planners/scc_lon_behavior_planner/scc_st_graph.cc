@@ -3882,6 +3882,13 @@ void StGraphGenerator::UpdateTargetVelocityByFilter(const bool is_on_ramp,
     if (v_ego < v_last_target_) {
       accel_vel_in_turns_filter_.SetState(v_ego);
     }
+    #ifdef X86
+      auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+      auto frame_info = planning_debug_data->frame_info();
+      if (frame_info.frame_num() == 1) {
+        accel_vel_in_turns_filter_.SetState(v_ego);
+      }
+    #endif
     accel_vel_in_turns_filter_.Update(v_target_);
     v_target_ = accel_vel_in_turns_filter_.GetOutput();
   }
