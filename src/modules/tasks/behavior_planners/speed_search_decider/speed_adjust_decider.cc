@@ -560,8 +560,14 @@ int SpeedAdjustDecider::SelectBestSlot() {
             : 0.0;
     slot_costs[i] += aligned_v_acc_penaty;
     // 3. aligned s cost
+    const double pred_aligned_time = std::fmax(
+        variable_time_optimal_trajs_[i].SecondOrderParamLength(), 0.0);
+    const double pred_aligned_rel_dis =
+        slot.is_align_front()
+            ? (slot.front_veh_info().v - init_va_.first) * pred_aligned_time
+            : (slot.back_veh_info().v - init_va_.first) * pred_aligned_time;
     const double s_dis_adjust_cost =
-        std::fabs(slot.aligned_s() - init_sl_.first) * s_dis_adjust_weight;
+        std::fabs(slot.aligned_s() + pred_aligned_rel_dis - init_sl_.first) * s_dis_adjust_weight;
     slot_costs[i] += s_dis_adjust_cost;
 
     // 4. consider rear faster coming car
