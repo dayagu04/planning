@@ -100,6 +100,10 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   const bool CheckEgoReplanNumber(const bool is_replan);
 
+  const bool IsEgoNeedDriveForwardInSlot(const Pose2D& ego_pose,
+                                         const double slot_width,
+                                         const double slot_len);
+
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 

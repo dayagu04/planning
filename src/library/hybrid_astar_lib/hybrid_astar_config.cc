@@ -36,6 +36,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   traj_steer_change_penalty = 0.0;
   lat_hierarchy_safe_buffer.emplace_back(0.2);
   lat_hierarchy_safe_buffer.emplace_back(0.1);
+  lon_hierarchy_safe_buffer.push_back(0.4);
+  lon_hierarchy_safe_buffer.push_back(0.2);
   lon_front_safe_buffer = 0.4;
   lon_back_safe_buffer = 0.4;
   lon_min_safe_buffer = 0.1;
