@@ -2290,7 +2290,8 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       session_->environmental_model().get_virtual_lane_manager();
   const auto current_distance_ego_to_stopline =
       virtual_lane_manager->GetEgoDistanceToStopline();
-  const auto current_intersection_state = virtual_lane_manager->GetIntersectionState();
+  const auto current_intersection_state =
+      virtual_lane_manager->GetIntersectionState();
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
@@ -2321,14 +2322,19 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
         (distance_stop + lead_change_buffer);
 
     // intersection condition
-    const bool traffic_light_start_condition = current_traffic_light_can_pass_ && 
-                      (current_intersection_state == common::IntersectionState::APPROACH_INTERSECTION ||
-                      current_intersection_state == common::IntersectionState::IN_INTERSECTION);
+    const bool traffic_light_start_condition =
+        current_traffic_light_can_pass_ &&
+        (current_intersection_state ==
+             common::IntersectionState::APPROACH_INTERSECTION ||
+         current_intersection_state ==
+             common::IntersectionState::IN_INTERSECTION);
     bool approach_to_stop_line = false;
     if (NL_NMAX !=
         current_distance_ego_to_stopline) {  // intersection stop line exits
       if (fabs(current_distance_ego_to_stopline) <
-          kDistanceToStopLineBufferEgo) {
+              kDistanceToStopLineBufferEgo ||
+          current_intersection_state ==
+              common::IntersectionState::IN_INTERSECTION) {
         lead_one_start = false;
         lead_one_change = false;
       } else if (lead_one.d_rel() >
@@ -2338,6 +2344,10 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
                      kDistanceToStopLineBufferEgo) {
         approach_to_stop_line = true;
       }
+    } else if (current_intersection_state ==
+               common::IntersectionState::IN_INTERSECTION) {
+      lead_one_start = false;
+      lead_one_change = false;
     }
     bool start_condition = lead_one_start || lead_one_change ||
                            traffic_light_start_condition ||
