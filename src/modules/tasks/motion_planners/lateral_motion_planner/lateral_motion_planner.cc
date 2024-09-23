@@ -458,7 +458,11 @@ void LateralMotionPlanner::AssembleInput() {
     const double init_dis_to_ref = planning_weight_ptr_->GetInitDisToRef();
     if (std::fabs(init_dis_to_ref) > 0.01) {
       complete_follow = false;
-      motion_plan_concerned_end_index = 17;
+      if (ego_v <= config_.lane_change_high_vel) {
+        motion_plan_concerned_end_index = 20;
+      } else {
+        motion_plan_concerned_end_index = 17;
+      }
       planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
     }
   }
