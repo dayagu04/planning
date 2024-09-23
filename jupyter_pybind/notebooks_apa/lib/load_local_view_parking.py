@@ -60,7 +60,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = True
+load_uss_wave_from_uss_percept_msg = False
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
@@ -203,6 +203,7 @@ class LoadCyberbag:
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
       print('plan_msg time:',self.plan_msg['t'][-1])
+      print('plan version:', self.plan_msg['data'][0].msg_meta.version)
       if len(self.plan_msg['t']) > 0:
         self.plan_msg['enable'] = True
       else:
@@ -797,9 +798,9 @@ class LoadCyberbag:
     return loc_msg_idx
 
 
-def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag=False):
+def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag=False):
 
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, car_inflation)
 
   abs_t = bag_time + smallest_abs_t
 
@@ -1867,8 +1868,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, loc
     if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
       for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
         for corner_index in [0,3,2,1]:
-          parking_slot_x.append(parking_slot.corner_point[corner_index].x)
-          parking_slot_y.append(parking_slot.corner_point[corner_index].y)
+          parking_slot_x.append(parking_slot.globle_corner_point[corner_index].x)
+          parking_slot_y.append(parking_slot.globle_corner_point[corner_index].y)
     local_view_data['data_spatial_parking_slot'].data.update({
       'corner_point_x': [parking_slot_x],
       'corner_point_y': [parking_slot_y],
@@ -2184,7 +2185,7 @@ def load_local_view_figure_parking():
                      }
   ### figures config
 
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=800, match_aspect = True, aspect_scale=1)
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1250, match_aspect = True, aspect_scale=1)
   fig1.x_range.flipped = True
   # figure plot
   fig1.patch('car_yn', 'car_xn', source = data_car_target, fill_color = "pink", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target')

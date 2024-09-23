@@ -9,7 +9,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240826-15-44-44/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-26-15-44-44_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240912/20240912-10-12-31/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-12-10-12-32_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240912/20240912-22-26-56/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-12-22-26-57_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
@@ -89,12 +89,14 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
+    self.car_inflation = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.15, value=0.0, step=0.01)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
-                                         vehicle_type = self.vehicle_type)
+                                         vehicle_type = self.vehicle_type,
+                                         car_inflation = self.car_inflation)
 
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type):
+def slider_callback(bag_time, vehicle_type, car_inflation):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -104,7 +106,7 @@ def slider_callback(bag_time, vehicle_type):
   elif vehicle_type == 2:
     vehicle_type = 'CHERY_E0X'
 
-  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data, plot_ctrl_flag)
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag)
   # print("bag_time:", bag_time)
   index_map = bag_loader.get_msg_index(bag_time)
   # print("index_map:", index_map)

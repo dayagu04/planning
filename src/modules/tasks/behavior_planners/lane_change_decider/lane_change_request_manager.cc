@@ -86,8 +86,11 @@ bool LaneChangeRequestManager::Update(
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double default_velocity_trigger_emergence_avoid_request = 13.88;
-  const double dis_threshold_to_merged_point = virtual_lane_mgr_->dis_threshold_to_merged_point();
-  const double dis_to_first_merge = virtual_lane_mgr_->distance_to_first_road_merge();
+  const double dis_threshold_to_merged_point =
+      virtual_lane_mgr_->dis_threshold_to_merged_point();
+  const double dis_to_first_merge =
+      virtual_lane_mgr_->distance_to_first_road_merge();
+  const int origin_relative_id_zero_nums = virtual_lane_mgr_->origin_relative_id_zero_nums();
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -108,7 +111,8 @@ bool LaneChangeRequestManager::Update(
     if (hd_map_valid) {
       map_request_.update(lc_status, map_request_.tfinish());
     }
-    if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST) {
+    if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
+        origin_relative_id_zero_nums == 1) {
       merge_change_request_.Update(lc_status);
     }
     if (location_valid && use_overtake_lane_change_request) {
@@ -123,7 +127,7 @@ bool LaneChangeRequestManager::Update(
           virtual_lane_mgr_->dis_to_ramp() <=
               minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
           sum_dis_to_last_merge_point <
-              max_pass_merge_distance_to_surpress_overtake_lane_change || 
+              max_pass_merge_distance_to_surpress_overtake_lane_change ||
           dis_to_first_merge < dis_threshold_to_merged_point) {
         overtake_request_.Reset();
         LOG_DEBUG(

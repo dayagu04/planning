@@ -110,7 +110,7 @@ void ObstacleManager::update() {
     auto groundline_clusters = GroundLineDecider::execute(groundline);
     std::cout << "groundline_clusters.size = " << groundline_clusters.size()
               << std::endl;
-    LOG_DEBUG("groundline_clusters.size = %d", groundline_clusters.size());
+    LOG_DEBUG("groundline_clusters.size = %lu", groundline_clusters.size());
     int cluster_id = kGroundLineIdOffset;
     for (auto &groundline_cluster : groundline_clusters) {
       cluster_id += 1;

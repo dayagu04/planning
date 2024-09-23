@@ -53,6 +53,10 @@ constexpr double kExpandLengthBuffer = 0.0;
 constexpr double kFarLead = 100.0;
 constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
+constexpr double kLargeCurvRadius = 500;
+constexpr double kConsiderTimeLargeCurv = 5.0;
+constexpr double kDistanceToStopLineBufferAgent = 1.8;
+constexpr double kDistanceToStopLineBufferEgo = 6.5;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -119,6 +123,8 @@ void StGraphGenerator::Update(
   const auto &current_lane = session->environmental_model()
                                  .get_virtual_lane_manager()
                                  ->get_current_lane();
+  const auto traffic_light_decision_manager =
+      session_->environmental_model().get_traffic_light_decision_manager();
 
   double v_ego = lon_behav_input_->ego_info().ego_v();
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
@@ -183,6 +189,7 @@ void StGraphGenerator::Update(
 
   // calc target v for noa curv and ramp
   CalcSpeedWithTurns(v_ego, steer_angle_ego, d_polys);
+  IsReverseAgentInLargeCurvature(v_ego, current_lane, dynamic_world);
 
   double distance_to_ramp = lon_behav_input_->dis_to_ramp();
   double distance_to_merge = lon_behav_input_->dis_to_merge();
@@ -328,10 +335,19 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
   // 纵向只使用融合成功障碍物
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
+  const auto &agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
+  bool is_reverse_obs_in_large_curv = false;
+  if (agent_manager != nullptr) {
+    const auto *agent = agent_manager->GetAgent(lead_one.track_id());
+    if (agent != nullptr) {
+      is_reverse_obs_in_large_curv = agent->is_reverse();
+    }
+  }
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
       lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-      lead_fusion_enable) {
+      lead_fusion_enable && !is_reverse_obs_in_large_curv) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
 
@@ -377,7 +393,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
-        lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
+        !is_reverse_obs_in_large_curv) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two.track_id(), lead_two.d_rel(), lead_two.v_lead());
@@ -477,10 +494,36 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   double temp_lead_two_desired_velocity = 40.0;
 
   LOG_DEBUG("----CalcSpeedInfoWithTempLead--- \n");
+  const auto &dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto &agent_manager = dynamic_world->agent_manager();
+  bool is_reverse_obs_in_large_curv = false;
+  if (agent_manager != nullptr) {
+    const auto *agent = agent_manager->GetAgent(temp_lead_one.track_id());
+    if (agent != nullptr) {
+      is_reverse_obs_in_large_curv = agent->is_reverse();
+    }
+  }
+  const auto ego_left_front_node_id = dynamic_world->ego_left_front_node_id();
+  const auto ego_right_front_node_id = dynamic_world->ego_right_front_node_id();
+  bool is_left_right_front_agent = false;
+  auto left_front_node = dynamic_world->GetNode(ego_left_front_node_id);
+  auto right_front_node = dynamic_world->GetNode(ego_right_front_node_id);
+  if (left_front_node != nullptr) {
+    is_left_right_front_agent =
+        left_front_node->node_agent_id() == temp_lead_one.track_id() ? true
+                                                                     : false;
+  }
+  if (right_front_node != nullptr) {
+    is_left_right_front_agent =
+        right_front_node->node_agent_id() == temp_lead_one.track_id() ? true
+                                                                      : false;
+  }
   // temp leadone
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
       (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
           1.0 &&
+      !is_reverse_obs_in_large_curv && is_left_right_front_agent &&
       temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),
@@ -523,7 +566,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
 
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
-        temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
+        !is_reverse_obs_in_large_curv && is_left_right_front_agent) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
@@ -629,22 +673,25 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   // calculate the velocity limit according to the road curvature
   if (d_poly.size() == 4) {
     double preview_x = config_.dis_curv + config_.t_curv * v_ego;
-    double curv =
+    curv_ =
         std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
-    double road_radius = 1 / std::max(curv, 0.0001);
-    if (road_radius < 750) {
-      acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    road_radius_ = 1 / std::max(curv_, 0.0001);
+    if (road_radius_ < 750) {
+      acc_lat_max = interp(road_radius_, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     }
-    double v_limit_road = std::sqrt(acc_lat_max * road_radius) * 0.9;
+    double v_limit_road = std::sqrt(acc_lat_max * road_radius_) * 0.9;
     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-    LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
+    LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius_,
               acc_lat_max);
     LOG_DEBUG(
         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
         angle_steers, angle_steers_deg, v_limit_road);
     JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
-    JSON_DEBUG_VALUE("road_radius", road_radius);
+    JSON_DEBUG_VALUE("road_radius", road_radius_);
+  } else {
+    curv_ = 1 / 10000.0;
+    road_radius_ = 10000.0;
   }
 
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
@@ -652,7 +699,7 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   JSON_DEBUG_VALUE("ego_acc_lat", acc_lat);
 
   if (v_limit_in_turns < v_ego - 2) {
-    acc_target_in_turns = -0.2;
+    acc_target_in_turns = config_.acc_lower_bound_in_large_curv;
   }
 
   acc_target_.first = std::min(acc_target_.first, acc_target_in_turns);
@@ -769,7 +816,7 @@ void StGraphGenerator::UpdateSTGraphs(
     double s_step = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
-    double st_obs_j = 1.0;  //_J_Obj 常规jerk
+    double st_obs_j = 0.5;  //_J_Obj 常规jerk
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
@@ -879,6 +926,9 @@ void StGraphGenerator::UpdateNearObstacles(
   std::array<std::string, 3> cutin_condition{"", "", ""};
 
   LOG_DEBUG("----limit_accel_velocity_for_cutin--- \n");
+  const auto &agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
+  bool is_reverse_obs_in_large_curv = false;
   // filter near cars from front && side tracks
   near_cars.clear();
   for (auto &track : lateral_obstacles.front_tracks()) {
@@ -886,6 +936,15 @@ void StGraphGenerator::UpdateNearObstacles(
     if ((track.fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
+    if (agent_manager != nullptr) {
+      const auto *agent = agent_manager->GetAgent(track.track_id());
+      if (agent != nullptr) {
+        is_reverse_obs_in_large_curv = agent->is_reverse();
+      }
+    }
+    if (is_reverse_obs_in_large_curv) {
+      continue;
+    }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
         track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
@@ -897,6 +956,15 @@ void StGraphGenerator::UpdateNearObstacles(
     if ((track.fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
+    if (agent_manager != nullptr) {
+      const auto *agent = agent_manager->GetAgent(track.track_id());
+      if (agent != nullptr) {
+        is_reverse_obs_in_large_curv = agent->is_reverse();
+      }
+    }
+    if (is_reverse_obs_in_large_curv) {
+      continue;
+    }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
         track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       near_cars.push_back(&track);
@@ -1357,15 +1425,28 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
   std::vector<int> front_cut_in_track_id;
   front_cut_in_track_id.clear();
 
+  const auto &agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
+  bool is_reverse_obs_in_large_curv = false;
+
   for (auto &track : lateral_obstacles.front_tracks()) {
     // ignore obj without camera source
     if ((track.fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
       continue;
     };
+
+    if (agent_manager != nullptr) {
+      const auto *agent = agent_manager->GetAgent(track.track_id());
+      if (agent != nullptr) {
+        is_reverse_obs_in_large_curv = agent->is_reverse();
+      }
+    }
+
     if (!track.is_lead() &&
         (track.cutinp() > cutinp_threshold || track.is_new_cutin()) &&
         track.v_lat() < -0.01 &&
-        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+        track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
+        !is_reverse_obs_in_large_curv) {
       cut_in_info->set_has_cutin(true);
 
       front_cut_in_track_id.push_back(track.track_id());
@@ -1707,9 +1788,10 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
     virtual_obs_desired_distance = GetCalibratedDistance(
         virtual_obs->speed(), v_ego,
         lon_behav_input_->lat_output().lc_request(), false, false, false);
-    double dis_to_virtual_obs =
-        std::min(lon_behav_input_->dis_to_stopline() - 1,
-                 lon_behav_input_->dis_to_crosswalk() - 3);
+    double dis_to_virtual_obs = std::min(
+        lon_behav_input_->dis_to_stopline() - config_.stop_dis_before_stopline,
+        lon_behav_input_->dis_to_crosswalk() -
+            config_.stop_dis_before_crosswalk);
     if (dis_to_virtual_obs < 1.0) {
       dis_to_virtual_obs = 1.0;
     }
@@ -1758,7 +1840,8 @@ bool StGraphGenerator::CalcSpeedInfoWithIntersection() {
       current_intersection_state_ == planning::common::IN_INTERSECTION) {
     if (v_limit_with_intersection_ < config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
-      v_limit_with_intersection_ = std::max(v_ego - 3.0, config_.v_intersection_min_limit);
+      v_limit_with_intersection_ =
+          std::max(v_ego - 3.0, config_.v_intersection_min_limit);
     }
     v_target_intersection = v_limit_with_intersection_;
   } else {
@@ -2201,11 +2284,19 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
   double distance_stop = config_.distance_stop;
   double distance_start = config_.distance_start;
   constexpr double lead_change_buffer = 1.0;
+  current_traffic_light_can_pass_ =
+      session_->planning_context().traffic_light_decider_output().can_pass;
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto current_distance_ego_to_stopline =
+      virtual_lane_manager->GetEgoDistanceToStopline();
+  const auto current_intersection_state = virtual_lane_manager->GetIntersectionState();
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
   // 这里有问题
-  if (lead_one.track_id() == 0 || dbw_status == false) {
+  if ((lead_one.track_id() == 0 && current_traffic_light_can_pass_) ||
+      dbw_status == false) {
     // reset state as default
     start_stop_info_.set_state(common::StartStopInfo::CRUISE);
   } else {
@@ -2213,9 +2304,12 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     std::string lc_request = "none";
     double desire_distance = CalcDesiredDistance(lead_one, v_ego, lc_request);
     bool is_lead_static = std::fabs(lead_one.v_lead()) < obstacle_v_start;
+    const bool traffic_light_stop_condition =
+        !current_traffic_light_can_pass_ && v_ego < v_start;
     bool stop_condition =
         (v_ego < v_start && is_lead_static &&
-         std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
+         std::fabs(lead_one.d_rel() - desire_distance) < distance_stop) ||
+        traffic_light_stop_condition;
     bool cruise_condition = v_ego > v_startmode || (v_last_target_ > v_target_);
     bool lead_one_start =
         (lead_one.v_lead() > obstacle_v_start &&
@@ -2225,7 +2319,29 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     bool lead_one_change =
         (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
         (distance_stop + lead_change_buffer);
-    bool start_condition = lead_one_start || lead_one_change;
+
+    // intersection condition
+    const bool traffic_light_start_condition = current_traffic_light_can_pass_ && 
+                      (current_intersection_state == common::IntersectionState::APPROACH_INTERSECTION ||
+                      current_intersection_state == common::IntersectionState::IN_INTERSECTION);
+    bool approach_to_stop_line = false;
+    if (NL_NMAX !=
+        current_distance_ego_to_stopline) {  // intersection stop line exits
+      if (fabs(current_distance_ego_to_stopline) <
+          kDistanceToStopLineBufferEgo) {
+        lead_one_start = false;
+        lead_one_change = false;
+      } else if (lead_one.d_rel() >
+                     fabs(fabs(current_distance_ego_to_stopline) -
+                          kDistanceToStopLineBufferAgent) &&
+                 current_distance_ego_to_stopline >
+                     kDistanceToStopLineBufferEgo) {
+        approach_to_stop_line = true;
+      }
+    }
+    bool start_condition = lead_one_start || lead_one_change ||
+                           traffic_light_start_condition ||
+                           approach_to_stop_line;
 
     // 2. Update the state
     if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
@@ -2250,6 +2366,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       start_stop_info_.set_state(common::StartStopInfo::STOP);
     }
   }
+  last_traffic_light_can_pass_ = current_traffic_light_can_pass_;
   LOG_DEBUG("The start_stop_state_info is [%d] \n", start_stop_info_.state());
   return start_stop_info_.state();
 }
@@ -2415,6 +2532,9 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   // 2) 获取障碍物
   narrow_agent_.clear();
   const auto &agent_manager = dynamic_world->agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
   const auto &all_current_agents = agent_manager->GetAllCurrentAgents();
   if (all_current_agents.empty()) {
     return;
@@ -3990,7 +4110,12 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.a_min = acc_target_.first;
   state_limit.a_max = acc_target_.second;
   state_limit.j_min = -1.0;
-  state_limit.j_max = 1.0;
+  state_limit.j_max = 1.5;
+
+  if (v_limit_on_turns_and_road_ == v_target_) {
+    state_limit.a_min = config_.acc_lower_bound_in_large_curv;
+    state_limit.j_min = config_.jerk_lower_in_large_curv;
+  }
 
   auto s_ref_curve = SecondOrderTimeOptimalTrajectory(init_state, state_limit);
   const double delta_time = 0.2;
@@ -4000,6 +4125,74 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
     double s_ego = std::fmax(s_ref_curve.Evaluate(0, time), s_refs[i - 1]);
     // double v_ego = far_slow_curve.Evaluate(1, time);
     s_refs[i] = s_ego;
+  }
+}
+
+void StGraphGenerator::IsReverseAgentInLargeCurvature(
+    const double v_ego, std::shared_ptr<VirtualLane> current_lane,
+    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world) {
+  const auto *agent_manager = dynamic_world->agent_manager();
+  auto *mutable_agent_manager = dynamic_world->mutable_agent_manager();
+
+  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
+    return;
+  }
+  const auto current_ref_path = current_lane->get_reference_path();
+  if (current_ref_path == nullptr) {
+    return;
+  }
+  const auto current_lane_frenet_coord = current_ref_path->get_frenet_coord();
+  if (current_lane_frenet_coord == nullptr) {
+    return;
+  }
+
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  double ego_pose_x = lon_behav_input_->ego_info().ego_pose_x();
+  double ego_pose_y = lon_behav_input_->ego_info().ego_pose_y();
+  if (!(current_lane_frenet_coord->XYToSL(ego_pose_x, ego_pose_y, &ego_s,
+                                          &ego_l))) {
+    return;
+  }
+
+  const auto &agents = agent_manager->GetAllCurrentAgents();
+  for (auto agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    if ((agent->fusion_source() & OBSTACLE_SOURCE_CAMERA) == 0) {
+      continue;
+    }
+
+    int agent_id = agent->agent_id();
+    auto *mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
+    if (nullptr == mutable_agent) {
+      continue;
+    }
+
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    if (!(current_lane_frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s,
+                                            &agent_l))) {
+      continue;
+    }
+    double s_rel = agent_s - ego_s;
+    double consider_s_in_large_curv = v_ego * kConsiderTimeLargeCurv;
+
+    const auto agent_matched_path_point =
+        current_lane_frenet_coord->GetPathPointByS(agent_s);
+    const double agent_matched_lane_theta = agent_matched_path_point.theta();
+    const double agent_relative_theta = planning_math::NormalizeAngle(
+        agent->theta() - agent_matched_lane_theta);
+    double object_s_speed_mps = agent->speed() * std::cos(agent_relative_theta);
+    // double object_l_speed_mps = agent->speed() *
+    // std::sin(agent_relative_theta);
+
+    bool is_in_large_curv = road_radius_ < kLargeCurvRadius ? true : false;
+    if (is_in_large_curv &&
+        (s_rel > consider_s_in_large_curv || object_s_speed_mps < -3.0)) {
+      mutable_agent->set_is_reverse(true);
+    }
   }
 }
 

@@ -1,9 +1,15 @@
 #include "hybrid_astar_park_planner.h"
 
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+
+#include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "hybrid_astar_response.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "math_utils.h"
 #include "path_safe_checker.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
@@ -23,14 +29,24 @@ HybridAStarParkPlanner::HybridAStarParkPlanner(
 void HybridAStarParkPlanner::Reset() {
   frame_.Reset();
   current_path_point_global_vec_.clear();
+  printf("astar reset\n");
 
   const ApaParameters& params = apa_param.GetParam();
   if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
-    HybridAStarThreadSolver* thread_solver =
-        HybridAStarThreadSolver::GetInstance();
-
-    thread_solver->Clear();
+    // init thread first
+    if (!thread_.IsInit()) {
+      thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
+                   params.steer_ratio, params.wheel_base,
+                   params.min_turn_radius,
+                   (params.max_car_width - params.car_width) * 0.5);
+      thread_.Start();
+    } else {
+      thread_.Clear();
+    }
   }
+
+  current_gear_ = AstarPathGear::parking;
+  in_slot_car_adjust_count_ = 0;
 
   return;
 }
@@ -42,16 +58,14 @@ void HybridAStarParkPlanner::Init() {
   // data structure.
   ILOG_INFO << "init astar thread";
 
-  if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
-    HybridAStarThreadSolver* solver = HybridAStarThreadSolver::GetInstance();
+  current_gear_ = AstarPathGear::parking;
+  in_slot_car_adjust_count_ = 0;
 
-    solver->Init(params.rear_overhanging, params.car_length, params.car_width,
-                 params.steer_ratio, params.wheel_base,
-                 params.min_turn_radius + 0.1,
-                 (params.max_car_width - params.car_width) * 0.5);
+  thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
+               params.steer_ratio, params.wheel_base, params.min_turn_radius,
+               (params.max_car_width - params.car_width) * 0.5);
 
-    solver->Start();
-  }
+  thread_.Start();
 
   return;
 }
@@ -119,19 +133,20 @@ const bool HybridAStarParkPlanner::CheckFinished() {
   const bool lon_condition =
       ego_slot_info.terminal_err.pos.x() < apa_param.GetParam().finish_lon_err;
 
-  const double y1 = ego_slot_info.ego_pos_slot.y();
-  const double y2 =
+  const double lat_offset = ego_slot_info.ego_pos_slot.y();
+  const double ego_head_lat_offset =
       (ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
                                      apa_param.GetParam().front_overhanging) *
                                         ego_slot_info.ego_heading_slot_vec)
           .y();
 
-  const bool lat_condition_1 =
-      std::fabs(y1) <= apa_param.GetParam().finish_lat_err;
+  const bool ego_center_lat_condition =
+      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err;
 
-  const bool lat_condition_2 =
-      std::fabs(y1) <= apa_param.GetParam().finish_lat_err_strict &&
-      std::fabs(y2) <= apa_param.GetParam().finish_lat_err_strict;
+  const bool ego_head_lat_condition =
+      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict &&
+      std::fabs(ego_head_lat_offset) <=
+          apa_param.GetParam().finish_lat_err_strict;
 
   const bool heading_condition_1 =
       std::fabs(ego_slot_info.terminal_err.heading) <=
@@ -141,8 +156,9 @@ const bool HybridAStarParkPlanner::CheckFinished() {
       std::fabs(ego_slot_info.terminal_err.heading) <=
       (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
 
-  const bool lat_condition = (lat_condition_1 && heading_condition_1) &&
-                             (lat_condition_2 && heading_condition_2);
+  const bool lat_condition =
+      (ego_center_lat_condition && heading_condition_1) &&
+      (ego_head_lat_condition && heading_condition_2);
 
   const bool static_condition =
       apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
@@ -209,6 +225,10 @@ void HybridAStarParkPlanner::PlanCore() {
     return;
   }
 
+  PathShrinkBySlotLimiter();
+
+  PathExpansionBySlotLimiter();
+
   // check finish
   if (CheckFinished()) {
     SetParkingStatus(PARKING_FINISHED);
@@ -224,8 +244,18 @@ void HybridAStarParkPlanner::PlanCore() {
   }
 
   bool is_replan = CheckReplan();
+
+  if (!CheckEgoReplanNumber(is_replan)) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = PLAN_COUNT_EXCEED_LIMIT;
+    return;
+  }
+
   bool update_thread_path = UpdateThreadPath();
-  uint8_t path_plan_result = PathPlannerResult::PLAN_FAILED;
+  PathPlannerResult path_plan_result = PathPlannerResult::PLAN_FAILED;
+
+  ILOG_INFO << "stuck_uss_time = " << frame_.stuck_uss_time
+            << ",is_replan = " << is_replan;
 
   // check replan
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan || is_replan ||
@@ -238,7 +268,7 @@ void HybridAStarParkPlanner::PlanCore() {
 
     frame_.replan_flag = true;
     path_plan_result = PlanBySearchBasedMethod();
-    frame_.pathplan_result = path_plan_result;
+    frame_.pathplan_result = static_cast<uint8_t>(path_plan_result);
 
     switch (path_plan_result) {
       case PathPlannerResult::PLAN_UPDATE:
@@ -265,7 +295,143 @@ void HybridAStarParkPlanner::PlanCore() {
   return;
 }
 
-void HybridAStarParkPlanner::Log() const { return; }
+void HybridAStarParkPlanner::Log() const {
+  const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+  const auto& l2g_tf = ego_slot_info.l2g_tf;
+
+  JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
+  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
+
+  std::vector<double> slot_corner_X;
+  const size_t corner_size = ego_slot_info.slot_corner.size();
+  slot_corner_X.clear();
+  slot_corner_X.reserve(4 * corner_size);
+  std::vector<double> slot_corner_Y;
+  slot_corner_Y.clear();
+  slot_corner_Y.reserve(4 * corner_size);
+  std::vector<Eigen::Vector2d> pt_vec;
+  pt_vec.clear();
+  pt_vec.reserve(corner_size);
+  for (const auto& corner : ego_slot_info.slot_corner) {
+    slot_corner_X.emplace_back(corner.x());
+    slot_corner_Y.emplace_back(corner.y());
+    pt_vec.emplace_back(corner);
+  }
+
+  if (corner_size == 4) {
+    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+    const Eigen::Vector2d vec_01 = (pt_vec[1] - pt_vec[0]).normalized();
+    const Eigen::Vector2d vec_23 = (pt_vec[3] - pt_vec[2]).normalized();
+    pt_vec[0] = pt_vec[0] + ego_slot_info.move_slot_dist * vec_01;
+    pt_vec[1] = pt_vec[1] + ego_slot_info.move_slot_dist * vec_01;
+    pt_vec[2] = pt_vec[2] + ego_slot_info.move_slot_dist * vec_23;
+    pt_vec[3] = pt_vec[3] + ego_slot_info.move_slot_dist * vec_23;
+    for (const Eigen::Vector2d& pt : pt_vec) {
+      slot_corner_X.emplace_back(pt.x());
+      slot_corner_Y.emplace_back(pt.y());
+    }
+    slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+    slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+    slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+  }
+
+  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 6)
+  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 6)
+
+  std::vector<double> limiter_corner_X;
+  limiter_corner_X.clear();
+  limiter_corner_X.reserve(frame_.ego_slot_info.limiter_corner.size());
+  std::vector<double> limiter_corner_Y;
+  limiter_corner_Y.clear();
+  limiter_corner_Y.reserve(frame_.ego_slot_info.limiter_corner.size());
+  for (const auto& corner : frame_.ego_slot_info.limiter_corner) {
+    const auto tmp_corner = l2g_tf.GetPos(corner);
+    limiter_corner_X.emplace_back(tmp_corner.x());
+    limiter_corner_Y.emplace_back(tmp_corner.y());
+  }
+  JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2)
+  JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
+
+  JSON_DEBUG_VALUE("terminal_error_x",
+                   frame_.ego_slot_info.terminal_err.pos.x())
+  JSON_DEBUG_VALUE("terminal_error_y",
+                   frame_.ego_slot_info.terminal_err.pos.y())
+  JSON_DEBUG_VALUE("terminal_error_heading",
+                   frame_.ego_slot_info.terminal_err.heading)
+
+  ILOG_INFO << "lon error = " << frame_.ego_slot_info.terminal_err.pos.x()
+            << ",lat error=" << frame_.ego_slot_info.terminal_err.pos.y()
+            << ",heading error="
+            << ifly_rad2deg(ego_slot_info.terminal_err.heading);
+
+  JSON_DEBUG_VALUE("is_replan", frame_.is_replan)
+  JSON_DEBUG_VALUE("is_finished", frame_.is_finished)
+  JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
+  JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
+  JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
+  JSON_DEBUG_VALUE("gear_change_count", frame_.gear_change_count)
+  JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
+  JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
+  JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist)
+  JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
+  JSON_DEBUG_VALUE("remain_dist_uss", frame_.remain_dist_uss)
+  JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
+  JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
+  JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
+  JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
+  JSON_DEBUG_VALUE("ego_heading_slot", frame_.ego_slot_info.ego_heading_slot)
+
+  JSON_DEBUG_VALUE("selected_slot_id", frame_.ego_slot_info.selected_slot_id)
+  JSON_DEBUG_VALUE("slot_length", frame_.ego_slot_info.slot_length)
+  JSON_DEBUG_VALUE("slot_width", frame_.ego_slot_info.slot_width)
+
+  JSON_DEBUG_VALUE("slot_origin_pos_x",
+                   frame_.ego_slot_info.slot_origin_pos.x())
+
+  JSON_DEBUG_VALUE("slot_origin_pos_y",
+                   frame_.ego_slot_info.slot_origin_pos.y())
+
+  JSON_DEBUG_VALUE("slot_origin_heading",
+                   frame_.ego_slot_info.slot_origin_heading)
+
+  JSON_DEBUG_VALUE("slot_occupied_ratio",
+                   frame_.ego_slot_info.slot_occupied_ratio)
+
+  std::vector<double> target_ego_pos_slot = {
+      frame_.ego_slot_info.target_ego_pos_slot.x(),
+      frame_.ego_slot_info.target_ego_pos_slot.y()};
+
+  JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
+  JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2)
+
+  const auto uss_info =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetRemainDistInfo();
+  JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
+  JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
+  JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
+  JSON_DEBUG_VALUE("uss_car_index", uss_info.car_index)
+
+  // lateral optimization
+  const auto plan_debug_info =
+      apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
+
+  if (plan_debug_info.has_terminal_pos_error()) {
+    JSON_DEBUG_VALUE("optimization_terminal_pose_error",
+                     plan_debug_info.terminal_pos_error())
+    JSON_DEBUG_VALUE("optimization_terminal_heading_error",
+                     plan_debug_info.terminal_heading_error())
+  } else {
+    JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
+    JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
+  }
+
+  return;
+}
 
 void HybridAStarParkPlanner::GenTlane() { return; }
 
@@ -296,8 +462,11 @@ const std::string HybridAStarParkPlanner::GetPlanReason(const uint8_t type) {
 
 void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
   double path_checker_start_time = IflyTime::Now_ms();
-
+  // init
   is_ego_collision_ = false;
+  is_path_collision_ = false;
+  path_collision_id_ = 1000000;
+
   // obs generate
   ParkObstacleList obs;
   PointCloudObstacleTransform obstacle_generator;
@@ -315,9 +484,7 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
       static_cast<pnc::geometry_lib::PathSegGear>(frame_.gear_command), &obs,
       ego_pose);
 
-  Pose2D* collision_pose = path_safe_checker.GetCollisionPose();
-  *collision_pose = Pose2D(0, 0, 0);
-
+  frame_.remain_dist_col_det = frame_.remain_dist;
   if (path_safe_checker.IsPathCollision()) {
     path_safe_checker.UpdatePathValidDist(current_path_point_global_vec_,
                                           ego_pose);
@@ -327,17 +494,16 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
     valid_dist -= 0.1;
     valid_dist = std::max(0.0, valid_dist);
 
-    if (frame_.remain_dist > valid_dist) {
-      frame_.remain_dist = valid_dist;
-
-      ILOG_INFO << "valid dist=" << valid_dist;
+    if (frame_.remain_dist_col_det > valid_dist) {
+      frame_.remain_dist_col_det = valid_dist;
     }
+    is_path_collision_ = true;
 
     // for debug
-    const size_t collision_id = path_safe_checker.GetPathCollisionID();
-    const pnc::geometry_lib::PathPoint& point =
-        current_path_point_global_vec_[collision_id];
-    *collision_pose = Pose2D(point.pos[0], point.pos[1], point.heading);
+    path_collision_id_ = path_safe_checker.GetPathCollisionID();
+
+    ILOG_INFO << "valid dist=" << valid_dist
+              << ",path_collision_id_=" << path_collision_id_;
   }
 
   double path_checker_end_time = IflyTime::Now_ms();
@@ -348,9 +514,18 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
 }
 
 void HybridAStarParkPlanner::UpdateRemainDist() {
-  ApaPlannerBase::UpdateRemainDist();
+  // 1. calculate remain dist according to plan path
+  frame_.remain_dist = CalRemainDistFromPath();
 
+  // 2.calculate remain dist uss according to uss
+  frame_.remain_dist_uss = CalRemainDistFromUss();
+
+  return;
   ShrinkPathByFusionObj();
+
+  ILOG_INFO << "remain s = " << frame_.remain_dist
+            << ", uss s = " << frame_.remain_dist_uss
+            << ", obs s = " << frame_.remain_dist_col_det;
 
   return;
 }
@@ -377,14 +552,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   Pose2D end = real_end;
   end.x = real_end.x + apa_param.GetParam().vertical_slot_target_adjust_dist;
 
-  HybridAStarThreadSolver* thread_solver =
-      HybridAStarThreadSolver::GetInstance();
-
-  if (thread_solver == nullptr) {
-    ILOG_ERROR << "plan fail";
-    return ApaPlannerBase::PathPlannerResult::PLAN_FAILED;
-  }
-
   double astar_start_time = IflyTime::Now_ms();
   // obs generate
   ParkObstacleList obs;
@@ -405,7 +572,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;
 
   // set input
-  AstarRequest history_request = thread_solver->GetAstarRequest();
   AstarRequest cur_request;
   cur_request.path_generate_method =
       planning::AstarPathGenerateType::astar_searching;
@@ -427,45 +593,48 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
 
   switch (frame_.replan_reason) {
     case FIRST_PLAN:
-      cur_request.plan_reason = PlanningReason::first_plan;
+      cur_request.plan_reason = PlanningReason::FIRST_PLAN;
       break;
     case SEG_COMPLETED_PATH:
-      cur_request.plan_reason = PlanningReason::path_completed;
+      cur_request.plan_reason = PlanningReason::PATH_COMPLETED;
       break;
     case SEG_COMPLETED_USS:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case STUCKED:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     case DYNAMIC:
-      cur_request.plan_reason = PlanningReason::adjust_self_car_pose;
+      cur_request.plan_reason = PlanningReason::ADJUST_SELF_CAR_POSE;
       break;
     case SEG_COMPLETED_COL_DET:
-      cur_request.plan_reason = PlanningReason::path_stucked;
+      cur_request.plan_reason = PlanningReason::PATH_STUCKED;
       break;
     default:
-      cur_request.plan_reason = PlanningReason::none;
+      cur_request.plan_reason = PlanningReason::NONE;
       break;
   }
 
   // generate request
   // If ego is in slot, use rs path to generate path, not astar searching.
-  double dist = start.DistanceTo(real_end);
+  double start_lat_offset = std::fabs(start.y);
   bool need_drive_forward = false;
-  if (dist < 3.0 && std::fabs(start.theta) < 5.0 * M_PI / 180.0 &&
-      history_request.history_gear == AstarPathGear::reverse) {
+  if (start_lat_offset < 1.0 && std::fabs(start.theta) < 5.0 * M_PI / 180.0 &&
+      current_gear_ == AstarPathGear::reverse) {
     need_drive_forward = true;
 
     ILOG_INFO << "use rs path";
   }
 
+  ILOG_INFO << "dist = " << start_lat_offset
+            << " ,theta = " << std::fabs(start.theta) * 180 / M_PI;
+
   if (need_drive_forward) {
     cur_request.path_generate_method =
         planning::AstarPathGenerateType::reeds_shepp;
 
-    end = real_end;
-    end.x = real_end.x + 20.0;
+    end.y = real_end.y;
+    end.x = start.x + 30.0;
     cur_request.goal_ = end;
 
   } else {
@@ -473,7 +642,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
     if (frame_.replan_reason != 1) {
       cur_request.first_action_request.has_request = true;
 
-      switch (history_request.history_gear) {
+      switch (current_gear_) {
         case AstarPathGear::reverse:
           cur_request.first_action_request.gear_request = AstarPathGear::drive;
           break;
@@ -494,26 +663,26 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   AstarResponse response;
 
   // check result
-  if (thread_state_ == RequestResponseState::has_response) {
+  if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
     // HybridAStarResult full_length_path;
     // std::vector<AStarPathPoint> first_seg_path;
     // Pose2D base_pose;
 
-    thread_solver->PublishResponse(&response);
+    thread_.PublishResponse(&response);
     ILOG_INFO << "publish path";
 
     bool is_nice = false;
 
     is_nice = IsResponseNice(cur_request, response);
     if (!is_nice) {
-      thread_solver->ResetResponse();
-      thread_state_ = RequestResponseState::none;
+      thread_.Clear();
+      thread_state_ = RequestResponseState::NONE;
     }
   }
 
   // publish result
-  if (thread_state_ == RequestResponseState::has_response) {
+  if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     Transform2d response_tf;
     response_tf.SetBasePose(response.request.base_pose_);
 
@@ -538,11 +707,10 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       double path_dist = 0.0;
       if (response.first_seg_path.size() > 0) {
         path_dist = response.first_seg_path.back().accumulated_s;
+        ILOG_INFO << "first path gear = "
+                  << PathGearDebugString(response.first_seg_path[0].gear)
+                  << ",dist = " << path_dist;
       }
-
-      ILOG_INFO << "gear = "
-                << PathGearDebugString(response.first_seg_path[0].gear)
-                << " ,dist = " << path_dist;
 
       // if (response.kappa_change_too_much) {
       //   ILOG_INFO << "path kappa change too much";
@@ -555,7 +723,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       double lqr_end_time = IflyTime::Now_ms();
       ILOG_INFO << "lqr time ms " << lqr_end_time - search_end_time;
 
-      PublishHybridAstarDebugInfo(response.result, thread_solver, &response_tf);
+      PublishHybridAstarDebugInfo(response.result, &thread_, &response_tf);
 
       double publish_end_time = IflyTime::Now_ms();
       ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
@@ -570,22 +738,42 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       ILOG_INFO << "path plan point less 5";
     }
 
+    // update gear
+    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (response.first_seg_path.size() > 0) {
-      thread_solver->ResetResponse();
+      if (response.first_seg_path[0].gear == AstarPathGear::drive) {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      }
+      current_gear_ = response.first_seg_path[0].gear;
+    }
+
+    frame_.gear_command = frame_.current_gear;
+
+    ILOG_INFO << "first path gear = " << static_cast<int>(frame_.gear_command);
+
+    if (response.first_seg_path.size() > 0) {
+      thread_.Clear();
       ILOG_INFO << "clear thread";
     }
 
-  } else if (thread_state_ == RequestResponseState::none ||
-             thread_state_ == RequestResponseState::has_published_response) {
+  } else if (thread_state_ == RequestResponseState::NONE ||
+             thread_state_ == RequestResponseState::HAS_PUBLISHED_RESPONSE) {
     // send request
-    thread_solver->SetRequest(obs, cur_request);
+    thread_.SetRequest(obs, cur_request);
     res = PathPlannerResult::WAIT_PATH;
 
     // publish fallback path
     GenerateFallBackPath();
 
     ILOG_INFO << "set input";
-  } else if (thread_state_ == RequestResponseState::has_request) {
+
+    frame_.total_plan_count++;
+    if (current_gear_ == AstarPathGear::reverse &&
+        frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
+      in_slot_car_adjust_count_++;
+    }
+
+  } else if (thread_state_ == RequestResponseState::HAS_REQUEST) {
     res = PathPlannerResult::WAIT_PATH;
 
     // publish fallback path
@@ -725,18 +913,11 @@ const int HybridAStarParkPlanner::LocalPathToGlobal(
 }
 
 const bool HybridAStarParkPlanner::UpdateThreadPath() {
-  HybridAStarThreadSolver* thread_solver =
-      HybridAStarThreadSolver::GetInstance();
-
-  if (thread_solver == nullptr) {
-    return false;
-  }
-
-  thread_solver->GetThreadState(&thread_state_);
+  thread_.GetThreadState(&thread_state_);
 
   ILOG_INFO << "thread state " << static_cast<int>(thread_state_);
 
-  if (thread_state_ == RequestResponseState::has_response) {
+  if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     ILOG_INFO << "fetch path";
 
     return true;
@@ -915,6 +1096,9 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   ego_slot_info.target_ego_heading_slot =
       apa_param.GetParam().terminal_target_heading;
 
+  ILOG_INFO << "limiter x=" << ego_slot_info.target_ego_pos_slot[0]
+            << ",y=" << ego_slot_info.target_ego_pos_slot[1];
+
   // cal terminal error
   ego_slot_info.terminal_err.Set(
       ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
@@ -925,13 +1109,13 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
           apa_param.GetParam().slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_slot_info.ego_heading_slot) <
           apa_param.GetParam().slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    const std::vector<double> x_tab = {
+    const std::vector<double> x_bound = {
         ego_slot_info.target_ego_pos_slot.x(),
         ego_slot_info.slot_length + apa_param.GetParam().rear_overhanging};
 
-    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    const std::vector<double> occupied_ratio_bound = {1.0, 0.0};
     ego_slot_info.slot_occupied_ratio = pnc::mathlib::Interp1(
-        x_tab, occupied_ratio_tab, ego_slot_info.ego_pos_slot.x());
+        x_bound, occupied_ratio_bound, ego_slot_info.ego_pos_slot.x());
   } else {
     ego_slot_info.slot_occupied_ratio = 0.0;
   }
@@ -969,6 +1153,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   }
 
   // update stuck by uss time
+  // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
       apa_world_ptr_->GetApaDataPtr()->cur_state ==
@@ -979,6 +1164,7 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
   }
 
   // update stuck time
+  // 车静止不动，这个值一直在更新
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
@@ -1008,6 +1194,174 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
 }
 
 HybridAStarParkPlanner::~HybridAStarParkPlanner() {}
+
+const bool HybridAStarParkPlanner::CheckStuckFailed() {
+  return frame_.stuck_time > 12.0;
+}
+
+const double HybridAStarParkPlanner::CalRemainDistFromUss() {
+  double remain_dist = 10.0;
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+
+  uss_obstacle_avoider_ptr->Update(&planning_output_,
+                                   apa_world_ptr_->GetApaDataPtr());
+
+  const double safe_uss_remain_dist =
+      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+
+  remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - 0.15;
+
+  return remain_dist;
+}
+
+void HybridAStarParkPlanner::PathShrinkBySlotLimiter() {
+  if (current_gear_ != AstarPathGear::reverse) {
+    return;
+  }
+
+  if (current_path_point_global_vec_.size() <= 1) {
+    return;
+  }
+
+  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+
+  double limiter_x = ego_slot_info.target_ego_pos_slot[0];
+
+  Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
+  Eigen::Vector2d point_local;
+  point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
+
+  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
+            << ", y=" << point_local[1];
+
+  if (point_local[0] >= limiter_x) {
+    return;
+  }
+
+  double x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
+                            ego_slot_info.ego_pos_slot[0]);
+  double y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
+                            ego_slot_info.ego_pos_slot[1]);
+  if (x_diff > 1.5 || y_diff > 0.5) {
+    return;
+  }
+
+  // shrink path
+  size_t path_size = current_path_point_global_vec_.size();
+  for (size_t i = 0; i < path_size; i++) {
+    Eigen::Vector2d& point_global = current_path_point_global_vec_.back().pos;
+
+    point_local = ego_slot_info.g2l_tf.GetPos(point_global);
+
+    if (point_local[0] >= limiter_x) {
+      break;
+    }
+
+    current_path_point_global_vec_.pop_back();
+  }
+
+  return;
+}
+
+void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
+  if (current_gear_ != AstarPathGear::reverse) {
+    return;
+  }
+
+  if (current_path_point_global_vec_.size() <= 1) {
+    return;
+  }
+
+  EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
+
+  double limiter_x = ego_slot_info.target_ego_pos_slot[0];
+
+  Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
+  Eigen::Vector2d point_local;
+  point_local = ego_slot_info.g2l_tf.GetPos(path_end_global);
+
+  if (point_local[0] <= (limiter_x + 0.1)) {
+    return;
+  }
+
+  double ego_x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
+                                ego_slot_info.ego_pos_slot[0]);
+  double ego_y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
+                                ego_slot_info.ego_pos_slot[1]);
+  if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
+    return;
+  }
+
+  Eigen::Vector2d end_point_global = current_path_point_global_vec_.back().pos;
+
+  Eigen::Vector2d end_point_local =
+      ego_slot_info.g2l_tf.GetPos(end_point_global);
+
+  double x_diff =
+      std::fabs(end_point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
+  double y_diff =
+      std::fabs(end_point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
+  double length = std::sqrt(x_diff * x_diff + y_diff * y_diff);
+
+  if (x_diff > 1.0 || y_diff > 0.5) {
+    return;
+  }
+
+  ILOG_INFO << "x = " << limiter_x << ", end x = " << end_point_local[0]
+            << ", y=" << end_point_local[1];
+
+  double phi = current_path_point_global_vec_.back().heading;
+
+  size_t path_point_size = current_path_point_global_vec_.size();
+
+  Eigen::Vector2d the_last_but_one =
+      current_path_point_global_vec_[path_point_size - 2].pos;
+
+  const Eigen::Vector2d unit_line_vec =
+      Eigen::Vector2d(end_point_global[0] - the_last_but_one[0],
+                      end_point_global[1] - the_last_but_one[1]);
+  double s = 0.1;
+  double ds = 0.1;
+
+  Eigen::Vector2d point;
+  pnc::geometry_lib::PathPoint global_point;
+  while (s < length) {
+    point = end_point_global + s * unit_line_vec;
+
+    global_point.Set(point, phi);
+    global_point.kappa = 0.0;
+
+    current_path_point_global_vec_.push_back(global_point);
+
+    s += ds;
+  }
+
+  return;
+}
+
+const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
+    const bool is_replan) {
+  if (is_replan) {
+    // check total plan number
+    if (frame_.total_plan_count > 30) {
+      return false;
+    }
+  }
+
+  // check plan number in slot
+  if (is_replan && current_gear_ == AstarPathGear::reverse &&
+      frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
+    if (in_slot_car_adjust_count_ >= 3) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 }  // namespace apa_planner
 }  // namespace planning

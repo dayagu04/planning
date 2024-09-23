@@ -38,11 +38,13 @@ namespace planning {
 
 #define ifly_float64_epsilon (1e-9)
 
-#define ifly_deg2rad(x) ((x)*M_PI / 180.0)
-#define ifly_rad2deg(x) ((x)*180.0 / M_PI)
+inline double ifly_rad2deg(double u) { return 57.295779513082323 * u; }
 
-#define ifly_cvt_kmh_to_ms(vel) (((vel)*1000) / 3600)
-#define ifly_cvt_ms_to_kmh(vel) (((vel)*3600) / 1000)
+inline double ifly_deg2rad(double u) { return 0.017453292519943 * u; }
+
+inline double ifly_cvt_kmh_to_ms(double vel) { return vel * 3.6; }
+
+inline double ifly_cvt_ms_to_kmh(double vel) { return vel * 3.6; }
 
 #define ifly_fequal(x, y) (ifly_fabs((x) - (y)) < ifly_float64_epsilon)
 #define ifly_fgreater(x, y) (((x) > (y)) && !ifly_fequal(x, y))

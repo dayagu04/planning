@@ -147,35 +147,33 @@ void GeneralLateralDecider::UnitTest() {
         //           type
         //           upper     10    2
         //           lower               -1   -10
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              -1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 2,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 2, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 0;
-      }
-      break;
+      } break;
       case 2: {
         // case 1:
         //           type
         //           upper     10      -1
         //           lower          3       -10
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, -1,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, -1, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 0;
-      }
-      break;
+      } break;
       case 3: {
         // case 3:
         //           type           J        A      A
@@ -183,21 +181,20 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3        2      1  -10
         // init                         2.5
         // result                        *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              2, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{2, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 2.5;
-      }
-      break;
+      } break;
       case 4: {
         // case 4:
         //           type           J    A      A        A
@@ -205,24 +202,23 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3    2      1       -2    -10
         // init                             1.5
         // result                        *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              2, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -2, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{2, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-2, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 1.5;
-      }
-      break;
+      } break;
       case 5: {
         // case 4:
         //           type           A    J      A        A
@@ -230,24 +226,23 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3    2      1       -2    -10
         // init                             1.5
         // result                   *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              2, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -2, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{2, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-2, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 1.5;
-      }
-      break;
+      } break;
 
       case 6: {
         // case 4:
@@ -256,30 +251,29 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3        1       -1   -2    -10
         // init                          2
         // result                          *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 2.5,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 0,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -2, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-2, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 2;
-      }
-      break;
+      } break;
       case 7: {
         // case 4:
         //           type           J   A      A  A   A
@@ -287,27 +281,26 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3         0.5     -1   -10
         // init                              1
         // result                            *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 2.5,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 0,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              0.5, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{0.5, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 1;
-      }
-      break;
+      } break;
 
       case 8: {
         // case 4:
@@ -316,27 +309,26 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3  2.5        -1   -10
         // init                               0.75
         // result                           *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 2.5,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 0,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              2.5, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{2.5, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 0.75;
-      }
-      break;
+      } break;
       case 9: {
         // case 4:
         //           type           J   A      A   J
@@ -344,30 +336,29 @@ void GeneralLateralDecider::UnitTest() {
         //           lower          3          1      -1   -10
         // init                                1
         // result                              *
-        bounds_input.emplace_back(WeightedBound{
-          -10, 10,
-          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 2.5,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -10, 0,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              3, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(WeightedBound{
-              -1, 10,
-              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::AGENT}});
         init_l = 1;
-      }
-      break;
+      } break;
     }
     PostProcessBound(init_l, bounds_input, bound_output, bound_info);
-    printf("case %d: %f %f\n",i, bound_output.first, bound_output.second);
+    printf("case %d: %f %f\n", i, bound_output.first, bound_output.second);
   }
 }
 
@@ -468,26 +459,31 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   const double v_ego =
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
-  double dynamic_ref_buffer = interp(v_ego, xp_v_ego, config_.dynamic_ref_buffer);
-  double init_dist_to_ref = std::fabs(frenet_init_pt.y - lateral_offset) - dynamic_ref_buffer;
+  double dynamic_ref_buffer =
+      interp(v_ego, xp_v_ego, config_.dynamic_ref_buffer);
+  double init_dist_to_ref =
+      std::fabs(frenet_init_pt.y - lateral_offset) - dynamic_ref_buffer;
   double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
   if (dist_to_second_stage < -1e-6) {
-    dynamic_ref_buffer = std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
+    dynamic_ref_buffer =
+        std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
   }
   if (frenet_init_pt.y < -1e-6) {
     dynamic_ref_buffer = -dynamic_ref_buffer;
   }
 
   if (config_.lateral_ref_traj_type ||
-      ((dist_to_second_stage >= 1e-6) &&
-       (is_LC_CHANGE || is_LC_BACK) &&
+      ((dist_to_second_stage >= 1e-6) && (is_LC_CHANGE || is_LC_BACK) &&
        gap_selector_decider_output.gap_selector_trustworthy)) {
     traj_points = coarse_planning_info.trajectory_points;
   } else {
     // generate traj_points based on kMaxAcc or kMinAcc
     const auto &planning_init_point =
         ego_cart_state_manager_->planning_init_point();
-    const double kMaxAcc = 2;
+    double kMaxAcc = 2.0;
+    if (is_LC_CHANGE || is_LC_BACK) {
+      kMaxAcc = 1e-6;
+    }
     const double kMinAcc = -5.5;
     double ego_v = planning_init_point.v;
     double cruise_v = session_->planning_context().v_ref_cruise();
@@ -577,7 +573,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   }
 }
 
-void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer) {
+void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
+                                             double dynamic_ref_buffer) {
   const auto &frenet_coord =
       session_->planning_context()
           .lane_change_decider_output()
@@ -585,8 +582,10 @@ void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points, doub
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  if (lateral_offset_decider_output.is_valid || std::fabs(dynamic_ref_buffer) > 1e-6) {
-    double lateral_offset = lateral_offset_decider_output.lateral_offset + dynamic_ref_buffer;
+  if (lateral_offset_decider_output.is_valid ||
+      std::fabs(dynamic_ref_buffer) > 1e-6) {
+    double lateral_offset =
+        lateral_offset_decider_output.lateral_offset + dynamic_ref_buffer;
     Point2D first_offset_xy_point;
     if (frenet_coord->SLToXY(Point2D(traj_points[0].s, lateral_offset),
                              first_offset_xy_point)) {
@@ -1168,14 +1167,16 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     has_lon_decision =
         has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
 
-    AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
-                             lat_buf_dis, lat_decision, lon_decision,
-                             obstacle_decision, is_update_hard_bound);
+    AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
+                             overlap_max_y, lat_buf_dis, lat_decision,
+                             lon_decision, obstacle_decision,
+                             is_update_hard_bound);
   }
 }
 
-bool GeneralLateralDecider::IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, double& limit_overlap_min_y,
-    double& limit_overlap_max_y) {
+bool GeneralLateralDecider::IsCutoutSideObstacle(
+    const std::shared_ptr<FrenetObstacle> obstacle, double &limit_overlap_min_y,
+    double &limit_overlap_max_y) {
   if (plan_history_traj_.empty()) {
     return false;
   }
@@ -1193,10 +1194,9 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(const std::shared_ptr<FrenetObs
     const double care_area_s_end = ego_s + 10;
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
-    const double care_area_length =
-        care_area_s_end - care_area_s_start;
-    const auto care_polygon = Polygon2d(
-        Box2d(care_area_center, 0, care_area_length, l_care_width));
+    const double care_area_length = care_area_s_end - care_area_s_start;
+    const auto care_polygon =
+        Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
     Polygon2d obstacle_sl_polygon;
     auto ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
                                                 obstacle_sl_polygon);
@@ -1207,13 +1207,14 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(const std::shared_ptr<FrenetObs
     Polygon2d care_overlap_polygon;
 
     if (obstacle_sl_polygon.ComputeOverlap(care_polygon,
-                                                &care_overlap_polygon)) {
+                                           &care_overlap_polygon)) {
       limit_overlap_min_y = care_overlap_polygon.min_y();
       limit_overlap_max_y = care_overlap_polygon.max_y();
     } else {
       return false;
     }
-    if ((obstacle->frenet_l() * obstacle->frenet_velocity_l() > 0) && fabs(obstacle->frenet_velocity_l()) > 0.3) {
+    if ((obstacle->frenet_l() * obstacle->frenet_velocity_l() > 0) &&
+        fabs(obstacle->frenet_velocity_l()) > 0.3) {
       return true;
     }
   }
@@ -1253,7 +1254,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &lat_obstacle_decision = session_->environmental_model()
                                           .get_lateral_obstacle()
                                           ->lat_obstacle_decision();
-  bool in_intersection = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState() == common::IntersectionState::IN_INTERSECTION;
+  bool in_intersection = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->GetIntersectionState() ==
+                         common::IntersectionState::IN_INTERSECTION;
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1300,7 +1304,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   double limit_overlap_min_y = -1000;
   double limit_overlap_max_y = 1000;
   // hack: consider that the obstacle is not completely over the car
-  bool is_cut_out_side_obstacle = IsCutoutSideObstacle(obstacle, limit_overlap_min_y, limit_overlap_max_y);
+  bool is_cut_out_side_obstacle =
+      IsCutoutSideObstacle(obstacle, limit_overlap_min_y, limit_overlap_max_y);
   BoundType bound_type = BoundType::DYNAMIC_AGENT;
   if (is_cut_out_side_obstacle) {
     bound_type = BoundType::ADJACENT_AGENT;
@@ -1389,9 +1394,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       has_lon_decision =
           has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
     }
-    AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
-                             lat_buf_dis, lat_decision, lon_decision,
-                             obstacle_decision);
+    AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
+                             overlap_max_y, lat_buf_dis, lat_decision,
+                             lon_decision, obstacle_decision);
   }
 }
 
@@ -1478,10 +1483,10 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
 }
 
 void GeneralLateralDecider::AddObstacleDecisionBound(
-    int id, double t,  BoundType bound_type, double overlap_min_y, double overlap_max_y,
-    double lat_buf_dis, LatObstacleDecisionType lat_decision,
-    LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision,
-    bool is_update_hard_bound) {
+    int id, double t, BoundType bound_type, double overlap_min_y,
+    double overlap_max_y, double lat_buf_dis,
+    LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision,
+    ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   const double l_offset_limit = 10.0;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1586,7 +1591,8 @@ void GeneralLateralDecider::ExtractBoundary(
   for (int i = 0; i < hard_bounds_.size(); i++) {
     std::pair<double, double> hard_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> hard_bound_info;  // <lower ,upper>
-    PostProcessBound(planning_init_point_l, hard_bounds_[i], hard_bound, hard_bound_info);
+    PostProcessBound(planning_init_point_l, hard_bounds_[i], hard_bound,
+                     hard_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
@@ -1597,7 +1603,8 @@ void GeneralLateralDecider::ExtractBoundary(
   for (int i = 0; i < soft_bounds_.size(); i++) {
     std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
-    PostProcessBound(planning_init_point_l, soft_bounds_[i], soft_bound, soft_bound_info);
+    PostProcessBound(planning_init_point_l, soft_bounds_[i], soft_bound,
+                     soft_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(soft_bound, soft_bound_info);
     }
@@ -1836,7 +1843,8 @@ void GeneralLateralDecider::PostProcessBound(
         if (upper_type == BoundType::ADJACENT_AGENT) {
           if (upper_bound < planning_init_point_l) {
             upper_bound = planning_init_point_l;
-            lower_bound = std::min(planning_init_point_l, std::max(lower, lower_bound));
+            lower_bound =
+                std::min(planning_init_point_l, std::max(lower, lower_bound));
             use_upper_init_protect = true;
           }
         }
@@ -1864,7 +1872,8 @@ void GeneralLateralDecider::PostProcessBound(
         auto &lower_type = lower_bound_info.type;
         if (lower_type == BoundType::ADJACENT_AGENT) {
           if (lower_bound > planning_init_point_l) {
-            upper_bound = std::max(planning_init_point_l, std::min(upper, upper_bound));
+            upper_bound =
+                std::max(planning_init_point_l, std::min(upper, upper_bound));
             lower_bound = planning_init_point_l;
             use_lower_init_protect = true;
           }
@@ -1987,9 +1996,12 @@ void GeneralLateralDecider::SaveLatDebugInfo(
       ->CopyFrom(lat_debug_info_);
 }
 
-void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
+void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    ref_traj_points_[i].l = std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first), frenet_soft_bounds[i].second);
+    ref_traj_points_[i].l =
+        std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
+                 frenet_soft_bounds[i].second);
   }
 }
 
@@ -2210,7 +2222,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
             virtual_lane_manager->get_lane_num() - 2 &&
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            MSD_LANE_TYPE_NON_MOTOR)) &&
+            iflyauto::LANETYPE_NON_MOTOR)) &&
       ((!isRedLightStop && lateral_output.accident_ahead &&
         lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
@@ -2238,7 +2250,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
             virtual_lane_manager->get_lane_num() - 2 &&
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            MSD_LANE_TYPE_NON_MOTOR)) &&
+            iflyauto::LANETYPE_NON_MOTOR)) &&
       virtual_lane_manager->current_lane_virtual_id() - 1 >= 0) {
     lateral_output.rightest_lane = true;
   } else {

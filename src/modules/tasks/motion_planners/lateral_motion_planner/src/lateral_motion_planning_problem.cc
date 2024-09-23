@@ -39,7 +39,7 @@ void LateralMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(
       std::make_shared<ReferenceCostTerm>());  // reference cost
   ilqr_core_ptr_->AddCost(
-      std::make_shared<ContinuityCostTerm>()); // continuity cost
+      std::make_shared<ContinuityCostTerm>());  // continuity cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatAccCostTerm>());  // lateral acc cost
   ilqr_core_ptr_->AddCost(

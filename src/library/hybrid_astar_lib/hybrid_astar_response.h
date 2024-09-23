@@ -10,7 +10,6 @@ namespace planning {
 // request.
 struct AstarResponse {
   AstarRequest request;
-  SearchState search_state;
 
   // local frame
   HybridAStarResult result;

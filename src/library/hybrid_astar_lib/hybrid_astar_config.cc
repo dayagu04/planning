@@ -11,10 +11,13 @@ void PlannerOpenSpaceConfig::InitConfig() {
   // if change reso, some bug will appear
   xy_grid_resolution = 0.2;
   xy_grid_resolution_inv = 1.0 / xy_grid_resolution;
-  // phi_grid_resolution = 0.1;
+
+  // 3 degree, 2 degree, 1 degree. default is 3.
+  // todo: maybe 1 is better.
   phi_grid_resolution = 0.0524;
   phi_grid_resolution_inv = 1.0 / phi_grid_resolution;
   next_node_num = 10;
+  // todo:step 0.4,0.2,0.1. maybe 0.1 is better.
   node_step = 0.4;
   // node_step = 0.3;
   // node_step = 0.2;
@@ -26,16 +29,18 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   traj_forward_penalty = 1.0;
   traj_reverse_penalty = 1.0;
-  traj_gear_switch_penalty = 4.0;
+  traj_gear_switch_penalty = 10.0;
+  // traj_gear_switch_penalty = 4.0;
   traj_steer_penalty = 0.0;
   // traj_steer_change_penalty = 4.0;
   traj_steer_change_penalty = 0.0;
   lat_hierarchy_safe_buffer.emplace_back(0.2);
   lat_hierarchy_safe_buffer.emplace_back(0.1);
-  mirror_safe_buffer = 0.2;
   lon_front_safe_buffer = 0.4;
   lon_back_safe_buffer = 0.4;
   lon_min_safe_buffer = 0.1;
+
+  expect_gear_penalty = 50.0;
 
   enable_euler_cost_for_vertical_park = true;
   enable_dp_cost_for_vertical_park = true;
@@ -49,6 +54,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   map_bound_max_x = 20.0;
   map_bound_min_y = -20.0;
   map_bound_max_x = 20.0;
+
+  tie_breaker_ = 1e-5;
 
   return;
 }

@@ -149,7 +149,7 @@ class ParallelPathPlanner : public ApaPathPlanner {
     }
     return obs_vec;
   }
-  
+
  private:
   virtual void Preprocess() override;
 

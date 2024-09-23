@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include "astar_decider.h"
+#include "node3d.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -21,7 +23,15 @@ class NodeShrinkDecider : public AstarDecider {
 
   bool IsLegalForHeading(const double heading);
 
+  bool IsShrinkByParent(const Node3d *parent, const Node3d *child_node);
+
+  bool IsShrinkByStartNode(const size_t start_id, Node3d *child);
+
+  bool IsShrinkByGearSwitchNumber(Node3d *child);
+
  private:
+  void ShrinkChildrenByHeading();
+
   // [-pi,+pi)
   NodeHeadingShrink heading_shrink_;
 };

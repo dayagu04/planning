@@ -1,8 +1,8 @@
 #pragma once
 #include "cdl_math.h"
+#include "collision_detect_types.h"
 #include "log_glog.h"
 #include "pose2d.h"
-#include "types.h"
 
 namespace cdl {
 

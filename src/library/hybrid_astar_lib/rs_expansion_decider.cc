@@ -1,8 +1,10 @@
 #include "rs_expansion_decider.h"
+#include <cmath>
 
 #include "astar_decider.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
+#include "math_utils.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -54,34 +56,19 @@ const double RSExpansionDecider::GetEndPointMaxDepth() {
 
 const Pose2D &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
 
-const bool RSExpansionDecider::IsSameEndPointForRsWithAtar() {
+const bool RSExpansionDecider::IsSameEndPointForRsWithAstar() {
   return same_point_for_rs_with_astar_;
 }
 
-// 对于车辆在ref line，需要注意：
 bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node) {
-  // use heuristic rule to do rs path expansion
-  // use node heading and steering to check.
-  double heading = node->GetPhi();
+  bool need_rs = false;
+  need_rs = NeedRsLinkByNodeHeading(node);
+  if (!need_rs) {
+    return false;
+  }
 
-  double check_heading_buffer = 0.26;
-
-  if (node->GetGearType() == AstarPathGear::drive) {
-    // need turn right
-    if (heading > check_heading_buffer && node->GetSteer() > 0.0) {
-      return false;
-    } else if (heading < -check_heading_buffer && node->GetSteer() < 0.0) {
-      // need turn left
-      return false;
-    }
-  } else if (node->GetGearType() == AstarPathGear::reverse) {
-    // need turn left
-    if (heading > check_heading_buffer && node->GetSteer() < 0.0) {
-      return false;
-    } else if (heading < -check_heading_buffer && node->GetSteer() > 0.0) {
-      // need turn right
-      return false;
-    }
+  if (!NeedRsLinkByOffset(node)) {
+    return false;
   }
 
   return true;
@@ -115,6 +102,46 @@ void RSExpansionDecider::UpdateRSPathRequest(
 
     return;
   }
+}
+
+const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
+  // use heuristic rule to do rs path expansion
+  // use node heading and steering to check.
+  // if heading > 150 degree, shrink some rs expansion.
+  double heading = node->GetPhi();
+  if (std::fabs(heading) > ifly_deg2rad(150.0)) {
+    return false;
+  }
+
+  // check node steering angle
+  double check_heading_buffer = M_PI_2;
+  if (node->GetGearType() == AstarPathGear::drive) {
+    // need turn right
+    if (heading > check_heading_buffer && node->GetSteer() > 0.0) {
+      return false;
+    } else if (heading < -check_heading_buffer && node->GetSteer() < 0.0) {
+      // need turn left
+      return false;
+    }
+  } else if (node->GetGearType() == AstarPathGear::reverse) {
+    // need turn left
+    if (heading > check_heading_buffer && node->GetSteer() < 0.0) {
+      return false;
+    } else if (heading < -check_heading_buffer && node->GetSteer() > 0.0) {
+      // need turn right
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) {
+  if (std::fabs(node->GetY()) > 10.0 || std::fabs(node->GetX()) > 15.0) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace planning

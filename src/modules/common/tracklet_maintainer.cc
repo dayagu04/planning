@@ -386,7 +386,7 @@ void TrackletMaintainer::recv_prediction_objects(
       trajectory_idx++;
     }
   }
-  LOG_DEBUG("1map size= : [%d] \n", lt_fusion_object_history_map_.size());
+  LOG_DEBUG("1map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = lt_fusion_object_history_map_.begin();
@@ -405,7 +405,7 @@ void TrackletMaintainer::recv_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", lt_fusion_object_history_map_.size());
+  LOG_DEBUG("2map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 }
 
 // use relative interface when hdmap valid is false
@@ -526,7 +526,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     objects.push_back(origin);
     id_sets.insert(p.id);
   }
-  LOG_DEBUG("1map size= : [%d] \n", fusion_object_history_map_.size());
+  LOG_DEBUG("1map size= : [%lu] \n", fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = fusion_object_history_map_.begin();
@@ -546,7 +546,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", fusion_object_history_map_.size());
+  LOG_DEBUG("2map size= : [%lu] \n", fusion_object_history_map_.size());
 }
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
@@ -1581,7 +1581,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
 
   // increase threshold for vru
   const double lead_vru = 1.2;
-  if(item.is_VRU){
+  if (item.is_VRU) {
     result = result * lead_vru;
   }
 
@@ -1623,7 +1623,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   lead_confidence_thrshld = interp(item.d_rel, xp4, fp4);
   LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
   item.is_lead = item.leadone_confidence_cnt >=
-                  lead_confidence_thrshld * planning_cycle_time;
+                 lead_confidence_thrshld * planning_cycle_time;
   LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
 
   // calculate cutin

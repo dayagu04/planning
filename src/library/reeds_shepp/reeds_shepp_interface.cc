@@ -3,7 +3,6 @@
 
 #include "./../hybrid_astar_lib/hybrid_astar_common.h"
 #include "log_glog.h"
-#include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
 
 namespace planning {
@@ -17,6 +16,7 @@ int RSPathInterface::GeneShortestRSPath(RSPath *rs_path,
   // init
   rs_path->size = 0;
   rs_path->total_length = 0.0;
+  rs_path->radius = min_radius;
 
   int i;
   AstarPathGear veh_dir;

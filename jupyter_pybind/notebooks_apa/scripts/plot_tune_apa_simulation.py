@@ -11,10 +11,11 @@ sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, LocalizationEstimate
-
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240904/20240904-14-48-23/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-04-14-48-23_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-11-52-27/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-11-52-27_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-15-42-25/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-15-42-26_no_camera.bag'
+
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -98,17 +99,17 @@ data_sim_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_simu_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_sim_obs = ColumnDataSource(data = {'obs_x':[], 'obs_y':[]})
 data_sim_col_det_path = ColumnDataSource(data = {'x':[], 'y':[]})
+data_sim_limiter = ColumnDataSource(data = {'x':[], 'y':[]})
 
-fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
-fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
-fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_tune, size=4, color='yellow', legend_label = 'sim_tuned_plan')
-fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
-fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
+fig1.line('plan_path_y', 'plan_path_x', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.7, legend_label = 'sim_tuned_plan')
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_sim_target_pos, fill_color = "blue", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'data_sim_target_pos', visible = False)
 fig1.line('y', 'x', source = data_sim_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_target_pos', visible = False)
+fig1.line('y', 'x', source = data_sim_limiter, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'data_sim_limiter', visible = False)
 fig1.circle('obs_y', 'obs_x', source = data_sim_obs, size=6.0, color='red', legend_label='sim obs', visible = False)
+fig1.circle('y', 'x', source = data_sim_col_det_path, size=4, color='red', legend_label = 'sim_tuned_col_det_path')
+fig1.line('y', 'x', source = data_sim_col_det_path, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_col_det_path')
 
 ### sliders config
 class LocalViewSlider:
@@ -120,6 +121,7 @@ class LocalViewSlider:
     self.use_obs_in_bag_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "use_obs_in_bag",min=0, max=1, value=1, step=1)
     self.select_id_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='18%'), description= "select_id",min=0, max=20, value=0, step=1)
     self.force_plan_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "force_plan",min=0, max=1, value=0, step=1)
+    self.car_inflation = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.15, value=0.0, step=0.01)
     self.is_path_optimization_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "path_optimization",min=0, max=1, value=0, step=1)
     self.is_cilqr_enable_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "cilqr_enable",min=0, max=1, value=1, step=1)
     self.is_reset_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_reset",min=0, max=1, value=0, step=1)
@@ -137,6 +139,7 @@ class LocalViewSlider:
                         use_obs_in_bag = self.use_obs_in_bag_slider,
                         select_id = self.select_id_slider,
                         force_plan = self.force_plan_slider,
+                        car_inflation = self.car_inflation,
                         is_path_optimization = self.is_path_optimization_slider,
                         is_cilqr_enable = self.is_cilqr_enable_slider,
                         is_reset = self.is_reset_slider,
@@ -147,7 +150,7 @@ class LocalViewSlider:
                         heading_dif = self.heading_dif_slider)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -157,7 +160,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   elif vehicle_type == 2:
     vehicle_type = 'CHERY_E0X'
 
-  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
   car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
   index_map = bag_loader.get_msg_index(bag_time)
 
@@ -189,7 +192,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   if bag_loader.loc_msg['enable'] == True:
     loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
   else:
-    loc_msg = copy.deepcopy(LocalizationEstimate())
+    loc_msg = copy.deepcopy(IFLYLocalization())
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
@@ -364,6 +367,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   col_det_path_x = []
   col_det_path_y = []
   col_det_path_phi = []
+  limiter_x = []
+  limiter_y = []
   if res == True:
     tuned_planning_output = PlanningOutput()
     tuned_planning_output.deserialize(apa_simulation_py.GetPlanningOutput())
@@ -378,6 +383,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     col_det_path_x = date_planning_debug["col_det_path_x"]
     col_det_path_y = date_planning_debug["col_det_path_y"]
     col_det_path_phi = date_planning_debug["col_det_path_phi"]
+
+    limiter_x = date_planning_debug["limiter_corner_X"]
+    limiter_y = date_planning_debug["limiter_corner_Y"]
 
     # print("obstaclesX = ",date_planning_debug["obstaclesX"])
 
@@ -476,6 +484,23 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   data_sim_col_det_path.data.update({
     'x': col_det_path_x_list,
     'y': col_det_path_y_list,
+  })
+
+  limiter_x_list = []
+  limiter_y_list = []
+  if isinstance(limiter_x, str) and len(limiter_x) > 0:
+    limiter_x_list = [float(x) for x in limiter_x.split(',')]
+  elif not isinstance(limiter_x, str):
+    limiter_x_list = limiter_x
+
+  if isinstance(limiter_y, str) and len(limiter_y) > 0:
+    limiter_y_list = [float(y) for y in limiter_y.split(',')]
+  elif not isinstance(limiter_y, str):
+    limiter_y_list = limiter_y
+
+  data_sim_limiter.data.update({
+    'x': limiter_x_list,
+    'y': limiter_y_list,
   })
 
   push_notebook()

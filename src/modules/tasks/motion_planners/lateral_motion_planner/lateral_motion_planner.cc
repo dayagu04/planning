@@ -201,7 +201,8 @@ void LateralMotionPlanner::AssembleInput() {
       planning_input_.mutable_last_y_vec()->Set(
           i, motion_planner_output.lateral_y_t_spline(tmp_t));
       double lateral_ref_theta = planning_input_.ref_theta_vec(i);
-      double last_lateral_theta = motion_planner_output.lateral_theta_t_spline(tmp_t);
+      double last_lateral_theta =
+          motion_planner_output.lateral_theta_t_spline(tmp_t);
       double theta_err = lateral_ref_theta - last_lateral_theta;
       const double pi2 = 2.0 * M_PI;
       if (theta_err > M_PI) {
@@ -209,8 +210,7 @@ void LateralMotionPlanner::AssembleInput() {
       } else if (theta_err < -M_PI) {
         last_lateral_theta -= pi2;
       }
-      planning_input_.mutable_last_theta_vec()->Set(
-          i, last_lateral_theta);
+      planning_input_.mutable_last_theta_vec()->Set(i, last_lateral_theta);
     }
     planning_input_.set_q_continuity(config_.q_continuity);
   } else {
@@ -218,7 +218,8 @@ void LateralMotionPlanner::AssembleInput() {
       planning_input_.mutable_last_x_vec()->Set(i, enu_ref_path[i].first);
       planning_input_.mutable_last_y_vec()->Set(i, enu_ref_path[i].second);
       // planning_input_.mutable_last_theta_vec()->Set(i, enu_ref_theta[i]);
-      planning_input_.mutable_last_theta_vec()->Set(i, planning_input_.ref_theta_vec(i));
+      planning_input_.mutable_last_theta_vec()->Set(
+          i, planning_input_.ref_theta_vec(i));
     }
     planning_input_.set_q_continuity(0.0);
   }
@@ -345,10 +346,18 @@ void LateralMotionPlanner::AssembleInput() {
   }
 
   // intersection
-  auto intersection_state = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState();
-  bool is_approach_intersection = intersection_state == planning::common::IntersectionState::APPROACH_INTERSECTION;
-  bool is_in_intersection = intersection_state == planning::common::IntersectionState::IN_INTERSECTION;
-  bool is_off_intersection = intersection_state == planning::common::IntersectionState::OFF_INTERSECTION;
+  auto intersection_state = session_->environmental_model()
+                                .get_virtual_lane_manager()
+                                ->GetIntersectionState();
+  bool is_approach_intersection =
+      intersection_state ==
+      planning::common::IntersectionState::APPROACH_INTERSECTION;
+  bool is_in_intersection =
+      intersection_state ==
+      planning::common::IntersectionState::IN_INTERSECTION;
+  bool is_off_intersection =
+      intersection_state ==
+      planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
   if (is_approach_intersection || is_in_intersection || is_off_intersection) {
     planning_weight_ptr_->SetIsInIntersection(true);
@@ -388,7 +397,8 @@ void LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::STATIC_AVOID, planning_input_);
   } else if (lateral_offset_decider_output.is_valid ||
-             (avoid_back_status && ((ego_v > config_.avoid_high_vel) || is_in_intersection))) {
+             (avoid_back_status &&
+              ((ego_v > config_.avoid_high_vel) || is_in_intersection))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
   } else if (split_scene) {
@@ -428,6 +438,8 @@ void LateralMotionPlanner::AssembleInput() {
     motion_plan_concerned_end_index = 17;
     if (!is_divide_lane_into_two_) {
       planning_weight_ptr_->MakeSplitDynamicWeight(planning_input_);
+    } else {
+      complete_follow = true;
     }
   }
 
@@ -452,7 +464,8 @@ void LateralMotionPlanner::AssembleInput() {
     //     }
     //   }
     // }
-    // if (motion_plan_concerned_end_index < 1 || std::fabs(frenet_init.y - frenet_ref0.y) > 1e-6) {
+    // if (motion_plan_concerned_end_index < 1 || std::fabs(frenet_init.y -
+    // frenet_ref0.y) > 1e-6) {
     const double init_dis_to_ref = planning_weight_ptr_->GetInitDisToRef();
     if (std::fabs(init_dis_to_ref) > 0.01) {
       complete_follow = false;

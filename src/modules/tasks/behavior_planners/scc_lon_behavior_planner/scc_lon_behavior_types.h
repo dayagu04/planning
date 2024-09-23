@@ -51,7 +51,7 @@ All merges can be abstracted as following lane topology:
   *
  * *
 *   *
-*   * 
+*   *
 *   *
 
 *******************************************************/
@@ -72,7 +72,7 @@ struct MergeSplitPoints {
         UNKNOWN};  // 1:left, 2:right(from perception)
     iflyauto::Point3d split_merge_point{0.0, 0.0, 0.0};
   };
-  
+
   void Reset() {
     merge_split_existence = false;
     merge_split_points_size = 0;

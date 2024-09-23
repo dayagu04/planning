@@ -33,7 +33,7 @@ static const size_t kMaxPerpenParkInSegmentNums = 15;
 static const size_t kReservedOutputPathPointSize = 750;
 static const int kMultiPlanMaxPathNumsInSlot = 5;
 static const size_t kAdjustPlanMaxPathNumsInSlot = 5;
-static const double kMinSingleGearPathLength = 0.4;
+static const double kMinSingleGearPathLength = 0.35;
 static const double kMinSinglePlanPathLength = 0.2;
 
 void PerpendicularPathInPlanner::Reset() {
@@ -282,6 +282,31 @@ const bool PerpendicularPathInPlanner::UpdatePath() {
     DEBUG_PRINT("adjust plan success!");
     return true;
   }
+
+  if (output_.path_segment_vec.size() == 1 && !input_.is_replan_dynamic) {
+    auto& path_seg = output_.path_segment_vec[0];
+    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
+        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+        path_seg.Getlength() < kMinSingleGearPathLength + 1e-5 &&
+        std::fabs(path_seg.GetStartHeading()) * kRad2Deg < 0.68) {
+      auto path_seg_copy = path_seg;
+      path_seg_copy.seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      path_seg_copy.line_seg.length = kMinSingleGearPathLength + 1e-5;
+      path_seg_copy.line_seg.pB =
+          path_seg_copy.line_seg.pA +
+          (kMinSingleGearPathLength + 1e-5) *
+              pnc::geometry_lib::GenHeadingVec(path_seg_copy.GetStartHeading());
+      if (IsPathSafe(path_seg_copy,
+                     apa_param.GetParam().car_lat_inflation_normal,
+                     apa_param.GetParam().col_obs_safe_dist_normal)) {
+        path_seg = path_seg_copy;
+        if (output_.gear_cmd_vec.size() == 1) {
+          output_.gear_cmd_vec[0] = pnc::geometry_lib::SEG_GEAR_DRIVE;
+        }
+      }
+    }
+  }
+
   if (output_.multi_reach_target_pose) {
     DEBUG_PRINT("multi plan is already to target pos!");
     return true;
@@ -1225,6 +1250,10 @@ const bool PerpendicularPathInPlanner::PrepareSinglePathPlan(
     x_offset_vec.emplace_back(x);
     x += dx;
   }
+
+  std::cout << "x_offset_vec size = " << x_offset_vec.size()
+            << "  heading_offset_vec size = " << heading_offset_vec.size()
+            << std::endl;
 
   std::vector<geometry_lib::LineSegment> prepare_line_vec;
   prepare_line_vec.reserve(heading_offset_vec.size() * x_offset_vec.size() + 1);
@@ -2367,10 +2396,17 @@ const bool PerpendicularPathInPlanner::CalSinglePathInMulti(
   // avoid line arc length too length whicl let car go too far
   if (play_type == PLAN_TYPE_LINE_ARC &&
       current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    const double channel_width =
+    double channel_width =
+        collision_detector_ptr_->GetCarMaxX(input_.ego_pose) + 3.168 -
+        std::max(input_.pt_0.x(), input_.pt_1.x());
+
+    const double channel_para_width =
         (input_.slot_occupied_ratio < 0.368)
             ? apa_param.GetParam().channel_width
             : apa_param.GetParam().line_arc_obs_channel_width;
+
+    channel_width = std::max(channel_width, channel_para_width);
+
     const double channel_length =
         apa_param.GetParam().line_arc_obs_channel_length;
 
@@ -2824,7 +2860,7 @@ const bool PerpendicularPathInPlanner::AdjustPlan() {
         calc_params_.adjust_fail_count += 1;
         DEBUG_PRINT("adjust_fail_count = " << calc_params_.adjust_fail_count);
         if (!output_.multi_reach_target_pose &&
-            calc_params_.adjust_fail_count > 4) {
+            calc_params_.adjust_fail_count > 6) {
           output_.Reset();
           success = false;
         }
@@ -3402,10 +3438,17 @@ const bool PerpendicularPathInPlanner::CalSinglePathInAdjust(
 
   // avoid line arc length too length whicl let car go too far
   if (line_arc_success && current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    const double channel_width =
+    // use fus obs
+    double channel_width =
+        collision_detector_ptr_->GetCarMaxX(input_.ego_pose) + 3.168 -
+        std::max(input_.pt_0.x(), input_.pt_1.x());
+
+    const double channel_para_width =
         (input_.slot_occupied_ratio < 0.368)
             ? apa_param.GetParam().channel_width
             : apa_param.GetParam().line_arc_obs_channel_width;
+
+    channel_width = std::max(channel_width, channel_para_width);
 
     const double channel_length =
         apa_param.GetParam().line_arc_obs_channel_length;
@@ -3867,7 +3910,8 @@ PerpendicularPathInPlanner::TrimPathByCollisionDetection(
 
     CollisionDetector::ObsSlotType obs_slot_type =
         collision_detector_ptr_->GetObsSlotType(
-            col_res.col_pt_obs_global, slot_pt, calc_params_.is_left_side);
+            col_res.col_pt_obs_global, slot_pt, calc_params_.is_left_side,
+            true);
 
     DEBUG_PRINT("col_pt_ego_global = "
                 << col_res.col_pt_ego_global.transpose()
@@ -4028,7 +4072,7 @@ const bool PerpendicularPathInPlanner::CheckReachTargetPose(
           current_pose.heading - input_.tlane.pt_terminal_heading)) *
       kRad2Deg;
 
-  if (lon_err < 0.2 && lat_err < 0.0308 && heading_err < 0.268) {
+  if (lon_err < 0.268 && lat_err < 0.0308 && heading_err < 0.268) {
     return true;
   }
   return false;

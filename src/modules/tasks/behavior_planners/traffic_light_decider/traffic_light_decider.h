@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include "debug_info_log.h"
+#include "planning_context.h"
 #include "tasks/task.h"
 #include "traffic_light_decision_manager.h"
 
@@ -21,6 +22,12 @@ class TrafficLightDecider : public Task {
  private:
   // add virtual agent to agent manager
   bool AddVirtualObstacle();
+
+  //intersection before is small intersection or not
+  bool IsSmallFrontIntersection();
+
+  //small intersection is matchable with tfl or not
+  bool IsIntersectionMatchTFL();
 
   TrafficLightDeciderConfig config_;
   bool is_first_car_ = false;

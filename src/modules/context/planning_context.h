@@ -8,6 +8,7 @@
 #include "../tasks/task_interface/lateral_motion_planner_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
+#include "../tasks/task_interface/traffic_light_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
@@ -133,6 +134,14 @@ class PlanningContext {
 
   LongitudinalDeciderOutput &mutable_longitudinal_decider_output() {
     return longitudinal_decider_output_;
+  }
+
+  const TrafficLightDeciderOutput &traffic_light_decider_output() const {
+    return traffic_light_decider_output_;
+  }
+
+  TrafficLightDeciderOutput &mutable_traffic_light_decider_output() {
+    return traffic_light_decider_output_;
   }
 
   const MotionPlannerOutput &motion_planner_output() const {
@@ -355,6 +364,7 @@ class PlanningContext {
   MotionPlannerOutput motion_planner_output_;  // TODO: 拆分到独立的Task里面
   CipvLostProhibitAccelerationDeciderOutput
       cipv_lost_prohibit_acceleration_decider_output_;
+  TrafficLightDeciderOutput traffic_light_decider_output_;
 
   // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;

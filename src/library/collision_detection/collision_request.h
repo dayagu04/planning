@@ -1,8 +1,8 @@
 #pragma once
 #include <unordered_set>
 
+#include "collision_detect_types.h"
 #include "collision_result2d.h"
-#include "types.h"
 
 namespace cdl {
 /**

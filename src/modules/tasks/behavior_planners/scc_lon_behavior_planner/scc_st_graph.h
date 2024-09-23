@@ -24,6 +24,7 @@
 #include "scc_lon_behavior_types.h"
 #include "task_basic_types.h"
 #include "tasks/behavior_planners/real_time_lane_change_decider/real_time_lane_change_decider.h"
+#include "traffic_light_decision_manager.h"
 #include "utils_math.h"
 #include "virtual_lane.h"
 namespace planning {
@@ -259,6 +260,10 @@ class StGraphGenerator {
 
   void GenerateSrefByVrefJLT(std::vector<double> &s_refs);
 
+  void IsReverseAgentInLargeCurvature(
+      const double v_ego, std::shared_ptr<VirtualLane> current_lane,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);
+
  private:
   framework::Session *session_;
   std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input_;
@@ -274,6 +279,8 @@ class StGraphGenerator {
   std::array<double, 3> lon_init_state_;
   std::shared_ptr<KDPath> lat_path_coord_;
   std::vector<NarrowLead> narrow_agent_;
+  double curv_ = 1 / 10000.0;
+  double road_radius_ = 10000.0;
 
   // lead障碍物期望距离膨胀速率
   pnc::filters::SlopeFilter lead_desired_distance_filter_;
@@ -293,6 +300,10 @@ class StGraphGenerator {
   int lc_rear_id_ = -20;
   double lc_front_desired_distance_;
   double lc_rear_desired_distance_;
+
+  // traffic light info
+  bool current_traffic_light_can_pass_ = true;
+  bool last_traffic_light_can_pass_ = true;
 
   // 需要进行优化和剔除
  private:

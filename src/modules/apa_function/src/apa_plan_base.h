@@ -30,6 +30,7 @@ class ApaPlannerBase {
     STUCKED,
     DYNAMIC,
     SEG_COMPLETED_COL_DET,
+    FORCE_PLAN,
   };
 
   struct EgoSlotInfo {
@@ -39,6 +40,7 @@ class ApaPlannerBase {
     double target_ego_heading_slot = 0.0;
 
     std::vector<Eigen::Vector2d> slot_corner;
+    double last_move_slot_dist = 0.0;
     double move_slot_dist = 0.0;
     std::vector<Eigen::Vector2d> limiter_corner;
 
@@ -87,6 +89,7 @@ class ApaPlannerBase {
       slot_corner.clear();
       limiter_corner.clear();
       move_slot_dist = 0.0;
+      last_move_slot_dist = 0.0;
 
       slot_center.setZero();
 
@@ -151,6 +154,7 @@ class ApaPlannerBase {
       stuck_time = 0.0;
       stuck_uss_time = 0.0;
       pause_time = 0.0;
+      dynamic_plan_time = 0.0;
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
       remain_dist_col_det = 5.01;
@@ -194,6 +198,7 @@ class ApaPlannerBase {
     double stuck_time = 0.0;
     double stuck_uss_time = 0.0;
     double pause_time = 0.0;
+    double dynamic_plan_time = 0.0;
     double remain_dist = 5.01;
     double remain_dist_uss = 5.01;
     double remain_dist_col_det = 5.01;
@@ -247,6 +252,7 @@ class ApaPlannerBase {
   };
 
  public:
+  virtual ~ApaPlannerBase() = default;
   virtual void Init();
   virtual void Update();
 

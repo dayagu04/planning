@@ -20,6 +20,7 @@
 #include "func_state_machine_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
+#include "ifly_parking_map_c.h"
 #include "ifly_time.h"
 #include "interface/src/c/camera_preception_groundline_c.h"
 #include "interface/src/c/fusion_objects_c.h"
@@ -63,13 +64,19 @@
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "path_safe_checker.h"
+#include "hybrid_astar_park_planner.h"
 
 namespace py = pybind11;
 using namespace planning;
 using namespace planning::apa_planner;
 
+typedef std::vector<Eigen::Vector2d> EigenPath2d;
+typedef std::vector<Eigen::Vector2d> EigenPointSet2d;
+
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
+static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
+std::shared_ptr<apa_planner::HybridAStarParkPlanner> hybrid_astar_park_;
 HybridAStarThreadSolver *thread_solver_;
 planning::apa_planner::ApaPlannerBase::EgoSlotInfo ego_slot_info_;
 
@@ -79,16 +86,19 @@ std::vector<double> global_path_s_;
 // record rs path in astar total path.
 std::vector<Eigen::Vector3d> static_rs_path_;
 Eigen::Vector3d astar_end_pose_;
-Eigen::Vector3d path_collision_pose_;
+Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
-std::vector<Eigen::Vector2d> virtual_wall_points_;
-std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
-std::vector<std::vector<Eigen::Vector2d>> static_rs_path_list_;
+EigenPointSet2d virtual_wall_points_;
+std::vector<EigenPath2d> real_time_node_list_;
+// 所有启发项的rs path，record in here
+std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
-std::vector<Eigen::Vector2d> static_ref_line_;
+EigenPath2d static_ref_line_;
 
 // bit 4 is flag
 Eigen::Vector4d car_pose_by_s_;
+EigenPointSet2d search_sequence_path_;
+Eigen::Vector3d coordinate_system_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -101,7 +111,13 @@ int Init() {
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
 
-  thread_solver_ = HybridAStarThreadSolver::GetInstance();
+  std::shared_ptr<apa_planner::ApaPlannerBase> planner =
+      apa_interface_ptr->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
+  hybrid_astar_park_ =
+      std::dynamic_pointer_cast<apa_planner::HybridAStarParkPlanner>(planner);
+
+  thread_solver_ = hybrid_astar_park_->GetThread();
+  hybrid_astar_interface_ = thread_solver_->GetHybridAStarInterface();
   ILOG_INFO << "replay init success";
 
   return 0;
@@ -220,6 +236,8 @@ int GetPathFromHybridAstar() {
 
   static_rs_path_list_.emplace_back(tmp_path);
 
+  ILOG_INFO << "rs path size = " << static_rs_path_list_.size();
+
   // update ref line
   ParkReferenceLine ref_line;
   thread_solver_->GetRefLine(&ref_line);
@@ -244,10 +262,31 @@ int GetPathFromHybridAstar() {
       Eigen::Vector2d(global_position.x, global_position.y));
 
   // get collision pose in path
-  Pose2D *collision_pose = PathSafeChecker::GetCollisionPose();
-  path_collision_pose_[0] = collision_pose->x;
-  path_collision_pose_[1] = collision_pose->y;
-  path_collision_pose_[2] = collision_pose->theta;
+  const size_t collision_id = hybrid_astar_park_->GetPathCollisionID();
+  path_collision_info_[0] = static_cast<int>(collision_id);
+  if (hybrid_astar_park_->IsPathCollision()) {
+    path_collision_info_[1] = 1;
+  } else {
+    path_collision_info_[1] = 0;
+  }
+
+  // 为了调试搜索过程，plot it
+  search_sequence_path_.clear();
+  const std::vector<ad_common::math::Vec2d> &search_path =
+      hybrid_astar_interface_->GetPriorQueueNode();
+
+  for (i = 0; i < search_path.size(); i++) {
+    local_position.x = search_path[i].x();
+    local_position.y = search_path[i].y();
+    tf.ULFLocalPoseToGlobal(&global_position, local_position);
+
+    search_sequence_path_.emplace_back(
+        Eigen::Vector2d(global_position.x, global_position.y));
+  }
+
+  // 基坐标位置
+  coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
+  coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
 
   return 0;
 }
@@ -426,20 +465,18 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
-const bool PlanOnce(py::bytes &func_statemachine_bytes,
-                    py::bytes &parking_slot_info_bytes,
-                    py::bytes &localization_info_bytes,
-                    py::bytes &vehicle_service_output_info_bytes,
-                    // py::bytes &uss_wave_info_bytes,
-                    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes,
-                    int select_id, bool force_plan, bool is_path_optimization,
-                    bool is_cilqr_optimization, bool is_reset,
-                    bool is_complete_path, double sample_ds,
-                    std::vector<double> target_managed_slot_x_vec,
-                    std::vector<double> target_managed_slot_y_vec,
-                    std::vector<double> target_managed_limiter_x_vec,
-                    std::vector<double> target_managed_limiter_y_vec,
-                    int current_state) {
+const bool PlanOnce(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, int select_id,
+    bool force_plan, bool is_path_optimization, bool is_cilqr_optimization,
+    bool is_reset, bool is_complete_path, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec, int current_state) {
   double start_time = IflyTime::Now_us();
 
   SimulationParam sim_param;
@@ -477,9 +514,9 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     struct_msgs::VehicleServiceOutputInfo>(
           vehicle_service_output_info_bytes);
 
-  // iflyauto::UssWaveInfo uss_wave_info =
-  //     BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
-  //         uss_wave_info_bytes);
+  iflyauto::UssWaveInfo uss_wave_info =
+      BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
+          uss_wave_info_bytes);
 
   iflyauto::FusionObjectsInfo fusion_objs =
       BytesToStruct<iflyauto::FusionObjectsInfo,
@@ -494,16 +531,16 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
                     struct_msgs::FusionOccupancyObjectsInfo>(
           fus_occ_obj_msg_bytes);
 
-  // iflyauto::UssPerceptInfo uss_perception_info =
-  //     BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
-  //         uss_perception_info_bytes);
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
 
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
-  // local_view.uss_wave_info = uss_wave_info;
+  local_view.uss_wave_info = uss_wave_info;
   local_view.function_state_machine_info = func_statemachine;
-  // local_view.uss_percept_info = uss_perception_info;
+  local_view.uss_percept_info = uss_perception_info;
   // local_view.ground_line_perception = ground_line_;
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
@@ -565,7 +602,7 @@ const bool PlanOnce(py::bytes &func_statemachine_bytes,
   ILOG_INFO << "plan process time ms "
             << (data_process_time - plan_time) / 1000.0;
 
-  return result;
+  return true;
 }
 
 const bool RefreshThreadResult() {
@@ -611,73 +648,79 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     planning::apa_planner::ApaPlannerBase::EgoSlotInfo ego_slot_info =
         frame.ego_slot_info;
 
-    ego_slot_info.slot_origin_pos[0] = end_pose[0];
-    ego_slot_info.slot_origin_pos[1] = end_pose[1];
-    ego_slot_info.slot_origin_heading = end_pose[2];
+    if (1) {
+      ego_slot_info = ego_slot_info_;
+    } else {
+      ego_slot_info.slot_origin_pos[0] = end_pose[0];
+      ego_slot_info.slot_origin_pos[1] = end_pose[1];
+      ego_slot_info.slot_origin_heading = end_pose[2];
 
-    ego_slot_info.slot_origin_heading_vec =
-        Eigen::Vector2d(std::cos(end_pose[2]), std::sin(end_pose[2]));
+      ego_slot_info.slot_origin_heading_vec =
+          Eigen::Vector2d(std::cos(end_pose[2]), std::sin(end_pose[2]));
 
-    ego_slot_info.slot_length = 6;
+      ego_slot_info.slot_length = 6;
 
-    ego_slot_info.slot_width = 2.3;
+      ego_slot_info.slot_width = 2.3;
 
-    // base coordinate
-    ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
+      // base coordinate
+      ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
+                                ego_slot_info.slot_origin_heading);
 
-    ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                              ego_slot_info.slot_origin_heading);
+      ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
+                                ego_slot_info.slot_origin_heading);
 
-    // update ego pose
-    Eigen::Vector2d ego_global_position(
-        local_view.localization.position.position_boot.x,
-        local_view.localization.position.position_boot.y);
-    double heading_ego = local_view.localization.orientation.euler_boot.yaw;
+      // update ego pose
+      Eigen::Vector2d ego_global_position(
+          local_view.localization.position.position_boot.x,
+          local_view.localization.position.position_boot.y);
+      double heading_ego = local_view.localization.orientation.euler_boot.yaw;
 
-    Pose2D ego_global_pose = {ego_global_position.x(), ego_global_position.y(),
-                              heading_ego};
+      Pose2D ego_global_pose = {ego_global_position.x(),
+                                ego_global_position.y(), heading_ego};
 
-    ego_slot_info.ego_pos_slot =
-        ego_slot_info.g2l_tf.GetPos(ego_global_position);
-    ego_slot_info.ego_heading_slot =
-        ego_slot_info.g2l_tf.GetHeading(heading_ego);
+      ego_slot_info.ego_pos_slot =
+          ego_slot_info.g2l_tf.GetPos(ego_global_position);
+      ego_slot_info.ego_heading_slot =
+          ego_slot_info.g2l_tf.GetHeading(heading_ego);
 
-    // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x() << " "
-    //           << ego_slot_info.ego_pos_slot.y()
-    //           << "  ego_heading_slot = " << ego_slot_info.ego_heading_slot
-    //           * 57.3;
+      // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x() << "
+      // "
+      //           << ego_slot_info.ego_pos_slot.y()
+      //           << "  ego_heading_slot = " << ego_slot_info.ego_heading_slot
+      //           * 57.3;
 
-    ego_slot_info.ego_heading_slot_vec =
-        Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
-                        std::sin(ego_slot_info.ego_heading_slot));
+      ego_slot_info.ego_heading_slot_vec =
+          Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
+                          std::sin(ego_slot_info.ego_heading_slot));
 
-    // cal target pos
-    const planning::apa_planner::ApaParameters &parking_param =
-        apa_param.GetParam();
+      // cal target pos
+      const planning::apa_planner::ApaParameters &parking_param =
+          apa_param.GetParam();
 
-    ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
-        parking_param.terminal_target_x, parking_param.terminal_target_y);
+      ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
+          parking_param.terminal_target_x, parking_param.terminal_target_y);
 
-    ego_slot_info.target_ego_heading_slot =
-        parking_param.terminal_target_heading;
+      ego_slot_info.target_ego_heading_slot =
+          parking_param.terminal_target_heading;
 
-    // get global
-    const auto &target_ego_pos_global =
-        ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
-    const auto &target_ego_heading_global =
-        ego_slot_info.l2g_tf.GetHeading(ego_slot_info.target_ego_heading_slot);
+      // get global
+      const auto &target_ego_pos_global =
+          ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
+      const auto &target_ego_heading_global = ego_slot_info.l2g_tf.GetHeading(
+          ego_slot_info.target_ego_heading_slot);
 
-    // ILOG_INFO << "target_ego_pos_slot = " <<
-    // ego_slot_info.target_ego_pos_slot[0]
-    //           << ", " << ego_slot_info.target_ego_pos_slot[1]
-    //           << "  target_ego_heading_slot = "
-    //           << ego_slot_info.target_ego_heading_slot * 57.3;
+      // ILOG_INFO << "target_ego_pos_slot = " <<
+      // ego_slot_info.target_ego_pos_slot[0]
+      //           << ", " << ego_slot_info.target_ego_pos_slot[1]
+      //           << "  target_ego_heading_slot = "
+      //           << ego_slot_info.target_ego_heading_slot * 57.3;
 
-    // cal terminal error
-    ego_slot_info.terminal_err.Set(
-        ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-        ego_slot_info.ego_heading_slot - ego_slot_info.target_ego_heading_slot);
+      // cal terminal error
+      ego_slot_info.terminal_err.Set(
+          ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
+          ego_slot_info.ego_heading_slot -
+              ego_slot_info.target_ego_heading_slot);
+    }
 
     hybrid_astar_obs_.Clear();
 
@@ -712,11 +755,12 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     // end
     Eigen::Vector3d end;
     end[0] = ego_slot_info.target_ego_pos_slot[0] +
-             parking_param.vertical_slot_target_adjust_dist;
+             park_param.vertical_slot_target_adjust_dist;
     end[1] = ego_slot_info.target_ego_pos_slot[1];
     end[2] = ego_slot_info.target_ego_heading_slot;
 
     AstarRequest request;
+    request.first_action_request.has_request = false;
     request.path_generate_method =
         planning::AstarPathGenerateType::astar_searching;
 
@@ -790,7 +834,7 @@ const std::vector<Eigen::Vector3d> &GetReedsShapePath() {
 
 const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
 
-const Eigen::Vector3d GetAstarCollisionPose() { return path_collision_pose_; }
+const Eigen::Vector2i GetAstarPathCollisionID() { return path_collision_info_; }
 
 const std::vector<Eigen::Vector3d> &GetAstarPath() {
   // ILOG_INFO << " check  astar path ";
@@ -870,6 +914,14 @@ const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
   return static_rs_path_list_;
 }
 
+const std::vector<Eigen::Vector2d> &GetSearchSequencePath() {
+  return search_sequence_path_;
+}
+
+const Eigen::Vector3d GetCoordinateSystem() {
+  return coordinate_system_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -890,10 +942,12 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("SetFusionObject", &SetFusionObject)
       .def("GetTrajPoseByDist", &GetTrajPoseByDist)
       .def("GetAstarEndPose", &GetAstarEndPose)
-      .def("GetAstarCollisionPose", &GetAstarCollisionPose)
+      .def("GetAstarPathCollisionID", &GetAstarPathCollisionID)
       .def("GetAstarAllNodes", &GetAstarAllNodes)
       .def("GetRSHeuristicPath", &GetRSHeuristicPath)
       .def("RefreshThreadResult", &RefreshThreadResult)
       .def("GetPlotRefLine", &GetPlotRefLine)
+      .def("GetSearchSequencePath", &GetSearchSequencePath)
+      .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetDynamicState", &GetDynamicState);
 }

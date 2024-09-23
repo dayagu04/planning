@@ -148,9 +148,9 @@ void InitGlog(const char* file);
 
 void StopGlog();
 
-void CreateLogDirectory(const std::string& path);
+const bool CreateLogDirectory(const std::string& path);
 
-void SignalHandler(const char* data, int size);
+// void SignalHandler(const char* data, int size);
 
 }  // namespace planning
 

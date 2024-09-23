@@ -1,9 +1,9 @@
 #pragma once
 #include <iostream>
 
+#include "collision_detect_types.h"
 #include "collision_geometry2d.h"
 #include "gjk2d.h"
-#include "types.h"
 
 namespace cdl {
 /**

@@ -236,6 +236,15 @@ class Node3d {
 
   void ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf);
 
+  void SetMultiMapIter(std::multimap<double, Node3d*>::iterator iter) {
+    multimap_iter_ = iter;
+    return;
+  }
+
+  std::multimap<double, Node3d*>::iterator GetMultiMapIter() {
+    return multimap_iter_;
+  }
+
  private:
   // use end pose in path to x_,y_,phi_;
   double x_ = 0.0;
@@ -293,6 +302,8 @@ class Node3d {
 
   NodeCollisionType collision_type_;
   size_t collision_id_;
+
+  std::multimap<double, Node3d*>::iterator multimap_iter_;
 };
 
 }  // namespace planning

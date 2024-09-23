@@ -10,19 +10,19 @@ namespace planning {
 
 // using namespace boost;
 
-typedef struct {
+struct ObjectIgnore {
   std::string info;
   bool set_flag;
-} ObjectIgnore;
+};
 
-typedef struct {
+struct ObjectStop {
   planning_math::Vec2d stop_point;
   double distance_s;
   double stop_heading;
   bool set_flag;
-} ObjectStop;
+};
 
-typedef struct {
+struct ObjectNudge {
   enum Type { LEFT_NUDGE, RIGHT_NUDGE, NO_NUDGE };
   Type type;
   bool is_longitunidal_ignored;
@@ -31,28 +31,18 @@ typedef struct {
   double time_buffer;
   int priority = 1;
   bool set_flag;
-} ObjectNudge;
+};
 
-typedef struct {
+struct ObjectYield {
   planning_math::Vec2d fence_point;
   double distance_s;
   double fence_heading;
   double start_time;
   double time_buffer;
   bool set_flag;
-} ObjectYield;
+};
 
-typedef struct {
-  planning_math::Vec2d fence_point;
-  double distance_s;
-  double fence_heading;
-  double start_time;
-  double time_buffer;
-  int ObsTag;
-  bool set_flag;
-} ObjectFollow;
-
-typedef struct {
+struct ObjectFollow {
   planning_math::Vec2d fence_point;
   double distance_s;
   double fence_heading;
@@ -60,18 +50,28 @@ typedef struct {
   double time_buffer;
   int ObsTag;
   bool set_flag;
-} ObjectOvertake;
+};
 
-typedef struct {
+struct ObjectOvertake {
+  planning_math::Vec2d fence_point;
+  double distance_s;
+  double fence_heading;
+  double start_time;
+  double time_buffer;
+  int ObsTag;
+  bool set_flag;
+};
+
+struct ObjectSidePass {
   enum Type { LEFT, RIGHT };
   Type type;
   bool set_flag;
-} ObjectSidePass;
+};
 
-typedef struct {
+struct ObjectAvoid {
   int level;
   bool set_flag;
-} ObjectAvoid;
+};
 
 class ObjectDecisionType {
  public:

@@ -14,7 +14,6 @@
 #include "reeds_shepp.h"
 #include "src/common/ifly_time.h"
 
-#include "./../reeds_shepp/rs_path_interpolate.h"
 #include "ad_common/math/math_utils.h"
 #include "transform2d.h"
 #include "utils_math.h"
@@ -24,8 +23,8 @@ namespace planning {
 #define PLOT_RS_COST_PATH (0)
 #define PLOT_RS_EXNTEND_TO_END (0)
 #define PLOT_CHILD_NODE (0)
-#define PLOT_CHILD_NODE_SEQUENCE (0)
-#define RS_H_COST_MAX_NUM (12)
+#define PLOT_SEARCH_SEQUENCE (0)
+#define RS_H_COST_MAX_NUM (32)
 
 #define DEBUG_SEARCH_RESULT (0)
 #define DEBUG_CHILD_NODE (0)
@@ -35,6 +34,7 @@ namespace planning {
 #define DEBUG_NODE_MAX_NUM (100)
 
 #define LOG_TIME_PROFILE (0)
+#define DEBUG_GJK (0)
 
 constexpr int backward_pass_max_point = 100000;
 // 控制可以执行的距离
@@ -121,15 +121,11 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
 
   // load XYbounds
   XYbounds_ = XYbounds;
-  shrink_map_bounds_ = XYbounds_;
-
-  shrink_map_bounds_.x_min += car_half_width_;
-  shrink_map_bounds_.x_max -= car_half_width_;
-  shrink_map_bounds_.y_min += car_half_width_;
-  shrink_map_bounds_.y_max -= car_half_width_;
 
   request_ = request;
   DebugAstarRequestString(request_);
+
+  clear_zone_.GenerateBoundingBox(start, obstacles_);
 
   // get path lengh
   size_t path_points_size = result->x.size();
@@ -161,15 +157,12 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
   size_t collision_id = GetPathCollisionIndex(result);
 
   // shrink length
-  size_t x_size = result->x.size();
-
-  for (size_t i = 0; i < x_size; i++) {
-    size_t end_point_id = result->x.size() - 1;
-
-    // keep a point
-    if (end_point_id <= 0) {
+  for (size_t i = 0; i < path_points_size; i++) {
+    if (result->x.size() <= 1) {
       break;
     }
+
+    size_t end_point_id = result->x.size() - 1;
 
     if (end_point_id >= collision_id || end_point_id > expected_dist_id) {
       result->x.pop_back();
@@ -184,7 +177,7 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
 
   result->base_pose = request.base_pose_;
 
-  DebugRSPath(&rs_path_);
+  // DebugRSPath(&rs_path_);
 
   double astar_end_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar total time (ms): "
@@ -195,7 +188,7 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
 
 bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
                                        const Pose2D& start, const Pose2D& end,
-                                       const double expected_path_dist,
+                                       const double lon_min_sampling_length,
                                        const MapBound& XYbounds,
                                        const ParkObstacleList& obstacles,
                                        const AstarRequest& request) {
@@ -207,15 +200,11 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
 
   // load XYbounds
   XYbounds_ = XYbounds;
-  shrink_map_bounds_ = XYbounds_;
-
-  shrink_map_bounds_.x_min += car_half_width_;
-  shrink_map_bounds_.x_max -= car_half_width_;
-  shrink_map_bounds_.y_min += car_half_width_;
-  shrink_map_bounds_.y_max -= car_half_width_;
 
   request_ = request;
   DebugAstarRequestString(request_);
+
+  clear_zone_.GenerateBoundingBox(start, obstacles_);
 
   ref_line_.Init(request_.real_goal,
                  Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
@@ -229,11 +218,16 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
   Pose2D sampling_end = start;
   sampling_end.y = 0.0;
   sampling_end.theta = 0.0;
-  sampling_end.x = start.x + expected_path_dist;
+  sampling_end.x = start.x + lon_min_sampling_length;
 
   double sampling_step = 0.2;
   size_t max_sampling_num = std::ceil((end.x - sampling_end.x) / sampling_step);
   double sampling_radius = 85.0;
+
+  HybridAStarResult path;
+  path.Clear();
+  size_t path_valid_point_size = 1000;
+  size_t expected_dist_point_size = 0;
 
   for (size_t k = 0; k < max_sampling_num; k++) {
     sampling_end.x += sampling_step;
@@ -262,7 +256,7 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
       continue;
     }
 
-    result->Clear();
+    path.Clear();
     RSPathSegment* last_segment = nullptr;
     for (int i = 0; i < rs_path_.size; i++) {
       RSPathSegment* segment = &rs_path_.paths[i];
@@ -276,81 +270,104 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
       }
 
       for (; point_id < segment->size; point_id++) {
-        result->x.emplace_back(segment->points[point_id].x);
-        result->y.emplace_back(segment->points[point_id].y);
-        result->phi.emplace_back(segment->points[point_id].theta);
-        result->gear.emplace_back(segment->gear);
-        result->type.emplace_back(AstarPathType::Reeds_Shepp);
-        result->kappa.emplace_back(segment->points[point_id].kappa);
+        path.x.emplace_back(segment->points[point_id].x);
+        path.y.emplace_back(segment->points[point_id].y);
+        path.phi.emplace_back(segment->points[point_id].theta);
+        path.gear.emplace_back(segment->gear);
+        path.type.emplace_back(AstarPathType::Reeds_Shepp);
+        path.kappa.emplace_back(segment->points[point_id].kappa);
       }
 
       last_segment = segment;
     }
 
     // get path lengh
-    size_t path_points_size = result->x.size();
+    path_valid_point_size = path.x.size();
 
     double accumulated_s = 0.0;
-    result->accumulated_s.clear();
-    auto last_x = result->x.front();
-    auto last_y = result->y.front();
+    path.accumulated_s.clear();
+    auto last_x = path.x.front();
+    auto last_y = path.y.front();
     double x_diff;
     double y_diff;
 
-    size_t expected_dist_id = 0;
-
-    for (size_t i = 0; i < path_points_size; ++i) {
-      x_diff = result->x[i] - last_x;
-      y_diff = result->y[i] - last_y;
+    expected_dist_point_size = 0;
+    for (size_t i = 0; i < path_valid_point_size; ++i) {
+      x_diff = path.x[i] - last_x;
+      y_diff = path.y[i] - last_y;
       accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
-      result->accumulated_s.emplace_back(accumulated_s);
+      path.accumulated_s.emplace_back(accumulated_s);
 
-      if (accumulated_s <= expected_path_dist) {
-        expected_dist_id = i;
+      if (accumulated_s <= lon_min_sampling_length) {
+        expected_dist_point_size = i;
       }
 
-      last_x = result->x[i];
-      last_y = result->y[i];
+      last_x = path.x[i];
+      last_y = path.y[i];
     }
 
+    path_valid_point_size =
+        std::min(path_valid_point_size, expected_dist_point_size);
+
     // collision check
-    size_t collision_id = GetPathCollisionIndex(result);
+    size_t collision_id = GetPathCollisionIndex(&path);
+    // add extra lon buffer
     if (collision_id > 2) {
       collision_id -= 2;
     }
 
-    size_t path_safe_point_id = std::min(expected_dist_id, collision_id);
-    path_safe_point_id = std::max(path_safe_point_id, (size_t)0);
-    if (path_safe_point_id <= 1) {
+    path_valid_point_size = std::min(path_valid_point_size, collision_id);
+    if (path_valid_point_size <= 1) {
+      ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+                << ", max_sampling_num=" << max_sampling_num;
       continue;
     }
 
-    // shrink length
-    size_t pop_point_size = result->x.size() - path_safe_point_id;
-    for (size_t i = 0; i < pop_point_size; i++) {
-      if (result->x.size() > 0) {
-        result->x.pop_back();
-        result->y.pop_back();
-        result->phi.pop_back();
-        result->gear.pop_back();
-        result->type.pop_back();
-        result->accumulated_s.pop_back();
-        result->kappa.pop_back();
-      }
-    }
+    ILOG_INFO << "point size= " << path.x.size()
+              << ",expected_dist_id= " << expected_dist_point_size
+              << ", path len= " << path.accumulated_s.back();
 
-    if (result->accumulated_s.size() >= expected_dist_id) {
+    if (path_valid_point_size >= expected_dist_point_size) {
       break;
     }
-
-    ILOG_INFO << "point size: " << result->x.size()
-              << ",expected_dist_id: " << expected_dist_id
-              << ", path len:" << result->accumulated_s.back();
   }
 
-  result->base_pose = request.base_pose_;
+  path_valid_point_size = std::min(path_valid_point_size, path.x.size());
+  double valid_dist = 0.0;
+  if (path_valid_point_size > 0) {
+    valid_dist = path.accumulated_s[path_valid_point_size];
+  }
+  if (valid_dist >= 1.2) {
+    for (size_t i = 0; i < path_valid_point_size; i++) {
+      result->x.emplace_back(path.x[i]);
+      result->y.emplace_back(path.y[i]);
+      result->phi.emplace_back(path.phi[i]);
+      result->gear.emplace_back(path.gear[i]);
+      result->type.emplace_back(path.type[i]);
+      result->kappa.emplace_back(path.kappa[i]);
+      result->accumulated_s.emplace_back(path.accumulated_s[i]);
+    }
+    result->base_pose = request.base_pose_;
 
-  DebugRSPath(&rs_path_);
+    ILOG_INFO << "path valid, point size= " << result->x.size();
+  } else {
+    // if path is too short by collision check or gear check, use a fallback
+    // path with no collision check.
+    fallback_path_.Clear();
+    for (size_t i = 0; i < expected_dist_point_size; i++) {
+      fallback_path_.x.emplace_back(path.x[i]);
+      fallback_path_.y.emplace_back(path.y[i]);
+      fallback_path_.phi.emplace_back(path.phi[i]);
+      fallback_path_.gear.emplace_back(path.gear[i]);
+      fallback_path_.type.emplace_back(path.type[i]);
+      fallback_path_.kappa.emplace_back(path.kappa[i]);
+      fallback_path_.accumulated_s.emplace_back(path.accumulated_s[i]);
+    }
+    fallback_path_.base_pose = request.base_pose_;
+    ILOG_INFO << "path invalid, point size= " << path.x.size();
+  }
+
+  // DebugRSPath(&rs_path_);
 
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
@@ -518,7 +535,7 @@ bool HybridAStar::AnalyticExpansion(Node3d* current_node) {
     ILOG_INFO << "rs path size " << rs_path_.size;
   }
 
-  DebugRSPath(&rs_path_);
+  // DebugRSPath(&rs_path_);
 
   return true;
 }
@@ -1139,6 +1156,10 @@ size_t HybridAStar::GetPathCollisionIndex(HybridAStarResult* result) {
     // check bound
     if (IsPointBeyondBound(result->x[i], result->y[i])) {
       collision_index = i;
+
+#if DEBUG_GJK
+      ILOG_INFO << "i=" << i << "beyond bound";
+#endif
       break;
     }
 
@@ -1151,22 +1172,10 @@ size_t HybridAStar::GetPathCollisionIndex(HybridAStarResult* result) {
 
     GetBoundingBoxByPolygon(&path_point_aabb, &polygon);
     if (clear_zone_.IsContain(path_point_aabb)) {
-      // ILOG_INFO << "clear";
+#if DEBUG_GJK
+      ILOG_INFO << "i=" << i << "clear";
+#endif
       continue;
-    }
-
-    for (const auto& obstacle : obstacles_->virtual_obs) {
-      gjk_interface_.PolygonPointCollisionDetect(&is_collision, &polygon,
-                                                 obstacle);
-
-      if (is_collision) {
-        collision_index = i;
-        break;
-      }
-    }
-
-    if (is_collision) {
-      break;
     }
 
     for (const auto& obstacle : obstacles_->point_cloud_list) {
@@ -1185,17 +1194,15 @@ size_t HybridAStar::GetPathCollisionIndex(HybridAStarResult* result) {
 
         if (is_collision) {
           collision_index = i;
-          break;
+
+#if DEBUG_GJK
+          ILOG_INFO << "path id=" << i
+                    << ",obs type=" << static_cast<int>(obstacle.obs_type)
+                    << ",obs size=" << obstacle.points.size();
+#endif
+          return collision_index;
         }
       }
-
-      if (is_collision) {
-        break;
-      }
-    }
-
-    if (is_collision) {
-      break;
     }
   }
 
@@ -1389,7 +1396,7 @@ int HybridAStar::NextNodeGenerator(Node3d* new_node, Node3d* parent_node,
   }
 
   bool heading_legal = false;
-  heading_legal = node_shrink_.IsLegalForHeading(new_node->GetPhi());
+  heading_legal = node_shrink_decider_.IsLegalForHeading(new_node->GetPhi());
   if (!heading_legal) {
     new_node->ClearPath();
 
@@ -1550,7 +1557,10 @@ double HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
 
 #if PLOT_RS_COST_PATH
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
-    rs_path_h_cost_debug_.emplace_back(reeds_shepp_path_);
+    Pose2D rs_start_pose = next_node->GetPose();
+    rs_path_interface_.RSPathInterpolate(&rs_path_, &rs_start_pose,
+                                         vehicle_param_.min_turn_radius);
+    rs_path_h_cost_debug_.emplace_back(rs_path_);
   }
 #endif
 
@@ -1588,14 +1598,13 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   }
 
   // request dist and gear cost
-  double gear_expect_punish = 5.0;
   if (request_.first_action_request.has_request &&
       next_node->GetDistToStart() <
           request_.first_action_request.dist_request) {
     // gear is different
     if (next_node->GetGearType() !=
         request_.first_action_request.gear_request) {
-      piecewise_cost += gear_expect_punish;
+      piecewise_cost += config_.expect_gear_penalty;
     }
   }
 
@@ -1605,6 +1614,63 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     safe_punish = CalcSafeDistCost(next_node);
   }
   piecewise_cost += safe_punish;
+
+  // ref line heading cost
+  // double heading_cost =
+  //     std::fabs(GetThetaDiff(next_node->GetPhi(), ref_line_.GetHeading())) *
+  //     config_.ref_line_heading_penalty;
+  // piecewise_cost += heading_cost;
+
+  return piecewise_cost;
+}
+
+double HybridAStar::CalcGCostToParentNode2(Node3d* current_node,
+                                          Node3d* next_node) {
+  // evaluate cost on the trajectory and add current cost
+  double piecewise_cost = 0.0;
+  double path_dist = 0.0;
+  path_dist = next_node->GetNodePathDistance();
+
+  if (next_node->IsForward()) {
+    piecewise_cost += path_dist * config_.traj_forward_penalty;
+  } else {
+    piecewise_cost += path_dist * config_.traj_reverse_penalty;
+  }
+
+  // gear punish
+  if (current_node->IsPathGearChange(next_node->GetGearType())) {
+    piecewise_cost += 10.0;
+  }
+
+  // // steering wheel angle cost
+  // // for start node, steering angle can be any value
+  // if (!current_node->IsStartNode()) {
+  //   piecewise_cost +=
+  //       config_.traj_steer_penalty * std::fabs(next_node->GetSteer());
+
+  //   // steering wheel change
+  //   piecewise_cost +=
+  //       config_.traj_steer_change_penalty *
+  //       std::fabs(next_node->GetSteer() - current_node->GetSteer());
+  // }
+
+  // // request dist and gear cost
+  // if (request_.first_action_request.has_request &&
+  //     next_node->GetDistToStart() <
+  //         request_.first_action_request.dist_request) {
+  //   // gear is different
+  //   if (next_node->GetGearType() !=
+  //       request_.first_action_request.gear_request) {
+  //     piecewise_cost += config_.expect_gear_penalty;
+  //   }
+  // }
+
+  // // safe dist cost
+  // double safe_punish = 0.0;
+  // if (config_.enable_obs_dist_g_cost) {
+  //   safe_punish = CalcSafeDistCost(next_node);
+  // }
+  // piecewise_cost += safe_punish;
 
   // ref line heading cost
   // double heading_cost =
@@ -1797,23 +1863,17 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
   }
 
   // link rs end to astar end
-  if (!rs_expansion_decider_.IsSameEndPointForRsWithAtar()) {
+  if (!rs_expansion_decider_.IsSameEndPointForRsWithAstar()) {
     LinkRsToAstarEndPoint(result, astar_end_node_->GetPose());
   }
 
-  // speed, not use it for now
-  if (!GetTemporalProfile(result)) {
-    ILOG_ERROR << "GetSpeedProfile from Hybrid Astar path fails";
-    return false;
-  }
-
   size_t pt_size = result->x.size();
-  if (pt_size != result->y.size() || pt_size != result->v.size() ||
-      pt_size != result->phi.size() || pt_size != result->gear.size()) {
+  if (pt_size != result->y.size() || pt_size != result->phi.size() ||
+      pt_size != result->gear.size()) {
     ILOG_ERROR << "state sizes not equal, "
                << "result->x.size(): " << result->x.size() << "result->y.size()"
-               << result->y.size() << "result->phi.size()" << result->phi.size()
-               << "result->v.size()" << result->v.size();
+               << result->y.size() << "result->phi.size()"
+               << result->phi.size();
 
     return false;
   }
@@ -1906,15 +1966,6 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
   return;
 }
 
-bool HybridAStar::GetTemporalProfile(HybridAStarResult* result) {
-  for (size_t i = 0; i < result->x.size(); i++) {
-    result->v.push_back(0);
-    result->a.push_back(0);
-  }
-
-  return true;
-}
-
 bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
                            const MapBound& XYbounds,
                            const ParkObstacleList& obstacles,
@@ -1926,7 +1977,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   // clear containers
   ResetNodePool();
   rs_end_node_.Clear();
-  open_pq_ = decltype(open_pq_)();
+  open_pq_.clear();
   node_set_.clear();
 
   // debug
@@ -1955,22 +2006,6 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   // ILOG_INFO << "map bound, xmin " << XYbounds_.x_min << " , ymin "
   //           << XYbounds_.y_min << " ,xmax " << XYbounds_.x_max << " , ymax "
   //           << XYbounds_.y_max;
-
-  shrink_map_bounds_ = XYbounds_;
-  // ILOG_INFO << "map bound,xmin " << shrink_map_bounds_.x_min << " , ymin "
-  //           << shrink_map_bounds_.y_min << " ,xmax " <<
-  //           shrink_map_bounds_.x_max
-  //           << " , ymax " << shrink_map_bounds_.y_max << " car_half_width_ "
-  //           << car_half_width_;
-
-  shrink_map_bounds_.x_min += car_half_width_;
-  shrink_map_bounds_.x_max -= car_half_width_;
-  shrink_map_bounds_.y_min += car_half_width_;
-  shrink_map_bounds_.y_max -= car_half_width_;
-  // ILOG_INFO << "map bound,xmin " << shrink_map_bounds_.x_min << " , ymin "
-  //           << shrink_map_bounds_.y_min << " ,xmax " <<
-  //           shrink_map_bounds_.x_max
-  //           << " , ymax " << shrink_map_bounds_.y_max;
 
   clear_zone_.GenerateBoundingBox(start, obstacles_);
 
@@ -2055,7 +2090,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   // check end
   check_start_time = IflyTime::Now_ms();
   if (!ValidityCheckByEDT(astar_end_node_)) {
-    ILOG_ERROR << "end_node in collision with obstacles "
+    ILOG_INFO << "end_node in collision with obstacles "
                << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
     astar_end_node_->DebugString();
@@ -2078,7 +2113,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   // ILOG_INFO << "time " << IflyTime::DateString();
 
   // node shrink related
-  node_shrink_.Process(start, end);
+  node_shrink_decider_.Process(start, end);
 
   // generate a star dist
   if (dp_heuristic_generator_ == nullptr) {
@@ -2100,8 +2135,9 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
                                 start, end, vehicle_param_.width);
 
   // load open set, pq
-  open_pq_.emplace(
-      QueuePoint(start_node_->GetGlobalID(), start_node_->GetFCost()));
+  start_node_->SetMultiMapIter(
+      open_pq_.insert(std::make_pair(0.0, start_node_)));
+
   node_set_.emplace(start_node_->GetGlobalID(), start_node_);
 
   // Hybrid A*
@@ -2118,17 +2154,18 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   Node3d new_node;
 
   AstarNodeVisitedType vis_type;
-
-  bool find_better_node = false;
   bool is_safe = false;
 
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
 
-    node_id = open_pq_.top().node_id;
-    open_pq_.pop();
+    current_node = open_pq_.begin()->second;
+    open_pq_.erase(open_pq_.begin());
+    if (current_node == nullptr) {
+      ILOG_INFO <<"pq is null node";
+      continue;
+    }
 
-    current_node = node_set_[node_id];
     current_node->SetVisitedType(AstarNodeVisitedType::in_close);
 
 #if DEBUG_CHILD_NODE
@@ -2136,13 +2173,12 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
       ILOG_INFO << "main cycle, explored_node_num " << explored_node_num
                 << " open set size for now " << open_pq_.size();
       current_node->DebugString();
-
-#if PLOT_CHILD_NODE_SEQUENCE
-      queue_path_debug_.emplace_back(
-          ad_common::math::Vec2d(current_node->GetX(), current_node->GetY()));
-#endif
     }
+#endif
 
+#if PLOT_SEARCH_SEQUENCE
+    queue_path_debug_.emplace_back(
+        ad_common::math::Vec2d(current_node->GetX(), current_node->GetY()));
 #endif
 
     // check if an analystic curve could be connected from current
@@ -2180,6 +2216,19 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
 
       // boundary check failure handle
       if (!new_node.IsNodeValid()) {
+        continue;
+      }
+
+      if (node_shrink_decider_.IsShrinkByStartNode(start_node_->GetGlobalID(),
+                                                   &new_node)) {
+        continue;
+      }
+
+      if (node_shrink_decider_.IsShrinkByParent(current_node, &new_node)) {
+        continue;
+      }
+
+      if (node_shrink_decider_.IsShrinkByGearSwitchNumber(&new_node)) {
         continue;
       }
 
@@ -2232,8 +2281,6 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
       }
 #endif
 
-      find_better_node = false;
-
       // find a new node
       if (vis_type == AstarNodeVisitedType::not_visited) {
         CalculateNodeHeuristicCost(current_node, &new_node);
@@ -2245,12 +2292,10 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
         next_node_in_pool->SetFCost();
         next_node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
 
-        open_pq_.emplace(QueuePoint(next_node_in_pool->GetGlobalID(),
-                                    next_node_in_pool->GetFCost()));
+        next_node_in_pool->SetMultiMapIter(open_pq_.insert(
+            std::make_pair(next_node_in_pool->GetFCost(), next_node_in_pool)));
 
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
-
-        find_better_node = true;
 
 #if DEBUG_CHILD_NODE
         if (explored_node_num < DEBUG_NODE_MAX_NUM) {
@@ -2266,23 +2311,41 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
 
           h_cost_rs_path_num++;
 
+          open_pq_.erase(next_node_in_pool->GetMultiMapIter());
+
           *next_node_in_pool = new_node;
           next_node_in_pool->SetFCost();
           next_node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
 
-          // put neighbor in open set and record it.
-          open_pq_.emplace(QueuePoint(next_node_in_pool->GetGlobalID(),
-                                      next_node_in_pool->GetFCost()));
+          // put node in open set again and record it.
+          next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
+              next_node_in_pool->GetFCost(), next_node_in_pool)));
 
-          find_better_node = true;
 #if DEBUG_CHILD_NODE
           if (explored_node_num < DEBUG_NODE_MAX_NUM) {
-            if (vis_type == AstarNodeVisitedType::in_open) {
-              ILOG_INFO << "node has in open";
-            } else {
-              ILOG_INFO << "node has in close";
-            }
+            ILOG_INFO << "node has in open";
+            next_node_in_pool->DebugCost();
+          }
+#endif
+        }
+      } else {
+        // in close set and need update
+        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
+          CalculateNodeHeuristicCost(current_node, &new_node);
 
+          h_cost_rs_path_num++;
+
+          *next_node_in_pool = new_node;
+          next_node_in_pool->SetFCost();
+          next_node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
+
+          // put node in open set again and record it.
+          next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
+              next_node_in_pool->GetFCost(), next_node_in_pool)));
+
+#if DEBUG_CHILD_NODE
+          if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+            ILOG_INFO << "node has in close";
             next_node_in_pool->DebugCost();
           }
 #endif
@@ -2290,7 +2353,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
       }
 
 #if PLOT_CHILD_NODE
-      if (explored_node_num < DEBUG_NODE_MAX_NUM && find_better_node) {
+      if (explored_node_num < DEBUG_NODE_MAX_NUM) {
         child_node_debug_.emplace_back(
             ad_common::math::Vec2d(new_node.GetX(), new_node.GetY()));
       }
@@ -2342,7 +2405,8 @@ void HybridAStar::Init() {
   max_steer_angle_ =
       vehicle_param_.max_steer_angle / vehicle_param_.steer_ratio;
 
-  min_radius_ = vehicle_param_.wheel_base / std::tan(max_steer_angle_);
+  // min_radius_ = vehicle_param_.wheel_base / std::tan(max_steer_angle_);
+  min_radius_ = vehicle_param_.min_turn_radius;
   inv_radius_ = 1.0 / min_radius_;
 
   // front sampling number is 5, back sampling number is 5.
@@ -2372,8 +2436,6 @@ void HybridAStar::Init() {
   if (config_.lat_hierarchy_safe_buffer.size() > 0) {
     UpdateCarBoxBySafeBuffer(config_.lat_hierarchy_safe_buffer[0]);
   }
-
-  // PolygonDebugString(&veh_polygon_gear_drive_);
 
   if (dp_heuristic_generator_ == nullptr) {
     dp_heuristic_generator_ = std::make_unique<GridSearch>(config_);
@@ -2476,25 +2538,26 @@ void HybridAStar::DebugRSPath(const RSPath* reeds_shepp_path) {
               << ", steering wheel: "
               << std::atan(reeds_shepp_path->paths[i].kappa *
                            vehicle_param_.wheel_base) *
-                     vehicle_param_.steer_ratio * 57.4;
+                     vehicle_param_.steer_ratio * 57.4
+              << ",rs seg size= " << reeds_shepp_path->paths[i].size;
   }
 
-  // for (size_t i = 0; i < reeds_shepp_path->size; i++) {
-  //   const RSPathSegment* seg = &reeds_shepp_path->paths[i];
-  //   for (size_t j = 0; j < seg->size; j++) {
-  //     ILOG_INFO << "rs point, id " << j << "x " << seg->points[j].x << " y "
-  //               << seg->points[j].y << " len" << seg->length << " ,kappa "
-  //               << seg->kappa;
-  //   }
-  // }
+  for (size_t i = 0; i < reeds_shepp_path->size; i++) {
+    const RSPathSegment* seg = &reeds_shepp_path->paths[i];
+    for (size_t j = 0; j < seg->size; j++) {
+      ILOG_INFO << "rs point, id " << j << "x " << seg->points[j].x << " y "
+                << seg->points[j].y << " len" << seg->length << " ,kappa "
+                << seg->kappa;
+    }
+  }
 
   return;
 }
 
 const bool HybridAStar::IsPointBeyondBound(const double x,
                                            const double y) const {
-  if (x > shrink_map_bounds_.x_max || x < shrink_map_bounds_.x_min ||
-      y > shrink_map_bounds_.y_max || y < shrink_map_bounds_.y_min) {
+  if (x > XYbounds_.x_max || x < XYbounds_.x_min || y > XYbounds_.y_max ||
+      y < XYbounds_.y_min) {
     return true;
   }
   return false;
@@ -2595,7 +2658,7 @@ const std::vector<ad_common::math::Vec2d>& HybridAStar::GetQueuePathForDebug() {
   return queue_path_debug_;
 }
 
-const std::vector<RSPath>& HybridAStar::GetRSPathHeuristic() const {
+const std::vector<RSPath>& HybridAStar::GetRSPathHeuristic() {
   return rs_path_h_cost_debug_;
 }
 
@@ -2756,6 +2819,18 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer) {
           config_.lon_min_safe_buffer,
       safe_half_width);
 
+  ILOG_INFO << "lat buffer = " << lat_buffer;
+
+  return;
+}
+
+void HybridAStar::Clear() {
+  fallback_path_.Clear();
+  return;
+}
+
+void HybridAStar::CopyFallbackPath(HybridAStarResult* path) {
+  *path = fallback_path_;
   return;
 }
 

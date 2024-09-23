@@ -129,9 +129,10 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
     planning_output_ = planner_ptr_->GetOutput();
     apa_hmi_ = planner_ptr_->GetAPAHmi();
     // DEBUG_PRINT("interface planning hmi----------------");
-    // DEBUG_PRINT("remain dist in hmi = " << apa_hmi_.distance_to_parking_space);
-    // DEBUG_PRINT(
-    //     "is_parking_pause = " << static_cast<int>(apa_hmi_.is_parking_pause));
+    // DEBUG_PRINT("remain dist in hmi = " <<
+    // apa_hmi_.distance_to_parking_space); DEBUG_PRINT(
+    //     "is_parking_pause = " <<
+    //     static_cast<int>(apa_hmi_.is_parking_pause));
     // DEBUG_PRINT("parking_pause_reason = " << apa_hmi_.parking_pause_reason);
   }
 
@@ -201,24 +202,6 @@ void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
                    local_view_ptr->fusion_objects_info_recv_time)
   JSON_DEBUG_VALUE("fusion_occupancy_objects_timestamp",
                    local_view_ptr->fusion_occupancy_objects_info_recv_time)
-}
-
-static std::string ReadFile(const std::string &path) {
-  FILE *file = fopen(path.c_str(), "r");
-  if (file == nullptr) {
-    ILOG_INFO << " file is null";
-
-    return "null";
-  }
-
-  std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
-  fseek(fp.get(), 0, SEEK_END);
-  std::vector<char> content(ftell(fp.get()));
-  fseek(fp.get(), 0, SEEK_SET);
-  auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
-  assert(read_bytes == content.size());
-  (void)read_bytes;
-  return std::string(content.begin(), content.end());
 }
 
 void ApaPlanInterface::SyncParameters(const bool is_simulation) {
@@ -331,6 +314,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lon_err, double,
                   "finish_parallel_lon_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().finish_parallel_lon_overhaing_error,
+                  double, "finish_parallel_lon_overhaing_error");
 
   JSON_READ_VALUE(apa_param.SetPram().finish_parallel_heading_err, double,
                   "finish_parallel_heading_err");
@@ -563,6 +549,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().use_fus_occ_obj, bool, "use_fus_occ_obj");
 
+  JSON_READ_VALUE(apa_param.SetPram().use_uss_pt_clound, bool,
+                  "use_uss_pt_clound");
+
   JSON_READ_VALUE(apa_param.SetPram().tmp_virtual_obs_dy, double,
                   "tmp_virtual_obs_dy");
 
@@ -613,8 +602,19 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().max_obs_lat_invasion_slot_dist, double,
                   "max_obs_lat_invasion_slot_dist");
 
+  JSON_READ_VALUE(
+      apa_param.SetPram().max_obs_lat_invasion_slot_dist_dynamic_col, double,
+      "max_obs_lat_invasion_slot_dist_dynamic_col");
+
   JSON_READ_VALUE(apa_param.SetPram().max_obs_lon_invasion_slot_dist, double,
                   "max_obs_lon_invasion_slot_dist");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().max_obs_lon_invasion_slot_dist_dynamic_col, double,
+      "max_obs_lon_invasion_slot_dist_dynamic_col");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_entrance_obs_x, double,
+                  "slot_entrance_obs_x");
 
   // dynamic update path params
   JSON_READ_VALUE(apa_param.SetPram().car_to_limiter_dis, double,
@@ -652,6 +652,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().max_slot_jump_heading, double,
                   "max_slot_jump_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().dynamic_plan_interval_time, double,
+                  "dynamic_plan_interval_time");
 
   // slot update params when parking
   JSON_READ_VALUE(apa_param.SetPram().fix_slot_occupied_ratio, double,

@@ -34,6 +34,8 @@ class MergeRequest : public LaneChangeRequest {
   bool both_lane_line_exist_virtual_or_not_ = false;
   RequestType merge_lane_change_direction_ = NO_CHANGE;
   int merge_alc_trigger_counter_ = 0;
+  bool is_exist_left_merge_direction_ = false;
+  bool is_exist_right_merge_direction_ = false;
 };
 
 }  // namespace planning
