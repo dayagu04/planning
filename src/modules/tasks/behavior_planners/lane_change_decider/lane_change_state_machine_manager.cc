@@ -942,14 +942,19 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   if (lane_change_decider_output.is_merge_region) {
     std::vector <Point2D> merge_point_list;
     merge_point_list.resize(2);
-    CalculateMergePoint(&merge_point_list,lane_change_decider_output.merge_lane_virtual_id);
+    bool is_continue = true;
+    int calculate_nums = -1;
+    CalculateMergePoint(&merge_point_list, &calculate_nums, lane_change_decider_output.merge_lane_virtual_id);
+    CalculateRoadRight(&is_continue, calculate_nums, lane_change_decider_output.merge_lane_virtual_id);
     lane_change_decider_output.merge_point = merge_point_list[0];
     lane_change_decider_output.boundary_merge_point = merge_point_list[1];
+    lane_change_decider_output.cur_lane_is_continue = is_continue;
   } else {
     const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
     Point2D ego_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
     lane_change_decider_output.merge_point = ego_point;
     lane_change_decider_output.boundary_merge_point = ego_point;
+    lane_change_decider_output.cur_lane_is_continue = true;
   }
   JSON_DEBUG_VALUE(
       "macroeconomic_decider_merge_point_x",
@@ -963,6 +968,9 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   JSON_DEBUG_VALUE(
       "boundary_line_merge_point_y",
       lane_change_decider_output.boundary_merge_point.y);
+  JSON_DEBUG_VALUE(
+      "cur_lane_is_continue",
+      lane_change_decider_output.cur_lane_is_continue);
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp =
       road_to_ramp_turn_signal_;
@@ -2012,7 +2020,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   return false;
 }
 
-void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* merge_point_list, const int merge_lane_virtual_id) {
+void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* merge_point_list, int* calculate_nums, const int merge_lane_virtual_id) {
   const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
   Point2D merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
   Point2D boundary_line_merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
@@ -2038,6 +2046,7 @@ void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* me
     return;
   }
   const double cur_ego_s = cur_path->get_frenet_ego_state().s();
+  const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
   const double ego_front_center_line_length = cur_path->get_frenet_coord()->Length() - cur_ego_s;
   const double buffer = 1.0;
   const double need_judgement_length = std::max(0.0, std::min(ego_front_line_length, ego_front_center_line_length) - buffer);
@@ -2067,6 +2076,7 @@ void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* me
       // last_point_lat_diff = lat_diff;
       merge_point = projection_point;
       is_find_merge_point = true;
+      *calculate_nums = i;
       break;
     }
     //处理遍历完，没有找到merge point的情况
@@ -2077,9 +2087,9 @@ void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* me
         merge_point.x = cur_ref_path_point_temp.path_point.x;
         merge_point.y = cur_ref_path_point_temp.path_point.y;
       }
+      *calculate_nums = i;
     }
   }
-
   (*merge_point_list)[0] = merge_point;
   (*merge_point_list)[1] = boundary_line_merge_point;
 }
@@ -2106,5 +2116,163 @@ const double LaneChangeStateMachineManager::CalculateEgoFrontLineLength(){
   }
   const double ego_front_length = target_boundary_path->Length() - ego_s;
   return ego_front_length;
+}
+
+const double LaneChangeStateMachineManager::CalculateAverageKappa(const std::shared_ptr<planning_math::KDPath> kd_path) {
+  if (!kd_path) {
+    return -1;
+  }
+  const int size_num = kd_path->path_points().size();
+  double sum_kappa = 0.0;
+  for (int i = 0; i < size_num; i++) {
+    sum_kappa = sum_kappa + std::abs(kd_path->path_points()[i].kappa());
+  }
+  return sum_kappa / size_num;
+}
+
+void LaneChangeStateMachineManager::CalculateRoadRight(bool* is_continue,const int calculate_nums, const int merge_lane_virtual_id) {
+  const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto& reference_path_manager = session_->environmental_model().get_reference_path_manager();
+  const auto& overlap_lane = virtual_lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id);
+  if (!overlap_lane) {
+    return;
+  }
+  const auto& cur_path = reference_path_manager->get_reference_path_by_current_lane();
+  if (!cur_path) {
+    return;
+  }
+  const auto& overlap_path = reference_path_manager->get_reference_path_by_lane(merge_lane_virtual_id);
+  if (!overlap_path) {
+    return;
+  }
+  //(1) 首先根据虚拟车道判断
+  bool is_vir_lane_line_cur = IsVirtualLaneLine(virtual_lane_manager->current_lane_virtual_id());
+  bool is_vir_lane_line_overlap = IsVirtualLaneLine(merge_lane_virtual_id);
+  if (is_vir_lane_line_cur &&
+      !is_vir_lane_line_overlap) {
+    *is_continue = false; 
+  } else if (is_vir_lane_line_overlap &&
+             !is_vir_lane_line_cur) {
+    *is_continue = true;
+  } else if ((is_vir_lane_line_overlap &&
+             is_vir_lane_line_cur) ||
+             (!is_vir_lane_line_overlap &&
+             !is_vir_lane_line_cur)) {
+    //没有虚拟车道，或者都有虚拟车道时，利用曲率判断
+    const double cur_ego_s = cur_path->get_frenet_ego_state().s();
+    const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
+    const double step_length = 1.0;
+    std::vector<planning_math::PathPoint> cur_path_points;
+    std::vector<planning_math::PathPoint> overlap_path_points;
+    for (int i = 0; i <= calculate_nums; i++) {
+      ReferencePathPoint cur_ref_path_point_temp{};
+      if (!cur_path->get_reference_point_by_lon(cur_ego_s + i * step_length, cur_ref_path_point_temp)) {
+        continue;
+      }
+      ReferencePathPoint over_ref_path_point_temp{};
+      if (!overlap_path->get_reference_point_by_lon(overlap_ego_s + i * step_length, over_ref_path_point_temp)) {
+        continue;
+      }
+      auto overlap_pt = planning_math::PathPoint(over_ref_path_point_temp.path_point.x, over_ref_path_point_temp.path_point.y);
+      auto cur_pt = planning_math::PathPoint(cur_ref_path_point_temp.path_point.x, cur_ref_path_point_temp.path_point.y);
+      overlap_path_points.emplace_back(overlap_pt);
+      cur_path_points.emplace_back(cur_pt);
+    }
+    if (cur_path_points.size() < 3 ||
+        overlap_path_points.size() < 3) {
+      return;
+    }
+
+    std::shared_ptr<planning_math::KDPath> cur_kd_path =
+      std::make_shared<planning_math::KDPath>(std::move(cur_path_points));
+    std::shared_ptr<planning_math::KDPath> over_kd_path =
+      std::make_shared<planning_math::KDPath>(std::move(overlap_path_points));
+    const double cur_average_kappa = CalculateAverageKappa(cur_kd_path);
+    const double overlap_average_kappa = CalculateAverageKappa(over_kd_path);
+
+    if (cur_average_kappa > overlap_average_kappa) {
+      *is_continue = false;
+    } else {
+      *is_continue = true;
+    }
+  }
+}
+
+bool LaneChangeStateMachineManager::IsVirtualLaneLine(const int lane_virtual_id) {
+  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+  const auto base_lane =
+      virtual_lane_mgr->get_lane_with_virtual_id(lane_virtual_id);
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
+  std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
+  if (!base_lane) {
+    return false;
+  }
+
+  double left_lane_line_length = 0.0;
+  int left_current_segment_count = 0;
+  double left_ego_s = 0.0, left_ego_l = 0.0;
+  // 判断左侧车道线类型
+  auto left_lane_boundarys = base_lane->get_left_lane_boundary();
+  left_base_boundary_path =
+      virtual_lane_mgr->MakeBoundaryPath(left_lane_boundarys);
+  if (left_base_boundary_path != nullptr) {
+    if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
+                                          &left_ego_l)) {
+      return false;
+    }
+  } else {
+    return false;
+  }
+  for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+    left_lane_line_length += left_lane_boundarys.type_segments[i].length;
+    if (left_lane_line_length > left_ego_s) {
+      left_current_segment_count = i;
+      break;
+    }
+  }
+  for (int i = left_current_segment_count;
+        i < left_lane_boundarys.type_segments_size; i++) {
+    if (left_lane_boundarys.type_segments[i].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      return true;
+    }
+  }
+
+  // 判断右侧车道线类型
+  double right_lane_line_length = 0.0;
+  int right_current_segment_count = 0;
+  double right_ego_s = 0.0, right_ego_l = 0.0;
+  auto right_lane_boundarys = base_lane->get_right_lane_boundary();
+  right_base_boundary_path =
+      virtual_lane_mgr->MakeBoundaryPath(right_lane_boundarys);
+  if (right_base_boundary_path != nullptr) {
+    if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
+                                          &right_ego_l)) {
+      return false;
+    }
+  } else {
+    return false;
+  }
+  for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+    right_lane_line_length += right_lane_boundarys.type_segments[i].length;
+    if (right_lane_line_length > right_ego_s) {
+      right_current_segment_count = i;
+      break;
+    }
+  }
+  for (int i = right_current_segment_count;
+        i < right_lane_boundarys.type_segments_size; i++) {
+    if (right_lane_boundarys.type_segments[i].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      return true;
+    }
+  }
+  return false;
 }
 }  // namespace planning

@@ -116,6 +116,7 @@ struct LaneChangeDeciderOutput {
   RequestType ilc_virtual_req = NO_CHANGE;
   Point2D merge_point;
   Point2D boundary_merge_point;
+  bool cur_lane_is_continue;
 };
 
 }  // namespace planning
