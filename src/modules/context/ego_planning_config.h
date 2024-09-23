@@ -1080,9 +1080,21 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     lane_change_ego_l_thr = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "lane_change_ego_l_thr"});
+    q_ref_xy_lane_change_back = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_xy_lane_change_back"});
+    q_ref_theta_lane_change_back = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_ref_theta_lane_change_back"});
     q_jerk_lane_change_back = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "q_jerk_lane_change_back"});
+    jerk_bound_lane_change_back = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_lane_change_back"});
+    q_jerk_bound_lane_change_back = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound_lane_change_back"});
     road_curvature_radius = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "road_curvature_radius"});
@@ -1252,7 +1264,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_lane_change = 2.0;
   double q_jerk_lane_change2 = 2.0;
   double lane_change_ego_l_thr = 1.0;
-  double q_jerk_lane_change_back = 10.0;
+
+  double q_ref_xy_lane_change_back = 20.0;
+  double q_ref_theta_lane_change_back = 10000.0;
+  double q_jerk_lane_change_back = 5.0;
+  double jerk_bound_lane_change_back = 1.5;
+  double q_jerk_bound_lane_change_back = 50000.0;
 
   double enter_ramp_on_road_time = 2.0;
   double q_ref_xy_split = 20.0;

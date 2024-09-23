@@ -115,13 +115,13 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       // planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change);
 
       if (is_lane_change_back_) {
-        planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
-        planning_input.set_q_ref_y(config_.q_ref_y_lane_change);
-        planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change);
+        planning_input.set_q_ref_x(config_.q_ref_xy_lane_change_back);
+        planning_input.set_q_ref_y(config_.q_ref_xy_lane_change_back);
+        planning_input.set_q_ref_theta(config_.q_ref_theta_lane_change_back);
         planning_input.set_q_jerk(config_.q_jerk_lane_change_back);
-        concerned_start_q_jerk_ = config_.q_jerk_lane_change;
-        planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
-        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+        concerned_start_q_jerk_ = config_.q_jerk_lane_change_back;
+        planning_input.set_jerk_bound(config_.jerk_bound_lane_change_back);
+        planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_back);
       }
       break;
     }
