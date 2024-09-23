@@ -541,11 +541,11 @@
   },
   "speed_adjust": {
     "max_acc_limit_lower": 0.5,
-    "max_acc_limit_upper": 1.0,
+    "max_acc_limit_upper": 0.8,
     "min_acc_limit_lower": -1.0,
     "min_acc_limit_upper": -0.5,
     "min_jerk_limit_upper": -1.0,
-    "min_jerk_limit_lower": -1.5,
+    "min_jerk_limit_lower": -1.2,
     "min_acc_limit": -1.5,
     "max_jerk_limit_lower": 1.0,
     "max_jerk_limit_upper": 1.5,
