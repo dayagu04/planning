@@ -19,7 +19,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240530/20240530-10-53-27/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-30-10-53-27.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240921/20240921-14-52-27/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2024-09-21-14-52-27_no_camera.bag"
 
 html_file = bag_path +".vo_lat_behavior.html" 
 # -

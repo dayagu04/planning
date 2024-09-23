@@ -715,8 +715,6 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_mark_s_vec = [lane.lane_marks[j].end for j in range(virtual_lane_marks_size)]
       lane_mark_s_begin_vec = [lane.lane_marks[j].begin for j in range(virtual_lane_marks_size)]
       lane_info['lane_mark_vec'] = [lane.lane_marks[j].lane_mark for j in range(virtual_lane_marks_size)]
-      print("virtual_lane_marks_size: ", virtual_lane_marks_size)
-      # print("lane_info['lane_mark_vec']: ", lane_info['lane_mark_vec'])
 
       lane_mark_point_x = []
       lane_mark_point_y = []
@@ -767,25 +765,31 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['curvature_vec'] = line_curvature
       lane_info['d_poly_curvature_vec'] = d_poly_line_curvature
 
-      for i in range(10):
-        if i < virtual_lane_marks_size:
-          for j in range(virtual_lane_refline_points_size):
-            if line_s[j] > lane_mark_s_vec[i]:
-              lane_mark_point_x.append(line_x[j])
-              lane_mark_point_y.append(line_y[j])
-              break
-        else:
-          break
+      try:
+        for i in range(10):
+          if i < virtual_lane_marks_size:
+            for j in range(virtual_lane_refline_points_size):
+              if line_s[j] > lane_mark_s_vec[i]:
+                lane_mark_point_x.append(line_x[j])
+                lane_mark_point_y.append(line_y[j])
+                break
+          else:
+            break
+      except:
+        pass
 
-      for i in range(10):
-        if i < virtual_lane_marks_size:
-          for j in range(virtual_lane_refline_points_size):
-            if line_s[j] > (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
-              lane_mark_loc_x.append(line_x[j])
-              lane_mark_loc_y.append(line_y[j])
-              break
-        else:
-          break
+      try:
+        for i in range(10):
+          if i < virtual_lane_marks_size:
+            for j in range(virtual_lane_refline_points_size):
+              if line_s[j] > (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
+                lane_mark_loc_x.append(line_x[j])
+                lane_mark_loc_y.append(line_y[j])
+                break
+          else:
+            break
+      except:
+        pass
 
     else:
       lane_mark_point_x = []
