@@ -1020,6 +1020,11 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     is_exist_split_on_intersection_ = false;
     return;
   }
+  if (relative_id_lanes.size() == order_ids.size()) {
+    LOG_DEBUG("relative_id_lanes.size() == order_ids.size()");
+    is_exist_split_on_intersection_ = false;
+    return;  
+  }
 
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() >= order_ids[i] + 1) {
