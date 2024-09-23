@@ -57,8 +57,6 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       session_->environmental_model().get_virtual_lane_manager();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto &ego_state =
-      session_->environmental_model().get_ego_state_manager();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
   int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
@@ -69,7 +67,6 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &fix_reference_path =
       reference_path_mgr->get_reference_path_by_lane(fix_lane_virtual_id);
-  const auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id);
   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
@@ -79,17 +76,6 @@ double ObjectSelector::get_vrel_close(int side, int status) {
   auto rlane = virtual_lane_mgr->get_right_lane();
 
   auto &lead_cars = lateral_obstacle->get_lead_cars();
-
-  bool curr_direct_exist = true;
-
-  bool left_direct_exist = true;
-
-  bool right_direct_exist = true;
-
-  bool curr_direct_has_straight = true;
-
-  bool left_direct_has_straight = true;
-  bool right_direct_has_straight = true;
 
   if ((side == -1 && llane == nullptr) || (side == 1 && rlane == nullptr) ||
       side > 1 || side < -1) {
@@ -172,13 +158,7 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
     olane_width = olane->width();
   }
   double act_cancel_thr = std::max(olane_width / 2 - 0.6, 0.);
-  bool l_change_cond =
-      (tlane != nullptr && frenet_ego_state.l() + v_ego * dt_delay <
-                               start_move_distolane + act_cancel_thr);
 
-  bool r_change_cond =
-      (tlane != nullptr && frenet_ego_state.l() - v_ego * dt_delay >
-                               start_move_distolane - act_cancel_thr);
   const auto state = lane_change_decider_output.curr_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
   bool is_LC_LWAIT =
@@ -298,14 +278,11 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   TrackedObject *temp_leadone = lateral_obstacle->tleadone();
   TrackedObject *temp_leadtwo = lateral_obstacle->tleadtwo();
 
-  auto lanes_num = virtual_lane_mgr->get_lane_num();
   auto current_lane_index = virtual_lane_mgr->get_lane_index(clane);
   auto &left_boundary_info = clane->get_left_lane_boundary();
   auto &right_boundary_info = clane->get_right_lane_boundary();
   auto &lane_merge_split_point = clane->get_lane_merge_split_point();
   // auto traffic_light_direction = virtual_lane_mgr->traffic_light_direction();
-  iflyauto::LaneDrivableDirection traffic_light_direction =
-      iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT;
   auto intersection_info = virtual_lane_mgr->get_intersection_info();
   auto dist_to_last_intsect = intersection_info.dist_to_last_intsect();
   auto dist_to_intsect = intersection_info.dist_to_intsect();
@@ -345,7 +322,6 @@ bool ObjectSelector::update(int status, double start_move_distolane,
       (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
   bool is_LC_RBACK =
       (state == kLaneChangeCancel) && (lc_request_direction == RIGHT_CHANGE);
-  bool None_state = status == kLaneKeeping;
   bool isRedLightStop = false;
 
   if ((llane == nullptr || (left_boundary_info.type_segments_size > 0 &&
@@ -386,9 +362,6 @@ bool ObjectSelector::update(int status, double start_move_distolane,
 
   bool right_direct_exist = true;
 
-  bool curr_direct_has_straight = true;
-
-  bool left_direct_has_straight = true;
   bool left_laneout_direct_exist = true;
   bool right_laneout_direct_exist = true;
 

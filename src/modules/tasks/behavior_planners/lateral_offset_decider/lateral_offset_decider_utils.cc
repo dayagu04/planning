@@ -82,20 +82,6 @@ bool IsInConsiderFrontLateralRange(
   if (!is_in_consider_lateral_range_hysteresis_map[tr.track_id].IsValid()) {
     return false;
   }
-  double t_lookforward = 1.0;
-  double predict_lon_distance = tr.d_rel + tr.v_rel * t_lookforward;
-  // tr.v_lat * t_lookforward
-  // TODO(clren):consider prediction;  v_lat > 0.3
-  // cutin
-  // std::array<double, 5> drel_x{1, 2, 5, 10, 20};
-  // std::array<double, 5> vrel_y{4, 2, 1.8, 1, 0.3};
-
-  // double min_desire_v = interp(tr.d_rel, drel_x, vrel_y);
-  // return tr.v_rel > min_desire_v;
-
-  // if (tr.d_path_self &&tr.v_lat < -0.3) {
-  //   return false;
-  // }
 
   return true;
 }
@@ -118,9 +104,6 @@ bool IsInConsiderSideLateralRange(
       std::get<std::map<int, HysteresisDecision>>(
           hysteresis_maps[HysteresisType::IsInConsiderLateralRangeHysteresis]);
 
-  const double ego_position =
-      is_left ? fix_ref->get_frenet_ego_state().boundary().l_end
-              : fix_ref->get_frenet_ego_state().boundary().l_start;
   double lat_dis =
       is_left
           ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
@@ -163,7 +146,6 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
         VehicleConfigurationContext::Instance()->get_vehicle_param();
     const double ego_length = vehicle_param.length;
     const double v_obstacle_2 = v_ego + tr.v_rel;
-    const double kDistanceOffset = 3.5;
     std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
     std::array<double, 3> t_gap_vego_bp{5, 15, 30};
     const double safety_dist = 2.0;

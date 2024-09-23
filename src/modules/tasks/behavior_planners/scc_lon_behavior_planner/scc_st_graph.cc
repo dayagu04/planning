@@ -44,13 +44,11 @@ constexpr double kStaticAgentBuffer = 0.12;
 constexpr double kStaticLeadThr = 1.0;
 constexpr double kHalfLaneWidth = 1.75;
 constexpr double kLeadoneThr = 1.2;
-constexpr double kHalfEgoWidth = 1.1;
 constexpr double kHalfEgoLength = 2.55;
 constexpr double kEgoWidth = 2.2;
 constexpr double kEgoLength = 5.1;
 constexpr double kExpandWidthBuffer = 0.0;
 constexpr double kExpandLengthBuffer = 0.0;
-constexpr double kFarLead = 100.0;
 constexpr double kLaneWidthBuffer = 0.1;
 constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
 constexpr double kLargeCurvRadius = 500;
@@ -770,7 +768,6 @@ void StGraphGenerator::UpdateSTRefs(const std::vector<double> &sref_vec) {
 void StGraphGenerator::UpdateSTGraphs(
     const std::vector<common::RealTimeLonObstacleSTInfo> &st_infos,
     const std::vector<double> &sref_vec) {
-  const double soft_bound_corridor_t = config_.soft_bound_corridor_t;
   // local variables
   double sample_time = 0;
   double t = config_.delta_time;
@@ -1409,7 +1406,6 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
   double desired_distance_filtered = 0.0;
 
   double v_target_potential_cutin = 40.0;
-  double v_limit = std::min(v_cruise, v_ego);
   std::pair<int, double> cutin_id_vt = {-1, 0.0};
   std::pair<double, double> acc_target = {-0.5, 0.5};
 
@@ -1586,8 +1582,6 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
   double lc_buffer = 2;
   double safe_distance =
       lane_changing_decider_->get_lc_safe_dist(lc_buffer, lc_t_gap, v_ego);
-  double time_to_lc = 0.0;
-  double predict_distance = 0.0;
   v_limit_lc_ = 40.0;
   lane_change_st_info.clear();
 
@@ -1687,9 +1681,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       front_obs.set_d_rel(gap.s_front + gap.v_front * gap.acc_time -
                           v_limit_lc_ * gap.acc_time);
 
-      double lc_front_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          front_obs, v_limit_lc_, safe_distance_lc_front,
-          lc_front_desired_distance, true);
+      (void)LCGapDesiredDistanceFilter(front_obs, v_limit_lc_,
+                                       safe_distance_lc_front,
+                                       lc_front_desired_distance, true);
 
       // common::RealTimeLonObstacleSTInfo lc_gap_front_st_info;
       // lc_gap_front_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
@@ -1716,9 +1710,9 @@ void StGraphGenerator::CalcSpeedInfoWithGap(
       rear_obs.set_d_rel(gap.s_rear + gap.v_rear * gap.acc_time -
                          v_limit_lc_ * gap.acc_time);
 
-      double lc_rear_desired_distance_filtered = LCGapDesiredDistanceFilter(
-          rear_obs, v_limit_lc_, safe_distance_lc_rear,
-          lc_rear_desired_distance, false);
+      (void)LCGapDesiredDistanceFilter(rear_obs, v_limit_lc_,
+                                       safe_distance_lc_rear,
+                                       lc_rear_desired_distance, false);
 
       // common::RealTimeLonObstacleSTInfo lc_gap_rear_st_info;
       // lc_gap_rear_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::GAP);
@@ -1767,7 +1761,6 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
   double virtual_obs_desired_distance = 0.0;
   double safe_distance = 0.0;
   double virtual_obs_desired_velocity = 40.0;
-  double desired_distance_filtered = 0.0;
   double v_ego = lon_behav_input_->ego_info().ego_v();
 
   bool is_virtual_obs_exist = false;
@@ -2472,11 +2465,6 @@ void StGraphGenerator::MakeAccBound() {
     acc_upper_bound_with_high_speed =
         config_.lane_change_high_speed_acc_upper_bound;
   }
-  double acc_upper_bound_with_speed = planning_math::LerpWithLimit(
-      acc_upper_bound_with_lower_speed,
-      config_.low_speed_threshold_with_acc_upper_bound,
-      acc_upper_bound_with_high_speed,
-      config_.high_speed_threshold_with_acc_upper_bound, lon_init_state_[1]);
 
   acc_bound_.first = acc_target_.first;
   acc_bound_.second = acc_target_.second;
@@ -2774,7 +2762,8 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
                                    : MergeSplitPoints::SPLIT;
     const auto split_merge_orientation_tmp =
         merge_split_points.merge_split_point_data[i].orientation;
-    MergeSplitPoints::MergeSplitOrientation split_merge_orientation;
+    MergeSplitPoints::MergeSplitOrientation split_merge_orientation{
+        MergeSplitPoints::UNKNOWN};
     if (split_merge_orientation_tmp == 1) {
       split_merge_orientation = MergeSplitPoints::LEFT;
     } else if (split_merge_orientation_tmp == 2) {
@@ -2852,8 +2841,6 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_status = lane_change_decider_output.curr_state;
-  const bool is_in_lane_change =
-      ((lc_request != "none") && (lc_status != "none"));
   if (!config_.enable_merge_decision_process) {
     SetDefaultDebugValues(debug_msg_names);
     return;
@@ -3044,8 +3031,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
   double safe_distance = 0.0;
   double merge_rear_one_desired_velocity = 40.0;
   double desired_distance_filtered = 0.0;
-  double merge_rear_one_d_relative = 0.0;
-  std::pair<double, double> acc_target = {-0.5, 0.5};  // TODO: need to process
+  // std::pair<double, double> acc_target = {-0.5, 0.5};  // TODO: need to
+  // process
   if (merge_target_one != nullptr) {
     merge_rear_one_a_processed = ProcessObstacleAcc(merge_target_one->accel());
     safe_distance = CalcSafeDistance(merge_target_one->accel(), v_ego);
@@ -3307,8 +3294,6 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       is_merging_to_left ? agent_node_left_neibor_lane_map_[agent_id]
                          : agent_node_right_neibor_lane_map_[agent_id];
   const auto &agent_prediction_traj = agent_prediction.obstacle_pred_info;
-  const auto points_size_prediction_in_agentnode_manager =
-      agent_node_manager_->agent_node_prediction_traj_points_size();
   const auto &obstacle_manager =
       session_->environmental_model().get_obstacle_manager();
   const auto agent_length = obstacle_manager->find_obstacle(agent_id)->length();
@@ -3321,14 +3306,8 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       obstacle_manager->find_obstacle(agent_id)->heading_angle();
   const auto &lat_path_x_t_spline =
       session_->planning_context().motion_planner_output().lateral_x_t_spline;
-  const auto &lat_path_y_t_spline =
-      session_->planning_context().motion_planner_output().y_t_spline;
-  const auto &lat_path_theta_t_spline =
-      session_->planning_context().motion_planner_output().theta_t_spline;
   const auto &lat_path_s_t_spline =
       session_->planning_context().motion_planner_output().lateral_s_t_spline;
-  const auto &lat_path_t_s_spline =
-      session_->planning_context().motion_planner_output().lateral_t_s_spline;
   const auto &lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto &ego_lane_coord =
@@ -3574,7 +3553,6 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
   }
   const auto &agent_node = dynamic_world->GetNode(agent_node_id);
   const auto &agent_prediction_traj = agent_node->node_trajectories().at(0);
-  const auto t_prediction = agent_prediction_traj.GetTimeLength();
   const auto points_size_prediction = agent_prediction_traj.size();
   const auto agent_width = agent_node->node_width();
   const auto agent_length = agent_node->node_length();
@@ -3931,20 +3909,6 @@ bool StGraphGenerator::FastCrossAgentChecker(double lead_v_lat,
 }
 void StGraphGenerator::DebugAgentsPredictionTraj(
     std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world) {
-  std::vector<double> empty_traj{};
-  const auto ego_left_rear_node =
-      dynamic_world->GetNode(dynamic_world->ego_left_rear_node_id());
-  const auto ego_left_agent_node =
-      dynamic_world->GetNode(dynamic_world->ego_left_node_id());
-  const auto ego_left_front_agent_node =
-      dynamic_world->GetNode(dynamic_world->ego_left_front_node_id());
-  const auto ego_right_rear_agent_node =
-      dynamic_world->GetNode(dynamic_world->ego_right_rear_node_id());
-  const auto ego_right_agent_node =
-      dynamic_world->GetNode(dynamic_world->ego_right_node_id());
-  const auto ego_right_front_agent_node =
-      dynamic_world->GetNode(dynamic_world->ego_right_front_node_id());
-
   const auto ego_left_rear_node_id = dynamic_world->ego_left_rear_node_id();
   const auto ego_left_node_id = dynamic_world->ego_left_node_id();
   const auto ego_left_front_node_id = dynamic_world->ego_left_front_node_id();

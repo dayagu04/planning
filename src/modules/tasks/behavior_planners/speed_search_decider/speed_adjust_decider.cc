@@ -540,7 +540,6 @@ int SpeedAdjustDecider::SelectBestSlot() {
 
   for (auto i = 0; i < variable_time_optimal_trajs_.size(); i++) {
     // 1. speed adjust cost
-    const auto& candidate_traj = variable_time_optimal_trajs_[i];
     // 2. aligned v cost
     const auto& slot = slot_point_info_[i];
     const double aligned_v_cost =

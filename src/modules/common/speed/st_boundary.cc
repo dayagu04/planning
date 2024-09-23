@@ -328,7 +328,6 @@ bool STBoundary::GetUnblockSRange(const double curr_time, double* s_upper,
   // }
   if (left != right) {
     double left_time_dis = std::abs(curr_time - upper_points_[left].t());
-    double right_time_dis = std::abs(curr_time - upper_points_[right].t());
     double range_time_dis =
         std::abs(upper_points_[left].t() - upper_points_[right].t());
     std::pair<double, double> time_range{upper_points_[left].t(),
@@ -384,7 +383,6 @@ bool STBoundary::GetBoundarySRange(const double curr_time, double* s_upper,
   double r = 0.0;
   if (left != right) {
     double left_time_dis = std::abs(curr_time - upper_points_[left].t());
-    double right_time_dis = std::abs(curr_time - upper_points_[right].t());
     double range_time_dis =
         std::abs(upper_points_[left].t() - upper_points_[right].t());
     std::pair<double, double> time_range{upper_points_[left].t(),

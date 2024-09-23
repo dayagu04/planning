@@ -127,7 +127,6 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   const bool emergency_avoidance_valid =
       (is_left_lane_change_safe || is_right_lane_change_safe);
   bool lane_change_to_left = true;
-  double v_ego = ego_state->ego_v();
   bool curr_direct_exist = (clane->get_lane_marks() ==
                             iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT);
 
@@ -237,9 +236,6 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     return;
   }
 
-  const auto& function_info = session_->environmental_model().function_info();
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   // const double default_velocity_trigger_emergence_avoid_request = 13.88;
 
   // if (ego_state->ego_v() < default_velocity_trigger_emergence_avoid_request)

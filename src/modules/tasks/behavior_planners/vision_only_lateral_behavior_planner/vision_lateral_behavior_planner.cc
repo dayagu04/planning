@@ -22,9 +22,6 @@ bool VisionLateralBehaviorPlanner::Execute() {
 
   auto current_time = IflyTime::Now_ms();
 
-  auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
-
   lane_width_ = 3.8;
 
   bool success = Process();

@@ -115,9 +115,6 @@ void GapSelectorInterface::Store(
     Point->set_y(point.local_point.y);
   }
 
-  const auto &coarse_planning_info = session->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
   const auto &lane_change_decider_output =
       session->planning_context().lane_change_decider_output();
   const auto state = lane_change_decider_output.curr_state;

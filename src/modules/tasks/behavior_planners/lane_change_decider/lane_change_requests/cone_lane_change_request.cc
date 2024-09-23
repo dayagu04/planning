@@ -150,11 +150,9 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     is_cone_lane_change_situation_ = false;
     return;
   }
-  const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
   const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   double eps_s = vehicle_param.length * kLongClusterCoeff;
   double eps_l = vehicle_param.width + kLatClusterThre;
-  const double ego_vel = ego_state->ego_v();
   int cone_nums_of_front_objects = 0;
   int minPts = 1;
   cone_points_.clear();
@@ -302,7 +300,6 @@ void ConeRequest::setLaneChangeRequestByCone() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
-  const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
@@ -525,12 +522,10 @@ void ConeRequest::ConeDir() {
 
   // 获取左车道线型
   if (base_lane != nullptr) {
-    auto left_lane_boundary = base_lane->get_left_lane_boundary();
     auto left_boundary_type =
         MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
     current_left_boundary_type = left_boundary_type;
     // 获取右车道线型
-    auto right_lane_boundary = base_lane->get_right_lane_boundary();
     auto right_boundary_type =
         MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
     current_right_boundary_type = right_boundary_type;

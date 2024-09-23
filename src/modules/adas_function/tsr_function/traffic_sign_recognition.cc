@@ -63,24 +63,24 @@ void TrafficSignRecognition::RunOnce() {
 }
 
 uint16 TrafficSignRecognition::TSREnableCode() {
-  uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
-                           256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
+  // uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
+  //                          256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 tsr_enable_code_temp = 0;
 
   return tsr_enable_code_temp;
 }
 
 uint16 TrafficSignRecognition::TSRDisableCode() {
-  uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
-                           256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
+  // uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
+  //                          256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 tsr_disable_code_temp = 0;
 
   return tsr_disable_code_temp;
 }
 
 uint16 TrafficSignRecognition::TSRFaultCode() {
-  uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
-                           256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
+  // uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
+  //                          256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 tsr_fault_code_temp = 0;
 
   return tsr_fault_code_temp;

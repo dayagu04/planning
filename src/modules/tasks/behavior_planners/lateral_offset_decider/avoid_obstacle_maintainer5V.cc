@@ -901,8 +901,6 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
     std::vector<AvoidObstacleInfo> &avd_obstacles) {
   // update avd_obstacles_ info according to avd_obstacles
   // TODO(clren): 为了避让更平滑， 对avd_obstacles_的横向信息更新做调整
-  const auto &lateral_obstacle =
-      session_->mutable_environmental_model()->get_lateral_obstacle();
   auto TempHack = [](const planning::framework::Session *session,
                      const AvoidObstacleInfo &avd_obstacle_past,
                      AvoidObstacleInfo &avd_obstacles) {
@@ -1305,7 +1303,6 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
-  int state = coarse_planning_info.target_state;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_length_ = vehicle_param.length;

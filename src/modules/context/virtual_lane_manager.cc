@@ -200,9 +200,6 @@ void VirtualLaneManager::construct_reference_line_msg(
         std::fabs(2.0 * c2 + 6.0 * c3 * x) /
         std::pow(std::pow(c1 + (2.0 * c2 + 3.0 * c3 * x) * x, 2) + 1, 1.5);
 
-    const double half_car_width =
-        VehicleConfigurationContext::Instance()->get_vehicle_param().width;
-
     current_lane_virtual_ref_point->track_id = 0;
 
     Eigen::Vector3d car_point, enu_point;
@@ -1179,7 +1176,6 @@ bool VirtualLaneManager::GetCurrentIndexAndDis(
 bool VirtualLaneManager::CalculateSortedLaneGroupIdsInRouting(
     const planning::framework::Session& session) {
   const auto& ego_state = session.environmental_model().get_ego_state_manager();
-  const auto& local_view = session.environmental_model().get_local_view();
   const auto& hd_map = session.environmental_model().get_hd_map();
 
   const double ego_pose_x = ego_state->ego_pose_raw().x;

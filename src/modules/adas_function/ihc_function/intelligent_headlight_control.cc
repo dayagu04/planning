@@ -96,8 +96,8 @@ uint16 IntelligentHeadlightControl::IHCDisableCode() {
   return ihc_disable_code_temp;
 }
 uint16 IntelligentHeadlightControl::IHCFaultCode() {
-  uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
-                           256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
+  // uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
+  //                          256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
   uint16 ihc_fault_code_temp = 0;
 
   return ihc_fault_code_temp;

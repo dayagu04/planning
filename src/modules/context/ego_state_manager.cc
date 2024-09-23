@@ -255,13 +255,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
                                        const bool &set_lon_replan) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-  // double steer_ratio = vehicle_param.steer_ratio;
   auto &lat_init_state = planning_init_point_.lat_init_state;
 
   JSON_DEBUG_VALUE("enable_ego_state_compensation",
@@ -279,7 +276,6 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
       motion_planner_output.s_lat_vec.back(), cur_pos);
 
   const auto &lat_err = projection_spline.GetOutput().dist_proj;
-  const auto &s_proj = projection_spline.GetOutput().s_proj;
   const auto &proj_point = projection_spline.GetOutput().point_proj;
   Eigen::Vector2d init_point(lat_init_state.x(), lat_init_state.y());
   const double lat_init_theta = lat_init_state.theta();
@@ -724,9 +720,6 @@ bool EgoStateManager::LongitudinalStitch() {
 void EgoStateManager::RealtimeUpdatePlanningInitState() {
   // lateral motion never replans, lateral stitch obeys that (x,y,theta) always
   // apply current pose, delta uses current delta
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // double steer_ratio = vehicle_param.steer_ratio;
 
   auto &lat_init_state = planning_init_point_.lat_init_state;
   const auto &ego_state =

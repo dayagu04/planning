@@ -56,7 +56,6 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
   const auto &environmental_model = session_->environmental_model();
 
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
-  const auto &planning_init_point = ego_state_mgr->planning_init_point();
   const auto &v_ego = ego_state_mgr->ego_v();
   const auto &dynamic_world = environmental_model.get_dynamic_world();
   const bool dbw_status = environmental_model.GetVehicleDbwStatus();
@@ -212,7 +211,6 @@ void CipvLostProhibitAccelerationDecider::Update() {
   if (cipv_has_) {
     const auto &environmental_model = session_->environmental_model();
     const auto ego_state_mgr = environmental_model.get_ego_state_manager();
-    const auto &planning_init_point = ego_state_mgr->planning_init_point();
     const auto &v_ego = ego_state_mgr->ego_v();
 
     const auto &current_lane =

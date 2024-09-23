@@ -10,9 +10,7 @@ MapRequest::MapRequest(
     framework::Session* session, const EgoPlanningConfigBuilder* config_builder,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
-    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-  auto map_request_config = config_builder->cast<ScenarioDisplayStateConfig>();
-}
+    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
 
 bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   auto current_lane = virtual_lane_mgr_->get_current_lane();
@@ -129,9 +127,6 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
   bool allow_generate =
       ((lc_status == kLaneChangePropose || lc_status == kLaneChangeHold) ||
        lc_status == kLaneKeeping);
-
-  auto& ego_state = session_->environmental_model().get_ego_state_manager();
-  double v_ego = ego_state->ego_v();
 
   auto olane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);

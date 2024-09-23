@@ -22,7 +22,6 @@ void ObstacleManager::update() {
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
   double ego_init_relative_time = ego_state.planning_init_point().relative_time;
-  bool enable_bbox_mode = config_.enable_bbox_mode;
   const auto &prediction_objects =
       session_->environmental_model().get_prediction_info();
   for (int i = 0;

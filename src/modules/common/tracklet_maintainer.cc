@@ -617,10 +617,6 @@ void TrackletMaintainer::calc(
     bool left_faster, bool right_faster, LeadCars &lead_cars,
     bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
     const std::vector<double> &d_poly, const std::vector<double> &c_poly) {
-  auto config_builder =
-      session_->environmental_model().highway_config_builder();
-  PotentialAvoidDeciderConfig config =
-      config_builder->cast<PotentialAvoidDeciderConfig>();
   seq_state_.remove_clean();
   double v_ego = ego_state_->ego_v();
   const auto &vehicle_param =
@@ -1916,7 +1912,6 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double potential_near_car_v_ub = config.potential_near_car_v_ub;
   double potential_near_car_v_lb = config.potential_near_car_v_lb;
   bool enable_static_scene = config.enable_static_scene;
-  double car_addition_decre_factor = config.car_addition_decre_factor;
   double car_addition_decre_buffer = config.car_addition_decre_buffer;
   double emegency_cutin_ttc_lower = config.emegency_cutin_ttc_lower;
   double emegency_cutin_ttc_upper = config.emegency_cutin_ttc_upper;

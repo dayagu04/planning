@@ -38,7 +38,6 @@ namespace planning {
 namespace apa_planner {
 namespace {
 constexpr double kPie = 3.141592653589793;
-constexpr double kEps = 1e-6;
 }  // namespace
 
 bool SlotManagement::Update(const std::shared_ptr<ApaData> apa_data_ptr) {

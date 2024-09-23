@@ -436,8 +436,6 @@ void HppGeneralLateralDecider::ConstructLaneAndBoundaryBounds(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  double left_border_distance{10.};
-  double right_border_distance{10.};
   double l_offset_limit = 20.0;
 
   std::vector<std::pair<int, Polygon2d>> left_groundline_polygons,
@@ -446,9 +444,6 @@ void HppGeneralLateralDecider::ConstructLaneAndBoundaryBounds(
   ConstructStaticObstacleTotalPolygons(
       left_groundline_polygons, right_groundline_polygons,
       left_parking_space_polygons, right_parking_space_polygons);
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound path_bound{-l_offset_limit, l_offset_limit};
@@ -459,13 +454,8 @@ void HppGeneralLateralDecider::ConstructLaneAndBoundaryBounds(
     map_obstacle_decision.tp.s = ref_traj_points_[i].s;
     map_obstacle_decision.tp.l = ref_traj_points_[i].l;
 
-    double left_lane_distance = 10.;
-    double right_lane_distance = 10.;
-    double left_road_distance = 10.;
-    double right_road_distance = 10.;
     double ego_s = ref_traj_points_[i].s;
     double ego_length = vehicle_param.length;
-    double ego_width = vehicle_param.width;
     double care_area_s_start = ego_s - ego_length / 2;
     double care_area_s_end = ego_s + ego_length / 2 + config_.care_area_s_len;
     auto care_area_center = Vec2d((care_area_s_start + care_area_s_end) / 2, 0);
@@ -789,10 +779,6 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
            ego_cur_s - vehicle_param.rear_edge_to_rear_axle ||
        obstacle->frenet_obstacle_boundary().s_start >
            ego_cur_s + rear_axle_to_front_bumper);
-  const bool init_lat_overlap = !(obstacle->frenet_obstacle_boundary().l_end <
-                                      ego_cur_l - vehicle_param.width / 2 ||
-                                  obstacle->frenet_obstacle_boundary().l_start >
-                                      ego_cur_l + vehicle_param.width / 2);
 
   // Polygon2d obstacle_start_sl_polygon;
   Polygon2d obstacle_end_sl_polygon;
@@ -801,12 +787,11 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
                                        .coarse_planning_info.reference_path;
   // const bool ok_start = obstacle->get_polygon_at_time(  // TBD: no prediction
   //     0., reference_path_ptr, obstacle_start_sl_polygon);
-  const bool ok_end = obstacle->get_polygon_at_time(  // TBD: no prediction
-      ref_traj_points_.back().t, reference_path_ptr, obstacle_end_sl_polygon);
+  // const bool ok_end = obstacle->get_polygon_at_time(  // TBD: no prediction
+  //     ref_traj_points_.back().t, reference_path_ptr,
+  //     obstacle_end_sl_polygon);
 
   double dynamic_bound_gain_vel = std::max(config_.min_gain_vel, ego_velocity);
-  double dynamic_bound_slack_coefficient =
-      1.0 / dynamic_bound_gain_vel / dynamic_bound_gain_vel;
   double nudge_obj_extra_buffer = 0.2;
   bool nudge_obj_flag{false};
   bool reset_conflict_decision{false};
