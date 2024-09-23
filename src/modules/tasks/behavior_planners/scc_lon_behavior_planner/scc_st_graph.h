@@ -384,6 +384,7 @@ class StGraphGenerator {
   MergeSplitPoints merge_split_points_;  // from perception
   // merge info from plan
   bool is_merge_region_ = false;
+  bool current_lane_is_continue_ = true;
   //   MergeDirection merge_direction_ = MergeDirection::NONE_LANE_MERGE;
   MergeSplitPoints::MergeSplitOrientation merge_direction_ =
       MergeSplitPoints::UNKNOWN;
