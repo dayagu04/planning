@@ -28,7 +28,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ['acc_target_high', 'acc_target_low', 'acc_cipv', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
-                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
+                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \

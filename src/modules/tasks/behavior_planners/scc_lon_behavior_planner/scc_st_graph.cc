@@ -148,6 +148,7 @@ void StGraphGenerator::Update(
   st_refs_.clear();
   st_boundaries_.clear();
   JSON_DEBUG_VALUE("v_ego", v_ego);
+  JSON_DEBUG_VALUE("v_cruise", v_cruise);
 
   last_v_target_ = v_target_;
   accel_vel_filter_.SetState(last_v_target_);
