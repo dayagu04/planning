@@ -434,7 +434,7 @@ void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map
   //在匝道上，经过split点50m后再开始触发变道任务，避免自车还在split的区域内
   const double dis_to_last_spli_threshold = 50;
   //在匝道汇入匝道时，距离merge的距离在200m范围内时，再生成地图变道任务，避免前面有1分2场景的不合理变道
-  const double dis_to_first_merge_threshold = 200;
+  const double dis_to_first_merge_threshold = 100;
   //首先处理匝道上的分叉口
   if (dis_to_first_merge > dis_to_first_split &&
       dis_to_first_split <
