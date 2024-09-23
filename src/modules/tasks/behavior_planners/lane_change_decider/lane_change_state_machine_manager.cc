@@ -70,10 +70,12 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
+        iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
-        if (is_propose_to_execution) {
+        if (is_propose_to_execution &&
+            boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
@@ -2274,5 +2276,57 @@ bool LaneChangeStateMachineManager::IsVirtualLaneLine(const int lane_virtual_id)
     }
   }
   return false;
+}
+
+iflyauto::LaneBoundaryType LaneChangeStateMachineManager::MakesureCurrentBoundaryType(
+    const RequestType lc_request) const {
+  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  double lane_line_length = 0.0;
+  std::shared_ptr<planning_math::KDPath> target_boundary_path;
+  const auto &plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  double ego_s = 0.0, ego_l = 0.0;
+  const std::shared_ptr<VirtualLane> current_lane =
+      virtual_lane_mgr->get_current_lane();
+
+  if (lc_request == LEFT_CHANGE) {
+    const auto &left_lane_boundarys = current_lane->get_left_lane_boundary();
+    target_boundary_path =
+        virtual_lane_mgr->MakeBoundaryPath(left_lane_boundarys);
+    if (target_boundary_path != nullptr) {
+      if (!target_boundary_path->XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
+        return iflyauto::LaneBoundaryType_MARKING_SOLID;
+      }
+    } else {
+      return iflyauto::LaneBoundaryType_MARKING_SOLID;
+    }
+    for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+      lane_line_length += left_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
+        return left_lane_boundarys.type_segments[i].type;
+      }
+    }
+  } else if (lc_request == RIGHT_CHANGE) {
+    const auto &right_lane_boundarys = current_lane->get_right_lane_boundary();
+    target_boundary_path =
+        virtual_lane_mgr->MakeBoundaryPath(right_lane_boundarys);
+    if (target_boundary_path != nullptr) {
+      if (!target_boundary_path->XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
+        return iflyauto::LaneBoundaryType_MARKING_SOLID;
+      }
+    } else {
+      return iflyauto::LaneBoundaryType_MARKING_SOLID;
+    }
+    for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+      lane_line_length += right_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
+        return right_lane_boundarys.type_segments[i].type;
+      }
+    }
+  }
+  return iflyauto::LaneBoundaryType_MARKING_SOLID;
 }
 }  // namespace planning

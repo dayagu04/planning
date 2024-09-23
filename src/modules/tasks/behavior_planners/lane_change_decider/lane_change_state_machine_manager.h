@@ -193,6 +193,9 @@ class LaneChangeStateMachineManager {
   void CalculateRoadRight(bool* is_continue,const int calculate_nums, const int merge_lane_virtual_id);
   bool IsVirtualLaneLine(const int lane_virtual_id);
 
+  iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
+    const RequestType lc_request) const;
+
  private:
   ScenarioStateMachineConfig config_;
   framework::Session* session_;
