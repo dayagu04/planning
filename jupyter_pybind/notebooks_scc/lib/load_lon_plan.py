@@ -82,15 +82,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   except:
         print("there is no long_ref_path.soft_bounds")
 
-
-  try:
-    search_path_s_vec = list(plan_debug_info.st_search_decider_info.search_s_vec)
-    search_path_t_vec = list(plan_debug_info.st_search_decider_info.search_t_vec)
-    print("search path s vec: ", search_path_s_vec)
-    print("search path t vec: ", search_path_t_vec)
-  except:
-    print("no speed search search info ")
-
   try:
     # print("obstacle st info: ",plan_debug_info.st_search_decider_info.obstacle_st_infos)
     for idx in range(len(plan_debug_info.st_search_decider_info.obstacle_st_infos)):
@@ -270,7 +261,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'cutinVal': cutin_attr_vec
   })
 
-  lon_plan_data['data_search_path'].data.update({'t':search_path_t_vec, 's':search_path_s_vec })
   # motion planning
   lon_motion_plan_input = plan_debug_info.longitudinal_motion_planning_input
   lon_motion_plan_output = plan_debug_info.longitudinal_motion_planning_output
@@ -978,7 +968,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig2.line('t', 'obs_high', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
   fig2.triangle('t', 'obs_low', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
   fig2.inverted_triangle ('t', 'obs_high', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
-  fig2.line('t', 's', source = data_search_path, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'search path')
   # 添加障碍物s-t bound
   for obs_id in data_obs_st.keys():
      if(obs_id != ''):
