@@ -415,6 +415,8 @@ const bool UssObstacleAvoidance::Preprocess() {
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());
 
+  const double min_uss_dist = apa_param.GetParam().min_uss_origin_dist;
+
   if (apa_param.GetParam().is_uss_dist_from_perception) {
     const auto &uss_dis_info_buf =
         apa_data_ptr_->uss_percept_info_ptr->dis_from_car_to_obj;
@@ -439,13 +441,15 @@ const bool UssObstacleAvoidance::Preprocess() {
     //  upa, fr apa
     for (const auto &front_uss_idx :
          apa_param.GetParam().uss_wdis_index_front) {
-      uss_raw_dist_vec_.emplace_back(0.001 * uss_dis_info_buf[front_uss_idx]);
+      uss_raw_dist_vec_.emplace_back(
+          std::max(min_uss_dist, 0.001 * uss_dis_info_buf[front_uss_idx]));
     }
 
     // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4
     // upa, rl apa
     for (const auto &rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
-      uss_raw_dist_vec_.emplace_back(0.001 * uss_dis_info_buf[rear_uss_idx]);
+      uss_raw_dist_vec_.emplace_back(
+          std::max(min_uss_dist, 0.001 * uss_dis_info_buf[rear_uss_idx]));
     }
   } else {
     // load uss dist from uss wave, m id f
@@ -460,9 +464,8 @@ const bool UssObstacleAvoidance::Preprocess() {
     for (size_t i = 0; i < wids_idx_vec.size(); i++) {
       for (size_t j = 0; j < wids_idx_vec[i].size(); j++) {
         const auto idx = wids_idx_vec[i][j];
-
-        uss_raw_dist_vec_.emplace_back(
-            upa_dis_info_buf[i].wdis[idx].wdis_value[0]);
+        uss_raw_dist_vec_.emplace_back(std::max(
+            min_uss_dist, 1.0 * upa_dis_info_buf[i].wdis[idx].wdis_value[0]));
       }
     }
   }

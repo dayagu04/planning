@@ -96,6 +96,7 @@ struct ApaParameters {
 
   // uss params
   bool is_uss_dist_from_perception = false;
+  double min_uss_origin_dist = 0.3;
   double detection_distance = 2.5;
   double lat_inflation = 0.1;
   double safe_uss_remain_dist_in_slot = 0.35;

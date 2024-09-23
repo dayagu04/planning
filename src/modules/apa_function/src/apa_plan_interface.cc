@@ -360,6 +360,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().is_uss_dist_from_perception, bool,
                   "is_uss_dist_from_perception");
 
+  JSON_READ_VALUE(apa_param.SetPram().min_uss_origin_dist, double,
+                  "min_uss_origin_dist");
+
   JSON_READ_VALUE(apa_param.SetPram().detection_distance, double,
                   "detection_distance");
 
