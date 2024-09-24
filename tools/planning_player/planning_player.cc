@@ -302,7 +302,7 @@ void PlanningPlayer::VersinCheck(const std::string& bag_path) {
   try {
     bag.open(bag_path, rosbag::bagmode::Read);
   } catch (rosbag::BagException& e) {
-    ROS_ERROR("Error opening bag file: %s", e.what());
+    std::cerr << "Error opening bag file: " << e.what() << std::endl;
     return;
   }
   std::vector<std::string> topics;
@@ -360,7 +360,7 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path,
     bag.open(bag_path, rosbag::bagmode::Read);
     new_bag.open(out_bag, rosbag::bagmode::Write);
   } catch (rosbag::BagException& e) {
-    ROS_ERROR("Error opening bag file: %s", e.what());
+    std::cerr << "Error opening bag file: " << e.what() << std::endl;
     return false;
   }
 
@@ -538,7 +538,7 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
     std::cout << "write bag: " << bag_path << std::endl;
     bag.close();
   } catch (rosbag::BagException& e) {
-    ROS_ERROR("Error writing bag file: %s", e.what());
+    std::cerr << "Error writing bag file: " << e.what() << std::endl;
     return;
   }
 }
@@ -1134,7 +1134,7 @@ void PlanningPlayer::PerfectControlAPA(
   const auto path_size = plan_msg.trajectory.trajectory_points_size;
 
   if (path_size < 2) {
-    std::cout << "planning error: path_size = " << path_size << std::endl;
+    std::cerr << "planning error: path_size = " << path_size << std::endl;
     return;
   }
 
@@ -1208,7 +1208,7 @@ void PlanningPlayer::PerfectControlAPA(
   if (success == true) {
     remain_dist = path_length - s_proj;
   } else {
-    std::cout << "remain_dist calculation error:input is error" << std::endl;
+    std::cerr << "remain_dist calculation error:input is error" << std::endl;
   }
 
   if (state_.static_flag) {
@@ -1267,7 +1267,7 @@ void PlanningPlayer::PerfectControlAPANewLocalization(
   const auto path_size = plan_msg.trajectory.trajectory_points_size;
 
   if (path_size < 2) {
-    std::cout << "planning error: path_size = " << path_size << std::endl;
+    std::cerr << "planning error: path_size = " << path_size << std::endl;
     return;
   }
 
@@ -1341,7 +1341,7 @@ void PlanningPlayer::PerfectControlAPANewLocalization(
   if (success == true) {
     remain_dist = path_length - s_proj;
   } else {
-    std::cout << "remain_dist calculation error:input is error" << std::endl;
+    std::cerr << "remain_dist calculation error:input is error" << std::endl;
   }
 
   if (state_.static_flag) {

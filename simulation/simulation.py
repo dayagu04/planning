@@ -53,7 +53,7 @@ try:
     result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
     print(f"Runing PP error: {e}")
-    print("PP Output:", e.stdout)
+    # print("PP Output:", e.stdout)
     print("PP Error:", e.stderr)
 if (result.returncode != 0):
     print(f"Runing PP error !")
