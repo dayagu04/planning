@@ -518,7 +518,7 @@
   },
   "traffic_light_decider": {
     "enable_tfl_decider": true,
-    "virtual_dis_before_stopline": 20,
+    "virtual_dis_before_stopline": 25.5,
     "stopline_tfl_dis_thred": 50
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
