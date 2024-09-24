@@ -166,6 +166,7 @@ void StGraphGenerator::Update(
   CalcCruiseAccelLimits(v_ego);
 
   // lane change vel hold
+  // Only hold current vel as v_target in lane change accelerated case
   double v_cruise_in_lane_change = v_cruise;
   const auto &coarse_planning_info = session->planning_context()
                                          .lane_change_decider_output()
@@ -173,7 +174,8 @@ void StGraphGenerator::Update(
   if (coarse_planning_info.target_state == kLaneChangePropose) {
     // v_hold_ = lon_behav_input_->lon_init_state().v();
     v_hold_ = v_ego;
-  } else if (coarse_planning_info.target_state == kLaneChangeExecution) {
+  } else if (coarse_planning_info.target_state == kLaneChangeExecution &&
+             v_hold_ > v_target_) {
     v_cruise_in_lane_change = v_hold_;
   } else {
     v_hold_ = v_cruise;
@@ -337,16 +339,18 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   const auto &agent_manager =
       session_->environmental_model().get_dynamic_world()->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
+  bool is_far_obs_in_large_curv = false;
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(lead_one.track_id());
     if (agent != nullptr) {
       is_reverse_obs_in_large_curv = agent->is_reverse();
+      is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
       lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-      lead_fusion_enable && !is_reverse_obs_in_large_curv) {
+      lead_fusion_enable && !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
 
@@ -393,7 +397,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-        !is_reverse_obs_in_large_curv) {
+        !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two.track_id(), lead_two.d_rel(), lead_two.v_lead());
@@ -497,10 +501,12 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
       session_->environmental_model().get_dynamic_world();
   const auto &agent_manager = dynamic_world->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
+  bool is_far_obs_in_large_curv = false;
   if (agent_manager != nullptr) {
     const auto *agent = agent_manager->GetAgent(temp_lead_one.track_id());
     if (agent != nullptr) {
       is_reverse_obs_in_large_curv = agent->is_reverse();
+      is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
   const auto ego_left_front_node_id = dynamic_world->ego_left_front_node_id();
@@ -522,7 +528,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
       (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
           1.0 &&
-      !is_reverse_obs_in_large_curv && is_left_right_front_agent &&
+      !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+      is_left_right_front_agent &&
       temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),
@@ -566,7 +573,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-        !is_reverse_obs_in_large_curv && is_left_right_front_agent) {
+        !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+        is_left_right_front_agent) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
@@ -927,6 +935,7 @@ void StGraphGenerator::UpdateNearObstacles(
   const auto &agent_manager =
       session_->environmental_model().get_dynamic_world()->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
+  bool is_far_obs_in_large_curv = false;
   // filter near cars from front && side tracks
   near_cars.clear();
   for (auto &track : lateral_obstacles.front_tracks()) {
@@ -938,9 +947,10 @@ void StGraphGenerator::UpdateNearObstacles(
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
-    if (is_reverse_obs_in_large_curv) {
+    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv) {
       continue;
     }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
@@ -958,9 +968,10 @@ void StGraphGenerator::UpdateNearObstacles(
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
-    if (is_reverse_obs_in_large_curv) {
+    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv) {
       continue;
     }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
@@ -1425,6 +1436,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
   const auto &agent_manager =
       session_->environmental_model().get_dynamic_world()->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
+  bool is_far_obs_in_large_curv = false;
 
   for (auto &track : lateral_obstacles.front_tracks()) {
     // ignore obj without camera source
@@ -1436,6 +1448,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
+        is_far_obs_in_large_curv = agent->is_far_in_large_curv();
       }
     }
 
@@ -1443,7 +1456,7 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
         (track.cutinp() > cutinp_threshold || track.is_new_cutin()) &&
         track.v_lat() < -0.01 &&
         track.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-        !is_reverse_obs_in_large_curv) {
+        !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv) {
       cut_in_info->set_has_cutin(true);
 
       front_cut_in_track_id.push_back(track.track_id());
@@ -3869,6 +3882,13 @@ void StGraphGenerator::UpdateTargetVelocityByFilter(const bool is_on_ramp,
     if (v_ego < v_last_target_) {
       accel_vel_in_turns_filter_.SetState(v_ego);
     }
+    #ifdef X86
+      auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+      auto frame_info = planning_debug_data->frame_info();
+      if (frame_info.frame_num() == 1) {
+        accel_vel_in_turns_filter_.SetState(v_ego);
+      }
+    #endif
     accel_vel_in_turns_filter_.Update(v_target_);
     v_target_ = accel_vel_in_turns_filter_.GetOutput();
   }
@@ -4152,7 +4172,7 @@ void StGraphGenerator::IsReverseAgentInLargeCurvature(
       continue;
     }
     double s_rel = agent_s - ego_s;
-    double consider_s_in_large_curv = v_ego * kConsiderTimeLargeCurv;
+    double consider_s_in_large_curv = std::fmax(v_ego * kConsiderTimeLargeCurv, 20.0);
 
     const auto agent_matched_path_point =
         current_lane_frenet_coord->GetPathPointByS(agent_s);
@@ -4164,9 +4184,15 @@ void StGraphGenerator::IsReverseAgentInLargeCurvature(
     // std::sin(agent_relative_theta);
 
     bool is_in_large_curv = road_radius_ < kLargeCurvRadius ? true : false;
-    if (is_in_large_curv &&
-        (s_rel > consider_s_in_large_curv || object_s_speed_mps < -3.0)) {
-      mutable_agent->set_is_reverse(true);
+    if (is_in_large_curv) {
+      // 1. filter far agent
+      if (s_rel > consider_s_in_large_curv && object_s_speed_mps > -1.0) {
+        mutable_agent->set_is_far_in_large_curv(true);
+      }
+      // 2. filter revese agent
+      if (object_s_speed_mps < -3.0) {
+        mutable_agent->set_is_reverse(true);
+      }
     }
   }
 }
