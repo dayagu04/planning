@@ -1053,18 +1053,15 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   } else {
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
-  prediction_object.acc = std::hypot(fusion_object.common_info.acceleration.x,
-                                     fusion_object.common_info.acceleration.y);
   // judge direction of obj acc
   auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
                                      fusion_object.common_info.acceleration.x);
-  Eigen::Vector2f obj_acc_heading_vec(cos(obj_acc_heading_angle),
-                                      sin(obj_acc_heading_angle));
   Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
                                   sin(prediction_object.yaw));
-  if (obj_acc_heading_vec.dot(obj_heading_vec) < 0.0) {
-    prediction_object.acc *= -1.0;
-  }
+  Eigen::Vector2f prediction_obj_acc_vec(
+      fusion_object.common_info.acceleration.x,
+      fusion_object.common_info.acceleration.y);
+  prediction_object.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
   // add relative info for highway
   prediction_object.relative_position_x =
       x_turn(prediction_object.position_x - ego_state->ego_pose().x,
