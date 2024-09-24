@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <queue>
 
 #include "ad_common/hdmap/hdmap.h"
 #include "ego_lane_track_manager.h"
@@ -396,6 +397,8 @@ class VirtualLaneManager {
   //到停止线的距离，可以为负，表示停止线在车后
   double distance_to_stopline_ = NL_NMAX;
   double distance_to_crosswalk_ = NL_NMAX;
+  std::deque<double> stopline_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
+  std::deque<double> crosswalk_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   planning::common::IntersectionState Intersection_state_ =
       planning::common::NO_INTERSECTION;
 };
