@@ -62,7 +62,7 @@ class VisionOnlyLaneChangeDecider {
   const std::vector<double> _P_SLOPE_BP{0., 40.0};
   const std::vector<double> _P_SLOPE_V{0.8, 0.2};
 
-  bool called_in_state_machine_{false};
+  // bool called_in_state_machine_{false};
   TargetObstacle lead_car_;
   std::vector<TargetObstacle> obstacle_on_target_;
   std::pair<int, int> target_gap_;
@@ -79,9 +79,9 @@ class VisionOnlyLaneChangeDecider {
   int lc_map_decision_;
   iflyauto::LaneType current_lane_type_;
 
-  int target_lane_id_;
-  int current_lane_id_;
-  int leader_car_id_;
+  // int target_lane_id_;
+  // int current_lane_id_;
+  // int leader_car_id_;
 
   std::vector<TrackedObject *> target_cars_;
   const TrackedObject *lead_one_ = nullptr;

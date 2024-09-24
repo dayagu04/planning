@@ -147,12 +147,12 @@ class EgoLaneTrackManger {
 
  private:
   planning::framework::Session *session_ = nullptr;
-  int last_fix_lane_virtual_id_ = 0;
+  // int last_fix_lane_virtual_id_ = 0;
   int current_lane_virtual_id_ = 0;
   std::shared_ptr<VirtualLane> current_lane_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ = nullptr;
-  uint lane_num_ = 0;
+  // uint lane_num_ = 0;
   uint last_zero_relative_id_nums_ = 0;
   uint last_zero_relative_id_order_id_index_ = -1;
   bool is_ego_on_expressway_ = false;

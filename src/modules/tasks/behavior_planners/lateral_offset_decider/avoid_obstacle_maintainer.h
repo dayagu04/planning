@@ -29,15 +29,15 @@ class AvoidObstacleMaintainer {
   bool UpdateRSideAvdsInfo(bool no_near_car);
 
   planning::framework::Session* session_;
-  bool no_sp_car_ = true;
+  // bool no_sp_car_ = true;
 
   bool is_ncar_ = false;
   double t_avd_car_ = 3.0;
-  double t_avd_sp_car_ = 3.0;
+  // double t_avd_sp_car_ = 3.0;
   double final_y_rel_ = 10;
 
   int ncar_change_ = 0;
-  int lbcar_change_ = 0;
+  // int lbcar_change_ = 0;
   int flag_avd_ = 0;
   int avd_back_cnt_ = 0;
   int avd_leadone_ = 0;

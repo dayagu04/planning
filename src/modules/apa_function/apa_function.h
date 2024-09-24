@@ -32,7 +32,7 @@ class ApaFunction : public BaseFunction {
 
   std::unique_ptr<apa_planner::ApaPlanInterface> apa_plan_interface_;
 
-  uint8_t last_planner_interface_type_ = 0;
+  // uint8_t last_planner_interface_type_ = 0;
 };
 
 }  // namespace planning

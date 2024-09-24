@@ -142,7 +142,7 @@ class UssObstacle {
   Eigen::Vector2d turning_center_ = Eigen::Vector2d::Zero();
 
   const LocalView *local_view_ptr_ = nullptr;
-  iflyauto::PlanningOutput *planning_output_;
+  // iflyauto::PlanningOutput *planning_output_;
 };
 
 };  // namespace planning

@@ -138,7 +138,7 @@ class HybridAStarInterface {
 
   AstarSearchState search_state_;
 
-  bool swap_start_end_;
+  // bool swap_start_end_;
 
   AstarRequest request_;
 
