@@ -157,15 +157,22 @@ void CollisionDetector::TransObsMapToParkObstacleList() {
 void CollisionDetector::TransObsMapToOccupancyGridMap(
     const double _ogm_resolution) {
   TransObsMapToParkObstacleList();
-  Pose2D ogm_base_pose;
+
   // grid map origin, make all indexes positive
-  ogm_base_pose.x = -3.0;
-  ogm_base_pose.y = -20.0;
-  ogm_base_pose.theta = 0.0;
+  // Pose2D ogm_base_pose(-3.0, -20.0, 0.0);
+  // ogm_base_pose.x = -3.0;
+  // ogm_base_pose.y = -20.0;
+  // ogm_base_pose.theta = 0.0;
+  // occupancy_grid_map_.Clear();
+  // occupancy_grid_map_.Process(ogm_base_pose, _ogm_resolution);
+  // occupancy_grid_map_.AddParkingObs(obs_list_);
+  // edt_col_det_.Excute(occupancy_grid_map_, ogm_base_pose, _ogm_resolution);
+
   occupancy_grid_map_.Clear();
-  occupancy_grid_map_.Process(ogm_base_pose, _ogm_resolution);
+  OccupancyGridBound bound(-3.68, -10.68, 14.68, 10.68);
+  occupancy_grid_map_.Process(bound, _ogm_resolution);
   occupancy_grid_map_.AddParkingObs(obs_list_);
-  edt_col_det_.Excute(occupancy_grid_map_, ogm_base_pose, _ogm_resolution);
+  edt_col_det_.Excute(occupancy_grid_map_, bound, _ogm_resolution);
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(

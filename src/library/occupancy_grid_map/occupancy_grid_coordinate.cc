@@ -1,6 +1,8 @@
 #include "occupancy_grid_coordinate.h"
 #include "pose2d.h"
 
+#include "pose2d.h"
+
 namespace planning {
 
 void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose,
@@ -21,12 +23,14 @@ void OccupancyGridCoordinate::Process(const Pose2D &ogm_pose,
   return;
 }
 
-void OccupancyGridCoordinate::Process(const OccupancyGridBound &bound) {
+void OccupancyGridCoordinate::Process(const OccupancyGridBound &bound,
+                                      const double _ogm_resolution) {
   Pose2D ogm_pose(bound.min_x, bound.min_y, 0.0);
   ogm_tf_.SetBasePose(ogm_pose);
   ogm_base_pose_ = ogm_pose;
 
-  ogm_resolution_inv_ = 1.0 / ogm_resolution;
+  ogm_resolution_ = _ogm_resolution;
+  ogm_resolution_inv_ = 1.0 / _ogm_resolution;
   bound_ = bound;
 
   return;

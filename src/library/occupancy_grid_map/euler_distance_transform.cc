@@ -27,8 +27,9 @@ void EulerDistanceTransform::Process(const Pose2D &ogm_pose,
   return;
 }
 
-void EulerDistanceTransform::Process(const OccupancyGridBound &bound) {
-  OccupancyGridCoordinate::Process(bound);
+void EulerDistanceTransform::Process(const OccupancyGridBound &bound,
+                                     const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(bound, _ogm_resolution);
 
   return;
 }
@@ -55,7 +56,11 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
   CVMatrixToArray(&edt_matrix);
 
 #if write_debug_file
-  cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
+  cv::flip(map_matrix_, map_matrix_, 0);
+  cv::flip(map_matrix_, map_matrix_, 1);
+  cv::flip(edt_matrix, edt_matrix, 0);
+  cv::flip(edt_matrix, edt_matrix, 1);
+  cv::imwrite("/asw/planning/glog/ogm.png", map_matrix_);
   cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
 #endif
 
@@ -63,12 +68,13 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
 }
 
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
-                                    const OccupancyGridBound &bound) {
-  OccupancyGridCoordinate::Process(bound);
+                                    const OccupancyGridBound &bound,
+                                    const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(bound, _ogm_resolution);
 
-  int max_bound_x =
+  const int max_bound_x =
       std::round((bound.max_x - bound.min_x) * ogm_resolution_inv_);
-  int max_bound_y =
+  const int max_bound_y =
       std::round((bound.max_y - bound.min_y) * ogm_resolution_inv_);
 
   cv::Mat map_matrix(max_bound_x, max_bound_y, CV_8UC1, cv::Scalar(200));
@@ -86,6 +92,10 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
   CVMatrixToArray(&edt_matrix);
 
 #if write_debug_file
+  cv::flip(map_matrix, map_matrix, 0);
+  cv::flip(map_matrix, map_matrix, 1);
+  cv::flip(edt_matrix, edt_matrix, 0);
+  cv::flip(edt_matrix, edt_matrix, 1);
   cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
   cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
 #endif
@@ -97,8 +107,8 @@ void EulerDistanceTransform::CVMatrixToArray(cv::Mat *edt_matrix) {
   const int row_num = edt_matrix->rows;
   const int column_num = edt_matrix->cols;
 
-  ILOG_INFO << "r " << row_num << " max x " << ogm_grid_x_max;
-  ILOG_INFO << "c " << column_num << " max y " << ogm_grid_y_max;
+  // ILOG_INFO << "r " << row_num << " max x " << ogm_grid_x_max;
+  // ILOG_INFO << "c " << column_num << " max y " << ogm_grid_y_max;
 
   for (int j = 0; j < row_num; j++) {
     float *data = edt_matrix->ptr<float>(j);
