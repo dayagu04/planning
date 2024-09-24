@@ -401,6 +401,31 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
   double dist_threshold = interp(v_ego, xp_v_ego, config_.lc_finished_dist_thr);
+
+  // 大曲率阈值增大一点
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  const auto &flane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
+  const auto &target_reference_path =
+      reference_path_mgr->make_map_lane_reference_path(flane_virtual_id);
+  const auto &ego_s = target_reference_path->get_frenet_ego_state().s();
+  const double preview_length = 10.0;
+  const double preview_step = 1.0;
+  double sum_far_kappa = 0.0;
+  double preview_x = 3.0 * v_ego - 5.0;
+  for (double preview_distance = 0.0; preview_distance < preview_length;
+       preview_distance += preview_step) {
+    ReferencePathPoint preview_point;
+    if (target_reference_path->get_reference_point_by_lon(ego_s + preview_x + preview_distance, preview_point)) {
+      sum_far_kappa += std::fabs(preview_point.path_point.kappa);
+    }
+  }
+  double aver_far_kappa = sum_far_kappa / std::max((preview_length / preview_step), 1.0);
+  double road_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
+  if (road_radius < 750.0) {
+    dist_threshold = 0.3;
+  }
+
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
     //匝道汇主路打灯时，关灯阈值可以增大一点
     dist_threshold = 0.3;
@@ -410,8 +435,8 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
   double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 
-  std::shared_ptr<ReferencePathManager> reference_path_mgr =
-      session_->mutable_environmental_model()->get_reference_path_manager();
+  // std::shared_ptr<ReferencePathManager> reference_path_mgr =
+  //     session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &current_reference_path =
       reference_path_mgr->get_reference_path_by_lane(clane_virtual_id);
   const auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
