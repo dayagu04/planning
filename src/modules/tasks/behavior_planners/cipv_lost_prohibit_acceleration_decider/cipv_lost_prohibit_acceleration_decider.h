@@ -1,8 +1,10 @@
 #pragma once
 
 #include <memory>
+
 #include "dynamic_world/dynamic_world.h"
 #include "ego_state_manager.h"
+#include "lateral_obstacle.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "session.h"
 #include "tasks/task.h"
@@ -25,14 +27,18 @@ class CipvLostProhibitAccelerationDecider : public Task {
   void Update();
 
   double CalculateRelativeDistance(const std::shared_ptr<KDPath>& planned_path,
-                                   planning::agent::Agent cipv);
+                                   const agent::Agent* cipv);
 
-  const planning::agent::Agent* QuerryCipv(
-      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-      const planning::agent::Agent* cipv);
+  const agent::Agent* QuerryCipv(
+      std::shared_ptr<agent::AgentManager> agent_manager);
+
+  void UpdateCipvInfo(const std::shared_ptr<LateralObstacle>& lateral_obstacle,
+                      const string& lc_status);
+
+  bool IsLeadVehicle(const TrackedObject* lead);
 
  private:
-  planning::framework::Session* session_ = nullptr;
+  framework::Session* session_ = nullptr;
   GeneralPlanningConfig config_;
 
   bool cipv_has_ = false;
