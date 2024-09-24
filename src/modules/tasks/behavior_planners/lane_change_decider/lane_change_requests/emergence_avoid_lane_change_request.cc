@@ -30,7 +30,6 @@ constexpr double kEmergencyAvoidancelongitudinalDistanceThreshold = 100.0;
 constexpr int kInvalidAgentId = -1;
 constexpr double kEmergencySituationDuration = 0.4;
 constexpr double kSplitTriggleDistance = 3000.0;
-constexpr double kStationaryObstacleSpeedThreshold = 2.78;
 }  // namespace
 // class: EmergenceAvoidRequest
 EmergenceAvoidRequest::EmergenceAvoidRequest(

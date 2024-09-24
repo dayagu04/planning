@@ -23,14 +23,12 @@
 namespace planning {
 
 namespace {
-constexpr double kODDRouteDistanceThreshold = 500.0;
 constexpr double kStaticVehicleThreshold = 1.0;
 constexpr int kOvertakeCountThreshold = 200;
 constexpr int kOvertakeRightLaneCountThreshold = 300;
 constexpr int kExtraOvertakeCountForRainMode = 150;
 constexpr double kDisancebetweenRoadSplitAndRampAllowError = 5.0;
 constexpr double kSplitTriggleDistance = 3000.0;
-constexpr double kOvertakeUpdateCountTtcThreshold = 24.0;
 constexpr double kOvertakeMaintainCountTtcThreshold = 48.0;
 constexpr double kOvertakeLeadingVehicleDistanceThreshold = 130.0;
 constexpr double kOvertakeEgoHighSpeedThreshold = 25.00;           // 90km/h
@@ -68,8 +66,6 @@ constexpr double kCancelOverTakeLnChgLeadVehLatSpdThold = 0.4;  // mps
 constexpr double kCancelOverTakeLnChgEgoVehLatDstThold = 0.4;   // m
 constexpr double kCancelOverTakeLnChgFrtLeadVehLonDst = 140;    // m
 constexpr double kCancelOverTakeLnChgLeadVehLatDstThold = 1.1;  // m
-constexpr double kDeadEndAheadLaneChangeMaxDistance = 600.0;
-constexpr double kDeadEndAheadLaneChangeTimeBuffer = 20.0;
 constexpr double kCancelOverTakeLnChgTargetLaneVehDftSpd = 50;  // mps,180kph
 constexpr double kTriggerOvertakeDuration = 0.5;
 constexpr double kCancelOverTakeLnChgTargetLaneVehDstThold = 180;   // m

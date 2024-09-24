@@ -20,7 +20,6 @@
 namespace planning {
 namespace {
 constexpr double kEps = 1e-6;
-constexpr double kLaneChangeWaitTimeoutThreshold = 15.0;
 }  // namespace
 
 LaneChangeStateMachineManager::LaneChangeStateMachineManager(

@@ -36,13 +36,9 @@
 namespace planning {
 
 namespace {
-constexpr double kLatDistanceMaxStandardThr = 3.6;
 constexpr double kLastPlanLengthThr = 2.0;
-constexpr double kNeighborLaneCenterThr = 3.0;
-constexpr double kFarLaneCenterThr = 5.0;
 constexpr double kBoundaryCrossEgoBehindThr = 5.0;
 constexpr double kBoundaryCrossEgoFrontThr = 10.0;
-constexpr double kEnableFarLaneCenterThr = 1.2;
 constexpr double kCrossLaneCostDefault = 0.2;
 constexpr double kInitPosCostStandardThr = 3.6;
 constexpr double kInitPosCostWeight = 1.0;
@@ -50,7 +46,6 @@ constexpr double kCumuLateralDistanceCostWeight = 1.5;
 constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 4.0;
 constexpr int32_t kLaneCenterMinPointsThr = 3;
-constexpr double kMinCostLength = 30.0;
 constexpr double kLaneLineSegmentLength = 5.0;
 constexpr double kConsiderLaneLineLength = 40.0;
 constexpr double kDefaultRoadRadius = 750.0;

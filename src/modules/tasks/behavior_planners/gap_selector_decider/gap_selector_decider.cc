@@ -49,13 +49,11 @@ using namespace pnc::mathlib;
 
 constexpr int PointNum = 25;
 constexpr double delta_t = 0.2;
-constexpr double kFilterFrontCarDistace = 50.;
 constexpr double kMaxNegativeJerk = -4.;
 constexpr double kMaxPositiveJerk = 4.;
 constexpr double kMaxDecel = -5.;
 constexpr double kMaxAcc = 5.;
 constexpr double kPlanEps = 0.1;
-constexpr double kOvertakeSpeedThreshld = 2.;
 constexpr double kCarCollisionThreshld = 1.0;
 constexpr double kMaxTotalLCTime = 35;
 constexpr double kHalfEgoLength = 2.55;
@@ -63,9 +61,7 @@ constexpr double kHalfEgoWidth = 1.1;
 constexpr double kMaxExpectedLCTime = 8.5;
 constexpr double kMinExpectedLCTime = 6.0;
 constexpr double kMinSplineSampleLength = 30.0;
-constexpr double kMaxSplineSampleLength = 60.0;
 constexpr double kDefaultLatMovedDistance = 7.0;
-constexpr double kDeg2Rad = 0.01745;
 constexpr double kRad2Deg = 57.3;
 
 GapSelectorDecider::GapSelectorDecider(
