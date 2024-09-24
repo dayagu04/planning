@@ -26,7 +26,7 @@ coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
-                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', 'prohibit_acc_',\
+                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', 'prohibit_acc_',\
                               'merge_agent_id', 'v_target_merge', 'rear_agent_merge_time', 'merge_orintation', 'merge_direction_plan',
                               'merge_exist','is_merge_region_plan', 'merge_point_distance', 'ego_has_rightof_tar_lane',
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',"max_brake_distance",\
@@ -536,40 +536,60 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
   })
 
 def load_lon_global_figure(bag_loader):
-  #real time global figure data process
+  # ------绘制veloticy图表------
   velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
                 y_axis_label='velocity/(m/s)',width=600,height=300)
-
   ego_velocity_vec = []
+  cruise_velocity_vec = []
   target_velocity_vec = []
   ref_velocity_vec = []
   leadone_velocity_vec = []
   leadtwo_velocity_vec = []
+  intersection_velocity_vec = []
+  curve_limit_velocity_vec = []
+  narrow_limit_velocity_vec = []
   t_plan_vec = bag_loader.plan_debug_msg['t']
   t_loc_vec = bag_loader.loc_msg['t']
   t_vehicle_service_vec = bag_loader.vs_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    cruise_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_cruise'], 2))
     target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
-    # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
     leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
     leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
+    intersection_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_intersection'], 2))
+    curve_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_limit_in_turns'], 2))
+    narrow_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['narrow_agent_v_limit'], 2))
 
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_velocity_vec.append(round(bag_loader.vs_msg['data'][ind].vehicle_speed, 2))
 
-  velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
-                              legend_label='target_velocity', color="green")
-  # velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
-  #                             legend_label='ref_velocity', color="gray")
+
+  line_target = velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+                                legend_label='target_velocity', color="green")  # 实线，绿色
+  velocity_fig.line(t_plan_vec, cruise_velocity_vec, line_width=1,
+                    legend_label='v_cruise', color="green", line_dash="dashed")  # 虚线，紫色
   velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
-                                legend_label='ego_velocity',color="blue")
+                    legend_label='ego_velocity', color="blue")  # 实线，蓝色
   velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
-                              legend_label='leadone_velocity', color="red")
+                    legend_label='leadone_velocity', color="red")  # 实线，红色
   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
-                                legend_label='leadtwo_velocity',color="orange")
+                    legend_label='leadtwo_velocity', color="brown", line_dash="dashed")  # 虚线，棕色
+  velocity_fig.line(t_plan_vec, intersection_velocity_vec, line_width=1,
+                    legend_label='v_target_intersection', color="magenta")  # 实线，洋红色
+  velocity_fig.line(t_plan_vec, curve_limit_velocity_vec, line_width=1,
+                    legend_label='v_limit_in_turns', color="teal", line_dash="dotted")  # 点状虚线，青绿色
+  velocity_fig.line(t_plan_vec, narrow_limit_velocity_vec, line_width=1.5,
+                    legend_label='narrow_agent_v_limit', color="orange", line_dash=[4, 2])  # 自定义虚线，金色
+  # 添加工具和交互
+  hover_velocity_fig = HoverTool(renderers=[line_target], tooltips=[('time', '$x'), ('velocity', '$y')], mode='vline')
+  # 将悬停工具添加到图形中
+  velocity_fig.add_tools(hover_velocity_fig)
+  # 设置鼠标滚轮缩放为激活工具
+  velocity_fig.toolbar.active_scroll = velocity_fig.select_one(WheelZoomTool)
+  # 设置点击图例隐藏曲线的功能
   velocity_fig.legend.click_policy = 'hide'
 
-
+  # ------绘制acc 图表------
   acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
                 y_axis_label='acc/(m/s2)',width=600,height=300)
 
