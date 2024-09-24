@@ -530,6 +530,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         cart_init_point);
 
     double s_ref = projection_spline.GetOutput().s_proj;
+    s_ref = frenet_init_pt.x;
     traj_points.clear();
     TrajectoryPoint point;
     constexpr double kEps = 1e-4;

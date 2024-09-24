@@ -831,6 +831,15 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   double s_ref = projection_spline.GetOutput().s_proj;
 
+  Point2D cart_init_pt(init_pos.x(), init_pos.y());
+  Point2D frenet_init_pt{0.0, 0.0};
+  if(frenet_coord->XYToSL(cart_init_pt, frenet_init_pt)) {
+    s_ref = frenet_init_pt.x;
+  } else {
+    coarse_planning_info.reference_path.reset();
+    LOG_DEBUG("kd_path coordinate conversion init_pos failed");
+  }
+
   const auto &frenet_length = frenet_coord->Length();
 
   s_ref = std::min(s_ref, frenet_length * 0.95);
