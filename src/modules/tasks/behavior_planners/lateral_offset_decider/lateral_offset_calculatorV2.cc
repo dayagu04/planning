@@ -528,7 +528,9 @@ double LateralOffsetCalculatorV2::SmoothLateralOffset(
             std::min(std::max(last_avoid_info_.lat_offset, smooth_lat_offset),
                      lat_offset);
       } else {
-        smooth_lat_offset = std::max(smooth_lat_offset, lat_offset);
+        smooth_lat_offset =
+            std::max(std::min(last_avoid_info_.lat_offset, smooth_lat_offset),
+                     lat_offset);
       }
     } else {
       if (is_positive) {
