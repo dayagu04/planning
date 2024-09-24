@@ -3382,8 +3382,6 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       obstacle_manager->find_obstacle(agent_id)->y_center();
   const auto agent_current_heading_angle =
       obstacle_manager->find_obstacle(agent_id)->heading_angle();
-  const auto &lat_path_x_t_spline =
-      session_->planning_context().motion_planner_output().lateral_x_t_spline;
   const auto &lat_path_s_t_spline =
       session_->planning_context().motion_planner_output().lateral_s_t_spline;
   const auto &lane_manager =

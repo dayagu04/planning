@@ -427,9 +427,7 @@ void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map
   const bool is_ramp_merge_to_ramp_on_expressway = general_task_map_info.is_ramp_merge_to_ramp_on_expressway;
   const bool is_leaving_ramp = general_task_map_info.is_leaving_ramp;
   const double dis_to_second_merge = general_task_map_info.distance_to_second_road_merge;
-  const double dis_to_second_split = general_task_map_info.distance_to_second_road_split;
   const double sum_dis_to_last_split_point_on_ramp = general_task_map_info.sum_dis_to_last_split_point_on_ramp;
-  const RampDirection second_split_direction = general_task_map_info.second_split_direction;
   const RampDirection second_merge_direction = general_task_map_info.second_merge_direction;
   //在匝道上，经过split点50m后再开始触发变道任务，避免自车还在split的区域内
   const double dis_to_last_spli_threshold = 50;

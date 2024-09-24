@@ -323,10 +323,6 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
       session_->mutable_environmental_model()->get_lateral_obstacle();
   auto &ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-  auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   auto &vision_lateral_behavior_planner_output =
       session_->mutable_planning_context()
           ->mutable_vision_lateral_behavior_planner_output();

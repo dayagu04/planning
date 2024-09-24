@@ -257,7 +257,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const double default_consider_lane_marks_length = 120.0;
   const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();

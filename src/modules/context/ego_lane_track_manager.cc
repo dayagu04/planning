@@ -74,15 +74,14 @@ void EgoLaneTrackManger::TrackEgoLane(
       session_->planning_context().lane_change_decider_output();
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const bool lane_keep_status = lane_change_status == kLaneKeeping;
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
+
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   const double dis_to_split_threshold = 1000.0;
   const double dis_to_last_split_threshold = 150.0;
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int zero_relative_id_nums = order_ids_of_same_zero_relative_id.size();
-  double select_split_min_distance_threshold = 0.0;
+
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
   is_exist_split_on_intersection_ = false;
@@ -190,11 +189,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
   const auto& coarse_planning_info =
       lane_change_decider_output.coarse_planning_info;
   const double lane_point_match_lateral_dis_threshold = 1.8;
-  int last_ego_lane_order_id = 0;
-  int current_ego_lane_order_id = last_ego_lane_order_id;
-  int order_id_diff = 0;
   auto lc_state = coarse_planning_info.target_state;
-  auto lc_request = lane_change_decider_output.lc_request;
   int target_lane_vitrual_id =
       lane_change_decider_output.target_lane_virtual_id;
   int target_lane_order_id = 0;
@@ -456,7 +451,6 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;
-  const double default_front_rear_frame_lateral_offset_threshold = 0.4;
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
@@ -485,7 +479,6 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
       ComputeTargetLaneSpecifiedRangeCurvature(last_track_virtual_id_lane);
   double road_radius = 1 / std::max(last_ego_lane_curv, 0.0001);
 
-  const auto& lane_change_status = lane_change_decider_output.curr_state;
   const auto coarse_planning_info = session_->planning_context()
                                         .lane_change_decider_output()
                                         .coarse_planning_info;
@@ -590,7 +583,6 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
             }
             double lateral_offset = 0.0;
             double s = 0.0;
-            double l = 0.0;
             Point2D cur_point_frenet;
             Point2D cur_point(point.local_point.x, point.local_point.y);
             if (!track_lane_frenet_coord->XYToSL(cur_point, cur_point_frenet)) {
@@ -802,8 +794,6 @@ void EgoLaneTrackManger::CalcBoundaryCross(
 void EgoLaneTrackManger::PreprocessRoadSplit(
     std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
     const std::vector<int>& order_ids) {
-  const double kDefaultWidth = 3.75;
-  const int lane_nums = relative_id_lanes.size();
   int origin_order_id = 0;
 
   if (last_zero_relative_id_nums_ > 1) {
@@ -848,7 +838,6 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
     const std::vector<int>& order_ids) {
   int origin_order_id = 0;
-  int order_id_index = -1;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& plannig_init_point = ego_state->planning_init_point();
@@ -1008,9 +997,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
       session_->environmental_model().get_ego_state_manager();
   const double default_consider_lane_marks_length = 80.0;
   const double consider_lane_straight_front_ego = 30.0;
-  double ego2lane_heading_min = std::numeric_limits<double>::max();
   const auto& plannig_init_point = ego_state->planning_init_point();
-  const double ego_heading_angle = ego_state->heading_angle();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
   int origin_order_id = 0;
@@ -1023,7 +1010,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   if (relative_id_lanes.size() == order_ids.size()) {
     LOG_DEBUG("relative_id_lanes.size() == order_ids.size()");
     is_exist_split_on_intersection_ = false;
-    return;  
+    return;
   }
 
   for (size_t i = 0; i < order_ids.size(); i++) {
@@ -1185,7 +1172,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
         is_on_right_side_lane = true;
         break;
       }
-    }    
+    }
     if (is_on_left_side_lane && is_on_right_side_lane) {
       is_exist_split_on_intersection_= false;
       return;
@@ -1194,12 +1181,12 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
       origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
     } else if (is_on_right_side_lane) {
       relative_id_lanes[order_ids[0]]->set_relative_id(0);
-      origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();    
+      origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
     } else {
       is_exist_split_on_intersection_= false;
-      return;      
+      return;
     }
-  
+
     is_exist_split_on_intersection_ = true;
   }
 

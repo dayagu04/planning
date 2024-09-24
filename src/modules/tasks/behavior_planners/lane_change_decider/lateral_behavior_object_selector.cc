@@ -65,8 +65,6 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       lane_change_decider_output.target_lane_virtual_id;
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
-  const auto &fix_reference_path =
-      reference_path_mgr->get_reference_path_by_lane(fix_lane_virtual_id);
   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id);
   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
@@ -136,7 +134,6 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
       session_->environmental_model().get_virtual_lane_manager();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  auto &ego_state = session_->environmental_model().get_ego_state_manager();
   int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   int target_lane_virtual_id =
@@ -152,12 +149,9 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
       virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
 
   double olane_width = flane->width();
-  double v_ego = ego_state->ego_v();
-  double dt_delay = v_ego < 5.0 ? 0.0 : 0.03;
   if (olane != nullptr) {
     olane_width = olane->width();
   }
-  double act_cancel_thr = std::max(olane_width / 2 - 0.6, 0.);
 
   const auto state = lane_change_decider_output.curr_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;

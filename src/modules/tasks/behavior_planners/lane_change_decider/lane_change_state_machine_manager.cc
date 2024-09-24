@@ -1444,8 +1444,6 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
 void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     const std::vector<TrackedObject> &vec_front_obstacles,
     const RequestType &direction, LaneChangeStageInfo *const lc_state_info) {
-  const auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
   const auto &reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &fix_reference_path =
@@ -1996,8 +1994,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
     std::cout << "is merge region!!!" << std::endl;
     return true;
   }
-  //遍历自车向前的点，是否有overlap情况
-  const double cur_lane_length = cur_lane_coord->Length();
+  // 遍历自车向前的点，是否有overlap情况
   const double step_length = 5.0;
   const double buffer = 1.0;
   const int calculate_nums = (int)(ego_front_length / step_length - buffer);

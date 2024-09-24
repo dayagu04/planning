@@ -213,8 +213,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     return;
   }
 
-  const auto matched_path_point = ego_lane_coord->GetPathPointByS(ego_s);
-
   double agent_s_base_path = 0.0;
   double agent_l_base_path = 0.0;
   if (!ego_lane_coord->XYToSL(agent.x(), agent.y(), &agent_s_base_path,

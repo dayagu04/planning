@@ -586,10 +586,7 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
   Point2D frenet_init_point;
   Point2D cart_init_point{planning_init_point.lat_init_state.x(),
                           planning_init_point.lat_init_state.y()};
-  const auto &coord =
-      session_->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info.reference_path->get_frenet_coord();
+  const auto &coord = coarse_planning_info.reference_path->get_frenet_coord();
 
   if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
     LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");

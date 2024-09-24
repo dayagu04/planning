@@ -763,7 +763,6 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
       config_.care_obj_lon_distance_threshold;
   const auto &ego_cur_s = ref_traj_points_.front().s;
   const auto &ego_cur_l = ref_traj_points_.front().l;
-  const auto &ego_velocity = cruise_vel_;
 
   auto safe_center_distance =
       config_.dynamic_obj_safe_buffer + vehicle_param.width / 2;
@@ -791,9 +790,7 @@ void HppGeneralLateralDecider::ConstructLateralObstacleDecision(
   //     ref_traj_points_.back().t, reference_path_ptr,
   //     obstacle_end_sl_polygon);
 
-  double dynamic_bound_gain_vel = std::max(config_.min_gain_vel, ego_velocity);
   double nudge_obj_extra_buffer = 0.2;
-  bool nudge_obj_flag{false};
   bool reset_conflict_decision{false};
 
   obstacle_decision.rel_pos_type = ObsRelPosType::NONE;
