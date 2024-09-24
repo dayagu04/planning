@@ -296,7 +296,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     return pred_s_error < 0;
   };
 
-  auto static_slot_car = [this](const SlotInfo& slot) -> bool {
+  auto static_slot_car = [](const SlotInfo& slot) -> bool {
     if (slot.front_veh_info().v < kStaticCarFilterVel) return true;
     return false;
   };
