@@ -442,7 +442,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
     fig_lat_traj_info5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
     fig_lat_traj_info6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
     global plan_debug_ts
-    steer_ratio = 15.7
+    steer_ratio = 13.0
     rad_to_deg = 57.3
     coord_tf = coord_transformer()
     ref_theta_generate = CommonGenerator()
