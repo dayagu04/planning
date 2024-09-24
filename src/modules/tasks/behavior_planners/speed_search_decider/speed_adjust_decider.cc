@@ -435,8 +435,8 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     }
 
     // lower aligned v limit
-    if (slot.aligned_v() < min_ego_speed_in_speed_adjust_ -
-                               config_.min_dec_filter_speed / 3.6 ||
+    if (slot.aligned_v() <
+            min_ego_speed_in_speed_adjust_ - min_dec_filter_speed / 3.6 ||
         slot.aligned_v() > max_ego_speed_in_speed_adjust_ +
                                config_.max_acc_filter_speed / 3.6) {
       std::cout << " The slot: <<" << idx << " is too slow" << std::endl;
@@ -625,9 +625,10 @@ int SpeedAdjustDecider::SelectBestSlot() {
 
     // 3.1 aligned v excced cost
     const double aligned_v_dec_penaty =
-        slot.aligned_v() - init_va_.first < -kPenaltyMinDecAdjustSpeed
-            ? (init_va_.first - slot.aligned_v()) * dec_excced_weight
-            : 0.0;
+        slot.aligned_v() - init_va_.first >= -kPenaltyMinDecAdjustSpeed ||
+                deceleration_priority_scene_
+            ? 0.0
+            : (init_va_.first - slot.aligned_v()) * dec_excced_weight;
     slot_costs[i] += aligned_v_dec_penaty;
 
     // 3.2 aligned v acc max cost
