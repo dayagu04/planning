@@ -23,7 +23,6 @@
 
 using namespace planning;
 constexpr double Eps = 1e-3;
-constexpr int PointNum = 30;
 constexpr double LaneCheckBuffer = 0.55;
 constexpr double delta_t = 0.1;
 
@@ -184,9 +183,6 @@ bool AgentNodeManager::InferObjTrajByLane(
       obj_in_which_lane == 0 ? x_vec_origin_lane_ : x_vec_target_lane_;
   const std::vector<double> &lane_y_vec =
       obj_in_which_lane == 0 ? y_vec_origin_lane_ : y_vec_target_lane_;
-
-  const double start_x_value = std::fmin(lane_x_vec.front(), lane_x_vec.back());
-  const double back_x_value = std::fmax(lane_x_vec.front(), lane_x_vec.back());
 
   std::vector<Point2D> lane_points;
   lane_points.resize(lane_x_vec.size());
@@ -671,9 +667,7 @@ void AgentNodeManager::SortNodeByS() {
   return;
 }
 
-bool AgentNodeManager::InferAllObjPredInfoByKDPath(){
-
-};
+bool AgentNodeManager::InferAllObjPredInfoByKDPath() { return true; };
 
 bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
   // Recheck unreasonable objs

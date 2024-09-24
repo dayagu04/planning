@@ -15,15 +15,10 @@
 namespace {
 
 constexpr double kEpsilon = 1.0e-4;
-constexpr double kMaxHeadingDiff = 1.04;  // 60 degree
-constexpr double kMinLowSpeedTrajLength = 3.0;
-constexpr double kIgnoreSpeedDiffThd = 5.0 / 3.6;
-constexpr double kAgentFrontEdgeSDiffThd = -0.2;
 constexpr double kHalf = 0.5;
 constexpr double kKphToMps = 0.2778;
 constexpr double kMpsToKph = 3.6;
 constexpr double kLaneWidth = 3.75;
-constexpr double kCheckUnstableTrajEgoSpeedThd = 10.0 / 3.6;
 constexpr double kLargeAgentLengthM = 8.0;
 
 // Param for cut-in check
@@ -40,7 +35,6 @@ constexpr double kCutInSpeedLimitMps = 0.5;
 constexpr double kEgoStopSpeedThresholdMps = 0.5;
 constexpr double kCurrentKappaThreshold = 0.0015;
 constexpr double kCurrentKappaThresholdForLargeAgent = 0.003;
-constexpr double kConsiderIgnoreObsThd = 30.0 / 3.6;
 constexpr int32_t kRuleBasedCutInCount = 3;
 constexpr int32_t kPredBasedCutInCount = 3;
 constexpr int32_t kDefaultCutInCount = 4;
@@ -220,7 +214,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   }
 
   const auto matched_path_point = ego_lane_coord->GetPathPointByS(ego_s);
-  const double ego_matched_lane_theta = matched_path_point.theta();
 
   double agent_s_base_path = 0.0;
   double agent_l_base_path = 0.0;
@@ -235,7 +228,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   const int32_t agent_id = agent.agent_id();
   const double agent_relative_theta =
       planning_math::NormalizeAngle(agent.theta() - agent_matched_lane_theta);
-  double object_s_speed_mps = agent.speed() * std::cos(agent_relative_theta);
   double object_l_speed_mps = agent.speed() * std::sin(agent_relative_theta);
 
   const bool is_large_agent = IsLargeAgent(agent);
@@ -375,7 +367,6 @@ bool AgentLongitudinalDecider::IsLargeAgentCutIn(
     const double ego_half_length, const double ego_s, const double ego_theta,
     const double ego_speed_mps) {
   constexpr double kSpeedThresholdKph = 30.0;
-  constexpr double kDefaultHalfWidth = 1.75;
   const bool speed_meet = ego_speed_mps * kMpsToKph > kSpeedThresholdKph &&
                           agent.speed() * kMpsToKph > kSpeedThresholdKph;
 
@@ -437,8 +428,6 @@ bool AgentLongitudinalDecider::IsLargeAgentCutIn(
   double agent_box_l = 0.0;
   planned_path->XYToSL(agent.box().center_x(), agent.box().center_y(),
                        &agent_box_s, &agent_box_l);
-  const double heading_diff =
-      planning_math::NormalizeAngle(agent.theta() - ego_theta);
   const double heading_diff_with_path = planning_math::NormalizeAngle(
       agent.theta() - planned_path->GetPathPointByS(agent_s).theta());
   const bool is_heading_diff_in_range =

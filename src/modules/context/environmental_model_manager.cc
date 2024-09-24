@@ -592,9 +592,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         vehicle_service_output_info.vehicle_speed_display);
   }
 
-  if (session_->environmental_model().location_valid()) {
-    auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
-  }
+  // if (session_->environmental_model().location_valid()) {
+  //   auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
+  // }
 
   if (vehicle_service_output_info.steering_wheel_angle_available) {
     auto steering_data = vehicle_status.mutable_steering_wheel();

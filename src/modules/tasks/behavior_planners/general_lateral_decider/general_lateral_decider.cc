@@ -1270,7 +1270,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
   const double half_ego_width = vehicle_param.max_width * 0.5;
-  auto collision_center_distance = half_ego_width;
 
   const double front_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
@@ -1408,9 +1407,6 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
     LonObstacleDecisionType &lon_decision) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width = vehicle_param.max_width * 0.5;
-  constexpr double kMaxAvoidEdgeL{2.0};  // m
-  auto avoid_cross_lane = 0.2;
   if (is_nudge_left) {
     lat_decision = LatObstacleDecisionType::RIGHT;
     lon_decision = LonObstacleDecisionType::IGNORE;

@@ -112,9 +112,6 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   ddkappa_t_spline.set_points(t_vec, ddkappa_vec);
 
   // Step 2) get dense trajectory points
-  auto &planning_init_point =
-      reference_path_ptr->get_frenet_ego_state().planning_init_point();
-  // double init_point_relative_time = planning_init_point.relative_time;
 
   std::vector<TrajectoryPoint> dense_traj_points;
   int dense_num_points =

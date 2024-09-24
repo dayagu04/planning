@@ -123,7 +123,6 @@ void OvertakeRequest::Update(int lc_status) {
   planning_init_point_ = ego_state->planning_init_point();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  int current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
   int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   int target_lane_virtual_id =
@@ -134,7 +133,6 @@ void OvertakeRequest::Update(int lc_status) {
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
-  const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   if (llane != nullptr) {
@@ -224,7 +222,6 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
-  double v_ego = ego_state->ego_v();
 
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
       virtual_lane_mgr_->get_virtual_lanes();
@@ -730,8 +727,6 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
     return false;
   }
 
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   const auto& target_lane_coord_ptr = ref_line->get_frenet_coord();
   Point2D ego_frenet_point_in_left_lane;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
@@ -860,8 +855,6 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
     return false;
   }
 
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   const auto& target_lane_coord_ptr = ref_line->get_frenet_coord();
   Point2D ego_frenet_point_in_right_lane;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
@@ -882,8 +875,6 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
       target_lane->get_reference_path()->get_lane_obstacles_ids();
   const std::vector<int>& front_potensial_objects =
       current_lane->get_reference_path()->get_lane_obstacles_ids();
-  const std::vector<TrackedObject>& front_tracks =
-      lateral_obstacle_->front_tracks();
 
   if (!right_potensial_objects.size()) {
     return true;
@@ -985,8 +976,6 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
 }
 
 bool OvertakeRequest::checkLaneChangeValidBySuprsSignal(const bool is_left) {
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   std::vector<int> target_side_objects_id_set;
   Point2D ego_pose{planning_init_point_.lat_init_state.x(),
                    planning_init_point_.lat_init_state.y()};

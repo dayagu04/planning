@@ -219,11 +219,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   }
 
   trajectory_.clear();
-  double relative_time = start_timestamp;
   double cumulative_s = 0.0;
-  double start_vel_direction = prediction_trajectory[0].yaw;
-  double sigma_t = 0.0;
-  constexpr double InvalidSigma = 10.0;
   for (size_t i = 0; i < prediction_trajectory.size(); ++i) {
     PncTrajectoryPoint tp;
     auto &traj_point = prediction_trajectory[i];

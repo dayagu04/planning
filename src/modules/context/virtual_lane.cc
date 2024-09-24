@@ -173,16 +173,16 @@ uint VirtualLane::get_common_point_num(
     return 0;
   }
 
-  const std::vector<std::string> &other_point_ids =
-      other->center_line_points_track_id();
+  // const std::vector<std::string> &other_point_ids =
+  //     other->center_line_points_track_id();
 
   uint common_point_num = 0;
-  for (auto &p : other_point_ids) {  // todo
-    // if (center_line_points_track_id_.find(p) !=
-    // center_line_points_track_id_.end()) {
-    //   common_point_num++;
-    // }
-  }
+  // for (auto &p : other_point_ids) {  // todo
+  // if (center_line_points_track_id_.find(p) !=
+  // center_line_points_track_id_.end()) {
+  //   common_point_num++;
+  // }
+  // }
 
   return common_point_num;
 }

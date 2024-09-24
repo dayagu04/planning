@@ -134,7 +134,6 @@ class KDPath {
       return;
     }
     // cal s
-    double s = 0.0;
     ResetSCalculte(points);
 
     // cal heading

@@ -494,7 +494,6 @@ double LateralOffsetCalculatorV2::SmoothLateralOffset(
   double smooth_lat_offset = lat_offset;
   bool is_positive = lat_offset > 0;
 
-  const double lat_control_delay = 0.0;
   const std::array<double, 5> _AVD_DISTANCE_V = {
       config_.avd_lon_distance_5, config_.avd_lon_distance_4,
       config_.avd_lon_distance_3, config_.avd_lon_distance_2,

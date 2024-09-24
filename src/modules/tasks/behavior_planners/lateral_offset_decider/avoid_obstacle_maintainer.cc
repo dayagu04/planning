@@ -22,8 +22,6 @@ double AvoidObstacleMaintainer::UpdateAntsidesStrict() {
   int debug_front_id = -1000;
   int debug_side_id = -1000;
 
-  auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
   auto &ego_state =
@@ -314,7 +312,6 @@ bool AvoidObstacleMaintainer::Process(planning::framework::Session *session) {
   int enter2 = 0;
   int ncar_cnt = 0;
 
-  double fs_y_rel = 10.0;
   double safety_dist = 2.0;
 
   std::vector<std::vector<double>> avd_cars;
@@ -324,8 +321,6 @@ bool AvoidObstacleMaintainer::Process(planning::framework::Session *session) {
   is_ncar_ = false;
 
   session_ = session;
-  auto &virtual_lane_manager =
-      session->mutable_environmental_model()->get_virtual_lane_manager();
   auto &lateral_obstacle =
       session->mutable_environmental_model()->get_lateral_obstacle();
   auto &ego_state =

@@ -63,7 +63,6 @@ bool LaneChangeRequestManager::Update(
   double minimum_ego_cruise_speed_for_active_lane_change =
       config_.minimum_ego_cruise_speed_for_active_lane_change;
   // const double kOvertakeTriggerCruiseSpeedMinThreshold = 16.67;  // 60km/h
-  const double intersection_distance_of_suppression_active_lane_change = 90.0;
   bool EnableGenerateOvertakeQequestByFrontSlowVehicle = true;
   const bool use_overtake_lane_change_request =
       config_
@@ -81,11 +80,7 @@ bool LaneChangeRequestManager::Update(
       config_.enable_use_cone_change_request;
   const bool enable_use_merge_lc_request =
       config_.enable_use_merge_change_request;
-  const bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
   const auto& function_info = session_->environmental_model().function_info();
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
-  const double default_velocity_trigger_emergence_avoid_request = 13.88;
   const double dis_threshold_to_merged_point =
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const double dis_to_first_merge =
@@ -127,7 +122,7 @@ bool LaneChangeRequestManager::Update(
           virtual_lane_mgr_->dis_to_ramp() <=
               minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
           sum_dis_to_last_merge_point <
-              max_pass_merge_distance_to_surpress_overtake_lane_change || 
+              max_pass_merge_distance_to_surpress_overtake_lane_change ||
           dis_to_first_merge < dis_threshold_to_merged_point) {
         overtake_request_.Reset();
         LOG_DEBUG(

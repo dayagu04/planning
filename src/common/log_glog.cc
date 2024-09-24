@@ -90,10 +90,6 @@ void InitGlog(const char *file) {
 
     async_logger_->Start();
 
-    auto thread = const_cast<std::thread *>(async_logger_->LogThread());
-    // apollo::cyber::scheduler::Instance()->SetInnerThreadAttr("async_log",
-    //                                                          thread);
-
     FLAGS_stop_logging_if_full_disk = true;
     ILOG_INFO << "glog init, create_path = " << create_path;
     glog_flag_.is_init = true;

@@ -601,8 +601,6 @@ const double GeneralLongitudinalDecider::compute_max_lat_acceleration() const {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  const auto &map_info_manager =
-      session_->environmental_model().get_virtual_lane_manager();
   auto ego_velocity = frenet_ego_state.planning_init_point().v;
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
@@ -721,8 +719,6 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   const auto &obstacle_sl_boundary = obstacle->frenet_obstacle_boundary();
   auto l_center = obstacle->frenet_l();
 
-  const auto &map_info_manager =
-      session_->environmental_model().get_virtual_lane_manager();
   const bool is_low_right_intersection = false;
   // hack
   // map_info_manager->curr_intersection_with_traffic_light().getRoadOffset()

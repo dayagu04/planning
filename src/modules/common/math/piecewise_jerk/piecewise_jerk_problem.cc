@@ -111,10 +111,6 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter) {
   osqp_solve(osqp_work);
 
   const auto qp_end = std::chrono::system_clock::now();
-  std::chrono::duration<double> qp_diff = qp_end - qp_start;
-
-  // ILOG_INFO << "speed qp optimization takes " << qp_diff.count() * 1000.0
-  //           << " ms";
 
   auto status = osqp_work->info->status_val;
 

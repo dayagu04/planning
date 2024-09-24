@@ -145,7 +145,6 @@ bool VisionLateralMotionPlanner::update(
 }
 
 bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
-  double reject_prob_thre = 0.5;
   double short_reject_length = 15;
 
   reject_reason_ = NO_REJECTION;
@@ -213,9 +212,6 @@ bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
     bool l_reject = false;
     bool r_reject = false;
     // bool bias_enable = true;
-    bool wide_reject_enable = true;
-    bool narrow_reject_enable = true;
-    bool short_reject_enable = true;
 
     double gap_distance = 1.0;
 
@@ -423,13 +419,10 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
     int status, bool flag_avd, bool accident_ahead, bool should_premove,
     double dist_rblane, const std::array<std::vector<double>, 2> &avd_car_past,
     const std::array<std::vector<double>, 2> &avd_sp_car_past) {
-  const auto &v_cruise = ego_cart_state_manager_->ego_v_cruise();
   double lane_width = flane_->width();
   const auto &min_width = flane_->min_width();
   const auto &max_width = flane_->max_width();
   lane_width = clip(lane_width, max_width, min_width);
-
-  double entrance_lane_width = lane_width;
 
   // calc lat avoid limit
   double avd_limit_left = 0.15 * lane_width;
@@ -472,7 +465,6 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
 
   double v_ego = ego_cart_state_manager_->ego_v();
 
-  double l_ego = ego_frenet_state_.l();    // hack ! it's l in cur ref path?
   double safety_dist = 2.0 + v_ego * 0.2;  // magic number
   double t_gap = interp(v_ego, t_gap_vego_bp, t_gap_vego_v);
 
@@ -2089,11 +2081,6 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
       std::array<double, 2> fp1{1, 5};
       std::array<double, 2> fp2{1, 3};
 
-      double min_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp1),
-                                   interp(std::fabs(d_poly_[1]), xp2, fp1));
-      double max_factor = std::max(interp(std::fabs(d_poly_[2]), xp1, fp2),
-                                   interp(std::fabs(d_poly_[1]), xp2, fp2));
-
       if (d_poly_[3] < -path_gap) {
         // d_poly_[3] = -min_factor * path_gap;
         d_poly_[3] = -path_gap;
@@ -2448,7 +2435,6 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   //   world_model_->mutable_lateral_obstacle();
 
   int scenario = lane_change_decider_output.scenario;
-  int state = lane_change_decider_output.curr_state;
   auto &state_name = lane_change_decider_output.state_name;
   int turn_light = lane_change_decider_output.turn_light;
   int map_turn_light = lane_change_decider_output.map_turn_light;  //
@@ -2817,7 +2803,6 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   // auto lb_status = lateral_output.lane_borrow;
   auto lb_request = lateral_output.lb_request;
   auto lb_status = lateral_output.lb_status;
-  auto lb_info = lateral_output.lane_borrow_range;
   // //   // LOG_DEBUG("zzd arbitrator lc_status %s
   // lc_request %s lb_status %s
   // //   // lb_request %s lb_info %d", lc_status.c_str(),
@@ -2828,7 +2813,6 @@ bool VisionLateralMotionPlanner::update_lateral_info() {
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
 
-  int scenario = lane_change_decider_output.scenario;
   int state = lane_change_decider_output.curr_state;
   planning::common::LaneStatus default_lane_status;
   // //   // scenario input info

@@ -470,8 +470,8 @@ void LaneKeepAssistManager::CalculateWheelToLine() {
       Common_FrontCamera_PosYR;
 }
 void LaneKeepAssistManager::Output() {
-  auto lka_output_str =
-      session_->mutable_planning_context()->mutable_planning_hmi_info();
+  // auto lka_output_str =
+  //     session_->mutable_planning_context()->mutable_planning_hmi_info();
   /*
   0:Unavailable
   1:Off

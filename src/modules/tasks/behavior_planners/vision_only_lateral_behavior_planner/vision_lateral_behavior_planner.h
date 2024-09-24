@@ -39,8 +39,6 @@ class VisionLateralBehaviorPlanner : public Task {
   void update_lside_svsp_info();
   void update_rside_svsp_info();
 
-  bool update_lateral_behavior_planner_output() {}
-
  private:
   VisionLateralBehaviorPlannerConfig config_;
   bool no_sp_car_ = true;

@@ -18,16 +18,10 @@ double VisionLateralBehaviorPlanner::update_antsides_strict() {
   double ego_car_width = 2.2;
   double lat_safety_buffer = 0.2;
 
-  auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
   auto &ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-  auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
 
   double v_ego = ego_state->ego_v();
   auto &front_tracks_copy = lateral_obstacle->front_tracks_copy();
@@ -317,7 +311,6 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   int enter2 = 0;
   int ncar_cnt = 0;
 
-  double fs_y_rel = 10.0;
   double safety_dist = 2.0;
 
   std::vector<std::vector<double>> avd_cars;
@@ -326,8 +319,6 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   t_avd_car_ = 3.0;
   is_ncar_ = false;
 
-  auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto &lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
   auto &ego_state =
@@ -352,7 +343,6 @@ void VisionLateralBehaviorPlanner::update_avoid_cars(
   }
 
   double v_ego = ego_state->ego_v();
-  double l_ego = frenet_ego_state.l();
   double curr_time = IflyTime::Now_s();
 
   std::vector<TrackedObject> front_side_tracks;

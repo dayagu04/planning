@@ -49,7 +49,6 @@ bool HistoryObstacleManager::Update() {
       session_->environmental_model().get_obstacle_manager();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
   frenet_coord_ =
       reference_path->get_reference_path_by_current_lane()->get_frenet_coord();
   if (frenet_coord_ != nullptr) {
@@ -57,7 +56,6 @@ bool HistoryObstacleManager::Update() {
     if (frenet_coord_->XYToSL(
             Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
             ego_frenet)) {
-      double dt = 1.0 / FLAGS_planning_loop_rate;  // 0.1
       double ego_s = ego_frenet.x;
       double ego_l = ego_frenet.y;
       double curve_heading = frenet_coord_->GetPathCurveHeading(ego_s);

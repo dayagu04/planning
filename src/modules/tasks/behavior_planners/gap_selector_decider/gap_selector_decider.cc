@@ -579,8 +579,6 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto &target_state = coarse_planning_info.target_state;
-  const auto target_l = lat_avoid_offset;
   const auto &planning_init_point = session_->mutable_environmental_model()
                                         ->get_ego_state_manager()
                                         ->planning_init_point();
@@ -599,11 +597,6 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
   // frenet_init_point_ = frenet_init_point;
 
   const double lat_lc_dis = std::fabs(frenet_init_point.y - lat_avoid_offset);
-  const double ego_v =
-      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
-  const double v_cruise = session_->mutable_environmental_model()
-                              ->get_ego_state_manager()
-                              ->ego_v_cruise();
   const double default_lc_lat_v = 3.8 / config_.default_lc_time;
   if (lat_lc_dis <= 0.6) {
     return;
@@ -1248,6 +1241,7 @@ bool GapSelectorDecider::MakeInteractiveDecision(
               << std::endl;
     return false;
   }
+  return true;
 };
 
 void GapSelectorDecider::DriveStyleTimeOptimalTrajEvaluation(
@@ -1289,10 +1283,6 @@ void GapSelectorDecider::DriveStyleTimeOptimalTrajEvaluation(
         agent_node_mgr_->agent_node_target_lane_map()
             .find(nearby_gap_.front_agent_id)
             ->second;
-    const ObstaclePredicatedInfo &rear_obstacle_info =
-        agent_node_mgr_->agent_node_target_lane_map()
-            .find(nearby_gap_.rear_agent_id)
-            ->second;
     state_limit.v_end =
         std::fmin(cruise_vel_, front_obstacle_info.raw_vel + kPlanEps);
 
@@ -1310,10 +1300,6 @@ void GapSelectorDecider::DriveStyleTimeOptimalTrajEvaluation(
     interactive_ok = MakeInteractiveDecision(front_obstacle_info, path_spline,
                                              traj_time_optimal_);
   } else if (gap_drive_style_ == GapDriveStyle::OnlyFrontSlowerCar) {
-    const ObstaclePredicatedInfo &front_obstacle_info =
-        agent_node_mgr_->agent_node_target_lane_map()
-            .find(nearby_gap_.front_agent_id)
-            ->second;
     state_limit.v_end = cruise_vel_;
   }
 
@@ -1974,10 +1960,7 @@ void GapSelectorDecider::CalcLatOffset(double &expected_s, double &expected_l,
     expected_l = target_state_ == 1
                      ? 0.5 * (away_origin_lane_width + away_target_lane_width)
                      : -0.5 * (away_origin_lane_width + away_target_lane_width);
-
   } else {
-    const double &cur_s = planning_init_point_.frenet_state.s;
-
     const double near_current_lane_width = origin_lane_width_;
     const double near_target_lane_width = target_lane_width_;
 
@@ -2114,7 +2097,6 @@ void GapSelectorDecider::StitchQuinticPath(
     GapSelectorPathSpline &path_spline) {
   double path_length =
       base_frenet_coord_->Length() - 0.5 - planning_init_point_.frenet_state.s;
-  const double sample_s = 15.0;
 
   int quintic_point_num = expected_lc_time / delta_t;
 
@@ -2163,8 +2145,6 @@ void GapSelectorDecider::DecoupleQuinticPathSpline(
     const double remaining_lc_duration,
     const pnc::spline::QuinticPolynominalPath &quintic_path,
     const std::shared_ptr<KDPath> coord, GapSelectorPathSpline &path_spline) {
-  const double path_length =
-      coord->Length() - 0.5 - planning_init_point_.frenet_state.s;
   const double sample_s = 7.0;
 
   std::vector<double> x_path_points, y_path_points, s_vec;
@@ -2264,7 +2244,6 @@ void GapSelectorDecider::GenerateLHTrajectory(
     TrajectoryPoints &traj_points) {
   // the car is in dynamic lc, need to consider the lat car state, use quintic
   // poly
-  double expected_s = cruise_vel_ * 5;
 
   for (auto i = 0; i < traj_points.size(); i++) {
     auto &traj_point = traj_points[i];

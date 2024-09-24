@@ -82,20 +82,6 @@ bool IsInConsiderFrontLateralRange(
   if (!is_in_consider_lateral_range_hysteresis_map[tr.track_id].IsValid()) {
     return false;
   }
-  double t_lookforward = 1.0;
-  double predict_lon_distance = tr.d_rel + tr.v_rel * t_lookforward;
-  // tr.v_lat * t_lookforward
-  // TODO(clren):consider prediction;  v_lat > 0.3
-  // cutin
-  // std::array<double, 5> drel_x{1, 2, 5, 10, 20};
-  // std::array<double, 5> vrel_y{4, 2, 1.8, 1, 0.3};
-
-  // double min_desire_v = interp(tr.d_rel, drel_x, vrel_y);
-  // return tr.v_rel > min_desire_v;
-
-  // if (tr.d_path_self &&tr.v_lat < -0.3) {
-  //   return false;
-  // }
 
   return true;
 }
@@ -118,9 +104,6 @@ bool IsInConsiderSideLateralRange(
       std::get<std::map<int, HysteresisDecision>>(
           hysteresis_maps[HysteresisType::IsInConsiderLateralRangeHysteresis]);
 
-  const double ego_position =
-      is_left ? fix_ref->get_frenet_ego_state().boundary().l_end
-              : fix_ref->get_frenet_ego_state().boundary().l_start;
   double lat_dis =
       is_left
           ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
@@ -163,7 +146,6 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
         VehicleConfigurationContext::Instance()->get_vehicle_param();
     const double ego_length = vehicle_param.length;
     const double v_obstacle_2 = v_ego + tr.v_rel;
-    const double kDistanceOffset = 3.5;
     std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
     std::array<double, 3> t_gap_vego_bp{5, 15, 30};
     const double safety_dist = 2.0;
@@ -369,54 +351,6 @@ bool IsPassive(const AvoidObstacleInfo &avoid_obstacle) {
     is_passive = true;
   }
   return is_passive;
-}
-
-double GetLimitLateralDistance(const framework::Session *session,
-                               int track_id) {
-  const CoarsePlanningInfo &coarse_planning_info =
-      session->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info;
-  const auto fix_ref =
-      session->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
-  const auto frenet_ego_state = fix_ref->get_frenet_ego_state();
-  double ego_s_start = frenet_ego_state.boundary().s_start;
-  double ego_s_end = frenet_ego_state.boundary().s_end;
-  const auto frenet_obstacle_map = fix_ref->get_obstacles_map();
-  double obstacle_s_start, obstacle_s_end;
-  if (frenet_obstacle_map.find(track_id) != frenet_obstacle_map.end()) {
-    const auto &frenet_obstacle = frenet_obstacle_map.at(track_id);
-    if (frenet_obstacle->b_frenet_valid()) {
-      const auto frenet_obstacle_boundary =
-          frenet_obstacle->frenet_obstacle_boundary();
-      obstacle_s_start = frenet_obstacle_boundary.s_start;
-      obstacle_s_end = frenet_obstacle_boundary.s_end;
-
-      double lon_distance = 0.0;
-      bool is_overlap =
-          obstacle_s_end >= ego_s_start && ego_s_end >= obstacle_s_start;
-      if (is_overlap) {
-        lon_distance = 0.0;
-      } else {
-        if (obstacle_s_start > ego_s_end) {
-          lon_distance = obstacle_s_start - ego_s_end;
-        } else {
-          lon_distance = obstacle_s_end - ego_s_start;
-        }
-      }
-
-      // const double relative_v = frenet_obstacle->frenet_velocity_s() -
-      // frenet_ego_state->frenet_velocity_s(); const double t = lon_distance /
-      // relative_v; std::array<double, 3> l_buffer_x{0, 0.05,  0.13, 0.15,
-      // 0.20, 0.25}; std::array<double, 3> t_gap_bp{1, 2, 4, 6, 8, 10};
-
-      // // desired t_gap to obstacle_2 when exceed obstacle_1
-      // const double l_buffer = interp(t, t_gap_bp, l_buffer_x);
-    }
-  } else {
-  }
 }
 
 bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,

@@ -331,8 +331,6 @@ void Agent::RecalculateLowSpeedTrajectories() {
     const double last_x = last_trajectory_point.x();
     const double last_y = last_trajectory_point.y();
     const double last_theta = last_trajectory_point.theta();
-    const double last_t = last_trajectory_point.absolute_time();
-    const double start_tmie = trajectory.front().absolute_time();
     trajectory::Trajectory processed_trajectory;
     for (int i = 0; i < processed_speed.size(); ++i) {
       if (processed_trajectory.empty() ||
@@ -369,7 +367,6 @@ void Agent::RecalculateLowSpeedTrajectories() {
         }
         double x = last_x + ds * std::cos(last_theta);
         double y = last_y + ds * std::sin(last_theta);
-        double s = processed_lon_position[i];
         processed_trajectory.emplace_back(x, y, last_theta, processed_speed[i],
                                           processed_acc[i], target_time, 0.0,
                                           0.0, processed_lon_position[i], 0.0);

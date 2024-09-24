@@ -62,7 +62,6 @@ void MergeRequest::Update(int lc_status) {
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
-  const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   if (llane != nullptr) {
@@ -129,8 +128,6 @@ void MergeRequest::Update(int lc_status) {
 }
 
 void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   if (base_lane == nullptr) {
@@ -258,8 +255,6 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
 void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
-  const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
-      virtual_lane_mgr_->get_virtual_lanes();
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double default_consider_lane_marks_length = 120.0;
