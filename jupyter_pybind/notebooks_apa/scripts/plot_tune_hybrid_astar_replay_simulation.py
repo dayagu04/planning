@@ -218,7 +218,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   # vehicle_type = 'JAC_S811'
   vehicle_type = 'CHERY_E0X'
   # vehicle_type = 'CHERY_T26'
-  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, local_view_data)
+  update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
   car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
   car_polygon_x, car_polygon_y = load_car_params_patch_parking(
       vehicle_type, 0.0)
@@ -384,16 +384,13 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   #           'y_vec': [],
   #       })
 
+  if 0:
+    if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
+      for i in range(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points_size):
+        path_point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
 
-  # if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
-  #   for i in range(len(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points)):
-  #     path_point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
-
-  #     print('x ', path_point.x, 'y ', path_point.y, 'v ', path_point.v)
-
-  #   print("v ",bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.target_reference.target_velocity)
-
-
+        print('x ', path_point.x, 'y ', path_point.y, 'v ', path_point.v)
+      print("v ",bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.target_reference.target_velocity)
 
   target_managed_slot_x_vec = []
   target_managed_slot_y_vec = []

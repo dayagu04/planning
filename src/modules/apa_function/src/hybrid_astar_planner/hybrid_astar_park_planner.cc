@@ -1197,13 +1197,11 @@ const double HybridAStarParkPlanner::CalRemainDistFromUss() {
   uss_obstacle_avoider_ptr->Update(&planning_output_,
                                    apa_world_ptr_->GetApaDataPtr());
 
-  const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
-
-  remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - 0.15;
+  // hack: use uss circle dist. In the future, will use uss point cloud to do
+  // safe check.
+  const double safe_uss_remain_dist = 0.31;
+  remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
+                safe_uss_remain_dist;
 
   return remain_dist;
 }
