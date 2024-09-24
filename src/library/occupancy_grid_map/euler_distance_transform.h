@@ -16,7 +16,13 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   void Process(const Pose2D &ogm_pose) override;
 
+  void Process(const OccupancyGridBound &bound) override;
+
+  // use default ROI bound to generate ogm.
   bool Excute(const OccupancyGridMap &map, const Pose2D &ogm_pose);
+
+  // use user ROI bound to generate ogm.
+  bool Excute(const OccupancyGridMap &map, const OccupancyGridBound &bound);
 
   void CVMatrixToArray(cv::Mat *edt_matrix);
 

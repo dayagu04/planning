@@ -20,6 +20,8 @@ class OccupancyGridMap : public OccupancyGridCoordinate {
 
   void Process(const Pose2D &ogm_pose) override;
 
+  void Process(const OccupancyGridBound &bound) override;
+
   template <typename T>
   void AddSlotPoint(const T &point);
 

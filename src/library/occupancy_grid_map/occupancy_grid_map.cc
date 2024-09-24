@@ -14,6 +14,11 @@ void OccupancyGridMap::Process(const Pose2D &ogm_pose) {
   return;
 }
 
+void OccupancyGridMap::Process(const OccupancyGridBound &bound) {
+  OccupancyGridCoordinate::Process(bound);
+  return;
+}
+
 void OccupancyGridMap::Clear() {
   for (int32_t i = 0; i < ogm_grid_x_max; i++) {
     for (int32_t j = 0; j < ogm_grid_y_max; j++) {
@@ -122,10 +127,13 @@ void OccupancyGridMap::AddSlotCoordinatePointCloud(
 }
 
 void OccupancyGridMap::TransformToMatrix(cv::Mat *mat) const {
-  for (int32_t i = 0; i < ogm_grid_x_max; i++) {
+  int row_num = mat->rows;
+  int column_num = mat->cols;
+
+  for (int32_t i = 0; i < row_num; i++) {
     uchar *data = mat->ptr<uchar>(i);
 
-    for (int32_t j = 0; j < ogm_grid_y_max; j++) {
+    for (int32_t j = 0; j < column_num; j++) {
       if (ogm[i][j]) {
         data[j] = 0;
       }

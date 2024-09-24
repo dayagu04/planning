@@ -26,11 +26,48 @@ void EulerDistanceTransform::Process(const Pose2D &ogm_pose) {
   return;
 }
 
+void EulerDistanceTransform::Process(const OccupancyGridBound &bound) {
+  OccupancyGridCoordinate::Process(bound);
+
+  return;
+}
+
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
                                     const Pose2D &ogm_pose) {
   OccupancyGridCoordinate::Process(ogm_pose);
 
   cv::Mat map_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1, cv::Scalar(200));
+
+  map.TransformToMatrix(&map_matrix);
+
+  // cv::Mat edt_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_32FC1,
+  // cv::Scalar(200));
+  cv::Mat edt_matrix;
+
+  // 计算每一个像素到其他零像素的最近距离
+  cv::distanceTransform(map_matrix, edt_matrix, CV_DIST_L2,
+                        CV_DIST_MASK_PRECISE);
+
+  CVMatrixToArray(&edt_matrix);
+
+#if write_debug_file
+  cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
+  cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
+#endif
+
+  return true;
+}
+
+bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
+                                    const OccupancyGridBound &bound) {
+  OccupancyGridCoordinate::Process(bound);
+
+  int max_bound_x =
+      std::round((bound.max_x - bound.min_x) * ogm_resolution_inv_);
+  int max_bound_y =
+      std::round((bound.max_y - bound.min_y) * ogm_resolution_inv_);
+
+  cv::Mat map_matrix(max_bound_x, max_bound_y, CV_8UC1, cv::Scalar(200));
 
   map.TransformToMatrix(&map_matrix);
 
