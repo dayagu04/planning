@@ -44,6 +44,9 @@ constexpr double kBackwardRange = 100.0;
 constexpr double kMinSlotLength = 15.0;
 constexpr int32_t kNoAgentId = -1;
 constexpr double kStaticCarFilterVel = 1.5;
+constexpr double kDistanceToMapRequestPoint = 120.0;
+constexpr double kNearbyCarFilterDis = 7.0;
+constexpr double kAlignedDistanceBuffer = 2.5;
 }  // namespace
 
 namespace planning {
@@ -314,9 +317,9 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
         GetSafeAlignedDistance(init_va_.first, slot);
 
     const double& aligned_front_s =
-        slot.front_veh_info().center_s - safe_distacne_pair.first;
+        slot.front_veh_info().center_s - safe_distacne_pair.first - kAlignedDistanceBuffer;
     const double& aligned_back_s =
-        slot.back_veh_info().center_s + safe_distacne_pair.second;
+        slot.back_veh_info().center_s + safe_distacne_pair.second + kAlignedDistanceBuffer;
     if (slot.back_veh_info().center_s > 0.) {
       slot.SetAlignedFront(false);
       slot.SetAlignedS(aligned_back_s + init_sl_.first);
