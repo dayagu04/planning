@@ -73,6 +73,7 @@ enum class AstarPathType {
   none = 0,
   Reeds_Shepp,
   dubins,
+  cubic,
   node_searching,
   point_interpolate,
   start_node,
