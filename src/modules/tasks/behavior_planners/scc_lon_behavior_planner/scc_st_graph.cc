@@ -175,7 +175,7 @@ void StGraphGenerator::Update(
     // v_hold_ = lon_behav_input_->lon_init_state().v();
     v_hold_ = v_ego;
   } else if (coarse_planning_info.target_state == kLaneChangeExecution &&
-             v_hold_ > v_cruise) {
+             v_hold_ > v_target_) {
     v_cruise_in_lane_change = v_hold_;
   } else {
     v_hold_ = v_cruise;
