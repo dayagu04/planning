@@ -476,9 +476,10 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     relative_state_limit.a_min =
         interp(init_va_.first, min_acc_ego_v_, min_acc_ego_v_bp_);
     relative_state_limit.v_min =
-        std::fmax(std::fmin(retriggered_ego_speed_, init_va_.first),
-                  origin_ego_speed_) -
-        config_.min_dec_adjust_limit / 3.6;
+        std::fmax(std::fmax(std::fmin(retriggered_ego_speed_, init_va_.first),
+                            origin_ego_speed_) -
+                      config_.min_dec_adjust_limit / 3.6,
+                  0.0);
     relative_state_limit.v_max =
         v_cruise_ *
         interp(init_va_.first, max_v_max_ego_v_, max_v_max_ego_v_bp_);
