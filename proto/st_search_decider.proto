@@ -32,4 +32,7 @@ message StSearchDeciderInfo {
   optional bool st_search_status = 15;
   optional int32 front_gap_id = 16;
   optional int32 back_gap_id = 17;
+  repeated double search_v_vec = 18;
+  repeated double search_a_vec = 19;
+  repeated double search_j_vec = 20;
 };

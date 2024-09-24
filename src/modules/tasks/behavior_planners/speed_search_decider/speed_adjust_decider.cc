@@ -87,6 +87,9 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   for (auto i = 0; i < kPlanningHorizions; i++) {
     speed_decider_pb_info->add_search_s_vec(0.0);
     speed_decider_pb_info->add_search_t_vec(0.0);
+    speed_decider_pb_info->add_search_v_vec(0.0);
+    speed_decider_pb_info->add_search_a_vec(0.0);
+    speed_decider_pb_info->add_search_j_vec(0.0);
   }
   variable_time_optimal_trajs_.clear();
 
@@ -477,9 +480,13 @@ bool SpeedAdjustDecider::Execute() {
     auto& s_vec = session_->mutable_planning_context()
                       ->mutable_lane_change_decider_output()
                       .st_search_vec;
+    const auto& best_profile = variable_time_optimal_trajs_[best_id];
     for (auto i = 0; i < s_vec.size(); i++) {
       speed_decider_pb_info->add_search_s_vec(s_vec[i]);
       speed_decider_pb_info->add_search_t_vec(i * kPlanningStep);
+      speed_decider_pb_info->add_search_v_vec(best_profile.Evaluate(1, i * 0.2));
+      speed_decider_pb_info->add_search_a_vec(best_profile.Evaluate(2, i * 0.2));
+      speed_decider_pb_info->add_search_j_vec(best_profile.Evaluate(3, i * 0.2));
     }
   }
   for (auto& lane_change_veh : lane_change_veh_info_) {
