@@ -432,6 +432,9 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
     //匝道汇主路打灯时，关灯阈值可以增大一点
     dist_threshold = 0.3;
   }
+  //考虑向避让的情况
+  const double lateral_offset = session_->planning_context().lateral_offset_decider_output().lateral_offset;
+  dist_threshold = dist_threshold + std::abs(lateral_offset);
 
   std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
   std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
