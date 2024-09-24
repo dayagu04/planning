@@ -285,30 +285,6 @@ const bool PerpendicularPathInPlanner::UpdatePath() {
     return true;
   }
 
-  if (output_.path_segment_vec.size() == 1 && !input_.is_replan_dynamic) {
-    auto& path_seg = output_.path_segment_vec[0];
-    if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
-        path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-        path_seg.Getlength() < kMinSingleGearPathLength + 1e-5 &&
-        std::fabs(path_seg.GetStartHeading()) * kRad2Deg < 0.68) {
-      auto path_seg_copy = path_seg;
-      path_seg_copy.seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-      path_seg_copy.line_seg.length = kMinSingleGearPathLength + 1e-5;
-      path_seg_copy.line_seg.pB =
-          path_seg_copy.line_seg.pA +
-          (kMinSingleGearPathLength + 1e-5) *
-              pnc::geometry_lib::GenHeadingVec(path_seg_copy.GetStartHeading());
-      if (IsPathSafe(path_seg_copy,
-                     apa_param.GetParam().car_lat_inflation_normal,
-                     apa_param.GetParam().col_obs_safe_dist_normal)) {
-        path_seg = path_seg_copy;
-        if (output_.gear_cmd_vec.size() == 1) {
-          output_.gear_cmd_vec[0] = pnc::geometry_lib::SEG_GEAR_DRIVE;
-        }
-      }
-    }
-  }
-
   if (output_.multi_reach_target_pose) {
     DEBUG_PRINT("multi plan is already to target pos!");
     return true;
@@ -2772,6 +2748,30 @@ const bool PerpendicularPathInPlanner::OneLinePlan(
       return false;
     }
     pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
+
+    if (seg_gear == geometry_lib::SEG_GEAR_REVERSE &&
+        !input_.is_replan_dynamic) {
+      geometry_lib::PathSegment temp_line_seg = line_seg;
+      collision_detector_ptr_->SetParam(
+          CollisionDetector::Paramters(g_params.car_lat_inflation_normal));
+      PathColDetRes col_res = TrimPathByCollisionDetection(temp_line_seg);
+      if (col_res == PathColDetRes::INVALID ||
+          col_res == PathColDetRes::SHORTEN) {
+        if (temp_line_seg.Getlength() < kMinSingleGearPathLength + 1e-3) {
+          temp_line_seg.seg_gear = geometry_lib::SEG_GEAR_DRIVE;
+          temp_line_seg.line_seg.length = kMinSingleGearPathLength + 1e-3;
+          temp_line_seg.line_seg.pB =
+              temp_line_seg.line_seg.pA +
+              temp_line_seg.line_seg.length *
+                  geometry_lib::GenHeadingVec(temp_line_seg.GetEndHeading());
+          col_res = TrimPathByCollisionDetection(temp_line_seg);
+          if (col_res == PathColDetRes::NORMAL) {
+            line_seg = temp_line_seg;
+          }
+        }
+      }
+    }
+
     path_seg_vec.emplace_back(line_seg);
     return true;
   } else {
@@ -2856,7 +2856,7 @@ const bool PerpendicularPathInPlanner::AdjustPlan() {
         calc_params_.adjust_fail_count += 1;
         DEBUG_PRINT("adjust_fail_count = " << calc_params_.adjust_fail_count);
         if (!output_.multi_reach_target_pose &&
-            calc_params_.adjust_fail_count > 6) {
+            calc_params_.adjust_fail_count > 10000) {
           output_.Reset();
           success = false;
         }

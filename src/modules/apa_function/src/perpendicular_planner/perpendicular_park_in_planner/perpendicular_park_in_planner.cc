@@ -988,7 +988,9 @@ void PerpendicularParkInPlanner::GenTlane() {
       right_dis_obs_car > safe_threshold ? true : false;
 
   ego_slot_info.last_move_slot_dist = ego_slot_info.move_slot_dist;
-  if (ego_slot_info.slot_occupied_ratio < 0.618 && frame_.replan_flag) {
+  if (!(ego_slot_info.slot_occupied_ratio > 0.728 &&
+        frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) &&
+      frame_.replan_flag) {
     // if two side is all no safe, the slot would not release in slot managment,
     // and should not move target pose
     if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
