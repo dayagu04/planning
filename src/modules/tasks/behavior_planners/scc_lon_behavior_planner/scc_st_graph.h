@@ -259,7 +259,7 @@ class StGraphGenerator {
                              const double kwidth);
 
   void GenerateSrefByVrefJLT(std::vector<double> &s_refs);
-  
+
   void IsReverseAgentInLargeCurvature(
       const double v_ego, std::shared_ptr<VirtualLane> current_lane,
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world);
@@ -319,7 +319,7 @@ class StGraphGenerator {
   const std::vector<double> _AY_MAX_ABS_BP{5.0, 10.0, 15.0, 30.0};
   const std::vector<double> _AY_MAX_STEERS{2.0, 1.8, 1.6, 1.6};
   const std::vector<double> _AY_MAX_CURV_BP{100, 200, 400, 600};
-  const std::vector<double> _AY_MAX_CURV_V{1.6, 0.9, 0.5, 0.4};
+  const std::vector<double> _AY_MAX_CURV_V{1.6, 0.9, 0.8, 0.7};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
   // linear slope
