@@ -30,7 +30,6 @@ HybridAStarParkPlanner::HybridAStarParkPlanner(
 void HybridAStarParkPlanner::Reset() {
   frame_.Reset();
   current_path_point_global_vec_.clear();
-  printf("astar reset\n");
 
   const ApaParameters& params = apa_param.GetParam();
   if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
@@ -48,6 +47,7 @@ void HybridAStarParkPlanner::Reset() {
 
   current_gear_ = AstarPathGear::parking;
   in_slot_car_adjust_count_ = 0;
+  is_path_single_shot_to_goal_ = false;
 
   return;
 }
@@ -61,6 +61,7 @@ void HybridAStarParkPlanner::Init() {
 
   current_gear_ = AstarPathGear::parking;
   in_slot_car_adjust_count_ = 0;
+  is_path_single_shot_to_goal_ = false;
 
   thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
                params.steer_ratio, params.wheel_base, params.min_turn_radius,
@@ -616,6 +617,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       break;
   }
 
+  is_path_single_shot_to_goal_ = false;
+
   // generate request
   bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
@@ -655,10 +658,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   // check result
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
-    // HybridAStarResult full_length_path;
-    // std::vector<AStarPathPoint> first_seg_path;
-    // Pose2D base_pose;
-
     thread_.PublishResponse(&response);
     ILOG_INFO << "publish path";
 
@@ -694,13 +693,19 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
 
       double search_end_time = IflyTime::Now_ms();
 
-      double path_dist = 0.0;
-      if (response.first_seg_path.size() > 0) {
-        path_dist = response.first_seg_path.back().accumulated_s;
-        ILOG_INFO << "first path gear = "
-                  << PathGearDebugString(response.first_seg_path[0].gear)
-                  << ",dist = " << path_dist;
+      // check path is single shot to goal.
+      if (response.result.gear_change_num > 0) {
+        is_path_single_shot_to_goal_ = false;
+      } else {
+        is_path_single_shot_to_goal_ = true;
       }
+
+      double path_dist = 0.0;
+      path_dist = response.first_seg_path.back().accumulated_s;
+      ILOG_INFO << "first path gear = "
+                << PathGearDebugString(response.first_seg_path[0].gear)
+                << ",dist = " << path_dist
+                << ",gear_change_num=" << response.result.gear_change_num;
 
       // if (response.kappa_change_too_much) {
       //   ILOG_INFO << "path kappa change too much";
@@ -735,17 +740,13 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
         frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
       }
       current_gear_ = response.first_seg_path[0].gear;
-    }
 
-    frame_.gear_command = frame_.current_gear;
-
-    ILOG_INFO << "first path gear = " << static_cast<int>(frame_.gear_command);
-
-    if (response.first_seg_path.size() > 0) {
       thread_.Clear();
       ILOG_INFO << "clear thread";
     }
 
+    frame_.gear_command = frame_.current_gear;
+    ILOG_INFO << "first path gear = " << static_cast<int>(frame_.gear_command);
   } else if (thread_state_ == RequestResponseState::NONE ||
              thread_state_ == RequestResponseState::HAS_PUBLISHED_RESPONSE) {
     // send request
@@ -1261,6 +1262,10 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   }
 
   if (current_path_point_global_vec_.size() <= 2) {
+    return;
+  }
+
+  if (!is_path_single_shot_to_goal_) {
     return;
   }
 

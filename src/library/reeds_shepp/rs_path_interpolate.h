@@ -55,6 +55,11 @@ struct RSPath {
 
     return;
   }
+
+  void Clear() {
+    size = 0;
+    return;
+  }
 };
 
 struct VehicleCircle {

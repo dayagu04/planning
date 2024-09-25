@@ -113,6 +113,7 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   AstarPathGear current_gear_;
   int in_slot_car_adjust_count_;
+  bool is_path_single_shot_to_goal_;
 };
 
 }  // namespace apa_planner
