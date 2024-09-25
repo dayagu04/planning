@@ -18,6 +18,7 @@
 #include "./../reeds_shepp/reeds_shepp_interface.h"
 #include "ad_common/math/line_segment2d.h"
 #include "compact_node_pool.h"
+#include "cubic_polynomial_path.h"
 #include "dynamic_programing_cost.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
@@ -73,7 +74,16 @@ class HybridAStar {
                             const double lon_min_sampling_length,
                             const MapBound& XYbounds,
                             const ParkObstacleList& obstacles,
-                            const AstarRequest& request);
+                            const AstarRequest& request,
+                            EulerDistanceTransform* edt);
+
+  // use cubic path sampling to link start point and end point.
+  bool PlanByCubicPath(HybridAStarResult* result, const Pose2D& start,
+                       const Pose2D& target, const double expected_path_dist,
+                       const MapBound& XYbounds,
+                       const ParkObstacleList& obstacles,
+                       const AstarRequest& request,
+                       EulerDistanceTransform* edt);
 
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);
@@ -303,6 +313,7 @@ class HybridAStar {
   RSExpansionDecider rs_expansion_decider_;
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;
+  CubicPathInterface cubic_path_interface_;
 
   std::unique_ptr<GridSearch> dp_heuristic_generator_;
 

@@ -266,6 +266,7 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
+  bool use_a_cubic_polynomial_for_adjustment = true;
   // move target point in slot to another point for easy tracking
   double vertical_slot_target_adjust_dist = 1.0;
   bool enable_delete_fusion_obj_in_slot = true;

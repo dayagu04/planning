@@ -6,10 +6,12 @@
 #include <memory>
 #include <utility>
 
+#include "debug_info_log.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "modules/apa_function/src/apa_param_setting.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
@@ -235,8 +237,8 @@ int HybridAStarInterface::UpdateOutput() {
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
       lon_buffer = config_.lon_hierarchy_safe_buffer[i];
       edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
-            static_cast<float>(config_.lon_front_safe_buffer),
-            static_cast<float>(lat_buffer));
+                            static_cast<float>(config_.lon_front_safe_buffer),
+                            static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
       hybrid_astar_->PlanOnce(initial_state_, goal_state_, map_bounds_, obs_,
@@ -272,9 +274,46 @@ int HybridAStarInterface::UpdateOutput() {
                             static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
-      hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, initial_state_,
-                                        goal_state_, lon_min_sampling_length,
-                                        map_bounds_, obs_, request_);
+      // hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, initial_state_,
+      //                                     goal_state_, lon_min_sampling_length,
+      //                                     map_bounds_, obs_, request_);
+
+      if (apa_param.GetParam().use_a_cubic_polynomial_for_adjustment) {
+        if (hybrid_astar_->PlanByCubicPath(&coarse_traj_, initial_state_,
+                                           goal_state_, lon_min_sampling_length,
+                                           map_bounds_, obs_, request_, &edt_)) {
+          double response_end_time = IflyTime::Now_ms();
+
+          ILOG_INFO << "hybrid astar finish, cubic path point size = "
+                    << coarse_traj_.x.size() << " ,plan once time = "
+                    << response_end_time - response_start_time
+                    << ",safe buffer = " << lat_buffer;
+        } else {
+          coarse_traj_.Clear();
+          hybrid_astar_->PlanByRSPathSampling(
+              &coarse_traj_, initial_state_, goal_state_,
+              lon_min_sampling_length, map_bounds_, obs_, request_, &edt_);
+
+          double response_end_time = IflyTime::Now_ms();
+
+          ILOG_INFO << "hybrid astar finish, rs path point size = "
+                    << coarse_traj_.x.size() << " ,plan once time = "
+                    << response_end_time - response_start_time
+                    << ",safe buffer = " << lat_buffer;
+        }
+
+      } else {
+        hybrid_astar_->PlanByRSPathSampling(
+            &coarse_traj_, initial_state_, goal_state_, lon_min_sampling_length,
+            map_bounds_, obs_, request_, &edt_);
+
+        double response_end_time = IflyTime::Now_ms();
+
+        ILOG_INFO << "hybrid astar finish, rs path point size = "
+                  << coarse_traj_.x.size() << " ,plan once time = "
+                  << response_end_time - response_start_time
+                  << ",safe buffer = " << lat_buffer;
+      }
 
       // check time
       if (coarse_traj_.time_ms > 1000.0) {
@@ -294,11 +333,6 @@ int HybridAStarInterface::UpdateOutput() {
   }
 
   search_state_ = AstarSearchState::SUCCESS;
-  double response_end_time = IflyTime::Now_ms();
-
-  ILOG_INFO << "hybrid astar finish, point size = " << coarse_traj_.x.size()
-            << " ,plan once time = " << response_end_time - response_start_time
-            << ",safe buffer = " << lat_buffer;
 
   // hybrid_astar_->DebugPathString(&coarse_traj_);
 
@@ -370,7 +404,7 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
     hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, start_pose, end_pose,
                                         expected_forward_dist, map_bounds_,
-                                        obs_list, request);
+                                        obs_list, request, &edt_);
   }
 
   search_state_ = AstarSearchState::SUCCESS;

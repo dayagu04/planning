@@ -7,14 +7,13 @@
 #include <string>
 #include <utility>
 
+#include "ad_common/math/math_utils.h"
 #include "h_cost.h"
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
 #include "src/common/ifly_time.h"
-
-#include "ad_common/math/math_utils.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
@@ -191,12 +190,14 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
                                        const double lon_min_sampling_length,
                                        const MapBound& XYbounds,
                                        const ParkObstacleList& obstacles,
-                                       const AstarRequest& request) {
+                                       const AstarRequest& request,
+                                       EulerDistanceTransform* edt) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
   // init
   obstacles_ = &obstacles;
+  edt_ = edt;
 
   // load XYbounds
   XYbounds_ = XYbounds;
@@ -269,6 +270,207 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
   ILOG_INFO << "hybrid astar total time (ms) = " << result->time_ms;
+
+  return true;
+}
+
+bool HybridAStar::PlanByCubicPath(HybridAStarResult* result,
+                                  const Pose2D& start, const Pose2D& end,
+                                  const double lon_min_sampling_length,
+                                  const MapBound& XYbounds,
+                                  const ParkObstacleList& obstacles,
+                                  const AstarRequest& request,
+                                  EulerDistanceTransform* edt) {
+  double astar_start_time = IflyTime::Now_ms();
+  ILOG_INFO << "hybrid astar begin, generate path by cubic.";
+
+  // init
+  obstacles_ = &obstacles;
+  edt_ = edt;
+
+  // load XYbounds
+  XYbounds_ = XYbounds;
+
+  request_ = request;
+  DebugAstarRequestString(request_);
+
+  clear_zone_.GenerateBoundingBox(start, obstacles_);
+
+  ref_line_.Init(request_.real_goal,
+                 Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
+                        request_.real_goal.theta));
+
+  // sampling for path end
+  // sampling start point: move start point forward dist (expected_path_dist)
+  Pose2D sampling_end = start;
+  sampling_end.y = 0.0;
+  sampling_end.theta = 0.0;
+  sampling_end.x = start.x + lon_min_sampling_length;
+
+  double sampling_step = 0.1;
+  size_t max_sampling_num = std::ceil((end.x - sampling_end.x) / sampling_step);
+  ILOG_INFO << "max_sampling_num = " << max_sampling_num << " "
+            << ", lon_min_sampling_length = " << lon_min_sampling_length
+            << ", start.x " << start.x << ", end.x " << end.x
+            << ", sampling_end.x " << sampling_end.x << ", sampling_step "
+            << sampling_step;
+  size_t plan_num = 0;
+  HybridAStarResult path;
+  path.Clear();
+  size_t path_points_size = 1000;
+  size_t expected_dist_id = 0;
+  max_sampling_num = 100;
+
+  for (size_t k = 0; k < max_sampling_num; k++) {
+    plan_num = k;
+    sampling_end.x += sampling_step;
+    std::vector<double> coefficients_vec =
+        cubic_path_interface_.GeneratePolynomialCoefficients(start,
+                                                             sampling_end);
+    ILOG_INFO << " coefficients_a : " << coefficients_vec[0]
+              << " coefficients_b : " << coefficients_vec[1]
+              << " coefficients_c : " << coefficients_vec[2]
+              << " coefficients_d : " << coefficients_vec[3];
+    std::vector<AStarPathPoint> cubic_path;
+    cubic_path.clear();
+    cubic_path_interface_.GeneratePolynomialPath(
+        cubic_path, coefficients_vec, sampling_step * 0.5, start, sampling_end);
+
+    if (cubic_path.empty()) {
+      ILOG_INFO << "cubic_path empty";
+      continue;
+    }
+
+    // check gear
+    bool has_reverse = false;
+    for (int j = 0; j < cubic_path.size(); j++) {
+      if (cubic_path[j].gear == AstarPathGear::reverse) {
+        // ILOG_INFO << " rs path seg need single shot by drive gear ";
+        has_reverse = true;
+        break;
+      }
+    }
+    if (has_reverse) {
+      ILOG_INFO << "gear is invalid";
+      continue;
+    }
+
+    // check curvature
+    if (cubic_path_interface_.GetMinCurvatureRadius() <
+        vehicle_param_.min_turn_radius) {
+      ILOG_INFO << "curvature is invalid, CurvatureRadius = "
+                << cubic_path_interface_.GetMinCurvatureRadius();
+      continue;
+    }
+
+    path.Clear();
+
+    result->Clear();
+
+    for (int i = 0; i < cubic_path.size(); i++) {
+      path.x.emplace_back(cubic_path[i].x);
+      path.y.emplace_back(cubic_path[i].y);
+      path.phi.emplace_back(cubic_path[i].phi);
+      path.gear.emplace_back(cubic_path[i].gear);
+      path.type.emplace_back(AstarPathType::cubic);
+      path.kappa.emplace_back(cubic_path[i].kappa);
+    }
+
+    // get path lengh
+    path_points_size = path.x.size();
+
+    double accumulated_s = 0.0;
+    path.accumulated_s.clear();
+    auto last_x = path.x.front();
+    auto last_y = path.y.front();
+    double x_diff;
+    double y_diff;
+
+    for (size_t i = 0; i < path_points_size; ++i) {
+      x_diff = path.x[i] - last_x;
+      y_diff = path.y[i] - last_y;
+      accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
+      path.accumulated_s.emplace_back(accumulated_s);
+
+      if (accumulated_s <= lon_min_sampling_length) {
+        expected_dist_id = i;
+      }
+
+      last_x = path.x[i];
+      last_y = path.y[i];
+    }
+
+    path_points_size = std::min(path_points_size, expected_dist_id);
+
+    // collision check
+    size_t collision_id = GetPathCollisionIDByEDT(&path);
+    if (collision_id > 2) {
+      collision_id -= 2;
+    }
+
+    path_points_size = std::min(path_points_size, collision_id);
+    if (path_points_size <= 1) {
+      ILOG_INFO << "collision_id = " << collision_id << ", sampling id = " << k
+                << ", max_sampling_num=" << max_sampling_num;
+      continue;
+    }
+
+    ILOG_INFO << "point size= " << path.x.size()
+              << ",expected_dist_id= " << expected_dist_id
+              << ", path len= " << path.accumulated_s.back();
+
+    if (path_points_size >= expected_dist_id) {
+      break;
+    }
+  }
+
+  result->base_pose = request.base_pose_;
+
+  if (plan_num > max_sampling_num - 1 || plan_num == max_sampling_num - 1) {
+    ILOG_INFO << "cubic plan fail";
+    return false;
+  }
+
+  path_points_size = std::min(path_points_size, path.x.size());
+  double valid_dist = 0.0;
+  if (path_points_size > 0) {
+    valid_dist = path.accumulated_s[path_points_size];
+  }
+  if (valid_dist >= 1.2) {
+    for (size_t i = 0; i < path_points_size; i++) {
+      result->x.emplace_back(path.x[i]);
+      result->y.emplace_back(path.y[i]);
+      result->phi.emplace_back(path.phi[i]);
+      result->gear.emplace_back(path.gear[i]);
+      result->type.emplace_back(path.type[i]);
+      result->kappa.emplace_back(path.kappa[i]);
+      result->accumulated_s.emplace_back(path.accumulated_s[i]);
+    }
+    result->base_pose = request.base_pose_;
+
+    ILOG_INFO << "path valid, point size= " << result->x.size();
+  } else {
+    // if path is too short by collision check or gear check, use a fallback
+    // path with no collision check.
+    fallback_path_.Clear();
+    for (size_t i = 0; i < expected_dist_id; i++) {
+      fallback_path_.x.emplace_back(path.x[i]);
+      fallback_path_.y.emplace_back(path.y[i]);
+      fallback_path_.phi.emplace_back(path.phi[i]);
+      fallback_path_.gear.emplace_back(path.gear[i]);
+      fallback_path_.type.emplace_back(path.type[i]);
+      fallback_path_.kappa.emplace_back(path.kappa[i]);
+      fallback_path_.accumulated_s.emplace_back(path.accumulated_s[i]);
+    }
+    fallback_path_.base_pose = request.base_pose_;
+    ILOG_INFO << "path invalid, point size= " << path.x.size();
+  }
+
+  // DebugRSPath(&rs_path_);
+
+  double astar_end_time = IflyTime::Now_ms();
+  ILOG_INFO << "hybrid astar total time (ms): "
+            << astar_end_time - astar_start_time;
 
   return true;
 }
