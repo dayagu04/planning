@@ -124,6 +124,9 @@ class Agent {
   const bool is_far_in_large_curv() const;
   void set_is_far_in_large_curv(const bool is_far_in_large_curv);
 
+  const bool is_reverse_cutin() const;
+  void set_is_reverse_cutin(const bool is_reverse);
+
   const bool has_low_spd_unstable_trajectory() const;
   void set_has_low_spd_unstable_trajectory(
       const bool has_low_spd_unstable_trajectory);
@@ -203,6 +206,7 @@ class Agent {
   bool is_sod_ = false;
   bool need_backward_extend_ = false;
   bool is_far_in_large_curv_ = false;
+  bool is_reverse_cutin_ = false;
 
   bool is_cut_out_for_lane_change_ = false;
 

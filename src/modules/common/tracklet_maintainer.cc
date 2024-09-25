@@ -276,7 +276,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->a_lead = rot_ax;
     origin->a_lead_k = rot_ax;
 
-    origin->oncoming = (origin->v_lead < -3.9);
+    origin->oncoming = (origin->v_lead < -2.0);
     origin->motion_pattern_current = p.motion_pattern_current;
     origin->is_static = p.is_static;
     origin->is_oversize_vehicle = p.is_oversize_vehicle;
@@ -511,7 +511,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->a_lead = p.relative_acceleration_x + ego_state->ego_acc();
     origin->a_lead_k = p.relative_acceleration_x + ego_state->ego_acc();
 
-    origin->oncoming = (origin->v_lead < -3.9);
+    origin->oncoming = (origin->v_lead < -2.0);
     origin->motion_pattern_current = p.motion_pattern_current;
     origin->is_static = p.is_static;
     origin->is_oversize_vehicle = p.is_oversize_vehicle;
@@ -1691,7 +1691,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     }
     item.last_ttc = new_ttc;
     item.cutinp = std::max(0.0, std::min(1.0, item.cutinp));
-    if (item.oncoming) {
+    if (item.oncoming || item.is_static) {
       item.cutinp = 0.0;
     }
     LOG_DEBUG("cutin_p is : [%f]\n", item.cutinp);

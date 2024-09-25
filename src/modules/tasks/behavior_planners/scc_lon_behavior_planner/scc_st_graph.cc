@@ -58,6 +58,7 @@ constexpr double kDistanceToStopLineBufferEgo = 6.5;
 constexpr double kConfideceDegree = 0.8;
 constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56; // 20kph
+constexpr double kHighVel = 100 / 3.6;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -677,8 +678,13 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   // And limit the logitudinal velocity for a safe turn
   double acc_lat_max =
       interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
-  double v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
-                                      std::max(std::abs(angle_steers), 0.001));
+  // HACK: close v_limit_steering in high vel
+  bool is_high_vel = v_ego > kHighVel;
+  double v_limit_steering = 100.0;
+  if (!is_high_vel) {
+    v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
+                                 std::max(std::abs(angle_steers), 0.001));
+  }
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
   if (d_poly.size() == 4) {
@@ -939,6 +945,7 @@ void StGraphGenerator::UpdateNearObstacles(
       session_->environmental_model().get_dynamic_world()->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
   bool is_far_obs_in_large_curv = false;
+  bool is_reverse_cutin = false;
   // filter near cars from front && side tracks
   near_cars.clear();
   for (auto &track : lateral_obstacles.front_tracks()) {
@@ -951,9 +958,11 @@ void StGraphGenerator::UpdateNearObstacles(
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
+        is_reverse_cutin = agent->is_reverse_cutin();
       }
     }
-    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv) {
+    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv ||
+        is_reverse_cutin) {
       continue;
     }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
@@ -972,9 +981,11 @@ void StGraphGenerator::UpdateNearObstacles(
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
+        is_reverse_cutin = agent->is_reverse_cutin();
       }
     }
-    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv) {
+    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv ||
+        is_reverse_cutin) {
       continue;
     }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
