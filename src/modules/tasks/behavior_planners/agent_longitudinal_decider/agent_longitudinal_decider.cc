@@ -228,6 +228,7 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   const int32_t agent_id = agent.agent_id();
   const double agent_relative_theta =
       planning_math::NormalizeAngle(agent.theta() - agent_matched_lane_theta);
+  double object_s_speed_mps = agent.speed() * std::cos(agent_relative_theta);
   double object_l_speed_mps = agent.speed() * std::sin(agent_relative_theta);
 
   const bool is_large_agent = IsLargeAgent(agent);
@@ -286,11 +287,13 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
       std::fabs(small_lateral_distance) <
           kLaneWidth * kHalf + kLargeYawLateralDistanceBufferM &&
       std::fabs(object_l_speed_mps) > kLargeYawLateralSpeedThresholdMps;
+  const bool is_reverse_agent = (object_s_speed_mps < -1.0);
+  const bool is_static_agent = agent.is_static();
 
   bool current_rule_base_cutin =
       is_agent_closer_to_ego && is_agent_ahead_of_ego && is_agent_not_too_far &&
-      agent_speed_meet && current_kappa_meet &&
-      (lateral_ttc_meet || low_speed_and_large_yaw_meet);
+      agent_speed_meet && current_kappa_meet && !is_reverse_agent &&
+      !is_static_agent && (lateral_ttc_meet || low_speed_and_large_yaw_meet);
 
   if (is_large_agent && !is_large_agent_cutin) {
     double agent_s = 0.0;
