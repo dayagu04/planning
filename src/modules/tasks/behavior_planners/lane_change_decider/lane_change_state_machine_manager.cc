@@ -949,8 +949,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
     merge_point_list.resize(2);
     bool is_continue = true;
     int calculate_nums = -1;
-    CalculateMergePoint(&merge_point_list, &calculate_nums, lane_change_decider_output.merge_lane_virtual_id);
-    CalculateRoadRight(&is_continue, calculate_nums, lane_change_decider_output.merge_lane_virtual_id);
+    CalculateMergePoint(lane_change_decider_output.merge_lane_virtual_id, &merge_point_list, &calculate_nums);
+    CalculateRoadRight(calculate_nums, lane_change_decider_output.merge_lane_virtual_id, &is_continue);
     lane_change_decider_output.merge_point = merge_point_list[0];
     lane_change_decider_output.boundary_merge_point = merge_point_list[1];
     lane_change_decider_output.cur_lane_is_continue = is_continue;
@@ -2025,7 +2025,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   return false;
 }
 
-void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* merge_point_list, int* calculate_nums, const int merge_lane_virtual_id) {
+void LaneChangeStateMachineManager::CalculateMergePoint(const int merge_lane_virtual_id, std::vector<Point2D>* merge_point_list, int* calculate_nums) {
   const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
   Point2D merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
   Point2D boundary_line_merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
@@ -2128,6 +2128,9 @@ const double LaneChangeStateMachineManager::CalculateAverageKappa(const std::sha
     return -1;
   }
   const int size_num = kd_path->path_points().size();
+  if (size_num == 0) {
+    return 0.0;
+  }
   double sum_kappa = 0.0;
   for (int i = 0; i < size_num; i++) {
     sum_kappa = sum_kappa + std::abs(kd_path->path_points()[i].kappa());
@@ -2135,7 +2138,7 @@ const double LaneChangeStateMachineManager::CalculateAverageKappa(const std::sha
   return sum_kappa / size_num;
 }
 
-void LaneChangeStateMachineManager::CalculateRoadRight(bool* is_continue,const int calculate_nums, const int merge_lane_virtual_id) {
+void LaneChangeStateMachineManager::CalculateRoadRight(const int calculate_nums, const int merge_lane_virtual_id, bool* is_continue) {
   const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
   const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
   const auto& reference_path_manager = session_->environmental_model().get_reference_path_manager();
@@ -2280,7 +2283,7 @@ bool LaneChangeStateMachineManager::IsVirtualLaneLine(const int lane_virtual_id)
   }
   return false;
 }
-
+//TODO(fengwang31):后面需要把这个函数和lane change request中的MakesureCurrentBoundaryType合在一起
 iflyauto::LaneBoundaryType LaneChangeStateMachineManager::MakesureCurrentBoundaryType(
     const RequestType lc_request) const {
   const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
