@@ -178,6 +178,21 @@ void PerpendicularParkInPlanner::PlanCore() {
     SetParkingStatus(PARKING_RUNNING);
   }
 
+  // check finish
+  if (CheckFinished()) {
+    DEBUG_PRINT("check apa finished!");
+    SetParkingStatus(PARKING_FINISHED);
+    return;
+  }
+
+  // check failed
+  if (CheckStuckFailed()) {
+    DEBUG_PRINT("check stuck failed!");
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    return;
+  }
+
   // check planning status
   DEBUG_PRINT("parking status = "
               << static_cast<int>(GetPlannerStates().planning_status));
