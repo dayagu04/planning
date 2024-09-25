@@ -2010,6 +2010,12 @@ bool TrackletMaintainer::is_potential_avoiding_car(
        item.v_rel < -2.5);
   bool cross_solid_line = false;
 
+  // decre lat_safety_buffer
+  std::array<double, 3> x_lat_buffer{3.2, 3.5, 3.8};
+  std::array<double, 3> f_lat_buffer{0.3, 0.15, 0};
+  double decre_buffer_for_lane_width = interp(lane_width, x_lat_buffer, f_lat_buffer);
+  lat_safety_buffer -= decre_buffer_for_lane_width;
+
   if (scenario != LocationEnum::LOCATION_INTER) {
     if (is_not_full_in_road && (is_in_range || is_about_to_enter_range)) {
       if (item.d_min_cpath != DBL_MAX && item.d_max_cpath != DBL_MAX) {
