@@ -248,74 +248,79 @@ void UssObstacleAvoidance::GenUssArc() {
 
       // hack: avoid corner uss invalid stuck
       // todo: need move when uss can be trust
-      if (std::fabs(car_motion_info_.steer_angle * 57.3) <
-          apa_param.GetParam().corner_uss_steer_angle) {
-        if (i == 1 || i == 7) {
-          uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
-                             uss_local_arc.circle_info.center;
-        } else if (i == 4 || i == 10) {
-          uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
-                             uss_local_arc.circle_info.center;
-        }
-      } else {
-        if (car_motion_info_.steer_angle > 0.0) {
-          if (i == 1) {
-            if (uss_raw_dist_vec_[1] >
-                uss_raw_dist_vec_[0] + corner_uss_dist_diff) {
-              uss_local_arc.pA =
-                  rot_matrix_corner_uss_straight.transpose() * OC +
-                  uss_local_arc.circle_info.center;
-            } else {
-              uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
-                                 uss_local_arc.circle_info.center;
-            }
-          }
-          if (i == 4) {
-            uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+      if (uss_raw_dist_vec_[i] >
+          apa_param.GetParam().min_uss_origin_dist + 1e-3) {
+        if (std::fabs(car_motion_info_.steer_angle * 57.3) <
+            apa_param.GetParam().corner_uss_steer_angle) {
+          if (i == 1 || i == 7) {
+            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
                                uss_local_arc.circle_info.center;
-          }
-          if (i == 7) {
-            if (uss_raw_dist_vec_[7] >
-                uss_raw_dist_vec_[6] + corner_uss_dist_diff) {
-              uss_local_arc.pA =
-                  rot_matrix_corner_uss_straight.transpose() * OC +
-                  uss_local_arc.circle_info.center;
-            } else {
-              uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
-                                 uss_local_arc.circle_info.center;
-            }
-          }
-          if (i == 10) {
+          } else if (i == 4 || i == 10) {
             uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
                                uss_local_arc.circle_info.center;
           }
         } else {
-          if (i == 1) {
-            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
-                               uss_local_arc.circle_info.center;
-          }
-          if (i == 4) {
-            if (uss_raw_dist_vec_[4] >
-                uss_raw_dist_vec_[5] + corner_uss_dist_diff) {
+          if (car_motion_info_.steer_angle > 0.0) {
+            if (i == 1) {
+              if (uss_raw_dist_vec_[1] >
+                  uss_raw_dist_vec_[0] + corner_uss_dist_diff) {
+                uss_local_arc.pA =
+                    rot_matrix_corner_uss_straight.transpose() * OC +
+                    uss_local_arc.circle_info.center;
+              } else {
+                uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
+                                   uss_local_arc.circle_info.center;
+              }
+            }
+            if (i == 4) {
               uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
-                                 uss_local_arc.circle_info.center;
-            } else {
-              uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
                                  uss_local_arc.circle_info.center;
             }
-          }
-          if (i == 7) {
-            uss_local_arc.pA = rot_matrix_corner_uss_straight.transpose() * OC +
-                               uss_local_arc.circle_info.center;
-          }
-          if (i == 10) {
-            if (uss_raw_dist_vec_[10] >
-                uss_raw_dist_vec_[11] + corner_uss_dist_diff) {
+            if (i == 7) {
+              if (uss_raw_dist_vec_[7] >
+                  uss_raw_dist_vec_[6] + corner_uss_dist_diff) {
+                uss_local_arc.pA =
+                    rot_matrix_corner_uss_straight.transpose() * OC +
+                    uss_local_arc.circle_info.center;
+              } else {
+                uss_local_arc.pA = rot_matrix_corner_uss_turn.transpose() * OC +
+                                   uss_local_arc.circle_info.center;
+              }
+            }
+            if (i == 10) {
               uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
                                  uss_local_arc.circle_info.center;
-            } else {
-              uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
-                                 uss_local_arc.circle_info.center;
+            }
+          } else {
+            if (i == 1) {
+              uss_local_arc.pA =
+                  rot_matrix_corner_uss_straight.transpose() * OC +
+                  uss_local_arc.circle_info.center;
+            }
+            if (i == 4) {
+              if (uss_raw_dist_vec_[4] >
+                  uss_raw_dist_vec_[5] + corner_uss_dist_diff) {
+                uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                                   uss_local_arc.circle_info.center;
+              } else {
+                uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
+                                   uss_local_arc.circle_info.center;
+              }
+            }
+            if (i == 7) {
+              uss_local_arc.pA =
+                  rot_matrix_corner_uss_straight.transpose() * OC +
+                  uss_local_arc.circle_info.center;
+            }
+            if (i == 10) {
+              if (uss_raw_dist_vec_[10] >
+                  uss_raw_dist_vec_[11] + corner_uss_dist_diff) {
+                uss_local_arc.pB = rot_matrix_corner_uss_straight * OC +
+                                   uss_local_arc.circle_info.center;
+              } else {
+                uss_local_arc.pB = rot_matrix_corner_uss_turn * OC +
+                                   uss_local_arc.circle_info.center;
+              }
             }
           }
         }

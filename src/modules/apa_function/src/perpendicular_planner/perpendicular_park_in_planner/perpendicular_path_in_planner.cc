@@ -993,9 +993,8 @@ const bool PerpendicularPathInPlanner::PreparePathPlan() {
 
   // first check ego pose if collision
   if (!calc_params_.is_searching_stage) {
-    CollisionDetector::Paramters param(g_params.car_lat_inflation_strict +
-                                       0.068);
-    collision_detector_ptr_->SetParam(param);
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(
+        g_params.car_lat_inflation_strict + 0.068));
     if (collision_detector_ptr_->IsObstacleInCar(input_.ego_pose)) {
       std::cout << "ego pose has obs, force quit PreparePathPlan, fail\n";
       return false;
