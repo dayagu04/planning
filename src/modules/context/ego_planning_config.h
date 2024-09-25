@@ -651,6 +651,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     read_json_vec<double>(json, "dynamic_ref_buffer", dynamic_ref_buffer);
     not_use_gap_flag =
         read_json_key<bool>(json, "not_use_gap_flag", not_use_gap_flag);
+    low_speed_limit_for_ref = read_json_key<double>(
+        json, "low_speed_limit_for_ref", low_speed_limit_for_ref);
+
 
     lateral_road_boader_collision_ttc_bp_1 = read_json_keys<double>(
         json,
@@ -836,6 +839,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lc_second_dist_thr = 1.5;
   std::vector<double> dynamic_ref_buffer{0.0, 0.1, 0.2, 0.3};
   bool not_use_gap_flag = true;
+  double low_speed_limit_for_ref = 5.0;
 
   double lateral_road_boader_collision_ttc_bp_1 = 0;
   double lateral_road_boader_collision_ttc_bp_2 = 1;

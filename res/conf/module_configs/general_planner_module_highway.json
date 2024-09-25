@@ -154,6 +154,7 @@
   "soft_min_distance_road2center":-20,
   "hard_min_distance_road2center":-20,
   "care_lon_area_road_border":80,
+  "low_speed_limit_for_ref": 0.5,
   "lc_second_dist_thr": 2.0,
   "dynamic_ref_buffer": [0.0, 0.0, 0.15, 0.3],
   "not_use_gap_flag": true,
