@@ -69,11 +69,16 @@ bool TrafficLightDecider::Execute() {
     
     } else if (traffic_status.go_straight == 30 || traffic_status.go_straight == 32 || traffic_status.go_straight == 33) {
     //green blink
-      if (can_pass_ && (std::max(v_ego - 1.0, 0.0) * std::max(5.0 - green_blink_timer_, 0.0) > dis_to_stopline)) {
+      if (dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        can_pass_ = false;
+        if (can_pass_ && (std::max(v_ego - 1.0, 0.0) * std::max(5.0 - green_blink_timer_, 0.0) > dis_to_stopline)) {
+          can_pass_ = true;
+        } else {
+          can_pass_ = false;
+        }
       }
+      
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ += 0.1;
