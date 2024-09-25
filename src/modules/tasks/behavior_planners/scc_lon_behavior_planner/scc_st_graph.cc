@@ -40,7 +40,7 @@ namespace {
 
 constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.1;
-constexpr double kStaticAgentBuffer = 0.12;
+constexpr double kStaticAgentBuffer = 0.2;
 constexpr double kStaticLeadThr = 1.0;
 constexpr double kHalfLaneWidth = 1.75;
 constexpr double kLeadoneThr = 1.2;
@@ -55,6 +55,9 @@ constexpr double kLargeCurvRadius = 500;
 constexpr double kConsiderTimeLargeCurv = 5.0;
 constexpr double kDistanceToStopLineBufferAgent = 1.8;
 constexpr double kDistanceToStopLineBufferEgo = 6.5;
+constexpr double kConfideceDegree = 0.8;
+constexpr double kMinNarrowConeSpeed = 10.0;
+constexpr double kMinNarrowVehicleSpeed = 5.56; // 20kph
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -2647,7 +2650,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     }
     double half_lane_width_by_s = 0.5 * current_lane->width_by_s(min_s);
     double invade_thr = half_lane_width_by_s - kStaticAgentBuffer;
-    // invade thr: (1.1, half_lane_width - 0.12)
+    // invade thr: (1.0, half_lane_width - 0.2)
     if (fabs(min_lat_l) > invade_thr || fabs(min_lat_l) < kStaticLeadThr) {
       continue;
     }
@@ -2695,8 +2698,18 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     std::array<double, 2> xp2{kStaticAgentPosThr, invade_thr + avoid_offset};
     std::array<double, 2> fp2{v_target, v_ego};
     double v_limit_narrow = interp(fabs(min_lat_l_by_lat_path), xp2, fp2);
+    double v_limit_temp =
+        kConfideceDegree * v_limit_narrow + (1 - kConfideceDegree) * v_ego;
+    // distinguish narrow cone/narrow vehicle
+    double v_limit_lower = 0.0;
+    if (agent->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      v_limit_lower = kMinNarrowConeSpeed;
+    } else if (agent->is_vehicle_type()) {
+      v_limit_lower = kMinNarrowVehicleSpeed;
+    }
+    double v_limit = std::fmax(v_limit_temp, v_limit_lower);
     if (is_collison) {
-      v_limit_narrow = v_target;
+      v_limit = v_target;
     }
 
     NarrowLead narrow_lead;
@@ -2704,7 +2717,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     narrow_lead.desire_distance = s_target;
     narrow_lead.min_s = min_s_rel;
     narrow_lead.safe_distance = s_safe;
-    narrow_lead.v_limit = v_limit_narrow;
+    narrow_lead.v_limit = v_limit;
     narrow_lead.is_collison = is_collison;
 
     narrow_agent_.emplace_back(narrow_lead);
