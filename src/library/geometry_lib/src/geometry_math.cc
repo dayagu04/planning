@@ -2698,5 +2698,21 @@ const bool IsOppositeSteer(const uint8_t steer1, const uint8_t steer2) {
   return false;
 }
 
+const std::vector<PathPoint> SamplePathSegVec(
+    const std::vector<PathSegment> &path_seg_vec, const double ds) {
+  std::vector<PathPoint> path_pt_vec;
+  for (size_t i = 0; i < path_seg_vec.size(); ++i) {
+    const PathSegment &path_seg = path_seg_vec[i];
+
+    std::vector<PathPoint> pt_set;
+    SamplePointSetInPathSeg(pt_set, path_seg, ds);
+    if (i < path_seg_vec.size() - 1) {
+      pt_set.pop_back();
+    }
+    path_pt_vec.insert(path_pt_vec.end(), pt_set.begin(), pt_set.end());
+  }
+  return path_pt_vec;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

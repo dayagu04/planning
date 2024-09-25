@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "footprint_circle_model.h"
+#include "geometry_math.h"
 #include "occupancy_grid_coordinate.h"
 #include "occupancy_grid_map.h"
 #include "ogm_common.h"
@@ -12,17 +13,21 @@ namespace planning {
 
 class EulerDistanceTransform : public OccupancyGridCoordinate {
  public:
-  EulerDistanceTransform() = default;
-
-  void Process(const Pose2D &ogm_pose) override;
-
-  void Process(const OccupancyGridBound &bound) override;
+  EulerDistanceTransform(){};
 
   // use default ROI bound to generate ogm.
-  bool Excute(const OccupancyGridMap &map, const Pose2D &ogm_pose);
+  void Process(const Pose2D &ogm_pose,
+               const double _ogm_resolution = ogm_resolution) override;
+
+  bool Excute(const OccupancyGridMap &map, const Pose2D &ogm_pose,
+              const double _ogm_resolution = ogm_resolution);
 
   // use user ROI bound to generate ogm.
-  bool Excute(const OccupancyGridMap &map, const OccupancyGridBound &bound);
+  void Process(const OccupancyGridBound &bound,
+               const double _ogm_resolution = ogm_resolution) override;
+
+  bool Excute(const OccupancyGridMap &map, const OccupancyGridBound &bound,
+              const double _ogm_resolution = ogm_resolution);
 
   void CVMatrixToArray(cv::Mat *edt_matrix);
 
@@ -35,6 +40,13 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
                                    const AstarPathGear gear);
 
   const bool IsCollisionForPoint(Transform2d *tf, const AstarPathGear gear);
+
+  const bool IsCollisionForPoint(const pnc::geometry_lib::PathPoint &pose,
+                                 const uint8_t gear);
+
+  const bool IsCollisionForPath(
+      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+      const uint8_t gear);
 
   void Init(const float car_body_lat_safe_buffer, const float lon_safe_buffer,
             const float mirror_buffer);
@@ -52,6 +64,7 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   FootPrintCircleList global_circles_;
   FootPrintCircleModel footprint_model_;
   float latetal_safe_buffer_;
+  float mirror_safe_buffer_;
   float lon_safe_buffer_;
 };
 

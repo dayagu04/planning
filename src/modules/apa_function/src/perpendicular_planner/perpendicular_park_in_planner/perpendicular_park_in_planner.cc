@@ -178,6 +178,21 @@ void PerpendicularParkInPlanner::PlanCore() {
     SetParkingStatus(PARKING_RUNNING);
   }
 
+  // check finish
+  if (CheckFinished()) {
+    DEBUG_PRINT("check apa finished!");
+    SetParkingStatus(PARKING_FINISHED);
+    return;
+  }
+
+  // check failed
+  if (CheckStuckFailed()) {
+    DEBUG_PRINT("check stuck failed!");
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    return;
+  }
+
   // check planning status
   DEBUG_PRINT("parking status = "
               << static_cast<int>(GetPlannerStates().planning_status));
@@ -988,7 +1003,9 @@ void PerpendicularParkInPlanner::GenTlane() {
       right_dis_obs_car > safe_threshold ? true : false;
 
   ego_slot_info.last_move_slot_dist = ego_slot_info.move_slot_dist;
-  if (ego_slot_info.slot_occupied_ratio < 0.618 && frame_.replan_flag) {
+  if (!(ego_slot_info.slot_occupied_ratio > 0.728 &&
+        frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) &&
+      frame_.replan_flag) {
     // if two side is all no safe, the slot would not release in slot managment,
     // and should not move target pose
     if (!left_obs_meet_safe_require && right_obs_meet_safe_require) {
@@ -1404,6 +1421,8 @@ void PerpendicularParkInPlanner::GenObstacles() {
     apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
         fus_obs_vec, CollisionDetector::FUSION_OBS);
   }
+
+  apa_world_ptr_->GetCollisionDetectorPtr()->TransObsMapToOccupancyGridMap();
 }
 
 const uint8_t PerpendicularParkInPlanner::PathPlanOnce() {

@@ -434,9 +434,11 @@ const bool SlotManagement::GenTLane(
         channel_width, apa_param.GetParam().min_channel_width,
         apa_param.GetParam().channel_width);
   } else {
+    // use fus obs
     const double channel_width =
-        ego_slot_info.ego_pos_slot.x() + 4.268 -
-        std::max(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x());
+        frame_.collision_detector_ptr->GetCarMaxX(pnc::geometry_lib::PathPoint(
+            ego_slot_info.ego_pos_slot, ego_slot_info.ego_heading_slot)) +
+        3.068 - std::max(ego_slot_info.pt_0.x(), ego_slot_info.pt_1.x());
     ego_slot_info.channel_width =
         std::max(channel_width, apa_param.GetParam().channel_width);
   }
@@ -483,7 +485,7 @@ const bool SlotManagement::GenTLane(
     //     std::fabs(obstacle_point_slot.y()) < y_min) {
     //   continue;
     // }
-    obs_slot_type = CollisionDetector::GetObsSlotType(
+    obs_slot_type = frame_.collision_detector_ptr->GetObsSlotType(
         obstacle_point_slot, slot_pt, is_left_side, frame_.replan_flag);
 
     if (obs_slot_type == CollisionDetector::ObsSlotType::SLOT_IN_OBS &&
@@ -796,14 +798,13 @@ const bool SlotManagement::GenTLane(
 }
 
 const bool SlotManagement::GenObstacles(
-    std::shared_ptr<CollisionDetector> &collision_detector_ptr,
     const PerpendicularPathInPlanner::Tlane &slot_tlane,
     PerpendicularPathInPlanner::Tlane &obs_tlane,
     const EgoSlotInfo &ego_slot_info) {
-  if (!collision_detector_ptr) {
+  if (!frame_.collision_detector_ptr) {
     return false;
   }
-  collision_detector_ptr->ClearObstacles();
+  frame_.collision_detector_ptr->ClearObstacles();
   // set obstacles
   double channel_width = ego_slot_info.channel_width;
   double channel_length = apa_param.GetParam().channel_length;
@@ -873,8 +874,8 @@ const bool SlotManagement::GenObstacles(
                                 point_set.end());
   }
 
-  collision_detector_ptr->SetObstacles(channel_obstacle_vec,
-                                       CollisionDetector::CHANNEL_OBS);
+  frame_.collision_detector_ptr->SetObstacles(channel_obstacle_vec,
+                                              CollisionDetector::CHANNEL_OBS);
 
   pnc::geometry_lib::LineSegment tlane_line;
   std::vector<pnc::geometry_lib::LineSegment> tlane_line_vec;
@@ -912,10 +913,10 @@ const bool SlotManagement::GenObstacles(
       safe_dist = apa_param.GetParam().max_obs2car_dist_in_slot;
     }
     for (const auto &obs_pos : tlane_obstacle_vec) {
-      if (!collision_detector_ptr->IsObstacleInCar(obs_pos, ego_pose,
-                                                   safe_dist)) {
-        collision_detector_ptr->AddObstacles(obs_pos,
-                                             CollisionDetector::TLANE_OBS);
+      if (!frame_.collision_detector_ptr->IsObstacleInCar(obs_pos, ego_pose,
+                                                          safe_dist)) {
+        frame_.collision_detector_ptr->AddObstacles(
+            obs_pos, CollisionDetector::TLANE_OBS);
       }
     }
   }
@@ -926,13 +927,13 @@ const bool SlotManagement::GenObstacles(
     std::vector<Eigen::Vector2d> tlane_obs_vec;
     tlane_obs_vec.reserve(tlane_obstacle_vec.size());
     for (const Eigen::Vector2d &obs_pos : tlane_obstacle_vec) {
-      if (!collision_detector_ptr->IsObstacleInCar(obs_pos, ego_pose,
-                                                   safe_dist)) {
+      if (!frame_.collision_detector_ptr->IsObstacleInCar(obs_pos, ego_pose,
+                                                          safe_dist)) {
         tlane_obs_vec.emplace_back(obs_pos);
       }
     }
-    collision_detector_ptr->AddObstacles(tlane_obs_vec,
-                                         CollisionDetector::TLANE_OBS);
+    frame_.collision_detector_ptr->AddObstacles(tlane_obs_vec,
+                                                CollisionDetector::TLANE_OBS);
 
     // add actual fus obs
     Eigen::Vector2d pt_left = obs_tlane.pt_outside;
@@ -962,7 +963,7 @@ const bool SlotManagement::GenObstacles(
     }
 
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
-      obs_slot_type = collision_detector_ptr->GetObsSlotType(
+      obs_slot_type = frame_.collision_detector_ptr->GetObsSlotType(
           obs_pos, slot_pt, is_left_side, frame_.replan_flag);
 
       if (!apa_param.GetParam().believe_in_fus_obs) {
@@ -1020,9 +1021,25 @@ const bool SlotManagement::GenObstacles(
 
       fus_obs_vec.emplace_back(std::move(obs_pos));
     }
-    collision_detector_ptr->AddObstacles(fus_obs_vec,
-                                         CollisionDetector::FUSION_OBS);
+    frame_.collision_detector_ptr->AddObstacles(fus_obs_vec,
+                                                CollisionDetector::FUSION_OBS);
   }
+
+  // first check ego pose if collision
+  frame_.collision_detector_ptr->SetParam(CollisionDetector::Paramters(
+      apa_param.GetParam().car_lat_inflation_strict + 0.068));
+  if (frame_.collision_detector_ptr->IsObstacleInCar(
+          pnc::geometry_lib::PathPoint(ego_slot_info.ego_pos_slot,
+                                       ego_slot_info.ego_heading_slot))) {
+    std::cout << "ego pose has obs, force quit PreparePathPlan, fail\n";
+    return false;
+  }
+
+  // const double time1 = IflyTime::Now_ms();
+  // frame_.collision_detector_ptr->TransObsMapToOccupancyGridMap();
+  // DEBUG_PRINT("construct map time = " << IflyTime::Now_ms() - time1 << "ms");
+
+  frame_.collision_detector_ptr->TransObsMapToOccupancyGridMap();
 
   return true;
 }
@@ -1234,6 +1251,15 @@ bool SlotManagement::UpdateSlotsInSearching() {
         continue;
       }
 
+      if (!GenObstacles(slot_tlane, obs_tlane, ego_slot_info)) {
+        slot->set_is_release(false);
+        slot->set_is_occupied(true);
+        DEBUG_PRINT("GenObstacles slot id = "
+                    << slot->id() << "  slot type = " << slot->slot_type()
+                    << "  is_release = " << slot->is_release());
+        continue;
+      }
+
       PerpendicularPathInPlanner::Input path_planner_input;
       path_planner_input.pt_0 = ego_slot_info.pt_0;
       path_planner_input.pt_1 = ego_slot_info.pt_1;
@@ -1243,22 +1269,9 @@ bool SlotManagement::UpdateSlotsInSearching() {
       path_planner_input.tlane = slot_tlane;
       path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
                                       ego_slot_info.ego_heading_slot);
-
-      std::shared_ptr<CollisionDetector> collision_detector_ptr =
-          std::make_shared<CollisionDetector>();
-      if (!GenObstacles(collision_detector_ptr, slot_tlane, obs_tlane,
-                        ego_slot_info)) {
-        slot->set_is_release(false);
-        slot->set_is_occupied(true);
-        DEBUG_PRINT("GenObstacles slot id = "
-                    << slot->id() << "  slot type = " << slot->slot_type()
-                    << "  is_release = " << slot->is_release());
-        continue;
-      }
-
       PerpendicularPathInPlanner path_planner;
       path_planner.SetInput(path_planner_input);
-      path_planner.SetColPtr(collision_detector_ptr);
+      path_planner.SetColPtr(frame_.collision_detector_ptr);
       if (!path_planner.UpdateByPrePlan()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);

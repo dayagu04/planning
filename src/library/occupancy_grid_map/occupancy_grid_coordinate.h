@@ -23,9 +23,11 @@ class OccupancyGridCoordinate {
  public:
   OccupancyGridCoordinate() = default;
 
-  virtual void Process(const Pose2D &ogm_pose);
+  virtual void Process(const Pose2D &ogm_pose,
+                       const double _ogm_resolution = ogm_resolution);
 
-  virtual void Process(const OccupancyGridBound &bound);
+  virtual void Process(const OccupancyGridBound &bound,
+                       const double _ogm_resolution = ogm_resolution);
 
   const bool IsIndexValid(const OgmIndex &id);
 
@@ -60,6 +62,8 @@ class OccupancyGridCoordinate {
   // in slot system.
   OccupancyGridBound bound_;
 
-  double ogm_resolution_inv_;
+  double ogm_resolution_ = ogm_resolution;
+
+  double ogm_resolution_inv_ = 1 / ogm_resolution_;
 };
 }  // namespace planning

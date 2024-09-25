@@ -20,21 +20,24 @@ namespace planning {
 // x86, opencv version:3.2.0
 // todo
 
-void EulerDistanceTransform::Process(const Pose2D &ogm_pose) {
-  OccupancyGridCoordinate::Process(ogm_pose);
+void EulerDistanceTransform::Process(const Pose2D &ogm_pose,
+                                     const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   return;
 }
 
-void EulerDistanceTransform::Process(const OccupancyGridBound &bound) {
-  OccupancyGridCoordinate::Process(bound);
+void EulerDistanceTransform::Process(const OccupancyGridBound &bound,
+                                     const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(bound, _ogm_resolution);
 
   return;
 }
 
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
-                                    const Pose2D &ogm_pose) {
-  OccupancyGridCoordinate::Process(ogm_pose);
+                                    const Pose2D &ogm_pose,
+                                    const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   cv::Mat map_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1, cv::Scalar(200));
 
@@ -51,6 +54,10 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
   CVMatrixToArray(&edt_matrix);
 
 #if write_debug_file
+  cv::flip(map_matrix, map_matrix, 0);
+  cv::flip(map_matrix, map_matrix, 1);
+  cv::flip(edt_matrix, edt_matrix, 0);
+  cv::flip(edt_matrix, edt_matrix, 1);
   cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
   cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
 #endif
@@ -59,12 +66,13 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
 }
 
 bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
-                                    const OccupancyGridBound &bound) {
-  OccupancyGridCoordinate::Process(bound);
+                                    const OccupancyGridBound &bound,
+                                    const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(bound, _ogm_resolution);
 
-  int max_bound_x =
+  const int max_bound_x =
       std::round((bound.max_x - bound.min_x) * ogm_resolution_inv_);
-  int max_bound_y =
+  const int max_bound_y =
       std::round((bound.max_y - bound.min_y) * ogm_resolution_inv_);
 
   cv::Mat map_matrix(max_bound_x, max_bound_y, CV_8UC1, cv::Scalar(200));
@@ -82,6 +90,10 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
   CVMatrixToArray(&edt_matrix);
 
 #if write_debug_file
+  cv::flip(map_matrix, map_matrix, 0);
+  cv::flip(map_matrix, map_matrix, 1);
+  cv::flip(edt_matrix, edt_matrix, 0);
+  cv::flip(edt_matrix, edt_matrix, 1);
   cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
   cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
 #endif
@@ -90,16 +102,16 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
 }
 
 void EulerDistanceTransform::CVMatrixToArray(cv::Mat *edt_matrix) {
-  int row_num = edt_matrix->rows;
-  int column_num = edt_matrix->cols;
+  const int row_num = edt_matrix->rows;
+  const int column_num = edt_matrix->cols;
 
-  ILOG_INFO << "r " << row_num << " max x " << ogm_grid_x_max;
-  ILOG_INFO << "c " << column_num << " max y " << ogm_grid_y_max;
+  // ILOG_INFO << "r " << row_num << " max x " << ogm_grid_x_max;
+  // ILOG_INFO << "c " << column_num << " max y " << ogm_grid_y_max;
 
   for (int j = 0; j < row_num; j++) {
     float *data = edt_matrix->ptr<float>(j);
     for (int i = 0; i < column_num; i++) {
-      data_.dist[j][i] = data[i] * float(ogm_resolution);
+      data_.dist[j][i] = data[i] * float(ogm_resolution_);
     }
   }
 
@@ -270,6 +282,19 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
   return false;
 }
 
+const bool EulerDistanceTransform::IsCollisionForPoint(
+    const pnc::geometry_lib::PathPoint &pose, const uint8_t gear) {
+  const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
+                                      ? AstarPathGear::drive
+                                      : AstarPathGear::reverse;
+
+  const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
+
+  Transform2d tf(pose_2d);
+
+  return IsCollisionForPoint(&tf, path_gear);
+}
+
 void EulerDistanceTransform::Init(const float car_body_lat_safe_buffer,
                                   const float lon_safe_buffer,
                                   const float mirror_buffer) {
@@ -278,9 +303,36 @@ void EulerDistanceTransform::Init(const float car_body_lat_safe_buffer,
   return;
 }
 
+const bool EulerDistanceTransform::IsCollisionForPath(
+    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+    const uint8_t gear) {
+  if (path_pt_vec.empty()) {
+    return false;
+  }
+
+  // Prioritize checking the last point
+  if (IsCollisionForPoint(path_pt_vec.back(), gear)) {
+    return true;
+  }
+
+  for (size_t i = 0; i < path_pt_vec.size() - 1; ++i) {
+    if (IsCollisionForPoint(path_pt_vec[i], gear)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void EulerDistanceTransform::UpdateSafeBuffer(
     const float car_body_lat_safe_buffer, const float lon_safe_buffer,
     const float mirror_buffer) {
+  if (std::fabs(latetal_safe_buffer_ - car_body_lat_safe_buffer) < 0.001 &&
+      std::fabs(lon_safe_buffer_ - lon_safe_buffer) < 0.001 &&
+      std::fabs(mirror_safe_buffer_ - mirror_buffer) < 0.001) {
+    return;
+  }
+
   footprint_model_.UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer,
                                     mirror_buffer);
 
@@ -288,6 +340,7 @@ void EulerDistanceTransform::UpdateSafeBuffer(
 
   latetal_safe_buffer_ = car_body_lat_safe_buffer;
   lon_safe_buffer_ = lon_safe_buffer;
+  mirror_safe_buffer_ = mirror_buffer;
 
   return;
 }

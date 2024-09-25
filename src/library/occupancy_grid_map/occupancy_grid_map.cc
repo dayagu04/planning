@@ -8,14 +8,16 @@
 
 namespace planning {
 
-void OccupancyGridMap::Process(const Pose2D &ogm_pose) {
-  OccupancyGridCoordinate::Process(ogm_pose);
+void OccupancyGridMap::Process(const Pose2D &ogm_pose,
+                               const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
   return;
 }
 
-void OccupancyGridMap::Process(const OccupancyGridBound &bound) {
-  OccupancyGridCoordinate::Process(bound);
+void OccupancyGridMap::Process(const OccupancyGridBound &bound,
+                               const double _ogm_resolution) {
+  OccupancyGridCoordinate::Process(bound, _ogm_resolution);
   return;
 }
 
