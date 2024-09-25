@@ -36,8 +36,6 @@ static const size_t kAdjustPlanMaxPathNumsInSlot = 5;
 static const double kMinSingleGearPathLength = 0.35;
 static const double kMinSinglePlanPathLength = 0.2;
 
-const ApaParameters& g_params = apa_param.GetParam();
-
 void PerpendicularPathInPlanner::Reset() {
   output_.Reset();
   output_.path_segment_vec.reserve(kMaxPerpenParkInSegmentNums);
@@ -994,7 +992,7 @@ const bool PerpendicularPathInPlanner::PreparePathPlan() {
   // first check ego pose if collision
   if (!calc_params_.is_searching_stage) {
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(
-        g_params.car_lat_inflation_strict + 0.068));
+        apa_param.GetParam().car_lat_inflation_strict + 0.068));
     if (collision_detector_ptr_->IsObstacleInCar(input_.ego_pose)) {
       std::cout << "ego pose has obs, force quit PreparePathPlan, fail\n";
       return false;
@@ -1108,12 +1106,14 @@ const bool PerpendicularPathInPlanner::PreparePathPlan() {
           const double dist = geometry_lib::CalPoint2LineDist(
               current_turn_center, calc_params_.target_line);
 
-          if (dist > calc_params_.turn_radius - g_params.target_radius_err) {
-            if (!g_params.actual_mono_plan_enable) {
+          if (dist > calc_params_.turn_radius -
+                         apa_param.GetParam().target_radius_err) {
+            if (!apa_param.GetParam().actual_mono_plan_enable) {
               cost += one_step_col_cost;
               continue;
             }
-            if (dist > calc_params_.turn_radius + g_params.target_radius_err) {
+            if (dist > calc_params_.turn_radius +
+                           apa_param.GetParam().target_radius_err) {
               double sin_theta = std::fabs(sin(end_pose.heading));
               sin_theta = std::max(sin_theta, 0.0001);
               const double length =
@@ -1128,9 +1128,10 @@ const bool PerpendicularPathInPlanner::PreparePathPlan() {
             geometry_lib::CalArcFromPt(gear, steer, arc_length,
                                        calc_params_.turn_radius, end_pose,
                                        arc_seg);
-            if (!IsGeometryPathSafe(geometry_lib::GeometryPath(arc_seg),
-                                    g_params.car_lat_inflation_strict,
-                                    g_params.col_obs_safe_dist_strict)) {
+            if (!IsGeometryPathSafe(
+                    geometry_lib::GeometryPath(arc_seg),
+                    apa_param.GetParam().car_lat_inflation_strict,
+                    apa_param.GetParam().col_obs_safe_dist_strict)) {
               cost += one_step_col_cost;
             }
           } else {
@@ -1199,15 +1200,17 @@ const bool PerpendicularPathInPlanner::PrepareSinglePathPlan(
   x_offset_vec.reserve(5);
   heading_offset_vec.reserve(40);
 
-  double max_heading = std::min(
-      90.0 - slot_angle, g_params.prepare_line_max_heading_offset_slot_deg);
+  double max_heading =
+      std::min(90.0 - slot_angle,
+               apa_param.GetParam().prepare_line_max_heading_offset_slot_deg);
   max_heading = slot_side_sgn * (90.0 - slot_angle - max_heading) * kDeg2Rad;
 
-  double min_heading = g_params.prepare_line_min_heading_offset_slot_deg;
+  double min_heading =
+      apa_param.GetParam().prepare_line_min_heading_offset_slot_deg;
   min_heading = slot_side_sgn * (90.0 - slot_angle - min_heading) * kDeg2Rad;
 
   const double dheading =
-      g_params.prepare_line_dheading_offset_slot_deg * kDeg2Rad;
+      apa_param.GetParam().prepare_line_dheading_offset_slot_deg * kDeg2Rad;
 
   double heading = max_heading;
   while (slot_side_sgn * heading < slot_side_sgn * min_heading) {
@@ -1216,10 +1219,13 @@ const bool PerpendicularPathInPlanner::PrepareSinglePathPlan(
   }
 
   const double max_x =
-      g_params.prepare_line_max_x_offset_slot / sin_slot_angle + slot_x;
+      apa_param.GetParam().prepare_line_max_x_offset_slot / sin_slot_angle +
+      slot_x;
   const double min_x =
-      g_params.prepare_line_min_x_offset_slot / sin_slot_angle + slot_x;
-  const double dx = g_params.prepare_line_dx_offset_slot / sin_slot_angle;
+      apa_param.GetParam().prepare_line_min_x_offset_slot / sin_slot_angle +
+      slot_x;
+  const double dx =
+      apa_param.GetParam().prepare_line_dx_offset_slot / sin_slot_angle;
   double x = min_x;
   while (x < max_x) {
     x_offset_vec.emplace_back(x);
@@ -1322,7 +1328,7 @@ const bool PerpendicularPathInPlanner::PrepareSinglePathPlan(
             << IflyTime::Now_ms() - pre_start_time << "ms\n";
 
   bool exceed_time_flag = false;
-  double max_allow_time = g_params.prepare_single_max_allow_time;
+  double max_allow_time = apa_param.GetParam().prepare_single_max_allow_time;
   if (!calc_params_.is_searching_stage) {
     max_allow_time = 999.9;
   }
@@ -1352,9 +1358,10 @@ const bool PerpendicularPathInPlanner::PrepareSinglePathPlan(
                                    calc_params_.turn_radius,
                                    inner_inner_tang_pose_vec[0], arc_seg);
         // check 1r is safe
-        if (IsGeometryPathSafe(geometry_lib::GeometryPath(arc_seg),
-                               g_params.car_lat_inflation_strict + 0.068,
-                               g_params.col_obs_safe_dist_strict + 0.068)) {
+        if (IsGeometryPathSafe(
+                geometry_lib::GeometryPath(arc_seg),
+                apa_param.GetParam().car_lat_inflation_strict + 0.068,
+                apa_param.GetParam().col_obs_safe_dist_strict + 0.068)) {
           reverse_1arc_safe = true;
         } else {
           continue;
@@ -1496,9 +1503,9 @@ PerpendicularPathInPlanner::DubinsPathPlan(
   geometry_path.SetPath(path_seg_vec);
 
   if (need_col_det &&
-      !IsGeometryPathSafe(geometry_path,
-                          g_params.car_lat_inflation_strict + 0.068,
-                          g_params.col_obs_safe_dist_strict + 0.068)) {
+      !IsGeometryPathSafe(
+          geometry_path, apa_param.GetParam().car_lat_inflation_strict + 0.068,
+          apa_param.GetParam().col_obs_safe_dist_strict + 0.068)) {
     geometry_path.Reset();
     return DubinsPlanResult::PATH_COLLISION;
   }
@@ -2758,8 +2765,8 @@ const bool PerpendicularPathInPlanner::OneLinePlan(
     if (seg_gear == geometry_lib::SEG_GEAR_REVERSE &&
         !input_.is_replan_dynamic) {
       geometry_lib::PathSegment temp_line_seg = line_seg;
-      collision_detector_ptr_->SetParam(
-          CollisionDetector::Paramters(g_params.car_lat_inflation_normal));
+      collision_detector_ptr_->SetParam(CollisionDetector::Paramters(
+          apa_param.GetParam().car_lat_inflation_normal));
       PathColDetRes col_res = TrimPathByCollisionDetection(temp_line_seg);
       if (col_res == PathColDetRes::INVALID ||
           col_res == PathColDetRes::SHORTEN) {
