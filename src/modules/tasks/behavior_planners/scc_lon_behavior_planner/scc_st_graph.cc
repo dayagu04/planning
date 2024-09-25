@@ -2850,6 +2850,9 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   merge_lane_virtual_id_ = session_->planning_context()
                                .lane_change_decider_output()
                                .merge_lane_virtual_id;
+  current_lane_is_continue_ = session_->planning_context()
+                                  .lane_change_decider_output()
+                                  .cur_lane_is_continue;
   const auto lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   if (lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id_) !=
@@ -2898,6 +2901,11 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     SetDefaultDebugValues(debug_msg_names);
     return;
   }
+  if (current_lane_is_continue_) {
+    SetDefaultDebugValues(debug_msg_names);
+    LOG_DEBUG("[CalculateMergeSpeedLimit] current lane is continued!!! \n");
+    return;
+  }
   if (!is_merge_region_) {
     SetDefaultDebugValues(debug_msg_names);
     LOG_DEBUG("[CalculateMergeSpeedLimit] no merge region!!! \n");
@@ -2909,14 +2917,14 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     LOG_DEBUG("[CalculateMergeSpeedLimit] in intersection!!! \n");
     return;
   }
-  if (!config_.enabe_right_lane_merge_to_ego_lane_decision_process &&
-      is_merge_region_ && merge_direction_ == MergeSplitPoints::RIGHT) {
-    LOG_DEBUG(
-        "[CalculateMergeSpeedLimit] right lane merge to ego lane, no lon "
-        "decision!!! \n");
-    SetDefaultDebugValues(debug_msg_names);
-    return;
-  }
+  // if (!config_.enabe_right_lane_merge_to_ego_lane_decision_process &&
+  //     is_merge_region_ && merge_direction_ == MergeSplitPoints::RIGHT) {
+  //   LOG_DEBUG(
+  //       "[CalculateMergeSpeedLimit] right lane merge to ego lane, no lon "
+  //       "decision!!! \n");
+  //   SetDefaultDebugValues(debug_msg_names);
+  //   return;
+  // }
   if (lane_change_status ==
       planning::StateMachineLaneChangeStatus::kLaneChangeExecution) {
     SetDefaultDebugValues(debug_msg_names);
@@ -2970,7 +2978,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
   const auto ego_right_node_id = dynamic_world->ego_right_node_id();
   const auto ego_right_front_node_id = dynamic_world->ego_right_front_node_id();
 
-  if (is_merge_region_ && merge_direction_ == MergeSplitPoints::LEFT) {
+  if (is_merge_region_ && merge_direction_ == MergeSplitPoints::LEFT &&
+      current_lane_is_continue_ == false) {
     ego_has_right_of_target_lane_ =
         EgoHasRightOfTargetLaneJudge(left_neibor_lane, current_lane);
     if (ego_left_node_id != planning_data::kInvalidId &&
@@ -3012,7 +3021,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
                                     "ego_left_front");
       }
     }
-  } else if (is_merge_region_ && merge_direction_ == MergeSplitPoints::RIGHT) {
+  } else if (is_merge_region_ && merge_direction_ == MergeSplitPoints::RIGHT &&
+             current_lane_is_continue_ == false) {
     ego_has_right_of_target_lane_ =
         EgoHasRightOfTargetLaneJudge(right_neibor_lane, current_lane);
     if (ego_right_node_id != planning_data::kInvalidId &&
@@ -3218,7 +3228,7 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
       agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x +
       agent_length * 0.5 + ego_rear_edge_to_rear_axle;
   if (distance_current_relative < -kRearAgentFollowEgoSafeDistance &&
-      fabs(ego_current_sl_to_ego_lane.y) <
+      fabs(agent_current_sl_to_ego_lane.y) <
           0.5 * ego_lane_width + kLaneWidthBuffer) {
     return true;
   }
@@ -3805,6 +3815,7 @@ void StGraphGenerator::MergeInfoReset() {
   // upstream decider merge info reset
   merge_direction_ = MergeSplitPoints::UNKNOWN;
   is_merge_region_ = false;
+  current_lane_is_continue_ = true;
   merge_point_plan_ = {std::numeric_limits<double>::lowest(),
                        std::numeric_limits<double>::lowest()};
   // intersection_state_ = common::IntersectionState::UNKNOWN;
