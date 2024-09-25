@@ -1704,6 +1704,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
 
 bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
   const auto& stop_line = current_lane_->get_stop_line();
+  double ego_to_stopline_dis = NL_NMAX;
   if (stop_line.type == iflyauto::LANE_LINE_TYPE_STOPLINE) {
     std::vector<iflyauto::Point2f> stop_line_points_vec;
     stop_line_points_vec.resize(stop_line.car_points_size);
@@ -1734,19 +1735,24 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
       planning::StopLine lane_stop_line = planning::StopLine(id, line_seg);
       double raw_dis =
           lane_stop_line.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
-      distance_to_stopline_ = -1.0 * raw_dis;
-    } else {
-      distance_to_stopline_ = NL_NMAX;
-    }
-  } else {
-    distance_to_stopline_ = NL_NMAX;
+      ego_to_stopline_dis = -1.0 * raw_dis;
+    } 
   }
+  stopline_window_.pop_front();
+  stopline_window_.push_back(ego_to_stopline_dis);
+
+  if (stopline_window_[0] < 200.0 && stopline_window_[1] < 200.0 && stopline_window_[2] < 200.0) {
+    distance_to_stopline_ = ego_to_stopline_dis;
+  } else if (stopline_window_[0] > 200.0 && stopline_window_[1] > 200.0 && stopline_window_[2] > 200.0) {
+    distance_to_stopline_ = NL_NMAX;
+  } 
   JSON_DEBUG_VALUE("distance_to_stopline", distance_to_stopline_);
   return true;
 }
 
 bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
     const iflyauto::RoadInfo* roads_ptr) {
+  double ego_to_crosswalk_dis = NL_NMAX;
   std::vector<std::vector<iflyauto::Point2f>> cross_walk_pts_vec;
   for (int i = 0; i < roads_ptr->lane_ground_markings_size; i++) {
     const auto& cross_walk = roads_ptr->lane_ground_markings[i];
@@ -1796,10 +1802,16 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
         min_dis = cw_idx_dis_vec[i].second;
       }
     }
-    distance_to_crosswalk_ = min_dis;
-  } else {
-    distance_to_crosswalk_ = NL_NMAX;
+    ego_to_crosswalk_dis = min_dis;
   }
+  crosswalk_window_.pop_front();
+  crosswalk_window_.push_back(ego_to_crosswalk_dis);
+
+  if (crosswalk_window_[0] < 200.0 && crosswalk_window_[1] < 200.0 && crosswalk_window_[2] < 200.0) {
+    distance_to_crosswalk_ = ego_to_crosswalk_dis;
+  } else if (crosswalk_window_[0] > 200.0 && crosswalk_window_[1] > 200.0 && crosswalk_window_[2] > 200.0) {
+    distance_to_crosswalk_ = NL_NMAX;
+  } 
   JSON_DEBUG_VALUE("distance_to_crosswalk", distance_to_crosswalk_);
   return true;
 }
@@ -1824,10 +1836,10 @@ bool VirtualLaneManager::UpdateIntersectionState() {
   } else if (-1.0 < distance_to_stopline_ && distance_to_stopline_ <= 3.0) {
     Intersection_state_ = planning::common::IN_INTERSECTION;
   } else {
-    if ((0 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) &&
+    if ((-1.5 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) &&
         !IsPosXOnVirtualLaneType(ego_pos_x)) {
       Intersection_state_ = planning::common::IN_INTERSECTION;
-    } else if (distance_to_crosswalk_ <= 0.0 &&
+    } else if (distance_to_crosswalk_ <= -1.5 &&
                !IsPosXOnVirtualLaneType(ego_pos_x)) {
       Intersection_state_ = planning::common::NO_INTERSECTION;
     } else if (IsPosXOnVirtualLaneType(ego_pos_x) &&

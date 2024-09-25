@@ -1778,6 +1778,8 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
   double virtual_obs_desired_distance = 0.0;
   double safe_distance = 0.0;
   double virtual_obs_desired_velocity = 40.0;
+  double desired_distance_filtered = 0.0;
+  std::pair<double, double> acc_target = {-0.5, 0.5};
   double v_ego = lon_behav_input_->ego_info().ego_v();
 
   bool is_virtual_obs_exist = false;
@@ -1807,6 +1809,30 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
     }
     virtual_obs_desired_velocity = CalcDesiredVelocity(
         dis_to_virtual_obs, virtual_obs_desired_distance, virtual_obs->speed());
+
+    // calcuate acc
+    planning::common::TrackedObjectInfo virtual_lead;
+    virtual_lead.set_track_id(virtual_obs->agent_id());
+    virtual_lead.set_type(iflyauto::OBJECT_TYPE_UNKNOWN_IMMOVABLE);
+    virtual_lead.set_fusion_source(0);
+    virtual_lead.set_v_lead(virtual_obs->speed());
+    virtual_lead.set_v_rel(virtual_obs->speed() - v_ego);
+    virtual_lead.set_a_lead_k(0);
+    virtual_lead.set_d_rel(dis_to_virtual_obs);
+    virtual_lead.set_d_path(0);
+    virtual_lead.set_d_path_self(0);
+    virtual_lead.set_v_lat(0);
+    virtual_lead.set_is_accident_car(false);
+    virtual_lead.set_is_lead(false);
+    virtual_lead.set_is_temp_lead(false);
+    virtual_lead.set_cutinp(0);
+    virtual_lead.set_is_vru(false);
+    virtual_lead.set_is_car(false);
+    CalcAccLimits(virtual_lead, virtual_obs_desired_distance,
+                  virtual_obs_desired_velocity, v_ego, virtual_obs_a_processed,
+                  acc_target);
+    acc_target_.first = std::min(acc_target_.first, acc_target.first);
+    acc_target_.second = std::min(acc_target_.second, acc_target.second);
 
     // desired_distance_filtered = DesiredDistanceFilter(
     //    lead_one, v_ego, safe_distance, virtual_obs_desired_distance);
