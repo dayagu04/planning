@@ -945,7 +945,6 @@ void StGraphGenerator::UpdateNearObstacles(
       session_->environmental_model().get_dynamic_world()->agent_manager();
   bool is_reverse_obs_in_large_curv = false;
   bool is_far_obs_in_large_curv = false;
-  bool is_reverse_cutin = false;
   // filter near cars from front && side tracks
   near_cars.clear();
   for (auto &track : lateral_obstacles.front_tracks()) {
@@ -958,11 +957,9 @@ void StGraphGenerator::UpdateNearObstacles(
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
-        is_reverse_cutin = agent->is_reverse_cutin();
       }
     }
-    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv ||
-        is_reverse_cutin) {
+    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv) {
       continue;
     }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
@@ -981,11 +978,9 @@ void StGraphGenerator::UpdateNearObstacles(
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
-        is_reverse_cutin = agent->is_reverse_cutin();
       }
     }
-    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv ||
-        is_reverse_cutin) {
+    if (is_reverse_obs_in_large_curv || is_far_obs_in_large_curv) {
       continue;
     }
     if (std::abs(track.y_rel()) < 10.0 && std::abs(track.d_rel()) < 20.0 &&
@@ -1458,11 +1453,15 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       continue;
     };
 
+    bool is_reverse_cutin_agent = false;
+    bool is_static_cutin_agent = false;
     if (agent_manager != nullptr) {
       const auto *agent = agent_manager->GetAgent(track.track_id());
       if (agent != nullptr) {
         is_reverse_obs_in_large_curv = agent->is_reverse();
         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
+        is_reverse_cutin_agent = agent->is_reverse_cutin();
+        is_static_cutin_agent = agent->is_static();
       }
     }
 
@@ -1517,22 +1516,27 @@ void StGraphGenerator::UpdateSpeedWithPotentialCutinCar(
       desired_distance_filtered = CutInDesiredDistanceFilter(
           track, v_ego, safe_distance, predict_distance, desired_distance);
 
-      // update potential_cutin st
-      common::RealTimeLonObstacleSTInfo st_info;
-      st_info.set_st_type(common::RealTimeLonObstacleSTInfo::CUT_IN);
-      st_info.set_id(track.track_id());
-      st_info.set_a_lead(a_processed);
-      st_info.set_v_lead(track.v_lead());
-      st_info.set_s_lead(track.d_rel());
-      st_info.set_desired_distance(desired_distance_filtered);
-      st_info.set_desired_velocity(v_target_potential_cutin);
-      st_info.set_safe_distance(safe_distance);
-      st_info.set_start_time(time_to_entry);  // TBD:使用可配置参数
-      st_info.set_end_time(5.0);              // TBD:使用可配置参数
-      // st_info.set_start_s(time_to_entry * v_ego + predict_distance);
-      st_info.set_start_s(track.d_rel());
-      cut_in_st_info.emplace_back(st_info);
-      v_target_ = std::min(v_target_, v_target_potential_cutin);
+      if (!is_reverse_cutin_agent && !is_static_cutin_agent) {
+        // update potential_cutin st
+        common::RealTimeLonObstacleSTInfo st_info;
+        st_info.set_st_type(common::RealTimeLonObstacleSTInfo::CUT_IN);
+        st_info.set_id(track.track_id());
+        st_info.set_a_lead(a_processed);
+        st_info.set_v_lead(track.v_lead());
+        st_info.set_s_lead(track.d_rel());
+        st_info.set_desired_distance(desired_distance_filtered);
+        st_info.set_desired_velocity(v_target_potential_cutin);
+        st_info.set_safe_distance(safe_distance);
+        st_info.set_start_time(time_to_entry);  // TBD:使用可配置参数
+        st_info.set_end_time(5.0);              // TBD:使用可配置参数
+        // st_info.set_start_s(time_to_entry * v_ego + predict_distance);
+        st_info.set_start_s(track.d_rel());
+        cut_in_st_info.emplace_back(st_info);
+        v_target_ = std::min(v_target_, v_target_potential_cutin);
+      } else {
+        // reverse_cutin or static_cutin not update potential_cutin st
+        v_target_ = std::min(v_target_, v_target_potential_cutin);
+      }
 
       LOG_DEBUG("potential_cutin_car's id: [%d], track.v_lat is: [%f]\n",
                 track.track_id(), track.v_lat());
