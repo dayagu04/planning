@@ -334,15 +334,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
   auto filter_in_deceleration_priority_scene =
       [this](const SlotInfo& slot,
              const double& aligned_back_safe_dis) -> bool {
-    if (slot.back_veh_info().center_s - slot.back_veh_info().half_length -
-                kNearbyCarFilterDis >
-            kEgoHalfLength &&
-        (init_va_.first - slot.back_veh_info().v) * 3.0 -
-                slot.back_veh_info().center_s <
-            aligned_back_safe_dis) {
-      return true;
-    }
-    return false;
+    return slot.aligned_s() > init_sl_.first;
   };
 
   for (auto idx = 1; idx < lane_change_veh_info_.size(); ++idx) {
