@@ -985,14 +985,21 @@ const bool PerpendicularPathInPlanner::DubinsPlan(
 
 const bool PerpendicularPathInPlanner::PreparePathPlan() {
   std::cout << "enter prepare plan\n";
-  using namespace pnc;
+
+  if (collision_detector_ptr_ == nullptr) {
+    std::cout << "collision_detector_ptr_ is nullptr\n";
+    return false;
+  }
 
   // first check ego pose if collision
-  CollisionDetector::Paramters param(g_params.car_lat_inflation_strict + 0.068);
-  collision_detector_ptr_->SetParam(param);
-  if (collision_detector_ptr_->IsObstacleInCar(input_.ego_pose)) {
-    std::cout << "ego pose has obs, force quit PreparePathPlan, fail\n";
-    return false;
+  if (!calc_params_.is_searching_stage) {
+    CollisionDetector::Paramters param(g_params.car_lat_inflation_strict +
+                                       0.068);
+    collision_detector_ptr_->SetParam(param);
+    if (collision_detector_ptr_->IsObstacleInCar(input_.ego_pose)) {
+      std::cout << "ego pose has obs, force quit PreparePathPlan, fail\n";
+      return false;
+    }
   }
 
   const double pre_start_time = IflyTime::Now_ms();

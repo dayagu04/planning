@@ -13,9 +13,7 @@ namespace planning {
 
 class EulerDistanceTransform : public OccupancyGridCoordinate {
  public:
-  EulerDistanceTransform() {
-    map_matrix_ = cv::Mat(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1);
-  };
+  EulerDistanceTransform(){};
 
   // use default ROI bound to generate ogm.
   void Process(const Pose2D &ogm_pose,
@@ -62,8 +60,6 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
  private:
   EDTData data_;
-
-  cv::Mat map_matrix_;
 
   FootPrintCircleList global_circles_;
   FootPrintCircleModel footprint_model_;

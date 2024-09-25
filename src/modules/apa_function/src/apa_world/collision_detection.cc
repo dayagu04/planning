@@ -26,7 +26,7 @@ void CollisionDetector::Init() {
       apa_param.GetParam().car_vertex_x_vec.size());
   std::vector<double> inflated_car_local_vertex_y_vec;
   inflated_car_local_vertex_y_vec.clear();
-  inflated_car_local_vertex_y_vec.reserve(
+  inflated_car_local_vertex_y_vec.resize(
       apa_param.GetParam().car_vertex_y_vec.size());
   for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
     inflated_car_local_vertex_y_vec[i] =

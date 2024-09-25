@@ -39,28 +39,26 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
                                     const double _ogm_resolution) {
   OccupancyGridCoordinate::Process(ogm_pose, _ogm_resolution);
 
-  // cv::Mat map_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1,
-  // cv::Scalar(200));
-  map_matrix_.setTo(200.0);
+  cv::Mat map_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_8UC1, cv::Scalar(200));
 
-  map.TransformToMatrix(&map_matrix_);
+  map.TransformToMatrix(&map_matrix);
 
   // cv::Mat edt_matrix(ogm_grid_x_max, ogm_grid_y_max, CV_32FC1,
   // cv::Scalar(200));
   cv::Mat edt_matrix;
 
   // 计算每一个像素到其他零像素的最近距离
-  cv::distanceTransform(map_matrix_, edt_matrix, CV_DIST_L2,
+  cv::distanceTransform(map_matrix, edt_matrix, CV_DIST_L2,
                         CV_DIST_MASK_PRECISE);
 
   CVMatrixToArray(&edt_matrix);
 
 #if write_debug_file
-  cv::flip(map_matrix_, map_matrix_, 0);
-  cv::flip(map_matrix_, map_matrix_, 1);
+  cv::flip(map_matrix, map_matrix, 0);
+  cv::flip(map_matrix, map_matrix, 1);
   cv::flip(edt_matrix, edt_matrix, 0);
   cv::flip(edt_matrix, edt_matrix, 1);
-  cv::imwrite("/asw/planning/glog/ogm.png", map_matrix_);
+  cv::imwrite("/asw/planning/glog/ogm.png", map_matrix);
   cv::imwrite("/asw/planning/glog/edt.png", edt_matrix);
 #endif
 
