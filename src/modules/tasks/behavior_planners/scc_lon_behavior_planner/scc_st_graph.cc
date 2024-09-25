@@ -58,6 +58,7 @@ constexpr double kDistanceToStopLineBufferEgo = 6.5;
 constexpr double kConfideceDegree = 0.8;
 constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56; // 20kph
+constexpr double kHighVel = 100 / 3.6;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -677,8 +678,13 @@ bool StGraphGenerator::CalcSpeedWithTurns(const double v_ego,
   // And limit the logitudinal velocity for a safe turn
   double acc_lat_max =
       interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
-  double v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
-                                      std::max(std::abs(angle_steers), 0.001));
+  // HACK: close v_limit_steering in high vel
+  bool is_high_vel = v_ego > kHighVel;
+  double v_limit_steering = 100.0;
+  if (!is_high_vel) {
+    v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
+                                 std::max(std::abs(angle_steers), 0.001));
+  }
   double v_limit_in_turns = v_limit_steering;
   // calculate the velocity limit according to the road curvature
   if (d_poly.size() == 4) {
