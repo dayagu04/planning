@@ -276,7 +276,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->a_lead = rot_ax;
     origin->a_lead_k = rot_ax;
 
-    origin->oncoming = (origin->v_lead < -3.9);
+    origin->oncoming = (origin->v_lead < -2.0);
     origin->motion_pattern_current = p.motion_pattern_current;
     origin->is_static = p.is_static;
     origin->is_oversize_vehicle = p.is_oversize_vehicle;
