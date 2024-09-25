@@ -32,6 +32,7 @@
 #include "planning_gflags.h"
 #include "reference_path_manager.h"
 #include "scene_type_config.pb.h"
+#include "src/modules/common/config/basic_type.h"
 #include "traffic_light_decision_manager.h"
 #include "vehicle_model/vehicle_model.h"
 #include "vehicle_service_c.h"
@@ -1326,6 +1327,7 @@ void EnvironmentalModelManager::RunBlinkState(
       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
        (state == kLaneChangePropose)) &&
       (lc_request_direction == RIGHT_CHANGE) && (lc_source == INT_REQUEST);
+  bool is_cancel = state == kLaneChangeCancel;
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
@@ -1345,7 +1347,8 @@ void EnvironmentalModelManager::RunBlinkState(
           is_ilc_right_change) {
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_ilc_right_change) {
+      } else if (is_ilc_right_change ||
+                 is_cancel) {
         // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
@@ -1359,7 +1362,8 @@ void EnvironmentalModelManager::RunBlinkState(
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
           is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_ilc_left_change) {
+      } else if (is_ilc_left_change ||
+                 is_cancel) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::RIGHT;
