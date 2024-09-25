@@ -248,7 +248,7 @@ void LaneReferencePath::assign_obstacles_to_lane() {
 
 bool LaneReferencePath::IsObstacleOn(
     std::shared_ptr<FrenetObstacle> frenet_obstacle) {
-  if (frenet_obstacle->rel_s() > 120 || frenet_obstacle->rel_s() < -50 ||
+  if (frenet_obstacle->rel_s() > 180 || frenet_obstacle->rel_s() < -50 ||
       frenet_obstacle->s_min_l().x > 15 || frenet_obstacle->s_max_l().x < -15 ||
       !frenet_obstacle->b_frenet_valid()) {
     return false;

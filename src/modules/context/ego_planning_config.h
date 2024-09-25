@@ -2328,7 +2328,7 @@ struct EgoPlanningObstacleManagerConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "max_speed_static_obstacle");
   }
   double frenet_obstacle_range_s_min = -50.0;
-  double frenet_obstacle_range_s_max = 120.0;
+  double frenet_obstacle_range_s_max = 180.0;
   double frenet_obstacle_range_l_min = -50.0;
   double frenet_obstacle_range_l_max = 50.0;
   bool enable_bbox_mode = true;

@@ -497,7 +497,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   bool is_lane_change_execution =
       (coarse_planning_info.target_state == kLaneChangeExecution);
   const double k_init_pos_cost_weight =
-      is_lane_change_execution
+      is_lane_change
           ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
           : kInitPosCostWeight;
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
@@ -1020,6 +1020,11 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     is_exist_split_on_intersection_ = false;
     return;
   }
+  if (relative_id_lanes.size() == order_ids.size()) {
+    LOG_DEBUG("relative_id_lanes.size() == order_ids.size()");
+    is_exist_split_on_intersection_ = false;
+    return;  
+  }
 
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() >= order_ids[i] + 1) {
@@ -1167,19 +1172,32 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   }
 
   if (!is_exist_split_on_intersection_) {
-    bool is_on_right_side_lane = true;
+    bool is_on_right_side_lane = false;
+    bool is_on_left_side_lane = false;
     for (size_t i = 0; i < order_ids.size(); i++) {
       if (order_ids[i] == 0) {
-        is_on_right_side_lane = false;
+        is_on_left_side_lane = true;
         break;
       }
     }
-    if (!is_on_right_side_lane) {
+    for (size_t i = 0; i < order_ids.size(); i++) {
+      if (order_ids[i] == relative_id_lanes.size() - 1) {
+        is_on_right_side_lane = true;
+        break;
+      }
+    }    
+    if (is_on_left_side_lane && is_on_right_side_lane) {
+      is_exist_split_on_intersection_= false;
+      return;
+    } else if (is_on_left_side_lane) {
       relative_id_lanes[order_ids[1]]->set_relative_id(0);
       origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
-    } else {
+    } else if (is_on_right_side_lane) {
       relative_id_lanes[order_ids[0]]->set_relative_id(0);
       origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();    
+    } else {
+      is_exist_split_on_intersection_= false;
+      return;      
     }
   
     is_exist_split_on_intersection_ = true;
