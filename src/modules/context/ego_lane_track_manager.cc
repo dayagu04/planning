@@ -497,7 +497,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   bool is_lane_change_execution =
       (coarse_planning_info.target_state == kLaneChangeExecution);
   const double k_init_pos_cost_weight =
-      is_lane_change_execution
+      is_lane_change
           ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
           : kInitPosCostWeight;
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
