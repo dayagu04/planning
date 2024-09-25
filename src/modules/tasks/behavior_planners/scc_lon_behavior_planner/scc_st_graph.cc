@@ -3239,7 +3239,7 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
       agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x +
       agent_length * 0.5 + ego_rear_edge_to_rear_axle;
   if (distance_current_relative < -kRearAgentFollowEgoSafeDistance &&
-      fabs(agent_current_sl_to_ego_lane.y) <
+      fabs(ego_current_sl_to_ego_lane.y) <
           0.5 * ego_lane_width + kLaneWidthBuffer) {
     return true;
   }
