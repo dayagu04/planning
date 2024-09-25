@@ -57,7 +57,28 @@ speed_search_s_params = {
     'line_width': 2,
     'line_color': 'blue',
     'line_dash': 'dashed',
-    'legend_label': 'speed_search'
+    'legend_label': 's_search'
+}
+
+speed_search_v_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'v_search'
+}
+
+speed_search_a_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'a_search'
+}
+
+speed_search_j_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'j_search'
 }
 def isINJupyter():
     try:
@@ -296,8 +317,83 @@ def get_speed_search_st(plan_debug_msg):
     one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
     one_s_vec = list(debug_info.st_search_decider_info.search_s_vec)
     xys.append((one_t_vec, one_s_vec))
-  speed_search_base = DataGeneratorBase(xys, ts)
-  return speed_search_base
+  speed_search_base_s = DataGeneratorBase(xys, ts)
+
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_v_vec = list(debug_info.st_search_decider_info.search_v_vec)
+    xys.append((one_t_vec, one_v_vec))
+  speed_search_base_v = DataGeneratorBase(xys, ts)
+
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_a_vec = list(debug_info.st_search_decider_info.search_a_vec)
+    xys.append((one_t_vec, one_a_vec))
+  speed_search_base_a = DataGeneratorBase(xys, ts)
+
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_j_vec = list(debug_info.st_search_decider_info.search_j_vec)
+    xys.append((one_t_vec, one_j_vec))
+  speed_search_base_j = DataGeneratorBase(xys, ts)
+
+  return speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j
+
+def draw_v_a_j_fig():
+    hover_v = HoverTool(tooltips = [('t', '@pts_xs'),
+     ('s', '@pts_ys')
+    ])
+    fig_vt = bkp.figure(x_axis_label='t',
+                        y_axis_label='v',
+                        x_range = [-0.1, 7.0],
+                        tools=[hover_v, 'pan,wheel_zoom,box_zoom,reset'],
+                        width=600,
+                        height=400,
+                        match_aspect = True,
+                        aspect_scale=1)
+
+    fig_vt.toolbar.active_scroll = fig_vt.select_one(WheelZoomTool)
+    fig_vt.legend.click_policy = "hide"
+
+    hover_a = HoverTool(tooltips = [('t', '@pts_xs'),
+     ('s', '@pts_ys')
+    ])
+    fig_at = bkp.figure(x_axis_label='t',
+                        y_axis_label='a',
+                        x_range = [-0.1, 7.0],
+                        tools=[hover_a, 'pan,wheel_zoom,box_zoom,reset'],
+                        width=600,
+                        height=400,
+                        match_aspect = True,
+                        aspect_scale=1)
+
+    fig_at.toolbar.active_scroll = fig_at.select_one(WheelZoomTool)
+    fig_at.legend.click_policy = "hide"
+
+    hover_j = HoverTool(tooltips = [('t', '@pts_xs'),
+     ('s', '@pts_ys')
+    ])
+    fig_jt = bkp.figure(x_axis_label='t',
+                        y_axis_label='j',
+                        x_range = [-0.1, 7.0],
+                        tools=[hover_j, 'pan,wheel_zoom,box_zoom,reset'],
+                        width=600,
+                        height=400,
+                        match_aspect = True,
+                        aspect_scale=1)
+
+    fig_jt.toolbar.active_scroll = fig_jt.select_one(WheelZoomTool)
+    fig_jt.legend.click_policy = "hide"
+    return fig_vt, fig_at, fig_jt
 
 def plotOnce(bag_path, html_file):
     # 加载bag
@@ -320,10 +416,22 @@ def plotOnce(bag_path, html_file):
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
 
     plan_debug_msg = dataLoader.plan_debug_msg
-    speed_search_s_base = get_speed_search_st(plan_debug_msg)
+    speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
     speed_search_layer = CurveLayer(fig_st, speed_search_s_params)
-    layer_manager.AddLayer(speed_search_layer, 'speed_search_source', speed_search_s_base, 'speed_search_ref', 2)
+    layer_manager.AddLayer(speed_search_layer, 'speed_search_source', speed_search_base_s, 'speed_search_ref', 2)
+
+    fig_vt, fig_at, fig_jt = draw_v_a_j_fig()
+
+    v_search_layer = CurveLayer(fig_vt, speed_search_v_params)
+    layer_manager.AddLayer(v_search_layer, 'v_speed_search_source', speed_search_base_v, 'v_search_ref', 2)
+
+    a_search_layer = CurveLayer(fig_at, speed_search_a_params)
+    layer_manager.AddLayer(a_search_layer, 'a_speed_search_source', speed_search_base_a, 'a_search_ref', 2)
+
+    j_search_layer = CurveLayer(fig_jt, speed_search_j_params)
+    layer_manager.AddLayer(j_search_layer, 'j_speed_search_source', speed_search_base_j, 'j_search_ref', 2)
+
     min_t = sys.maxsize
     max_t = 0
     for gdlabel in layer_manager.gds.keys():
@@ -443,7 +551,7 @@ def plotOnce(bag_path, html_file):
         output_notebook()
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
-    pan_speed_search_info = Panel(child = row(column(fig_st)), title="SpeedSearchInfo")
+    pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt), column(fig_at, fig_jt)), title="SpeedSearchInfo")
     pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
