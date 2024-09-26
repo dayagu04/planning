@@ -82,11 +82,11 @@ void CubicPathInterface::GeneratePolynomialPath(
 
   for (size_t i = 0; i < max_sampling_num; i++) {
     x = i * step + x0;
-    double y = coefficients[0] * pow(x, 3) + coefficients[1] * pow(x, 2) +
+    const double y = coefficients[0] * pow(x, 3) + coefficients[1] * pow(x, 2) +
                coefficients[2] * x + coefficients[3];
-    double y_dot = 3 * coefficients[0] * pow(x, 2) + 2 * coefficients[1] * x +
+    const double y_dot = 3 * coefficients[0] * pow(x, 2) + 2 * coefficients[1] * x +
                    coefficients[2];
-    double y_sec_dot = 6 * coefficients[0] * x + 2 * coefficients[1];
+    const double y_sec_dot = 6 * coefficients[0] * x + 2 * coefficients[1];
 
     double curvature = std::fabs(y_sec_dot) / pow(1 + y_dot * y_dot, 1.5);
     AStarPathPoint tmp_point;
@@ -94,6 +94,8 @@ void CubicPathInterface::GeneratePolynomialPath(
     tmp_point.y = y;
     tmp_point.phi = atan(y_dot);
     tmp_point.kappa = curvature;
+    tmp_point.gear = AstarPathGear::drive;
+    tmp_point.type = AstarPathType::cubic;
     path.emplace_back(tmp_point);
     theta_vec_.emplace_back(atan(y_dot));
     curvature_vec_.emplace_back(curvature);
