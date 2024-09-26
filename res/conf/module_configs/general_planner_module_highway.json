@@ -503,7 +503,7 @@
     "enable_intersection_v_limit" : true,
     "v_lc_speed_adjust":0.5,
     "search_sdmap_curv_dis":300.0,
-    "sdmap_curv_thred":1000.0,
+    "sdmap_curv_thred":500.0,
     "straight_ramp_v_limit":22.22,
     "v_intersection_min_limit":11.11,
     "stop_dis_before_stopline":2.0,
