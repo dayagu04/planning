@@ -90,6 +90,8 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
+  rs_path_.Clear();
+
   bool is_connected_to_goal;
   RSPathRequestType rs_request = RSPathRequestType::none;
   rs_path_interface_.GeneShortestRSPath(
@@ -204,6 +206,7 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
 
   request_ = request;
   DebugAstarRequestString(request_);
+  rs_path_.Clear();
 
   clear_zone_.GenerateBoundingBox(start, obstacles_);
 
@@ -1890,6 +1893,7 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
   rs_end_node_.SetNext(nullptr);
 
   result->base_pose = request_.base_pose_;
+  result->gear_change_num = 0;
 
   // all nodes
   std::vector<Node3d*> node_list;
@@ -1917,6 +1921,8 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
   size_t point_size;
   double kappa;
 
+  AstarPathGear last_gear_type = AstarPathGear::none;
+  AstarPathGear cur_gear_type;
   while (child_node != nullptr) {
     // break
     if (child_node->IsRsPath()) {
@@ -1926,7 +1932,7 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
     const NodePath& path = child_node->GetNodePath();
 
     AstarPathType path_type = child_node->GetPathType();
-    AstarPathGear gear_type = child_node->GetGearType();
+    cur_gear_type = child_node->GetGearType();
 
     // todo
     if (child_node->GetConstNextNode() == nullptr) {
@@ -1950,12 +1956,20 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
       result->y.emplace_back(path.points[k].y);
       result->phi.emplace_back(path.points[k].theta);
       result->type.emplace_back(path_type);
-      result->gear.emplace_back(gear_type);
+      result->gear.emplace_back(cur_gear_type);
       result->kappa.emplace_back(kappa);
+    }
+
+    // check gear switch number
+    if (last_gear_type != AstarPathGear::none) {
+      if (last_gear_type != cur_gear_type) {
+        result->gear_change_num++;
+      }
     }
 
     node_list.push_back(child_node);
 
+    last_gear_type = cur_gear_type;
     parent_node = child_node;
     child_node = child_node->GetMutableNextNode();
 
@@ -1992,7 +2006,6 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
 
   // get rs path
   AstarPathType path_type = child_node->GetPathType();
-  AstarPathGear gear;
   if (child_node != nullptr && child_node->IsRsPath()) {
     for (int seg_id = 0; seg_id < rs_path_.size; seg_id++) {
       const RSPathSegment* segment = &rs_path_.paths[seg_id];
@@ -2000,19 +2013,27 @@ const bool HybridAStar::GenerateResult(HybridAStarResult* result) {
       if (segment->size < 1) {
         ILOG_ERROR << "result size check failed";
         continue;
-        ;
       }
 
-      gear = segment->gear;
+      cur_gear_type = segment->gear;
       kappa = segment->kappa;
       for (int k = 0; k < segment->size; k++) {
         result->x.emplace_back(segment->points[k].x);
         result->y.emplace_back(segment->points[k].y);
         result->phi.emplace_back(segment->points[k].theta);
         result->type.emplace_back(path_type);
-        result->gear.emplace_back(gear);
+        result->gear.emplace_back(cur_gear_type);
         result->kappa.emplace_back(kappa);
       }
+
+      // check gear switch number
+      if (last_gear_type != AstarPathGear::none) {
+        if (last_gear_type != cur_gear_type) {
+          result->gear_change_num++;
+        }
+      }
+
+      last_gear_type = cur_gear_type;
     }
   }
 
@@ -2135,6 +2156,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   child_node_debug_.clear();
   queue_path_debug_.clear();
   rs_path_h_cost_debug_.clear();
+  rs_path_.Clear();
 
   collision_check_time_ms_ = 0.0;
   rs_time_ms_ = 0.0;
@@ -2603,6 +2625,7 @@ void HybridAStar::Init() {
   NodePoolInit();
 
   rs_path_h_cost_debug_.clear();
+  rs_path_.Clear();
 
   ILOG_INFO << "astar init finish";
 

@@ -184,13 +184,11 @@ struct HybridAStarResult {
   std::vector<AstarPathGear> gear;
   std::vector<AstarPathType> type;
 
-  // is positive
   std::vector<double> accumulated_s;
-  // left turn is
+  // left turn is is positive
   std::vector<double> kappa;
 
   int gear_change_num;
-  bool is_nice_path;
 
   // slot pose
   Pose2D base_pose;
@@ -209,6 +207,7 @@ struct HybridAStarResult {
     kappa.clear();
     time_ms = 0;
     fail_type = AstarFailType::none;
+    gear_change_num = 0;
 
     return;
   }
