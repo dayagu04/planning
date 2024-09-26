@@ -70,7 +70,7 @@ class GeneralLateralDecider : public Task {
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
-
+  double CalculateExtraDecreaseBuffer(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
   bool CheckObstacleNudgeDecision(
       const std::shared_ptr<FrenetObstacle> &obstacle);
 
@@ -79,6 +79,8 @@ class GeneralLateralDecider : public Task {
 
   void RefineConflictLatDecisions(const double &ego_l,
                                   ObstacleDecision &obstacle_decision);
+  bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left, double& limit_overlap_min_y,
+      double& limit_overlap_max_y);
   bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, double& limit_overlap_min_y,
                             double& limit_overlap_max_y);
   void PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds);
@@ -139,6 +141,7 @@ class GeneralLateralDecider : public Task {
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
   void HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer);
   void CalcLateralBehaviorOutput();
+  bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsRearObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFilterForStaticObstacle(

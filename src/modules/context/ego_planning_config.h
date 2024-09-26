@@ -795,6 +795,26 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "bound_road_border_weight"},
         0.1);
+
+    read_json_vec<double>(
+        json, std::vector<std::string>{"general_lateral_decider", "relative_positon_bp"},
+        _relative_positon_bp);
+    read_json_vec<double>(
+        json, std::vector<std::string>{"general_lateral_decider", "relative_position_decrease_extra_buffer"},
+        _relative_positon_decrease_extra_buffer);
+
+    read_json_vec<double>(
+        json, std::vector<std::string>{"general_lateral_decider", "relative_v_bp"},
+        _relative_v_bp);
+    read_json_vec<double>(
+        json, std::vector<std::string>{"general_lateral_decider", "relative_v_decrease_extra_buffer"},
+        _relative_v_decrease_extra_buffer);
+
+    truck_decrease_extra_buffer = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "truck_decrease_extra_buffer"},
+        truck_decrease_extra_buffer);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -867,6 +887,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
 
   std::unordered_map<BoundType, double> map_bound_weight;
   double nudge_extra_buffer_in_intersection = 0.1;
+
+  std::vector<double> _relative_positon_bp = { 0, 1, 2, 3, 4, 5};
+  std::vector<double> _relative_positon_decrease_extra_buffer = {0, 0.1, 0.2, 0.3, 0.4, 0.5};
+  std::vector<double> _relative_v_bp = { 0, 1, 2, 3, 4, 5};
+  std::vector<double> _relative_v_decrease_extra_buffer = {0, 0.02, 0.05, 0.1, 0.15, 0.23};
+  double truck_decrease_extra_buffer = 0.05;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
