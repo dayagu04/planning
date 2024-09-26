@@ -23,7 +23,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1400
+fig1.height = 1550
 # init pybind
 lateral_motion_planning_py.Init()
 

@@ -315,6 +315,8 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
         tmp_hard_lower_bound_x0_vec.append(hard_lower_bound_x0_vec[m])
         tmp_hard_lower_bound_y0_vec.append(hard_lower_bound_y0_vec[m])
 
+    last_x_vec = []
+    last_y_vec = []
     if g_is_display_enu:
       try:
         soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = tmp_soft_upper_bound_x0_vec, tmp_soft_upper_bound_y0_vec
@@ -323,6 +325,12 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
         hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = tmp_hard_lower_bound_x0_vec, tmp_hard_lower_bound_y0_vec
       except:
         print("tuned bound error! plot origin bound!")
+
+      try:
+        last_x_vec, last_y_vec = lat_motion_plan_input.last_x_vec, lat_motion_plan_input.last_y_vec
+      except:
+        print("last traj error!")
+
     else:
       try:
         soft_upper_bound_x0_vec, soft_upper_bound_y0_vec = coord_tf.global_to_local(tmp_soft_upper_bound_x0_vec,
@@ -348,6 +356,10 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
 
         hard_lower_bound_x0_vec, hard_lower_bound_y0_vec = coord_tf.global_to_local(hard_lower_bound_x0_vec,
                                                                                     hard_lower_bound_y0_vec)
+      try:
+        last_x_vec, last_y_vec = coord_tf.global_to_local(lat_motion_plan_input.last_x_vec, lat_motion_plan_input.last_y_vec)
+      except:
+        print("last traj error!")
 
     if len(soft_upper_bound_x0_vec) == 0 or plan_msg.trajectory.target_reference.lateral_maneuver_gear == 2:
       soft_upper_bound_x0_vec = ref_x
@@ -413,6 +425,9 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'ref_y': ref_y,
       'ref_xn': ref_xn,
       'ref_yn': ref_yn,
+      'last_x_vec': last_x_vec,
+      'last_y_vec': last_y_vec,
+
       'soft_upper_bound_x0_vec': soft_upper_bound_x0_vec,
       'soft_upper_bound_y0_vec': soft_upper_bound_y0_vec,
       'soft_lower_bound_x0_vec': soft_lower_bound_x0_vec,
@@ -464,12 +479,14 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
 
     ref_theta_deg_vec = []
     theta_deg_vec = []
+    last_theta_deg_vec = []
     steer_deg_vec = []
-    steer_dot_deg_vec =[]
+    steer_dot_deg_vec = []
 
     for i in range(len(time_vec)):
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
+      last_theta_deg_vec.append(lat_motion_plan_input.last_theta_vec[i] * 57.3)
       steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 13.0)
       steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 13.0)
 
@@ -498,6 +515,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'ref_theta_deg_vec': ref_theta_deg_vec,
       'next_ref_theta_deg_vec': next_ref_theta_deg_vec,
       'theta_deg_vec': theta_deg_vec,
+      'last_theta_deg_vec': last_theta_deg_vec,
       'steer_deg_vec': steer_deg_vec,
       'steer_dot_deg_vec': steer_dot_deg_vec,
       'acc_vec': acc_vec,
@@ -792,6 +810,8 @@ def load_lat_plan_figure(fig1):
                                                         'ref_y':[],
                                                         'ref_xn':[],
                                                         'ref_yn':[],
+                                                        'last_x_vec': [],
+                                                        'last_y_vec': [],
                                                         'soft_upper_bound_x0_vec':[],
                                                         'soft_upper_bound_y0_vec':[],
                                                         'soft_lower_bound_x0_vec':[],
@@ -824,6 +844,7 @@ def load_lat_plan_figure(fig1):
                                                          'ref_theta_deg_vec':[],
                                                          'next_ref_theta_deg_vec':[],
                                                          'theta_deg_vec':[],
+                                                         'last_theta_deg_vec':[],
                                                          'steer_deg_vec':[],
                                                          'steer_dot_deg_vec':[],
                                                          'acc_vec':[],
@@ -948,6 +969,7 @@ def load_lat_plan_figure(fig1):
   fig1.circle('soft_lower_bound_y0_vec','soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "darkorange", line_alpha = 0.7, fill_color = 'gold',fill_alpha = 1.0, legend_label = 'soft lower bound')
   fig1.circle('hard_upper_bound_y0_vec','hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard upper bound')
   fig1.circle('hard_lower_bound_y0_vec','hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard lower bound')
+  fig1.line('last_y_vec', 'last_x_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'brown', line_dash = 'solid', line_alpha = 0.35, legend_label = 'last path', visible=False)
 
   columns = [
         TableColumn(field="bound_t_vec", title="t"),
@@ -959,7 +981,7 @@ def load_lat_plan_figure(fig1):
       ]
   tab1 = DataTable(source = data_lat_motion_plan_input, columns = columns, width = 600, height = 400)
 
-  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=160)
+  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=180)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
   fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=600, height=160)
   fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=160)
@@ -1030,6 +1052,7 @@ def load_lat_plan_figure(fig1):
   fig2.line('time_vec', 'theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin theta')
   fig2.line('time_vec', 'theta_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned theta')
   fig2.line('time_vec', 'next_ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'next ref_theta')
+  fig2.line('time_vec', 'last_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'brown', line_dash = 'solid', legend_label = 'last traj theta', visible=False)
 
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat acc')
   fig3.line('time_vec', 'acc_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat acc')
@@ -1067,7 +1090,7 @@ def load_lat_plan_figure(fig1):
                                                                                     ('obstacle id', '@hard_upper_bound_id_vec'), ('type', '@hard_upper_bound_type_vec')])
   hover1_4 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 1]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @hard_lower_bound_vec)'),
                                                                                      ('obstacle id', '@hard_lower_bound_id_vec'), ('type', '@hard_lower_bound_type_vec')])
-  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t'), ('next_ref_theta', '@next_ref_theta_deg_vec')], mode='vline')
+  hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t'), ('next_ref_theta', '@next_ref_theta_deg_vec'), ('last_traj_theta', '@last_theta_deg_vec')], mode='vline')
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t'), ('|acc bound|', '@acc_upper_bound')], mode='vline')
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound')], mode='vline')
