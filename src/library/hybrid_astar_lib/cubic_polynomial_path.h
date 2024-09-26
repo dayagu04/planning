@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "hybrid_astar_common.h"
+#include "hybrid_astar_request.h"
 
 namespace planning {
 
