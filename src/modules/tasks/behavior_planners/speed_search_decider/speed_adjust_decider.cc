@@ -111,15 +111,19 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   const auto& lc_request_source = session_->planning_context()
                                       .lane_change_decider_output()
                                       .lc_request_source;
+  const auto& is_in_merge_area =
+      session_->planning_context().lane_change_decider_output().is_merge_region;
 
-  if (coarse_planning_info.target_state != kLaneChangePropose) {
+  if (coarse_planning_info.target_state != kLaneChangePropose ||
+      is_in_merge_area) {
     ClearStatus();
     last_request_ = lc_request;
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
     speed_adjust_status_buffer_.current_frame_status = false;
-    std::cout << "no wait state " << std::endl;
+    std::cout << "no wait state or is in merge area:  " << is_in_merge_area
+              << std::endl;
     return false;
   }
 
@@ -319,10 +323,12 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     std::pair<double, double> safe_distacne_pair =
         GetSafeAlignedDistance(init_va_.first, slot);
 
-    const double& aligned_front_s =
-        slot.front_veh_info().center_s - safe_distacne_pair.first - kAlignedDistanceBuffer;
-    const double& aligned_back_s =
-        slot.back_veh_info().center_s + safe_distacne_pair.second + kAlignedDistanceBuffer;
+    const double& aligned_front_s = slot.front_veh_info().center_s -
+                                    safe_distacne_pair.first -
+                                    kAlignedDistanceBuffer;
+    const double& aligned_back_s = slot.back_veh_info().center_s +
+                                   safe_distacne_pair.second +
+                                   kAlignedDistanceBuffer;
     if (slot.back_veh_info().center_s > 0.) {
       slot.SetAlignedFront(false);
       slot.SetAlignedS(aligned_back_s + init_sl_.first);
@@ -484,9 +490,12 @@ bool SpeedAdjustDecider::Execute() {
     for (auto i = 0; i < s_vec.size(); i++) {
       speed_decider_pb_info->add_search_s_vec(s_vec[i]);
       speed_decider_pb_info->add_search_t_vec(i * kPlanningStep);
-      speed_decider_pb_info->add_search_v_vec(best_profile.Evaluate(1, i * 0.2));
-      speed_decider_pb_info->add_search_a_vec(best_profile.Evaluate(2, i * 0.2));
-      speed_decider_pb_info->add_search_j_vec(best_profile.Evaluate(3, i * 0.2));
+      speed_decider_pb_info->add_search_v_vec(
+          best_profile.Evaluate(1, i * 0.2));
+      speed_decider_pb_info->add_search_a_vec(
+          best_profile.Evaluate(2, i * 0.2));
+      speed_decider_pb_info->add_search_j_vec(
+          best_profile.Evaluate(3, i * 0.2));
     }
   }
   for (auto& lane_change_veh : lane_change_veh_info_) {
@@ -577,7 +586,8 @@ int SpeedAdjustDecider::SelectBestSlot() {
             ? (slot.front_veh_info().v - init_va_.first) * pred_aligned_time
             : (slot.back_veh_info().v - init_va_.first) * pred_aligned_time;
     const double s_dis_adjust_cost =
-        std::fabs(slot.aligned_s() + pred_aligned_rel_dis - init_sl_.first) * s_dis_adjust_weight;
+        std::fabs(slot.aligned_s() + pred_aligned_rel_dis - init_sl_.first) *
+        s_dis_adjust_weight;
     slot_costs[i] += s_dis_adjust_cost;
 
     // 4. consider rear faster coming car
