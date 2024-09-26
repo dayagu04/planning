@@ -317,12 +317,17 @@ void LateralMotionPlanner::AssembleInput() {
 
   // split
   bool split_scene = false;
+  // NOA split
   const bool is_exist_ramp_on_road = session_->environmental_model()
                                          .get_virtual_lane_manager()
                                          ->get_is_exist_ramp_on_road();
   const bool is_exist_split_on_ramp = session_->environmental_model()
                                           .get_virtual_lane_manager()
                                           ->get_is_exist_split_on_ramp();
+  // LCC split
+  const bool is_exist_intersection_split = session_->environmental_model()
+                                              .get_virtual_lane_manager()
+                                              ->get_is_exist_intersection_split();
   if (is_exist_ramp_on_road || is_exist_split_on_ramp) {
     split_scene = true;
     // complete_follow = true;
@@ -591,8 +596,16 @@ void LateralMotionPlanner::Update() {
       end_s += end_ds;
       x_vec[i + 1] = end_x_s_spline(end_s);
       y_vec[i + 1] = end_y_s_spline(end_s);
-      theta_vec[i + 1] = std::atan2(end_y_s_spline.deriv(1, end_s),
-                                    end_x_s_spline.deriv(1, end_s));
+      double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
+                                     end_x_s_spline.deriv(1, end_s));
+      double theta_err = theta_vec[i] - next_theta;
+      const double pi2 = 2.0 * M_PI;
+      if (theta_err > M_PI) {
+        next_theta += pi2;
+      } else if (theta_err < -M_PI) {
+        next_theta -= pi2;
+      }
+      theta_vec[i + 1] = next_theta;
       s_vec[i + 1] = end_s;
     }
   }
