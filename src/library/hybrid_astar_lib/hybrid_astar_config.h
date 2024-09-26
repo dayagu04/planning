@@ -67,6 +67,8 @@ struct PlannerOpenSpaceConfig {
 
   double tie_breaker_;
 
+  double dp_search_goal_adjust_dist;
+
   void InitConfig();
 };
 

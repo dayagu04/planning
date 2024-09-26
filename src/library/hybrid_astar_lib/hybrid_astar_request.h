@@ -8,8 +8,17 @@
 namespace planning {
 
 enum class CollisionDetectionMethod {
-  edt,
-  gjk,
+  EDT,
+  GJK,
+  SAT,
+  AABB,
+};
+
+enum class PathGearRequest {
+  NONE = 0,
+  GEAR_REVERSE_ONLY,
+  GEAR_DRIVE_ONLY,
+  MAX_NUMBER
 };
 
 // request-response mode.

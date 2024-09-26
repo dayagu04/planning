@@ -23,12 +23,12 @@ search_path_display_num = 15
 coord_tf = coord_transformer()
 
 data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-data_moving_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
+# data_moving_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_car_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
 data_car_safe_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-data_car_safe_line = ColumnDataSource(data = {'y':[], 'x':[]})
 data_car_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+data_astar_target_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_car_end_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_safe_circle_tang_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_safe_circle_tang_line = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
@@ -42,6 +42,9 @@ data_pt_inside_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_real_time_node_list = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_search_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+# include node: open set, close set, safe node
+data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 rs_heuristic_path = ColumnDataSource(data = {'x':[], 'y':[]})
 data_obstacle_points = ColumnDataSource(data = {'x':[], 'y':[]})
 
@@ -57,6 +60,9 @@ data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
 data_rs_path = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[],
                                               'plan_path_heading':[],})
+data_polynomial_path = ColumnDataSource(data = {'plan_path_x':[],
+                                              'plan_path_y':[],
+                                              'plan_path_heading':[],})
 
 data_rs_lib_test = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[],
@@ -66,11 +72,10 @@ data_veh_circle = ColumnDataSource(data = {'car_circle_xn':[], 'car_circle_yn':[
 
 fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
 fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5,legend_label = 'car',visible = True,fill_alpha = 0.2)
-fig1.patch('car_xn', 'car_yn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car',visible = False)
+# fig1.patch('car_xn', 'car_yn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car',visible = False)
 # fig1.patch('car_xn', 'car_yn', source = data_car_target_pos, fill_color = "blue", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target_pos')
 # fig1.patch('car_xn', 'car_yn', source = data_car_safe_pos, fill_color = "orange", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_safe_pos', visible = False)
 fig1.line('x', 'y', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target_line',visible = False)
-fig1.line('x', 'y', source = data_car_safe_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_safe_line',visible = False)
 fig1.patches('x_vec', 'y_vec', source = data_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'veh_body_envelope', visible = False)
 
 fig1.circle('x','y', source = data_pt_inside_pos, size=8, color='green', legend_label = 'pt_inside_pos')
@@ -81,6 +86,7 @@ fig1.multi_line('x_vec', 'y_vec', source=data_real_time_node_list, line_width=1.
 
 fig1.circle('x','y', source = data_car_start_pos, size=8, color='red', legend_label = 'car_start_pos')
 fig1.circle('x','y', source = data_car_end_pos, size=8, color='blue', legend_label = 'car_end_pos')
+fig1.circle('x','y', source = data_astar_target_pos, size=8, color='orange', legend_label = 'astar_target')
 fig1.circle('x','y', source = data_safe_circle_tang_pos, size=8, color='black', legend_label = 'safe_circle_tang_pos', visible = False)
 fig1.multi_line('x_vec', 'y_vec',source = data_safe_circle_tang_line, line_width = 3, line_color = 'black', line_dash = 'solid',legend_label = 'safe_circle_tang_line', visible = False)
 fig1.multi_line('x_vec', 'y_vec',source = data_slot, line_width = 1.5, line_color = 'black', line_dash = 'solid',legend_label = 'slot')
@@ -92,8 +98,11 @@ fig1.circle('plan_path_x', 'plan_path_y', source = data_full_astar_path, size=4,
 fig1.circle('x', 'y', source = data_obstacle_points, size=4, color='red', legend_label = 'obstacle_points')
 fig1.line('plan_path_x', 'plan_path_y', source = data_full_astar_path, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
 fig1.line('plan_path_x', 'plan_path_y', source = data_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path')
+fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
 fig1.line('plan_path_x', 'plan_path_y', source = data_rs_lib_test, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_lib_test')
 fig1.line('x_vec', 'y_vec', source = data_search_path, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_path')
+fig1.circle('x_vec', 'y_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
+fig1.circle('x_vec', 'y_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
 fig1.circle(x='car_circle_xn', y='car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
 
@@ -163,20 +172,20 @@ hybrid_astar_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=5.1, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=0.1, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=180.0, step=1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.1, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=1.6, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=45.0, step=1)
 
     self.is_left = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_left",min=0, max=1, value=0, step=1)
     self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
     self.slot_phi_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_phi",min=45, max=90, value=90, step=15.0)
 
-    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.2, step=0.05)
-    self.left_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_virtual_wall_x",min=-30.0, max=20.0, value=-2.6, step=0.05)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-2.0, max=2.0, value=0.6, step=0.05)
+    self.left_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_virtual_wall_x",min=-30.0, max=20.0, value=-12.6, step=0.05)
     self.right_virtual_wall_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_virtual_wall_x",min=0.0, max=20.0, value=15, step=0.05)
-    self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
-    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.2, step=0.5)
-    self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.2, step=0.05)
+    self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=0, max=2.0, value=0.6, step=0.05)
+    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-2.0, max=2.0, value=0.6, step=0.5)
+    self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=0, max=2.0, value=0.6, step=0.05)
     self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=20, value=8.8, step=0.1)
 
     self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=3, value=2.4, step=0.01)
@@ -185,9 +194,6 @@ class LocalViewSlider:
 
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
-
-    self.traj_s_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "traj_s_slider",min=-1, max=20, value=0.0, step=0.05)
-    self.car_move_mode_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="car_move_mode", min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback, ego_x=self.ego_x_slider,
                         ego_y=self.ego_y_slider,
@@ -207,12 +213,11 @@ class LocalViewSlider:
                         channel_width=self.channel_width_slider,
                         right_virtual_wall_x=self.right_virtual_wall_x_slider,
                         left_virtual_wall_x=self.left_virtual_wall_x_slider,
-                        traj_s=self.traj_s_slider,
-                        car_move_mode=self.car_move_mode_slider)
+                        )
 
 ## sliders callback
 def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, trigger_plan, slot_phi, slot_width, slot_length, inside_dx, right_obj_dx,
-                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x,traj_s, car_move_mode):
+                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x):
   kwargs = locals()
 
   # vehicle_type = 'CHERY_T26'
@@ -320,7 +325,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
                 channel_width, right_virtual_wall_x, left_virtual_wall_x]
 
   current_path_point_global_vec_ = hybrid_astar_py.Update(
-      ego_pose, slot_pt, inside_dx, obs_params, trigger_plan, traj_s)
+      ego_pose, slot_pt, inside_dx, obs_params, trigger_plan)
 
   # rs
   data_rs_path.data.update({
@@ -341,6 +346,24 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
      plan_path_heading.append(rs_path[i][2])
 
   data_rs_path.data.update({
+    'plan_path_x': plan_path_x,
+    'plan_path_y': plan_path_y,
+    'plan_path_heading': plan_path_heading,
+  })
+
+  # plot polynomial
+  polynomial_path = hybrid_astar_py.GetPolynomialPath()
+
+  plan_path_x = []
+  plan_path_y = []
+  plan_path_heading = []
+
+  for i in range(len(polynomial_path)):
+     plan_path_x.append(polynomial_path[i][0])
+     plan_path_y.append(polynomial_path[i][1])
+     plan_path_heading.append(polynomial_path[i][2])
+
+  data_polynomial_path.data.update({
     'plan_path_x': plan_path_x,
     'plan_path_y': plan_path_y,
     'plan_path_heading': plan_path_heading,
@@ -391,8 +414,36 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     'y_vec': plan_path_y
   })
 
-  # all h rs path
+  # all search node
+  data_all_search_node.data.update({
+      'x_vec': [],
+      'y_vec': [],
+  })
 
+  nodes = hybrid_astar_py.GetAllSearchNode()
+  safe_node_x = []
+  safe_node_y = []
+  collision_node_x = []
+  collision_node_y = []
+
+  for i in range(len(nodes)):
+    if (nodes[i][2] > 0.8):
+      safe_node_x.append(nodes[i][0])
+      safe_node_y.append(nodes[i][1])
+    else:
+      collision_node_x.append(nodes[i][0])
+      collision_node_y.append(nodes[i][1])
+
+  data_all_search_node.data.update({
+    'x_vec': safe_node_x,
+    'y_vec': safe_node_y
+  })
+  data_all_search_collision_node.data.update({
+    'x_vec': collision_node_x,
+    'y_vec': collision_node_y
+  })
+
+  # all h rs path
   paths = hybrid_astar_py.GetRSHeuristicPath()
   plan_path_x = []
   plan_path_y = []
@@ -444,6 +495,11 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     'y': [car_end_pose[1]],
   })
 
+  pose = hybrid_astar_py.GetAstarEndPose()
+  data_astar_target_pos.data.update({
+    'x': [pose[0]],
+    'y': [pose[1]],
+  })
 
   print(len(current_path_point_global_vec_))
 
@@ -585,11 +641,6 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
   #   'car_yn': car_yn,
   # })
 
-  # data_car_safe_line.data.update({
-  #   'x' : line_xn,
-  #   'y' : line_yn,
-  # })
-
   # circle obs
   obs_pts = hybrid_astar_py.GetVirtualWallObstacles()
   obs_pt_x, obs_pt_y = [], []
@@ -645,18 +696,18 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     'y_vec': line_list_y_vec,})
 
 
-  car_xn = []
-  car_yn = []
-  pose = hybrid_astar_py.GetTrajPoseByDist()
+  # car_xn = []
+  # car_yn = []
+  # pose = hybrid_astar_py.GetTrajPoseByDist()
 
-  for i in range(len(car_xb)):
-      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], pose[0], pose[1], pose[2])
-      car_xn.append(tmp_x)
-      car_yn.append(tmp_y)
-  data_moving_car.data.update({
-    'car_xn': car_xn,
-    'car_yn': car_yn,
-  })
+  # for i in range(len(car_xb)):
+  #     tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], pose[0], pose[1], pose[2])
+  #     car_xn.append(tmp_x)
+  #     car_yn.append(tmp_y)
+  # data_moving_car.data.update({
+  #   'car_xn': car_xn,
+  #   'car_yn': car_yn,
+  # })
 
 
   # vehicle_type = 'CHERY_T26'

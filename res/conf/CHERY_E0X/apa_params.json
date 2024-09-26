@@ -239,7 +239,7 @@
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,
   "is_parallel_advanced_method": true,
-  "path_generator_type": 0,
+  "path_generator_type": 1,
   "vertical_slot_target_adjust_dist": 1.5,
   "enable_delete_fusion_obj_in_slot": true,
   "use_a_cubic_polynomial_for_adjustment" :true,

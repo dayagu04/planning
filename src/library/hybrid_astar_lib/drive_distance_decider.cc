@@ -100,7 +100,7 @@ void DriveDistanceDecider::Process(HybridAStarResult *history_path,
       history_path->accumulated_s[next_path_info_.end_point_id_] -
       history_path->accumulated_s[next_path_info_.start_point_id_];
 
-  ILOG_INFO << "single shot parking decision, gear: "
+  ILOG_INFO << "drive distance decider, gear: "
             << PathGearDebugString(second_path_gear) << " ,dist "
             << next_path_info_.dist_ << " ,shot number: "
             << PathGearSwitchNumberString(next_path_info_.gear_switch_number_);

@@ -312,7 +312,6 @@ int HybridAStarThreadSolver::Process() {
 }
 
 void HybridAStarThreadSolver::Clear() {
-  printf("HybridAStarThreadSolver clear\n");
   request_response_state_.store(RequestResponseState::NONE);
   return;
 }

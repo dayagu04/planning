@@ -59,6 +59,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   tie_breaker_ = 1e-5;
 
+  dp_search_goal_adjust_dist = 0.7;
+
   return;
 }
 
