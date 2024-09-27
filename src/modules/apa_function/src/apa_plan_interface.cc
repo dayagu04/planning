@@ -380,6 +380,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().uss_stuck_replan_wait_time, double,
                   "uss_stuck_replan_wait_time");
 
+  JSON_READ_VALUE(apa_param.SetPram().deadend_uss_stuck_replan_wait_time,
+                  double, "deadend_uss_stuck_replan_wait_time");
+
   JSON_READ_VALUE(apa_param.SetPram().uss_scan_angle_deg, double,
                   "uss_scan_angle_deg");
 

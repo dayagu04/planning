@@ -243,6 +243,7 @@
   "vertical_slot_target_adjust_dist": 1.5,
   "enable_delete_fusion_obj_in_slot": true,
   "use_a_cubic_polynomial_for_adjustment" :true,
+  "deadend_uss_stuck_replan_wait_time": 1.0,
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
