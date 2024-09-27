@@ -3,6 +3,7 @@ import sys
 import subprocess
 import json
 import time
+import shutil
 
 begin_time = time.time()
 
@@ -43,6 +44,7 @@ end_time = time.time()
 print(f"Get bag 耗时：{end_time - start_time}秒")
 
 # 生成结果文件目录
+shm_path = "/dev/shm"
 out_root_path = "/out"
 out_dir = f"{out_root_path}/{task_id}/{scene_lib_id}/{case_id}"
 try:
@@ -53,7 +55,7 @@ print("Creat out_dir successfully !")
 
 # 运行PP
 start_time = time.time()
-PP_bag = f"{out_dir}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
+PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 mileage_path = f"{out_dir}/case_result.json"
 command = export_command + f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {mileage_path} --close-loop --interface-check --no-version-check'"
 try:
@@ -93,7 +95,7 @@ with open(json_path, 'r', encoding='utf-8') as file:
     data = json.load(file)
 data['checker_list'] = checker_list
 data['plotter_list'] = []
-data['bag_path_list'] = [out_dir]
+data['bag_path_list'] = [shm_path]
 data['output_path'] = out_dir
 
 with open(json_path, 'w', encoding='utf-8') as file:
@@ -120,10 +122,10 @@ print(f"Run checker 耗时：{end_time - start_time}秒")
 start_time = time.time()
 script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
 command_proto = export_command + f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py'"
-command_lat = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lat_plan_html.py {PP_bag}'"
-command_lon = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lon_plan_html.py {PP_bag}'"
-command_behavior = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_vo_lat_behavior_html.py {PP_bag}'"
-command_local_view = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_local_view_html.py {PP_bag}'"
+command_lat = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lat_plan_html.py {PP_bag} {out_dir}'"
+command_lon = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lon_plan_html.py {PP_bag} {out_dir}'"
+command_behavior = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_vo_lat_behavior_html.py {PP_bag} {out_dir}'"
+command_local_view = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_local_view_html.py {PP_bag} {out_dir}'"
 try:
     result0 = subprocess.run(command_proto, shell=True, text=True, check=True)
     result1 = subprocess.run(command_lat, shell=True, text=True, check=True)
@@ -139,4 +141,13 @@ if (result0.returncode != 0 or result1.returncode != 0 or result2.returncode != 
 print("Creat html successfully !")
 end_time = time.time()
 print(f"Creat html 耗时：{end_time - start_time}秒")
+
+# 移动PP bag
+start_time = time.time()
+try:
+    shutil.move(PP_bag, out_dir)
+except Exception as e:
+    print(f"Move PP Error: {e}")
+end_time = time.time()
+print(f"Move PP bag 耗时：{end_time - start_time}秒")
 print(f"总耗时：{end_time - begin_time}秒")
