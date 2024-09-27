@@ -426,15 +426,6 @@ void LateralMotionPlanner::AssembleInput() {
     }
   }
 
-  if (split_scene) {
-    motion_plan_concerned_end_index = 17;
-    if (!is_divide_lane_into_two_) {
-      planning_weight_ptr_->MakeSplitDynamicWeight(planning_input_);
-    } else {
-      complete_follow = true;
-    }
-  }
-
   // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
   if ((lane_change_scene) && (!lane_change_back)) {
     if (ego_v <= config_.lane_change_high_vel || config_.use_new_lc_param) {
@@ -466,6 +457,13 @@ void LateralMotionPlanner::AssembleInput() {
         motion_plan_concerned_end_index = 17;
       }
       planning_weight_ptr_->MakeLaneChangeDynamicWeight(planning_input_);
+    }
+  } else if (split_scene) {
+    motion_plan_concerned_end_index = 17;
+    if (!is_divide_lane_into_two_) {
+      planning_weight_ptr_->MakeSplitDynamicWeight(planning_input_);
+    } else {
+      complete_follow = true;
     }
   }
 
