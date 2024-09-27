@@ -2,6 +2,9 @@ import os
 import sys
 import subprocess
 import json
+import time
+
+begin_time = time.time()
 
 config_file_path = os.getenv('CONFIG_FILE_PATH')
 
@@ -17,6 +20,7 @@ common_tools_branch  = data["common_tools_branch"]
 
 export_command = "bash -c 'source /opt/ros/melodic/setup.sh && "
 # 获取bag文件，分为下载链接和路径两种
+start_time = time.time()
 if "http" in bag_file:
     file_path = f"/root/planning/{task_id}_{scene_lib_id}_{case_id}.bag"
     command = 'curl ' + '"' + bag_file + '"' + ' -o ' + file_path
@@ -35,6 +39,8 @@ else:
         print(f"The file '{bag_file}' does not exist.")
         sys.exit(1)
 print("Get bag successfully !")
+end_time = time.time()
+print(f"Get bag 耗时：{end_time - start_time}秒")
 
 # 生成结果文件目录
 out_root_path = "/out"
@@ -46,6 +52,7 @@ except Exception as e:
 print("Creat out_dir successfully !")
 
 # 运行PP
+start_time = time.time()
 PP_bag = f"{out_dir}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 mileage_path = f"{out_dir}/case_result.json"
 command = export_command + f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {mileage_path} --close-loop --interface-check --no-version-check'"
@@ -60,8 +67,11 @@ if (result.returncode != 0):
 if not os.path.exists(PP_bag):
     sys.exit(1)
 print("Run PP successfully !")
+end_time = time.time()
+print(f"Run PP 耗时：{end_time - start_time}秒")
 
 # 运行checker
+start_time = time.time()
 command = f"cd /root/common_tools/ && git fetch && git checkout -b {task_id}_{scene_lib_id}_{case_id} origin/{common_tools_branch}"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True)
@@ -72,10 +82,13 @@ if (result.returncode != 0):
     print(f"Pulling common_tools error")
     sys.exit(1)
 print("Pulling common_tools successfully !")
+end_time = time.time()
+print(f"Pulling common_tools 耗时：{end_time - start_time}秒")
 
 checker_path = "/root/common_tools/checker_scc/task"
 json_path = f"{checker_path}/scc_checker_task.json"
 # 修改JSON文件
+start_time = time.time()
 with open(json_path, 'r', encoding='utf-8') as file:
     data = json.load(file)
 data['checker_list'] = checker_list
@@ -86,7 +99,10 @@ data['output_path'] = out_dir
 with open(json_path, 'w', encoding='utf-8') as file:
     json.dump(data, file, ensure_ascii=False, indent=2)
 print("Update json successfully !")
+end_time = time.time()
+print(f"Update json 耗时：{end_time - start_time}秒")
 
+start_time = time.time()
 command = export_command + f"cd {checker_path} && /root/miniconda3/bin/python scc_checker_task.py scc_checker_task.json simulation_mode'"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True)
@@ -97,8 +113,11 @@ if (result.returncode != 0):
     print(f"Runing checker error")
     sys.exit(1)
 print("Run checker successfully !")
+end_time = time.time()
+print(f"Run checker 耗时：{end_time - start_time}秒")
 
 # 生成html
+start_time = time.time()
 script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
 command_proto = export_command + f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py'"
 command_lat = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lat_plan_html.py {PP_bag}'"
@@ -118,3 +137,6 @@ if (result0.returncode != 0 or result1.returncode != 0 or result2.returncode != 
     print(f"Creating html error")
     sys.exit(1)
 print("Creat html successfully !")
+end_time = time.time()
+print(f"Creat html 耗时：{end_time - start_time}秒")
+print(f"总耗时：{end_time - begin_time}秒")
