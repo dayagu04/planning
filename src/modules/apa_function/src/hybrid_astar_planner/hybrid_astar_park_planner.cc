@@ -90,7 +90,7 @@ const bool HybridAStarParkPlanner::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
       apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
     if (frame_.stuck_uss_time >
-        apa_param.GetParam().uss_stuck_replan_wait_time) {
+        apa_param.GetParam().deadend_uss_stuck_replan_wait_time) {
       frame_.is_replan_by_uss = true;
       return true;
     }

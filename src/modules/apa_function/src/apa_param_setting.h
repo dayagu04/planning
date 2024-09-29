@@ -271,6 +271,7 @@ struct ApaParameters {
   // move target point in slot to another point for easy tracking
   double vertical_slot_target_adjust_dist = 1.0;
   bool enable_delete_fusion_obj_in_slot = true;
+  double deadend_uss_stuck_replan_wait_time;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
