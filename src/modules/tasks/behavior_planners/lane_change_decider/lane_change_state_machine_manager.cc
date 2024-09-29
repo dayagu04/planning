@@ -75,7 +75,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
         if (is_propose_to_execution &&
-            boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED) {
+            (boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+             boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL)) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
