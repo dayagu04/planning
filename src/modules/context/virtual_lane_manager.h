@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <queue>
 
 #include "ad_common/hdmap/hdmap.h"
 #include "ego_lane_track_manager.h"
@@ -205,7 +206,9 @@ class VirtualLaneManager {
 
   bool is_ego_on_expressway_hmi() const { return is_ego_on_expressway_hmi_; }
 
-  bool is_road_merged_by_other_lane() const { return is_road_merged_by_other_lane_; }
+  bool is_road_merged_by_other_lane() const {
+    return is_road_merged_by_other_lane_;
+  }
 
   const double dis_threshold_to_merged_point() const {
     return dis_threshold_to_is_merged_point_;
@@ -255,6 +258,7 @@ class VirtualLaneManager {
   const planning::common::IntersectionState GetIntersectionState() {
     return Intersection_state_;
   };
+  bool IsPosXOnVirtualLaneType(double x_pos);
 
   std::vector<int> GetZeroRelativeIdOrderIds() {
     return order_ids_of_same_zero_relative_id_;
@@ -290,6 +294,9 @@ class VirtualLaneManager {
   RampDirection MakesureSplitDirection(
       const ::SdMapSwtx::Segment &split_segment,
       const ad_common::sdmap::SDMap &sd_map);
+  RampDirection MakesureMergeDirection(
+      const ::SdMapSwtx::Segment &merge_segment,
+      const ad_common::sdmap::SDMap &sd_map);
   // void CalculateHPPInfo(planning::framework::Session *session);
   void ResetHpp();
   // void CalculateDistanceToTargetSlot(planning::framework::Session *session);
@@ -305,7 +312,6 @@ class VirtualLaneManager {
   bool UpdateEgoDistanceToStopline();
   bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);
   bool UpdateIntersectionState();
-  bool IsPosXOnVirtualLaneType(double x_pos);
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
@@ -328,8 +334,13 @@ class VirtualLaneManager {
   double dis_to_ramp_ = NL_NMAX;
   RampDirection ramp_direction_ = RampDirection::RAMP_NONE;
   RampDirection first_split_direction_ = RampDirection::RAMP_NONE;
+  RampDirection first_merge_direction_ = RampDirection::RAMP_NONE;
   double distance_to_first_road_merge_ = NL_NMAX;
   double distance_to_first_road_split_ = NL_NMAX;
+  RampDirection second_split_direction_ = RampDirection::RAMP_NONE;
+  RampDirection second_merge_direction_ = RampDirection::RAMP_NONE;
+  double distance_to_second_road_merge_ = NL_NMAX;
+  double distance_to_second_road_split_ = NL_NMAX;
   bool is_local_valid_ = false;
   bool is_select_split_nearing_ramp_ = true;
   std::unordered_set<uint64_t> lane_group_set_;
@@ -355,6 +366,8 @@ class VirtualLaneManager {
   double distance_to_next_speed_bump_ = NL_NMAX;
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point_ = NL_NMAX;
+  double sum_dis_to_last_split_point_ = NL_NMAX;
+  double sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
   bool is_in_sdmaproad_ = false;
   bool is_ego_on_expressway_ = false;
   bool is_ego_on_expressway_hmi_ = false;
@@ -372,7 +385,7 @@ class VirtualLaneManager {
   bool is_road_merged_by_other_lane_ = false;
   bool is_nearing_other_lane_merge_to_road_point_ = false;
   RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
-  const double dis_threshold_to_last_merge_point_ = 800.0;
+  const double dis_threshold_to_last_merge_point_ = 600.0;
   const double dis_threshold_to_is_merged_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;
@@ -384,6 +397,8 @@ class VirtualLaneManager {
   //到停止线的距离，可以为负，表示停止线在车后
   double distance_to_stopline_ = NL_NMAX;
   double distance_to_crosswalk_ = NL_NMAX;
+  std::deque<double> stopline_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
+  std::deque<double> crosswalk_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   planning::common::IntersectionState Intersection_state_ =
       planning::common::NO_INTERSECTION;
 };

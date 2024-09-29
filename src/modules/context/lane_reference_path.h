@@ -12,7 +12,7 @@ class LaneReferencePath
 
   int get_lane_id() { return lane_virtual_id_; }
 
-  virtual void update(planning::framework::Session *session);
+  virtual void update(planning::framework::Session *session) override;
 
   virtual bool is_obstacle_ignorable(
       const std::shared_ptr<FrenetObstacle> obstacle) override;

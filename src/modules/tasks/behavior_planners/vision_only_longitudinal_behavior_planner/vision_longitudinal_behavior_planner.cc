@@ -298,7 +298,6 @@ bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
     const std::vector<TrackedObject> &front_tracks,
     const std::vector<TrackedObject> &side_tracks, const string &lc_status,
     const double v_ego) {
-  const double velocity_increase_cutin = 0.005;
   const double safety_distance = 2.0 + v_ego * 0.2;
   const double p1min_speed = 2.0;
   const double p2min_speed = 3.0;
@@ -1247,8 +1246,6 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_lane_change(
     const TrackedObject *lead_one, const double v_cruise, const double v_ego,
     const string &lc_request, const string &lc_status) {
   LOG_DEBUG("----compute_speed_4_lane_change--- \n");
-  auto &lateral_obstacle =
-      session_->environmental_model().get_lateral_obstacle();
 
   /*modify
   auto &state_machine_output =

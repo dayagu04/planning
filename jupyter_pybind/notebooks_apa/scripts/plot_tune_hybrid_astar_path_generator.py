@@ -215,9 +215,9 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
                     right_obj_dy, left_obj_dx, left_obj_dy, channel_width, right_virtual_wall_x, left_virtual_wall_x,traj_s, car_move_mode):
   kwargs = locals()
 
-  vehicle_type = 'CHERY_T26'
-  # vehicle_type = 'CHERY_E0X'
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  # vehicle_type = 'CHERY_T26'
+  vehicle_type = 'CHERY_E0X'
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, 0.0)
 
   car_xn = []
   car_yn = []
@@ -660,7 +660,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
 
   # vehicle_type = 'CHERY_T26'
-  car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
+  footprint_model = hybrid_astar_py.GetFootPrintModel()
 
   car_circle_xn = []
   car_circle_yn = []
@@ -668,6 +668,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
   # draw origin car, no expansion
   if 0:
+    car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
     for i in range(len(car_circle_x)):
       x = ego_pose[0]
       y = ego_pose[1]
@@ -687,30 +688,14 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
     })
 
   # expansion
-  for i in range(len(car_circle_x)):
+  for i in range(len(footprint_model)):
     x = ego_pose[0]
     y = ego_pose[1]
     heading = ego_pose[2]
 
-    if i == 1 or i==2:
-      tmp_x, tmp_y = local2global(
-        car_circle_x[i]+0.2, car_circle_y[i], x, y, heading)
-    elif i==4 or i==5:
-       tmp_x, tmp_y = local2global(
-          car_circle_x[i]-0.2, car_circle_y[i], x, y, heading)
-    else:
-      tmp_x, tmp_y = local2global(
-          car_circle_x[i], car_circle_y[i], x, y, heading)
-
-    car_circle_xn.append(tmp_x)
-    car_circle_yn.append(tmp_y)
-
-    if i == 0:
-      car_circle_rn.append(car_circle_r[i]+0.35)
-    elif i == 3 or i == 6:
-      car_circle_rn.append(car_circle_r[i]+0.2)
-    else:
-      car_circle_rn.append(car_circle_r[i]+0.2)
+    car_circle_xn.append(footprint_model[i][0])
+    car_circle_yn.append(footprint_model[i][1])
+    car_circle_rn.append(footprint_model[i][2])
 
   data_veh_circle.data.update({
     'car_circle_xn': car_circle_xn,

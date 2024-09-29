@@ -4,6 +4,7 @@
 #include <sys/param.h>
 
 #include <cmath>
+#include <complex>
 
 #include "environmental_model.h"
 #include "ifly_time.h"
@@ -248,7 +249,7 @@ void LaneReferencePath::assign_obstacles_to_lane() {
 
 bool LaneReferencePath::IsObstacleOn(
     std::shared_ptr<FrenetObstacle> frenet_obstacle) {
-  if (frenet_obstacle->rel_s() > 120 || frenet_obstacle->rel_s() < -50 ||
+  if (frenet_obstacle->rel_s() > 180 || frenet_obstacle->rel_s() < -50 ||
       frenet_obstacle->s_min_l().x > 15 || frenet_obstacle->s_max_l().x < -15 ||
       !frenet_obstacle->b_frenet_valid()) {
     return false;
@@ -264,6 +265,12 @@ bool LaneReferencePath::IsObstacleOn(
       frenet_obstacle->s_min_l().x - lane_width / 2.0;
   double distance_to_right_line =
       frenet_obstacle->s_max_l().x + lane_width / 2.0;
+  //扩张自车道上的锥桶，使之能被绑定在相邻车道上
+  if (frenet_obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
+    std::abs(frenet_obstacle->l_relative_to_ego()) < lane_width) {
+    distance_to_left_line = distance_to_left_line - 1.0;
+    distance_to_right_line = distance_to_right_line + 1.0;
+  }
   std::array<double, 3> xp_vs{0., 3., 5.};
   std::array<double, 3> fp_l1{std::max(lane_width / 2 - 1.45, 0.0),
                               std::max(lane_width / 2 - 1.65, 0.0), 0.0};

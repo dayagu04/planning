@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 # no project name in src
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Eigen3 REQUIRED)
 
 add_subdirectory(common EXCLUDE_FROM_ALL)
@@ -26,3 +28,8 @@ install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/scripts
   DESTINATION ${CMAKE_INSTALL_PREFIX}/res)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/../res/conf/${PRODUCT}/
   DESTINATION ${CMAKE_INSTALL_PREFIX}/res/conf)
+
+if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
+  install(DIRECTORY ${CMAKE_INSTALL_PREFIX}/res
+    DESTINATION /asw/planning)
+endif()

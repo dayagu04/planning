@@ -36,7 +36,6 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
   bool neg_right_alc_car = object_selector->neg_right_alc_car();
   auto &left_alc_car = object_selector->left_alc_car();
   auto &right_alc_car = object_selector->right_alc_car();
-  int front_tracks_l_cnt = object_selector->front_tracks_l_cnt();
   int front_tracks_r_cnt = object_selector->front_tracks_r_cnt();
 
   auto flane = lane_change_lane_mgr_->flane();
@@ -45,7 +44,6 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
 
   double olane_width = flane->width();
   double v_ego = ego_state->ego_v();
-  double dt_delay = v_ego < 5.0 ? 0.0 : 0.03;
   int left_lane_index = 0;
   int right_lane_index = virtual_lane_mgr_->get_lane_num() - 1;
 
@@ -77,14 +75,6 @@ void ActRequest::Update(std::shared_ptr<ObjectSelector> object_selector,
   //   olane_width = 3.6;
   // }
   olane_width = 3.6;  // hack
-  double act_cancel_thr = std::max(olane_width / 2 - 0.6, 0.);
-  bool l_change_cond = (lane_change_lane_mgr_->has_target_lane() &&
-                        flane->get_ego_lateral_offset() + v_ego * dt_delay <
-                            start_move_distolane + act_cancel_thr);
-
-  bool r_change_cond = (lane_change_lane_mgr_->has_target_lane() &&
-                        flane->get_ego_lateral_offset() - v_ego * dt_delay >
-                            start_move_distolane - act_cancel_thr);
 
   // auto traffic_light_direction = map_info.traffic_light_direction();
   // bool curr_direct_exist =

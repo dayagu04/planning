@@ -113,7 +113,6 @@ bool PlanningScheduler::RunOnce(
     iflyauto::PlanningOutput *const planning_output,
     iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   double start_timestamp = IflyTime::Now_ms();
-  double start_timestamp_us = IflyTime::Now_us();
 
   LOG_ERROR("PlanningScheduler::RunOnce \n");
 
@@ -170,7 +169,6 @@ bool PlanningScheduler::RunOnce(
   g_context.MutableStatemachine().scene_type = scene_type;
 
   // update environment model
-  auto environmental_model = session_.mutable_environmental_model();
   if (!environmental_model_manager_.Run()) {
     session_.mutable_planning_context()->Clear();
     return false;
@@ -248,8 +246,6 @@ void PlanningScheduler::FillPlanningTrajectory(
       session_.environmental_model().get_virtual_lane_manager();
 
   // 更新输出
-  auto time_stamp_us = IflyTime::Now_us();
-
   iflyauto::strcpy_array(planning_output->meta.plan_strategy_name,
                          "Real Time Planning");
 
@@ -829,7 +825,6 @@ void PlanningScheduler::PrepareForApa() {
   auto &ego_state = session_.environmental_model().get_ego_state_manager();
 
   auto planning_context = session_.mutable_planning_context();
-  auto &planning_result = planning_context->mutable_planning_result();
 
   auto &planning_output = planning_context->mutable_planning_output();
 

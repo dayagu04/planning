@@ -487,10 +487,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // generate traj_points based on kMaxAcc or kMinAcc
     const auto &planning_init_point =
         ego_cart_state_manager_->planning_init_point();
-    const double kMaxAcc = 2;
+    double kMaxAcc = 2.0;
+    if (is_LC_CHANGE || is_LC_BACK) {
+      kMaxAcc = 1e-6;
+    }
     const double kMinAcc = -5.5;
-    double ego_v = planning_init_point.v;
     double cruise_v = session_->planning_context().v_ref_cruise();
+    double ego_v = std::max(planning_init_point.v, std::min(config_.low_speed_limit_for_ref, cruise_v));
     if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
     }
@@ -527,6 +530,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         cart_init_point);
 
     double s_ref = projection_spline.GetOutput().s_proj;
+    s_ref = frenet_init_pt.x;
     traj_points.clear();
     TrajectoryPoint point;
     constexpr double kEps = 1e-4;
@@ -1220,6 +1224,42 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(const std::shared_ptr<FrenetObs
   return false;
 }
 
+double GeneralLateralDecider::CalculateExtraDecreaseBuffer(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left) {
+  bool in_intersection = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState() == common::IntersectionState::IN_INTERSECTION;
+  if (in_intersection) {
+    return 0.0;
+  }
+
+  const double relative_position = obstacle->frenet_obstacle_boundary().s_end - reference_path_ptr_->get_ego_frenet_boundary().s_start;
+  double extra_relative_position_decrease_buffer = 0.0;
+  if ((is_nudge_left && ego_frenet_state_.heading_angle() < 0.03) ||
+      (!is_nudge_left && ego_frenet_state_.heading_angle() > -0.03)) {
+    extra_relative_position_decrease_buffer = interp(relative_position, config_._relative_positon_bp, config_._relative_positon_decrease_extra_buffer);
+  }
+
+
+  double extra_relative_v_decrease_buffer = 0.0;
+  if (relative_position <= 2.5 &&
+      ((is_nudge_left && ego_frenet_state_.heading_angle() < 0.03) ||
+      (!is_nudge_left && ego_frenet_state_.heading_angle() > -0.03))) {
+    extra_relative_v_decrease_buffer = interp(obstacle->frenet_velocity_s() - ego_frenet_state_.velocity_s(), config_._relative_v_bp, config_._relative_v_decrease_extra_buffer);
+  }
+
+  double extra_type_decrease_buffer = 0.0;
+  if (general_lateral_decider_utils::IsTruck(obstacle->type())) {
+    extra_type_decrease_buffer = config_.truck_decrease_extra_buffer;
+  }
+
+  if (extra_relative_position_decrease_buffer > 0.0) {
+    JSON_DEBUG_VALUE("extra_relative_position_decrease_buffer", extra_relative_position_decrease_buffer);
+  }
+  if (extra_relative_v_decrease_buffer > 0.0) {
+    JSON_DEBUG_VALUE("extra_relative_v_decrease_buffer", extra_relative_v_decrease_buffer);
+  }
+
+  return extra_relative_position_decrease_buffer + extra_relative_v_decrease_buffer + extra_type_decrease_buffer;
+}
+
 void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
     const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
     ObstacleDecisions &obstacle_decisions) {
@@ -1267,7 +1307,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
   const double half_ego_width = vehicle_param.max_width * 0.5;
-  auto collision_center_distance = half_ego_width;
 
   const double front_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
@@ -1301,10 +1340,15 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   double limit_overlap_max_y = 1000;
   // hack: consider that the obstacle is not completely over the car
   bool is_cut_out_side_obstacle = IsCutoutSideObstacle(obstacle, limit_overlap_min_y, limit_overlap_max_y);
+  double hack_yaw_limit_overlap_min_y = -1000;
+  double hack_yaw_limit_overlap_max_y = 1000;
+  const bool is_hack_yaw = HackYawSideObstacle(obstacle, is_nudge_left, hack_yaw_limit_overlap_min_y, hack_yaw_limit_overlap_max_y);
   BoundType bound_type = BoundType::DYNAMIC_AGENT;
   if (is_cut_out_side_obstacle) {
     bound_type = BoundType::ADJACENT_AGENT;
   }
+
+  double extra_decrease_buffer = CalculateExtraDecreaseBuffer(obstacle, is_nudge_left);
 
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
@@ -1354,7 +1398,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       overlap_max_y = std::min(overlap_max_y, limit_overlap_max_y);
     }
 
-    const double lat_buf_dis =
+    double lat_buf_dis =
         general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
             is_nudge_left, in_intersection, config_);
@@ -1376,23 +1420,66 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     }
 
     const auto &indexes = match_index_map_[i];
-    for (auto index : indexes) {
-      GenerateObstaclePreliminaryDecision(
-          ego_l, ref_path_points_[index].distance_to_right_lane_border,
-          ref_path_points_[index].distance_to_left_lane_border, overlap_min_y,
-          overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
-          is_nudge_left, is_cross_obj, pre_lateral_decision,
-          reset_conflict_decision, obstacle_decision, lat_decision,
-          lon_decision);
-      has_lat_decision =
-          has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
-      has_lon_decision =
-          has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
+    if (is_cut_out_side_obstacle || (extra_decrease_buffer < 1e-5 && !is_hack_yaw)) {
+      for (auto index : indexes) {
+        GenerateObstaclePreliminaryDecision(
+            ego_l, ref_path_points_[index].distance_to_right_lane_border,
+            ref_path_points_[index].distance_to_left_lane_border, overlap_min_y,
+            overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+            is_nudge_left, is_cross_obj, pre_lateral_decision,
+            reset_conflict_decision, obstacle_decision, lat_decision,
+            lon_decision);
+        has_lat_decision =
+            has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
+        has_lon_decision =
+            has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
+      }
+      AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
+                              lat_buf_dis, lat_decision, lon_decision,
+                              obstacle_decision);
+    } else {
+      for (int k = 0; k < 2; k++) {
+        if (k == 0) {
+          bound_type = BoundType::ADJACENT_AGENT;
+        } else {
+          overlap_min_y = std::max(overlap_min_y, hack_yaw_limit_overlap_min_y);
+          overlap_max_y = std::min(overlap_max_y, hack_yaw_limit_overlap_max_y);
+          lat_buf_dis = std::max(lat_buf_dis - extra_decrease_buffer, 0.0);
+          bound_type = BoundType::DYNAMIC_AGENT;
+        }
+        for (auto index : indexes) {
+          GenerateObstaclePreliminaryDecision(
+              ego_l, ref_path_points_[index].distance_to_right_lane_border,
+              ref_path_points_[index].distance_to_left_lane_border, overlap_min_y,
+              overlap_max_y, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+              is_nudge_left, is_cross_obj, pre_lateral_decision,
+              reset_conflict_decision, obstacle_decision, lat_decision,
+              lon_decision);
+          has_lat_decision =
+              has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
+          has_lon_decision =
+              has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
+        }
+        AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
+                                lat_buf_dis, lat_decision, lon_decision,
+                                obstacle_decision);
+      }
     }
-    AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
-                             lat_buf_dis, lat_decision, lon_decision,
-                             obstacle_decision);
   }
+}
+
+bool GeneralLateralDecider::HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left, double& limit_overlap_min_y,
+    double& limit_overlap_max_y) {
+  if (obstacle->frenet_velocity_s() > ego_frenet_state_.velocity_s() &&
+      (reference_path_ptr_->get_ego_frenet_boundary().s_end + 1.0 >= obstacle->frenet_obstacle_boundary().s_end)) {
+    if (is_nudge_left) {
+      limit_overlap_min_y = std::min(obstacle->frenet_obstacle_corners().l_front_right, (obstacle->frenet_obstacle_corners().l_front_right + obstacle->frenet_obstacle_corners().l_rear_right) * 0.5);
+    } else {
+      limit_overlap_max_y = std::max(obstacle->frenet_obstacle_corners().l_front_left, (obstacle->frenet_obstacle_corners().l_front_left + obstacle->frenet_obstacle_corners().l_rear_left) * 0.5);
+    }
+    return true;
+  }
+  return false;
 }
 
 void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
@@ -1405,9 +1492,6 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
     LonObstacleDecisionType &lon_decision) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width = vehicle_param.max_width * 0.5;
-  constexpr double kMaxAvoidEdgeL{2.0};  // m
-  auto avoid_cross_lane = 0.2;
   if (is_nudge_left) {
     lat_decision = LatObstacleDecisionType::RIGHT;
     lon_decision = LonObstacleDecisionType::IGNORE;
@@ -2210,7 +2294,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
             virtual_lane_manager->get_lane_num() - 2 &&
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            MSD_LANE_TYPE_NON_MOTOR)) &&
+            iflyauto::LANETYPE_NON_MOTOR)) &&
       ((!isRedLightStop && lateral_output.accident_ahead &&
         lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
@@ -2238,7 +2322,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
             virtual_lane_manager->get_lane_num() - 2 &&
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            MSD_LANE_TYPE_NON_MOTOR)) &&
+            iflyauto::LANETYPE_NON_MOTOR)) &&
       virtual_lane_manager->current_lane_virtual_id() - 1 >= 0) {
     lateral_output.rightest_lane = true;
   } else {
@@ -2316,6 +2400,20 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     if (start_s - KDynamicLonOverlapDisBuffer < end_s) {
       return true;
     }
+  }
+  return false;
+}
+
+bool GeneralLateralDecider::IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle) {
+  const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;
+  const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
+
+  const double ego_s_start = ego_frenet_state_.boundary().s_start;
+  const double ego_s_end = ego_frenet_state_.boundary().s_end;
+  double start_s = std::max(ego_s_start, obstacle_s_start);
+  double end_s = std::min(ego_s_end, obstacle_s_end);
+  if (start_s < end_s) {
+    return true;
   }
   return false;
 }

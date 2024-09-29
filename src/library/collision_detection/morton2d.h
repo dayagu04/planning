@@ -3,7 +3,7 @@
 #include <bitset>
 
 #include "aabb2d.h"
-#include "types.h"
+#include "collision_detect_types.h"
 
 namespace cdl {
 CDL_EXPORT

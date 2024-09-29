@@ -22,7 +22,6 @@ void ObstacleManager::update() {
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
   double ego_init_relative_time = ego_state.planning_init_point().relative_time;
-  bool enable_bbox_mode = config_.enable_bbox_mode;
   const auto &prediction_objects =
       session_->environmental_model().get_prediction_info();
   for (int i = 0;
@@ -110,7 +109,7 @@ void ObstacleManager::update() {
     auto groundline_clusters = GroundLineDecider::execute(groundline);
     std::cout << "groundline_clusters.size = " << groundline_clusters.size()
               << std::endl;
-    LOG_DEBUG("groundline_clusters.size = %d", groundline_clusters.size());
+    LOG_DEBUG("groundline_clusters.size = %lu", groundline_clusters.size());
     int cluster_id = kGroundLineIdOffset;
     for (auto &groundline_cluster : groundline_clusters) {
       cluster_id += 1;

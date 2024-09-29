@@ -292,7 +292,10 @@ def draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager):
       for i, plan_debug in enumerate(plan_debug_msg['data']):
         input_topic_timestamp = plan_debug.input_topic_timestamp
         if lib.load_ros_bag.is_new_loc:
-          localization_timestamp = input_topic_timestamp.localization
+          if 0 != input_topic_timestamp.localization:
+            localization_timestamp = input_topic_timestamp.localization
+          else :
+            localization_timestamp = input_topic_timestamp.localization_estimate
         else :
           if is_bag_main:
             localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
@@ -439,7 +442,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
     fig_lat_traj_info5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
     fig_lat_traj_info6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig_lat_traj_info1.x_range, width=750, height=160)
     global plan_debug_ts
-    steer_ratio = 15.7
+    steer_ratio = 13.0
     rad_to_deg = 57.3
     coord_tf = coord_transformer()
     ref_theta_generate = CommonGenerator()
@@ -464,8 +467,10 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         lat_motion_plan_output = plan_debug.lateral_motion_planning_output
         input_topic_timestamp = plan_debug.input_topic_timestamp
         if lib.load_ros_bag.is_new_loc:
-          localization_timestamp = input_topic_timestamp.localization
-          #localization_timestamp = input_topic_timestamp.localization_estimate
+          if 0 != input_topic_timestamp.localization:
+            localization_timestamp = input_topic_timestamp.localization
+          else :
+            localization_timestamp = input_topic_timestamp.localization_estimate
         else :
           if is_bag_main:
             localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包

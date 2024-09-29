@@ -11,10 +11,6 @@
 
 namespace planning {
 // class: IntRequest
-namespace {
-constexpr double kLCCoolingTime = 3.0;
-}
-
 IntRequest::IntRequest(
     planning::framework::Session* session,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
@@ -47,7 +43,7 @@ void IntRequest::Update(int lc_status) {
     is_lever_status_valid_ = true;
   }
   is_lever_status_valid_last_frame_ =
-      lane_change_cmd_;  //反方向拨杆时，能触发反方向的变道请求
+      is_lever_status_valid_;  //反方向拨杆时，能触发反方向的变道请求
   // init lanes with id
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
   auto tlane = lane_change_lane_mgr_->tlane();

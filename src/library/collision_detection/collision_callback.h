@@ -3,10 +3,8 @@
 #include "collision_data2d.h"
 #include "collision_object2d.h"
 #include "collision_request.h"
-#include "constants.h"
 #include "contact2d.h"
 #include "convex2d.h"
-#include "user_data.h"
 
 namespace cdl {
 /**

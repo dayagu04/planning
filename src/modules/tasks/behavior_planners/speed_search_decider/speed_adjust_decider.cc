@@ -44,6 +44,9 @@ constexpr double kBackwardRange = 100.0;
 constexpr double kMinSlotLength = 15.0;
 constexpr int32_t kNoAgentId = -1;
 constexpr double kStaticCarFilterVel = 1.5;
+constexpr double kDistanceToMapRequestPoint = 120.0;
+constexpr double kNearbyCarFilterDis = 7.0;
+constexpr double kAlignedDistanceBuffer = 2.5;
 }  // namespace
 
 namespace planning {
@@ -84,6 +87,9 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   for (auto i = 0; i < kPlanningHorizions; i++) {
     speed_decider_pb_info->add_search_s_vec(0.0);
     speed_decider_pb_info->add_search_t_vec(0.0);
+    speed_decider_pb_info->add_search_v_vec(0.0);
+    speed_decider_pb_info->add_search_a_vec(0.0);
+    speed_decider_pb_info->add_search_j_vec(0.0);
   }
   variable_time_optimal_trajs_.clear();
 
@@ -105,15 +111,19 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   const auto& lc_request_source = session_->planning_context()
                                       .lane_change_decider_output()
                                       .lc_request_source;
+  const auto& is_in_merge_area =
+      session_->planning_context().lane_change_decider_output().is_merge_region;
 
-  if (coarse_planning_info.target_state != kLaneChangePropose) {
+  if (coarse_planning_info.target_state != kLaneChangePropose ||
+      is_in_merge_area) {
     ClearStatus();
     last_request_ = lc_request;
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
     speed_adjust_status_buffer_.current_frame_status = false;
-    std::cout << "no wait state " << std::endl;
+    std::cout << "no wait state or is in merge area:  " << is_in_merge_area
+              << std::endl;
     return false;
   }
 
@@ -231,7 +241,10 @@ void SpeedAdjustDecider::ProcessEnvInfos() {
 
   if (speed_adjust_status_buffer_.current_frame_status == true &&
       speed_adjust_status_buffer_.last_frame_status == false) {
+    retriggered_ego_speed_ = ego_state_manager->ego_v();
     origin_ego_speed_ = ego_state_manager->ego_v();
+    max_ego_speed_in_speed_adjust_ = ego_state_manager->ego_v();
+    min_ego_speed_in_speed_adjust_ = ego_state_manager->ego_v();
   }
 }
 
@@ -310,10 +323,12 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     std::pair<double, double> safe_distacne_pair =
         GetSafeAlignedDistance(init_va_.first, slot);
 
-    const double& aligned_front_s =
-        slot.front_veh_info().center_s - safe_distacne_pair.first;
-    const double& aligned_back_s =
-        slot.back_veh_info().center_s + safe_distacne_pair.second;
+    const double& aligned_front_s = slot.front_veh_info().center_s -
+                                    safe_distacne_pair.first -
+                                    kAlignedDistanceBuffer;
+    const double& aligned_back_s = slot.back_veh_info().center_s +
+                                   safe_distacne_pair.second +
+                                   kAlignedDistanceBuffer;
     if (slot.back_veh_info().center_s > 0.) {
       slot.SetAlignedFront(false);
       slot.SetAlignedS(aligned_back_s + init_sl_.first);
@@ -363,10 +378,10 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
                                              max_v_max_ego_v_bp_)));
 
     // lower aligned v limit
-    if (slot.aligned_v() <
-            origin_ego_speed_ - config_.min_dec_filter_speed / 3.6 ||
-        slot.aligned_v() >
-            origin_ego_speed_ + config_.max_acc_filter_speed / 3.6) {
+    if (slot.aligned_v() < min_ego_speed_in_speed_adjust_ -
+                               config_.min_dec_filter_speed / 3.6 ||
+        slot.aligned_v() > max_ego_speed_in_speed_adjust_ +
+                               config_.max_acc_filter_speed / 3.6) {
       std::cout << " The slot: <<" << idx << " is too slow" << std::endl;
       continue;
     }
@@ -404,7 +419,9 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     relative_state_limit.a_min =
         interp(init_va_.first, min_acc_ego_v_, min_acc_ego_v_bp_);
     relative_state_limit.v_min =
-        origin_ego_speed_ - config_.min_dec_adjust_limit / 3.6;
+        std::fmax(std::fmin(retriggered_ego_speed_, init_va_.first),
+                  origin_ego_speed_) -
+        config_.min_dec_adjust_limit / 3.6;
     relative_state_limit.v_max =
         v_cruise_ *
         interp(init_va_.first, max_v_max_ego_v_, max_v_max_ego_v_bp_);
@@ -469,9 +486,16 @@ bool SpeedAdjustDecider::Execute() {
     auto& s_vec = session_->mutable_planning_context()
                       ->mutable_lane_change_decider_output()
                       .st_search_vec;
+    const auto& best_profile = variable_time_optimal_trajs_[best_id];
     for (auto i = 0; i < s_vec.size(); i++) {
       speed_decider_pb_info->add_search_s_vec(s_vec[i]);
       speed_decider_pb_info->add_search_t_vec(i * kPlanningStep);
+      speed_decider_pb_info->add_search_v_vec(
+          best_profile.Evaluate(1, i * 0.2));
+      speed_decider_pb_info->add_search_a_vec(
+          best_profile.Evaluate(2, i * 0.2));
+      speed_decider_pb_info->add_search_j_vec(
+          best_profile.Evaluate(3, i * 0.2));
     }
   }
   for (auto& lane_change_veh : lane_change_veh_info_) {
@@ -535,7 +559,6 @@ int SpeedAdjustDecider::SelectBestSlot() {
 
   for (auto i = 0; i < variable_time_optimal_trajs_.size(); i++) {
     // 1. speed adjust cost
-    const auto& candidate_traj = variable_time_optimal_trajs_[i];
     // 2. aligned v cost
     const auto& slot = slot_point_info_[i];
     const double aligned_v_cost =
@@ -556,8 +579,15 @@ int SpeedAdjustDecider::SelectBestSlot() {
             : 0.0;
     slot_costs[i] += aligned_v_acc_penaty;
     // 3. aligned s cost
+    const double pred_aligned_time = std::fmax(
+        variable_time_optimal_trajs_[i].SecondOrderParamLength(), 0.0);
+    const double pred_aligned_rel_dis =
+        slot.is_align_front()
+            ? (slot.front_veh_info().v - init_va_.first) * pred_aligned_time
+            : (slot.back_veh_info().v - init_va_.first) * pred_aligned_time;
     const double s_dis_adjust_cost =
-        std::fabs(slot.aligned_s() - init_sl_.first) * s_dis_adjust_weight;
+        std::fabs(slot.aligned_s() + pred_aligned_rel_dis - init_sl_.first) *
+        s_dis_adjust_weight;
     slot_costs[i] += s_dis_adjust_cost;
 
     // 4. consider rear faster coming car
@@ -588,7 +618,11 @@ int SpeedAdjustDecider::SelectBestSlot() {
     std::cout
         << "origin ego speed has been register again, beacuse slot changed!"
         << std::endl;
-    origin_ego_speed_ = init_va_.first;
+    retriggered_ego_speed_ = init_va_.first;
+    max_ego_speed_in_speed_adjust_ =
+        std::fmax(max_ego_speed_in_speed_adjust_, init_va_.first);
+    min_ego_speed_in_speed_adjust_ =
+        std::fmin(min_ego_speed_in_speed_adjust_, init_va_.first);
   }
   last_best_slot_ = slot_point_info_[best_slot_id];
 

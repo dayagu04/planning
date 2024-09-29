@@ -19,15 +19,15 @@ enum class AstarFailType {
   dp_cost_fail,
 };
 
-enum class SearchState {
-  none,
-  time_out,
-  extend_node_too_much,
-  success,
-  overdue,
-  failure,
-  searching,
-  search_state_max_number,
+enum class AstarSearchState {
+  NONE,
+  TIME_OUT,
+  EXTEND_NODE_TOO_MUCH,
+  SUCCESS,
+  OVERDUE,
+  FAILURE,
+  SEARCHING,
+  SEARCH_STATE_MAX_NUMBER,
 };
 
 // use astar searching to get a path or just use rs path to link start and end.
@@ -73,6 +73,7 @@ enum class AstarPathType {
   none = 0,
   Reeds_Shepp,
   dubins,
+  cubic,
   node_searching,
   point_interpolate,
   start_node,
@@ -81,12 +82,13 @@ enum class AstarPathType {
 };
 
 enum class PlanningReason {
-  none,
-  path_completed,
-  path_stucked,
-  slot_changed,
-  first_plan,
-  adjust_self_car_pose,
+  NONE,
+  PATH_COMPLETED,
+  PATH_STUCKED,
+  SLOT_CHANGED,
+  FIRST_PLAN,
+  ADJUST_SELF_CAR_POSE,
+  SIMULATION_TRIGGER,
 };
 
 enum class AstarPathSteer {
@@ -161,17 +163,20 @@ struct AStarPathPoint {
         kappa(kappa_) {}
 };
 
-struct HybridAStarSpeedPoint {
+struct AStarSTPoint {
   double v;
   double acc;
+  double jerk;
   double t;
+  double s;
 };
 
 struct HybridAStarTrajPoint {
   AStarPathPoint path_point;
-  HybridAStarSpeedPoint speed_point;
+  AStarSTPoint speed_point;
 };
 
+// need refact this data
 struct HybridAStarResult {
   std::vector<double> x;
   std::vector<double> y;
@@ -179,19 +184,11 @@ struct HybridAStarResult {
   std::vector<AstarPathGear> gear;
   std::vector<AstarPathType> type;
 
-  // fill 0 for now
-  std::vector<double> v;
-
-  // not fill end point
-  std::vector<double> a;
-
-  // is positive
   std::vector<double> accumulated_s;
-  // left turn is
+  // left turn is is positive
   std::vector<double> kappa;
 
   int gear_change_num;
-  bool is_nice_path;
 
   // slot pose
   Pose2D base_pose;
@@ -204,14 +201,13 @@ struct HybridAStarResult {
     x.clear();
     y.clear();
     phi.clear();
-    a.clear();
     accumulated_s.clear();
-    v.clear();
     gear.clear();
     type.clear();
     kappa.clear();
     time_ms = 0;
     fail_type = AstarFailType::none;
+    gear_change_num = 0;
 
     return;
   }

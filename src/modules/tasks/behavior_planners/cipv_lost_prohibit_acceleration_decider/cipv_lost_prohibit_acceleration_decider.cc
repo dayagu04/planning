@@ -23,7 +23,8 @@ namespace {
 constexpr size_t kHistoryCipvSaveNum = 3;
 constexpr double kCipvLostTtcThr = 5.0;
 constexpr double kStopEgoHoldSpdMps = 0.5 / 3.6;
-constexpr double kMinSpeedThr = 0.5;
+constexpr double kMinSpeedThr = 0.1;
+constexpr size_t kProhibitCount = 5;
 }  // namespace
 
 CipvLostProhibitAccelerationDecider::CipvLostProhibitAccelerationDecider(
@@ -52,38 +53,17 @@ void CipvLostProhibitAccelerationDecider::Reset() {
 
 bool CipvLostProhibitAccelerationDecider::Execute() {
   LOG_DEBUG("=======CipvLostProhibitAccelerationDecider======= \n");
-
   const auto &environmental_model = session_->environmental_model();
-
-  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
-  const auto &planning_init_point = ego_state_mgr->planning_init_point();
+  const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto &v_ego = ego_state_mgr->ego_v();
-  const auto &dynamic_world = environmental_model.get_dynamic_world();
-  const bool dbw_status = environmental_model.GetVehicleDbwStatus();
-  const auto lateral_obstacle = environmental_model.get_lateral_obstacle();
+  const bool &dbw_status = environmental_model.GetVehicleDbwStatus();
+  const auto &lateral_obstacle = environmental_model.get_lateral_obstacle();
   const auto &lateral_behavior_planner_output =
       session_->planning_context().lateral_behavior_planner_output();
   auto lc_status = lateral_behavior_planner_output.lc_status;
 
   // 1、读取当前cipv信息，包括是否存在cipv和cipv的id
-  cipv_id_ = -1;
-  if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
-    if (lateral_obstacle->leadone() != nullptr &&
-        lateral_obstacle->leadone()->type != 0) {
-      cipv_has_ = true;
-      cipv_id_ = lateral_obstacle->leadone()->track_id;
-    }
-  } else {
-    if (lateral_obstacle->tleadone() != nullptr &&
-        lateral_obstacle->tleadone()->type != 0) {
-      cipv_has_ = true;
-      cipv_id_ = lateral_obstacle->tleadone()->track_id;
-    }
-  }
-
-  if (cipv_id_ == -1) {
-    cipv_has_ = false;
-  }
+  UpdateCipvInfo(lateral_obstacle, lc_status);
 
   // 2、continous_flag来判断当前cipv的稳定性
   bool continous_flag = true;
@@ -94,22 +74,21 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     }
   }
 
-  // 3、判断：存在cipv，当前车速度大于kStopEgoHoldSpdMps，处在ACC或PILOT模式
+  // 3、判断：存在cipv，当前车速度大于kStopEgoHoldSpdMps，进自动
   if (cipv_has_ && v_ego > kStopEgoHoldSpdMps && dbw_status) {
-    const auto &agent_manager = dynamic_world->agent_manager();
-    const planning::agent::Agent *cipv_ptr = agent_manager->GetAgent(cipv_id_);
-
-    // 新cipv开始稳定稳定，并且ttc小于阈值，自车速度比它大
-    if (cipv_ptr != nullptr && pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ &&
-        continous_flag &&
-        (pre_cipv_ttc_ < kCipvLostTtcThr || v_ego > cipv_ptr->speed())) {
-      pre_cipv_lost_id_ = cipv_id_;  // 当cipv稳定时存储
+    // 判断cipv lost id是否为当前cipv id
+    if (pre_cipv_lost_id_ > 0 && cipv_id_ == pre_cipv_lost_id_) {
       ++counter_;
-      // 当前cipv没变动
-    } else if (pre_cipv_lost_id_ > 0 && cipv_id_ == pre_cipv_lost_id_) {
+    } else if (pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ && continous_flag &&
+              (pre_cipv_ttc_ < kCipvLostTtcThr)) {
+      // 更新cipv lost id，满足：
+      // 1. 上一帧cipv id是否为当前cipv id
+      // 2. cipv是否连续3帧稳定
+      // 3. 自车与cipv的纵向ttc是否小于5s
+      pre_cipv_lost_id_ = cipv_id_;
       ++counter_;
     } else {
-      // pre_cipv_lost_id_ = -1;
+      pre_cipv_lost_id_ = -1;
       counter_ = 0;
     }
   } else {
@@ -118,7 +97,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
   }
 
   // 设置禁止加速标志位，禁止10帧
-  if (counter_ < 10 && counter_) {
+  if (counter_ < kProhibitCount && counter_) {
     prohibit_acc_ = true;
   } else {
     prohibit_acc_ = false;
@@ -126,7 +105,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
 
   // 4、设置禁止加速的速度限制开始时间
   if (prohibit_acc_ && v_ego > kStopEgoHoldSpdMps) {
-    // 设置速度限制
+    // 设置速度限制：保持当前车速
     speed_limit_ = v_ego;
     start_time_ = IflyTime::Now_s();
   }
@@ -141,6 +120,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     speed_limit_ = std::numeric_limits<double>::max();
   }
   JSON_DEBUG_VALUE("prohibit_acc_", prohibit_acc_);
+
   // 5、更新历史cipv信息
   Update();
   auto &mutable_output =
@@ -152,12 +132,18 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
 }
 
 double CipvLostProhibitAccelerationDecider::CalculateRelativeDistance(
-    const std::shared_ptr<KDPath> &planned_path, planning::agent::Agent cipv) {
+    const std::shared_ptr<KDPath> &planned_path, const agent::Agent *cipv) {
   double project_dist = std::numeric_limits<double>::max();
-  if (cipv.agent_id() <= 0) {
+  if (cipv->agent_id() <= 0) {
     return project_dist;
   }
-  const auto &corners = cipv.box().GetAllCorners();
+
+  if (planned_path == nullptr) {
+    return project_dist;
+  }
+
+  const auto &corners = cipv->box().GetAllCorners();
+
   // 遍历每个角点，并计算投影距离
   for (const auto &corner : corners) {
     double project_s = 0.0;
@@ -188,14 +174,12 @@ double CipvLostProhibitAccelerationDecider::CalculateRelativeDistance(
   return std::numeric_limits<double>::max();
 }
 
-const planning::agent::Agent *CipvLostProhibitAccelerationDecider::QuerryCipv(
-    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-    const planning::agent::Agent *cipv) {
-  const auto &agent_manager = dynamic_world->agent_manager();
+const agent::Agent *CipvLostProhibitAccelerationDecider::QuerryCipv(
+    std::shared_ptr<agent::AgentManager> agent_manager) {
   if (nullptr == agent_manager) {
     return nullptr;
   }
-  const planning::agent::Agent *cipv_ptr = agent_manager->GetAgent(cipv_id_);
+  const auto *cipv_ptr = agent_manager->GetAgent(cipv_id_);
   if (nullptr == cipv_ptr) {
     return nullptr;
   } else {
@@ -204,29 +188,39 @@ const planning::agent::Agent *CipvLostProhibitAccelerationDecider::QuerryCipv(
 }
 
 void CipvLostProhibitAccelerationDecider::Update() {
-  const planning::agent::Agent *cipv;
-  const auto &dynamic_world =
-      session_->environmental_model().get_dynamic_world();
-  cipv = QuerryCipv(dynamic_world, cipv);
+  const auto &agent_manager =
+      session_->environmental_model().get_agent_manager();
+  const auto cipv = QuerryCipv(agent_manager);
 
-  if (cipv_has_) {
-    const auto &environmental_model = session_->environmental_model();
-    const auto ego_state_mgr = environmental_model.get_ego_state_manager();
-    const auto &planning_init_point = ego_state_mgr->planning_init_point();
-    const auto &v_ego = ego_state_mgr->ego_v();
-
-    const auto &current_lane =
-        environmental_model.get_virtual_lane_manager()->get_current_lane();
-    const auto planned_path =
-        current_lane->get_reference_path()->get_frenet_coord();
-
-    pre_cipv_rel_s_ = CalculateRelativeDistance(planned_path, *cipv);
-    pre_cipv_ttc_ =
-        pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, v_ego - cipv->speed());
+  if (cipv != nullptr) {
     pre_cipv_id_ = cipv->agent_id();
+    if (cipv_has_) {
+      const auto &environmental_model = session_->environmental_model();
+      const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
+      const auto &v_ego = ego_state_mgr->ego_v();
+
+      const auto &current_lane =
+          environmental_model.get_virtual_lane_manager()->get_current_lane();
+      if (current_lane == nullptr) {
+        pre_cipv_rel_s_ = std::numeric_limits<double>::max();
+        pre_cipv_ttc_ = std::numeric_limits<double>::max();
+        pre_cipv_id_ = -1;
+        return;
+      }
+      const auto planned_path =
+          current_lane->get_reference_path()->get_frenet_coord();
+
+      pre_cipv_rel_s_ = CalculateRelativeDistance(planned_path, cipv);
+      pre_cipv_ttc_ =
+          pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, v_ego);
+    } else {
+      pre_cipv_rel_s_ = std::numeric_limits<double>::max();
+      pre_cipv_ttc_ = std::numeric_limits<double>::max();
+    }
   } else {
     pre_cipv_rel_s_ = std::numeric_limits<double>::max();
     pre_cipv_ttc_ = std::numeric_limits<double>::max();
+    pre_cipv_id_ = -1;
   }
 
   history_cipv_ids_.emplace_back(pre_cipv_id_);
@@ -236,4 +230,52 @@ void CipvLostProhibitAccelerationDecider::Update() {
     history_cipv_ids_.erase(history_cipv_ids_.begin());
   }
 }
+
+void CipvLostProhibitAccelerationDecider::UpdateCipvInfo(
+    const std::shared_ptr<LateralObstacle> &lateral_obstacle,
+    const string &lc_status) {
+  // check lead one
+  bool is_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->leadone());
+  // check lead two
+  bool is_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->leadtwo());
+  // check temp lead one
+  bool is_temp_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->tleadone());
+  // check temp lead two
+  bool is_temp_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->tleadtwo());
+
+  cipv_id_ = -1;
+  if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
+    if (is_lead_one_vehicle) {
+      cipv_id_ = lateral_obstacle->leadone()->track_id;
+      cipv_has_ = true;
+    } else if (!is_lead_one_vehicle && is_lead_two_vehicle) {
+      cipv_id_ = lateral_obstacle->leadtwo()->track_id;
+      cipv_has_ = true;
+    } else {
+      cipv_has_ = false;
+      cipv_id_ = -1;
+    }
+  } else {
+    if (is_temp_lead_one_vehicle) {
+      cipv_id_ = lateral_obstacle->tleadone()->track_id;
+      cipv_has_ = true;
+    } else if (!is_temp_lead_one_vehicle && is_temp_lead_two_vehicle) {
+      cipv_id_ = lateral_obstacle->tleadtwo()->track_id;
+      cipv_has_ = true;
+    } else {
+      cipv_has_ = false;
+      cipv_id_ = -1;
+    }
+  }
+}
+
+bool CipvLostProhibitAccelerationDecider::IsLeadVehicle(
+    const TrackedObject *lead) {
+  if (lead != nullptr) {
+    return lead->track_id != -1 && lead->is_lead && lead->is_car;
+  } else {
+    return false;
+  }
+}
+
 }  // namespace planning

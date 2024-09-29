@@ -3,14 +3,10 @@
 #include <memory>
 #include <vector>
 
-#include "./../../modules/common/common.h"
-#include "./../../modules/common/utils/file.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "Eigen/Core"
 #include "ad_common/math/line_segment2d.h"
-#include "ad_common/math/vec2d.h"
-#include "gtest/gtest.h"
 #include "hybrid_a_star.h"
 #include "log_glog.h"
 #include "node3d.h"
@@ -18,8 +14,6 @@
 #include "pose2d.h"
 
 namespace planning {
-
-#define publish_astar_node_message (1)
 
 // todo: use float to replace double.
 class HybridAStarInterface {
@@ -35,13 +29,12 @@ class HybridAStarInterface {
            const double wheel_base, const double min_turn_radius,
            const double mirror_width);
 
-  // coordinate: ego, slot, localization
-  // for now, use slot coordinate.
+  // for now, use slot coordinate. you can call this API in one thread.
   int GeneratePath(const Eigen::Vector3d& start, const Eigen::Vector3d& end,
                    const ParkObstacleList& obs_list,
                    const AstarRequest& request);
 
-  const SearchState GetFullLengthPath(HybridAStarResult* result);
+  const AstarSearchState GetFullLengthPath(HybridAStarResult* result);
 
   AstarRequest* GetMutableRequest() { return &request_; }
 
@@ -56,7 +49,7 @@ class HybridAStarInterface {
 
   const bool GetFirstSegmentPath(std::vector<AStarPathPoint>& result);
 
-  static const SearchState TransformFirstSegmentPath(
+  static const AstarSearchState TransformFirstSegmentPath(
       std::vector<AStarPathPoint>& result, const HybridAStarResult& full_path,
       const Pose2D& start);
 
@@ -80,6 +73,10 @@ class HybridAStarInterface {
   // multi-thread, output
   int UpdateOutput();
 
+  const EulerDistanceTransform* GetEulerDistanceTransform() const {
+    return &edt_;
+  }
+
  public:
   // for debug
   void GetRSPathHeuristic(
@@ -91,7 +88,7 @@ class HybridAStarInterface {
   // for debug
   const std::vector<ad_common::math::Vec2d>& GetPriorQueueNode();
 
-  // for debug
+  // for debug,retired
   void GetNodeListMessage(planning::common::AstarNodeList* list);
 
   // for debug
@@ -139,7 +136,7 @@ class HybridAStarInterface {
   // astar goal
   Pose2D goal_state_;
 
-  SearchState search_state_;
+  AstarSearchState search_state_;
 
   bool swap_start_end_;
 

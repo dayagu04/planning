@@ -1647,7 +1647,7 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
 }
 
 const bool CalCommonTangentCircleOfTwoLine(
-    LineSegment &line1, LineSegment &line2, const double &radius,
+    LineSegment &line1, LineSegment &line2, const double radius,
     std::vector<Eigen::Vector2d> &centers,
     std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss) {
   // the circle is tangent with line1, also with line2
@@ -1716,6 +1716,43 @@ const bool CalCommonTangentCircleOfTwoLine(
   }
 
   return true;
+}
+
+const bool CalLineArcOfTwoLine(LineSegment &line1, LineSegment &line2,
+                               LineSegment &line, Arc &arc, const double radius,
+                               const bool is_shifted) {
+  // the arc headingB should equal to line2 heading
+  std::vector<Eigen::Vector2d> centers;
+  std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> tangent_ptss;
+  CalCommonTangentCircleOfTwoLine(line1, line2, radius, centers, tangent_ptss);
+
+  for (size_t i = 0; i < centers.size(); ++i) {
+    line = geometry_lib::LineSegment(line1.pA, tangent_ptss[i].first,
+                                     line1.heading);
+    arc.circle_info.center = centers[i];
+    arc.circle_info.radius = radius;
+    arc.pA = tangent_ptss[i].first;
+    arc.headingA = line.heading;
+    arc.pB = tangent_ptss[i].second;
+    CompleteArcInfo(arc);
+
+    if (std::fabs(arc.headingB - line2.heading) * kRad2Deg > 0.168) {
+      continue;
+    }
+
+    const uint8_t line_gear = CalLineSegGear(line);
+
+    const uint8_t arc_gear = CalArcGear(arc);
+
+    if (is_shifted && IsOppositeDirGear(line_gear, arc_gear)) {
+      return true;
+    }
+
+    if (!is_shifted && IsSameDirGear(line_gear, arc_gear)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 const bool MinimumBoundingBox(
@@ -1942,6 +1979,19 @@ const bool CompleteArcInfo(Arc &arc, const double length,
   return true;
 }
 
+const bool CompleteArcInfo(Arc &arc, const double length, const uint8_t steer) {
+  // known: pA, headingA, radius, is_anti_clockwise
+  const Eigen::Vector2d t_vec = GenHeadingVec(arc.headingA);
+  Eigen::Vector2d n_vec;
+  if (steer == pnc::geometry_lib::SEG_STEER_RIGHT) {
+    n_vec << t_vec.y(), -t_vec.x();
+  } else {
+    n_vec << -t_vec.y(), t_vec.x();
+  }
+  arc.circle_info.center = arc.pA + arc.circle_info.radius * n_vec;
+  return CompleteArcInfo(arc, length, arc.is_anti_clockwise);
+}
+
 const bool CompleteLineInfo(LineSegment &line, const double length) {
   // known:pA, pB, heading
   const auto AB = line.pB - line.pA;
@@ -1980,7 +2030,7 @@ const bool CompleteLineInfo(LineSegment &line, const double length,
 
 const bool CompletePathSeg(PathSegment &path_seg, const double length,
                            const bool save_start_pt) {
-  if (length < 0.0168) {
+  if (length < 1e-4) {
     return true;
   }
   if (path_seg.seg_type == SEG_TYPE_LINE) {
@@ -1992,6 +2042,18 @@ const bool CompletePathSeg(PathSegment &path_seg, const double length,
     return false;
   }
   return true;
+}
+
+const bool CompletePathSegInfo(PathSegment &path_seg, const double length) {
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    auto &line = path_seg.line_seg;
+    return CompleteLineInfo(line, length);
+  } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+    auto &arc = path_seg.arc_seg;
+    return CompleteArcInfo(arc, length, arc.is_anti_clockwise);
+  } else {
+    return false;
+  }
 }
 
 const uint8_t CalArcGear(const Arc &arc) {
@@ -2594,6 +2656,62 @@ const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
   }
 
   return true;
+}
+
+const bool IsSameDirGear(const uint8_t gear1, const uint8_t gear2) {
+  if (gear1 == SEG_GEAR_DRIVE && gear2 == SEG_GEAR_DRIVE) {
+    return true;
+  }
+  if (gear1 == SEG_GEAR_REVERSE && gear2 == SEG_GEAR_REVERSE) {
+    return true;
+  }
+  return false;
+}
+
+const bool IsOppositeDirGear(const uint8_t gear1, const uint8_t gear2) {
+  if (gear1 == SEG_GEAR_DRIVE && gear2 == SEG_GEAR_REVERSE) {
+    return true;
+  }
+  if (gear1 == SEG_GEAR_REVERSE && gear2 == SEG_GEAR_DRIVE) {
+    return true;
+  }
+  return false;
+}
+
+const bool IsSameSteer(const uint8_t steer1, const uint8_t steer2) {
+  if (steer1 == SEG_STEER_LEFT && steer2 == SEG_STEER_LEFT) {
+    return true;
+  }
+  if (steer1 == SEG_STEER_RIGHT && steer2 == SEG_STEER_RIGHT) {
+    return true;
+  }
+  return false;
+}
+
+const bool IsOppositeSteer(const uint8_t steer1, const uint8_t steer2) {
+  if (steer1 == SEG_STEER_LEFT && steer2 == SEG_STEER_RIGHT) {
+    return true;
+  }
+  if (steer1 == SEG_STEER_RIGHT && steer2 == SEG_STEER_LEFT) {
+    return true;
+  }
+  return false;
+}
+
+const std::vector<PathPoint> SamplePathSegVec(
+    const std::vector<PathSegment> &path_seg_vec, const double ds) {
+  std::vector<PathPoint> path_pt_vec;
+  for (size_t i = 0; i < path_seg_vec.size(); ++i) {
+    const PathSegment &path_seg = path_seg_vec[i];
+
+    std::vector<PathPoint> pt_set;
+    SamplePointSetInPathSeg(pt_set, path_seg, ds);
+    if (i < path_seg_vec.size() - 1) {
+      pt_set.pop_back();
+    }
+    path_pt_vec.insert(path_pt_vec.end(), pt_set.begin(), pt_set.end());
+  }
+  return path_pt_vec;
 }
 
 }  // namespace geometry_lib

@@ -21,6 +21,11 @@ struct Pose2D {
   Pose2D() = default;
   Pose2D(const double x_, const double y_, const double theta_)
       : x(x_), y(y_), theta(theta_) {}
+  void SetPose(const double x_, const double y_, const double theta_) {
+    x = x_;
+    y = y_;
+    theta = theta_;
+  }
 
   const double GetX() const { return x; }
   const double GetY() const { return y; }

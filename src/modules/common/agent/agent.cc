@@ -224,6 +224,18 @@ const bool Agent::is_reverse() const { return is_reverse_; }
 
 void Agent::set_is_reverse(const bool is_reverse) { is_reverse_ = is_reverse; }
 
+const bool Agent::is_far_in_large_curv() const { return is_far_in_large_curv_; }
+
+void Agent::set_is_far_in_large_curv(const bool is_far_in_large_curv) {
+  is_far_in_large_curv_ = is_far_in_large_curv;
+}
+
+const bool Agent::is_reverse_cutin() const { return is_reverse_cutin_; }
+
+void Agent::set_is_reverse_cutin(const bool is_reverse) {
+  is_reverse_cutin_ = is_reverse;
+}
+
 const bool Agent::has_low_spd_unstable_trajectory() const {
   return has_low_spd_unstable_trajectory_;
 }
@@ -331,8 +343,6 @@ void Agent::RecalculateLowSpeedTrajectories() {
     const double last_x = last_trajectory_point.x();
     const double last_y = last_trajectory_point.y();
     const double last_theta = last_trajectory_point.theta();
-    const double last_t = last_trajectory_point.absolute_time();
-    const double start_tmie = trajectory.front().absolute_time();
     trajectory::Trajectory processed_trajectory;
     for (int i = 0; i < processed_speed.size(); ++i) {
       if (processed_trajectory.empty() ||
@@ -369,7 +379,6 @@ void Agent::RecalculateLowSpeedTrajectories() {
         }
         double x = last_x + ds * std::cos(last_theta);
         double y = last_y + ds * std::sin(last_theta);
-        double s = processed_lon_position[i];
         processed_trajectory.emplace_back(x, y, last_theta, processed_speed[i],
                                           processed_acc[i], target_time, 0.0,
                                           0.0, processed_lon_position[i], 0.0);

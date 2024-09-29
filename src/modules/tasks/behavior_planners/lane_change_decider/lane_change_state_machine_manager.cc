@@ -70,10 +70,13 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
+        iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
-        if (is_propose_to_execution) {
+        if (is_propose_to_execution &&
+            (boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+             boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL)) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
@@ -259,7 +262,6 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
       reference_path_manager->get_reference_path_by_lane(
           target_lane_virtual_id);
   const double ego_l_target = target_reference_path->get_frenet_ego_state().l();
-  const double ego_s_target = target_reference_path->get_frenet_ego_state().s();
   const double width_by_target =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id)
           ->width();
@@ -337,11 +339,10 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToHold(
   }
   CheckLaneChangeBackValid(lane_change_direction);
   const double time_out_threshold_gap_not_available_time_s = 0.15;
-  const bool gap_not_available_time_out =
-      TimeOut(lane_change_stage_info_.lc_should_back,
-              &lc_timer_.gap_not_available_time_count_,
-              &lc_timer_.gap_not_available_at_time_,
-              time_out_threshold_gap_not_available_time_s);
+  (void)TimeOut(lane_change_stage_info_.lc_should_back,
+                &lc_timer_.gap_not_available_time_count_,
+                &lc_timer_.gap_not_available_at_time_,
+                time_out_threshold_gap_not_available_time_s);
 
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
 
@@ -376,11 +377,10 @@ bool LaneChangeStateMachineManager::CheckIfHoldToExecution(
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   CheckLaneChangeValid(lane_change_direction);
   const double hold_to_execution_is_safe_time_out_threshold = 0.2;
-  const bool is_safe_time_out =
-      TimeOut(lane_change_stage_info_.gap_insertable,
-              &lc_timer_.is_safe_hold_to_execution_count_,
-              &lc_timer_.is_safe_hold_to_execution_at_time_,
-              hold_to_execution_is_safe_time_out_threshold);
+  (void)TimeOut(lane_change_stage_info_.gap_insertable,
+                &lc_timer_.is_safe_hold_to_execution_count_,
+                &lc_timer_.is_safe_hold_to_execution_at_time_,
+                hold_to_execution_is_safe_time_out_threshold);
   return lane_change_stage_info_.gap_insertable && has_target_lane;
 }
 
@@ -395,7 +395,6 @@ bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() const {
 bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   const auto &virtual_lane_mgr =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const auto &clane = virtual_lane_mgr->get_current_lane();
   const auto &clane_virtual_id = virtual_lane_mgr->current_lane_virtual_id();
   const int origin_relative_id_zero_nums =
       virtual_lane_mgr->origin_relative_id_zero_nums();
@@ -405,17 +404,45 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
   double dist_threshold = interp(v_ego, xp_v_ego, config_.lc_finished_dist_thr);
+
+  // 大曲率阈值增大一点
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  const auto &flane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
+  const auto &target_reference_path =
+      reference_path_mgr->make_map_lane_reference_path(flane_virtual_id);
+  const auto &ego_s = target_reference_path->get_frenet_ego_state().s();
+  const double preview_length = 10.0;
+  const double preview_step = 1.0;
+  double sum_far_kappa = 0.0;
+  double preview_x = 3.0 * v_ego - 5.0;
+  for (double preview_distance = 0.0; preview_distance < preview_length;
+       preview_distance += preview_step) {
+    ReferencePathPoint preview_point;
+    if (target_reference_path->get_reference_point_by_lon(ego_s + preview_x + preview_distance, preview_point)) {
+      sum_far_kappa += std::fabs(preview_point.path_point.kappa);
+    }
+  }
+  double aver_far_kappa = sum_far_kappa / std::max((preview_length / preview_step), 1.0);
+  double road_radius = 1.0 / std::max(aver_far_kappa, 0.0001);
+  if (road_radius < 750.0) {
+    dist_threshold = 0.3;
+  }
+
   if (road_to_ramp_turn_signal_ != RAMP_NONE) {
     //匝道汇主路打灯时，关灯阈值可以增大一点
     dist_threshold = 0.3;
   }
+  //考虑向避让的情况
+  const double lateral_offset = session_->planning_context().lateral_offset_decider_output().lateral_offset;
+  dist_threshold = dist_threshold + std::abs(lateral_offset);
 
   std::vector<double> angle_thre_v{0.72, 0.48, 0.12};
   std::vector<double> angle_thre_bp{1.0, 3.0, 5.0};
   double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 
-  std::shared_ptr<ReferencePathManager> reference_path_mgr =
-      session_->mutable_environmental_model()->get_reference_path_manager();
+  // std::shared_ptr<ReferencePathManager> reference_path_mgr =
+  //     session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &current_reference_path =
       reference_path_mgr->get_reference_path_by_lane(clane_virtual_id);
   const auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
@@ -810,6 +837,15 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   double s_ref = projection_spline.GetOutput().s_proj;
 
+  Point2D cart_init_pt(init_pos.x(), init_pos.y());
+  Point2D frenet_init_pt{0.0, 0.0};
+  if(frenet_coord->XYToSL(cart_init_pt, frenet_init_pt)) {
+    s_ref = frenet_init_pt.x;
+  } else {
+    coarse_planning_info.reference_path.reset();
+    LOG_DEBUG("kd_path coordinate conversion init_pos failed");
+  }
+
   const auto &frenet_length = frenet_coord->Length();
 
   s_ref = std::min(s_ref, frenet_length * 0.95);
@@ -912,14 +948,19 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   if (lane_change_decider_output.is_merge_region) {
     std::vector <Point2D> merge_point_list;
     merge_point_list.resize(2);
-    CalculateMergePoint(&merge_point_list,lane_change_decider_output.merge_lane_virtual_id);
+    bool is_continue = true;
+    int calculate_nums = -1;
+    CalculateMergePoint(lane_change_decider_output.merge_lane_virtual_id, &merge_point_list, &calculate_nums);
+    CalculateRoadRight(calculate_nums, lane_change_decider_output.merge_lane_virtual_id, &is_continue);
     lane_change_decider_output.merge_point = merge_point_list[0];
     lane_change_decider_output.boundary_merge_point = merge_point_list[1];
+    lane_change_decider_output.cur_lane_is_continue = is_continue;
   } else {
     const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
     Point2D ego_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
     lane_change_decider_output.merge_point = ego_point;
     lane_change_decider_output.boundary_merge_point = ego_point;
+    lane_change_decider_output.cur_lane_is_continue = true;
   }
   JSON_DEBUG_VALUE(
       "macroeconomic_decider_merge_point_x",
@@ -933,6 +974,9 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   JSON_DEBUG_VALUE(
       "boundary_line_merge_point_y",
       lane_change_decider_output.boundary_merge_point.y);
+  JSON_DEBUG_VALUE(
+      "cur_lane_is_continue",
+      lane_change_decider_output.cur_lane_is_continue);
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp =
       road_to_ramp_turn_signal_;
@@ -1183,7 +1227,6 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
   const double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) - 1.8;
   const double t_reaction =
       (dist_mline == DBL_MAX) ? 1.0 : 1.0 * dist_mline / 1.8;
-  const double l_ego = frenet_ego_state.l();
   // 根据车道边界的曲率插值计算横向移动阈值 move_thre，曲率越大，move越大
   std::array<double, 3> xp_heading{0, 0.5, 1};
   std::array<double, 3> fp_l{0, 0.4, 0.6};
@@ -1209,8 +1252,6 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
     double ego_fy = std::sin(ego_state->heading_angle());
     double ego_lx = -ego_fy;
     double ego_ly = ego_fx;
-    double theta = 0.0;
-    double send = 0.0;
     double lend = 0.0;
     int end_idx = 0;
     if (tr.trajectory.intersection == 0) {
@@ -1293,7 +1334,6 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
         // 相对距离在自车后方一个车长范围外,而且后车车速比自车快，若是比自车慢，那么可以不用处理
         if (tr.d_rel <= -5.0 && tr.v_rel >= 0) {
           double temp = std::max(tr.v_rel, 0.0);
-          double lat_thre = car_width + 0.6 - lane_width / 2;
           std::array<double, 3> xp1{0., 3., 5.};
           std::array<double, 3> fp1{2, 1.5, 1.};
           double a = interp(temp, xp1, fp1);
@@ -1378,8 +1418,6 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
     }
   }
   const double distance = frenet_ego_state.l();
-  const double current_lane_virtual_id =
-      virtual_lane_manager->current_lane_virtual_id();
   const double pause_ttc = 2.0;
   const double pause_v_rel = 2.0;
   if ((direction == LEFT_CHANGE &&
@@ -1408,16 +1446,11 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     const RequestType &direction, LaneChangeStageInfo *const lc_state_info) {
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const auto &fix_lane = virtual_lane_manager->get_lane_with_virtual_id(
-      lc_req_mgr_->target_lane_virtual_id());
   const auto &reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &fix_reference_path =
       reference_path_manager->get_reference_path_by_lane(
           lc_lane_mgr_->fix_lane_virtual_id());
-  const auto &target_reference_path =
-      reference_path_manager->get_reference_path_by_lane(
-          lc_lane_mgr_->target_lane_virtual_id());
   const auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   const double l_ego = frenet_ego_state.l();
   const double v_ego =
@@ -1710,6 +1743,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
       reference_path->get_frenet_coord();
   Point2D projection_point = {cur_ref_path_finally_point.x,
                               cur_ref_path_finally_point.y};
+  const double front_line_distance = CalculateEgoFrontLineLength();
   bool is_on_ramp = session_->environmental_model().get_virtual_lane_manager()->is_on_ramp();
   if (is_on_ramp) {
     ReferencePathPoint refpoint = {};
@@ -1732,8 +1766,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
     } else {
       ReferencePathPoint refpoint = {};
       if (current_reference_path->get_reference_point_by_lon(
-          current_reference_path->get_frenet_coord()->Length() -
-              length_diff_threshold,
+          current_reference_path->get_frenet_ego_state().s() + front_line_distance,
           refpoint)) {
         projection_point = {refpoint.path_point.x, refpoint.path_point.y};
       }
@@ -1875,7 +1908,6 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   double abs_lat_diff = 0.0;
   const auto reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
-  const auto &virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
   const auto ref_frenet_ego_state = reference_path->get_frenet_ego_state();
   ref_ego_l = ref_frenet_ego_state.l();
   ref_ego_s = ref_frenet_ego_state.s();
@@ -1900,7 +1932,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   }
   const auto cur_lane_coord = cur_reference_path->get_frenet_coord();
   const auto cur_ref_path_end_point = cur_reference_path->get_points().back();
-  
+
   //计算自车前方车道线的长度
   double ego_front_length = CalculateEgoFrontLineLength();
   if (ego_front_length < kEps) {
@@ -1948,14 +1980,14 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
     if (std::abs(cur_to_other_lane_end_lat_diff) <
                end_lane_lat_diff_threshold) {
       lane_end_satisfied_merge_condition = true;
-    } 
+    }
   } else {
     if (cur_lane_coord->XYToSL(ref_path_end_point_temp, frenet_point)) {
       cur_to_other_lane_end_lat_diff = frenet_point.y;
       if (std::abs(cur_to_other_lane_end_lat_diff) <
                   end_lane_lat_diff_threshold) {
         lane_end_satisfied_merge_condition = true;
-      } 
+      }
     }
   }
   if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
@@ -1966,7 +1998,6 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   }
   //遍历自车向前的点，是否有overlap情况
   const double cur_lane_length = cur_lane_coord->Length();
-  const double remaining_length = cur_lane_length - cur_ego_s;
   const double step_length = 5.0;
   const double buffer = 1.0;
   const int calculate_nums = (int)(ego_front_length / step_length - buffer);
@@ -1995,7 +2026,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
   return false;
 }
 
-void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* merge_point_list, const int merge_lane_virtual_id) {
+void LaneChangeStateMachineManager::CalculateMergePoint(const int merge_lane_virtual_id, std::vector<Point2D>* merge_point_list, int* calculate_nums) {
   const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
   Point2D merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
   Point2D boundary_line_merge_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
@@ -2021,6 +2052,7 @@ void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* me
     return;
   }
   const double cur_ego_s = cur_path->get_frenet_ego_state().s();
+  const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
   const double ego_front_center_line_length = cur_path->get_frenet_coord()->Length() - cur_ego_s;
   const double buffer = 1.0;
   const double need_judgement_length = std::max(0.0, std::min(ego_front_line_length, ego_front_center_line_length) - buffer);
@@ -2050,6 +2082,7 @@ void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* me
       // last_point_lat_diff = lat_diff;
       merge_point = projection_point;
       is_find_merge_point = true;
+      *calculate_nums = i;
       break;
     }
     //处理遍历完，没有找到merge point的情况
@@ -2060,9 +2093,9 @@ void LaneChangeStateMachineManager::CalculateMergePoint(std::vector<Point2D>* me
         merge_point.x = cur_ref_path_point_temp.path_point.x;
         merge_point.y = cur_ref_path_point_temp.path_point.y;
       }
+      *calculate_nums = i;
     }
   }
-
   (*merge_point_list)[0] = merge_point;
   (*merge_point_list)[1] = boundary_line_merge_point;
 }
@@ -2089,5 +2122,218 @@ const double LaneChangeStateMachineManager::CalculateEgoFrontLineLength(){
   }
   const double ego_front_length = target_boundary_path->Length() - ego_s;
   return ego_front_length;
+}
+
+const double LaneChangeStateMachineManager::CalculateAverageKappa(const std::shared_ptr<planning_math::KDPath> kd_path) {
+  if (!kd_path) {
+    return -1;
+  }
+  const int size_num = kd_path->path_points().size();
+  if (size_num == 0) {
+    return 0.0;
+  }
+  double sum_kappa = 0.0;
+  for (int i = 0; i < size_num; i++) {
+    sum_kappa = sum_kappa + std::abs(kd_path->path_points()[i].kappa());
+  }
+  return sum_kappa / size_num;
+}
+
+void LaneChangeStateMachineManager::CalculateRoadRight(const int calculate_nums, const int merge_lane_virtual_id, bool* is_continue) {
+  const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto& reference_path_manager = session_->environmental_model().get_reference_path_manager();
+  const auto& overlap_lane = virtual_lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id);
+  if (!overlap_lane) {
+    return;
+  }
+  const auto& cur_path = reference_path_manager->get_reference_path_by_current_lane();
+  if (!cur_path) {
+    return;
+  }
+  const auto& overlap_path = reference_path_manager->get_reference_path_by_lane(merge_lane_virtual_id);
+  if (!overlap_path) {
+    return;
+  }
+  //(1) 首先根据虚拟车道判断
+  bool is_vir_lane_line_cur = IsVirtualLaneLine(virtual_lane_manager->current_lane_virtual_id());
+  bool is_vir_lane_line_overlap = IsVirtualLaneLine(merge_lane_virtual_id);
+  if (is_vir_lane_line_cur &&
+      !is_vir_lane_line_overlap) {
+    *is_continue = false; 
+  } else if (is_vir_lane_line_overlap &&
+             !is_vir_lane_line_cur) {
+    *is_continue = true;
+  } else if ((is_vir_lane_line_overlap &&
+             is_vir_lane_line_cur) ||
+             (!is_vir_lane_line_overlap &&
+             !is_vir_lane_line_cur)) {
+    //没有虚拟车道，或者都有虚拟车道时，利用曲率判断
+    const double cur_ego_s = cur_path->get_frenet_ego_state().s();
+    const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
+    const double step_length = 1.0;
+    std::vector<planning_math::PathPoint> cur_path_points;
+    std::vector<planning_math::PathPoint> overlap_path_points;
+    for (int i = 0; i <= calculate_nums; i++) {
+      ReferencePathPoint cur_ref_path_point_temp{};
+      if (!cur_path->get_reference_point_by_lon(cur_ego_s + i * step_length, cur_ref_path_point_temp)) {
+        continue;
+      }
+      ReferencePathPoint over_ref_path_point_temp{};
+      if (!overlap_path->get_reference_point_by_lon(overlap_ego_s + i * step_length, over_ref_path_point_temp)) {
+        continue;
+      }
+      auto overlap_pt = planning_math::PathPoint(over_ref_path_point_temp.path_point.x, over_ref_path_point_temp.path_point.y);
+      auto cur_pt = planning_math::PathPoint(cur_ref_path_point_temp.path_point.x, cur_ref_path_point_temp.path_point.y);
+      overlap_path_points.emplace_back(overlap_pt);
+      cur_path_points.emplace_back(cur_pt);
+    }
+    if (cur_path_points.size() < 3 ||
+        overlap_path_points.size() < 3) {
+      return;
+    }
+
+    std::shared_ptr<planning_math::KDPath> cur_kd_path =
+      std::make_shared<planning_math::KDPath>(std::move(cur_path_points));
+    std::shared_ptr<planning_math::KDPath> over_kd_path =
+      std::make_shared<planning_math::KDPath>(std::move(overlap_path_points));
+    const double cur_average_kappa = CalculateAverageKappa(cur_kd_path);
+    const double overlap_average_kappa = CalculateAverageKappa(over_kd_path);
+
+    if (cur_average_kappa > overlap_average_kappa) {
+      *is_continue = false;
+    } else {
+      *is_continue = true;
+    }
+  }
+}
+
+bool LaneChangeStateMachineManager::IsVirtualLaneLine(const int lane_virtual_id) {
+  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+  const auto base_lane =
+      virtual_lane_mgr->get_lane_with_virtual_id(lane_virtual_id);
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
+  std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
+  if (!base_lane) {
+    return false;
+  }
+
+  double left_lane_line_length = 0.0;
+  int left_current_segment_count = 0;
+  double left_ego_s = 0.0, left_ego_l = 0.0;
+  // 判断左侧车道线类型
+  auto left_lane_boundarys = base_lane->get_left_lane_boundary();
+  left_base_boundary_path =
+      virtual_lane_mgr->MakeBoundaryPath(left_lane_boundarys);
+  if (left_base_boundary_path != nullptr) {
+    if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
+                                          &left_ego_l)) {
+      return false;
+    }
+  } else {
+    return false;
+  }
+  for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+    left_lane_line_length += left_lane_boundarys.type_segments[i].length;
+    if (left_lane_line_length > left_ego_s) {
+      left_current_segment_count = i;
+      break;
+    }
+  }
+  for (int i = left_current_segment_count;
+        i < left_lane_boundarys.type_segments_size; i++) {
+    if (left_lane_boundarys.type_segments[i].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      return true;
+    }
+  }
+
+  // 判断右侧车道线类型
+  double right_lane_line_length = 0.0;
+  int right_current_segment_count = 0;
+  double right_ego_s = 0.0, right_ego_l = 0.0;
+  auto right_lane_boundarys = base_lane->get_right_lane_boundary();
+  right_base_boundary_path =
+      virtual_lane_mgr->MakeBoundaryPath(right_lane_boundarys);
+  if (right_base_boundary_path != nullptr) {
+    if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
+                                          &right_ego_l)) {
+      return false;
+    }
+  } else {
+    return false;
+  }
+  for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+    right_lane_line_length += right_lane_boundarys.type_segments[i].length;
+    if (right_lane_line_length > right_ego_s) {
+      right_current_segment_count = i;
+      break;
+    }
+  }
+  for (int i = right_current_segment_count;
+        i < right_lane_boundarys.type_segments_size; i++) {
+    if (right_lane_boundarys.type_segments[i].type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      return true;
+    }
+  }
+  return false;
+}
+//TODO(fengwang31):后面需要把这个函数和lane change request中的MakesureCurrentBoundaryType合在一起
+iflyauto::LaneBoundaryType LaneChangeStateMachineManager::MakesureCurrentBoundaryType(
+    const RequestType lc_request) const {
+  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  double lane_line_length = 0.0;
+  std::shared_ptr<planning_math::KDPath> target_boundary_path;
+  const auto &plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  double ego_s = 0.0, ego_l = 0.0;
+  const std::shared_ptr<VirtualLane> current_lane =
+      virtual_lane_mgr->get_current_lane();
+
+  if (lc_request == LEFT_CHANGE) {
+    const auto &left_lane_boundarys = current_lane->get_left_lane_boundary();
+    target_boundary_path =
+        virtual_lane_mgr->MakeBoundaryPath(left_lane_boundarys);
+    if (target_boundary_path != nullptr) {
+      if (!target_boundary_path->XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
+        return iflyauto::LaneBoundaryType_MARKING_SOLID;
+      }
+    } else {
+      return iflyauto::LaneBoundaryType_MARKING_SOLID;
+    }
+    for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+      lane_line_length += left_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
+        return left_lane_boundarys.type_segments[i].type;
+      }
+    }
+  } else if (lc_request == RIGHT_CHANGE) {
+    const auto &right_lane_boundarys = current_lane->get_right_lane_boundary();
+    target_boundary_path =
+        virtual_lane_mgr->MakeBoundaryPath(right_lane_boundarys);
+    if (target_boundary_path != nullptr) {
+      if (!target_boundary_path->XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
+        return iflyauto::LaneBoundaryType_MARKING_SOLID;
+      }
+    } else {
+      return iflyauto::LaneBoundaryType_MARKING_SOLID;
+    }
+    for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+      lane_line_length += right_lane_boundarys.type_segments[i].length;
+      if (lane_line_length > ego_s) {
+        return right_lane_boundarys.type_segments[i].type;
+      }
+    }
+  }
+  return iflyauto::LaneBoundaryType_MARKING_SOLID;
 }
 }  // namespace planning

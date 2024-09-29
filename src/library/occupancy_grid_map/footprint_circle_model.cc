@@ -26,6 +26,7 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
 
   // big circle, buffer is 0.35
   double big_circle_safe_buffer = 0.35;
+  double min_lon_buffer = 0.05;
   local_circles_.max_circle.pos = Position2D(circle_x[0], circle_y[0]);
   local_circles_.max_circle.radius =
       (float)(circle_r[0] + big_circle_safe_buffer);
@@ -47,6 +48,16 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + mirror_buffer;
       local_circles_.circles[local_circles_.size].safe_buffer = mirror_buffer;
+    } else if (i == 1 || i == 2 || i == 7) {
+      local_circles_.circles[local_circles_.size].radius =
+          (float)circle_r[i] + lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].pos.x -= lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
+    } else if (i == 4 || i == 5 || i == 10) {
+      local_circles_.circles[local_circles_.size].radius =
+          (float)circle_r[i] + lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].pos.x += lat_safe_buffer;
+      local_circles_.circles[local_circles_.size].safe_buffer = lat_safe_buffer;
     } else {
       local_circles_.circles[local_circles_.size].radius =
           (float)circle_r[i] + lat_safe_buffer;
@@ -58,27 +69,59 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
 
   // gear drive
   // front buffer: lon_safe_buffer
-  // back buffer: 0.15
-  double car_lon_buffer = lon_safe_buffer - lat_safe_buffer;
-
   drive_gear_circles_ = local_circles_;
   drive_gear_circles_.circles[0].pos.x =
-      local_circles_.circles[0].pos.x + car_lon_buffer;
+      local_circles_.circles[0].pos.x + lon_safe_buffer;
   drive_gear_circles_.circles[1].pos.x =
-      local_circles_.circles[1].pos.x + car_lon_buffer;
+      local_circles_.circles[1].pos.x + lon_safe_buffer;
+  drive_gear_circles_.circles[6].pos.x =
+      local_circles_.circles[6].pos.x + lon_safe_buffer;
 
-  DebugCircles(&drive_gear_circles_);
+  drive_gear_circles_.circles[3].pos.x =
+      local_circles_.circles[3].pos.x - min_lon_buffer;
+  drive_gear_circles_.circles[4].pos.x =
+      local_circles_.circles[4].pos.x - min_lon_buffer;
+  drive_gear_circles_.circles[9].pos.x =
+      local_circles_.circles[9].pos.x - min_lon_buffer;
+
+  // DebugCircles(&drive_gear_circles_);
 
   // gear reverse
   reverse_gear_circles_ = local_circles_;
+  reverse_gear_circles_.circles[0].pos.x =
+      local_circles_.circles[0].pos.x + min_lon_buffer;
+  reverse_gear_circles_.circles[1].pos.x =
+      local_circles_.circles[1].pos.x + min_lon_buffer;
+  reverse_gear_circles_.circles[6].pos.x =
+      local_circles_.circles[6].pos.x + min_lon_buffer;
+
   reverse_gear_circles_.circles[3].pos.x =
-      local_circles_.circles[3].pos.x - car_lon_buffer;
+      local_circles_.circles[3].pos.x - lon_safe_buffer;
   reverse_gear_circles_.circles[4].pos.x =
-      local_circles_.circles[4].pos.x - car_lon_buffer;
+      local_circles_.circles[4].pos.x - lon_safe_buffer;
+  reverse_gear_circles_.circles[9].pos.x =
+      local_circles_.circles[9].pos.x - lon_safe_buffer;
 
-  DebugCircles(&reverse_gear_circles_);
+  // DebugCircles(&reverse_gear_circles_);
 
-  ILOG_INFO << "footprint init success";
+  // normal circles, move circle for safe
+
+  local_circles_.circles[0].pos.x =
+      local_circles_.circles[0].pos.x + min_lon_buffer;
+  local_circles_.circles[1].pos.x =
+      local_circles_.circles[1].pos.x + min_lon_buffer;
+  local_circles_.circles[6].pos.x =
+      local_circles_.circles[6].pos.x + min_lon_buffer;
+
+  local_circles_.circles[3].pos.x =
+      local_circles_.circles[3].pos.x - min_lon_buffer;
+  local_circles_.circles[4].pos.x =
+      local_circles_.circles[4].pos.x - min_lon_buffer;
+  local_circles_.circles[9].pos.x =
+      local_circles_.circles[9].pos.x - min_lon_buffer;
+
+  // DebugCircles(&local_circles_);
+  // ILOG_INFO << "footprint init success";
 
   return;
 }
@@ -188,6 +231,16 @@ const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircleByGear(
   return reverse_gear_circles_;
 }
 
+const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircleByGear(
+    const AstarPathGear gear) const {
+  if (gear == AstarPathGear::drive) {
+    return drive_gear_circles_;
+  } else if (gear == AstarPathGear::reverse) {
+    return reverse_gear_circles_;
+  }
+  return local_circles_;
+}
+
 const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircle() {
   return local_circles_;
 }
@@ -200,7 +253,7 @@ void FootPrintCircleModel::DebugCircle(FootPrintCircle *circle) {
 void FootPrintCircleModel::DebugCircles(FootPrintCircleList *circles) {
   DebugCircle(&circles->max_circle);
 
-  for (size_t i = 0; i < circles->size; i++) {
+  for (int i = 0; i < circles->size; i++) {
     DebugCircle(&circles->circles[i]);
   }
 }

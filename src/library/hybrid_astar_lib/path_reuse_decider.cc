@@ -1,8 +1,8 @@
 
 #include "path_reuse_decider.h"
 
+#include "drive_distance_decider.h"
 #include "pose2d.h"
-#include "single_shot_parking_decider.h"
 #include "transform2d.h"
 
 namespace planning {
@@ -10,9 +10,9 @@ namespace planning {
 void PathReuseDecider::Process(HybridAStarResult* path,
                                const HybridAStarResult* history_path,
                                const Pose2D& current_slot_pose,
-                               const NextShotPathInfo* next_shot_info) {
+                               const InferenceNextPathInfo* next_shot_info) {
   reuse_path_ = false;
-  if (next_shot_info->shot_number_ != PathShotNumber::single_shot_path) {
+  if (next_shot_info->gear_switch_number_ != PathGearSwitchNumber::NONE) {
     return;
   }
 

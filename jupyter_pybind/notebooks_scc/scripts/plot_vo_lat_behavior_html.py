@@ -1,3 +1,4 @@
+from ast import List
 import sys
 import os
 from abc import ABC, abstractmethod
@@ -11,6 +12,7 @@ import numpy as np
 from IPython.core.display import display, HTML
 from plot_local_view_html import *
 import logging
+from plot_lon_plan_html import *
 sys.path.append('..')
 sys.path.append('../lib/')
 sys.path.append('../..')
@@ -21,7 +23,7 @@ from lib.local_view_lib import *
 # 先手动写死bag
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240530/20240530-10-53-27/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-30-10-53-27.bag"
 
-html_file = bag_path +".vo_lat_behavior.html" 
+html_file = bag_path +".vo_lat_behavior.html"
 # -
 
 # bokeh创建的html在jupyter中显示
@@ -51,6 +53,33 @@ table_params4={
     'height':500,
 }
 
+speed_search_s_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 's_search'
+}
+
+speed_search_v_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'v_search'
+}
+
+speed_search_a_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'a_search'
+}
+
+speed_search_j_params = {
+    'line_width': 2,
+    'line_color': 'blue',
+    'line_dash': 'dashed',
+    'legend_label': 'j_search'
+}
 def isINJupyter():
     try:
         __file__
@@ -102,7 +131,7 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
         names.append('avoid_dpoly_c0')
       except:
         pass
-      
+
       names.append('avoid_car_id')
       avoid_car_id_str = ""
       for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
@@ -162,13 +191,13 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
     #     obstacle_snrd_text_generate.xys.append(([], [], []))
     #     continue
     environment_model_info = plan_debug.environment_model_info
-    for obstacle_id in obstacle_ids:   
+    for obstacle_id in obstacle_ids:
       obstacle_generate = obstacle_generates['obstacle_generate_table_' + str(obstacle_id)]
       names  = []
       datas = []
       flag_obj = False
       for obstacle in environment_model_info.obstacle:
-        if obstacle_id == obstacle.id: 
+        if obstacle_id == obstacle.id:
           flag_obj = True
           for name in obj_vars:
             try:
@@ -187,7 +216,7 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
                 datas.append(obj.common_info.relative_velocity.y)
                 break
 
-          obstacle_generate.xys.append((names, datas, [None] * len(names)))    
+          obstacle_generate.xys.append((names, datas, [None] * len(names)))
           break
       if not flag_obj:
         obstacle_generate.xys.append((names, datas, [None] * len(names)))
@@ -259,8 +288,8 @@ def draw_overtake_lc_data_view(dataLoader, layer_manager):
 
       names = []
       datas = []
-      vars_lc = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", 
-                 "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", 
+      vars_lc = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
+                 "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
                  "trigger_right_overtake", "overtake_vehicle_id",  "dash_line_len",
                  "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold"]
       for name in vars_lc:
@@ -280,6 +309,92 @@ def draw_overtake_lc_data_view(dataLoader, layer_manager):
 
   return table_rt_layer3.plot
 
+def get_speed_search_st(plan_debug_msg):
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_s_vec = list(debug_info.st_search_decider_info.search_s_vec)
+    xys.append((one_t_vec, one_s_vec))
+  speed_search_base_s = DataGeneratorBase(xys, ts)
+
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_v_vec = list(debug_info.st_search_decider_info.search_v_vec)
+    xys.append((one_t_vec, one_v_vec))
+  speed_search_base_v = DataGeneratorBase(xys, ts)
+
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_a_vec = list(debug_info.st_search_decider_info.search_a_vec)
+    xys.append((one_t_vec, one_a_vec))
+  speed_search_base_a = DataGeneratorBase(xys, ts)
+
+  ts = []
+  xys = []
+  for i, debug_info in enumerate(plan_debug_msg["data"]):
+    ts.append(plan_debug_msg["t"][i])
+    one_t_vec = list(debug_info.st_search_decider_info.search_t_vec)
+    one_j_vec = list(debug_info.st_search_decider_info.search_j_vec)
+    xys.append((one_t_vec, one_j_vec))
+  speed_search_base_j = DataGeneratorBase(xys, ts)
+
+  return speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j
+
+def draw_v_a_j_fig():
+    hover_v = HoverTool(tooltips = [('t', '@pts_xs'),
+     ('s', '@pts_ys')
+    ])
+    fig_vt = bkp.figure(x_axis_label='t',
+                        y_axis_label='v',
+                        x_range = [-0.1, 7.0],
+                        tools=[hover_v, 'pan,wheel_zoom,box_zoom,reset'],
+                        width=600,
+                        height=400,
+                        match_aspect = True,
+                        aspect_scale=1)
+
+    fig_vt.toolbar.active_scroll = fig_vt.select_one(WheelZoomTool)
+    fig_vt.legend.click_policy = "hide"
+
+    hover_a = HoverTool(tooltips = [('t', '@pts_xs'),
+     ('s', '@pts_ys')
+    ])
+    fig_at = bkp.figure(x_axis_label='t',
+                        y_axis_label='a',
+                        x_range = [-0.1, 7.0],
+                        tools=[hover_a, 'pan,wheel_zoom,box_zoom,reset'],
+                        width=600,
+                        height=400,
+                        match_aspect = True,
+                        aspect_scale=1)
+
+    fig_at.toolbar.active_scroll = fig_at.select_one(WheelZoomTool)
+    fig_at.legend.click_policy = "hide"
+
+    hover_j = HoverTool(tooltips = [('t', '@pts_xs'),
+     ('s', '@pts_ys')
+    ])
+    fig_jt = bkp.figure(x_axis_label='t',
+                        y_axis_label='j',
+                        x_range = [-0.1, 7.0],
+                        tools=[hover_j, 'pan,wheel_zoom,box_zoom,reset'],
+                        width=600,
+                        height=400,
+                        match_aspect = True,
+                        aspect_scale=1)
+
+    fig_jt.toolbar.active_scroll = fig_jt.select_one(WheelZoomTool)
+    fig_jt.legend.click_policy = "hide"
+    return fig_vt, fig_at, fig_jt
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
@@ -287,7 +402,7 @@ def plotOnce(bag_path, html_file):
     except:
         print('load ros_bag error!')
         return
-  
+
     if isINJupyter():
        max_time = dataLoader.load_all_data()
        print("is in jupter now!")
@@ -299,6 +414,24 @@ def plotOnce(bag_path, html_file):
     tab_rt1, tab_rt2,tab_lat_rt_obstacle, obstacle_generates = draw_vo_lat_behavior(dataLoader, layer_manager)
     mlc_info_view, noa_info_view = draw_mlc_data_view(dataLoader, layer_manager)
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
+
+    plan_debug_msg = dataLoader.plan_debug_msg
+    speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
+    fig_st = draw_lon_st(plan_debug_msg, layer_manager)
+    speed_search_layer = CurveLayer(fig_st, speed_search_s_params)
+    layer_manager.AddLayer(speed_search_layer, 'speed_search_source', speed_search_base_s, 'speed_search_ref', 2)
+
+    fig_vt, fig_at, fig_jt = draw_v_a_j_fig()
+
+    v_search_layer = CurveLayer(fig_vt, speed_search_v_params)
+    layer_manager.AddLayer(v_search_layer, 'v_speed_search_source', speed_search_base_v, 'v_search_ref', 2)
+
+    a_search_layer = CurveLayer(fig_at, speed_search_a_params)
+    layer_manager.AddLayer(a_search_layer, 'a_speed_search_source', speed_search_base_a, 'a_search_ref', 2)
+
+    j_search_layer = CurveLayer(fig_jt, speed_search_j_params)
+    layer_manager.AddLayer(j_search_layer, 'j_speed_search_source', speed_search_base_j, 'j_search_ref', 2)
+
     min_t = sys.maxsize
     max_t = 0
     for gdlabel in layer_manager.gds.keys():
@@ -417,11 +550,10 @@ def plotOnce(bag_path, html_file):
         # display in jupyter notebook
         output_notebook()
 
-    # pan_lt = Panel(child=row(column(fig_local_view, fig_sv), column(fig_tp, fig_tv, fig_ta, fig_tj)), title="Longtime")
-    # pan_rt = Panel(child=row(tab_rt, column(fig_rtv)), title="Realtime")
-    # pans = Tabs(tabs=[ pan_lt, pan_rt ])
-    bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector)
-                                                       , column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view))))
+    pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
+    pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt), column(fig_at, fig_jt)), title="SpeedSearchInfo")
+    pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info])
+    bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():
     print('''\n

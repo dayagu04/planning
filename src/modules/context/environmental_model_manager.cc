@@ -32,6 +32,7 @@
 #include "planning_gflags.h"
 #include "reference_path_manager.h"
 #include "scene_type_config.pb.h"
+#include "src/modules/common/config/basic_type.h"
 #include "traffic_light_decision_manager.h"
 #include "vehicle_model/vehicle_model.h"
 #include "vehicle_service_c.h"
@@ -592,9 +593,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         vehicle_service_output_info.vehicle_speed_display);
   }
 
-  if (session_->environmental_model().location_valid()) {
-    auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
-  }
+  // if (session_->environmental_model().location_valid()) {
+  //   auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
+  // }
 
   if (vehicle_service_output_info.steering_wheel_angle_available) {
     auto steering_data = vehicle_status.mutable_steering_wheel();
@@ -1053,18 +1054,15 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   } else {
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
-  prediction_object.acc = std::hypot(fusion_object.common_info.acceleration.x,
-                                     fusion_object.common_info.acceleration.y);
   // judge direction of obj acc
   auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
                                      fusion_object.common_info.acceleration.x);
-  Eigen::Vector2f obj_acc_heading_vec(cos(obj_acc_heading_angle),
-                                      sin(obj_acc_heading_angle));
   Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
                                   sin(prediction_object.yaw));
-  if (obj_acc_heading_vec.dot(obj_heading_vec) < 0.0) {
-    prediction_object.acc *= -1.0;
-  }
+  Eigen::Vector2f prediction_obj_acc_vec(
+      fusion_object.common_info.acceleration.x,
+      fusion_object.common_info.acceleration.y);
+  prediction_object.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
   // add relative info for highway
   prediction_object.relative_position_x =
       x_turn(prediction_object.position_x - ego_state->ego_pose().x,
@@ -1272,8 +1270,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
       LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,
                 current_time - last_feed_time_[i], "\n");
       if (current_time - last_feed_time_[i] > 200) {
-        LOG_ERROR("(%s)input_delay: %d, %s", __FUNCTION__, i, feed_type_str,
-                  "\n");
+        LOG_ERROR("(%s)input_delay: %d, %s\n", __FUNCTION__, i, feed_type_str);
         error_msg += std::string(feed_type_str) + "; ";
         setFaultcode(39001);
         res = false;
@@ -1296,8 +1293,8 @@ bool EnvironmentalModelManager::InputReady(double current_time,
               current_time - last_feed_time_[i] >=
                   kpredictionCheckTimeDiff * 0.8)
             continue;
-          LOG_ERROR("(%s)input_rate_error: %d, %s", __FUNCTION__, i,
-                    feed_type_str, "\n");
+          LOG_ERROR("(%s)input_rate_error: %d, %s \n", __FUNCTION__, i,
+                    feed_type_str);
           error_msg += std::string(feed_type_str) + "; ";
           setFaultcode(39000);
           res = false;
@@ -1330,6 +1327,7 @@ void EnvironmentalModelManager::RunBlinkState(
       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
        (state == kLaneChangePropose)) &&
       (lc_request_direction == RIGHT_CHANGE) && (lc_source == INT_REQUEST);
+  bool is_cancel = state == kLaneChangeCancel;
   switch (vehicle_service_output_info.turn_switch_state) {
     case NONE:
       if (active) {
@@ -1349,7 +1347,8 @@ void EnvironmentalModelManager::RunBlinkState(
           is_ilc_right_change) {
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_ilc_right_change) {
+      } else if (is_ilc_right_change ||
+                 is_cancel) {
         // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
@@ -1363,7 +1362,8 @@ void EnvironmentalModelManager::RunBlinkState(
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
           is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_ilc_left_change) {
+      } else if (is_ilc_left_change ||
+                 is_cancel) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::RIGHT;

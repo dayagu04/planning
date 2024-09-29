@@ -10,9 +10,7 @@ MapRequest::MapRequest(
     framework::Session* session, const EgoPlanningConfigBuilder* config_builder,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
-    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-  auto map_request_config = config_builder->cast<ScenarioDisplayStateConfig>();
-}
+    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
 
 bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   auto current_lane = virtual_lane_mgr_->get_current_lane();
@@ -24,10 +22,26 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   bool is_current_lane_on_leftmost = false;
   auto right_lane = virtual_lane_mgr_->get_right_lane();
   if (right_lane) {
+    bool is_solid_right_lane_left =
+        MakesureCurrentBoundaryType(LEFT_CHANGE,
+                                    right_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_SOLID;
+    bool is_solid_right_lane_right =
+        MakesureCurrentBoundaryType(RIGHT_CHANGE,
+                                    right_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_SOLID;
     bool is_right_lane_boundary_both_dash =
-        !right_lane->is_solid_line(0) && !right_lane->is_solid_line(1);
+        !is_solid_right_lane_left && !is_solid_right_lane_right;
+    bool is_solid_cur_lane_left =
+        MakesureCurrentBoundaryType(LEFT_CHANGE,
+                                    current_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_SOLID;
+    bool is_solid_cur_lane_right =
+        MakesureCurrentBoundaryType(RIGHT_CHANGE,
+                                    current_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_SOLID;
     bool is_current_lane_is_leftmost =
-        current_lane->is_solid_line(0) && !current_lane->is_solid_line(1);
+        is_solid_cur_lane_left && !is_solid_cur_lane_right;
     is_current_lane_on_leftmost =
         is_current_lane_is_leftmost && is_right_lane_boundary_both_dash;
   }
@@ -45,13 +59,6 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
 
   std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
   std::array<double, 3> fp{500.0, 800.0, 1200.0};
-  const double sum_dis_to_last_merge_point =
-      virtual_lane_mgr_->sum_dis_to_last_merge_point();
-  const double dis_threshold_to_last_merge_point =
-      virtual_lane_mgr_->dis_threshold_to_last_merge_point();
-  if (sum_dis_to_last_merge_point < dis_threshold_to_last_merge_point) {
-    fp = {300.0, 500.0, 800.0};
-  }
   double adaptor_interval = interp(v_limit, xp, fp);
   double map_response_dist =
       kResponseOffset + adaptor_interval * std::fabs(lc_map_decision);
@@ -120,9 +127,6 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
   bool allow_generate =
       ((lc_status == kLaneChangePropose || lc_status == kLaneChangeHold) ||
        lc_status == kLaneKeeping);
-
-  auto& ego_state = session_->environmental_model().get_ego_state_manager();
-  double v_ego = ego_state->ego_v();
 
   auto olane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);

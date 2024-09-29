@@ -276,7 +276,7 @@ void TrackletMaintainer::recv_prediction_objects(
     origin->a_lead = rot_ax;
     origin->a_lead_k = rot_ax;
 
-    origin->oncoming = (origin->v_lead < -3.9);
+    origin->oncoming = (origin->v_lead < -3.0);
     origin->motion_pattern_current = p.motion_pattern_current;
     origin->is_static = p.is_static;
     origin->is_oversize_vehicle = p.is_oversize_vehicle;
@@ -386,7 +386,7 @@ void TrackletMaintainer::recv_prediction_objects(
       trajectory_idx++;
     }
   }
-  LOG_DEBUG("1map size= : [%d] \n", lt_fusion_object_history_map_.size());
+  LOG_DEBUG("1map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = lt_fusion_object_history_map_.begin();
@@ -405,7 +405,7 @@ void TrackletMaintainer::recv_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", lt_fusion_object_history_map_.size());
+  LOG_DEBUG("2map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 }
 
 // use relative interface when hdmap valid is false
@@ -511,7 +511,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     origin->a_lead = p.relative_acceleration_x + ego_state->ego_acc();
     origin->a_lead_k = p.relative_acceleration_x + ego_state->ego_acc();
 
-    origin->oncoming = (origin->v_lead < -3.9);
+    origin->oncoming = (origin->v_lead < -3.0);
     origin->motion_pattern_current = p.motion_pattern_current;
     origin->is_static = p.is_static;
     origin->is_oversize_vehicle = p.is_oversize_vehicle;
@@ -526,7 +526,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     objects.push_back(origin);
     id_sets.insert(p.id);
   }
-  LOG_DEBUG("1map size= : [%d] \n", fusion_object_history_map_.size());
+  LOG_DEBUG("1map size= : [%lu] \n", fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = fusion_object_history_map_.begin();
@@ -546,7 +546,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%d] \n", fusion_object_history_map_.size());
+  LOG_DEBUG("2map size= : [%lu] \n", fusion_object_history_map_.size());
 }
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
@@ -617,10 +617,6 @@ void TrackletMaintainer::calc(
     bool left_faster, bool right_faster, LeadCars &lead_cars,
     bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
     const std::vector<double> &d_poly, const std::vector<double> &c_poly) {
-  auto config_builder =
-      session_->environmental_model().highway_config_builder();
-  PotentialAvoidDeciderConfig config =
-      config_builder->cast<PotentialAvoidDeciderConfig>();
   seq_state_.remove_clean();
   double v_ego = ego_state_->ego_v();
   const auto &vehicle_param =
@@ -1916,7 +1912,6 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double potential_near_car_v_ub = config.potential_near_car_v_ub;
   double potential_near_car_v_lb = config.potential_near_car_v_lb;
   bool enable_static_scene = config.enable_static_scene;
-  double car_addition_decre_factor = config.car_addition_decre_factor;
   double car_addition_decre_buffer = config.car_addition_decre_buffer;
   double emegency_cutin_ttc_lower = config.emegency_cutin_ttc_lower;
   double emegency_cutin_ttc_upper = config.emegency_cutin_ttc_upper;

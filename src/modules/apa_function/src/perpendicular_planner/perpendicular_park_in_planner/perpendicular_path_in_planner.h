@@ -16,7 +16,7 @@
 
 namespace planning {
 namespace apa_planner {
-
+using namespace pnc;
 class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
  public:
   enum class PrePlanCase : uint8_t {
@@ -178,20 +178,24 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
 
   const bool PrepareSinglePathPlan(
       const pnc::geometry_lib::PathPoint &cur_pose,
-      std::vector<std::vector<pnc::geometry_lib::PathSegment>>
-          &all_path_seg_vec);
+      std::vector<geometry_lib::GeometryPath> &geometry_path_vec);
 
   const bool PreparePathPlanSecond();
 
   const bool UpdatePath();
+
   const DubinsPlanResult DubinsPathPlan(
       const pnc::geometry_lib::PathPoint &start_pose,
       const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
       const double min_length, const bool need_col_det,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+      geometry_lib::GeometryPath &geometry_path);
 
   const bool IsPathSafe(const pnc::geometry_lib::PathSegment &path_seg,
                         const double lat_inflation, const double lon_safe_dist);
+
+  const bool IsGeometryPathSafe(
+      const pnc::geometry_lib::GeometryPath &geometry_path,
+      const double lat_inflation, const double lon_safe_dist);
 
   const PathColDetRes TrimPathByObs(pnc::geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,

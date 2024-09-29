@@ -186,7 +186,6 @@ bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
   JSON_DEBUG_VALUE("LonMotionOpt_init_state_v", s_init_state[1]);
   JSON_DEBUG_VALUE("LonMotionOpt_init_state_a", s_init_state[2]);
 
-  const auto &ego_prediction_raw_traj_points = planning_result.raw_traj_points;
   auto init_s = planning_init_point.frenet_state.s;
   constexpr size_t kMaxCheckIndex = 5;
   bool check_invalid_speed_bound{false};
@@ -195,14 +194,10 @@ bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
   auto &status_info =
       session_->mutable_planning_context()->mutable_status_info();
   for (size_t i = 0; i < num_t; ++i) {
-    auto t = lon_ref_path.t_list[i];
     auto s_ref = lon_ref_path.s_refs[i].first;
     v_ok = (s_ref - s_last) / 0.2;
     // LOG_DEBUG("v_ref from long behavior planner is: [%.2f] m/s \n", v_ok);
     s_last = s_ref;
-    auto s_ref_raw = i < ego_prediction_raw_traj_points.size()
-                         ? ego_prediction_raw_traj_points[i].s
-                         : 0.0;
     auto s_lower = std::numeric_limits<double>::min();
     auto s_upper = std::numeric_limits<double>::max();
     BoundInfo s_lower_bound_info;
@@ -246,7 +241,7 @@ bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
     size_t max_check_index = std::min(kMaxCheckIndex, s.size());
     if (!check_invalid_speed_bound && after_hot_start && i < max_check_index) {
       if (s[i] < s_lower - 2.0 || s[i] > s_upper + 2.0) {
-        LOG_ERROR("NP_DEBUG: Error! speed bound collide! %d %f [%f %f] \n", i,
+        LOG_ERROR("NP_DEBUG: Error! speed bound collide! %zu %f [%f %f] \n", i,
                   s[i], s_lower, s_upper);
         if (option.enable_log) {
           planning_result.extra_json["lon_motion_error_info"] =

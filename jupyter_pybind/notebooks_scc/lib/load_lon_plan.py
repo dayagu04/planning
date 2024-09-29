@@ -26,11 +26,12 @@ coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
-                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', 'prohibit_acc_',\
+                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', 'prohibit_acc_',\
                               'merge_agent_id', 'v_target_merge', 'rear_agent_merge_time', 'merge_orintation', 'merge_direction_plan',
                               'merge_exist','is_merge_region_plan', 'merge_point_distance', 'ego_has_rightof_tar_lane',
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',"max_brake_distance",\
-                              'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
+                              'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'v_target_intersection', 'v_target_virtual_obs', \
+                              'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
                               'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                               'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
@@ -80,15 +81,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
   except:
         print("there is no long_ref_path.soft_bounds")
-
-
-  try:
-    search_path_s_vec = list(plan_debug_info.st_search_decider_info.search_s_vec)
-    search_path_t_vec = list(plan_debug_info.st_search_decider_info.search_t_vec)
-    print("search path s vec: ", search_path_s_vec)
-    print("search path t vec: ", search_path_t_vec)
-  except:
-    print("no speed search search info ")
 
   try:
     # print("obstacle st info: ",plan_debug_info.st_search_decider_info.obstacle_st_infos)
@@ -194,6 +186,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   v_limit_vec = plan_debug_json_info['limit_v_type']
   print('v_limit_vec', v_limit_vec)
+  print('intersection_state', plan_debug_json_info['current_intersection_state'])
+  print('last_intersection_state', plan_debug_json_info['last_intersection_state'])
+  print('distance_to_stopline', plan_debug_json_info['distance_to_stopline'])
+  print('distance_to_crosswalk', plan_debug_json_info['distance_to_crosswalk'])
+  print('traffic_status_straight', plan_debug_json_info['traffic_status_straight'])
+  print('v_target_intersection', plan_debug_json_info['v_target_intersection'])
+  print('v_target_virtual_obs', plan_debug_json_info['v_target_virtual_obs'])
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
@@ -262,7 +261,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'cutinVal': cutin_attr_vec
   })
 
-  lon_plan_data['data_search_path'].data.update({'t':search_path_t_vec, 's':search_path_s_vec })
   # motion planning
   lon_motion_plan_input = plan_debug_info.longitudinal_motion_planning_input
   lon_motion_plan_output = plan_debug_info.longitudinal_motion_planning_output
@@ -343,7 +341,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       ego_front_agent_traj_x, ego_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_front_agent_traj_x_vec'], planning_json['ego_front_agent_traj_y_vec'])
       ego_rear_agent_traj_x, ego_rear_agent_traj_y = coord_tf.global_to_local(planning_json['ego_rear_agent_traj_x_vec'], planning_json['ego_rear_agent_traj_y_vec'])
       ego_left_agent_traj_x, ego_left_agent_traj_y = coord_tf.global_to_local(planning_json['ego_left_agent_traj_x_vec'], planning_json['ego_left_agent_traj_y_vec'])
-      ego_right_agent_traj_x, ego_right_agent_traj_y = coord_tf.global_to_local(planning_json['ego_right_agent_traj_x_vec'], planning_json['ego_right_agent_traj_y_vec']) 
+      ego_right_agent_traj_x, ego_right_agent_traj_y = coord_tf.global_to_local(planning_json['ego_right_agent_traj_x_vec'], planning_json['ego_right_agent_traj_y_vec'])
       ego_left_front_agent_traj_x, ego_left_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_left_front_agent_traj_x_vec'], planning_json['ego_left_front_agent_traj_y_vec'])
       ego_right_front_agent_traj_x, ego_right_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_right_front_agent_traj_x_vec'], planning_json['ego_right_front_agent_traj_y_vec'])
       ego_left_rear_agent_traj_x, ego_left_rear_agent_traj_y = coord_tf.global_to_local(planning_json['ego_left_rear_agent_traj_x_vec'], planning_json['ego_left_rear_agent_traj_y_vec'])
@@ -362,7 +360,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       # ego_front_agent_traj_x, ego_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_front_agent_traj_x_vec'], planning_json['ego_front_agent_traj_y_vec'])
       # ego_rear_agent_traj_x, ego_rear_agent_traj_y = coord_tf.global_to_local(planning_json['ego_rear_agent_traj_x_vec'], planning_json['ego_rear_agent_traj_y_vec'])
       # ego_left_agent_traj_x, ego_left_agent_traj_y = coord_tf.global_to_local(planning_json['ego_left_agent_traj_x_vec'], planning_json['ego_left_agent_traj_y_vec'])
-      # ego_right_agent_traj_x, ego_right_agent_traj_y = coord_tf.global_to_local(planning_json['ego_right_agent_traj_x_vec'], planning_json['ego_right_agent_traj_y_vec']) 
+      # ego_right_agent_traj_x, ego_right_agent_traj_y = coord_tf.global_to_local(planning_json['ego_right_agent_traj_x_vec'], planning_json['ego_right_agent_traj_y_vec'])
       # ego_left_front_agent_traj_x, ego_left_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_left_front_agent_traj_x_vec'], planning_json['ego_left_front_agent_traj_y_vec'])
       # ego_right_front_agent_traj_x, ego_right_front_agent_traj_y = coord_tf.global_to_local(planning_json['ego_right_front_agent_traj_x_vec'], planning_json['ego_right_front_agent_traj_y_vec'])
       # ego_left_rear_agent_traj_x, ego_left_rear_agent_traj_y = coord_tf.global_to_local(planning_json['ego_left_rear_agent_traj_x_vec'], planning_json['ego_left_rear_agent_traj_y_vec'])
@@ -390,7 +388,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'ego_right_rear_agent_traj_x_vec': ego_right_rear_agent_traj_x,
       'ego_right_rear_agent_traj_y_vec': ego_right_rear_agent_traj_y
       })
-    
+
 
 def update_lon_ref_path(lon_ref_path, lon_plan_data):
   # behavior planning
@@ -538,40 +536,60 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
   })
 
 def load_lon_global_figure(bag_loader):
-  #real time global figure data process
+  # ------绘制veloticy图表------
   velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
                 y_axis_label='velocity/(m/s)',width=600,height=300)
-
   ego_velocity_vec = []
+  cruise_velocity_vec = []
   target_velocity_vec = []
   ref_velocity_vec = []
   leadone_velocity_vec = []
   leadtwo_velocity_vec = []
+  intersection_velocity_vec = []
+  curve_limit_velocity_vec = []
+  narrow_limit_velocity_vec = []
   t_plan_vec = bag_loader.plan_debug_msg['t']
   t_loc_vec = bag_loader.loc_msg['t']
   t_vehicle_service_vec = bag_loader.vs_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    cruise_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_cruise'], 2))
     target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
-    # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
     leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
     leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
+    intersection_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_intersection'], 2))
+    curve_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_limit_in_turns'], 2))
+    narrow_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['narrow_agent_v_limit'], 2))
 
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_velocity_vec.append(round(bag_loader.vs_msg['data'][ind].vehicle_speed, 2))
 
-  velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
-                              legend_label='target_velocity', color="green")
-  # velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
-  #                             legend_label='ref_velocity', color="gray")
+
+  line_target = velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+                                legend_label='target_velocity', color="green")  # 实线，绿色
+  velocity_fig.line(t_plan_vec, cruise_velocity_vec, line_width=1,
+                    legend_label='v_cruise', color="green", line_dash="dashed")  # 虚线，紫色
   velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
-                                legend_label='ego_velocity',color="blue")
+                    legend_label='ego_velocity', color="blue")  # 实线，蓝色
   velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
-                              legend_label='leadone_velocity', color="red")
+                    legend_label='leadone_velocity', color="red")  # 实线，红色
   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
-                                legend_label='leadtwo_velocity',color="orange")
+                    legend_label='leadtwo_velocity', color="brown", line_dash="dashed")  # 虚线，棕色
+  velocity_fig.line(t_plan_vec, intersection_velocity_vec, line_width=1,
+                    legend_label='v_target_intersection', color="magenta")  # 实线，洋红色
+  velocity_fig.line(t_plan_vec, curve_limit_velocity_vec, line_width=1,
+                    legend_label='v_limit_in_turns', color="teal", line_dash="dotted")  # 点状虚线，青绿色
+  velocity_fig.line(t_plan_vec, narrow_limit_velocity_vec, line_width=1.5,
+                    legend_label='narrow_agent_v_limit', color="orange", line_dash=[4, 2])  # 自定义虚线，金色
+  # 添加工具和交互
+  hover_velocity_fig = HoverTool(renderers=[line_target], tooltips=[('time', '$x'), ('velocity', '$y')], mode='vline')
+  # 将悬停工具添加到图形中
+  velocity_fig.add_tools(hover_velocity_fig)
+  # 设置鼠标滚轮缩放为激活工具
+  velocity_fig.toolbar.active_scroll = velocity_fig.select_one(WheelZoomTool)
+  # 设置点击图例隐藏曲线的功能
   velocity_fig.legend.click_policy = 'hide'
 
-
+  # ------绘制acc 图表------
   acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
                 y_axis_label='acc/(m/s2)',width=600,height=300)
 
@@ -827,10 +845,25 @@ def load_lon_global_figure(bag_loader):
                                legend_label='localization_estimate',color="black")
   topic_latency_fig.legend.click_policy = 'hide'
 
+  tfl_status_fig = bkp.figure(title='交通灯信号',x_axis_label='time/s',
+                y_axis_label='tfl_status',width=600,height=300)
+  traffic_status_vec = []
+  t_plan_vec = bag_loader.plan_debug_msg['t']
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+     traffic_status_vec.append(bag_loader.plan_debug_msg['json'][ind]['traffic_status_straight'])
+  tfl_status_fig.line(t_plan_vec, traffic_status_vec, line_width=1,
+                              legend_label='tfl_straight_status', color="brown")
+  tfl_status_fig.text(x=x_value, y=48, text=['RED:1.10.11.41'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=44, text=['YELLOW:2.42'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=46, text=['GREEN:3.43'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=38, text=['GREEN_BLINK:30.32.33'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=42, text=['YELLOW_BLINK:20.22'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.text(x=x_value, y=40, text=['UNKNOWN:OTHERS'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  tfl_status_fig.legend.click_policy = 'hide'
 
-  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig
+  return velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig, tfl_status_fig
 
-def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig):
+def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig, tfl_status_fig):
   data_st = ColumnDataSource(data = {'t':[], 's':[], 's_soft_ub':[], 's_soft_lb':[], 'obs_low':[], 'obs_high':[], 'obs_low_id':[], 'obs_high_id':[], 'obs_low_type':[], 'obs_high_type':[]})
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
@@ -955,7 +988,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig2.line('t', 'obs_high', source = data_st, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
   fig2.triangle('t', 'obs_low', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
   fig2.inverted_triangle ('t', 'obs_high', source = data_st, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
-  fig2.line('t', 's', source = data_search_path, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'search path')
   # 添加障碍物s-t bound
   for obs_id in data_obs_st.keys():
      if(obs_id != ''):
@@ -1040,7 +1072,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 
-  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status,topic_latency_fig)), title="Realtime")
+  pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state, tfl_status_fig), column(cost_time_fig, cutin_fig, fig_replan_status,topic_latency_fig)), title="Realtime")
 
   pans = Tabs(tabs=[ pan1, pan2 ])
 

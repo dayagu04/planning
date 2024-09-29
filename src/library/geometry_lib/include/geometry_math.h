@@ -535,9 +535,13 @@ const LineSegment BuildLineSegByPose(const Eigen::Vector2d &current_pos,
                                      const double &current_heading);
 
 const bool CalCommonTangentCircleOfTwoLine(
-    LineSegment &line1, LineSegment &line2, const double &radius,
+    LineSegment &line1, LineSegment &line2, const double radius,
     std::vector<Eigen::Vector2d> &centers,
     std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss);
+
+const bool CalLineArcOfTwoLine(LineSegment &line1, LineSegment &line2,
+                               LineSegment &line, Arc &arc, const double radius,
+                               const bool is_shifted);
 
 const bool CheckTwoVecCollinear(const Eigen::Vector2d &v1,
                                 const Eigen::Vector2d &v2);
@@ -561,6 +565,8 @@ const bool CompleteArcInfo(Arc &arc, const double length,
                            const bool is_anti_clockwise,
                            const bool save_start_pt);
 
+const bool CompleteArcInfo(Arc &arc, const double length, const uint8_t steer);
+
 const bool CompleteLineInfo(LineSegment &line, const double length);
 
 const bool CompleteLineInfo(LineSegment &line, const double length,
@@ -571,6 +577,8 @@ const bool CompleteLineInfo(LineSegment &line, const double length,
 
 const bool CompletePathSeg(PathSegment &path_seg, const double length,
                            const bool save_start_pt = true);
+
+const bool CompletePathSegInfo(PathSegment &path_seg, const double length);
 
 const uint8_t CalArcGear(const Arc &arc);
 
@@ -645,6 +653,113 @@ const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
 
 const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
                             const double length);
+
+const bool IsSameDirGear(const uint8_t gear1, const uint8_t gear2);
+
+const bool IsOppositeDirGear(const uint8_t gear1, const uint8_t gear2);
+
+const bool IsSameSteer(const uint8_t steer1, const uint8_t steer2);
+
+const bool IsOppositeSteer(const uint8_t steer1, const uint8_t steer2);
+
+struct GeometryPath {
+  uint8_t gear_change_count = 0;
+  double total_length = 0.0;
+  uint8_t path_count = 0;
+  double cost = 0.0;
+  PathPoint start_pose;
+  PathPoint end_pose;
+  uint8_t cur_gear = SEG_GEAR_INVALID;
+  uint8_t cur_steer = SEG_STEER_INVALID;
+  std::vector<uint8_t> steer_cmd_vec;
+  std::vector<uint8_t> gear_cmd_vec;
+  std::vector<PathSegment> path_segment_vec;
+  std::vector<PathPoint> path_pt_vec;
+
+  GeometryPath() {}
+  GeometryPath(const PathSegment &_path_segment) {
+    Reset();
+    std::vector<PathSegment> _path_segment_vec;
+    _path_segment_vec.emplace_back(_path_segment);
+    SetPath(_path_segment_vec);
+  }
+  GeometryPath(const std::vector<PathSegment> &_path_segment_vec) {
+    Reset();
+    if (!_path_segment_vec.empty()) {
+      path_segment_vec = _path_segment_vec;
+      path_count = path_segment_vec.size();
+      cur_gear = path_segment_vec.front().seg_gear;
+      cur_steer = path_segment_vec.front().seg_steer;
+      start_pose = path_segment_vec.front().GetStartPose();
+      end_pose = path_segment_vec.back().GetEndPose();
+      for (const auto &path_seg : path_segment_vec) {
+        gear_cmd_vec.emplace_back(path_seg.seg_gear);
+        steer_cmd_vec.emplace_back(path_seg.seg_steer);
+        total_length += path_seg.Getlength();
+      }
+
+      for (int i = 0; i < path_count - 1; ++i) {
+        if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
+          gear_change_count++;
+        }
+      }
+    }
+  }
+  void SetPath(const std::vector<PathSegment> &_path_segment_vec) {
+    Reset();
+    if (!_path_segment_vec.empty()) {
+      path_segment_vec = _path_segment_vec;
+      path_count = path_segment_vec.size();
+      cur_gear = path_segment_vec.front().seg_gear;
+      cur_steer = path_segment_vec.front().seg_steer;
+      start_pose = path_segment_vec.front().GetStartPose();
+      end_pose = path_segment_vec.back().GetEndPose();
+      for (const auto &path_seg : path_segment_vec) {
+        gear_cmd_vec.emplace_back(path_seg.seg_gear);
+        steer_cmd_vec.emplace_back(path_seg.seg_steer);
+        total_length += path_seg.Getlength();
+      }
+
+      for (int i = 0; i < path_count - 1; ++i) {
+        if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
+          gear_change_count++;
+        }
+      }
+    }
+  }
+  void Reset() {
+    path_segment_vec.clear();
+    gear_change_count = 0;
+    total_length = 0.0;
+    cost = 0.0;
+    path_count = 0;
+    start_pose.Reset();
+    end_pose.Reset();
+    cur_gear = geometry_lib::SEG_GEAR_INVALID;
+    cur_steer = geometry_lib::SEG_STEER_INVALID;
+    steer_cmd_vec.clear();
+    gear_cmd_vec.clear();
+    path_pt_vec.clear();
+  }
+  ~GeometryPath() {}
+
+  void Sample(const double ds) {
+    path_pt_vec.clear();
+    for (size_t i = 0; i < path_segment_vec.size(); ++i) {
+      const auto &path_seg = path_segment_vec[i];
+
+      std::vector<pnc::geometry_lib::PathPoint> pt_set;
+      SamplePointSetInPathSeg(pt_set, path_seg, ds);
+      if (i < path_segment_vec.size() - 1) {
+        pt_set.pop_back();
+      }
+      path_pt_vec.insert(path_pt_vec.end(), pt_set.begin(), pt_set.end());
+    }
+  }
+};
+
+const std::vector<PathPoint> SamplePathSegVec(
+    const std::vector<PathSegment> &path_seg_vec, const double ds);
 
 }  // namespace geometry_lib
 }  // namespace pnc

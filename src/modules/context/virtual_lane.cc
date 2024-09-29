@@ -173,16 +173,16 @@ uint VirtualLane::get_common_point_num(
     return 0;
   }
 
-  const std::vector<std::string> &other_point_ids =
-      other->center_line_points_track_id();
+  // const std::vector<std::string> &other_point_ids =
+  //     other->center_line_points_track_id();
 
   uint common_point_num = 0;
-  for (auto &p : other_point_ids) {  // todo
-    // if (center_line_points_track_id_.find(p) !=
-    // center_line_points_track_id_.end()) {
-    //   common_point_num++;
-    // }
-  }
+  // for (auto &p : other_point_ids) {  // todo
+  // if (center_line_points_track_id_.find(p) !=
+  // center_line_points_track_id_.end()) {
+  //   common_point_num++;
+  // }
+  // }
 
   return common_point_num;
 }
@@ -366,24 +366,38 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(
-    double dis_to_ramp, double dis_to_first_merge, double dis_to_first_split,
-    bool is_nearing_ramp, RampDirection ramp_direction,
-    RampDirection first_split_direction, bool is_leaving_ramp, uint lane_num,
-    bool is_on_ramp, bool is_nearing_other_lane_merge_to_road_point) {
+void VirtualLane::update_lane_tasks(const GeneralTaskMapInfo& general_task_map_info) {
   current_tasks_.clear();
-  const double trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp =
-      266;
-  const double
-      trigger_mlc_distance_threshold_to_first_ramp_when_ego_on_expressway =
-          3000;
-  if (order_id_ + 1 > lane_num) return;
-  if (is_nearing_other_lane_merge_to_road_point) {
-    if (order_id_ + 1 == lane_num) {
-      current_tasks_.emplace_back(-1);
-      std::cout << "在高速主路最右侧车道上,且接近前方汇入点时,向左产生一个变道任务" << std::endl;
+  bool ego_on_ramp = general_task_map_info.is_on_ramp;
+  if (ego_on_ramp) {
+    ProcessEgoOnRampMLC(general_task_map_info);
+  } else {
+    ProcessEgoOnRoadMLC(general_task_map_info);
+  }
+}
+void VirtualLane::ProcessEgoOnRoadMLC(const GeneralTaskMapInfo& general_task_map_info) {
+  bool is_nearing_other_lane_merge_to_road_point = general_task_map_info.is_nearing_other_lane_merge_to_road_point;
+  RampDirection first_merge_direction = general_task_map_info.first_merge_direction;
+  RampDirection ramp_direction = general_task_map_info.ramp_direction;
+  bool is_nearing_ramp = general_task_map_info.is_nearing_ramp;
+  bool is_on_ramp = general_task_map_info.is_on_ramp;
+  const int lane_num = general_task_map_info.lane_num_except_emergency;
+  bool is_trigger_ego_not_on_side = general_task_map_info.is_leaving_ramp && !general_task_map_info.is_on_ramp;
+  if (is_nearing_other_lane_merge_to_road_point) {//主路前方接近汇入区域的变道
+    if (first_merge_direction == RAMP_ON_LEFT) {
+      if (order_id_ + 1 == lane_num) {
+        current_tasks_.emplace_back(-1);
+        std::cout << "高速前方右侧有汇入车道，最右侧车道产生一个变道任务"
+                  << std::endl;
+      }
+    } else if (first_merge_direction == RAMP_ON_RIGHT) {
+      if (order_id_ == 0) {
+        current_tasks_.emplace_back(1);
+        std::cout << "高速前方左侧有汇入车道，最左侧车道产生一个变道任务"
+                  << std::endl;
+      }
     }
-  } else if (is_nearing_ramp && !is_on_ramp) {
+  } else if (is_nearing_ramp && !is_on_ramp) {//在主路上，前方接近ramp的变道
     if (ramp_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
@@ -393,34 +407,94 @@ void VirtualLane::update_lane_tasks(
         current_tasks_.emplace_back(-1);
       }
     }
-  } else if (is_on_ramp) {
-    //首先处理匝道上的分叉口
-    if (dis_to_first_merge > dis_to_first_split) {
-      if (dis_to_first_split <
-          trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp) {
-        if (first_split_direction == RAMP_ON_RIGHT) {
-          for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-            current_tasks_.emplace_back(1);
-          }
-        } else if (first_split_direction == RAMP_ON_LEFT) {
-          for (int i = order_id_; i > 0; i--) {
-            current_tasks_.emplace_back(-1);
-          }
-        }
-      }
-    } else {
-      for (int i = order_id_; i > 0; i--) {
-        current_tasks_.emplace_back(-1);
-      }
-    }
-  } else if (is_leaving_ramp) {
+  } else if (is_trigger_ego_not_on_side) {//在主路上，触发自车不在最右侧车道上的变道
+    //TODO（fengwang31）：需要考虑上一次汇入的方向。目前默认匝道都是从右边汇入主路的
     if (order_id_ + 1 == lane_num) {
       current_tasks_.emplace_back(-1);
       std::cout << "在最右侧车道上时,向左产生一个变道任务" << std::endl;
     }
   }
 }
-
+void VirtualLane::ProcessEgoOnRampMLC(const GeneralTaskMapInfo& general_task_map_info) {
+  const double dis_to_first_merge = general_task_map_info.distance_to_first_road_merge;
+  const double dis_to_first_split = general_task_map_info.distance_to_first_road_split;
+  const RampDirection first_merge_direction = general_task_map_info.first_merge_direction;
+  const double trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp =
+      266;
+  const RampDirection first_split_direction = general_task_map_info.first_split_direction;
+  const int lane_num = general_task_map_info.lane_num_except_emergency;
+  const bool is_ramp_merge_to_road_on_expressway = general_task_map_info.is_ramp_merge_to_road_on_expressway;
+  const bool is_ramp_merge_to_ramp_on_expressway = general_task_map_info.is_ramp_merge_to_ramp_on_expressway;
+  const bool is_leaving_ramp = general_task_map_info.is_leaving_ramp;
+  const double dis_to_second_merge = general_task_map_info.distance_to_second_road_merge;
+  const double dis_to_second_split = general_task_map_info.distance_to_second_road_split;
+  const double sum_dis_to_last_split_point_on_ramp = general_task_map_info.sum_dis_to_last_split_point_on_ramp;
+  const RampDirection second_split_direction = general_task_map_info.second_split_direction;
+  const RampDirection second_merge_direction = general_task_map_info.second_merge_direction;
+  //在匝道上，经过split点50m后再开始触发变道任务，避免自车还在split的区域内
+  const double dis_to_last_spli_threshold = 50;
+  //在匝道汇入匝道时，距离merge的距离在200m范围内时，再生成地图变道任务，避免前面有1分2场景的不合理变道
+  const double dis_to_first_merge_threshold = 100;
+  //首先处理匝道上的分叉口
+  if (dis_to_first_merge > dis_to_first_split &&
+      dis_to_first_split <
+        trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp) {
+    if (first_split_direction == RAMP_ON_RIGHT) {
+      for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+        current_tasks_.emplace_back(1);
+      }
+    } else if (first_split_direction == RAMP_ON_LEFT) {
+      for (int i = order_id_; i > 0; i--) {
+        current_tasks_.emplace_back(-1);
+      }
+    }
+  } else if (is_ramp_merge_to_road_on_expressway &&
+             is_leaving_ramp) {//处理匝道汇入主路的场景
+    if (first_merge_direction == RAMP_ON_RIGHT) {
+      for (int i = order_id_; i > 0; i--) {
+        current_tasks_.emplace_back(-1);
+      }
+    } else if (first_merge_direction == RAMP_ON_LEFT) {
+      for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+        current_tasks_.emplace_back(1);
+      }
+    }
+  } else if (is_ramp_merge_to_ramp_on_expressway &&
+            sum_dis_to_last_split_point_on_ramp > dis_to_last_spli_threshold &&
+            dis_to_first_merge < dis_to_first_merge_threshold) {
+    RampDirection next_lc_dir = RAMP_NONE;
+    if (dis_to_second_merge < dis_to_first_split) {
+      //下下一个场景还是merge场景
+      next_lc_dir = second_merge_direction;
+      if (first_merge_direction == RAMP_ON_RIGHT &&
+          next_lc_dir == RAMP_ON_RIGHT) {
+        for (int i = order_id_; i > 0; i--) {
+          current_tasks_.emplace_back(-1);
+        }
+      } else if (first_merge_direction == RAMP_ON_LEFT &&
+          next_lc_dir == RAMP_ON_LEFT) {
+        for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+          current_tasks_.emplace_back(1);
+        }
+      }
+    } else if (dis_to_second_merge >= dis_to_first_split) {
+      //下下一个是split的场景
+      next_lc_dir = first_split_direction;
+      if (first_merge_direction == RAMP_ON_RIGHT &&
+          next_lc_dir == RAMP_ON_LEFT) {
+        for (int i = order_id_; i > 0; i--) {
+          current_tasks_.emplace_back(-1);
+        }
+      } else if (first_merge_direction == RAMP_ON_LEFT &&
+          next_lc_dir == RAMP_ON_RIGHT) {
+        for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+          current_tasks_.emplace_back(1);
+        }
+      }
+    }
+  }
+  //TODO（fengwang31）：匝道汇入匝道的scean
+}
 void VirtualLane::save_context(VirtualLaneContext &context) const {
   // todo: clren
 }

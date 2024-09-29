@@ -9,10 +9,8 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240903/20240903-17-25-29/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-09-03-17-25-29_no_camera.bag"
-# bag_path = "/share/mnt/0704_night/real_time_0704_22.00000.1688538752.plan"
-# bag_path = "/docker_share/data/clren/bag/new_bag/20230206114346.record.00000"
-frame_dt = 0.02 # sec
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_48160/trigger/20240919/20240919-17-09-30/data_collection_CHERY_E0Y_48160_EVENT_MANUAL_2024-09-19-17-09-30_no_camera.bag.1727070962.open-loop.plan"
+frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -20,7 +18,8 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 900
+fig1.legend.label_text_font_size = "8pt"
+fig1.height = 950
 fig1.width = 700
 
 plan_debug_msg_idx = 0
@@ -83,11 +82,11 @@ columns = [
     ]
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=350, height=600)
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
-data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=300)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=800)
+data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=100)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=900)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=500)
-data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=300)
-data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=300)
+data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=200)
+data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=200)
 
 
 fig1.line('d_poly_y', 'd_poly_x', source = data_d_poly, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'd_poly')
@@ -209,7 +208,7 @@ def update_lc_data (noa_info, plan_debug_json):
   vars_lc = ['sdmap_valid_', 'turn_switch_state','lane_change_cmd_','cur_state','lc_map_decision','ramp_direction',
              'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
-             'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',
+             'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',"cur_lane_is_continue",
              'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'virtual_lane_relative_id_switch_flag',
              'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_intersection_split',
@@ -326,8 +325,8 @@ def slider_callback(bag_time):
   push_notebook()
 
 # +
+bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3),
+            column(data_overtake_lc_table, data_merge_lc_table),column(data_obstacle_table, data_behavior_table_2, data_cone_lc_table)), notebook_handle=True)
 slider_class = LatBehaviorSlider(slider_callback)
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3,data_obstacle_table),
-            column(data_overtake_lc_table, data_cone_lc_table, data_merge_lc_table, data_behavior_table_2)), notebook_handle=True)
 
 # slider_class = ObjText(obj_id_handler)

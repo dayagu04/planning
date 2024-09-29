@@ -38,6 +38,8 @@ struct RSPath {
   // todo
   int steering_change_number;
 
+  double radius;
+
   void BackPoint(RSPoint *point) {
     if (size < 1) {
       return;
@@ -51,6 +53,11 @@ struct RSPath {
 
     *point = back_seg->points[back_seg->size - 1];
 
+    return;
+  }
+
+  void Clear() {
+    size = 0;
     return;
   }
 };

@@ -15,12 +15,7 @@ AdaptiveCruiseControl::AdaptiveCruiseControl(
 void AdaptiveCruiseControl::adaptive_cruise_control(
     common::LonDecisionInfo& lon_decision_information,
     AdaptiveCruiseControlInfo& acc_info,
-    PlanningResult& ego_prediction_result) {
-  auto& ego_state = session_->environmental_model().get_ego_state_manager();
-
-  const double ego_v = ego_state->ego_v();
-  const double ego_a = ego_state->ego_acc();
-}
+    PlanningResult& ego_prediction_result) {}
 
 std::pair<double, double> AdaptiveCruiseControl::calculate_max_acc(
     double ego_v) {

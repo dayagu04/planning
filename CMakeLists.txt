@@ -3,9 +3,10 @@ cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(PYTHON_EXECUTABLE /root/miniconda3/bin/python)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/install")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -DX86")
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

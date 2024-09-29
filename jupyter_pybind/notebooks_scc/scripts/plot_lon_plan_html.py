@@ -22,7 +22,7 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240711/20240711-09-53-56/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-11-09-53-56_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240923/20240923-14-30-48/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2024-09-23-14-30-48_no_camera.bag"
 html_file = bag_path +".lonplan.html"
 
 # bokeh创建的html在jupyter中显示
@@ -259,6 +259,31 @@ target_vel_start_stop_params = {
     'line_width': 1,
     'color': 'brown',
     'legend_label': 'target_velocity_start_stop'
+}
+
+v_cruise_params = {
+    'line_width': 1,
+    'color': 'green',
+    'legend_label': 'v_cruise',
+    'line_dash': 'dashed'
+}
+
+v_target_intersection_params = {
+    'line_width': 1,
+    'color': 'magenta',
+    'legend_label': 'v_target_intersection'
+}
+
+v_limit_in_turns_params = {
+    'line_width': 1,
+    'color': 'teal',
+    'legend_label': 'v_limit_in_turns'
+}
+
+narrow_agent_v_limit_params = {
+    'line_width': 1,
+    'color': 'gold',
+    'legend_label': 'narrow_agent_v_limit'
 }
 
 lon_rt_table_params={
@@ -512,6 +537,14 @@ class ScalarGenerator(DataGeneratorBase):
                         ys.append(round(v['v_target_start_stop'], 2))
                     else:
                         ys.append(0)
+                elif val_type == 'v_cruise':
+                    ys.append(round(v['v_cruise'], 2))
+                elif val_type == 'v_target_intersection':
+                    ys.append(round(v['v_target_intersection'], 2))
+                elif val_type == 'v_limit_in_turns':
+                    ys.append(round(v['v_limit_in_turns'], 2))
+                elif val_type == 'narrow_agent_v_limit':
+                    ys.append(round(v['narrow_agent_v_limit'], 2))
                 else:
                     pass
 
@@ -728,7 +761,7 @@ class TextGenerator4Lon(DataGeneratorBase):
             planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                               "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
-                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
+                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", \
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                               'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
@@ -1078,18 +1111,30 @@ def draw_rt_vel(plan_debug_msg, vs_msg, layer_manager):
     rt_leadone_vel = ScalarGenerator(plan_debug_msg, 'leadone_velocity', accu=True, name="rt_leadone_vel")
     rt_leadtwo_vel = ScalarGenerator(plan_debug_msg, 'leadtwo_velocity', accu=True, name="rt_leadtwo_vel")
     rt_target_vel_start_stop = ScalarGenerator(plan_debug_msg, 'target_velocity_start_stop', accu=True, name="rt_target_vel_start_stop")
+    v_cruise = ScalarGenerator(plan_debug_msg, 'v_cruise', accu=True, name="v_cruise")
+    v_target_intersection = ScalarGenerator(plan_debug_msg, 'v_target_intersection', accu=True, name="v_target_intersection")
+    v_limit_in_turns = ScalarGenerator(plan_debug_msg, 'v_limit_in_turns', accu=True, name="v_limit_in_turns")
+    narrow_agent_v_limit = ScalarGenerator(plan_debug_msg, 'narrow_agent_v_limit', accu=True, name="narrow_agent_v_limit")
 
     target_vel_layer = CurveLayer(fig_rtv, target_vel_params)
     ego_vel_layer = CurveLayer(fig_rtv, ego_vel_params)
     leadone_vel_layer = CurveLayer(fig_rtv, leadone_vel_params)
     leadtwo_vel_layer = CurveLayer(fig_rtv, leadtwo_vel_params)
     target_vel_start_stop_layer = CurveLayer(fig_rtv, target_vel_start_stop_params)
+    v_cruise_layer = CurveLayer(fig_rtv, v_cruise_params)
+    v_target_intersection_layer = CurveLayer(fig_rtv, v_target_intersection_params)
+    v_limit_in_turns_layer = CurveLayer(fig_rtv, v_limit_in_turns_params)
+    narrow_agent_v_limit_layer = CurveLayer(fig_rtv, narrow_agent_v_limit_params)
 
     layer_manager.AddLayer(target_vel_layer, 'global_target_vel', rt_target_vel)
     layer_manager.AddLayer(ego_vel_layer, 'global_ego_vel', rt_ego_vel)
     layer_manager.AddLayer(leadone_vel_layer, 'global_leadone_vel', rt_leadone_vel)
     layer_manager.AddLayer(leadtwo_vel_layer, 'global_leadtwo_vel', rt_leadtwo_vel)
+    layer_manager.AddLayer(v_cruise_layer, 'global_v_cruise', v_cruise)
     layer_manager.AddLayer(target_vel_start_stop_layer, 'global_target_vel_start_stop', rt_target_vel_start_stop)
+    layer_manager.AddLayer(v_target_intersection_layer, 'global_v_target_intersection', v_target_intersection)
+    layer_manager.AddLayer(v_limit_in_turns_layer, 'global_v_limit_in_turns', v_limit_in_turns)
+    layer_manager.AddLayer(narrow_agent_v_limit_layer, 'global_narrow_agent_v_limit', narrow_agent_v_limit)
 
     fig_rtv.toolbar.active_scroll = fig_rtv.select_one(WheelZoomTool)
     fig_rtv.legend.click_policy = "hide"

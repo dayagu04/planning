@@ -7,9 +7,11 @@
 #include "Eigen/Core"
 #include "apa_param_setting.h"
 #include "dubins_lib.h"
+#include "euler_distance_transform.h"
 #include "geometry_math.h"
 #include "local_view.h"
 #include "math_lib.h"
+#include "path_safe_checker.h"
 #include "planning_plan_c.h"
 #include "transform_lib.h"
 
@@ -77,8 +79,28 @@ class CollisionDetector {
   void Init();
   void Reset();
 
+  void TransObsMapToParkObstacleList();
+
+  void TransObsMapToOccupancyGridMap(
+      const double _ogm_resolution = ogm_resolution);
+
+  const CollisionResult UpdateByEDT(
+      const pnc::geometry_lib::GeometryPath &geometry_path,
+      const double lat_buffer, const double lon_buffer);
+
+  const CollisionResult UpdateByEDT(
+      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+      const uint8_t gear, const double lat_buffer, const double lon_buffer);
+
+  const CollisionResult UpdateByEDT(
+      const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+      const uint8_t gear, const double lat_buffer, const double lon_buffer);
+
   const CollisionResult Update(const pnc::geometry_lib::LineSegment &line_seg,
                                const double heading_start);
+
+  const CollisionResult UpdateByObsMap(
+      const pnc::geometry_lib::PathSegment &path_seg);
 
   const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::LineSegment &line_seg,
@@ -128,8 +150,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
+  GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 
@@ -150,7 +172,7 @@ class CollisionDetector {
     return obs_line_global_vec_;
   }
 
-  void SetParam(Paramters param);
+  void SetParam(const Paramters& param);
 
   const Paramters GetParam() { return param_; }
 
@@ -190,15 +212,20 @@ class CollisionDetector {
       const pnc::geometry_lib::PathPoint &target_pose,
       const pnc::geometry_lib::Arc &arc);
 
+  const double GetCarMaxX(const pnc::geometry_lib::PathPoint &ego_pose);
+
   static const ObsSlotType GetObsSlotType(
       const Eigen::Vector2d &obs,
       const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-      const bool is_left_side, const bool is_vertical_slot = true);
+      const bool is_left_side, const bool is_replan,
+      const bool is_vertical_slot = true);
 
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;
 
   std::vector<Eigen::Vector2d> car_local_vertex_vec_;
+
+  std::vector<Eigen::Vector2d> origin_car_local_vertex_vec_;
 
   std::vector<Eigen::Vector2d> obs_pt_global_vec_;
 
@@ -207,6 +234,14 @@ class CollisionDetector {
   std::vector<pnc::geometry_lib::LineSegment> obs_line_global_vec_;
 
   Paramters param_;
+
+  PathSafeChecker gjk_col_det_;
+
+  ParkObstacleList obs_list_;
+
+  EulerDistanceTransform edt_col_det_;
+
+  OccupancyGridMap occupancy_grid_map_;
 };
 }  // namespace apa_planner
 }  // namespace planning

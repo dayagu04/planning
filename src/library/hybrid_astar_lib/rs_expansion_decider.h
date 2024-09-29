@@ -22,7 +22,7 @@ class RSExpansionDecider : public AstarDecider {
 
   const Pose2D &GetRSEndPose();
 
-  const bool IsSameEndPointForRsWithAtar();
+  const bool IsSameEndPointForRsWithAstar();
 
   bool IsNeedRsExpansion(const Node3d *node);
 
@@ -33,6 +33,11 @@ class RSExpansionDecider : public AstarDecider {
                                   const double slot_width);
 
  private:
+  // 对于车辆在ref line，需要注意
+  const bool NeedRsLinkByNodeHeading(const Node3d *node);
+
+  const bool NeedRsLinkByOffset(const Node3d *node);
+
   bool same_point_for_rs_with_astar_;
 
   double rs_end_max_depth_;

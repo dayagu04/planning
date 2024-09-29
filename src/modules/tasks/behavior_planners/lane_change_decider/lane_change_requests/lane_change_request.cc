@@ -199,7 +199,6 @@ bool LaneChangeRequest::compute_lc_valid_info(RequestType direction) {
       reference_path_manager->get_reference_path_by_lane(
           target_lane->get_virtual_id());
   // auto &frenet_obstacles = current_reference_path->get_obstacles();
-  auto &frenet_ego_state = fix_reference_path->get_frenet_ego_state();
   auto &target_lane_frenet_ego_state =
       target_reference_path->get_frenet_ego_state();
 
@@ -210,7 +209,6 @@ bool LaneChangeRequest::compute_lc_valid_info(RequestType direction) {
   }
 
   double v_ego = ego_state->ego_v();
-  double l_ego = frenet_ego_state.l();
   double safety_dist = v_ego * v_ego * 0.02 + 2.0;
   double dist_mline = std::fabs(target_lane_frenet_ego_state.l()) -
                       1.8;  // TODO(Rui): use target_lane()->get_lane_width()
@@ -220,8 +218,6 @@ bool LaneChangeRequest::compute_lc_valid_info(RequestType direction) {
 
   std::vector<TrackedObject> side_target_tracks;
   std::vector<TrackedObject> front_target_tracks;
-  auto &obstacle_manager =
-      session_->mutable_environmental_model()->get_obstacle_manager();
   auto tlane_obstacles =
       target_lane->get_reference_path()->get_lane_obstacles_ids();
 
@@ -451,7 +447,6 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   int current_segment_count = 0;
   bool all_lane_boundary_types_are_dashed = true;
   double default_lc_boundary_length = 100.0;
-  bool first_solid_second_dashed = false;
   double need_lane_change_time = 4.0;
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
   const std::shared_ptr<VirtualLane> current_lane =
@@ -621,7 +616,6 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
   ReferencePathPoint sample_path_point{};
   const double cut_length = 1.4;
   const double sample_forward_distance = 1.0;
-  const double default_lane_width = 3.5;
   ReferencePathPoint refpath_pt{};
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();

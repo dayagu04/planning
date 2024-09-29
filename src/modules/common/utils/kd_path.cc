@@ -470,7 +470,6 @@ bool KDPath::CartStateToFrenetState(const CartesianState& cart_state,
 
   const auto point = GetPathPointByS(frenet_state.s);
 
-  double ref_yaw = point.theta();
   double ref_curve = point.kappa();
   double yaw_diff = cart_state.yaw - ref_curve;
 

@@ -75,6 +75,7 @@ struct ApaParameters {
   double finish_heading_err_loose = 2.868;
   double finish_parallel_lat_err = 0.1;
   double finish_parallel_lon_err = 0.3;
+  double finish_parallel_lon_overhaing_error = 0.2;
   double finish_parallel_heading_err = 2.3;
   double finish_parallel_rear_stop_buffer = 0.55;
   double finish_parallel_lat_rac_err = 0.35;
@@ -95,6 +96,7 @@ struct ApaParameters {
 
   // uss params
   bool is_uss_dist_from_perception = false;
+  double min_uss_origin_dist = 0.3;
   double detection_distance = 2.5;
   double lat_inflation = 0.1;
   double safe_uss_remain_dist_in_slot = 0.35;
@@ -172,6 +174,7 @@ struct ApaParameters {
   bool tmp_no_consider_obs_dy = true;
   bool believe_in_fus_obs = false;
   bool use_fus_occ_obj = true;
+  bool use_uss_pt_clound = false;
   double tmp_virtual_obs_dy = 0.05;
   double tlane_safe_dx = 0.1;
   double obs_safe_dx = 0.1;
@@ -185,6 +188,8 @@ struct ApaParameters {
   double max_obs_lat_invasion_slot_dist = -0.026;
   double max_obs_lat_invasion_slot_dist_dynamic_col = -0.026;
   double max_obs_lon_invasion_slot_dist = -0.026;
+  double max_obs_lon_invasion_slot_dist_dynamic_col = -0.068;
+  double slot_entrance_obs_x = 2.468;
   double col_obs_safe_dist_strict = 0.2;
   double parallel_obs2slot_max_dist = 16.66;
   double parallel_channel_y_mag = 8.5;
@@ -206,6 +211,7 @@ struct ApaParameters {
   double pose_min_remain_dis = 0.4;
   double max_slot_jump_dist = 0.088;
   double max_slot_jump_heading = 0.68;
+  double dynamic_plan_interval_time = 0.4;
 
   // slot update params when parking
   double fix_slot_occupied_ratio = 0.938;
@@ -261,9 +267,11 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
+  bool use_a_cubic_polynomial_for_adjustment = true;
   // move target point in slot to another point for easy tracking
   double vertical_slot_target_adjust_dist = 1.0;
   bool enable_delete_fusion_obj_in_slot = true;
+  double deadend_uss_stuck_replan_wait_time;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
@@ -273,7 +281,7 @@ struct ApaParameters {
   // slot managent params
   bool release_slot_by_prepare = false;
   size_t max_slot_window_size = 3;
-  size_t max_limiter_window_size = 6;
+  size_t max_limiter_window_size = 3;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;

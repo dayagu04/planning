@@ -28,6 +28,7 @@ Node3d::Node3d(const double x, const double y, const double phi) {
   dist_to_start_ = 0.0;
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
+  gear_switch_num_ = 0;
 }
 
 Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
@@ -57,6 +58,7 @@ Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
   dist_to_start_ = 0.0;
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
+  gear_switch_num_ = 0;
 }
 
 Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
@@ -83,6 +85,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
 
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
+  gear_switch_num_ = 0;
 
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
@@ -126,6 +129,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   }
 
   collision_type_ = NodeCollisionType::none;
+  gear_switch_num_ = 0;
 
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
@@ -259,6 +263,8 @@ void Node3d::CopyNode(const Node3d* node) {
   collision_type_ = node->GetConstCollisionType();
 
   dist_to_obs_ = node->GetDistToObs();
+
+  // nodeMapIt = node->nodeMapIt;
   return;
 }
 

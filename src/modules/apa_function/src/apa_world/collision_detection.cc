@@ -21,10 +21,12 @@ void CollisionDetector::Init() {
   car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
   car_local_vertex_vec_.clear();
   car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
-
+  origin_car_local_vertex_vec_.clear();
+  origin_car_local_vertex_vec_.resize(
+      apa_param.GetParam().car_vertex_x_vec.size());
   std::vector<double> inflated_car_local_vertex_y_vec;
   inflated_car_local_vertex_y_vec.clear();
-  inflated_car_local_vertex_y_vec.reserve(
+  inflated_car_local_vertex_y_vec.resize(
       apa_param.GetParam().car_vertex_y_vec.size());
   for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
     inflated_car_local_vertex_y_vec[i] =
@@ -34,6 +36,8 @@ void CollisionDetector::Init() {
     } else {
       inflated_car_local_vertex_y_vec[i] -= param_.lat_inflation;
     }
+    origin_car_local_vertex_vec_[i] << apa_param.GetParam().car_vertex_x_vec[i],
+        apa_param.GetParam().car_vertex_y_vec[i];
   }
 
   pnc::geometry_lib::LineSegment car_line;
@@ -57,9 +61,11 @@ void CollisionDetector::Init() {
   }
 }
 
-void CollisionDetector::SetParam(Paramters param) {
-  param_ = param;
-  SetLatInflation();
+void CollisionDetector::SetParam(const Paramters &param) {
+  if (std::fabs(param_.lat_inflation - param.lat_inflation) > 0.001) {
+    param_ = param;
+    SetLatInflation();
+  }
 }
 
 void CollisionDetector::SetLatInflation() { Init(); }
@@ -132,6 +138,71 @@ void CollisionDetector::AddObstacles(const Eigen::Vector2d &obs_pt_global,
                                          1);
     obs_pt_global_map_[obs_type].emplace_back(obs_pt_global);
   }
+}
+
+void CollisionDetector::TransObsMapToParkObstacleList() {
+  obs_list_.Clear();
+  PointCloudObstacle pt_cloud;
+  Position2D pt_2d;
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const auto &obs_pt : obs_pt_pair.second) {
+      pt_2d.x = obs_pt.x();
+      pt_2d.y = obs_pt.y();
+      pt_cloud.points.emplace_back(pt_2d);
+    }
+  }
+  obs_list_.point_cloud_list.emplace_back(pt_cloud);
+}
+
+void CollisionDetector::TransObsMapToOccupancyGridMap(
+    const double _ogm_resolution) {
+  TransObsMapToParkObstacleList();
+
+  // grid map origin, make all indexes positive
+  // Pose2D ogm_base_pose(-3.0, -20.0, 0.0);
+  // ogm_base_pose.x = -3.0;
+  // ogm_base_pose.y = -20.0;
+  // ogm_base_pose.theta = 0.0;
+  // occupancy_grid_map_.Clear();
+  // occupancy_grid_map_.Process(ogm_base_pose, _ogm_resolution);
+  // occupancy_grid_map_.AddParkingObs(obs_list_);
+  // edt_col_det_.Excute(occupancy_grid_map_, ogm_base_pose, _ogm_resolution);
+
+  occupancy_grid_map_.Clear();
+  OccupancyGridBound bound(-3.68, -10.68, 14.68, 10.68);
+  occupancy_grid_map_.Process(bound, _ogm_resolution);
+  occupancy_grid_map_.AddParkingObs(obs_list_);
+  edt_col_det_.Excute(occupancy_grid_map_, bound, _ogm_resolution);
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+    const uint8_t gear, const double lat_buffer, const double lon_buffer) {
+  CollisionResult result;
+  if (path_pt_vec.empty()) {
+    return result;
+  }
+
+  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+
+  result.collision_flag = edt_col_det_.IsCollisionForPath(path_pt_vec, gear);
+
+  return result;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const pnc::geometry_lib::GeometryPath &geometry_path,
+    const double lat_buffer, const double lon_buffer) {
+  return UpdateByEDT(
+      pnc::geometry_lib::SamplePathSegVec(geometry_path.path_segment_vec, 0.1),
+      geometry_path.cur_gear, lat_buffer, lon_buffer);
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
+    const uint8_t gear, const double lat_buffer, const double lon_buffer) {
+  return UpdateByEDT(pnc::geometry_lib::SamplePathSegVec(path_seg_vec, 0.1),
+                     gear, lat_buffer, lon_buffer);
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::Update(
@@ -207,6 +278,15 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   result.col_pt_obs_global = obs_pt_global_vec_[i];
 
   return result;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
+    const pnc::geometry_lib::PathSegment &path_seg) {
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    return UpdateByObsMap(path_seg.line_seg, path_seg.GetStartHeading());
+  } else {
+    return UpdateByObsMap(path_seg.arc_seg, path_seg.GetStartHeading());
+  }
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
@@ -1318,10 +1398,33 @@ const bool CollisionDetector::CalTrajBound(
   return true;
 }
 
+const double CollisionDetector::GetCarMaxX(
+    const pnc::geometry_lib::PathPoint &ego_pose) {
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+
+  Eigen::Vector2d car_global_vertex;
+  std::vector<Eigen::Vector2d> car_global_vertex_vec;
+  car_global_vertex_vec.reserve(origin_car_local_vertex_vec_.size());
+  for (const Eigen::Vector2d &car_local_vertex : origin_car_local_vertex_vec_) {
+    car_global_vertex = l2g_tf.GetPos(car_local_vertex);
+    car_global_vertex_vec.emplace_back(car_global_vertex);
+  }
+
+  double max_x = -std::numeric_limits<double>::infinity();
+  for (const Eigen::Vector2d &car_vertex : car_global_vertex_vec) {
+    if (car_vertex.x() > max_x) {
+      max_x = car_vertex.x();
+    }
+  }
+  return max_x;
+}
+
 const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     const Eigen::Vector2d &obs,
     const std::pair<Eigen::Vector2d, Eigen::Vector2d> &slot_pt,
-    const bool is_left_side, const bool is_vertical_slot) {
+    const bool is_left_side, const bool is_replan,
+    const bool is_vertical_slot) {
   if (is_vertical_slot) {
     // the slot origin pt is on the line(pt2->pt3)
     Eigen::Vector2d slot_left_pt = slot_pt.first;
@@ -1329,10 +1432,16 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     if (slot_left_pt.y() < slot_right_pt.y()) {
       std::swap(slot_left_pt, slot_right_pt);
     }
+    const auto &params = apa_param.GetParam();
+
     const double max_obs_lat_invasion_slot_dist =
-        apa_param.GetParam().max_obs_lat_invasion_slot_dist;
+        is_replan ? params.max_obs_lat_invasion_slot_dist
+                  : params.max_obs_lat_invasion_slot_dist_dynamic_col;
+
     const double max_obs_lon_invasion_slot_dist =
-        apa_param.GetParam().max_obs_lon_invasion_slot_dist;
+        is_replan ? params.max_obs_lon_invasion_slot_dist
+                  : params.max_obs_lon_invasion_slot_dist_dynamic_col;
+
     const Eigen::Vector2d unit_01_vec =
         (slot_left_pt - slot_right_pt).normalized();
     const Eigen::Vector2d unit_02_vec(-1.0, 0.0);
@@ -1340,7 +1449,7 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     area_vec.resize(4);
     const double max_x = std::max(slot_left_pt.x(), slot_right_pt.x());
 
-    const double max_obs_x = 2.268;
+    const double max_obs_x = params.slot_entrance_obs_x;
 
     const Eigen::Vector2d pt_1 = slot_left_pt -
                                  max_obs_lat_invasion_slot_dist * unit_01_vec -
@@ -1377,14 +1486,17 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
     }
 
     const double lat_extend = 1.68;
+    const double slot_entrance_x = std::max(4.068 - max_obs_x, 0.0168);
     if (is_left_side) {
-      area_vec[0] = pt_1 - 3.468 * unit_02_vec;
-      area_vec[1] = pt_0 - lat_extend * unit_01_vec - 3.468 * unit_02_vec;
+      area_vec[0] = pt_1 - slot_entrance_x * unit_02_vec;
+      area_vec[1] =
+          pt_0 - lat_extend * unit_01_vec - slot_entrance_x * unit_02_vec;
       area_vec[2] = pt_0 - lat_extend * unit_01_vec;
       area_vec[3] = pt_1;
     } else {
-      area_vec[0] = pt_1 + lat_extend * unit_01_vec - 3.468 * unit_02_vec;
-      area_vec[1] = pt_0 - 3.468 * unit_02_vec;
+      area_vec[0] =
+          pt_1 + lat_extend * unit_01_vec - slot_entrance_x * unit_02_vec;
+      area_vec[1] = pt_0 - slot_entrance_x * unit_02_vec;
       area_vec[2] = pt_0;
       area_vec[3] = pt_1 + lat_extend * unit_01_vec;
     }

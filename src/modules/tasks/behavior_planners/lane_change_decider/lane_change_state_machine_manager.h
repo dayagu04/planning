@@ -187,7 +187,14 @@ class LaneChangeStateMachineManager {
       const std::shared_ptr<ReferencePath> reference_path,
       const RelativeDirection rel_dir);
   const double CalculateEgoFrontLineLength();
-  void CalculateMergePoint(std::vector<Point2D>* merge_point, const int merge_lane_virtual_id);
+  void CalculateMergePoint(const int merge_lane_virtual_id, std::vector<Point2D>* merge_point, int* calculate_nums);
+
+  const double CalculateAverageKappa(const std::shared_ptr<planning_math::KDPath> cur_kd_path);
+  void CalculateRoadRight(const int calculate_nums, const int merge_lane_virtual_id, bool* is_continue);
+  bool IsVirtualLaneLine(const int lane_virtual_id);
+
+  iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
+    const RequestType lc_request) const;
 
  private:
   ScenarioStateMachineConfig config_;

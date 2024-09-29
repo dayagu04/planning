@@ -1,6 +1,7 @@
 #ifndef __HYBRID_ASTAR_PARK_H__
 #define __HYBRID_ASTAR_PARK_H__
 
+#include <cstddef>
 #include "apa_plan_base.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
@@ -16,9 +17,15 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   void Init() override;
 
-  virtual void Reset() override;
+  void Reset() override;
 
   virtual std::string GetName() override { return typeid(this).name(); }
+
+  HybridAStarThreadSolver* GetThread() { return &thread_; }
+
+  const size_t GetPathCollisionID() const { return path_collision_id_; }
+
+  const bool IsPathCollision() const { return is_path_collision_; }
 
  private:
   virtual const bool CheckReplan() override;
@@ -35,7 +42,11 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   virtual const uint8_t PathPlanOnce() override;
 
+  const bool CheckStuckFailed() override;
+
   void UpdateRemainDist() override;
+
+  const double CalRemainDistFromUss() override;
 
   const std::string GetPlanReason(const uint8_t type);
 
@@ -83,9 +94,26 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   void ShrinkPathByFusionObj();
 
+  void PathShrinkBySlotLimiter();
+
+  void PathExpansionBySlotLimiter();
+
+  const bool CheckEgoReplanNumber(const bool is_replan);
+
+  const bool IsEgoNeedDriveForwardInSlot(const Pose2D& ego_pose,
+                                         const double slot_width,
+                                         const double slot_len);
+
   RequestResponseState thread_state_;
+  HybridAStarThreadSolver thread_;
 
   bool is_ego_collision_;
+  bool is_path_collision_;
+  size_t path_collision_id_;
+
+  AstarPathGear current_gear_;
+  int in_slot_car_adjust_count_;
+  bool is_path_single_shot_to_goal_;
 };
 
 }  // namespace apa_planner

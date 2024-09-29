@@ -115,9 +115,6 @@ void GapSelectorInterface::Store(
     Point->set_y(point.local_point.y);
   }
 
-  const auto &coarse_planning_info = session->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
   const auto &lane_change_decider_output =
       session->planning_context().lane_change_decider_output();
   const auto state = lane_change_decider_output.curr_state;
@@ -505,14 +502,13 @@ void GapSelectorInterface::Parse(planning::common::GapSelectorInput &input) {
   spline_info.path_spline_status = input.gap_selector_info()
                                        .last_gap_selector_path_spline()
                                        .path_spline_status();
-  if ((input.gap_selector_info()
-           .last_gap_selector_path_spline()
-           .path_spline_status() == 2) ||
-      (input.gap_selector_info()
-           .last_gap_selector_path_spline()
-           .path_spline_status() == 3) &&
-          s_vec.size() >
-              3) {  // this hack for spline s_vec, x_vec size problems
+  if (((input.gap_selector_info()
+            .last_gap_selector_path_spline()
+            .path_spline_status() == 2) ||
+       (input.gap_selector_info()
+            .last_gap_selector_path_spline()
+            .path_spline_status() == 3)) &&
+      s_vec.size() > 3) {  // this hack for spline s_vec, x_vec size problems
     spline_info.x_s_spline.set_points(s_vec, x_vec);
     spline_info.y_s_spline.set_points(s_vec, y_vec);
   }

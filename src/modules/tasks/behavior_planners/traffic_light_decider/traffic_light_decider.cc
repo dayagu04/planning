@@ -32,17 +32,25 @@ bool TrafficLightDecider::Execute() {
   } else {
     is_first_car_ = true;
   }
-  if (config_.enable_tfl_decider && is_first_car_ && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2.5) && 
+  const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
+  const auto traffic_status = tfl_manager->GetTrafficStatus();
+  if (config_.enable_tfl_decider && (dis_to_stopline > 0.5 && dis_to_crosswalk > 2) && 
       (intersection_state != planning::common::IN_INTERSECTION || (intersection_state == planning::common::IN_INTERSECTION && !can_pass_))) {
 
-    const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
-    const auto traffic_status = tfl_manager->GetTrafficStatus();
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 || traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
       //red light or(==) red blink
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
-      can_pass_ = false;
+      if (can_pass_ && dis_to_stopline > 100.0) {
+        can_pass_ = true;
+      } else {
+        if (dis_to_stopline < 100.0 && IsSmallFrontIntersection() && !IsIntersectionMatchTFL()) {
+          can_pass_ = true;
+        } else {
+          can_pass_ = false;
+        }
+      }
 
     } else if (traffic_status.go_straight == 3 || traffic_status.go_straight == 43) {
       //green light
@@ -53,32 +61,56 @@ bool TrafficLightDecider::Execute() {
 
     } else if (traffic_status.go_straight == 2 || traffic_status.go_straight == 42) {
       //yellow light
-      if (can_pass_  && (v_ego * (3.0 - yellow_light_timer_) > dis_to_stopline)) {
+      if (dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        can_pass_ = false;
+        if (can_pass_  && (std::max(v_ego - 1.0, 0.0) * std::max(2.0 - yellow_light_timer_, 0.0) > dis_to_stopline)) {
+          can_pass_ = true;
+        } else {
+          can_pass_ = false;
+        }
       }
-      
       green_light_timer_ = 0.0;
       yellow_light_timer_ += 0.1;
       green_blink_timer_ = 0.0;
     
     } else if (traffic_status.go_straight == 30 || traffic_status.go_straight == 32 || traffic_status.go_straight == 33) {
     //green blink
-      if (can_pass_ && (v_ego * (5.0 - green_blink_timer_) > dis_to_stopline)) {
+      if (dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        can_pass_ = false;
+        if (can_pass_ && (std::max(v_ego - 1.0, 0.0) * std::max(5.0 - green_blink_timer_, 0.0) > dis_to_stopline)) {
+          can_pass_ = true;
+        } else {
+          can_pass_ = false;
+        }
       }
+      
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ += 0.1;
 
     } else if (traffic_status.go_straight == 20 || traffic_status.go_straight == 22) {
-      //yellow blink and use last frame  
-      green_light_timer_ = 0.0;
-      yellow_light_timer_ = 0.0;
-      green_blink_timer_ = 0.0;
+      if (IsSmallFrontIntersection()) {
+        //yellow blink in small intersection, use last frame  
+        green_light_timer_ = 0.0;
+        yellow_light_timer_ = 0.0;
+        green_blink_timer_ = 0.0;
+      } else {
+        //in big intersection, regard as yellow light
+        if (dis_to_stopline > 100.0) {
+          can_pass_ = true;
+        } else {
+          if (can_pass_  && (std::max(v_ego - 1.0, 0.0) * std::max(2.0 - yellow_light_timer_, 0.0) > dis_to_stopline)) {
+            can_pass_ = true;
+          } else {
+            can_pass_ = false;
+          }
+        }
+        green_light_timer_ = 0.0;
+        yellow_light_timer_ += 0.1;
+        green_blink_timer_ = 0.0;
+      }
       //can_pass_ = true;
 
     } else {
@@ -86,12 +118,31 @@ bool TrafficLightDecider::Execute() {
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
-      can_pass_ = true;
+      if(dis_to_stopline > 200.0 || !is_first_car_) {
+        can_pass_ = true;
+      }
+      //can_pass_ = true;
 
     }
-    if (!can_pass_) {
-      AddVirtualObstacle();
+  } else if (config_.enable_tfl_decider && (dis_to_stopline <= 0.5 || dis_to_crosswalk <= 2) && (intersection_state == planning::common::IN_INTERSECTION && !can_pass_)) {
+    //一般是刹停在路口中，这是看到绿灯就设置can_pass_ = true
+    if (traffic_status.go_straight == 3 || traffic_status.go_straight == 43) {
+      //green light
+      green_light_timer_ += 0.1;
+      yellow_light_timer_ = 0.0;
+      green_blink_timer_ = 0.0;
+      can_pass_ = true;
+
+    } else {
+      can_pass_ = false;
     }
+    
+  } else {
+    can_pass_ = true;
+  }
+
+  if (!can_pass_) {
+      AddVirtualObstacle();
   }
   //此外认为已经进入路口
   /*
@@ -113,7 +164,8 @@ bool TrafficLightDecider::Execute() {
     }
   }
   */
-
+  auto &tfl_decider = session_->mutable_planning_context()->mutable_traffic_light_decider_output();
+  tfl_decider.can_pass = can_pass_;
   return true;
 }
 
@@ -150,4 +202,53 @@ bool TrafficLightDecider::AddVirtualObstacle() {
 
   return true;
 }
+
+bool TrafficLightDecider::IsSmallFrontIntersection() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto curr_lane = environmental_model.get_virtual_lane_manager()
+                               ->get_current_lane();
+  if (curr_lane == nullptr) {
+    return false;
+  }
+  double ego_pos_x = 0.0;
+  if (curr_lane->get_left_lane_boundary().car_points_size > 0 &&
+      curr_lane->get_right_lane_boundary().car_points_size > 0) {
+    double first_left_x =
+        curr_lane->get_left_lane_boundary().car_points[0].x;
+    double first_right_x =
+        curr_lane->get_right_lane_boundary().car_points[0].x;
+    ego_pos_x = std::max(0 - first_left_x, 0 - first_right_x);
+  } else {
+    return false;
+  }
+  double dis_to_stopline = environmental_model.get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+  double judge_virtual_dis = ego_pos_x + dis_to_stopline + config_.virtual_dis_before_stopline;
+  bool is_virtual_type = environmental_model.get_virtual_lane_manager()
+                               ->IsPosXOnVirtualLaneType(judge_virtual_dis);
+  return !is_virtual_type;
+}
+
+bool TrafficLightDecider::IsIntersectionMatchTFL() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto tfl_manager = environmental_model.get_traffic_light_decision_manager();
+  const auto all_tfls = tfl_manager->GetTrafficLightsInfo();
+  
+  double dis_to_tfl = 10000.0;
+  for (int i = 0; i < all_tfls.size(); i++) {
+    if (all_tfls[i].traffic_light_x > 0 && all_tfls[i].traffic_light_x < dis_to_tfl) {
+      dis_to_tfl = all_tfls[i].traffic_light_x;
+    }
+  }
+
+  double dis_to_stopline = environmental_model.get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+  bool is_match = false;
+  if (std::abs(dis_to_tfl - dis_to_stopline) < config_.stopline_tfl_dis_thred) {
+    is_match = true;
+  }
+  return is_match;
+  
+}
+
 }  // namespace planning
