@@ -33,6 +33,7 @@ data_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_target_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
+data_all_debug_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 data_slot = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
@@ -54,14 +55,14 @@ data_debug_arc = ColumnDataSource(data = {'cx_vec':[],
 
 
 
-fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=800, height=600, match_aspect = True, aspect_scale=1)
+fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=1000, height=800, match_aspect = True, aspect_scale=1)
 
 fig1.x_range.flipped = False
 fig1.xgrid.grid_line_color = None
 fig1.ygrid.grid_line_color = None
 fig1.outline_line_color = "black"
 fig1.outline_line_width = 1.0  # 可以调整边框线条的宽度
-fig1.legend.location = 'bottom_right'
+# fig1.legend.location = 'bottom_right'
 
 fig1.x_range = Range1d(start = -1.0, end = 13.0)
 fig1.y_range = Range1d(start = -3.0, end = 8.0)
@@ -134,7 +135,9 @@ callback = CustomJS(args=dict(source=source, line_source=line_source, text_sourc
 # Attach the callback to the Tap event on the plot
 fig1.js_on_event(Tap, callback)
 
+fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path')
 fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'car_path')
+
 fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 0.5, legend_label = 'sampled carbox')
 ## t-lane
 fig1.line('x_vec', 'y_vec',source = data_slot, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'slot')
@@ -167,11 +170,11 @@ parallel_planning_py.Init()
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
+    self.is_all_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "all debug path",min=0, max=1, value= 1, step=1)
     # ego pose
     self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 9.64, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 4.36, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 2.21, step=0.01)
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 0.0, step=0.1)
-    self.s_init_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "s_init",min=-10.0, max=10.0, value=0.0, step=0.01)
     # obs pt pos
     self.obs_tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_x",min=-15, max=15, value= 6.0, step=0.01)
     self.obs_tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_y",min=-15, max=15, value= -0.868469, step=0.01)
@@ -208,12 +211,12 @@ class LocalViewSlider:
 
     self.ref_gear_drive_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "dirve",min=0, max=1, value=1, step=1)
     self.ref_steer_left_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "left",min=0, max=1, value=0, step=1)
+    self.s_init_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "s_init",min=-10.0, max=10.0, value=0.0, step=0.01)
 
-
-    ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
+    ipywidgets.interact(slider_callback, is_all_path = self.is_all_path_slider,
+                                         ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
-                                         s_init = self.s_init_slider,
 
                                          obs_tlane_p_outside_x = self.obs_tlane_p_outside_x_slider,
                                          obs_tlane_p_outside_y = self.obs_tlane_p_outside_y_slider,
@@ -242,17 +245,18 @@ class LocalViewSlider:
                                          is_complete_path = self.is_complete_path_slider,
                                          is_plan_first = self.is_plan_first_slider,
                                          ref_gear_drive = self.ref_gear_drive_slider,
-                                         ref_steer_left = self.ref_steer_left_slider)
+                                         ref_steer_left = self.ref_steer_left_slider,
+                                         s_init = self.s_init_slider)
 
 ### sliders callback
-def slider_callback(ego_x, ego_y, ego_heading,s_init,
+def slider_callback(is_all_path, ego_x, ego_y, ego_heading,
                     obs_tlane_p_outside_x, obs_tlane_p_outside_y,
                     obs_tlane_p_inside_x, obs_tlane_p_inside_y,
                     slot_length, slot_width, set_left_slot,
                     tlane_pt_x, tlane_pt_y,
                     channel_x, channel_y,curb_y,
                     ds,obs_ds,fix_car_x, fix_car_y,fix_car_heading_deg,  fix_result,
-                    is_complete_path,is_plan_first, ref_gear_drive,ref_steer_left):
+                    is_complete_path,is_plan_first, ref_gear_drive,ref_steer_left,s_init):
   kwargs = locals()
 
   slot_side_sgn = 1.0
@@ -343,6 +347,11 @@ def slider_callback(ego_x, ego_y, ego_heading,s_init,
     'theta_vec': [],
   })
 
+  data_all_debug_path.data.update({
+    'x_vec': [],
+    'y_vec': [],
+  })
+
   path_x_vec = parallel_planning_py.GetPathEle(0)
   path_y_vec = parallel_planning_py.GetPathEle(1)
   path_theta_vec = parallel_planning_py.GetPathEle(2)
@@ -352,6 +361,19 @@ def slider_callback(ego_x, ego_y, ego_heading,s_init,
     'y_vec': path_y_vec,
     'theta_vec': path_theta_vec,
   })
+  if is_all_path:
+    parallel_planning_py.SampleAllDebugPaths()
+    x_debug_paths = parallel_planning_py.GetDebugPathsX()
+    y_debug_paths = parallel_planning_py.GetDebugPathsY()
+    # 将 C++ 返回的二维数据转换为 Python 列表列表格式
+    x_vec = [list(x_path) for x_path in x_debug_paths]
+    y_vec = [list(y_path) for y_path in y_debug_paths]
+    print("x_vec size = ", len(x_vec))
+    print("y_vec size = ", len(y_vec))
+    data_all_debug_path.data.update({
+      'x_vec': x_vec,
+      'y_vec': y_vec,
+    })
 
   # obstacles
   data_obs_pt.data.update({

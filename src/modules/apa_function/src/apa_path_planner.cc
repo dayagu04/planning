@@ -1,6 +1,9 @@
 #include "apa_path_planner.h"
 
+#include <vector>
+
 #include "debug_info_log.h"
+#include "geometry_math.h"
 
 namespace planning {
 namespace apa_planner {
@@ -153,6 +156,47 @@ const bool ApaPathPlanner::CheckCurrentGearLength() {
   }
 
   return (length > 0.3) ? true : false;
+}
+
+const bool ApaPathPlanner::SamplePathSeg(
+    std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+    const std::vector<pnc::geometry_lib::PathSegment>& path_segment_vec) {
+  if (path_segment_vec.empty()) {
+    return false;
+  }
+
+  path_point_vec.clear();
+  path_point_vec.reserve(PLANNING_TRAJ_POINTS_NUM);
+
+  double length = 0.0;
+  for (size_t i = 0; i <= path_segment_vec.size(); ++i) {
+    length += path_segment_vec[i].Getlength();
+  }
+  size_t N = std::ceil(length / input_.sample_ds);
+  double sample_ds = input_.sample_ds;
+  const size_t max_seg_count = 7;
+  if (N >= PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count) {
+    N = PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count;
+    sample_ds = length / static_cast<double>(N);
+  }
+
+  pnc::geometry_lib::PathPoint path_point;
+  for (size_t i = 0; i < path_segment_vec.size(); ++i) {
+    const auto& current_seg = path_segment_vec[i];
+    std::vector<pnc::geometry_lib::PathPoint> tmp_path_point_vec;
+    if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+      SampleLineSegment(tmp_path_point_vec, current_seg.line_seg, sample_ds);
+    } else {
+      SampleArcSegment(tmp_path_point_vec, current_seg.arc_seg, sample_ds);
+    }
+    path_point_vec.insert(path_point_vec.end(), tmp_path_point_vec.begin(),
+                          tmp_path_point_vec.end());
+    if (i < path_segment_vec.size() - 1) {
+      path_point_vec.pop_back();
+    }
+  }
+
+  return true;
 }
 
 const bool ApaPathPlanner::SampleCurrentPathSeg() {
@@ -309,6 +353,42 @@ void ApaPathPlanner::SampleLineSegment(
   }
 }
 
+void ApaPathPlanner::SampleLineSegment(
+    std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+    const pnc::geometry_lib::LineSegment& cur_line_seg, const double ds) {
+  path_point_vec.clear();
+  path_point_vec.reserve(50);
+  if (cur_line_seg.is_ignored) {
+    return;
+  }
+
+  // get first point
+  pnc::geometry_lib::PathPoint path_point;
+  path_point.Set(cur_line_seg.pA, cur_line_seg.heading);
+  path_point_vec.emplace_back(path_point);
+
+  if (cur_line_seg.length > ds) {
+    auto pn = cur_line_seg.pA;
+    const Eigen::Vector2d diff_vec =
+        (cur_line_seg.pB - cur_line_seg.pA).normalized() * ds;
+
+    double s = ds;
+    while (s < cur_line_seg.length) {
+      pn += diff_vec;
+      path_point.Set(pn, cur_line_seg.heading);
+      path_point_vec.emplace_back(path_point);
+      s += ds;
+    }
+  }
+  // check the dist of the last point and end point
+  const double dist = (path_point_vec.back().pos - cur_line_seg.pB).norm();
+  if (dist > 1e-2) {
+    // get end point
+    path_point.Set(cur_line_seg.pB, cur_line_seg.heading);
+    path_point_vec.emplace_back(path_point);
+  }
+}
+
 void ApaPathPlanner::SampleArcSegment(const pnc::geometry_lib::Arc& cur_arc_seg,
                                       const double ds) {
   if (cur_arc_seg.is_ignored) {
@@ -352,6 +432,54 @@ void ApaPathPlanner::SampleArcSegment(const pnc::geometry_lib::Arc& cur_arc_seg,
     // get end point
     path_point.Set(cur_arc_seg.pB, cur_arc_seg.headingB);
     output_.path_point_vec.emplace_back(path_point);
+  }
+}
+
+void ApaPathPlanner::SampleArcSegment(
+    std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+    const pnc::geometry_lib::Arc& cur_arc_seg, const double ds) {
+  path_point_vec.clear();
+  path_point_vec.reserve(50);
+  if (cur_arc_seg.is_ignored) {
+    return;
+  }
+
+  pnc::geometry_lib::PathPoint path_point;
+
+  // get first point
+  path_point.Set(cur_arc_seg.pA,
+                 pnc::geometry_lib::NormalizeAngle(cur_arc_seg.headingA));
+  path_point_vec.emplace_back(path_point);
+
+  if (cur_arc_seg.length > ds) {
+    const auto& pO = cur_arc_seg.circle_info.center;
+    double theta = cur_arc_seg.headingA;
+    const double dtheta = ds / cur_arc_seg.circle_info.radius *
+                          (cur_arc_seg.is_anti_clockwise ? 1.0 : -1.0);
+
+    const auto rot_m = pnc::geometry_lib::GetRotm2dFromTheta(dtheta);
+    Eigen::Vector2d pn = cur_arc_seg.pA;
+
+    Eigen::Vector2d v_n = cur_arc_seg.pA - cur_arc_seg.circle_info.center;
+
+    double s = ds;
+    while (s < cur_arc_seg.length) {
+      v_n = rot_m * v_n;
+      pn = pO + v_n;
+      s += ds;
+      theta += dtheta;
+
+      path_point.Set(pn, pnc::geometry_lib::NormalizeAngle(theta));
+      path_point_vec.emplace_back(path_point);
+    }
+  }
+
+  // check the dist of the last point and end point
+  const double dist = (path_point_vec.back().pos - cur_arc_seg.pB).norm();
+  if (dist > 1e-2) {
+    // get end point
+    path_point.Set(cur_arc_seg.pB, cur_arc_seg.headingB);
+    path_point_vec.emplace_back(path_point);
   }
 }
 

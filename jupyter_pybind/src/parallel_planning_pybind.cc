@@ -29,11 +29,14 @@ int Init() {
   pBase->Reset();
 
   pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
-  pApaPlanInterface->Init(true);
+  pApaPlanInterface->SyncParameters(true);
   return 0;
 }
 
 static std::vector<double> res;
+
+static std::vector<std::vector<double>> debug_paths_x;
+static std::vector<std::vector<double>> debug_paths_y;
 
 int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
                     double slot_occupied_ratio, double obs_p_outside_x,
@@ -119,7 +122,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
   ego_pose.Set(Eigen::Vector2d(ego_x, ego_y), ego_heading);
   double safe_dist = 0.08;
   if (slot_occupied_ratio < 0.018) {
-    safe_dist = 0.58;
+    safe_dist = 0.3;
     DEBUG_PRINT("safe dist =" << safe_dist);
   }
 
@@ -204,6 +207,28 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   return 0;
 }
 
+void SampleAllDebugPaths() {
+  debug_paths_x.clear();
+  debug_paths_y.clear();
+
+  for (const auto &path : pBase->GetDebugInfo().debug_all_path_vec) {
+    std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
+    if (pBase->SamplePathSeg(path_point_vec, path.path_segment_vec)) {
+      std::vector<double> path_point_vec_x;
+      std::vector<double> path_point_vec_y;
+      for (const auto &path_point : path_point_vec) {
+        path_point_vec_x.emplace_back(path_point.pos.x());
+        path_point_vec_y.emplace_back(path_point.pos.y());
+        debug_paths_x.emplace_back(path_point_vec_x);
+        debug_paths_y.emplace_back(path_point_vec_y);
+      }
+    }
+  }
+}
+
+std::vector<std::vector<double>> GetDebugPathsX() { return debug_paths_x; }
+std::vector<std::vector<double>> GetDebugPathsY() { return debug_paths_y; }
+
 std::vector<double> GetPathEle(size_t index) {
   return pBase->GetPathEle(index);
 }
@@ -252,15 +277,18 @@ std::vector<double> GetInverseArcVec() {
   std::vector<double> res;
   res.reserve(80);
 
-  // for (size_t i = 0; i < pBase->GetPlannerParams().park_out_path_in_slot.size();
+  // for (size_t i = 0; i <
+  // pBase->GetPlannerParams().park_out_path_in_slot.size();
   //      i++) {
   //   // tmp debug for last arc
   //   if (i != pBase->GetPlannerParams().park_out_path_in_slot.size() - 1) {
   //     continue;
   //   }
-  //   const auto &path_seg = pBase->GetPlannerParams().park_out_path_in_slot[i];
+  //   const auto &path_seg =
+  //   pBase->GetPlannerParams().park_out_path_in_slot[i];
 
-  //   if (path_seg.seg_type == pnc::geometry_lib::PathSegType::SEG_TYPE_ARC) {
+  //   if (path_seg.seg_type == pnc::geometry_lib::PathSegType::SEG_TYPE_ARC)
+  //   {
   //     const auto arc = path_seg.arc_seg;
   //     res.emplace_back(arc.circle_info.center.x());
   //     res.emplace_back(arc.circle_info.center.y());
@@ -293,6 +321,9 @@ PYBIND11_MODULE(parallel_planning_py, m) {
 
   m.def("Init", &Init)
       .def("Update", &Update)
+      .def("SampleAllDebugPaths", &SampleAllDebugPaths)
+      .def("GetDebugPathsX", &GetDebugPathsX)
+      .def("GetDebugPathsY", &GetDebugPathsY)
       .def("GetPathEle", &GetPathEle)
       .def("UpdateObstacles", &UpdateObstacles)
       .def("GetObsX", &GetObsX)
