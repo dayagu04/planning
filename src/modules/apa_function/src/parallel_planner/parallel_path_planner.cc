@@ -52,7 +52,7 @@ static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.36;
 static const double kFirstStepForwardLineLonBuffer = 0.15;
 static const double kFirstStepArcLatBuffer = 0.36;
-static const double kVirtualObsDetaXMag = 0.03;
+static const double kVirtualObsDetaXMag = 0.066;
 static const double kVirtualObsDetaYMag = 0.2;
 static const double kMinTlaneAddedLength = 0.8;
 static const double kNarrowChannelLastArcCrossLength = 1.38;
@@ -2282,7 +2282,7 @@ const bool ParallelPathPlanner::GenLineStepValidEnd(
   std::vector<uint8_t> gear_vec = {SEG_GEAR_REVERSE, SEG_GEAR_DRIVE};
 
   for (const auto& gear : gear_vec) {
-    if (!CalcLineStepLimitPose(first_line, gear, 0.25)) {
+    if (!CalcLineStepLimitPose(first_line, gear, kColBufferInSlot)) {
       DEBUG_PRINT("gear = " << gear << " failed!");
       continue;
     }
