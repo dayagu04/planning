@@ -482,8 +482,6 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_lc_back = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = (is_lc_change || is_lc_back);
-  bool is_lane_change_execution =
-      (coarse_planning_info.target_state == kLaneChangeExecution);
   const double k_init_pos_cost_weight =
       is_lane_change
           ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight

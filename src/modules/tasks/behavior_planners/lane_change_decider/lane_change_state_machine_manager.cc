@@ -2048,7 +2048,6 @@ void LaneChangeStateMachineManager::CalculateMergePoint(const int merge_lane_vir
     return;
   }
   const double cur_ego_s = cur_path->get_frenet_ego_state().s();
-  const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
   const double ego_front_center_line_length = cur_path->get_frenet_coord()->Length() - cur_ego_s;
   const double buffer = 1.0;
   const double need_judgement_length = std::max(0.0, std::min(ego_front_line_length, ego_front_center_line_length) - buffer);
@@ -2135,8 +2134,9 @@ const double LaneChangeStateMachineManager::CalculateAverageKappa(const std::sha
   return sum_kappa / size_num;
 }
 
-void LaneChangeStateMachineManager::CalculateRoadRight(const int calculate_nums, const int merge_lane_virtual_id, bool* is_continue) {
-  const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
+void LaneChangeStateMachineManager::CalculateRoadRight(
+    const int calculate_nums, const int merge_lane_virtual_id,
+    bool *is_continue) {
   const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
   const auto& reference_path_manager = session_->environmental_model().get_reference_path_manager();
   const auto& overlap_lane = virtual_lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id);
@@ -2156,7 +2156,7 @@ void LaneChangeStateMachineManager::CalculateRoadRight(const int calculate_nums,
   bool is_vir_lane_line_overlap = IsVirtualLaneLine(merge_lane_virtual_id);
   if (is_vir_lane_line_cur &&
       !is_vir_lane_line_overlap) {
-    *is_continue = false; 
+    *is_continue = false;
   } else if (is_vir_lane_line_overlap &&
              !is_vir_lane_line_cur) {
     *is_continue = true;

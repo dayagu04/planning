@@ -40,8 +40,6 @@ constexpr double kBackwardRange = 100.0;
 constexpr double kMinSlotLength = 15.0;
 constexpr int32_t kNoAgentId = -1;
 constexpr double kStaticCarFilterVel = 1.5;
-constexpr double kDistanceToMapRequestPoint = 120.0;
-constexpr double kNearbyCarFilterDis = 7.0;
 constexpr double kAlignedDistanceBuffer = 2.5;
 }  // namespace
 

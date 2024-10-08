@@ -286,7 +286,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
           kLaneWidth * kHalf + kLargeYawLateralDistanceBufferM &&
       std::fabs(object_l_speed_mps) > kLargeYawLateralSpeedThresholdMps;
   const bool is_reverse_agent = (object_s_speed_mps < -3.0);
-  const bool is_static_agent = agent.is_static();
 
   bool current_rule_base_cutin =
       is_agent_closer_to_ego && is_agent_ahead_of_ego && is_agent_not_too_far &&

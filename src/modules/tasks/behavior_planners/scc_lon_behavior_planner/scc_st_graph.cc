@@ -1791,7 +1791,6 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
   double virtual_obs_desired_distance = 0.0;
   double safe_distance = 0.0;
   double virtual_obs_desired_velocity = 40.0;
-  double desired_distance_filtered = 0.0;
   std::pair<double, double> acc_target = {-0.5, 0.5};
   double v_ego = lon_behav_input_->ego_info().ego_v();
 

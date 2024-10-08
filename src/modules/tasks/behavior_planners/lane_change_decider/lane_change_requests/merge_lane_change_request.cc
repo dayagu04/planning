@@ -269,7 +269,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   bool target_right_boundary_exist_virtual_type = false;
 
   bool exist_left_direction_merge = false;
-  bool exist_right_direction_merge = false;
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
 
@@ -348,7 +347,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
                                               &right_ego_l)) {
           right_ego_s = 50.0;
         }
-      
+
         for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
           target_right_lane_line_length += right_lane_boundarys.type_segments[i].length;
           if (target_right_lane_line_length > right_ego_s) {
@@ -435,7 +434,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
                                             &left_ego_l)) {
           left_ego_s = 50.0;
         }
-    
+
         for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
           target_left_lane_line_length += left_lane_boundarys.type_segments[i].length;
           if (target_left_lane_line_length > left_ego_s) {
