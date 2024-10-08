@@ -60,7 +60,7 @@ void InitGlog(const char *file) {
 #ifdef IFLY_LOG_PATH
   path_dir = "/asw/planning/glog";
 #else
-  path_dir = "../runtime_service/planning_exec/glog";
+  path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
 #endif
 
   FLAGS_log_dir = path_dir;
