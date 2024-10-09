@@ -24,10 +24,6 @@
 
 namespace planning {
 
-namespace {
-constexpr double kEps = 1e-6;
-}
-
 LaneChangeDecider::LaneChangeDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {

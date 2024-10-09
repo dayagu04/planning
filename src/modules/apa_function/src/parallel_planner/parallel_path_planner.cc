@@ -30,9 +30,6 @@ namespace planning {
 namespace apa_planner {
 
 static const double kMaxParkOutFirstArcHeading = 66.0;
-static const double kMaxParkOutLineLength = 6.0;
-static const double kSearchOutArcSampleDistance = 0.2;
-static const double kSearchOutLineSampleDistance = 0.3;
 static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kColBufferTrippleStep = 0.2;

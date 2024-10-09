@@ -24,9 +24,6 @@ bool LateralOffsetDecider::Execute() {
   }
 
   double lat_offset = 0.0;
-  const auto &coarse_planning_info = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
   auto last_fix_lane_id = session_->environmental_model()
                               .get_virtual_lane_manager()
                               ->get_last_fix_lane_id();

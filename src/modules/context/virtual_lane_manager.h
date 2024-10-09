@@ -360,7 +360,7 @@ class VirtualLaneManager {
   bool is_reached_hpp_start_point_ = false;
   double sum_distance_driving_ = -1;
   ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
-  double distance_to_destination_ = NL_NMAX;
+  // double distance_to_destination_ = NL_NMAX;
   // target slot
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
@@ -372,7 +372,7 @@ class VirtualLaneManager {
   bool is_ego_on_expressway_ = false;
   bool is_ego_on_expressway_hmi_ = false;
   bool is_ego_on_city_expressway_hmi_ = false;
-  bool virtual_lane_relative_id_switch_flag_ = false;
+  // bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
   bool is_exist_intersection_split_ = false;
@@ -389,7 +389,7 @@ class VirtualLaneManager {
   const double dis_threshold_to_is_merged_point_ = 800.0;
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;
-  bool is_within_hdmap_ = false;
+  // bool is_within_hdmap_ = false;
   std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
   std::vector<std::pair<SplitRelativeDirection, double>>
       split_dir_dis_info_list_;

@@ -123,7 +123,7 @@ class ConeRequest : public LaneChangeRequest {
   std::vector<std::pair<double, double>>
       right_lane_s_width_;  // <s, lane_width>
   std::vector<std::pair<double, double>> origin_lane_s_width_;
-  bool use_query_lane_width_ = false;
+  // bool use_query_lane_width_ = false;
 };
 
 }  // namespace planning

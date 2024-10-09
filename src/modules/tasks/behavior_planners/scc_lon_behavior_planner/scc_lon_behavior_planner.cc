@@ -36,7 +36,6 @@ constexpr double kAccMax = 1.5;
 constexpr double kJerkMin = -2.0;
 constexpr double kJerkMax = 0.5;
 constexpr double kPositionPrecision = 0.3;
-constexpr double kLowAgentSpeed = 20.0 / 3.6;
 // TODO: 后续取参考线的长度为s bound upper
 constexpr double kSUpperBound = 200.0;
 constexpr double kVelBoundCoeff = 1.1;

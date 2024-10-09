@@ -1329,7 +1329,6 @@ size_t HybridAStar::GetPathCollisionIDByEDT(HybridAStarResult* result) {
 
   Polygon2D polygon;
   Pose2D global_pose;
-  bool is_collision;
 
   size_t collision_index = 100000;
   cdl::AABB path_point_aabb;
@@ -2321,7 +2320,6 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   double astar_search_time;
   heuristic_time_ = 0.0;
 
-  size_t node_id;
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
   Node3d new_node;

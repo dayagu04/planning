@@ -35,7 +35,7 @@ class RSPathInterface {
   // RSPath rs_path_;
 
   // rs path generator
-  RSPathGenerator rs_generator_;
+  // RSPathGenerator rs_generator_;
 
   // rs path interpolator
   RSPathInterpolator rs_interpolate_;

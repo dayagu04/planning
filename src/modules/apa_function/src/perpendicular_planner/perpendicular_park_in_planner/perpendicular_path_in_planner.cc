@@ -30,11 +30,9 @@ namespace planning {
 namespace apa_planner {
 
 static const size_t kMaxPerpenParkInSegmentNums = 15;
-static const size_t kReservedOutputPathPointSize = 750;
 static const int kMultiPlanMaxPathNumsInSlot = 5;
 static const size_t kAdjustPlanMaxPathNumsInSlot = 5;
 static const double kMinSingleGearPathLength = 0.35;
-static const double kMinSinglePlanPathLength = 0.2;
 
 void PerpendicularPathInPlanner::Reset() {
   output_.Reset();

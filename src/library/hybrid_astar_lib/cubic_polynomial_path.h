@@ -31,7 +31,7 @@ class CubicPathInterface {
  private:
   std::vector<double> theta_vec_;
   std::vector<double> curvature_vec_;
-  size_t max_plan_num_ = 25;
+  // size_t max_plan_num_ = 25;
   double max_curvature_;
 };
 }  // namespace planning

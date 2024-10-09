@@ -175,7 +175,7 @@ class AsyncLogger : public google::base::Logger {
 
   // Count of how many times the writer thread has dropped the log messages.
   // 64 bits should be enough to never worry about overflow.
-  uint64_t drop_count_ = 0;
+  // uint64_t drop_count_ = 0;
 
   // The buffer to which application threads append new log messages.
   std::unique_ptr<std::deque<Msg>> active_buf_;

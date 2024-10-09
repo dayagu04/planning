@@ -42,8 +42,6 @@ constexpr double kStaticAgentSpeedThr = 3;
 constexpr double kStaticAgentPosThr = 1.1;
 constexpr double kStaticAgentBuffer = 0.2;
 constexpr double kStaticLeadThr = 1.0;
-constexpr double kHalfLaneWidth = 1.75;
-constexpr double kLeadoneThr = 1.2;
 constexpr double kHalfEgoLength = 2.55;
 constexpr double kEgoWidth = 2.2;
 constexpr double kEgoLength = 5.1;
@@ -1793,7 +1791,6 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
   double virtual_obs_desired_distance = 0.0;
   double safe_distance = 0.0;
   double virtual_obs_desired_velocity = 40.0;
-  double desired_distance_filtered = 0.0;
   std::pair<double, double> acc_target = {-0.5, 0.5};
   double v_ego = lon_behav_input_->ego_info().ego_v();
 
@@ -3382,8 +3379,6 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       obstacle_manager->find_obstacle(agent_id)->y_center();
   const auto agent_current_heading_angle =
       obstacle_manager->find_obstacle(agent_id)->heading_angle();
-  const auto &lat_path_x_t_spline =
-      session_->planning_context().motion_planner_output().lateral_x_t_spline;
   const auto &lat_path_s_t_spline =
       session_->planning_context().motion_planner_output().lateral_s_t_spline;
   const auto &lane_manager =

@@ -1306,8 +1306,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       ego_cur_s - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double half_ego_width = vehicle_param.max_width * 0.5;
-
   const double front_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
           ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
@@ -1490,8 +1488,6 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
     LatObstacleDecisionType pre_lateral_decision, bool &reset_conflict_decision,
     ObstacleDecision &obstacle_decision, LatObstacleDecisionType &lat_decision,
     LonObstacleDecisionType &lon_decision) {
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
   if (is_nudge_left) {
     lat_decision = LatObstacleDecisionType::RIGHT;
     lon_decision = LonObstacleDecisionType::IGNORE;

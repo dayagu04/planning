@@ -1055,8 +1055,6 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
   // judge direction of obj acc
-  auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
-                                     fusion_object.common_info.acceleration.x);
   Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
                                   sin(prediction_object.yaw));
   Eigen::Vector2f prediction_obj_acc_vec(

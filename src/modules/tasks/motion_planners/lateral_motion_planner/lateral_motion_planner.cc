@@ -325,9 +325,6 @@ void LateralMotionPlanner::AssembleInput() {
                                           .get_virtual_lane_manager()
                                           ->get_is_exist_split_on_ramp();
   // LCC split
-  const bool is_exist_intersection_split = session_->environmental_model()
-                                              .get_virtual_lane_manager()
-                                              ->get_is_exist_intersection_split();
   if (is_exist_ramp_on_road || is_exist_split_on_ramp) {
     split_scene = true;
     // complete_follow = true;

@@ -49,13 +49,11 @@ using namespace pnc::mathlib;
 
 constexpr int PointNum = 25;
 constexpr double delta_t = 0.2;
-constexpr double kFilterFrontCarDistace = 50.;
 constexpr double kMaxNegativeJerk = -4.;
 constexpr double kMaxPositiveJerk = 4.;
 constexpr double kMaxDecel = -5.;
 constexpr double kMaxAcc = 5.;
 constexpr double kPlanEps = 0.1;
-constexpr double kOvertakeSpeedThreshld = 2.;
 constexpr double kCarCollisionThreshld = 1.0;
 constexpr double kMaxTotalLCTime = 35;
 constexpr double kHalfEgoLength = 2.55;
@@ -63,9 +61,7 @@ constexpr double kHalfEgoWidth = 1.1;
 constexpr double kMaxExpectedLCTime = 8.5;
 constexpr double kMinExpectedLCTime = 6.0;
 constexpr double kMinSplineSampleLength = 30.0;
-constexpr double kMaxSplineSampleLength = 60.0;
 constexpr double kDefaultLatMovedDistance = 7.0;
-constexpr double kDeg2Rad = 0.01745;
 constexpr double kRad2Deg = 57.3;
 
 GapSelectorDecider::GapSelectorDecider(
@@ -586,10 +582,7 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
   Point2D frenet_init_point;
   Point2D cart_init_point{planning_init_point.lat_init_state.x(),
                           planning_init_point.lat_init_state.y()};
-  const auto &coord =
-      session_->planning_context()
-          .lane_change_decider_output()
-          .coarse_planning_info.reference_path->get_frenet_coord();
+  const auto &coord = coarse_planning_info.reference_path->get_frenet_coord();
 
   if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
     LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
