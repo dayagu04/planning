@@ -60,13 +60,27 @@ struct NodePath {
     points[0].theta = pose.theta;
   }
 
-  const Pose2D& GetEndPoint() {
+  const Pose2D& GetEndPoint() const {
     if (point_size > 0) {
       return points[point_size - 1];
     } else {
       return points[0];
     }
   }
+};
+
+enum class NodeShrinkType {
+  NONE = 0,
+  OUT_OF_BOUNDARY = 1,
+  COLLISION = 2,
+  BACK_TO_START_NODE = 3,
+  BACK_TO_PARENT_NODE = 4,
+  UNEXPECTED_HEADING = 5,
+  UNEXPECTED_GEAR = 6,
+  UNEXPECTED_STEERING_WHEEL = 7,
+  UNEXPECTED_DRIVE_DIST = 8,
+  FAIL_TO_ALLOCATE_NODE = 9,
+  MAX_NUMBER,
 };
 
 class Node3d {
@@ -104,13 +118,13 @@ class Node3d {
 
   size_t GetGridPhi() const { return grid_index_.phi; }
 
-  double GetX() const { return x_; }
+  const double GetX() const { return path_.GetEndPoint().x; }
 
-  double GetY() const { return y_; }
+  const double GetY() const { return path_.GetEndPoint().y; }
 
-  double GetPhi() const { return phi_; }
+  const double GetPhi() const { return path_.GetEndPoint().theta; }
 
-  const Pose2D GetPose() const;
+  const Pose2D& GetPose() const;
 
   bool operator==(const Node3d& right) const;
 
@@ -120,7 +134,11 @@ class Node3d {
 
   const bool IsRsPath() const;
 
+  const bool IsQunticPolynomialPath() const;
+
   double GetSteer() const { return steering_; }
+
+  const double GetRadius() const { return radius_; }
 
   Node3d* GetPreNode() const { return pre_node_; }
 
@@ -157,6 +175,8 @@ class Node3d {
   const AstarPathGear& GetGearType() const { return gear_type_; }
 
   void SetSteer(double steering) { steering_ = steering; }
+
+  void SetRadius(const double radius) { radius_ = radius; }
 
   const AstarPathType GetPathType() const { return path_type_; }
 
@@ -245,12 +265,9 @@ class Node3d {
     return multimap_iter_;
   }
 
- private:
-  // use end pose in path to x_,y_,phi_;
-  double x_ = 0.0;
-  double y_ = 0.0;
-  double phi_ = 0.0;
+  double DistToPose(const Pose2D& pose);
 
+ private:
   // path point size
   NodePath path_;
 
@@ -285,6 +302,7 @@ class Node3d {
   // front wheel angle, [-pi, +pi]
   // left is positive
   double steering_ = 0.0;
+  double radius_;
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;

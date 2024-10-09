@@ -68,7 +68,7 @@ void InitGlog(const char *file) {
   // FLAGS_colorlogtostderr = true;
   // FLAGS_minloglevel = 0;
   //  50 Mb
-  // FLAGS_max_log_size = 50;
+  FLAGS_max_log_size = 50;
 
   bool create_path = CreateLogDirectory(path_dir);
 

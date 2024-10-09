@@ -13,13 +13,10 @@ using ad_common::math::Box2d;
 #define DEBUG_NODE3D (0)
 
 Node3d::Node3d(const double x, const double y, const double phi) {
-  x_ = x;
-  y_ = y;
-  phi_ = phi;
-
   path_.path_dist = 0;
   path_.point_size = 1;
-  path_.points[0] = Pose2D(x, y, phi);
+  double theta = IflyUnifyTheta(phi, M_PI);
+  path_.points[0] = Pose2D(x, y, theta);
 
   visited_type_ = AstarNodeVisitedType::not_visited;
 
@@ -33,23 +30,21 @@ Node3d::Node3d(const double x, const double y, const double phi) {
 
 Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
                const PlannerOpenSpaceConfig& open_space_conf) {
-  x_ = x;
-  y_ = y;
-  phi_ = phi;
-
-  grid_index_.x = std::round((x_ - XYbounds.x_min) *
+  grid_index_.x = std::round((x - XYbounds.x_min) *
                              open_space_conf.xy_grid_resolution_inv);
 
-  grid_index_.y = std::round((y_ - XYbounds.y_min) *
+  grid_index_.y = std::round((y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
+
+  double theta = IflyUnifyTheta(phi, M_PI);
   grid_index_.phi =
-      std::round((phi_ - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
+      std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
   path_.path_dist = 0;
   path_.point_size = 1;
   path_.points[0].x = x;
   path_.points[0].y = y;
-  path_.points[0].theta = phi;
+  path_.points[0].theta = theta;
 
   visited_type_ = AstarNodeVisitedType::not_visited;
 
@@ -63,21 +58,17 @@ Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
 
 Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
                const PlannerOpenSpaceConfig& open_space_conf) {
-  if (path.point_size > 0) {
-    x_ = path.points[path.point_size - 1].x;
-    y_ = path.points[path.point_size - 1].y;
-    phi_ = IflyUnifyTheta(path.points[path.point_size - 1].theta, M_PI);
-  }
-
   path_ = path;
 
   // XYbounds in xmin, xmax, ymin, ymax
-  grid_index_.x = std::round((x_ - XYbounds.x_min) *
+  grid_index_.x = std::round((path_.GetEndPoint().x - XYbounds.x_min) *
                              open_space_conf.xy_grid_resolution_inv);
-  grid_index_.y = std::round((y_ - XYbounds.y_min) *
+  grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
+
+  double theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
   grid_index_.phi =
-      std::round((phi_ - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
+      std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
   visited_type_ = AstarNodeVisitedType::not_visited;
   is_start_node_ = false;
@@ -95,22 +86,18 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
 int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
                 const PlannerOpenSpaceConfig& open_space_conf,
                 const double node_path_dist) {
-  if (path.point_size > 0) {
-    x_ = path.points[path.point_size - 1].x;
-    y_ = path.points[path.point_size - 1].y;
-    phi_ = IflyUnifyTheta(path.points[path.point_size - 1].theta, M_PI);
-  }
-
   path_ = path;
   path_.path_dist = node_path_dist;
 
   // XYbounds in xmin, xmax, ymin, ymax
-  grid_index_.x = std::round((x_ - XYbounds.x_min) *
+  grid_index_.x = std::round((path_.GetEndPoint().x - XYbounds.x_min) *
                              open_space_conf.xy_grid_resolution_inv);
-  grid_index_.y = std::round((y_ - XYbounds.y_min) *
+  grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
                              open_space_conf.xy_grid_resolution_inv);
-  grid_index_.phi =
-      std::round((phi_ - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
+
+  double theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
+  grid_index_.phi = std::round((theta - (-M_PI)) *
+                               open_space_conf.phi_grid_resolution_inv);
 
   visited_type_ = AstarNodeVisitedType::not_visited;
 
@@ -131,6 +118,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   collision_type_ = NodeCollisionType::none;
   gear_switch_num_ = 0;
 
+  radius_ = 100000.0;
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
 #endif
@@ -141,9 +129,6 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
 void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {
   if (collision_id_ >= 3) {
     path_.point_size = collision_id_;
-    x_ = path_.points[path_.point_size - 1].x;
-    y_ = path_.points[path_.point_size - 1].y;
-    phi_ = IflyUnifyTheta(path_.points[path_.point_size - 1].theta, M_PI);
   }
 
   double shink_dist =
@@ -209,7 +194,9 @@ void Node3d::DebugString() const {
 }
 
 void Node3d::DebugPoseString() const {
-  ILOG_INFO << "x,y,theta: " << x_ << " , " << y_ << " , " << phi_ * 57.3;
+  ILOG_INFO << "x,y,theta(degree): " << path_.GetEndPoint().x << " , "
+            << path_.GetEndPoint().y << " , "
+            << path_.GetEndPoint().theta * 57.3;
 
   return;
 }
@@ -228,10 +215,6 @@ void Node3d::DebugCost() const {
 }
 
 void Node3d::CopyNode(const Node3d* node) {
-  x_ = node->GetX();
-  y_ = node->GetY();
-  phi_ = node->GetPhi();
-
   path_ = node->GetNodePath();
 
   traj_cost_ = node->GetGCost();
@@ -281,7 +264,14 @@ bool Node3d::IsPathGearChange(const AstarPathGear type) {
 }
 
 const bool Node3d::IsRsPath() const {
-  if (path_type_ == AstarPathType::Reeds_Shepp) {
+  if (path_type_ == AstarPathType::REEDS_SHEPP) {
+    return true;
+  }
+  return false;
+}
+
+const bool Node3d::IsQunticPolynomialPath() const {
+  if (path_type_ == AstarPathType::QUNTIC_POLYNOMIAL) {
     return true;
   }
   return false;
@@ -324,7 +314,7 @@ void Node3d::Clear() {
 
   visited_type_ = AstarNodeVisitedType::not_visited;
 
-  path_type_ = AstarPathType::none;
+  path_type_ = AstarPathType::NONE;
   global_id_ = 0;
   dist_to_obs_ = 100.0f;
 
@@ -370,16 +360,23 @@ void Node3d::CoordinateToGridIndex(const double x, const double y,
   index->phi = std::round((phi - (-M_PI)) * conf.phi_grid_resolution_inv);
 }
 
-const Pose2D Node3d::GetPose() const { return Pose2D(x_, y_, phi_); }
+const Pose2D& Node3d::GetPose() const { return path_.GetEndPoint(); }
 
 const double Node3d::GetEulerDist(const Node3d* end) const {
   double dist;
 
-  dist = std::pow(x_ - end->GetX(), 2) + std::pow(y_ - end->GetY(), 2);
+  dist = std::pow(path_.GetEndPoint().x - end->GetX(), 2) +
+         std::pow(path_.GetEndPoint().y - end->GetY(), 2);
 
   return std::sqrt(dist);
 }
 
 void Node3d::SetDistToObs(const float dist) { dist_to_obs_ = dist; }
+
+double Node3d::DistToPose(const Pose2D& pose) {
+  double dist = path_.GetEndPoint().DistanceTo(pose);
+
+  return dist;
+}
 
 }  // namespace planning

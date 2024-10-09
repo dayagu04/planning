@@ -576,7 +576,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   // set input
   AstarRequest cur_request;
   cur_request.path_generate_method =
-      planning::AstarPathGenerateType::astar_searching;
+      planning::AstarPathGenerateType::ASTAR_SEARCHING;
   cur_request.first_action_request.has_request = false;
   cur_request.space_type = ParkSpaceType::vertical;
   cur_request.parking_task = ParkingTask::parking_in;
@@ -592,6 +592,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       apa_param.GetParam().vertical_slot_target_adjust_dist;
   cur_request.slot_width = ego_slot_info.slot_width;
   cur_request.slot_length = ego_slot_info.slot_length;
+  cur_request.history_gear = current_gear_;
 
   switch (frame_.replan_reason) {
     case FIRST_PLAN:
@@ -624,7 +625,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
     cur_request.path_generate_method =
-        planning::AstarPathGenerateType::reeds_shepp;
+        planning::AstarPathGenerateType::REEDS_SHEPP;
 
     end.y = real_end.y;
     end.x = start.x + 30.0;
@@ -810,7 +811,7 @@ const int HybridAStarParkPlanner::PublishHybridAstarDebugInfo(
     point->set_s(result.accumulated_s[i]);
 
     // todo, add hybrid astar msg. but now reuse TrajectoryPoint.
-    if (result.type[i] == AstarPathType::Reeds_Shepp) {
+    if (result.type[i] == AstarPathType::REEDS_SHEPP) {
       point->set_l(-1.0);
     } else {
       point->set_l(1.0);
@@ -1289,15 +1290,10 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
     return;
   }
 
-  Eigen::Vector2d end_point_global = current_path_point_global_vec_.back().pos;
-
-  Eigen::Vector2d end_point_local =
-      ego_slot_info.g2l_tf.GetPos(end_point_global);
-
   double x_diff =
-      std::fabs(end_point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
+      std::fabs(point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
   double y_diff =
-      std::fabs(end_point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
+      std::fabs(point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
   double length = std::sqrt(x_diff * x_diff + y_diff * y_diff);
   length = std::min(length, 5.0);
 
@@ -1305,8 +1301,8 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
     return;
   }
 
-  ILOG_INFO << "x = " << limiter_x << ", end x = " << end_point_local[0]
-            << ", y=" << end_point_local[1];
+  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
+            << ", y=" << point_local[1];
 
   double phi = current_path_point_global_vec_.back().heading;
 
@@ -1316,8 +1312,8 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
       current_path_point_global_vec_[path_point_size - 2].pos;
 
   Eigen::Vector2d unit_line_vec =
-      Eigen::Vector2d(end_point_global[0] - the_last_but_one[0],
-                      end_point_global[1] - the_last_but_one[1]);
+      Eigen::Vector2d(path_end_global[0] - the_last_but_one[0],
+                      path_end_global[1] - the_last_but_one[1]);
 
   if (unit_line_vec.norm() < 0.01) {
     return;
@@ -1330,7 +1326,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   Eigen::Vector2d point;
   pnc::geometry_lib::PathPoint global_point;
   while (s < length) {
-    point = end_point_global + s * unit_line_vec;
+    point = path_end_global + s * unit_line_vec;
 
     global_point.Set(point, phi);
     global_point.kappa = 0.0;
