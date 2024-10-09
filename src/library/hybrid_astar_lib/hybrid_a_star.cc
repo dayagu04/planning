@@ -92,7 +92,8 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
                                    const MapBound& XYbounds,
                                    const ParkObstacleList& obstacles,
                                    const AstarRequest& request,
-                                   ObstacleClearZone *clear_zone) {
+                                   const ObstacleClearZone *clear_zone,
+                                   EulerDistanceTransform* edt) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -134,6 +135,7 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
   DebugAstarRequestString(request_);
 
   clear_zone_ = clear_zone;
+  edt_ = edt;
 
   // get path lengh
   size_t path_points_size = result->x.size();
@@ -201,7 +203,7 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
                                        const ParkObstacleList& obstacles,
                                        const AstarRequest& request,
                                        EulerDistanceTransform* edt,
-                                       ObstacleClearZone* clear_zone) {
+                                       const ObstacleClearZone* clear_zone) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -292,7 +294,7 @@ bool HybridAStar::PlanByCubicPath(HybridAStarResult* result,
                                   const ParkObstacleList& obstacles,
                                   const AstarRequest& request,
                                   EulerDistanceTransform* edt,
-                                  ObstacleClearZone *clear_zone) {
+                                  const ObstacleClearZone *clear_zone) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by cubic.";
 
@@ -2462,7 +2464,7 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
 void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
                                         const ParkObstacleList& obstacles,
                                         const AstarRequest& request,
-                                        ObstacleClearZone *clear_zone,
+                                        const ObstacleClearZone *clear_zone,
                                         HybridAStarResult* result,
                                         EulerDistanceTransform* edt) {
   result->Clear();
@@ -2920,7 +2922,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
                            const MapBound& XYbounds,
                            const ParkObstacleList& obstacles,
                            const AstarRequest& request,
-                           ObstacleClearZone *clear_zone,
+                           const ObstacleClearZone *clear_zone,
                            HybridAStarResult* result,
                            EulerDistanceTransform* edt) {
   double astar_start_time = IflyTime::Now_ms();

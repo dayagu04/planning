@@ -29,7 +29,7 @@ class OccupancyGridCoordinate {
   virtual void Process(const OccupancyGridBound &bound,
                        const double _ogm_resolution = ogm_resolution);
 
-  const bool IsIndexValid(const OgmIndex &id);
+  const bool IsIndexValid(const OgmIndex &id) const;
 
   const double GetBoundMinX() const { return bound_.min_x; }
 

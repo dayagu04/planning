@@ -169,8 +169,8 @@ void FootPrintCircleModel::LocalToGlobalByTF(FootPrintCircleList *global_circle,
 
 void FootPrintCircleModel::LocalToGlobalByGear(
     FootPrintCircleList *global_circle, Transform2d *tf,
-    const AstarPathGear gear) {
-  FootPrintCircleList *local;
+    const AstarPathGear gear) const {
+  const FootPrintCircleList *local;
 
   if (gear == AstarPathGear::drive) {
     local = &drive_gear_circles_;

@@ -57,8 +57,9 @@ class HybridAStar {
    */
   bool PlanOnce(const Pose2D& start, const Pose2D& end,
                 const MapBound& XYbounds, const ParkObstacleList& obstacles,
-                const AstarRequest& request, ObstacleClearZone* clear_zone,
-                HybridAStarResult* result, EulerDistanceTransform* edt);
+                const AstarRequest& request,
+                const ObstacleClearZone* clear_zone, HybridAStarResult* result,
+                EulerDistanceTransform* edt);
 
   // no astar search, just use rs path link start point and end point to adjust
   // ego position.
@@ -67,17 +68,15 @@ class HybridAStar {
                         const MapBound& XYbounds,
                         const ParkObstacleList& obstacles,
                         const AstarRequest& request,
-                        ObstacleClearZone *clear_zone);
+                        const ObstacleClearZone *clear_zone,
+                        EulerDistanceTransform* edt);
 
   // use rs path sampling to link start point and end point.
-  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2D& start,
-                            const Pose2D& end,
-                            const double lon_min_sampling_length,
-                            const MapBound& XYbounds,
-                            const ParkObstacleList& obstacles,
-                            const AstarRequest& request,
-                            EulerDistanceTransform* edt,
-                            ObstacleClearZone *clear_zone);
+  bool PlanByRSPathSampling(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+      const double lon_min_sampling_length, const MapBound& XYbounds,
+      const ParkObstacleList& obstacles, const AstarRequest& request,
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone);
 
   // use cubic path sampling to link start point and end point.
   bool PlanByCubicPath(HybridAStarResult* result, const Pose2D& start,
@@ -85,7 +84,7 @@ class HybridAStar {
                        const MapBound& XYbounds,
                        const ParkObstacleList& obstacles,
                        const AstarRequest& request, EulerDistanceTransform* edt,
-                       ObstacleClearZone* clear_zone);
+                       const ObstacleClearZone* clear_zone);
 
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);
@@ -118,7 +117,7 @@ class HybridAStar {
   void SingleShotPathAttempt(const MapBound& XYbounds,
                              const ParkObstacleList& obstacles,
                              const AstarRequest& request,
-                             ObstacleClearZone* clear_zone,
+                             const ObstacleClearZone* clear_zone,
                              HybridAStarResult* result,
                              EulerDistanceTransform* edt);
 
@@ -327,7 +326,7 @@ class HybridAStar {
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;
-  ObstacleClearZone *clear_zone_;
+  const ObstacleClearZone *clear_zone_;
 
   EulerDistanceTransform* edt_;
 

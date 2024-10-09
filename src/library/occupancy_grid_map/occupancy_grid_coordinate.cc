@@ -36,7 +36,7 @@ void OccupancyGridCoordinate::Process(const OccupancyGridBound &bound,
   return;
 }
 
-const bool OccupancyGridCoordinate::IsIndexValid(const OgmIndex &id) {
+const bool OccupancyGridCoordinate::IsIndexValid(const OgmIndex &id) const {
   if (id.x >= ogm_grid_x_max || id.y >= ogm_grid_y_max) {
     return false;
   }
