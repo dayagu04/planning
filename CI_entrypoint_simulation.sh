@@ -15,6 +15,4 @@ fi
 unset __conda_setup
 
 # ros env
-bash -c "source /opt/ros/melodic/setup.sh"
-
-/root/miniconda3/bin/python  /root/planning/simulation/simulation.py
+bash -c "source /opt/ros/melodic/setup.sh && /root/miniconda3/bin/python /root/planning/simulation/simulation.py"
