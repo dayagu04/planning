@@ -465,7 +465,7 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     StateLimit relative_state_limit;
     relative_state_limit.a_max =
         interp(init_va_.first, max_acc_ego_v_, max_acc_ego_v_bp_);
-    relative_state_limit.a_min =
+    relative_state_limit.a_min = deceleration_priority_scene_ ? config_.min_acc_limit_lower :
         interp(init_va_.first, min_acc_ego_v_, min_acc_ego_v_bp_);
     relative_state_limit.v_min =
         std::fmax(std::fmax(std::fmin(retriggered_ego_speed_, init_va_.first),
@@ -478,7 +478,7 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     relative_state_limit.p_end = 0.0;
     relative_state_limit.j_max =
         interp(init_va_.first, max_jerk_ego_v_, max_jerk_ego_v_bp_);
-    relative_state_limit.j_min =
+    relative_state_limit.j_min =  deceleration_priority_scene_ ? config_.min_jerk_limit_lower :
         interp(init_va_.first, min_jerk_ego_v_, min_jerk_ego_v_bp_);
     auto speed_adjust_curve =
         VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
