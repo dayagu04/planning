@@ -874,7 +874,9 @@ std::vector<Eigen::Vector3d> Update(
     request.goal_ = Pose2D(end[0], end[1], end[2]);
     request.goal_.theta = ad_common::math::NormalizeAngle(request.goal_.theta);
 
-    request.real_goal = request.goal_;
+    request.real_goal = Pose2D(ego_slot_info.target_ego_pos_slot[0],
+                               ego_slot_info.target_ego_pos_slot[1],
+                               ego_slot_info.target_ego_heading_slot);
     request.vertical_slot_target_adjust_dist_ =
         apa_param.GetParam().vertical_slot_target_adjust_dist;
     request.base_pose_ = Pose2D(0, 0, 0);
@@ -890,12 +892,7 @@ std::vector<Eigen::Vector3d> Update(
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);
 
-    Eigen::Vector3d real_end;
-    real_end[0] = ego_slot_info.target_ego_pos_slot[0];
-    real_end[1] = ego_slot_info.target_ego_pos_slot[1];
-    real_end[2] = ego_slot_info.target_ego_heading_slot;
-    hybrid_astar_interface_->ExtendPathToRealTargetPose(
-        Pose2D(real_end[0], real_end[1], real_end[2]));
+    hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(ego_slot_info,

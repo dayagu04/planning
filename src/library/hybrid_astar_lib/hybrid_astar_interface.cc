@@ -266,9 +266,6 @@ int HybridAStarInterface::UpdateOutput() {
                             static_cast<float>(lat_buffer));
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
-      // hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, initial_state_,
-      //                                     goal_state_, lon_min_sampling_length,
-      //                                     map_bounds_, obs_, request_);
 
       if (apa_param.GetParam().use_a_cubic_polynomial_for_adjustment) {
         if (hybrid_astar_->PlanByCubicPath(&coarse_traj_, initial_state_,
@@ -403,7 +400,7 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
     hybrid_astar_->PlanByRSPathSampling(&coarse_traj_, start_pose, end_pose,
                                         expected_forward_dist, map_bounds_,
-                                        obs_list, request, &clear_zone_);
+                                        obs_list, request, &edt_, &clear_zone_);
   }
 
   search_state_ = AstarSearchState::SUCCESS;

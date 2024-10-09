@@ -95,7 +95,7 @@ void CubicPathInterface::GeneratePolynomialPath(
     tmp_point.phi = atan(y_dot);
     tmp_point.kappa = curvature;
     tmp_point.gear = AstarPathGear::drive;
-    tmp_point.type = AstarPathType::cubic;
+    tmp_point.type = AstarPathType::CUBIC_POLYNOMIAL;
     path.emplace_back(tmp_point);
     theta_vec_.emplace_back(atan(y_dot));
     curvature_vec_.emplace_back(curvature);

@@ -15,22 +15,22 @@ namespace planning {
 planning::cyber::logger::AsyncLogger *async_logger_ = nullptr;
 static GlogFlag glog_flag_;
 
-void SignalHandler(const char *data, int size) {
-  std::string path_dir;
-#ifdef IFLY_LOG_PATH
-  path_dir = "/asw/planning/glog/backtrace.log";
-#else
-  path_dir = "../runtime_service/planning_exec/glog/backtrace.log";
-#endif
+// void SignalHandler(const char *data, int size) {
+//   std::string path_dir;
+// #ifdef IFLY_LOG_PATH
+//   path_dir = "/asw/planning/glog/backtrace.log";
+// #else
+//   path_dir = "../runtime_service/planning_exec/glog/backtrace.log";
+// #endif
 
-  std::ofstream file_stream(path_dir.c_str(), std::ios::app);
-  std::string str = std::string(data, size);
-  file_stream << str;
-  file_stream.close();
-  ILOG_ERROR << str;
+//   std::ofstream file_stream(path_dir.c_str(), std::ios::app);
+//   std::string str = std::string(data, size);
+//   file_stream << str;
+//   file_stream.close();
+//   ILOG_ERROR << str;
 
-  return;
-}
+//   return;
+// }
 
 const bool CreateLogDirectory(const std::string &path) {
   DIR *log_dir = nullptr;
@@ -74,8 +74,8 @@ void InitGlog(const char *file) {
 
   // Init glog
   if (glog_flag_.is_init == false) {
-    google::InstallFailureSignalHandler();
-    google::InstallFailureWriter(&SignalHandler);
+    // google::InstallFailureSignalHandler();
+    // google::InstallFailureWriter(&SignalHandler);
 
     google::InitGoogleLogging("");
     google::SetLogDestination(google::ERROR, "");
