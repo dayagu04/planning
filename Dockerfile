@@ -13,7 +13,7 @@ ENV LD_LIBRARY_PATH=/opt/ros/melodic/lib:$LD_LIBRARY_PATH \
     CMAKE_PREFIX_PATH=/opt/ros/melodic:$CMAKE_PREFIX_PATH
 
 RUN sed -i "s/$OLD_TEXT/$NEW_TEXT/g" $CONFIG_FILE && \
-    /root/miniconda3/bin/pip install empy==3.3.4 && \
+    /root/miniconda3/bin/pip install empy==3.3.4 boto3 && \
     echo 'source /opt/ros/melodic/setup.sh' >> ~/.bashrc && \
     mkdir -p /tmp && \
     make clean
