@@ -55,7 +55,7 @@ constexpr double kDistanceToStopLineBufferAgent = 1.8;
 constexpr double kDistanceToStopLineBufferEgo = 6.5;
 constexpr double kConfideceDegree = 0.8;
 constexpr double kMinNarrowConeSpeed = 10.0;
-constexpr double kMinNarrowVehicleSpeed = 5.56; // 20kph
+constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
@@ -352,7 +352,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
       lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-      lead_fusion_enable && !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv) {
+      lead_fusion_enable && !is_reverse_obs_in_large_curv &&
+      !is_far_obs_in_large_curv) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
 
@@ -2343,75 +2344,23 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
 
   start_stop_info_.CopyFrom(lon_behav_input_->start_stop_info());
   bool dbw_status = lon_behav_input_->dbw_status();
-  // 这里有问题
-  if ((lead_one.track_id() == 0 && current_traffic_light_can_pass_) ||
-      dbw_status == false) {
-    // reset state as default
-    start_stop_info_.set_state(common::StartStopInfo::CRUISE);
-  } else {
-    // 1. Calculate the condition
-    std::string lc_request = "none";
-    double desire_distance = CalcDesiredDistance(lead_one, v_ego, lc_request);
-    bool is_lead_static = std::fabs(lead_one.v_lead()) < obstacle_v_start;
+  if (current_intersection_state ==
+          common::IntersectionState::IN_INTERSECTION ||
+      (current_intersection_state ==
+           common::IntersectionState::APPROACH_INTERSECTION &&
+       fabs(current_distance_ego_to_stopline) < kDistanceToStopLineBufferEgo)) {
+    // intersection condition
+    const bool traffic_light_start_condition = current_traffic_light_can_pass_;
     const bool traffic_light_stop_condition =
         !current_traffic_light_can_pass_ && v_ego < v_start;
-    bool stop_condition =
-        (v_ego < v_start && is_lead_static &&
-         std::fabs(lead_one.d_rel() - desire_distance) < distance_stop) ||
-        traffic_light_stop_condition;
-    bool cruise_condition = v_ego > v_startmode || (v_last_target_ > v_target_);
-    bool lead_one_start =
-        (lead_one.v_lead() > obstacle_v_start &&
-         (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
-             distance_start);
-    // lead_one change: obj stopped adc by cut_in, then leaved
-    bool lead_one_change =
-        (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
-        (distance_stop + lead_change_buffer);
-
-    // intersection condition
-    const bool traffic_light_start_condition =
-        current_traffic_light_can_pass_ &&
-        (current_intersection_state ==
-             common::IntersectionState::APPROACH_INTERSECTION ||
-         current_intersection_state ==
-             common::IntersectionState::IN_INTERSECTION);
-    bool approach_to_stop_line = false;
-    if (NL_NMAX !=
-        current_distance_ego_to_stopline) {  // intersection stop line exits
-      if (fabs(current_distance_ego_to_stopline) <
-              kDistanceToStopLineBufferEgo ||
-          current_intersection_state ==
-              common::IntersectionState::IN_INTERSECTION) {
-        lead_one_start = false;
-        lead_one_change = false;
-      } else if (lead_one.d_rel() >
-                     fabs(fabs(current_distance_ego_to_stopline) -
-                          kDistanceToStopLineBufferAgent) &&
-                 current_distance_ego_to_stopline >
-                     kDistanceToStopLineBufferEgo) {
-        approach_to_stop_line = true;
-      }
-    } else if (current_intersection_state ==
-               common::IntersectionState::IN_INTERSECTION) {
-      lead_one_start = false;
-      lead_one_change = false;
-    }
-    bool start_condition = lead_one_start || lead_one_change ||
-                           traffic_light_start_condition ||
-                           approach_to_stop_line;
-
-    // 2. Update the state
+    bool cruise_condition = v_ego > v_startmode || v_last_target_ > v_target_;
+    //  Update the state
     if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
-        stop_condition) {
+        traffic_light_stop_condition) {
       // CRUISE --> STOP
       start_stop_info_.set_state(common::StartStopInfo::STOP);
-      // store the distance of leadone
-      start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
-      LOG_DEBUG("The distance error of STOP is [%f]m \n",
-                lead_one.d_rel() - desire_distance);
     } else if (start_stop_info_.state() == common::StartStopInfo::STOP &&
-               start_condition) {
+               traffic_light_start_condition) {
       // STOP --> START
       start_stop_info_.set_state(common::StartStopInfo::START);
     } else if (start_stop_info_.state() == common::StartStopInfo::START &&
@@ -2419,12 +2368,142 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       // START --> CRUISE
       start_stop_info_.set_state(common::StartStopInfo::CRUISE);
     } else if (start_stop_info_.state() == common::StartStopInfo::START &&
-               stop_condition) {
+               traffic_light_stop_condition) {
       // START --> STOP
       start_stop_info_.set_state(common::StartStopInfo::STOP);
     }
+  } else {
+    // 这里有问题
+    if (lead_one.track_id() == 0 || dbw_status == false) {
+      // reset state as default
+      start_stop_info_.set_state(common::StartStopInfo::CRUISE);
+    } else {
+      // 1. Calculate the condition
+      std::string lc_request = "none";
+      double desire_distance = CalcDesiredDistance(lead_one, v_ego, lc_request);
+      bool is_lead_static = std::fabs(lead_one.v_lead()) < obstacle_v_start;
+      bool stop_condition =
+          (v_ego < v_start && is_lead_static &&
+           std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
+      bool cruise_condition =
+          v_ego > v_startmode || (v_last_target_ > v_target_);
+      bool lead_one_start =
+          (lead_one.v_lead() > obstacle_v_start &&
+           (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+               distance_start);
+      // lead_one change: obj stopped adc by cut_in, then leaved
+      bool lead_one_change =
+          (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+          (distance_stop + lead_change_buffer);
+      bool start_condition = lead_one_start || lead_one_change;
+
+      // 2. Update the state
+      if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
+          stop_condition) {
+        // CRUISE --> STOP
+        start_stop_info_.set_state(common::StartStopInfo::STOP);
+        // store the distance of leadone
+        start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
+        LOG_DEBUG("The distance error of STOP is [%f]m \n",
+                  lead_one.d_rel() - desire_distance);
+      } else if (start_stop_info_.state() == common::StartStopInfo::STOP &&
+                 start_condition) {
+        // STOP --> START
+        start_stop_info_.set_state(common::StartStopInfo::START);
+      } else if (start_stop_info_.state() == common::StartStopInfo::START &&
+                 cruise_condition) {
+        // START --> CRUISE
+        start_stop_info_.set_state(common::StartStopInfo::CRUISE);
+      } else if (start_stop_info_.state() == common::StartStopInfo::START &&
+                 stop_condition) {
+        // START --> STOP
+        start_stop_info_.set_state(common::StartStopInfo::STOP);
+      }
+    }
   }
-  last_traffic_light_can_pass_ = current_traffic_light_can_pass_;
+
+  // 这里有问题
+  // if ((lead_one.track_id() == 0 && current_traffic_light_can_pass_) ||
+  //     dbw_status == false) {
+  //   // reset state as default
+  //   start_stop_info_.set_state(common::StartStopInfo::CRUISE);
+  // } else {
+  //   // 1. Calculate the condition
+  //   std::string lc_request = "none";
+  //   double desire_distance = CalcDesiredDistance(lead_one, v_ego,
+  //   lc_request); bool is_lead_static = std::fabs(lead_one.v_lead()) <
+  //   obstacle_v_start; const bool traffic_light_stop_condition =
+  //       !current_traffic_light_can_pass_ && v_ego < v_start;
+  //   bool stop_condition =
+  //       (v_ego < v_start && is_lead_static &&
+  //        std::fabs(lead_one.d_rel() - desire_distance) < distance_stop) ||
+  //       traffic_light_stop_condition;
+  //   bool cruise_condition = v_ego > v_startmode || (v_last_target_ >
+  //   v_target_); bool lead_one_start =
+  //       (lead_one.v_lead() > obstacle_v_start &&
+  //        (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+  //            distance_start);
+  //   // lead_one change: obj stopped adc by cut_in, then leaved
+  //   bool lead_one_change =
+  //       (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+  //       (distance_stop + lead_change_buffer);
+
+  //   // intersection condition
+  //   const bool traffic_light_start_condition =
+  //       current_traffic_light_can_pass_ &&
+  //       (current_intersection_state ==
+  //            common::IntersectionState::APPROACH_INTERSECTION ||
+  //        current_intersection_state ==
+  //            common::IntersectionState::IN_INTERSECTION);
+  //   bool approach_to_stop_line = false;
+  //   if (NL_NMAX !=
+  //       current_distance_ego_to_stopline) {  // intersection stop line exits
+  //     if (fabs(current_distance_ego_to_stopline) <
+  //             kDistanceToStopLineBufferEgo ||
+  //         current_intersection_state ==
+  //             common::IntersectionState::IN_INTERSECTION) {
+  //       lead_one_start = false;
+  //       lead_one_change = false;
+  //     } else if (lead_one.d_rel() >
+  //                    fabs(fabs(current_distance_ego_to_stopline) -
+  //                         kDistanceToStopLineBufferAgent) &&
+  //                current_distance_ego_to_stopline >
+  //                    kDistanceToStopLineBufferEgo) {
+  //       approach_to_stop_line = true;
+  //     }
+  //   } else if (current_intersection_state ==
+  //              common::IntersectionState::IN_INTERSECTION) {
+  //     lead_one_start = false;
+  //     lead_one_change = false;
+  //   }
+  //   bool start_condition = lead_one_start || lead_one_change ||
+  //                          traffic_light_start_condition ||
+  //                          approach_to_stop_line;
+
+  //   // 2. Update the state
+  //   if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
+  //       stop_condition) {
+  //     // CRUISE --> STOP
+  //     start_stop_info_.set_state(common::StartStopInfo::STOP);
+  //     // store the distance of leadone
+  //     start_stop_info_.set_stop_distance_of_leadone(lead_one.d_rel());
+  //     LOG_DEBUG("The distance error of STOP is [%f]m \n",
+  //               lead_one.d_rel() - desire_distance);
+  //   } else if (start_stop_info_.state() == common::StartStopInfo::STOP &&
+  //              start_condition) {
+  //     // STOP --> START
+  //     start_stop_info_.set_state(common::StartStopInfo::START);
+  //   } else if (start_stop_info_.state() == common::StartStopInfo::START &&
+  //              cruise_condition) {
+  //     // START --> CRUISE
+  //     start_stop_info_.set_state(common::StartStopInfo::CRUISE);
+  //   } else if (start_stop_info_.state() == common::StartStopInfo::START &&
+  //              stop_condition) {
+  //     // START --> STOP
+  //     start_stop_info_.set_state(common::StartStopInfo::STOP);
+  //   }
+  // }
+  // last_traffic_light_can_pass_ = current_traffic_light_can_pass_;
   LOG_DEBUG("The start_stop_state_info is [%d] \n", start_stop_info_.state());
   return start_stop_info_.state();
 }
@@ -3942,13 +4021,14 @@ void StGraphGenerator::UpdateTargetVelocityByFilter(const bool is_on_ramp,
     if (v_ego < v_last_target_) {
       accel_vel_in_turns_filter_.SetState(v_ego);
     }
-    #ifdef X86
-      auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-      auto frame_info = planning_debug_data->frame_info();
-      if (frame_info.frame_num() == 1) {
-        accel_vel_in_turns_filter_.SetState(v_ego);
-      }
-    #endif
+#ifdef X86
+    auto &planning_debug_data =
+        DebugInfoManager::GetInstance().GetDebugInfoPb();
+    auto frame_info = planning_debug_data->frame_info();
+    if (frame_info.frame_num() == 1) {
+      accel_vel_in_turns_filter_.SetState(v_ego);
+    }
+#endif
     accel_vel_in_turns_filter_.Update(v_target_);
     v_target_ = accel_vel_in_turns_filter_.GetOutput();
   }
@@ -4232,7 +4312,8 @@ void StGraphGenerator::IsReverseAgentInLargeCurvature(
       continue;
     }
     double s_rel = agent_s - ego_s;
-    double consider_s_in_large_curv = std::fmax(v_ego * kConsiderTimeLargeCurv, 20.0);
+    double consider_s_in_large_curv =
+        std::fmax(v_ego * kConsiderTimeLargeCurv, 20.0);
 
     const auto agent_matched_path_point =
         current_lane_frenet_coord->GetPathPointByS(agent_s);
