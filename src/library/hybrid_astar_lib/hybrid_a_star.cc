@@ -3964,7 +3964,7 @@ void HybridAStar::RSPathCandidateByRadius(
     // if path is too short by collision check or gear check, use a fallback
     // path with no collision check.
     fallback_path_.Clear();
-    for (size_t i = 0; i < best_path.x.size(); i++) {
+    for (size_t i = 0; i < best_path_valid_point_size; i++) {
       fallback_path_.x.emplace_back(best_path.x[i]);
       fallback_path_.y.emplace_back(best_path.y[i]);
       fallback_path_.phi.emplace_back(best_path.phi[i]);
