@@ -1,5 +1,6 @@
 #include "agent_longitudinal_decider.h"
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -7,6 +8,7 @@
 
 #include "agent/agent.h"
 #include "common_platform_type_soc.h"
+#include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "interface/src/c/common_c.h"
@@ -14,9 +16,15 @@
 #include "planning_context.h"
 #include "virtual_lane.h"
 
+namespace planning {
+
 namespace {
 
 constexpr double kEpsilon = 1.0e-4;
+constexpr double kMaxHeadingDiff = 1.04;  // 60 degree
+constexpr double kMinLowSpeedTrajLength = 3.0;
+constexpr double kIgnoreSpeedDiffThd = 5.0 / 3.6;
+constexpr double kAgentFrontEdgeSDiffThd = -0.2;
 constexpr double kHalf = 0.5;
 constexpr double kKphToMps = 0.2778;
 constexpr double kMpsToKph = 3.6;
@@ -40,6 +48,13 @@ constexpr double kCurrentKappaThresholdForLargeAgent = 0.003;
 constexpr int32_t kRuleBasedCutInCount = 3;
 constexpr int32_t kPredBasedCutInCount = 3;
 constexpr int32_t kDefaultCutInCount = 4;
+
+// param for filter ultradistant obstacle
+constexpr double kFilterUltraEgoSpeedLowThd = 100 / 3.6;
+constexpr double kFilterUltraEgoSpeedHighThd = 110 / 3.6;
+constexpr double kFilterUltraDistanceLowThd = 150.0;
+constexpr double kFilterUltraDistanceMiddleThd = 165.0;
+constexpr double kFilterUltraDistanceHighThd = 300.0;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath>& planned_path,
                               const planning_math::Box2d& agent_box,
@@ -72,8 +87,6 @@ void CalculateAgentSLBoundary(const std::shared_ptr<KDPath>& planned_path,
                            ptr_min_l, ptr_max_l);
 }
 }  // namespace
-
-namespace planning {
 
 AgentLongitudinalDecider::AgentLongitudinalDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
@@ -120,6 +133,12 @@ void AgentLongitudinalDecider::Init() {
 }
 
 bool AgentLongitudinalDecider::Update() {
+  FilterRearAgents();
+
+  FilterUltradistantObs();
+
+  // FilterReverseAgents();
+
   // Check cut in/out agent.
   DeciderCutInAndOutAgents();
 
@@ -572,5 +591,392 @@ void AgentLongitudinalDecider::UpdateCutInAgentTable() {
   JSON_DEBUG_VECTOR("new_cutin_id", cutin_id, 0)
   JSON_DEBUG_VECTOR("new_cutin_id_count", cutin_count, 0)
 };
+
+void AgentLongitudinalDecider::FilterRearAgents() {
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  auto& mutable_agent_manager =
+      session_->mutable_environmental_model()->mutable_agent_manager();
+  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
+    return;
+  }
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  if (agents.empty()) {
+    return;
+  }
+
+  // get lane change info
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto& coarse_planning_info =
+      lane_change_decider_output.coarse_planning_info;
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  const auto is_in_lane_change_execution =
+      lane_change_state == kLaneChangeExecution;
+  const auto is_lane_change_complete = lane_change_state == kLaneChangeComplete;
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  if (ego_state_manager == nullptr) {
+    return;
+  }
+  const auto& planning_init_point = ego_state_manager->planning_init_point();
+  const double distance_thr_for_rear = 50.0;
+
+  // get ego_lane
+  const auto& ego_lane = virtual_lane_manager_->get_current_lane();
+  if (ego_lane == nullptr) {
+    return;
+  }
+  // get reference path from ego lane
+  const auto& ego_reference_path = ego_lane->get_reference_path();
+  if (ego_reference_path == nullptr) {
+    return;
+  }
+  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return;
+  }
+
+  double ego_s = 0;
+  double ego_l = 0;
+  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+                              &ego_s, &ego_l)) {
+    return;
+  }
+
+  // vehicle param
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vehicle_length = vehicle_param.length;
+  const double rear_axle_to_rear_edge =
+      vehicle_length - vehicle_param.front_edge_to_rear_axle;
+  const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
+  const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
+  const double ego_rear_edge_s = ego_s - rear_axle_to_rear_edge;
+  const double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
+  const double ego_center_s = ego_s + rear_axle_to_center;
+
+  for (const auto* agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    if (agent->is_tfl_virtual_obs()) {
+      continue;
+    }
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+
+    const double half_length = agent->length() * 0.5;
+
+    bool is_no_need_expand_agent = false;
+    // update no need for expansion agents.
+    if (ego_front_edge_s > agent_s + half_length) {
+      is_no_need_expand_agent = true;
+    }
+
+    // filter consider rear agent
+    if (IsConsiderBackObs(ego_lane_coord, planning_init_point, agent,
+                          ego_front_edge_s, ego_rear_edge_s, ego_center_s,
+                          agent_s, agent_l)) {
+      continue;
+    }
+
+    // rear agents
+    // TODO: only insert ego_right_rear_node_id in target_lane_rear_agents
+    //       if want consider more rear agent, insert there
+    int64_t target_lane_rear_node_id = -1;
+    std::unordered_set<int32_t> target_lane_rear_agents;
+    if (is_in_lane_change_execution) {
+      if (lc_request_direction == LEFT_CHANGE) {
+        target_lane_rear_node_id = dynamic_world_->ego_left_rear_node_id();
+      } else if (lc_request_direction == RIGHT_CHANGE) {
+        target_lane_rear_node_id = dynamic_world_->ego_right_rear_node_id();
+      }
+    } else if (is_lane_change_complete) {
+      target_lane_rear_node_id = dynamic_world_->ego_rear_node_id();
+    }
+    if (target_lane_rear_node_id != -1) {
+      auto* target_lane_rear_node =
+          dynamic_world_->GetNode(target_lane_rear_node_id);
+      if (target_lane_rear_node != nullptr) {
+        target_lane_rear_agents.insert(target_lane_rear_node->node_agent_id());
+      }
+    }
+    if (is_in_lane_change_execution || is_lane_change_complete) {
+      if (target_lane_rear_agents.find(agent->agent_id()) !=
+          target_lane_rear_agents.end()) {
+        continue;
+      }
+    }
+
+    auto* mutable_agent =
+        mutable_agent_manager->mutable_agent(agent->agent_id());
+    if (mutable_agent == nullptr) {
+      continue;
+    }
+    mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+        agent::AgentDecisionType::IGNORE);
+  }
+}
+
+bool AgentLongitudinalDecider::IsConsiderBackObs(
+    const std::shared_ptr<KDPath> planned_path,
+    const PlanningInitPoint& init_point, const agent::Agent* agent,
+    const double ego_front_s, const double ego_back_s,
+    const double ego_center_s, const double agent_s,
+    const double agent_l) const {
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double k_agent_ignore_only_position_diff_thd =
+      -vehicle_param.length / 2.0;
+
+  auto& mutable_agent_manager =
+      session_->mutable_environmental_model()->mutable_agent_manager();
+  const double agent_half_length = agent->length() * 0.5;
+  const double agent_speed_diff = agent->speed() - init_point.v;
+  double front_corner_s = -std::numeric_limits<double>::max();
+  // double front_corner_l = -std::numeric_limits<double>::max();
+  std::vector<planning_math::Vec2d> corners;
+  agent->box().GetAllCorners(&corners);
+  for (const auto& corner : corners) {
+    double corner_s = 0.0;
+    double corner_l = 0.0;
+    if (!planned_path->XYToSL(corner.x(), corner.y(), &corner_s, &corner_l)) {
+      continue;
+    }
+    if (corner_s > front_corner_s) {
+      front_corner_s = corner_s;
+    }
+  }
+  if (std::fabs(front_corner_s) < -1.0e6) {
+    return true;
+  }
+
+  // 0.ego is slow(<15kph) and agent front s < ego center s
+  constexpr double kEgoSlowSpeedKph = 15.0;
+  const bool ignore_rear_agent_when_ego_slow =
+      (init_point.v * kMpsToKph < kEgoSlowSpeedKph) &&
+      (front_corner_s < ego_center_s);
+
+  // 1.agent is not cut-in and rear of ego
+  const bool filter_rear_no_cut_in_agent = FilterRearNoCutInAgent(
+      planned_path, init_point, ego_front_s, front_corner_s, agent);
+
+  const double front_edge_s_diff = front_corner_s - ego_front_s;
+  if ((agent_speed_diff < kIgnoreSpeedDiffThd &&
+       front_edge_s_diff < kAgentFrontEdgeSDiffThd) ||
+      front_edge_s_diff < k_agent_ignore_only_position_diff_thd ||
+      ignore_rear_agent_when_ego_slow || filter_rear_no_cut_in_agent) {
+    auto* mutable_agent =
+        mutable_agent_manager->mutable_agent(agent->agent_id());
+    if (mutable_agent == nullptr) {
+      return true;
+    }
+    return false;
+  }
+  return true;
+}
+
+bool AgentLongitudinalDecider::FilterRearNoCutInAgent(
+    const std::shared_ptr<KDPath> planned_path,
+    const PlanningInitPoint& init_point, const double ego_front_s,
+    const double agent_front_s, const agent::Agent* ptr_agent) const {
+  // 1.lane keeping
+  // 2.not cut-in
+  // 3.agent speed is fast(>40kph)
+  constexpr double kAgentLowerSpeedKph = 40.0;
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& ego_lane = virtual_lane_manager->get_current_lane();
+  const auto& lateral_behavior_planner_output =
+      session_->planning_context().lateral_behavior_planner_output();
+  const auto lane_change_status = lateral_behavior_planner_output.lc_status;
+  const auto lane_change_request = lateral_behavior_planner_output.lc_request;
+  const bool is_lane_keeping = lane_change_request == "none" ||
+                               lane_change_status == "none" ||
+                               lane_change_status == "left_lane_change_wait" ||
+                               lane_change_status == "right_lane_change_wait";
+  if (nullptr == virtual_lane_manager || nullptr == ego_lane ||
+      !is_lane_keeping || nullptr == ptr_agent ||
+      ptr_agent->is_prediction_cutin() ||
+      ptr_agent->speed() * kMpsToKph < kAgentLowerSpeedKph ||
+      ptr_agent->trajectories().empty()) {
+    return false;
+  }
+
+  // 4.agent is not in ego lane,but must at neighbor lane
+  double nearest_s = 0.0;
+  double nearest_l = 0.0;
+  const auto& ptr_obj_lane = virtual_lane_manager->GetNearestLane(
+      {ptr_agent->x(), ptr_agent->y()}, &nearest_s, &nearest_l);
+  if (nullptr == ptr_obj_lane ||
+      ptr_obj_lane->get_virtual_id() == ego_lane->get_virtual_id()) {
+    return false;
+  }
+
+  // 5.agent and ego lane is parallel
+  // 6.agent must be rear
+  const bool is_neighbor = std::abs(ptr_obj_lane->get_virtual_id() -
+                                    ego_lane->get_virtual_id()) == 1;
+  // const bool is_parallel =
+  // IsParallelToEgoLane(ptr_obj_lane->get_virtual_id());
+  const bool is_rear_agent = ego_front_s > agent_front_s;
+  if (!is_rear_agent || !is_neighbor) {
+    return false;
+  }
+
+  // 7.small heading diff
+  double agent_s = 0.0;
+  double agent_l = 0.0;
+  const auto& ego_lane_coord = ego_lane->get_lane_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return false;
+  }
+  ego_lane_coord->XYToSL(ptr_agent->x(), ptr_agent->y(), &agent_s, &agent_l);
+  if (agent_s < 0.0 || agent_s > ego_lane_coord->Length()) {
+    return false;
+  }
+  const auto ego_lane_point = ego_lane_coord->GetPathPointByS(agent_s);
+  const double heading_diff_with_lane = planning_math::NormalizeAngle(
+      ptr_agent->theta() - ego_lane_point.theta());
+  const double heading_diff_with_ego = planning_math::NormalizeAngle(
+      ptr_agent->theta() - init_point.heading_angle);
+  constexpr double kSmallHeadingDiff = 3 / 57.3;
+  const bool small_heading_diff = agent_l < kEpsilon
+                                      ? (heading_diff_with_lane < kSmallHeadingDiff/* &&
+                                         heading_diff_with_ego < kSmallHeadingDiff*/)
+                                      : (heading_diff_with_lane > -kSmallHeadingDiff /*&&
+                                         heading_diff_with_ego > -kSmallHeadingDiff*/);
+  if (!small_heading_diff) {
+    return false;
+  }
+
+  // 8.agent point(0s,1s,2s) has no overlap with ego planned_path
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vehicle_width = vehicle_param.width;
+  const double left_border_position = vehicle_width * 0.5;
+  const double right_border_position = -left_border_position;
+  const auto& trajectory = ptr_agent->trajectories().front();
+  const double relative_time = init_point.relative_time;
+  constexpr double kExpandBuffer = 0.35;
+  std::vector<double> check_time{relative_time + 0.1, relative_time + 1.0,
+                                 relative_time + 2.0};
+  for (const double t : check_time) {
+    const auto point = trajectory.Evaluate(t);
+
+    Box2d obs_box(Vec2d(point.x(), point.y()), point.theta(),
+                  ptr_agent->length(),
+                  ptr_agent->width() + 2.0 * kExpandBuffer);
+    double min_s = std::numeric_limits<double>::max();
+    double max_s = std::numeric_limits<double>::lowest();
+    double min_l = std::numeric_limits<double>::max();
+    double max_l = std::numeric_limits<double>::lowest();
+    CalculateAgentSLBoundary(planned_path, obs_box, &min_s, &max_s, &min_l,
+                             &max_l);
+    const double check_l = agent_l < kEpsilon ? max_l : min_l;
+    const bool has_overlap = agent_l < kEpsilon
+                                 ? check_l > right_border_position
+                                 : check_l < left_border_position;
+    if (has_overlap) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void AgentLongitudinalDecider::FilterUltradistantObs() {
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  auto& mutable_agent_manager =
+      session_->mutable_environmental_model()->mutable_agent_manager();
+  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
+    return;
+  }
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  if (agents.empty()) {
+    return;
+  }
+
+  // get ego_lane
+  const auto& ego_lane = virtual_lane_manager_->get_current_lane();
+  if (ego_lane == nullptr) {
+    return;
+  }
+  // get reference path from ego lane
+  const auto& ego_reference_path = ego_lane->get_reference_path();
+  if (ego_reference_path == nullptr) {
+    return;
+  }
+  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return;
+  }
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  if (ego_state_manager == nullptr) {
+    return;
+  }
+  const auto& planning_init_point = ego_state_manager->planning_init_point();
+
+  double ego_s = 0;
+  double ego_l = 0;
+  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+                              &ego_s, &ego_l)) {
+    return;
+  }
+
+  // vehicle param
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vehicle_length = vehicle_param.length;
+  const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
+  const double ego_front_edge_s = ego_s + rear_axle_to_front_edge;
+
+  double filter_ultra_distance = kFilterUltraDistanceHighThd;
+  filter_ultra_distance =
+      GetFilterUltraDistanceWithEgoVel(planning_init_point.v);
+
+  for (const auto* agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+
+    const double half_length = agent->length() * 0.5;
+    const double s_diff = (agent_s - half_length) - ego_front_edge_s;
+
+    if (s_diff < filter_ultra_distance) {
+      continue;
+    }
+    auto* mutable_agent =
+        mutable_agent_manager->mutable_agent(agent->agent_id());
+    if (mutable_agent == nullptr) {
+      continue;
+    }
+    mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+        agent::AgentDecisionType::IGNORE);
+  }
+}
+
+// void AgentLongitudinalDecider::FilterReverseAgents() {}
+
+double AgentLongitudinalDecider::GetFilterUltraDistanceWithEgoVel(
+    const double ego_vel) const {
+  std::array<double, 3> speed{100.0, 110.0, 120.0};
+  std::array<double, 3> max_distance{150.0, 170.0, 200.0};
+  const double mps_to_kph = 3.6;
+  double distance = interp(ego_vel * mps_to_kph, speed, max_distance);  // kmph
+  return distance;
+}
 
 }  // namespace planning

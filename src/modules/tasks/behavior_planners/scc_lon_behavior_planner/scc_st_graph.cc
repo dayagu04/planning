@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include "agent/agent.h"
 #include "agent_node_manager.h"
 #include "basic_types.pb.h"
 #include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
@@ -2775,7 +2776,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
         kConfideceDegree * v_limit_narrow + (1 - kConfideceDegree) * v_ego;
     // distinguish narrow cone/narrow vehicle
     double v_limit_lower = 0.0;
-    if (agent->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+    if (agent->type() == agent::AgentType::TRAFFIC_CONE) {
       v_limit_lower = kMinNarrowConeSpeed;
     } else if (agent->is_vehicle_type()) {
       v_limit_lower = kMinNarrowVehicleSpeed;
