@@ -232,7 +232,8 @@ class StGraphGenerator {
                              const std::string &lc_request);
   double MergeDesiredDistanceFilter(const double v_ego, double safe_distance,
                                     double desired_distance,
-                                    const agent::Agent *merge_target, const string& merge_target_name);
+                                    const agent::Agent *merge_target,
+                                    const string &merge_target_name);
 
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
                              const double &agent_min_l);
@@ -247,7 +248,10 @@ class StGraphGenerator {
   bool FilterEgoNearByAgentsWhenMerge(
       const int32_t agent_id,
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-      const std::shared_ptr<VirtualLane> ego_lane);
+      const std::shared_ptr<VirtualLane> ego_lane,
+      const string &agent_semanctic_orientation_to_ego);
+  bool FilterEgoNearByAgentsWhenMerge(
+      const string &agent_semanctic_orientation_to_ego, const double t_overlap);
 
   void MergeInfoReset();
 

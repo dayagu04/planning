@@ -57,6 +57,7 @@ constexpr double kConfideceDegree = 0.8;
 constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
+constexpr double kRearAgentEntrySTTimeThrd = 1.8;
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -3125,7 +3126,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       const auto left_rear_agent_id =
           dynamic_world->GetNode(ego_left_rear_node_id)->node_agent_id();
       if (!FilterEgoNearByAgentsWhenMerge(left_rear_agent_id, dynamic_world,
-                                          current_lane)) {
+                                          current_lane, "ego_left_rear")) {
         CalculateMergeInfoWithAgent(left_rear_agent_id, true, "ego_left_rear");
       }
     }
@@ -3143,7 +3144,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       if (lead_one_id != ego_left_front_agent_id &&
           lead_two_id != ego_left_front_agent_id &&
           !FilterEgoNearByAgentsWhenMerge(ego_left_front_agent_id,
-                                          dynamic_world, current_lane)) {
+                                          dynamic_world, current_lane,
+                                          "ego_left_front")) {
         CalculateMergeInfoWithAgent(ego_left_front_agent_id, true,
                                     "ego_left_front");
       }
@@ -3168,7 +3170,7 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       const auto right_rear_agent_id =
           dynamic_world->GetNode(ego_right_rear_node_id)->node_agent_id();
       if (!FilterEgoNearByAgentsWhenMerge(right_rear_agent_id, dynamic_world,
-                                          current_lane)) {
+                                          current_lane, "ego_right_rear")) {
         CalculateMergeInfoWithAgent(right_rear_agent_id, false,
                                     "ego_right_rear");
       }
@@ -3187,7 +3189,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
       if (lead_one_id != ego_right_front_agent_id &&
           lead_two_id != ego_right_front_agent_id &&
           !FilterEgoNearByAgentsWhenMerge(ego_right_front_agent_id,
-                                          dynamic_world, current_lane)) {
+                                          dynamic_world, current_lane,
+                                          "ego_right_front")) {
         CalculateMergeInfoWithAgent(ego_right_front_agent_id, false,
                                     "ego_right_front");
       }
@@ -3385,7 +3388,8 @@ bool StGraphGenerator::EgoHasRightOfTargetLaneJudge(
 bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
     const int32_t agent_id,
     std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-    const std::shared_ptr<VirtualLane> ego_lane) {
+    const std::shared_ptr<VirtualLane> ego_lane,
+    const string &agent_semanctic_orientation_to_ego) {
   const auto agent_manager = dynamic_world->agent_manager();
   const auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -3395,6 +3399,7 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
   }
   // filter rear agent
   const double agent_length = agent->length();
+  const double agent_width = agent->width();
   const auto ego_lane_width = ego_lane->width();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -3430,9 +3435,10 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
   const double distance_current_relative =
       agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x +
       agent_length * 0.5 + ego_rear_edge_to_rear_axle;
-  if (distance_current_relative < -kRearAgentFollowEgoSafeDistance &&
+  if (/*distance_current_relative < -kRearAgentFollowEgoSafeDistance &&*/
+      agent_semanctic_orientation_to_ego.find("rear") != std::string::npos &&
       fabs(ego_current_sl_to_ego_lane.y) <
-          0.5 * ego_lane_width + kLaneWidthBuffer) {
+          0.5 * ego_lane_width + 0.5 * agent_width + kLaneWidthBuffer) {
     return true;
   }
 
@@ -3454,6 +3460,15 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
     return true;
   }
 
+  return false;
+}
+
+bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
+    const string &agent_semanctic_orientation_to_ego, const double t_overlap) {
+  if (agent_semanctic_orientation_to_ego.find("rear") != std::string::npos &&
+      t_overlap > kRearAgentEntrySTTimeThrd) {
+    return true;
+  }
   return false;
 }
 
@@ -3694,6 +3709,11 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
     if (merge_direction_ == MergeSplitPoints::LEFT) {
       if (min_l_by_lat_path < interest_capture_agent_lat_width_in_lat_path) {
         t_overlap = i * step_t;
+        if (FilterEgoNearByAgentsWhenMerge(semantic_orientation_to_ego,
+                                           t_overlap)) {
+          t_overlap = std::numeric_limits<double>::max();
+          break;
+        }
         distance_overlap = lat_path_s_t_spline(i * step_t);
         v_overlap = agent_prediction.raw_vel;
         if (ego_lane_coord != nullptr) {
@@ -3738,6 +3758,11 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
     } else if (merge_direction_ == MergeSplitPoints::RIGHT) {
       if (max_l_by_lat_path > -interest_capture_agent_lat_width_in_lat_path) {
         t_overlap = i * step_t;
+        if (FilterEgoNearByAgentsWhenMerge(semantic_orientation_to_ego,
+                                           t_overlap)) {
+          t_overlap = std::numeric_limits<double>::max();
+          break;
+        }
         distance_overlap = lat_path_s_t_spline(i * step_t);
         v_overlap = agent_prediction.raw_vel;
         if (ego_lane_coord != nullptr) {
