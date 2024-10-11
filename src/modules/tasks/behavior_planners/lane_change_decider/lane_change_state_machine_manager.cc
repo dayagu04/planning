@@ -1376,7 +1376,7 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
           //       (tr.d_min_cpath +
           //           tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
           //       lat_thre)))
-          if (tr.d_rel > -5 - mss) {
+          if (tr.d_rel > -5 - mss * 0.7) {
             lc_state_info->lc_should_back = true;
             lc_state_info->lc_back_reason = "side view back";
             lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
