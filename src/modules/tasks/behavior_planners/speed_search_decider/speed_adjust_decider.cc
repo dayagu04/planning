@@ -674,7 +674,8 @@ int SpeedAdjustDecider::SelectBestSlot() {
     max_ego_speed_in_speed_adjust_ =
         std::fmax(max_ego_speed_in_speed_adjust_, init_va_.first);
     min_ego_speed_in_speed_adjust_ =
-        std::fmin(min_ego_speed_in_speed_adjust_, init_va_.first);
+        std::fmax(std::fmin(min_ego_speed_in_speed_adjust_, init_va_.first),
+                  origin_ego_speed_);
   }
   last_best_slot_ = slot_point_info_[best_slot_id];
 
