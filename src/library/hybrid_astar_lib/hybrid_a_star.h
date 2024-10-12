@@ -121,6 +121,9 @@ class HybridAStar {
                              HybridAStarResult* result,
                              EulerDistanceTransform* edt);
 
+  // for debug
+  void DebugPathString(const HybridAStarResult* result) const;
+
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,
@@ -260,9 +263,6 @@ class HybridAStar {
 
   // for debug
   void DebugLineSegment(const ad_common::math::LineSegment2d& line) const;
-
-  // for debug
-  void DebugPathString(const HybridAStarResult* result) const;
 
   void RSPathCandidateByRadius(HybridAStarResult* result, const Pose2D& start,
                                const Pose2D& end,

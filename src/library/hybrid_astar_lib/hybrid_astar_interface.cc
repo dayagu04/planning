@@ -470,19 +470,20 @@ int HybridAStarInterface::ExtendPathToRealParkSpacePoint(
   }
 
   double x_diff = real_end.x - result->x.back();
-  double y_diff = real_end.x - result->y.back();
+  double y_diff = real_end.y - result->y.back();
   double dist_diff = std::sqrt(x_diff * x_diff + y_diff * y_diff);
+  if (dist_diff > 1e-2) {
+    double last_s = result->accumulated_s.back();
 
-  double last_s = result->accumulated_s.back();
-
-  // add end
-  result->x.emplace_back(real_end.x);
-  result->y.emplace_back(real_end.y);
-  result->phi.emplace_back(real_end.theta);
-  result->gear.emplace_back(gear);
-  result->type.emplace_back(path_type);
-  result->accumulated_s.emplace_back(last_s + dist_diff);
-  result->kappa.emplace_back(0);
+    // add end
+    result->x.emplace_back(real_end.x);
+    result->y.emplace_back(real_end.y);
+    result->phi.emplace_back(real_end.theta);
+    result->gear.emplace_back(gear);
+    result->type.emplace_back(path_type);
+    result->accumulated_s.emplace_back(last_s + dist_diff);
+    result->kappa.emplace_back(0);
+  }
 
   return 0;
 }

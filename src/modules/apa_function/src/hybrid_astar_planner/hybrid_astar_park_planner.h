@@ -104,6 +104,14 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
                                          const double slot_width,
                                          const double slot_len);
 
+  const double CalRemainDistFromPath() override;
+
+  size_t GetNearestPathPoint(
+      const std::vector<pnc::geometry_lib::PathPoint>& path,
+      const Pose2D& pose);
+
+  void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 

@@ -3466,21 +3466,19 @@ void HybridAStar::DebugObstacleString() const {
 }
 
 void HybridAStar::DebugPathString(const HybridAStarResult* result) const {
-  // ILOG_INFO << "result, x size " << result->x.size() << " gear size "
-  //           << result->gear.size() << "y size " << result->y.size()
-  //           << "phi size " << result->phi.size() << "type size "
-  //           << result->type.size() << "s size " <<
-  //           result->accumulated_s.size();
+  ILOG_INFO << "path x point size " << result->x.size() << " gear size "
+            << result->gear.size() << "y size " << result->y.size()
+            << "phi size " << result->phi.size() << "type size "
+            << result->type.size() << "s size " <<
+            result->accumulated_s.size();
 
-  // for (size_t i = 0; i < result->x.size(); i++) {
-  //   ILOG_INFO << "i " << i << " x,y, theta, gear:  " << result->x[i] << " "
-  //             << result->y[i] << " " << result->phi[i] * 57.4 << " , "
-  //             << PathGearDebugString(result->gear[i]) << " ,type "
-  //             << static_cast<int>(result->type[i]) << ", s "
-  //             << result->accumulated_s[i];
-  // }
-
-  // ILOG_INFO << "path end";
+  for (size_t i = 0; i < result->x.size(); i++) {
+    ILOG_INFO << "i = " << i << " x, y, theta, gear:  " << result->x[i] << ", "
+              << result->y[i] << ", " << result->phi[i] * 57.4 << ", "
+              << PathGearDebugString(result->gear[i]) << ",paht type = "
+              << static_cast<int>(result->type[i]) << ", s = "
+              << result->accumulated_s[i];
+  }
 
   return;
 }
