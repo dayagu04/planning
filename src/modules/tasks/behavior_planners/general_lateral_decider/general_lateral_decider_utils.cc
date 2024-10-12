@@ -140,8 +140,9 @@ std::vector<int> MatchRefTrajPoints(int s,
 TrajectoryPoint GetTrajectoryPointAtTime(
     const TrajectoryPoints trajectory_points, const double relative_time) {
   const auto &points = trajectory_points;
-  if (trajectory_points.size() == 0) {
-  } else if (trajectory_points.size() == 1) {
+  if (trajectory_points.size() < 2) {
+    TrajectoryPoint point;
+    return point;
   } else {
     auto comp = [](const TrajectoryPoint &p, const double time) {
       return p.t < time;
