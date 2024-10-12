@@ -59,7 +59,7 @@ class HybridAStar {
                 const MapBound& XYbounds, const ParkObstacleList& obstacles,
                 const AstarRequest& request,
                 const ObstacleClearZone* clear_zone, HybridAStarResult* result,
-                EulerDistanceTransform* edt);
+                EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
 
   // no astar search, just use rs path link start point and end point to adjust
   // ego position.
@@ -69,14 +69,16 @@ class HybridAStar {
                         const ParkObstacleList& obstacles,
                         const AstarRequest& request,
                         const ObstacleClearZone *clear_zone,
-                        EulerDistanceTransform* edt);
+                        EulerDistanceTransform* edt,
+                        ParkReferenceLine* ref_line);
 
   // use rs path sampling to link start point and end point.
   bool PlanByRSPathSampling(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
       const double lon_min_sampling_length, const MapBound& XYbounds,
       const ParkObstacleList& obstacles, const AstarRequest& request,
-      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone);
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
 
   // use cubic path sampling to link start point and end point.
   bool PlanByCubicPath(HybridAStarResult* result, const Pose2D& start,
@@ -84,7 +86,8 @@ class HybridAStar {
                        const MapBound& XYbounds,
                        const ParkObstacleList& obstacles,
                        const AstarRequest& request, EulerDistanceTransform* edt,
-                       const ObstacleClearZone* clear_zone);
+                       const ObstacleClearZone* clear_zone,
+                       ParkReferenceLine* ref_line);
 
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);
@@ -107,7 +110,7 @@ class HybridAStar {
   // for debug
   void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
-  const ParkReferenceLine& GetConstRefLine() const;
+  const ParkReferenceLine* GetConstRefLine() const;
 
   void Clear();
 
@@ -119,7 +122,8 @@ class HybridAStar {
                              const AstarRequest& request,
                              const ObstacleClearZone* clear_zone,
                              HybridAStarResult* result,
-                             EulerDistanceTransform* edt);
+                             EulerDistanceTransform* edt,
+                             ParkReferenceLine* ref_line);
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
@@ -348,7 +352,7 @@ class HybridAStar {
 
   std::unique_ptr<GridSearch> dp_heuristic_generator_;
 
-  ParkReferenceLine ref_line_;
+  ParkReferenceLine *ref_line_;
 
   AstarRequest request_;
 

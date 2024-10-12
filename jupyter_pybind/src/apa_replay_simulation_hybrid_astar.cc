@@ -100,6 +100,9 @@ Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
+// all search node, not only include: open + close, and include deleted node.
+std::vector<Eigen::Vector3d> all_searched_node_;
+
 int Init() {
   FilePath::SetName("open_space_replay");
   InitGlog(FilePath::GetName().c_str());
@@ -287,6 +290,23 @@ int GetPathFromHybridAstar() {
   // 基坐标位置
   coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
   coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
+
+  // plot all searched node
+  const std::vector<DebugAstarSearchPoint> &all_search_node =
+      hybrid_astar_interface_->GetChildNodeForDebug();
+
+  all_searched_node_.clear();
+  double is_safe = 0;
+  for (i = 0; i < all_search_node.size(); i++) {
+    local_position.x = all_search_node[i].pos.x;
+    local_position.y = all_search_node[i].pos.y;
+    tf.ULFLocalPoseToGlobal(&global_position, local_position);
+
+    is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+
+    all_searched_node_.emplace_back(
+        Eigen::Vector3d(global_position.x, global_position.y, is_safe));
+  }
 
   return 0;
 }
@@ -918,6 +938,10 @@ const Eigen::Vector3d GetCoordinateSystem() {
   return coordinate_system_;
 }
 
+const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+  return all_searched_node_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -944,5 +968,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetPlotRefLine", &GetPlotRefLine)
       .def("GetSearchSequencePath", &GetSearchSequencePath)
       .def("GetCoordinateSystem", &GetCoordinateSystem)
+      .def("GetAllSearchNode", &GetAllSearchNode)
       .def("GetDynamicState", &GetDynamicState);
 }

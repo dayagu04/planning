@@ -150,6 +150,7 @@ class HybridAStarInterface {
 
   OccupancyGridMap ogm_;
   EulerDistanceTransform edt_;
+  ParkReferenceLine ref_line_;
 };
 
 }  // namespace planning

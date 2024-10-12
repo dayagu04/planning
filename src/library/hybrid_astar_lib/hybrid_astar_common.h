@@ -280,4 +280,6 @@ std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
 
+bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
+
 }  // namespace planning

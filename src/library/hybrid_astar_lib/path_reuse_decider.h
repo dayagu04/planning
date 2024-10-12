@@ -2,7 +2,7 @@
 
 #include "astar_decider.h"
 #include "hybrid_astar_common.h"
-#include "drive_distance_decider.h"
+#include "future_path_decider.h"
 
 namespace planning {
 
@@ -15,7 +15,7 @@ class PathReuseDecider : public AstarDecider {
 
   void Process(HybridAStarResult* path, const HybridAStarResult* history_path,
                const Pose2D& current_slot_pose,
-               const InferenceNextPathInfo* next_shot_info);
+               const HistoryPathDriveInfo* next_shot_info);
 
   const bool IsReusePath();
 

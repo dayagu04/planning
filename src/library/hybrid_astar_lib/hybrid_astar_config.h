@@ -46,6 +46,7 @@ struct PlannerOpenSpaceConfig {
   std::vector<double> lon_hierarchy_safe_buffer;
 
   double expect_gear_penalty;
+  double expect_dist_penalty;
 
   double lon_front_safe_buffer = 0.5;
   double lon_back_safe_buffer = 0.1;

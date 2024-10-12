@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241008/20241008-16-29-01/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-10-08-16-29-01_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241009/20241009-16-54-58/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-10-09-16-54-58_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -142,6 +142,8 @@ data_plot_ref_line = ColumnDataSource(data={'plan_path_x': [],
                                       })
 data_search_sequence_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
+data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 
 fig1.circle('plan_path_y', 'plan_path_x', source = data_planning_left, size = 4, color = 'green', legend_label = 'cur_path_left')
@@ -168,7 +170,8 @@ fig1.multi_line('y', 'x',source = all_rs_heuristic_path, line_width = 1.5, line_
 fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend_label = 'virtual_wall')
 fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
 fig1.line('y_vec', 'x_vec', source = data_search_sequence_path, line_width = 2, line_color = 'blue', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_sequence',visible = False)
-
+fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
+fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
 ### sliders config
 class LocalViewSlider:
@@ -384,7 +387,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   #           'y_vec': [],
   #       })
 
-  if 0:
+  if 1:
     if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
       for i in range(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points_size):
         path_point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
@@ -1092,6 +1095,35 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   data_coordinate_system.data.update({
     'x': [pose[0]],
     'y': [pose[1]],
+  })
+
+  # all search node
+  data_all_search_node.data.update({
+      'x_vec': [],
+      'y_vec': [],
+  })
+
+  nodes = replay_simulation_hybrid_astar.GetAllSearchNode()
+  safe_node_x = []
+  safe_node_y = []
+  collision_node_x = []
+  collision_node_y = []
+
+  for i in range(len(nodes)):
+    if (nodes[i][2] > 0.8):
+      safe_node_x.append(nodes[i][0])
+      safe_node_y.append(nodes[i][1])
+    else:
+      collision_node_x.append(nodes[i][0])
+      collision_node_y.append(nodes[i][1])
+
+  data_all_search_node.data.update({
+    'x_vec': safe_node_x,
+    'y_vec': safe_node_y
+  })
+  data_all_search_collision_node.data.update({
+    'x_vec': collision_node_x,
+    'y_vec': collision_node_y
   })
 
   if (is_reset):

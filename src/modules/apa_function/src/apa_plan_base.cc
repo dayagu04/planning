@@ -5,6 +5,7 @@
 #include "apa_utils.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
@@ -310,6 +311,7 @@ const bool ApaPlannerBase::PostProcessPath() {
     frame_.spline_success = false;
     DEBUG_PRINT("fit line by spline error!");
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SAME;
+    ILOG_INFO << "POST_PROCESS_PATH_POINT_SAME";
     return false;
   }
 
