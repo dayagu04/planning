@@ -110,6 +110,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
       const std::vector<pnc::geometry_lib::PathPoint>& path,
       const Pose2D& pose);
 
+  void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 

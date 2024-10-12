@@ -296,6 +296,8 @@ void HybridAStarParkPlanner::PlanCore() {
     ILOG_INFO << "use history path";
   }
 
+  // DebugPathString(current_path_point_global_vec_);
+
   return;
 }
 
@@ -710,12 +712,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
                 << ",dist = " << path_dist
                 << ",gear_change_num=" << response.result.gear_change_num;
 
-      // if (response.kappa_change_too_much) {
-      //   ILOG_INFO << "path kappa change too much";
-
-      // } else {
-      // }
-
       PathOptimizationByCILRQ(path_dist, local_path, &response_tf);
 
       double lqr_end_time = IflyTime::Now_ms();
@@ -777,7 +773,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
     ILOG_INFO << "has input";
   }
 
-  ILOG_INFO << "path size " << current_path_point_global_vec_.size();
+  // DebugPathString(current_path_point_global_vec_);
 
   return res;
 }
@@ -1503,6 +1499,15 @@ size_t HybridAStarParkPlanner::GetNearestPathPoint(
   }
 
   return nearest_id;
+}
+
+void HybridAStarParkPlanner::DebugPathString(
+    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+  for (size_t i = 0; i < path.size(); i++) {
+    ILOG_INFO << "i = " << i << ",x = " << path[i].pos.x()
+              << ",y = " << path[i].pos.y();
+  }
+  return;
 }
 
 }  // namespace apa_planner
