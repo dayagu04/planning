@@ -2353,7 +2353,8 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     const bool traffic_light_start_condition = current_traffic_light_can_pass_;
     const bool traffic_light_stop_condition =
         !current_traffic_light_can_pass_ && v_ego < v_start;
-    bool cruise_condition = v_ego > v_startmode || v_last_target_ > v_target_;
+    bool cruise_condition =
+        v_ego > v_startmode /*|| v_last_target_ > v_target_*/;
     //  Update the state
     if (start_stop_info_.state() == common::StartStopInfo::CRUISE &&
         traffic_light_stop_condition) {
@@ -2386,7 +2387,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
           (v_ego < v_start && is_lead_static &&
            std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
       bool cruise_condition =
-          v_ego > v_startmode || (v_last_target_ > v_target_);
+          v_ego > v_startmode /*|| (v_last_target_ > v_target_)*/;
       bool lead_one_start =
           (lead_one.v_lead() > obstacle_v_start &&
            (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
@@ -4244,8 +4245,14 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.v_end = v_target_;
   state_limit.a_min = acc_target_.first;
   state_limit.a_max = acc_target_.second;
-  state_limit.j_min = -1.0;
+  state_limit.j_min = -1.0;   
   state_limit.j_max = 1.5;
+  if (start_stop_info_.state() == common::StartStopInfo::START) {
+    state_limit.a_min = acc_target_.first;
+    state_limit.a_max = config_.acc_start_max_bound;
+    state_limit.j_min = -2.0;
+    state_limit.j_max = 2.5;
+  }
 
   if (v_limit_on_turns_and_road_ == v_target_) {
     state_limit.a_min = config_.acc_lower_bound_in_large_curv;
