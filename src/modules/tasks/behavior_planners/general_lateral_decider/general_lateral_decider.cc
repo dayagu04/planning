@@ -2548,6 +2548,18 @@ void GeneralLateralDecider::SaveLatDebugInfo(
     soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
   }
 
+  // 障碍物决策是否存在跳动
+  lat_debug_info_.mutable_obstacle_ids()->Resize(dynamic_obstacle_decisions_.size() + static_obstacle_decisions_.size(), 0);
+  int i = 0;
+  for (const auto&dynamic_obstacle_decision : dynamic_obstacle_decisions_) {
+    lat_debug_info_.mutable_obstacle_ids()->Set(i, dynamic_obstacle_decision.first);
+    i++;
+  }
+  for (const auto&static_obstacle_decision : static_obstacle_decisions_) {
+    lat_debug_info_.mutable_obstacle_ids()->Set(i, static_obstacle_decision.first);
+    i++;
+  }
+
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_lateral_behavior_debug_info()
