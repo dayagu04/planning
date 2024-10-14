@@ -34,4 +34,5 @@ message Obstacle {
   optional bool current_lead_obstacle_to_ego = 22;
   optional double cutin_p = 23;
   optional uint32 lat_decision = 24;
+  optional bool is_static = 25;
 }

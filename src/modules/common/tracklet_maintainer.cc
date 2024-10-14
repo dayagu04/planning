@@ -766,6 +766,7 @@ void TrackletMaintainer::calc(
     obstacle->set_is_avoid_car(tr->is_avd_car);
     obstacle->set_is_lane_lead_obstacle(tr->is_lead);
     obstacle->set_current_lead_obstacle_to_ego(tr->is_temp_lead);
+    obstacle->set_is_static(tr->is_static);
     // obstacle->set_cutin_p(tr->cutinp);
   }
 
