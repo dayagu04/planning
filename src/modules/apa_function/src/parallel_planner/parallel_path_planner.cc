@@ -34,11 +34,10 @@ static const double kMaxParkOutFirstArcHeading = 66.0;
 static const double kMaxParkOutRootHeading = 25.0;
 
 static const double kLonBufferTrippleStep = 0.2;
-static const double kLatBufferTrippleStep = 0.05;
+// static const double kLatBufferTrippleStep = 0.05;
 static const double kColBufferInSlot = 0.2;
 static const double kColBufferOutSlot = 0.5;
 static const double kColLargeLatBufferOutSlot = 0.56;
-static const double kColSmallLonBufferOutSlot = 0.3;
 static const double kColSmallLatBufferOutSlot = 0.1;
 static const double kSmallColBufferInSlot = 0.1;
 
@@ -51,8 +50,6 @@ static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
 static const double kMaxHeadingFirstStepForwardLine = 5.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 1.36;
-static const double kFirstStepForwardLineLonBuffer = 0.15;
-static const double kFirstStepArcLatBuffer = 0.36;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
 static const double kMinTlaneAddedLength = 0.8;
@@ -62,13 +59,6 @@ static const double kLineStepLength = 0.16;
 static const double k1dExtendLength = 0.36;
 
 static const size_t kInvalidInteger = 666;
-
-static const std::vector<double> kPrepareTargetLineDeltaHeadingTab = {
-    10.0 / 57.3, 12.0 / 57.3, 8.0 / 57.3};
-
-static const std::vector<Eigen::Vector2d> kPrepareTargetLinePosTab = {
-    Eigen::Vector2d(0.0, 0.0), Eigen::Vector2d(0.0, 0.0),
-    Eigen::Vector2d(0.0, 0.0)};
 
 void ParallelPathPlanner::Reset() {
   output_.Reset();
