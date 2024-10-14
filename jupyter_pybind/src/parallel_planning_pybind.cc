@@ -226,6 +226,23 @@ void SampleAllDebugPaths() {
   }
 }
 
+std::vector<std::vector<double>> GetTraSearchOutPath() {
+  std::vector<double> path_x_vec;
+  std::vector<double> path_y_vec;
+  std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
+
+  pBase->SamplePathSeg(path_point_vec,
+                       pBase->GetDebugInfo().tra_search_out_res);
+  for (const auto point : path_point_vec) {
+    path_x_vec.emplace_back(point.pos.x());
+    path_y_vec.emplace_back(point.pos.y());
+  }
+  std::vector<std::vector<double>> res;
+  res.emplace_back(path_x_vec);
+  res.emplace_back(path_y_vec);
+  return res;
+}
+
 std::vector<std::vector<double>> GetDebugPathsX() { return debug_paths_x; }
 std::vector<std::vector<double>> GetDebugPathsY() { return debug_paths_y; }
 
@@ -322,6 +339,7 @@ PYBIND11_MODULE(parallel_planning_py, m) {
   m.def("Init", &Init)
       .def("Update", &Update)
       .def("SampleAllDebugPaths", &SampleAllDebugPaths)
+      .def("GetTraSearchOutPath", &GetTraSearchOutPath)
       .def("GetDebugPathsX", &GetDebugPathsX)
       .def("GetDebugPathsY", &GetDebugPathsY)
       .def("GetPathEle", &GetPathEle)

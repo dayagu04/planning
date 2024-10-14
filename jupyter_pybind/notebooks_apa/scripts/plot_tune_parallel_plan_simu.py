@@ -33,6 +33,7 @@ data_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 data_target_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 
 data_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[], 'theta_vec':[]})
+data_tra_search_out_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_debug_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
@@ -134,7 +135,7 @@ callback_code = """
 callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
 # Attach the callback to the Tap event on the plot
 fig1.js_on_event(Tap, callback)
-
+fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible =True)
 fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path')
 fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'car_path')
 
@@ -368,12 +369,16 @@ def slider_callback(is_all_path, ego_x, ego_y, ego_heading,
     # 将 C++ 返回的二维数据转换为 Python 列表列表格式
     x_vec = [list(x_path) for x_path in x_debug_paths]
     y_vec = [list(y_path) for y_path in y_debug_paths]
-    print("x_vec size = ", len(x_vec))
-    print("y_vec size = ", len(y_vec))
     data_all_debug_path.data.update({
       'x_vec': x_vec,
       'y_vec': y_vec,
     })
+
+  tra_search_out_path = parallel_planning_py.GetTraSearchOutPath()
+  data_tra_search_out_path.data.update({
+     'x_vec': tra_search_out_path[0],
+     'y_vec': tra_search_out_path[1],
+  })
 
   # obstacles
   data_obs_pt.data.update({

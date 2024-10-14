@@ -69,10 +69,8 @@ void CollisionDetector::Init() {
 }
 
 void CollisionDetector::SetParam(const Paramters &param) {
-  if (std::fabs(param_.lat_inflation - param.lat_inflation) > 0.001) {
-    param_ = param;
-    SetLatInflation();
-  }
+  param_ = param;
+  SetLatInflation();
 }
 
 void CollisionDetector::SetLatInflation() { Init(); }

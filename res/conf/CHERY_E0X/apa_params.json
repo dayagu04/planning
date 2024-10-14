@@ -166,7 +166,7 @@
   "parallel_channel_y_mag": 7.9,
   "parallel_channel_x_mag": 20.0,
   "parallel_ego_side_to_obs_in_buffer": 0.25,
-  "parallel_ego_front_corner_to_obs_in_buffer": 0.05,
+  "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
 
   "comment_12": "dynamic update path params",
   "car_to_limiter_dis": 1.0,

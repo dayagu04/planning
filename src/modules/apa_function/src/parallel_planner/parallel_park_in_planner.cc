@@ -1307,6 +1307,17 @@ const uint8_t ParallelParkInPlanner::PathPlanOnce() {
       parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
           extend_lenth);
     }
+  } else {
+    const auto& end_pose =
+        path_planner_output
+            .path_segment_vec[path_planner_output.path_seg_index.second]
+            .GetEndPose();
+
+    if (std::fabs(end_pose.pos.y()) > 0.5) {
+      const double extend_lenth = 0.36;
+      parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+          extend_lenth);
+    }
   }
   parallel_path_planner_.SampleCurrentPathSeg();
 

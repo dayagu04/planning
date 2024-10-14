@@ -127,6 +127,7 @@ class ParallelPathPlanner : public ApaPathPlanner {
   struct DebugInfo {
     std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
     std::vector<GeometryPath> debug_all_path_vec;
+    std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
   };
 
  public:
@@ -310,6 +311,10 @@ class ParallelPathPlanner : public ApaPathPlanner {
   void AddPathSegVecToOutput(
       const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
 
+  const bool MultiPlan(std::vector<GeometryPath> &path_vec,
+                       const pnc::geometry_lib::PathPoint &start_pose,
+                       const pnc::geometry_lib::PathPoint &target_pose,
+                       const uint8_t ref_gear);
   // multi plan
   const bool MultiPlan();
   const bool CheckMultiPlanSuitable(
