@@ -2647,7 +2647,6 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   // 100 ms
   constexpr double dp_max_search_time = 100.0;
 
-  size_t node_id;
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
   Node3d new_node;
@@ -2655,7 +2654,6 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   AstarNodeVisitedType vis_type;
   PathGearRequest gear_request = PathGearRequest::GEAR_REVERSE_ONLY;
   bool is_safe = false;
-  bool find_better_node = false;
   double child_node_dist;
   double father_node_dist;
   NodeShrinkType node_shrink_type;
