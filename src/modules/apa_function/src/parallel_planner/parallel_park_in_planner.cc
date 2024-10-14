@@ -672,17 +672,16 @@ void ParallelParkInPlanner::GenTlane() {
   }
 
   // if curb exist, combine curb and slot center line to decide target y
-  if (curb_count > 3) {
-    const double target_y_with_curb =
-        curb_y_limit +
-        side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
-                    0.5 * apa_param.GetParam().car_width);
-
-    frame_.ego_slot_info.target_ego_pos_slot.y() =
-        (side_sgn > 0.0
-             ? std::max(t_lane_.pt_terminal_pos.y(), target_y_with_curb)
-             : std::min(t_lane_.pt_terminal_pos.y(), target_y_with_curb));
-  }
+  // if (curb_count > 1) {
+  // }
+  const double target_y_with_curb =
+      curb_y_limit +
+      side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
+                  0.5 * apa_param.GetParam().car_width);
+  frame_.ego_slot_info.target_ego_pos_slot.y() =
+      (side_sgn > 0.0
+           ? std::max(t_lane_.pt_terminal_pos.y(), target_y_with_curb)
+           : std::min(t_lane_.pt_terminal_pos.y(), target_y_with_curb));
 
   // for terminal pose: get accurate target x combining with obs tlane
   // const double front_obs_x = t_lane_.obs_pt_inside.x();
@@ -1314,7 +1313,7 @@ const uint8_t ParallelParkInPlanner::PathPlanOnce() {
             .GetEndPose();
 
     if (std::fabs(end_pose.pos.y()) > 0.5) {
-      const double extend_lenth = 0.36;
+      const double extend_lenth = 0.4;
       parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
           extend_lenth);
     }

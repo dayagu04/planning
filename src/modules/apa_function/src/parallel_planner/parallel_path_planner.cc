@@ -59,7 +59,7 @@ static const double kMinTlaneAddedLength = 0.8;
 static const double kNarrowChannelLastArcCrossLength = 1.38;
 
 static const double kLineStepLength = 0.16;
-static const double k1dExtendLength = 0.01;
+static const double k1dExtendLength = 0.36;
 
 static const size_t kInvalidInteger = 666;
 
@@ -1226,7 +1226,7 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
 
     if (!pnc::mathlib::IsInBound(dubins_planner_.GetOutput().line_arc_radius,
                                  apa_param.GetParam().min_turn_radius - 1e-6,
-                                 13.0)) {
+                                 20.0)) {
       DEBUG_PRINT("arc not in bound! << "
                   << dubins_planner_.GetOutput().line_arc_radius);
       continue;
@@ -2321,7 +2321,7 @@ const bool ParallelPathPlanner::GenLineStepValidEnd(
     int max_size = static_cast<int>(line_length / 0.1);
 
     if (gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      line_length = std::min(line_length, 0.5);
+      line_length = std::min(line_length, 0.6);
       step_size = mathlib::Clamp(step_size, 3, 5);
       step_size = std::min(step_size, max_size);
 
@@ -2333,7 +2333,8 @@ const bool ParallelPathPlanner::GenLineStepValidEnd(
 
     if (line_length < 0.2) {
       DEBUG_PRINT("line_length" << line_length
-                                << "smaller than min line length");
+                                << "smaller than min line length! gear == "
+                                << static_cast<int>(gear));
       continue;
     }
 
@@ -4229,14 +4230,8 @@ void ParallelPathPlanner::InsertLineSegAfterCurrentFollowLastPath(
     pnc::geometry_lib::PathSegment new_line;
     new_line.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
 
-    if (path_len + extend_distance < apa_param.GetParam().min_path_length) {
-      extend_distance =
-          apa_param.GetParam().min_path_length - path_seg.Getlength();
-    }
-    if (output_.is_last_path &&
-        path_len < apa_param.GetParam().min_path_length) {
-      // incase control stops too early
-      extend_distance += apa_param.GetParam().min_path_length;
+    if (path_len < apa_param.GetParam().min_path_length) {
+      extend_distance = apa_param.GetParam().min_path_length;
     }
 
     new_line.line_seg.length = extend_distance;

@@ -38,7 +38,7 @@
   "terminal_target_y": 0.0,
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
-  "terminal_parallel_y_offset": -0.03,
+  "terminal_parallel_y_offset": 0.00,
   "terminal_parallel_y_offset_with_curb": 0.30,
 
   "comment_5": "check finish params",
@@ -120,7 +120,7 @@
   "parallel_occupied_pt_outside_dy": 0.15,
   "parallel_occupied_pt_inside_dx": 0.0,
   "parallel_occupied_pt_inside_dy": 0.0,
-  "curb_offset": 0.35,
+  "curb_offset": 0.45,
   "nearby_slot_corner_dist": 0.6,
   "force_both_side_occupied": false,
   "safe_threshold": 0.042,
