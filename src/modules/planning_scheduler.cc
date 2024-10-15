@@ -622,6 +622,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
              lc_back_reason == "but back cnt below threshold") {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
+    iflyauto::ObstacleInfo obstacle;
+    obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
+    planning_hmi_info->ad_info.obstacle_info[0] = obstacle;
   } else {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
