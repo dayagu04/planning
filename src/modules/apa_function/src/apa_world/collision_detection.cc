@@ -12,6 +12,7 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "math_lib.h"
 
 namespace planning {
 namespace apa_planner {
@@ -21,9 +22,14 @@ void CollisionDetector::Init() {
   car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
   car_local_vertex_vec_.clear();
   car_local_vertex_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
-  origin_car_local_vertex_vec_.clear();
-  origin_car_local_vertex_vec_.resize(
-      apa_param.GetParam().car_vertex_x_vec.size());
+
+  double max_y_abs = 0.0;
+  for (const double &y : apa_param.GetParam().car_vertex_y_vec) {
+    if (std::fabs(y) > max_y_abs) {
+      max_y_abs = std::fabs(y);
+    }
+  }
+
   std::vector<double> inflated_car_local_vertex_y_vec;
   inflated_car_local_vertex_y_vec.clear();
   inflated_car_local_vertex_y_vec.resize(
@@ -31,13 +37,14 @@ void CollisionDetector::Init() {
   for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
     inflated_car_local_vertex_y_vec[i] =
         apa_param.GetParam().car_vertex_y_vec[i];
-    if (inflated_car_local_vertex_y_vec[i] > 0) {
-      inflated_car_local_vertex_y_vec[i] += param_.lat_inflation;
-    } else {
-      inflated_car_local_vertex_y_vec[i] -= param_.lat_inflation;
+    if (!param_.is_side_mirror_expand &&
+        pnc::mathlib::IsDoubleEqual(
+            std::fabs(inflated_car_local_vertex_y_vec[i]), max_y_abs)) {
+      continue;
     }
-    origin_car_local_vertex_vec_[i] << apa_param.GetParam().car_vertex_x_vec[i],
-        apa_param.GetParam().car_vertex_y_vec[i];
+    inflated_car_local_vertex_y_vec[i] += inflated_car_local_vertex_y_vec[i] > 0
+                                              ? param_.left_lat_inflation
+                                              : -param_.right_lat_inflation;
   }
 
   pnc::geometry_lib::LineSegment car_line;
@@ -62,10 +69,8 @@ void CollisionDetector::Init() {
 }
 
 void CollisionDetector::SetParam(const Paramters &param) {
-  if (std::fabs(param_.lat_inflation - param.lat_inflation) > 0.001) {
-    param_ = param;
-    SetLatInflation();
-  }
+  param_ = param;
+  SetLatInflation();
 }
 
 void CollisionDetector::SetLatInflation() { Init(); }

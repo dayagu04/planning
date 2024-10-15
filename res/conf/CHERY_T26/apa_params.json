@@ -38,7 +38,7 @@
   "terminal_target_y": 0.0,
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
-  "terminal_parallel_y_offset": -0.03,
+  "terminal_parallel_y_offset": 0.0,
   "terminal_parallel_y_offset_with_curb": 0.30,
 
   "comment_5": "check finish params",
@@ -120,7 +120,7 @@
   "parallel_occupied_pt_outside_dy": 0.15,
   "parallel_occupied_pt_inside_dx": 0.0,
   "parallel_occupied_pt_inside_dy": 0.0,
-  "curb_offset": 0.35,
+  "curb_offset": 0.45,
   "nearby_slot_corner_dist": 0.6,
   "force_both_side_occupied": false,
   "safe_threshold": 0.042,
@@ -166,7 +166,7 @@
   "parallel_channel_y_mag": 7.9,
   "parallel_channel_x_mag": 20.0,
   "parallel_ego_side_to_obs_in_buffer": 0.25,
-  "parallel_ego_front_corner_to_obs_in_buffer": 0.05,
+  "parallel_ego_front_corner_to_obs_in_buffer": 0.1,
 
   "comment_12": "dynamic update path params",
   "car_to_limiter_dis": 1.0,
