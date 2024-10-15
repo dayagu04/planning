@@ -263,6 +263,17 @@ void FuturePathDecider::UpdateFuturePathRequest(
       future_path_request->dist_request =
           future_drive_dist_info_.gear_reverse_dist_to_obs;
     }
+  } else {
+    if (future_drive_dist_info_.gear_reverse_dist_to_obs <
+        future_path_request->dist_request) {
+      future_path_request->dist_request =
+          future_drive_dist_info_.gear_reverse_dist_to_obs;
+    }
+    if (future_drive_dist_info_.gear_drive_dist_to_obs <
+        future_path_request->dist_request) {
+      future_path_request->dist_request =
+          future_drive_dist_info_.gear_drive_dist_to_obs;
+    }
   }
 
   return;
