@@ -522,7 +522,7 @@ void ParallelParkInPlanner::GenTlane() {
       curb_count++;
       if (side_sgn > 0.0) {
         curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::min(curb_y_limit, half_slot_width);
+        curb_y_limit = std::min(curb_y_limit, -half_slot_width);
       } else {
         curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
         curb_y_limit = std::max(curb_y_limit, half_slot_width);
@@ -640,9 +640,9 @@ void ParallelParkInPlanner::GenTlane() {
   t_lane_.obs_pt_inside << front_min_x, front_y_limit;
   t_lane_.obs_pt_outside << rear_max_x, rear_y_limit;
 
-  curb_y_limit =
-      pnc::mathlib::Clamp(curb_y_limit, -side_sgn * (half_slot_width + 0.4),
-                          -side_sgn * half_slot_width);
+  curb_y_limit = pnc::mathlib::Clamp(
+      curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
+      -side_sgn * half_slot_width);
 
   t_lane_.corner_inside_slot << slot_length, half_slot_width * side_sgn;
   t_lane_.corner_outside_slot << 0.0, half_slot_width * side_sgn;
@@ -678,10 +678,12 @@ void ParallelParkInPlanner::GenTlane() {
       curb_y_limit +
       side_sgn * (apa_param.GetParam().terminal_parallel_y_offset_with_curb +
                   0.5 * apa_param.GetParam().car_width);
+
   frame_.ego_slot_info.target_ego_pos_slot.y() =
-      (side_sgn > 0.0
-           ? std::max(t_lane_.pt_terminal_pos.y(), target_y_with_curb)
-           : std::min(t_lane_.pt_terminal_pos.y(), target_y_with_curb));
+      (side_sgn > 0.0 ? std::max(frame_.ego_slot_info.target_ego_pos_slot.y(),
+                                 target_y_with_curb)
+                      : std::min(frame_.ego_slot_info.target_ego_pos_slot.y(),
+                                 target_y_with_curb));
 
   // for terminal pose: get accurate target x combining with obs tlane
   // const double front_obs_x = t_lane_.obs_pt_inside.x();
