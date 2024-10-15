@@ -52,7 +52,7 @@ constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
 constexpr double kLargeCurvRadius = 500;
 constexpr double kConsiderTimeLargeCurv = 5.0;
 constexpr double kDistanceToStopLineBufferAgent = 1.8;
-constexpr double kDistanceToStopLineBufferEgo = 6.5;
+constexpr double kDistanceToStopLineBufferEgo = 7.5;
 constexpr double kConfideceDegree = 0.8;
 constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
@@ -2349,10 +2349,39 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
       (current_intersection_state ==
            common::IntersectionState::APPROACH_INTERSECTION &&
        fabs(current_distance_ego_to_stopline) < kDistanceToStopLineBufferEgo)) {
-    // intersection condition
-    const bool traffic_light_start_condition = current_traffic_light_can_pass_;
+    // intersection leadone condition
+    std::string lc_request = "none";
+    double desire_distance = CalcDesiredDistance(lead_one, v_ego, lc_request);
+    const bool lead_one_nearby_intersection_exists =
+        lead_one.track_id() != -1 &&
+        lead_one.d_rel() < current_distance_ego_to_stopline;
+    const auto lead_one_nearby_intersection_is_static =
+        lead_one_nearby_intersection_exists &&
+        std::fabs(lead_one.v_lead()) < obstacle_v_start;
+    bool lead_one_nearby_intersection_starts =
+        lead_one_nearby_intersection_exists &&
+        (lead_one.v_lead() > obstacle_v_start &&
+         (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
+             distance_start);
+    // intersection stop condition considers both leadone and traffic light         
     const bool traffic_light_stop_condition =
-        !current_traffic_light_can_pass_ && v_ego < v_start;
+        (!current_traffic_light_can_pass_ && v_ego < v_start) ||
+        (v_ego < v_start && lead_one_nearby_intersection_is_static &&
+         std::fabs(lead_one.d_rel() - desire_distance) < distance_stop);
+
+    // intersection start condition considers both leadone and traffic light
+    bool traffic_light_start_condition = false;
+    if (lead_one_nearby_intersection_exists) {
+      if (current_traffic_light_can_pass_ &&
+          lead_one_nearby_intersection_is_static) {
+        traffic_light_start_condition = false;
+      } else if (current_traffic_light_can_pass_ &&
+                 lead_one_nearby_intersection_starts) {
+        traffic_light_start_condition = true;
+      }
+    } else {
+      traffic_light_start_condition = current_traffic_light_can_pass_;
+    }
     bool cruise_condition =
         v_ego > v_startmode /*|| v_last_target_ > v_target_*/;
     //  Update the state
@@ -2375,7 +2404,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
     }
   } else {
     // 这里有问题
-    if (lead_one.track_id() == 0 || dbw_status == false) {
+    if (lead_one.track_id() == -1 || dbw_status == false) {
       // reset state as default
       start_stop_info_.set_state(common::StartStopInfo::CRUISE);
     } else {
