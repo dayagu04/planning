@@ -28,9 +28,6 @@ class LaneChangeDecider : public Task {
   std::shared_ptr<LaneChangeLaneManager> get_lane_change_lane_manager() {
     return lc_lane_mgr_;
   }
-  std::shared_ptr<ObjectSelector> get_object_selector() {
-    return object_selector_;
-  }
 
  private:
   void update_scenario();
@@ -46,7 +43,6 @@ class LaneChangeDecider : public Task {
   ScenarioStateMachineConfig config_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
-  std::shared_ptr<ObjectSelector> object_selector_;
   std::shared_ptr<LaneChangeStateMachineManager> lc_sm_mgr_;
   int scenario_ = SCENARIO_CRUISE;
   RequestSource last_frame_lc_req_source_ = NO_REQUEST;

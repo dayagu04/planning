@@ -165,7 +165,7 @@ struct EgoPlanningConfig : public Config {
   int active_lane_change_min_duration_threshold = 150;
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
-      false;
+      true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;
   bool enable_use_emergency_avoidence_lane_change_request = false;
