@@ -102,6 +102,7 @@ Eigen::Vector3d coordinate_system_;
 
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
+AstarPathGear history_gear_request_;
 
 int Init() {
   FilePath::SetName("open_space_replay");
@@ -307,6 +308,9 @@ int GetPathFromHybridAstar() {
     all_searched_node_.emplace_back(
         Eigen::Vector3d(global_position.x, global_position.y, is_safe));
   }
+
+  AstarRequest request = thread_solver_->GetAstarRequest();
+  history_gear_request_ = request.first_action_request.gear_request;
 
   return 0;
 }
@@ -766,7 +770,12 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     end[2] = ego_slot_info.target_ego_heading_slot;
 
     AstarRequest request;
-    request.first_action_request.has_request = false;
+    request.first_action_request.has_request = true;
+    if (history_gear_request_ == AstarPathGear::drive) {
+      request.first_action_request.gear_request = AstarPathGear::reverse;
+    } else {
+      request.first_action_request.gear_request = AstarPathGear::drive;
+    }
     request.path_generate_method =
         planning::AstarPathGenerateType::ASTAR_SEARCHING;
 
@@ -788,7 +797,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
-    request.history_gear = AstarPathGear::drive;
+    request.history_gear = history_gear_request_;
 
     thread_solver_->SetRequest(hybrid_astar_obs_, request);
 
