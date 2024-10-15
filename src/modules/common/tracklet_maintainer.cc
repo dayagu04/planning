@@ -703,7 +703,7 @@ void TrackletMaintainer::calc(
     }
     if (tr->d_rel <= 0) {
       tr->is_avd_car = false;
-      if (tr->d_rel <= -1 * (tr->length + 5)) {
+      if (tr->d_rel <= -1 * (tr->length + vehicle_param.length)) {
         tr->ncar_count = 0;
         tr->ncar_count_in = false;
       }
@@ -1917,10 +1917,12 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   double emegency_cutin_ttc_upper = config.emegency_cutin_ttc_upper;
   double emegency_cutin_front_area = config.emegency_cutin_front_area;
 
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   item.is_ncar = false;
-  double ego_car_width = 2.2;
-  double ego_car_length = 5;
+  const double ego_car_width = vehicle_param.width;
+  const double ego_car_length = vehicle_param.length;
   // double l_ego = ego_state_->ego_frenet.y;
   // TODO: ego_state relative
   double l_ego = 0.;
