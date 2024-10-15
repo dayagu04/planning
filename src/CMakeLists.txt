@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Eigen3 REQUIRED)
-
+add_compile_options(-Werror)
 add_subdirectory(common EXCLUDE_FROM_ALL)
 add_subdirectory(modules EXCLUDE_FROM_ALL)
 add_subdirectory(framework EXCLUDE_FROM_ALL)
