@@ -1,8 +1,10 @@
 #include "agent_longitudinal_decider.h"
+
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
 #include "agent/agent.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -77,7 +79,16 @@ AgentLongitudinalDecider::AgentLongitudinalDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : Task(config_builder, session) {
   name_ = "AgentLongitudinalDecider";
-  // Reset();
+  if (crossing_agent_decider_ == nullptr) {
+    crossing_agent_decider_ =
+        std::make_shared<CrossingAgentDecider>(config_builder, session);
+  }
+}
+
+bool AgentLongitudinalDecider::Reset() {
+  // if (crossing_agent_decider_ != nullptr) {
+  //   crossing_agent_decider_->Reset();
+  // }
 }
 
 bool AgentLongitudinalDecider::Execute() {
@@ -114,6 +125,12 @@ bool AgentLongitudinalDecider::Update() {
   // AddCutInForLaneChange();
 
   UpdateCutInAgentTable();
+
+  // crossing agent decider
+  // 横穿障碍物依赖障碍物预测轨迹
+  if (crossing_agent_decider_ != nullptr) {
+    crossing_agent_decider_->Execute();
+  }
 
   return true;
 }
@@ -545,7 +562,6 @@ void AgentLongitudinalDecider::UpdateCutInAgentTable() {
   // debug
   std::vector<double> cutin_id;
   std::vector<double> cutin_count;
-  ;
   for (const auto cut_in_agent : cut_in_agent_count_) {
     if (cut_in_agent.second > 0) {
       cutin_id.emplace_back(cut_in_agent.first);

@@ -7,6 +7,7 @@
 #include "tasks/task.h"
 #include "utils/kd_path.h"
 #include "virtual_lane_manager.h"
+#include "crossing_agent_decider/crossing_agent_decider.h"
 
 namespace planning {
 
@@ -21,7 +22,7 @@ class AgentLongitudinalDecider : public Task {
 
   bool Update();
 
-  void Reset();
+  bool Reset();
 
   void Init();
 
@@ -82,5 +83,7 @@ class AgentLongitudinalDecider : public Task {
   std::unordered_map<int32_t, int32_t> pred_cut_in_agent_count_;
   std::unordered_map<int32_t, int32_t> rule_based_cut_in_agent_count_;
   std::unordered_set<int32_t> current_agent_ids_;
+
+  std::shared_ptr<CrossingAgentDecider> crossing_agent_decider_;
 };
 }  // namespace planning
