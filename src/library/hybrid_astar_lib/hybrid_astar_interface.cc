@@ -54,7 +54,7 @@ int HybridAStarInterface::Init(const double back_edge_to_rear_axis,
   ILOG_INFO << "veh_param.max_steer_angle " << vehicle_param_.max_steer_angle
             << " l " << vehicle_param_.length << "w " << vehicle_param_.width
             << "base " << vehicle_param_.wheel_base;
-  ILOG_INFO << "traj_gear_switch_penalty " << config_.traj_gear_switch_penalty;
+  ILOG_INFO << "gear_switch_penalty " << config_.gear_switch_penalty;
   ILOG_INFO << "enable_dp_cost_for_vertical_park "
             << config_.enable_dp_cost_for_vertical_park;
   ILOG_INFO << "enable_euler_cost_for_vertical_park "

@@ -28,7 +28,7 @@ namespace planning {
 #define RS_H_COST_MAX_NUM (32)
 
 #define DEBUG_SEARCH_RESULT (0)
-#define DEBUG_CHILD_NODE (0)
+#define DEBUG_CHILD_NODE (1)
 #define DEBUG_TARGET_HEADING_COST (0)
 #define DEBUG_EDT (0)
 
@@ -1880,7 +1880,7 @@ double HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
   for (int i = 0; i < rs_path_.size - 1; i++) {
     // gear cost
     if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
-      gear_cost += config_.traj_gear_switch_penalty;
+      gear_cost += config_.gear_switch_penalty_heu;
     }
 
     // steer change cost
@@ -1898,7 +1898,7 @@ double HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
 
   // gear cost
   if (next_node->GetGearType() != rs_path_.paths[0].gear) {
-    gear_cost += config_.traj_gear_switch_penalty;
+    gear_cost += config_.gear_switch_penalty_heu;
   }
 
   // steer cost
@@ -1941,7 +1941,7 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
 
   // gear punish
   if (current_node->IsPathGearChange(next_node->GetGearType())) {
-    piecewise_cost += config_.traj_gear_switch_penalty;
+    piecewise_cost += config_.gear_switch_penalty;
   }
 
   // steering wheel angle cost
@@ -2535,7 +2535,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   rs_time_ms_ = 0.0;
   rs_interpolate_time_ms_ = 0.0;
 
-  ILOG_INFO << "a star programming begin";
+  ILOG_INFO << "a star begin";
 
   obstacles_ = &obstacles;
   edt_ = edt;
@@ -2648,7 +2648,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
 
   node_set_.emplace(start_node_->GetGlobalID(), start_node_);
 
-  // a star programming searching
+  // a star searching
   size_t explored_node_num = 0;
   size_t explored_rs_path_num = 0;
   size_t h_cost_rs_path_num = 0;
