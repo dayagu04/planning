@@ -2235,6 +2235,11 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   //   };
   // }
 
+  // cut in/out factor
+  std::array<double, 3> x_cut_factor{0.3, 0.6, 0.9};
+  std::array<double, 3> f_cut_factor{5, 10, 15};
+  double cut_factor = interp(std::fabs(item.v_lat), x_cut_factor, f_cut_factor);
+
   if (item.is_ncar) {
     // hack：missing prediction, considering v_lat
     // if (item.trajectory.intersection == 0 ||
@@ -2258,9 +2263,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
       }
     } else {
       item.ncar_count = std::max(
-          item.ncar_count - 5 * (int)(std::fabs(item.v_lat) / 0.4 + 0.5) *
-                                count * planning_cycle_time,
-          0.0);
+          item.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
     }
 
     if (item.ncar_count < ncar_count * planning_cycle_time &&
@@ -2294,9 +2297,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     // for cut in and cut out
     if (!in_lon_near_area && (item.v_lat > 0.3 || item.v_lat < -0.3)) {
       item.ncar_count = std::max(
-          item.ncar_count - 5 * (int)(std::fabs(item.v_lat) / 0.4 + 0.5) *
-                                count * planning_cycle_time,
-          0.0);
+          item.ncar_count - cut_factor * count * planning_cycle_time, 0.0);
     }
 
     if (item.d_max_cpath > 0 && item.d_min_cpath < 0) {
