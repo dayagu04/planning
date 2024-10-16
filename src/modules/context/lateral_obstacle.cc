@@ -94,6 +94,10 @@ bool LateralObstacle::update_sensors(
 
 void LateralObstacle::LateralObstacleDecision(
     const std::vector<TrackedObject> &tracked_objects) {
+  auto config_builder =
+      session_->environmental_model().highway_config_builder();
+  PotentialAvoidDeciderConfig config =
+      config_builder->cast<PotentialAvoidDeciderConfig>();
   const auto ego_l = DebugInfoManager::GetInstance()
                          .GetDebugInfoPb()
                          ->environment_model_info()
@@ -106,6 +110,7 @@ void LateralObstacle::LateralObstacleDecision(
       session_->planning_context().lateral_behavior_planner_output();
   auto lane_width = lateral_output.flane_width;
   double ref_dis = 1;
+  double avoid_front_buffer = 0.0;
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
@@ -128,10 +133,13 @@ void LateralObstacle::LateralObstacleDecision(
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       }
     } else if (item.d_rel > 0) {
+      if (item.is_traffic_facilities) {
+        avoid_front_buffer = config.traffic_cone_thr;
+      }
       if (item.d_max_cpath < 0 &&
-          std::fabs(item.d_max_cpath) > lane_width * 0.5) {
+          std::fabs(item.d_max_cpath) > lane_width * 0.5 - avoid_front_buffer) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::LEFT;
-      } else if (item.d_min_cpath > lane_width * 0.5) {
+      } else if (item.d_min_cpath > lane_width * 0.5 - avoid_front_buffer) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       } else {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
