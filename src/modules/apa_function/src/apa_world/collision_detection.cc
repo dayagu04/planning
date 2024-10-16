@@ -13,10 +13,12 @@
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "math_lib.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
 const bool box = true;
+const double col_sample_ds = 0.1;
 void CollisionDetector::Init() {
   car_line_local_vec_.clear();
   car_line_local_vec_.reserve(apa_param.GetParam().car_vertex_x_vec.size());
@@ -160,7 +162,7 @@ void CollisionDetector::TransObsMapToParkObstacleList() {
 }
 
 void CollisionDetector::TransObsMapToOccupancyGridMap(
-    const double _ogm_resolution) {
+    const OccupancyGridBound &bound, const double _ogm_resolution) {
   TransObsMapToParkObstacleList();
 
   // grid map origin, make all indexes positive
@@ -174,7 +176,6 @@ void CollisionDetector::TransObsMapToOccupancyGridMap(
   // edt_col_det_.Excute(occupancy_grid_map_, ogm_base_pose, _ogm_resolution);
 
   occupancy_grid_map_.Clear();
-  OccupancyGridBound bound(-3.68, -10.68, 14.68, 10.68);
   occupancy_grid_map_.Process(bound, _ogm_resolution);
   occupancy_grid_map_.AddParkingObs(obs_list_);
   edt_col_det_.Excute(occupancy_grid_map_, bound, _ogm_resolution);
@@ -196,18 +197,40 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
+    const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+    const double lon_buffer) {
+  std::vector<pnc::geometry_lib::PathPoint> point_set;
+  CollisionResult col_res;
+  if (!pnc::geometry_lib::SamplePointSetInPathSeg(point_set, path_seg,
+                                                  col_sample_ds)) {
+    ILOG_INFO << "UpdateByEDT sample pt fail";
+    return col_res;
+  }
+
+  edt_col_det_.UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+
+  col_res.remain_car_dist = path_seg.Getlength();
+
+  col_res.remain_dist =
+      edt_col_det_.CalPathSafeDist(point_set, col_sample_ds, path_seg.seg_gear);
+
+  return col_res;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
     const pnc::geometry_lib::GeometryPath &geometry_path,
     const double lat_buffer, const double lon_buffer) {
-  return UpdateByEDT(
-      pnc::geometry_lib::SamplePathSegVec(geometry_path.path_segment_vec, 0.1),
-      geometry_path.cur_gear, lat_buffer, lon_buffer);
+  return UpdateByEDT(pnc::geometry_lib::SamplePathSegVec(
+                         geometry_path.path_segment_vec, col_sample_ds),
+                     geometry_path.cur_gear, lat_buffer, lon_buffer);
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
     const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
     const uint8_t gear, const double lat_buffer, const double lon_buffer) {
-  return UpdateByEDT(pnc::geometry_lib::SamplePathSegVec(path_seg_vec, 0.1),
-                     gear, lat_buffer, lon_buffer);
+  return UpdateByEDT(
+      pnc::geometry_lib::SamplePathSegVec(path_seg_vec, col_sample_ds), gear,
+      lat_buffer, lon_buffer);
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::Update(
@@ -286,12 +309,23 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
-    const pnc::geometry_lib::PathSegment &path_seg) {
-  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-    return UpdateByObsMap(path_seg.line_seg, path_seg.GetStartHeading());
-  } else {
-    return UpdateByObsMap(path_seg.arc_seg, path_seg.GetStartHeading());
+    const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+    const double lon_buffer) {
+  CollisionResult col_res;
+  if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
+    param_.lat_inflation = lat_buffer;
+    SetParam(param_);
   }
+  if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+    col_res = UpdateByObsMap(path_seg.line_seg, path_seg.GetStartHeading());
+  } else {
+    col_res = UpdateByObsMap(path_seg.arc_seg, path_seg.GetStartHeading());
+  }
+  col_res.remain_dist = std::min(col_res.remain_car_dist,
+                                 col_res.remain_obstacle_dist - lon_buffer);
+
+  col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;
+  return col_res;
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(

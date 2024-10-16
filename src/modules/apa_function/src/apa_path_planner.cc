@@ -4,6 +4,7 @@
 
 #include "debug_info_log.h"
 #include "geometry_math.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
@@ -21,13 +22,13 @@ const bool ApaPathPlanner::SetCurrentPathSegIndex() {
 
   if (output_.gear_cmd_vec.empty() || output_.path_segment_vec.empty() ||
       output_.steer_vec.empty()) {
-    DEBUG_PRINT("no path can get");
+    ILOG_INFO << "no path can get";
     return false;
   }
 
   const size_t N = output_.path_segment_vec.size();
   if (output_.gear_cmd_vec.size() != N || output_.steer_vec.size() != N) {
-    DEBUG_PRINT("size is not equal");
+    ILOG_INFO << "size is not equal";
     return false;
   }
 
@@ -38,7 +39,7 @@ const bool ApaPathPlanner::SetCurrentPathSegIndex() {
     output_.is_first_path = false;
   } else {
     if (output_.path_seg_index.second == N - 1) {
-      DEBUG_PRINT("no more path can get");
+      ILOG_INFO << "no more path can get";
       return false;
     }
     output_.path_seg_index.first = output_.path_seg_index.second + 1;
@@ -49,7 +50,7 @@ const bool ApaPathPlanner::SetCurrentPathSegIndex() {
   }
 
   if (output_.path_seg_index.first >= N) {
-    DEBUG_PRINT("first index is err");
+    ILOG_INFO << "first index is err";
     return false;
   }
   output_.current_gear = output_.gear_cmd_vec[output_.path_seg_index.first];
@@ -67,14 +68,14 @@ const bool ApaPathPlanner::SetCurrentPathSegIndex() {
   }
 
   if (output_.path_seg_index.second >= N) {
-    DEBUG_PRINT("second index is err");
+    ILOG_INFO << "second index is err";
     return false;
   }
 
   const int first = output_.path_seg_index.first;
   const int second = output_.path_seg_index.second;
   if (first < 0 || second < 0 || first > second) {
-    DEBUG_PRINT("first and second index is err");
+    ILOG_INFO << "first and second index is err";
     return false;
   }
   for (int i = second; i >= first; --i) {
@@ -86,7 +87,7 @@ const bool ApaPathPlanner::SetCurrentPathSegIndex() {
   }
 
   if (output_.path_seg_index.second == N - 1) {
-    DEBUG_PRINT("current path is final path");
+    ILOG_INFO << "current path is final path";
     output_.is_last_path = true;
   }
 
@@ -253,7 +254,7 @@ const bool ApaPathPlanner::SampleCurrentPathSeg() {
 }
 
 void ApaPathPlanner::PrintOutputSegmentsInfo() const {
-  DEBUG_PRINT("-------------- OutputSegmentsInfo --------------");
+  ILOG_INFO << "-------------- OutputSegmentsInfo --------------";
   const size_t N =
       std::min(output_.path_seg_index.second - output_.path_seg_index.first + 1,
                output_.path_segment_vec.size());
@@ -264,58 +265,57 @@ void ApaPathPlanner::PrintOutputSegmentsInfo() const {
     if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       const auto& line_seg = current_seg.line_seg;
 
-      DEBUG_PRINT("Segment [" << i << "] "
-                              << " LINE_SEGMENT "
-                              << " length= " << line_seg.length);
+      ILOG_INFO << "Segment [" << i << "] "
+                << " LINE_SEGMENT "
+                << " length= " << line_seg.length;
 
-      DEBUG_PRINT("seg_gear: " << static_cast<int>(current_seg.seg_gear));
+      ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-      DEBUG_PRINT("seg_steer: " << static_cast<int>(current_seg.seg_steer));
+      ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-      DEBUG_PRINT("start_pos: " << line_seg.pA.transpose());
-      DEBUG_PRINT("start_heading: " << line_seg.heading * kRad2Deg);
-      DEBUG_PRINT("end_pos: " << line_seg.pB.transpose() << "");
+      ILOG_INFO << "start_pos: " << line_seg.pA.transpose();
+      ILOG_INFO << "start_heading: " << line_seg.heading * kRad2Deg;
+      ILOG_INFO << "end_pos: " << line_seg.pB.transpose() << "";
     } else {
       const auto& arc_seg = current_seg.arc_seg;
 
-      DEBUG_PRINT("Segment [" << i << "] "
-                              << "ARC_SEGMENT "
-                              << "length= " << arc_seg.length);
+      ILOG_INFO << "Segment [" << i << "] "
+                << "ARC_SEGMENT "
+                << "length= " << arc_seg.length;
 
-      DEBUG_PRINT("seg_gear: " << static_cast<int>(current_seg.seg_gear));
+      ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-      DEBUG_PRINT("seg_steer: " << static_cast<int>(current_seg.seg_steer));
+      ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-      DEBUG_PRINT("start_pos: " << arc_seg.pA.transpose());
-      DEBUG_PRINT("start_heading: " << arc_seg.headingA * kRad2Deg);
-      DEBUG_PRINT("end_pos: " << arc_seg.pB.transpose());
-      DEBUG_PRINT("end_heading: " << arc_seg.headingB * kRad2Deg);
-      DEBUG_PRINT("center: " << arc_seg.circle_info.center.transpose()
-                             << "  radius = " << arc_seg.circle_info.radius
-                             << "");
+      ILOG_INFO << "start_pos: " << arc_seg.pA.transpose();
+      ILOG_INFO << "start_heading: " << arc_seg.headingA * kRad2Deg;
+      ILOG_INFO << "end_pos: " << arc_seg.pB.transpose();
+      ILOG_INFO << "end_heading: " << arc_seg.headingB * kRad2Deg;
+      ILOG_INFO << "center: " << arc_seg.circle_info.center.transpose()
+                << "  radius = " << arc_seg.circle_info.radius << "";
     }
   }
 }
 
 void ApaPathPlanner::PrintSegmentInfo(
     const pnc::geometry_lib::PathSegment& seg) const {
-  DEBUG_PRINT("----");
-  DEBUG_PRINT("seg_gear: " << static_cast<int>(seg.seg_gear));
+  ILOG_INFO << "----";
+  ILOG_INFO << "seg_gear: " << static_cast<int>(seg.seg_gear);
 
-  DEBUG_PRINT("seg_steer: " << static_cast<int>(seg.seg_steer));
-  DEBUG_PRINT("seg_type: " << static_cast<int>(seg.seg_type));
-  DEBUG_PRINT("length: " << seg.Getlength());
+  ILOG_INFO << "seg_steer: " << static_cast<int>(seg.seg_steer);
+  ILOG_INFO << "seg_type: " << static_cast<int>(seg.seg_type);
+  ILOG_INFO << "length: " << seg.Getlength();
 
   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-    DEBUG_PRINT("start_pos: " << seg.GetLineSeg().pA.transpose());
-    DEBUG_PRINT("start_heading: " << seg.GetLineSeg().heading * kRad2Deg);
-    DEBUG_PRINT("end_pos: " << seg.GetLineSeg().pB.transpose());
-    DEBUG_PRINT("end_heading: " << seg.GetLineSeg().heading * kRad2Deg);
+    ILOG_INFO << "start_pos: " << seg.GetLineSeg().pA.transpose();
+    ILOG_INFO << "start_heading: " << seg.GetLineSeg().heading * kRad2Deg;
+    ILOG_INFO << "end_pos: " << seg.GetLineSeg().pB.transpose();
+    ILOG_INFO << "end_heading: " << seg.GetLineSeg().heading * kRad2Deg;
   } else {
-    DEBUG_PRINT("start_pos: " << seg.GetArcSeg().pA.transpose());
-    DEBUG_PRINT("start_heading: " << seg.GetArcSeg().headingA * kRad2Deg);
-    DEBUG_PRINT("end_pos: " << seg.GetArcSeg().pB.transpose());
-    DEBUG_PRINT("end_heading: " << seg.GetArcSeg().headingB * kRad2Deg);
+    ILOG_INFO << "start_pos: " << seg.GetArcSeg().pA.transpose();
+    ILOG_INFO << "start_heading: " << seg.GetArcSeg().headingA * kRad2Deg;
+    ILOG_INFO << "end_pos: " << seg.GetArcSeg().pB.transpose();
+    ILOG_INFO << "end_heading: " << seg.GetArcSeg().headingB * kRad2Deg;
   }
 }
 

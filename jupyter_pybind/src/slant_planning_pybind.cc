@@ -29,8 +29,8 @@ int Init() {
   //     "/asw/planning/res/conf/planning_gflags.conf";
   // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 
-  // FilePath::SetName("slant_simulation_pybind");
-  // InitGlog(FilePath::GetName().c_str());
+  planning::FilePath::SetName("slant_simulation_pybind");
+  planning::InitGlog(planning::FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
 
   pBase = new PerpendicularPathInPlanner();
@@ -412,7 +412,15 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   collision_detector_ptr->SetObstacles(obs_local_pts,
                                        CollisionDetector::TLANE_OBS);
 
-  collision_detector_ptr->TransObsMapToOccupancyGridMap();
+
+  const auto& tf = ego_slot_info.g2l_tf;
+  planning::OccupancyGridBound bound(
+      std::min(tf.GetPos(C).x(), tf.GetPos(D).x()) - 0.0168,
+      std::min({tf.GetPos(G).y(), tf.GetPos(H).y(), tf.GetPos(A).y(), tf.GetPos(F).y()}) - 0.0168,
+      std::max(tf.GetPos(G).x(), tf.GetPos(H).x()) + 0.0168,
+      std::max({tf.GetPos(G).y(), tf.GetPos(H).y(), tf.GetPos(A).y(), tf.GetPos(F).y()}) + 0.0168);
+
+  collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
   planning::apa_planner::PerpendicularPathInPlanner::Input input;
   input.pt_0 = ego_slot_info.pt_0;

@@ -12,7 +12,9 @@
 #include "collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
+#include "log_glog.h"
 #include "perpendicular_path_planner.h"
+#include "planning_plan_c.h"
 
 namespace planning {
 namespace apa_planner {
@@ -44,6 +46,7 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
     ONE_ARC,
     TWO_ARC,
     LINE_ARC,
+    ONE_LINE,
     COUNT,
   };
 
@@ -53,13 +56,24 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
     NO_PATH,
   };
 
+  enum class PlanRequest {
+    ROUGH_PATH,
+    ONE_STEP_PATH,
+    OPTIMAL_PATH,
+  };
+
   struct PlannerParams {
     bool is_left_side = true;
     double slot_side_sgn = 1.0;
 
+    double strict_car_lat_inflation = 0.0;
+    double strict_col_lon_safe_dist = 0.0;
+
     bool is_searching_stage = false;
 
     PrePlanCase pre_plan_case = PrePlanCase::FAIL;
+
+    PlanRequest plan_request;
 
     bool should_prepare_second = false;
     bool should_prepare_third = false;
@@ -68,6 +82,8 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
     bool single_plan_again = false;
     bool multi_plan = false;
     bool can_insert_line = true;
+
+    double statistical_time = 0.0;
 
     double turn_radius = 5.5;
 
@@ -96,6 +112,11 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
       is_searching_stage = false;
       is_left_side = true;
       slot_side_sgn = 1.0;
+
+      strict_car_lat_inflation = 0.0;
+      strict_col_lon_safe_dist = 0.0;
+
+      statistical_time = 0.0;
 
       turn_radius = 5.5;
 
@@ -155,6 +176,10 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
       const Input &input,
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
 
+  const bool ItervativeUpdatePb(
+      const Input &input,
+      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
+
   const bool PreparePlanPb();
 
   const bool PreparePlanSecondPb();
@@ -197,7 +222,7 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
       const pnc::geometry_lib::GeometryPath &geometry_path,
       const double lat_inflation, const double lon_safe_dist);
 
-  const PathColDetRes TrimPathByObs(pnc::geometry_lib::PathSegment &path_seg,
+  const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,
                                     const double lon_safe_dist);
 
@@ -226,7 +251,62 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
   bool CalMultiSafeCircle();
   // prepare plan end
 
-  //   const bool MultiAdjustPlan();
+  const bool MultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
+                                 const uint8_t ref_gear,
+                                 const PlanRequest plan_request);
+
+  const bool RoughMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
+                                      const uint8_t ref_gear);
+
+  const bool OneStepMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
+                                        const uint8_t ref_gear);
+
+  const bool OptimalMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
+                                        const uint8_t ref_gear);
+
+  const bool SingleMultiAdjustPathPlan(
+      const geometry_lib::PathPoint &pose, const uint8_t ref_gear,
+      const double lat_buffer, const double lon_buffer,
+      std::vector<geometry_lib::GeometryPath> &geometry_path_vec);
+
+  const bool OneArcPathPlan(const geometry_lib::PathPoint &pose,
+                            const uint8_t ref_gear, const double lat_buffer,
+                            const double lon_buffer,
+                            geometry_lib::GeometryPath &geometry_path);
+
+  const bool LineArcPathPlan(const geometry_lib::PathPoint &pose,
+                             const uint8_t ref_gear, const double lat_buffer,
+                             const double lon_buffer,
+                             geometry_lib::GeometryPath &geometry_path,
+                             const bool same_gear = true);
+
+  const bool TwoArcPathPlan(const geometry_lib::PathPoint &pose,
+                            const uint8_t ref_gear, const double lat_buffer,
+                            const double lon_buffer,
+                            geometry_lib::GeometryPath &geometry_path,
+                            const bool same_gear = false);
+
+  const bool AlignAndSTurnPathPlan(const geometry_lib::PathPoint &pose,
+                                   const uint8_t ref_gear,
+                                   const double lat_buffer,
+                                   const double lon_buffer,
+                                   geometry_lib::GeometryPath &geometry_path);
+
+  const bool OneLinePathPlan(const geometry_lib::PathPoint &pose,
+                             const uint8_t gear, const double lat_buffer,
+                             const double lon_buffer,
+                             const double last_seg_reverse_length,
+                             geometry_lib::GeometryPath &geometry_path);
+
+  const bool InsertLineInGeometryPath(
+      const double lat_buffer, const double lon_buffer, const uint8_t ref_gear,
+      const double insert_length, geometry_lib::GeometryPath &geometry_path);
+
+  const bool ConstructReverseVaildPathSeg(geometry_lib::PathSegment &seg1,
+                                          geometry_lib::PathSegment &seg2,
+                                          const double lat_buffer,
+                                          const double lon_buffer);
+
   const bool OneArcPathPlan(
       const pnc::geometry_lib::PathPoint &pose,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);

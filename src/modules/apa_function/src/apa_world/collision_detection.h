@@ -100,11 +100,17 @@ class CollisionDetector {
   void TransObsMapToParkObstacleList();
 
   void TransObsMapToOccupancyGridMap(
+      const OccupancyGridBound &bound = OccupancyGridBound(-3.68, -10.68, 14.68,
+                                                           10.68),
       const double _ogm_resolution = ogm_resolution);
 
   const CollisionResult UpdateByEDT(
       const pnc::geometry_lib::GeometryPath &geometry_path,
       const double lat_buffer, const double lon_buffer);
+
+  const CollisionResult UpdateByEDT(
+      const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+      const double lon_buffer);
 
   const CollisionResult UpdateByEDT(
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
@@ -118,7 +124,8 @@ class CollisionDetector {
                                const double heading_start);
 
   const CollisionResult UpdateByObsMap(
-      const pnc::geometry_lib::PathSegment &path_seg);
+      const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+      const double lon_buffer);
 
   const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::LineSegment &line_seg,
@@ -190,7 +197,7 @@ class CollisionDetector {
     return obs_line_global_vec_;
   }
 
-  void SetParam(const Paramters& param);
+  void SetParam(const Paramters &param);
 
   const Paramters GetParam() { return param_; }
 
