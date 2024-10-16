@@ -89,6 +89,7 @@ bool AgentLongitudinalDecider::Reset() {
   // if (crossing_agent_decider_ != nullptr) {
   //   crossing_agent_decider_->Reset();
   // }
+  return false;
 }
 
 bool AgentLongitudinalDecider::Execute() {
@@ -490,7 +491,7 @@ bool AgentLongitudinalDecider::IsLargeAgent(const agent::Agent& agent) {
 void AgentLongitudinalDecider::IsSlowSpeedCutinSuppression(
     const std::shared_ptr<KDPath>& planned_path,
     const PlanningInitPoint init_point, const bool is_lane_change,
-    const agent::Agent& agent, bool* is_slow_need_suppression){};
+    const agent::Agent& agent, bool* is_slow_need_suppression) {};
 
 void AgentLongitudinalDecider::CalculateAgentLateralDistance(
     const double object_l_speed_mps, const double min_l, const double max_l,
