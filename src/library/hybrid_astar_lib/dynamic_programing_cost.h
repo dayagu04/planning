@@ -26,6 +26,19 @@
 
 namespace planning {
 
+enum class NodeLayerTag {
+  NONE,
+  PARENT_LAYER,
+  CHILD_LAYER,
+  MAX_NUMBER,
+};
+
+// 在搜索的过程中，为了减少删除或者拷贝操作，通过标签来确认搜索层是父节点层还是子节点层
+struct NodeLayer {
+  std::vector<Node2d*> node_layer;
+  NodeLayerTag tag;
+};
+
 class GridSearch {
  public:
   explicit GridSearch(const PlannerOpenSpaceConfig& open_space_conf);
@@ -70,6 +83,8 @@ class GridSearch {
 
   void ProjectObstacleToNodeMap();
 
+  bool NodePositionValid(const double x, const double y);
+
  private:
   double xy_grid_resolution_ = 0.0;
   double inv_xy_resolution_ = 0.0;
@@ -93,8 +108,6 @@ class GridSearch {
   int32_t max_y_search_size_;
 
   Node2dMatrix node_pool_;
-
-  std::multimap<double, Node2d*> open_set_;
 
   int32_t global_idx_;
 

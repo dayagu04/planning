@@ -47,6 +47,7 @@ class Node2d {
     grid_index_.y = std::round((y - XYbounds.y_min) * inv_xy_resolution);
 
     id_ = id;
+    is_visited_ = true;
   }
 
   Node2d(const int grid_x, const int grid_y, const MapBound& XYbounds,
@@ -58,6 +59,7 @@ class Node2d {
     grid_index_.y = grid_y;
 
     id_ = id;
+    is_visited_ = true;
   }
 
   void Set(const double x, const double y, const double inv_xy_resolution,
@@ -71,6 +73,7 @@ class Node2d {
     id_ = id;
 
     cost_ = 0.0;
+    is_visited_ = true;
   }
 
   void CalcRealPositionByIndex(const int32_t grid_x, const int32_t grid_y,
@@ -135,7 +138,7 @@ class Node2d {
     x_ = 0.0;
     y_ = 0.0;
 
-    visited_type_ = AstarNodeVisitedType::not_visited;
+    is_visited_ = false;
     is_collision_ = false;
     cost_ = 10000.0;
 
@@ -149,14 +152,18 @@ class Node2d {
     cost_ = node.GetCost();
     id_ = node.GetGlobalID();
     grid_index_ = node.GetGridIndex();
+    is_visited_ = node.GetVisitedType();
 
     return;
   }
 
-  void DebugNodeString() {
-    ILOG_INFO << "id " << grid_index_.x << " " << grid_index_.y << " xy " << x_
-              << " " << y_ << " d " << cost_ << " is collision "
+  void DebugNodeString(const double xy_resolution) {
+    ILOG_INFO << "id, x " << grid_index_.x << ", id y " << grid_index_.y
+              << ", x " << x_ << ", y " << y_ << ", dist "
+              << cost_ * xy_resolution << ", is collision "
               << static_cast<int>(is_collision_);
+
+    return;
   }
 
   void SetCollision(const bool is_collision) {
@@ -164,22 +171,15 @@ class Node2d {
     return;
   }
 
-  const bool IsCollision() { return is_collision_; }
+  const bool IsCollision() const { return is_collision_; }
 
-  void SetVisitedType(const AstarNodeVisitedType type) {
-    visited_type_ = type;
+  void SetVisited() {
+    is_visited_ = true;
     return;
   }
 
-  const AstarNodeVisitedType GetVisitedType() { return visited_type_; }
+  const bool GetVisitedType() const { return is_visited_; }
 
-  void SetIter(std::multimap<double, Node2d*>::iterator i) { open_set_it_ = i; }
-
-  std::multimap<double, Node2d*>::iterator GetOpenSetIter() {
-    return open_set_it_;
-  }
-
- private:
   static std::string ComputeStringIndex(int x_grid, int y_grid) {
     std::string line = "_";
 
@@ -200,8 +200,7 @@ class Node2d {
 
   Node2dIndex grid_index_;
 
-  AstarNodeVisitedType visited_type_;
-  std::multimap<double, Node2d*>::iterator open_set_it_;
+  bool is_visited_;
   bool is_collision_;
 };
 
