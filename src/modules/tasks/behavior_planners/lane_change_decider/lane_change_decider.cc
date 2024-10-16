@@ -69,7 +69,7 @@ bool LaneChangeDecider::Execute() {
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
       if (!session_->is_hpp_scene()) {
-        if (!lc_req_mgr_->Update( current_lc_status,
+        if (!lc_req_mgr_->Update(current_lc_status,
                                  session_->environmental_model().IsOnRoute())) {
           return false;
         }
