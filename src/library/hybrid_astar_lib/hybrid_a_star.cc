@@ -15,6 +15,7 @@
 #include "node3d.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
+#include "rs_path_interpolate.h"
 #include "src/common/ifly_time.h"
 #include "transform2d.h"
 #include "utils_math.h"
@@ -22,14 +23,14 @@
 
 namespace planning {
 
-#define PLOT_RS_COST_PATH (1)
+#define PLOT_RS_COST_PATH (0)
 #define PLOT_RS_EXNTEND_TO_END (0)
-#define PLOT_CHILD_NODE (1)
+#define PLOT_CHILD_NODE (0)
 #define PLOT_SEARCH_SEQUENCE (0)
 #define RS_H_COST_MAX_NUM (32)
 
 #define DEBUG_SEARCH_RESULT (0)
-#define DEBUG_CHILD_NODE (1)
+#define DEBUG_CHILD_NODE (0)
 #define DEBUG_TARGET_HEADING_COST (0)
 #define DEBUG_EDT (0)
 
@@ -646,18 +647,11 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
-  Node3d* rs_end_in_pool = node_pool_.AllocateNode();
-  if (rs_end_in_pool == nullptr) {
-    ILOG_ERROR << " rs end fail";
-    rs_node_to_goal->ClearPath();
-    return false;
-  }
-
-  *rs_end_in_pool = *rs_node_to_goal;
-
-  if (rs_end_in_pool != nullptr) {
-    ILOG_INFO << "rs path size " << rs_path_.size;
-  }
+  double gcost =
+      CalcRSGCostToParentNode(current_node, rs_node_to_goal, &rs_path_);
+  rs_node_to_goal->SetGCost(current_node->GetGCost() + gcost);
+  rs_node_to_goal->SetHeuCost(0.0);
+  rs_node_to_goal->SetFCost();
 
   // DebugRSPath(&rs_path_);
 
@@ -1995,6 +1989,74 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   return piecewise_cost;
 }
 
+double HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
+                                            Node3d* rs_node,
+                                            const RSPath* rs_path) {
+  rs_node->SetGearSwitchNum(current_node->GetGearSwitchNum());
+  // evaluate cost on the trajectory and add current cost
+  double piecewise_cost = 0.0;
+  double path_dist = 0.0;
+  path_dist = rs_path->total_length;
+  piecewise_cost += path_dist * config_.traj_forward_penalty;
+
+
+  double gear_cost = 0.0;
+  double steer_change_cost = 0.0;
+  for (int i = 0; i < rs_path_.size - 1; i++) {
+    // gear cost
+    if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
+      gear_cost += config_.gear_switch_penalty;
+
+      rs_node->AddGearSwitchNumber();
+    }
+
+    // steer change cost
+    if (rs_path_.paths[i].steer != rs_path_.paths[i + 1].steer) {
+      if (rs_path_.paths[i].steer == RS_STRAIGHT ||
+          rs_path_.paths[i + 1].steer == RS_STRAIGHT) {
+        steer_change_cost +=
+            config_.traj_steer_change_penalty * max_steer_angle_;
+      } else {
+        steer_change_cost +=
+            config_.traj_steer_change_penalty * max_steer_angle_ * 2;
+      }
+    }
+  }
+
+  // gear cost
+  if (current_node->IsPathGearChange(rs_path_.paths[0].gear)) {
+    gear_cost += config_.gear_switch_penalty;
+    rs_node->AddGearSwitchNumber();
+  }
+  piecewise_cost += gear_cost;
+
+  // steer cost
+  if (current_node->GetSteer() > 0.0 && rs_path_.paths[0].steer != RS_LEFT) {
+    steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+  } else if (current_node->GetSteer() < 0.0 &&
+             rs_path_.paths[0].steer != RS_RIGHT) {
+    steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+  }
+  piecewise_cost += steer_change_cost;
+
+  // request dist and gear cost
+  if (current_node->GetDistToStart() <
+      request_.first_action_request.dist_request) {
+
+    if (current_node->IsPathGearChange(rs_path_.paths[0].gear)) {
+      piecewise_cost += config_.expect_dist_penalty;
+    } else if (current_node->GetDistToStart() +
+                   std::fabs(rs_path_.paths[0].length) <
+               request_.first_action_request.dist_request) {
+      piecewise_cost += config_.expect_dist_penalty;
+    }
+  }
+
+  rs_node->SetDistToStart(path_dist + current_node->GetDistToStart());
+
+  return piecewise_cost;
+}
+
 void HybridAStar::GetSingleShotNodeGCost(Node3d* current_node,
                                          Node3d* next_node) {
   // evaluate cost on the trajectory and add current cost
@@ -2079,10 +2141,11 @@ double HybridAStar::GenerateRefLineHeuristicCost(Node3d* next_node,
 }
 
 const bool HybridAStar::BackwardPassByRSPath(HybridAStarResult* result,
-                                             Node3d* rs_node_to_goal) {
+                                             Node3d* best_rs_node,
+                                             const RSPath* rs_path) {
   Node3d* parent_node = nullptr;
-  Node3d* child_node = rs_node_to_goal;
-  rs_node_to_goal->SetNext(nullptr);
+  Node3d* child_node = best_rs_node;
+  best_rs_node->SetNext(nullptr);
 
   result->base_pose = request_.base_pose_;
   result->gear_change_num = 0;
@@ -2199,8 +2262,8 @@ const bool HybridAStar::BackwardPassByRSPath(HybridAStarResult* result,
   // get rs path
   AstarPathType path_type = child_node->GetPathType();
   if (child_node != nullptr && child_node->IsRsPath()) {
-    for (int seg_id = 0; seg_id < rs_path_.size; seg_id++) {
-      const RSPathSegment* segment = &rs_path_.paths[seg_id];
+    for (int seg_id = 0; seg_id < rs_path->size; seg_id++) {
+      const RSPathSegment* segment = &rs_path->paths[seg_id];
 
       if (segment->size < 1) {
         ILOG_ERROR << "result size check failed";
@@ -2907,7 +2970,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   if (polynomial_node.IsNodeValid()) {
     BackwardPassByPolynomialPath(result, &polynomial_node, poly_path);
   } else if (rs_node_to_goal.IsNodeValid()) {
-    BackwardPassByRSPath(result, &rs_node_to_goal);
+    BackwardPassByRSPath(result, &rs_node_to_goal, &rs_path_);
   } else {
     result->fail_type = AstarFailType::search_too_much_node;
   }
@@ -3116,6 +3179,13 @@ bool HybridAStar::AstarSearch(
   AstarNodeVisitedType vis_type;
   bool is_safe = false;
   PathGearRequest gear_request = PathGearRequest::NONE;
+  double current_time;
+
+  int rs_path_success_num = 0;
+  RSPath best_rs_path;
+  Node3d best_rs_node;
+  best_rs_node.ClearPath();
+  double best_rs_node_cost = 1000000.0;
 
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
@@ -3146,7 +3216,7 @@ bool HybridAStar::AstarSearch(
     // check if an analystic curve could be connected from current
     // configuration to the end configuration without collision. if so,
     // search ends.
-    double current_time = IflyTime::Now_ms();
+    current_time = IflyTime::Now_ms();
 
     // if bigger than 60 s，break
     astar_search_time = current_time - astar_search_start_time;
@@ -3156,9 +3226,21 @@ bool HybridAStar::AstarSearch(
     }
 
     if (AnalyticExpansionByRS(current_node, gear_request, &rs_node_to_goal)) {
-      ILOG_INFO << "RS success";
+      ILOG_INFO << "RS success number=" << rs_path_success_num;
 
-      break;
+      rs_path_success_num++;
+      if (rs_node_to_goal.GetFCost() < best_rs_node_cost - 1.0) {
+        best_rs_node = rs_node_to_goal;
+        best_rs_path = rs_path_;
+        best_rs_node_cost = rs_node_to_goal.GetFCost();
+
+        current_node->DebugString();
+        rs_node_to_goal.DebugString();
+      }
+
+      if (rs_path_success_num > 5) {
+        break;
+      }
     }
 
     explored_rs_path_num++;
@@ -3332,8 +3414,8 @@ bool HybridAStar::AstarSearch(
             << search_end_time - astar_search_start_time;
 
   // todo, use all astar node, maybe no need use rs path.
-  if (rs_node_to_goal.IsNodeValid()) {
-    BackwardPassByRSPath(result, &rs_node_to_goal);
+  if (best_rs_node.IsNodeValid()) {
+    BackwardPassByRSPath(result, &best_rs_node, &best_rs_path);
   } else {
     result->fail_type = AstarFailType::search_too_much_node;
   }

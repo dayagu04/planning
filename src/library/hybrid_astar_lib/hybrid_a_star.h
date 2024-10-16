@@ -160,6 +160,9 @@ class HybridAStar {
 
   double CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
 
+  double CalcRSGCostToParentNode(Node3d* current_node, Node3d* rs_node,
+                                 const RSPath* rs_path);
+
   void GetSingleShotNodeGCost(Node3d* current_node, Node3d* next_node);
 
   // holonomic: freedom is equal with controllable variables
@@ -178,7 +181,7 @@ class HybridAStar {
                                        NodeHeuristicCost* cost);
 
   const bool BackwardPassByRSPath(HybridAStarResult* result,
-                                  Node3d* rs_node_to_goal);
+                                  Node3d* best_rs_node, const RSPath* rs_path);
 
   void ResetNodePool();
 
