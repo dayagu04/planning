@@ -238,9 +238,9 @@ int HybridAStarInterface::UpdateOutput() {
 
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
-      hybrid_astar_->PlanOnce(initial_state_, goal_state_, map_bounds_, obs_,
-                              request_, &clear_zone_, &coarse_traj_, &edt_,
-                              &ref_line_);
+      hybrid_astar_->AstarSearch(initial_state_, goal_state_, map_bounds_, obs_,
+                                 request_, &clear_zone_, &coarse_traj_, &edt_,
+                                 &ref_line_);
 
       ExtendPathToRealParkSpacePoint(&coarse_traj_, request_.real_goal);
 
@@ -380,9 +380,9 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                         request_.real_goal.theta));
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
-    hybrid_astar_->PlanOnce(initial_state_, goal_state_, map_bounds_, obs_list,
-                            request, &clear_zone_, &coarse_traj_, &edt_,
-                            &ref_line_);
+    hybrid_astar_->AstarSearch(initial_state_, goal_state_, map_bounds_,
+                               obs_list, request, &clear_zone_, &coarse_traj_,
+                               &edt_, &ref_line_);
   } else if (request.path_generate_method ==
              AstarPathGenerateType::GEAR_REVERSE_DYNAMIC_PROGRAMMING) {
     hybrid_astar_->SingleShotPathAttempt(map_bounds_, obs_list, request,

@@ -55,11 +55,12 @@ class HybridAStar {
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
    */
-  bool PlanOnce(const Pose2D& start, const Pose2D& end,
-                const MapBound& XYbounds, const ParkObstacleList& obstacles,
-                const AstarRequest& request,
-                const ObstacleClearZone* clear_zone, HybridAStarResult* result,
-                EulerDistanceTransform* edt, ParkReferenceLine* ref_line);
+  bool AstarSearch(const Pose2D& start, const Pose2D& end,
+                   const MapBound& XYbounds, const ParkObstacleList& obstacles,
+                   const AstarRequest& request,
+                   const ObstacleClearZone* clear_zone,
+                   HybridAStarResult* result, EulerDistanceTransform* edt,
+                   ParkReferenceLine* ref_line);
 
   // no astar search, just use rs path link start point and end point to adjust
   // ego position.
@@ -131,7 +132,8 @@ class HybridAStar {
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,
-                             const PathGearRequest gear_request_info);
+                             const PathGearRequest gear_request_info,
+                             Node3d* rs_node_to_goal);
 
   bool ExpansionByQunticPolynomial(Node3d* current_node,
                                    std::vector<AStarPathPoint>& path,
@@ -145,8 +147,8 @@ class HybridAStar {
   const bool ValidityCheckByEDT(Node3d* node);
 
   // check Reeds Shepp path collision and validity
-  bool RSPathCollisionCheck(Node3d* current_node,
-                            const RSPath* reeds_shepp_to_end);
+  bool RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
+                            Node3d* rs_node_to_goal);
 
   void CalculateNodeFCost(Node3d* current_node, Node3d* next_node);
 
@@ -175,7 +177,8 @@ class HybridAStar {
   double GenerateHeuristicCostByRsPath(Node3d* next_node,
                                        NodeHeuristicCost* cost);
 
-  const bool BackwardPassByRSPath(HybridAStarResult* result);
+  const bool BackwardPassByRSPath(HybridAStarResult* result,
+                                  Node3d* rs_node_to_goal);
 
   void ResetNodePool();
 
@@ -344,7 +347,6 @@ class HybridAStar {
   std::unordered_map<size_t, Node3d*> node_set_;
 
   // rs related
-  Node3d rs_end_node_;
   RSExpansionDecider rs_expansion_decider_;
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;

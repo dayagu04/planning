@@ -12,6 +12,7 @@
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
 #include "math_utils.h"
+#include "node3d.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
 #include "src/common/ifly_time.h"
@@ -21,7 +22,7 @@
 
 namespace planning {
 
-#define PLOT_RS_COST_PATH (0)
+#define PLOT_RS_COST_PATH (1)
 #define PLOT_RS_EXNTEND_TO_END (0)
 #define PLOT_CHILD_NODE (1)
 #define PLOT_SEARCH_SEQUENCE (0)
@@ -487,8 +488,9 @@ bool HybridAStar::PlanByCubicPath(HybridAStarResult* result,
   return true;
 }
 
-bool HybridAStar::AnalyticExpansionByRS(
-    Node3d* current_node, const PathGearRequest gear_request_info) {
+bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
+                                        const PathGearRequest gear_request_info,
+                                        Node3d* rs_node_to_goal) {
   // check gear and steering wheel
   if (!rs_expansion_decider_.IsNeedRsExpansion(current_node)) {
     // ILOG_INFO << "no need rs path link";
@@ -515,7 +517,7 @@ bool HybridAStar::AnalyticExpansionByRS(
     if (current_node->IsStartNode()) {
       if (IsGearDifferent(request_.first_action_request.gear_request,
                           rs_path_.paths[0].gear)) {
-        rs_end_node_.ClearPath();
+        rs_node_to_goal->ClearPath();
 
         // ILOG_INFO << "gear is not expectation";
         return false;
@@ -529,7 +531,7 @@ bool HybridAStar::AnalyticExpansionByRS(
             request_.first_action_request.dist_request) {
       if (IsGearDifferent(request_.first_action_request.gear_request,
                           rs_path_.paths[0].gear)) {
-        rs_end_node_.ClearPath();
+        rs_node_to_goal->ClearPath();
 
         // ILOG_INFO << "gear is not expectation";
         return false;
@@ -546,7 +548,7 @@ bool HybridAStar::AnalyticExpansionByRS(
     if (current_node->GetGearSwitchNum() == 0 &&
         current_node->IsPathGearChange(
             request_.first_action_request.gear_request)) {
-      rs_end_node_.ClearPath();
+      rs_node_to_goal->ClearPath();
 
       // ILOG_INFO << "gear is not expectation";
       return false;
@@ -617,19 +619,19 @@ bool HybridAStar::AnalyticExpansionByRS(
   path.points[0].y = rs_end_point.y;
   path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PI);
 
-  rs_end_node_.Set(path, XYbounds_, config_, path.path_dist);
-  if (!NodeInSearchBound(rs_end_node_.GetIndex())) {
+  rs_node_to_goal->Set(path, XYbounds_, config_, path.path_dist);
+  if (!NodeInSearchBound(rs_node_to_goal->GetIndex())) {
     // ILOG_INFO << "node positiong is not expectation";
-    rs_end_node_.ClearPath();
+    rs_node_to_goal->ClearPath();
     return false;
   }
 
-  rs_end_node_.SetPathType(AstarPathType::REEDS_SHEPP);
-  rs_end_node_.SetGearType(rs_path_.paths[0].gear);
+  rs_node_to_goal->SetPathType(AstarPathType::REEDS_SHEPP);
+  rs_node_to_goal->SetGearType(rs_path_.paths[0].gear);
 
   // collision check
-  if (!RSPathCollisionCheck(current_node, &rs_path_)) {
-    rs_end_node_.ClearPath();
+  if (!RSPathCollisionCheck(&rs_path_, rs_node_to_goal)) {
+    rs_node_to_goal->ClearPath();
 
     // ILOG_INFO << "rs collision";
     return false;
@@ -637,9 +639,9 @@ bool HybridAStar::AnalyticExpansionByRS(
 
   // ILOG_INFO << "Reach the end configuration with Reeds Shepp";
 
-  rs_end_node_.SetPre(current_node);
+  rs_node_to_goal->SetPre(current_node);
 
-  if (!rs_end_node_.IsNodeValid()) {
+  if (!rs_node_to_goal->IsNodeValid()) {
     // ILOG_INFO << "node invalid";
     return false;
   }
@@ -647,11 +649,11 @@ bool HybridAStar::AnalyticExpansionByRS(
   Node3d* rs_end_in_pool = node_pool_.AllocateNode();
   if (rs_end_in_pool == nullptr) {
     ILOG_ERROR << " rs end fail";
-    rs_end_node_.ClearPath();
+    rs_node_to_goal->ClearPath();
     return false;
   }
 
-  *rs_end_in_pool = rs_end_node_;
+  *rs_end_in_pool = *rs_node_to_goal;
 
   if (rs_end_in_pool != nullptr) {
     ILOG_INFO << "rs path size " << rs_path_.size;
@@ -891,8 +893,8 @@ bool HybridAStar::IsRSPathSingleShot(const RSPath* reeds_shepp_to_end) {
   return true;
 }
 
-bool HybridAStar::RSPathCollisionCheck(Node3d* current_node,
-                                       const RSPath* reeds_shepp_to_end) {
+bool HybridAStar::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
+                                       Node3d* rs_node_to_goal) {
   // length check
   if (reeds_shepp_to_end->size < 1) {
     return false;
@@ -903,7 +905,7 @@ bool HybridAStar::RSPathCollisionCheck(Node3d* current_node,
   double check_start_time = IflyTime::Now_ms();
 #endif
 
-  bool is_valid = IsRSPathSafeByEDT(reeds_shepp_to_end, &rs_end_node_);
+  bool is_valid = IsRSPathSafeByEDT(reeds_shepp_to_end, rs_node_to_goal);
   // if (!is_valid) {
   // ILOG_INFO << "rs collision "
   //           << static_cast<int>(rs_end_node_.GetConstCollisionType());
@@ -2076,10 +2078,11 @@ double HybridAStar::GenerateRefLineHeuristicCost(Node3d* next_node,
   return std::max(dist_cost, heading_cost);
 }
 
-const bool HybridAStar::BackwardPassByRSPath(HybridAStarResult* result) {
+const bool HybridAStar::BackwardPassByRSPath(HybridAStarResult* result,
+                                             Node3d* rs_node_to_goal) {
   Node3d* parent_node = nullptr;
-  Node3d* child_node = &rs_end_node_;
-  rs_end_node_.SetNext(nullptr);
+  Node3d* child_node = rs_node_to_goal;
+  rs_node_to_goal->SetNext(nullptr);
 
   result->base_pose = request_.base_pose_;
   result->gear_change_num = 0;
@@ -2521,7 +2524,6 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
 
   // clear containers
   ResetNodePool();
-  rs_end_node_.Clear();
   open_pq_.clear();
   node_set_.clear();
 
@@ -2534,8 +2536,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   collision_check_time_ms_ = 0.0;
   rs_time_ms_ = 0.0;
   rs_interpolate_time_ms_ = 0.0;
-
-  ILOG_INFO << "a star begin";
+  ILOG_INFO << "gear reverse searching";
 
   obstacles_ = &obstacles;
   edt_ = edt;
@@ -2661,6 +2662,8 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
   Node3d new_node;
+  Node3d rs_node_to_goal;
+  rs_node_to_goal.Clear();
 
   AstarNodeVisitedType vis_type;
   PathGearRequest gear_request = PathGearRequest::GEAR_REVERSE_ONLY;
@@ -2722,7 +2725,8 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
                 << ",radius = " << current_node->GetRadius();
 
       break;
-    } else if (AnalyticExpansionByRS(current_node, gear_request)) {
+    } else if (AnalyticExpansionByRS(current_node, gear_request,
+                                     &rs_node_to_goal)) {
       ILOG_INFO << "RS success";
       break;
     }
@@ -2902,8 +2906,8 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   // todo, use all astar node, maybe no need use rs path.
   if (polynomial_node.IsNodeValid()) {
     BackwardPassByPolynomialPath(result, &polynomial_node, poly_path);
-  } else if (rs_end_node_.IsNodeValid()) {
-    BackwardPassByRSPath(result);
+  } else if (rs_node_to_goal.IsNodeValid()) {
+    BackwardPassByRSPath(result, &rs_node_to_goal);
   } else {
     result->fail_type = AstarFailType::search_too_much_node;
   }
@@ -2927,19 +2931,15 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   return;
 }
 
-bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
-                           const MapBound& XYbounds,
-                           const ParkObstacleList& obstacles,
-                           const AstarRequest& request,
-                           const ObstacleClearZone *clear_zone,
-                           HybridAStarResult* result,
-                           EulerDistanceTransform* edt,
-                           ParkReferenceLine* ref_line) {
+bool HybridAStar::AstarSearch(
+    const Pose2D& start, const Pose2D& end, const MapBound& XYbounds,
+    const ParkObstacleList& obstacles, const AstarRequest& request,
+    const ObstacleClearZone* clear_zone, HybridAStarResult* result,
+    EulerDistanceTransform* edt, ParkReferenceLine* ref_line) {
   double astar_start_time = IflyTime::Now_ms();
 
   // clear containers
   ResetNodePool();
-  rs_end_node_.Clear();
   open_pq_.clear();
   node_set_.clear();
 
@@ -3110,6 +3110,8 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
   Node3d new_node;
+  Node3d rs_node_to_goal;
+  rs_node_to_goal.Clear();
 
   AstarNodeVisitedType vis_type;
   bool is_safe = false;
@@ -3153,7 +3155,7 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
       break;
     }
 
-    if (AnalyticExpansionByRS(current_node, gear_request)) {
+    if (AnalyticExpansionByRS(current_node, gear_request, &rs_node_to_goal)) {
       ILOG_INFO << "RS success";
 
       break;
@@ -3330,8 +3332,8 @@ bool HybridAStar::PlanOnce(const Pose2D& start, const Pose2D& end,
             << search_end_time - astar_search_start_time;
 
   // todo, use all astar node, maybe no need use rs path.
-  if (rs_end_node_.IsNodeValid()) {
-    BackwardPassByRSPath(result);
+  if (rs_node_to_goal.IsNodeValid()) {
+    BackwardPassByRSPath(result, &rs_node_to_goal);
   } else {
     result->fail_type = AstarFailType::search_too_much_node;
   }
