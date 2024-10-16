@@ -1210,7 +1210,7 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
   for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::LINEARC_TYPE_COUNT;
        ++i) {
     if (!dubins_planner_.Solve(i)) {
-      DEBUG_PRINT("solve line arc failed!");
+      // DEBUG_PRINT("solve line arc failed!");
       continue;
     }
 
@@ -1285,8 +1285,7 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
   pnc::geometry_lib::LocalToGlobalTf l2g_tf;
   l2g_tf.Init(input_.ego_pose.pos, input_.ego_pose.heading);
 
-  double left_min_buffer = kColLargeLatBufferOutSlot;
-  double right_min_buffer = kColLargeLatBufferOutSlot;
+  std::vector<double> min_real_dist_vec = {2.0, 2.0};
   for (const auto& pt_pair : collision_detector_ptr_->GetObstaclesMap()) {
     const bool is_left_corner =
         (pt_pair.first == CollisionDetector::CHANNEL_OBS &&
@@ -1300,21 +1299,32 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
     for (const auto& obs_pt : pt_pair.second) {
       const double real_dist =
           pnc::geometry_lib::CalPoint2LineSegDist(obs_pt, car_line);
-      if (is_left_corner && real_dist < left_min_buffer) {
-        left_min_buffer = std::max(kColSmallLatBufferOutSlot, real_dist - 0.3);
-        break;
-      } else if (!is_left_corner && real_dist < right_min_buffer) {
-        right_min_buffer = std::max(kColSmallLatBufferOutSlot, real_dist - 0.3);
-        break;
+
+      if (is_left_corner) {
+        min_real_dist_vec[0] = std::min(min_real_dist_vec[0], real_dist);
+      } else {
+        min_real_dist_vec[1] = std::min(min_real_dist_vec[1], real_dist);
       }
     }
   }
 
-  left_min_buffer = std::max(0.05, left_min_buffer);
-  right_min_buffer = std::max(0.05, right_min_buffer);
-  DEBUG_PRINT("left lat buffer = " << left_min_buffer);
-  DEBUG_PRINT("right lat buffer = " << right_min_buffer);
-  return {left_min_buffer, right_min_buffer};
+  std::vector<double> min_buffer_vec = {kColLargeLatBufferOutSlot,
+                                        kColLargeLatBufferOutSlot};
+  for (size_t i = 0; i < min_real_dist_vec.size(); i++) {
+    if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot) {
+      min_buffer_vec[i] =
+          mathlib::Clamp(min_real_dist_vec[i] - 0.4, kColSmallLatBufferOutSlot,
+                         kColLargeLatBufferOutSlot);
+    } else if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot + 0.3) {
+      min_buffer_vec[i] =
+          mathlib::Clamp(min_real_dist_vec[i] - 0.3, kColSmallLatBufferOutSlot,
+                         kColLargeLatBufferOutSlot);
+    }
+  }
+
+  DEBUG_PRINT("left lat buffer = " << min_buffer_vec[0]);
+  DEBUG_PRINT("right lat buffer = " << min_buffer_vec[1]);
+  return min_buffer_vec;
 }
 
 const bool ParallelPathPlanner::GenAlignedPreparingLine(
