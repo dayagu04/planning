@@ -791,17 +791,15 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
 
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("PreprocessRoadSplit::last_zero_relative_id_nums_ > 1");
-    is_exist_ramp_on_road_ = true;
     if (last_zero_relative_id_order_id_index_ != -1) {
       for (auto& lane : relative_id_lanes) {
         int lane_order_id = lane->get_order_id();
         int lane_relative_id = lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
         lane->set_relative_id(lane_relative_id);
       }
-    } else {
-      is_exist_ramp_on_road_ = false;
+      is_exist_ramp_on_road_ = true;
+      return;
     }
-    return;
   }
 
   if (first_split_dir_dis_info_.first == ON_RIGHT) {
@@ -838,17 +836,15 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   double ego_y = plannig_init_point.lat_init_state.y();
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("last_zero_relative_id_nums_ > 1");
-    is_exist_split_on_ramp_ = true;
     if (last_zero_relative_id_order_id_index_ != -1) {
       for (auto& lane : relative_id_lanes) {
         int lane_order_id = lane->get_order_id();
         int lane_relative_id = lane_order_id - order_ids[last_zero_relative_id_order_id_index_];
         lane->set_relative_id(lane_relative_id);
       }
-    } else {
-      is_exist_split_on_ramp_ = false;
+      is_exist_split_on_ramp_ = true;
+      return;
     }
-    return;
   }
 
   if (!is_on_ramp_ && split_direction_dis_info_list_.size() > 1) {
