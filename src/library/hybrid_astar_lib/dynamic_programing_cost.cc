@@ -1,8 +1,16 @@
 
 #include "dynamic_programing_cost.h"
+
+#include <opencv2/imgproc/types_c.h>
+
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <opencv2/core/types.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 #include <vector>
+
 #include "log_glog.h"
 #include "node2d.h"
 #include "polygon_base.h"
@@ -10,7 +18,7 @@
 
 namespace planning {
 
-#define DEBUG_NODE_COST (1)
+#define DEBUG_NODE_COST (0)
 
 GridSearch::GridSearch(const PlannerOpenSpaceConfig& open_space_conf) {
   xy_grid_resolution_ = open_space_conf.heuristic_grid_resolution;
@@ -197,8 +205,7 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
 
   double end_timestamp = IflyTime::Now_ms();
   double time_consumption = end_timestamp - start_timestamp;
-
-  ILOG_INFO << "time_consumption = " << time_consumption;
+  ILOG_INFO << "reset time_consumption = " << time_consumption;
 
   XYbounds_ = XYbounds;
   veh_half_width_with_safe_dist_ = veh_half_width_with_safe_dist;
@@ -215,16 +222,19 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
   start_timestamp = IflyTime::Now_ms();
   obstacles_ = obstacles;
   ProjectObstacleToNodeMap();
-
   end_timestamp = IflyTime::Now_ms();
   time_consumption = end_timestamp - start_timestamp;
-
-  ILOG_INFO << "obs time_consumption = " << time_consumption;
+  ILOG_INFO << "obs process time = " << time_consumption;
 
   // backward search in end node
   end_node_.Set(ex, ey, inv_xy_resolution_, XYbounds_, GenerateGlobalId());
   NodePoolPush(&end_node_);
 
+#if DEBUG_NODE_COST
+  end_node_.DebugNodeString(xy_grid_resolution_);
+#endif
+
+  start_timestamp = IflyTime::Now_ms();
   node_layer1.node_layer.push_back(&end_node_);
   node_layer1.tag = NodeLayerTag::PARENT_LAYER;
   node_layer2.tag = NodeLayerTag::CHILD_LAYER;
@@ -303,7 +313,7 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
   end_timestamp = IflyTime::Now_ms();
   time_consumption = end_timestamp - start_timestamp;
 
-  ILOG_INFO << "search time_consumption = " << time_consumption;
+  ILOG_INFO << "search time = " << time_consumption;
   ILOG_INFO << "heuristic search explored node num is " << explored_node_num;
 
 #if DEBUG_NODE_COST
@@ -334,6 +344,36 @@ void GridSearch::DebugNodePool() {
       node_pool_[i][k].DebugNodeString(xy_grid_resolution_);
     }
   }
+
+  cv::Mat map_matrix(max_x_search_size_, max_y_search_size_, CV_8UC1,
+                     cv::Scalar(200));
+
+  int row_num = map_matrix.rows;
+  int column_num = map_matrix.cols;
+
+  double value = 0;
+
+  for (int32_t i = 0; i < row_num; i++) {
+    uchar* data = map_matrix.ptr<uchar>(i);
+
+    for (int32_t j = 0; j < column_num; j++) {
+      value = node_pool_[i][j].GetCost() * xy_grid_resolution_;
+      value = value / 50.0 * 255;
+
+      if (value < 0.0) {
+        value = 0.0;
+      }
+
+      if (value > 255.0) {
+        value = 255.0;
+      }
+
+      data[j] = std::round(value);
+    }
+  }
+
+  cv::imwrite("/asw/planning/glog/dp_cost.png", map_matrix);
+
   return;
 }
 
