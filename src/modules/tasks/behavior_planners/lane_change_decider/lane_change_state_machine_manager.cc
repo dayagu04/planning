@@ -1473,9 +1473,10 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
                                           tr.d_min_cpath - l_ego - 1.6)),
                                 0.0) /
                        (std::max(-tr.v_lat + 0.7, 0.3));
-    if ((lat_condi < 1.5 && tr.d_rel < 1.0) ||
-        (lat_condi <= 1.5 &&
-         tr.d_rel < 0.8 * (mss - std::max(lat_condi * tr.v_rel, 0.0)))) {
+    // if ((lat_condi < 1.5 && tr.d_rel < 1.0) ||
+    //     (lat_condi <= 1.5 &&
+    //      tr.d_rel < 0.8 * (mss - std::max(lat_condi * tr.v_rel, 0.0)))) {
+    if (tr.d_rel < 0.7 * mss) {
       lc_state_info->lc_should_back = true;
       lc_state_info->lc_back_reason = "front view back";
       lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
