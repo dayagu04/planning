@@ -643,7 +643,9 @@ void ParallelParkInPlanner::GenTlane() {
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
       -side_sgn * half_slot_width);
-  curb_y_limit += side_sgn * apa_param.GetParam().mov_curb_out_dist;
+  if (ego_slot_info.slot_occupied_ratio < 0.01) {
+    curb_y_limit += side_sgn * apa_param.GetParam().mov_curb_out_dist;
+  }
 
   t_lane_.corner_inside_slot << slot_length, half_slot_width * side_sgn;
   t_lane_.corner_outside_slot << 0.0, half_slot_width * side_sgn;
@@ -687,8 +689,10 @@ void ParallelParkInPlanner::GenTlane() {
                                  target_y_with_curb));
 
   // hack for obs
-  frame_.ego_slot_info.target_ego_pos_slot.y() +=
-      apa_param.GetParam().mov_curb_out_dist * t_lane_.slot_side_sgn;
+  if (ego_slot_info.slot_occupied_ratio < 0.01) {
+    frame_.ego_slot_info.target_ego_pos_slot.y() +=
+        apa_param.GetParam().mov_curb_out_dist * t_lane_.slot_side_sgn;
+  }
 
   const double rac_to_geom_center = 0.5 * apa_param.GetParam().car_length -
                                     apa_param.GetParam().rear_overhanging;
