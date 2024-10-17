@@ -95,11 +95,12 @@ bool LaneChangeRequestManager::Update(
     int_request_.reset_int_cnt();
   }
   if (int_request_.request_type() == NO_CHANGE) {
-    if (enable_use_cone_change_request) {
+    if (enable_use_cone_change_request &&
+        request_source_ != EMERGENCE_AVOID_REQUEST) {
       cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request &&
-        cone_change_request_.request_type() == RequestType::NO_CHANGE) {
+        request_source_ != CONE_REQUEST) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
