@@ -834,8 +834,8 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
 
   AstarPathGear gear = reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
-  if (request_.parking_task == ParkingTask::parking_in &&
-      request_.space_type == ParkSpaceType::vertical &&
+  if (request_.parking_task == ParkingTask::TAIL_PARKING_IN &&
+      request_.space_type == ParkSpaceType::VERTICAL &&
       request_.head_request == ParkingVehDirectionRequest::tail_in_first &&
       request_.rs_request == RSPathRequestType::last_path_forbid_forward) {
     if (gear == AstarPathGear::drive) {
@@ -859,8 +859,8 @@ bool HybridAStar::IsRSPathSingleShot(const RSPath* reeds_shepp_to_end) {
   for (int i = 0; i < rs_path_seg_size; i++) {
     gear = reeds_shepp_to_end->paths[i].gear;
 
-    if (request_.parking_task == ParkingTask::parking_in &&
-        request_.space_type == ParkSpaceType::vertical) {
+    if (request_.parking_task == ParkingTask::TAIL_PARKING_IN &&
+        request_.space_type == ParkSpaceType::VERTICAL) {
       if (request_.rs_request == RSPathRequestType::all_path_forbid_forward &&
           gear == AstarPathGear::drive) {
         // ILOG_INFO << " rs path seg need single shot by reverse gear ";
@@ -2538,12 +2538,12 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
     return;
   }
 
-  if (request.space_type != ParkSpaceType::vertical) {
+  if (request.space_type != ParkSpaceType::VERTICAL) {
     ILOG_INFO << "vertical";
     return;
   }
 
-  if (request.parking_task != ParkingTask::parking_in) {
+  if (request.parking_task != ParkingTask::TAIL_PARKING_IN) {
     ILOG_INFO << "parking_in";
     return;
   }

@@ -46,4 +46,28 @@ bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right) {
   return false;
 }
 
+std::string PlanReasonDebugString(const PlanningReason reason) {
+  switch (reason) {
+    case PlanningReason::FIRST_PLAN:
+      return "FIRST_PLAN";
+    case PlanningReason::ADJUST_SELF_CAR_POSE:
+      return "ADJUST_SELF_CAR_POSE";
+    case PlanningReason::GEOMETRY_CURVE_FAIL:
+      return "GEOMETRY_CURVE_FAIL";
+    case PlanningReason::PATH_COMPLETED:
+      return "PATH_COMPLETED";
+    case PlanningReason::PATH_STUCKED:
+      return "PATH_STUCKED";
+    case PlanningReason::SLOT_CHANGED:
+      return "SLOT_CHANGED";
+    case PlanningReason::SIMULATION_TRIGGER:
+      return "SIMULATION_TRIGGER";
+    default:
+      return "none";
+      break;
+  }
+
+  return "none";
+}
+
 }  // namespace planning

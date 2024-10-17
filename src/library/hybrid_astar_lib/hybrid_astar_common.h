@@ -47,17 +47,20 @@ enum class AstarPathGenerateType {
 };
 
 enum class ParkSpaceType {
-  none,
-  vertical,
-  parallel,
-  max_number,
+  NONE,
+  VERTICAL,
+  PARALLEL,
+  SLANTING,
+  MAX_NUMBER,
 };
 
 enum class ParkingTask {
-  none,
-  parking_in,
-  parking_out,
-  max_number,
+  NONE,
+  TAIL_PARKING_IN,
+  HEAD_PARKING_IN,
+  HEAD_PARKING_OUT,
+  TAIL_PARKING_OUT,
+  MAX_NUMBER,
 };
 
 enum class ParkingVehDirectionRequest {
@@ -282,5 +285,7 @@ std::string PathGearDebugString(const AstarPathGear gear);
 std::string GetPathSteerDebugString(const AstarPathSteer type);
 
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
+
+std::string PlanReasonDebugString(const PlanningReason reason);
 
 }  // namespace planning

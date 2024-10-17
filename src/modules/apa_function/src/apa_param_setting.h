@@ -327,6 +327,9 @@ struct ApaParameters {
                                             0.88, 0.0,  0.0,   0.0,   0.0};
   std::vector<double> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
                                             0.18, 0.95, 0.95, 0.95, 0.95};
+
+  bool vertical_slot_auto_scheduler_for_astar;
+  bool parallel_slot_auto_scheduler_for_astar;
 };
 
 class ApaParametersSetting {

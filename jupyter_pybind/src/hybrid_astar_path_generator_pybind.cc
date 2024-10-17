@@ -881,8 +881,8 @@ std::vector<Eigen::Vector3d> Update(
         apa_param.GetParam().vertical_slot_target_adjust_dist;
     request.base_pose_ = Pose2D(0, 0, 0);
 
-    request.space_type = ParkSpaceType::vertical;
-    request.parking_task = ParkingTask::parking_in;
+    request.space_type = ParkSpaceType::VERTICAL;
+    request.parking_task = ParkingTask::TAIL_PARKING_IN;
     request.head_request = ParkingVehDirectionRequest::tail_in_first;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;

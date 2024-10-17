@@ -17,6 +17,7 @@
 #include "pose2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -583,8 +584,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       planning::AstarPathGenerateType::ASTAR_SEARCHING;
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::none;
-  cur_request.space_type = ParkSpaceType::vertical;
-  cur_request.parking_task = ParkingTask::parking_in;
+  cur_request.space_type = ParkSpaceType::VERTICAL;
+  cur_request.parking_task = ParkingTask::TAIL_PARKING_IN;
   cur_request.head_request = ParkingVehDirectionRequest::tail_in_first;
   cur_request.rs_request = RSPathRequestType::none;
   cur_request.timestamp_ms = astar_start_time;
@@ -720,12 +721,18 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       double publish_end_time = IflyTime::Now_ms();
       ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
 
+      AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+      astar_scheduler->SetSchedulerState(AstarSearchState::SUCCESS);
+
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
       res = PathPlannerResult::WAIT_PATH;
 
       // publish fallback path
       GenerateFallBackPath();
+
+      AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+      astar_scheduler->SetSchedulerState(AstarSearchState::FAILURE);
 
       ILOG_INFO << "path plan point less 5";
     }

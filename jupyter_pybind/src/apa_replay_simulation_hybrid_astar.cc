@@ -791,8 +791,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     request.base_pose_ = base_pose_;
 
-    request.space_type = ParkSpaceType::vertical;
-    request.parking_task = ParkingTask::parking_in;
+    request.space_type = ParkSpaceType::VERTICAL;
+    request.parking_task = ParkingTask::TAIL_PARKING_IN;
     request.head_request = ParkingVehDirectionRequest::tail_in_first;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;

@@ -281,5 +281,7 @@
   "max_limiter_window_size": 3,
 
   "comment_17": "gen output params",
-  "max_velocity": 0.6
+  "max_velocity": 0.6,
+  "vertical_slot_auto_scheduler_for_astar": true,
+  "parallel_slot_auto_scheduler_for_astar": false
 }

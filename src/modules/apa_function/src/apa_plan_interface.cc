@@ -26,6 +26,7 @@
 #include "perpendicular_park_out_planner.h"
 #include "planning_context.h"
 #include "planning_plan_c.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -70,6 +71,11 @@ void ApaPlanInterface::Reset() {
   for (const auto &apa_planner : apa_planner_map_) {
     apa_planner.second->Reset();
   }
+
+  AstarScheduler *astar_scheduler = AstarScheduler::GetAstarScheduler();
+  astar_scheduler->Clear();
+
+  return;
 }
 
 void ApaPlanInterface::ResetForSearching() {
@@ -951,6 +957,11 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   "footprint_circle_y");
   JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<double>,
                   "footprint_circle_r");
+
+  JSON_READ_VALUE(apa_param.SetPram().vertical_slot_auto_scheduler_for_astar,
+                  bool, "vertical_slot_auto_scheduler_for_astar");
+  JSON_READ_VALUE(apa_param.SetPram().parallel_slot_auto_scheduler_for_astar,
+                  bool, "parallel_slot_auto_scheduler_for_astar");
 }
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(
