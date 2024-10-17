@@ -865,7 +865,7 @@ std::vector<Eigen::Vector3d> Update(
     request.slot_length = ego_slot_info.slot_length;
     request.first_action_request.has_request = false;
     request.path_generate_method =
-        planning::AstarPathGenerateType::GEAR_REVERSE_DYNAMIC_PROGRAMMING;
+        planning::AstarPathGenerateType::ASTAR_SEARCHING;
 
     request.start_ = Pose2D(start[0], start[1], start[2]);
     request.start_.theta =

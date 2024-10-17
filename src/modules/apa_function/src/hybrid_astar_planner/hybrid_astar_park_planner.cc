@@ -581,7 +581,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   AstarRequest cur_request;
   cur_request.path_generate_method =
       planning::AstarPathGenerateType::ASTAR_SEARCHING;
-  cur_request.first_action_request.has_request = false;
+  cur_request.first_action_request.has_request = true;
+  cur_request.first_action_request.gear_request = AstarPathGear::none;
   cur_request.space_type = ParkSpaceType::vertical;
   cur_request.parking_task = ParkingTask::parking_in;
   cur_request.head_request = ParkingVehDirectionRequest::tail_in_first;
@@ -638,8 +639,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   } else {
     // gear need be different with history in next replanning
     if (frame_.replan_reason != 1) {
-      cur_request.first_action_request.has_request = true;
-
       switch (current_gear_) {
         case AstarPathGear::reverse:
           cur_request.first_action_request.gear_request = AstarPathGear::drive;
@@ -649,7 +648,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
               AstarPathGear::reverse;
           break;
         default:
-          cur_request.first_action_request.has_request = false;
           break;
       }
     }

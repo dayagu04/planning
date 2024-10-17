@@ -55,11 +55,12 @@ class HybridAStar {
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
    */
-  bool PlanOnce(const Pose2D& start, const Pose2D& end,
-                const MapBound& XYbounds, const ParkObstacleList& obstacles,
-                const AstarRequest& request,
-                const ObstacleClearZone* clear_zone, HybridAStarResult* result,
-                EulerDistanceTransform* edt);
+  bool AstarSearch(const Pose2D& start, const Pose2D& end,
+                   const MapBound& XYbounds, const ParkObstacleList& obstacles,
+                   const AstarRequest& request,
+                   const ObstacleClearZone* clear_zone,
+                   HybridAStarResult* result, EulerDistanceTransform* edt,
+                   ParkReferenceLine* ref_line);
 
   // no astar search, just use rs path link start point and end point to adjust
   // ego position.
@@ -69,14 +70,16 @@ class HybridAStar {
                         const ParkObstacleList& obstacles,
                         const AstarRequest& request,
                         const ObstacleClearZone *clear_zone,
-                        EulerDistanceTransform* edt);
+                        EulerDistanceTransform* edt,
+                        ParkReferenceLine* ref_line);
 
   // use rs path sampling to link start point and end point.
   bool PlanByRSPathSampling(
       HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
       const double lon_min_sampling_length, const MapBound& XYbounds,
       const ParkObstacleList& obstacles, const AstarRequest& request,
-      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone);
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
 
   // use cubic path sampling to link start point and end point.
   bool PlanByCubicPath(HybridAStarResult* result, const Pose2D& start,
@@ -84,7 +87,8 @@ class HybridAStar {
                        const MapBound& XYbounds,
                        const ParkObstacleList& obstacles,
                        const AstarRequest& request, EulerDistanceTransform* edt,
-                       const ObstacleClearZone* clear_zone);
+                       const ObstacleClearZone* clear_zone,
+                       ParkReferenceLine* ref_line);
 
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);
@@ -107,7 +111,7 @@ class HybridAStar {
   // for debug
   void GetNodeListMessage(std::vector<std::vector<Eigen::Vector2d>>& list);
 
-  const ParkReferenceLine& GetConstRefLine() const;
+  const ParkReferenceLine* GetConstRefLine() const;
 
   void Clear();
 
@@ -119,7 +123,8 @@ class HybridAStar {
                              const AstarRequest& request,
                              const ObstacleClearZone* clear_zone,
                              HybridAStarResult* result,
-                             EulerDistanceTransform* edt);
+                             EulerDistanceTransform* edt,
+                             ParkReferenceLine* ref_line);
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
@@ -127,7 +132,8 @@ class HybridAStar {
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,
-                             const PathGearRequest gear_request_info);
+                             const PathGearRequest gear_request_info,
+                             Node3d* rs_node_to_goal);
 
   bool ExpansionByQunticPolynomial(Node3d* current_node,
                                    std::vector<AStarPathPoint>& path,
@@ -141,8 +147,8 @@ class HybridAStar {
   const bool ValidityCheckByEDT(Node3d* node);
 
   // check Reeds Shepp path collision and validity
-  bool RSPathCollisionCheck(Node3d* current_node,
-                            const RSPath* reeds_shepp_to_end);
+  bool RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
+                            Node3d* rs_node_to_goal);
 
   void CalculateNodeFCost(Node3d* current_node, Node3d* next_node);
 
@@ -153,6 +159,9 @@ class HybridAStar {
   void GetSingleShotNodeHeuCost(const Node3d* father_node, Node3d* next_node);
 
   double CalcGCostToParentNode(Node3d* current_node, Node3d* next_node);
+
+  double CalcRSGCostToParentNode(Node3d* current_node, Node3d* rs_node,
+                                 const RSPath* rs_path);
 
   void GetSingleShotNodeGCost(Node3d* current_node, Node3d* next_node);
 
@@ -171,7 +180,8 @@ class HybridAStar {
   double GenerateHeuristicCostByRsPath(Node3d* next_node,
                                        NodeHeuristicCost* cost);
 
-  const bool BackwardPassByRSPath(HybridAStarResult* result);
+  const bool BackwardPassByRSPath(HybridAStarResult* result,
+                                  Node3d* best_rs_node, const RSPath* rs_path);
 
   void ResetNodePool();
 
@@ -340,7 +350,6 @@ class HybridAStar {
   std::unordered_map<size_t, Node3d*> node_set_;
 
   // rs related
-  Node3d rs_end_node_;
   RSExpansionDecider rs_expansion_decider_;
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;
@@ -348,7 +357,7 @@ class HybridAStar {
 
   std::unique_ptr<GridSearch> dp_heuristic_generator_;
 
-  ParkReferenceLine ref_line_;
+  ParkReferenceLine *ref_line_;
 
   AstarRequest request_;
 

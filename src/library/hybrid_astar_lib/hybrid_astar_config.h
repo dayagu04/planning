@@ -38,7 +38,7 @@ struct PlannerOpenSpaceConfig {
 
   double traj_forward_penalty = 1.0;
   double traj_reverse_penalty = 1.0;
-  double traj_gear_switch_penalty = 20.0;
+  double gear_switch_penalty = 20.0;
   double traj_steer_penalty = 0.0;
   double traj_steer_change_penalty = 0.0;
   double ref_line_heading_penalty = 0.0;
@@ -46,6 +46,8 @@ struct PlannerOpenSpaceConfig {
   std::vector<double> lon_hierarchy_safe_buffer;
 
   double expect_gear_penalty;
+  double expect_dist_penalty;
+  double gear_switch_penalty_heu;
 
   double lon_front_safe_buffer = 0.5;
   double lon_back_safe_buffer = 0.1;

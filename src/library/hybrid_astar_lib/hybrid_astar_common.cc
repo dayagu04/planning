@@ -34,4 +34,16 @@ std::string GetPathSteerDebugString(const AstarPathSteer type) {
   return "none";
 }
 
+bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right) {
+  if (left == AstarPathGear::drive && right == AstarPathGear::reverse) {
+    return true;
+  }
+
+  if (left == AstarPathGear::reverse && right == AstarPathGear::drive) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace planning

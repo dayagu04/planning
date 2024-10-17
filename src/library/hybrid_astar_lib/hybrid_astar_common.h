@@ -99,6 +99,7 @@ enum class PlanningReason {
   FIRST_PLAN,
   ADJUST_SELF_CAR_POSE,
   SIMULATION_TRIGGER,
+  GEOMETRY_CURVE_FAIL,
 };
 
 enum class AstarPathSteer {
@@ -279,5 +280,7 @@ struct DebugAstarSearchPoint {
 std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
+
+bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
 
 }  // namespace planning
