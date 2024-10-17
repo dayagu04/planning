@@ -1174,8 +1174,6 @@ bool EnvironmentalModelManager::IsStatic(
   bool is_static = prediction_object.speed < static_speed ||
                    prediction_object.trajectory_array.size() == 0 ||
                    prediction_trajectory_length < kMaxStaticPredictionLength ||
-                   prediction_object.motion_pattern_current ==
-                       iflyauto::OBJECT_MOTION_TYPE_STATIC ||
                    prediction_object.is_traffic_facilities;
   return is_static;
 }

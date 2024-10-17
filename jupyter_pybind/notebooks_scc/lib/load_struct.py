@@ -1000,6 +1000,7 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
     try:
       frenet_vs, frenet_vl = 255, 255
       lat_decision = "None"
+      is_static = ""
       for obstacle in environment_model_info.obstacle:
         if obstacle.id == obstacle_list[i].additional_info.track_id:
           frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
@@ -1009,6 +1010,8 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
             lat_decision = "RIGHT"
           elif (2 == obstacle.lat_decision):
             lat_decision = "IGNORE"
+          if obstacle.is_static:
+            is_static = "Static"
           break
     except:
       pass
@@ -1099,7 +1102,7 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
           + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type)+'\n'\
           + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4))+'\n'\
-          + lat_decision)
+          + lat_decision + '\n' + is_static)
     obs_info_all[source]['obstacles_x'].append(obs_x)
     # for ind in range(len(obs_y)):
     obs_info_all[source]['obstacles_y'].append(obs_y)

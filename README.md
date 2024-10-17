@@ -89,6 +89,10 @@ build/tools/planning_player/pp --play <bag的路径>
 ```
 --no-debug
 ```
+- 可选参数，车型，决定了使用哪个车辆配置文件。不加此项，默认车型为 CHERY_E0X
+```
+--car=JAC_S811
+```
 **3.3 程序崩溃时的堆栈分析**
 ```
 gdb --args build/tools/planning_player/pp --play <bag的路径>
@@ -108,7 +112,7 @@ p (planning::SomeClass)*0x12345678 ：通过指针打印变量的值
 
 **3.5 PP无法复现的常见原因**
 使用与原包相同的算法版本，本地PP开环仿真的结果应该和原包中结果保持一致（只有规划起点会有细微差距），如果发现不一致的现象，依次排查以下项目：
-- 本地版本与原包中版本是否一致。原包中的"/iflytek/planning/plan"的msg_header.version中记录了planning版本的commit，可以使用rqt_bag可视化原rosbag中的信息
+- 本地版本与原包中版本是否一致。运行PP，会打印出实车和本地的planning版本(commit号)，可观察两版本是否一致
 - make clean 后再 make pp_build
 - 如果是没复现拨杆换道，确保包中包含了拨杆信息
 ##### 4.Planning Player 本地批量生成包
