@@ -26,6 +26,10 @@
 
 namespace planning {
 
+#define DP_MAX_X_SEARCH_SIZE (100)
+#define DP_MAX_Y_SEARCH_SIZE (150)
+#define DP_NODE_LAYER_MAX_NUMBER (600)
+
 enum class NodeLayerTag {
   NONE,
   PARENT_LAYER,
@@ -35,8 +39,24 @@ enum class NodeLayerTag {
 
 // 在搜索的过程中，为了减少删除或者拷贝操作，通过标签来确认搜索层是父节点层还是子节点层
 struct NodeLayer {
-  std::vector<Node2d*> node_layer;
+  Node2d* node_layer[DP_NODE_LAYER_MAX_NUMBER];
+  int32_t size;
   NodeLayerTag tag;
+
+  void AddNode(Node2d* node) {
+    node_layer[size] = node;
+    size++;
+
+    return;
+  }
+
+  void Clear() {
+    size = 0;
+
+    return;
+  }
+
+  const int32_t GetSize() const { return size; }
 };
 
 class GridSearch {
@@ -99,17 +119,11 @@ class GridSearch {
 
   Node2d start_node_;
   Node2d end_node_;
-  Node2d final_node_;
   const ParkObstacleList* obstacles_;
 
   Polygon2D grid_box_;
 
-  int32_t max_x_search_size_;
-  int32_t max_y_search_size_;
-
-  Node2dMatrix node_pool_;
-
-  int32_t global_idx_;
+  Node2d node_pool_[DP_MAX_X_SEARCH_SIZE][DP_MAX_Y_SEARCH_SIZE];
 
   GJK2DInterface gjk_interface_;
 };

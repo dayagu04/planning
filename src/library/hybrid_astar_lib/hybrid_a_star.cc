@@ -3128,14 +3128,11 @@ bool HybridAStar::AstarSearch(
   check_end_time = IflyTime::Now_ms();
   collision_check_time_ms_ += check_end_time - check_start_time;
 
-  const double map_time = IflyTime::Now_ms();
-
-  ILOG_INFO << "init time(ms) " << map_time - astar_start_time;
-
-  // ILOG_INFO << "time " << IflyTime::DateString();
-
   // node shrink related
   node_shrink_decider_.Process(start, end);
+
+  check_start_time = IflyTime::Now_ms();
+  // ILOG_INFO << "time " << IflyTime::DateString();
 
   // generate a star dist
   if (dp_heuristic_generator_ == nullptr) {
@@ -3147,10 +3144,8 @@ bool HybridAStar::AstarSearch(
   dp_heuristic_generator_->GenerateDpMap(end.x, end.y, XYbounds, obstacles_,
                                          car_half_width_);
 
-  const double end_timestamp = IflyTime::Now_ms();
-  const double time_consumption = end_timestamp - map_time;
-
-  ILOG_INFO << "map time(ms) " << time_consumption;
+  check_end_time = IflyTime::Now_ms();
+  ILOG_INFO << "dp map time(ms) " << check_end_time - check_start_time;
 
   rs_expansion_decider_.Process(vehicle_param_.min_turn_radius,
                                 request_.slot_width, request_.slot_length,
