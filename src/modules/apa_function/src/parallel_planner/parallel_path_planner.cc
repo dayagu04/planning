@@ -3185,7 +3185,7 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
   first_line.pA = input_.ego_pose.pos;
   first_line.heading = input_.ego_pose.heading;
 
-  if (OneLinePlanInCSCS(first_line, calc_params_.target_pose)) {
+  if (OneLinePlan(first_line, calc_params_.target_pose)) {
     DEBUG_PRINT("firstly calc line success");
     AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
         pnc::geometry_lib::CalLineSegGear(first_line), first_line));
@@ -4108,47 +4108,6 @@ const bool ParallelPathPlanner::OneLinePlan(
 
   line_seg = pnc::geometry_lib::PathSegment(
       pnc::geometry_lib::CalLineSegGear(line), line);
-  return true;
-}
-const bool ParallelPathPlanner::OneLinePlanInCSCS(
-    pnc::geometry_lib::LineSegment& line,
-    const pnc::geometry_lib::PathPoint& target_pose) const {
-  const pnc::geometry_lib::PathPoint start_pose(line.pA, line.heading);
-
-  auto target_line = pnc::geometry_lib::BuildLineSegByPose(target_pose.pos,
-                                                           target_pose.heading);
-  // std::cout << "target line pA =" << target_line.pA.transpose()
-  //           << "heading(deg) =" << target_line.heading * 57.3 << std::endl;
-
-  const double lat_dif_mag = std::fabs(start_pose.pos.y() - target_line.pA.y());
-  const double heading_dif_mag = std::fabs(pnc::geometry_lib::NormalizeAngle(
-      start_pose.heading - target_pose.heading));
-
-  if (lat_dif_mag > apa_param.GetParam().finish_parallel_lat_rac_err ||
-      heading_dif_mag >
-          apa_param.GetParam().finish_parallel_heading_err / 57.3) {
-    // std::cout << "pose is not on line, fail\n";
-    return false;
-  }
-
-  const double fixed_y_coor = 0.5 * (start_pose.pos.y() + target_line.pA.y());
-  const Eigen::Vector2d fixed_pa(start_pose.pos.x(), fixed_y_coor);
-  const Eigen::Vector2d fixed_pb(target_line.pA.x(), fixed_y_coor);
-
-  line.SetPoints(fixed_pa, fixed_pb);
-  line.heading = target_pose.heading;
-
-  if (line.length > 0.02) {
-    const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
-    if (!pnc::geometry_lib::IsValidGear(seg_gear)) {
-      // std::cout << "the line gear is invalid\n";
-      return false;
-    }
-    // DEBUG_PRINT("line plan to target pos success");
-  } else {
-    line.is_ignored = true;
-    // DEBUG_PRINT("already is on target pos");
-  }
   return true;
 }
 

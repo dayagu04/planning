@@ -421,10 +421,6 @@ class ParallelPathPlanner : public ApaPathPlanner {
                          const pnc::geometry_lib::LineSegment &target_line,
                          const double lon_buffer = 0.3) const;
 
-  const bool OneLinePlanInCSCS(
-      pnc::geometry_lib::LineSegment &line,
-      const pnc::geometry_lib::PathPoint &target_pose) const;
-
   const bool OneLinePlanAlongEgoHeading(
       pnc::geometry_lib::LineSegment &line,
       const pnc::geometry_lib::PathPoint

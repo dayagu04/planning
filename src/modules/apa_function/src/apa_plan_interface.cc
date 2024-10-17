@@ -521,6 +521,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().curb_offset, double, "curb_offset");
 
+  JSON_READ_VALUE(apa_param.SetPram().mov_curb_out_dist, double,
+                  "mov_curb_out_dist");
+
   // construce obstacles params
   JSON_READ_VALUE(apa_param.SetPram().channel_width, double, "channel_width");
 

@@ -643,6 +643,7 @@ void ParallelParkInPlanner::GenTlane() {
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
       -side_sgn * half_slot_width);
+  curb_y_limit += side_sgn * apa_param.GetParam().mov_curb_out_dist;
 
   t_lane_.corner_inside_slot << slot_length, half_slot_width * side_sgn;
   t_lane_.corner_outside_slot << 0.0, half_slot_width * side_sgn;
@@ -685,72 +686,15 @@ void ParallelParkInPlanner::GenTlane() {
                       : std::min(frame_.ego_slot_info.target_ego_pos_slot.y(),
                                  target_y_with_curb));
 
-  // for terminal pose: get accurate target x combining with obs tlane
-  // const double front_obs_x = t_lane_.obs_pt_inside.x();
-  // const double rear_obs_x = t_lane_.obs_pt_outside.x();
-  // const double front_corner_x = t_lane_.corner_inside_slot.x();
-  // const double rear_corner_x = t_lane_.corner_outside_slot.x();
+  // hack for obs
+  frame_.ego_slot_info.target_ego_pos_slot.y() +=
+      apa_param.GetParam().mov_curb_out_dist * t_lane_.slot_side_sgn;
 
   const double rac_to_geom_center = 0.5 * apa_param.GetParam().car_length -
                                     apa_param.GetParam().rear_overhanging;
 
   const double target_x_in_slot_center =
       0.5 * frame_.ego_slot_info.slot_length - rac_to_geom_center;
-
-  // const double target_x_in_slot_center =
-  //     (front_corner_x + rear_corner_x) * 0.5 - rac_to_geom_center;
-
-  // const double stop_buffer =
-  //     apa_param.GetParam().finish_parallel_rear_stop_buffer;
-
-  // const double ego_front_x = target_x_in_slot_center +
-  //                            apa_param.GetParam().wheel_base +
-  //                            apa_param.GetParam().front_overhanging;
-  // const double ego_rear_x =
-  //     target_x_in_slot_center - apa_param.GetParam().rear_overhanging;
-
-  // DEBUG_PRINT("terminal debug --------------------------------");
-  // DEBUG_PRINT("target_x_in_slot_center =" << target_x_in_slot_center);
-
-  // const bool is_front_exceeded = ego_front_x > front_obs_x - stop_buffer;
-  // const bool is_rear_exceeded = ego_rear_x < rear_obs_x + stop_buffer;
-
-  // double target_x = target_x_in_slot_center;
-  // if (is_front_exceeded && is_rear_exceeded) {
-  //   DEBUG_PRINT("both sides exceed!");
-  //   target_x = (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
-  // } else if (is_front_exceeded && !is_rear_exceeded) {
-  //   DEBUG_PRINT("front exceeded, rear safe!");
-  //   const double target_x_via_front_obs =
-  //       front_obs_x - apa_param.GetParam().wheel_base -
-  //       apa_param.GetParam().front_overhanging - stop_buffer;
-
-  //   const double target_x_via_obs_corner =
-  //       (front_obs_x + rear_corner_x) * 0.5 - rac_to_geom_center;
-  //   target_x = std::min(target_x_via_front_obs, target_x_via_obs_corner);
-
-  //   const double target_x_via_obs_center =
-  //       (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
-
-  //   target_x = std::max(target_x, target_x_via_obs_center);
-
-  // } else if (!is_front_exceeded && is_rear_exceeded) {
-  //   DEBUG_PRINT("rear exceeded, front safe!");
-  //   const double target_x_via_rear_obs =
-  //       rear_obs_x + apa_param.GetParam().rear_overhanging + stop_buffer;
-  //   const double target_x_via_corner_obs =
-  //       (front_corner_x + rear_obs_x) * 0.5 - rac_to_geom_center;
-
-  //   target_x = std::max(target_x_via_rear_obs, target_x_via_corner_obs);
-
-  //   const double target_x_via_obs_center =
-  //       (front_obs_x + rear_obs_x) * 0.5 - rac_to_geom_center;
-  //   target_x = std::min(target_x, target_x_via_obs_center);
-  // } else {
-  //   DEBUG_PRINT("both sides safe");
-  //   target_x = target_x_in_slot_center;
-  // }
-  // frame_.ego_slot_info.target_ego_pos_slot.x() = target_x;
 
   frame_.ego_slot_info.target_ego_pos_slot.x() = target_x_in_slot_center;
 
