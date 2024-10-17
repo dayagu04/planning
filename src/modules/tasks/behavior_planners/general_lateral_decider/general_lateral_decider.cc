@@ -480,7 +480,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // generate traj_points based on kMaxAcc or kMinAcc
     const auto &planning_init_point =
         ego_cart_state_manager_->planning_init_point();
-    double kMaxAcc = 2.0;
+    double kMaxAcc = 0.8;
     if (is_LC_CHANGE || is_LC_BACK) {
       kMaxAcc = 1e-6;
     }
