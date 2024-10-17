@@ -303,6 +303,29 @@ void EulerDistanceTransform::Init(const float car_body_lat_safe_buffer,
   return;
 }
 
+const double EulerDistanceTransform::CalPathSafeDist(
+    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+    const double ds, const uint8_t gear) {
+  if (path_pt_vec.size() < 1) {
+    return 0.0;
+  }
+
+  if (IsCollisionForPoint(path_pt_vec[0], gear)) {
+    return 0.0;
+  }
+
+  double safe_dist = 0.0;
+  for (size_t i = 1; i < path_pt_vec.size(); ++i) {
+    if (IsCollisionForPoint(path_pt_vec[i], gear)) {
+      break;
+    } else {
+      safe_dist += ds;
+    }
+  }
+
+  return safe_dist;
+}
+
 const bool EulerDistanceTransform::IsCollisionForPath(
     const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
     const uint8_t gear) {

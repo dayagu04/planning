@@ -1431,6 +1431,88 @@ const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err) {
   return true;
 }
 
+const bool CalTwoArcWithLine(const PathPoint &pose, LineSegment &line,
+                             const double radius1, const double radius2,
+                             std::vector<std::pair<Arc, Arc>> &arc_pair_vec) {
+  using namespace mathlib;
+  arc_pair_vec.clear();
+  arc_pair_vec.reserve(8);
+  if (IsDoubleEqual((line.pB - line.pA).norm(), 0.0)) {
+    return LogErr(__func__, 0);
+  }
+  if (IsDoubleEqual(line.length, 0.0)) {
+    line.length = (line.pB - line.pA).norm();
+  }
+
+  const Eigen::Vector2d pose_heading_tang_vec = GenHeadingVec(pose.heading);
+  std::vector<Eigen::Vector2d> center1_vec;
+  center1_vec.reserve(2);
+  Eigen::Vector2d center1 =
+      pose.pos + radius1 * Eigen::Vector2d(pose_heading_tang_vec.y(),
+                                           -pose_heading_tang_vec.x());
+
+  center1_vec.emplace_back(center1);
+  center1 = pose.pos + radius1 * Eigen::Vector2d(-pose_heading_tang_vec.y(),
+                                                 pose_heading_tang_vec.x());
+  center1_vec.emplace_back(center1);
+
+  const Eigen::Vector2d line_tang_vec = GenHeadingVec(line.heading);
+  std::vector<Eigen::Vector2d> line_norm_vec_vec{
+      {-line_tang_vec.y(), line_tang_vec.x()},
+      {line_tang_vec.y(), -line_tang_vec.x()}};
+
+  for (const Eigen::Vector2d &center1 : center1_vec) {
+    for (const Eigen::Vector2d &line2_norm_vec : line_norm_vec_vec) {
+      // the O2 is on arc2_center_line
+      LineSegment arc2_center_line(line.pA + line2_norm_vec * radius2,
+                                   line.pB + line2_norm_vec * radius2);
+      // the O2 is on virtual circle, arc1 is tangent with arc2, than the dist
+      // of O1 and O2 is 2*r
+      Circle virtual_circle(center1, radius1 + radius2);
+      // the intersection of arc2_center_line and virtual arc is arc2 center
+      std::vector<Eigen::Vector2d> center2_vec;
+      if (CalcCrossPointsOfLineAndCircle(arc2_center_line, virtual_circle,
+                                         center2_vec) < 1) {
+        continue;
+      }
+      for (const Eigen::Vector2d &center2 : center2_vec) {
+        Arc arc1;
+        arc1.pA = pose.pos;
+        arc1.headingA = pose.heading;
+        arc1.circle_info.radius = radius1;
+        arc1.circle_info.center = center1;
+
+        // the mid of two arc center is tangent of arc1 and arc2
+        const Eigen::Vector2d arc1_arc2_tangent = (center1 + center2) * 0.5;
+
+        arc1.pB = arc1_arc2_tangent;
+
+        if (!CompleteArcInfo(arc1)) {
+          continue;
+        }
+
+        Arc arc2;
+        arc2.pA = arc1.pB;
+        arc2.headingA = arc1.headingB;
+        arc2.circle_info.radius = radius2;
+        arc2.circle_info.center = center2;
+
+        // assume C2 is the tangent of arc2 and line
+        // C2O2 = O2 - C2 -> C2 = O2
+        const Eigen::Vector2d C2O2 = radius2 * line2_norm_vec;
+        arc2.pB = center2 - C2O2;
+
+        if (!CompleteArcInfo(arc2)) {
+          continue;
+        }
+
+        arc_pair_vec.emplace_back(std::make_pair(arc1, arc2));
+      }
+    }
+  }
+  return arc_pair_vec.size() > 0;
+}
+
 const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
                              bool is_shifted) {
   // arc1 and line are intersected
@@ -1744,11 +1826,11 @@ const bool CalLineArcOfTwoLine(LineSegment &line1, LineSegment &line2,
 
     const uint8_t arc_gear = CalArcGear(arc);
 
-    if (is_shifted && IsOppositeDirGear(line_gear, arc_gear)) {
+    if (is_shifted && IsOppositeGear(line_gear, arc_gear)) {
       return true;
     }
 
-    if (!is_shifted && IsSameDirGear(line_gear, arc_gear)) {
+    if (!is_shifted && IsSameGear(line_gear, arc_gear)) {
       return true;
     }
   }
@@ -1957,6 +2039,7 @@ const bool CompleteArcInfo(Arc &arc, const double length,
 const bool CompleteArcInfo(Arc &arc, const double length,
                            const bool is_anti_clockwise,
                            const bool save_start_pt) {
+  // unknown: pB, headingB
   arc.length = length;
   double rot_angle = length / arc.circle_info.radius;
   if (save_start_pt) {
@@ -2028,6 +2111,20 @@ const bool CompleteLineInfo(LineSegment &line, const double length,
   return true;
 }
 
+const bool CompleteLineInfo(LineSegment &line, const double length,
+                            const uint8_t gear) {
+  // known: pA, heading, gear, length
+  // unknown: pB
+  line.length = length;
+  const Eigen::Vector2d unit_vec = GenHeadingVec(line.heading);
+  if (gear == SEG_GEAR_DRIVE) {
+    line.pB = line.pA + length * unit_vec;
+  } else {
+    line.pB = line.pA - length * unit_vec;
+  }
+  return true;
+}
+
 const bool CompletePathSeg(PathSegment &path_seg, const double length,
                            const bool save_start_pt) {
   if (length < 1e-4) {
@@ -2054,6 +2151,43 @@ const bool CompletePathSegInfo(PathSegment &path_seg, const double length) {
   } else {
     return false;
   }
+}
+
+const bool IsArcAnticlockwise(const uint8_t gear, const uint8_t steer) {
+  if ((gear == SEG_GEAR_DRIVE && steer == SEG_STEER_LEFT) ||
+      (gear == SEG_GEAR_REVERSE && steer == SEG_STEER_RIGHT)) {
+    return true;
+  }
+  return false;
+}
+
+const bool CompletePathSegInfo(PathSegment &path_seg, const double length,
+                               const uint8_t gear, const uint8_t steer) {
+  // known: pA, headingA, seg_type, if arc, also known radius
+  path_seg.seg_gear = gear;
+  path_seg.seg_steer = steer;
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    auto &line = path_seg.line_seg;
+    return CompleteLineInfo(line, length, gear);
+  } else if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+    auto &arc = path_seg.arc_seg;
+    arc.is_anti_clockwise = IsArcAnticlockwise(gear, steer);
+    return CompleteArcInfo(arc, length, steer);
+  }
+  return false;
+}
+
+const Eigen::Vector2d CalArcCenter(const Eigen::Vector2d &pos,
+                                   const double heading, const double radius,
+                                   const uint8_t steer) {
+  const Eigen::Vector2d tang_vec = GenHeadingVec(heading);
+  Eigen::Vector2d norm_vec;
+  if (steer == SEG_STEER_LEFT) {
+    norm_vec << -tang_vec.y(), tang_vec.x();
+  } else {
+    norm_vec << tang_vec.y(), -tang_vec.x();
+  }
+  return pos + norm_vec * radius;
 }
 
 const uint8_t CalArcGear(const Arc &arc) {
@@ -2273,8 +2407,8 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
     return LogErr(__func__, 1);
   }
   if (!mathlib::IsDoubleEqual(arc.headingB, line.heading)) {
-    std::cout << "arc.headingB = " << arc.headingB * kRad2Deg
-              << "  line.heading = " << line.heading << std::endl;
+    ILOG_INFO << "arc.headingB = " << arc.headingB * kRad2Deg
+              << "  line.heading = " << line.heading;
     return LogErr(__func__, 2);
   }
   return true;
@@ -2289,14 +2423,45 @@ const bool LogErr(const std::string &func_name, uint8_t index,
     err_type = " fail ";
   }
 
-  std::cout << func_name + err_type + " err " + std::to_string(index)
-            << std::endl;
+  ILOG_INFO << func_name + err_type + " err " + std::to_string(index);
 
   return false;
 }
 
-const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t &current_seg_gear,
-                                      const double &target_heading) {
+const bool CalOneArcWithTargetHeadingAndGear(Arc &arc,
+                                             const uint8_t current_seg_gear,
+                                             const double target_heading) {
+  // known: arc: pA, headingA, radius
+  // unknown: arc: pB, headingB, pO, length, is_anti_clockwise
+  if (!IsValidGear(current_seg_gear)) {
+    return LogErr(__func__, 0);
+  }
+
+  arc.headingB = target_heading;
+  const double heading_diff = NormalizeAngle(arc.headingA - arc.headingB);
+  uint8_t arc_steer = 0;
+  if ((heading_diff < 0.0 && current_seg_gear == SEG_GEAR_DRIVE) ||
+      (heading_diff > 0.0 && current_seg_gear == SEG_GEAR_REVERSE)) {
+    arc_steer = SEG_STEER_LEFT;
+  } else {
+    arc_steer = SEG_STEER_RIGHT;
+  }
+
+  if (!CompleteArcInfo(arc, arc_steer)) {
+    return LogErr(__func__, 1);
+  }
+
+  if (!mathlib::IsDoubleEqual(arc.headingB, target_heading, 1e-4)) {
+    std::cout << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
+              << "target_heading =" << target_heading * kRad2Deg << std::endl;
+    return LogErr(__func__, 2);
+  }
+
+  return true;
+}
+
+const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t current_seg_gear,
+                                      const double target_heading) {
   using namespace mathlib;
   // check input
   if ((current_seg_gear != SEG_GEAR_DRIVE &&
@@ -2658,7 +2823,7 @@ const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
   return true;
 }
 
-const bool IsSameDirGear(const uint8_t gear1, const uint8_t gear2) {
+const bool IsSameGear(const uint8_t gear1, const uint8_t gear2) {
   if (gear1 == SEG_GEAR_DRIVE && gear2 == SEG_GEAR_DRIVE) {
     return true;
   }
@@ -2668,7 +2833,7 @@ const bool IsSameDirGear(const uint8_t gear1, const uint8_t gear2) {
   return false;
 }
 
-const bool IsOppositeDirGear(const uint8_t gear1, const uint8_t gear2) {
+const bool IsOppositeGear(const uint8_t gear1, const uint8_t gear2) {
   if (gear1 == SEG_GEAR_DRIVE && gear2 == SEG_GEAR_REVERSE) {
     return true;
   }
@@ -2712,6 +2877,13 @@ const std::vector<PathPoint> SamplePathSegVec(
     path_pt_vec.insert(path_pt_vec.end(), pt_set.begin(), pt_set.end());
   }
   return path_pt_vec;
+}
+
+const bool IsTwoNumerEqual(const double a, const double b, const double err) {
+  if (std::fabs(a - b) < err) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace geometry_lib

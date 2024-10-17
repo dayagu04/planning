@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "apa_data.h"
@@ -86,10 +87,10 @@ void ApaPlanInterface::ResetForSearching() {
 }
 
 const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
-  std::cout << "\n------------------------ apa_interface: Update() "
-               "------------------------\n";
+  ILOG_INFO << "\n------------------------ apa_interface: Update() "
+               "------------------------";
   if (local_view_ptr == nullptr) {
-    std::cout << "\nlocal_view_ptr is nullptr, quit apa\n";
+    ILOG_INFO << "\nlocal_view_ptr is nullptr, quit apa";
     return false;
   }
 
@@ -109,7 +110,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   }
 
   // run apa world, always run when enter apa
-  DEBUG_PRINT("---- apa_world: Update() ---");
+  ILOG_INFO << "---- apa_world: Update() ---";
   apa_world_ptr_->Update(local_view_ptr);
 
   if (apa_world_ptr_->GetApaDataPtr()->cur_state == ApaStateMachine::INVALID) {
@@ -141,7 +142,7 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   const auto end_timestamp_ms = IflyTime::Now_ms();
   const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
 
-  DEBUG_PRINT("total time consumption = " << frame_duration << "ms");
+  ILOG_INFO << "total time consumption = " << frame_duration << "ms";
   JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
   return success;
@@ -152,11 +153,11 @@ const bool ApaPlanInterface::ApaPlanOnce(const ApaPlannerType planner_type) {
     if (apa_planner.first == planner_type) {
       planner_ptr_ = apa_planner_map_[planner_type];
       planner_ptr_->Update();
-      DEBUG_PRINT(GetApaPlannerTypeString(planner_type) << " update.");
+      ILOG_INFO << GetApaPlannerTypeString(planner_type) << " update.";
       return true;
     }
   }
-  std::cout << "planner type error!" << std::endl;
+  ILOG_INFO << "planner type error!";
   return false;
 }
 
@@ -166,15 +167,16 @@ void ApaPlanInterface::AddReleasedSlotInfo(
   const std::vector<int> &release_slot_id_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
 
-  std::cout << "plan release slot id = ";
+  std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
     iflyauto::SuccessfulSlotsInfo slot_id;
     slot_id.id = static_cast<uint32>(release_slot_id_vec[i]);
     planning_output.successful_slot_info_list[i] = slot_id;
     planning_output.successful_slot_info_list_size++;
-    std::cout << "[" << slot_id.id << "]  ";
+    release_slot_id.append(std::string("[") + std::to_string(slot_id.id) +
+                           std::string("]"));
   }
-  std::cout << "\n";
+  ILOG_INFO << "plan release slot id = " << release_slot_id;
 }
 
 void ApaPlanInterface::UpdateDebugInfo() {
@@ -679,6 +681,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   "last_update_slot_occupied_ratio");
 
   // path planner params
+  JSON_READ_VALUE(apa_param.SetPram().new_itervative_solution, bool,
+                  "new_itervative_solution");
+
   JSON_READ_VALUE(apa_param.SetPram().min_turn_radius, double,
                   "min_turn_radius");
 

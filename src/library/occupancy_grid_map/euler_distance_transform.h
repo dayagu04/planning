@@ -48,6 +48,10 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
       const uint8_t gear);
 
+  const double CalPathSafeDist(
+      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+      const double ds, const uint8_t gear);
+
   void Init(const float car_body_lat_safe_buffer, const float lon_safe_buffer,
             const float mirror_buffer);
 

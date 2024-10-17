@@ -1,12 +1,14 @@
 #include "uss_obstacle_avoidance.h"
 
 #include <cstddef>
+#include <string>
 #include <utility>
 
 #include "apa_param_setting.h"
 #include "common_c.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
+#include "log_glog.h"
 #include "transform_lib.h"
 
 namespace planning {
@@ -387,7 +389,7 @@ void UssObstacleAvoidance::GenUssArc() {
 
 const bool UssObstacleAvoidance::Preprocess() {
   if (apa_data_ptr_ == nullptr) {
-    DEBUG_PRINT("uss apa_data_ptr_ is nullptr!");
+    ILOG_INFO << "uss apa_data_ptr_ is nullptr!";
     return false;
   }
 
@@ -436,7 +438,7 @@ const bool UssObstacleAvoidance::Preprocess() {
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // const auto &uss_dis_info = uss_dis_info_buf[4];
     // if (uss_dis_info.obj_pt_cnt != 12) {
-    //   DEBUG_PRINT("uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ");
+    //   ILOG_INFO << "uss dis nums = " << uss_dis_info.obj_pt_cnt << " != 12 ";
     //   return false;
     // }
     // raw dist info stored in dis_from_car_to_obj in clockwise direction, the
@@ -475,11 +477,11 @@ const bool UssObstacleAvoidance::Preprocess() {
     }
   }
 
-  std::cout << "uss_raw_dist = ";
+  std::string dist_str;
   for (const double dist : uss_raw_dist_vec_) {
-    std::cout << dist << " ";
+    dist_str.append(std::to_string(dist) + std::string(" "));
   }
-  std::cout << "\n";
+  ILOG_INFO << "uss_raw_dist = [" << dist_str << "]";
 
   JSON_DEBUG_VECTOR("uss_raw_dist_vec", uss_raw_dist_vec_, 2)
 
@@ -528,8 +530,8 @@ void UssObstacleAvoidance::CalRemainDist() {
       }
     }
   }
-  std::cout << "uss_index = " << remain_dist_info_.uss_index
-            << "  car_index = " << remain_dist_info_.car_index << std::endl;
+  ILOG_INFO << "uss_index = " << remain_dist_info_.uss_index
+            << "  car_index = " << remain_dist_info_.car_index;
 }
 
 void UssObstacleAvoidance::Update(
