@@ -387,7 +387,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   #           'y_vec': [],
   #       })
 
-  if 1:
+  if 0:
     if index_map['plan_msg_idx'] < len(bag_loader.plan_msg['data']):
       for i in range(bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points_size):
         path_point = bag_loader.plan_msg['data'][index_map['plan_msg_idx']].trajectory.trajectory_points[i]
