@@ -435,9 +435,9 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   if (config_.use_ego_v) {
     use_ego_v_ = true;
   }
-  auto ego_v =
+  auto v_cruise =
       use_ego_v_ ? ego_state_mgr->ego_v() : ego_state_mgr->ego_v_cruise();
-
+  auto ego_v = std::fmax(v_cruise, config_.min_ego_v_cruise);
   auto lat_state = ego_state_mgr->planning_init_point().lat_init_state;
   Point2D frenet_init_point;
   Point2D cart_init_point{lat_state.x(), lat_state.y()};

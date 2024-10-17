@@ -267,6 +267,8 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     lc_finish_heading_deg_thr =
         read_json_key<double>(json, "lc_finish_heading_deg_thr");
     read_json_vec<double>(json, "lc_finished_dist_thr", lc_finished_dist_thr);
+    min_ego_v_cruise =
+        read_json_key<double>(json, "min_ego_v_cruise");
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
@@ -275,6 +277,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   double lc_finish_dist_thr = 0.5;
   double lc_finish_heading_deg_thr = 1.0;
   std::vector<double> lc_finished_dist_thr{0.1, 0.15, 0.2, 0.3};
+  double min_ego_v_cruise = 2.0;
 };
 
 struct SpeedAdjustDeciderConfig : public EgoPlanningConfig {
@@ -450,6 +453,8 @@ struct GapSelectorConfig : public EgoPlanningConfig {
     read_json_vec<double>(
         json, std::vector<std::string>{"gap_selector", "lat_ref_offset"},
         lat_ref_offset);
+    min_ego_v_cruise = read_json_keys<double>(
+        json, std::vector<std::string>{"gap_selector", "min_ego_v_cruise"});
   }
 
   double default_lc_time = 6.0;
@@ -463,6 +468,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double lb_heading_error_max = 0.5;
   bool use_gs = true;
   std::vector<double> lat_ref_offset{0.0, 0.1, 0.2, 0.3};
+  double min_ego_v_cruise = 2.0;
 };
 
 struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
@@ -677,7 +683,11 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                              std::vector<std::string>{"general_lateral_decider",
                                                       "ramp_limit_v_valid"},
                              ramp_limit_v_valid);
-
+    min_v_cruise =
+        read_json_keys<double>(json,
+                             std::vector<std::string>{"general_lateral_decider",
+                                                      "min_v_cruise"},
+                             min_v_cruise);
     lc_second_dist_thr = read_json_keys<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -692,11 +702,6 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         json,
         std::vector<std::string>{"general_lateral_decider", "not_use_gap_flag"},
         not_use_gap_flag);
-    low_speed_limit_for_ref = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "low_speed_limit_for_ref"},
-        low_speed_limit_for_ref);
 
     read_json_vec<double>(
         json,
@@ -810,7 +815,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lc_second_dist_thr = 1.5;
   std::vector<double> dynamic_ref_buffer{0.0, 0.1, 0.2, 0.3};
   bool not_use_gap_flag = true;
-  double low_speed_limit_for_ref = 5.0;
+  double min_v_cruise = 5.0;
 
   std::vector<double> lateral_road_boader_collision_ttc_bp{0, 1.5, 3, 4.5, 5};
   std::vector<double> extra_collision_lateral_buffer{0.1, 0.0, 0.0, 0.0, 0.0};
@@ -883,6 +888,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "delta_t"});
     curv_factor = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "curv_factor"});
+    min_v_cruise = read_json_keys<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "min_v_cruise"});
     min_ego_vel = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "min_ego_vel"});
     acc_bound = read_json_keys<double>(
@@ -1164,6 +1171,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double curv_factor = 0.35;
   double delta_t = 0.2;
   double min_ego_vel = 5.0;
+  double min_v_cruise = 2.0;
 
   double acc_bound = 1.5;
   std::vector<double> map_jerk_bound{1.2, 1.0, 0.8, 0.25};

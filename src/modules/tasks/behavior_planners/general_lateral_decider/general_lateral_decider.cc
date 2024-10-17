@@ -485,10 +485,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       kMaxAcc = 1e-6;
     }
     const double kMinAcc = -5.5;
-    double cruise_v = session_->planning_context().v_ref_cruise();
-    double ego_v =
-        std::max(planning_init_point.v,
-                 std::min(config_.low_speed_limit_for_ref, cruise_v));
+    // double cruise_v = session_->planning_context().v_ref_cruise();
+    double cruise_v = std::max(config_.min_v_cruise, session_->planning_context().v_ref_cruise());
+    double ego_v = planning_init_point.v;
     if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
       limit_ref_vel_on_ramp_valid = true;
     }

@@ -287,9 +287,9 @@ void LateralMotionPlanner::AssembleInput() {
         i, next_hard_upper_bound.y);
   }
 
-  static const double min_v_cruise = 0.5;
+  // static const double min_v_cruise = 0.5;
   planning_input_.set_ref_vel(
-      std::max(general_lateral_decider_output.v_cruise, min_v_cruise));
+      std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise));
 
   planning_input_.set_curv_factor(config_.curv_factor);
 
