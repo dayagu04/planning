@@ -400,7 +400,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // 对lead two进行类似的计算
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-        !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv) {
+        !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+        start_stop_info_.state() != common::StartStopInfo::START) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
           lead_two.track_id(), lead_two.d_rel(), lead_two.v_lead());
@@ -577,7 +578,8 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
     if (config_.enable_lead_two && temp_lead_two.track_id() != 0 &&
         temp_lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
         !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
-        is_left_right_front_agent) {
+        is_left_right_front_agent &&
+        start_stop_info_.state() != common::StartStopInfo::START) {
       LOG_DEBUG(
           "target_temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: "
           "[%f]\n",
