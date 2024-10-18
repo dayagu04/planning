@@ -1765,7 +1765,8 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
       }
     }
     if (idx != -1) {
-      double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx + 1].x);
+      //double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx + 1].x);
+      double pt_x = (cw_pt_vec[idx].x + cw_pt_vec[idx + 1].x) / 2.0;
       planning::planning_math::Vec2d p_left(pt_x, cw_pt_vec[idx].y);
       planning::planning_math::Vec2d p_right(pt_x, cw_pt_vec[idx + 1].y);
       planning::planning_math::LineSegment2d line_seg(p_left, p_right);
