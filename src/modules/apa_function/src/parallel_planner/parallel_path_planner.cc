@@ -1210,7 +1210,7 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
   for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::LINEARC_TYPE_COUNT;
        ++i) {
     if (!dubins_planner_.Solve(i)) {
-      DEBUG_PRINT("solve line arc failed!");
+      // DEBUG_PRINT("solve line arc failed!");
       continue;
     }
 
@@ -1285,8 +1285,7 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
   pnc::geometry_lib::LocalToGlobalTf l2g_tf;
   l2g_tf.Init(input_.ego_pose.pos, input_.ego_pose.heading);
 
-  double left_min_buffer = kColLargeLatBufferOutSlot;
-  double right_min_buffer = kColLargeLatBufferOutSlot;
+  std::vector<double> min_real_dist_vec = {2.0, 2.0};
   for (const auto& pt_pair : collision_detector_ptr_->GetObstaclesMap()) {
     const bool is_left_corner =
         (pt_pair.first == CollisionDetector::CHANNEL_OBS &&
@@ -1300,21 +1299,32 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
     for (const auto& obs_pt : pt_pair.second) {
       const double real_dist =
           pnc::geometry_lib::CalPoint2LineSegDist(obs_pt, car_line);
-      if (is_left_corner && real_dist < left_min_buffer) {
-        left_min_buffer = std::max(kColSmallLatBufferOutSlot, real_dist - 0.3);
-        break;
-      } else if (!is_left_corner && real_dist < right_min_buffer) {
-        right_min_buffer = std::max(kColSmallLatBufferOutSlot, real_dist - 0.3);
-        break;
+
+      if (is_left_corner) {
+        min_real_dist_vec[0] = std::min(min_real_dist_vec[0], real_dist);
+      } else {
+        min_real_dist_vec[1] = std::min(min_real_dist_vec[1], real_dist);
       }
     }
   }
 
-  left_min_buffer = std::max(0.05, left_min_buffer);
-  right_min_buffer = std::max(0.05, right_min_buffer);
-  DEBUG_PRINT("left lat buffer = " << left_min_buffer);
-  DEBUG_PRINT("right lat buffer = " << right_min_buffer);
-  return {left_min_buffer, right_min_buffer};
+  std::vector<double> min_buffer_vec = {kColLargeLatBufferOutSlot,
+                                        kColLargeLatBufferOutSlot};
+  for (size_t i = 0; i < min_real_dist_vec.size(); i++) {
+    if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot) {
+      min_buffer_vec[i] =
+          mathlib::Clamp(min_real_dist_vec[i] - 0.4, kColSmallLatBufferOutSlot,
+                         kColLargeLatBufferOutSlot);
+    } else if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot + 0.3) {
+      min_buffer_vec[i] =
+          mathlib::Clamp(min_real_dist_vec[i] - 0.3, kColSmallLatBufferOutSlot,
+                         kColLargeLatBufferOutSlot);
+    }
+  }
+
+  DEBUG_PRINT("left lat buffer = " << min_buffer_vec[0]);
+  DEBUG_PRINT("right lat buffer = " << min_buffer_vec[1]);
+  return min_buffer_vec;
 }
 
 const bool ParallelPathPlanner::GenAlignedPreparingLine(
@@ -3175,7 +3185,7 @@ const bool ParallelPathPlanner::ParallelAdjustPlan() {
   first_line.pA = input_.ego_pose.pos;
   first_line.heading = input_.ego_pose.heading;
 
-  if (OneLinePlanInCSCS(first_line, calc_params_.target_pose)) {
+  if (OneLinePlan(first_line, calc_params_.target_pose)) {
     DEBUG_PRINT("firstly calc line success");
     AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
         pnc::geometry_lib::CalLineSegGear(first_line), first_line));
@@ -4098,47 +4108,6 @@ const bool ParallelPathPlanner::OneLinePlan(
 
   line_seg = pnc::geometry_lib::PathSegment(
       pnc::geometry_lib::CalLineSegGear(line), line);
-  return true;
-}
-const bool ParallelPathPlanner::OneLinePlanInCSCS(
-    pnc::geometry_lib::LineSegment& line,
-    const pnc::geometry_lib::PathPoint& target_pose) const {
-  const pnc::geometry_lib::PathPoint start_pose(line.pA, line.heading);
-
-  auto target_line = pnc::geometry_lib::BuildLineSegByPose(target_pose.pos,
-                                                           target_pose.heading);
-  // std::cout << "target line pA =" << target_line.pA.transpose()
-  //           << "heading(deg) =" << target_line.heading * 57.3 << std::endl;
-
-  const double lat_dif_mag = std::fabs(start_pose.pos.y() - target_line.pA.y());
-  const double heading_dif_mag = std::fabs(pnc::geometry_lib::NormalizeAngle(
-      start_pose.heading - target_pose.heading));
-
-  if (lat_dif_mag > apa_param.GetParam().finish_parallel_lat_rac_err ||
-      heading_dif_mag >
-          apa_param.GetParam().finish_parallel_heading_err / 57.3) {
-    // std::cout << "pose is not on line, fail\n";
-    return false;
-  }
-
-  const double fixed_y_coor = 0.5 * (start_pose.pos.y() + target_line.pA.y());
-  const Eigen::Vector2d fixed_pa(start_pose.pos.x(), fixed_y_coor);
-  const Eigen::Vector2d fixed_pb(target_line.pA.x(), fixed_y_coor);
-
-  line.SetPoints(fixed_pa, fixed_pb);
-  line.heading = target_pose.heading;
-
-  if (line.length > 0.02) {
-    const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
-    if (!pnc::geometry_lib::IsValidGear(seg_gear)) {
-      // std::cout << "the line gear is invalid\n";
-      return false;
-    }
-    // DEBUG_PRINT("line plan to target pos success");
-  } else {
-    line.is_ignored = true;
-    // DEBUG_PRINT("already is on target pos");
-  }
   return true;
 }
 
