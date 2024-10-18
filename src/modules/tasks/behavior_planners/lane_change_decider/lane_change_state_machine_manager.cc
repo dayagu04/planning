@@ -69,13 +69,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
-        iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
+        // iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
-        if (is_propose_to_execution &&
-            (boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-             boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL)) {
+        if (is_propose_to_execution) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
@@ -197,9 +195,12 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
   *lane_change_type = lc_req_mgr_->request_source();
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    bool is_ego_in_perfect_pose = CheckIfInPerfectLaneKeeping();
+    iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(*lane_change_direction);
+    const bool is_dashed_line = (boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+                                boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+    bool is_ego_in_perfect_pose = CheckIfInPerfectLaneKeeping() && is_dashed_line;
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
-    if (*lane_change_type == INT_REQUEST) {
+    if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
     } else {
       return is_ego_in_perfect_pose;

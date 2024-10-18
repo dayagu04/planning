@@ -95,7 +95,7 @@ void IntRequest::Update(int lc_status) {
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = LEFT_CHANGE;
-      counter_left_ = -5;
+      counter_left_ = 0;
     }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
@@ -158,7 +158,7 @@ void IntRequest::Update(int lc_status) {
         iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = RIGHT_CHANGE;
-      counter_right_ = -5;
+      counter_right_ = 0;
     }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
@@ -216,7 +216,7 @@ void IntRequest::Update(int lc_status) {
           "to right \n");
     }
   } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_NONE &&
-             request_type_ != NO_CHANGE) {
+             request_type_ != NO_CHANGE && lc_status == kLaneChangeExecution) {
     // 3.换道过程中取消拨杆
     if (lane_change_lane_mgr_->has_target_lane() &&
         (std::fabs(frenet_ego_state_l) <

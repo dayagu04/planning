@@ -601,7 +601,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
       lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (int_request_cancel_reason == SOLID_LC) {
+  if (int_request_cancel_reason == SOLID_LC &&
+      lane_change_decider_output.lc_request_source == INT_REQUEST) {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
     //暂时为了满足实线变道时打灯合planing_hmi的提示需求
@@ -611,7 +612,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
         (iflyauto::LaneChangeDirection)
             lane_change_decider_output.ilc_virtual_req;
     planning_hmi_info->ad_info.lane_change_status =
-        iflyauto::LaneChangeStatus::LC_STATE_WAITING;
+        iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
   } else if (int_request_cancel_reason == MANUAL_CANCEL) {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;

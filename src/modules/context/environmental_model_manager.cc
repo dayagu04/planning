@@ -1330,8 +1330,7 @@ void EnvironmentalModelManager::RunBlinkState(
         // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
         if ((history_lc_source_[0] == INT_REQUEST &&
             history_lc_source_[1] != INT_REQUEST) ||
-            (history_lc_source_[0] == NO_REQUEST &&
-             history_lc_source_[1] == NO_REQUEST)) {
+            (state == kLaneKeeping)) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         }
       } else {
