@@ -1599,7 +1599,8 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
   // compute desired speed
   double v_target = v_rel_des + v_lead;
   LOG_DEBUG("v_rel_des : [%f], v_target : [%f] \n", v_rel_des, v_target);
-  JSON_DEBUG_VALUE("soft_brake_distance_lead", soft_brake_distance);
+  JSON_DEBUG_VALUE("soft_brake_distance_lead",
+                   clip(soft_brake_distance, 250.0, 0.0));
   return v_target;
 }
 
@@ -2363,7 +2364,7 @@ common::StartStopInfo::StateType StGraphGenerator::UpdateStartStopState(
         (lead_one.v_lead() > obstacle_v_start &&
          (lead_one.d_rel() - start_stop_info_.stop_distance_of_leadone()) >
              distance_start);
-    // intersection stop condition considers both leadone and traffic light         
+    // intersection stop condition considers both leadone and traffic light
     const bool traffic_light_stop_condition =
         (!current_traffic_light_can_pass_ && v_ego < v_start) ||
         (v_ego < v_start && lead_one_nearby_intersection_is_static &&
@@ -4274,7 +4275,7 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.v_end = v_target_;
   state_limit.a_min = acc_target_.first;
   state_limit.a_max = acc_target_.second;
-  state_limit.j_min = -1.0;   
+  state_limit.j_min = -1.0;
   state_limit.j_max = 1.5;
   if (start_stop_info_.state() == common::StartStopInfo::START) {
     state_limit.a_min = acc_target_.first;
