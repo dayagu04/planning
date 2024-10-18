@@ -1114,11 +1114,10 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
       session_->mutable_planning_context()->lateral_offset_decider_output();
   CalculateExtraLaneWidthDecreaseBuffer();
 
-  if (general_lateral_decider_output.lane_change_scene) {
-    last_lat_obstacle_decision_.clear();
-    LOG_DEBUG("LatObstacle Decider! GS trustworthy");
-    return;
-  }
+  // if (general_lateral_decider_output.lane_change_scene) {
+  //   LOG_DEBUG("LatObstacle Decider! GS trustworthy");
+  //   return;
+  // }
 
   if (!lateral_offset_decider_output.enable_bound) {
     last_lat_obstacle_decision_.clear();
