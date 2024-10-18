@@ -1523,6 +1523,7 @@ const bool ParallelParkInPlanner::CheckFinished() {
       "terminal heading error = " << ego_slot_info.terminal_err.heading * 57.3);
   DEBUG_PRINT("heading_condition = " << heading_condition);
 
+  DEBUG_PRINT("lat error = " << ego_slot_info.terminal_err.pos.y());
   const bool lat_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.y()) <=
                                apa_param.GetParam().finish_parallel_lat_rac_err;
 
