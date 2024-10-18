@@ -962,6 +962,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
                   bool, "vertical_slot_auto_scheduler_for_astar");
   JSON_READ_VALUE(apa_param.SetPram().parallel_slot_auto_scheduler_for_astar,
                   bool, "parallel_slot_auto_scheduler_for_astar");
+
+  JSON_READ_VALUE(apa_param.SetPram().parallel_slot_target_adjust_dist, double,
+                  "parallel_slot_target_adjust_dist");
 }
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(

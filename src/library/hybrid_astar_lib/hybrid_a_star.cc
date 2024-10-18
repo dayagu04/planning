@@ -2685,9 +2685,9 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
 
   // node shrink related
   node_shrink_decider_.Process(start, end);
-  rs_expansion_decider_.Process(vehicle_param_.min_turn_radius,
-                                request_.slot_width, request_.slot_length,
-                                start, end, vehicle_param_.width);
+  rs_expansion_decider_.Process(
+      vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
+      start, end, vehicle_param_.width, request_.space_type);
 
   // load open set, pq
   start_node_->SetMultiMapIter(
@@ -3130,9 +3130,9 @@ bool HybridAStar::AstarSearch(
   check_end_time = IflyTime::Now_ms();
   ILOG_INFO << "dp map time(ms) " << check_end_time - check_start_time;
 
-  rs_expansion_decider_.Process(vehicle_param_.min_turn_radius,
-                                request_.slot_width, request_.slot_length,
-                                start, end, vehicle_param_.width);
+  rs_expansion_decider_.Process(
+      vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
+      start, end, vehicle_param_.width, request_.space_type);
 
   // load open set, pq
   start_node_->SetMultiMapIter(

@@ -786,9 +786,6 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.goal_ = Pose2D(end[0], end[1], end[2]);
 
     request.real_goal = real_end;
-    request.vertical_slot_target_adjust_dist_ =
-        apa_param.GetParam().vertical_slot_target_adjust_dist;
-
     request.base_pose_ = base_pose_;
 
     request.space_type = ParkSpaceType::VERTICAL;

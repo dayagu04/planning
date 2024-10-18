@@ -594,8 +594,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   cur_request.base_pose_ = slot_base_pose;
   cur_request.real_goal = real_end;
 
-  cur_request.vertical_slot_target_adjust_dist_ =
-      apa_param.GetParam().vertical_slot_target_adjust_dist;
   cur_request.slot_width = ego_slot_info.slot_width;
   cur_request.slot_length = ego_slot_info.slot_length;
   cur_request.history_gear = current_gear_;

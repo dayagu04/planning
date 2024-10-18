@@ -244,6 +244,7 @@
   "is_parallel_advanced_method": true,
   "path_generator_type": 0,
   "vertical_slot_target_adjust_dist": 1.5,
+  "parallel_slot_target_adjust_dist": 0.0,
   "enable_delete_fusion_obj_in_slot": true,
   "use_a_cubic_polynomial_for_adjustment" :true,
 

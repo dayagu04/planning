@@ -273,6 +273,7 @@ struct ApaParameters {
   bool use_a_cubic_polynomial_for_adjustment = true;
   // move target point in slot to another point for easy tracking
   double vertical_slot_target_adjust_dist = 1.0;
+  double parallel_slot_target_adjust_dist = 0.0;
   bool enable_delete_fusion_obj_in_slot = true;
   double deadend_uss_stuck_replan_wait_time;
 

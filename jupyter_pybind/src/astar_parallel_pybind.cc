@@ -54,11 +54,9 @@ std::vector<Eigen::Vector3d> rs_path_alone_;
 Eigen::Vector3d car_pose_by_s_;
 Eigen::Vector3d global_target_pose_;
 Eigen::Vector3d safe_circle_tang_pose_;
-Eigen::Vector2d pt_inside_pose_;
 // global park space
 std::vector<Eigen::Vector2d> corrected_park_space_points_;
-PerpendicularPathPlanner::Tlane slot_t_lane_;
-Eigen::Vector2d right_obs_start_;
+Eigen::Vector2d right_wall1_upper_;
 
 std::vector<Eigen::Vector2d> obs_global_points_;
 ParkObstacleList hybrid_astar_obs_;
@@ -118,77 +116,8 @@ void ResetHybridAstarPath() {
   return;
 }
 
-void GetTrajPoseBySDist(const double s) {
-  size_t left_idx = 0;
-  size_t right_idx = 0;
-
-  if (global_path_.size() < 1 || global_path_s_.size() < 1) {
-    return;
-  }
-
-  ILOG_INFO << "s " << s << " path size " << global_path_.size();
-
-  // for (size_t i = 0; i < global_path_s_.size(); i++)
-  // {
-  //   ILOG_INFO << "s " << global_path_s_[i];
-  // }
-
-  if (s <= global_path_s_[0]) {
-    left_idx = 0;
-    right_idx = 0;
-  } else if (global_path_s_.size() > 0 &&
-             s >= global_path_s_[global_path_s_.size() - 1]) {
-    left_idx = global_path_s_.size() - 1;
-    right_idx = left_idx;
-  } else {
-    for (size_t i = 0; i < global_path_s_.size(); i++) {
-      if (i == 0) {
-        if (s <= global_path_s_[1]) {
-          left_idx = 0;
-          right_idx = 1;
-          break;
-        }
-      }
-
-      if (s <= global_path_s_[i] && s >= global_path_s_[i - 1]) {
-        left_idx = i - 1;
-        right_idx = i;
-        break;
-      }
-    }
-  }
-
-  double left_s = global_path_s_[left_idx];
-  double right_s = global_path_s_[right_idx];
-
-  if (left_idx == right_idx) {
-    car_pose_by_s_[0] = global_path_[left_idx][0];
-    car_pose_by_s_[1] = global_path_[left_idx][1];
-    car_pose_by_s_[2] = global_path_[left_idx][2];
-  } else {
-    car_pose_by_s_[0] =
-        ad_common::math::lerp(global_path_[left_idx][0], left_s,
-                              global_path_[right_idx][0], right_s, s);
-
-    car_pose_by_s_[1] =
-        ad_common::math::lerp(global_path_[left_idx][1], left_s,
-                              global_path_[right_idx][1], right_s, s);
-
-    car_pose_by_s_[2] =
-        ad_common::math::slerp(global_path_[left_idx][2], left_s,
-                               global_path_[right_idx][2], right_s, s);
-  }
-
-  ILOG_INFO << "left s " << left_s << "right s " << right_s
-            << global_path_[left_idx][2] << " phi "
-            << global_path_[right_idx][2] << " left_idx " << left_idx
-            << " right_idx" << right_idx;
-
-  return;
-}
-
 int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
-                           const double vertical_slot_target_adjust_dist,
+                           const double slot_target_adjust_dist,
                            const Eigen::Vector3d &ego_pose) {
   //
   global_path_.clear();
@@ -408,15 +337,12 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
 
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
-    slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
 
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
   } else if (cross_ego_to_slot_heading < 0.0 &&
              cross_ego_to_slot_center > 0.0) {
-    slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
   } else {
-    slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     frame.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
     frame.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     // ILOG_INFO << "calculate slot side error ";
@@ -428,9 +354,8 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
 
 int UpdateParkSpaceKeyPoints(
     const ApaParameters &parking_param, ApaPlannerBase::EgoSlotInfo &slot_info,
-    double inside_dx,
     const std::vector<Eigen::Vector2d> &global_park_space_points,
-    double cos_theta, double real_slot_length) {
+     double real_slot_length) {
   const double car_width_include_mirror =
       parking_param.car_width + 2.0 * parking_param.max_car_width;
 
@@ -448,35 +373,6 @@ int UpdateParkSpaceKeyPoints(
   Eigen::Vector2d slot_right_upper_point(slot_info.slot_length,
                                          -0.5 * slot_min_width);
 
-  const auto &slot_side = slot_t_lane_.slot_side;
-  if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-    // inside is right, outside is left
-    slot_t_lane_.corner_outside_slot = slot_left_upper_point;
-    slot_t_lane_.corner_inside_slot = slot_right_upper_point;
-
-    slot_t_lane_.pt_outside = slot_left_upper_point;
-    slot_t_lane_.pt_inside = slot_right_upper_point;
-  } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-    // outside is right, inside is left
-    slot_t_lane_.corner_outside_slot = slot_right_upper_point;
-    slot_t_lane_.corner_inside_slot = slot_left_upper_point;
-
-    slot_t_lane_.pt_outside = slot_right_upper_point;
-    slot_t_lane_.pt_inside = slot_left_upper_point;
-  }
-
-  // extend tlane point by dx
-  slot_t_lane_.pt_inside.x() += inside_dx;
-
-  slot_t_lane_.pt_terminal_pos = Eigen::Vector2d(
-      slot_info.target_ego_pos_slot.x(), slot_info.target_ego_pos_slot.y());
-  slot_t_lane_.pt_terminal_heading = slot_info.target_ego_heading_slot;
-
-  slot_t_lane_.pt_lower_boundry_pos = slot_t_lane_.pt_terminal_pos;
-  slot_t_lane_.pt_lower_boundry_pos.x() =
-      slot_t_lane_.pt_lower_boundry_pos.x() - parking_param.rear_overhanging -
-      0.3 - 0.05;
-
   const auto initial_right_upper_point =
       slot_info.g2l_tf.GetPos(global_park_space_points[0]);
   const auto initial_left_upper_point =
@@ -489,23 +385,8 @@ int UpdateParkSpaceKeyPoints(
       initial_left_upper_point - initial_right_upper_point;
 
   // vertical
-  if (pnc::mathlib::IsDoubleEqual(cos_theta, 0.0)) {
-    slot_info.sin_angle = 1.0;
-    slot_info.origin_pt_0_heading = 0.0;
-  } else {
-    auto angle = std::fabs(pnc::geometry_lib::GetAngleFromTwoVec(
-                     Eigen::Vector2d(real_slot_length, 0.0), vec_to_right)) *
-                 57.3;
-
-    if (angle > 90.0) {
-      angle = 180.0 - angle;
-    }
-
-    // slant space angle
-    angle = pnc::mathlib::DoubleConstrain(angle, 10.0, 80.0);
-    slot_info.sin_angle = std::sin(angle / 57.3);
-    slot_info.origin_pt_0_heading = 90.0 - angle;
-  }
+  slot_info.sin_angle = 1.0;
+  slot_info.origin_pt_0_heading = 0.0;
 
   return 0;
 }
@@ -542,81 +423,84 @@ int GenerateObstacleByJupyter(
   const double obs_length = (channel_length - vec_01.norm()) * 0.5;
 
   // right obs
-  right_obs_start_ =
-      global_park_space_points[0] + right_obj_dx * unit_vec_02 +
+  right_wall1_upper_ =
+      global_park_space_points[0] - right_obj_dx * unit_vec_02 +
       right_obj_dy * Eigen::Vector2d(-unit_vec_02.y(), unit_vec_02.x());
+  // vec1_0
 
-  const Eigen::Vector2d right_obs_horizontal_pt =
-      right_obs_start_ - obs_length * unit_vec_01;
+  const Eigen::Vector2d right_wall2_pt =
+      right_wall1_upper_ - obs_length * unit_vec_01;
 
-  const Eigen::Vector2d right_obs_vertical_pt =
-      right_obs_start_ + unit_vec_02 * (vec_02.norm() - right_obj_dx);
+  const Eigen::Vector2d right_wall1_lower =
+      right_wall1_upper_ + unit_vec_02 * (vec_02.norm() + right_obj_dx);
 
-  // left obs
-  const Eigen::Vector2d left_obs_start =
-      global_park_space_points[1] + left_obj_dx * unit_vec_02 +
+  // left wall 1
+  const Eigen::Vector2d left_wall1_upper =
+      global_park_space_points[1] - left_obj_dx * unit_vec_02 +
       left_obj_dy * Eigen::Vector2d(unit_vec_02.y(), -unit_vec_02.x());
 
-  const Eigen::Vector2d left_obs_horizontal_pt =
-      left_obs_start + obs_length * unit_vec_01;
+  const Eigen::Vector2d left_wall2_end =
+      left_wall1_upper + obs_length * unit_vec_01;
 
-  const Eigen::Vector2d left_obs_vertical_pt =
-      left_obs_start + unit_vec_02 * (vec_02.norm() - left_obj_dx);
+  const Eigen::Vector2d left_wall1_lower =
+      left_wall1_upper + unit_vec_02 * (vec_02.norm() + left_obj_dx);
 
   const Eigen::Vector2d channel_mid_pt =
       (global_park_space_points[0] + global_park_space_points[1]) * 0.5 +
       channel_width * Eigen::Vector2d(unit_vec_01.y(), -unit_vec_01.x());
 
-  const Eigen::Vector2d channel_left =
+  const Eigen::Vector2d up_wall_left =
       channel_mid_pt + channel_length * 0.5 * unit_vec_01;
-  const Eigen::Vector2d channel_right =
+  const Eigen::Vector2d up_wall_right =
       channel_mid_pt - channel_length * 0.5 * unit_vec_01;
 
   // right virtual wall
-  const Eigen::Vector2d right_virtual_wall_start =
+  const Eigen::Vector2d right_virtual_wall3_start =
       global_park_space_points[0] - obs_params[5] * unit_vec_01;
-  const Eigen::Vector2d right_virtual_wall_end =
-      right_virtual_wall_start - unit_vec_02 * channel_width;
+  const Eigen::Vector2d right_virtual_wall3_end =
+      right_virtual_wall3_start - unit_vec_02 * channel_width;
 
-  const Eigen::Vector2d left_virtual_wall_start =
+  const Eigen::Vector2d left_virtual_wall3_start =
       global_park_space_points[0] - obs_params[6] * unit_vec_01;
-  const Eigen::Vector2d left_virtual_wall_end =
-      left_virtual_wall_start - unit_vec_02 * channel_width;
+  const Eigen::Vector2d left_virtual_wall3_end =
+      left_virtual_wall3_start - unit_vec_02 * channel_width;
 
   // slot back wall
-  const Eigen::Vector2d back_wall_left =
-      left_obs_start + unit_vec_02 * (vec_02.norm() - left_obj_dx + 1.0);
+  Eigen::Vector2d lower_wall_left =
+      global_park_space_points[3] + unit_vec_02 * 1.0;
+  lower_wall_left[0] = left_wall1_upper[0];
 
-  const Eigen::Vector2d back_wall_right =
-      right_obs_start_ + unit_vec_02 * (vec_02.norm() - right_obj_dx + 1.0);
+  Eigen::Vector2d lower_wall_right =
+      global_park_space_points[2] + unit_vec_02 * 1.0;
+  lower_wall_right[0] = right_wall1_upper_[0];
 
   //
   std::vector<pnc::geometry_lib::LineSegment> line_vec;
 
   pnc::geometry_lib::LineSegment line;
 
-  line.SetPoints(right_obs_start_, right_obs_horizontal_pt);
+  line.SetPoints(right_wall1_upper_, right_wall2_pt);
   line_vec.emplace_back(line);
 
-  line.SetPoints(right_obs_start_, right_obs_vertical_pt);
+  line.SetPoints(right_wall1_upper_, right_wall1_lower);
   line_vec.emplace_back(line);
 
-  line.SetPoints(left_obs_start, left_obs_horizontal_pt);
+  line.SetPoints(left_wall1_upper, left_wall2_end);
   line_vec.emplace_back(line);
 
-  line.SetPoints(left_obs_start, left_obs_vertical_pt);
+  line.SetPoints(left_wall1_upper, left_wall1_lower);
   line_vec.emplace_back(line);
 
-  line.SetPoints(channel_left, channel_right);
+  line.SetPoints(up_wall_left, up_wall_right);
   line_vec.emplace_back(line);
 
-  line.SetPoints(right_virtual_wall_start, right_virtual_wall_end);
+  line.SetPoints(right_virtual_wall3_start, right_virtual_wall3_end);
   line_vec.emplace_back(line);
 
-  line.SetPoints(left_virtual_wall_start, left_virtual_wall_end);
+  line.SetPoints(left_virtual_wall3_start, left_virtual_wall3_end);
   line_vec.emplace_back(line);
 
-  line.SetPoints(back_wall_left, back_wall_right);
+  line.SetPoints(lower_wall_left, lower_wall_right);
   line_vec.emplace_back(line);
 
   // ILOG_INFO << "line_vec size " << line_vec.size();
@@ -663,7 +547,7 @@ int GenerateObstacleByJupyter(
 
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
-    std::vector<Eigen::Vector2d> global_park_space_points, double inside_dx,
+    std::vector<Eigen::Vector2d> global_park_space_points,
     std::vector<double> obs_params, const bool trigger_plan) {
   obs_global_points_.clear();
   planning::apa_planner::ApaPlannerBase::Frame frame;
@@ -680,52 +564,28 @@ std::vector<Eigen::Vector3d> Update(
       global_park_space_points[2] - global_park_space_points[0];
   const Eigen::Vector2d unit_vec_02 = vec_02.normalized();
 
-  // [-90,+90 degree], cos_theta > 0
-  const double cos_theta = unit_vec_01.dot(unit_vec_02);
+  const Eigen::Vector2d vec_10 = -vec_01;
+  const Eigen::Vector2d vec_13 =
+      global_park_space_points[3] - global_park_space_points[1];
 
-  // update parking space for slant space
-  if (cos_theta > 0.0) {
-    const double h_02 = vec_01.dot(unit_vec_02);
-    const Eigen::Vector2d right_upper_point =
-        global_park_space_points[0] + h_02 * unit_vec_02;
+  const Eigen::Vector2d unit_vec_13 = vec_13.normalized();
 
-    const double h_13 = vec_02.norm() - h_02;
-    const Eigen::Vector2d left_lower_point =
-        global_park_space_points[1] + h_13 * unit_vec_02;
-
-    corrected_park_space_points_[0] = right_upper_point;
-    corrected_park_space_points_[1] = global_park_space_points[1];
-    corrected_park_space_points_[2] = global_park_space_points[2];
-    corrected_park_space_points_[3] = left_lower_point;
-
-  } else {
-    const Eigen::Vector2d vec_10 = -vec_01;
-    const Eigen::Vector2d vec_13 =
-        global_park_space_points[3] - global_park_space_points[1];
-
-    const Eigen::Vector2d unit_vec_13 = vec_13.normalized();
-
-    const double h_13 = vec_10.dot(unit_vec_13);
-    const Eigen::Vector2d pt_1_dot =
-        global_park_space_points[1] + h_13 * unit_vec_13;
-
-    const double h_02 = vec_13.norm() - h_13;
-    const Eigen::Vector2d pt_2_dot =
-        global_park_space_points[0] + h_02 * unit_vec_13;
-
-    corrected_park_space_points_[0] = global_park_space_points[0];
-    corrected_park_space_points_[1] = pt_1_dot;
-    corrected_park_space_points_[2] = pt_2_dot;
-    corrected_park_space_points_[3] = global_park_space_points[3];
-  }
+  corrected_park_space_points_[0] = global_park_space_points[0];
+  corrected_park_space_points_[1] = global_park_space_points[1];
+  corrected_park_space_points_[2] = global_park_space_points[2];
+  corrected_park_space_points_[3] = global_park_space_points[3];
 
   // update space
+  const auto right_middle_pt =
+      0.5 * (corrected_park_space_points_[0] + corrected_park_space_points_[2]);
+  const auto left_middle_pt =
+      0.5 * (corrected_park_space_points_[1] + corrected_park_space_points_[3]);
   const auto upper_middle_pt =
       0.5 * (corrected_park_space_points_[0] + corrected_park_space_points_[1]);
   const auto lower_middle_pt =
       0.5 * (corrected_park_space_points_[2] + corrected_park_space_points_[3]);
 
-  const double real_slot_length = (upper_middle_pt - lower_middle_pt).norm();
+  const double real_slot_length = (right_middle_pt - left_middle_pt).norm();
 
   const auto vector_to_left =
       (corrected_park_space_points_[1] - corrected_park_space_points_[0])
@@ -734,24 +594,13 @@ std::vector<Eigen::Vector3d> Update(
   const auto vector_to_up =
       Eigen::Vector2d(vector_to_left.y(), -vector_to_left.x());
 
-  corrected_park_space_points_[2] =
-      corrected_park_space_points_[0] - real_slot_length * vector_to_up;
-  corrected_park_space_points_[3] =
-      corrected_park_space_points_[1] - real_slot_length * vector_to_up;
-
   ego_slot_info.slot_corner = corrected_park_space_points_;
-
-  ego_slot_info.slot_origin_pos =
-      upper_middle_pt - real_slot_length * vector_to_up;
-
-  ego_slot_info.slot_origin_heading =
-      std::atan2(vector_to_up.y(), vector_to_up.x());
-
-  ego_slot_info.slot_origin_heading_vec = vector_to_up;
+  ego_slot_info.slot_origin_pos = left_middle_pt;
+  ego_slot_info.slot_origin_heading = std::atan2(vec_10.y(), vec_10.x());
+  ego_slot_info.slot_origin_heading_vec = vec_10;
   ego_slot_info.slot_length = real_slot_length;
-
   ego_slot_info.slot_width =
-      (corrected_park_space_points_[0] - corrected_park_space_points_[1])
+      (corrected_park_space_points_[0] - corrected_park_space_points_[2])
           .norm();
 
   // base coordinate
@@ -815,8 +664,8 @@ std::vector<Eigen::Vector3d> Update(
                                ego_global_position, ego_global_pose,
                                ego_slot_info, frame);
 
-  UpdateParkSpaceKeyPoints(parking_param, ego_slot_info, inside_dx,
-                           global_park_space_points, cos_theta,
+  UpdateParkSpaceKeyPoints(parking_param, ego_slot_info,
+                           global_park_space_points,
                            real_slot_length);
 
   obs_global_points_.clear();
@@ -837,21 +686,15 @@ std::vector<Eigen::Vector3d> Update(
                             vec_01, vec_02, unit_vec_02, unit_vec_01,
                             ego_slot_info);
 
-  // copy pt_inside
-  slot_t_lane_.pt_inside.x() =
-      ego_slot_info.g2l_tf.GetPos(right_obs_start_).x();
-  pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane_.pt_inside);
-
   // start
   Eigen::Vector3d start;
   start << ego_slot_info.ego_pos_slot[0], ego_slot_info.ego_pos_slot[1],
       ego_slot_info.ego_heading_slot;
 
   // end
-
   Eigen::Vector3d end;
   end[0] = ego_slot_info.target_ego_pos_slot[0] +
-           parking_param.vertical_slot_target_adjust_dist;
+           parking_param.parallel_slot_target_adjust_dist;
   end[1] = ego_slot_info.target_ego_pos_slot[1];
   end[2] = ego_slot_info.target_ego_heading_slot;
 
@@ -879,9 +722,9 @@ std::vector<Eigen::Vector3d> Update(
                                ego_slot_info.target_ego_heading_slot);
     request.base_pose_ = Pose2D(0, 0, 0);
 
-    request.space_type = ParkSpaceType::VERTICAL;
-    request.parking_task = ParkingTask::TAIL_PARKING_IN;
-    request.head_request = ParkingVehDirectionRequest::tail_in_first;
+    request.space_type = ParkSpaceType::PARALLEL;
+    request.parking_task = ParkingTask::NONE;
+    request.head_request = ParkingVehDirectionRequest::none;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
@@ -894,7 +737,7 @@ std::vector<Eigen::Vector3d> Update(
 
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(ego_slot_info,
-                           parking_param.vertical_slot_target_adjust_dist,
+                           parking_param.parallel_slot_target_adjust_dist,
                            ego_global_pose);
 
     // just test rs library
@@ -955,8 +798,6 @@ Eigen::Vector3d GetCircleTangentPose() { return safe_circle_tang_pose_; }
 
 Eigen::Vector3d GetTrajPoseByDist() { return car_pose_by_s_; }
 
-Eigen::Vector2d GetPtInsidePose() { return pt_inside_pose_; }
-
 const std::vector<Eigen::Vector2d> &GetRectangleSoltPos() {
   return corrected_park_space_points_;
 }
@@ -995,14 +836,13 @@ const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
 
 const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
 
-PYBIND11_MODULE(hybrid_astar_py, m) {
+PYBIND11_MODULE(astar_parallel_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
       .def("Update", &Update)
       .def("GetTargetPose", &GetTargetPose)
       .def("GetCircleTangentPose", &GetCircleTangentPose)
-      .def("GetPtInsidePose", &GetPtInsidePose)
       .def("GetRectangleSoltPos", &GetRectangleSoltPos)
       .def("GetReedsShapePath", &GetReedsShapePath)
       .def("GetAstarAllNodes", &GetAstarAllNodes)
