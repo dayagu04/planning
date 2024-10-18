@@ -570,7 +570,8 @@ void LateralMotionPlanner::Update() {
   d_curv_vec[0] = d_curv_vec[1];
   t_vec[0] = -0.2;
 
-  if (!planning_input_.complete_follow()) {
+  if ((!session_->planning_context().general_lateral_decider_output().lane_change_scene) &&
+      (!planning_input_.complete_follow())) {
     const double end_points_size =
         planning_input_.motion_plan_concerned_index() + 1;
     std::vector<double> end_x_vec(end_points_size + 1);
