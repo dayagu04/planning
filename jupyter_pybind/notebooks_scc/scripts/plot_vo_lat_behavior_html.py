@@ -21,7 +21,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240530/20240530-10-53-27/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-05-30-10-53-27.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241017/20241017-15-20-43/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-10-17-15-20-43_no_camera.bag.1729168548.open-loop.plan"
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
@@ -87,6 +87,32 @@ def isINJupyter():
         return True
     else:
         return False
+def draw_speed_adjust_decider(dataLoader, layer_manager):
+  speed_adjust_decider_table = TextGenerator()
+  plan_debug_ts = []
+  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+    t = dataLoader.plan_debug_msg["t"][i]
+    plan_debug_ts.append(t)
+    speed_decider_info = plan_debug.st_search_decider_info
+    vars = ['ego_v', 'ego_v_cruise', 'st_search_status', 'front_gap_id', \
+            'back_gap_id', 'target_objs_flow_vel', 'slot_changed']
+    names  = []
+    datas = []
+    for name in vars:
+      try:
+          # print(getattr(vo_lat_behavior_plan,name))
+        datas.append(getattr(speed_decider_info,name))
+        names.append(name)
+      except:
+        pass
+    speed_adjust_decider_table.xys.append((names, datas, [None] * len(names)))
+  speed_adjust_decider_table.ts = plan_debug_ts
+  tab_attr_list = ['Attr', 'Val']
+  tab_speed_adjust_decider_table_layer1 = TableLayerV2(None, tab_attr_list, table_params)
+  layer_manager.AddLayer(
+      tab_speed_adjust_decider_table_layer1, 'speed_adjust_decider1', speed_adjust_decider_table, 'speed_adjust_decider_table1', 3)
+  return tab_speed_adjust_decider_table_layer1.plot
+
 
 def draw_vo_lat_behavior(dataLoader, layer_manager):
   lat_behavior_table1 = TextGenerator()
@@ -395,6 +421,10 @@ def draw_v_a_j_fig():
     fig_jt.legend.click_policy = "hide"
     return fig_vt, fig_at, fig_jt
 
+
+
+
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
@@ -414,6 +444,8 @@ def plotOnce(bag_path, html_file):
     tab_rt1, tab_rt2,tab_lat_rt_obstacle, obstacle_generates = draw_vo_lat_behavior(dataLoader, layer_manager)
     mlc_info_view, noa_info_view = draw_mlc_data_view(dataLoader, layer_manager)
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
+
+    tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
 
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
@@ -551,7 +583,7 @@ def plotOnce(bag_path, html_file):
         output_notebook()
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
-    pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt), column(fig_at, fig_jt)), title="SpeedSearchInfo")
+    pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
     pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 

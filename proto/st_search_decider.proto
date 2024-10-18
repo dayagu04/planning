@@ -7,6 +7,16 @@ message LaneChangeVehInfo {
   optional double v = 4;
 };
 
+message LaneChangeSlotInfo {
+  optional double slot_v = 1;
+  optional double aligned_v = 2;
+  optional double aligned_s = 3;
+  optional double cost = 4;
+  optional int32 front_veh_id = 5;
+  optional int32 back_veh_id = 6;
+  optional bool is_aligned_front =7;
+};
+
 message ObstacleSTInfo {
   optional int32 id = 1;
   repeated double s_vec_upper = 2;
@@ -35,4 +45,7 @@ message StSearchDeciderInfo {
   repeated double search_v_vec = 18;
   repeated double search_a_vec = 19;
   repeated double search_j_vec = 20;
+  optional double target_objs_flow_vel = 21;
+  repeated LaneChangeSlotInfo slot_info_vec = 22;
+  optional bool slot_changed = 23;
 };

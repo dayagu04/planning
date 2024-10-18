@@ -91,6 +91,7 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   session_->mutable_planning_context()
       ->mutable_lane_change_decider_output()
       .st_search_vec.clear();
+  slot_changed_ = false;
 
   // preprocess
   speed_adjust_status_buffer_.last_two_frame_status =
@@ -277,6 +278,8 @@ void SpeedAdjustDecider::ProcessEnvInfos() {
     max_ego_speed_in_speed_adjust_ = ego_state_manager->ego_v();
     min_ego_speed_in_speed_adjust_ = ego_state_manager->ego_v();
   }
+
+  CalcTargetObjsFlowVel();
 }
 
 std::pair<double, double> SpeedAdjustDecider::GetSafeAlignedDistance(
@@ -337,6 +340,26 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
              const double& aligned_back_safe_dis) -> bool {
     return slot.aligned_s() > init_sl_.first;
   };
+  
+  auto far_away_front_obj = [&](const SlotInfo& slot) -> bool {
+    return slot.front_veh_info().center_s -
+               (init_va_.first - slot.front_veh_info().v) * kPlanningDuration -
+               vehicle_param_.length * 0.5 - slot.front_veh_info().half_length >
+           kFarawayObjFilterDis;
+  };
+
+  auto calc_slot_v = [&](SlotInfo& slot) -> void {
+    if (slot.front_veh_info().id < 0) {
+      slot.SetSlotV(slot.back_veh_info().v);
+      return;
+    } else if (slot.back_veh_info().id < 0) {
+      slot.SetSlotV(slot.front_veh_info().v);
+    } else {
+      slot.SetSlotV(slot.front_veh_info().v > slot.back_veh_info().v
+                        ? slot.back_veh_info().v
+                        : slot.front_veh_info().v);
+    }
+  };
 
   for (auto idx = 1; idx < lane_change_veh_info_.size(); ++idx) {
     SlotInfo slot(lane_change_veh_info_[idx], lane_change_veh_info_[idx - 1]);
@@ -393,13 +416,9 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     const double fv = slot.front_veh_info().v;
     const double bv = slot.back_veh_info().v;
     if (fv > bv) {
-      const bool far_away_front_obj =
-          slot.front_veh_info().center_s -
-              (init_va_.first - slot.front_veh_info().v) * kPlanningDuration -
-              vehicle_param_.length * 0.5 - slot.front_veh_info().half_length >
-          kFarawayObjFilterDis;
+      const bool is_far_away_front_obj = far_away_front_obj(slot);
       slot.SetAlignedV(std::min(
-          slot.front_veh_info().id < 0 || far_away_front_obj ? 40.0 : fv,
+          slot.front_veh_info().id < 0 || is_far_away_front_obj ? 40.0 : fv,
           std::max(init_va_.first, bv)));
 
     } else {
@@ -426,6 +445,9 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     if (deceleration_priority_scene_) {
       min_dec_filter_speed = config_.min_dec_filter_speed_in_deceleration_scene;
     }
+
+    // calc slot v
+    calc_slot_v(slot);
 
     // lower aligned v limit
     if (slot.aligned_v() <
@@ -466,8 +488,10 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     StateLimit relative_state_limit;
     relative_state_limit.a_max =
         interp(init_va_.first, max_acc_ego_v_, max_acc_ego_v_bp_);
-    relative_state_limit.a_min = deceleration_priority_scene_ ? config_.min_acc_limit_lower :
-        interp(init_va_.first, min_acc_ego_v_, min_acc_ego_v_bp_);
+    relative_state_limit.a_min =
+        deceleration_priority_scene_
+            ? config_.min_acc_limit_lower
+            : interp(init_va_.first, min_acc_ego_v_, min_acc_ego_v_bp_);
     relative_state_limit.v_min =
         std::fmax(std::fmax(std::fmin(retriggered_ego_speed_, init_va_.first),
                             origin_ego_speed_) -
@@ -479,8 +503,10 @@ void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
     relative_state_limit.p_end = 0.0;
     relative_state_limit.j_max =
         interp(init_va_.first, max_jerk_ego_v_, max_jerk_ego_v_bp_);
-    relative_state_limit.j_min =  deceleration_priority_scene_ ? config_.min_jerk_limit_lower :
-        interp(init_va_.first, min_jerk_ego_v_, min_jerk_ego_v_bp_);
+    relative_state_limit.j_min =
+        deceleration_priority_scene_
+            ? config_.min_jerk_limit_lower
+            : interp(init_va_.first, min_jerk_ego_v_, min_jerk_ego_v_bp_);
     auto speed_adjust_curve =
         VariableCoordinateTimeOptimalTrajectory::ConstructInstance(
             relative_init_state, relative_state_limit, slot_aligned_coord, 0.3);
@@ -493,7 +519,7 @@ bool SpeedAdjustDecider::Execute() {
   auto speed_decider_pb_info = DebugInfoManager::GetInstance()
                                    .GetDebugInfoPb()
                                    ->mutable_st_search_decider_info();
-
+  speed_decider_pb_info->Clear();
   if (!ProcessLaneChangeStatus()) {
     std::cout << " No speed adjust status!" << std::endl;
     session_->mutable_planning_context()
@@ -527,9 +553,8 @@ bool SpeedAdjustDecider::Execute() {
   speed_decider_pb_info->set_st_search_status(true);
   speed_decider_pb_info->set_front_gap_id(last_best_slot_.front_veh_info().id);
   speed_decider_pb_info->set_back_gap_id(last_best_slot_.back_veh_info().id);
-  // proto info store
 
-  speed_decider_pb_info->Clear();
+  // proto info store
   if (session_->mutable_planning_context()
           ->mutable_lane_change_decider_output()
           .s_search_status) {
@@ -569,6 +594,18 @@ bool SpeedAdjustDecider::Execute() {
     }
   }
 
+  for (auto& slot_info : slot_point_info_) {
+    planning::common::LaneChangeSlotInfo* lane_change_slot_pb =
+        speed_decider_pb_info->add_slot_info_vec();
+    lane_change_slot_pb->set_slot_v(slot_info.slot_v());
+    lane_change_slot_pb->set_aligned_v(slot_info.aligned_v());
+    lane_change_slot_pb->set_aligned_s(slot_info.aligned_s());
+    lane_change_slot_pb->set_cost(slot_info.cost());
+    lane_change_slot_pb->set_front_veh_id(slot_info.front_veh_info().id);
+    lane_change_slot_pb->set_back_veh_id(slot_info.back_veh_info().id);
+    lane_change_slot_pb->set_is_aligned_front(slot_info.is_align_front());
+  }
+
   speed_decider_pb_info->mutable_leading_veh_info()->set_v(leading_veh_.v);
   speed_decider_pb_info->mutable_leading_veh_info()->set_id(leading_veh_.id);
   speed_decider_pb_info->mutable_leading_veh_info()->set_center_s(
@@ -580,6 +617,8 @@ bool SpeedAdjustDecider::Execute() {
   speed_decider_pb_info->set_ego_v(init_va_.first);
   speed_decider_pb_info->set_ego_a(init_va_.second);
   speed_decider_pb_info->set_ego_v_cruise(v_cruise_);
+  speed_decider_pb_info->set_target_objs_flow_vel(target_objs_flow_vel_);
+  speed_decider_pb_info->set_slot_changed(slot_changed_);
   return true;
 }
 
@@ -649,7 +688,8 @@ int SpeedAdjustDecider::SelectBestSlot() {
     //   const double adjust_length = candidate_traj.SecondOrderParamLength();
     //   const double ttc = back_car.center_s / (init_va_.first - back_car.v);
     //   if (ttc < adjust_length - kSafeAdjustDuration) {
-    //     rear_faster_coming_cost = (adjust_length - kSafeAdjustDuration - ttc)
+    //     rear_faster_coming_cost = (adjust_length - kSafeAdjustDuration -
+    //     ttc)
     //     *
     //                               rear_faster_coming_car_weight;
     //   }
@@ -664,6 +704,7 @@ int SpeedAdjustDecider::SelectBestSlot() {
       best_slot_id = i;
       min_cost = slot_costs[i];
     }
+    slot_point_info_[i].SetSlotCost(slot_costs[i]);
   }
 
   if (!is_same_slot(slot_point_info_[best_slot_id], last_best_slot_)) {
@@ -676,6 +717,7 @@ int SpeedAdjustDecider::SelectBestSlot() {
     min_ego_speed_in_speed_adjust_ =
         std::fmax(std::fmin(min_ego_speed_in_speed_adjust_, init_va_.first),
                   origin_ego_speed_);
+    slot_changed_ = true;
   }
   last_best_slot_ = slot_point_info_[best_slot_id];
 
@@ -690,6 +732,28 @@ void SpeedAdjustDecider::GenerateAdjustTraj(int best_slot_id,
     double s = best_profile.Evaluate(0, i * 0.2) - init_sl_.first;
     search_path->emplace_back(std::move(s));
   }
+}
+
+void SpeedAdjustDecider::CalcTargetObjsFlowVel() {
+  if (lane_change_veh_info_.size() < 2) {
+    target_objs_flow_vel_ = v_cruise_;
+    return;
+  }
+
+  double d_norm;
+  for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
+    d_norm += std::fabs(lane_change_veh_info_[i].center_s);
+  }
+
+  double d_norm_inverse = 1 / d_norm;
+  double temp_sum;
+  for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
+    temp_sum = (d_norm - std::fabs(lane_change_veh_info_[i].center_s)) *
+               d_norm_inverse * lane_change_veh_info_[i].v;
+  }
+  target_objs_flow_vel_ =
+      temp_sum * 1 /
+      (lane_change_veh_info_.size() * (lane_change_veh_info_.size() - 1));
 }
 
 }  // namespace planning
