@@ -145,7 +145,7 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
     deceleration_priority_scene_ = true;
     merge_emegency_distance_ = std::hypot(
         ego_point.x - boundary_merge_point.x,
-        ego_point.y - boundary_merge_point.y);  // cailiu2:no use currently
+        ego_point.y - boundary_merge_point.y);
   } else if (lc_request_source == MAP_REQUEST) {
     const double& distance_to_road_merge =
         virtual_lane_mgr->get_distance_to_first_road_merge();
@@ -157,7 +157,7 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
       deceleration_priority_scene_ = true;
       merge_emegency_distance_ =
           std::fmin(distance_to_road_split,
-                    distance_to_road_merge);  // cailiu2:no use currently
+                    distance_to_road_merge);
     }
 
   } else {
@@ -340,7 +340,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
              const double& aligned_back_safe_dis) -> bool {
     return slot.aligned_s() > init_sl_.first;
   };
-  
+
   auto far_away_front_obj = [&](const SlotInfo& slot) -> bool {
     return slot.front_veh_info().center_s -
                (init_va_.first - slot.front_veh_info().v) * kPlanningDuration -
