@@ -954,12 +954,14 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
     lane_change_decider_output.merge_point = merge_point_list[0];
     lane_change_decider_output.boundary_merge_point = merge_point_list[1];
     lane_change_decider_output.cur_lane_is_continue = is_continue;
+    lane_change_decider_output.boundary_merge_point_valid = true;
   } else {
     const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
     Point2D ego_point = {ego_stete->planning_init_point().x, ego_stete->planning_init_point().y};
     lane_change_decider_output.merge_point = ego_point;
     lane_change_decider_output.boundary_merge_point = ego_point;
     lane_change_decider_output.cur_lane_is_continue = true;
+    lane_change_decider_output.boundary_merge_point_valid = false;
   }
   JSON_DEBUG_VALUE(
       "macroeconomic_decider_merge_point_x",

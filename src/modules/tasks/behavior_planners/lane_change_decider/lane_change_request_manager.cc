@@ -108,6 +108,8 @@ bool LaneChangeRequestManager::Update(
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
         origin_relative_id_zero_nums == 1) {
       merge_change_request_.Update(lc_status);
+      is_near_merge_region_ =
+          merge_change_request_.is_merge_lane_change_situation();
     }
     if (location_valid && use_overtake_lane_change_request) {
       // lcc功能抑制超车变道

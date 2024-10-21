@@ -183,7 +183,7 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
   int target_lane_virtual_id_tmp{origin_lane_virtual_id_};
 
   if (merge_lane_change_direction_ == LEFT_CHANGE && enable_l_) {
-    if (request_type_ != LEFT_CHANGE && compute_lc_valid_info(LEFT_CHANGE)) {
+    if (request_type_ != LEFT_CHANGE) {
       // 获取左车道线型
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
@@ -210,7 +210,7 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
       }
     }
   } else if (merge_lane_change_direction_ == RIGHT_CHANGE && enable_r_) {
-    if (request_type_ != RIGHT_CHANGE && compute_lc_valid_info(RIGHT_CHANGE)) {
+    if (request_type_ != RIGHT_CHANGE) {
       // 获取右车道线型
       iflyauto::LaneBoundaryType right_boundary_type =
           MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
