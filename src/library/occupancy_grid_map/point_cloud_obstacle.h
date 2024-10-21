@@ -11,19 +11,22 @@
 namespace planning {
 
 enum class ParkObstacleType {
-  none = 0,
-  map_bound,
-  slot_line,
-  virtual_wall,
-  ground_line,
-  fusion_obj,
-  uss_obj,
-  max_num
+  NONE = 0,
+  MAP_BOUND,
+  SLOT_LINE,
+  VIRTUAL_WALL,
+  GROUND_LINE,
+  FUSION_OBJ,
+  USS_OBJ,
+  LIMITER,
+  MAX_NUM
 };
 
 // now, use convex hull collision detection API, so we use point to restore
 // point cloud. But in the future, we will use occupancy grid
 // map (ogm) to represent all obstacle in astar search.
+// todo: use heirachy collision checker by different height.
+// e.g. lower obs < 0.3 meter. upper obs > 2.3 meter.
 struct PointCloudObstacle {
   std::vector<Position2D> points;
 
@@ -66,6 +69,9 @@ class PointCloudObstacleTransform {
                               const LocalView* local_view);
 
  private:
+  void SampleInLineSegment(const Eigen::Vector2d& start,
+                           const Eigen::Vector2d& end,
+                           std::vector<Position2D>* points);
 };
 
 }  // namespace planning
