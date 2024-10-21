@@ -367,11 +367,23 @@ class ParallelPathPlanner : public ApaPathPlanner {
       pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
       const uint8_t current_arc_steer);
 
+  const bool TwoArcPath(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::LineSegment &target_line, const uint8_t ref_gear,
+      const double radius, const double lon_buffer);
+
   const bool LineArcPlan(
       pnc::geometry_lib::Arc &arc,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
       const uint8_t current_arc_steer);
+
+  const bool LineArcPlan(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &target_line, const uint8_t ref_gear,
+      const uint8_t ref_steer, const double radius, const double lon_buffer);
 
   const bool AlignBodyPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
