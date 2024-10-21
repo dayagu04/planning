@@ -421,10 +421,6 @@ def draw_v_a_j_fig():
     fig_jt.legend.click_policy = "hide"
     return fig_vt, fig_at, fig_jt
 
-
-
-
-
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:

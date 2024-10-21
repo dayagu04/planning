@@ -134,18 +134,18 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   }
 
   // judge the lane change source and scene
-
-  boundary_merge_point_valid_ = session_->planning_context()
-                                    .lane_change_decider_output()
-                                    .boundary_merge_point_valid;
+  boundary_merge_point_valid_ =
+      session_->planning_context() boundary_merge_point_valid_ =
+          session_->planning_context()
+              .lane_change_decider_output()
+              .boundary_merge_point_valid;
   if (boundary_merge_point_valid_ && lc_request_source == MERGE_REQUEST) {
     const auto& boundary_merge_point = session_->planning_context()
                                            .lane_change_decider_output()
                                            .boundary_merge_point;
     deceleration_priority_scene_ = true;
-    merge_emegency_distance_ = std::hypot(
-        ego_point.x - boundary_merge_point.x,
-        ego_point.y - boundary_merge_point.y);
+    merge_emegency_distance_ = std::hypot(ego_point.x - boundary_merge_point.x,
+                                          ego_point.y - boundary_merge_point.y);
   } else if (lc_request_source == MAP_REQUEST) {
     const double& distance_to_road_merge =
         virtual_lane_mgr->get_distance_to_first_road_merge();
@@ -156,10 +156,8 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
         is_merge_region) {
       deceleration_priority_scene_ = true;
       merge_emegency_distance_ =
-          std::fmin(distance_to_road_split,
-                    distance_to_road_merge);
+          std::fmin(distance_to_road_split, distance_to_road_merge);
     }
-
   } else {
     deceleration_priority_scene_ = false;
     merge_emegency_distance_ =
@@ -740,20 +738,20 @@ void SpeedAdjustDecider::CalcTargetObjsFlowVel() {
     return;
   }
 
-  double d_norm;
+  double d_norm = 0.0;
   for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
+    if (lane_change_veh_info_[i].id < 0) continue;
     d_norm += std::fabs(lane_change_veh_info_[i].center_s);
   }
 
   double d_norm_inverse = 1 / d_norm;
-  double temp_sum;
+  double temp_sum = 0.0;
   for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    temp_sum = (d_norm - std::fabs(lane_change_veh_info_[i].center_s)) *
-               d_norm_inverse * lane_change_veh_info_[i].v;
+    if (lane_change_veh_info_[i].id < 0) continue;
+    temp_sum += std::fabs(lane_change_veh_info_[i].center_s) * d_norm_inverse *
+                lane_change_veh_info_[i].v;
   }
-  target_objs_flow_vel_ =
-      temp_sum * 1 /
-      (lane_change_veh_info_.size() * (lane_change_veh_info_.size() - 1));
+  target_objs_flow_vel_ = temp_sum;
 }
 
 }  // namespace planning
