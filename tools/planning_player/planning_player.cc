@@ -220,7 +220,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
           planning_debug_info_proto.mutable_frame_info()->set_frame_num(
               frame_num_);
           ros::Duration duration(0.1 * frame_num_);
-          auto ros_time = ros_start_time + duration;
+          ros_time = ros_start_time + duration;
         } else {
           planning_debug_info_proto.set_timestamp(
               planning_dubug_info_header_time_us_);
