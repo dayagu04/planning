@@ -2320,25 +2320,24 @@ const bool ParallelPathPlanner::GenLineStepValidEnd(
     }
 
     double line_length = (first_line.pB - target_pose.pos).norm();
-    int step_size = static_cast<int>(line_length / kLineStepLength);
-    int max_size = static_cast<int>(line_length / 0.1);
-
-    if (gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      line_length = std::min(line_length, 0.6);
-      step_size = mathlib::Clamp(step_size, 3, 5);
-      step_size = std::min(step_size, max_size);
-
-    } else {
-      line_length = std::min(line_length, 0.8);
-      step_size = mathlib::Clamp(step_size, 3, 4);
-      step_size = std::min(step_size, max_size);
-    }
-
     if (line_length < 0.2) {
       DEBUG_PRINT("line_length" << line_length
                                 << "smaller than min line length! gear == "
                                 << static_cast<int>(gear));
       continue;
+    }
+
+    int step_size = static_cast<int>(line_length / kLineStepLength);
+    int max_size = static_cast<int>(line_length / 0.1);
+    if (gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      line_length = std::min(line_length, 0.6);
+      step_size = mathlib::Clamp(step_size, 2, 3);
+      step_size = std::min(step_size, max_size);
+
+    } else {
+      line_length = std::min(line_length, 0.8);
+      step_size = mathlib::Clamp(step_size, 2, 4);
+      step_size = std::min(step_size, max_size);
     }
 
     const double step = line_length / step_size;
