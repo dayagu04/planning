@@ -81,7 +81,7 @@ class LaneChangeRequestManager {
 
   void GenerateHMIInfo();
 
-  bool is_near_merge_region() { return is_near_merge_region_; };
+  const bool is_near_merge_region() { return is_near_merge_region_; };
 
  private:
   EgoPlanningConfig config_;

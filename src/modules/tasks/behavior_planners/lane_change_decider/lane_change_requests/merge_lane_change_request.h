@@ -16,7 +16,7 @@ class MergeRequest : public LaneChangeRequest {
 
   void Reset();
 
-  bool is_merge_lane_change_situation() {
+  const bool is_merge_lane_change_situation() {
     return is_merge_lane_change_situation_;
   };
 

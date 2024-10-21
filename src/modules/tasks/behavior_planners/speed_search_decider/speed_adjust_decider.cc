@@ -134,11 +134,9 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   }
 
   // judge the lane change source and scene
-  boundary_merge_point_valid_ =
-      session_->planning_context() boundary_merge_point_valid_ =
-          session_->planning_context()
-              .lane_change_decider_output()
-              .boundary_merge_point_valid;
+  boundary_merge_point_valid_ = session_->planning_context()
+                                    .lane_change_decider_output()
+                                    .boundary_merge_point_valid;
   if (boundary_merge_point_valid_ && lc_request_source == MERGE_REQUEST) {
     const auto& boundary_merge_point = session_->planning_context()
                                            .lane_change_decider_output()
@@ -740,14 +738,18 @@ void SpeedAdjustDecider::CalcTargetObjsFlowVel() {
 
   double d_norm = 0.0;
   for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    if (lane_change_veh_info_[i].id < 0) continue;
+    if (lane_change_veh_info_[i].id < 0) {
+      continue;
+    }
     d_norm += std::fabs(lane_change_veh_info_[i].center_s);
   }
 
   double d_norm_inverse = 1 / d_norm;
   double temp_sum = 0.0;
   for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    if (lane_change_veh_info_[i].id < 0) continue;
+    if (lane_change_veh_info_[i].id < 0) {
+      continue;
+    }
     temp_sum += std::fabs(lane_change_veh_info_[i].center_s) * d_norm_inverse *
                 lane_change_veh_info_[i].v;
   }
