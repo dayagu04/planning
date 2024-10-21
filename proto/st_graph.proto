@@ -1,0 +1,42 @@
+syntax = "proto2";
+
+package planning.common;
+
+message Point2D {
+  optional double x = 1;
+  optional double y = 2;
+}
+
+message StPoint {
+  optional double s = 1;
+  optional double t = 2;
+  optional double vel = 3;
+  optional double acc = 4;
+  optional bool valid = 5;
+  optional int32 agent_id = 6;
+}
+
+message StBoundary {
+  optional int64 boundary_id = 1;
+  repeated StPoint lower_points = 2;
+  repeated StPoint upper_points = 3;
+}
+
+message AgentStBoundary {
+  optional int32 agent_id = 1;
+  repeated StBoundary st_boundary = 2;
+}
+
+message StGraphData {
+  optional double start_path = 1;
+  optional double end_path = 2;
+  optional double start_time = 3;
+  optional double end_time = 4;
+  repeated AgentStBoundary agent_st_boundary = 5;
+  repeated StBoundary st_boundaries = 6;
+  repeated Point2D planned_path = 7;
+  optional string status = 8;
+  repeated StBoundary neighbor_st_boundaries = 9;
+  repeated StBoundary expand_st_boundaries = 10;
+  repeated StBoundary caution_yield_st_boundaries = 11;
+}

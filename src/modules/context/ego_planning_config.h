@@ -2517,4 +2517,37 @@ struct EgoPlanningUrgentChangeEvaluatorConfig
 struct VisionOnlyAdasFunctionTaskConfig : public EgoPlanningConfig {
   void init(const Json &json) override { EgoPlanningConfig::init(json); }
 };
+
+struct STGraphConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  bool enable_backward_extend_st_boundary = false;
+  double backward_extend_length_for_lane_change = 50.0;
+  double backward_extend_sample_resolution = 3.0;
+  double lane_keeping_lower_lateral_buffer_m = 0.3;
+  double lane_keeping_upper_lateral_buffer_m = 0.3;
+  double lane_keeping_lower_speed_kph = 10.0;
+  double lane_keeping_upper_speed_kph = 30.0;
+  double lane_keeping_large_agent_lateral_buffer_m = 0.2;
+  double lane_change_lateral_buffer_m = 0.2;
+  double lane_keeping_large_agent_lower_lateral_buffer_m = 0.20;
+  double lane_keeping_large_agent_upper_lateral_buffer_m = 0.20;
+  double lane_keeping_large_agent_lower_speed_kph = 10.0;
+  double lane_keeping_large_agent_upper_speed_kph = 30.0;
+  double front_agent_lower_s_safety_buffer_for_lane_change = 8.0;
+  double large_agent_expand_param_for_consistency = 0.20;
+  double large_agent_small_expand_param_for_consistency = 0.15;
+  double cone_lateral_buffer_m = 0.20;
+  double lane_keeping_large_heading_diff_lon_buffer_m = 0.30;
+  double person_lat_buffer_m = 0.4;
+  double person_lon_buffer_m = 0.4;
+  double bycicle_lat_buffer_m = 0.4;
+  double bycicle_lon_buffer_m = 0.4;
+  double tricycle_lat_buffer_m = 0.4;
+  double tricycle_lon_buffer_m = 0.4;
+  double backward_extend_time_s = 2.0;
+  double reverse_vehicle_lat_buffer_m = 0.2;
+};
 }  // namespace planning

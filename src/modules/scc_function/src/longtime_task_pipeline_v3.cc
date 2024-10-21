@@ -36,6 +36,10 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   cipv_lost_prohibit_acceleration_decider_ =
       std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
                                                             session);
+  st_graph_input_ =
+      std::make_shared<speed::StGraphInput>(config_builder, session);
+  st_graph_ = std::make_shared<speed::STGraph>();
+  st_graph_helper_ = std::make_shared<speed::StGraphHelper>(*st_graph_);
   st_graph_searcher_ =
       std::make_unique<StGraphSearcher>(config_builder, session);
   truck_longitudinal_avoid_decider_ =
@@ -130,8 +134,19 @@ bool LongTimeTaskPipelineV3::Run() {
   // }
 
   // 构建st input
-  // StGraphInput st_graph_input();  // TBD：jwliu23
-  // session_->mutable_st_graph_base()->Init(st_graph_input); // TBD: jwliu23
+  double time_start = IflyTime::Now_ms();
+  st_graph_input_->Update();
+  ok = st_graph_->Init(*st_graph_input_);
+  auto planning_context = session_->mutable_planning_context();
+  planning_context->set_st_graph(st_graph_);
+  planning_context->set_st_graph_helper(st_graph_helper_);
+  double time_end = IflyTime::Now_ms();
+  if (!ok) {
+    std::cout << "st graph init error" << std::endl;
+    return false;
+  }
+  JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);
+
 
   ok = expand_st_boundaries_decider_->Execute();
   if (!ok) {

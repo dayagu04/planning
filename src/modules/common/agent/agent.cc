@@ -35,7 +35,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   accel_ = prediction_object.acc;
   length_ = prediction_object.length;
   width_ = prediction_object.width;
-  type_ = prediction_object.type;
+  type_ = static_cast<AgentType>(prediction_object.type);
   fusion_source_ = prediction_object.fusion_source;
   timestamp_us_ = prediction_object.timestamp_us;
   timestamp_s_ = prediction_object.timestamp_us / 1000000.0;
@@ -148,16 +148,16 @@ AgentDecision* const Agent::mutable_agent_decision() {
   return &agent_decision_;
 }
 
-const iflyauto::ObjectType Agent::type() const { return type_; }
-void Agent::set_type(const iflyauto::ObjectType type) { type_ = type; }
+const AgentType Agent::type() const { return type_; }
+void Agent::set_type(const AgentType type) { type_ = type; }
 
 bool Agent::is_vehicle_type() const {
-  return type_ == iflyauto::OBJECT_TYPE_BUS ||
-         type_ == iflyauto::OBJECT_TYPE_COUPE ||
-         type_ == iflyauto::OBJECT_TYPE_MINIBUS ||
-         type_ == iflyauto::OBJECT_TYPE_VAN ||
-         type_ == iflyauto::OBJECT_TYPE_TRAILER ||
-         type_ == iflyauto::OBJECT_TYPE_TRUCK;
+  return type_ == AgentType::BUS ||
+         type_ == AgentType::COUPE ||
+         type_ == AgentType::MINIBUS ||
+         type_ == AgentType::VAN ||
+         type_ == AgentType::TRAILER ||
+         type_ == AgentType::TRUCK;
 }
 
 bool Agent::is_static() const { return is_static_; }
@@ -251,7 +251,7 @@ void Agent::set_is_vru(const bool is_vru) { is_vru_ = is_vru; }
 
 const bool Agent::is_sod() const { return is_sod_; }
 
-void Agent::set_is_sod(const bool is_sod) { is_sod_ = is_sod; }
+void Agent::set_is_sod(const bool is_sod) { is_sod_ = is_sod; } // cone
 
 const bool Agent::need_backward_extend() const { return need_backward_extend_; }
 

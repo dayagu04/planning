@@ -29,6 +29,10 @@
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "st_graph/st_graph_input.h"
+#include "st_graph/st_graph.h"
+#include "st_graph/st_graph_helper.h"
+#include "st_graph/st_graph_utils.h"
 
 namespace planning {
 
@@ -72,6 +76,11 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
       scc_longitudinal_motion_planner_;
 
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
+  
+  // ST Graph
+  std::shared_ptr<speed::StGraphInput> st_graph_input_;
+  std::shared_ptr<speed::STGraph> st_graph_;
+  std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
 };
 
 }  // namespace planning

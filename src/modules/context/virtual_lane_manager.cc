@@ -2494,4 +2494,42 @@ std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
   return boundary_path;
 }
 
+std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
+    Point2D point, double* nearest_s, double* nearest_l) {
+  double default_lateral_offset = 10.0;
+  int current_order_id = -1;
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane == nullptr) {
+      continue;
+    }
+    std::shared_ptr<KDPath> frenet_coord;
+    if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
+      continue;
+    }
+    frenet_coord = relative_id_lane->get_lane_frenet_coord();
+    Point2D frenet_point;
+    double point_s = 0.0;
+    double point_l = 0.0;
+    if (!frenet_coord->XYToSL(point, frenet_point)) {
+      continue;
+    } else {
+      point_l = fabs(frenet_point.y);
+    }
+    if (point_l < default_lateral_offset) {
+      default_lateral_offset = point_l;
+      current_order_id = relative_id_lane->get_order_id();
+      *nearest_s = point_s;
+      *nearest_l = point_l;
+    }
+  }
+
+  for(const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_order_id() == current_order_id) {
+      return relative_id_lane;
+    } else {
+      continue;
+    }
+  }
+  return nullptr;
+}
 }  // namespace planning

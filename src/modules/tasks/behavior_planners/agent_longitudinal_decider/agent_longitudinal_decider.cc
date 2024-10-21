@@ -482,9 +482,9 @@ bool AgentLongitudinalDecider::IsLargeAgentCutIn(
 };
 
 bool AgentLongitudinalDecider::IsLargeAgent(const agent::Agent& agent) {
-  return iflyauto::OBJECT_TYPE_BUS == agent.type() ||
-         iflyauto::OBJECT_TYPE_TRUCK == agent.type() ||
-         iflyauto::OBJECT_TYPE_TRAILER == agent.type() ||
+  return agent::AgentType::BUS == agent.type() ||
+         agent::AgentType::TRUCK == agent.type() ||
+         agent::AgentType::TRAILER == agent.type() ||
          agent.length() > kLargeAgentLengthM;
 };
 
