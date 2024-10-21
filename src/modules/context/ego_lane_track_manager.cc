@@ -47,9 +47,9 @@ constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 4.0;
 constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kLaneLineSegmentLength = 5.0;
-constexpr double kConsiderLaneLineLength = 40.0;
+constexpr double kConsiderLaneLineLength = 50.0;
 constexpr double kDefaultRoadRadius = 750.0;
-constexpr int32_t kDefaultPointNums = 30;
+constexpr int32_t kDefaultPointNums = 33;
 constexpr int32_t kLeastDefaultPointNums = 3;
 }  // namespace
 
@@ -1412,7 +1412,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
   const double default_lane_mapping_cost = 10.0;
-  const double default_consider_lane_length = 50.0;
+  const double default_consider_lane_length = 66.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
