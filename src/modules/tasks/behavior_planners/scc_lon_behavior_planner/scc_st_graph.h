@@ -222,18 +222,18 @@ class StGraphGenerator {
       const std::shared_ptr<VirtualLane> ego_lane);
 
   // use prediction info in agent node manager
-  void CalculateMergeInfoWithAgent(const int64_t agent_id,
-                                   const bool is_merging_to_left,
-                                   const string semantic_orientation_to_ego);
+  void CalculateMergeInfoWithAgent(
+      const int64_t agent_id, const bool is_merging_to_left,
+      const MergeAgentsInfo::AgentOrientationToEgo semantic_orientation_to_ego);
 
   double CalcDesiredDistance(const double intersection_front_one_velocity,
                              const bool is_lead, const bool is_accident_car,
                              const bool is_temp_lead, const double v_ego,
                              const std::string &lc_request);
-  double MergeDesiredDistanceFilter(const double v_ego, double safe_distance,
-                                    double desired_distance,
-                                    const agent::Agent *merge_target,
-                                    const string &merge_target_name);
+  double MergeDesiredDistanceFilter(
+      const double v_ego, double safe_distance, double desired_distance,
+      const agent::Agent *merge_target,
+      const MergeAgentsInfo::MergeTargetName merge_target_name);
 
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
                              const double &agent_min_l);
@@ -249,9 +249,12 @@ class StGraphGenerator {
       const int32_t agent_id,
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
       const std::shared_ptr<VirtualLane> ego_lane,
-      const string &agent_semanctic_orientation_to_ego);
+      const MergeAgentsInfo::AgentOrientationToEgo
+          agent_semanctic_orientation_to_ego);
   bool FilterEgoNearByAgentsWhenMerge(
-      const string &agent_semanctic_orientation_to_ego, const double t_overlap);
+      const MergeAgentsInfo::AgentOrientationToEgo
+          agent_semanctic_orientation_to_ego,
+      const double t_overlap);
 
   void MergeInfoReset();
 
@@ -419,7 +422,9 @@ class StGraphGenerator {
   std::pair<int64_t, double> d_relative_front_agent_current_to_ego_{
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
 
-  string merge_target_one_semantic_orientation_to_ego_{};
+  MergeAgentsInfo::AgentOrientationToEgo
+      merge_target_one_semantic_orientation_to_ego_{
+          MergeAgentsInfo::AgentOrientationToEgo::UNKNOWN};
   pnc::filters::SlopeFilter merge_desired_distance_filter_;
   bool ego_has_right_of_target_lane_{false};
   bool merge_target_one_has_changed_{false};
