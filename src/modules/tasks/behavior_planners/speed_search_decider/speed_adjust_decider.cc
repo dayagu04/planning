@@ -42,6 +42,8 @@ constexpr int32_t kNoAgentId = -1;
 constexpr double kStaticCarFilterVel = 1.5;
 constexpr double kAlignedDistanceBuffer = 2.5;
 constexpr double kDistanceToMapRequestPoint = 120.0;
+constexpr double kSlotFilterVel = 3.5;
+constexpr double kSlotFilterCenterS = 35.0;
 }  // namespace
 
 namespace planning {
@@ -365,9 +367,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
         6.0);
     // 1. filter too tight gap
     if (slot.front_veh_info().center_s - slot.front_veh_info().half_length -
-            slot.back_veh_info().center_s - slot.back_veh_info().half_length -
-            (slot.back_veh_info().v - slot.front_veh_info().v) *
-                kPlanningDuration <=
+            slot.back_veh_info().center_s - slot.back_veh_info().half_length <=
         2 * safety_distance) {
       std::cout << "The slot front id: " << slot.front_veh_info().id
                 << ", slot rear id: " << slot.back_veh_info().id
@@ -437,13 +437,24 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
       }
     }
 
+    // calc slot v
+    calc_slot_v(slot);
+
     double min_dec_filter_speed = config_.min_dec_filter_speed;
     if (deceleration_priority_scene_) {
       min_dec_filter_speed = config_.min_dec_filter_speed_in_deceleration_scene;
-    }
+    } else {
+      if (std::fabs(slot.slot_v() - init_va_.first) > kSlotFilterVel) {
+        continue;
+      }
 
-    // calc slot v
-    calc_slot_v(slot);
+      if (std::fabs(slot.front_veh_info().center_s -
+                    slot.front_veh_info().half_length -
+                    slot.back_veh_info().center_s -
+                    slot.back_veh_info().half_length) > kSlotFilterCenterS) {
+        continue;
+      }
+    }
 
     // lower aligned v limit
     if (slot.aligned_v() <
@@ -453,6 +464,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
       std::cout << " The slot: <<" << idx << " is too slow" << std::endl;
       continue;
     }
+
     if (leading_veh_.id > 0) {
       if (tailgating_leading_car(leading_veh_, slot)) {
         std::cout << " The slot: " << idx << " is tailgating leading car!"
@@ -755,5 +767,4 @@ void SpeedAdjustDecider::CalcTargetObjsFlowVel() {
   }
   target_objs_flow_vel_ = temp_sum;
 }
-
 }  // namespace planning

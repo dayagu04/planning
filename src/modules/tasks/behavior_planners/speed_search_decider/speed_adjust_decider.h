@@ -111,6 +111,8 @@ class SpeedAdjustDecider : public Task {
   void GenerateAdjustTraj(int best_id, std::vector<double>* search_path);
   void CalcTargetObjsFlowVel();
 
+  bool SlotValidCheck();
+
  private:
   SpeedAdjustDeciderConfig config_;
   int count_wait_state_{0};
