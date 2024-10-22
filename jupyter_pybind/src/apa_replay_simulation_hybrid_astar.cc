@@ -595,6 +595,17 @@ const bool PlanOnce(
     ParkObstacleList virtual_wall_obs;
     VirtualWallDecider wall_decider;
 
+    ParkSpaceType slot_type;
+    if (ego_slot_info.slot_type ==
+        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+      slot_type = ParkSpaceType::PARALLEL;
+    } else if (ego_slot_info.slot_type ==
+               Common::PARKING_SLOT_TYPE_SLANTING) {
+      slot_type = ParkSpaceType::SLANTING;
+    } else {
+      slot_type = ParkSpaceType::VERTICAL;
+    }
+
     wall_decider.Process(
         virtual_wall_obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
         ego_slot_info.slot_length,
@@ -602,7 +613,8 @@ const bool PlanOnce(
                ego_slot_info.ego_heading_slot),
         Pose2D(ego_slot_info.target_ego_pos_slot[0],
                ego_slot_info.target_ego_pos_slot[1],
-               ego_slot_info.target_ego_heading_slot));
+               ego_slot_info.target_ego_heading_slot),
+        slot_type);
 
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
@@ -750,9 +762,20 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                              ego_slot_info.target_ego_pos_slot[1],
                              ego_slot_info.target_ego_heading_slot);
     PointCloudObstacleTransform obstacle_generator;
+
+    ParkSpaceType slot_type;
+    if (ego_slot_info.slot_type ==
+        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+      slot_type = ParkSpaceType::PARALLEL;
+    } else if (ego_slot_info.slot_type ==
+               Common::PARKING_SLOT_TYPE_SLANTING) {
+      slot_type = ParkSpaceType::SLANTING;
+    } else {
+      slot_type = ParkSpaceType::VERTICAL;
+    }
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, real_end);
+        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 

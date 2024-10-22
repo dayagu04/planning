@@ -21,7 +21,7 @@ class VirtualWallDecider {
   int Process(std::vector<Position2D>& points, const double channel_length,
               const double channel_width, const double slot_width,
               const double slot_length, const Pose2D& ego_pose,
-              const Pose2D& end);
+              const Pose2D& end, const ParkSpaceType slot_type);
 
   void SampleInLine(const Eigen::Vector2d& start, const Eigen::Vector2d& end,
                     std::vector<Position2D>* points);
@@ -29,6 +29,13 @@ class VirtualWallDecider {
   void GenerateCarRelativePosition(const Pose2D& ego_pose);
 
  private:
+  void CalcVerticalVirtualWall(std::vector<Position2D>& points,
+                               const double channel_length,
+                               const double channel_width,
+                               const double slot_width,
+                               const double slot_length, const Pose2D& ego_pose,
+                               const Pose2D& end);
+
   std::string name_;
   Pose2D start_;
   Pose2D end_;

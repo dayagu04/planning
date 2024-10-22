@@ -175,12 +175,64 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
                                 const double channel_width,
                                 const double slot_width,
                                 const double slot_length,
-                                const Pose2D& ego_pose, const Pose2D& end) {
+                                const Pose2D& ego_pose, const Pose2D& end,
+                                const ParkSpaceType slot_type) {
   start_ = ego_pose;
   end_ = end;
 
   GenerateCarRelativePosition(ego_pose);
 
+  if (slot_type == ParkSpaceType::VERTICAL ||
+      slot_type == ParkSpaceType::SLANTING) {
+    CalcVerticalVirtualWall(points, channel_length, channel_width, slot_width,
+                            slot_length, ego_pose, end);
+  }
+
+  else {
+  }
+
+  return 0;
+}
+
+void VirtualWallDecider::SampleInLine(const Eigen::Vector2d& start,
+                                      const Eigen::Vector2d& end,
+                                      std::vector<Position2D>* points) {
+  const Eigen::Vector2d line = end - start;
+  const Eigen::Vector2d unit_line_vec = line.normalized();
+  double len = line.norm();
+
+  double s = 0.0;
+  double ds = 0.2;
+
+  Eigen::Vector2d point;
+  while (s < len) {
+    point = start + s * unit_line_vec;
+
+    points->emplace_back(Position2D(point.x(), point.y()));
+
+    s += ds;
+  }
+
+  points->emplace_back(Position2D(end.x(), end.y()));
+
+  return;
+}
+
+void VirtualWallDecider::GenerateCarRelativePosition(const Pose2D& ego_pose) {
+  if (ego_pose.y > 0.2) {
+    relative_position_ = CarSlotRelativePosition::car_is_left;
+  } else if (ego_pose.y < -0.2) {
+    relative_position_ = CarSlotRelativePosition::car_is_right;
+  } else {
+    relative_position_ = CarSlotRelativePosition::car_is_middle;
+  }
+  return;
+}
+
+void VirtualWallDecider::CalcVerticalVirtualWall(
+    std::vector<Position2D>& points, const double channel_length,
+    const double channel_width, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // width is the slot upper edge to a virtual wall
   const double lower_channel_length = (channel_length - slot_width) * 0.5;
 
@@ -310,41 +362,6 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
 
   SampleInLine(back_wall_left, back_wall_right, &points);
 
-  return 0;
-}
-
-void VirtualWallDecider::SampleInLine(const Eigen::Vector2d& start,
-                                      const Eigen::Vector2d& end,
-                                      std::vector<Position2D>* points) {
-  const Eigen::Vector2d line = end - start;
-  const Eigen::Vector2d unit_line_vec = line.normalized();
-  double len = line.norm();
-
-  double s = 0.0;
-  double ds = 0.2;
-
-  Eigen::Vector2d point;
-  while (s < len) {
-    point = start + s * unit_line_vec;
-
-    points->emplace_back(Position2D(point.x(), point.y()));
-
-    s += ds;
-  }
-
-  points->emplace_back(Position2D(end.x(), end.y()));
-
-  return;
-}
-
-void VirtualWallDecider::GenerateCarRelativePosition(const Pose2D& ego_pose) {
-  if (ego_pose.y > 0.2) {
-    relative_position_ = CarSlotRelativePosition::car_is_left;
-  } else if (ego_pose.y < -0.2) {
-    relative_position_ = CarSlotRelativePosition::car_is_right;
-  } else {
-    relative_position_ = CarSlotRelativePosition::car_is_middle;
-  }
   return;
 }
 

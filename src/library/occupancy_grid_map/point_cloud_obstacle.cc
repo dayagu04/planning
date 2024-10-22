@@ -16,14 +16,15 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
     const bool delete_obs_around_ego, const double slot_length,
     const double slot_width, const Pose2D& slot_base_pose,
-    const Pose2D& ego_start, const Pose2D& ego_final_goal) {
+    const Pose2D& ego_start, const Pose2D& ego_final_goal,
+    const ParkSpaceType slot_type) {
   Transform2d slot_tf;
   slot_tf.SetBasePose(slot_base_pose);
 
   // obs
   VirtualWallDecider wall_decider;
   wall_decider.Process(obs_list.virtual_obs, 40.0, 15.0, slot_width,
-                       slot_length, ego_start, ego_final_goal);
+                       slot_length, ego_start, ego_final_goal, slot_type);
 
   // hack: delete obstacle around ego and slot. In the future, it will be
   // retired.
@@ -258,7 +259,8 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
 }
 
 void PointCloudObstacleTransform::GenerateGlobalObstacle(
-    ParkObstacleList& obs_list, const LocalView* local_view) {
+    ParkObstacleList& obs_list, const LocalView* local_view,
+    const ParkSpaceType slot_type) {
   // generate local obs
   if (local_view == nullptr) {
     ILOG_ERROR << "local view is null";

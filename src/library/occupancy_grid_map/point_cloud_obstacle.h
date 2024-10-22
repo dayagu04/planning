@@ -5,6 +5,7 @@
 #include "./../../modules/common/local_view.h"
 #include "./../collision_detection/aabb2d.h"
 #include "./../collision_detection/polygon_base.h"
+#include "library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
 
@@ -63,10 +64,12 @@ class PointCloudObstacleTransform {
       ParkObstacleList& obs_list, const LocalView* local_view,
       const bool delete_obs_around_ego, const double slot_length,
       const double slot_width, const Pose2D& slot_base_pose,
-      const Pose2D& ego_start, const Pose2D& ego_final_goal);
+      const Pose2D& ego_start, const Pose2D& ego_final_goal,
+      const ParkSpaceType slot_type);
 
   void GenerateGlobalObstacle(ParkObstacleList& obs_list,
-                              const LocalView* local_view);
+                              const LocalView* local_view,
+                              const ParkSpaceType slot_type);
 
  private:
   void SampleInLineSegment(const Eigen::Vector2d& start,

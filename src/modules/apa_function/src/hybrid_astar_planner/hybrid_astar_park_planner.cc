@@ -484,7 +484,17 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
   Pose2D ego_pose(measures_ptr->pos[0], measures_ptr->pos[1],
                   measures_ptr->heading);
 
-  obstacle_generator.GenerateGlobalObstacle(obs, local_view);
+  ParkSpaceType slot_type;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    slot_type = ParkSpaceType::PARALLEL;
+  } else if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+             iflyauto::PARKING_SLOT_TYPE_SLANTING) {
+    slot_type = ParkSpaceType::SLANTING;
+  } else {
+    slot_type = ParkSpaceType::VERTICAL;
+  }
+  obstacle_generator.GenerateGlobalObstacle(obs, local_view, slot_type);
 
   PathSafeChecker path_safe_checker;
   path_safe_checker.Excute(
@@ -588,7 +598,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   // retired.
   obstacle_generator.GenerateLocalObstacle(
       obs, local_view, true, ego_slot_info.slot_length,
-      ego_slot_info.slot_width, slot_base_pose, start, real_end);
+      ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type);
 
   double search_start_time = IflyTime::Now_ms();
   ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;

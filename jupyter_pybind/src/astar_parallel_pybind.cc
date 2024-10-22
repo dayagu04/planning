@@ -466,13 +466,13 @@ int GenerateObstacleByJupyter(
       left_virtual_wall3_start - unit_vec_02 * channel_width;
 
   // slot back wall
-  Eigen::Vector2d lower_wall_left =
+  Eigen::Vector2d bottom_wall_left =
       global_park_space_points[3] + unit_vec_02 * 1.0;
-  lower_wall_left[0] = left_wall1_upper[0];
+  bottom_wall_left[0] = left_wall1_upper[0];
 
-  Eigen::Vector2d lower_wall_right =
+  Eigen::Vector2d bottom_wall_right =
       global_park_space_points[2] + unit_vec_02 * 1.0;
-  lower_wall_right[0] = right_wall1_upper_[0];
+  bottom_wall_right[0] = right_wall1_upper_[0];
 
   //
   std::vector<pnc::geometry_lib::LineSegment> line_vec;
@@ -500,7 +500,7 @@ int GenerateObstacleByJupyter(
   line.SetPoints(left_virtual_wall3_start, left_virtual_wall3_end);
   line_vec.emplace_back(line);
 
-  line.SetPoints(lower_wall_left, lower_wall_right);
+  line.SetPoints(bottom_wall_left, bottom_wall_right);
   line_vec.emplace_back(line);
 
   // ILOG_INFO << "line_vec size " << line_vec.size();
@@ -735,7 +735,7 @@ std::vector<Eigen::Vector3d> Update(
 
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
-    ILOG_INFO << "hybrid_astar_interface_ finish";
+    ILOG_INFO << "hybrid_astar_interface finish";
     GetPathFromHybridAstar(ego_slot_info,
                            parking_param.parallel_slot_end_straight_dist,
                            ego_global_pose);
