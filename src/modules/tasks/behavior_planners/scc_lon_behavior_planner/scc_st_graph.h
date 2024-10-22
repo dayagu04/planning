@@ -222,17 +222,18 @@ class StGraphGenerator {
       const std::shared_ptr<VirtualLane> ego_lane);
 
   // use prediction info in agent node manager
-  void CalculateMergeInfoWithAgent(const int64_t agent_id,
-                                   const bool is_merging_to_left,
-                                   const string semantic_orientation_to_ego);
+  void CalculateMergeInfoWithAgent(
+      const int64_t agent_id, const bool is_merging_to_left,
+      const MergeAgentsInfo::AgentOrientationToEgo semantic_orientation_to_ego);
 
   double CalcDesiredDistance(const double intersection_front_one_velocity,
                              const bool is_lead, const bool is_accident_car,
                              const bool is_temp_lead, const double v_ego,
                              const std::string &lc_request);
-  double MergeDesiredDistanceFilter(const double v_ego, double safe_distance,
-                                    double desired_distance,
-                                    const agent::Agent *merge_target_one);
+  double MergeDesiredDistanceFilter(
+      const double v_ego, double safe_distance, double desired_distance,
+      const agent::Agent *merge_target,
+      const MergeAgentsInfo::MergeTargetName merge_target_name);
 
   bool LateralCollisionCheck(const double &start_s, const double &end_s,
                              const double &agent_min_l);
@@ -247,7 +248,13 @@ class StGraphGenerator {
   bool FilterEgoNearByAgentsWhenMerge(
       const int32_t agent_id,
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
-      const std::shared_ptr<VirtualLane> ego_lane);
+      const std::shared_ptr<VirtualLane> ego_lane,
+      const MergeAgentsInfo::AgentOrientationToEgo
+          agent_semanctic_orientation_to_ego);
+  bool FilterEgoNearByAgentsWhenMerge(
+      const MergeAgentsInfo::AgentOrientationToEgo
+          agent_semanctic_orientation_to_ego,
+      const double t_overlap);
 
   void MergeInfoReset();
 
@@ -389,21 +396,41 @@ class StGraphGenerator {
   MergeSplitPoints::MergeSplitOrientation merge_direction_ =
       MergeSplitPoints::UNKNOWN;
   int merge_lane_virtual_id_ = -1;
+
+  // NOTE: adjacent or rear agent merge info which is left or left rear or right
+  // or right rear
   // first: agent_node_id, second: t_intersect
-  std::pair<int64_t, double> t_merge_with_agent_{
+  std::pair<int64_t, double> t_merge_with_adjacent_or_rear_agent_{
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
   // first: angent_node_id, seconde: d_reletive_intersect
-  std::pair<int64_t, double> d_relative_merge_with_agent_{
+  std::pair<int64_t, double> d_relative_merge_with_adjacent_or_rear_agent_{
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
-  std::pair<int64_t, double> v_agent_merge_with_ego_{
+  std::pair<int64_t, double> v_adjacent_or_rear_agent_merge_with_ego_{
       planning_data::kInvalidId, std::numeric_limits<double>::lowest()};
-  std::pair<int64_t, double> d_current_relative_to_ego_{
+  std::pair<int64_t, double> d_relative_adjacent_or_rear_agent_current_to_ego_{
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
-  string merge_target_one_semantic_orientation_to_ego_{};
+
+  // NOTE: front agent merge info which is left front or right front
+  // first: agent_node_id, second: t_intersect
+  std::pair<int64_t, double> t_merge_with_front_agent_{
+      planning_data::kInvalidId, std::numeric_limits<double>::max()};
+  // first: angent_node_id, seconde: d_reletive_intersect
+  std::pair<int64_t, double> d_relative_merge_with_front_agent_{
+      planning_data::kInvalidId, std::numeric_limits<double>::max()};
+  std::pair<int64_t, double> v_front_agent_merge_with_ego_{
+      planning_data::kInvalidId, std::numeric_limits<double>::lowest()};
+  std::pair<int64_t, double> d_relative_front_agent_current_to_ego_{
+      planning_data::kInvalidId, std::numeric_limits<double>::max()};
+
+  MergeAgentsInfo::AgentOrientationToEgo
+      merge_target_one_semantic_orientation_to_ego_{
+          MergeAgentsInfo::AgentOrientationToEgo::UNKNOWN};
   pnc::filters::SlopeFilter merge_desired_distance_filter_;
   bool ego_has_right_of_target_lane_{false};
   bool merge_target_one_has_changed_{false};
   int64_t last_merge_target_one_id_{planning_data::kInvalidId};
+  bool merge_target_two_has_changed_{false};
+  int64_t last_merge_target_two_id_{planning_data::kInvalidId};
   Point2D merge_point_plan_{std::numeric_limits<double>::lowest(),
                             std::numeric_limits<double>::lowest()};
   //   common::IntersectionState intersection_state_ =

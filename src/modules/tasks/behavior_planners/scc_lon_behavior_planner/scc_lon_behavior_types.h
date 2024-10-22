@@ -51,7 +51,7 @@ All merges can be abstracted as following lane topology:
   *
  * *
 *   *
-*   * 
+*   *
 *   *
 
 *******************************************************/
@@ -72,7 +72,7 @@ struct MergeSplitPoints {
         UNKNOWN};  // 1:left, 2:right(from perception)
     iflyauto::Point3d split_merge_point{0.0, 0.0, 0.0};
   };
-  
+
   void Reset() {
     merge_split_existence = false;
     merge_split_points_size = 0;
@@ -84,6 +84,23 @@ struct MergeSplitPoints {
   size_t merge_split_points_size{0};
   std::map<double, MergeSplitPointInfo> merge_split_points_in_dist_order;
   MergeSplitPointInfo closet_merge_split_point;
+};
+
+struct MergeAgentsInfo {
+  enum class AgentOrientationToEgo {
+    UNKNOWN = 0,
+    LEFT_FRONT = 1,
+    RIGHT_FRONT = 2,
+    LEFT = 3,
+    RIGHT = 4,
+    LEFT_REAR = 5,
+    RIGHT_REAR = 6
+  };
+  enum class MergeTargetName {
+    UNKNOWN = 0,
+    MERGE_TARGET_ONE = 1,
+    MERGE_TARGET_TWO = 2
+  };
 };
 
 }  // namespace scc
