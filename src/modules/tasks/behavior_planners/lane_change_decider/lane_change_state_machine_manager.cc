@@ -69,13 +69,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
-        iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
+        // iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
-        if (is_propose_to_execution &&
-            (boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-             boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL)) {
+        if (is_propose_to_execution) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
@@ -197,9 +195,12 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
   *lane_change_type = lc_req_mgr_->request_source();
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
-    bool is_ego_in_perfect_pose = CheckIfInPerfectLaneKeeping();
+    iflyauto::LaneBoundaryType boundary_type = MakesureCurrentBoundaryType(*lane_change_direction);
+    const bool is_dashed_line = (boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+                                boundary_type == iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
+    bool is_ego_in_perfect_pose = CheckIfInPerfectLaneKeeping() && is_dashed_line;
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
-    if (*lane_change_type == INT_REQUEST) {
+    if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
     } else {
       return is_ego_in_perfect_pose;
@@ -1375,7 +1376,7 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
           //       (tr.d_min_cpath +
           //           tr.v_lat * std::min(tr.d_rel + 5 / tr.v_rel, 4.) <=
           //       lat_thre)))
-          if (tr.d_rel > -5 - mss) {
+          if (tr.d_rel > -5 - mss * 0.7) {
             lc_state_info->lc_should_back = true;
             lc_state_info->lc_back_reason = "side view back";
             lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);
@@ -1472,9 +1473,10 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
                                           tr.d_min_cpath - l_ego - 1.6)),
                                 0.0) /
                        (std::max(-tr.v_lat + 0.7, 0.3));
-    if ((lat_condi < 1.5 && tr.d_rel < 1.0) ||
-        (lat_condi <= 1.5 &&
-         tr.d_rel < 0.8 * (mss - std::max(lat_condi * tr.v_rel, 0.0)))) {
+    // if ((lat_condi < 1.5 && tr.d_rel < 1.0) ||
+    //     (lat_condi <= 1.5 &&
+    //      tr.d_rel < 0.8 * (mss - std::max(lat_condi * tr.v_rel, 0.0)))) {
+    if (tr.d_rel < 0.7 * mss) {
       lc_state_info->lc_should_back = true;
       lc_state_info->lc_back_reason = "front view back";
       lc_back_track_.set_value(tr.track_id, tr.d_rel, tr.v_rel);

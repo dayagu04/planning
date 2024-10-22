@@ -2363,9 +2363,11 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   }
 
   //(2)、判断当前在高速主路上是否在接近汇入点，如果接近汇入点800米以内，不让自车呆最右侧车道上，以避开汇流区域
+  // fengwang31:增加优先级判断，如果前方汇入距离前方匝道的距离较近，那么避开汇入区域的逻辑被抑制
   if (is_road_merged_by_other_lane_ &&
       distance_to_first_road_merge_ < dis_threshold_to_is_merged_point_ &&
-      is_ego_on_rightest_lane) {
+      is_ego_on_rightest_lane &&
+      dis_to_ramp_ - distance_to_first_road_merge_ > 500) {
     is_nearing_other_lane_merge_to_road_point_ = true;
   }
   JSON_DEBUG_VALUE("is_nearing_other_lane_merge_to_road_point", is_nearing_other_lane_merge_to_road_point_);
@@ -2373,7 +2375,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //(3)、判断高速前方汇入点在前，还是匝道在前
  if (is_nearing_ramp_ &&
       is_road_merged_by_other_lane_ &&
-      dis_to_ramp_ > distance_to_first_road_merge_ &&
+      dis_to_ramp_ - distance_to_first_road_merge_ > 500 &&
       !is_on_ramp_ &&
       is_on_highway_) {
     is_nearing_ramp_ = false;
