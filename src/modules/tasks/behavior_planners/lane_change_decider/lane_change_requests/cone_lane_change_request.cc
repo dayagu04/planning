@@ -157,7 +157,6 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   int minPts = 1;
   cone_points_.clear();
   cone_cluster_attribute_set_.clear();
-  is_cone_lane_change_situation_ = false;
 
   const std::vector<TrackedObject>& front_obstacles_array =
       lateral_obstacle_->front_tracks();

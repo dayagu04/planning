@@ -249,7 +249,7 @@ def update_cone_request_lc_data (plan_debug_json):
   names  = []
   datas = []
   cone_lc_vars_ = ["is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_",
-                   "cone_nums_of_front_objects"]
+                   "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_"]
   for name in cone_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))

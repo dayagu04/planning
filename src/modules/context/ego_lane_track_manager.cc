@@ -50,6 +50,7 @@ constexpr double kLaneLineSegmentLength = 5.0;
 constexpr double kConsiderLaneLineLength = 40.0;
 constexpr double kDefaultRoadRadius = 750.0;
 constexpr int32_t kDefaultPointNums = 25;
+constexpr int32_t kLeastDefaultPointNums = 3;
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(planning::framework::Session* session) {
@@ -1378,7 +1379,11 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
         }
       }
       point_nums = std::max(1, point_nums);
-      lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
+      if (point_nums < kLeastDefaultPointNums) {
+        lane_mapping_cost = default_lane_mapping_cost;
+      } else {
+        lane_mapping_cost = std::fabs(total_lateral_offset / point_nums);
+      }
       return lane_mapping_cost;
     } else {
       return default_lane_mapping_cost;
