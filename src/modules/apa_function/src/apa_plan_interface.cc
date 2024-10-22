@@ -845,10 +845,10 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   ILOG_INFO << "path_generator_type "
             << static_cast<int>(apa_param.GetParam().path_generator_type);
 
-  JSON_READ_VALUE(apa_param.SetPram().vertical_slot_target_adjust_dist, double,
-                  "vertical_slot_target_adjust_dist");
-  ILOG_INFO << "vertical_slot_target_adjust_dist "
-            << apa_param.SetPram().vertical_slot_target_adjust_dist;
+  JSON_READ_VALUE(apa_param.SetPram().vertical_slot_end_straight_dist, double,
+                  "vertical_slot_end_straight_dist");
+  ILOG_INFO << "vertical_slot_end_straight_dist "
+            << apa_param.SetPram().vertical_slot_end_straight_dist;
 
   JSON_READ_VALUE(apa_param.SetPram().enable_delete_fusion_obj_in_slot, bool,
                   "enable_delete_fusion_obj_in_slot");
@@ -963,8 +963,10 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().parallel_slot_auto_scheduler_for_astar,
                   bool, "parallel_slot_auto_scheduler_for_astar");
 
-  JSON_READ_VALUE(apa_param.SetPram().parallel_slot_target_adjust_dist, double,
-                  "parallel_slot_target_adjust_dist");
+  JSON_READ_VALUE(apa_param.SetPram().parallel_slot_end_straight_dist, double,
+                  "parallel_slot_end_straight_dist");
+  JSON_READ_VALUE(apa_param.SetPram().cubic_polynomial_pose_adjustment, bool,
+                  "cubic_polynomial_pose_adjustment");
 }
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdio>
 
+#include "common_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "hybrid_astar_response.h"
@@ -557,7 +558,21 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
 
   // astar end, maybe different with real end.
   Pose2D end = real_end;
-  end.x = real_end.x + apa_param.GetParam().vertical_slot_target_adjust_dist;
+  double end_straight_len;
+  ParkSpaceType slot_type;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    end_straight_len = apa_param.GetParam().parallel_slot_end_straight_dist;
+    slot_type = ParkSpaceType::PARALLEL;
+  } else if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+             iflyauto::PARKING_SLOT_TYPE_SLANTING) {
+    end_straight_len = apa_param.GetParam().vertical_slot_end_straight_dist;
+    slot_type = ParkSpaceType::SLANTING;
+  } else {
+    end_straight_len = apa_param.GetParam().vertical_slot_end_straight_dist;
+    slot_type = ParkSpaceType::VERTICAL;
+  }
+  end.x = real_end.x + end_straight_len;
 
   double astar_start_time = IflyTime::Now_ms();
   // obs generate
@@ -584,7 +599,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       planning::AstarPathGenerateType::ASTAR_SEARCHING;
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::none;
-  cur_request.space_type = ParkSpaceType::VERTICAL;
+  cur_request.space_type = slot_type;
   cur_request.parking_task = ParkingTask::TAIL_PARKING_IN;
   cur_request.head_request = ParkingVehDirectionRequest::tail_in_first;
   cur_request.rs_request = RSPathRequestType::none;
@@ -628,8 +643,13 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
-    cur_request.path_generate_method =
-        planning::AstarPathGenerateType::REEDS_SHEPP;
+    if (apa_param.GetParam().cubic_polynomial_pose_adjustment) {
+      cur_request.path_generate_method =
+          planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
+    } else {
+      cur_request.path_generate_method =
+          planning::AstarPathGenerateType::REEDS_SHEPP;
+    }
 
     end.y = real_end.y;
     end.x = start.x + 30.0;

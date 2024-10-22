@@ -87,12 +87,6 @@ int HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
                                       const AstarRequest& request) {
   request_ = request;
 
-  // range
-  map_bounds_.x_min = -2;
-  map_bounds_.x_max = 20;
-  map_bounds_.y_min = -20;
-  map_bounds_.y_max = 20;
-
   // start state
   initial_state_ = request.start_;
   ego_pose_ = initial_state_;
@@ -113,9 +107,7 @@ int HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
 
 int HybridAStarInterface::UpdateEDT() {
   Pose2D ogm_base_pose;
-  ogm_base_pose.x = -3.0;
-  ogm_base_pose.y = -20.0;
-  ogm_base_pose.theta = 0.0;
+  UpdateEDTBasePose(ogm_base_pose);
 
   ogm_.Clear();
   ogm_.Process(ogm_base_pose);
@@ -128,9 +120,7 @@ int HybridAStarInterface::UpdateEDT() {
 
 int HybridAStarInterface::UpdateEDTByObs(const ParkObstacleList& obs_list) {
   Pose2D ogm_base_pose;
-  ogm_base_pose.x = -3.0;
-  ogm_base_pose.y = -20.0;
-  ogm_base_pose.theta = 0.0;
+  UpdateEDTBasePose(ogm_base_pose);
 
   ogm_.Clear();
   ogm_.Process(ogm_base_pose);
@@ -180,6 +170,8 @@ int HybridAStarInterface::UpdateOutput() {
   }
 
   search_state_ = AstarSearchState::SEARCHING;
+
+  UpdateSearchBoundary();
 
   UpdateEDT();
   // update clear zone. This zone not contain any obstacle.
@@ -268,7 +260,8 @@ int HybridAStarInterface::UpdateOutput() {
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
 
-      if (apa_param.GetParam().use_a_cubic_polynomial_for_adjustment) {
+      if (request_.path_generate_method ==
+          AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
         if (hybrid_astar_->PlanByCubicPath(&coarse_traj_, initial_state_,
                                            goal_state_, lon_min_sampling_length,
                                            map_bounds_, obs_, request_, &edt_,
@@ -338,14 +331,12 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     ILOG_INFO << "path searching, please wait";
     return 0;
   }
+  request_ = request;
 
   DebugAstarRequestString(request);
 
   // range
-  map_bounds_.x_min = -2;
-  map_bounds_.x_max = 20;
-  map_bounds_.y_min = -20;
-  map_bounds_.y_max = 20;
+  UpdateSearchBoundary();
 
   ILOG_INFO << "map bound, xmin " << map_bounds_.x_min << " , ymin "
             << map_bounds_.y_min << " ,xmax " << map_bounds_.x_max << " , ymax "
@@ -781,6 +772,40 @@ void HybridAStarInterface::GetPolynomialPathForDebug(std::vector<double>& x,
       y.push_back(coarse_traj_.y[i]);
       phi.push_back(coarse_traj_.phi[i]);
     }
+  }
+
+  return;
+}
+
+void HybridAStarInterface::UpdateSearchBoundary() {
+  // range
+  if (request_.space_type == ParkSpaceType::VERTICAL ||
+      request_.space_type == ParkSpaceType::SLANTING) {
+    map_bounds_.x_min = -2;
+    map_bounds_.x_max = 20;
+    map_bounds_.y_min = -20;
+    map_bounds_.y_max = 20;
+  } else {
+    map_bounds_.x_min = -10;
+    map_bounds_.x_max = 14;
+    map_bounds_.y_min = -3;
+    map_bounds_.y_max = 15;
+  }
+
+  return;
+}
+
+void HybridAStarInterface::UpdateEDTBasePose(Pose2D& ogm_base_pose) {
+  // range
+  if (request_.space_type == ParkSpaceType::VERTICAL ||
+      request_.space_type == ParkSpaceType::SLANTING) {
+    ogm_base_pose.x = -3.0;
+    ogm_base_pose.y = -20.0;
+    ogm_base_pose.theta = 0.0;
+  } else {
+    ogm_base_pose.x = -10.0;
+    ogm_base_pose.y = -20.0;
+    ogm_base_pose.theta = 0.0;
   }
 
   return;

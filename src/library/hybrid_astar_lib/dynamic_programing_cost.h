@@ -1,16 +1,12 @@
 
 #pragma once
 
-#include <bits/stdint-intn.h>
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
 #include <memory>
-#include <queue>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -106,7 +102,7 @@ class GridSearch {
   bool NodePositionValid(const double x, const double y);
 
  private:
-  double xy_grid_resolution_ = 0.0;
+  double heuristic_grid_resolution_ = 0.0;
   double inv_xy_resolution_ = 0.0;
   double xy_grid_resolution_half_ = 0.0;
   double safe_width_ = 0.0;

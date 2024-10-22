@@ -243,10 +243,10 @@
   "parallel_search_out_heading": 0.0,
   "is_parallel_advanced_method": true,
   "path_generator_type": 0,
-  "vertical_slot_target_adjust_dist": 1.5,
-  "parallel_slot_target_adjust_dist": 0.0,
+  "vertical_slot_end_straight_dist": 1.5,
+  "parallel_slot_end_straight_dist": 0.0,
   "enable_delete_fusion_obj_in_slot": true,
-  "use_a_cubic_polynomial_for_adjustment" :true,
+  "cubic_polynomial_pose_adjustment" :true,
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
