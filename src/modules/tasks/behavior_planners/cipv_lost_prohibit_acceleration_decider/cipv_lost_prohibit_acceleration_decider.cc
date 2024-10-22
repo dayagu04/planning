@@ -212,7 +212,7 @@ void CipvLostProhibitAccelerationDecider::Update() {
 
       pre_cipv_rel_s_ = CalculateRelativeDistance(planned_path, cipv);
       pre_cipv_ttc_ =
-          pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, v_ego);
+          pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, (v_ego - cipv->speed()));
     } else {
       pre_cipv_rel_s_ = std::numeric_limits<double>::max();
       pre_cipv_ttc_ = std::numeric_limits<double>::max();

@@ -289,7 +289,10 @@ void StGraphGenerator::Update(
   const auto &mutable_output =
       session->planning_context()
           .cipv_lost_prohibit_acceleration_decider_output();
-  v_target_ = fmin(v_target_, mutable_output.speed_limit_);
+  // START模式下不进入cipv抑制加速逻辑
+  if (start_stop_info_.state() != common::StartStopInfo::START) {
+    v_target_ = fmin(v_target_, mutable_output.speed_limit_);
+  }
 
   UpdateTargetVelocityByFilter(is_on_ramp, v_ego);
 
