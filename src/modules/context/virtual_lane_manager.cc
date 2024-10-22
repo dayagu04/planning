@@ -1765,7 +1765,8 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
       }
     }
     if (idx != -1) {
-      double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx + 1].x);
+      //double pt_x = std::min(cw_pt_vec[idx].x, cw_pt_vec[idx + 1].x);
+      double pt_x = (cw_pt_vec[idx].x + cw_pt_vec[idx + 1].x) / 2.0;
       planning::planning_math::Vec2d p_left(pt_x, cw_pt_vec[idx].y);
       planning::planning_math::Vec2d p_right(pt_x, cw_pt_vec[idx + 1].y);
       planning::planning_math::LineSegment2d line_seg(p_left, p_right);
@@ -1828,12 +1829,47 @@ bool VirtualLaneManager::UpdateIntersectionState() {
                !IsPosXOnVirtualLaneType(ego_pos_x + 8.0)) {
       Intersection_state_ = planning::common::OFF_INTERSECTION;
     } else if (IsPosXOnVirtualLaneType(ego_pos_x)) {
-      Intersection_state_ = planning::common::IN_INTERSECTION;
+      if(IsEgoBothSidesHaveRoadBorder()) {
+        Intersection_state_ = planning::common::NO_INTERSECTION;
+      } else {
+        Intersection_state_ = planning::common::IN_INTERSECTION;
+      }
     } else {
       Intersection_state_ = planning::common::NO_INTERSECTION;
     }
   }
   return true;
+}
+
+bool VirtualLaneManager::IsEgoBothSidesHaveRoadBorder() {
+  bool rslt = false;
+  int ego_pos_idx = -1;
+  double ego_pos_s = 0.0;
+  const auto& vlane_ref_pts = current_lane_->lane_points();
+  for (int i = 0; i < vlane_ref_pts.size(); i++) {
+    if (vlane_ref_pts[i].car_point.x > 0.0) {
+      ego_pos_idx = i;
+      ego_pos_s = vlane_ref_pts[i].s;
+      break;
+    }
+  }
+  if (ego_pos_idx == -1) {
+    return rslt;
+  }
+  double ego_pos_front_end = ego_pos_s + 8.0;
+  int i = ego_pos_idx;
+  for (; i < vlane_ref_pts.size(); i++) {
+    if (vlane_ref_pts[i].s < ego_pos_front_end && vlane_ref_pts[i].distance_to_left_road_border < 20.0 &&
+      vlane_ref_pts[i].distance_to_right_road_border < 20.0) {
+      continue;
+    } else {
+      break;
+    }
+  }
+  if (i < vlane_ref_pts.size() && vlane_ref_pts[i].s >= ego_pos_front_end) {
+    rslt = true;
+  }
+  return rslt;
 }
 
 bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {

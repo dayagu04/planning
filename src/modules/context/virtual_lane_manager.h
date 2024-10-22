@@ -312,6 +312,7 @@ class VirtualLaneManager {
   bool UpdateEgoDistanceToStopline();
   bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);
   bool UpdateIntersectionState();
+  bool IsEgoBothSidesHaveRoadBorder(); 
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;
