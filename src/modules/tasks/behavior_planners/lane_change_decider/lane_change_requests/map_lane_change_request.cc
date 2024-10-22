@@ -4,7 +4,6 @@
 #include "debug_info_log.h"
 
 namespace planning {
-const double kNeedLaneChangeTime = 4.0;
 // class: MapRequest
 MapRequest::MapRequest(
     framework::Session* session, const EgoPlanningConfigBuilder* config_builder,

@@ -50,7 +50,7 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
     double side_view_x_percent = 0.3;
   };
 
-  PerceptionRangeEstimatorImpl() : ego_yaw_(0.0), ego_frenet_s_(0.0){};
+  PerceptionRangeEstimatorImpl() /* : ego_yaw_(0.0), ego_frenet_s_(0.0) */ {};
   ~PerceptionRangeEstimatorImpl() = default;
 
   void updateFrenet(
@@ -194,8 +194,8 @@ class PerceptionRangeEstimatorImpl : public PerceptionRangeEstimator {
   // }
 
  private:
-  double ego_yaw_;
-  double ego_frenet_s_;
+  // double ego_yaw_;
+  // double ego_frenet_s_;
   define::Transform car2enu_;
   std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
   std::vector<Point2D> refline_points_;

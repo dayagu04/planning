@@ -111,7 +111,7 @@ class StGraphData {
   PncTrajectoryPoint init_point_;
   SpeedLimit speed_limit_;
   double path_data_length_ = 0.0;
-  double path_length_by_conf_ = 0.0;
+  // double path_length_by_conf_ = 0.0;
   double total_time_by_conf_ = 0.0;
 
   BarrierPairList lane_keep_sv_;

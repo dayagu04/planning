@@ -100,6 +100,10 @@ Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
+// all search node, not only include: open + close, and include deleted node.
+std::vector<Eigen::Vector3d> all_searched_node_;
+AstarPathGear history_gear_request_;
+
 int Init() {
   FilePath::SetName("open_space_replay");
   InitGlog(FilePath::GetName().c_str());
@@ -161,7 +165,7 @@ int GetPathFromHybridAstar() {
 
       global_path_s_.emplace_back(result.accumulated_s[i]);
 
-      if (result.type[i] == planning::AstarPathType::Reeds_Shepp) {
+      if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
         static_rs_path_.push_back(Eigen::Vector3d(
             global_position.x, global_position.y, global_position.theta));
       }
@@ -288,18 +292,41 @@ int GetPathFromHybridAstar() {
   coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
   coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
 
+  // plot all searched node
+  const std::vector<DebugAstarSearchPoint> &all_search_node =
+      hybrid_astar_interface_->GetChildNodeForDebug();
+
+  all_searched_node_.clear();
+  double is_safe = 0;
+  for (i = 0; i < all_search_node.size(); i++) {
+    local_position.x = all_search_node[i].pos.x;
+    local_position.y = all_search_node[i].pos.y;
+    tf.ULFLocalPoseToGlobal(&global_position, local_position);
+
+    is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+
+    all_searched_node_.emplace_back(
+        Eigen::Vector3d(global_position.x, global_position.y, is_safe));
+  }
+
+  AstarRequest request = thread_solver_->GetAstarRequest();
+  history_gear_request_ = request.first_action_request.gear_request;
+
   return 0;
 }
 
-const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
-                           py::bytes &parking_slot_info_bytes,
-                           py::bytes &localization_info_bytes,
-                           py::bytes &vehicle_service_output_info_bytes,
-                           py::bytes &uss_wave_info_bytes) {
+const void UpdateLocalView(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &fus_objs, py::bytes &fus_occ_obj_msg_bytes, bool force_plan,
+    std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec, int current_state) {
   iflyauto::FuncStateMachine func_statemachine;
-  // iflyauto::FuncStateMachine func_statemachine =
-      // BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-      //     func_statemachine_bytes);
+  func_statemachine.current_state = static_cast<FunctionalState>(current_state);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -318,49 +345,34 @@ const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
       BytesToStruct<iflyauto::UssWaveInfo, struct_msgs::UssWaveInfo>(
           uss_wave_info_bytes);
 
+  iflyauto::FusionObjectsInfo fusion_objs =
+      BytesToStruct<iflyauto::FusionObjectsInfo,
+                    struct_msgs::FusionObjectsInfo>(fus_objs);
+
+  // auto ground_line_ =
+  //     BytesToStruct<GroundLinePerception::GroundLinePerceptionInfo>(
+  //         ground_line);
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+                    struct_msgs::FusionOccupancyObjectsInfo>(
+          fus_occ_obj_msg_bytes);
+
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
+
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
-  local_view.function_state_machine_info = func_statemachine;
   local_view.uss_wave_info = uss_wave_info;
-
-  const bool result = apa_interface_ptr->Update(&local_view);
-  apa_interface_ptr->UpdateDebugInfo();
-
-  return result;
-}
-
-const bool InterfaceUpdateClosedLoop(
-    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
-    py::bytes &localization_info_bytes,
-    py::bytes &vehicle_service_output_info_bytes) {
-  iflyauto::FuncStateMachine func_statemachine;
-  // iflyauto::FuncStateMachine func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-  //         func_statemachine_bytes);
-
-  iflyauto::ParkingFusionInfo parking_slot_info =
-      BytesToStruct<iflyauto::ParkingFusionInfo,
-                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
-
-  iflyauto::IFLYLocalization localization_info =
-      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
-          localization_info_bytes);
-
-  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
-      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
-                    struct_msgs::VehicleServiceOutputInfo>(
-          vehicle_service_output_info_bytes);
-
-  local_view.localization = localization_info;
-  local_view.vehicle_service_output_info = vehicle_service_output_info;
-  local_view.parking_fusion_info = parking_slot_info;
   local_view.function_state_machine_info = func_statemachine;
+  local_view.uss_percept_info = uss_perception_info;
+  // local_view.ground_line_perception = ground_line_;
+  local_view.fusion_objects_info = fusion_objs;
+  local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
-  apa_interface_ptr->UpdateDebugInfo();
-
-  return result;
+  return;
 }
 
 static const int CopyVirtualWallForPlot(
@@ -683,11 +695,9 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
       ego_slot_info.ego_heading_slot =
           ego_slot_info.g2l_tf.GetHeading(heading_ego);
 
-      // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x() << "
-      // "
-      //           << ego_slot_info.ego_pos_slot.y()
-      //           << "  ego_heading_slot = " << ego_slot_info.ego_heading_slot
-      //           * 57.3;
+      // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x()
+      //           << ego_slot_info.ego_pos_slot.y() << "  ego_heading_slot = "
+      //           << ego_slot_info.ego_heading_slot * 57.3;
 
       ego_slot_info.ego_heading_slot_vec =
           Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
@@ -760,12 +770,19 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     end[2] = ego_slot_info.target_ego_heading_slot;
 
     AstarRequest request;
-    request.first_action_request.has_request = false;
+    request.first_action_request.has_request = true;
+    if (history_gear_request_ == AstarPathGear::drive) {
+      request.first_action_request.gear_request = AstarPathGear::reverse;
+    } else {
+      request.first_action_request.gear_request = AstarPathGear::drive;
+    }
     request.path_generate_method =
-        planning::AstarPathGenerateType::astar_searching;
+        planning::AstarPathGenerateType::ASTAR_SEARCHING;
 
     base_pose_ = slot_base_pose;
     request.start_ = start;
+    request.start_.DebugString();
+
     request.goal_ = Pose2D(end[0], end[1], end[2]);
 
     request.real_goal = real_end;
@@ -773,6 +790,14 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
         apa_param.GetParam().vertical_slot_target_adjust_dist;
 
     request.base_pose_ = base_pose_;
+
+    request.space_type = ParkSpaceType::vertical;
+    request.parking_task = ParkingTask::parking_in;
+    request.head_request = ParkingVehDirectionRequest::tail_in_first;
+    request.rs_request = RSPathRequestType::none;
+    request.slot_width = ego_slot_info.slot_width;
+    request.slot_length = ego_slot_info.slot_length;
+    request.history_gear = history_gear_request_;
 
     thread_solver_->SetRequest(hybrid_astar_obs_, request);
 
@@ -922,12 +947,15 @@ const Eigen::Vector3d GetCoordinateSystem() {
   return coordinate_system_;
 }
 
+const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+  return all_searched_node_;
+}
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
-      .def("InterfaceUpdate", &InterfaceUpdate)
-      .def("InterfaceUpdateClosedLoop", &InterfaceUpdateClosedLoop)
+      .def("UpdateLocalView", &UpdateLocalView)
       .def("PlanOnce", &PlanOnce)
       .def("GetPlanningOutput", &GetPlanningOutput)
       .def("DynamicsUpdate", &DynamicsUpdate)
@@ -949,5 +977,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetPlotRefLine", &GetPlotRefLine)
       .def("GetSearchSequencePath", &GetSearchSequencePath)
       .def("GetCoordinateSystem", &GetCoordinateSystem)
+      .def("GetAllSearchNode", &GetAllSearchNode)
       .def("GetDynamicState", &GetDynamicState);
 }

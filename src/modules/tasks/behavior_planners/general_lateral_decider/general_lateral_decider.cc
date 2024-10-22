@@ -868,32 +868,11 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   const double ego_v = planning_init_point.v;
   double max_collision_t, left_collision_t, right_collision_t;
   GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
-  const std::array<double, 5> _COLLISION_TTC_BP = {
-      config_.lateral_road_boader_collision_ttc_bp_1,
-      config_.lateral_road_boader_collision_ttc_bp_2,
-      config_.lateral_road_boader_collision_ttc_bp_3,
-      config_.lateral_road_boader_collision_ttc_bp_4,
-      config_.lateral_road_boader_collision_ttc_bp_5};
-  const std::array<double, 5> _COLLISION_BUFFER = {
-      config_.extra_collision_lateral_buffer_1,
-      config_.extra_collision_lateral_buffer_2,
-      config_.extra_collision_lateral_buffer_3,
-      config_.extra_collision_lateral_buffer_4,
-      config_.extra_collision_lateral_buffer_5};
-
-  const std::array<double, 6> _V_ROAD_BORDER_EXTRA_BUFFER_BP = {
-      config_.lateral_road_boader_v_bp_1, config_.lateral_road_boader_v_bp_2,
-      config_.lateral_road_boader_v_bp_3, config_.lateral_road_boader_v_bp_4,
-      config_.lateral_road_boader_v_bp_5, config_.lateral_road_boader_v_bp_6};
-  const std::array<double, 6> _V_ROAD_BORDER_EXTRA_BUFFER = {
-      config_.extra_lateral_buffer_1, config_.extra_lateral_buffer_2,
-      config_.extra_lateral_buffer_3, config_.extra_lateral_buffer_4,
-      config_.extra_lateral_buffer_5, config_.extra_lateral_buffer_6};
-
+  
   *left_road_extra_buffer =
-      interp(left_collision_t, _COLLISION_TTC_BP, _COLLISION_BUFFER);
+      interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp, config_.extra_collision_lateral_buffer);
   *right_road_extra_buffer =
-      interp(right_collision_t, _COLLISION_TTC_BP, _COLLISION_BUFFER);
+      interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp, config_.extra_collision_lateral_buffer);
   // *left_road_extra_buffer =
   //     std::min(0.2, (max_collision_t - left_collision_t) * 0.1);
   // *right_road_extra_buffer =
@@ -901,8 +880,8 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   // 36     60         80          100          120           130     kph
   // 0.3    0.43       0.53        0.632        0.725         0.77    m
   // double extra_buffer =
-  double extra_buffer = interp(ego_v * 3.6, _V_ROAD_BORDER_EXTRA_BUFFER_BP,
-                               _V_ROAD_BORDER_EXTRA_BUFFER);
+  double extra_buffer = interp(ego_v * 3.6, config_.lateral_road_boader_v_bp,
+                               config_.extra_lateral_buffer);
   extra_buffer = std::max(extra_buffer, kMinExtraBuffer);
   *left_road_extra_buffer += extra_buffer;
   *right_road_extra_buffer += extra_buffer;
@@ -1306,8 +1285,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       ego_cur_s - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double half_ego_width = vehicle_param.max_width * 0.5;
-
   const double front_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
           ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
@@ -1490,8 +1467,6 @@ void GeneralLateralDecider::GenerateObstaclePreliminaryDecision(
     LatObstacleDecisionType pre_lateral_decision, bool &reset_conflict_decision,
     ObstacleDecision &obstacle_decision, LatObstacleDecisionType &lat_decision,
     LonObstacleDecisionType &lon_decision) {
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
   if (is_nudge_left) {
     lat_decision = LatObstacleDecisionType::RIGHT;
     lon_decision = LonObstacleDecisionType::IGNORE;

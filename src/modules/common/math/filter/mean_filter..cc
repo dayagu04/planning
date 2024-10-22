@@ -8,8 +8,6 @@ namespace planning_math {
 using uint8 = std::uint_fast8_t;
 using TimedValue = std::pair<uint8, double>;
 
-const uint8 kMaxWindowSize = std::numeric_limits<uint8>::max() / 2;
-
 MeanFilter::MeanFilter(const uint8 window_size) : window_size_(window_size) {
   initialized_ = true;
 }

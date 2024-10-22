@@ -3,7 +3,8 @@ import sys
 import subprocess
 import json
 import time
-import shutil
+from multiprocessing import Process
+import boto3
 
 begin_time = time.time()
 
@@ -18,8 +19,22 @@ case_id = data["case_id"]
 checker_list = data["checker_list"]
 config_version = data["config_version"]
 common_tools_branch  = data["common_tools_branch"]
+file_name  = data["file_name"]
+s3_bucket = data["s3_bucket"]
+s3_url = data["s3_url"]
+s3_access_key = data["s3_access_key"]
+s3_secret_key = data["s3_secret_key"]
 
-export_command = "bash -c 'source /opt/ros/melodic/setup.sh && "
+# 定义S3 client
+object_prefix = f"{task_id}/{scene_lib_id}/{case_id}"
+client = boto3.client(
+    's3',
+    endpoint_url=s3_url,  # Ceph S3端点
+    aws_access_key_id=s3_access_key,     # 访问密钥
+    aws_secret_access_key=s3_secret_key,  # 密钥
+    use_ssl=False
+)
+
 # 获取bag文件，分为下载链接和路径两种
 start_time = time.time()
 if "http" in bag_file:
@@ -56,8 +71,8 @@ print("Creat out_dir successfully !")
 # 运行PP
 start_time = time.time()
 PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
-mileage_path = f"{out_dir}/case_result.json"
-command = export_command + f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {mileage_path} --close-loop --interface-check --no-version-check'"
+result_path = f"{out_dir}/case_result.json"
+command = f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
@@ -105,49 +120,79 @@ end_time = time.time()
 print(f"Update json 耗时：{end_time - start_time}秒")
 
 start_time = time.time()
-command = export_command + f"cd {checker_path} && /root/miniconda3/bin/python scc_checker_task.py scc_checker_task.json simulation_mode'"
+os.chdir('/root/common_tools/checker_scc/task')
+sys.path.append('/root/common_tools/checker_scc/task')
+import scc_checker_task_for_simu
+
 try:
-    result = subprocess.run(command, shell=True, text=True, check=True)
+    t1 = Process(target=scc_checker_task_for_simu.main, args=("scc_checker_task.json",))
+    t1.start()
 except Exception as e:
     print(f"Runing checker error: {e}")
     sys.exit(1)
-if (result.returncode != 0):
-    print(f"Runing checker error")
-    sys.exit(1)
-print("Run checker successfully !")
 end_time = time.time()
 print(f"Run checker 耗时：{end_time - start_time}秒")
 
 # 生成html
+def upload_and_remove_file(suffix, result_data, key):
+    object_name = f"{object_prefix}/{file_name}{suffix}"
+    file_path = PP_bag + suffix
+    try:
+        client.upload_file(file_path, s3_bucket, object_name)
+        result_data[key] = object_name
+    except Exception as e:
+        print(f"Error uploading {key} file: {e}")
+    # finally:
+    #     try:
+    #         os.remove(file_path)
+    #     except Exception as e:
+    #         print(f"Error removing {key} file: {e}")
+
 start_time = time.time()
+with open(result_path, 'r', encoding='utf-8') as file:
+    result_data = json.load(file)
+
 script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
-command_proto = export_command + f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py'"
-command_lat = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lat_plan_html.py {PP_bag} {out_dir}'"
-command_lon = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_lon_plan_html.py {PP_bag} {out_dir}'"
-command_behavior = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_vo_lat_behavior_html.py {PP_bag} {out_dir}'"
-command_local_view = export_command + f"cd {script_path} && /root/miniconda3/bin/python plot_local_view_html.py {PP_bag} {out_dir}'"
+command_proto = f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py"
+command = f"cd {script_path} && /root/miniconda3/bin/python plot_mutil_html.py {PP_bag}"
 try:
     result0 = subprocess.run(command_proto, shell=True, text=True, check=True)
-    result1 = subprocess.run(command_lat, shell=True, text=True, check=True)
-    result2 = subprocess.run(command_lon, shell=True, text=True, check=True)
-    result3 = subprocess.run(command_local_view, shell=True, text=True, check=True)
-    result4 = subprocess.run(command_behavior, shell=True, text=True, check=True)
+    result1 = subprocess.run(command, shell=True, text=True, check=True)
+    html_start_time = time.time()
+    upload_and_remove_file('.lat_plan.html', result_data, "lat_html_url")
+    upload_and_remove_file('.lon_plan.html', result_data, "lon_html_url")
+    upload_and_remove_file('.enu_local_view.html', result_data, "local_view_html_url")
+    upload_and_remove_file('.vo_lat_behavior.html', result_data, "behavior_html_url")
+    html_end_time = time.time()
+    print(f"Upload html file 耗时：{html_end_time - html_start_time}秒")
 except Exception as e:
     print(f"Creating html error: {e}")
     sys.exit(1)
-if (result0.returncode != 0 or result1.returncode != 0 or result2.returncode != 0 or result3.returncode != 0 or result4.returncode != 0):
+if (result0.returncode != 0 or result1.returncode != 0):
     print(f"Creating html error")
     sys.exit(1)
 print("Creat html successfully !")
 end_time = time.time()
-print(f"Creat html 耗时：{end_time - start_time}秒")
+print(f"Creat and upload html 耗时：{end_time - start_time}秒")
 
-# 移动PP bag
+# 上传PP bag
 start_time = time.time()
 try:
-    shutil.move(PP_bag, out_dir)
+    object_name = f"{object_prefix}/{file_name}.PP"
+    client.upload_file(PP_bag, s3_bucket, object_name)
+    result_data["PP_url"] = object_name
 except Exception as e:
-    print(f"Move PP Error: {e}")
+    print(f"Error uploading PP bag: {e}")
 end_time = time.time()
-print(f"Move PP bag 耗时：{end_time - start_time}秒")
-print(f"总耗时：{end_time - begin_time}秒")
+print(f"Upload PP bag 耗时：{end_time - start_time}秒")
+
+print("结果信息：")
+for key, value in result_data.items():
+    print(f'{key}: {value}')
+
+with open(result_path, 'w', encoding='utf-8') as file:
+    json.dump(result_data, file, ensure_ascii=False, indent=2)
+
+t1.join()
+end_time = time.time()
+print(f"任务总耗时：{end_time - begin_time}秒")

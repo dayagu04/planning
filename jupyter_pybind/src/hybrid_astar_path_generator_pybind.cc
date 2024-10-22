@@ -35,6 +35,7 @@
 #include "src/library/occupancy_grid_map/virtual_wall_decider.h"
 #include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "transform2d.h"
+#include "ad_common/math/math_utils.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -47,6 +48,7 @@ static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
 std::vector<Eigen::Vector3d> global_path_;
 std::vector<double> global_path_s_;
 std::vector<Eigen::Vector3d> rs_path_;
+std::vector<Eigen::Vector3d> polynomial_path_;
 // 独立的rs，验证rs
 std::vector<Eigen::Vector3d> rs_path_alone_;
 Eigen::Vector3d car_pose_by_s_;
@@ -64,10 +66,13 @@ std::vector<Eigen::Vector4d> obs_line_list_;
 
 std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
 std::vector<Eigen::Vector2d> search_sequence_path_;
+// all search node, not only include: open + close, and include deleted node.
+std::vector<Eigen::Vector3d> all_searched_node_;
 std::vector<std::vector<Eigen::Vector2d>> rs_h_path_;
 std::vector<Eigen::Vector3d> footprint_circle_model_;
 std::vector<Eigen::Vector3d> footprint_circle_model_gear_drive_;
 std::vector<Eigen::Vector3d> footprint_circle_model_gear_reverse_;
+Eigen::Vector3d astar_end_pose_;
 
 #define OBS_SAMPLING_DIST (0.1)
 
@@ -190,6 +195,11 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
   global_path_s_.clear();
   bool success = false;
 
+  Transform2d tf;
+  tf.SetBasePose(Pose2D(ego_slot_info.slot_origin_pos[0],
+                        ego_slot_info.slot_origin_pos[1],
+                        ego_slot_info.slot_origin_heading));
+
   size_t i;
   Eigen::Vector2d local_position;
   Eigen::Vector2d global_position;
@@ -203,6 +213,7 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
     global_path_s_.reserve(result.x.size());
 
     rs_path_.clear();
+    polynomial_path_.clear();
 
     for (i = 0; i < result.x.size(); i++) {
       local_position[0] = result.x[i];
@@ -219,8 +230,12 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
 
       global_path_s_.emplace_back(result.accumulated_s[i]);
 
-      if (result.type[i] == AstarPathType::Reeds_Shepp) {
+      if (result.type[i] == AstarPathType::REEDS_SHEPP) {
         rs_path_.emplace_back(
+            Eigen::Vector3d(global_position[0], global_position[1], heading));
+      }
+      if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL) {
+        polynomial_path_.emplace_back(
             Eigen::Vector3d(global_position[0], global_position[1], heading));
       }
     }
@@ -252,6 +267,24 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
         Eigen::Vector2d(global_position[0], global_position[1]));
   }
 
+  // plot all searched node
+  const std::vector<DebugAstarSearchPoint> &all_search_node =
+      hybrid_astar_interface_->GetChildNodeForDebug();
+
+  all_searched_node_.clear();
+  double is_safe = 0;
+  for (i = 0; i < all_search_node.size(); i++) {
+    local_position[0] = all_search_node[i].pos.x;
+    local_position[1] = all_search_node[i].pos.y;
+
+    global_position = ego_slot_info.l2g_tf.GetPos(local_position);
+
+    is_safe = all_search_node[i].safe ? 1.0 : 0.0;
+
+    all_searched_node_.emplace_back(
+        Eigen::Vector3d(global_position[0], global_position[1], is_safe));
+  }
+
   ILOG_INFO << "rs path copy ";
   std::vector<std::vector<ad_common::math::Vec2d>> path_list;
   hybrid_astar_interface_->GetRSPathHeuristic(path_list);
@@ -275,6 +308,16 @@ int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
 
     rs_h_path_.emplace_back(path);
   }
+
+  // get astar target pose
+  const Pose2D target_local = hybrid_astar_interface_->GetAstarTargetPose();
+  Pose2D global_pose;
+
+  tf.ULFLocalPoseToGlobal(&global_pose, target_local);
+
+  astar_end_pose_[0] = global_pose.x;
+  astar_end_pose_[1] = global_pose.y;
+  astar_end_pose_[2] = global_pose.theta;
 
   return 0;
 }
@@ -621,7 +664,7 @@ int GenerateObstacleByJupyter(
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
     std::vector<Eigen::Vector2d> global_park_space_points, double inside_dx,
-    std::vector<double> obs_params, const bool trigger_plan, const double s) {
+    std::vector<double> obs_params, const bool trigger_plan) {
   obs_global_points_.clear();
   planning::apa_planner::ApaPlannerBase::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;
@@ -818,22 +861,38 @@ std::vector<Eigen::Vector3d> Update(
     ILOG_INFO << "trigger astar plan";
 
     AstarRequest request;
-    request.path_generate_method =
-        planning::AstarPathGenerateType::astar_searching;
-
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
+    request.first_action_request.has_request = false;
+    request.path_generate_method =
+        planning::AstarPathGenerateType::ASTAR_SEARCHING;
+
+    request.start_ = Pose2D(start[0], start[1], start[2]);
+    request.start_.theta =
+        ad_common::math::NormalizeAngle(request.start_.theta);
+
+    request.goal_ = Pose2D(end[0], end[1], end[2]);
+    request.goal_.theta = ad_common::math::NormalizeAngle(request.goal_.theta);
+
+    request.real_goal = Pose2D(ego_slot_info.target_ego_pos_slot[0],
+                               ego_slot_info.target_ego_pos_slot[1],
+                               ego_slot_info.target_ego_heading_slot);
+    request.vertical_slot_target_adjust_dist_ =
+        apa_param.GetParam().vertical_slot_target_adjust_dist;
+    request.base_pose_ = Pose2D(0, 0, 0);
+
+    request.space_type = ParkSpaceType::vertical;
+    request.parking_task = ParkingTask::parking_in;
+    request.head_request = ParkingVehDirectionRequest::tail_in_first;
+    request.rs_request = RSPathRequestType::none;
+    request.slot_width = ego_slot_info.slot_width;
+    request.slot_length = ego_slot_info.slot_length;
+    request.history_gear = AstarPathGear::drive;
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);
 
-    Eigen::Vector3d real_end;
-    real_end[0] = ego_slot_info.target_ego_pos_slot[0];
-    real_end[1] = ego_slot_info.target_ego_pos_slot[1];
-    real_end[2] = ego_slot_info.target_ego_heading_slot;
-    hybrid_astar_interface_->ExtendPathToRealTargetPose(
-        Pose2D(real_end[0], real_end[1], real_end[2]),
-        apa_param.GetParam().vertical_slot_target_adjust_dist);
+    hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(ego_slot_info,
@@ -873,7 +932,7 @@ std::vector<Eigen::Vector3d> Update(
     }
 
     planning::HybridAStar astar;
-    astar.DebugRSPath(&rs_path);
+    // astar.DebugRSPath(&rs_path);
 
   } else {
     // ResetHybridAstarPath();
@@ -881,7 +940,7 @@ std::vector<Eigen::Vector3d> Update(
     ILOG_INFO << "get_history_astar_path";
   }
 
-  GetTrajPoseBySDist(s);
+  // GetTrajPoseBySDist(s);
 
   UpdateFootprintCircle(ego_global_pose);
 
@@ -908,12 +967,21 @@ const std::vector<Eigen::Vector4d> &GetObsLineList() { return obs_line_list_; }
 
 const std::vector<Eigen::Vector3d> &GetReedsShapePath() { return rs_path_; }
 
+const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
+  return polynomial_path_;
+}
+
 const std::vector<std::vector<Eigen::Vector2d>> &GetAstarAllNodes() {
   return real_time_node_list_;
 }
 
+// this is a search path by queue.
 const std::vector<Eigen::Vector2d> &GetSearchPathPoint() {
   return search_sequence_path_;
+}
+
+const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
+  return all_searched_node_;
 }
 
 const std::vector<std::vector<Eigen::Vector2d>> &GetRSHeuristicPath() {
@@ -926,6 +994,8 @@ const std::vector<Eigen::Vector3d> &GetRSLibPath() { return rs_path_alone_; }
 const std::vector<Eigen::Vector3d> &GetFootPrintModel() {
   return footprint_circle_model_;
 }
+
+const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
 
 PYBIND11_MODULE(hybrid_astar_py, m) {
   m.doc() = "m";
@@ -945,6 +1015,9 @@ PYBIND11_MODULE(hybrid_astar_py, m) {
       .def("GetTrajPoseByDist", &GetTrajPoseByDist)
       .def("GetRSLibPath", &GetRSLibPath)
       .def("GetFootPrintModel", &GetFootPrintModel)
+      .def("GetAllSearchNode", &GetAllSearchNode)
+      .def("GetPolynomialPath", &GetPolynomialPath)
+      .def("GetAstarEndPose", &GetAstarEndPose)
       .def("GetVirtualWallObstacles", &GetVirtualWallObstacles);
   ;
 }

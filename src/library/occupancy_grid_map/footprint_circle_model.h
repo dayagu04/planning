@@ -50,7 +50,7 @@ class FootPrintCircleModel {
   void LocalToGlobalByTF(FootPrintCircleList *global_circle, Transform2d *tf);
 
   void LocalToGlobalByGear(FootPrintCircleList *global_circle, Transform2d *tf,
-                           const AstarPathGear gear);
+                           const AstarPathGear gear) const;
 
  private:
   void DebugCircle(FootPrintCircle *circle);

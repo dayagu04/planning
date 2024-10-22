@@ -31,21 +31,15 @@ constexpr int kPlanningHorizions = 26;
 constexpr double kFarawayObjFilterDis = 105.0;
 constexpr double kPenaltyMinDecAdjustSpeed = 8.0 / 3.6;
 constexpr double kMaxExceedAdjustSpeed = 12.0 / 3.6;
-constexpr double kTimeResolution = 0.1;
 constexpr double kPlanningDuration = 5.0;
 constexpr int kTimeHorizion = 26;
 constexpr double kPlanningStep = 0.2;
-constexpr double kLinearExtendPathLength = 150.;
-constexpr double kMathEpsilon = 1e-10;
-constexpr double kMaxPathLength = 400.0;
 constexpr double kEgoHalfLength = 2.6;
 constexpr double kForwardRange = 150.0;
 constexpr double kBackwardRange = 100.0;
 constexpr double kMinSlotLength = 15.0;
 constexpr int32_t kNoAgentId = -1;
 constexpr double kStaticCarFilterVel = 1.5;
-constexpr double kDistanceToMapRequestPoint = 120.0;
-constexpr double kNearbyCarFilterDis = 7.0;
 constexpr double kAlignedDistanceBuffer = 2.5;
 }  // namespace
 
@@ -296,7 +290,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     return pred_s_error < 0;
   };
 
-  auto static_slot_car = [this](const SlotInfo& slot) -> bool {
+  auto static_slot_car = [](const SlotInfo& slot) -> bool {
     if (slot.front_veh_info().v < kStaticCarFilterVel) return true;
     return false;
   };

@@ -31,8 +31,7 @@ class LaneChangeRequestManager {
 
   void FinishRequest();
 
-  bool Update(std::shared_ptr<ObjectSelector> object_selector, int lc_status,
-              const bool hd_map_valid);
+  bool Update(int lc_status, const bool hd_map_valid);
 
   /// @brief 获取换道请求开始和完成的时间
   double GetReqStartTime(int source) const;
@@ -81,7 +80,6 @@ class LaneChangeRequestManager {
   }
 
   void GenerateHMIInfo();
-  void GenerateHMIInfoForOvertake();
 
  private:
   EgoPlanningConfig config_;

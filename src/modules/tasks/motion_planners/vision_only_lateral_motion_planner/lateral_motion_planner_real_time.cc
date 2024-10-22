@@ -2076,10 +2076,6 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                status != is_LC_RBACK_ && status != is_LC_LCHANGE_ &&
                status != is_LC_RCHANGE_) {
       double path_gap = 0.2;
-      std::array<double, 2> xp1{0, 0.02};
-      std::array<double, 2> xp2{0, 0.003};
-      std::array<double, 2> fp1{1, 5};
-      std::array<double, 2> fp2{1, 3};
 
       if (d_poly_[3] < -path_gap) {
         // d_poly_[3] = -min_factor * path_gap;

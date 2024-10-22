@@ -22,9 +22,10 @@ struct NodeGCost {
   double steer_change_cost;
   double steer_cost;
   double expected_gear_cost;
+
+  // 小于期望值，发生换档，那么产生一个cost
   double expected_dist_cost;
   double obs_dist_cost;
-  double ref_line_heading_cost;
 
   double total_cost;
 };

@@ -199,14 +199,14 @@ void ApaWorld::UpdateObstacles() {}
 
 const bool ApaWorld::Update() {
   if (local_view_ptr_ == nullptr) {
-    DEBUG_PRINT("-- apa_world: local view ptr is nullptr, err ---");
+    ILOG_INFO << "-- apa_world: local view ptr is nullptr, err ---";
     return false;
   }
-  DEBUG_PRINT("-- apa_world: run preprocess ---");
+  ILOG_INFO << "-- apa_world: run preprocess ---";
   Preprocess();
 
-  DEBUG_PRINT("func_state = " << static_cast<int>(
-                  apa_data_ptr_->func_state_ptr->current_state));
+  ILOG_INFO << "func_state = "
+            << static_cast<int>(apa_data_ptr_->func_state_ptr->current_state);
 
   PrintApaStateMachine(apa_data_ptr_->cur_state);
 
@@ -223,9 +223,9 @@ const bool ApaWorld::Update() {
   // run slot manager
   // currently path planning starts once id is selected in searching state
 
-  DEBUG_PRINT("-- apa_world: run slot_management ---");
+  ILOG_INFO << "-- apa_world: run slot_management ---";
   if (!slot_manager_ptr_->Update(apa_data_ptr_)) {
-    DEBUG_PRINT("shouldn't have entered the parking function at that time");
+    ILOG_INFO << "shouldn't have entered the parking function at that time";
     return false;
   }
 
@@ -236,16 +236,16 @@ const bool ApaWorld::Update() {
     apa_data_ptr_->is_slot_type_fixed = true;
   }
 
-  DEBUG_PRINT("current slot type in slm =" << static_cast<int>(
-                  slot_manager_ptr_->GetEgoSlotInfo().slot_type));
-  DEBUG_PRINT(
-      "fixed slot type =" << static_cast<int>(apa_data_ptr_->slot_type));
+  ILOG_INFO << "current slot type in slm ="
+            << static_cast<int>(slot_manager_ptr_->GetEgoSlotInfo().slot_type);
+  ILOG_INFO << "fixed slot type ="
+            << static_cast<int>(apa_data_ptr_->slot_type);
 
   if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_WAIT_IN ||
       apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_IN) {
     if (apa_data_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-      DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_IN!");
+      ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
 
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
@@ -258,14 +258,14 @@ const bool ApaWorld::Update() {
                 << static_cast<int>(apa_data_ptr_->planner_type);
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
-      DEBUG_PRINT("planner_type = PARALLEL_PARK_IN!");
+      ILOG_INFO << "planner_type = PARALLEL_PARK_IN!";
       apa_data_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-      DEBUG_PRINT("planner_type = SLANT_PARK_IN!");
+      ILOG_INFO << "planner_type = SLANT_PARK_IN!";
       apa_data_ptr_->planner_type = ApaPlannerType::SLANT_PARK_IN_PLANNER;
     } else {
-      DEBUG_PRINT("current slot type is not supported now!");
+      ILOG_INFO << "current slot type is not supported now!";
       return false;
     }
   }

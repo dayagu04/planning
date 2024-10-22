@@ -11,8 +11,9 @@ void DebugAstarRequestString(const AstarRequest &request) {
             << ", gear "
             << PathGearDebugString(request.first_action_request.gear_request)
             << " dist " << request.first_action_request.dist_request
-            << ",path method "
-            << static_cast<int>(request.path_generate_method);
+            << ",path method " << static_cast<int>(request.path_generate_method)
+            << ",history gear="
+            << PathGearDebugString(request.history_gear);
 
   ILOG_INFO << " rs request: " << GetRSRequestType(request.rs_request)
             << ",plan reason = " << static_cast<int>(request.plan_reason);

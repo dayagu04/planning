@@ -1,11 +1,23 @@
 
 #include "dynamic_programing_cost.h"
+
 #include <bits/stdint-intn.h>
+#include <opencv2/imgproc/types_c.h>
+
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <opencv2/core/types.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include "log_glog.h"
 #include "node2d.h"
 #include "polygon_base.h"
+#include "src/common/ifly_time.h"
 
 namespace planning {
 
@@ -98,73 +110,81 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
   double edge_distance = 1.0;
 
   Node2d up = Node2d(current_node_x, current_node_y + 1, XYbounds_,
-                     xy_grid_resolution_, GenerateGlobalId());
+                     xy_grid_resolution_);
   up.SetCost(current_node_path_cost + edge_distance);
 
   Node2d up_right = Node2d(current_node_x + 1, current_node_y + 1, XYbounds_,
-                           xy_grid_resolution_, GenerateGlobalId());
+                           xy_grid_resolution_);
   up_right.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d right = Node2d(current_node_x + 1, current_node_y, XYbounds_,
-                        xy_grid_resolution_, GenerateGlobalId());
+                        xy_grid_resolution_);
   right.SetCost(current_node_path_cost + edge_distance);
 
   Node2d down_right = Node2d(current_node_x + 1, current_node_y - 1, XYbounds_,
-                             xy_grid_resolution_, GenerateGlobalId());
+                             xy_grid_resolution_);
   down_right.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d down = Node2d(current_node_x, current_node_y - 1, XYbounds_,
-                       xy_grid_resolution_, GenerateGlobalId());
+                       xy_grid_resolution_);
   down.SetCost(current_node_path_cost + edge_distance);
 
   Node2d down_left = Node2d(current_node_x - 1, current_node_y - 1, XYbounds_,
-                            xy_grid_resolution_, GenerateGlobalId());
+                            xy_grid_resolution_);
   down_left.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d left = Node2d(current_node_x - 1, current_node_y, XYbounds_,
-                       xy_grid_resolution_, GenerateGlobalId());
+                       xy_grid_resolution_);
   left.SetCost(current_node_path_cost + edge_distance);
 
   Node2d up_left = Node2d(current_node_x - 1, current_node_y + 1, XYbounds_,
-                          xy_grid_resolution_, GenerateGlobalId());
+                          xy_grid_resolution_);
   up_left.SetCost(current_node_path_cost + diagonal_distance);
 
-  if (NodeIndexValid(up.GetGridIndex())) {
+  if (NodeIndexValid(up.GetGridIndex()) &&
+      NodePositionValid(up.GetX(), up.GetY())) {
     next_nodes->nodes[next_nodes->size] = up;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(up_right.GetGridIndex())) {
+  if (NodeIndexValid(up_right.GetGridIndex()) &&
+      NodePositionValid(up_right.GetX(), up_right.GetY())) {
     next_nodes->nodes[next_nodes->size] = up_right;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(right.GetGridIndex())) {
+  if (NodeIndexValid(right.GetGridIndex()) &&
+      NodePositionValid(right.GetX(), right.GetY())) {
     next_nodes->nodes[next_nodes->size] = right;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(down_right.GetGridIndex())) {
+  if (NodeIndexValid(down_right.GetGridIndex()) &&
+      NodePositionValid(down_right.GetX(), down_right.GetY())) {
     next_nodes->nodes[next_nodes->size] = down_right;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(down.GetGridIndex())) {
+  if (NodeIndexValid(down.GetGridIndex()) &&
+      NodePositionValid(down.GetX(), down.GetY())) {
     next_nodes->nodes[next_nodes->size] = down;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(down_left.GetGridIndex())) {
+  if (NodeIndexValid(down_left.GetGridIndex()) &&
+      NodePositionValid(down_left.GetX(), down_left.GetY())) {
     next_nodes->nodes[next_nodes->size] = down_left;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(left.GetGridIndex())) {
+  if (NodeIndexValid(left.GetGridIndex()) &&
+      NodePositionValid(left.GetX(), left.GetY())) {
     next_nodes->nodes[next_nodes->size] = left;
     next_nodes->size++;
   }
 
-  if (NodeIndexValid(up_left.GetGridIndex())) {
+  if (NodeIndexValid(up_left.GetGridIndex()) &&
+      NodePositionValid(up_left.GetX(), up_left.GetY())) {
     next_nodes->nodes[next_nodes->size] = up_left;
     next_nodes->size++;
   }
@@ -177,99 +197,133 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
                                const ParkObstacleList* obstacles,
                                const double veh_half_width_with_safe_dist) {
   // init
-  global_idx_ = -1;
-  ResetNodePool();
-  open_set_.clear();
-
-  XYbounds_ = XYbounds;
-  veh_half_width_with_safe_dist_ = veh_half_width_with_safe_dist;
-
-  // ILOG_INFO << "h cost resolution " << xy_grid_resolution_;
+#if DEBUG_NODE_COST
+  double start_timestamp = IflyTime::Now_ms();
+#endif
 
   // XYbounds with xmin, xmax, ymin, ymax
+  XYbounds_ = XYbounds;
+  veh_half_width_with_safe_dist_ = veh_half_width_with_safe_dist;
   max_grid_y_ =
       std::round((XYbounds_.y_max - XYbounds_.y_min) * inv_xy_resolution_);
   max_grid_x_ =
       std::round((XYbounds_.x_max - XYbounds_.x_min) * inv_xy_resolution_);
 
+  ResetNodePool();
+  NodeLayer node_layer1;
+  NodeLayer node_layer2;
+  node_layer1.Clear();
+  node_layer2.Clear();
+  NodeLayer* parent_layer = nullptr;
+  NodeLayer* child_layer = nullptr;
+
   // projection
   obstacles_ = obstacles;
   ProjectObstacleToNodeMap();
 
+#if DEBUG_NODE_COST
+  double end_timestamp = IflyTime::Now_ms();
+  double time_consumption = end_timestamp - start_timestamp;
+  ILOG_INFO << "obs process time = " << time_consumption;
+#endif
+
   // backward search in end node
-  end_node_.Set(ex, ey, inv_xy_resolution_, XYbounds_, GenerateGlobalId());
+  end_node_.Set(ex, ey, inv_xy_resolution_, XYbounds_);
   NodePoolPush(&end_node_);
-  end_node_.SetIter(
-      open_set_.insert(std::make_pair(end_node_.GetCost(), &end_node_)));
+
+#if DEBUG_NODE_COST
+  end_node_.DebugNodeString(xy_grid_resolution_);
+#endif
+
+  // start_timestamp = IflyTime::Now_ms();
+  node_layer1.AddNode(&end_node_);
+  node_layer1.tag = NodeLayerTag::PARENT_LAYER;
+  node_layer2.tag = NodeLayerTag::CHILD_LAYER;
+  parent_layer = &node_layer1;
+  child_layer = &node_layer2;
 
   // Grid a star begins
   Node2d* current_node = nullptr;
   Node2d* node_in_pool = nullptr;
   Node2d* next_node = nullptr;
-  AstarNodeVisitedType vis_type;
   Node2dChildSet next_nodes;
+  std::unordered_set<int> child_layer_hash_table;
 
   int explored_node_num = 0;
 
   // update dp cost
-  while (!open_set_.empty()) {
-    current_node = open_set_.begin()->second;
-    open_set_.erase(open_set_.begin());
-
-    current_node->SetVisitedType(AstarNodeVisitedType::in_close);
-
-    next_nodes.size = 0;
-    GenerateNextNodes(&next_nodes, current_node);
-
-    // check next nodes
-    for (int i = 0; i < next_nodes.size; i++) {
-      explored_node_num++;
-
-      next_node = &next_nodes.nodes[i];
-      node_in_pool = GetNodeFromPool(next_node->GetGridIndex());
-
-      if (node_in_pool == nullptr) {
-        ILOG_INFO << " next node is null";
-        continue;
-      }
-
-      if (node_in_pool->IsCollision()) {
-        // node_in_pool->SetCost(10000.0);
-        continue;
-      }
-
-      if (next_node->GetCost() >= node_in_pool->GetCost()) {
-        continue;
-      }
-
-      vis_type = node_in_pool->GetVisitedType();
-      node_in_pool->CopyFrom(*next_node);
-      node_in_pool->SetVisitedType(AstarNodeVisitedType::in_open);
-
-      // find a new node
-      if (vis_type == AstarNodeVisitedType::not_visited) {
-        node_in_pool->SetIter(open_set_.insert(
-            std::make_pair(node_in_pool->GetCost(), node_in_pool)));
-
-      } else if (vis_type == AstarNodeVisitedType::in_open) {
-        // in open set and need update
-        open_set_.erase(node_in_pool->GetOpenSetIter());
-        // put neighbor in open set and record it.
-        node_in_pool->SetIter(open_set_.insert(
-            std::make_pair(node_in_pool->GetCost(), node_in_pool)));
-
-      } else if (vis_type == AstarNodeVisitedType::in_close) {
-        // in close set and need update
-        // put neighbor in open set and record it.
-        node_in_pool->SetIter(open_set_.insert(
-            std::make_pair(node_in_pool->GetCost(), node_in_pool)));
-      }
+  while (true) {
+    if (parent_layer->tag == NodeLayerTag::PARENT_LAYER &&
+        parent_layer->GetSize() <= 0) {
+      break;
     }
-  }
-
-  ILOG_INFO << "heuristic search explored node num is " << explored_node_num;
 
 #if DEBUG_NODE_COST
+    ILOG_INFO << "parent layer size=" << parent_layer->GetSize()
+              << ",child layer size=" << child_layer->GetSize();
+#endif
+
+    child_layer_hash_table.clear();
+    for (int32_t i = 0; i < parent_layer->GetSize(); i++) {
+      current_node = parent_layer->node_layer[i];
+
+      next_nodes.size = 0;
+      GenerateNextNodes(&next_nodes, current_node);
+
+      // check next nodes
+      for (int j = 0; j < next_nodes.size; j++) {
+        explored_node_num++;
+
+        next_node = &next_nodes.nodes[j];
+        node_in_pool = GetNodeFromPool(next_node->GetGridIndex());
+
+        if (node_in_pool == nullptr) {
+          // ILOG_INFO << " next node is null";
+          continue;
+        }
+
+        if (node_in_pool->IsCollision()) {
+          // node_in_pool->SetCost(10000.0);
+          continue;
+        }
+
+        if (next_node->GetCost() >= node_in_pool->GetCost()) {
+          continue;
+        }
+
+        node_in_pool->CopyFrom(*next_node);
+
+        if (child_layer_hash_table.find(next_node->GetGlobalID()) ==
+            child_layer_hash_table.end()) {
+          child_layer->AddNode(node_in_pool);
+
+          child_layer_hash_table.insert(next_node->GetGlobalID());
+        }
+      }
+    }
+
+    if (node_layer1.tag == NodeLayerTag::PARENT_LAYER) {
+      parent_layer = &node_layer2;
+      parent_layer->tag = NodeLayerTag::PARENT_LAYER;
+      child_layer = &node_layer1;
+      child_layer->tag = NodeLayerTag::CHILD_LAYER;
+    } else {
+      parent_layer = &node_layer1;
+      parent_layer->tag = NodeLayerTag::PARENT_LAYER;
+      child_layer = &node_layer2;
+      child_layer->tag = NodeLayerTag::CHILD_LAYER;
+    }
+
+    child_layer->Clear();
+  }
+
+#if DEBUG_NODE_COST
+  end_timestamp = IflyTime::Now_ms();
+  time_consumption = end_timestamp - start_timestamp;
+
+  ILOG_INFO << "search time = " << time_consumption;
+  ILOG_INFO << "heuristic search explored node num is " << explored_node_num;
+
   DebugNodePool();
 
 #endif
@@ -292,11 +346,41 @@ double GridSearch::CheckDpMap(const double sx, const double sy) {
 }
 
 void GridSearch::DebugNodePool() {
-  for (int32_t i = 0; i < max_x_search_size_; i++) {
-    for (int32_t k = 0; k < max_y_search_size_; k++) {
-      node_pool_[i][k].DebugNodeString();
+  for (int32_t i = 0; i < DP_MAX_X_SEARCH_SIZE; i++) {
+    for (int32_t k = 0; k < DP_MAX_Y_SEARCH_SIZE; k++) {
+      node_pool_[i][k].DebugNodeString(xy_grid_resolution_);
     }
   }
+
+  cv::Mat map_matrix(DP_MAX_X_SEARCH_SIZE, DP_MAX_Y_SEARCH_SIZE, CV_8UC1,
+                     cv::Scalar(200));
+
+  int row_num = map_matrix.rows;
+  int column_num = map_matrix.cols;
+
+  double value = 0;
+
+  for (int32_t i = 0; i < row_num; i++) {
+    uchar* data = map_matrix.ptr<uchar>(i);
+
+    for (int32_t j = 0; j < column_num; j++) {
+      value = node_pool_[i][j].GetCost() * xy_grid_resolution_;
+      value = value / 50.0 * 255;
+
+      if (value < 0.0) {
+        value = 0.0;
+      }
+
+      if (value > 255.0) {
+        value = 255.0;
+      }
+
+      data[j] = std::round(value);
+    }
+  }
+
+  cv::imwrite("/asw/planning/glog/dp_cost.png", map_matrix);
+
   return;
 }
 
@@ -321,8 +405,17 @@ Node2d* GridSearch::GetNodeFromPool(const Node2dIndex& id) {
 }
 
 bool GridSearch::NodeIndexValid(const Node2dIndex& id) {
-  if (id.x < 0 || id.x >= max_x_search_size_ || id.y < 0 ||
-      id.y >= max_y_search_size_) {
+  if (id.x < 0 || id.x >= DP_MAX_X_SEARCH_SIZE || id.y < 0 ||
+      id.y >= DP_MAX_Y_SEARCH_SIZE) {
+    return false;
+  }
+
+  return true;
+}
+
+bool GridSearch::NodePositionValid(const double x, const double y) {
+  if (x < XYbounds_.x_min || x > XYbounds_.x_max || y < XYbounds_.y_min ||
+      y > XYbounds_.y_max) {
     return false;
   }
 
@@ -330,11 +423,20 @@ bool GridSearch::NodeIndexValid(const Node2dIndex& id) {
 }
 
 void GridSearch::ResetNodePool() {
-  for (int32_t i = 0; i < max_x_search_size_; i++) {
-    for (int32_t k = 0; k < max_y_search_size_; k++) {
-      node_pool_[i][k].Clear(i, k);
+  int32_t x_bound_size = max_grid_x_ + 1;
+  int32_t y_bound_size = max_grid_y_ + 1;
+
+  x_bound_size = std::min(DP_MAX_X_SEARCH_SIZE, x_bound_size);
+  y_bound_size = std::min(DP_MAX_Y_SEARCH_SIZE, y_bound_size);
+
+  // ILOG_INFO << "x size = " << x_bound_size << ", y size = " << y_bound_size;
+
+  for (int32_t i = 0; i < x_bound_size; i++) {
+    for (int32_t k = 0; k < y_bound_size; k++) {
+      node_pool_[i][k].Clear();
     }
   }
+
   return;
 }
 
@@ -349,22 +451,7 @@ const bool GridSearch::IsPointInMapBound(const double x, const double y) {
   return true;
 }
 
-int32_t GridSearch::GenerateGlobalId() {
-  global_idx_++;
-
-  return global_idx_;
-}
-
 void GridSearch::Init() {
-  max_x_search_size_ = 256;
-  max_y_search_size_ = 256;
-
-  node_pool_.resize(max_x_search_size_);
-
-  for (int32_t i = 0; i < max_x_search_size_; i++) {
-    node_pool_[i].resize(max_y_search_size_);
-  }
-
   return;
 }
 

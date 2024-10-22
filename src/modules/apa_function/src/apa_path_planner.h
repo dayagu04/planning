@@ -133,6 +133,11 @@ class ApaPathPlanner {
   virtual void SetLineSegmentHeading();
   virtual const bool CheckCurrentGearLength();
   virtual const bool SampleCurrentPathSeg();
+
+  const bool SamplePathSeg(
+      std::vector<pnc::geometry_lib::PathPoint> &path_point_vec,
+      const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
+
   virtual void PrintOutputSegmentsInfo() const;
 
   void SetInput(const Input &input) { input_ = input; }
@@ -151,9 +156,15 @@ class ApaPathPlanner {
 
   void SampleLineSegment(const pnc::geometry_lib::LineSegment &cur_line_seg,
                          const double ds);
+  void SampleLineSegment(
+      std::vector<pnc::geometry_lib::PathPoint> &path_point_vec,
+      const pnc::geometry_lib::LineSegment &cur_line_seg, const double ds);
 
   void SampleArcSegment(const pnc::geometry_lib::Arc &cur_arc_seg,
                         const double ds);
+  void SampleArcSegment(
+      std::vector<pnc::geometry_lib::PathPoint> &path_point_vec,
+      const pnc::geometry_lib::Arc &cur_arc_seg, const double ds);
 
   Input input_;
   Output output_;

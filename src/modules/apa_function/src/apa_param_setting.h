@@ -223,6 +223,7 @@ struct ApaParameters {
   double last_update_slot_occupied_ratio = 0.836;
 
   // path planner params
+  bool new_itervative_solution = false;
   double prepare_line_min_x_offset_slot = 7.2;
   double prepare_line_dx_offset_slot = 0.1;
   double prepare_line_max_x_offset_slot = 9.7;

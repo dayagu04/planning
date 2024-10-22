@@ -37,7 +37,7 @@ class Node2d {
   Node2d() {}
 
   Node2d(const double x, const double y, const double inv_xy_resolution,
-         const MapBound& XYbounds, const int32_t id) {
+         const MapBound& XYbounds) {
     // XYbounds with xmin, xmax, ymin, ymax
 
     x_ = x;
@@ -46,29 +46,42 @@ class Node2d {
     grid_index_.x = std::round((x - XYbounds.x_min) * inv_xy_resolution);
     grid_index_.y = std::round((y - XYbounds.y_min) * inv_xy_resolution);
 
-    id_ = id;
+    if (IsNode2dIndexValid()) {
+      id_ = IDTransform(grid_index_);
+    } else {
+      id_ = -1;
+    }
+
   }
 
   Node2d(const int grid_x, const int grid_y, const MapBound& XYbounds,
-         const double xy_resolution, const int32_t id) {
+         const double xy_resolution) {
     x_ = grid_x * xy_resolution + XYbounds.x_min;
     y_ = grid_y * xy_resolution + XYbounds.y_min;
 
     grid_index_.x = grid_x;
     grid_index_.y = grid_y;
 
-    id_ = id;
+    if (IsNode2dIndexValid()) {
+      id_ = IDTransform(grid_index_);
+    } else {
+      id_ = -1;
+    }
   }
 
   void Set(const double x, const double y, const double inv_xy_resolution,
-           const MapBound& XYbounds, const int32_t id) {
+           const MapBound& XYbounds) {
     x_ = x;
     y_ = y;
 
     grid_index_.x = std::round((x - XYbounds.x_min) * inv_xy_resolution);
     grid_index_.y = std::round((y - XYbounds.y_min) * inv_xy_resolution);
 
-    id_ = id;
+    if (IsNode2dIndexValid()) {
+      id_ = IDTransform(grid_index_);
+    } else {
+      id_ = -1;
+    }
 
     cost_ = 0.0;
   }
@@ -97,7 +110,7 @@ class Node2d {
 
   const Node2dIndex& GetGridIndex() const { return grid_index_; }
 
-  const int32_t& GetGlobalID() const { return id_; }
+  const int GetGlobalID() const { return id_; }
 
   static Node2dIndex CalcIndex(const double x, const double y,
                                const double inv_xy_resolution,
@@ -128,14 +141,13 @@ class Node2d {
     return true;
   }
 
-  void Clear(const int grid_x, const int grid_y) {
-    grid_index_.x = grid_x;
-    grid_index_.y = grid_y;
+  void Clear() {
+    // grid_index_.x = grid_x;
+    // grid_index_.y = grid_y;
 
-    x_ = 0.0;
-    y_ = 0.0;
+    // x_ = 0.0;
+    // y_ = 0.0;
 
-    visited_type_ = AstarNodeVisitedType::not_visited;
     is_collision_ = false;
     cost_ = 10000.0;
 
@@ -153,10 +165,13 @@ class Node2d {
     return;
   }
 
-  void DebugNodeString() {
-    ILOG_INFO << "id " << grid_index_.x << " " << grid_index_.y << " xy " << x_
-              << " " << y_ << " d " << cost_ << " is collision "
+  void DebugNodeString(const double xy_resolution) {
+    ILOG_INFO << "id, x " << grid_index_.x << ", id y " << grid_index_.y
+              << ", x " << x_ << ", y " << y_ << ", dist "
+              << cost_ * xy_resolution << ", is collision "
               << static_cast<int>(is_collision_);
+
+    return;
   }
 
   void SetCollision(const bool is_collision) {
@@ -164,28 +179,38 @@ class Node2d {
     return;
   }
 
-  const bool IsCollision() { return is_collision_; }
+  const bool IsCollision() const { return is_collision_; }
 
-  void SetVisitedType(const AstarNodeVisitedType type) {
-    visited_type_ = type;
-    return;
-  }
-
-  const AstarNodeVisitedType GetVisitedType() { return visited_type_; }
-
-  void SetIter(std::multimap<double, Node2d*>::iterator i) { open_set_it_ = i; }
-
-  std::multimap<double, Node2d*>::iterator GetOpenSetIter() {
-    return open_set_it_;
-  }
-
- private:
   static std::string ComputeStringIndex(int x_grid, int y_grid) {
     std::string line = "_";
 
     std::string tmp = std::to_string(x_grid) + line + std::to_string(y_grid);
 
     return tmp;
+  }
+
+  int IDTransform(const Node2dIndex& id) {
+    int x_id = id.x;
+    int y_id = id.y << 10;
+
+    return x_id + y_id;
+  }
+
+  const bool IsNode2dIndexValid() {
+    if (grid_index_.x < 0 || grid_index_.x > 1000 || grid_index_.y < 0 ||
+        grid_index_.y > 1000) {
+      return false;
+    }
+
+    return true;
+  }
+
+  const bool IsNodeValid() {
+    if (id_ < 0) {
+      return false;
+    }
+
+    return true;
   }
 
  private:
@@ -195,13 +220,11 @@ class Node2d {
   // cost is not real path length, is grid num
   double cost_;
 
-  // not use it
-  int32_t id_;
+  // unique id
+  int id_;
 
   Node2dIndex grid_index_;
 
-  AstarNodeVisitedType visited_type_;
-  std::multimap<double, Node2d*>::iterator open_set_it_;
   bool is_collision_;
 };
 
@@ -209,8 +232,5 @@ struct Node2dChildSet {
   int size;
   Node2d nodes[8];
 };
-
-using Node2dVectorY = std::vector<Node2d>;
-using Node2dMatrix = std::vector<Node2dVectorY>;
 
 }  // namespace planning

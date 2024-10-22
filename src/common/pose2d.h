@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include "log_glog.h"
 #include "math_utils.h"
 
@@ -152,5 +153,26 @@ void CvtPoseGlobalToLocal(Pose2D *local_pose, const Pose2D *global_pose,
 void IsLineSegmentIntersection(bool *is, const Position2D *p1,
                                const Position2D *p2, const Position2D *p3,
                                const Position2D *p4);
+
+inline double GetDotProduct(const Pose2D &a, const Pose2D &b) {
+  return a.x * b.x + a.y * b.y;
+}
+
+inline double HorizonProjectionLength(const Pose2D &base,
+                                      const Pose2D &vector) {
+  double base_length = std::sqrt(base.x * base.x + base.y * base.y);
+  if (base_length < 1e-7) {
+    return 0.0;
+  }
+
+  return (base.x * vector.x + base.y * vector.y) / base_length;
+}
+
+/*
+ * Vector cross product
+ */
+const double inline CrossProduct(const Pose2D &base, const Pose2D &vector) {
+  return base.x * vector.y - base.y * vector.x;
+}
 
 }  // namespace planning

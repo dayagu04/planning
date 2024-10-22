@@ -172,9 +172,9 @@ bool EnvironmentalModelManager::Run() {
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
   bool planner_valid = g_context.GetParam().planner_type ==
-                           planning::context::PlannerType::SCC_PLANNER ||
+                           planning::context::PlannerType::SCC_PLANNER_V2 ||
                        g_context.GetParam().planner_type ==
-                           planning::context::PlannerType::LONGTIME_PLANNER ||
+                           planning::context::PlannerType::SCC_PLANNER_V3 ||
                        g_context.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
   printf("planner_type:%d\n", g_context.GetParam().planner_type);
@@ -1055,8 +1055,6 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
   // judge direction of obj acc
-  auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
-                                     fusion_object.common_info.acceleration.x);
   Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
                                   sin(prediction_object.yaw));
   Eigen::Vector2f prediction_obj_acc_vec(
@@ -1176,8 +1174,6 @@ bool EnvironmentalModelManager::IsStatic(
   bool is_static = prediction_object.speed < static_speed ||
                    prediction_object.trajectory_array.size() == 0 ||
                    prediction_trajectory_length < kMaxStaticPredictionLength ||
-                   prediction_object.motion_pattern_current ==
-                       iflyauto::OBJECT_MOTION_TYPE_STATIC ||
                    prediction_object.is_traffic_facilities;
   return is_static;
 }
@@ -1332,8 +1328,10 @@ void EnvironmentalModelManager::RunBlinkState(
     case NONE:
       if (active) {
         // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
-        if (history_lc_source_[0] == INT_REQUEST &&
-            history_lc_source_[1] != INT_REQUEST) {
+        if ((history_lc_source_[0] == INT_REQUEST &&
+            history_lc_source_[1] != INT_REQUEST) ||
+            (history_lc_source_[0] == NO_REQUEST &&
+             history_lc_source_[1] == NO_REQUEST)) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         }
       } else {

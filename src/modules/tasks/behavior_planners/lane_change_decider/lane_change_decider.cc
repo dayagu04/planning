@@ -24,10 +24,6 @@
 
 namespace planning {
 
-namespace {
-constexpr double kEps = 1e-6;
-}
-
 LaneChangeDecider::LaneChangeDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
@@ -40,9 +36,6 @@ LaneChangeDecider::LaneChangeDecider(
       std::make_shared<LaneChangeLaneManager>(virtual_lane_mgr, session_);
   lc_req_mgr_ = std::make_shared<LaneChangeRequestManager>(
       session_, config_builder, virtual_lane_mgr, lc_lane_mgr_);
-
-  object_selector_ = std::make_shared<ObjectSelector>(config_builder, session_);
-
   lc_sm_mgr_ = std::make_shared<LaneChangeStateMachineManager>(
       config_builder, session_, lc_req_mgr_, lc_lane_mgr_);
 
@@ -71,16 +64,12 @@ bool LaneChangeDecider::Execute() {
     lc_sm_mgr_->ResetStateMachine();
   }
 
-  // if (!UpdateObjectSelector(active)) {
-  //   return false;
-  // }
-
   if (active) {
     LOG_DEBUG("[scenario_state_machine] active\n");
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
       if (!session_->is_hpp_scene()) {
-        if (!lc_req_mgr_->Update(object_selector_, current_lc_status,
+        if (!lc_req_mgr_->Update(current_lc_status,
                                  session_->environmental_model().IsOnRoute())) {
           return false;
         }
@@ -144,37 +133,6 @@ bool LaneChangeDecider::CheckEgoPosition() const {
       }
     }
   }
-
-  return true;
-}
-
-bool LaneChangeDecider::UpdateObjectSelector(bool active) {
-#ifndef CHERY_T26
-  if (!session_->is_hpp_scene()) {
-    if (active && !object_selector_->update(session_->planning_context()
-                                                .lane_change_decider_output()
-                                                .curr_state,
-                                            session_->planning_context()
-                                                .lane_change_decider_output()
-                                                .start_move_dist_lane,
-                                            false, 80., false, false, false,
-                                            false, false, -1)) {
-      LOG_DEBUG("object_selector_update fail\n");
-      return false;
-    } else {
-      if (!active) {
-        object_selector_->left_alc_car().clear();
-        object_selector_->right_alc_car().clear();
-        object_selector_->left_alc_car_cnt().clear();
-        object_selector_->right_alc_car_cnt().clear();
-        LOG_DEBUG("object_selector_ cleared\n");
-      } else {
-        LOG_DEBUG("object_selector_updated \n");
-      }
-    }
-    LOG_DEBUG("object_selector_update end\n");
-  }
-#endif
 
   return true;
 }

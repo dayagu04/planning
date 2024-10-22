@@ -128,6 +128,10 @@ avoid_way_params = {
     'line_width' : 1, 'line_color' : 'black', 'line_dash' : 'solid', 'legend_label' : 'avoid_way'
 }
 
+cursor_params = {
+    'line_width' : 1, 'line_color' : 'grey', 'line_dash' : 'solid', 'legend_label' : 'cursor'
+}
+
 ref_theta_params = {
     'line_width' : 1, 'line_color' : 'black', 'line_dash' : 'dashed', 'legend_label' : 'ref_theta'
 }
@@ -142,6 +146,9 @@ traj_y_params = {
 }
 traj_acc_params = {
     'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'lat acc'
+}
+lat_acc_params = {
+    'line_width' : 1, 'line_color' : 'blue', 'line_dash' : 'solid', 'legend_label' : 'final lat acc'
 }
 traj_jerk_params = {
     'line_width' : 1, 'line_color' : 'red', 'line_dash' : 'solid', 'legend_label' : 'lat jerk'
@@ -219,8 +226,11 @@ def draw_lateral_offset(plan_debug_msg, layer_manager):
     lateral_offsets_generate = CommonGenerator()
     smooth_lateral_offsets_generate = CommonGenerator()
     avoid_ways_generate = CommonGenerator()
+    cursor_generate = CommonGenerator()
     global plan_debug_ts
     if plan_debug_msg['enable'] == True:
+      min_lateral_offset = 10.0
+      max_lateral_offset = -10.0
       lateral_offsets = []
       smooth_lateral_offsets = []
       frame_nums = []
@@ -234,8 +244,19 @@ def draw_lateral_offset(plan_debug_msg, layer_manager):
         lateral_offsets.append(plan_json_debug['lat_offset'])
         smooth_lateral_offsets.append(plan_json_debug['smooth_lateral_offset'])
         avoid_ways.append(plan_json_debug['avoid_way'] * 0.1)
+        if plan_json_debug['lat_offset'] < min_lateral_offset:
+          min_lateral_offset = plan_json_debug['lat_offset']
+        if plan_json_debug['lat_offset'] > max_lateral_offset:
+          max_lateral_offset = plan_json_debug['lat_offset']
       frame_num_0 = frame_nums[0]
       frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
+
+      for i in range(len(frame_nums)):
+        cursor_x = frame_nums[i]
+        cursor_y1 = min_lateral_offset - 0.1
+        cursor_y2 = max_lateral_offset + 0.1
+        cursor_generate.xys.append(([cursor_x, cursor_x], [cursor_y1, cursor_y2]))
+
     fig_lateral_offset = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [frame_nums[0], frame_nums[-1]], width=800, height=200)
 
     lateral_offsets_generate.xys.append((frame_nums, lateral_offsets))
@@ -244,12 +265,15 @@ def draw_lateral_offset(plan_debug_msg, layer_manager):
     smooth_lateral_offsets_generate.ts = plan_debug_ts
     avoid_ways_generate.xys.append((frame_nums, avoid_ways))
     avoid_ways_generate.ts = plan_debug_ts
+    cursor_generate.ts = plan_debug_ts
     lateral_offsets_layer = CurveLayer(fig_lateral_offset ,lateral_offset_params)
     smooth_lateral_offsets_layer = CurveLayer(fig_lateral_offset ,smooth_lateral_offset_params)
     avoid_ways_layer = CurveLayer(fig_lateral_offset ,avoid_way_params)
+    cursor_layer = CurveLayer(fig_lateral_offset , cursor_params)
     layer_manager.AddLayer(lateral_offsets_layer, 'lateral_offsets_layer', lateral_offsets_generate)
     layer_manager.AddLayer(smooth_lateral_offsets_layer, 'smooth_lateral_offsets_layer', smooth_lateral_offsets_generate)
     layer_manager.AddLayer(avoid_ways_layer, 'avoid_ways_layer', avoid_ways_generate)
+    layer_manager.AddLayer(cursor_layer, 'cursor_layer', cursor_generate, 'cursor_generate', 2)
 
     fig_lateral_offset.add_tools(hover)
     fig_lateral_offset.toolbar.active_scroll = fig_lateral_offset.select_one(WheelZoomTool)
@@ -450,6 +474,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
     ref_y_generate = CommonGenerator()
     traj_y_generate = CommonGenerator()
     traj_acc_generate = CommonGenerator()
+    lat_acc_generate = CommonGenerator()
     traj_jerk_generate = CommonGenerator()
     traj_steer_generate = CommonGenerator()
     traj_steer_dot_generate = CommonGenerator()
@@ -494,6 +519,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         traj_x_vec = []
         traj_y_vec = []
         traj_acc_vec = []
+        lat_acc_vec = []
         traj_jerk_vec = []
         traj_steer_vec = []
         traj_steer_dot_vec = []
@@ -505,6 +531,9 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         steer_lower_bound = []
         steer_dot_upper_bound = []
         steer_dot_lower_bound = []
+        curv_factor = lat_motion_plan_input.curv_factor
+        delta_vec = lat_motion_plan_output.delta_vec
+        vel_vec = plan_debug.longitudinal_motion_planning_output.vel_vec
         for i in range(len(lat_motion_plan_output.time_vec)):
           time_vec.append(lat_motion_plan_output.time_vec[i])
           ref_theta_vec.append(lat_motion_plan_input.ref_theta_vec[i] * rad_to_deg)
@@ -514,6 +543,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
           traj_x_vec.append(lat_motion_plan_output.x_vec[i])
           traj_y_vec.append(lat_motion_plan_output.y_vec[i])
           traj_acc_vec.append(lat_motion_plan_output.acc_vec[i])
+          lat_acc_vec.append(curv_factor * vel_vec[i] * vel_vec[i] * delta_vec[i])
           traj_jerk_vec.append(lat_motion_plan_output.jerk_vec[i])
           traj_steer_vec.append(lat_motion_plan_output.delta_vec[i] * steer_ratio * rad_to_deg)
           traj_steer_dot_vec.append(lat_motion_plan_output.omega_vec[i] * steer_ratio * rad_to_deg)
@@ -538,6 +568,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         ref_y_generate.xys.append((time_vec, ref_y_vec))
         traj_y_generate.xys.append((time_vec, traj_y_vec))
         traj_acc_generate.xys.append((time_vec, traj_acc_vec))
+        lat_acc_generate.xys.append((time_vec, lat_acc_vec))
         traj_jerk_generate.xys.append((time_vec, traj_jerk_vec))
         traj_steer_generate.xys.append((time_vec, traj_steer_vec))
         traj_steer_dot_generate.xys.append((time_vec, traj_steer_dot_vec))
@@ -555,6 +586,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
       ref_y_generate.ts = plan_debug_ts
       traj_y_generate.ts = plan_debug_ts
       traj_acc_generate.ts = plan_debug_ts
+      lat_acc_generate.ts = plan_debug_ts
       traj_jerk_generate.ts = plan_debug_ts
       traj_steer_generate.ts = plan_debug_ts
       traj_steer_dot_generate.ts = plan_debug_ts
@@ -572,6 +604,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
       ref_y_layer = CurveLayer(fig_lat_traj_info2, ref_y_params)
       traj_y_layer = CurveLayer(fig_lat_traj_info2, traj_y_params)
       traj_acc_layer = CurveLayer(fig_lat_traj_info3, traj_acc_params)
+      lat_acc_layer = CurveLayer(fig_lat_traj_info3, lat_acc_params)
       traj_jerk_layer = CurveLayer(fig_lat_traj_info4, traj_jerk_params)
       traj_steer_layer = CurveLayer(fig_lat_traj_info5, traj_steer_params)
       traj_steer_dot_layer = CurveLayer(fig_lat_traj_info6, traj_steer_dot_params)
@@ -597,6 +630,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
       layer_manager.AddLayer(ref_y_layer, 'ref_y_layer', ref_y_generate, 'ref_y_generate', 2)
       layer_manager.AddLayer(traj_y_layer, 'traj_y_layer', traj_y_generate, 'traj_y_generate', 2)
       layer_manager.AddLayer(traj_acc_layer, 'traj_acc_layer', traj_acc_generate, 'traj_acc_generate', 2)
+      layer_manager.AddLayer(lat_acc_layer, 'lat_acc_layer', lat_acc_generate, 'lat_acc_generate', 2)
       layer_manager.AddLayer(traj_jerk_layer, 'traj_jerk_layer', traj_jerk_generate, 'traj_jerk_generate', 2)
       layer_manager.AddLayer(traj_steer_layer, 'traj_steer_layer', traj_steer_generate, 'traj_steer_generate', 2)
       layer_manager.AddLayer(traj_steer_dot_layer, 'traj_steer_dot_layer', traj_steer_dot_generate, 'traj_steer_dot_generate', 2)

@@ -20,7 +20,6 @@
 namespace planning {
 namespace {
 constexpr double kEps = 1e-6;
-constexpr double kLaneChangeWaitTimeoutThreshold = 15.0;
 }  // namespace
 
 LaneChangeStateMachineManager::LaneChangeStateMachineManager(
@@ -1444,8 +1443,6 @@ void LaneChangeStateMachineManager::CalculateSideAreaIfNeedBack(
 void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     const std::vector<TrackedObject> &vec_front_obstacles,
     const RequestType &direction, LaneChangeStageInfo *const lc_state_info) {
-  const auto &virtual_lane_manager =
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
   const auto &reference_path_manager =
       session_->mutable_environmental_model()->get_reference_path_manager();
   const auto &fix_reference_path =
@@ -1996,8 +1993,7 @@ bool LaneChangeStateMachineManager::IsOverlapWithOtherLaneOnEndRegion(
     std::cout << "is merge region!!!" << std::endl;
     return true;
   }
-  //遍历自车向前的点，是否有overlap情况
-  const double cur_lane_length = cur_lane_coord->Length();
+  // 遍历自车向前的点，是否有overlap情况
   const double step_length = 5.0;
   const double buffer = 1.0;
   const int calculate_nums = (int)(ego_front_length / step_length - buffer);
@@ -2052,7 +2048,6 @@ void LaneChangeStateMachineManager::CalculateMergePoint(const int merge_lane_vir
     return;
   }
   const double cur_ego_s = cur_path->get_frenet_ego_state().s();
-  const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
   const double ego_front_center_line_length = cur_path->get_frenet_coord()->Length() - cur_ego_s;
   const double buffer = 1.0;
   const double need_judgement_length = std::max(0.0, std::min(ego_front_line_length, ego_front_center_line_length) - buffer);
@@ -2139,8 +2134,9 @@ const double LaneChangeStateMachineManager::CalculateAverageKappa(const std::sha
   return sum_kappa / size_num;
 }
 
-void LaneChangeStateMachineManager::CalculateRoadRight(const int calculate_nums, const int merge_lane_virtual_id, bool* is_continue) {
-  const auto& ego_stete = session_->environmental_model().get_ego_state_manager();
+void LaneChangeStateMachineManager::CalculateRoadRight(
+    const int calculate_nums, const int merge_lane_virtual_id,
+    bool *is_continue) {
   const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
   const auto& reference_path_manager = session_->environmental_model().get_reference_path_manager();
   const auto& overlap_lane = virtual_lane_manager->get_lane_with_virtual_id(merge_lane_virtual_id);
@@ -2160,7 +2156,7 @@ void LaneChangeStateMachineManager::CalculateRoadRight(const int calculate_nums,
   bool is_vir_lane_line_overlap = IsVirtualLaneLine(merge_lane_virtual_id);
   if (is_vir_lane_line_cur &&
       !is_vir_lane_line_overlap) {
-    *is_continue = false; 
+    *is_continue = false;
   } else if (is_vir_lane_line_overlap &&
              !is_vir_lane_line_cur) {
     *is_continue = true;

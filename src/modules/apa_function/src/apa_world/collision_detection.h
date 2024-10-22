@@ -65,14 +65,32 @@ class CollisionDetector {
   };
 
   struct Paramters {
+    bool is_side_mirror_expand = true;
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+    double left_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+    double right_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     double bound_expand = 0.5;
     Paramters() = default;
-    Paramters(const double lat_inf) { lat_inflation = lat_inf; }
+    Paramters(const double lat_inf, bool set_side_mirror_expand = true) {
+      lat_inflation = lat_inf;
+      left_lat_inflation = lat_inf;
+      right_lat_inflation = lat_inf;
+      is_side_mirror_expand = set_side_mirror_expand;
+    }
+
+    Paramters(const double left_lat_inf, const double right_lat_inf,
+              bool set_side_mirror_expand = true) {
+      left_lat_inflation = left_lat_inf;
+      right_lat_inflation = right_lat_inf;
+      is_side_mirror_expand = set_side_mirror_expand;
+    }
 
     void Reset() {
+      is_side_mirror_expand = true;
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
       bound_expand = 0.5;
+      left_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+      right_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     }
   };
 
@@ -82,11 +100,17 @@ class CollisionDetector {
   void TransObsMapToParkObstacleList();
 
   void TransObsMapToOccupancyGridMap(
+      const OccupancyGridBound &bound = OccupancyGridBound(-3.68, -10.68, 14.68,
+                                                           10.68),
       const double _ogm_resolution = ogm_resolution);
 
   const CollisionResult UpdateByEDT(
       const pnc::geometry_lib::GeometryPath &geometry_path,
       const double lat_buffer, const double lon_buffer);
+
+  const CollisionResult UpdateByEDT(
+      const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+      const double lon_buffer);
 
   const CollisionResult UpdateByEDT(
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
@@ -100,7 +124,8 @@ class CollisionDetector {
                                const double heading_start);
 
   const CollisionResult UpdateByObsMap(
-      const pnc::geometry_lib::PathSegment &path_seg);
+      const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
+      const double lon_buffer);
 
   const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::LineSegment &line_seg,
@@ -172,7 +197,7 @@ class CollisionDetector {
     return obs_line_global_vec_;
   }
 
-  void SetParam(const Paramters& param);
+  void SetParam(const Paramters &param);
 
   const Paramters GetParam() { return param_; }
 

@@ -60,7 +60,7 @@ void InitGlog(const char *file) {
 #ifdef IFLY_LOG_PATH
   path_dir = "/asw/planning/glog";
 #else
-  path_dir = "../runtime_service/planning_exec/glog";
+  path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
 #endif
 
   FLAGS_log_dir = path_dir;
@@ -68,7 +68,7 @@ void InitGlog(const char *file) {
   // FLAGS_colorlogtostderr = true;
   // FLAGS_minloglevel = 0;
   //  50 Mb
-  // FLAGS_max_log_size = 50;
+  FLAGS_max_log_size = 50;
 
   bool create_path = CreateLogDirectory(path_dir);
 

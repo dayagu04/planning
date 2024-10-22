@@ -29,8 +29,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   traj_forward_penalty = 1.0;
   traj_reverse_penalty = 1.0;
-  traj_gear_switch_penalty = 10.0;
-  // traj_gear_switch_penalty = 4.0;
+  gear_switch_penalty = 10.0;
+  // gear_switch_penalty = 4.0;
   traj_steer_penalty = 0.0;
   // traj_steer_change_penalty = 4.0;
   traj_steer_change_penalty = 0.0;
@@ -43,6 +43,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   lon_min_safe_buffer = 0.1;
 
   expect_gear_penalty = 50.0;
+  expect_dist_penalty = 50.0;
+  gear_switch_penalty_heu = 10.0;
 
   enable_euler_cost_for_vertical_park = true;
   enable_dp_cost_for_vertical_park = true;
@@ -58,6 +60,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   map_bound_max_x = 20.0;
 
   tie_breaker_ = 1e-5;
+
+  dp_search_goal_adjust_dist = 0.7;
 
   return;
 }

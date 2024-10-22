@@ -10,7 +10,8 @@ NoaFunction::NoaFunction(framework::Session *session) : BaseFunction(session) {
 
   EgoPlanningConfig ego_config =
       config_builder->cast<planning::EgoPlanningConfig>();
-  if (ego_config.planner_type == planning::context::PlannerType::SCC_PLANNER) {
+  if (ego_config.planner_type ==
+      planning::context::PlannerType::SCC_PLANNER_V2) {
     task_pipeline_ =
         std::make_unique<LongtimeNoaTaskPipeline>(config_builder, session);
   } else {

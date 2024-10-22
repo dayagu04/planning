@@ -65,8 +65,6 @@ double ObjectSelector::get_vrel_close(int side, int status) {
       lane_change_decider_output.target_lane_virtual_id;
   std::shared_ptr<ReferencePathManager> reference_path_mgr =
       session_->mutable_environmental_model()->get_reference_path_manager();
-  const auto &fix_reference_path =
-      reference_path_mgr->get_reference_path_by_lane(fix_lane_virtual_id);
   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id);
   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
@@ -136,7 +134,6 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
       session_->environmental_model().get_virtual_lane_manager();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  auto &ego_state = session_->environmental_model().get_ego_state_manager();
   int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   int target_lane_virtual_id =
@@ -152,12 +149,9 @@ bool ObjectSelector::in_alc_status(int status, double start_move_distolane) {
       virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
 
   double olane_width = flane->width();
-  double v_ego = ego_state->ego_v();
-  double dt_delay = v_ego < 5.0 ? 0.0 : 0.03;
   if (olane != nullptr) {
     olane_width = olane->width();
   }
-  double act_cancel_thr = std::max(olane_width / 2 - 0.6, 0.);
 
   const auto state = lane_change_decider_output.curr_state;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
@@ -3929,76 +3923,6 @@ bool ObjectSelector::update(int status, double start_move_distolane,
     return true;
   }
 
-  // void ObjectSelector::restore_context(const ObjectSelectorContext &context)
-  // {
-  //   v_rel_l_ = context.v_rel_l;
-  //   v_rel_r_ = context.v_rel_r;
-  //   v_rel_f_ = context.v_rel_f;
-  //   d_stop_l_ = context.d_stop_l;
-  //   d_stop_r_ = context.d_stop_r;
-  //   d_lb_car_l_ = context.d_lb_car_l;
-  //   d_lb_car_r_ = context.d_lb_car_r;
-  //   t_surpass_l_ = context.t_surpass_l;
-  //   t_surpass_r_ = context.t_surpass_r;
-  //   premove_dist_ = context.premove_dist;
-
-  //   premovel_ = context.premovel;
-  //   premover_ = context.premover;
-  //   left_is_faster_ = context.left_is_faster;
-  //   right_is_faster_ = context.right_is_faster;
-  //   left_is_faster_cnt_ = context.left_is_faster_cnt;
-  //   right_is_faster_cnt_ = context.right_is_faster_cnt;
-  //   premoved_id_ = context.premoved_id;
-  //   neg_premoved_id_ = context.neg_premoved_id;
-
-  //   l_accident_cnt_ = context.l_accident_cnt;
-  //   r_accident_cnt_ = context.r_accident_cnt;
-
-  //   left_lb_car_ = context.left_lb_car;
-  //   left_alc_car_ = context.left_alc_car;
-  //   right_lb_car_ = context.right_lb_car;
-  //   right_alc_car_ = context.right_alc_car;
-
-  //   left_lb_car_cnt_ = context.left_lb_car_cnt;
-  //   left_alc_car_cnt_ = context.left_alc_car_cnt;
-  //   right_lb_car_cnt_ = context.right_lb_car_cnt;
-  //   right_alc_car_cnt_ = context.right_alc_car_cnt;
-  // }
-
-  // void ObjectSelector::save_context(ObjectSelectorContext &context) const {
-  //   context.v_rel_l = v_rel_l_;
-  //   context.v_rel_r = v_rel_r_;
-  //   context.v_rel_f = v_rel_f_;
-  //   context.d_stop_l = d_stop_l_;
-  //   context.d_stop_r = d_stop_r_;
-  //   context.d_lb_car_l = d_lb_car_l_;
-  //   context.d_lb_car_r = d_lb_car_r_;
-  //   context.t_surpass_l = t_surpass_l_;
-  //   context.t_surpass_r = t_surpass_r_;
-  //   context.premove_dist = premove_dist_;
-
-  //   context.premovel = premovel_;
-  //   context.premover = premover_;
-  //   context.left_is_faster = left_is_faster_;
-  //   context.right_is_faster = right_is_faster_;
-  //   context.left_is_faster_cnt = left_is_faster_cnt_;
-  //   context.right_is_faster_cnt = right_is_faster_cnt_;
-  //   context.premoved_id = premoved_id_;
-  //   context.neg_premoved_id = neg_premoved_id_;
-
-  //   context.l_accident_cnt = l_accident_cnt_;
-  //   context.r_accident_cnt = r_accident_cnt_;
-
-  //   context.left_lb_car = left_lb_car_;
-  //   context.left_alc_car = left_alc_car_;
-  //   context.right_lb_car = right_lb_car_;
-  //   context.right_alc_car = right_alc_car_;
-
-  //   context.left_lb_car_cnt = left_lb_car_cnt_;
-  //   context.left_alc_car_cnt = left_alc_car_cnt_;
-  //   context.right_lb_car_cnt = right_lb_car_cnt_;
-  //   context.right_alc_car_cnt = right_alc_car_cnt_;
-  // }
-
+  return false;
 }  // namespace planning
 }  // namespace planning

@@ -26,7 +26,6 @@ namespace planning {
 
 // class EgoPlanningConfigBuilder;
 class ScenarioManager;
-class ObjectSelector;
 class ScenarioStateMachine;
 class AdaptiveCruiseControl;
 class StartStopEnable;

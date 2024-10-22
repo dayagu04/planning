@@ -1,8 +1,10 @@
 #include "agent_longitudinal_decider.h"
+
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
 #include "agent/agent.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -77,7 +79,17 @@ AgentLongitudinalDecider::AgentLongitudinalDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : Task(config_builder, session) {
   name_ = "AgentLongitudinalDecider";
-  // Reset();
+  if (crossing_agent_decider_ == nullptr) {
+    crossing_agent_decider_ =
+        std::make_shared<CrossingAgentDecider>(config_builder, session);
+  }
+}
+
+bool AgentLongitudinalDecider::Reset() {
+  // if (crossing_agent_decider_ != nullptr) {
+  //   crossing_agent_decider_->Reset();
+  // }
+  return false;
 }
 
 bool AgentLongitudinalDecider::Execute() {
@@ -114,6 +126,12 @@ bool AgentLongitudinalDecider::Update() {
   // AddCutInForLaneChange();
 
   UpdateCutInAgentTable();
+
+  // crossing agent decider
+  // 横穿障碍物依赖障碍物预测轨迹
+  if (crossing_agent_decider_ != nullptr) {
+    crossing_agent_decider_->Execute();
+  }
 
   return true;
 }
@@ -213,8 +231,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     return;
   }
 
-  const auto matched_path_point = ego_lane_coord->GetPathPointByS(ego_s);
-
   double agent_s_base_path = 0.0;
   double agent_l_base_path = 0.0;
   if (!ego_lane_coord->XYToSL(agent.x(), agent.y(), &agent_s_base_path,
@@ -288,7 +304,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
           kLaneWidth * kHalf + kLargeYawLateralDistanceBufferM &&
       std::fabs(object_l_speed_mps) > kLargeYawLateralSpeedThresholdMps;
   const bool is_reverse_agent = (object_s_speed_mps < -3.0);
-  const bool is_static_agent = agent.is_static();
 
   bool current_rule_base_cutin =
       is_agent_closer_to_ego && is_agent_ahead_of_ego && is_agent_not_too_far &&
@@ -476,7 +491,7 @@ bool AgentLongitudinalDecider::IsLargeAgent(const agent::Agent& agent) {
 void AgentLongitudinalDecider::IsSlowSpeedCutinSuppression(
     const std::shared_ptr<KDPath>& planned_path,
     const PlanningInitPoint init_point, const bool is_lane_change,
-    const agent::Agent& agent, bool* is_slow_need_suppression){};
+    const agent::Agent& agent, bool* is_slow_need_suppression) {};
 
 void AgentLongitudinalDecider::CalculateAgentLateralDistance(
     const double object_l_speed_mps, const double min_l, const double max_l,
@@ -548,7 +563,6 @@ void AgentLongitudinalDecider::UpdateCutInAgentTable() {
   // debug
   std::vector<double> cutin_id;
   std::vector<double> cutin_count;
-  ;
   for (const auto cut_in_agent : cut_in_agent_count_) {
     if (cut_in_agent.second > 0) {
       cutin_id.emplace_back(cut_in_agent.first);

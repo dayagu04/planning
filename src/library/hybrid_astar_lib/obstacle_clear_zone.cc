@@ -182,7 +182,7 @@ bool ObstacleClearZone::GenerateBoundingBox(const Pose2D& start,
   return true;
 }
 
-const bool ObstacleClearZone::IsContain(const cdl::AABB& box) {
+const bool ObstacleClearZone::IsContain(const cdl::AABB& box) const {
   return box_.contain(box);
 }
 

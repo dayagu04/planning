@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240724/20240724-15-39-38/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-24-15-39-38_no_camera.bag" 
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240724/20240724-15-39-38/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-24-15-39-38_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 frame_dt = 0.1 # sec
@@ -25,6 +25,7 @@ fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1)
+fig1.height = 1500
 
 fig_lat_offset = load_lateral_offset(bag_loader)
 

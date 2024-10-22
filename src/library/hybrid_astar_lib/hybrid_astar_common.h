@@ -31,11 +31,19 @@ enum class AstarSearchState {
 };
 
 // use astar searching to get a path or just use rs path to link start and end.
+// path type: node searching, rs, dubins, cubic polynomial curve, quntic
+// polynomial curve, cubic spiral.
 enum class AstarPathGenerateType {
-  none,
-  reeds_shepp,
-  astar_searching,
-  max_number,
+  NONE,
+  REEDS_SHEPP,
+  ASTAR_SEARCHING,
+  GEAR_REVERSE_DYNAMIC_PROGRAMMING,
+  GEAR_DRIVE_DYNAMIC_PROGRAMMING,
+  DUBINS_SAMPLING,
+  SPIRAL_SAMPLING,
+  CUBIC_POLYNOMIAL_SAMPLING,
+  QUNTIC_POLYNOMIAL_SAMPLING,
+  MAX_NUMBER,
 };
 
 enum class ParkSpaceType {
@@ -70,15 +78,17 @@ enum class NodeCollisionType {
 };
 
 enum class AstarPathType {
-  none = 0,
-  Reeds_Shepp,
-  dubins,
-  cubic,
-  node_searching,
-  point_interpolate,
-  start_node,
-  end_node,
-  max_num
+  NONE = 0,
+  REEDS_SHEPP,
+  DUBINS,
+  NODE_SEARCHING,
+  LINE_SEGMENT,
+  START_NODE,
+  END_NODE,
+  CUBIC_POLYNOMIAL,
+  QUNTIC_POLYNOMIAL,
+  SPIRAL,
+  MAX_NUM
 };
 
 enum class PlanningReason {
@@ -89,6 +99,7 @@ enum class PlanningReason {
   FIRST_PLAN,
   ADJUST_SELF_CAR_POSE,
   SIMULATION_TRIGGER,
+  GEOMETRY_CURVE_FAIL,
 };
 
 enum class AstarPathSteer {
@@ -113,6 +124,24 @@ enum class AstarNodeVisitedType {
   in_open = 1,
   in_close,
   max_num
+};
+
+enum class PolynomialPathErrorCode {
+  NONE = 0,
+  OUT_OF_X_BOUNDARY = 1,
+  COLLISION = 2,
+  BACK_TO_START_NODE = 3,
+  BACK_TO_PARENT_NODE = 4,
+  OUT_OF_HEADING_BOUNDARY = 5,
+  UNEXPECTED_GEAR = 6,
+  UNEXPECTED_STEERING_WHEEL = 7,
+  UNEXPECTED_DRIVE_DIST = 8,
+  FAIL_TO_ALLOCATE_NODE = 9,
+  OUT_OF_Y_BOUNDARY,
+  OUT_OF_KAPPA_BOUNDARY,
+  LINK_POINT_INVALID_KAPPA,
+  OUT_OF_SEARCH_BOUNDARY,
+  MAX_NUMBER,
 };
 
 // set first action in path
@@ -235,8 +264,23 @@ struct AstarSamplingAngle {
   double radius[astar_max_angle_number];
 };
 
+struct DebugAstarSearchPoint {
+  Position2D pos;
+  bool safe;
+
+  DebugAstarSearchPoint() = default;
+
+  DebugAstarSearchPoint(const double x, const double y, const bool is_safe) {
+    pos.x = x;
+    pos.y = y;
+    safe  = is_safe;
+  }
+};
+
 std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
+
+bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
 
 }  // namespace planning

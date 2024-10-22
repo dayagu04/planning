@@ -57,8 +57,7 @@ class HybridAStarInterface {
 
   const int GetFallBackPath(HybridAStarResult* result);
 
-  int ExtendPathToRealTargetPose(const Pose2D& real_end,
-                                 const double astar_end_to_limiter);
+  int ExtendPathToRealTargetPose(const Pose2D& real_end);
 
   const ParkObstacleList& GetConstObstacles() const;
 
@@ -83,7 +82,7 @@ class HybridAStarInterface {
       std::vector<std::vector<ad_common::math::Vec2d>>& path_list);
 
   // for debug
-  const std::vector<ad_common::math::Vec2d>& GetChildNodeForDebug();
+  const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
 
   // for debug
   const std::vector<ad_common::math::Vec2d>& GetPriorQueueNode();
@@ -100,6 +99,10 @@ class HybridAStarInterface {
 
   const ParkReferenceLine& GetConstRefLine() const;
 
+  // for debug
+  void GetPolynomialPathForDebug(std::vector<double>& x, std::vector<double>& y,
+                                 std::vector<double>& phi);
+
  private:
   // if ego pose is good, seleted real end is ok
   const bool IsSelectedRealTargetPose() const;
@@ -109,8 +112,7 @@ class HybridAStarInterface {
   int UpdateEDTByObs(const ParkObstacleList& obs_list);
 
   int ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
-                                     const Pose2D& real_end,
-                                     const double astar_end_to_limiter);
+                                     const Pose2D& real_end);
 
   void PathClear(HybridAStarResult* path);
 
@@ -138,18 +140,17 @@ class HybridAStarInterface {
 
   AstarSearchState search_state_;
 
-  bool swap_start_end_;
+  // bool swap_start_end_;
 
   AstarRequest request_;
 
   ParkObstacleList obs_;
 
-  // real goal in slot
-  Pose2D real_end_;
-  double astar_end_to_limiter_;
+  ObstacleClearZone clear_zone_;
 
   OccupancyGridMap ogm_;
   EulerDistanceTransform edt_;
+  ParkReferenceLine ref_line_;
 };
 
 }  // namespace planning

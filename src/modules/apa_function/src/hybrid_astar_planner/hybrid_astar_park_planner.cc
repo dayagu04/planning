@@ -9,6 +9,7 @@
 #include "hybrid_astar_response.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "math/vec2d.h"
 #include "math_utils.h"
 #include "path_safe_checker.h"
 #include "point_cloud_obstacle.h"
@@ -76,7 +77,8 @@ const bool HybridAStarParkPlanner::CheckSegCompleted() {
   bool is_seg_complete = false;
   if (frame_.spline_success) {
     if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag &&
+        frame_.current_path_length > 1e-2) {
       if (frame_.stuck_uss_time > 0.068) {
         is_seg_complete = true;
       }
@@ -293,6 +295,8 @@ void HybridAStarParkPlanner::PlanCore() {
     HybridAstarDebugInfoClear();
     ILOG_INFO << "use history path";
   }
+
+  // DebugPathString(current_path_point_global_vec_);
 
   return;
 }
@@ -522,12 +526,12 @@ void HybridAStarParkPlanner::UpdateRemainDist() {
   // 2.calculate remain dist uss according to uss
   frame_.remain_dist_uss = CalRemainDistFromUss();
 
-  return;
-  ShrinkPathByFusionObj();
-
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss
             << ", obs s = " << frame_.remain_dist_col_det;
+
+  return;
+  ShrinkPathByFusionObj();
 
   return;
 }
@@ -576,8 +580,9 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   // set input
   AstarRequest cur_request;
   cur_request.path_generate_method =
-      planning::AstarPathGenerateType::astar_searching;
-  cur_request.first_action_request.has_request = false;
+      planning::AstarPathGenerateType::ASTAR_SEARCHING;
+  cur_request.first_action_request.has_request = true;
+  cur_request.first_action_request.gear_request = AstarPathGear::none;
   cur_request.space_type = ParkSpaceType::vertical;
   cur_request.parking_task = ParkingTask::parking_in;
   cur_request.head_request = ParkingVehDirectionRequest::tail_in_first;
@@ -592,6 +597,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       apa_param.GetParam().vertical_slot_target_adjust_dist;
   cur_request.slot_width = ego_slot_info.slot_width;
   cur_request.slot_length = ego_slot_info.slot_length;
+  cur_request.history_gear = current_gear_;
 
   switch (frame_.replan_reason) {
     case FIRST_PLAN:
@@ -624,7 +630,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
     cur_request.path_generate_method =
-        planning::AstarPathGenerateType::reeds_shepp;
+        planning::AstarPathGenerateType::REEDS_SHEPP;
 
     end.y = real_end.y;
     end.x = start.x + 30.0;
@@ -633,8 +639,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   } else {
     // gear need be different with history in next replanning
     if (frame_.replan_reason != 1) {
-      cur_request.first_action_request.has_request = true;
-
       switch (current_gear_) {
         case AstarPathGear::reverse:
           cur_request.first_action_request.gear_request = AstarPathGear::drive;
@@ -644,7 +648,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
               AstarPathGear::reverse;
           break;
         default:
-          cur_request.first_action_request.has_request = false;
           break;
       }
     }
@@ -707,12 +710,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
                 << ",dist = " << path_dist
                 << ",gear_change_num=" << response.result.gear_change_num;
 
-      // if (response.kappa_change_too_much) {
-      //   ILOG_INFO << "path kappa change too much";
-
-      // } else {
-      // }
-
       PathOptimizationByCILRQ(path_dist, local_path, &response_tf);
 
       double lqr_end_time = IflyTime::Now_ms();
@@ -774,7 +771,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
     ILOG_INFO << "has input";
   }
 
-  ILOG_INFO << "path size " << current_path_point_global_vec_.size();
+  // DebugPathString(current_path_point_global_vec_);
 
   return res;
 }
@@ -810,7 +807,7 @@ const int HybridAStarParkPlanner::PublishHybridAstarDebugInfo(
     point->set_s(result.accumulated_s[i]);
 
     // todo, add hybrid astar msg. but now reuse TrajectoryPoint.
-    if (result.type[i] == AstarPathType::Reeds_Shepp) {
+    if (result.type[i] == AstarPathType::REEDS_SHEPP) {
       point->set_l(-1.0);
     } else {
       point->set_l(1.0);
@@ -1289,15 +1286,10 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
     return;
   }
 
-  Eigen::Vector2d end_point_global = current_path_point_global_vec_.back().pos;
-
-  Eigen::Vector2d end_point_local =
-      ego_slot_info.g2l_tf.GetPos(end_point_global);
-
   double x_diff =
-      std::fabs(end_point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
+      std::fabs(point_local[0] - ego_slot_info.target_ego_pos_slot[0]);
   double y_diff =
-      std::fabs(end_point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
+      std::fabs(point_local[1] - ego_slot_info.target_ego_pos_slot[1]);
   double length = std::sqrt(x_diff * x_diff + y_diff * y_diff);
   length = std::min(length, 5.0);
 
@@ -1305,8 +1297,8 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
     return;
   }
 
-  ILOG_INFO << "x = " << limiter_x << ", end x = " << end_point_local[0]
-            << ", y=" << end_point_local[1];
+  ILOG_INFO << "x = " << limiter_x << ", end x = " << point_local[0]
+            << ", y=" << point_local[1];
 
   double phi = current_path_point_global_vec_.back().heading;
 
@@ -1316,8 +1308,8 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
       current_path_point_global_vec_[path_point_size - 2].pos;
 
   Eigen::Vector2d unit_line_vec =
-      Eigen::Vector2d(end_point_global[0] - the_last_but_one[0],
-                      end_point_global[1] - the_last_but_one[1]);
+      Eigen::Vector2d(path_end_global[0] - the_last_but_one[0],
+                      path_end_global[1] - the_last_but_one[1]);
 
   if (unit_line_vec.norm() < 0.01) {
     return;
@@ -1330,7 +1322,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   Eigen::Vector2d point;
   pnc::geometry_lib::PathPoint global_point;
   while (s < length) {
-    point = end_point_global + s * unit_line_vec;
+    point = path_end_global + s * unit_line_vec;
 
     global_point.Set(point, phi);
     global_point.kappa = 0.0;
@@ -1389,6 +1381,131 @@ const bool HybridAStarParkPlanner::IsEgoNeedDriveForwardInSlot(
             << ",theta = " << ifly_rad2deg(ego_pose.theta);
 
   return need_drive_forward;
+}
+
+const double HybridAStarParkPlanner::CalRemainDistFromPath() {
+  double remain_dist = 20.0;
+
+  // no path
+  size_t path_point_size = current_path_point_global_vec_.size();
+  if (current_path_point_global_vec_.size() <= 1) {
+    return 0.0;
+  }
+
+  const MeasurementData* measures_ptr =
+      &(apa_world_ptr_->GetApaDataPtr()->measurement_data);
+  Pose2D ego_pose(measures_ptr->pos[0], measures_ptr->pos[1],
+                  measures_ptr->heading);
+
+  size_t nearest_point_id = 100000;
+  nearest_point_id =
+      GetNearestPathPoint(current_path_point_global_vec_, ego_pose);
+  if (nearest_point_id >= path_point_size) {
+    return 0.0;
+  }
+
+  // calc base vector
+  pnc::geometry_lib::PathPoint *base_point;
+  base_point = &current_path_point_global_vec_[nearest_point_id];
+  ad_common::math::Vec2d base_vector;
+  if (nearest_point_id == path_point_size - 1) {
+    const pnc::geometry_lib::PathPoint& point1 =
+        current_path_point_global_vec_[nearest_point_id - 1];
+    const pnc::geometry_lib::PathPoint& point2 =
+        current_path_point_global_vec_[nearest_point_id];
+
+    base_vector.set_x(point2.pos.x() - point1.pos.x());
+    base_vector.set_y(point2.pos.y() - point1.pos.y());
+  } else {
+    const pnc::geometry_lib::PathPoint& point1 =
+        current_path_point_global_vec_[nearest_point_id];
+    const pnc::geometry_lib::PathPoint& point2 =
+        current_path_point_global_vec_[nearest_point_id + 1];
+    base_vector.set_x(point2.pos.x() - point1.pos.x());
+    base_vector.set_y(point2.pos.y() - point1.pos.y());
+  }
+
+  if (base_vector.LengthSquare() > 1e-4) {
+    base_vector.Normalize();
+  } else {
+    if (current_gear_ == AstarPathGear::drive) {
+      base_vector.set_x(std::cos(base_point->heading));
+      base_vector.set_y(std::sin(base_point->heading));
+    } else {
+      base_vector.set_x(std::cos(base_point->heading + M_PI));
+      base_vector.set_y(std::sin(base_point->heading + M_PI));
+    }
+  }
+
+  ad_common::math::Vec2d projection_vector;
+  projection_vector.set_x(ego_pose.x - base_point->pos.x());
+  projection_vector.set_y(ego_pose.y - base_point->pos.y());
+
+  double horizon_dist = base_vector.InnerProd(projection_vector);
+
+  // end point
+  if (nearest_point_id == path_point_size - 1) {
+    if (horizon_dist > 0.0) {
+      remain_dist = 0.0;
+    } else {
+      remain_dist = -horizon_dist;
+    }
+  } else {
+    // get dist to goal
+    double total_dist = -horizon_dist;
+    double delta_dist;
+    for (size_t i = nearest_point_id; i < path_point_size - 1; i++) {
+      const pnc::geometry_lib::PathPoint& point1 =
+          current_path_point_global_vec_[i];
+      const pnc::geometry_lib::PathPoint& point2 =
+          current_path_point_global_vec_[i + 1];
+
+      delta_dist = GetTwoPointDist(point1, point2);
+      total_dist += delta_dist;
+    }
+
+    remain_dist = total_dist;
+  }
+
+  return remain_dist;
+}
+
+size_t HybridAStarParkPlanner::GetNearestPathPoint(
+    const std::vector<pnc::geometry_lib::PathPoint>& path, const Pose2D& pose) {
+  double nearest_dist = 10000.0;
+  double dist;
+  Pose2D global_pose;
+  size_t nearest_id = 0;
+
+  for (size_t i = 0; i < path.size(); i++) {
+    global_pose.x = path[i].pos[0];
+    global_pose.y = path[i].pos[1];
+    global_pose.theta = path[i].heading;
+    dist = pose.DistanceSquareTo(&global_pose);
+
+    if (i == 0) {
+      nearest_dist = dist;
+      nearest_id = i;
+
+      continue;
+    }
+
+    if (dist < nearest_dist) {
+      nearest_dist = dist;
+      nearest_id = i;
+    }
+  }
+
+  return nearest_id;
+}
+
+void HybridAStarParkPlanner::DebugPathString(
+    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+  for (size_t i = 0; i < path.size(); i++) {
+    ILOG_INFO << "i = " << i << ",x = " << path[i].pos.x()
+              << ",y = " << path[i].pos.y();
+  }
+  return;
 }
 
 }  // namespace apa_planner
