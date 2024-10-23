@@ -5,6 +5,7 @@
 
 #include "hybrid_astar_common.h"
 #include "log_glog.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -13,10 +14,15 @@ void FuturePathDecider::Process(const HybridAStarResult *history_path,
                                 const Pose2D &ego_pose,
                                 EulerDistanceTransform *edt,
                                 const ParkReferenceLine *ref_line,
+                                double min_turn_radius,
                                 ParkFirstActionRequest *future_path_request) {
   ILOG_INFO << "plan reason=" << static_cast<int>(plan_reason);
 
+  min_turn_radius_ = min_turn_radius;
+
   CalcDriveDistByLineModel(ego_pose, edt, ref_line);
+
+  CalcDriveDistByCircleModel(ego_pose, edt, ref_line);
 
   CalcDriveDistByHistoryPath(history_path, plan_reason);
 
@@ -109,7 +115,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     s += ds;
   }
 
-  future_drive_dist_info_.gear_drive_dist_to_obs = s - 0.1;
+  future_drive_dist_info_.gear_drive_dist_to_obs = s - ds;
 
   // gear reverse drive dist
   s = 0.01;
@@ -132,12 +138,113 @@ void FuturePathDecider::CalcDriveDistByLineModel(
 
     s += ds;
   }
-  future_drive_dist_info_.gear_reverse_dist_to_obs = s - 0.1;
+  future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds;
   future_drive_dist_info_.advised_drive_dist = 1.2;
 
   ILOG_INFO << "dist to ref line=" << future_drive_dist_info_.dist_to_ref_line
-            << ",d, dist=" << future_drive_dist_info_.gear_drive_dist_to_obs
-            << ",r dist=" << future_drive_dist_info_.gear_reverse_dist_to_obs;
+            << ", drive straight dist="
+            << future_drive_dist_info_.gear_drive_dist_to_obs
+            << ", reverse straight dist="
+            << future_drive_dist_info_.gear_reverse_dist_to_obs;
+
+  return;
+}
+
+void FuturePathDecider::CalcDriveDistByCircleModel(
+    const Pose2D &ego_pose, EulerDistanceTransform *edt,
+    const ParkReferenceLine *ref_line) {
+
+  // update gear drive safe dist
+  Pose2D global_pose;
+  Transform2d tf;
+  double s = 0.0;
+  double ds = 0.1;
+
+  std::vector<Pose2D> path;
+
+  // left
+  GetPathByCircle(&ego_pose, 5.0, min_turn_radius_, true, &path);
+
+  for (size_t i = 0; i < path.size(); i++) {
+    global_pose = path[i];
+    tf.SetBasePose(global_pose);
+
+    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+      future_drive_dist_info_.gear_drive_has_obs = true;
+      break;
+    }
+    s += ds;
+  }
+
+  if (s < future_drive_dist_info_.gear_drive_dist_to_obs) {
+    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds;
+  }
+
+  ILOG_INFO << "dirve, left s=" << s;
+
+  // right
+  s = 0.0;
+  GetPathByCircle(&ego_pose, 5.0, -min_turn_radius_, true, &path);
+
+  for (size_t i = 0; i < path.size(); i++) {
+    global_pose = path[i];
+    tf.SetBasePose(global_pose);
+
+    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+      future_drive_dist_info_.gear_drive_has_obs = true;
+      break;
+    }
+    s += ds;
+  }
+
+  if (s < future_drive_dist_info_.gear_drive_dist_to_obs) {
+    future_drive_dist_info_.gear_drive_dist_to_obs = s - ds;
+  }
+  ILOG_INFO << "dirve, right s=" << s;
+
+  // gear reverse drive dist
+  // left
+  s = 0.0;
+  GetPathByCircle(&ego_pose, 5.0, min_turn_radius_, false, &path);
+
+  for (size_t i = 0; i < path.size(); i++) {
+    global_pose = path[i];
+    tf.SetBasePose(global_pose);
+
+    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+      future_drive_dist_info_.gear_reverse_has_obs = true;
+      break;
+    }
+    s += ds;
+  }
+  if (s < future_drive_dist_info_.gear_reverse_dist_to_obs) {
+    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds;
+  }
+  ILOG_INFO << "reverse, left s=" << s;
+
+  // right
+  s = 0.0;
+  GetPathByCircle(&ego_pose, 5.0, -min_turn_radius_, false, &path);
+
+  for (size_t i = 0; i < path.size(); i++) {
+    global_pose = path[i];
+    tf.SetBasePose(global_pose);
+
+    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+      future_drive_dist_info_.gear_reverse_has_obs = true;
+      break;
+    }
+    s += ds;
+  }
+  if (s < future_drive_dist_info_.gear_reverse_dist_to_obs) {
+    future_drive_dist_info_.gear_reverse_dist_to_obs = s - ds;
+  }
+
+  ILOG_INFO << "reverse, right s=" << s;
 
   return;
 }
@@ -275,6 +382,97 @@ void FuturePathDecider::UpdateFuturePathRequest(
           future_drive_dist_info_.gear_drive_dist_to_obs;
     }
   }
+
+  if (future_path_request->dist_request > 2.5) {
+    future_path_request->dist_request -=0.4;
+  }
+
+  return;
+}
+
+// radius: if left turn, radius is positive
+void FuturePathDecider::GetVehCircleByPose(const Pose2D *pose,
+                                           const double radius,
+                                           const AstarPathGear gear,
+                                           VehicleCircle *veh_circle) {
+  veh_circle->radius = radius;
+  veh_circle->gear = gear;
+
+  veh_circle->center.x = pose->x - radius * std::sin(pose->theta);
+  veh_circle->center.y = pose->y + radius * std::cos(pose->theta);
+
+  return;
+}
+
+void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
+                                        const double arc, const double radius,
+                                        const bool is_forward,
+                                        std::vector<Pose2D> *path) {
+  int path_point_num = std::ceil(arc / 0.1);
+  // ILOG_INFO << "path point num " << path_point_num;
+  // ILOG_INFO << "node path s resolution " << traveled_distance;
+
+  // get vehicle circle
+  VehicleCircle veh_circle;
+  AstarPathGear gear;
+  if (is_forward) {
+    gear = AstarPathGear::drive;
+  } else {
+    gear = AstarPathGear::reverse;
+  }
+
+  GetVehCircleByPose(start_point_pose, radius, gear, &veh_circle);
+
+  // interpolate
+  Pose2D next_pose;
+  double inv_radius = std::fabs(1.0 / radius);
+
+  double acc_s = 0.0;
+
+  path->clear();
+  path->push_back(*start_point_pose);
+
+  for (int i = 0; i < path_point_num; ++i) {
+    acc_s += 0.1;
+
+    InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s,
+                           inv_radius, &next_pose);
+
+    path->push_back(next_pose);
+  }
+
+  return;
+}
+
+void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
+                                               const Pose2D *start_pose,
+                                               const double arc,
+                                               const double inverse_radius,
+                                               Pose2D *pose) {
+  double delta_theta, theta;
+
+  delta_theta = arc * inverse_radius;
+
+  // left turn
+  if (veh_circle->radius > 0.0) {
+    if (veh_circle->gear == AstarPathGear::reverse) {
+      delta_theta = -delta_theta;
+    }
+  } else {
+    // right turn, gear is d
+    if (veh_circle->gear == AstarPathGear::drive) {
+      delta_theta = -delta_theta;
+    }
+  }
+
+  // update next point theta
+  theta = start_pose->theta + delta_theta;
+
+  double radius = veh_circle->radius;
+
+  pose->x = veh_circle->center.x + radius * std::sin(theta);
+  pose->y = veh_circle->center.y - radius * std::cos(theta);
+  pose->theta = IflyUnifyTheta(theta, M_PI);
 
   return;
 }

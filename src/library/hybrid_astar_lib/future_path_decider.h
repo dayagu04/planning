@@ -8,6 +8,8 @@
 #include "node3d.h"
 #include "park_reference_line.h"
 #include "pose2d.h"
+#include "rs_path_interpolate.h"
+
 
 namespace planning {
 
@@ -52,6 +54,7 @@ class FuturePathDecider : public AstarDecider {
   void Process(const HybridAStarResult *history_path,
                const PlanningReason plan_reason, const Pose2D &ego_pose,
                EulerDistanceTransform *edt, const ParkReferenceLine *ref_line,
+               double min_turn_radius,
                ParkFirstActionRequest *future_path_request);
 
   void Process(const Pose2D &start, const Pose2D &end);
@@ -77,11 +80,32 @@ class FuturePathDecider : public AstarDecider {
 
   void UpdateFuturePathRequest(ParkFirstActionRequest *future_path_request);
 
+  // radius: if left turn, radius is positive
+  void GetVehCircleByPose(const Pose2D *pose, const double radius,
+                          const AstarPathGear gear, VehicleCircle *veh_circle);
+
+  // if left, radius is positive
+  void GetPathByCircle(const Pose2D *start_pose, const double arc,
+                       const double radius, const bool is_forward,
+                       std::vector<Pose2D> *path);
+
+  // arc is positive.
+  // inverse_radius is positive
+  void InterpolateByArcOffset(const VehicleCircle *veh_circle,
+                              const Pose2D *start_pose, const double arc,
+                              const double inverse_radius, Pose2D *pose);
+
+  void CalcDriveDistByCircleModel(const Pose2D &ego_pose,
+                                  EulerDistanceTransform *edt,
+                                  const ParkReferenceLine *ref_line);
+
   // use history path info as an heuristic info
   HistoryPathDriveInfo history_path_info_;
 
   // use raycast path safe distance as an heuristic info
   InferenceDriveDist future_drive_dist_info_;
+
+  double min_turn_radius_;
 };
 
 }  // namespace planning

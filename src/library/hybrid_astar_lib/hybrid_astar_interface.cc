@@ -191,7 +191,7 @@ int HybridAStarInterface::UpdateOutput() {
   bool no_gear_switch;
   edt_.UpdateSafeBuffer(0.2, 0.4, 0.2);
   future_path_decider.Process(&coarse_traj_, request_.plan_reason, ego_pose_,
-                              &edt_, &ref_line_,
+                              &edt_, &ref_line_, vehicle_param_.min_turn_radius,
                               &request_.first_action_request);
   no_gear_switch = future_path_decider.IsNextPathNoGearSwitchByHistory();
 
