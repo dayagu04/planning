@@ -545,4 +545,5 @@
     "min_dec_filter_speed_in_deceleration_scene":30.0,
     "enable_speed_adjust": true
   }
+  
 }
