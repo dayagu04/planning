@@ -492,6 +492,11 @@ SlotRelativePosition GenerateSlotSide(
   const auto &slot_points =
       ego_slot_info.target_managed_slot.corner_points().corner_point();
 
+  if (slot_points.size() != 4) {
+    ILOG_ERROR << "slot point error";
+    return SlotRelativePosition::NONE;
+  }
+
   // 顶点顺序,来自感知
   std::vector<Eigen::Vector2d> pt;
   pt.resize(slot_points.size());

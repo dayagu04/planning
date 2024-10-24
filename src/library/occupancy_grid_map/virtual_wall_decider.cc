@@ -45,7 +45,7 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
     if (slot_side == SlotRelativePosition::RIGHT) {
       RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
                                    end);
-    } else {
+    } else if (slot_side == SlotRelativePosition::LEFT) {
       LeftSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
                                   end);
     }
