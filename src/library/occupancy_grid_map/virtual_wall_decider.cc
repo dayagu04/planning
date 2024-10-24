@@ -233,9 +233,9 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
     const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // width is the slot upper edge to a virtual wall
-  const double channel_length = 30;
   const double channel_width = 8;
-  const double half_channel_length = channel_length * 0.5;
+  const double channel_top_buffer = 8.0;
+  const double channel_bottom_buffer = 8.0;
 
   // slot right wall
   Eigen::Vector2d right_wall_upper =
@@ -276,9 +276,9 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 
   // channel up bound
   Eigen::Vector2d channel_up_bound_left = Eigen::Vector2d(
-      slot_length + half_channel_length, slot_width / 2.0 + channel_width);
+      slot_length + channel_top_buffer, slot_width / 2.0 + channel_width);
   Eigen::Vector2d channel_up_bound_right =
-      Eigen::Vector2d(slot_length + half_channel_length, -slot_width / 2.0);
+      Eigen::Vector2d(slot_length + channel_top_buffer, -slot_width / 2.0);
 
   channel_up_bound_left[0] =
       std::max(channel_up_bound_left[0], veh_aabb.max_[0]);
@@ -290,9 +290,9 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 
   // channel bottom bound
   Eigen::Vector2d channel_bottom_bound_left = Eigen::Vector2d(
-      -slot_length - half_channel_length, slot_width / 2.0 + channel_width);
+      -slot_length - channel_bottom_buffer, slot_width / 2.0 + channel_width);
   Eigen::Vector2d channel_bottom_bound_right =
-      Eigen::Vector2d(-slot_length - half_channel_length, -slot_width / 2.0);
+      Eigen::Vector2d(-slot_length - channel_bottom_buffer, -slot_width / 2.0);
 
   channel_bottom_bound_left[0] =
       std::min(channel_bottom_bound_left[0], veh_aabb.min_[0]);
@@ -304,9 +304,9 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 
   // channel left bound
   Eigen::Vector2d channel_left_bound_upper = Eigen::Vector2d(
-      slot_length + half_channel_length, slot_width / 2.0 + channel_width);
+      slot_length + channel_top_buffer, slot_width / 2.0 + channel_width);
   Eigen::Vector2d channel_left_bound_lower = Eigen::Vector2d(
-      -slot_length - half_channel_length, slot_width / 2.0 + channel_width);
+      -slot_length - channel_bottom_buffer, slot_width / 2.0 + channel_width);
 
   channel_left_bound_upper[0] =
       std::max(channel_left_bound_upper[0], veh_aabb.max_[0]);
