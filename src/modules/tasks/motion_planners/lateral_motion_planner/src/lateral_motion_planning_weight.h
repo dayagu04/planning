@@ -24,6 +24,8 @@ class LateralMotionPlanningWeight {
       const planning::LateralMotionPlannerConfig &config);
   ~LateralMotionPlanningWeight() = default;
 
+  void Init();
+
   void CalculateInitInfo(
       const planning::common::LateralPlanningInput &planning_input);
 
@@ -74,6 +76,9 @@ class LateralMotionPlanningWeight {
   void MakeDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
+  void MakeDynamicPosBoundWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
  private:
   planning::LateralMotionPlannerConfig config_;
   LateralMotionSceneEnum lateral_motion_scene_;
@@ -86,6 +91,7 @@ class LateralMotionPlanningWeight {
   double end_ratio_for_qreftheta_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
+  bool is_emergence_;
 };
 
 }  // namespace lateral_planning

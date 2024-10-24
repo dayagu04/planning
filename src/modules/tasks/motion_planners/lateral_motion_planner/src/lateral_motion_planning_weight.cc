@@ -8,7 +8,23 @@ namespace lateral_planning {
 
 LateralMotionPlanningWeight::LateralMotionPlanningWeight(
     const planning::LateralMotionPlannerConfig &config)
-    : config_(config) {}
+    : config_(config) {
+  Init();
+}
+
+void LateralMotionPlanningWeight::Init() {
+  lateral_motion_scene_ = pnc::lateral_planning::LANE_KEEP;
+  init_dis_to_ref_ = 0.0;
+  init_ref_theta_error_ = 0.0;
+  concerned_start_q_jerk_ = 0.0;
+  ego_vel_ = 0.0;
+  ego_l_ = 0.0;
+  end_ratio_for_qrefxy_ = 0.0;
+  end_ratio_for_qreftheta_ = 0.0;
+  is_lane_change_back_ = false;
+  is_in_intersection_ = false;
+  is_emergence_ = false;
+}
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
     const LateralMotionSceneEnum scene,
@@ -17,13 +33,14 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
   // CalculateInitInfo(planning_input);
   planning_input.set_q_acc_bound(config_.q_acc_bound);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
-  if (is_in_intersection_) {
-    planning_input.set_q_soft_corridor(config_.q_soft_corridor_intersection);
-  } else {
-    planning_input.set_q_soft_corridor(config_.q_soft_corridor);
-  }
+  // if (is_in_intersection_) {
+  //   planning_input.set_q_soft_corridor(config_.q_soft_corridor_intersection);
+  // } else {
+  //   planning_input.set_q_soft_corridor(config_.q_soft_corridor);
+  // }
 
-  planning_input.set_q_hard_corridor(config_.q_hard_corridor);
+  // planning_input.set_q_hard_corridor(config_.q_hard_corridor);
+  MakeDynamicPosBoundWeight(planning_input);
   end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
   end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
   // set cost weight by scene
@@ -67,6 +84,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_acc(config_.q_acc_avoid);
       planning_input.set_q_jerk(config_.q_jerk_avoid);
       SetAccJerkBoundByVelocity(planning_input);
+
       concerned_start_q_jerk_ = config_.q_jerk_avoid;
       if (ego_vel_ > config_.avoid_high_vel) {
         planning_input.set_jerk_bound(config_.jerk_bound_avoid);
@@ -301,6 +319,28 @@ void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
   planning_input.set_q_ref_theta(q_ref_theta);
   planning_input.set_jerk_bound(config_.jerk_bound_lane_change_high_vel);
   planning_input.set_q_jerk_bound(config_.q_jerk_bound_lane_change_high_vel);
+}
+
+void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
+    planning::common::LateralPlanningInput &planning_input) {
+  double emergence_factor = 1.0;
+  double intersection_factor = 1.0;
+  if (is_emergence_) {
+    emergence_factor = config_.emergence_avoid_factor;
+  }
+  if (is_in_intersection_) {
+    intersection_factor = config_.intersection_avoid_factor;
+  }
+  // Set according to different vel
+  std::vector<double> xp_v{5.0, 10.0, 20.0, 30.0};
+  double q_soft_bound =
+      planning::interp(ego_vel_, xp_v, config_.map_qsoft_bound) *
+      emergence_factor * intersection_factor;
+  double q_hard_bound =
+      planning::interp(ego_vel_, xp_v, config_.map_qhard_bound);
+
+  planning_input.set_q_soft_corridor(q_soft_bound);
+  planning_input.set_q_hard_corridor(q_hard_bound);
 }
 
 }  // namespace lateral_planning
