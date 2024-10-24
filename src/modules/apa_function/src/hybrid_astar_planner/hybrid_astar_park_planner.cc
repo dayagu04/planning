@@ -78,13 +78,11 @@ void HybridAStarParkPlanner::Init() {
 
 const bool HybridAStarParkPlanner::CheckSegCompleted() {
   bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag &&
-        frame_.current_path_length > 1e-2) {
-      if (frame_.stuck_uss_time > 0.068) {
-        is_seg_complete = true;
-      }
+  if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
+      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag &&
+      frame_.current_path_length > 1e-2) {
+    if (frame_.stuck_uss_time > 0.068) {
+      is_seg_complete = true;
     }
   }
 
@@ -1703,6 +1701,17 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
 
   std::cout << "ego_slot_info.slot_occupied_ratio = "
             << ego_slot_info.slot_occupied_ratio << std::endl;
+
+  // update stuck by uss time
+  // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
+  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
+      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      apa_world_ptr_->GetApaDataPtr()->cur_state ==
+          ApaStateMachine::ACTIVE_IN) {
+    frame_.stuck_uss_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.stuck_uss_time = 0.0;
+  }
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
