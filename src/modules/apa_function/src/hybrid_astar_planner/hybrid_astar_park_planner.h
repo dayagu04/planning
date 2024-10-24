@@ -5,6 +5,7 @@
 #include "apa_plan_base.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
+#include "virtual_wall_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -130,6 +131,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
   AstarPathGear current_gear_;
   int in_slot_car_adjust_count_;
   bool is_path_single_shot_to_goal_;
+
+  SlotRelativePosition slot_side_;
 };
 
 }  // namespace apa_planner

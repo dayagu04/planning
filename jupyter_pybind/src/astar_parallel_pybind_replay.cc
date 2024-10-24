@@ -486,6 +486,44 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
+SlotRelativePosition GenerateSlotSide(
+    const planning::apa_planner::ApaPlannerBase::EgoSlotInfo &ego_slot_info,
+    iflyauto::IFLYLocalization &localization) {
+  const auto &slot_points =
+      ego_slot_info.target_managed_slot.corner_points().corner_point();
+
+  // 顶点顺序,来自感知
+  std::vector<Eigen::Vector2d> pt;
+  pt.resize(slot_points.size());
+
+  for (int i = 0; i < slot_points.size(); i++) {
+    pt[i] << slot_points[i].x(), slot_points[i].y();
+  }
+
+  Eigen::Vector2d n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d t = Eigen::Vector2d::Zero();
+
+  // note: slot points' order is corrected in slot management
+  Pose2D vec02;
+  vec02.x =  pt[2].x()-pt[0].x();
+  vec02.y =  pt[2].y()-pt[0].y();
+
+  Pose2D ego_vector;
+  double ego_heading = localization.orientation.euler_boot.yaw;
+  ego_vector.x  = std::cos(ego_heading);
+  ego_vector.y  = std::sin(ego_heading);
+
+  SlotRelativePosition slot_side = SlotRelativePosition::NONE;
+  double cross = CrossProduct(ego_vector, vec02);
+  if (cross > 0) {
+    slot_side = SlotRelativePosition::LEFT;
+  } else if (cross < 0) {
+    slot_side = SlotRelativePosition::RIGHT;
+  }
+
+  return slot_side;
+}
+
 const bool PlanOnce(
     py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
     py::bytes &localization_info_bytes,
@@ -613,6 +651,9 @@ const bool PlanOnce(
       slot_type = ParkSpaceType::VERTICAL;
     }
 
+    SlotRelativePosition slot_side =
+        GenerateSlotSide(ego_slot_info, localization_info);
+
     wall_decider.Process(
         virtual_wall_obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
         ego_slot_info.slot_length,
@@ -621,7 +662,7 @@ const bool PlanOnce(
         Pose2D(ego_slot_info.target_ego_pos_slot[0],
                ego_slot_info.target_ego_pos_slot[1],
                ego_slot_info.target_ego_heading_slot),
-        slot_type);
+        slot_type, slot_side);
 
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
@@ -780,9 +821,13 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     } else {
       slot_type = ParkSpaceType::VERTICAL;
     }
+    SlotRelativePosition slot_side =
+        GenerateSlotSide(ego_slot_info, local_view.localization);
+
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type);
+        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
+        slot_side);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 

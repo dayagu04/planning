@@ -6,6 +6,7 @@
 
 #include "common.pb.h"
 #include "common_c.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "hybrid_astar_response.h"
@@ -612,7 +613,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   // retired.
   obstacle_generator.GenerateLocalObstacle(
       obs, local_view, true, ego_slot_info.slot_length,
-      ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type);
+      ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
+      slot_side_);
 
   double search_start_time = IflyTime::Now_ms();
   ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;
@@ -1618,19 +1620,19 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
   ego_vector.x  = std::cos(measures_ptr->heading);
   ego_vector.y  = std::sin(measures_ptr->heading);
 
-  bool slot_is_left;
+  slot_side_ = SlotRelativePosition::NONE;
   double cross = CrossProduct(ego_vector, vec02);
   if (cross > 0) {
-    slot_is_left = true;
+    slot_side_ = SlotRelativePosition::LEFT;
   } else if (cross < 0) {
-    slot_is_left = false;
+    slot_side_ = SlotRelativePosition::RIGHT;
   } else {
 
     ILOG_ERROR <<"ego is vertical";
     return false;
   }
 
-  if (!slot_is_left) {
+  if (slot_side_ == SlotRelativePosition::RIGHT) {
     ego_slot_info.slot_width =
         std::min(pnc::geometry_lib::CalPoint2LineDist(pt[2], line_01),
                  pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01));
@@ -1706,7 +1708,7 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
     const double y_err_ratio =
         ego_slot_info.terminal_err.pos.y() / (0.5 * ego_slot_info.slot_width);
 
-    if (!slot_is_left) {
+    if (slot_side_ == SlotRelativePosition::RIGHT) {
       slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
     } else {
       slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);

@@ -28,7 +28,8 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
                                 const double slot_width,
                                 const double slot_length,
                                 const Pose2D& ego_pose, const Pose2D& end,
-                                const ParkSpaceType slot_type) {
+                                const ParkSpaceType slot_type,
+                                const SlotRelativePosition slot_side) {
   start_ = ego_pose;
   end_ = end;
 
@@ -41,7 +42,7 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
 
     ILOG_INFO << "vertical slot virtual wall";
   } else {
-    if (ego_pose.y > -slot_width / 2) {
+    if (slot_side == SlotRelativePosition::RIGHT) {
       RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
                                    end);
     } else {
@@ -81,11 +82,11 @@ void VirtualWallDecider::SampleInLine(const Eigen::Vector2d& start,
 
 void VirtualWallDecider::GenerateCarRelativePosition(const Pose2D& ego_pose) {
   if (ego_pose.y > 0.2) {
-    relative_position_ = CarSlotRelativePosition::car_is_left;
+    relative_position_ = VehRelativePosition::LEFT;
   } else if (ego_pose.y < -0.2) {
-    relative_position_ = CarSlotRelativePosition::car_is_right;
+    relative_position_ = VehRelativePosition::RIGHT;
   } else {
-    relative_position_ = CarSlotRelativePosition::car_is_middle;
+    relative_position_ = VehRelativePosition::MIDDLE;
   }
   return;
 }
@@ -155,7 +156,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   double tail_buffer = 5.5;
   double head_buffer = 7.0;
 
-  if (relative_position_ == CarSlotRelativePosition::car_is_right) {
+  if (relative_position_ == VehRelativePosition::RIGHT) {
     if (theta < 0.0) {
       channel_right_bound_y = ego_pose.y - head_buffer;
       channel_left_bound_y = slot_width / 2.0 + 5.0;
@@ -166,7 +167,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
       channel_right_bound_y = -slot_width / 2.0 - lower_channel_length;
       channel_left_bound_y = slot_width / 2.0 + 10.0;
     }
-  } else if (relative_position_ == CarSlotRelativePosition::car_is_left) {
+  } else if (relative_position_ == VehRelativePosition::LEFT) {
     if (theta < 0.0) {
       channel_right_bound_y = -slot_width / 2 - head_buffer;
       channel_left_bound_y = ego_pose.y + tail_buffer;
@@ -400,7 +401,7 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
   double channel_right_bound_y;
   double channel_left_bound_y;
 
-  if (relative_position_ == CarSlotRelativePosition::car_is_right) {
+  if (relative_position_ == VehRelativePosition::RIGHT) {
     if (theta < 0.0) {
       channel_right_bound_y = ego_pose.y - 4.0 - 10.0;
       channel_left_bound_y = slot_width / 2.0 + 5.0;
@@ -411,7 +412,7 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
       channel_right_bound_y = -slot_width / 2.0 - lower_channel_length;
       channel_left_bound_y = slot_width / 2.0 + 10.0;
     }
-  } else if (relative_position_ == CarSlotRelativePosition::car_is_left) {
+  } else if (relative_position_ == VehRelativePosition::LEFT) {
     if (theta < 0.0) {
       channel_right_bound_y = -slot_width / 2 - 4.0 - 10.0;
       channel_left_bound_y = ego_pose.y + 1.0 + 5.0;

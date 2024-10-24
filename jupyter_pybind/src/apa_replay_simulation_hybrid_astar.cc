@@ -614,7 +614,7 @@ const bool PlanOnce(
         Pose2D(ego_slot_info.target_ego_pos_slot[0],
                ego_slot_info.target_ego_pos_slot[1],
                ego_slot_info.target_ego_heading_slot),
-        slot_type);
+        slot_type, SlotRelativePosition::NONE);
 
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
@@ -775,7 +775,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     }
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type);
+        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
+        SlotRelativePosition::NONE);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 

@@ -280,6 +280,21 @@ struct DebugAstarSearchPoint {
   }
 };
 
+enum class SlotRelativePosition {
+  NONE,
+  RIGHT,
+  LEFT,
+  MAX_NUMBER
+};
+
+enum class VehRelativePosition {
+  NONE,
+  RIGHT,
+  LEFT,
+  MIDDLE,
+  MAX_NUMBER
+};
+
 std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
