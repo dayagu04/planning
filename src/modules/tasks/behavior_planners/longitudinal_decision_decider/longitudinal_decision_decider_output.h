@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class LongitudinalDecisionDeciderOutput {
-public:
+ public:
   LongitudinalDecisionDeciderOutput() = default;
   ~LongitudinalDecisionDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

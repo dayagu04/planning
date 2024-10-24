@@ -714,42 +714,49 @@ void PlanningScheduler::FillPlanningHmiInfo(
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
 
-  if (curr_state == kLaneChangePropose ||
-      curr_state == kLaneChangeExecution ||
-      curr_state == kLaneChangeComplete ||
-      curr_state == kLaneChangeCancel) {
+  if (curr_state == kLaneChangePropose || curr_state == kLaneChangeExecution ||
+      curr_state == kLaneChangeComplete || curr_state == kLaneChangeCancel) {
     int target_reference_virtual_id;
     if (curr_state == kLaneChangeCancel) {
-      target_reference_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
+      target_reference_virtual_id =
+          lane_change_decider_output.fix_lane_virtual_id;
     } else {
-      target_reference_virtual_id = lane_change_decider_output.target_lane_virtual_id;
+      target_reference_virtual_id =
+          lane_change_decider_output.target_lane_virtual_id;
     }
     auto target_reference =
         session_.environmental_model()
             .get_reference_path_manager()
-            ->get_reference_path_by_lane(target_reference_virtual_id,
-                                         false);
+            ->get_reference_path_by_lane(target_reference_virtual_id, false);
     if (target_reference != nullptr) {
       Point2D cart_point;
       if (target_reference->get_frenet_coord()->SLToXY(
               Point2D(target_reference->get_frenet_ego_state().s(), 0),
               cart_point)) {
-        const auto& ego_pose = session_.environmental_model().get_ego_state_manager()->ego_pose();
+        const auto &ego_pose =
+            session_.environmental_model().get_ego_state_manager()->ego_pose();
         const double theta_ori = ego_pose.theta;
         double landing_point_theta_global = 0;
         ReferencePathPoint reference_path_point{};
-        if (target_reference->get_reference_point_by_lon(target_reference->get_frenet_ego_state().s(), reference_path_point)) {
+        if (target_reference->get_reference_point_by_lon(
+                target_reference->get_frenet_ego_state().s(),
+                reference_path_point)) {
           landing_point_theta_global = reference_path_point.path_point.theta;
         }
-        Eigen::Vector2d pos_n_ori (ego_pose.x, ego_pose.y);
-        pnc::geometry_lib::GlobalToLocalTf global_to_local_tf (pos_n_ori, theta_ori);
-        Eigen::Vector2d p_n (cart_point.x, cart_point.y);
-        Eigen::Vector2d  landing_point_body = global_to_local_tf.GetPos(p_n);
-        const double landing_point_theta_local = global_to_local_tf.GetHeading(landing_point_theta_global);
-        planning_hmi_info->ad_info.landing_point.relative_pos.x = landing_point_body.x();
-        planning_hmi_info->ad_info.landing_point.relative_pos.y = landing_point_body.y();
+        Eigen::Vector2d pos_n_ori(ego_pose.x, ego_pose.y);
+        pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori,
+                                                              theta_ori);
+        Eigen::Vector2d p_n(cart_point.x, cart_point.y);
+        Eigen::Vector2d landing_point_body = global_to_local_tf.GetPos(p_n);
+        const double landing_point_theta_local =
+            global_to_local_tf.GetHeading(landing_point_theta_global);
+        planning_hmi_info->ad_info.landing_point.relative_pos.x =
+            landing_point_body.x();
+        planning_hmi_info->ad_info.landing_point.relative_pos.y =
+            landing_point_body.y();
         planning_hmi_info->ad_info.landing_point.relative_pos.z = 0;
-        planning_hmi_info->ad_info.landing_point.heading = landing_point_theta_local;
+        planning_hmi_info->ad_info.landing_point.heading =
+            landing_point_theta_local;
       }
     }
   }

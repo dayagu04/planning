@@ -2,7 +2,6 @@
 
 #include "tasks/task.h"
 
-
 namespace planning {
 
 class VirtualObstacleDecider : public Task {

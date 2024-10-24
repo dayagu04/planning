@@ -90,10 +90,11 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   is_emergency_avoidance_situation_ = false;
 
   UpdateEmergencyAvoidanceSituation(lc_status);
-  LOG_DEBUG("EmergenceAvoidRequest::Update: is_emergency_avoidance_situation_ %d",
-            is_emergency_avoidance_situation_);
+  LOG_DEBUG(
+      "EmergenceAvoidRequest::Update: is_emergency_avoidance_situation_ %d",
+      is_emergency_avoidance_situation_);
   JSON_DEBUG_VALUE("is_emergency_avoidance_situation_",
-                    is_emergency_avoidance_situation_);
+                   is_emergency_avoidance_situation_);
 
   if (!is_emergency_avoidance_situation_) {
     if (request_type_ != NO_CHANGE) {
@@ -334,8 +335,7 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
           "leading_vehicle_speed: %f, long_gap: %f "
           "Front Leading track_id: %d \n",
           leading_vehicle_speed, long_gap, leading_vehicle_id_);
-      JSON_DEBUG_VALUE("leading_vehicle_id_",
-                        leading_vehicle_id_);
+      JSON_DEBUG_VALUE("leading_vehicle_id_", leading_vehicle_id_);
     }
   } else {
     emergency_situation_timetstamp_ = std::numeric_limits<double>::max();

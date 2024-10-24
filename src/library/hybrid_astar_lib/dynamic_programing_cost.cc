@@ -196,7 +196,7 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
                                const MapBound& XYbounds,
                                const ParkObstacleList* obstacles,
                                const double veh_half_width_with_safe_dist) {
-  // init
+// init
 #if DEBUG_NODE_COST
   double start_timestamp = IflyTime::Now_ms();
 #endif
@@ -451,9 +451,7 @@ const bool GridSearch::IsPointInMapBound(const double x, const double y) {
   return true;
 }
 
-void GridSearch::Init() {
-  return;
-}
+void GridSearch::Init() { return; }
 
 void GridSearch::ProjectObstacleToNodeMap() {
   Node2d* node = nullptr;

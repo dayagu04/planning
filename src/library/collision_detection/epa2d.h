@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include "cdl_math.h"
-#include "gjk2d.h"
 #include "collision_detect_types.h"
+#include "gjk2d.h"
 
 namespace cdl {
 struct SimplexEdge2D {

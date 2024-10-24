@@ -273,7 +273,7 @@ struct DebugAstarSearchPoint {
   DebugAstarSearchPoint(const double x, const double y, const bool is_safe) {
     pos.x = x;
     pos.y = y;
-    safe  = is_safe;
+    safe = is_safe;
   }
 };
 

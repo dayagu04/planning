@@ -8,9 +8,6 @@ AgentHeadwayDecider::AgentHeadwayDecider(
   name_ = "AgentHeadwayDecider";
 }
 
-bool AgentHeadwayDecider::Execute() {
-
-  return true;
-}
+bool AgentHeadwayDecider::Execute() { return true; }
 
 }  // namespace planning

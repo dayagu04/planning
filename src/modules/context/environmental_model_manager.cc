@@ -1329,7 +1329,7 @@ void EnvironmentalModelManager::RunBlinkState(
       if (active) {
         // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
         if ((history_lc_source_[0] == INT_REQUEST &&
-            history_lc_source_[1] != INT_REQUEST) ||
+             history_lc_source_[1] != INT_REQUEST) ||
             (state == kLaneKeeping)) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         }
@@ -1344,8 +1344,7 @@ void EnvironmentalModelManager::RunBlinkState(
           is_ilc_right_change) {
         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_ilc_right_change ||
-                 is_cancel) {
+      } else if (is_ilc_right_change || is_cancel) {
         // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
@@ -1359,8 +1358,7 @@ void EnvironmentalModelManager::RunBlinkState(
           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
           is_ilc_left_change) {
         current_turn_signal_ = common::TurnSignalType::NONE;
-      } else if (is_ilc_left_change ||
-                 is_cancel) {
+      } else if (is_ilc_left_change || is_cancel) {
         current_turn_signal_ = common::TurnSignalType::NONE;
       } else {
         current_turn_signal_ = common::TurnSignalType::RIGHT;

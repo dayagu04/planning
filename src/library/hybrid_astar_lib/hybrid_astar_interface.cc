@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 
+#include "aabb2d.h"
 #include "debug_info_log.h"
 #include "future_path_decider.h"
 #include "hybrid_a_star.h"
@@ -16,7 +17,6 @@
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
-#include "aabb2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
@@ -629,8 +629,8 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
 }
 
 const AstarSearchState HybridAStarInterface::TransformFirstSegmentPath(
-    std::vector<AStarPathPoint>& result,
-    const HybridAStarResult& full_path, const Pose2D& start) {
+    std::vector<AStarPathPoint>& result, const HybridAStarResult& full_path,
+    const Pose2D& start) {
   // init
   result.clear();
   AstarSearchState state;

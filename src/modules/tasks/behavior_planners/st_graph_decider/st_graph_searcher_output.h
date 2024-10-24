@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class StGraphSearcherOutput {
-public:
+ public:
   StGraphSearcherOutput() = default;
   ~StGraphSearcherOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

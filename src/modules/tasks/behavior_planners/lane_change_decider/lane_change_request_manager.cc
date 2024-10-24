@@ -48,8 +48,7 @@ void LaneChangeRequestManager::FinishRequest() {
   gen_turn_signal_ = NO_CHANGE;
 }
 
-bool LaneChangeRequestManager::Update(
-    int lc_status, const bool hd_map_valid) {
+bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   LOG_DEBUG("LaneChangeRequestManager.Update() \n");
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
   // TBD： 后续考虑json形式进行数据存储
@@ -84,7 +83,8 @@ bool LaneChangeRequestManager::Update(
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const double dis_to_first_merge =
       virtual_lane_mgr_->distance_to_first_road_merge();
-  const int origin_relative_id_zero_nums = virtual_lane_mgr_->origin_relative_id_zero_nums();
+  const int origin_relative_id_zero_nums =
+      virtual_lane_mgr_->origin_relative_id_zero_nums();
 
   int state = lane_change_decider_output.curr_state;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -172,15 +172,13 @@ bool LaneChangeRequestManager::Update(
       "cone_change_request: %d, "
       "int_cancel_reason: %d, turn_signal: %d \n",
       int_request_.request_type(), map_request_.request_type(),
-      overtake_request_.request_type(),
-      emergence_avoid_request_.request_type(),
+      overtake_request_.request_type(), emergence_avoid_request_.request_type(),
       cone_change_request_.request_type(), int_request_cancel_reason_,
       gen_turn_signal_);
 
   if (int_request_cancel_reason_ == MANUAL_CANCEL &&
       gen_turn_signal_ != NO_CHANGE &&
-      target_lane_virtual_id_ !=
-          virtual_lane_mgr_->current_lane_virtual_id() &&
+      target_lane_virtual_id_ != virtual_lane_mgr_->current_lane_virtual_id() &&
       request_source_ == MAP_REQUEST) {
     if (gen_turn_signal_ == LEFT_CHANGE) {
       int_request_.set_left_cancel_freeze_cnt(
@@ -253,8 +251,7 @@ bool LaneChangeRequestManager::Update(
     }
     request_ = emergence_avoid_request_.request_type();
     request_source_ = EMERGENCE_AVOID_REQUEST;
-    target_lane_virtual_id_ =
-        emergence_avoid_request_.target_lane_virtual_id();
+    target_lane_virtual_id_ = emergence_avoid_request_.target_lane_virtual_id();
   } else if (map_request_.request_type() != NO_CHANGE) {
     if (merge_change_request_.request_type() != NO_CHANGE) {
       merge_change_request_.Finish();
@@ -281,9 +278,8 @@ bool LaneChangeRequestManager::Update(
     request_ = overtake_request_.request_type();
     request_source_ = (request_ != NO_CHANGE) ? OVERTAKE_REQUEST : NO_REQUEST;
     target_lane_virtual_id_ =
-        (request_ != NO_CHANGE)
-            ? overtake_request_.target_lane_virtual_id()
-            : virtual_lane_mgr_->current_lane_virtual_id();
+        (request_ != NO_CHANGE) ? overtake_request_.target_lane_virtual_id()
+                                : virtual_lane_mgr_->current_lane_virtual_id();
     if (request_ != NO_CHANGE && request_source_ == OVERTAKE_REQUEST) {
       int overtake_vehicle_id = overtake_request_.GetOvertakeVehicleId();
       JSON_DEBUG_VALUE("overtake_vehicle_id", overtake_vehicle_id);

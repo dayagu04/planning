@@ -136,8 +136,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
   return true;
 }
 
-const bool RSExpansionDecider::NeedRsLinkByOffset(
-    const Node3d *node) {
+const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) {
   if (std::fabs(node->GetY()) > 10.0 || std::fabs(node->GetX()) > 15.0) {
     return false;
   }

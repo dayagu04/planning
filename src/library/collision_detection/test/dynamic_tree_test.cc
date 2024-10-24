@@ -3,9 +3,9 @@
 #include <iostream>
 
 #include "./../cdl_math.h"
+#include "./../collision_detect_types.h"
 #include "./../morton2d.h"
 #include "./../rng.h"
-#include "./../collision_detect_types.h"
 #include "src/common/collision_detection/dynamic_tree.h"
 #include "src/common/collision_detection/polygon_base.h"
 
