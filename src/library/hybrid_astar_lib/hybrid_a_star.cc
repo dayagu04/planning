@@ -283,14 +283,17 @@ bool HybridAStar::PlanByRSPathSampling(
   return true;
 }
 
-bool HybridAStar::PlanByCubicPath(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const double lon_min_sampling_length, const MapBound& XYbounds,
-    const ParkObstacleList& obstacles, const AstarRequest& request,
-    EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
-    ParkReferenceLine* ref_line) {
+bool HybridAStar::PlanByCubicPolynomialSampling(HybridAStarResult* result,
+                                  const Pose2D& start, const Pose2D& end,
+                                  const double lon_min_sampling_length,
+                                  const MapBound& XYbounds,
+                                  const ParkObstacleList& obstacles,
+                                  const AstarRequest& request,
+                                  EulerDistanceTransform* edt,
+                                  const ObstacleClearZone *clear_zone,
+                                  ParkReferenceLine* ref_line) {
   double astar_start_time = IflyTime::Now_ms();
-  ILOG_INFO << "hybrid astar begin, generate path by cubic.";
+  ILOG_INFO << "hybrid astar begin, by cubic polynomial";
 
   // init
   obstacles_ = &obstacles;
@@ -2535,11 +2538,6 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
 
   if (request.history_gear == AstarPathGear::reverse) {
     ILOG_INFO << "history gear is reverse";
-    return;
-  }
-
-  if (request.space_type != ParkSpaceType::VERTICAL) {
-    ILOG_INFO << "vertical";
     return;
   }
 

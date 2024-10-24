@@ -82,13 +82,12 @@ class HybridAStar {
       ParkReferenceLine* ref_line);
 
   // use cubic path sampling to link start point and end point.
-  bool PlanByCubicPath(HybridAStarResult* result, const Pose2D& start,
-                       const Pose2D& target, const double expected_path_dist,
-                       const MapBound& XYbounds,
-                       const ParkObstacleList& obstacles,
-                       const AstarRequest& request, EulerDistanceTransform* edt,
-                       const ObstacleClearZone* clear_zone,
-                       ParkReferenceLine* ref_line);
+  bool PlanByCubicPolynomialSampling(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      const double expected_path_dist, const MapBound& XYbounds,
+      const ParkObstacleList& obstacles, const AstarRequest& request,
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
 
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);

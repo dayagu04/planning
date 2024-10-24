@@ -249,7 +249,13 @@ int HybridAStarInterface::UpdateOutput() {
   } else {
     double dist_to_slot_up_edge =
         request_.slot_length - initial_state_.DistanceToOrigin();
-    double lon_min_sampling_length = std::max(2.0, dist_to_slot_up_edge);
+    double lon_min_sampling_length;
+    if (request_.space_type == ParkSpaceType::VERTICAL ||
+        request_.space_type == ParkSpaceType::SLANTING) {
+      lon_min_sampling_length = std::max(2.0, dist_to_slot_up_edge);
+    } else {
+      lon_min_sampling_length = 0.4;
+    }
 
     for (size_t i = 0; i < config_.lat_hierarchy_safe_buffer.size(); i++) {
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
@@ -262,10 +268,10 @@ int HybridAStarInterface::UpdateOutput() {
 
       if (request_.path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
-        if (hybrid_astar_->PlanByCubicPath(&coarse_traj_, initial_state_,
-                                           goal_state_, lon_min_sampling_length,
-                                           map_bounds_, obs_, request_, &edt_,
-                                           &clear_zone_, &ref_line_)) {
+        if (hybrid_astar_->PlanByCubicPolynomialSampling(
+                &coarse_traj_, initial_state_, goal_state_,
+                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+                &clear_zone_, &ref_line_)) {
           double response_end_time = IflyTime::Now_ms();
 
           ILOG_INFO << "hybrid astar finish, cubic path point size = "
@@ -393,11 +399,17 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
     search_state_ = AstarSearchState::SEARCHING;
 
-    double dist_to_up = request.slot_length - initial_state_.DistanceToOrigin();
-    double expected_forward_dist = std::max(2.0, dist_to_up);
+    double dist_to_slot_up_edge = request.slot_length - initial_state_.DistanceToOrigin();
+    double lon_min_sampling_dist;
+    if (request_.space_type == ParkSpaceType::VERTICAL ||
+        request_.space_type == ParkSpaceType::SLANTING) {
+      lon_min_sampling_dist = std::max(2.0, dist_to_slot_up_edge);
+    } else {
+      lon_min_sampling_dist = 0.4;
+    }
 
     hybrid_astar_->PlanByRSPathSampling(
-        &coarse_traj_, start_pose, end_pose, expected_forward_dist, map_bounds_,
+        &coarse_traj_, start_pose, end_pose, lon_min_sampling_dist, map_bounds_,
         obs_list, request, &edt_, &clear_zone_, &ref_line_);
   }
 
