@@ -93,7 +93,7 @@ const bool HybridAStarParkPlanner::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
       apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
     if (frame_.stuck_uss_time >
-        apa_param.GetParam().deadend_uss_stuck_replan_wait_time) {
+        apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time) {
       frame_.is_replan_by_uss = true;
       return true;
     }
@@ -583,14 +583,17 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   ParkSpaceType slot_type;
   if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
       iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
-    end_straight_len = apa_param.GetParam().parallel_slot_end_straight_dist;
+    end_straight_len =
+        apa_param.GetParam().astar_config.parallel_slot_end_straight_dist;
     slot_type = ParkSpaceType::PARALLEL;
   } else if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
              iflyauto::PARKING_SLOT_TYPE_SLANTING) {
-    end_straight_len = apa_param.GetParam().vertical_slot_end_straight_dist;
+    end_straight_len =
+        apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     slot_type = ParkSpaceType::SLANTING;
   } else {
-    end_straight_len = apa_param.GetParam().vertical_slot_end_straight_dist;
+    end_straight_len =
+        apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     slot_type = ParkSpaceType::VERTICAL;
   }
   end.x = real_end.x + end_straight_len;
@@ -664,7 +667,7 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
-    if (apa_param.GetParam().cubic_polynomial_pose_adjustment) {
+    if (apa_param.GetParam().astar_config.cubic_polynomial_pose_adjustment) {
       cur_request.path_generate_method =
           planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
     } else {
@@ -1748,70 +1751,43 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
 }
 
 const bool HybridAStarParkPlanner::CheckParallelSlotFinished() {
+  const ApaParameters& config = apa_param.GetParam();
   const auto& ego_slot_info = frame_.ego_slot_info;
 
-  const bool lon_condition =
-      ego_slot_info.terminal_err.pos.x() < apa_param.GetParam().finish_lon_err;
+  const bool rear_axis_lon_condition =
+      ego_slot_info.terminal_err.pos.x() <
+      config.astar_config.parallel_finish_lon_err;
 
-  const double lat_offset = ego_slot_info.ego_pos_slot.y();
-  const double ego_head_lat_offset =
-      (ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
-                                     apa_param.GetParam().front_overhanging) *
-                                        ego_slot_info.ego_heading_slot_vec)
+  const double rear_axis_lat_offset = ego_slot_info.ego_pos_slot.y();
+  const double veh_head_lat_offset =
+      (ego_slot_info.ego_pos_slot +
+       (config.wheel_base + config.front_overhanging) *
+           ego_slot_info.ego_heading_slot_vec)
           .y();
 
   const bool ego_center_lat_condition =
-      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err;
+      std::fabs(rear_axis_lat_offset) <=
+      config.astar_config.parallel_finish_center_lat_err;
 
   const bool ego_head_lat_condition =
-      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict &&
-      std::fabs(ego_head_lat_offset) <=
-          apa_param.GetParam().finish_lat_err_strict;
+      std::fabs(veh_head_lat_offset) <=
+      config.astar_config.parallel_finish_head_lat_err;
 
-  const bool heading_condition_1 =
+  const bool heading_condition =
       std::fabs(ego_slot_info.terminal_err.heading) <=
-      apa_param.GetParam().finish_heading_err * kDeg2Rad;
-
-  const bool heading_condition_2 =
-      std::fabs(ego_slot_info.terminal_err.heading) <=
-      (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
+      config.astar_config.parallel_finish_heading_err * kDeg2Rad;
 
   const bool lat_condition =
-      (ego_center_lat_condition && heading_condition_1) &&
-      (ego_head_lat_condition && heading_condition_2);
+      ego_center_lat_condition && ego_head_lat_condition && heading_condition;
 
   const bool static_condition =
       apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
 
   const bool remain_s_condition =
-      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+      frame_.remain_dist < config.max_replan_remain_dist;
 
-  bool parking_finish =
-      lon_condition && lat_condition && static_condition && remain_s_condition;
-
-  if (parking_finish) {
-    return true;
-  }
-
-  // stucked by directly behind uss
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
-  const bool enter_slot_condition =
-      frame_.ego_slot_info.slot_occupied_ratio >
-      apa_param.GetParam().finish_uss_slot_occupied_ratio;
-  const bool remain_uss_condition =
-      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
-  if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
-    parking_finish = lat_condition && static_condition &&
-                     enter_slot_condition && remain_uss_condition;
-  }
-
-  if (parking_finish) {
-    return true;
-  }
-
-  parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   (ego_slot_info.terminal_err.pos.x() < 0.568);
+  bool parking_finish = rear_axis_lon_condition && lat_condition &&
+                        static_condition && remain_s_condition;
 
   return parking_finish;
 }

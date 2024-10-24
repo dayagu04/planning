@@ -284,5 +284,9 @@
   "comment_17": "gen output params",
   "max_velocity": 0.6,
   "vertical_slot_auto_scheduler_for_astar": true,
-  "parallel_slot_auto_scheduler_for_astar": false
+  "parallel_slot_auto_scheduler_for_astar": false,
+  "astar_parallel_finish_lon_err" : 0.25,
+  "astar_parallel_finish_center_lat_err" : 0.1,
+  "astar_parallel_finish_head_lat_err" : 0.25,
+  "astar_parallel_finish_heading_err" : 2.5
 }

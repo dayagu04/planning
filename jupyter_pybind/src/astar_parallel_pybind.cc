@@ -694,7 +694,7 @@ std::vector<Eigen::Vector3d> Update(
   // end
   Eigen::Vector3d end;
   end[0] = ego_slot_info.target_ego_pos_slot[0] +
-           parking_param.parallel_slot_end_straight_dist;
+           parking_param.astar_config.parallel_slot_end_straight_dist;
   end[1] = ego_slot_info.target_ego_pos_slot[1];
   end[2] = ego_slot_info.target_ego_heading_slot;
 
@@ -736,9 +736,10 @@ std::vector<Eigen::Vector3d> Update(
     hybrid_astar_interface_->ExtendPathToRealTargetPose(request.real_goal);
 
     ILOG_INFO << "hybrid_astar_interface finish";
-    GetPathFromHybridAstar(ego_slot_info,
-                           parking_param.parallel_slot_end_straight_dist,
-                           ego_global_pose);
+    GetPathFromHybridAstar(
+        ego_slot_info,
+        parking_param.astar_config.parallel_slot_end_straight_dist,
+        ego_global_pose);
 
     // just test rs library
 

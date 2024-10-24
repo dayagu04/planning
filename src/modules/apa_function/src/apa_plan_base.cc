@@ -360,7 +360,8 @@ const void ApaPlannerBase::SchedulerForGeometryWithAstar() {
     return;
   }
 
-  if (!apa_param.GetParam().vertical_slot_auto_scheduler_for_astar) {
+  if (!apa_param.GetParam()
+           .astar_config.vertical_slot_auto_scheduler_for_astar) {
     return;
   }
 

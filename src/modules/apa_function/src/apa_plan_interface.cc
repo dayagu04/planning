@@ -388,8 +388,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().uss_stuck_replan_wait_time, double,
                   "uss_stuck_replan_wait_time");
 
-  JSON_READ_VALUE(apa_param.SetPram().deadend_uss_stuck_replan_wait_time,
-                  double, "deadend_uss_stuck_replan_wait_time");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
+      double, "deadend_uss_stuck_replan_wait_time");
 
   JSON_READ_VALUE(apa_param.SetPram().uss_scan_angle_deg, double,
                   "uss_scan_angle_deg");
@@ -845,15 +846,17 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   ILOG_INFO << "path_generator_type "
             << static_cast<int>(apa_param.GetParam().path_generator_type);
 
-  JSON_READ_VALUE(apa_param.SetPram().vertical_slot_end_straight_dist, double,
-                  "vertical_slot_end_straight_dist");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_end_straight_dist, double,
+      "vertical_slot_end_straight_dist");
   ILOG_INFO << "vertical_slot_end_straight_dist "
-            << apa_param.SetPram().vertical_slot_end_straight_dist;
+            << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
 
-  JSON_READ_VALUE(apa_param.SetPram().enable_delete_fusion_obj_in_slot, bool,
-                  "enable_delete_fusion_obj_in_slot");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.enable_delete_fusion_obj_in_slot, bool,
+      "enable_delete_fusion_obj_in_slot");
   ILOG_INFO << "enable_delete_fusion_obj_in_slot "
-            << apa_param.SetPram().enable_delete_fusion_obj_in_slot;
+            << apa_param.SetPram().astar_config.enable_delete_fusion_obj_in_slot;
 
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
@@ -958,15 +961,29 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().footprint_circle_r, std::vector<double>,
                   "footprint_circle_r");
 
-  JSON_READ_VALUE(apa_param.SetPram().vertical_slot_auto_scheduler_for_astar,
-                  bool, "vertical_slot_auto_scheduler_for_astar");
-  JSON_READ_VALUE(apa_param.SetPram().parallel_slot_auto_scheduler_for_astar,
-                  bool, "parallel_slot_auto_scheduler_for_astar");
-
-  JSON_READ_VALUE(apa_param.SetPram().parallel_slot_end_straight_dist, double,
-                  "parallel_slot_end_straight_dist");
-  JSON_READ_VALUE(apa_param.SetPram().cubic_polynomial_pose_adjustment, bool,
-                  "cubic_polynomial_pose_adjustment");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_auto_scheduler_for_astar,
+      bool, "vertical_slot_auto_scheduler_for_astar");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.parallel_slot_auto_scheduler_for_astar,
+      bool, "parallel_slot_auto_scheduler_for_astar");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.parallel_slot_end_straight_dist, double,
+      "parallel_slot_end_straight_dist");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.cubic_polynomial_pose_adjustment, bool,
+      "cubic_polynomial_pose_adjustment");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_finish_lon_err, double,
+                  "astar_parallel_finish_lon_err");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.parallel_finish_center_lat_err, double,
+      "astar_parallel_finish_center_lat_err");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.parallel_finish_head_lat_err, double,
+      "astar_parallel_finish_head_lat_err");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.parallel_finish_heading_err, double,
+      "astar_parallel_finish_heading_err");
 }
 
 std::shared_ptr<ApaPlannerBase> ApaPlanInterface::GetPlannerByType(

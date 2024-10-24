@@ -788,7 +788,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     // end
     Eigen::Vector3d end;
     end[0] = ego_slot_info.target_ego_pos_slot[0] +
-             park_param.vertical_slot_end_straight_dist;
+             park_param.astar_config.vertical_slot_end_straight_dist;
     end[1] = ego_slot_info.target_ego_pos_slot[1];
     end[2] = ego_slot_info.target_ego_heading_slot;
 
