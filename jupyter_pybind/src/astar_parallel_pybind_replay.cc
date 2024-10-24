@@ -99,6 +99,7 @@ EigenPath2d static_ref_line_;
 Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
 Eigen::Vector3d coordinate_system_;
+Eigen::Vector3d goal_pose_;
 
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
@@ -291,6 +292,14 @@ int GetPathFromHybridAstar() {
   // 基坐标位置
   coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
   coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
+
+  // goal
+  local_position.x = ego_slot_info_.target_ego_pos_slot.x();
+  local_position.y = ego_slot_info_.target_ego_pos_slot.y();
+
+  tf.ULFLocalPoseToGlobal(&global_position, local_position);
+  goal_pose_[0] = global_position.x;
+  goal_pose_[1] = global_position.y;
 
   // plot all searched node
   const std::vector<DebugAstarSearchPoint> &all_search_node =
@@ -962,6 +971,10 @@ const Eigen::Vector3d GetCoordinateSystem() {
   return coordinate_system_;
 }
 
+const Eigen::Vector3d GetGoalPose() {
+  return goal_pose_;
+}
+
 const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
   return all_searched_node_;
 }
@@ -993,5 +1006,6 @@ PYBIND11_MODULE(astar_parallel_replay_py, m) {
       .def("GetSearchSequencePath", &GetSearchSequencePath)
       .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetAllSearchNode", &GetAllSearchNode)
+      .def("GetGoalPose", &GetGoalPose)
       .def("GetDynamicState", &GetDynamicState);
 }

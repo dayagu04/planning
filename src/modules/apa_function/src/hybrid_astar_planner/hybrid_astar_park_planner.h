@@ -32,6 +32,10 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   virtual const bool CheckFinished() override;
 
+  const bool CheckVerticalSlotFinished();
+
+  const bool CheckParallelSlotFinished();
+
   virtual void PlanCore() override;
 
   virtual void Log() const override;

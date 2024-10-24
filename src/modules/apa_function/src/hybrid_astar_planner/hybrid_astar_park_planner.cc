@@ -133,6 +133,18 @@ const bool HybridAStarParkPlanner::CheckReplan() {
 }
 
 const bool HybridAStarParkPlanner::CheckFinished() {
+  bool ret = false;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    ret = CheckParallelSlotFinished();
+  } else {
+    ret = CheckVerticalSlotFinished();
+  }
+
+  return ret;
+}
+
+const bool HybridAStarParkPlanner::CheckVerticalSlotFinished() {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const bool lon_condition =
@@ -1733,6 +1745,75 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
   ego_slot_info.slot_type  = 1;
 
   return true;
+}
+
+const bool HybridAStarParkPlanner::CheckParallelSlotFinished() {
+  const auto& ego_slot_info = frame_.ego_slot_info;
+
+  const bool lon_condition =
+      ego_slot_info.terminal_err.pos.x() < apa_param.GetParam().finish_lon_err;
+
+  const double lat_offset = ego_slot_info.ego_pos_slot.y();
+  const double ego_head_lat_offset =
+      (ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
+                                     apa_param.GetParam().front_overhanging) *
+                                        ego_slot_info.ego_heading_slot_vec)
+          .y();
+
+  const bool ego_center_lat_condition =
+      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err;
+
+  const bool ego_head_lat_condition =
+      std::fabs(lat_offset) <= apa_param.GetParam().finish_lat_err_strict &&
+      std::fabs(ego_head_lat_offset) <=
+          apa_param.GetParam().finish_lat_err_strict;
+
+  const bool heading_condition_1 =
+      std::fabs(ego_slot_info.terminal_err.heading) <=
+      apa_param.GetParam().finish_heading_err * kDeg2Rad;
+
+  const bool heading_condition_2 =
+      std::fabs(ego_slot_info.terminal_err.heading) <=
+      (apa_param.GetParam().finish_heading_err + 1.988) * kDeg2Rad;
+
+  const bool lat_condition =
+      (ego_center_lat_condition && heading_condition_1) &&
+      (ego_head_lat_condition && heading_condition_2);
+
+  const bool static_condition =
+      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+
+  const bool remain_s_condition =
+      frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
+
+  bool parking_finish =
+      lon_condition && lat_condition && static_condition && remain_s_condition;
+
+  if (parking_finish) {
+    return true;
+  }
+
+  // stucked by directly behind uss
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  const bool enter_slot_condition =
+      frame_.ego_slot_info.slot_occupied_ratio >
+      apa_param.GetParam().finish_uss_slot_occupied_ratio;
+  const bool remain_uss_condition =
+      frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist;
+  if (uss_obstacle_avoider_ptr->CheckIsDirectlyBehindUss()) {
+    parking_finish = lat_condition && static_condition &&
+                     enter_slot_condition && remain_uss_condition;
+  }
+
+  if (parking_finish) {
+    return true;
+  }
+
+  parking_finish = lat_condition && static_condition && enter_slot_condition &&
+                   (ego_slot_info.terminal_err.pos.x() < 0.568);
+
+  return parking_finish;
 }
 
 }  // namespace apa_planner

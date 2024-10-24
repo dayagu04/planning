@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241021/20241021-16-50-58/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-21-16-50-59_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241021/20241021-16-56-19/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-21-16-56-19_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -110,8 +110,6 @@ data_planning_right = ColumnDataSource(data = {'plan_path_x':[],
 data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 # record包中的定位信息
 data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-# 轨迹点pose，融合仿真使用
-data_moving_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_path_end_stop_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -142,6 +140,7 @@ data_plot_ref_line = ColumnDataSource(data={'plan_path_x': [],
                                       })
 data_search_sequence_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
+data_goal_pose = ColumnDataSource(data = {'x':[], 'y':[]})
 data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
@@ -155,6 +154,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 6
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
+fig1.circle('y','x', source = data_goal_pose, size=8, color='purple')
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
@@ -165,7 +165,6 @@ fig1.multi_line('y_vec', 'x_vec', source=data_record_node_list, line_width=1.0, 
 fig1.multi_line('y_vec', 'x_vec', source=data_real_time_node_list, line_width=1.0, line_color='red', line_dash='solid', legend_label='real_time_node_list')
 fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'veh_body_envelope', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_current_gear_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'current_path_envelop', visible = False)
-fig1.patch('car_yn', 'car_xn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car')
 fig1.multi_line('y', 'x',source = all_rs_heuristic_path, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'rs_h_path')
 fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend_label = 'virtual_wall')
 fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
@@ -1000,17 +999,6 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
   car_xn = []
   car_yn = []
-  pose = astar_parallel_replay_py.GetTrajPoseByDist()
-
-  if pose[3] > 0:
-    for i in range(len(car_polygon_x)):
-        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], pose[0], pose[1], pose[2])
-        car_xn.append(tmp_x)
-        car_yn.append(tmp_y)
-    data_moving_car.data.update({
-      'car_xn': car_xn,
-      'car_yn': car_yn,
-    })
 
   # get all rs path
   paths = astar_parallel_replay_py.GetRSHeuristicPath()
@@ -1082,8 +1070,16 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time6, ms ', (end_time6 - end_time5) * 1000)
   # print('loop over')
 
+  # base pose
   pose = astar_parallel_replay_py.GetCoordinateSystem()
   data_coordinate_system.data.update({
+    'x': [pose[0]],
+    'y': [pose[1]],
+  })
+
+  # target goal
+  pose = astar_parallel_replay_py.GetGoalPose()
+  data_goal_pose.data.update({
     'x': [pose[0]],
     'y': [pose[1]],
   })

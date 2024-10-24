@@ -316,18 +316,30 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
   channel_left_bound_lower[1] =
       std::max(channel_left_bound_lower[1], veh_aabb.max_[1]);
 
+  // channel right bound
+  Eigen::Vector2d channel_right_bound_pt1 =
+      Eigen::Vector2d(channel_up_bound_right[0], slot_top_wall_left[1]);
+  Eigen::Vector2d channel_right_bound_pt2 = slot_top_wall_left;
+
+  Eigen::Vector2d channel_right_bound_pt3 = slot_bottom_wall_left;
+  Eigen::Vector2d channel_right_bound_pt4 =
+      Eigen::Vector2d(channel_bottom_bound_left[0], slot_bottom_wall_left[1]);
+
   // add points
   SampleInLine(right_wall_upper, right_wall_lower, &points);
 
   SampleInLine(slot_bottom_wall_left, slot_bottom_wall_right, &points);
 
-  SampleInLine(slot_top_wall_left, slot_top_wall_left, &points);
+  SampleInLine(slot_top_wall_left, slot_top_wall_right, &points);
 
   SampleInLine(channel_up_bound_left, channel_up_bound_right, &points);
 
   SampleInLine(channel_bottom_bound_left, channel_bottom_bound_right, &points);
 
   SampleInLine(channel_left_bound_upper, channel_left_bound_lower, &points);
+
+  SampleInLine(channel_right_bound_pt1, channel_right_bound_pt2, &points);
+  SampleInLine(channel_right_bound_pt3, channel_right_bound_pt4, &points);
 
   return;
 }
