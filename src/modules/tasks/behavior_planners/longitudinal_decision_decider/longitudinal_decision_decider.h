@@ -12,8 +12,20 @@ class LongitudinalDecisionDecider : public Task {
 
   bool Execute() override;
 
+  void Reset();  // 后续考虑抽象到Task中
+
  private:
-  SccLonBehaviorPlannerConfig config_;
+  void DetermineKinematicBoundForCruiseScenario();
+  void UpdateInvadeNeighborResults();
+  void MakeDebugMessage();
+
+ private:
+  EgoPlanningConfig config_;
+  // <counter, flag>
+  std::pair<int32_t, int32_t> cruise_accelerate_count_{0, 0};
+  int32_t plan_points_num_ = 0;
+  double plan_time_ = 0.0;
+  double dt_ = 0.0;
 };
 
 }  // namespace planning
