@@ -9,7 +9,7 @@ class ExpandStBoundariesDecider : public Task {
  public:
   ExpandStBoundariesDecider(const EgoPlanningConfigBuilder *config_builder,
                             framework::Session *session);
-    virtual ~ExpandStBoundariesDecider() = default;
+  virtual ~ExpandStBoundariesDecider() = default;
 
   bool Execute() override;
 

@@ -83,9 +83,9 @@ void CubicPathInterface::GeneratePolynomialPath(
   for (size_t i = 0; i < max_sampling_num; i++) {
     x = i * step + x0;
     const double y = coefficients[0] * pow(x, 3) + coefficients[1] * pow(x, 2) +
-               coefficients[2] * x + coefficients[3];
-    const double y_dot = 3 * coefficients[0] * pow(x, 2) + 2 * coefficients[1] * x +
-                   coefficients[2];
+                     coefficients[2] * x + coefficients[3];
+    const double y_dot = 3 * coefficients[0] * pow(x, 2) +
+                         2 * coefficients[1] * x + coefficients[2];
     const double y_sec_dot = 6 * coefficients[0] * x + 2 * coefficients[1];
 
     double curvature = std::fabs(y_sec_dot) / pow(1 + y_dot * y_dot, 1.5);

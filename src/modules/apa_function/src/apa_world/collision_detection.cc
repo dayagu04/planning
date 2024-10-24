@@ -12,8 +12,8 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
-#include "math_lib.h"
 #include "log_glog.h"
+#include "math_lib.h"
 
 namespace planning {
 namespace apa_planner {

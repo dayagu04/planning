@@ -377,7 +377,6 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
         box.MergePoint(cdl::Vector2r(global_point.x, global_point.y));
         obs->points.emplace_back(Position2D(global_point.x, global_point.y));
       }
-
     }
   }
 

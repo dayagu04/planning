@@ -1,17 +1,15 @@
 #pragma once
-#include "common/speed/st_point.h"
 #include <vector>
+#include "common/speed/st_point.h"
 
 namespace planning {
 
 class ExpandStBoundariesDeciderOutput {
-public:
+ public:
   ExpandStBoundariesDeciderOutput() = default;
   ~ExpandStBoundariesDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

@@ -69,7 +69,7 @@ class HybridAStar {
                         const MapBound& XYbounds,
                         const ParkObstacleList& obstacles,
                         const AstarRequest& request,
-                        const ObstacleClearZone *clear_zone,
+                        const ObstacleClearZone* clear_zone,
                         EulerDistanceTransform* edt,
                         ParkReferenceLine* ref_line);
 
@@ -336,7 +336,7 @@ class HybridAStar {
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;
-  const ObstacleClearZone *clear_zone_;
+  const ObstacleClearZone* clear_zone_;
 
   EulerDistanceTransform* edt_;
 
@@ -357,7 +357,7 @@ class HybridAStar {
 
   std::unique_ptr<GridSearch> dp_heuristic_generator_;
 
-  ParkReferenceLine *ref_line_;
+  ParkReferenceLine* ref_line_;
 
   AstarRequest request_;
 

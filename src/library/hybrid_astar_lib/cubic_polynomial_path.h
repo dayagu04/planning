@@ -26,7 +26,8 @@ class CubicPathInterface {
   std::vector<double> GetCurvatureVec();
 
   const double GetMinCurvatureRadius() const;
-  const bool ArePosesEqual(const Pose2D& p1, const Pose2D& p2, double epsilon = 1e-9);
+  const bool ArePosesEqual(const Pose2D& p1, const Pose2D& p2,
+                           double epsilon = 1e-9);
 
  private:
   std::vector<double> theta_vec_;

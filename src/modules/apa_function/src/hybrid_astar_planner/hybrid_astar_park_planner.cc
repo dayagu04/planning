@@ -1281,7 +1281,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   double ego_x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
                                 ego_slot_info.ego_pos_slot[0]);
   double ego_y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
-                            ego_slot_info.ego_pos_slot[1]);
+                                ego_slot_info.ego_pos_slot[1]);
   if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
     return;
   }
@@ -1335,8 +1335,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   return;
 }
 
-const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
-    const bool is_replan) {
+const bool HybridAStarParkPlanner::CheckEgoReplanNumber(const bool is_replan) {
   if (is_replan) {
     // check total plan number
     if (frame_.total_plan_count > 30) {
@@ -1405,7 +1404,7 @@ const double HybridAStarParkPlanner::CalRemainDistFromPath() {
   }
 
   // calc base vector
-  pnc::geometry_lib::PathPoint *base_point;
+  pnc::geometry_lib::PathPoint* base_point;
   base_point = &current_path_point_global_vec_[nearest_point_id];
   ad_common::math::Vec2d base_vector;
   if (nearest_point_id == path_point_size - 1) {

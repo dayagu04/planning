@@ -161,14 +161,14 @@ void PathSafeChecker::GenerateVehBox(const pnc::geometry_lib::PathSegGear gear,
   center.x = config.footprint_circle_x[6];
   center.y = config.footprint_circle_y[6] + lateral_safe_buffer;
   double radius = std::fabs(config.footprint_circle_r[6]);
-  GenerateMirrorPolygon(&polygon_foot_print_.mirror_left, 0.3,
-                        radius * 2, center);
+  GenerateMirrorPolygon(&polygon_foot_print_.mirror_left, 0.3, radius * 2,
+                        center);
 
   // right mirror
   center.x = config.footprint_circle_x[3];
   center.y = config.footprint_circle_y[3] - lateral_safe_buffer;
-  GenerateMirrorPolygon(&polygon_foot_print_.mirror_right, 0.3,
-                        radius * 2, center);
+  GenerateMirrorPolygon(&polygon_foot_print_.mirror_right, 0.3, radius * 2,
+                        center);
 
   GetUpLeftCoordinatePolygonByParam(
       &polygon_foot_print_.max_polygon, config.rear_overhanging,
@@ -348,7 +348,8 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
         &is_collision, &obstacle.envelop_polygon, car, 0.01);
 
     if (!is_collision) {
-      // ILOG_INFO << "size = " << obstacle.points.size() << " box no collision";
+      // ILOG_INFO << "size = " << obstacle.points.size() << " box no
+      // collision";
       continue;
     }
 

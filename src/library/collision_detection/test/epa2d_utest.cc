@@ -3,10 +3,10 @@
 #include <iostream>
 
 #include "cdl_math.h"
+#include "collision_detect_types.h"
 #include "epa2d.h"
 #include "gjk2d.h"
 #include "pose2d.h"
-#include "collision_detect_types.h"
 
 using namespace cdl;
 using namespace cdl;

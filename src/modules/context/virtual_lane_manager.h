@@ -3,9 +3,9 @@
 
 #include <climits>
 #include <memory>
+#include <queue>
 #include <utility>
 #include <vector>
-#include <queue>
 
 #include "ad_common/hdmap/hdmap.h"
 #include "ego_lane_track_manager.h"
@@ -312,7 +312,7 @@ class VirtualLaneManager {
   bool UpdateEgoDistanceToStopline();
   bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);
   bool UpdateIntersectionState();
-  bool IsEgoBothSidesHaveRoadBorder(); 
+  bool IsEgoBothSidesHaveRoadBorder();
 
   planning::framework::Session *session_ = nullptr;
   EgoPlanningVirtualLaneManagerConfig config_;

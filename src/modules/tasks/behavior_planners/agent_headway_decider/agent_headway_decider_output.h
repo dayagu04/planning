@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class AgentHeadwayDeciderOutput {
-public:
+ public:
   AgentHeadwayDeciderOutput() = default;
   ~AgentHeadwayDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

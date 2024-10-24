@@ -156,7 +156,7 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(cipv_lost_prohibit_acceleration_decider_->Name());
     return false;
   }
- 
+
   ok = st_graph_searcher_->Execute();
   if (!ok) {
     AddErrorInfo(st_graph_searcher_->Name());

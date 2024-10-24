@@ -30,11 +30,11 @@ Node3d::Node3d(const double x, const double y, const double phi) {
 
 Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
                const PlannerOpenSpaceConfig& open_space_conf) {
-  grid_index_.x = std::round((x - XYbounds.x_min) *
-                             open_space_conf.xy_grid_resolution_inv);
+  grid_index_.x =
+      std::round((x - XYbounds.x_min) * open_space_conf.xy_grid_resolution_inv);
 
-  grid_index_.y = std::round((y - XYbounds.y_min) *
-                             open_space_conf.xy_grid_resolution_inv);
+  grid_index_.y =
+      std::round((y - XYbounds.y_min) * open_space_conf.xy_grid_resolution_inv);
 
   double theta = IflyUnifyTheta(phi, M_PI);
   grid_index_.phi =
@@ -96,8 +96,8 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
                              open_space_conf.xy_grid_resolution_inv);
 
   double theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PI);
-  grid_index_.phi = std::round((theta - (-M_PI)) *
-                               open_space_conf.phi_grid_resolution_inv);
+  grid_index_.phi =
+      std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
   visited_type_ = AstarNodeVisitedType::not_visited;
 

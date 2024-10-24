@@ -17,9 +17,9 @@
 #include "reeds_shepp.h"
 #include "rs_path_interpolate.h"
 #include "src/common/ifly_time.h"
+#include "src/modules/common/math/curve1d/quintic_polynomial_curve1d.h"
 #include "transform2d.h"
 #include "utils_math.h"
-#include "src/modules/common/math/curve1d/quintic_polynomial_curve1d.h"
 
 namespace planning {
 
@@ -88,15 +88,12 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
   return true;
 }
 
-bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
-                                   const Pose2D& start, const Pose2D& end,
-                                   const double expected_path_dist,
-                                   const MapBound& XYbounds,
-                                   const ParkObstacleList& obstacles,
-                                   const AstarRequest& request,
-                                   const ObstacleClearZone *clear_zone,
-                                   EulerDistanceTransform* edt,
-                                   ParkReferenceLine* ref_line) {
+bool HybridAStar::PlanByRSPathLink(
+    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+    const double expected_path_dist, const MapBound& XYbounds,
+    const ParkObstacleList& obstacles, const AstarRequest& request,
+    const ObstacleClearZone* clear_zone, EulerDistanceTransform* edt,
+    ParkReferenceLine* ref_line) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -200,15 +197,12 @@ bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
   return true;
 }
 
-bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
-                                       const Pose2D& start, const Pose2D& end,
-                                       const double lon_min_sampling_length,
-                                       const MapBound& XYbounds,
-                                       const ParkObstacleList& obstacles,
-                                       const AstarRequest& request,
-                                       EulerDistanceTransform* edt,
-                                       const ObstacleClearZone* clear_zone,
-                                       ParkReferenceLine* ref_line) {
+bool HybridAStar::PlanByRSPathSampling(
+    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+    const double lon_min_sampling_length, const MapBound& XYbounds,
+    const ParkObstacleList& obstacles, const AstarRequest& request,
+    EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+    ParkReferenceLine* ref_line) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -289,15 +283,12 @@ bool HybridAStar::PlanByRSPathSampling(HybridAStarResult* result,
   return true;
 }
 
-bool HybridAStar::PlanByCubicPath(HybridAStarResult* result,
-                                  const Pose2D& start, const Pose2D& end,
-                                  const double lon_min_sampling_length,
-                                  const MapBound& XYbounds,
-                                  const ParkObstacleList& obstacles,
-                                  const AstarRequest& request,
-                                  EulerDistanceTransform* edt,
-                                  const ObstacleClearZone *clear_zone,
-                                  ParkReferenceLine* ref_line) {
+bool HybridAStar::PlanByCubicPath(
+    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+    const double lon_min_sampling_length, const MapBound& XYbounds,
+    const ParkObstacleList& obstacles, const AstarRequest& request,
+    EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+    ParkReferenceLine* ref_line) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by cubic.";
 
@@ -590,12 +581,12 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     }
   }
 
-  // interpolation
+    // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
 
-  const Pose2D &start_pose = current_node->GetPose();
+  const Pose2D& start_pose = current_node->GetPose();
   rs_path_interface_.RSPathInterpolate(&rs_path_, &start_pose, rs_radius);
 
 #if LOG_TIME_PROFILE
@@ -1340,7 +1331,6 @@ const bool HybridAStar::IsRSPathSafeByEDT(const RSPath* reeds_shepp_path,
 
 const bool HybridAStar::IsPolynomialPathSafeByEDT(
     const std::vector<AStarPathPoint>& path, Node3d* node) {
-
   if (path.size() <= 0) {
     return true;
   }
@@ -1394,7 +1384,6 @@ const bool HybridAStar::IsPolynomialPathSafeByEDT(
       node->SetCollisionType(NodeCollisionType::obs);
       return false;
     }
-
   }
 
   return true;
@@ -1475,7 +1464,6 @@ size_t HybridAStar::GetPathCollisionIndex(HybridAStarResult* result) {
           return collision_index;
         }
       }
-
     }
   }
 
@@ -1999,7 +1987,6 @@ double HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   path_dist = rs_path->total_length;
   piecewise_cost += path_dist * config_.traj_forward_penalty;
 
-
   double gear_cost = 0.0;
   double steer_change_cost = 0.0;
   for (int i = 0; i < rs_path_.size - 1; i++) {
@@ -2042,7 +2029,6 @@ double HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   // request dist and gear cost
   if (current_node->GetDistToStart() <
       request_.first_action_request.dist_request) {
-
     if (current_node->IsPathGearChange(rs_path_.paths[0].gear)) {
       piecewise_cost += config_.expect_dist_penalty;
     } else if (current_node->GetDistToStart() +
@@ -2422,28 +2408,25 @@ const bool HybridAStar::BackwardPassByPolynomialPath(
     last_gear_type = cur_gear_type;
     parent_node = child_node;
     child_node = child_node->GetMutableNextNode();
-
   }
 
   // get path
   if (child_node != nullptr && child_node->IsQunticPolynomialPath()) {
+    if (poly_path.size() < 1) {
+      return false;
+    }
 
-      if (poly_path.size() < 1) {
-        return false;
-      }
+    AstarPathType path_type = child_node->GetPathType();
 
-      AstarPathType path_type = child_node->GetPathType();
-
-      for (size_t k = 0; k < poly_path.size(); k++) {
-        result->x.emplace_back(poly_path[k].x);
-        result->y.emplace_back(poly_path[k].y);
-        result->phi.emplace_back(poly_path[k].phi);
-        result->type.emplace_back(path_type);
-        result->gear.emplace_back(poly_path[k].gear);
-        result->kappa.emplace_back(poly_path[k].kappa);
-      }
+    for (size_t k = 0; k < poly_path.size(); k++) {
+      result->x.emplace_back(poly_path[k].x);
+      result->y.emplace_back(poly_path[k].y);
+      result->phi.emplace_back(poly_path[k].phi);
+      result->type.emplace_back(path_type);
+      result->gear.emplace_back(poly_path[k].gear);
+      result->kappa.emplace_back(poly_path[k].kappa);
+    }
   }
-
 
   size_t pt_size = result->x.size();
   if (pt_size != result->y.size() || pt_size != result->phi.size() ||
@@ -2544,7 +2527,7 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
 void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
                                         const ParkObstacleList& obstacles,
                                         const AstarRequest& request,
-                                        const ObstacleClearZone *clear_zone,
+                                        const ObstacleClearZone* clear_zone,
                                         HybridAStarResult* result,
                                         EulerDistanceTransform* edt,
                                         ParkReferenceLine* ref_line) {
@@ -2690,7 +2673,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   check_start_time = IflyTime::Now_ms();
   if (!ValidityCheckByEDT(astar_end_node_)) {
     ILOG_INFO << "end_node in collision with obstacles "
-               << static_cast<int>(astar_end_node_->GetConstCollisionType());
+              << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
     astar_end_node_->DebugString();
     result->fail_type = AstarFailType::goal_collision;
@@ -2745,7 +2728,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
     current_node = open_pq_.begin()->second;
     open_pq_.erase(open_pq_.begin());
     if (current_node == nullptr) {
-      ILOG_INFO <<"pq is null node";
+      ILOG_INFO << "pq is null node";
       continue;
     }
 
@@ -2822,7 +2805,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3118,7 +3101,7 @@ bool HybridAStar::AstarSearch(
   check_start_time = IflyTime::Now_ms();
   if (!ValidityCheckByEDT(astar_end_node_)) {
     ILOG_INFO << "end_node in collision with obstacles "
-               << static_cast<int>(astar_end_node_->GetConstCollisionType());
+              << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
     astar_end_node_->DebugString();
     result->fail_type = AstarFailType::goal_collision;
@@ -3188,7 +3171,7 @@ bool HybridAStar::AstarSearch(
     current_node = open_pq_.begin()->second;
     open_pq_.erase(open_pq_.begin());
     if (current_node == nullptr) {
-      ILOG_INFO <<"pq is null node";
+      ILOG_INFO << "pq is null node";
       continue;
     }
 
@@ -3271,7 +3254,7 @@ bool HybridAStar::AstarSearch(
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3555,15 +3538,14 @@ void HybridAStar::DebugPathString(const HybridAStarResult* result) const {
   ILOG_INFO << "path x point size " << result->x.size() << " gear size "
             << result->gear.size() << "y size " << result->y.size()
             << "phi size " << result->phi.size() << "type size "
-            << result->type.size() << "s size " <<
-            result->accumulated_s.size();
+            << result->type.size() << "s size " << result->accumulated_s.size();
 
   for (size_t i = 0; i < result->x.size(); i++) {
     ILOG_INFO << "i = " << i << " x, y, theta, gear:  " << result->x[i] << ", "
               << result->y[i] << ", " << result->phi[i] * 57.4 << ", "
-              << PathGearDebugString(result->gear[i]) << ",paht type = "
-              << static_cast<int>(result->type[i]) << ", s = "
-              << result->accumulated_s[i];
+              << PathGearDebugString(result->gear[i])
+              << ",paht type = " << static_cast<int>(result->type[i])
+              << ", s = " << result->accumulated_s[i];
   }
 
   return;
@@ -3597,8 +3579,8 @@ void HybridAStar::DebugRSPath(const RSPath* reeds_shepp_path) {
 
 const bool HybridAStar::IsPointBeyondBound(const double x,
                                            const double y) const {
-  if (x > XYbounds_.x_max || x < XYbounds_.x_min ||
-      y > XYbounds_.y_max || y < XYbounds_.y_min) {
+  if (x > XYbounds_.x_max || x < XYbounds_.x_min || y > XYbounds_.y_max ||
+      y < XYbounds_.y_min) {
     return true;
   }
   return false;
@@ -3874,9 +3856,11 @@ void HybridAStar::CopyFallbackPath(HybridAStarResult* path) {
   return;
 }
 
-void HybridAStar::RSPathCandidateByRadius(
-    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
-    const double lon_min_sampling_length, const double radius) {
+void HybridAStar::RSPathCandidateByRadius(HybridAStarResult* result,
+                                          const Pose2D& start,
+                                          const Pose2D& end,
+                                          const double lon_min_sampling_length,
+                                          const double radius) {
   bool is_connected_to_goal;
   RSPathRequestType rs_request = RSPathRequestType::none;
 
@@ -3906,7 +3890,6 @@ void HybridAStar::RSPathCandidateByRadius(
     rs_path_interface_.GeneShortestRSPath(&rs_path_, &is_connected_to_goal,
                                           &start, &sampling_end,
                                           sampling_radius, true, rs_request);
-
 
 #if 0
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
@@ -4113,7 +4096,8 @@ void HybridAStar::GetQunticPolynomialPath(std::vector<AStarPathPoint>& path,
       path.clear();
 
       // ILOG_INFO << "i=" << i << ",radius bound =" << min_radius
-      //           << ",radius=" << 1 / kappa << ",accumulated_s=" << accumulated_s
+      //           << ",radius=" << 1 / kappa << ",accumulated_s=" <<
+      //           accumulated_s
       //           << ",x =" << end.x + ref_s << ",y=" << x << ",phi=" << theta;
       // start.DebugString();
       return;

@@ -6,8 +6,5 @@ CipvLostProhibitStartDecider::CipvLostProhibitStartDecider(
     : Task(config_builder, session) {
   name_ = "CipvLostProhibitStartDecider";
 }
-bool CipvLostProhibitStartDecider::Execute() {
-
-  return true;
-}
+bool CipvLostProhibitStartDecider::Execute() { return true; }
 }  // namespace planning

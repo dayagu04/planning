@@ -7,5 +7,5 @@ TruckLongitudinalAvoidDecider::TruckLongitudinalAvoidDecider(
   name_ = "TruckLongitudinalAvoidDecider";
 }
 
-bool TruckLongitudinalAvoidDecider::Execute(){return true;}
+bool TruckLongitudinalAvoidDecider::Execute() { return true; }
 }  // namespace planning
