@@ -9,7 +9,7 @@ namespace {
 
 constexpr double kMaxPathLength = 400.0;
 constexpr double kMathEpsilon = 1e-10;
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 constexpr bool kEnablePlotLowSpeedAgentOriginStBoundary = false;
 }  // namespace
 

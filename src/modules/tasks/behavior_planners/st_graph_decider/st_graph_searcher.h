@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ego_planning_config.h"
+#include "st_graph_searcher.pb.h"
 #include "st_search_input.h"
 #include "st_search_node.h"
 #include "tasks/task.h"
@@ -46,6 +47,9 @@ class StGraphSearcher : public Task {
 
   double GetAgentMinPredictionSpeed(const int64_t agent_id) const;
 
+  void AddStGraphSearcherDataToProto(
+      const std::vector<StSearchNode> st_search_path);
+
   // compute cost and h_cost
   void ComputeNodeCost(const StSearchInput& input_info,
                        const StSearchNode& current_node,
@@ -82,6 +86,7 @@ class StGraphSearcher : public Task {
                               const StSearchNode& node) const;
 
   StGraphSearcherConfig config_;
+  planning::common::StGraphSearcher st_graph_searcher_pb_;
   std::shared_ptr<YieldFrontVehicleSafeFunction>
       yield_front_vehicle_safe_utils_;
 };

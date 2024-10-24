@@ -173,7 +173,7 @@ def load_st_polygen_lower_upper_point(st_graph_data):
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                               "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                              "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", 'construct_st_graph_cost',\
+                              "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", 'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
@@ -232,6 +232,17 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'center_point_{}_t'.format(i): st_label_all[i]['center_point_t'],
       'agent_{}_id'.format(i): st_label_all[i]['agent_id'],
     })
+
+  t_search_vec = []
+  s_search_vec = []
+  for item in (plan_debug_info.st_graph_searcher.st_search_path):
+    t_search_vec.append(item.t)
+  for item in (plan_debug_info.st_graph_searcher.st_search_path):
+    s_search_vec.append(item.s)
+  lon_plan_data['data_st_searcher'].data.update({
+    't_search': t_search_vec,
+    's_search': s_search_vec,
+  })
 
   # behavior planning
   t_vec = list(plan_debug_info.long_ref_path.t_list)
@@ -946,6 +957,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
+  data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -984,6 +996,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_obs_st':data_obs_st, \
                    'data_lon_motion_plan': data_lon_motion_plan, \
                    'data_planning':data_planning, \
+                   'data_st_searcher':data_st_searcher, \
   }
 
   for i in range(20):
@@ -1035,7 +1048,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)
   # fig3 S-V
   # fig3 = bkp.figure(x_axis_label='s', y_axis_label='v', width=600, height=400, match_aspect = True, aspect_scale=1)
-  fig3 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], y_range = [-50.0, 300.0], width=600, height=400, match_aspect = True, aspect_scale=1)
+  fig3 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=400, match_aspect = True, aspect_scale=1)
   # fig4 s-t
   fig4 = bkp.figure(x_axis_label='time', y_axis_label='pos',x_range = [-0.1, 6.5], width=600, height=200)
   # fig5 v-t
@@ -1097,6 +1110,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
     agent_id = f'agent_{i}_id'
 
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
+
+  fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')

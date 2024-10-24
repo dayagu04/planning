@@ -252,6 +252,8 @@ bool StGraphSearcher::Execute() {
       ->set_is_search_success(true);
 
   // store st path in proto
+  st_graph_searcher_pb_.Clear();
+  AddStGraphSearcherDataToProto(st_path);
 
   // Based on the decision of the last node, update lane change decision
   bool is_yield_back_vehicle =
@@ -334,8 +336,11 @@ bool StGraphSearcher::SearchStPath(
     const double time_used = current_time - start_time;
     const double max_search_time_ms = max_search_time * 1e3;
     // max search time < 0.1s
-    if (time_used > max_search_time_ms) {
-      LOG_DEBUG("time out, time used: %.4f", time_used);
+    // if (time_used > max_search_time_ms) {
+    //   LOG_DEBUG("time out, time used: %.4f", time_used);
+    //   break;
+    // }
+    if (count > 30) {
       break;
     }
 
@@ -1105,6 +1110,21 @@ bool StGraphSearcher::CheckIfFrontVehcileSafe() {
     return false;
   }
   return true;
+}
+
+void StGraphSearcher::AddStGraphSearcherDataToProto(
+    const std::vector<StSearchNode> st_search_path) {
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_st_graph_searcher_data =
+      debug_info_pb->mutable_st_graph_searcher();
+  if (!st_search_path.empty()) {
+    for (const auto& search_node : st_search_path) {
+      auto* p = st_graph_searcher_pb_.add_st_search_path();
+      p->set_s(search_node.s());
+      p->set_t(search_node.t());
+    }
+  }
+  mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
 }
 
 }  // namespace planning

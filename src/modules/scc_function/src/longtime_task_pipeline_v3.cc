@@ -50,6 +50,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LongitudinalDecisionDecider>(config_builder, session);
   speed_limit_decider_ =
       std::make_unique<SpeedLimitDecider>(config_builder, session);
+  scc_lon_behavior_planner_ =
+      std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
 
@@ -172,11 +174,14 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+  time_start = IflyTime::Now_ms();
   ok = st_graph_searcher_->Execute();
+  time_end = IflyTime::Now_ms();
   if (!ok) {
     AddErrorInfo(st_graph_searcher_->Name());
     return false;
   }
+  JSON_DEBUG_VALUE("st_graph_searcher_cost", time_end - time_start);
 
   ok = truck_longitudinal_avoid_decider_->Execute();
   if (!ok) {
@@ -207,6 +212,13 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(speed_limit_decider_->Name());
     return false;
   }
+
+  ok = scc_lon_behavior_planner_->Execute();
+  if (!ok) {
+    AddErrorInfo(scc_lon_behavior_planner_->Name());
+    return false;
+  }
+
   // --↑↑↑↑↑↑--long behavior--↑↑↑↑↑↑--
 
   // ------ long motion planner ------
