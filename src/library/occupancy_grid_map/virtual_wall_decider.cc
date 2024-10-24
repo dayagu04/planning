@@ -41,7 +41,7 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
 
     ILOG_INFO << "vertical slot virtual wall";
   } else {
-    if (ego_pose.y > 0) {
+    if (ego_pose.y > -slot_width / 2) {
       RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
                                    end);
     } else {
