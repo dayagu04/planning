@@ -97,17 +97,17 @@ void PlanningAdapter::Proc() {
   auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
 
   // 1.1 receive prediction
-  // if (is_prediction_result_msg_updated_) {
-  //   std::lock_guard<std::mutex> lock(msg_mutex_);
-  //   local_view_ptr_->prediction_result = prediction_result_msg_;
-  //   local_view_ptr_->prediction_result_recv_time =
-  //       prediction_result_msg_recv_time_;
-  //   is_prediction_result_msg_updated_.store(false);
-  // }
-  // input_topic_timestamp->set_prediction(
-  //     local_view_ptr_->prediction_result.msg_header.stamp);
-  // input_topic_latency->set_prediction(get_latency(
-  //     start_time, local_view_ptr_->prediction_result.msg_header.stamp));
+  if (is_prediction_result_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->prediction_result = prediction_result_msg_;
+    local_view_ptr_->prediction_result_recv_time =
+        prediction_result_msg_recv_time_;
+    is_prediction_result_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_prediction(
+      local_view_ptr_->prediction_result.msg_header.stamp);
+  input_topic_latency->set_prediction(get_latency(
+      start_time, local_view_ptr_->prediction_result.msg_header.stamp));
 
   // 1.2 receive fusion_road
   if (is_road_info_msg_updated_) {

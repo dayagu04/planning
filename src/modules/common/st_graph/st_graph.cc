@@ -722,6 +722,128 @@ void STGraph::BackwardExtendSingleStBoundary(
   }
 }
 
+void STGraph::SetStSearchFailSafeDecisionTable(
+    std::unordered_map<int64_t, STBoundary::DecisionType>* succ_decision_table)
+    const {
+  // No fail safe for lane keeping.
+  if (st_graph_input_.is_lane_keeping()) {
+    return;
+  }
+  // Set rear target as overtake.
+  const auto rear_st_id = StGraphUtils::GetAgentStBoundaryId(
+      st_graph_input_.rear_agent_of_target(), agent_id_st_boundaries_map_);
+  const speed::STBoundary* rear_st_boundary = nullptr;
+  if (boundary_id_st_boundaries_map_.find(rear_st_id) !=
+      boundary_id_st_boundaries_map_.end()) {
+    rear_st_boundary = boundary_id_st_boundaries_map_.at(rear_st_id).get();
+    succ_decision_table->insert(
+        std::make_pair(rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
+    // std::cout << "Set rear target agent as OVERTAKE "
+    //           << st_graph_input_.rear_agent_of_target()->agent_id() <<
+    //           std::endl;
+  }
+  // Won't trigger if has no rear agent.
+  if (nullptr == rear_st_boundary) {
+    return;
+  }
+  for (const auto& st_boundary_entry : boundary_id_st_boundaries_map_) {
+    const auto boundary_id = st_boundary_entry.first;
+    const auto& st_boundary = *st_boundary_entry.second;
+    if (boundary_id == rear_st_id || boundary_id == speed::kNoAgentId) {
+      continue;
+    }
+    if (st_boundary.IsEmpty()) {
+      continue;
+    }
+    // Only consider time overlapping.
+    if (st_boundary.min_t() > rear_st_boundary->max_t()) {
+      continue;
+    }
+    if (StGraphUtils::IsBoundaryAboveRearTargetBoundary(st_boundary,
+                                                        rear_st_boundary)) {
+      succ_decision_table->insert(
+          std::make_pair(boundary_id, speed::STBoundary::DecisionType::YIELD));
+      // std::cout << "Set boundary as YIELD: " << boundary_id << std::endl;
+    }
+  }
+}
+
+bool STGraph::UpdateStBoundaryDecisionResults(
+    const std::unordered_map<int64_t, STBoundary::DecisionType>&
+        decision_table) {
+  if (decision_table.empty()) {
+    return true;
+  }
+  for (const auto& decision_entry : decision_table) {
+    auto id = decision_entry.first;
+    auto iter = boundary_id_st_boundaries_map_.find(id);
+    if (iter == boundary_id_st_boundaries_map_.end()) {
+      // TODO: return false; ?
+      continue;
+    }
+    auto* st_boundary = iter->second.get();
+    if (st_boundary == nullptr) {
+      // TODO: return false; ?
+      continue;
+    }
+    st_boundary->set_decision_type(decision_entry.second);
+  }
+  const bool is_success = CalculateStPassCorridor();
+  return is_success;
+}
+
+bool STGraph::CalculateStPassCorridor() {
+  if (boundary_id_st_boundaries_map_.empty()) {
+    return false;
+  }
+
+  const auto& time_range = st_graph_input_.time_range();
+  for (size_t i = 0; i < st_pass_corridor_.size(); i++) {
+    double t = time_range.first + i * kTimeResolution;
+    STPoint upper_point = STPoint::HighestSTPoint();
+    STPoint lower_point = STPoint::LowestSTPoint();
+    bool find_upper = false;
+    bool find_lower = false;
+    for (const auto& st_boundary_entry : boundary_id_st_boundaries_map_) {
+      const auto& st_boundary = st_boundary_entry.second;
+      if (st_boundary == nullptr) {
+        continue;
+      }
+      if (st_boundary->decision_type() ==
+          STBoundary::DecisionType::CAUTION_YIELD) {
+        continue;
+      }
+      const auto& decision_type = st_boundary->decision_type();
+      if (decision_type == STBoundary::DecisionType::YIELD) {
+        STPoint cur_upper_pt, cur_lower_pt;
+        if (!st_boundary->GetBoundaryBounds(t, &cur_lower_pt, &cur_upper_pt)) {
+          continue;
+        }
+        if (cur_lower_pt.s() < upper_point.s()) {
+          find_upper = true;
+          upper_point = cur_lower_pt;
+        }
+      } else if (decision_type == STBoundary::DecisionType::OVERTAKE) {
+        STPoint cur_upper_pt, cur_lower_pt;
+        if (!st_boundary->GetBoundaryBounds(t, &cur_lower_pt, &cur_upper_pt)) {
+          continue;
+        }
+        if (cur_upper_pt.s() > lower_point.s()) {
+          find_lower = true;
+          lower_point = cur_upper_pt;
+        }
+      }
+    }
+    if (find_upper) {
+      st_pass_corridor_[i].first = upper_point;
+    }
+    if (find_lower) {
+      st_pass_corridor_[i].second = lower_point;
+    }
+  }
+  return true;
+}
+
 const StGraphInput& STGraph::st_graph_input() const {
   return st_graph_input_;
 }

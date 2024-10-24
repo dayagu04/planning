@@ -2550,4 +2550,58 @@ struct STGraphConfig : public EgoPlanningConfig {
   double backward_extend_time_s = 2.0;
   double reverse_vehicle_lat_buffer_m = 0.2;
 };
+
+struct StGraphSearcherConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  double planning_time_horizon = 5.0;
+  double upper_collision_dist = 1.0;
+  double lower_collision_dist = 5.0;
+  double max_accel_limit = 5.0;
+  double min_accel_limit = -6.0;
+  double max_jerk_limit = 10.0;
+  double min_jerk_limit = -10.0;
+  double accel_sample_num = 20;
+  double s_step = 0.25;
+  double t_step = 0.25;
+  double vel_step = 0.4;
+
+  double weight_yield = 2.0;
+  double weight_overtake = 2.0;
+  double weight_vel = 0.10;
+  double weight_accel = 0.10;
+  double weight_accel_sign = 0.5;
+  double weight_jerk = 1.0;
+
+  double weight_hcost_s = 2.0;
+  double weight_hcost_t = 20.0;
+
+  double upper_truncation_time_buffer = 0.5;
+  double lower_truncation_time_buffer = 0.5;
+
+  double velocity_tolerance = 2.0;
+  double proper_accel_value = 1.0;
+
+  double max_search_time_s = 0.1;
+  bool is_visualize_st_search_process = false;
+
+  double speed_limit_scale = 1.2;
+
+  double min_lower_collision_dist = 5.0;
+  double max_lower_collision_dist = 15.0;
+  double lower_collision_dist_speed_scale = 0.5;
+
+  double weight_length_s = 0.0;
+  double weight_length_t = 0.0;
+
+  double weight_virtual_yield = 20.0;
+
+  double min_lower_distance_buffer = 3.0;
+  double min_upper_distance_buffer = 3.0;
+  double rear_agent_max_start_yield_time_s = 4.0;
+  double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
+  double yield_front_vehicle_collision_s_buffer = 1.0;
+};
 }  // namespace planning

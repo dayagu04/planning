@@ -48,8 +48,7 @@ class STGraph {
 
   void SetStSearchFailSafeDecisionTable(
       std::unordered_map<int64_t, STBoundary::DecisionType>*
-          succ_decision_table,
-      std::string* const debug_string_ptr) const;
+          succ_decision_table) const;
 
   /*******st_graph_helper functions*******/
   const StGraphInput& st_graph_input() const;

@@ -1319,5 +1319,33 @@ StGraphUtils::GenerateMaxDecelerationCurveByAgentVel(
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
 
+bool StGraphUtils::IsBoundaryAboveRearTargetBoundary(
+    const STBoundary& st_boundary, const STBoundary* rear_st_boundary) {
+  if (nullptr == rear_st_boundary) {
+    return true;
+  }
+  const auto& bottom_left = rear_st_boundary->bottom_left_point();
+  double s_lower = 0.0;
+  double s_upper = 0.0;
+  for (const auto& pnt : st_boundary.upper_points()) {
+    if (pnt.t() >= rear_st_boundary->max_t()) {
+      break;
+    }
+    if (pnt.t() <= rear_st_boundary->min_t()) {
+      if (pnt.s() > bottom_left.s()) {
+        return true;
+      }
+    } else {
+      if (!rear_st_boundary->GetBoundarySRange(pnt.t(), &s_lower, &s_upper)) {
+        continue;
+      }
+      if (pnt.s() > s_lower) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 }  // namespace speed
 }  // namespace planning

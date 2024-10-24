@@ -13,6 +13,7 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -96,6 +97,13 @@ class PlanningContext {
   void set_st_graph_helper(
       std::shared_ptr<speed::StGraphHelper> st_graph_helper) {
     st_graph_helper_ = st_graph_helper;
+  }
+
+  const StGraphSearcherOutput &st_graph_searcher_output() const {
+    return st_graph_searcher_output_;
+  }
+  StGraphSearcherOutput *mutable_st_graph_searcher_output() {
+    return &st_graph_searcher_output_;
   }
 
   const VisionLateralBehaviorPlannerOutput &
@@ -399,6 +407,7 @@ class PlanningContext {
   // ST Graph
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
+  StGraphSearcherOutput st_graph_searcher_output_;
 };
 
 }  // namespace planning

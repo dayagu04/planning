@@ -177,6 +177,9 @@ class StGraphUtils {
   static SecondOrderTimeOptimalTrajectory
   GenerateMaxDecelerationCurveByAgentVel(
       const double agent_vel, const trajectory::TrajectoryPoint& init_point);
+
+  static bool IsBoundaryAboveRearTargetBoundary(const STBoundary& st_boundary,
+                                                const STBoundary*);
 };
 
 }  // namespace speed
