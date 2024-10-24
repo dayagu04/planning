@@ -596,11 +596,9 @@ const bool PlanOnce(
     VirtualWallDecider wall_decider;
 
     ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type ==
-        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    if (ego_slot_info.slot_type == 1) {
       slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type ==
-               Common::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_slot_info.slot_type == 3) {
       slot_type = ParkSpaceType::SLANTING;
     } else {
       slot_type = ParkSpaceType::VERTICAL;
@@ -830,9 +828,6 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   } else {
     ILOG_INFO << "hybrid_astar_interface_ is null";
   }
-
-  double s = time * 0.4;
-  GetTrajPoseBySDist(s);
 
   return update_path;
 }

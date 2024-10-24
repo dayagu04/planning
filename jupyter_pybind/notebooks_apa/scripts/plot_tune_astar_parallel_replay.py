@@ -190,7 +190,6 @@ class LocalViewSlider:
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
     self.car_move_mode_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="car_move_mode", min=0, max=1, value=0, step=1)
-    self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -207,13 +206,12 @@ class LocalViewSlider:
                         lat_pos_dif = self.lat_pos_dif_slider,
                         heading_dif = self.heading_dif_slider,
                         car_move_mode=self.car_move_mode_slider,
-                        plot_child_node=self.plot_child_node
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,car_move_mode,plot_child_node):
+                    lon_pos_dif, lat_pos_dif, heading_dif,car_move_mode):
 
   time0 = time.time()
 
@@ -792,12 +790,11 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time4, ms ', (end_time4 - end_time3) * 1000)
 
   # # all search node
-  if plot_child_node:
-    line_list_x_vec, line_list_y_vec = [], []
-    node_list = astar_parallel_replay_py.GetAstarAllNodes()
-    for i in range(len(node_list)):
-      plan_path_x =[]
-      plan_path_y =[]
+  line_list_x_vec, line_list_y_vec = [], []
+  node_list = astar_parallel_replay_py.GetAstarAllNodes()
+  for i in range(len(node_list)):
+      plan_path_x = []
+      plan_path_y = []
       for j in range(len(node_list[i])):
         path_point = node_list[i][j]
         plan_path_x.append(path_point[0])
@@ -806,20 +803,14 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       line_list_x_vec.append(plan_path_x)
       line_list_y_vec.append(plan_path_y)
 
-    data_real_time_node_list.data.update({
-          'x_vec': [],
-          'y_vec': [],
-      })
-    data_real_time_node_list.data.update({
-      'x_vec': line_list_x_vec,
-      'y_vec': line_list_y_vec,})
+  data_real_time_node_list.data.update({
+        'x_vec': [],
+        'y_vec': [],
+    })
+  data_real_time_node_list.data.update({
+        'x_vec': line_list_x_vec,
+        'y_vec': line_list_y_vec, })
 
-
-  else:
-    data_real_time_node_list.data.update({
-          'x_vec': [],
-          'y_vec': [],
-      })
 
 
   end_time5 = time.time()

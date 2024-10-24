@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdio>
 
+#include "common.pb.h"
 #include "common_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
@@ -950,6 +951,18 @@ const bool HybridAStarParkPlanner::UpdateThreadPath() {
 }
 
 const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
+  bool ret = true;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    ret = UpdateParallelSlotInfo();
+  } else {
+    ret = UpdateVerticalSlotInfo();
+  }
+
+  return ret;
+}
+
+const bool HybridAStarParkPlanner::UpdateVerticalSlotInfo() {
   const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
   const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
 
@@ -1212,6 +1225,8 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
     frame_.is_fix_slot = true;
     ego_slot_info.fix_limiter = true;
   }
+
+  ego_slot_info.slot_type = 2;
 
   return true;
 }
@@ -1540,6 +1555,175 @@ void HybridAStarParkPlanner::DebugPathString(
               << ",y = " << path[i].pos.y();
   }
   return;
+}
+
+const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
+  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
+
+  const auto& select_slot_filter =
+      slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
+  if (!select_slot_filter.has_corner_points()) {
+    return false;
+  }
+
+  if (select_slot_filter.corner_points().corner_point_size() != 4) {
+    return false;
+  }
+
+  auto& ego_slot_info = frame_.ego_slot_info;
+  // notice: get slot from GetEgoSlotInfo.select_slot_filter in slot management
+  ego_slot_info.target_managed_slot.CopyFrom(select_slot_filter);
+
+  const auto& slot_points =
+      ego_slot_info.target_managed_slot.corner_points().corner_point();
+
+  // 顶点顺序,来自感知
+  std::vector<Eigen::Vector2d> pt;
+  pt.resize(slot_points.size());
+  Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
+
+  for (int i = 0; i < slot_points.size(); i++) {
+    pt[i] << slot_points[i].x(), slot_points[i].y();
+    slot_center += pt[i];
+  }
+  ego_slot_info.slot_corner = pt;
+  slot_center *= 0.25;
+
+  Eigen::Vector2d n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d t = Eigen::Vector2d::Zero();
+
+  ego_slot_info.slot_length = (pt[0] - pt[1]).norm();
+  pnc::geometry_lib::LineSegment line_01(pt[0], pt[1]);
+
+  // note: slot points' order is corrected in slot management
+  Pose2D vec02;
+  vec02.x =  pt[2].x()-pt[0].x();
+  vec02.y =  pt[2].y()-pt[0].y();
+
+  Pose2D ego_vector;
+  ego_vector.x  = std::cos(measures_ptr->heading);
+  ego_vector.y  = std::sin(measures_ptr->heading);
+
+  bool slot_is_left;
+  double cross = CrossProduct(ego_vector, vec02);
+  if (cross > 0) {
+    slot_is_left = true;
+  } else if (cross < 0) {
+    slot_is_left = false;
+  } else {
+
+    ILOG_ERROR <<"ego is vertical";
+    return false;
+  }
+
+  if (!slot_is_left) {
+    ego_slot_info.slot_width =
+        std::min(pnc::geometry_lib::CalPoint2LineDist(pt[2], line_01),
+                 pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01));
+
+    n = (pt[0] - pt[1]).normalized();
+    t << -n.y(), n.x();
+    ego_slot_info.slot_origin_pos = pt[0] - ego_slot_info.slot_length * n -
+                                    0.5 * ego_slot_info.slot_width * t;
+  } else {
+    ego_slot_info.slot_width =
+        pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01);
+
+    n = (pt[1] - pt[0]).normalized();
+    t << -n.y(), n.x();
+    ego_slot_info.slot_origin_pos = pt[1] - ego_slot_info.slot_length * n +
+                                    0.5 * ego_slot_info.slot_width * t;
+  }
+
+  std::cout << "slot width =" << ego_slot_info.slot_width << std::endl;
+
+  ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
+  ego_slot_info.slot_origin_heading_vec = n;
+
+  std::cout << "origin heading =" << ego_slot_info.slot_origin_heading * 57.3
+            << std::endl;
+
+  std::cout << "frame_.current_arc_steer = "
+            << static_cast<int>(frame_.current_arc_steer) << std::endl;
+
+  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+
+  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_heading_slot =
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+  ego_slot_info.ego_heading_slot_vec
+      << std::cos(ego_slot_info.ego_heading_slot),
+      std::sin(ego_slot_info.ego_heading_slot);
+
+  // calc terminal pos, try best to stop in the middle of slot
+  const double goal_x =
+      0.5 * (ego_slot_info.slot_length - apa_param.GetParam().car_length) +
+      apa_param.GetParam().rear_overhanging;
+  const double goal_y = 0.0;
+  ego_slot_info.target_ego_pos_slot << goal_x, goal_y;
+  ego_slot_info.target_ego_heading_slot = 0.0;
+
+  std::cout << "target ego pos in slot ="
+            << ego_slot_info.target_ego_pos_slot.transpose()
+            << " heading =" << ego_slot_info.target_ego_heading_slot * 57.3
+            << std::endl;
+
+  // calc terminal error once
+  ego_slot_info.terminal_err.Set(
+      ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
+      pnc::geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
+                                        ego_slot_info.target_ego_heading_slot));
+
+  std::cout << "-- ego_slot:" << std::endl;
+  std::cout << "ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
+            << std::endl;
+
+  std::cout << "ego_heading_slot (deg)= "
+            << ego_slot_info.ego_heading_slot * 57.3 << std::endl;
+
+  std::cout << "vel_ego = " << measures_ptr->vel << std::endl;
+
+  // calc slot occupied ratio
+  double slot_occupied_ratio = 0.0;
+  if (pnc::mathlib::IsInBound(ego_slot_info.terminal_err.pos.x(), -3.0, 4.0)) {
+    const double y_err_ratio =
+        ego_slot_info.terminal_err.pos.y() / (0.5 * ego_slot_info.slot_width);
+
+    if (!slot_is_left) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
+    } else {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
+    }
+  }
+  ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
+
+  std::cout << "ego_slot_info.slot_occupied_ratio = "
+            << ego_slot_info.slot_occupied_ratio << std::endl;
+
+  // update stuck time
+  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
+      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      apa_world_ptr_->GetApaDataPtr()->cur_state ==
+          ApaStateMachine::ACTIVE_IN) {
+    frame_.stuck_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.stuck_time = 0.0;
+  }
+
+  // update pause time
+  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
+    frame_.pause_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.pause_time = 0.0;
+  }
+
+  ego_slot_info.slot_type  = 1;
+
+  return true;
 }
 
 }  // namespace apa_planner

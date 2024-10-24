@@ -788,7 +788,7 @@ void HybridAStarInterface::UpdateSearchBoundary() {
   } else {
     map_bounds_.x_min = -10;
     map_bounds_.x_max = 14;
-    map_bounds_.y_min = -3;
+    map_bounds_.y_min = -12;
     map_bounds_.y_max = 15;
   }
 

@@ -88,6 +88,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   const bool UpdateEgoSlotInfo() override;
 
+  const bool UpdateVerticalSlotInfo();
+
   const bool CheckSegCompleted();
 
   const bool CheckUssStucked();
@@ -111,6 +113,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
       const Pose2D& pose);
 
   void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
+  const bool UpdateParallelSlotInfo();
 
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;

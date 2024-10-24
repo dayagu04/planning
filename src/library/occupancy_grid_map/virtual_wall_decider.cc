@@ -1,10 +1,12 @@
 #include "virtual_wall_decider.h"
+
 #include <algorithm>
 #include <cmath>
 
 #include "aabb2d.h"
 #include "collision_box2d.h"
 #include "collision_detect_types.h"
+#include "log_glog.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "utils_math.h"
@@ -36,10 +38,18 @@ int VirtualWallDecider::Process(std::vector<Position2D>& points,
       slot_type == ParkSpaceType::SLANTING) {
     CalcVerticalVirtualWall(points, channel_length, channel_width, slot_width,
                             slot_length, ego_pose, end);
-  }
-  else {
-    CalcParallelVirtualWall(points, channel_length, channel_width, slot_width,
-                            slot_length, ego_pose, end);
+
+    ILOG_INFO << "vertical slot virtual wall";
+  } else {
+    if (ego_pose.y > 0) {
+      RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
+                                   end);
+    } else {
+      LeftSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
+                                  end);
+    }
+
+    ILOG_INFO << "parallel slot virtual wall";
   }
 
   return 0;
@@ -216,13 +226,14 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   return;
 }
 
-#define PARALLEL_SLOT_X_OFFSET (10.0)
+#define PARALLEL_SLOT_X_OFFSET (7.0)
 #define PARALLEL_SLOT_Y_OFFSET (1.0)
-void VirtualWallDecider::CalcParallelVirtualWall(
-    std::vector<Position2D>& points, const double channel_length,
-    const double channel_width, const double slot_width,
+void VirtualWallDecider::RightSideParallelVirtualWall(
+    std::vector<Position2D>& points, const double slot_width,
     const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // width is the slot upper edge to a virtual wall
+  const double channel_length = 30;
+  const double channel_width = 8;
   const double half_channel_length = channel_length * 0.5;
 
   // slot right wall
@@ -230,9 +241,8 @@ void VirtualWallDecider::CalcParallelVirtualWall(
       Eigen::Vector2d(slot_length + PARALLEL_SLOT_X_OFFSET,
                       -slot_width / 2.0 - PARALLEL_SLOT_Y_OFFSET);
 
-  Eigen::Vector2d right_wall_lower =
-      Eigen::Vector2d( - PARALLEL_SLOT_X_OFFSET,
-                      -slot_width / 2.0 - PARALLEL_SLOT_Y_OFFSET);
+  Eigen::Vector2d right_wall_lower = Eigen::Vector2d(
+      -PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 - PARALLEL_SLOT_Y_OFFSET);
 
   // slot bottom wall
   Eigen::Vector2d slot_bottom_wall_left =
@@ -258,7 +268,7 @@ void VirtualWallDecider::CalcParallelVirtualWall(
                      slot_length * std::fabs(std::sin(ego_pose.theta)) +
                      veh_y_buffer;
 
-  veh_aabb.min_[0] = ego_pose.x - slot_length -veh_x_buffer;
+  veh_aabb.min_[0] = ego_pose.x - slot_length - veh_x_buffer;
   veh_aabb.min_[1] = ego_pose.y - slot_width / 2 -
                      slot_length * std::fabs(std::sin(ego_pose.theta)) -
                      veh_y_buffer;
@@ -266,8 +276,8 @@ void VirtualWallDecider::CalcParallelVirtualWall(
   // channel up bound
   Eigen::Vector2d channel_up_bound_left = Eigen::Vector2d(
       slot_length + half_channel_length, slot_width / 2.0 + channel_width);
-  Eigen::Vector2d channel_up_bound_right = Eigen::Vector2d(
-      slot_length + half_channel_length, -slot_width / 2.0);
+  Eigen::Vector2d channel_up_bound_right =
+      Eigen::Vector2d(slot_length + half_channel_length, -slot_width / 2.0);
 
   channel_up_bound_left[0] =
       std::max(channel_up_bound_left[0], veh_aabb.max_[0]);
@@ -280,8 +290,8 @@ void VirtualWallDecider::CalcParallelVirtualWall(
   // channel bottom bound
   Eigen::Vector2d channel_bottom_bound_left = Eigen::Vector2d(
       -slot_length - half_channel_length, slot_width / 2.0 + channel_width);
-  Eigen::Vector2d channel_bottom_bound_right = Eigen::Vector2d(
-      -slot_length - half_channel_length, -slot_width / 2.0);
+  Eigen::Vector2d channel_bottom_bound_right =
+      Eigen::Vector2d(-slot_length - half_channel_length, -slot_width / 2.0);
 
   channel_bottom_bound_left[0] =
       std::min(channel_bottom_bound_left[0], veh_aabb.min_[0]);
@@ -475,6 +485,126 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
   convex_obs_list.emplace_back(polygon);
 
   return 0;
+}
+
+void VirtualWallDecider::LeftSideParallelVirtualWall(
+    std::vector<Position2D>& points, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+  // width is the slot upper edge to a virtual wall
+  const double channel_width = 8;
+  const double channel_length_buffer = 15;
+
+  // slot left wall
+  Eigen::Vector2d slot_left_wall_upper =
+      Eigen::Vector2d(slot_length + PARALLEL_SLOT_X_OFFSET,
+                      slot_width / 2.0 + PARALLEL_SLOT_Y_OFFSET);
+
+  Eigen::Vector2d slot_left_wall_lower = Eigen::Vector2d(
+      -PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 + PARALLEL_SLOT_Y_OFFSET);
+
+  // slot bottom wall
+  Eigen::Vector2d slot_bottom_wall_left =
+      Eigen::Vector2d(-PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 + 1);
+
+  Eigen::Vector2d slot_bottom_wall_right =
+      Eigen::Vector2d(-PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 + 1);
+
+  // slot top wall
+  Eigen::Vector2d slot_top_wall_left = Eigen::Vector2d(
+      slot_length + PARALLEL_SLOT_X_OFFSET, slot_width / 2.0 + 1);
+
+  Eigen::Vector2d slot_top_wall_right = Eigen::Vector2d(
+      slot_length + PARALLEL_SLOT_X_OFFSET, -slot_width / 2.0 + 1);
+
+  // ego aabb
+  cdl::AABB veh_aabb;
+  double veh_x_buffer = 5.0;
+  double veh_y_buffer = 4.0;
+
+  veh_aabb.max_[0] = ego_pose.x + slot_length + veh_x_buffer;
+  veh_aabb.max_[1] = ego_pose.y + slot_width / 2 +
+                     slot_length * std::fabs(std::sin(ego_pose.theta)) +
+                     veh_y_buffer;
+
+  veh_aabb.min_[0] = ego_pose.x - slot_length - veh_x_buffer;
+  veh_aabb.min_[1] = ego_pose.y - slot_width / 2 -
+                     slot_length * std::fabs(std::sin(ego_pose.theta)) -
+                     veh_y_buffer;
+
+  // channel up bound
+  Eigen::Vector2d channel_up_bound_left = Eigen::Vector2d(
+      slot_length + channel_length_buffer, slot_width / 2.0);
+  Eigen::Vector2d channel_up_bound_right = Eigen::Vector2d(
+      slot_length + channel_length_buffer, -slot_width / 2.0 - channel_width);
+
+  channel_up_bound_left[0] =
+      std::max(channel_up_bound_left[0], veh_aabb.max_[0]);
+  channel_up_bound_right[0] =
+      std::max(channel_up_bound_right[0], veh_aabb.max_[0]);
+
+  channel_up_bound_left[1] =
+      std::max(channel_up_bound_left[1], veh_aabb.max_[1]);
+  channel_up_bound_right[1] =
+      std::min(channel_up_bound_right[1], veh_aabb.min_[1]);
+
+  // channel bottom bound
+  double channel_bottom_buffer = 6.0;
+  Eigen::Vector2d channel_bottom_bound_left = Eigen::Vector2d(
+      -slot_length - channel_bottom_buffer, slot_width / 2.0);
+  Eigen::Vector2d channel_bottom_bound_right = Eigen::Vector2d(
+      -slot_length - channel_bottom_buffer, -slot_width / 2.0 - channel_width);
+
+  channel_bottom_bound_left[0] =
+      std::min(channel_bottom_bound_left[0], veh_aabb.min_[0]);
+  channel_bottom_bound_right[0] =
+      std::min(channel_bottom_bound_right[0], veh_aabb.min_[0]);
+
+  channel_bottom_bound_left[1] =
+      std::max(channel_bottom_bound_left[1], veh_aabb.max_[1]);
+  channel_bottom_bound_right[1] =
+      std::min(channel_bottom_bound_right[1], veh_aabb.min_[1]);
+
+  // channel right bound
+  Eigen::Vector2d channel_right_bound_upper = Eigen::Vector2d(
+      slot_length + channel_length_buffer, -slot_width / 2.0 - channel_width);
+  Eigen::Vector2d channel_right_bound_lower = Eigen::Vector2d(
+      -slot_length - channel_length_buffer, -slot_width / 2.0 - channel_width);
+
+  channel_right_bound_upper[0] =
+      std::max(channel_right_bound_upper[0], veh_aabb.max_[0]);
+  channel_right_bound_upper[1] =
+      std::min(channel_right_bound_upper[1], veh_aabb.min_[1]);
+
+  channel_right_bound_lower[0] =
+      std::min(channel_right_bound_lower[0], veh_aabb.min_[0]);
+  channel_right_bound_lower[1] =
+      std::min(channel_right_bound_lower[1], veh_aabb.min_[1]);
+
+  // channel left bound
+  Eigen::Vector2d channel_left_bound_pt1 =
+      Eigen::Vector2d(channel_up_bound_left[0], slot_top_wall_right[1]);
+  Eigen::Vector2d channel_left_bound_pt2 = slot_top_wall_right;
+
+  Eigen::Vector2d channel_left_bound_pt3 = slot_bottom_wall_right;
+  Eigen::Vector2d channel_left_bound_pt4 =
+      Eigen::Vector2d(channel_bottom_bound_left[0], slot_bottom_wall_right[1]);
+
+  // add points
+  SampleInLine(slot_left_wall_upper, slot_left_wall_lower, &points);
+
+  SampleInLine(slot_bottom_wall_left, slot_bottom_wall_right, &points);
+
+  SampleInLine(slot_top_wall_left, slot_top_wall_right, &points);
+
+  SampleInLine(channel_up_bound_left, channel_up_bound_right, &points);
+
+  SampleInLine(channel_bottom_bound_left, channel_bottom_bound_right, &points);
+
+  SampleInLine(channel_right_bound_upper, channel_right_bound_lower, &points);
+  SampleInLine(channel_left_bound_pt1, channel_left_bound_pt2, &points);
+  SampleInLine(channel_left_bound_pt3, channel_left_bound_pt4, &points);
+
+  return;
 }
 
 }  // namespace planning
