@@ -1883,7 +1883,7 @@ bool StGraphGenerator::CalcSpeedInfoWithVirtualObstacle(
     JSON_DEBUG_VALUE("desired_distance_virtual_obs",
                      virtual_obs_desired_distance);
   } else {
-    JSON_DEBUG_VALUE("virtual_obs_id", -1);
+    JSON_DEBUG_VALUE("virtual_obs_id", -1.0);
     JSON_DEBUG_VALUE("v_target_virtual_obs", virtual_obs_desired_velocity);
   }
 
