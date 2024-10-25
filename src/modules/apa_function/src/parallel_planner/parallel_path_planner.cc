@@ -36,8 +36,8 @@ static const double kMaxParkOutRootHeading = 25.0;
 static const double kLonBufferTrippleStep = 0.2;
 // static const double kLatBufferTrippleStep = 0.05;
 static const double kColBufferInSlot = 0.2;
-static const double kColBufferOutSlot = 0.5;
-static const double kColLargeLatBufferOutSlot = 0.56;
+static const double kColBufferOutSlot = 0.46;
+static const double kColLargeLatBufferOutSlot = 0.46;
 static const double kColSmallLatBufferOutSlot = 0.1;
 static const double kSmallColBufferInSlot = 0.1;
 
@@ -59,6 +59,8 @@ static const double kLineStepLength = 0.16;
 static const double k1dExtendLength = 0.36;
 
 static const size_t kInvalidInteger = 666;
+
+static const double kMinXInTBoundary = -1.0;
 
 void ParallelPathPlanner::Reset() {
   output_.Reset();
@@ -1064,7 +1066,7 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
   std::vector<GeometryPath> geo_path_vec;
   debug_info_.debug_all_path_vec.clear();
 
-  if (input_.ego_pose.pos.x() > input_.tlane.slot_length - 1.5) {
+  if (input_.ego_pose.pos.x() > input_.tlane.slot_length - 2.0) {
     GeometryPath ego_line_geo_path;
     std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
@@ -1083,30 +1085,24 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
   }
 
   // Todo: connect two line vec method
-  std::vector<double> preparing_line_y_vec;
-  GenPreparingLineVec(preparing_line_y_vec);
-  GenAlignedPreparingLine(preparing_line_y_vec, input_.ego_pose);
+  std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
+  GenAlignedPreparingLine(preparing_pose_vec, input_.ego_pose);
+  GenParallelPreparingLineVec(preparing_pose_vec);
+  const double parallel_line_size = preparing_pose_vec.size();
+  DEBUG_PRINT("parallel preparing line size= " << parallel_line_size);
 
-  std::sort(preparing_line_y_vec.begin(), preparing_line_y_vec.end(),
-            [sgn = input_.tlane.slot_side_sgn](int a, int b) {
-              return a * sgn < b * sgn;
-            });
+  GenTiltedPreparingLine(preparing_pose_vec);
+  DEBUG_PRINT("total preparing line size= " << preparing_pose_vec.size());
 
-  DEBUG_PRINT("preparing_line_y_vec size= " << preparing_line_y_vec.size());
-  for (const auto y : preparing_line_y_vec) {
-    std::cout << y << ", ";
-  }
-  std::cout << std::endl;
-
-  size_t success_cnt = 0;
-  for (const auto& prepare_y : preparing_line_y_vec) {
-    DEBUG_PRINT("side dist to tlane p in = "
-                << std::fabs(prepare_y - input_.tlane.obs_pt_inside.y()));
-
-    const Eigen::Vector2d prepare_pos(input_.tlane.pt_inside.x(), prepare_y);
-    pnc::geometry_lib::PathPoint prepare_pose(prepare_pos, 0.0);
+  size_t total_success_cnt = 0;
+  size_t parallel_success_cnt = 0;
+  for (size_t i = 0; i < preparing_pose_vec.size(); i++) {
+    if (i < parallel_line_size && parallel_success_cnt > 4) {
+      continue;
+    }
+    DEBUG_PRINT("number =======" << i);
     std::vector<pnc::geometry_lib::PathSegment> inversed_park_out_path;
-    if (!PlanFromTargetToLine(inversed_park_out_path, prepare_pose)) {
+    if (!PlanFromTargetToLine(inversed_park_out_path, preparing_pose_vec[i])) {
       DEBUG_PRINT(" PlanFromTargetToLine failed!");
       continue;
     }
@@ -1122,7 +1118,7 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
       inversed_park_out_path.erase(inversed_park_out_path.begin());
     }
 
-    prepare_pose = inversed_park_out_path.front().GetStartPose();
+    const auto prepare_pose = inversed_park_out_path.front().GetStartPose();
     const auto prepare_line = pnc::geometry_lib::BuildLineSegByPose(
         prepare_pose.pos, prepare_pose.heading);
 
@@ -1149,10 +1145,10 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
 
     // DEBUG_PRINT("calc success!");
     geo_path_vec.emplace_back(tmp_geo_path);
-    success_cnt++;
-    if (success_cnt > 4) {
-      break;
+    if (i < parallel_line_size) {
+      parallel_success_cnt++;
     }
+    total_success_cnt++;
   }
 
   DEBUG_PRINT("path size = " << geo_path_vec.size());
@@ -1191,70 +1187,49 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
     return true;
   }
 
+  std::vector<GeometryPath> geo_path_vec;
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
   std::vector<std::vector<pnc::geometry_lib::PathSegment>> path_vec;
-  std::vector<std::vector<pnc::geometry_lib::PathSegment>> tmp_path_vec;
+
   const uint8_t ref_gear = geometry_lib::SEG_GEAR_INVALID;
   const uint8_t ref_steer = geometry_lib::SEG_STEER_INVALID;
   const double ref_radius = apa_param.GetParam().min_turn_radius + 0.3;
 
-  if (!TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, ref_radius,
-                  kColBufferOutSlot)) {
-    if (!LineArcPlan(path_vec, ego_pose, prepare_line, ref_gear, ref_steer,
-                     ref_radius, kColBufferOutSlot)) {
+  bool success = LineArcPlan(path_vec, ego_pose, prepare_line, ref_gear,
+                             ref_steer, ref_radius, kColBufferOutSlot);
+  if (success) {
+    success = AssempleGeometryPathVec(geo_path_vec, path_vec);
+
+    if (success) {
+      const auto min_gear_cnt = GetMinShiftTimeInGeometryPathVec(geo_path_vec);
+      if (min_gear_cnt > 0) {
+        success = false;
+      } else {
+        DEBUG_PRINT("only line arc instead two arc");
+      }
     }
   }
-  pnc::dubins_lib::DubinsLibrary::Input dubins_input;
-  dubins_input.radius = ref_radius;
-  dubins_input.Set(ego_pose.pos, prepare_line.pA, ego_pose.heading,
-                   prepare_line.heading);
-  dubins_planner_.SetInput(dubins_input);
+  const size_t line_arc_path_size = path_vec.size();
 
-  // for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::LINEARC_TYPE_COUNT;
-  //      ++i) {
-  //   if (!dubins_planner_.Solve(i)) {
-  //     // DEBUG_PRINT("solve line arc failed!");
-  //     continue;
-  //   }
+  if (!success) {
+    TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, ref_radius,
+               kColBufferOutSlot);
+    DEBUG_PRINT("two arc path = " << path_vec.size());
+  }
 
-  //   if (!pnc::mathlib::IsInBound(
-  //           dubins_planner_.GetOutput().line_arc_radius,
-  //           apa_param.GetParam().min_turn_radius - 1e-6, 35.0)) {
-  //     DEBUG_PRINT("arc not in bound! << "
-  //                 << dubins_planner_.GetOutput().line_arc_radius);
-  //     continue;
-  //   }
-
-  //   if (IsDubinsCollided(kColBufferOutSlot)) {
-  //     DEBUG_PRINT("line arc collided!");
-  //     continue;
-  //   }
-
-  //   GetPathSegVecByDubins(tmp_path_seg_vec);
-  //   path_vec.emplace_back(tmp_path_seg_vec);
-
-  // }  // linearc loop
-
-  // try dubins method
-  for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::CASE_COUNT; ++i) {
-    for (size_t j = 0; j < pnc::dubins_lib::DubinsLibrary::DUBINS_TYPE_COUNT;
-         ++j) {
-      if (!dubins_planner_.Solve(j, i)) {
-        continue;
-      }
-      if (IsDubinsCollided(kColBufferOutSlot)) {
-        continue;
-      }
-      GetPathSegVecByDubins(tmp_path_seg_vec);
-      path_vec.emplace_back(tmp_path_seg_vec);
+  const PathPoint target_pose(prepare_line.pA, prepare_line.heading);
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>> tmp_path_vec;
+  if (DubinsPlan(tmp_path_vec, ego_pose, target_pose, ref_radius,
+                 kColBufferOutSlot)) {
+    for (const auto& path : tmp_path_vec) {
+      path_vec.emplace_back(path);
     }
-  }  // dubins loop
+  }
 
-  std::vector<GeometryPath> geo_path_vec;
   DEBUG_PRINT("path_vec size = " << path_vec.size());
-  for (const auto& path : path_vec) {
+  for (size_t i = line_arc_path_size; i < path_vec.size(); i++) {
     GeometryPath tmp_geo_path;
-    if (AssempleGeometryPath(tmp_geo_path, path)) {
+    if (AssempleGeometryPath(tmp_geo_path, path_vec[i])) {
       geo_path_vec.emplace_back(tmp_geo_path);
     }
   }
@@ -1306,6 +1281,13 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
       if (is_left_corner) {
         min_real_dist_vec[0] = std::min(min_real_dist_vec[0], real_dist);
       } else {
+        if (min_real_dist_vec[1] > real_dist) {
+          DEBUG_PRINT("------ real dist =" << real_dist << " obs pt = "
+                                           << obs_pt.transpose());
+          DEBUG_PRINT("------ corner1 = " << car_line.pA.transpose()
+                                          << " corner2 = "
+                                          << car_line.pB.transpose())
+        }
         min_real_dist_vec[1] = std::min(min_real_dist_vec[1], real_dist);
       }
     }
@@ -1325,21 +1307,23 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
     }
   }
 
+  DEBUG_PRINT("left min_real_dist = " << min_real_dist_vec[0]);
+  DEBUG_PRINT("right min_real_dist = " << min_real_dist_vec[1]);
+
   DEBUG_PRINT("left lat buffer = " << min_buffer_vec[0]);
   DEBUG_PRINT("right lat buffer = " << min_buffer_vec[1]);
   return min_buffer_vec;
 }
 
 const bool ParallelPathPlanner::GenAlignedPreparingLine(
-    std::vector<double>& preparing_y_vec,
+    std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec,
     const pnc::geometry_lib::PathPoint& ego_pose) {
   if (std::fabs(input_.ego_pose.heading) / 57.3 < 1.0) {
     if (input_.ego_pose.pos.x() > input_.tlane.slot_length ||
         std::fabs(input_.ego_pose.pos.y() - input_.tlane.obs_pt_inside.y()) >
             0.4) {
-      preparing_y_vec.emplace_back(ego_pose.pos.y());
+      preparing_pose_vec.emplace_back(ego_pose);
     }
-
     return true;
   }
 
@@ -1380,20 +1364,22 @@ const bool ParallelPathPlanner::GenAlignedPreparingLine(
       continue;
     }
 
-    // if (CheckPathSegVecCollided(aligned_path_seg_vec, 0.3)) {
-    //   DEBUG_PRINT("aligned plan collided!");
-    //   continue;
-    // }
-    preparing_y_vec.emplace_back(aligned_pos.y());
+    if (CheckPathSegVecCollided(aligned_path_seg_vec, 0.2)) {
+      DEBUG_PRINT("aligned plan collided!");
+      continue;
+    }
+
+    const pnc::geometry_lib::PathPoint aligned_pose(
+        Eigen::Vector2d(input_.tlane.pt_inside.x(), aligned_pos.y()), 0.0);
+
+    preparing_pose_vec.emplace_back(aligned_pose);
   }
 
   return true;
 }
 
-const bool ParallelPathPlanner::GenPreparingLineVec(
-    std::vector<double>& preparing_y_vec) {
-  preparing_y_vec.clear();
-
+const bool ParallelPathPlanner::GenParallelPreparingLineVec(
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
 
   const double tlane_outer_y =
@@ -1414,7 +1400,15 @@ const bool ParallelPathPlanner::GenPreparingLineVec(
     return false;
   }
 
+  const double y_bound = std::fabs(rac_channel_bound - rac_tlane_bound);
+
   double dy = 0.3;
+  int nums = static_cast<int>(y_bound / dy);
+  if (nums < 5) {
+    nums = 5;
+  }
+  dy = y_bound / nums;
+
   const double start_y = rac_tlane_bound + 0.2 * calc_params_.slot_side_sgn;
   double end_y = (1.2 + 0.5 * apa_param.GetParam().car_width + 1.8) *
                  calc_params_.slot_side_sgn;
@@ -1423,10 +1417,38 @@ const bool ParallelPathPlanner::GenPreparingLineVec(
     end_y = rac_channel_bound;
   }
 
-  preparing_y_vec = pnc::geometry_lib::Linspace(start_y, end_y, dy);
-  preparing_y_vec.emplace_back(rac_tlane_bound);
-  preparing_y_vec.emplace_back(rac_tlane_bound +
-                               0.1 * calc_params_.slot_side_sgn);
+  pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, 0.0);
+  prepare_pose.pos.y() = rac_tlane_bound;
+  preparing_pose_vec.emplace_back(prepare_pose);
+
+  const auto y_vec = pnc::geometry_lib::Linspace(start_y, end_y, dy);
+
+  for (const auto y : y_vec) {
+    prepare_pose.pos.y() = y;
+    preparing_pose_vec.emplace_back(prepare_pose);
+  }
+
+  return true;
+}
+
+const bool ParallelPathPlanner::GenTiltedPreparingLine(
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
+  const std::vector<double> heading_vec = {5.0, 10.0, 15.0, 20.0, 25.0, 30.0};
+
+  for (const auto& heading_deg : heading_vec) {
+    const double heading_rad = heading_deg / 57.3;
+    const auto v_preparing_line_heading =
+        geometry_lib::GenHeadingVec(heading_rad);
+
+    const Eigen::Vector2d v_preparing_line_norm(-v_preparing_line_heading.y(),
+                                                v_preparing_line_heading.x());
+    auto start_pos =
+        input_.tlane.pt_inside +
+        v_preparing_line_norm * (0.7 + 0.5 * apa_param.GetParam().car_width);
+
+    preparing_pose_vec.emplace_back(
+        pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+  }
 
   return true;
 }
@@ -1477,7 +1499,7 @@ const bool ParallelPathPlanner::SelectBestPathOutsideSlot(
 
 const bool ParallelPathPlanner::AssempleGeometryPath(
     GeometryPath& geometry_path,
-    const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec) {
+    const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec) const {
   geometry_path.Reset();
 
   if (path_seg_vec.size() == 0) {
@@ -1504,6 +1526,34 @@ const bool ParallelPathPlanner::AssempleGeometryPath(
   return true;
 }
 
+const bool ParallelPathPlanner::AssempleGeometryPathVec(
+    std::vector<GeometryPath>& geometry_path_vec,
+    const std::vector<std::vector<pnc::geometry_lib::PathSegment>>& path_vec)
+    const {
+  bool success = true;
+  GeometryPath tmp_geo_path;
+  for (const auto& path_seg : path_vec) {
+    if (!AssempleGeometryPath(tmp_geo_path, path_seg)) {
+      success = false;
+      break;
+    }
+    geometry_path_vec.emplace_back(tmp_geo_path);
+  }
+
+  return success;
+}
+
+const uint8_t ParallelPathPlanner::GetMinShiftTimeInGeometryPathVec(
+    const std::vector<GeometryPath>& geometry_path_vec) {
+  uint8_t min_nums = 100;
+  for (const auto& path : geometry_path_vec) {
+    if (min_nums < path.gear_change_count) {
+      min_nums = path.gear_change_count;
+    }
+  }
+  return min_nums;
+}
+
 const bool ParallelPathPlanner::OneStepDubinsPlan(
     const pnc::geometry_lib::PathPoint& start_pose,
     const pnc::geometry_lib::PathPoint& target_pose, const double radius,
@@ -1521,6 +1571,33 @@ const bool ParallelPathPlanner::OneStepDubinsPlan(
   if (success) {
     success = !IsDubinsCollided(buffer);
   }
+
+  return success;
+}
+
+const bool ParallelPathPlanner::DubinsPlan(
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>>& path_vec,
+    const pnc::geometry_lib::PathPoint& start_pose,
+    const pnc::geometry_lib::PathPoint& target_pose, const double radius,
+    const double buffer) {
+  path_vec.clear();
+  bool success = false;
+  // try dubins method
+  for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::CASE_COUNT; ++i) {
+    for (size_t j = 0; j < pnc::dubins_lib::DubinsLibrary::DUBINS_TYPE_COUNT;
+         ++j) {
+      if (!dubins_planner_.Solve(j, i)) {
+        continue;
+      }
+      if (IsDubinsCollided(kColBufferOutSlot)) {
+        continue;
+      }
+      std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
+      GetPathSegVecByDubins(path_seg_vec);
+      path_vec.emplace_back(path_seg_vec);
+      success = true;
+    }
+  }  // dubins loop
 
   return success;
 }
@@ -2211,43 +2288,72 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
   DEBUG_PRINT("front_limit_fail_cnt = " << front_limit_fail_cnt);
   DEBUG_PRINT("calc fail cnt = " << calc_fail_cnt);
   DEBUG_PRINT("success x vec -------");
+
+  if (success_x_vec.size() == 0) {
+    DEBUG_PRINT("no path success!");
+    return false;
+  }
+
+  // for debug
   for (const auto x : success_x_vec) {
     std::cout << x << ", ";
   }
   std::cout << std::endl;
 
-  std::vector<size_t> shifting_vec;
-  std::vector<double> length_vec;
-  size_t min_shifting_cnt = 10;
-
-  for (auto& path_info : total_path_vec) {
-    const auto& path = path_info.path_segment_vec;
-
-    path_info.park_out_heading_deg =
-        std::fabs(path.back().GetStartHeading() * 57.3);
-
-    min_shifting_cnt = std::min(min_shifting_cnt, path_info.gear_change_count);
-  }
-
+  // min gear shifting
   std::vector<size_t> min_gear_idx_vec;
+  size_t min_shifting_cnt = kInvalidInteger;
   for (size_t i = 0; i < total_path_vec.size(); i++) {
-    if (total_path_vec[i].gear_change_count == min_shifting_cnt) {
+    auto& path = total_path_vec[i];
+
+    path.park_out_heading_deg =
+        std::fabs(path.path_segment_vec.back().GetStartHeading() * 57.3);
+
+    if (path.gear_change_count < min_shifting_cnt) {
+      min_shifting_cnt = path.gear_change_count;
+      min_gear_idx_vec.clear();
+      min_gear_idx_vec.emplace_back(i);
+    } else if (path.gear_change_count == min_shifting_cnt) {
       min_gear_idx_vec.emplace_back(i);
     }
   }
   DEBUG_PRINT("path size =  " << min_gear_idx_vec.size()
                               << " after gear filtered!");
 
-  size_t best_idx = kInvalidInteger;
-  double min_heading = 66.6;
-  bool success = false;
+  if (min_gear_idx_vec.size() == 0) {
+    DEBUG_PRINT("select min gear shifting cnt failed!");
+    return false;
+  }
 
-  for (size_t i = 0; i < min_gear_idx_vec.size(); i++) {
-    size_t idx = min_gear_idx_vec[i];
-    if (total_path_vec[idx].park_out_heading_deg < min_heading) {
+  double min_heading = std::numeric_limits<double>::max();
+  for (const auto& idx : min_gear_idx_vec) {
+    const double current_heading_deg = total_path_vec[idx].park_out_heading_deg;
+    if (current_heading_deg < min_heading) {
+      min_heading = current_heading_deg;
+    }
+  }
+
+  std::vector<size_t> min_heading_idx_vec;
+  min_heading_idx_vec.reserve(min_gear_idx_vec.size());
+  for (const auto& idx : min_gear_idx_vec) {
+    if (total_path_vec[idx].park_out_heading_deg < min_heading + 1.0) {
+      min_heading_idx_vec.emplace_back(idx);
+    }
+  }
+
+  if (min_heading_idx_vec.size() == 0) {
+    DEBUG_PRINT("select min heading failed!");
+    return false;
+  }
+
+  bool success = false;
+  size_t best_idx = kInvalidInteger;
+  double min_length = std::numeric_limits<double>::max();
+  for (const auto& idx : min_heading_idx_vec) {
+    if (total_path_vec[idx].length < min_length) {
       success = true;
-      min_heading = total_path_vec[idx].park_out_heading_deg;
       best_idx = idx;
+      min_length = total_path_vec[idx].length;
     }
   }
 
@@ -3614,9 +3720,6 @@ const bool ParallelPathPlanner::TwoArcPath(
   // if ref_gear == invalid or cound  that mins ref_gear is not limited!
 
   using namespace pnc::geometry_lib;
-
-  path_vec.clear();
-
   std::vector<std::pair<Arc, Arc>> arc_pair_vec;
   auto tmp_target_line = target_line;
   bool success = CalTwoArcWithLine(start_pose, tmp_target_line, radius, radius,
@@ -3631,8 +3734,12 @@ const bool ParallelPathPlanner::TwoArcPath(
     std::vector<PathSegment> path_seg_vec;
     path_seg_vec.reserve(3);
 
-    Arc arc1 = arc_pair.first;
-    Arc arc2 = arc_pair.second;
+    const Arc arc1 = arc_pair.first;
+    const Arc arc2 = arc_pair.second;
+
+    if (arc2.pB.x() < kMinXInTBoundary) {
+      continue;
+    }
 
     if (!mathlib::IsDoubleEqual(arc2.headingB * 57.3,
                                 tmp_target_line.heading * 57.3)) {
@@ -3781,6 +3888,11 @@ const bool ParallelPathPlanner::LineArcPlan(
     tmp_arc.pB = tangent_ptss[i].second;
     tmp_arc.circle_info.center = centers[i];
     tmp_arc.circle_info.radius = radius;
+
+    if (tmp_arc.pA.x() < kMinXInTBoundary ||
+        tmp_arc.pB.x() < kMinXInTBoundary) {
+      continue;
+    }
 
     if (!CompleteArcInfo(tmp_arc)) {
       continue;
@@ -4221,7 +4333,8 @@ const bool ParallelPathPlanner::OneLinePlan(
   const pnc::geometry_lib::PathPoint start_pose(line.pA, line.heading);
 
   // std::cout << "line start pose =" << start_pose.pos.transpose()
-  //           << ", heading(deg) =" << start_pose.heading * 57.3 << std::endl;
+  //           << ", heading(deg) =" << start_pose.heading * 57.3 <<
+  //           std::endl;
 
   auto target_line = pnc::geometry_lib::BuildLineSegByPose(target_pose.pos,
                                                            target_pose.heading);

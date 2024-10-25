@@ -173,9 +173,9 @@ class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.is_all_path_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "all debug path",min=0, max=1, value= 1, step=1)
     # ego pose
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 9.64, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 2.21, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= 0.0, step=0.1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-15, max=15, value= 1.04, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 4.38, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value= -35.5, step=0.1)
     # obs pt pos
     self.obs_tlane_p_inside_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_x",min=-15, max=15, value= 6.0, step=0.01)
     self.obs_tlane_p_inside_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs_in_y",min=-15, max=15, value= -0.868469, step=0.01)

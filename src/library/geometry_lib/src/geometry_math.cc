@@ -2581,7 +2581,8 @@ const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
   if (cos_OAB > 1e-6 && cos_OAB < 1 - 1e-6 && cos_OBA > 1e-6 &&
       cos_OBA < 1 - 1e-6) {
     dist = CalPoint2LineDist(pO, line);
-  } else if (mathlib::IsDoubleEqual(cos_OAB, -1.0)) {
+  } else if (mathlib::IsDoubleEqual(cos_OAB, 1.0) &&
+             mathlib::IsDoubleEqual(cos_OBA, 1.0)) {
     // pO is on line seg
     dist = 0.0;
   } else {
