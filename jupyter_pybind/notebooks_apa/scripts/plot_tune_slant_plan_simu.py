@@ -135,6 +135,7 @@ class LocalViewSlider:
     self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=0.0, step=0.2)
 
     self.is_complete_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_complete",min=0, max=1, value=1, step=1)
+    self.is_itervative_solu_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_itervative_solu",min=0, max=1, value=1, step=1)
 
     self.is_astar_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "is_astar",min=0, max=1, value=1, step=1)
 
@@ -155,11 +156,14 @@ class LocalViewSlider:
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
 
+    self.car_inflation = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.30, value=0.0, step=0.01)
+
     ipywidgets.interact(slider_callback, vehicle_type = self.vehicle_type_slider,
                                          ego_x = self.ego_x_slider,
                                          ego_y = self.ego_y_slider,
                                          ego_heading = self.ego_heading_slider,
                                          is_complete = self.is_complete_slider,
+                                         is_itervative_solu = self.is_itervative_solu_slider,
                                          is_astar = self.is_astar_slider,
                                          is_left = self.is_left_slider,
                                          slot_phi = self.slot_phi_slider,
@@ -176,10 +180,12 @@ class LocalViewSlider:
                                          slot_width = self.slot_width_slider,
                                          slot_length = self.slot_length_slider,
                                          inside_dx = self.inside_dx_slider,
+
+                                         car_inflation = self.car_inflation,
                                        )
 
 ### sliders callback
-def slider_callback(vehicle_type, ego_x, ego_y, ego_heading, is_left, is_astar, is_complete, slot_phi, slot_inside_obs, right_obj_dx,
+def slider_callback(vehicle_type, car_inflation, ego_x, ego_y, ego_heading, is_left, is_astar, is_itervative_solu, is_complete, slot_phi, slot_inside_obs, right_obj_dx,
                     right_obj_dy, left_obj_dx, left_obj_dy, channel_width,  slot_pt0_x, slot_pt0_y, slot_width, slot_length, inside_dx, ):
   kwargs = locals()
 
@@ -190,7 +196,7 @@ def slider_callback(vehicle_type, ego_x, ego_y, ego_heading, is_left, is_astar, 
   elif vehicle_type == 2:
     vehicle_type = CHERY_E0X
 
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, car_inflation)
 
   car_xn = []
   car_yn = []
@@ -288,7 +294,7 @@ def slider_callback(vehicle_type, ego_x, ego_y, ego_heading, is_left, is_astar, 
 
   obs_params = [right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width, slot_inside_obs]
 
-  current_path_point_global_vec_ = slant_planning_py.Update(ego_pose, slot_pt, 0.2, is_complete, is_astar, inside_dx, obs_params)
+  current_path_point_global_vec_ = slant_planning_py.Update(ego_pose, slot_pt, 0.2, is_complete, is_itervative_solu, is_astar, inside_dx, obs_params)
 
   rectangle_solt_pos_vec_ = slant_planning_py.GetRectangleSoltPos()
 

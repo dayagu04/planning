@@ -1263,9 +1263,9 @@ const bool SamplePointSetInPathSeg(std::vector<Eigen::Vector2d> &point_set,
 
 const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
                                    const LineSegment &line, const double ds) {
-  if (!IsDoublePositive(line.length) || !IsDoublePositive(ds)) {
-    return LogErr(__func__, 0);
-  }
+  // if (!IsDoublePositive(line.length) || !IsDoublePositive(ds)) {
+  //   return LogErr(__func__, 0);
+  // }
 
   point_set.clear();
   point_set.reserve(50);
@@ -1290,10 +1290,10 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
                                const Arc &arc, const double ds) {
-  if (!IsDoublePositive(arc.length) || !IsDoublePositive(ds) ||
-      !IsDoublePositive(arc.circle_info.radius)) {
-    return LogErr(__func__, 0);
-  }
+  // if (!IsDoublePositive(arc.length) || !IsDoublePositive(ds) ||
+  //     !IsDoublePositive(arc.circle_info.radius)) {
+  //   return LogErr(__func__, 0);
+  // }
   point_set.clear();
   point_set.reserve(50);
 
@@ -1304,9 +1304,9 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
 
   const auto &pO = arc.circle_info.center;
   Eigen::Vector2d v_n = arc.pA - pO;
-  if (!IsDoublePositive(v_n.norm())) {
-    return LogErr(__func__, 1);
-  }
+  // if (!IsDoublePositive(v_n.norm())) {
+  //   return LogErr(__func__, 1);
+  // }
   double heading = arc.headingA;
   const double dheading =
       ds / arc.circle_info.radius * (arc.is_anti_clockwise ? 1.0 : -1.0);
@@ -2407,9 +2407,10 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
     return LogErr(__func__, 1);
   }
   if (!mathlib::IsDoubleEqual(arc.headingB, line.heading)) {
-    ILOG_INFO << "arc.headingB = " << arc.headingB * kRad2Deg
-              << "  line.heading = " << line.heading;
-    return LogErr(__func__, 2);
+    // ILOG_INFO << "arc.headingB = " << arc.headingB * kRad2Deg
+    //           << "  line.heading = " << line.heading;
+    return false;
+    // return LogErr(__func__, 2);
   }
   return true;
 }
@@ -2741,9 +2742,33 @@ const double GetTwoPointDist(const PathPoint &start, const PathPoint &end) {
   return (start.pos - end.pos).norm();
 }
 
+const bool CalLineFromPt(const uint8_t gear, const double length,
+                         const PathPoint &pose, PathSegment &line_seg) {
+  if (std::fabs(length) < 1e-3) {
+    return false;
+  }
+
+  const Eigen::Vector2d tang_vec = GenHeadingVec(pose.heading);
+
+  LineSegment line;
+  line.pA = pose.pos;
+  line.length = std::fabs(length);
+  const double sign = (gear == SEG_GEAR_DRIVE) ? 1.0 : -1.0;
+  line.pB = line.pA + sign * line.length * tang_vec;
+  line.heading = NormalizeAngle(pose.heading);
+  line.heading_vec = tang_vec;
+
+  line_seg.line_seg = line;
+  line_seg.seg_gear = gear;
+  line_seg.seg_steer = SEG_STEER_STRAIGHT;
+  line_seg.seg_type = SEG_TYPE_LINE;
+
+  return true;
+}
+
 const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
                         const double length, const double radius,
-                        const PathPoint pose, PathSegment &arc_seg) {
+                        const PathPoint &pose, PathSegment &arc_seg) {
   bool is_anti_clockwise = false;
   if (!CalcArcDirection(is_anti_clockwise, gear, steer) ||
       std::fabs(length) < 1e-3 || radius < 1e-3) {

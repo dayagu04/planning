@@ -7,12 +7,10 @@
 
 namespace planning {
 
-int RSPathInterface::GeneShortestRSPath(RSPath *rs_path,
-                                        bool *is_connected_to_goal,
-                                        const Pose2D *start, const Pose2D *end,
-                                        const double min_radius,
-                                        const bool need_interpolate,
-                                        const RSPathRequestType request_type) {
+int RSPathInterface::GeneShortestRSPath(
+    RSPath *rs_path, bool *is_connected_to_goal, const Pose2D *start,
+    const Pose2D *end, const double min_radius, const bool need_interpolate,
+    const RSPathRequestType request_type, const double rs_path_sample_dist) {
   // init
   rs_path->size = 0;
   rs_path->total_length = 0.0;
@@ -89,9 +87,9 @@ int RSPathInterface::GeneShortestRSPath(RSPath *rs_path,
     // rs_path_anchor_pts.size = kappa_list.size + 1
 
     // interpolate
-    double rs_path_sample_dist;
+    // double rs_path_sample_dist;
     RSPoint *anchor_point;
-    rs_path_sample_dist = 0.1;
+    // rs_path_sample_dist = 0.1;
 
     for (i = 0; i < rs_path->size; i++) {
       anchor_point = &rs_path_anchor_pts.points[i];

@@ -753,9 +753,13 @@ void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
 
 const double GetTwoPointDist(const PathPoint &start, const PathPoint &end);
+
+const bool CalLineFromPt(const uint8_t gear, const double length,
+                         const PathPoint &pose, PathSegment &line_seg);
+
 const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
                         const double length, const double radius,
-                        const PathPoint pose, PathSegment &arc_seg);
+                        const PathPoint &pose, PathSegment &arc_seg);
 
 const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
                             const double length);
@@ -778,6 +782,8 @@ struct GeometryPath {
   PathPoint end_pose;
   uint8_t cur_gear = SEG_GEAR_INVALID;
   uint8_t cur_steer = SEG_STEER_INVALID;
+  uint8_t last_gear = SEG_GEAR_INVALID;
+  uint8_t last_steer = SEG_STEER_INVALID;
   std::vector<uint8_t> steer_cmd_vec;
   std::vector<uint8_t> gear_cmd_vec;
   std::vector<PathSegment> path_segment_vec;
@@ -802,9 +808,13 @@ struct GeometryPath {
       path_count = path_segment_vec.size();
       cur_gear = path_segment_vec.front().seg_gear;
       cur_steer = path_segment_vec.front().seg_steer;
+      last_gear = path_segment_vec.back().seg_gear;
+      last_steer = path_segment_vec.back().seg_steer;
       start_pose = path_segment_vec.front().GetStartPose();
       end_pose = path_segment_vec.back().GetEndPose();
-      for (const auto &path_seg : path_segment_vec) {
+      gear_cmd_vec.reserve(path_count);
+      steer_cmd_vec.reserve(path_count);
+      for (const PathSegment &path_seg : path_segment_vec) {
         gear_cmd_vec.emplace_back(path_seg.seg_gear);
         steer_cmd_vec.emplace_back(path_seg.seg_steer);
         total_length += path_seg.Getlength();
@@ -843,6 +853,14 @@ struct GeometryPath {
     SetPath(__path_segment_vec);
   }
 
+  void AddPath(const GeometryPath &geometry_path) {
+    std::vector<PathSegment> __path_segment_vec = path_segment_vec;
+    __path_segment_vec.insert(__path_segment_vec.end(),
+                              geometry_path.path_segment_vec.begin(),
+                              geometry_path.path_segment_vec.end());
+    SetPath(__path_segment_vec);
+  }
+
   void Reset() {
     path_segment_vec.clear();
     gear_change_count = 0;
@@ -853,6 +871,8 @@ struct GeometryPath {
     end_pose.Reset();
     cur_gear = geometry_lib::SEG_GEAR_INVALID;
     cur_steer = geometry_lib::SEG_STEER_INVALID;
+    last_gear = geometry_lib::SEG_GEAR_INVALID;
+    last_steer = geometry_lib::SEG_STEER_INVALID;
     steer_cmd_vec.clear();
     gear_cmd_vec.clear();
     path_pt_vec.clear();
@@ -874,7 +894,7 @@ struct GeometryPath {
     }
   }
 
-  void PrintInfo() {
+  void PrintInfo() const {
     for (size_t i = 0; i < path_segment_vec.size(); i++) {
       const auto &current_seg = path_segment_vec[i];
       ILOG_INFO << "col flag = " << current_seg.collision_flag;

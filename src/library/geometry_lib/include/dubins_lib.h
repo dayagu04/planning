@@ -78,6 +78,7 @@ class DubinsLibrary {
     uint8_t gear_change_count = 0;
     uint8_t gear_change_index = 0;
     uint8_t path_seg_count = 0;
+    std::vector<double> length_vec = {0.0, 0.0, 0.0};
     std::vector<uint8_t> gear_cmd_vec = {0, 0, 0};
     double length = 0.0;
     double current_length = 0.0;
@@ -108,6 +109,7 @@ class DubinsLibrary {
   const bool OneStepDubinsUpdate();
   const bool OneStepDubinsUpdateByVer();
   const bool OneStepDubinsUpdateByVer(const double min_length);
+  const std::vector<Output> Update();
   void SetInput(Input& input) { input_ = input; }
   void PrintOutput() const;
 

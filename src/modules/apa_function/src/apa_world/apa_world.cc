@@ -195,7 +195,145 @@ void ApaWorld::UpdateStateMachine() {
 
 void ApaWorld::UpdateSlots() {}
 void ApaWorld::UpdateUssDistance() {}
-void ApaWorld::UpdateObstacles() {}
+void ApaWorld::UpdateObstacles() {
+  apa_data_ptr_->apa_obs_map.clear();
+  UpdateFuisonObs();
+  UpdateGroundLineObs();
+  UpdateUssObs();
+}
+
+void ApaWorld::UpdateFuisonObs() {
+  const bool use_fus_occ_obj = apa_param.GetParam().use_fus_occ_obj;
+  if (use_fus_occ_obj &&
+      apa_data_ptr_->fusion_occupancy_objects_info_ptr == nullptr) {
+    ILOG_INFO << "fusion_occ_objects_info_ptr is nullptr";
+    return;
+  }
+  if (!use_fus_occ_obj && apa_data_ptr_->fusion_objects_info_ptr == nullptr) {
+    ILOG_INFO << "fusion_objects_info_ptr is nullptr";
+    return;
+  }
+
+  uint8 fusion_object_num;
+  if (use_fus_occ_obj) {
+    fusion_object_num =
+        apa_data_ptr_->fusion_occupancy_objects_info_ptr->fusion_object_size;
+  } else {
+    fusion_object_num =
+        apa_data_ptr_->fusion_objects_info_ptr->fusion_object_size;
+  }
+
+  if (fusion_object_num == 0) {
+    ILOG_INFO << "fusion objects is empty";
+    return;
+  }
+
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  // Assuming an object has a maximum of 66 obstacle points
+  obs_pt_vec.reserve(fusion_object_num * 66);
+
+  Eigen::Vector2d fs_pt;
+  if (use_fus_occ_obj) {
+    iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
+    for (uint8 i = 0; i < fusion_object_num; ++i) {
+      fusion_occupancy_object =
+          apa_data_ptr_->fusion_occupancy_objects_info_ptr->fusion_object[i]
+              .additional_occupancy_info;
+      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_size; ++j) {
+        fs_pt << fusion_occupancy_object.polygon_points[j].x,
+            fusion_occupancy_object.polygon_points[j].y;
+        obs_pt_vec.emplace_back(fs_pt);
+      }
+    }
+  } else {
+    iflyauto::FusionObjectsAdditional fusion_object;
+    for (uint8 i = 0; i < fusion_object_num; ++i) {
+      fusion_object = apa_data_ptr_->fusion_objects_info_ptr->fusion_object[i]
+                          .additional_info;
+      for (uint32 j = 0; j < fusion_object.polygon_points_size; ++j) {
+        fs_pt << fusion_object.polygon_points[j].x,
+            fusion_object.polygon_points[j].y;
+        obs_pt_vec.emplace_back(fs_pt);
+      }
+    }
+  }
+
+  apa_data_ptr_->apa_obs_map[ObstacleType::FUSION] = obs_pt_vec;
+
+  ILOG_INFO << "fusion objects size = " << obs_pt_vec.size();
+
+  return;
+}
+
+void ApaWorld::UpdateGroundLineObs() {
+  if (apa_data_ptr_->ground_line_perception_info_ptr == nullptr) {
+    ILOG_INFO << "ground_line_perception_info_ptr is nullptr";
+    return;
+  }
+
+  const uint8_t ground_lines_size =
+      apa_data_ptr_->ground_line_perception_info_ptr->ground_lines_size;
+
+  if (ground_lines_size == 0) {
+    ILOG_INFO << "ground line is empty";
+    return;
+  }
+
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  // Assuming an object has a maximum of 33 obstacle points
+  obs_pt_vec.reserve(ground_lines_size * 66);
+
+  Eigen::Vector2d gl_pt;
+  iflyauto::GroundLine gl;
+  for (uint8_t i = 0; i < ground_lines_size; ++i) {
+    gl = apa_data_ptr_->ground_line_perception_info_ptr->ground_lines[i];
+    for (uint8 j = 0; j < gl.points_3d_size; ++j) {
+      gl_pt << gl.points_3d[j].x, gl.points_3d[j].y;
+      obs_pt_vec.emplace_back(gl_pt);
+    }
+  }
+
+  apa_data_ptr_->apa_obs_map[ObstacleType::GROUND_LINE] = obs_pt_vec;
+
+  ILOG_INFO << "ground line objects size = " << obs_pt_vec.size();
+
+  return;
+}
+
+void ApaWorld::UpdateUssObs() {
+  if (apa_data_ptr_->uss_percept_info_ptr == nullptr) {
+    ILOG_INFO << "uss_percept_info_ptr is empty";
+    return;
+  }
+
+  const auto& obj_info_desample =
+      apa_data_ptr_->uss_percept_info_ptr
+          ->out_line_dataori[0];  // 0 means desample while 1 means raw model
+                                  // output
+
+  const uint32 uss_pt_num = obj_info_desample.obj_pt_cnt;
+
+  if (uss_pt_num == 0) {
+    ILOG_INFO << "uss obs is empty";
+    return;
+  }
+
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  obs_pt_vec.reserve(uss_pt_num);
+
+  Eigen::Vector2d uss_pt;
+  for (uint32 i = 0; i < uss_pt_num; ++i) {
+    uss_pt << obj_info_desample.obj_pt_global[i].x,
+        obj_info_desample.obj_pt_global[i].y;
+    obs_pt_vec.emplace_back(uss_pt);
+  }
+
+  apa_data_ptr_->apa_obs_map[ObstacleType::USS] = obs_pt_vec;
+
+  ILOG_INFO << "uss objects size = " << obs_pt_vec.size();
+
+  return;
+}
 
 const bool ApaWorld::Update() {
   if (local_view_ptr_ == nullptr) {

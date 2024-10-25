@@ -225,6 +225,7 @@ struct ApaParameters {
 
   // path planner params
   bool new_itervative_solution = false;
+  double prepare_max_reverse_heading_err = 1.68;
   double prepare_line_min_x_offset_slot = 7.2;
   double prepare_line_dx_offset_slot = 0.1;
   double prepare_line_max_x_offset_slot = 9.7;

@@ -2,9 +2,11 @@
 
 #include <memory>
 
+#include "apa_param_setting.h"
 #include "apa_utils.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
@@ -42,7 +44,7 @@ const bool ApaPlannerBase::CheckPaused() const {
 const bool ApaPlannerBase::CheckPlanSkip() const {
   if (frame_.plan_stm.planning_status == PARKING_FINISHED ||
       frame_.plan_stm.planning_status == PARKING_FAILED) {
-    DEBUG_PRINT("plan has been finished or failed, need reset");
+    ILOG_INFO << "plan has been finished or failed, need reset";
 
     if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
       apa_world_ptr_->GetSlotManagerPtr()->Reset();
@@ -70,10 +72,10 @@ void ApaPlannerBase::GenPlanningOutput() {
       apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
       apa_world_ptr_->GetApaDataPtr()->measurement_data.heading);
 
-  DEBUG_PRINT("frame_.plan_stm.planning_status = "
-              << static_cast<int>(frame_.plan_stm.planning_status)
-              << "  plan path pt size = "
-              << current_path_point_global_vec_.size());
+  ILOG_INFO << "frame_.plan_stm.planning_status = "
+            << static_cast<int>(frame_.plan_stm.planning_status)
+            << "  plan path pt size = "
+            << current_path_point_global_vec_.size();
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
@@ -97,7 +99,7 @@ void ApaPlannerBase::GenPlanningOutput() {
     apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   }
 
-  DEBUG_PRINT("gen plan output success.");
+  ILOG_INFO << "gen plan output success.";
 }
 
 void ApaPlannerBase::GenPlanningHmiOutput() {
@@ -123,7 +125,7 @@ void ApaPlannerBase::GenPlanningPath() {
 
   size_t N = current_path_point_global_vec_.size();
   if (N > PLANNING_TRAJ_POINTS_NUM - 1) {
-    std::cout << "sample ds is possible err\n";
+    ILOG_INFO << "sample ds is possible err";
     N = PLANNING_TRAJ_POINTS_NUM - 1;
   }
   trajectory->trajectory_points_size = N;
@@ -214,14 +216,13 @@ const double ApaPlannerBase::CalRemainDistFromPath() {
     if (success == true) {
       remain_dist = frame_.current_path_length - s_proj;
 
-      DEBUG_PRINT("remain_dist = " << remain_dist << "  s_proj = " << s_proj
-                                   << "  current_path_length = "
-                                   << frame_.current_path_length);
+      ILOG_INFO << "remain_dist = " << remain_dist << "  s_proj = " << s_proj
+                << "  current_path_length = " << frame_.current_path_length;
     } else {
-      DEBUG_PRINT("remain_dist calculation error:input is error");
+      ILOG_INFO << "remain_dist calculation error:input is error";
     }
   } else {
-    DEBUG_PRINT("remain_dist calculation error: path spline failed!");
+    ILOG_INFO << "remain_dist calculation error: path spline failed!";
   }
 
   return remain_dist;
@@ -247,20 +248,32 @@ const double ApaPlannerBase::CalRemainDistFromUss() {
   remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
                 safe_uss_remain_dist;
 
-  DEBUG_PRINT("origin_uss remain dist = "
-              << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-              << "  uss remain dist = " << remain_dist);
+  ILOG_INFO << "origin_uss remain dist = "
+            << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
+            << "  uss remain dist = " << remain_dist;
+
+  const double obs_pt_remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
+      safe_uss_remain_dist;
+
+  ILOG_INFO << "origin_obs_pt remain dist = "
+            << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
+            << "  obs_pt remain dist = " << obs_pt_remain_dist;
 
   // remain_dist = 5.01;
 
-  return remain_dist;
+  if (apa_param.GetParam().enable_corner_uss_process) {
+    return remain_dist;
+  } else {
+    return obs_pt_remain_dist;
+  }
 }
 
 const bool ApaPlannerBase::PostProcessPath() {
   size_t origin_trajectory_size = current_path_point_global_vec_.size();
   if (origin_trajectory_size < 2) {
     frame_.spline_success = false;
-    DEBUG_PRINT("error: origin_trajectory_size = " << origin_trajectory_size);
+    ILOG_INFO << "error: origin_trajectory_size = " << origin_trajectory_size;
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
     return false;
   }
@@ -308,7 +321,7 @@ const bool ApaPlannerBase::PostProcessPath() {
 
   if (success == false) {
     frame_.spline_success = false;
-    DEBUG_PRINT("fit line by spline error!");
+    ILOG_INFO << "fit line by spline error!";
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SAME;
     return false;
   }

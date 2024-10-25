@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "Eigen/Core"
 #include "local_view.h"
@@ -192,30 +193,23 @@ struct UssDistance {
 
 enum class ObstacleType {
   FUSION,
+  GROUND_LINE,
   USS,
+  VIRTUAL,
   COUNT,
   INVALID,
 };
 
-struct ObstaclePt {
-  std::vector<Eigen::Vector3d> obs_pt_vec;
-  int obs_size = 0;
-  ObstacleType obs_type = ObstacleType::INVALID;
-
-  void Reset() {
-    obs_size = 0;
-    obs_type = ObstacleType::INVALID;
-  }
-};
-
 struct ApaObstacle {
-  std::vector<ObstaclePt> obs_vec;
-  int obs_type_size;
-
-  void Reset() {
-    obs_vec.clear();
-    obs_type_size = 0;
-  }
+  size_t id = 0;
+  double vel = 0.0;
+  Eigen::Vector2d center_2d = Eigen::Vector2d(0.0, 0.0);
+  Eigen::Vector3d center_3d = Eigen::Vector3d(0.0, 0.0, 0.0);
+  std::vector<Eigen::Vector2d> obs2d_pt_vec;
+  std::vector<Eigen::Vector3d> obs3d_pt_vec;
+  size_t obs2d_pt_size = 0;
+  size_t obs3d_pt_size = 0;
+  ObstacleType obs_type = ObstacleType::INVALID;
 };
 
 struct ApaData {
@@ -236,7 +230,12 @@ struct ApaData {
   MeasurementData measurement_data;
   ApaSlots apa_slots;
   UssDistance uss_dis;
-  ApaObstacle apa_obs;
+
+  // 暂时用这个 无需改变太多之前代码
+  std::unordered_map<ObstacleType, std::vector<Eigen::Vector2d>> apa_obs_map;
+
+  // 后面需要用这个
+  // std::unordered_map<ObstacleType, std::vector<ApaObstacle>> apa_obs_map;
 
   SimulationParam simu_param;
 
@@ -253,7 +252,7 @@ struct ApaData {
     measurement_data.Reset();
     apa_slots.Reset();
     uss_dis.Reset();
-    apa_obs.Reset();
+    apa_obs_map.clear();
 
     current_state = iflyauto::FunctionalState_PARK_STANDBY;
     slot_type = Common::PARKING_SLOT_TYPE_INVALID;

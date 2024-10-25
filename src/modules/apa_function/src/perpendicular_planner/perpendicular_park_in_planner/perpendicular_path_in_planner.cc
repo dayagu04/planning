@@ -51,7 +51,9 @@ void PerpendicularPathInPlanner::Preprocess() {
   calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
   calc_params_.can_insert_line = true;
   calc_params_.is_searching_stage = false;
-  calc_params_.statistical_time = 0.0;
+  calc_params_.col_det_time = 0.0;
+  calc_params_.dubins_plan_time = 0.0;
+  calc_params_.rough_plan_time = 0.0;
   calc_params_.strict_car_lat_inflation =
       apa_param.GetParam().car_lat_inflation_strict + 0.068;
   calc_params_.strict_col_lon_safe_dist =
