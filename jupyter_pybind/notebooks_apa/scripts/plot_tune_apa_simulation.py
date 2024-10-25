@@ -13,11 +13,7 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-11-52-27/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-11-52-27_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-15-42-25/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-15-42-26_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-11-22-13/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-11-22-14_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240923/20240923-21-26-44/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-23-21-26-44_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241009/20241009-11-52-32/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-10-09-11-52-32_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241016/20241016-20-26-06/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-16-20-26-06_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True

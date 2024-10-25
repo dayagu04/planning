@@ -71,6 +71,8 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
 
     bool is_searching_stage = false;
 
+    std::vector<geometry_lib::PathPoint> tange_pose_vec;
+
     PrePlanCase pre_plan_case = PrePlanCase::FAIL;
 
     PlanRequest plan_request;
@@ -83,7 +85,10 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
     bool multi_plan = false;
     bool can_insert_line = true;
 
-    double statistical_time = 0.0;
+    double col_det_time = 0.0;
+
+    double dubins_plan_time = 0.0;
+    double rough_plan_time = 0.0;
 
     double turn_radius = 5.5;
 
@@ -116,7 +121,9 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
       strict_car_lat_inflation = 0.0;
       strict_col_lon_safe_dist = 0.0;
 
-      statistical_time = 0.0;
+      col_det_time = 0.0;
+      dubins_plan_time = 0.0;
+      rough_plan_time = 0.0;
 
       turn_radius = 5.5;
 
@@ -148,6 +155,8 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
 
       pre_line_tangent_vec.setZero();
       pre_line_normal_vec.setZero();
+
+      tange_pose_vec.clear();
     }
   };
 
@@ -224,7 +233,8 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
 
   const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,
-                                    const double lon_safe_dist);
+                                    const double lon_safe_dist,
+                                    const bool enable_log = true);
 
   // prepare plan start
   const bool PreparePlan();
@@ -251,61 +261,101 @@ class PerpendicularPathInPlanner : public PerpendicularPathPlanner {
   bool CalMultiSafeCircle();
   // prepare plan end
 
+  const bool NewUpdatePathPlan();
+
+  const bool NewPreparePathPlan();
+
+  const bool NewPreparePathSecondPlan();
+
+  const bool NewPrepareSinglePathPlan(
+      const pnc::geometry_lib::PathPoint &cur_pose,
+      std::vector<
+          std::pair<geometry_lib::GeometryPath, geometry_lib::GeometryPath>>
+          &pair_geometry_path_vec);
+
+  const DubinsPlanResult NewDubinsPathPlan(
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
+      const double min_length, const uint8_t max_gear_change_count,
+      const uint8_t ref_gear, const bool need_col_det,
+      geometry_lib::GeometryPath &geometry_path);
+
+  const DubinsPlanResult RSPathPlan(
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
+      const double min_length, const uint8_t max_gear_change_count,
+      const bool need_col_det, geometry_lib::GeometryPath &geometry_path);
+
   const bool MultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
                                  const uint8_t ref_gear,
                                  const PlanRequest plan_request);
 
   const bool RoughMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
-                                      const uint8_t ref_gear);
+                                      const uint8_t ref_gear,
+                                      geometry_lib::GeometryPath &ahead_path,
+                                      const bool enable_log = false);
 
   const bool OneStepMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
-                                        const uint8_t ref_gear);
+                                        const uint8_t ref_gear,
+                                        geometry_lib::GeometryPath &ahead_path,
+                                        const bool enable_log = false);
 
   const bool OptimalMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
-                                        const uint8_t ref_gear);
+                                        const uint8_t ref_gear,
+                                        geometry_lib::GeometryPath &ahead_path);
 
   const bool SingleMultiAdjustPathPlan(
       const geometry_lib::PathPoint &pose, const uint8_t ref_gear,
       const double lat_buffer, const double lon_buffer,
-      std::vector<geometry_lib::GeometryPath> &geometry_path_vec);
+      std::vector<geometry_lib::GeometryPath> &geometry_path_vec,
+      const bool enable_log = true);
 
   const bool OneArcPathPlan(const geometry_lib::PathPoint &pose,
                             const uint8_t ref_gear, const double lat_buffer,
                             const double lon_buffer,
-                            geometry_lib::GeometryPath &geometry_path);
+                            geometry_lib::GeometryPath &geometry_path,
+                            const bool enable_log = true);
 
   const bool LineArcPathPlan(const geometry_lib::PathPoint &pose,
                              const uint8_t ref_gear, const double lat_buffer,
                              const double lon_buffer,
                              geometry_lib::GeometryPath &geometry_path,
-                             const bool same_gear = true);
+                             const bool same_gear = true,
+                             const bool enable_log = true);
 
   const bool TwoArcPathPlan(const geometry_lib::PathPoint &pose,
                             const uint8_t ref_gear, const double lat_buffer,
                             const double lon_buffer,
                             geometry_lib::GeometryPath &geometry_path,
-                            const bool same_gear = false);
+                            const bool same_gear = false,
+                            const bool enable_log = true);
 
   const bool AlignAndSTurnPathPlan(const geometry_lib::PathPoint &pose,
                                    const uint8_t ref_gear,
                                    const double lat_buffer,
                                    const double lon_buffer,
-                                   geometry_lib::GeometryPath &geometry_path);
+                                   geometry_lib::GeometryPath &geometry_path,
+                                   const bool enable_log = true);
 
   const bool OneLinePathPlan(const geometry_lib::PathPoint &pose,
                              const uint8_t gear, const double lat_buffer,
                              const double lon_buffer,
                              const double last_seg_reverse_length,
-                             geometry_lib::GeometryPath &geometry_path);
+                             geometry_lib::GeometryPath &geometry_path,
+                             const bool enable_log = true);
 
-  const bool InsertLineInGeometryPath(
-      const double lat_buffer, const double lon_buffer, const uint8_t ref_gear,
-      const double insert_length, geometry_lib::GeometryPath &geometry_path);
+  const bool InsertLineInGeometryPath(const double lat_buffer,
+                                      const double lon_buffer,
+                                      const uint8_t ref_gear,
+                                      const double insert_length,
+                                      geometry_lib::GeometryPath &geometry_path,
+                                      const bool enable_log = true);
 
   const bool ConstructReverseVaildPathSeg(geometry_lib::PathSegment &seg1,
                                           geometry_lib::PathSegment &seg2,
                                           const double lat_buffer,
-                                          const double lon_buffer);
+                                          const double lon_buffer,
+                                          const bool enable_log = true);
 
   const bool OneArcPathPlan(
       const pnc::geometry_lib::PathPoint &pose,

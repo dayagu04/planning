@@ -716,6 +716,9 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().min_one_step_path_length_in_slot, double,
                   "min_one_step_path_length_in_slot");
 
+  JSON_READ_VALUE(apa_param.SetPram().prepare_max_reverse_heading_err, double,
+                  "prepare_max_reverse_heading_err");
+
   JSON_READ_VALUE(apa_param.SetPram().prepare_line_min_x_offset_slot, double,
                   "prepare_line_min_x_offset_slot");
 

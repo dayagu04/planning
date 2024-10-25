@@ -28,6 +28,7 @@ class CollisionDetector {
     FUSION_OBS,
     RECORD_OBS,
     VIRTUAL_OBS,
+    USS_OBS,
     COUNT_OBS,
   };
 

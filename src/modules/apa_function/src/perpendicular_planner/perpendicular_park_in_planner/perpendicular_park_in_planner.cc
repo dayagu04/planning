@@ -28,6 +28,7 @@
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
+#include "log_glog.h"
 #include "math_lib.h"
 #include "perpendicular_path_in_planner.h"
 #include "planning_plan_c.h"
@@ -1103,8 +1104,8 @@ void PerpendicularParkInPlanner::GenTlane() {
     slot_t_lane_.pt_terminal_pos.y() += ego_slot_info.move_slot_dist;
     slot_t_lane_.pt_inside.y() += ego_slot_info.move_slot_dist;
     slot_t_lane_.pt_outside.y() += ego_slot_info.move_slot_dist;
-    std::cout << "should move slot according to obs pt, move dist = "
-              << ego_slot_info.move_slot_dist << std::endl;
+    ILOG_INFO << "should move slot according to obs pt, move dist = "
+              << ego_slot_info.move_slot_dist;
 
     ego_slot_info.terminal_err.Set(
         ego_slot_info.ego_pos_slot - slot_t_lane_.pt_terminal_pos,

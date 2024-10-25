@@ -20,7 +20,8 @@ class RSPathInterface {
   int GeneShortestRSPath(RSPath *rs_path, bool *is_connected_to_goal,
                          const Pose2D *start, const Pose2D *end,
                          const double min_radius, const bool need_interpolate,
-                         const RSPathRequestType request_type);
+                         const RSPathRequestType request_type,
+                         const double rs_path_sample_dist = 0.1);
 
   int RSPathInterpolate(RSPath *rs_path, const Pose2D *start,
                         const double min_radius);

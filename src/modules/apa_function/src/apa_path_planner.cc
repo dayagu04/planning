@@ -259,7 +259,7 @@ void ApaPathPlanner::PrintOutputSegmentsInfo() const {
       std::min(output_.path_seg_index.second - output_.path_seg_index.first + 1,
                output_.path_segment_vec.size());
 
-  for (size_t i = 0; i < N; i++) {
+  for (size_t i = 0; i < output_.path_segment_vec.size(); i++) {
     const auto& current_seg = output_.path_segment_vec[i];
 
     if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {

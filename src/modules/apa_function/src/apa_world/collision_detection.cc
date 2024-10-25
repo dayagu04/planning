@@ -352,10 +352,12 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   }
 
   std::vector<Eigen::Vector2d> traj_bound;
-  pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
-  pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
-  // CalTrajBound(traj_bound, start_pose, target_pose, true);
-  traj_bound = CalTrajBound(start_pose, target_pose);
+  if (box) {
+    pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
+    pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
+    // CalTrajBound(traj_bound, start_pose, target_pose, true);
+    traj_bound = CalTrajBound(start_pose, target_pose);
+  }
 
   // detect if there is intersection(point_P) between obstacle and car line
   // segment
@@ -562,10 +564,12 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   }
 
   std::vector<Eigen::Vector2d> traj_bound;
-  pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
-  pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
-  // CalTrajBound(traj_bound, start_pose, target_pose, false);
-  traj_bound = CalTrajBound(start_pose, target_pose, arc);
+  if (box) {
+    pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
+    pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
+    // CalTrajBound(traj_bound, start_pose, target_pose, false);
+    traj_bound = CalTrajBound(start_pose, target_pose, arc);
+  }
 
   // obstacle arc segment
   const auto v_OA = arc.pA - arc.circle_info.center;

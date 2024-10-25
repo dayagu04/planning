@@ -4,7 +4,9 @@
 #include <string>
 #include <utility>
 
+#include "apa_data.h"
 #include "apa_param_setting.h"
+#include "collision_detection.h"
 #include "common_c.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
@@ -104,6 +106,8 @@ void UssObstacleAvoidance::Init() {
     uss_local_normal_angle_vec_.emplace_back(pnc::mathlib::Deg2Rad(
         apa_param.GetParam().uss_normal_angle_deg_vec[i] - 90.0));
   }
+
+  col_det.SetParam(CollisionDetector::Paramters(param_.lat_inflation));
 }
 
 const std::vector<Eigen::Vector2d> UssObstacleAvoidance::GetCarLocalVertex() {
@@ -393,6 +397,14 @@ const bool UssObstacleAvoidance::Preprocess() {
     return false;
   }
 
+  // 添加障碍物 世界坐标即可  暂时只添加超声波点云障碍物,
+  // 后续应该放在一个地方统一计算所有真实的障碍物，考虑高度
+  col_det.ClearObstacles();
+  if (apa_data_ptr_->apa_obs_map.count(ObstacleType::USS) != 0) {
+    col_det.AddObstacles(apa_data_ptr_->apa_obs_map[ObstacleType::USS],
+                         CollisionDetector::ObsType::USS_OBS);
+  }
+
   car_motion_info_.steer_angle =
       apa_data_ptr_->measurement_data.steer_wheel_angle;
 
@@ -549,6 +561,11 @@ void UssObstacleAvoidance::Update(
     return;
   }
 
+  pnc::geometry_lib::PathSegment path_seg;
+  const uint8_t gear = (car_motion_info_.reverse_flag)
+                           ? pnc::geometry_lib::SEG_GEAR_REVERSE
+                           : pnc::geometry_lib::SEG_GEAR_DRIVE;
+
   // update car traj (line or arc)
   if (std::abs(car_motion_info_.steer_angle) <
       pnc::mathlib::Deg2Rad(param_.arc_line_shift_steer_angle_deg)) {
@@ -558,6 +575,13 @@ void UssObstacleAvoidance::Update(
     car_motion_info_.turning_center.setZero();
 
     GenCarLine();
+
+    pnc::geometry_lib::CalLineFromPt(
+        gear, param_.detection_distance,
+        pnc::geometry_lib::PathPoint(apa_data_ptr_->measurement_data.pos,
+                                     apa_data_ptr_->measurement_data.heading),
+        path_seg);
+
   } else {
     // car turn, update car arc
     car_motion_info_.car_motion_mode = ARC_MODE;
@@ -577,6 +601,17 @@ void UssObstacleAvoidance::Update(
     }
 
     GenCarArc();
+
+    const uint8_t steer = (front_wheel_angle > 0.0)
+                              ? pnc::geometry_lib::SEG_STEER_LEFT
+                              : pnc::geometry_lib::SEG_STEER_RIGHT;
+
+    pnc::geometry_lib::CalArcFromPt(
+        gear, steer, param_.detection_distance,
+        car_motion_info_.rear_axle_center_turn_radius,
+        pnc::geometry_lib::PathPoint(apa_data_ptr_->measurement_data.pos,
+                                     apa_data_ptr_->measurement_data.heading),
+        path_seg);
   }
 
   // update uss arc
@@ -591,6 +626,10 @@ void UssObstacleAvoidance::Update(
   } else {
     remain_dist_info_.is_available = false;
   }
+
+  CollisionDetector::CollisionResult result =
+      col_det.UpdateByObsMap(path_seg, param_.lat_inflation, 0.0);
+  remain_dist_info_.obs_pt_remain_dist = result.remain_dist;
 }
 
 const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {

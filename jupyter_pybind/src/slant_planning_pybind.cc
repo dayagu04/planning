@@ -69,7 +69,8 @@ std::vector<Eigen::Vector2d> obs_pts_;
 std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     std::vector<Eigen::Vector2d> raw_pt,
                                     double ds, bool is_complete_path,
-                                    bool is_astar, double inside_dx,
+                                    bool is_itervative_solu, bool is_astar,
+                                    double inside_dx,
                                     std::vector<double> obs_params) {
   obs_pts_.clear();
   planning::apa_planner::ApaPlannerBase::Frame frame;
@@ -391,6 +392,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   line_vec.emplace_back(line);
   line.SetPoints(G, H);
   line_vec.emplace_back(line);
+  line.SetPoints(H, A);
+  line_vec.emplace_back(line);
 
   std::vector<Eigen::Vector2d> pt_vec;
   obs_pts_.clear();
@@ -412,13 +415,16 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   collision_detector_ptr->SetObstacles(obs_local_pts,
                                        CollisionDetector::TLANE_OBS);
 
-
-  const auto& tf = ego_slot_info.g2l_tf;
+  const auto &tf = ego_slot_info.g2l_tf;
   planning::OccupancyGridBound bound(
       std::min(tf.GetPos(C).x(), tf.GetPos(D).x()) - 0.0168,
-      std::min({tf.GetPos(G).y(), tf.GetPos(H).y(), tf.GetPos(A).y(), tf.GetPos(F).y()}) - 0.0168,
+      std::min({tf.GetPos(G).y(), tf.GetPos(H).y(), tf.GetPos(A).y(),
+                tf.GetPos(F).y()}) -
+          0.0168,
       std::max(tf.GetPos(G).x(), tf.GetPos(H).x()) + 0.0168,
-      std::max({tf.GetPos(G).y(), tf.GetPos(H).y(), tf.GetPos(A).y(), tf.GetPos(F).y()}) + 0.0168);
+      std::max({tf.GetPos(G).y(), tf.GetPos(H).y(), tf.GetPos(A).y(),
+                tf.GetPos(F).y()}) +
+          0.0168);
 
   collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
@@ -432,7 +438,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     pt_inside = obj_pt_1;
   }
   slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(pt_inside).x();
-  input.is_simulation = true;
+  input.is_simulation = is_astar;
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
   input.tlane = slot_t_lane;
   input.is_complete_path = is_complete_path;
@@ -447,7 +453,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane.pt_inside);
 
-  bool success = pBase->UpdatePb(input, collision_detector_ptr);
+  bool success = false;
+  if (is_itervative_solu) {
+    success = pBase->ItervativeUpdatePb(input, collision_detector_ptr);
+  } else {
+    success = pBase->UpdatePb(input, collision_detector_ptr);
+  }
 
   current_path_point_global_vec_.clear();
 

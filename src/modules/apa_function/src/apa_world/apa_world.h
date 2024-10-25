@@ -60,6 +60,9 @@ class ApaWorld {
   void UpdateSlots();
   void UpdateUssDistance();
   void UpdateObstacles();
+  void UpdateFuisonObs();
+  void UpdateGroundLineObs();
+  void UpdateUssObs();
 
   std::shared_ptr<ApaData> apa_data_ptr_;
 

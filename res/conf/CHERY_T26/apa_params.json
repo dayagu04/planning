@@ -206,6 +206,7 @@
   "insert_line_after_arc": 0.2268,
   "min_one_step_path_length": 0.6,
   "min_one_step_path_length_in_slot": 1.2,
+  "prepare_max_reverse_heading_err": 2.68,
   "prepare_line_min_x_offset_slot": -0.51,
   "prepare_line_dx_offset_slot": 0.5,
   "prepare_line_max_x_offset_slot": 1.01,
