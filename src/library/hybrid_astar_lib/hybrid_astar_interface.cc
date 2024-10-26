@@ -268,28 +268,23 @@ int HybridAStarInterface::UpdateOutput() {
 
       if (request_.path_generate_method ==
           AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
-        if (hybrid_astar_->PlanByCubicPolynomialSampling(
-                &coarse_traj_, initial_state_, goal_state_,
-                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
-                &clear_zone_, &ref_line_)) {
-          double response_end_time = IflyTime::Now_ms();
-
-          ILOG_INFO << "hybrid astar finish, cubic path point size = "
-                    << coarse_traj_.x.size() << " ,plan once time = "
-                    << response_end_time - response_start_time
-                    << ",safe buffer = " << lat_buffer;
-        } else {
-          hybrid_astar_->PlanByRSPathSampling(
+        // parallel
+        if (request_.space_type == ParkSpaceType::PARALLEL) {
+          hybrid_astar_->SamplingByCubicPolyForParallelSlot(
               &coarse_traj_, initial_state_, goal_state_,
               lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
               &clear_zone_, &ref_line_);
-
-          double response_end_time = IflyTime::Now_ms();
-
-          ILOG_INFO << "hybrid astar finish, rs path point size = "
-                    << coarse_traj_.x.size() << " ,plan once time = "
-                    << response_end_time - response_start_time
-                    << ",safe buffer = " << lat_buffer;
+        } else {
+          if (hybrid_astar_->SamplingByCubicPolyForVerticalSlot(
+                  &coarse_traj_, initial_state_, goal_state_,
+                  lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+                  &clear_zone_, &ref_line_)) {
+          } else {
+            hybrid_astar_->PlanByRSPathSampling(
+                &coarse_traj_, initial_state_, goal_state_,
+                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+                &clear_zone_, &ref_line_);
+          }
         }
 
       } else {
@@ -297,13 +292,10 @@ int HybridAStarInterface::UpdateOutput() {
             &coarse_traj_, initial_state_, goal_state_, lon_min_sampling_length,
             map_bounds_, obs_, request_, &edt_, &clear_zone_, &ref_line_);
 
-        double response_end_time = IflyTime::Now_ms();
-
-        ILOG_INFO << "hybrid astar finish, rs path point size = "
-                  << coarse_traj_.x.size() << " ,plan once time = "
-                  << response_end_time - response_start_time
-                  << ",safe buffer = " << lat_buffer;
       }
+
+      ILOG_INFO << "hybrid astar finish, rs path point size = "
+                << coarse_traj_.x.size();
 
       // check time
       if (coarse_traj_.time_ms > 1000.0) {
@@ -323,6 +315,9 @@ int HybridAStarInterface::UpdateOutput() {
   }
 
   search_state_ = AstarSearchState::SUCCESS;
+  double response_end_time = IflyTime::Now_ms();
+  ILOG_INFO << "hybrid astar finish, plan once time = "
+            << response_end_time - response_start_time;
 
   // hybrid_astar_->DebugPathString(&coarse_traj_);
 

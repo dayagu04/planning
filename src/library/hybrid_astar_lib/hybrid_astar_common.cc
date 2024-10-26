@@ -1,5 +1,6 @@
 
 #include "hybrid_astar_common.h"
+#include <cmath>
 
 namespace planning {
 
@@ -68,6 +69,27 @@ std::string PlanReasonDebugString(const PlanningReason reason) {
   }
 
   return "none";
+}
+
+const bool PolynomialPathBetter(const PolynomialPathCost& path,
+                                const PolynomialPathCost& base) {
+  if (std::fabs(path.tail_heading) < std::fabs(base.tail_heading)) {
+    if (std::fabs(path.offset_to_center) <
+        std::fabs(base.offset_to_center) + 0.01) {
+      return true;
+    }
+  } else if (std::fabs(path.tail_heading) == std::fabs(base.tail_heading)) {
+    if (std::fabs(path.offset_to_center) < std::fabs(base.offset_to_center)) {
+      return true;
+    } else if (std::fabs(path.offset_to_center) ==
+               std::fabs(base.offset_to_center)) {
+      if (path.accumulated_s < base.accumulated_s) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 }  // namespace planning

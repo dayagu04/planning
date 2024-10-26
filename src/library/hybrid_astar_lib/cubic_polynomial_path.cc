@@ -66,6 +66,7 @@ void CubicPathInterface::GeneratePolynomialPath(
     std::vector<AStarPathPoint>& path, const std::vector<double>& coefficients,
     const double step, const Pose2D& start_point, const Pose2D& target_point) {
   curvature_vec_.clear();
+  path.clear();
 
   if (ArePosesEqual(start_point, target_point)) {
     path.clear();
@@ -114,7 +115,7 @@ const double CubicPathInterface::GetMinCurvatureRadius() const {
   if (max_curvature_ != 0) {
     return 1 / max_curvature_;
   } else {
-    ILOG_DEBUG << "curvature = 0" << std::endl;
+    ILOG_DEBUG << "curvature = 0";
     return std::numeric_limits<double>::max();
   }
 };
