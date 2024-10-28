@@ -110,9 +110,9 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  auto *mutable_agent_manager = session_->mutable_environmental_model()
-                                    ->get_dynamic_world()
-                                    ->mutable_agent_manager();
+  // auto *mutable_agent_manager = session_->mutable_environmental_model()
+  //                                   ->get_dynamic_world()
+  //                                   ->mutable_agent_manager();
   // planning_data->mutable_dynamic_world()->mutable_agent_manager();
 
   //-------------CIPV相关-----------------------
@@ -130,7 +130,7 @@ bool LongTimeTaskPipelineV3::Run() {
   // }
 
   // 构建st input
-  StGraphInput st_graph_input();  // TBD：jwliu23
+  // StGraphInput st_graph_input();  // TBD：jwliu23
   // session_->mutable_st_graph_base()->Init(st_graph_input); // TBD: jwliu23
 
   ok = expand_st_boundaries_decider_->Execute();

@@ -16,6 +16,7 @@ bool VirtualObstacleDecider::Execute() {
     LOG_ERROR("PreCheck failed\n");
     return false;
   }
+  return true;
 }
 
 }  // namespace planning
