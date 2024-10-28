@@ -834,29 +834,28 @@ void StGraphGenerator::UpdateSTGraphs(
     }
 
     double s_step = 0.0;
-    double s_step_soft_bound = 0.0;
+    double s_step_hard_bound = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
     double st_obs_j = 0.5;  //_J_Obj 常规jerk
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
+      s_step += std::max(st.v_lead() * t, 0.0);
       // 考虑前车减速的情况
       if (st.a_lead() < 0) {
         // s_step += CalcDeceleratedObstacleST();
-        s_step += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
-                               1.0 / 6 * st_obs_j * t_cube,
-                           0.0);
+        s_step_hard_bound += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
+                                          1.0 / 6 * st_obs_j * t_cube,
+                                      0.0);
         st_obs_v =
             std::max(st_obs_v + st_obs_a * t + 0.5 * st_obs_j * t_square, 0.0);
         st_obs_a = std::min(st_obs_a + st_obs_j * t, 0.0);
         if (st_obs_a == 0.0) {
           st_obs_j = 0.0;
         }
-        s_step_soft_bound += std::max(st.v_lead() * t, 0.0);
       } else {
-        s_step += std::max(st.v_lead() * t, 0.0);
-        s_step_soft_bound = s_step;
+        s_step_hard_bound = s_step;
       }
       // 只更新关注的t区间内
       if (sample_time >= st.start_time() && sample_time <= st.end_time()) {
@@ -873,8 +872,8 @@ void StGraphGenerator::UpdateSTGraphs(
           */
           s_ref = st.start_s() - st.desired_distance() + s_step;
           // hard bound使用安全距离
-          hard_bound.upper =
-              std::max(st.start_s() - st.safe_distance() + s_step, 0.1);
+          hard_bound.upper = std::max(
+              st.start_s() - st.safe_distance() + s_step_hard_bound, 0.1);
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
           hard_bound.vel = st.v_lead();
           hard_bound.acc = st.a_lead();
@@ -882,11 +881,11 @@ void StGraphGenerator::UpdateSTGraphs(
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::min(
               hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
-          soft_bound.upper = std::min(
-              0.5 * (hard_bound.upper + s_ref_update),
-              std::max(st.start_s() - st.desired_distance() +
-                           s_step_soft_bound + static_soft_bound_buffer,
-                       0.0));
+          soft_bound.upper =
+              std::min(0.5 * (hard_bound.upper + s_ref_update),
+                       std::max(st.start_s() - st.desired_distance() + s_step +
+                                    static_soft_bound_buffer,
+                                0.0));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
           soft_bound.vel = st.v_lead();
           soft_bound.acc = st.a_lead();
@@ -897,8 +896,8 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step;
           // hard bound使用安全距离
           hard_bound.upper = s_upper_bound;
-          hard_bound.lower =
-              std::max(st.start_s() + st.safe_distance() + s_step, 0.0);
+          hard_bound.lower = std::max(
+              st.start_s() + st.safe_distance() + s_step_hard_bound, 0.0);
           hard_bound.vel = st.v_lead();
           hard_bound.acc = st.a_lead();
           hard_bound.id = st.id();
