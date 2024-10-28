@@ -337,7 +337,7 @@ const bool ParallelPathPlanner::PlanFromTargetToLine(
   bool is_narrow_channel_activated = false;
   std::vector<pnc::geometry_lib::PathSegment> narrow_path_seg_vec;
   for (const auto& target_pose : calc_params_.valid_target_pt_vec) {
-    pnc::geometry_lib::PrintPose("current target", target_pose);
+    // pnc::geometry_lib::PrintPose("current target", target_pose);
     arc_1.pA = target_pose.pos;
     arc_1.headingA = target_pose.heading;
     arc_1.circle_info.center = CalEgoTurningCenter(
@@ -1100,10 +1100,11 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
     if (i < parallel_line_size && parallel_success_cnt > 4) {
       continue;
     }
-    DEBUG_PRINT("number =======" << i);
+    // DEBUG_PRINT("number =======" << i);
+    // geometry_lib::PrintPose("prepare pose", preparing_pose_vec[i]);
     std::vector<pnc::geometry_lib::PathSegment> inversed_park_out_path;
     if (!PlanFromTargetToLine(inversed_park_out_path, preparing_pose_vec[i])) {
-      DEBUG_PRINT(" PlanFromTargetToLine failed!");
+      // DEBUG_PRINT(" PlanFromTargetToLine failed!");
       continue;
     }
 
@@ -1124,7 +1125,7 @@ const bool ParallelPathPlanner::OutsideSlotPlan() {
 
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
     if (!PlanToPreparingLine(prepare_seg_vec, input_.ego_pose, prepare_line)) {
-      // DEBUG_PRINT("PlanToPreparingLine fail!");
+      DEBUG_PRINT("PlanToPreparingLine fail!");
       continue;
     }
 
@@ -1214,7 +1215,7 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
   if (!success) {
     TwoArcPath(path_vec, ego_pose, prepare_line, ref_gear, ref_radius,
                kColBufferOutSlot);
-    DEBUG_PRINT("two arc path = " << path_vec.size());
+    // DEBUG_PRINT("two arc path = " << path_vec.size());
   }
 
   const PathPoint target_pose(prepare_line.pA, prepare_line.heading);
@@ -1225,8 +1226,11 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
       path_vec.emplace_back(path);
     }
   }
+  // DEBUG_PRINT("path_vec size = " << path_vec.size());
+  if (path_vec.size() == 0) {
+    return false;
+  }
 
-  DEBUG_PRINT("path_vec size = " << path_vec.size());
   for (size_t i = line_arc_path_size; i < path_vec.size(); i++) {
     GeometryPath tmp_geo_path;
     if (AssempleGeometryPath(tmp_geo_path, path_vec[i])) {
@@ -1234,7 +1238,7 @@ const bool ParallelPathPlanner::PlanToPreparingLine(
     }
   }
 
-  DEBUG_PRINT("geo_path_vec size = " << geo_path_vec.size());
+  // DEBUG_PRINT("geo_path_vec size = " << geo_path_vec.size());
   if (geo_path_vec.size() == 0) {
     return false;
   }
@@ -1281,13 +1285,6 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
       if (is_left_corner) {
         min_real_dist_vec[0] = std::min(min_real_dist_vec[0], real_dist);
       } else {
-        if (min_real_dist_vec[1] > real_dist) {
-          DEBUG_PRINT("------ real dist =" << real_dist << " obs pt = "
-                                           << obs_pt.transpose());
-          DEBUG_PRINT("------ corner1 = " << car_line.pA.transpose()
-                                          << " corner2 = "
-                                          << car_line.pB.transpose())
-        }
         min_real_dist_vec[1] = std::min(min_real_dist_vec[1], real_dist);
       }
     }
@@ -1484,7 +1481,7 @@ const bool ParallelPathPlanner::SelectBestPathOutsideSlot(
   double min_length = std::numeric_limits<double>::max();
   for (const auto idx : index_vec) {
     const auto& path = path_vec[idx];
-    DEBUG_PRINT("path length = " << path.length);
+    // DEBUG_PRINT("path length = " << path.length);
     if (path.length < min_length) {
       min_length = path.length;
       best_path_idx = idx;
@@ -1906,8 +1903,8 @@ const bool ParallelPathPlanner::CalMinSafeCircle() {
 
   DEBUG_PRINT("Time cost (ms) =" << time1 - time0 << " vs " << time2 - time1);
 
-  DEBUG_PRINT("apa_param.GetParam().is_parallel_advanced_method = "
-              << apa_param.GetParam().is_parallel_advanced_method);
+  // DEBUG_PRINT("apa_param.GetParam().is_parallel_advanced_method = "
+  //             << apa_param.GetParam().is_parallel_advanced_method);
 
   std::vector<pnc::geometry_lib::PathSegment> search_out_res;
 
@@ -2259,7 +2256,7 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
         path_seg_vec.insert(path_seg_vec.begin(), first_line_path_seg);
 
         if (mathlib::IsDoubleEqual(start_pos.x(), line_step_vec.front().x())) {
-          DEBUG_PRINT("calc back limit path success! " << start_pos.x());
+          // DEBUG_PRINT("calc back limit path success! " << start_pos.x());
           debug_path_idx = total_path_vec.size();
         }
       }
@@ -2267,10 +2264,11 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
       GeometryPath geo_path;
       AssempleGeometryPath(geo_path, path_seg_vec);
       if (geo_path.first_path_length < 0.2) {
-        DEBUG_PRINT("first path length is too short!");
+        // DEBUG_PRINT("first path length is too short!");
         continue;
       }
-      DEBUG_PRINT("geo_path gear change cnt = " << geo_path.gear_change_count);
+      // DEBUG_PRINT("geo_path gear change cnt = " <<
+      // geo_path.gear_change_count);
       total_path_vec.emplace_back(geo_path);
       success_cnt++;
       gear == SEG_GEAR_DRIVE ? ++dirve_success_cnt : ++reverse_success_cnt;
@@ -2284,21 +2282,21 @@ const bool ParallelPathPlanner::AdvancedInversedTrialsInSlot(
   DEBUG_PRINT("success_cnt = " << success_cnt);
   DEBUG_PRINT("dirve_success_cnt = " << dirve_success_cnt);
   DEBUG_PRINT("reverse_success_cnt = " << reverse_success_cnt);
-  DEBUG_PRINT("rear_limit_fail_cnt = " << rear_limit_fail_cnt);
-  DEBUG_PRINT("front_limit_fail_cnt = " << front_limit_fail_cnt);
+  // DEBUG_PRINT("rear_limit_fail_cnt = " << rear_limit_fail_cnt);
+  // DEBUG_PRINT("front_limit_fail_cnt = " << front_limit_fail_cnt);
   DEBUG_PRINT("calc fail cnt = " << calc_fail_cnt);
-  DEBUG_PRINT("success x vec -------");
+  // DEBUG_PRINT("success x vec -------");
 
   if (success_x_vec.size() == 0) {
     DEBUG_PRINT("no path success!");
     return false;
   }
 
-  // for debug
-  for (const auto x : success_x_vec) {
-    std::cout << x << ", ";
-  }
-  std::cout << std::endl;
+  // // for debug
+  // for (const auto x : success_x_vec) {
+  //   std::cout << x << ", ";
+  // }
+  // std::cout << std::endl;
 
   // min gear shifting
   std::vector<size_t> min_gear_idx_vec;
@@ -3784,7 +3782,7 @@ const bool ParallelPathPlanner::TwoArcPath(
     path_vec.emplace_back(path_seg_vec);
     success = true;
   }
-  DEBUG_PRINT("path_vec size = " << path_vec.size());
+  // DEBUG_PRINT("path_vec size = " << path_vec.size());
 
   return success;
 }
@@ -3842,11 +3840,11 @@ const bool ParallelPathPlanner::LineArcPlan(
                                         line_seg1.heading);
     if (geometry_lib::IsValidGear(current_gear) &&
         pnc::geometry_lib::CalLineSegGear(line) != current_gear) {
-      DEBUG_PRINT("line pA =" << line.pA.transpose());
-      DEBUG_PRINT("line pB =" << line.pB.transpose());
-      std::cout << "line seg gear is error, line seg gear = "
-                << static_cast<int>(pnc::geometry_lib::CalLineSegGear(line))
-                << std::endl;
+      // DEBUG_PRINT("line pA =" << line.pA.transpose());
+      // DEBUG_PRINT("line pB =" << line.pB.transpose());
+      // std::cout << "line seg gear is error, line seg gear = "
+      //           << static_cast<int>(pnc::geometry_lib::CalLineSegGear(line))
+      //           << std::endl;
       continue;
     }
     pnc::geometry_lib::PathSegment line_seg(current_gear, line);
