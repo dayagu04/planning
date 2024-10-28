@@ -7,7 +7,7 @@ if(ADAPTER STREQUAL "cyber")
   add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="/asw/planning/res/conf/engine_configs/planning_engine_config_cyber.json")
   message("cyber config")
 elseif (ADAPTER STREQUAL "ap")
-  add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="../runtime_service/planning_exec/res/conf/engine_configs/planning_engine_config_ap.json")
+  add_definitions(-DPLANNING_ENGINE_CONFIG_PATH="${MODULE_RES_DIR}/res/conf/engine_configs/planning_engine_config_ap.json")
   message("ap config")
 endif()
 

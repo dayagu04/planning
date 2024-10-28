@@ -81,7 +81,7 @@ void PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
             << ", scene_type=" << scene_type << "==========" << std::endl;
   // 车辆配置文件
   car_ = car;
-  fs::path source = "res/conf/" + car;
+  fs::path source = "res/conf/product_configs/" + car;
   fs::path destination = "/asw/planning/res/conf/";
   copy_confif_files(source, destination);
 

@@ -1,8 +1,8 @@
 {
-  "module_cfg_dir": "../runtime_service/planning_exec/res/conf/module_configs",
-  "vehicle_cfg_dir": "../runtime_service/planning_exec/res/conf",
+  "module_cfg_dir": "/opt/usr/iflytek/cluster_b/gea/runtime_service/planning_exec/res/conf/module_configs",
+  "vehicle_cfg_dir": "/opt/usr/iflytek/cluster_b/gea/runtime_service/planning_exec/res/conf",
   "log_cfg": {
-    "log_file": "../runtime_service/planning_exec/log",
+    "log_file": "/opt/usr/iflytek/cluster_b/gea/runtime_service/planning_exec/log",
     "log_level": "FETAL"
   }
 }
