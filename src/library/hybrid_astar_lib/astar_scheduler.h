@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bits/stdint-uintn.h>
 #include "hybrid_astar_common.h"
 
 namespace planning {

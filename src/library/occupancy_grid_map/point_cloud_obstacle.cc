@@ -217,7 +217,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         global.y = limiter_points[point_id].y;
         slot_tf.GlobalPointToULFLocal(&local, global);
 
-        if (config.enable_delete_fusion_obj_in_slot) {
+        if (config.astar_config.enable_delete_fusion_obj_in_slot) {
           is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
           if (is_collision) {
