@@ -834,6 +834,7 @@ void StGraphGenerator::UpdateSTGraphs(
     }
 
     double s_step = 0.0;
+    double s_step_soft_bound = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
     double st_obs_j = 0.5;  //_J_Obj 常规jerk
@@ -852,8 +853,10 @@ void StGraphGenerator::UpdateSTGraphs(
         if (st_obs_a == 0.0) {
           st_obs_j = 0.0;
         }
+        s_step_soft_bound += std::max(st.v_lead() * t, 0.0);
       } else {
         s_step += std::max(st.v_lead() * t, 0.0);
+        s_step_soft_bound = s_step;
       }
       // 只更新关注的t区间内
       if (sample_time >= st.start_time() && sample_time <= st.end_time()) {
@@ -879,11 +882,11 @@ void StGraphGenerator::UpdateSTGraphs(
           st_boundary.hard_bound.emplace_back(hard_bound);
           s_ref_update = std::min(
               hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
-          soft_bound.upper =
-              std::min(0.5 * (hard_bound.upper + s_ref_update),
-                       std::max(st.start_s() - st.desired_distance() + s_step +
-                                    static_soft_bound_buffer,
-                                0.0));
+          soft_bound.upper = std::min(
+              0.5 * (hard_bound.upper + s_ref_update),
+              std::max(st.start_s() - st.desired_distance() +
+                           s_step_soft_bound + static_soft_bound_buffer,
+                       0.0));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
           soft_bound.vel = st.v_lead();
           soft_bound.acc = st.a_lead();
