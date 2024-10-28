@@ -1651,16 +1651,8 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
                                     0.5 * ego_slot_info.slot_width * t;
   }
 
-  std::cout << "slot width =" << ego_slot_info.slot_width << std::endl;
-
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;
-
-  std::cout << "origin heading =" << ego_slot_info.slot_origin_heading * 57.3
-            << std::endl;
-
-  std::cout << "frame_.current_arc_steer = "
-            << static_cast<int>(frame_.current_arc_steer) << std::endl;
 
   ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
                             ego_slot_info.slot_origin_heading);
@@ -1682,25 +1674,11 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
   ego_slot_info.target_ego_pos_slot << goal_x, goal_y;
   ego_slot_info.target_ego_heading_slot = 0.0;
 
-  std::cout << "target ego pos in slot ="
-            << ego_slot_info.target_ego_pos_slot.transpose()
-            << " heading =" << ego_slot_info.target_ego_heading_slot * 57.3
-            << std::endl;
-
   // calc terminal error once
   ego_slot_info.terminal_err.Set(
       ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
       pnc::geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
                                         ego_slot_info.target_ego_heading_slot));
-
-  std::cout << "-- ego_slot:" << std::endl;
-  std::cout << "ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
-            << std::endl;
-
-  std::cout << "ego_heading_slot (deg)= "
-            << ego_slot_info.ego_heading_slot * 57.3 << std::endl;
-
-  std::cout << "vel_ego = " << measures_ptr->vel << std::endl;
 
   // calc slot occupied ratio
   double slot_occupied_ratio = 0.0;
@@ -1715,9 +1693,6 @@ const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
     }
   }
   ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
-
-  std::cout << "ego_slot_info.slot_occupied_ratio = "
-            << ego_slot_info.slot_occupied_ratio << std::endl;
 
   // update stuck by uss time
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
