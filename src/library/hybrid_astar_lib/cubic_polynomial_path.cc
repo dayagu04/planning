@@ -88,7 +88,7 @@ void CubicPathInterface::GeneratePolynomialPath(
                          2 * coefficients[1] * x + coefficients[2];
     const double y_sec_dot = 6 * coefficients[0] * x + 2 * coefficients[1];
 
-    double curvature = std::fabs(y_sec_dot) / pow(1 + y_dot * y_dot, 1.5);
+    double curvature = y_sec_dot / pow(1 + y_dot * y_dot, 1.5);
     AStarPathPoint tmp_point;
     tmp_point.x = x;
     tmp_point.y = y;
