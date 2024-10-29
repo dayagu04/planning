@@ -16,8 +16,12 @@ class LongitudinalDecisionDecider : public Task {
 
  private:
   void DetermineKinematicBoundForCruiseScenario();
+
   void UpdateInvadeNeighborResults();
+
   void MakeDebugMessage();
+
+  double CalculateAgentsAverageSpeedAroundEgo() const;
 
  private:
   EgoPlanningConfig config_;
@@ -26,6 +30,13 @@ class LongitudinalDecisionDecider : public Task {
   int32_t plan_points_num_ = 0;
   double plan_time_ = 0.0;
   double dt_ = 0.0;
+
+  static constexpr double kCruiseSpeedMinThd = 60.0 / 3.6;
+  static constexpr double kEgoSpeedWithCruiseSpeedDiffThd = 15.0 / 3.6;
+  static constexpr double kEgoPreviewTimeThd = 6.0;
+  static constexpr double kPreviewDistanceStep = 2.0;
+  static constexpr double kMaxCurvThd = 0.01;
+  static constexpr double kAgentsAverageSpeedRatioByCruiseThd = 0.7;
 };
 
 }  // namespace planning

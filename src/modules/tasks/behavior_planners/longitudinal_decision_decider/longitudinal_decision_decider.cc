@@ -4,6 +4,7 @@
 
 #include "src/modules/context/environmental_model.h"
 #include "src/modules/context/planning_context.h"
+#include "utils_math.h"
 
 namespace planning {
 
@@ -47,11 +48,10 @@ bool LongitudinalDecisionDecider::Execute() {
 }
 
 void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
-  constexpr double kCruiseSpeedMinThd = 60.0 / 3.6;
-  constexpr double kEgoSpeedWithCruiseSpeedDiffThd = 15.0 / 3.6;
-
   const auto &environmental_model = session_->environmental_model();
-  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
+  const auto &dynamic_world = environmental_model.get_dynamic_world();
+  const auto &planning_context = session_->planning_context();
 
   // 获取init point
   const auto &plannig_init_point = ego_state_mgr->planning_init_point();
@@ -60,7 +60,7 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
 
   // 1.lane change
   const auto lane_change_status =
-      session_->planning_context().lane_change_decider_output().curr_state;
+      planning_context.lane_change_decider_output().curr_state;
   const bool is_in_lane_keeping =
       lane_change_status == StateMachineLaneChangeStatus::kLaneKeeping;
   if (!is_in_lane_keeping) {
@@ -80,14 +80,54 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
   }
 
   // 4.cutin
+  if (dynamic_world == nullptr) {
+    return;
+  }
+  const auto *agent_manager = dynamic_world->agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+  const auto &agents = agent_manager->GetAllCurrentAgents();
+  for (const auto *ptr_agent : agents) {
+    if (ptr_agent == nullptr) {
+      continue;
+    }
+    if (ptr_agent->is_cutin()) {
+      can_increase_acc_bound = false;
+      break;
+    }
+  }
 
   // 5.path curv
+  const auto &planned_path = planning_context.planner_output().planned_path();
+  const double k_preview_distance_thd = ego_vel * kEgoPreviewTimeThd;
+  double sample_distance = 0.0;
+  while (sample_distance < k_preview_distance_thd) {
+    sample_distance += kPreviewDistanceStep;
+    auto path_point = planned_path.GetPathPointByS(sample_distance);
+    const double curr_kappa = path_point.kappa();
+    if (curr_kappa > kMaxCurvThd) {
+      can_increase_acc_bound = false;
+      break;
+    }
+  }
 
   // 6.agents average speed
+  const double agent_around_average_speed =
+      CalculateAgentsAverageSpeedAroundEgo();
+  if (agent_around_average_speed <
+      cruise_speed * kAgentsAverageSpeedRatioByCruiseThd) {
+    can_increase_acc_bound = false;
+  }
 
   // 7.max_acc_curv VS st_corridor
   // 需要获取st信息，判断最大减速度时，和前车是否安全，前车从 agents_headway_map
   // 中获取
+}
+
+double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
+    const {
+  return 0.0;  // TBD
 }
 
 void LongitudinalDecisionDecider::MakeDebugMessage() {
