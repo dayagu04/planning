@@ -20,6 +20,22 @@ enum class ParkPathGenerationType {
   PARK_PATH_GENERATION_MAX_NUM,
 };
 
+struct AstarParkingConfig {
+  bool vertical_slot_auto_scheduler_for_astar;
+  bool parallel_slot_auto_scheduler_for_astar;
+  double parallel_finish_lon_err;
+  double parallel_finish_center_lat_err;
+  double parallel_finish_head_lat_err;
+  double parallel_finish_heading_err;
+
+  bool cubic_polynomial_pose_adjustment = true;
+  // move target point in slot to another point for easy tracking
+  double vertical_slot_end_straight_dist = 1.0;
+  double parallel_slot_end_straight_dist = 0.0;
+  bool enable_delete_fusion_obj_in_slot = true;
+  double deadend_uss_stuck_replan_wait_time;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -270,11 +286,7 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
-  bool use_a_cubic_polynomial_for_adjustment = true;
-  // move target point in slot to another point for easy tracking
-  double vertical_slot_target_adjust_dist = 1.0;
-  bool enable_delete_fusion_obj_in_slot = true;
-  double deadend_uss_stuck_replan_wait_time;
+
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
@@ -327,6 +339,8 @@ struct ApaParameters {
                                             0.88, 0.0,  0.0,   0.0,   0.0};
   std::vector<double> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
                                             0.18, 0.95, 0.95, 0.95, 0.95};
+
+  AstarParkingConfig astar_config;
 };
 
 class ApaParametersSetting {

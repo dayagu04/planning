@@ -99,6 +99,7 @@ EigenPath2d static_ref_line_;
 Eigen::Vector4d car_pose_by_s_;
 EigenPointSet2d search_sequence_path_;
 Eigen::Vector3d coordinate_system_;
+Eigen::Vector3d goal_pose_;
 
 // all search node, not only include: open + close, and include deleted node.
 std::vector<Eigen::Vector3d> all_searched_node_;
@@ -292,6 +293,14 @@ int GetPathFromHybridAstar() {
   coordinate_system_[0] = ego_slot_info_.slot_origin_pos[0];
   coordinate_system_[1] = ego_slot_info_.slot_origin_pos[1];
 
+  // goal
+  local_position.x = ego_slot_info_.target_ego_pos_slot.x();
+  local_position.y = ego_slot_info_.target_ego_pos_slot.y();
+
+  tf.ULFLocalPoseToGlobal(&global_position, local_position);
+  goal_pose_[0] = global_position.x;
+  goal_pose_[1] = global_position.y;
+
   // plot all searched node
   const std::vector<DebugAstarSearchPoint> &all_search_node =
       hybrid_astar_interface_->GetChildNodeForDebug();
@@ -477,6 +486,49 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
+SlotRelativePosition GenerateSlotSide(
+    const planning::apa_planner::ApaPlannerBase::EgoSlotInfo &ego_slot_info,
+    iflyauto::IFLYLocalization &localization) {
+  const auto &slot_points =
+      ego_slot_info.target_managed_slot.corner_points().corner_point();
+
+  if (slot_points.size() != 4) {
+    ILOG_ERROR << "slot point error";
+    return SlotRelativePosition::NONE;
+  }
+
+  // 顶点顺序,来自感知
+  std::vector<Eigen::Vector2d> pt;
+  pt.resize(slot_points.size());
+
+  for (int i = 0; i < slot_points.size(); i++) {
+    pt[i] << slot_points[i].x(), slot_points[i].y();
+  }
+
+  Eigen::Vector2d n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d t = Eigen::Vector2d::Zero();
+
+  // note: slot points' order is corrected in slot management
+  Pose2D vec02;
+  vec02.x =  pt[2].x()-pt[0].x();
+  vec02.y =  pt[2].y()-pt[0].y();
+
+  Pose2D ego_vector;
+  double ego_heading = localization.orientation.euler_boot.yaw;
+  ego_vector.x  = std::cos(ego_heading);
+  ego_vector.y  = std::sin(ego_heading);
+
+  SlotRelativePosition slot_side = SlotRelativePosition::NONE;
+  double cross = CrossProduct(ego_vector, vec02);
+  if (cross > 0) {
+    slot_side = SlotRelativePosition::LEFT;
+  } else if (cross < 0) {
+    slot_side = SlotRelativePosition::RIGHT;
+  }
+
+  return slot_side;
+}
+
 const bool PlanOnce(
     py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
     py::bytes &localization_info_bytes,
@@ -578,12 +630,12 @@ const bool PlanOnce(
   double plan_time = IflyTime::Now_us();
   ILOG_INFO << "plan time ms " << (plan_time - copy_data_time) / 1000.0;
 
-  const std::shared_ptr<apa_planner::ApaPlannerBase> vertical_space_decider_ =
+  const std::shared_ptr<apa_planner::ApaPlannerBase> astar_planner =
       apa_interface_ptr->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
 
-  if (vertical_space_decider_ != nullptr) {
+  if (astar_planner != nullptr) {
     const apa_planner::ApaPlannerBase::Frame &frame =
-        vertical_space_decider_->GetFrame();
+        astar_planner->GetFrame();
 
     const apa_planner::ApaPlannerBase::EgoSlotInfo &ego_slot_info =
         frame.ego_slot_info;
@@ -596,15 +648,16 @@ const bool PlanOnce(
     VirtualWallDecider wall_decider;
 
     ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type ==
-        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    if (ego_slot_info.slot_type == 1) {
       slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type ==
-               Common::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_slot_info.slot_type == 3) {
       slot_type = ParkSpaceType::SLANTING;
     } else {
       slot_type = ParkSpaceType::VERTICAL;
     }
+
+    SlotRelativePosition slot_side =
+        GenerateSlotSide(ego_slot_info, localization_info);
 
     wall_decider.Process(
         virtual_wall_obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
@@ -614,7 +667,7 @@ const bool PlanOnce(
         Pose2D(ego_slot_info.target_ego_pos_slot[0],
                ego_slot_info.target_ego_pos_slot[1],
                ego_slot_info.target_ego_heading_slot),
-        slot_type, SlotRelativePosition::NONE);
+        slot_type, slot_side);
 
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
@@ -773,10 +826,13 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     } else {
       slot_type = ParkSpaceType::VERTICAL;
     }
+    SlotRelativePosition slot_side =
+        GenerateSlotSide(ego_slot_info, local_view.localization);
+
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
         ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
-        SlotRelativePosition::NONE);
+        slot_side);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 
@@ -789,7 +845,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     // end
     Eigen::Vector3d end;
     end[0] = ego_slot_info.target_ego_pos_slot[0] +
-             park_param.astar_config.vertical_slot_end_straight_dist;
+             park_param.astar_config.parallel_slot_end_straight_dist;
     end[1] = ego_slot_info.target_ego_pos_slot[1];
     end[2] = ego_slot_info.target_ego_heading_slot;
 
@@ -812,7 +868,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.real_goal = real_end;
     request.base_pose_ = base_pose_;
 
-    request.space_type = ParkSpaceType::VERTICAL;
+    request.space_type = ParkSpaceType::PARALLEL;
     request.parking_task = ParkingTask::TAIL_PARKING_IN;
     request.head_request = ParkingVehDirectionRequest::tail_in_first;
     request.rs_request = RSPathRequestType::none;
@@ -831,9 +887,6 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   } else {
     ILOG_INFO << "hybrid_astar_interface_ is null";
   }
-
-  double s = time * 0.4;
-  GetTrajPoseBySDist(s);
 
   return update_path;
 }
@@ -968,11 +1021,15 @@ const Eigen::Vector3d GetCoordinateSystem() {
   return coordinate_system_;
 }
 
+const Eigen::Vector3d GetGoalPose() {
+  return goal_pose_;
+}
+
 const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
   return all_searched_node_;
 }
 
-PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
+PYBIND11_MODULE(astar_parallel_replay_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
@@ -999,5 +1056,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetSearchSequencePath", &GetSearchSequencePath)
       .def("GetCoordinateSystem", &GetCoordinateSystem)
       .def("GetAllSearchNode", &GetAllSearchNode)
+      .def("GetGoalPose", &GetGoalPose)
       .def("GetDynamicState", &GetDynamicState);
 }

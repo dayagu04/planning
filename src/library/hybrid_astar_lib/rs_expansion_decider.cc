@@ -13,10 +13,15 @@ namespace planning {
 
 void RSExpansionDecider::Process(
     const double min_radius, const double slot_width, const double slot_length,
-    const Pose2D &ego_pose, const Pose2D &astar_end, const double veh_width) {
+    const Pose2D &ego_pose, const Pose2D &astar_end, const double veh_width,
+    const ParkSpaceType slot_type) {
   same_point_for_rs_with_astar_ = true;
   rs_end_pose_ = astar_end;
   AstarDecider::Process(ego_pose, astar_end);
+
+  if (slot_type == ParkSpaceType::PARALLEL) {
+    return;
+  }
 
   double half_width = slot_width / 2.0;
 

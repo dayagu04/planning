@@ -5,6 +5,7 @@
 #include "apa_plan_base.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
+#include "virtual_wall_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -31,6 +32,10 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
   virtual const bool CheckReplan() override;
 
   virtual const bool CheckFinished() override;
+
+  const bool CheckVerticalSlotFinished();
+
+  const bool CheckParallelSlotFinished();
 
   virtual void PlanCore() override;
 
@@ -88,6 +93,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   const bool UpdateEgoSlotInfo() override;
 
+  const bool UpdateVerticalSlotInfo();
+
   const bool CheckSegCompleted();
 
   const bool CheckUssStucked();
@@ -112,6 +119,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint>& path);
 
+  const bool UpdateParallelSlotInfo();
+
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
 
@@ -122,6 +131,8 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
   AstarPathGear current_gear_;
   int in_slot_car_adjust_count_;
   bool is_path_single_shot_to_goal_;
+
+  SlotRelativePosition slot_side_;
 };
 
 }  // namespace apa_planner

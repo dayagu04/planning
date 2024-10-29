@@ -296,6 +296,8 @@ class ApaPlannerBase {
   virtual const double CalRemainDistFromUss();
   virtual const bool PostProcessPath();
 
+  virtual const void SchedulerForGeometryWithAstar();
+
   std::shared_ptr<ApaWorld> apa_world_ptr_;
 
   iflyauto::PlanningOutput planning_output_;

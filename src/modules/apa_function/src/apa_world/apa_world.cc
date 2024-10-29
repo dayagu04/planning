@@ -14,6 +14,7 @@
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "slot_management_info.pb.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -389,6 +390,12 @@ const bool ApaWorld::Update() {
           ParkPathGenerationType::GEOMETRY_BASED) {
         apa_data_ptr_->planner_type =
             ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
+
+        AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+        if (astar_scheduler->IsNeedAstarSearch()) {
+          apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+        }
+
       } else {
         apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
       }
@@ -397,7 +404,13 @@ const bool ApaWorld::Update() {
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       ILOG_INFO << "planner_type = PARALLEL_PARK_IN!";
-      apa_data_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::GEOMETRY_BASED) {
+        apa_data_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
+
+      } else {
+        apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+      }
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
       ILOG_INFO << "planner_type = SLANT_PARK_IN!";

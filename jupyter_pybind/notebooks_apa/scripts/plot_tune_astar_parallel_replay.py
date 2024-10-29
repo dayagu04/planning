@@ -11,13 +11,13 @@ sys.path.append('../../../build/devel/lib/python3/dis-packagers')
 
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
-from jupyter_pybind import replay_simulation_hybrid_astar
+from jupyter_pybind import astar_parallel_replay_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo
 
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241023/20241023-18-57-12/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-10-23-18-57-12_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241016/20241016-10-57-38/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-16-10-57-39_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -100,7 +100,7 @@ callback = CustomJS(args=dict(source=source, line_source=line_source, text_sourc
 fig1.js_on_event(Tap, callback)
 
 # try before sliders
-replay_simulation_hybrid_astar.Init()
+astar_parallel_replay_py.Init()
 
 data_planning_left = ColumnDataSource(data = {'plan_path_x':[],
                                               'plan_path_y':[]})
@@ -110,8 +110,6 @@ data_planning_right = ColumnDataSource(data = {'plan_path_x':[],
 data_sim_pos = ColumnDataSource(data = {'x':[], 'y':[]})
 # record包中的定位信息
 data_sim_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-# 轨迹点pose，融合仿真使用
-data_moving_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_path_end_stop_line = ColumnDataSource(data = {'x':[], 'y':[]})
 data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
@@ -142,6 +140,7 @@ data_plot_ref_line = ColumnDataSource(data={'plan_path_x': [],
                                       })
 data_search_sequence_path = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_coordinate_system = ColumnDataSource(data = {'x':[], 'y':[]})
+data_goal_pose = ColumnDataSource(data = {'x':[], 'y':[]})
 data_all_search_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_all_search_collision_node = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
@@ -155,6 +154,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = data_astar_path, line_width = 6
 fig1.line('plan_path_y', 'plan_path_x', source = data_record_astar_path, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'record_astar_path')
 fig1.circle('y','x', source = data_sim_pos, size=8, color='red')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
+fig1.circle('y','x', source = data_goal_pose, size=8, color='purple')
 fig1.patch('car_yn', 'car_xn', source = data_sim_car, fill_color = "red", fill_alpha=0.25, line_color = "black", line_width = 1, legend_label = 'sim_car', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
 fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
@@ -165,7 +165,6 @@ fig1.multi_line('y_vec', 'x_vec', source=data_record_node_list, line_width=1.0, 
 fig1.multi_line('y_vec', 'x_vec', source=data_real_time_node_list, line_width=1.0, line_color='red', line_dash='solid', legend_label='real_time_node_list')
 fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'veh_body_envelope', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_current_gear_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'current_path_envelop', visible = False)
-fig1.patch('car_yn', 'car_xn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car')
 fig1.multi_line('y', 'x',source = all_rs_heuristic_path, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'rs_h_path')
 fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend_label = 'virtual_wall')
 fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
@@ -190,7 +189,6 @@ class LocalViewSlider:
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
     self.car_move_mode_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="car_move_mode", min=0, max=1, value=0, step=1)
-    self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -207,13 +205,12 @@ class LocalViewSlider:
                         lat_pos_dif = self.lat_pos_dif_slider,
                         heading_dif = self.heading_dif_slider,
                         car_move_mode=self.car_move_mode_slider,
-                        plot_child_node=self.plot_child_node
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,car_move_mode,plot_child_node):
+                    lon_pos_dif, lat_pos_dif, heading_dif,car_move_mode):
 
   time0 = time.time()
 
@@ -511,7 +508,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   if data_valid['soc_state_msg_idx'] and data_valid['fus_parking_msg_idx'] and data_valid['loc_msg_idx'] and data_valid['vs_msg_idx'] and force_plan==0:
 
     print('plan once')
-    res = replay_simulation_hybrid_astar.PlanOnce(
+    res = astar_parallel_replay_py.PlanOnce(
         soc_state_msg_bytes,
         fus_parking_msg_bytes,
         loc_msg_bytes,
@@ -532,14 +529,14 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   elif force_plan or car_move_mode==1:
       print('plan once by force')
 
-      replay_simulation_hybrid_astar.SetLocalization(loc_msg_bytes)
-      replay_simulation_hybrid_astar.SetSlotInfo()
+      astar_parallel_replay_py.SetLocalization(loc_msg_bytes)
+      astar_parallel_replay_py.SetSlotInfo()
 
       if data_valid['fus_objects_msg_idx']:
-        replay_simulation_hybrid_astar.SetFusionObject(fus_obj_msg_bytes)
+        astar_parallel_replay_py.SetFusionObject(fus_obj_msg_bytes)
 
       if data_valid['fus_ground_line_msg_idx']:
-        replay_simulation_hybrid_astar.SetGroundLine(ground_line_perception_msg_bytes)
+        astar_parallel_replay_py.SetGroundLine(ground_line_perception_msg_bytes)
 
       localization_index_map = bag_loader.get_localization_msg_index(max_time)
       end_loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][localization_index_map])
@@ -606,7 +603,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
       print('time ', time_to_start_time)
 
-      update_path = replay_simulation_hybrid_astar.TriggerPlan(
+      update_path = astar_parallel_replay_py.TriggerPlan(
           force_plan, is_path_optimization,
           is_cilqr_enable, is_reset, target_managed_slot_x_vec,
           target_managed_slot_y_vec,
@@ -621,7 +618,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
 
   if refresh_thread:
-    replay_simulation_hybrid_astar.RefreshThreadResult()
+    astar_parallel_replay_py.RefreshThreadResult()
 
 
   end_time2 = time.time()
@@ -649,7 +646,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
   if res == True:
     tuned_planning_output = PlanningOutput()
-    tuned_planning_output.deserialize(replay_simulation_hybrid_astar.GetPlanningOutput())
+    tuned_planning_output.deserialize(astar_parallel_replay_py.GetPlanningOutput())
 
     for i in range(len(tuned_planning_output.trajectory.trajectory_points)):
       point = tuned_planning_output.trajectory.trajectory_points[i]
@@ -737,7 +734,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       'car_yn': [],
     })
 
-  path_collision_info = replay_simulation_hybrid_astar.GetAstarPathCollisionID()
+  path_collision_info = astar_parallel_replay_py.GetAstarPathCollisionID()
   point_size = len(plan_path_x)
   if path_collision_info[1] >0 and path_collision_info[0] >= 0 and path_collision_info[0] < point_size:
     pose = []
@@ -763,7 +760,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time3, ms ', (end_time3 - end_time2) * 1000)
 
   # rs
-  rs_path = replay_simulation_hybrid_astar.GetReedsShapePath()
+  rs_path = astar_parallel_replay_py.GetReedsShapePath()
   # print('rs path',len(rs_path))
 
   if (len(rs_path) > 0):
@@ -792,12 +789,11 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time4, ms ', (end_time4 - end_time3) * 1000)
 
   # # all search node
-  if plot_child_node:
-    line_list_x_vec, line_list_y_vec = [], []
-    node_list = replay_simulation_hybrid_astar.GetAstarAllNodes()
-    for i in range(len(node_list)):
-      plan_path_x =[]
-      plan_path_y =[]
+  line_list_x_vec, line_list_y_vec = [], []
+  node_list = astar_parallel_replay_py.GetAstarAllNodes()
+  for i in range(len(node_list)):
+      plan_path_x = []
+      plan_path_y = []
       for j in range(len(node_list[i])):
         path_point = node_list[i][j]
         plan_path_x.append(path_point[0])
@@ -806,31 +802,25 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       line_list_x_vec.append(plan_path_x)
       line_list_y_vec.append(plan_path_y)
 
-    data_real_time_node_list.data.update({
-          'x_vec': [],
-          'y_vec': [],
-      })
-    data_real_time_node_list.data.update({
-      'x_vec': line_list_x_vec,
-      'y_vec': line_list_y_vec,})
+  data_real_time_node_list.data.update({
+        'x_vec': [],
+        'y_vec': [],
+    })
+  data_real_time_node_list.data.update({
+        'x_vec': line_list_x_vec,
+        'y_vec': line_list_y_vec, })
 
-
-  else:
-    data_real_time_node_list.data.update({
-          'x_vec': [],
-          'y_vec': [],
-      })
 
 
   end_time5 = time.time()
   print('time5, ms ', (end_time5 - end_time4) * 1000)
 
-  astar_path = replay_simulation_hybrid_astar.GetAstarPath()
+  astar_path = astar_parallel_replay_py.GetAstarPath()
 
   # print('astar_path',len(astar_path))
 
   # astar target
-  pose = replay_simulation_hybrid_astar.GetAstarEndPose()
+  pose = astar_parallel_replay_py.GetAstarEndPose()
   car_xn = []
   car_yn = []
   for i in range(len(car_polygon_x)):
@@ -971,7 +961,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   # print('envelop')
 
   # virtual wall line
-  # line_list = replay_simulation_hybrid_astar.GetVirtualWall()
+  # line_list = astar_parallel_replay_py.GetVirtualWall()
   # line_list_x_vec, line_list_y_vec = [], []
 
   # for i in range(len(line_list)):
@@ -994,7 +984,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   #   'y_vec': line_list_y_vec,})
 
   # circle obs
-  obs_pts = replay_simulation_hybrid_astar.GetVirtualWall()
+  obs_pts = astar_parallel_replay_py.GetVirtualWall()
   obs_pt_x, obs_pt_y = [], []
   for i in range(len(obs_pts)):
     obs_pt_x.append(obs_pts[i][0])
@@ -1009,20 +999,9 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
 
   car_xn = []
   car_yn = []
-  pose = replay_simulation_hybrid_astar.GetTrajPoseByDist()
-
-  if pose[3] > 0:
-    for i in range(len(car_polygon_x)):
-        tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], pose[0], pose[1], pose[2])
-        car_xn.append(tmp_x)
-        car_yn.append(tmp_y)
-    data_moving_car.data.update({
-      'car_xn': car_xn,
-      'car_yn': car_yn,
-    })
 
   # get all rs path
-  paths = replay_simulation_hybrid_astar.GetRSHeuristicPath()
+  paths = astar_parallel_replay_py.GetRSHeuristicPath()
   plan_path_x = []
   plan_path_y = []
 
@@ -1053,7 +1032,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   ref_line_y =[]
   ref_line_heading =[]
 
-  points = replay_simulation_hybrid_astar.GetPlotRefLine()
+  points = astar_parallel_replay_py.GetPlotRefLine()
   ref_line_x.append(points[0][0])
   ref_line_x.append(points[1][0])
 
@@ -1072,7 +1051,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       'y_vec': [],
   })
 
-  path = replay_simulation_hybrid_astar.GetSearchSequencePath()
+  path = astar_parallel_replay_py.GetSearchSequencePath()
   plan_path_x = []
   plan_path_y = []
 
@@ -1091,8 +1070,16 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   print('time6, ms ', (end_time6 - end_time5) * 1000)
   # print('loop over')
 
-  pose = replay_simulation_hybrid_astar.GetCoordinateSystem()
+  # base pose
+  pose = astar_parallel_replay_py.GetCoordinateSystem()
   data_coordinate_system.data.update({
+    'x': [pose[0]],
+    'y': [pose[1]],
+  })
+
+  # target goal
+  pose = astar_parallel_replay_py.GetGoalPose()
+  data_goal_pose.data.update({
     'x': [pose[0]],
     'y': [pose[1]],
   })
@@ -1103,7 +1090,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
       'y_vec': [],
   })
 
-  nodes = replay_simulation_hybrid_astar.GetAllSearchNode()
+  nodes = astar_parallel_replay_py.GetAllSearchNode()
   safe_node_x = []
   safe_node_y = []
   collision_node_x = []
@@ -1127,7 +1114,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   })
 
   if (is_reset):
-    replay_simulation_hybrid_astar.StopPybind()
+    astar_parallel_replay_py.StopPybind()
 
   push_notebook()
 

@@ -1,12 +1,16 @@
 #include "apa_plan_base.h"
+#include <bits/stdint-uintn.h>
+#include <sys/types.h>
 
 #include <memory>
 
 #include "apa_param_setting.h"
 #include "apa_utils.h"
+#include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
 #include "log_glog.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -76,6 +80,8 @@ void ApaPlannerBase::GenPlanningOutput() {
             << static_cast<int>(frame_.plan_stm.planning_status)
             << "  plan path pt size = "
             << current_path_point_global_vec_.size();
+
+  SchedulerForGeometryWithAstar();
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
@@ -338,6 +344,38 @@ const bool ApaPlannerBase::PostProcessPath() {
   frame_.spline_success = true;
 
   return true;
+}
+
+const void ApaPlannerBase::SchedulerForGeometryWithAstar() {
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type !=
+      Common::PARKING_SLOT_TYPE_VERTICAL) {
+    return;
+  }
+
+  if (frame_.replan_reason != FIRST_PLAN) {
+    return;
+  }
+
+  if (frame_.plan_stm.planning_status != PARKING_FAILED) {
+    return;
+  }
+
+  if (!apa_param.GetParam()
+           .astar_config.vertical_slot_auto_scheduler_for_astar) {
+    return;
+  }
+
+  AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+  astar_scheduler->Process(
+      apa_world_ptr_->GetApaDataPtr()->slot_type, 1, frame_.replan_reason,
+      frame_.plan_stm.planning_status,
+      static_cast<uint8_t>(apa_world_ptr_->GetApaDataPtr()->planner_type));
+
+  if (astar_scheduler->IsNeedAstarSearch()) {
+    frame_.plan_stm.planning_status = PARKING_PLANNING;
+  }
+
+  return;
 }
 
 }  // namespace apa_planner

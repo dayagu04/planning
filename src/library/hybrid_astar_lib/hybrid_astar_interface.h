@@ -120,6 +120,10 @@ class HybridAStarInterface {
   // position.
   void AdjustGoalBySafeCheck(Pose2D* adjust_goal, const Pose2D& request_goal);
 
+  void UpdateSearchBoundary();
+
+  void UpdateEDTBasePose(Pose2D& ogm_base_pose);
+
  private:
   // read vehicle param from file
   VehicleParam vehicle_param_;

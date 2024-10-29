@@ -12,18 +12,21 @@ namespace planning {
 
 #define DEBUG_POINT_CLOUD_OBS (0)
 
-const int PointCloudObstacleTransform::GenerateLocalObstacle(
+const void PointCloudObstacleTransform::GenerateLocalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
     const bool delete_obs_around_ego, const double slot_length,
     const double slot_width, const Pose2D& slot_base_pose,
-    const Pose2D& ego_start, const Pose2D& ego_final_goal) {
+    const Pose2D& ego_start, const Pose2D& ego_final_goal,
+    const ParkSpaceType slot_type,
+    const SlotRelativePosition slot_side) {
   Transform2d slot_tf;
   slot_tf.SetBasePose(slot_base_pose);
 
   // obs
   VirtualWallDecider wall_decider;
   wall_decider.Process(obs_list.virtual_obs, 40.0, 15.0, slot_width,
-                       slot_length, ego_start, ego_final_goal);
+                       slot_length, ego_start, ego_final_goal, slot_type,
+                       slot_side);
 
   // hack: delete obstacle around ego and slot. In the future, it will be
   // retired.
@@ -44,7 +47,7 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
   if (local_view == nullptr) {
     ILOG_ERROR << "local view is null";
 
-    return 0;
+    return;
   }
 
   ILOG_INFO << "fusion_object_num = "
@@ -98,7 +101,7 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 
-      if (config.enable_delete_fusion_obj_in_slot) {
+      if (config.astar_config.enable_delete_fusion_obj_in_slot) {
         is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
         if (is_collision) {
@@ -149,7 +152,7 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 
-      if (config.enable_delete_fusion_obj_in_slot) {
+      if (config.astar_config.enable_delete_fusion_obj_in_slot) {
         is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
         if (is_collision) {
@@ -214,7 +217,7 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
         global.y = limiter_points[point_id].y;
         slot_tf.GlobalPointToULFLocal(&local, global);
 
-        if (config.enable_delete_fusion_obj_in_slot) {
+        if (config.astar_config.enable_delete_fusion_obj_in_slot) {
           is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
           if (is_collision) {
@@ -254,11 +257,12 @@ const int PointCloudObstacleTransform::GenerateLocalObstacle(
   ILOG_INFO << "GenerateFusionPolygon, size = "
             << obs_list.point_cloud_list.size();
 
-  return 0;
+  return;
 }
 
 void PointCloudObstacleTransform::GenerateGlobalObstacle(
-    ParkObstacleList& obs_list, const LocalView* local_view) {
+    ParkObstacleList& obs_list, const LocalView* local_view,
+    const ParkSpaceType slot_type) {
   // generate local obs
   if (local_view == nullptr) {
     ILOG_ERROR << "local view is null";
