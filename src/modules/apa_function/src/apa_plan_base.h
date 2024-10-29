@@ -273,6 +273,8 @@ class ApaPlannerBase {
     apa_world_ptr_ = apa_world_ptr;
   }
 
+  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
+
  protected:
   virtual const bool CheckFinished() = 0;
   virtual const bool CheckReplan() = 0;

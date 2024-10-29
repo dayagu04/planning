@@ -22,6 +22,7 @@ class CollisionDetector {
   enum ObsType {
     NONE_OBS,
     CHANNEL_OBS,
+    CURB_OBS,
     TLANE_OBS,
     TLANE_BOUNDARY_OBS,
     LINEARC_OBS,

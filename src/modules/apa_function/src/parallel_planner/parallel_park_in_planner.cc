@@ -356,7 +356,7 @@ const bool ParallelParkInPlanner::UpdateEgoSlotInfo() {
   // size_t in_ego_cnt = 0;
 
   for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
-    if ((obs_pt_global - slot_center).norm() > 13.3) {
+    if ((obs_pt_global - slot_center).norm() > 20.0) {
       // dist_fail_cnt++;
       continue;
     }
@@ -863,9 +863,6 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
   pnc::geometry_lib::SamplePointSetInLineSeg(channel_obstacle_vec, channel_line,
                                              kChannelSampleDist);
 
-  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
-
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
     const bool channel_y_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(), F.x()) &&
@@ -875,8 +872,7 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
             channel_point_1.y());
 
     if (channel_y_condition) {
-      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-          obstacle_point_slot, CollisionDetector::CHANNEL_OBS);
+      channel_obstacle_vec.emplace_back(obstacle_point_slot);
 
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
                                   t_lane_.slot_length + 3.0)) {
@@ -890,6 +886,8 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
       }
     }
   }
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+      channel_obstacle_vec, CollisionDetector::CHANNEL_OBS);
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -912,11 +910,7 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
                               point_set.end());
   }
 
-  for (const auto& obs_pos : tlane_obstacle_vec) {
-    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-        obs_pos, CollisionDetector::TLANE_BOUNDARY_OBS);
-  }
-
+  // tlane vertical line
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
     const bool is_rear_tlane_line =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(),
@@ -926,8 +920,7 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn);
 
     if (is_rear_tlane_line) {
-      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-          obstacle_point_slot, CollisionDetector::TLANE_BOUNDARY_OBS);
+      tlane_obstacle_vec.emplace_back(obstacle_point_slot);
       continue;
     }
 
@@ -939,8 +932,7 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn);
 
     if (is_front_tlane_line) {
-      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-          obstacle_point_slot, CollisionDetector::TLANE_BOUNDARY_OBS);
+      tlane_obstacle_vec.emplace_back(obstacle_point_slot);
     }
   }
 
@@ -956,19 +948,11 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
   tlane_line.SetPoints(D_curb, E);
   tlane_line_vec.emplace_back(tlane_line);
 
-  tlane_line.SetPoints(C_curb, D_curb);
-  tlane_line_vec.emplace_back(tlane_line);
-
   for (const auto& line : tlane_line_vec) {
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
                                                kTBoundarySampleDist);
     tlane_obstacle_vec.insert(tlane_obstacle_vec.end(), point_set.begin(),
                               point_set.end());
-  }
-
-  for (const auto& obs_pos : tlane_obstacle_vec) {
-    apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-        obs_pos, CollisionDetector::TLANE_OBS);
   }
 
   for (const auto& obs_pos : frame_.ego_slot_info.obs_pt_vec_slot) {
@@ -999,10 +983,19 @@ void ParallelParkInPlanner::GenTBoundaryObstacles() {
                                 C_curb.y());
 
     if (is_front_tlane_obs || is_rear_tlane_obs) {
-      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-          obs_pos, CollisionDetector::TLANE_OBS);
+      tlane_obstacle_vec.emplace_back(obs_pos);
     }
   }
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+      tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
+
+  point_set.clear();
+  tlane_line.SetPoints(C_curb, D_curb);
+  pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
+                                             kTBoundarySampleDist);
+
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+      point_set, CollisionDetector::CURB_OBS);
 }
 
 void ParallelParkInPlanner::GenObstacles() {
@@ -1052,7 +1045,6 @@ void ParallelParkInPlanner::GenObstacles() {
     channel_obstacle_vec.insert(channel_obstacle_vec.end(), point_set.begin(),
                                 point_set.end());
   }
-  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
 
   double channel_obs_lim = channel_y;
   DEBUG_PRINT("frame_.ego_slot_info.obs_pt_vec_slot size = "
@@ -1069,17 +1061,14 @@ void ParallelParkInPlanner::GenObstacles() {
     //         t_lane_.channel_y));
 
     const bool channel_y_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
-                                t_lane_.corner_outside_slot.x(),
-                                t_lane_.slot_length + 12.0) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(), F.x()) &&
         pnc::mathlib::IsInBound(
             obstacle_point_slot.y(),
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
             t_lane_.channel_y);
 
     if (channel_y_condition) {
-      apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
-          obstacle_point_slot);
+      channel_obstacle_vec.emplace_back(obstacle_point_slot);
 
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
                                   t_lane_.slot_length + 3.0)) {
@@ -1091,6 +1080,7 @@ void ParallelParkInPlanner::GenObstacles() {
       }
     }
   }
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
   DEBUG_PRINT("pre channel y = " << t_lane_.channel_y);
   t_lane_.channel_y = channel_obs_lim;
   DEBUG_PRINT("channel_obs_lim = " << channel_obs_lim);

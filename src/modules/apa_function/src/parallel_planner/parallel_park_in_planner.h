@@ -25,12 +25,15 @@ class ParallelParkInPlanner : public ApaPlannerBase {
   const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,
                                      const double slot_width,
                                      const bool is_right_side) const;
+  virtual const bool UpdateEgoSlotInfo() override;
+  virtual void GenTlane() override;
+  void GenTBoundaryObstacles();
+  virtual const uint8_t PathPlanOnce() override;
+  const ParallelPathPlanner::Tlane& GetTlane() { return t_lane_; }
 
  private:
   // virtual func
-  virtual const uint8_t PathPlanOnce() override;
-  virtual const bool UpdateEgoSlotInfo() override;
-  virtual void GenTlane() override;
+
   virtual void GenObstacles() override;
   virtual void PlanCore() override;
   virtual void Log() const override;
@@ -39,7 +42,7 @@ class ParallelParkInPlanner : public ApaPlannerBase {
   virtual const double CalRemainDistFromUss() override;
 
   void UpdateTlaneOnceInSlot();
-  void GenTBoundaryObstacles();
+
   const bool IsEgoInSlot() const;
   const bool IsEgoInSlot(const pnc::geometry_lib::PathPoint& pose) const;
   const bool CheckSegCompleted();
