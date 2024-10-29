@@ -1,6 +1,6 @@
 #include "ego_state_manager.h"
 
-#include <fastrtps/config.h>
+// #include <fastrtps/config.h>
 
 #include <algorithm>
 #include <cassert>
