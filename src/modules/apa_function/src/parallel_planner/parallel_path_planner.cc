@@ -72,6 +72,7 @@ void ParallelPathPlanner::Reset() {
 
 void ParallelPathPlanner::Preprocess() {
   DEBUG_PRINT("channel_y in path planner = " << input_.tlane.channel_y);
+  pnc::geometry_lib::PrintPose("start pose", input_.ego_pose);
   calc_params_.Reset();
   debug_info_.debug_arc_vec.clear();
   output_.Reset();
@@ -1297,11 +1298,17 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
       min_buffer_vec[i] =
           mathlib::Clamp(min_real_dist_vec[i] - 0.4, kColSmallLatBufferOutSlot,
                          kColLargeLatBufferOutSlot);
-    } else if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot + 0.3) {
+    } else if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot + 0.5) {
       min_buffer_vec[i] =
-          mathlib::Clamp(min_real_dist_vec[i] - 0.3, kColSmallLatBufferOutSlot,
+          mathlib::Clamp(min_real_dist_vec[i] - 0.5, kColSmallLatBufferOutSlot,
                          kColLargeLatBufferOutSlot);
     }
+  }
+
+  DEBUG_PRINT("input_.tlane.channel_y = " << input_.tlane.channel_y);
+  if (std::fabs(input_.tlane.channel_y < 4.3 + 1.2)) {
+    min_real_dist_vec[0] = kColSmallLatBufferOutSlot;
+    min_real_dist_vec[1] = kColSmallLatBufferOutSlot;
   }
 
   DEBUG_PRINT("left min_real_dist = " << min_real_dist_vec[0]);
@@ -1430,7 +1437,7 @@ const bool ParallelPathPlanner::GenParallelPreparingLineVec(
 
 const bool ParallelPathPlanner::GenTiltedPreparingLine(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
-  const std::vector<double> heading_vec = {5.0, 10.0, 15.0, 20.0, 25.0, 30.0};
+  const std::vector<double> heading_vec = {10.0, 15.0, 20.0};
 
   for (const auto& heading_deg : heading_vec) {
     const double heading_rad = heading_deg / 57.3;

@@ -458,6 +458,8 @@ class SlotManagement {
 
   void SetParam(const Param& param) { frame_.param = param; }
 
+  void SetFrame(const Frame& frame) { frame_ = frame; }
+
   void Reset();
 
   const bool GetSelectedSlot(common::SlotInfo& slot_info,
