@@ -106,7 +106,6 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     global_pose.theta = ego_pose.theta;
     tf.SetBasePose(global_pose, sin_theta, cos_theta);
 
-    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
     if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
       future_drive_dist_info_.gear_drive_has_obs = true;
       break;
@@ -129,7 +128,6 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     global_pose.theta = ego_pose.theta;
     tf.SetBasePose(global_pose, sin_theta, cos_theta);
 
-    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
     if (edt->IsCollisionForPoint(&tf, AstarPathGear::reverse)) {
       future_drive_dist_info_.gear_reverse_has_obs = true;
 
@@ -169,7 +167,6 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
     if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
       future_drive_dist_info_.gear_drive_has_obs = true;
       break;
@@ -191,7 +188,6 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
     if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
       future_drive_dist_info_.gear_drive_has_obs = true;
       break;
@@ -213,8 +209,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::reverse)) {
       future_drive_dist_info_.gear_reverse_has_obs = true;
       break;
     }
@@ -233,8 +228,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    // if (edt_->IsCollisionForPoint(&tf, AstarPathGear::none)) {
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::reverse)) {
       future_drive_dist_info_.gear_reverse_has_obs = true;
       break;
     }
@@ -409,8 +403,6 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
                                         const bool is_forward,
                                         std::vector<Pose2D> *path) {
   int path_point_num = std::ceil(arc / 0.1);
-  // ILOG_INFO << "path point num " << path_point_num;
-  // ILOG_INFO << "node path s resolution " << traveled_distance;
 
   // get vehicle circle
   VehicleCircle veh_circle;

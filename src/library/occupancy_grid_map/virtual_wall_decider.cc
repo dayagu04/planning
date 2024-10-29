@@ -130,16 +130,6 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   double veh_up_x = ego_pose.x + 5.0 * std::fabs(std::cos(ego_pose.theta));
   channel_up_bound_x = veh_up_x + 8.0;
 
-  // limit upper
-  if (channel_up_bound_x > slot_length + 9.0) {
-    channel_up_bound_x = slot_length + 9.0;
-  }
-
-  // limit lower
-  if (channel_up_bound_x < veh_up_x + 3.0) {
-    channel_up_bound_x = veh_up_x + 3.0;
-  }
-
   Eigen::Vector2d upper_channel_left = Eigen::Vector2d(
       channel_up_bound_x, slot_width / 2.0 + lower_channel_length);
   Eigen::Vector2d upper_channel_right = Eigen::Vector2d(
