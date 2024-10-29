@@ -138,7 +138,7 @@ bool LongTimeTaskPipelineV3::Run() {
   // 构建st input
   double time_start = IflyTime::Now_ms();
   st_graph_input_->Update();
-  ok = st_graph_->Init(*st_graph_input_);
+  ok = st_graph_->Init(st_graph_input_);
   auto planning_context = session_->mutable_planning_context();
   planning_context->set_st_graph(st_graph_);
   planning_context->set_st_graph_helper(st_graph_helper_);

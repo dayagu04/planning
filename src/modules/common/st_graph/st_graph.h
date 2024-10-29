@@ -29,7 +29,7 @@ class STGraph {
   ~STGraph() = default;
 
   /*******common functions*******/
-  bool Init(const StGraphInput& st_graph_input);
+  bool Init(const std::shared_ptr<StGraphInput>& st_graph_input);
 
   /*******normal st-graph functions*******/
   bool UpdateStBoundaryDecisionResults(
@@ -141,6 +141,7 @@ class STGraph {
       expand_boundary_id_st_boundaries_map_;
   std::unordered_map<int32_t, std::vector<int64_t>>
       expand_agent_id_st_boundaries_map_;
+  // <key: time_index, value<key: boundry_id value: boundary>: boundaries>
   std::vector<std::vector<std::pair<STPoint, STPoint>>> st_points_table_;
 
   // st_pass_corridor: order is <upper_point, lower_point>

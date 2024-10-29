@@ -43,8 +43,8 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
 }  // namespace
 
-bool STGraph::Init(const StGraphInput& st_graph_input) {
-  st_graph_input_ = st_graph_input;
+bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
+  st_graph_input_ = *st_graph_input;
   Reset();
   MakeAgentStBoundaries();
   if (st_graph_input_.enable_backward_extend_st_boundary()) {

@@ -132,7 +132,8 @@ class StGraphInput {
 
   const planning_math::Box2d& planning_init_point_box() const;
 
-  SecondOrderTimeOptimalTrajectory GenerateMaxAccelerationCurve(
+  std::shared_ptr<SecondOrderTimeOptimalTrajectory>
+  GenerateMaxAccelerationCurve(
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<EgoStateManager>& ego_state_manager);
 
@@ -150,7 +151,8 @@ class StGraphInput {
   VehicleParam vehicle_param_;
   bool is_lane_keeping_;
   std::shared_ptr<agent::AgentManager> mutable_agent_manager_;
-  const SecondOrderTimeOptimalTrajectory* max_acceleration_curve_ = nullptr;
+  std::shared_ptr<SecondOrderTimeOptimalTrajectory> max_acceleration_curve_ =
+      nullptr;
   std::pair<double, double> path_range_;
   std::pair<double, double> time_range_;
   std::shared_ptr<planning_math::KDPath> processed_path_ = nullptr;

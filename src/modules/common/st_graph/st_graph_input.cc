@@ -1,4 +1,5 @@
 #include "st_graph_input.h"
+#include <memory>
 
 #include "environmental_model.h"
 #include "planning_context.h"
@@ -138,11 +139,11 @@ void StGraphInput::Update() {
 
   MakePathBorderQuerier(planned_kd_path);
 
-  const auto& max_acceleration_curve =
+  max_acceleration_curve_ =
       GenerateMaxAccelerationCurve(planning_init_point_, ego_state_manager);
-  max_acceleration_curve_ = &max_acceleration_curve;
   if (config_.enable_backward_extend_st_boundary) {
-    enable_backward_extend_st_boundary_ = config_.enable_backward_extend_st_boundary;
+    enable_backward_extend_st_boundary_ =
+        config_.enable_backward_extend_st_boundary;
     backward_extend_time_s_ = config_.backward_extend_time_s;
   }
   MakePlanningInitPointBox();
@@ -534,7 +535,8 @@ bool StGraphInput::enable_backward_extend_st_boundary() const {
 
 const SecondOrderTimeOptimalTrajectory* StGraphInput::max_acceleration_curve()
     const {
-  return max_acceleration_curve_;
+  return nullptr == max_acceleration_curve_ ? nullptr
+                                            : max_acceleration_curve_.get();
 }
 
 double StGraphInput::backward_extend_time_s() const {
@@ -773,7 +775,8 @@ void StGraphInput::PlanningInitPointToTrajectoryPoint(
   // planning_init_point_.set_relative_time(init_point.relative_time);
 }
 
-SecondOrderTimeOptimalTrajectory StGraphInput::GenerateMaxAccelerationCurve(
+std::shared_ptr<SecondOrderTimeOptimalTrajectory>
+StGraphInput::GenerateMaxAccelerationCurve(
     const trajectory::TrajectoryPoint& planning_init_point,
     const std::shared_ptr<EgoStateManager>& ego_state_manager) {
   LonState init_state = {0.0, planning_init_point.vel(),
@@ -809,7 +812,8 @@ SecondOrderTimeOptimalTrajectory StGraphInput::GenerateMaxAccelerationCurve(
   state_limit.a_min = acc_lower_bound;
   state_limit.j_max = kSlowJerkUpperBound;
   state_limit.j_min = kSlowJerkLowerBound;
-  return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
+  return std::make_shared<SecondOrderTimeOptimalTrajectory>(init_state,
+                                                            state_limit);
 }
 
 void StGraphInput::Reset() {
