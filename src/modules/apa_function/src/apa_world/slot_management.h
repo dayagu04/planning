@@ -407,6 +407,8 @@ class SlotManagement {
     bool parallel_slot_reseted_once = false;
     bool is_side_calc_in_parking = false;
 
+    size_t park_out_select_id = 0;
+
     std::vector<Eigen::Vector2d> obs_pt_vec;
     std::vector<Eigen::Vector2d> ground_line_point_vec;
 
@@ -439,6 +441,8 @@ class SlotManagement {
       fus_obj_valid_flag = false;
       replan_flag = true;
       is_fix_slot = false;
+
+      park_out_select_id = 0;
 
       collision_detector_ptr->Reset();
     }
@@ -496,6 +500,8 @@ class SlotManagement {
   Frame frame_;
 
   void AddObstacles();
+
+  bool UpdateSlotsInParkingOut();
 
   bool UpdateSlotsInSearching();
 

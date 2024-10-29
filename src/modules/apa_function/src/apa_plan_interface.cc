@@ -778,6 +778,12 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().target_radius_err, double,
                   "target_radius_err");
 
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_park_out_max_target_heading, double,
+                  "target_heading_max");
+
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_park_out_min_target_heading, double,
+                  "target_heading_min");
+
   JSON_READ_VALUE(apa_param.SetPram().path_extend_distance, double,
                   "path_extend_distance");
 
@@ -825,6 +831,12 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
                   "parallel_search_out_heading");
+
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_parking_out_right, bool,
+                  "perpendicular_parking_out_right");
+
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_parking_out_state, bool,
+                  "perpendicular_parking_out_state");
 
   JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");

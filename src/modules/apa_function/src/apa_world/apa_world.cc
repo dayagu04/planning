@@ -162,6 +162,8 @@ void ApaWorld::UpdateStateMachine() {
   const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
   apa_data_ptr_->current_state = state;
 
+  ILOG_INFO << "apa world -> current_state : " << state;
+
   cur_state = ApaStateMachine::INVALID;
   if (state == iflyauto::FunctionalState_PARK_STANDBY) {
     cur_state = ApaStateMachine::INVALID;
@@ -176,8 +178,13 @@ void ApaWorld::UpdateStateMachine() {
   }
 
   if (state == iflyauto::FunctionalState_PARK_IN_SEARCHING) {
-    cur_state = ApaStateMachine::SEARCH_IN;
-    apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
+    if (apa_param.GetParam().perpendicular_parking_out_state) {
+      cur_state = ApaStateMachine::SEARCH_OUT;
+      apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
+    } else {
+      cur_state = ApaStateMachine::SEARCH_IN;
+      apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
+    }
   }
 
   if (state == iflyauto::FunctionalState_PARK_GUIDANCE) {
@@ -419,6 +426,10 @@ const bool ApaWorld::Update() {
       ILOG_INFO << "current slot type is not supported now!";
       return false;
     }
+  } else if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_OUT) {
+    DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_OUT!");
+    apa_data_ptr_->planner_type =
+        ApaPlannerType::PERPENDICULAR_PARK_OUT_PLANNER;
   }
 
   PrintApaPlannerType(apa_data_ptr_->planner_type);
