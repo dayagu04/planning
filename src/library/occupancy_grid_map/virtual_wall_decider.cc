@@ -10,11 +10,12 @@
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "utils_math.h"
+#include "src/modules/apa_function/src/apa_param_setting.h"
 
 namespace planning {
 
 #define SLOT_VIRTUAL_WALL_Y_OFFSET (0.5)
-#define SLOT_VIRTUAL_WALL_X_OFFSET (2.0)
+#define SLOT_VIRTUAL_WALL_X_OFFSET (3.0)
 void VirtualWallDecider::Process(const Pose2D& start, const Pose2D& end) {
   start_ = start;
   end_ = end;
@@ -128,16 +129,6 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   double channel_up_bound_x;
   double veh_up_x = ego_pose.x + 5.0 * std::fabs(std::cos(ego_pose.theta));
   channel_up_bound_x = veh_up_x + 8.0;
-
-  // limit upper
-  if (channel_up_bound_x > slot_length + 9.0) {
-    channel_up_bound_x = slot_length + 9.0;
-  }
-
-  // limit lower
-  if (channel_up_bound_x < veh_up_x + 3.0) {
-    channel_up_bound_x = veh_up_x + 3.0;
-  }
 
   Eigen::Vector2d upper_channel_left = Eigen::Vector2d(
       channel_up_bound_x, slot_width / 2.0 + lower_channel_length);
@@ -387,9 +378,11 @@ int VirtualWallDecider::GenerateVirtualWall(ParkObstacleList& obs_list,
   channel_up_bound_x =
       ego_pose.x + 5.0 * std::fabs(std::cos(ego_pose.theta)) + 8.0;
 
-  Eigen::Vector2d upper_channel_left = Eigen::Vector2d(
-      channel_up_bound_x, slot_width / 2.0 + lower_channel_length);
-  Eigen::Vector2d upper_channel_right = Eigen::Vector2d(
+  Eigen::Vector2d upper_channel_left;
+  Eigen::Vector2d upper_channel_right;
+  upper_channel_left = Eigen::Vector2d(channel_up_bound_x,
+                                       slot_width / 2.0 + lower_channel_length);
+  upper_channel_right = Eigen::Vector2d(
       channel_up_bound_x, -slot_width / 2.0 - lower_channel_length);
 
   // channel right virtual wall
