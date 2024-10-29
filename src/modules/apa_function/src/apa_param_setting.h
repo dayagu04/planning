@@ -270,6 +270,8 @@ struct ApaParameters {
   double target_pos_err = 0.068;
   double target_heading_err = 0.88;
   double target_radius_err = 0.036;
+  double perpendicular_park_out_max_target_heading = 95;
+  double perpendicular_park_out_min_target_heading = 85;
   double path_extend_distance = 0.3;
   bool actual_mono_plan_enable = false;
   bool mono_plan_enable = false;
@@ -286,7 +288,13 @@ struct ApaParameters {
   bool is_parallel_advanced_method = true;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
-
+  bool use_a_cubic_polynomial_for_adjustment = true;
+  // move target point in slot to another point for easy tracking
+  double vertical_slot_target_adjust_dist = 1.0;
+  bool enable_delete_fusion_obj_in_slot = true;
+  double deadend_uss_stuck_replan_wait_time;
+  bool perpendicular_parking_out_right = true;
+  bool perpendicular_parking_out_state = false;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;

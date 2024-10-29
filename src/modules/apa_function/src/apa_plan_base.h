@@ -39,6 +39,10 @@ class ApaPlannerBase {
     Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
     double target_ego_heading_slot = 0.0;
 
+    // for parking out
+    Eigen::Vector2d limiter_min_point_slot = Eigen::Vector2d::Zero();
+    double limiter_vertical_heanding_slot  = 0.0;
+
     std::vector<Eigen::Vector2d> slot_corner;
     double last_move_slot_dist = 0.0;
     double move_slot_dist = 0.0;
@@ -61,6 +65,7 @@ class ApaPlannerBase {
     double slot_length = 5.2;
 
     pnc::geometry_lib::PathPoint terminal_err;
+    pnc::geometry_lib::PathPoint initial_err;
     double slot_occupied_ratio = 0.0;
 
     pnc::geometry_lib::GlobalToLocalTf g2l_tf;
