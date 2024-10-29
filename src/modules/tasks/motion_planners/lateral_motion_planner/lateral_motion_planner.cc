@@ -146,6 +146,10 @@ void LateralMotionPlanner::AssembleInput() {
   const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
+  // static const double min_v_cruise = 0.5;
+  const double ref_vel = std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
+  planning_input_.set_ref_vel(ref_vel);
+
   // set reference trajectory
   std::vector<double> ref_theta_vec(enu_ref_theta.size());
 
@@ -193,7 +197,10 @@ void LateralMotionPlanner::AssembleInput() {
   // set last trajectory: temporarily same as reference: TODO
   double final_t = 5.0;  // hack now
   double tmp_t = 0.0;
-  if (motion_planner_output.lat_init_flag == true) {
+  auto last_s_vec = motion_planner_output.s_lat_vec;
+  double last_path_length = last_s_vec.size() > 0 ? last_s_vec.back() : 0.0;
+  bool is_ref_consistent = (ref_vel * final_t - last_path_length) <= 2.0;
+  if ((motion_planner_output.lat_init_flag == true) && is_ref_consistent) {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
       planning_input_.mutable_last_x_vec()->Set(
@@ -287,10 +294,6 @@ void LateralMotionPlanner::AssembleInput() {
         i, next_hard_upper_bound.y);
   }
 
-  // static const double min_v_cruise = 0.5;
-  planning_input_.set_ref_vel(
-      std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise));
-
   planning_input_.set_curv_factor(config_.curv_factor);
 
   // set init info
@@ -361,7 +364,7 @@ void LateralMotionPlanner::AssembleInput() {
       intersection_state ==
       planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
-  if (is_approach_intersection || is_in_intersection || is_off_intersection) {
+  if ((is_approach_intersection || is_in_intersection || is_off_intersection) && is_ref_consistent) {
     planning_weight_ptr_->SetIsInIntersection(true);
   } else {
     planning_weight_ptr_->SetIsInIntersection(false);
