@@ -4,7 +4,6 @@
 #include <cstddef>
 
 #include "debug_info_log.h"
-#include "thirdparty/eigen/Eigen/src/Core/Matrix.h"
 
 namespace planning {
 namespace apa_planner {
