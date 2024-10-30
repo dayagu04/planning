@@ -122,6 +122,9 @@ bool PlanningScheduler::RunOnce(
 
   auto scene_type = planning::common::SceneType::HIGHWAY;
   const auto &state_machine = local_view_->function_state_machine_info;
+  ILOG_INFO << "state_machine.current_state = "
+            << static_cast<int>(state_machine.current_state);
+
   if (IsUndefinedScene(state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;
   } else if (IsValidParkingState(state_machine.current_state)) {
@@ -131,6 +134,7 @@ bool PlanningScheduler::RunOnce(
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
+  ILOG_INFO << "init scene_type = " << static_cast<int>(scene_type);
 
   session_.set_scene_type(scene_type);
 

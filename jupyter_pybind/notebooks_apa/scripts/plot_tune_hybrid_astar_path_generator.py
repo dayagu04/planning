@@ -222,7 +222,7 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, is_left, 
 
   # vehicle_type = 'CHERY_T26'
   vehicle_type = 'CHERY_E0X'
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, 0.0)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, 0.0)
 
   car_xn = []
   car_yn = []

@@ -800,8 +800,7 @@ class LoadCyberbag:
 
 def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag=False):
 
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, car_inflation)
-
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)
   abs_t = bag_time + smallest_abs_t
 
   ### step 1: timestamp alignment
@@ -917,6 +916,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       'x' : [x1, x2],
     })
 
+    # front wheel pos line
+    norm_vec_3 = [wheel_base * heading_vec[0], wheel_base * heading_vec[1]]
+    x3 = x1 + norm_vec_3[0]
+    y3 = y1 + norm_vec_3[1]
+    x4 = x2 + norm_vec_3[0]
+    y4 = y2 + norm_vec_3[1]
+
+    local_view_data['data_current_front_line'].data.update({
+      'y' : [y3, y4],
+      'x' : [x3, x4],
+    })
+
     coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
 
     ego_xn, ego_yn = [], []
@@ -973,7 +984,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     else:
       steer_deg = 0.0
 
-    selected_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
+    if bag_loader.fus_parking_msg['enable'] == True:
+      selected_slot_id = bag_loader.fus_parking_msg['data'][fus_parking_msg_idx].select_slot_id
+    else:
+      selected_slot_id = -1
 
     current_state = bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state
     # local_view_data['data_text'].data.update({
@@ -1005,6 +1019,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     car_yn = []
     line_xn = []
     line_yn = []
+    front_line_xn = []
+    front_line_yn = []
     car_box_x_vec = []
     car_box_y_vec = []
     if (len(plan_x) > 1):
@@ -1027,6 +1043,15 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       line_xn = [x1, x2]
       line_yn = [y1, y2]
 
+      # front wheel pos line
+      norm_vec_3 = [wheel_base * heading_vec[0], wheel_base * heading_vec[1]]
+      x3 = x1 + norm_vec_3[0]
+      y3 = y1 + norm_vec_3[1]
+      x4 = x2 + norm_vec_3[0]
+      y4 = y2 + norm_vec_3[1]
+      front_line_xn = [x3, x4]
+      front_line_yn = [y3, y4]
+
     local_view_data['data_car_target'].data.update({
       'car_xn': car_xn,
       'car_yn': car_yn,
@@ -1048,6 +1073,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       'y' : line_yn,
     })
 
+    local_view_data['data_front_target_line'].data.update({
+      'x' : front_line_xn,
+      'y' : front_line_yn,
+    })
     for i in range(len(plan_x)):
       car_xn = []
       car_yn = []
@@ -2071,9 +2100,11 @@ def load_local_view_figure_parking():
   data_car = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
   data_current_pos = ColumnDataSource(data = {'current_pos_y':[], 'current_pos_x':[]})
   data_current_line = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_current_front_line = ColumnDataSource(data = {'y':[], 'x':[]})
   data_car_target = ColumnDataSource(data = {'car_yn':[], 'car_xn':[]})
   data_target_pos = ColumnDataSource(data = {'target_pos_y':[], 'target_pos_x':[]})
   data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_front_target_line = ColumnDataSource(data = {'x':[], 'y':[]})
   data_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
   data_car_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
   data_ego = ColumnDataSource(data = {'ego_yn':[], 'ego_xn':[]})
@@ -2140,9 +2171,11 @@ def load_local_view_figure_parking():
   local_view_data = {'data_car':data_car, \
                      'data_current_pos': data_current_pos, \
                      'data_current_line':data_current_line, \
+                      'data_current_front_line':data_current_front_line, \
                      'data_car_target':data_car_target, \
                      'data_target_pos':data_target_pos, \
                      'data_car_target_line':data_car_target_line,\
+                     'data_front_target_line':data_front_target_line,\
                      'data_car_box':data_car_box, \
                      'data_car_circle':data_car_circle, \
                      'data_ego':data_ego, \
@@ -2192,8 +2225,10 @@ def load_local_view_figure_parking():
   fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'car')
   fig1.circle('current_pos_y','current_pos_x', source = data_current_pos, size=8, color='grey', legend_label = 'car')
   fig1.line('y', 'x', source = data_current_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car')
+  fig1.line('y', 'x', source = data_current_front_line, line_width = 3.0, line_color = 'gray', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car')
   fig1.circle('target_pos_y','target_pos_x', source = data_target_pos, size=8, color='blue', legend_label = 'car_target')
   fig1.line('y', 'x', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target')
+  fig1.line('y', 'x', source = data_front_target_line, line_width = 3.0, line_color = 'gray', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target')
   fig1.patches('y_vec', 'x_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sampled carbox', visible = False)
   fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_car_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'car_circle', visible = False)
   fig1.line('ego_yn', 'ego_xn', source = data_ego, line_width = 1.5, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
@@ -2758,7 +2793,7 @@ fus_objects_params={
 
 def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_type, plot_ctrl_flag=False):
     #define figure
-    car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+    car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type)
     # define local_view fig
     fig_local_view = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1000, match_aspect = True, aspect_scale=1)
     fig_local_view.x_range.flipped = True

@@ -44,6 +44,44 @@ struct AstarParkingConfig {
 struct ApaParameters {
   // length unit: m   deg unit: deg  time unit: s
 
+  /***headin***/
+  // parking heading in params
+  bool is_heading_in = true;
+  double headin_fix_slot_occupied_ratio = 0.938;
+  double headin_multi_plan_min_heading_err = 22.86;    // 28.86
+  double headin_multi_plan_min_lat_err = 0.8;          // 1.2
+  double headin_multi_plan_max_occupied_ratio = 0.36;  // 0.3
+  double headin_linearc_plan_min_lat_err = 0.8;
+  double headin_linearc_plan_min_heading_err = 8.68;
+  double headin_linearc_plan_max_occupied_ratio = 0.8;
+  double headin_adjust_plan_max_heading1_err = 8.68;   // big
+  double headin_adjust_plan_max_heading2_err = 20.68;  // big
+  double headin_adjust_plan_max_lon_err = 0.68;        // big
+  double headin_extend_line_min_heading_err = 6.6;
+  double headin_extend_length = 0.0;
+  double headin_reverse_deg = 12.68;
+  double headin_prepare_line_min_x_offset_slot = 2.0;
+  double headin_prepare_line_max_x_offset_slot = 5.2;
+  double headin_prepare_line_max_heading_offset_slot_deg = 26.8;
+  double headin_prepare_line_min_heading_offset_slot_deg = 8.8;
+  double headin_max_pt_inside_drop_dy = 0.3;
+  double max_obs_invasion_slot_dist = 0.026;
+  double headin_virtual_obs_y_pos = 1.886;
+  double headin_virtual_obs_x_pos = 2.868;
+  double headin_obs_consider_lat_threshold = 2.0;
+  double headin_tlane_obs_omit_x = 0.3;
+  double headin_target_pos_err = 0.0568;
+  double headin_target_heading_err = 0.88;
+  double headin_max_radius_in_slot = 12.66;
+  double headin_min_radius_out_slot = 11.8;
+  double headin_sturn_steer_ratio_dist = 0.5;
+  // double headin_target_pos_err = 0.088;
+  // for simulation
+  double max_pt_inside_drop_dx_mono_headin = 0.0;
+  double max_pt_inside_drop_dx_multi_headin = 0.0;
+  double radius_add = 0.0;
+  /******/
+
   // schedule params
   double plan_time = 0.1;
 
@@ -141,11 +179,13 @@ struct ApaParameters {
   std::vector<int> uss_wdis_index_front = {0, 9, 6, 3, 1, 11};
   std::vector<int> uss_wdis_index_back = {0, 1, 3, 6, 9, 11};
   std::vector<int> uss_directly_behind_index = {8, 9};
+  std::vector<int> uss_directly_front_index = {2, 3};
 
   // check replan params
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
   int max_replan_count = 12;
+  int headin_max_replan_count = 14;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;

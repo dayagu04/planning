@@ -166,6 +166,7 @@ class ApaPlannerBase {
       car_already_move_dist = 0.0;
       spline_success = false;
       current_path_length = 0.0;
+      headin_current_path_length = 0.0;
       path_extended_dist = 1.0;
       is_replan_by_uss = false;
       ego_slot_info.Reset();
@@ -180,7 +181,12 @@ class ApaPlannerBase {
       replan_flag = false;
       dynamic_plan_fail_flag = false;
       gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
+
+      is_left_empty = false;
+      is_right_empty = false;
     }
+    bool is_left_empty = false;
+    bool is_right_empty = false;
 
     bool is_replan = false;
     bool is_replan_first = true;
@@ -199,6 +205,7 @@ class ApaPlannerBase {
     uint8_t pathplan_result = 0;
     size_t gear_change_count = 0;
     double current_path_length = 0.0;
+    double headin_current_path_length = 0.0;
     double path_extended_dist = 1.0;
     double stuck_time = 0.0;
     double stuck_uss_time = 0.0;
@@ -210,6 +217,8 @@ class ApaPlannerBase {
     double car_already_move_dist = 0.0;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
+    pnc::mathlib::spline headin_x_s_spline;
+    pnc::mathlib::spline headin_y_s_spline;
 
     PlannerStateMachine plan_stm;
     EgoSlotInfo ego_slot_info;

@@ -196,7 +196,7 @@ def slider_callback(vehicle_type, car_inflation, ego_x, ego_y, ego_heading, is_l
   elif vehicle_type == 2:
     vehicle_type = CHERY_E0X
 
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type, car_inflation)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)
 
   car_xn = []
   car_yn = []

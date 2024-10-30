@@ -223,7 +223,7 @@ def slider_callback(vehicle_type, traj_bound, obstacle_x, obstacle_y, obstacle_h
   elif vehicle_type == 2:
     vehicle_type = 'CHERY_E0X'
 
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type)
 
   kwargs = locals()
 

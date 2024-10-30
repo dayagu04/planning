@@ -242,3 +242,19 @@ target_link_libraries(astar_parallel_replay_py PRIVATE
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
   )
+  
+pybind11_add_module(headin_planning_py MODULE src/headin_planning_pybind.cc)
+  target_link_libraries(headin_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(prepareplan_py MODULE src/prepare_plan_pybind.cc)
+  target_link_libraries(prepareplan_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)

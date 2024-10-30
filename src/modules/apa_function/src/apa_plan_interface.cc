@@ -237,6 +237,97 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   // schedule params
   JSON_READ_VALUE(apa_param.SetPram().plan_time, double, "plan_time");
 
+  // head in param
+  JSON_READ_VALUE(apa_param.SetPram().is_heading_in, bool, "is_heading_in");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_fix_slot_occupied_ratio, double,
+                  "headin_fix_slot_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_multi_plan_min_heading_err, double,
+                  "headin_multi_plan_min_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_multi_plan_min_lat_err, double,
+                  "headin_multi_plan_min_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_multi_plan_max_occupied_ratio,
+                  double, "headin_multi_plan_max_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_linearc_plan_min_lat_err, double,
+                  "headin_linearc_plan_min_lat_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_linearc_plan_min_heading_err,
+                  double, "headin_linearc_plan_min_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_linearc_plan_max_occupied_ratio,
+                  double, "headin_linearc_plan_max_occupied_ratio");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_adjust_plan_max_heading1_err,
+                  double, "headin_adjust_plan_max_heading1_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_adjust_plan_max_heading2_err,
+                  double, "headin_adjust_plan_max_heading2_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_adjust_plan_max_lon_err, double,
+                  "headin_adjust_plan_max_lon_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_extend_line_min_heading_err,
+                  double, "headin_extend_line_min_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_extend_length, double,
+                  "headin_extend_length");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_reverse_deg, double,
+                  "headin_reverse_deg");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_prepare_line_min_x_offset_slot,
+                  double, "headin_prepare_line_min_x_offset_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_prepare_line_max_x_offset_slot,
+                  double, "headin_prepare_line_max_x_offset_slot");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().headin_prepare_line_max_heading_offset_slot_deg,
+      double, "headin_prepare_line_max_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(
+      apa_param.SetPram().headin_prepare_line_min_heading_offset_slot_deg,
+      double, "headin_prepare_line_min_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_max_pt_inside_drop_dy, double,
+                  "headin_max_pt_inside_drop_dy");
+
+  JSON_READ_VALUE(apa_param.SetPram().max_obs_invasion_slot_dist, double,
+                  "max_obs_invasion_slot_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_virtual_obs_y_pos, double,
+                  "headin_virtual_obs_y_pos");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_virtual_obs_x_pos, double,
+                  "headin_virtual_obs_x_pos");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_obs_consider_lat_threshold, double,
+                  "headin_obs_consider_lat_threshold");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_tlane_obs_omit_x, double,
+                  "headin_tlane_obs_omit_x");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_target_pos_err, double,
+                  "headin_target_pos_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_target_heading_err, double,
+                  "headin_target_heading_err");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_max_radius_in_slot, double,
+                  "headin_max_radius_in_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_min_radius_out_slot, double,
+                  "headin_min_radius_out_slot");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_sturn_steer_ratio_dist, double,
+                  "headin_sturn_steer_ratio_dist");
+
+  JSON_READ_VALUE(apa_param.SetPram().headin_max_replan_count, int,
+                  "headin_max_replan_count");
   // car params
   JSON_READ_VALUE(apa_param.SetPram().front_overhanging, double,
                   "front_overhanging");
