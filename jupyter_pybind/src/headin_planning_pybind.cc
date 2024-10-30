@@ -422,12 +422,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   double time_start = IflyTime::Now_ms();
   double time_end = time_start;
   while (true) {
-    if (pBase->CheckReachTargetPosePb()) {
+    if (pBase->CheckReachTargetPosePybind()) {
       success = true;
       break;
     }
 
-    if (pBase->PreparePlanPb()) {
+    if (pBase->PreparePlanPybind()) {
       std::cout << "first plan success\n";
       // success = true;
       // break;
@@ -438,12 +438,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     }
 
     time_end = IflyTime::Now_ms();
-    if (pBase->CheckReachTargetPosePb()) {
+    if (pBase->CheckReachTargetPosePybind()) {
       success = true;
       break;
     }
 
-    if (pBase->PreparePlanSecondPb()) {
+    if (pBase->PreparePlanSecondPybind()) {
       std::cout << "second prepare plan success\n";
     } else {
       std::cout << "second prepare  plan fail\n";
@@ -451,13 +451,13 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       // break;
     }
 
-    if (pBase->CheckReachTargetPosePb()) {
+    if (pBase->CheckReachTargetPosePybind()) {
       std::cout << "second prepare plan to target pose\n";
       success = true;
       break;
     }
 
-    if (pBase->MultiPlanPb()) {
+    if (pBase->MultiPlanPybind()) {
       std::cout << "multi plan success\n";
     } else {
       std::cout << "first is complete fail\n";
@@ -465,27 +465,27 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       break;
     }
 
-    if (pBase->CheckReachTargetPosePb()) {
+    if (pBase->CheckReachTargetPosePybind()) {
       success = true;
       break;
     }
 
-    if (pBase->MultiLineArcPlanPb()) {
+    if (pBase->MultiLineArcPlanPybind()) {
       std::cout << "multi line arc plan success\n";
     } else {
       // std::cout << "multi line arc plan omit\n";
     }
 
-    if (pBase->CheckReachTargetPosePb()) {
+    if (pBase->CheckReachTargetPosePybind()) {
       success = true;
       break;
     }
 
-    if (pBase->AdjustPlanPb()) {
+    if (pBase->AdjustPlanPybind()) {
       std::cout << "adjust plan success\n";
     }
 
-    if (pBase->CheckReachTargetPosePb()) {
+    if (pBase->CheckReachTargetPosePybind()) {
       success = true;
       break;
     }
