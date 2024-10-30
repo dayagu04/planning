@@ -37,6 +37,10 @@ class LongitudinalDecisionDecider : public Task {
   static constexpr double kPreviewDistanceStep = 2.0;
   static constexpr double kMaxCurvThd = 0.01;
   static constexpr double kAgentsAverageSpeedRatioByCruiseThd = 0.7;
+
+  static constexpr double kAroundEgoLateralDistanceThd = 5.4;
+  static constexpr double kAroundEgoLongitudinalPreviewTimeThd = 3.0;
+  static constexpr double kAroundEgoLongitudinalBackwardTimeThd = 1.0;
 };
 
 }  // namespace planning
