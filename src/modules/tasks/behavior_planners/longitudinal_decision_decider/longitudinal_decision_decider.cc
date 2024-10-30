@@ -124,6 +124,19 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
   // 7.max_acc_curv VS st_corridor
   // 需要获取st信息，判断最大减速度时，和前车是否安全，前车从 agents_headway_map
   // 中获取
+  const bool is_max_acc_curv_safe = IsMaxAccCurvSafeInStGraph();
+  if (!is_max_acc_curv_safe) {
+    can_increase_acc_bound = false;
+  }
+
+  // 8.计算增加后的acc bound
+  if (can_increase_acc_bound) {
+    cruise_accelerate_count_.first =
+        std::min(++(cruise_accelerate_count_.first), kIncreaseAccBoundCountThd);
+  } else {
+    cruise_accelerate_count_.first =
+        std::max(--(cruise_accelerate_count_.first), 0);
+  }
 }
 
 double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
@@ -209,6 +222,31 @@ double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
       agent_around_speed_total / agents_around_ego.size();
 
   return agent_around_average_speed;
+}
+
+bool LongitudinalDecisionDecider::IsMaxAccCurvSafeInStGraph() const {
+  constexpr double kMinFollowDistance = 3.0;
+  constexpr double kFollowTimeGap = 1.5;
+  constexpr double kCruiseAccelerateThd = 1.0;
+
+  const auto &environmental_model = session_->environmental_model();
+  const auto &planning_context = session_->planning_context();
+  const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
+
+  // 依赖ST的合入
+  // const auto *st_graph = planning_context.st_graph_helper();
+  // if (st_graph == nullptr) {
+  //   return false;
+  // }
+  // const auto &planning_init_point = ego_state_mgr->planning_init_point();
+  // const double ego_vel = planning_init_point.v;
+
+  // const auto& agents_headway_map =
+  //     planning_data->decision_output().agent_headway_decider_output().agents_headway_Info();
+  // auto max_deceleration_curve = GenerateMaxDecelerationCurve(planning_init_point);
+
+
+  return true;
 }
 
 void LongitudinalDecisionDecider::MakeDebugMessage() {

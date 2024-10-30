@@ -23,6 +23,8 @@ class LongitudinalDecisionDecider : public Task {
 
   double CalculateAgentsAverageSpeedAroundEgo() const;
 
+  bool IsMaxAccCurvSafeInStGraph() const;
+
  private:
   EgoPlanningConfig config_;
   // <counter, flag>
@@ -37,6 +39,8 @@ class LongitudinalDecisionDecider : public Task {
   static constexpr double kPreviewDistanceStep = 2.0;
   static constexpr double kMaxCurvThd = 0.01;
   static constexpr double kAgentsAverageSpeedRatioByCruiseThd = 0.7;
+
+  static constexpr int32_t kIncreaseAccBoundCountThd = 3;
 
   static constexpr double kAroundEgoLateralDistanceThd = 5.4;
   static constexpr double kAroundEgoLongitudinalPreviewTimeThd = 3.0;
