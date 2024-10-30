@@ -19,6 +19,8 @@ namespace apa_planner {
 
 class ApaPlanInterface {
  public:
+  ApaPlanInterface();
+
   void Init(const bool is_simulation = false);
 
   void Reset();

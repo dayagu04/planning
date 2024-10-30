@@ -571,6 +571,7 @@ struct GapSelectorInfo {
   GapSelectorPathSpline last_gap_selector_path_spline;
 };
 struct PlanningResult {
+  planning::common::SceneType scene_type;
   int target_lane_id;
   // ScenarioStateEnum target_scenario_state = ROAD_NONE;
   TrajectoryPoints traj_points;

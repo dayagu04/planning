@@ -4,6 +4,7 @@
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "tasks/behavior_planners/vision_only_adas_function_task/vision_only_adas_function_task.h"

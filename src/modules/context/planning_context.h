@@ -12,6 +12,7 @@
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
+#include "../tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
 #include "../tasks/task_interface/lane_borrow_decider_output.h"
@@ -164,6 +165,14 @@ class PlanningContext {
   VisionLateralMotionPlannerOutput &
   mutable_vision_lateral_motion_planner_output() {
     return vision_lateral_motion_planner_output_;
+  }
+
+  const LateralObstacleDeciderOutput &lateral_obstacle_decider_output() const {
+    return lateral_obstacle_decider_output_;
+  }
+
+  LateralObstacleDeciderOutput &mutable_lateral_obstacle_decider_output() {
+    return lateral_obstacle_decider_output_;
   }
 
   const GeneralLateralDeciderOutput &general_lateral_decider_output() const {
@@ -462,6 +471,7 @@ class PlanningContext {
   // used in HppGeneralLateralDecider and GeneralLateralDecider
   GeneralLateralDeciderOutput general_lateral_decider_output_;
   HppGeneralLateralDeciderOutput hpp_general_lateral_decider_output_;
+  LateralObstacleDeciderOutput lateral_obstacle_decider_output_;
 
   // longitudinal task pipeline
   VisionLongitudinalBehaviorPlannerOutput

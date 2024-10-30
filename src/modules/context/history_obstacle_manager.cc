@@ -15,7 +15,7 @@ namespace planning {
 HistoryObstacleManager::HistoryObstacleManager(
     const EgoPlanningConfigBuilder *config_builder,
     planning::framework::Session *session) {
-  config_ = config_builder->cast<HistoryObstacleConfig>();
+  SetConfig(config_builder);
   session_ = session;
   planning_loop_dt_ = 1.0 / FLAGS_planning_loop_rate;
   frenet_coord_ = nullptr;
@@ -25,6 +25,10 @@ HistoryObstacleManager::~HistoryObstacleManager() {
   history_obstacles_.clear();
   old_obstacles_.clear();
   new_obstacles_.clear();
+}
+
+void HistoryObstacleManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+  config_ = config_builder->cast<HistoryObstacleConfig>();
 }
 
 bool HistoryObstacleManager::Update() {

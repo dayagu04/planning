@@ -54,6 +54,7 @@ struct LaneChangeDeciderOutput {
   bool is_ego_on_rightmost_lane = false;
   LaneChangeGapInfo lc_gap_info;
   bool is_nearing_ramp = false;
+  RequestType hpp_turn_signal = NO_CHANGE;
 };
 
 }  // namespace planning

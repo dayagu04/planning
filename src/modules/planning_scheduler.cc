@@ -106,43 +106,54 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   std::string config_file = common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
+  environmental_model_manager_.SetConfig(scene_type);
   // all parameters can be changed here
   JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
                   "planner_type");
 }
 
-bool PlanningScheduler::RunOnce(
-    iflyauto::PlanningOutput *const planning_output,
-    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  double start_timestamp = IflyTime::Now_ms();
-
-  LOG_ERROR("PlanningScheduler::RunOnce \n");
-
-  session_.mutable_planning_context()->Clear();
-  session_.mutable_planning_context()->feed_planning_hmi_info(
-      planning_hmi_info);
-
+planning::common::SceneType PlanningScheduler::DetermineSceneType(
+    const iflyauto::FuncStateMachine &func_state_machine) {
   auto scene_type = planning::common::SceneType::HIGHWAY;
-  const auto &state_machine = local_view_->function_state_machine_info;
 
-  if (IsUndefinedScene(state_machine.current_state)) {
+  if (IsUndefinedScene(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;
-  } else if (IsValidParkingState(state_machine.current_state)) {
+  } else if (IsSwitchApaState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::PARKING_APA;
-  } else if (IsValidHppState(state_machine.current_state)) {
+  } else if (IsValidHppState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HPP;
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
-
   session_.set_scene_type(scene_type);
 
   auto frame_info =
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
 
+  ILOG_INFO << "scene_type " << scene_type;
+  return scene_type;
+}
+
+bool PlanningScheduler::RunOnce(
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  LOG_ERROR("PlanningScheduler::RunOnce \n");
+  auto &planning_result =
+      session_.mutable_planning_context()->mutable_planning_result();
+  const double start_timestamp = IflyTime::Now_ms();
   bool planning_success = false;
-  if (scene_type == common::PARKING_APA) {
+  session_.mutable_planning_context()->Clear();
+  session_.mutable_planning_context()->feed_planning_hmi_info(
+      planning_hmi_info);
+
+  const auto &state_machine = local_view_->function_state_machine_info;
+  auto scene_type = DetermineSceneType(state_machine);
+  planning_result.scene_type = scene_type;
+  planning_result.timestamp = start_timestamp;
+
+  bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
+  if (scene_type == common::PARKING_APA || is_hpp_slot_searching) {
     // 泊车规划部分
     if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
         state_machine.current_state !=
@@ -154,16 +165,17 @@ bool PlanningScheduler::RunOnce(
     }
     planning_success = apa_function_->Plan();
     *planning_output = session_.planning_context().planning_output();
-    return planning_success;
+
+    // If just in hpp searching stage, do not return, need to execute navigation
+    // planning.
+    if (!is_hpp_slot_searching) {
+      return planning_success;
+    }
   }
 
   // 行车规划部分
   // TODO(xjli32): 功能切换时，reset
-  ClearParkingInfo(planning_output);
-  auto &planning_result =
-      session_.mutable_planning_context()->mutable_planning_result();
-  planning_result.timestamp = start_timestamp;
-  // planning_output->msg_header.stamp = start_timestamp_us; 统一放在adapter处
+  // ClearParkingInfo(planning_output);
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -209,10 +221,7 @@ bool PlanningScheduler::RunOnce(
   JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  if (session_.is_hpp_scene()) {
-    PrepareForApa();
-  }
-
+  ClearParkingInfo(planning_output);
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
   LOG_DEBUG("The time cost of RunOnce is: %d\n", (int)frame_duration);
 
@@ -552,7 +561,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->cipv_info.cipv_id = cipv_info.cipv_id;
 
   // HMI for ad_info
-  const auto &ad_info = 
+  const auto &ad_info =
       session_.planning_context().planning_hmi_info().ad_info;
   planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
   planning_hmi_info->ad_info.lane_change_direction =
@@ -593,6 +602,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
           lat_offset_decider_output.avoid_direction);
 
   // HMI for hpp
+  const auto &ego_state_manager =
+      session_.environmental_model().get_ego_state_manager();
   const auto &route_info_output =
       session_.environmental_model().get_route_info()->get_route_info_output();
   auto hpp_info = &(session_.mutable_planning_context()
@@ -609,6 +620,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;
+  hpp_info->is_parking_space_occupied = false;
+  hpp_info->is_new_parking_space_found = false;
   auto reference_path_manager =
       session_.environmental_model().get_reference_path_manager();
   auto current_reference_path =
@@ -616,10 +629,10 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const double kCheckTurnDistance = 15.0;
   const double kEgoIsOnTurnDistance1 = -3.0;
   const double kEgoIsOnTurnDistance2 = 5.0;
+  auto& frenet_ego_state = current_reference_path->get_frenet_ego_state();
+  auto& points = current_reference_path->get_points();
+  double ego_s = frenet_ego_state.s();
   if (current_reference_path != nullptr) {
-    auto frenet_ego_state = current_reference_path->get_frenet_ego_state();
-    auto points = current_reference_path->get_points();
-    double ego_s = frenet_ego_state.s();
     for (auto &point : points) {
       double distance = point.path_point.s() - ego_s;
       if (distance > kEgoIsOnTurnDistance1 &&
@@ -635,6 +648,37 @@ void PlanningScheduler::FillPlanningHmiInfo(
           break;
         }
       } else if (distance > kCheckTurnDistance) {
+        break;
+      }
+    }
+  }
+
+  // hpp状态切park_in状态
+  const auto &state_machine = local_view_->function_state_machine_info;
+  // const auto &apa_planning_status = session_.planning_context().planning_output().planning_status.apa_planning_status;
+  const size_t successful_slot_info_list_size = session_.planning_context().planning_output().successful_slot_info_list_size;
+  const auto &successful_slot_info_list = session_.planning_context().planning_output().successful_slot_info_list;
+  const double ego_v = ego_state_manager->ego_v();
+  const size_t target_slot_id = local_view_->parking_fusion_info.select_slot_id;
+  double distance_to_path_end = route_info_output.distance_to_target_slot;
+  if (distance_to_path_end < 5.0) {
+    distance_to_path_end = std::min(
+     std::fabs(points.back().path_point.s - ego_s),
+     distance_to_path_end);
+  }
+  if ((successful_slot_info_list_size > 0) &&
+      (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING)) {
+    hpp_info->is_new_parking_space_found = true;
+    hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+  } else if ((distance_to_path_end < config_.dist_to_parking_space_thr) &&
+             (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
+    if ((ego_v <= 1e-2) || distance_to_path_end <= 1e-2) {
+      hpp_info->is_parking_space_occupied = true;
+    }
+    for (const auto& slot_info : successful_slot_info_list) {
+      if (target_slot_id == slot_info.id) {
+        hpp_info->is_parking_space_occupied = false;
+        hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
         break;
       }
     }
@@ -664,55 +708,6 @@ void PlanningScheduler::ClearParkingInfo(
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
 }
 
-void PlanningScheduler::PrepareForApa() {
-  const double kDistanceToDestination = 8.;
-  auto virtual_lane_manager =
-      session_.environmental_model().get_virtual_lane_manager();
-  auto &ego_state = session_.environmental_model().get_ego_state_manager();
-
-  auto planning_context = session_.mutable_planning_context();
-
-  auto &planning_output = planning_context->mutable_planning_output();
-
-  auto gear_command = &(planning_output.gear_command);
-  double distance_to_destination = std::numeric_limits<double>::max();
-  const auto &route_info_output =
-      session_.environmental_model().get_route_info()->get_route_info_output();
-  distance_to_destination = route_info_output.distance_to_target_slot;
-  bool entering_parking_area = distance_to_destination < kDistanceToDestination;
-  double ego_v = ego_state->ego_v();
-  auto fsm_state = session_.environmental_model()
-                       .get_local_view()
-                       .function_state_machine_info.current_state;
-
-  if (fsm_state != iflyauto::FunctionalState_HPP_IN_SECURE &&
-      entering_parking_area && ego_v < 0.1) {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
-    if (ego_state->ego_gear() == planning::common::GearType::PARK) {
-      planning_context->mutable_planning_completed() = true;
-      std::cout << "HPP has arrived destination !!! " << std::endl;
-    }
-  } else {
-    if (fsm_state == iflyauto::FunctionalState_HPP_IN_SECURE && ego_v < 0.1) {
-      if (ego_state->ego_gear() == planning::common::GearType::PARK) {
-        planning_context->mutable_planning_completed() = true;
-        std::cout << "[general_planning] The HPP gear has been changed to PARK "
-                     "by fsm_state HPP_IN_SECURE !!! "
-                  << std::endl;
-      }
-      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
-      std::cout << "[general planning] The HPP has stopped by MFF because of "
-                   "SECURE situation"
-                << std::endl;
-    } else {
-      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-      planning_context->mutable_planning_completed() = false;
-      std::cout << "[general_planning] reset planning_completed to false"
-                << std::endl;
-    }
-  }
-}
-
 bool PlanningScheduler::IsUndefinedScene(
     const iflyauto::FunctionalState &current_state) {
   return current_state == iflyauto::FunctionalState_MANUAL ||
@@ -722,12 +717,8 @@ bool PlanningScheduler::IsUndefinedScene(
 
 bool PlanningScheduler::IsValidHppState(
     const iflyauto::FunctionalState &current_state) {
-  return current_state == iflyauto::FunctionalState_HPP_IN_MEMORY ||
-         current_state == iflyauto::FunctionalState_HPP_IN_READY_EXISTROUTE ||
-         current_state == iflyauto::FunctionalState_HPP_IN_READY_REENTRYROUTE ||
-         current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_READY ||
-         current_state == iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE ||
-         current_state == iflyauto::FunctionalState_HPP_IN_SECURE;
+  return current_state >= iflyauto::FunctionalState_HPP_STANDBY &&
+         current_state <= iflyauto::FunctionalState_HPP_ERROR;
 }
 
 void PlanningScheduler::InitSccFunction() {
@@ -770,17 +761,13 @@ void PlanningScheduler::interpolate_with_last_trajectory_points() {
   const auto &last_planning_result =
       session_.planning_context().last_planning_result();
 
-  auto curr_time = session_.mutable_environmental_model()
-                       ->get_ego_state_manager()
-                       ->navi_timestamp();
-  auto start_time = curr_time - last_planning_result.timestamp;
-  assert(start_time >= 0);
-
   // interpolate traj points
   // todo @xbliu config
 
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
+  auto start_time = (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
+  assert(start_time >= 0);
   planning_result.traj_points.clear();
   auto backup_num_points = 201;
   auto delta_time = 0.025;
@@ -836,13 +823,14 @@ bool PlanningScheduler::UpdateFailedPlanningResult() {
       session_.planning_context().last_planning_result();
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
+  if (last_planning_result.scene_type != planning_result.scene_type) {
+    return false;
+  }
+
   if (last_planning_result.target_lane_id ==
           coarse_planning_info.target_lane_id &&
       last_planning_result.use_backup_cnt <= config_.failure_counter_thrshld) {
-    auto cur_time = session_.mutable_environmental_model()
-                        ->get_ego_state_manager()
-                        ->navi_timestamp();
-    auto delta_time = cur_time - last_planning_result.timestamp;
+    auto delta_time = (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
     if (0.0 < delta_time && delta_time < 1.0) {
       interpolate_with_last_trajectory_points();
       planning_result.use_backup_cnt = last_planning_result.use_backup_cnt + 1;
@@ -931,6 +919,34 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
   }
 
   return reference_intercept_bound;
+}
+
+bool PlanningScheduler::IsHppSlotSearchingByDistance() {
+  // check state
+  const auto &state_machine = local_view_->function_state_machine_info;
+  if (!IsHppSlotSearchingStage(state_machine.current_state)) {
+    return false;
+  }
+
+  // check dist
+  if (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    const double dist =
+        session_.environmental_model().get_route_info()->get_route_info_output().distance_to_target_slot;
+    const double kdistance_thresh = 10.0;
+    if (dist > kdistance_thresh) {
+      return false;
+    }
+  }
+
+  //  check speed
+  const auto &ego_state =
+      session_.environmental_model().get_ego_state_manager();
+  const double kspeed_thresh = 5.0;
+  if (ego_state->ego_v() > kspeed_thresh) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace planning

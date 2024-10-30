@@ -101,6 +101,10 @@ TrackletMaintainer::~TrackletMaintainer() {
   lt_fusion_object_history_map_.clear();
 }
 
+void TrackletMaintainer::SetConfig(const LateralObstacleConfig &config) {
+  config_ = config;
+}
+
 void TrackletMaintainer::apply_update(
     const std::shared_ptr<EgoStateManager> ego_state,
     const std::vector<PredictionObject> &predictions,
@@ -1940,8 +1944,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   LOG_DEBUG("----is_potential_avoiding_car-----\n");
   auto config_builder =
       session_->environmental_model().highway_config_builder();
-  PotentialAvoidDeciderConfig config =
-      config_builder->cast<PotentialAvoidDeciderConfig>();
+  LateralObstacleDeciderConfig config =
+      config_builder->cast<LateralObstacleDeciderConfig>();
   double near_car_thr = config.near_car_thr;
   double lat_safety_buffer = config.lat_safety_buffer;
   double oversize_veh_addition_buffer = config.oversize_veh_addition_buffer;

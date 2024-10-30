@@ -46,7 +46,7 @@
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
-#include "struct_msgs/GroundLinePerceptionInfo.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
@@ -245,6 +245,65 @@ const bool InterfaceUpdateParam(
       BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
           uss_perception_info_bytes);
 
+  // iflyauto::FusionGroundLineInfo ground_line_info =
+  //     BytesToStruct<iflyauto::FusionGroundLineInfo,
+  //                   struct_msgs::FusionGroundLineInfo>(
+  //         ground_line_info_bytes);
+
+  // iflyauto::FusionObjectsInfo fus_obj_info =
+  //     BytesToStruct<iflyauto::FusionObjectsInfo,
+  //                   struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
+
+  // iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+  //     BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+  //                   struct_msgs::FusionOccupancyObjectsInfo>(
+  //         fus_occ_obj_info_bytes);
+
+  iflyauto::FusionGroundLineInfo ground_line_info;
+
+  iflyauto::FusionObjectsInfo fus_obj_info;
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info;
+
+  ground_line_info.groundline_size = gl_coord.size();
+  for (size_t i = 0; i < ground_line_info.groundline_size; ++i) {
+    ground_line_info.groundline[i].groundline_point_size = gl_coord[i].size();
+    for (size_t j = 0; j < ground_line_info.groundline[i].groundline_point_size;
+         ++j) {
+      ground_line_info.groundline[i].shape[j].x = gl_coord[i][j].x();
+      ground_line_info.groundline[i].shape[j].y = gl_coord[i][j].y();
+    }
+  }
+  fus_obj_info.fusion_object_size = fus_obj_coord.size();
+  for (size_t i = 0; i < fus_obj_info.fusion_object_size; ++i) {
+    fus_obj_info.fusion_object[i].additional_info.polygon_points_size =
+        fus_obj_coord[i].size();
+    for (size_t j = 0;
+         j < fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
+         ++j) {
+      fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
+          fus_obj_coord[i][j].x();
+      fus_obj_info.fusion_object[i].additional_info.polygon_points[j].y =
+          fus_obj_coord[i][j].y();
+    }
+  }
+  fus_occ_obj_info.fusion_object_size = fus_occ_obj_coord.size();
+  for (size_t i = 0; i < fus_occ_obj_info.fusion_object_size; ++i) {
+    fus_occ_obj_info.fusion_object[i]
+        .additional_occupancy_info.polygon_points_size =
+        fus_occ_obj_coord[i].size();
+    for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
+                               .additional_occupancy_info.polygon_points_size;
+         ++j) {
+      fus_occ_obj_info.fusion_object[i]
+          .additional_occupancy_info.polygon_points[j]
+          .x = fus_occ_obj_coord[i][j].x();
+      fus_occ_obj_info.fusion_object[i]
+          .additional_occupancy_info.polygon_points[j]
+          .y = fus_occ_obj_coord[i][j].y();
+    }
+  }
+
   local_view.localization = localization_info;
   local_view.vehicle_service_output_info = vehicle_service_output_info;
   local_view.parking_fusion_info = parking_slot_info;
@@ -257,7 +316,8 @@ const bool InterfaceUpdateParam(
   local_view.control_output = control_output_info;
 
   // DEBUG_PRINT(
-  //     "c++ gl size = " << static_cast<int>(ground_line_info.ground_lines_size));
+  //     "c++ gl size = " <<
+  //     static_cast<int>(ground_line_info.groundline_size));
 
   // DEBUG_PRINT("c++ fus_obj_num = "
   //             << static_cast<int>(fus_obj_info.fusion_object_size));

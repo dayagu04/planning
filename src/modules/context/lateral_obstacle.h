@@ -22,6 +22,8 @@ class LateralObstacle {
                   planning::framework::Session *session);
   virtual ~LateralObstacle();
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   bool update();
 
   bool fvf_dead() const { return fvf_dead_; }

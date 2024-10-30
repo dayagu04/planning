@@ -1,13 +1,17 @@
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
-#include "ifly_parking_map_c.h"
+#include "fusion_parking_slot_c.h"
+#include "ehr.pb.h"
+#include "math/line_segment2d.h"
 #include "session.h"
 #include "vec2d.h"
 
 namespace planning {
 using ParkingSlotPoints = std::vector<planning_math::Vec2d>;
+using ParkingLimiters = std::vector<planning_math::LineSegment2d>;
 
 // todo: delete it
 class ParkingSlotManager {
@@ -15,12 +19,28 @@ class ParkingSlotManager {
   ParkingSlotManager(planning::framework::Session *session);
   ~ParkingSlotManager() = default;
 
- public:
-  bool update(const iflyauto::ParkingInfo &parking_info);
-  std::vector<ParkingSlotPoints> get_points() { return points_; };
+  bool Update(const Map::StaticMap &static_map);
+
+  bool Update(const iflyauto::ParkingFusionInfo &parking_fusion_info);
+
+  const std::vector<ParkingSlotPoints>& GetPoints() const { return points_; };
+
+  const size_t GetTargetSlotId() const {
+    return target_slot_id_;
+  }
+
+  const double GetDistanceToTargetSlot() const {
+    return distance_to_target_slot_;
+  }
 
  private:
-  planning::framework::Session *session_;
+  void Init();
+
+  planning::framework::Session *session_ = nullptr;
+  size_t target_slot_id_;
+  double distance_to_target_slot_;
+  ParkingSlotPoints target_slot_;
   std::vector<ParkingSlotPoints> points_;
+  ParkingLimiters limiters_;
 };
 }  // namespace planning

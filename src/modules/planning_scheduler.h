@@ -89,8 +89,6 @@ class PlanningScheduler {
                            iflyauto::PlanningOutput *const planning_output);
 
   void ClearParkingInfo(iflyauto::PlanningOutput *planning_output);
-
-  void PrepareForApa();
   bool IsUndefinedScene(const iflyauto::FunctionalState &current_state);
   bool IsValidHppState(const iflyauto::FunctionalState &current_state);
 
@@ -102,6 +100,11 @@ class PlanningScheduler {
 
   bool UpdateSuccessfulPlanningResult();
 
+  // hpp routing state: need apa search slot
+  // hpp searching state: need apa search slot.
+  bool IsHppSlotSearchingByDistance();
+
+  planning::common::SceneType DetermineSceneType(const iflyauto::FuncStateMachine &func_state_machine);
  private:
   enum FeedType {
     FEED_VEHICLE_DBW_STATUS = 0,

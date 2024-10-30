@@ -13,6 +13,10 @@ namespace planning {
 ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
     : session_(session) {
+  SetConfig(config_builder);
+}
+
+void ObstacleManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
 }
 
@@ -102,19 +106,22 @@ void ObstacleManager::update() {
       }
     }
   } else {
-    // fusion ground line
+    // ground line
     static constexpr int kGroundLineIdOffset = 5000000;
-    const std::vector<GroundLinePoint> &groundline =
-        session_->environmental_model().get_ground_line_point_info();
-    auto groundline_clusters = GroundLineDecider::execute(groundline);
-    std::cout << "groundline_clusters.size = " << groundline_clusters.size()
+    const std::shared_ptr<GroundLineManager> ground_line_manager =
+        session_->environmental_model().get_ground_line_manager();
+    const std::vector<GroundLinePoints> &ground_line_points =
+        ground_line_manager->GetPoints();
+    std::cout << "ground_line_points.size = " << ground_line_points.size()
               << std::endl;
-    LOG_DEBUG("groundline_clusters.size = %lu", groundline_clusters.size());
-    int cluster_id = kGroundLineIdOffset;
-    for (auto &groundline_cluster : groundline_clusters) {
-      cluster_id += 1;
-      Obstacle obstacle(cluster_id, groundline_cluster);
-      add_groundline_obstacle(obstacle);
+    // LOG_DEBUG("ground_line_points.size = %lu", ground_line_points.size());
+    int ground_line_id = kGroundLineIdOffset;
+    for (const auto &ground_line_point : ground_line_points) {
+      if (ground_line_point.size() >= 3) {
+        ground_line_id += 1;
+        Obstacle obstacle(ground_line_id, ground_line_point);
+        add_groundline_obstacle(obstacle);
+      }
     }
 
     // parking space
@@ -122,9 +129,9 @@ void ObstacleManager::update() {
     const std::shared_ptr<ParkingSlotManager> parking_slot_manager =
         session_->environmental_model().get_parking_slot_manager();
     const std::vector<ParkingSlotPoints> &parking_slot_points =
-        parking_slot_manager->get_points();
+        parking_slot_manager->GetPoints();
     int parking_slot_id = kParkingSlotIdOffset;
-    for (auto &parking_slot_point : parking_slot_points) {
+    for (const auto &parking_slot_point : parking_slot_points) {
       if (parking_slot_point.size() != 4U) {
         LOG_DEBUG("invalid parking_slot_point.size = %lu",
                   parking_slot_point.size());
@@ -133,6 +140,21 @@ void ObstacleManager::update() {
       parking_slot_id += 1;
       Obstacle obstacle(parking_slot_id, parking_slot_point);
       add_parking_space(obstacle);
+    }
+
+    // occupancy objects
+    static constexpr int kOccupancyObjectIdOffset = 7000000;
+    const std::shared_ptr<OccupancyObjectManager> occupancy_object_manager =
+        session_->environmental_model().get_occupancy_object_manager();
+    const std::vector<OccupancyObjectPoints> &occupancy_objects_points =
+        occupancy_object_manager->GetPoints();
+    int occupancy_object_id = kOccupancyObjectIdOffset;
+    for (auto &object_points : occupancy_objects_points) {
+      if (object_points.size() >= 3) {
+        occupancy_object_id += 1;
+        Obstacle obstacle(occupancy_object_id, object_points);
+        add_occupancy_obstacle(obstacle);
+      }
     }
 
     // update uss
@@ -149,6 +171,7 @@ void ObstacleManager::clear() {
   parking_space_obstacles_ = IndexedList<int, Obstacle>();
   road_edge_obstacles_ = IndexedList<int, Obstacle>();
   gs_care_obstacles_ = IndexedList<int, Obstacle>();
+  occupancy_obstacles_ = IndexedList<int, Obstacle>();
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {
@@ -172,14 +195,40 @@ const IndexedList<int, Obstacle> &ObstacleManager::get_obstacles() const {
 }
 
 void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
-  const auto &frenet_coord = reference_path.get_frenet_coord();
   auto &frenet_obstacles = reference_path.mutable_obstacles();
   auto &frenet_obstacles_map = reference_path.mutable_obstacles_map();
-  auto &bstacles_ids_in_lane_map =
+  auto &obstacles_ids_in_lane_map =
       reference_path.mutable_obstacles_in_lane_map();
-  bstacles_ids_in_lane_map.clear();
+  obstacles_ids_in_lane_map.clear();
   frenet_obstacles.clear();
   frenet_obstacles_map.clear();
+
+  if (session_->is_hpp_scene()) {
+    frenet_obstacles.reserve(obstacles_.Items().size() +
+                             groundline_obstacles_.Items().size());
+    obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
+                                     groundline_obstacles_.Items().size());
+    add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+    add_frenet_obstacle(groundline_obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+    add_frenet_obstacle(occupancy_obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+  } else {
+    frenet_obstacles.reserve(obstacles_.Items().size());
+    obstacles_ids_in_lane_map.reserve(obstacles_.Items().size());
+    add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map, obstacles_ids_in_lane_map);
+  }
+}
+
+void ObstacleManager::add_frenet_obstacle(
+    IndexedList<int, Obstacle> &obstacles, ReferencePath &reference_path,
+    std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
+    std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+        &frenet_obstacles_map,
+    std::vector<int> &obstacles_ids_in_lane_map) {
+  const auto &frenet_coord = reference_path.get_frenet_coord();
   constexpr double kCareDistance = 30.0;
   auto ego_s = reference_path.get_frenet_ego_state().s();
   auto ego_l = reference_path.get_frenet_ego_state().l();
@@ -190,7 +239,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
 
   auto is_location_valid = session_->environmental_model().location_valid();
 
-  for (const Obstacle *obstacle_ptr : obstacles_.Items()) {
+  for (const Obstacle *obstacle_ptr : obstacles.Items()) {
     // filter some obstacle
 
     Point2D frenet_point, cart_point;
@@ -235,7 +284,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     const double lat_buffer = 0.8;
     if (frenet_point.y + half_width < 1.5 + lat_buffer &&
         frenet_point.y - half_width > -1.5 - lat_buffer) {
-      bstacles_ids_in_lane_map.emplace_back(obstacle_ptr->id());
+      obstacles_ids_in_lane_map.emplace_back(obstacle_ptr->id());
     }
   }
 }

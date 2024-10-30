@@ -8,6 +8,7 @@
 #include "aabox2d.h"
 #include "box2d.h"
 #include "line_segment2d.h"
+#include "obstacle.h"
 #include "polygon2d.h"
 #include "vec2d.h"
 
@@ -34,6 +35,9 @@ class GeometryObject {
   GeometryObject(const Box2d& box, const int index);
 
   GeometryObject(const Box2d& box, const int index, const int32_t track_id);
+
+  GeometryObject(const Box2d& box, const int index, const int32_t track_id,
+                 const Obstacle* obstacle_ptr);
 
   GeometryObject(const Polygon2d& box, const int index, const int32_t track_id);
 
@@ -70,6 +74,8 @@ class GeometryObject {
 
   Type type() const;
 
+  const Obstacle* obstacle_ptr() const;
+
  private:
   // AABox2d aabox_;
   std::shared_ptr<LineSegment2d> ptr_line_segment_;
@@ -81,6 +87,7 @@ class GeometryObject {
   int index_ = -1;
   int32_t track_id_ = -1;
   Type type_ = Type::UNKNOWN;
+  const Obstacle* obstacle_ptr_ = nullptr;
 };
 
 }  // namespace planning_math

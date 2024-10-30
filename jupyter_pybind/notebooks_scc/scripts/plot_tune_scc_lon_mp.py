@@ -1,5 +1,6 @@
 import sys, os
 sys.path.append("..")
+from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_tune_lon_mp import *
 sys.path.append('../..')

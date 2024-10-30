@@ -20,7 +20,6 @@ sys.path.append('../../..')
 from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
-import lib.load_ros_bag
 
 # 先手动写死bag
 bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240607/20240607-16-37-00/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-07-16-37-00_no_camera.bag"
@@ -315,13 +314,13 @@ def draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager):
     if plan_debug_msg['enable'] == True:
       for i, plan_debug in enumerate(plan_debug_msg['data']):
         input_topic_timestamp = plan_debug.input_topic_timestamp
-        if lib.load_ros_bag.is_new_loc:
+        if global_var.get_value('is_new_loc'):
           if 0 != input_topic_timestamp.localization:
             localization_timestamp = input_topic_timestamp.localization
           else :
             localization_timestamp = input_topic_timestamp.localization_estimate
         else :
-          if is_bag_main:
+          if global_var.get_value('is_bag_main'):
             localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
           else:
             localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
@@ -329,7 +328,7 @@ def draw_lateral_motion(fig_lv, plan_debug_msg, loc_msg, layer_manager):
         lat_motion_plan_input = plan_debug.lateral_motion_planning_input
         lat_motion_plan_output = plan_debug.lateral_motion_planning_output
 
-        if g_is_display_enu:
+        if global_var.get_value('g_is_display_enu'):
           ref_x = [lat_motion_plan_input.ref_x_vec[j] for j in range(len(lat_motion_plan_input.ref_x_vec))]
           ref_y = [lat_motion_plan_input.ref_y_vec[j] for j in range(len(lat_motion_plan_input.ref_y_vec))]
           soft_upper_bound_x0_vec = [lat_motion_plan_input.soft_upper_bound_x0_vec[j] for j in range(len(lat_motion_plan_input.soft_upper_bound_x0_vec))]
@@ -491,26 +490,27 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
         lat_motion_plan_input = plan_debug.lateral_motion_planning_input
         lat_motion_plan_output = plan_debug.lateral_motion_planning_output
         input_topic_timestamp = plan_debug.input_topic_timestamp
-        if lib.load_ros_bag.is_new_loc:
+        if global_var.get_value('is_new_loc'):
           if 0 != input_topic_timestamp.localization:
             localization_timestamp = input_topic_timestamp.localization
           else :
             localization_timestamp = input_topic_timestamp.localization_estimate
         else :
-          if is_bag_main:
+          if global_var.get_value('is_bag_main'):
             localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
           else:
             localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
         vehicle_service_timestamp = input_topic_timestamp.vehicle_service
         match_loc_msg = find(loc_msg, localization_timestamp)
         match_vs_msg = find(vs_msg, vehicle_service_timestamp)
-        delta_bound = 360.0 / 14.5 / 57.3
-        omega_bound = 240.0 / 14.5 / 57.3
         try:
-          delta_bound = min(delta_bound, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * match_vs_msg.vehicle_speed * match_vs_msg.vehicle_speed))
-          omega_bound = min(omega_bound, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * match_vs_msg.vehicle_speed * match_vs_msg.vehicle_speed))
+          speed = max(match_vs_msg.vehicle_speed, 2.0)
+          delta_bound = min(delta_bound, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * speed * speed))
+          omega_bound = min(omega_bound, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * speed * speed))
         except:
-          print("min delta_bound and min omega_bound")
+          delta_bound = 360.0 / 14.5 / 57.3
+          omega_bound = 240.0 / 14.5 / 57.3
+          # print("use default delta & omega bound")
         time_vec = []
         ref_theta_vec = []
         traj_theta_vec = []
@@ -557,7 +557,7 @@ def draw_lateral_traj_info(plan_debug_msg, loc_msg, vs_msg, layer_manager):
           steer_dot_lower_bound.append(-(omega_bound * steer_ratio * rad_to_deg))
         ref_theta_generate.xys.append((time_vec, ref_theta_vec))
         traj_theta_generate.xys.append((time_vec, traj_theta_vec))
-        if not g_is_display_enu:
+        if not global_var.get_value('g_is_display_enu'):
           if match_loc_msg != None: # 长时轨迹
             cur_pos_xn = match_loc_msg.position.position_boot.x
             cur_pos_yn = match_loc_msg.position.position_boot.y

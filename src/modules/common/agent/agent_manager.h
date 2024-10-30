@@ -17,6 +17,8 @@ class AgentManager {
 
   ~AgentManager() = default;
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   void Update(const double start_timestamp_s);
 
   // The 'Update' method will clear and update the 'current_agents_'

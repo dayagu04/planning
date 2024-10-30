@@ -1,0 +1,40 @@
+#pragma once
+#include "base_cost.h"
+#include "obstacle.h"
+#include "src/library/arastar_lib/hybrid_ara_data.h"
+#include "utils/kd_path.h"
+
+namespace planning {
+namespace ara_star {
+
+class AgentCost : public BaseCost {
+ public:
+  AgentCost(
+      const double weight, const double ego_wheel_base, const double ego_length,
+      const double ego_circle_radius,
+      const std::vector<SLBox2d>& obstacles,
+      const std::shared_ptr<KDPath>& ego_lane,
+      const std::shared_ptr<AABoxKDTree2d<GeometryObject>>& agent_box_tree);
+  ~AgentCost() = default;
+
+  double MakeCost(Node3D& vertex) const;
+
+ private:
+  void NormalizeCost(double& cost) const;
+  bool GetAreaCost(const SLBox2d& box, const double ego_front_s,
+                   const double ego_front_l, const double ego_back_s,
+                   const double ego_back_l, double& area_cost) const;
+
+ private:
+  // agent list;
+  const std::vector<SLBox2d> obstacles_;
+  const std::shared_ptr<KDPath> ego_lane_;
+  const std::shared_ptr<AABoxKDTree2d<GeometryObject>> agent_box_tree_;
+
+  double ego_wheel_base_ = 0.0;
+  double ego_length_ = 0.0;
+  double ego_circle_radius_ = 0.0;
+};
+
+}  // namespace ara_star
+}  // namespace planning

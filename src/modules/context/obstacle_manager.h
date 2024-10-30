@@ -18,6 +18,8 @@ class ObstacleManager {
   ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
                   planning::framework::Session *session);
 
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
   void update();
 
   Obstacle *add_obstacle(const Obstacle &obstacle);
@@ -73,6 +75,14 @@ class ObstacleManager {
     return parking_space_obstacles_;
   }
 
+  Obstacle *add_occupancy_obstacle(const Obstacle &obstacle) {
+    return occupancy_obstacles_.Add(obstacle.id(), obstacle);
+  }
+
+  const IndexedList<int, Obstacle> &get_occupancy_obstacles() const {
+    return occupancy_obstacles_;
+  }
+
   double GetUssRemainDistance() {
     double remain_dist_uss = 5.01;
     const double kSafeUssRemainDist = 0.35;
@@ -82,6 +92,13 @@ class ObstacleManager {
     }
     return remain_dist_uss;
   }
+
+  void add_frenet_obstacle(
+    IndexedList<int, Obstacle> &obstacles, ReferencePath &reference_path,
+    std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
+    std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+        &frenet_obstacles_map,
+    std::vector<int> &obstacles_ids_in_lane_map);
 
  private:
   void clear();
@@ -95,6 +112,7 @@ class ObstacleManager {
   IndexedList<int, Obstacle> map_static_obstacles_;
   IndexedList<int, Obstacle> parking_space_obstacles_;
   IndexedList<int, Obstacle> road_edge_obstacles_;
+  IndexedList<int, Obstacle> occupancy_obstacles_;
   EgoPlanningObstacleManagerConfig config_;
   // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
   UssObstacle uss_obstacle_;

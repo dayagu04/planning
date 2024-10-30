@@ -26,6 +26,8 @@ class LateralMotionPlanningWeight {
 
   void Init();
 
+  void Init();
+
   void CalculateInitInfo(
       const planning::common::LateralPlanningInput &planning_input);
 
@@ -45,12 +47,20 @@ class LateralMotionPlanningWeight {
 
   void SetEgoL(const double ego_l) { ego_l_ = ego_l; }
 
+  void SetMaxAcc(const double max_acc) { max_acc_ = max_acc; }
+
+  void SetMaxJerk(const double max_jerk) { max_jerk_ = max_jerk; }
+
   void SetLCBackFlag(const bool is_lane_change_back) {
     is_lane_change_back_ = is_lane_change_back;
   }
 
   void SetIsInIntersection(const bool is_in_intersection) {
     is_in_intersection_ = is_in_intersection;
+  }
+
+  void SetIsSearchSuccess(const bool is_search_success) {
+    is_search_success_ = is_search_success;
   }
 
   double GetInitDisToRef() const { return init_dis_to_ref_; }
@@ -89,9 +99,12 @@ class LateralMotionPlanningWeight {
   double ego_l_;
   double end_ratio_for_qrefxy_;
   double end_ratio_for_qreftheta_;
+  double max_acc_;
+  double max_jerk_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
   bool is_emergence_;
+  bool is_search_success_;
 };
 
 }  // namespace lateral_planning

@@ -65,7 +65,7 @@ def plotOnce(bag_path, html_file):
         return
     max_time = dataLoader.load_all_data(True)
     layer_manager = LayerManager()
-    load_ros_bag.g_is_display_enu = True
+    global_var.set_value('g_is_display_enu', True)
     fig_local_view_enu, plan_debug_table_view = draw_local_view(dataLoader, layer_manager)
     min_t = sys.maxsize
     max_t = 0

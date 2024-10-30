@@ -24,6 +24,7 @@ struct GeneralLateralDeciderOutput {
   bool lane_change_scene = false;
   double v_cruise;
   bool ramp_scene = false;
+  bool enable_ara_ref = false;
   void Clear() {
     init_state.Clear();
     enu_ref_path.clear();

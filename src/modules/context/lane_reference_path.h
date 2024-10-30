@@ -63,6 +63,7 @@ class LaneReferencePath
   int current_leadone_obstacle_to_ego_{-1};
   int current_leadtwo_obstacle_to_ego_{-1};
   double origin_reference_path_length_ = -1;
+  double ego_projection_length_in_reference_path_ = 0;
 };
 
 }  // namespace planning

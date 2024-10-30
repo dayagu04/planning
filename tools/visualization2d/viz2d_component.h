@@ -25,10 +25,10 @@ class Viz2dComponent {
   FusionObjects::FusionObjectsInfo fusion_objs_;
 
   std::shared_ptr<
-      apollo::cyber::Reader<GroundLinePerception::GroundLinePerceptionInfo>>
+      apollo::cyber::Reader<GroundLinePerception::FusionGroundLineInfo>>
       ground_line_reader_;
 
-  GroundLinePerception::GroundLinePerceptionInfo ground_line_;
+  GroundLinePerception::FusionGroundLineInfo ground_line_;
 
   std::shared_ptr<apollo::cyber::Reader<PlanningOutput::PlanningOutput>>
       planning_reader;

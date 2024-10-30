@@ -1,6 +1,7 @@
 import sys, os
 sys.path.append("..")
 sys.path.append("../lib/")
+from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_tune_lat_mp import *
 sys.path.append('../..')
@@ -14,8 +15,12 @@ from jupyter_pybind import lateral_motion_planning_py
 # bag path and frame dt
 bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
 bag_path = "/data_cold/abu_zone/cailiu2/0802/165_66a1bb682933546a92b11980_66a77fb17af211090bc13d38.bag.PP"
+
 frame_dt = 0.1 # sec
 steer_ratio = 13.0 # e0y
+global_var.set_value('g_is_display_enu', True)
+global_var.set_value('is_vis_sdmap', False)
+global_var.set_value('is_vis_hpp', True)
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -23,7 +28,7 @@ output_notebook()
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1550
+fig1.height = 1300
 # init pybind
 lateral_motion_planning_py.Init()
 
@@ -84,8 +89,12 @@ for t in np.arange(0.0, max_time, frame_dt):
   steer_time.append(t)
   plan_debug_msg_idx = get_plan_debug_msg_idx(bag_loader, t)
   lateral_motion_planning_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
-  plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * steer_ratio * 57.3)
-  plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * steer_ratio * 57.3)
+  if (len(lateral_motion_planning_output.delta_vec) > 0):
+    plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * 13 * 57.3)
+    plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * 13 * 57.3)
+  else:
+    plan_steer_deg.append(0.0)
+    plan_steer_dot_deg.append(0.0)
   vs_msg_idx = get_vs_msg_idx(bag_loader, t)
   vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
   ego_steer_deg.append(vs_msg.steering_wheel_angle * 57.3)
@@ -210,6 +219,7 @@ class LocalViewSlider:
 def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
                     upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
                     complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, end_ratio1, end_ratio2, end_ratio3, max_iter):
+  g_is_display_enu = global_var.get_value('g_is_display_enu')
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_tune_lat_plan_data(fig7, bag_loader, bag_time, bag_time + bag_dt, local_view_data, lat_plan_data, ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu)
@@ -323,7 +333,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
     lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound,
                                               ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
                                               safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
-                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 5.0), end_ratio1, end_ratio2, end_ratio3, max_iter)
+                                              motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 2.0), end_ratio1, end_ratio2, end_ratio3, max_iter)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()

@@ -1,6 +1,7 @@
 #include "frenet_obstacle.h"
 
 #include <cassert>
+#include <cstddef>
 
 #include "ego_state_manager.h"
 #include "math/linear_interpolation.h"
@@ -17,7 +18,8 @@ FrenetObstacle::FrenetObstacle(
     bool is_location_valid)
     : id_(obstacle_ptr->id()),
       obstacle_ptr_(obstacle_ptr),
-      is_location_valid_(is_location_valid) {
+      is_location_valid_(is_location_valid),
+      is_static_(obstacle_ptr->is_static()) {
   compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
@@ -58,8 +60,8 @@ void FrenetObstacle::compute_frenet_obstacle(
   }
 
   // corner frenet
-  const double obs_length = obstacle_ptr_->length();
-  const double obs_width = obstacle_ptr_->width();
+  length_ = obstacle_ptr_->length();
+  width_ = obstacle_ptr_->width();
   double obs_relative_heading = obstacle_ptr_->heading_angle() -
                                 frenet_coord->GetPathCurveHeading(frenet_s_);
   if (not is_location_valid_) {
@@ -67,29 +69,29 @@ void FrenetObstacle::compute_frenet_obstacle(
                            frenet_coord->GetPathCurveHeading(frenet_s_);
   }
   frenet_obstacle_corners_.s_front_left =
-      frenet_s_ + obs_length / 2.0 * std::cos(obs_relative_heading) -
-      obs_width / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ + length_ / 2.0 * std::cos(obs_relative_heading) -
+      width_ / 2.0 * std::sin(obs_relative_heading);
   frenet_obstacle_corners_.l_front_left =
-      frenet_l_ + obs_length / 2.0 * std::sin(obs_relative_heading) +
-      obs_width / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ + length_ / 2.0 * std::sin(obs_relative_heading) +
+      width_ / 2.0 * std::cos(obs_relative_heading);
   frenet_obstacle_corners_.s_front_right =
-      frenet_s_ + obs_length / 2.0 * std::cos(obs_relative_heading) +
-      obs_width / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ + length_ / 2.0 * std::cos(obs_relative_heading) +
+      width_ / 2.0 * std::sin(obs_relative_heading);
   frenet_obstacle_corners_.l_front_right =
-      frenet_l_ + obs_length / 2.0 * std::sin(obs_relative_heading) -
-      obs_width / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ + length_ / 2.0 * std::sin(obs_relative_heading) -
+      width_ / 2.0 * std::cos(obs_relative_heading);
   frenet_obstacle_corners_.s_rear_left =
-      frenet_s_ - obs_length / 2.0 * std::cos(obs_relative_heading) -
-      obs_width / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ - length_ / 2.0 * std::cos(obs_relative_heading) -
+      width_ / 2.0 * std::sin(obs_relative_heading);
   frenet_obstacle_corners_.l_rear_left =
-      frenet_l_ - obs_length / 2.0 * std::sin(obs_relative_heading) +
-      obs_width / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ - length_ / 2.0 * std::sin(obs_relative_heading) +
+      width_ / 2.0 * std::cos(obs_relative_heading);
   frenet_obstacle_corners_.s_rear_right =
-      frenet_s_ - obs_length / 2.0 * std::cos(obs_relative_heading) +
-      obs_width / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ - length_ / 2.0 * std::cos(obs_relative_heading) +
+      width_ / 2.0 * std::sin(obs_relative_heading);
   frenet_obstacle_corners_.l_rear_right =
-      frenet_l_ - obs_length / 2.0 * std::sin(obs_relative_heading) -
-      obs_width / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ - length_ / 2.0 * std::sin(obs_relative_heading) -
+      width_ / 2.0 * std::cos(obs_relative_heading);
 
   double curve_heading = frenet_coord->GetPathCurveHeading(frenet_s_);
   frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
@@ -108,6 +110,11 @@ void FrenetObstacle::compute_frenet_obstacle(
                                    frenet_obstacle_corners_.s_front_right,
                                    frenet_obstacle_corners_.s_rear_left,
                                    frenet_obstacle_corners_.s_rear_right};
+  assert(corners_l.size() == corners_s.size());
+  corner_points_.reserve(corners_l.size());
+  for (size_t i = 0; i < corners_l.size(); ++i) {
+    corner_points_.emplace_back(corners_s[i], corners_l[i]);
+  }
 
   s_with_max_l_.x = *std::max_element(corners_l.begin(), corners_l.end());
   auto it = std::find(corners_l.begin(), corners_l.end(), s_with_max_l_.x);

@@ -218,6 +218,14 @@ class Polygon2d {
    */
   bool HasOverlap(const Polygon2d &polygon) const;
 
+  /**
+   * @brief Check if this polygon has overlap with a box.
+   * @param box The target box. To check if it has overlap
+   *        with this polygon.
+   * @return If this polygon has overlap with a box.
+   */
+  bool HasOverlap(const Box2d &box) const;
+
   // Only compute overlaps between two convex polygons.
   /**
    * @brief Compute the overlap of this polygon and the other polygon if any.

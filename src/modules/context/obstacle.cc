@@ -1,4 +1,5 @@
 #include "obstacle.h"
+#include <cstddef>
 
 #include "common.h"
 #include "log.h"
@@ -392,11 +393,48 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_id_(id),
       is_static_(true),
       perception_points_(points) {
-  type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE;  // FREESPACE占位
   velocity_ = 0.0;
-  if (id_ > 6000000) {
+  acc_ = 0.0;
+
+  if (id_ > 7000000) {  // occupancy object
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_EMPTY;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
+  } else if (id_ > 6000000) {  // parking space
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_SOLT;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  } else if (id_ > 5000000) {  // ground line
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  }
+  if (perception_polygon_.is_convex() &&
+      perception_polygon_.points().size() >= 3) {
+    perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
+  } else {
+    planning_math::LineSegment2d axis(
+        planning_math::Vec2d(perception_points_.front().x(),
+                            perception_points_.front().y()),
+        planning_math::Vec2d(perception_points_.back().x(),
+                            perception_points_.back().y()));
+    perception_bounding_box_ = planning_math::Box2d(axis, 0.2);
+    perception_polygon_= planning_math::Polygon2d(perception_bounding_box_);
+  }
+  x_center_ = perception_bounding_box_.center_x();
+  y_center_ = perception_bounding_box_.center_y();
+  width_ = perception_bounding_box_.width();
+  length_ = perception_bounding_box_.length();
+  yaw_ = perception_bounding_box_.heading();
+  velocity_angle_ = perception_bounding_box_.heading();
+  std::vector<planning_math::Vec2d> ego_polygon_points;
+  for (const auto &point : perception_polygon_.points()) {
+    ego_polygon_points.emplace_back(
+        planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
+  }
+  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
+                                                   &obstacle_ego_polygon_)) {
+    LOG_DEBUG("polygon_debug invalid ego polygon\n");
   }
 }
 

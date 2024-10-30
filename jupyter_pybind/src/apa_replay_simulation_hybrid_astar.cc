@@ -32,8 +32,10 @@
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
-#include "log_glog.h"
-#include "narrow_space_scenario.h"
+#include "camera_preception_groundline_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
+#include "fusion_groundline_c.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -63,13 +65,14 @@
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
-#include "struct_msgs/GroundLinePerceptionInfo.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/IFLYLocalization.h"
 #include "struct_msgs/ParkingFusionInfo.h"
 #include "struct_msgs/PlanningOutput.h"
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
+#include "struct_msgs/fusion_groundline_c.h"
 #include "transform2d.h"
 
 namespace py = pybind11;
@@ -823,8 +826,8 @@ const bool SetLocalization(py::bytes &localization_info_bytes) {
 }
 
 const bool SetGroundLine(py::bytes &line) {
-  auto ground_line = BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                                   struct_msgs::GroundLinePerceptionInfo>(line);
+  auto ground_line = BytesToStruct<iflyauto::FusionGroundLineInfo,
+                                   struct_msgs::FusionGroundLineInfo>(line);
 
   local_view.ground_line_perception = ground_line;
 

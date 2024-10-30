@@ -311,10 +311,22 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->sd_map_info_recv_time = sd_map_info_msg_recv_time_;
     is_sd_map_info_msg_updated_.store(false);
   }
-  input_topic_timestamp->set_map(
+  input_topic_timestamp->set_sd_map(
       local_view_ptr_->sd_map_info.header().timestamp());
-  input_topic_latency->set_map(get_latency(
+  input_topic_latency->set_sd_map(get_latency(
       start_time, local_view_ptr_->sd_map_info.header().timestamp()));
+
+  // 1.13 receive parking_map
+//   if (is_parking_map_info_msg_updated_) {
+//     std::lock_guard<std::mutex> lock(msg_mutex_);
+//     local_view_ptr_->parking_map_info = parking_map_info_msg_;
+//     local_view_ptr_->parking_map_info_recv_time = parking_map_info_msg_recv_time_;
+//     is_parking_map_info_msg_updated_.store(false);
+//   }
+//   input_topic_timestamp->set_ehr_parking_map(
+//       local_view_ptr_->parking_map_info.header().timestamp());
+//   input_topic_latency->set_ehr_parking_map(get_latency(
+//       start_time, local_view_ptr_->parking_map_info.header().timestamp()));
 
   if (is_perception_tsr_msg_updated_) {
     std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -328,22 +340,19 @@ bool PlanningAdapter::Proc() {
   input_topic_latency->set_perception_tsr(get_latency(
       start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
 
-  // update general context
-  auto &state_machine_g = GENERAL_PLANNING_CONTEXT.MutableStatemachine();
-
-  const auto &current_state =
-      local_view_ptr_->function_state_machine_info.current_state;
-
-  iflyauto::FunctionalState last_state =
-      GENERAL_PLANNING_CONTEXT.GetStatemachine().current_state;
-
-  if (!IsValidParkingState(last_state) && IsValidParkingState(current_state)) {
-    state_machine_g.apa_reset_flag = true;
-  } else {
-    state_machine_g.apa_reset_flag = false;
+  if (is_fusion_speed_bump_msg_updated_) {
+    std::lock_guard<std::mutex> lock(msg_mutex_);
+    local_view_ptr_->fusion_speed_bump_info = fusion_speed_bump_msg_;
+    local_view_ptr_->fusion_speed_bump_info_recv_time =
+        fusion_speed_bump_msg_recv_time_;
+    is_fusion_speed_bump_msg_updated_.store(false);
   }
+  input_topic_timestamp->set_fusion_speed_bump(
+      local_view_ptr_->fusion_speed_bump_info.msg_header.stamp);
+  input_topic_latency->set_fusion_speed_bump(get_latency(
+      start_time, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
 
-  state_machine_g.current_state = current_state;
+  UpdateApaResetFlag();
 
   // 2.planning run
   iflyauto::PlanningOutput planning_output;
@@ -385,7 +394,7 @@ bool PlanningAdapter::Proc() {
     } else {
       // use last succ planning output when planning not succ
       // if never succeed, output will bi empty
-      planning_output = last_planning_output_;
+    //   planning_output = last_planning_output_;
       LOG_WARNING("planning failed, use last planning output\n");
     }
     // update msg_header & msg_meta
@@ -496,6 +505,28 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   input_list_count += 1;
 
   msg_meta.input_list_size = input_list_count;
+}
+
+void PlanningAdapter::UpdateApaResetFlag() {
+  // update general context
+  auto &state_machine_g = GENERAL_PLANNING_CONTEXT.MutableStatemachine();
+
+  const auto &current_state =
+      local_view_ptr_->function_state_machine_info.current_state;
+
+  iflyauto::FunctionalState last_state =
+      GENERAL_PLANNING_CONTEXT.GetStatemachine().current_state;
+
+  if (!IsSlotSearchingOrParking(last_state) &&
+      IsSlotSearchingOrParking(current_state)) {
+    state_machine_g.apa_reset_flag = true;
+  } else {
+    state_machine_g.apa_reset_flag = false;
+  }
+
+  state_machine_g.current_state = current_state;
+
+  return;
 }
 
 }  // namespace planning

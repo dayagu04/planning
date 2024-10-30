@@ -257,12 +257,12 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   else:
     fus_obj_msg = FusionObjectsInfo()
 
-  if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
-    ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
-    data_valid['fus_ground_line_msg_idx'] = True
+  # if index_map['fus_ground_line_msg_idx'] < len(bag_loader.fus_ground_line_msg['data']):
+  #   ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
+  #   data_valid['fus_ground_line_msg_idx'] = True
 
-    print('ground line size',ground_line_msg.ground_lines_size)
-  else:
+  #   print('ground line size',ground_line_msg.ground_lines_size)
+  # else:
     ground_line_msg = GroundLinePerceptionInfo()
 
   if index_map['fus_parking_msg_idx'] < len(bag_loader.fus_parking_msg['data']):

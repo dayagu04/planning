@@ -91,8 +91,10 @@ bool LateralMotionPlanner::Execute() {
   auto start_time = IflyTime::Now_ms();
 
   // assemble input
-  AssembleInput();
-
+  if (!AssembleInput()) {
+    LOG_DEBUG("LateralMotionPlanner AssembleInput failed\n");
+    return false;
+  }
   // update
   Update();
 
@@ -112,7 +114,7 @@ bool LateralMotionPlanner::Execute() {
   return true;
 }
 
-void LateralMotionPlanner::AssembleInput() {
+bool LateralMotionPlanner::AssembleInput() {
   // set init state
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -145,6 +147,10 @@ void LateralMotionPlanner::AssembleInput() {
       general_lateral_decider_output.lane_change_scene;
   const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
+
+  if (enu_ref_path.size() == 0 || enu_ref_theta.size() == 0 || !session_->environmental_model().location_valid()) {
+    return false;
+  }
 
   // static const double min_v_cruise = 0.5;
   const double ref_vel =
@@ -319,7 +325,19 @@ void LateralMotionPlanner::AssembleInput() {
   const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
-
+  double max_wheel_angle =
+      360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc/noa
+  double max_wheel_angle_rate =
+      240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc/noa
+  if (session_->is_hpp_scene()) {
+    max_wheel_angle =
+        540.0 / 13.0 / 57.3;  // 360 deg steering angle for hpp
+    max_wheel_angle_rate =
+        240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for hpp
+  }
+  const double kv2 = config_.curv_factor * std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
+  planning_weight_ptr_->SetMaxAcc(max_wheel_angle * kv2);
+  planning_weight_ptr_->SetMaxJerk( max_wheel_angle_rate* kv2);
   // split
   bool split_scene = false;
   // NOA split
@@ -394,6 +412,11 @@ void LateralMotionPlanner::AssembleInput() {
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
 
+  // const bool &search_success = session_->mutable_planning_context()
+  //                                ->mutable_lateral_obstacle_decider_output()
+  //                                .search_success;
+  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  planning_weight_ptr_->SetIsSearchSuccess(search_success);
   // set weight
   if (lane_change_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
@@ -487,6 +510,8 @@ void LateralMotionPlanner::AssembleInput() {
   planning_input_.set_complete_follow(complete_follow);
   planning_input_.set_motion_plan_concerned_index(
       motion_plan_concerned_end_index);
+
+  return true;
 }
 
 void LateralMotionPlanner::Update() {

@@ -2049,7 +2049,19 @@ void GeneralLateralDecider::PostProcessBound(
         general_lateral_decider_utils::GetBoundTypePriority(upper_type);
     const double lower_weight = general_lateral_decider_utils::GetBoundWeight(
         lower_type, config_.map_bound_weight);
+        lower_type, config_.map_bound_weight);
     const double upper_weight = general_lateral_decider_utils::GetBoundWeight(
+        upper_type, config_.map_bound_weight);
+    // start compare
+    if (upper >= lower) {  // <==> (upper_bound >= lower_bound)
+      // end condition 2.upper > upper bound >= lower boud > lower
+      if ((upper > upper_bound) && (lower < lower_bound)) {
+        break;
+      }
+
+      // upper_bound
+      if (upper < upper_bound) {
+        upper_bound_info = upper_info;
         upper_type, config_.map_bound_weight);
     // start compare
     if (upper >= lower) {  // <==> (upper_bound >= lower_bound)

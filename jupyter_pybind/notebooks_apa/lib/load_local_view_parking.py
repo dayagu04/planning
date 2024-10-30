@@ -31,6 +31,7 @@ from cyber_record.record import Record
 from google.protobuf.json_format import MessageToJson
 from lib.local_view_lib import *
 import rosbag
+from ifly_parking_map_pb2 import *
 
 plan_debug_ts = []
 plan_debug_timestamps = []
@@ -152,6 +153,9 @@ class LoadCyberbag:
 
     self.parking_flag = parking_flag
 
+    # ehr static map msg
+    self.ehr_parking_map_msg = {'abs_t':[], 't':[], 'data':[], 'enable':[]}
+
     self.max_time = 0
 
     # time offset
@@ -167,7 +171,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
         loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-      loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+      # loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
         if t > 1e-3:
           self.loc_msg['t'].append(t)
@@ -193,19 +197,21 @@ class LoadCyberbag:
       self.loc_msg['enable'] = False
       print('missing /iflytek/localization/egomotion !!!')
 
+    self.max_time = max_time
+
     # load vehicle service msg
     try:
       vs_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
         vs_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
+      # vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vs_msg_dict.items():
         if t > 1e-3:
           self.vs_msg['t'].append(t)
           self.vs_msg['abs_t'].append(t)
           self.vs_msg['data'].append(msg)
       # print("self.vs_msg['t'][0]:", self.vs_msg['t'][0])
-      smallest_abs_t = min(smallest_abs_t, self.vs_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.vs_msg['t'][0])
       self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
       self.vs_msg['enable'] = True
       print('vs time:',self.vs_msg['t'][-1])
@@ -223,7 +229,7 @@ class LoadCyberbag:
       plan_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
         plan_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
+      # plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
         if t > 1e-3:
           self.plan_msg['t'].append(t)
@@ -231,7 +237,7 @@ class LoadCyberbag:
           self.plan_msg['data'].append(msg)
       print("plan init t:", self.plan_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.plan_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.plan_msg['t'][0])
       t0_plan = self.plan_msg['t'][0]
       self.plan_msg['t'] = [tmp - t0_plan  for tmp in self.plan_msg['t']]
       max_time = max(max_time, self.plan_msg['t'][-1])
@@ -276,7 +282,7 @@ class LoadCyberbag:
         planning_debug_output = PlanningDebugInfo()
         planning_debug_output.ParseFromString(msg.debug_info)
         plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
-      plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      # plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_debug_msg_dict.items():
         if t > 1e-3:
           self.plan_debug_msg['t'].append(t)
@@ -306,7 +312,7 @@ class LoadCyberbag:
         correct_path_for_limiter_time_list[i] = round(correct_path_for_limiter_time_list[i], 2)
       # print("self.plan_debug_msg['t'][0]:", self.plan_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.plan_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.plan_debug_msg['t'][0])
       t0_plan_debug = self.plan_debug_msg['t'][0]
       self.plan_debug_msg['t'] = [tmp - t0_plan_debug  for tmp in self.plan_debug_msg['t']]
       max_time = max(max_time, self.plan_debug_msg['t'][-1])
@@ -325,7 +331,7 @@ class LoadCyberbag:
       ctrl_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
         ctrl_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
+      # ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_msg_dict.items():
         if t > 1e-3:
           self.ctrl_msg['t'].append(t)
@@ -333,7 +339,7 @@ class LoadCyberbag:
           self.ctrl_msg['data'].append(msg)
       # print("self.ctrl_msg['t'][0]:", self.ctrl_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.ctrl_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.ctrl_msg['t'][0])
       self.ctrl_msg['t'] = [tmp - self.ctrl_msg['t'][0]  for tmp in self.ctrl_msg['t']]
       max_time = max(max_time, self.ctrl_msg['t'][-1])
       print('ctrl_msg time:',self.ctrl_msg['t'][-1])
@@ -363,7 +369,7 @@ class LoadCyberbag:
         ctrl_debug_output = ControlDebugInfo()
         ctrl_debug_output.ParseFromString(msg.debug_info)
         ctrl_debug_msg_dict[ctrl_debug_output.timestamp / 1e6] = ctrl_debug_output
-      ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      # ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_debug_msg_dict.items():
         if t > 1e-3:
           self.ctrl_debug_msg['t'].append(t)
@@ -380,7 +386,7 @@ class LoadCyberbag:
           print('except',jserr)
       # print("self.ctrl_debug_msg['t'][0]:", self.ctrl_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.ctrl_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.ctrl_debug_msg['t'][0])
       self.ctrl_debug_msg['t'] = [tmp - self.ctrl_debug_msg['t'][0]  for tmp in self.ctrl_debug_msg['t']]
       max_time = max(max_time, self.ctrl_debug_msg['t'][-1])
       print('ctrl_debug_msg time:',self.ctrl_debug_msg['t'][-1])
@@ -397,7 +403,7 @@ class LoadCyberbag:
       fus_parking_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
         fus_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
+      # fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_parking_msg_dict.items():
         if t > 1e-3:
           self.fus_parking_msg['t'].append(t)
@@ -405,7 +411,7 @@ class LoadCyberbag:
           self.fus_parking_msg['data'].append(msg)
       # print("self.fus_parking_msg['t'][0]:", self.fus_parking_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.fus_parking_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.fus_parking_msg['t'][0])
       if (abs(self.fus_parking_msg['t'][0]) < 0.0001):
         self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][1]  for tmp in self.fus_parking_msg['t']]
       else:
@@ -426,7 +432,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
         fusion_ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-      fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      # fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fusion_ground_line_msg_dict.items():
         if t > 1e-3:
           self.fus_ground_line_msg['t'].append(t)
@@ -434,7 +440,7 @@ class LoadCyberbag:
           self.fus_ground_line_msg['data'].append(msg)
       # print("self.fus_ground_line_msg['t'][0]:", self.fus_ground_line_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.fus_ground_line_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.fus_ground_line_msg['t'][0])
       if (abs(self.fus_ground_line_msg['t'][0]) < 0.0001):
         self.fus_ground_line_msg['t'] = [tmp - self.fus_ground_line_msg['t'][1]  for tmp in self.fus_ground_line_msg['t']]
       else:
@@ -443,7 +449,7 @@ class LoadCyberbag:
       print('fus_ground_line_msg time:',self.fus_ground_line_msg['t'][-1])
 
       if len(self.fus_ground_line_msg['t']) > 0:
-        self.fus_ground_line_msg['enable'] = True
+        self.fus_ground_line_msg['enable'] = False
       else:
         self.fus_ground_line_msg['enable'] = False
     except:
@@ -457,7 +463,7 @@ class LoadCyberbag:
         for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
             fus_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-        fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
+        # fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in fus_objects_msg_dict.items():
           if t > 1e-3:
             self.fus_objects_msg['t'].append(t)
@@ -485,7 +491,7 @@ class LoadCyberbag:
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
         fus_occupancy_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
-      fus_occupancy_objects_msg_dict = {key: val for key, val in sorted(fus_occupancy_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      # fus_occupancy_objects_msg_dict = {key: val for key, val in sorted(fus_occupancy_objects_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_occupancy_objects_msg_dict.items():
         if t > 1e-3:
           self.fus_occupancy_objects_msg['t'].append(t)
@@ -494,7 +500,7 @@ class LoadCyberbag:
 
       # print("self.fus_occupancy_objects_msg['t'][0]:", self.fus_occupancy_objects_msg['t'][0])
       # print("self.fus_occupancy_objects_msg['t'][-1]:", self.fus_occupancy_objects_msg['t'][-1])
-      smallest_abs_t = min(smallest_abs_t, self.fus_occupancy_objects_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.fus_occupancy_objects_msg['t'][0])
       self.fus_occupancy_objects_msg['t'] = [tmp - t0  for tmp in self.fus_occupancy_objects_msg['t']]
       print('fus_occupancy_objects_msg time:',self.fus_occupancy_objects_msg['t'][-1])
       if len(self.fus_occupancy_objects_msg['t']) > 0:
@@ -513,7 +519,7 @@ class LoadCyberbag:
       # new visula parking slot proto
       for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
         vis_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
+      # vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vis_parking_msg_dict.items():
         if t > 1e-3:
           self.vis_parking_msg['t'].append(t)
@@ -521,7 +527,7 @@ class LoadCyberbag:
           self.vis_parking_msg['data'].append(msg)
       # print("self.vis_parking_msg['t'][0]:", self.vis_parking_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.vis_parking_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.vis_parking_msg['t'][0])
       if (abs(self.vis_parking_msg['t'][0]) < 0.0001):
         self.vis_parking_msg['t'] = [tmp - self.vis_parking_msg['t'][1]  for tmp in self.vis_parking_msg['t']]
       else:
@@ -543,7 +549,7 @@ class LoadCyberbag:
       soc_state_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fsm/soc_state"):
         soc_state_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
+      # soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
       global enter_parking_time
       enter_parking_time = 0.0
       first_enter_apa = False
@@ -558,7 +564,7 @@ class LoadCyberbag:
           first_enter_apa = True
       # print("self.soc_state_msg['t'][0]:", self.soc_state_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.soc_state_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.soc_state_msg['t'][0])
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])
@@ -571,7 +577,7 @@ class LoadCyberbag:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/fsm/soc_state !!!')
 
-    self.max_time = max_time
+    # self.max_time = max_time
 
     # add obstacles in plot apa
     # load precept_info msg
@@ -624,7 +630,7 @@ class LoadCyberbag:
       wave_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
         wave_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
+      # wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
         if t > 1e-3:
           self.wave_msg['t'].append(t)
@@ -632,7 +638,7 @@ class LoadCyberbag:
           self.wave_msg['data'].append(msg)
       # print("self.wave_msg['t'][0]:", self.wave_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.wave_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.wave_msg['t'][0])
       self.wave_msg['t'] = [tmp - t0  for tmp in self.wave_msg['t']]
       self.wave_msg['enable'] = True
       print('wave time:',self.wave_msg['t'][-1])
@@ -649,7 +655,7 @@ class LoadCyberbag:
       adas_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/adas_function_debug"):
         adas_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      # adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in adas_debug_msg_dict.items():
         if t > 1e-3:
           self.adas_debug_msg['t'].append(t)
@@ -657,7 +663,7 @@ class LoadCyberbag:
           self.adas_debug_msg['data'].append(msg)
       # print("self.adas_debug_msg['t'][0]:", self.adas_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.adas_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.adas_debug_msg['t'][0])
       self.adas_debug_msg['t'] = [tmp - t0  for tmp in self.adas_debug_msg['t']]
       self.adas_debug_msg['enable'] = True
       print('adas_debug time:',self.adas_debug_msg['t'][-1])
@@ -675,7 +681,7 @@ class LoadCyberbag:
       wave_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/uss/ussdriver_debug_info"):
         wave_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
-      wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      # wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_debug_msg_dict.items():
         if t > 1e-3:
           self.wave_debug_msg['t'].append(t)
@@ -683,7 +689,7 @@ class LoadCyberbag:
           self.wave_debug_msg['data'].append(msg)
       # print("self.wave_debug_msg['t'][0]:", self.wave_debug_msg['t'][0])
 
-      smallest_abs_t = min(smallest_abs_t, self.wave_debug_msg['t'][0])
+      # smallest_abs_t = min(smallest_abs_t, self.wave_debug_msg['t'][0])
       self.wave_debug_msg['t'] = [tmp - t0  for tmp in self.wave_debug_msg['t']]
       self.wave_debug_msg['enable'] = True
       print('wave_debug time:',self.wave_debug_msg['t'][-1])
@@ -702,7 +708,7 @@ class LoadCyberbag:
         uss_percept_msg_dict = {}
         for topic, msg, t in self.bag.read_messages("/iflytek/uss/uss_perception_info"):
           uss_percept_msg_dict[msg.msg_header.stamp / 1e6] = msg
-        uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
+        # uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in uss_percept_msg_dict.items():
           if t > 0.0:
             self.uss_percept_msg['t'].append(t)
@@ -711,7 +717,7 @@ class LoadCyberbag:
         t0 = self.uss_percept_msg['t'][0]
         # print("self.uss_percept_msg['t'][0]:", self.uss_percept_msg['t'][0])
 
-        smallest_abs_t = min(smallest_abs_t, self.uss_percept_msg['t'][0])
+        # smallest_abs_t = min(smallest_abs_t, self.uss_percept_msg['t'][0])
         self.uss_percept_msg['t'] = [tmp - t0  for tmp in self.uss_percept_msg['t']]
         self.uss_percept_msg['enable'] = True
         print('uss_percept time:',self.uss_percept_msg['t'][-1])
@@ -736,7 +742,7 @@ class LoadCyberbag:
   def get_msg_index(self, bag_time):
     ### step 1: 时间戳对齐
     abs_t = bag_time + smallest_abs_t
-    # print("smallest_abs_t:", smallest_abs_t)
+    print("smallest_abs_t:", smallest_abs_t)
     out = {}
     loc_msg_idx = 0
     if self.loc_msg['enable'] == True:
@@ -831,6 +837,12 @@ class LoadCyberbag:
       while self.uss_percept_msg['abs_t'][uss_percept_msg_idx] <= abs_t and uss_percept_msg_idx < (len(self.uss_percept_msg['abs_t'])-1):
           uss_percept_msg_idx = uss_percept_msg_idx + 1
     out['uss_percept_msg_idx'] = uss_percept_msg_idx
+
+    ehr_parking_map_msg_idx = 0
+    if self.ehr_parking_map_msg['enable'] == True:
+      while self.ehr_parking_map_msg['abs_t'][ehr_parking_map_msg_idx] <= abs_t and ehr_parking_map_msg_idx < (len(self.ehr_parking_map_msg['abs_t'])-1):
+        ehr_parking_map_msg_idx = ehr_parking_map_msg_idx + 1
+    out['ehr_parking_map_msg_idx'] = ehr_parking_map_msg_idx
 
     return out
 
@@ -933,6 +945,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     while bag_loader.uss_percept_msg['abs_t'][uss_percept_msg_idx] <= abs_t and uss_percept_msg_idx < (len(bag_loader.uss_percept_msg['abs_t'])-1):
         uss_percept_msg_idx = uss_percept_msg_idx + 1
   local_view_data['data_index']['uss_percept_msg_idx'] = uss_percept_msg_idx
+
+
+  ehr_parking_map_msg_idx = 0
+  if bag_loader.ehr_parking_map_msg['enable'] == True:
+      while bag_loader.ehr_parking_map_msg['abs_t'][ehr_parking_map_msg_idx] <= abs_t and ehr_parking_map_msg_idx < (len(bag_loader.ehr_parking_map_msg['abs_t'])-1):
+        ehr_parking_map_msg_idx = ehr_parking_map_msg_idx + 1
+  local_view_data['data_index']['ehr_parking_map_msg_idx'] = ehr_parking_map_msg_idx
 
   ### step 2: load positioning information
   cur_pos_xn0 = 0
@@ -1193,6 +1212,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_fusion_parking_id'].data.update({'id':[], 'id_text_x':[], 'id_text_y':[],})
 
     # 1 camera; 2 uss; 3 camera and uss;
+    slots_x0_vec = []
+    slots_y0_vec = []
+
     slots_x1_vec = []
     slots_y1_vec = []
 
@@ -1240,6 +1262,11 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       elif slot.fusion_source == 3:
         slots_x3_vec.append(slot_plot_x_vec)
         slots_y3_vec.append(slot_plot_y_vec)
+
+      if slot.resource_type == 1:
+        slots_x0_vec.append(slot_plot_x_vec)
+        slots_y0_vec.append(slot_plot_y_vec)
+
       # 1.2 update slots limiter points in same slot_plot_vec
       single_limiter_x_vec = []
       single_limiter_y_vec = []
@@ -1282,6 +1309,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       if slot.allow_parking == 1:
         fus_release_solts_id.append(slot.id)
 
+    local_view_data['data_fusion_slot0'].data.update({'corner_point_x': slots_x0_vec, 'corner_point_y': slots_y0_vec,})
     local_view_data['data_fusion_slot1'].data.update({'corner_point_x': slots_x1_vec, 'corner_point_y': slots_y1_vec,})
     local_view_data['data_fusion_slot2'].data.update({'corner_point_x': slots_x2_vec, 'corner_point_y': slots_y2_vec,})
     local_view_data['data_fusion_slot3'].data.update({'corner_point_x': slots_x3_vec, 'corner_point_y': slots_y3_vec,})
@@ -2277,6 +2305,8 @@ def load_local_view_figure_parking():
                                           'mpc_dy':[],})
   data_ref_mpc_vec = ColumnDataSource(data = {'dx_ref_mpc_vec':[], 'dy_ref_mpc_vec':[],})
   data_ref_vec = ColumnDataSource(data = {'dx_ref_vec':[], 'dy_ref_vec':[],})
+  data_ehr_slot = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
+  data_fusion_slot0 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_fusion_slot1 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_fusion_slot2= ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
   data_fusion_slot3 = ColumnDataSource(data = {'corner_point_y': [], 'corner_point_x': [],})
@@ -2353,6 +2383,8 @@ def load_local_view_figure_parking():
                      'data_ref_mpc_vec':data_ref_mpc_vec, \
                      'data_ref_vec':data_ref_vec, \
                      'ctrl_debug_data':ctrl_debug_data, \
+                     'data_ehr_slot':data_ehr_slot, \
+                     'data_fusion_slot0':data_fusion_slot0, \
                      'data_fusion_slot1':data_fusion_slot1, \
                      'data_fusion_slot2':data_fusion_slot2, \
                      'data_fusion_slot3':data_fusion_slot3, \
@@ -2408,6 +2440,8 @@ def load_local_view_figure_parking():
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
 
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_vision_parking, line_width = 3, line_color = 'lightgrey', line_dash = 'solid',legend_label = 'vision_parking_slot', visible = False)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_ehr_slot, line_width = 2, line_color = 'SlateBlue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'ehr_slot', visible = True)
+  fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot0, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 0.6, legend_label = 'map_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot1, line_width = 2, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot2, line_width = 2, line_color = 'cyan', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_fusion_slot3, line_width = 2, line_color = 'purple', line_dash = 'solid', line_alpha = 0.6, legend_label = 'fusion_parking_slot', visible = True)

@@ -45,10 +45,10 @@ int Viz2dComponent::Init() {
       });
 
   ground_line_reader_ =
-      node_->CreateReader<GroundLinePerception::GroundLinePerceptionInfo>(
+      node_->CreateReader<GroundLinePerception::FusionGroundLineInfo>(
           "/iflytek/fusion/ground_line",
           [this](const std::shared_ptr<
-                 GroundLinePerception::GroundLinePerceptionInfo>& gl) {
+                 GroundLinePerception::FusionGroundLineInfo>& gl) {
             ILOG_DEBUG << "Received groud line";
             std::lock_guard<std::mutex> lock(mutex_);
             ground_line_.CopyFrom(*gl);
@@ -159,7 +159,7 @@ int Viz2dComponent::UpdateLocalView(double max_steering_wheel_angle_) {
     viz_subscribe_.last_planning_output_.CopyFrom(last_planning_);
 
     viz_subscribe_.ground_line_perception.Clear();
-    ILOG_INFO << ground_line_.ground_lines_size();
+    ILOG_INFO << ground_line_.groundline_size();
     viz_subscribe_.ground_line_perception.CopyFrom(ground_line_);
 
     viz_subscribe_.control_output.Clear();
@@ -254,10 +254,10 @@ int Viz2dComponent::Process(double max_steering_wheel_angle_) {
 
   ILOG_INFO << viz_subscribe_.ground_line_perception.DebugString();
 
-  for (int i = 0; i < viz_subscribe_.ground_line_perception.ground_lines_size();
+  for (int i = 0; i < viz_subscribe_.ground_line_perception.groundline_size();
        i++) {
     const GroundLinePerception::GroundLine& gl =
-        viz_subscribe_.ground_line_perception.ground_lines(i);
+        viz_subscribe_.ground_line_perception.groundline(i);
 
     ILOG_INFO << "ground line point " << gl.points_2d_size();
 
@@ -275,7 +275,7 @@ int Viz2dComponent::Process(double max_steering_wheel_angle_) {
                           viz2d_colors_yellow, ref_pose_is_map_ref_frame);
 
   ILOG_INFO << "ground line size "
-            << viz_subscribe_.ground_line_perception.ground_lines_size()
+            << viz_subscribe_.ground_line_perception.groundline_size()
             << "point size" << line_points.size();
 
   // draw ratio for replay

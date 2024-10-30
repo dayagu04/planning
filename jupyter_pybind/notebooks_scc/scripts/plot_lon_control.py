@@ -1,7 +1,7 @@
 import sys, os
 sys.path.append("..")
 sys.path.append("../lib/")
-# from lib.load_cyberbag import *
+from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 sys.path.append('../..')
 sys.path.append('../../../')
@@ -9,6 +9,7 @@ sys.path.append('../../../')
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240821/20240821-22-33-47/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-08-21-22-33-47_no_camera.bag"
 frame_dt = 0.02 # sec
+global_var.set_value('g_is_display_enu', False)
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

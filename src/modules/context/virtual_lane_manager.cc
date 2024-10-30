@@ -23,7 +23,7 @@
 #include "environmental_model.h"
 #include "fusion_road_c.h"
 #include "ifly_localization_c.h"
-#include "ifly_parking_map_c.h"
+#include "ifly_parking_map.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log.h"
@@ -53,8 +53,13 @@ constexpr double kEpsilon = 1.0e-4;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
-    planning::framework::Session* session)
-    : session_(session), ego_lane_track_manager_(config_builder, session) {
+    planning::framework::Session* session) {
+  session_ = session;
+  SetConfig(config_builder);
+  ego_lane_track_manager_ = std::make_shared<EgoLaneTrackManger>(config_builder, session);
+}
+
+void VirtualLaneManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
 }
@@ -423,6 +428,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   left_lane_ = nullptr;
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
+  Intersection_state_ = planning::common::NO_INTERSECTION;
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_generated_refline_info()
@@ -433,55 +439,58 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   // 1.检查lane的有效性
   if (!CheckLaneValid(roads)) {
-    // 依次为常数项、一次项、二次项、三次项
-    std::vector<double> current_lane_virtual_poly;
-    iflyauto::ReferenceLineMsg current_lane_virtual;
-    if (session_->environmental_model().function_info().function_mode() ==
-        common::DrivingFunctionInfo::ACC) {
-      current_lane_virtual_poly = construct_reference_line_acc();
-      construct_reference_line_msg(current_lane_virtual_poly,
-                                   current_lane_virtual);
-      LOG_WARNING("[VirtualLaneManager::update] ACC construct reference line");
-    } else if (session_->environmental_model()
-                   .function_info()
-                   .function_mode() == common::DrivingFunctionInfo::SCC) {
-      if (in_intersection_ == false) {
-        in_intersection_ = true;
-        current_lane_virtual_poly = construct_reference_line_scc();
-        construct_reference_line_msg(current_lane_virtual_poly,
-                                     current_lane_virtual);
-        intersection_lane_generated_ = current_lane_virtual;
-      } else {
-        current_lane_virtual = intersection_lane_generated_;
-      }
-      LOG_WARNING("[VirtualLaneManager::update] SCC construct reference line");
-    } else {
-      return false;
-    }
-    SetGeneratedReflineToDebugInfo(current_lane_virtual.lane_reference_line);
-
-    // set roads_virtual
-    roads_virtual.msg_header = roads.msg_header;
-    roads_virtual.isp_timestamp = roads.isp_timestamp;
-
-    roads_virtual.reference_line_msg[0] = current_lane_virtual;
-    roads_virtual.reference_line_msg_size = 1;
-    roads_virtual.local_point_valid = roads.local_point_valid;
-    roads_ptr = &roads_virtual;
-  } else {
-    in_intersection_ = false;
+    LOG_DEBUG("reference line invalid!\n");
+    // return false;
   }
+  // if (!CheckLaneValid(roads)) {
+  //   // 依次为常数项、一次项、二次项、三次项
+  //   std::vector<double> current_lane_virtual_poly;
+  //   iflyauto::ReferenceLineMsg current_lane_virtual;
+  //   if (session_->environmental_model().function_info().function_mode() ==
+  //       common::DrivingFunctionInfo::ACC) {
+  //     current_lane_virtual_poly = construct_reference_line_acc();
+  //     construct_reference_line_msg(current_lane_virtual_poly,
+  //                                  current_lane_virtual);
+  //     LOG_WARNING("[VirtualLaneManager::update] ACC construct reference line");
+  //   } else if (session_->environmental_model()
+  //                  .function_info()
+  //                  .function_mode() == common::DrivingFunctionInfo::SCC) {
+  //     if (in_intersection_ == false) {
+  //       in_intersection_ = true;
+  //       current_lane_virtual_poly = construct_reference_line_scc();
+  //       construct_reference_line_msg(current_lane_virtual_poly,
+  //                                    current_lane_virtual);
+  //       intersection_lane_generated_ = current_lane_virtual;
+  //     } else {
+  //       current_lane_virtual = intersection_lane_generated_;
+  //     }
+  //     LOG_WARNING("[VirtualLaneManager::update] SCC construct reference line");
+  //   } else if (session_->environmental_model()
+  //                  .function_info()
+  //                  .function_mode() == common::DrivingFunctionInfo::HPP) {
+  //     LOG_DEBUG("[hpp mode]: lane invalid!");
+  //     // return false;
+  //   }else {
+  //     return false;
+  //   }
+  //   SetGeneratedReflineToDebugInfo(current_lane_virtual.lane_reference_line);
+
+  //   // set roads_virtual
+  //   roads_virtual.msg_header = roads.msg_header;
+  //   roads_virtual.isp_timestamp = roads.isp_timestamp;
+
+  //   roads_virtual.reference_line_msg[0] = current_lane_virtual;
+  //   roads_virtual.reference_line_msg_size = 1;
+  //   roads_virtual.local_point_valid = roads.local_point_valid;
+  //   roads_ptr = &roads_virtual;
+  // } else {
+  //   in_intersection_ = false;
+  // }
 
   // 2.根据地图信息，计算需要的超视距信息
   const auto& route_info = session_->environmental_model().get_route_info();
   route_info_output_ = route_info->get_route_info_output();
   // CalculateDistanceToRampSplitMergeWithSdMap(session_);
-
-  // if (session_->is_hpp_scene() && GetCurrentNearestLane(*session_)) {
-  // CalculateHPPInfo(session_);
-  // CalculateDistanceToTargetSlot(session_);
-  // CalculateDistanceToNextSpeedBump(session_);
-  // }
 
   // 3.根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
@@ -553,7 +562,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
     LOG_ERROR("!!!current_lane is empty!!!");
-    ego_lane_track_manager_.Reset();
+    ego_lane_track_manager_->Reset();
     return false;
   }
 
@@ -987,6 +996,12 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
 }
 
 bool VirtualLaneManager::UpdateIntersectionState() {
+  if (session_->environmental_model()
+              .function_info()
+              .function_mode() == common::DrivingFunctionInfo::HPP) {
+    Intersection_state_ = planning::common::NO_INTERSECTION;
+    return true;
+  }
   double ego_pos_x = 0.0;
   if (current_lane_->get_left_lane_boundary().car_points_size > 0 &&
       current_lane_->get_right_lane_boundary().car_points_size > 0) {
@@ -1170,6 +1185,7 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
             << std::endl;
   if (roads.reference_line_msg_size == 0) {
     lane_valid = false;
+    return lane_valid;
   } else {
     for (int i = 0; i < roads.reference_line_msg_size; i++) {
       const auto& ref_line = roads.reference_line_msg[i];

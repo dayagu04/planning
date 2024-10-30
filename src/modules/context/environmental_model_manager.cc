@@ -132,9 +132,12 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_agent_node_manager(
       agent_node_mgr_ptr_);
 
-  // parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
-  // session_->mutable_environmental_model()->set_parking_slot_manager(
-  //     parking_slot_manager_ptr_);
+  ground_line_manager_ptr_ = std::make_shared<GroundLineManager>();
+  session_->mutable_environmental_model()->set_ground_line_manager(
+      ground_line_manager_ptr_);
+  parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
+  session_->mutable_environmental_model()->set_parking_slot_manager(
+      parking_slot_manager_ptr_);
   history_obstacle_ptr_ = std::make_shared<planning::HistoryObstacleManager>(
       config_builder, session_);
   session_->mutable_environmental_model()->set_history_obstacle_manager(
@@ -156,6 +159,32 @@ void EnvironmentalModelManager::InitContext() {
   route_info_ptr_ =
       std::make_shared<planning::RouteInfo>(config_builder, session_);
   session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
+
+  occupancy_object_manager_ptr_ = std::make_shared<OccupancyObjectManager>(session_);
+  session_->mutable_environmental_model()->set_occupancy_object_manager(
+      occupancy_object_manager_ptr_);
+}
+
+void EnvironmentalModelManager::SetConfig(const planning::common::SceneType scene_type) {
+  auto config_builder =
+      session_->environmental_model().config_builder(scene_type);
+  ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
+
+  ego_state_manager_ptr_->SetConfig(config_builder);
+
+  virtual_lane_manager_ptr_->SetConfig(config_builder);
+
+  traffic_light_decision_manager_ptr_->SetConfig(config_builder);
+
+  obstacle_manager_ptr_->SetConfig(config_builder);
+
+  lateral_obstacle_ptr_->SetConfig(config_builder);
+
+  history_obstacle_ptr_->SetConfig(config_builder);
+
+  agent_manager_ptr_->SetConfig(config_builder);
+
+  // route_info_ptr_->SetConfig(config_builder);
 }
 
 bool EnvironmentalModelManager::Run() {
@@ -189,12 +218,14 @@ bool EnvironmentalModelManager::Run() {
   printf("planner_type:%d\n", GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
   auto location_valid = (msf_valid || localization_valid) &&
                         fusion_localization_valid && planner_valid;
+  // auto location_valid = (msf_valid || localization_valid) &&
+  //                              planner_valid;   // [hack] use in pp
 
-  if (session_->is_hpp_scene() && !location_valid) {
-    LOG_ERROR("hpp location invalid\n");
-    return false;
-  }
-  // location_valid = true; //hack
+  // if (session_->is_hpp_scene() && !location_valid) {
+  //   LOG_ERROR("hpp location invalid\n");
+  //   return false;
+  // }
+  location_valid = localization_valid; //hack
 
   auto environmental_model = session_->mutable_environmental_model();
   environmental_model->set_location_valid(location_valid);
@@ -206,7 +237,9 @@ bool EnvironmentalModelManager::Run() {
                   (fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE);
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
-  bool dbw_status = acc_mode || scc_mode || noa_mode;
+  bool hpp_mode = (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
+                  (fsm_state <= iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu):set hpp mode range
+  bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
 
@@ -230,6 +263,9 @@ bool EnvironmentalModelManager::Run() {
                                            function_state);
   } else if (noa_mode) {
     environmental_model->set_function_info(common::DrivingFunctionInfo::NOA,
+                                           function_state);
+  } else if (hpp_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::HPP,
                                            function_state);
   } else {
     LOG_NOTICE("function mode error\n");
@@ -290,17 +326,34 @@ bool EnvironmentalModelManager::Run() {
   JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
 
   if (session_->is_hpp_scene()) {
+    ground_line_manager_ptr_->SetIsCluster(ego_config_.is_ground_line_cluster);
     time_start = IflyTime::Now_ms();
-    ground_line_obstacles_update(local_view);
+    if (ego_config_.enable_fusion_ground_line) {  // fusion ground line
+      ground_line_manager_ptr_->Update(local_view.ground_line_perception);
+    } else {  // ehr ground line
+      ground_line_manager_ptr_->Update(local_view.static_map_info);
+    }
     time_end = IflyTime::Now_ms();
     LOG_DEBUG("ground_line_obstacles update cost:%f\n", time_end - time_start);
     JSON_DEBUG_VALUE("ground_line_obstacles_cost", time_end - time_start);
 
     time_start = IflyTime::Now_ms();
-    // parking_slot_manager_ptr_->update(local_view.parking_map_info);
+    if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
+      parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
+    } else {  // ehr parking space
+      parking_slot_manager_ptr_->Update(local_view.static_map_info);
+    }
     time_end = IflyTime::Now_ms();
     LOG_DEBUG("parking_slot_manager update cost:%f\n", time_end - time_start);
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
+
+    if (ego_config_.enable_fusion_occupancy_objects) {  // fusion occupancy objects
+      time_start = IflyTime::Now_ms();
+      occupancy_object_manager_ptr_->Update(local_view.fusion_occupancy_objects_info);
+      time_end = IflyTime::Now_ms();
+      LOG_DEBUG("occupancy_object_manager update cost:%f\n", time_end - time_start);
+      JSON_DEBUG_VALUE(" occupancy_object_manager_cost", time_end - time_start);
+    }
   }
 
   time_start = IflyTime::Now_ms();
@@ -425,29 +478,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   return true;
 }
 
-bool EnvironmentalModelManager::ground_line_obstacles_update(
-    const LocalView &local_view) {
-  std::vector<GroundLinePoint> &ground_line_point_info =
-      session_->mutable_environmental_model()
-          ->get_mutable_ground_line_point_info();
-  ground_line_point_info.clear();
-  iflyauto::GroundLinePerceptionInfo groundline_data =
-      local_view.ground_line_perception;
-
-  for (size_t i = 0; i < groundline_data.ground_lines_size; ++i) {
-    for (size_t j = 0; j < groundline_data.ground_lines[i].points_3d_size;
-         j++) {
-      GroundLinePoint point;
-      point.point =
-          planning_math::Vec2d(groundline_data.ground_lines[i].points_3d[j].x,
-                               groundline_data.ground_lines[i].points_3d[j].y);
-      point.status = GroundLinePoint::Status::UNCLASSIFIED;
-      ground_line_point_info.emplace_back(point);
-    }
-  }
-
-  return true;
-}
 
 void EnvironmentalModelManager::vehicle_status_adaptor(
     double current_time, const LocalView &local_view,

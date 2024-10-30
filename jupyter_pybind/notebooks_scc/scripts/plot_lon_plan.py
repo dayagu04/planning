@@ -1,14 +1,22 @@
 import sys, os
 sys.path.append("..")
 sys.path.append("../lib/")
-from load_local_view import *
-from load_lon_plan import *
+from lib.load_ros_bag import LoadRosbag
+from lib.load_local_view import *
+from lib.load_lon_plan import *
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241214/20241214-09-15-09/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2024-12-14-09-15-09_no_camera.bag.1736404530.open-loop.scc.plan"
 frame_dt = 0.1 # sec
+global_var.set_value('g_is_display_enu', True)
+global_var.set_value('is_vis_sdmap', False)
+global_var.set_value('is_vis_hpp', True)
+global_var.set_value('is_vis_stop_line', True)
+global_var.set_value('is_vis_zebra_crossing_line', True)
+global_var.set_value('is_vis_merge_point', True)
+# -
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

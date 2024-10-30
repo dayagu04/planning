@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "config/message_type.h"
+#include "fusion_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
@@ -37,6 +38,7 @@ class Obstacle {
   // for ground line
   explicit Obstacle(int id, const std::vector<Common::Point3d> &points);
   explicit Obstacle(int id, const std::vector<planning_math::Vec2d> &points);
+  explicit Obstacle(int id, const iflyauto::FusionGroundLine &groundline_cluster);
 
   const std::vector<planning_math::Vec2d> &perception_points() const {
     return perception_points_;

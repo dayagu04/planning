@@ -28,7 +28,7 @@ void RouteInfo::Update() {
     return;
   }
 
-  bool is_hpp_scene = session_->get_scene_type() == common::HPP;
+  bool is_hpp_scene = session_->is_hpp_scene();
   if (!is_hpp_scene) {
     if (UpdateSdMap(local_view_)) {
       UpdateRouteInfoForNOA(sd_map_);
@@ -81,13 +81,15 @@ void RouteInfo::UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sd_map) {
 }
 
 void RouteInfo::UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hd_map) {
-  // if (!GetCurrentNearestLane()) {
-  //   std::cout << "GetCurrentNearestLane failed!!!" << std::endl;
-  //     return;
-  // }
-  // void CalculateHPPInfo();
-  // void CalculateDistanceToTargetSlot();
-  // void CalculateDistanceToNextSpeedBump();
+  LOG_DEBUG(
+      "session_->is_hpp_scene(): %d",session_->is_hpp_scene());
+  if (!GetCurrentNearestLane()) {
+    std::cout << "GetCurrentNearestLane failed!!!" << std::endl;
+      return;
+  }
+  CalculateHPPInfo();
+  CalculateDistanceToTargetSlot();
+  CalculateDistanceToNextSpeedBump();
   return;
 }
 
@@ -830,53 +832,246 @@ void RouteInfo::UpdateMLCInfoDecider(
 }
 
 // for HPP function
-// bool RouteInfo::GetCurrentNearestLane() {
-//   ad_common::math::Vec2d point;
-//   const auto& ego_state =
-//       session_->environmental_model().get_ego_state_manager();
-//   current_pose_ = ego_state->ego_pose_raw();
-//   point.set_x(current_pose_.x);
-//   point.set_y(current_pose_.x);
-//   // get nearest lane
-//   ad_common::hdmap::LaneInfoConstPtr nearest_lane;
-//   double nearest_s = 0.0;
-//   double nearest_l = 0.0;
-//   // const double distance = 10.0;
-//   // const double central_heading = pose.heading();
-//   // const double max_heading_difference = PI / 4;
-//   if (hd_map_.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l) !=
-//       0) {
-//     std::cout << "no get nearest lane!!!" << std::endl;
-//     return false;
+bool RouteInfo::GetCurrentNearestLane() {
+  ad_common::math::Vec2d point;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  current_pose_ = ego_state->ego_pose_raw();
+  point.set_x(current_pose_.x);
+  point.set_y(current_pose_.y);
+  // get nearest lane
+  ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+  double nearest_s = 0.0;
+  double nearest_l = 0.0;
+  // const double distance = 10.0;
+  // const double central_heading = pose.heading();
+  // const double max_heading_difference = PI / 4;
+  if (hd_map_.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l) !=
+      0) {
+    std::cout << "no get nearest lane!!!" << std::endl;
+    return false;
+  }
+  // const int res = hd_map.GetNearestLaneWithHeading(
+  //     point, distance, central_heading, max_heading_difference,
+  //     &nearest_lane, &nearest_s, &nearest_l);
+  // std::cout << "find current lane to current ego point dis:"
+  //           << nearest_lane->DistanceTo(point) << std::endl;
+  std::cout << "find the nearest lane!!!"
+            << "nearest_s_:" << nearest_s
+            << ",nearest lane group id:" << nearest_lane->lane_group_id()
+            << std::endl;
+  nearest_lane_hpp_ = nearest_lane;
+  nearest_s_hpp_ = nearest_s;
+  return true;
+}
+
+void RouteInfo::CalculateHPPInfo() {
+  ConstructBox();
+  // if on hpp lane
+  if (nearest_lane_hpp_->IsOnLane(ego_box_hpp_)) {
+    std::cout << "is on hpp lane!" << std::endl;
+    route_info_output_.is_on_hpp_lane = true;
+    const auto trace_start = local_view_.static_map_info.parking_assist_info().trace_start();
+    const ad_common::math::Vec2d trace_start_point_2d = {trace_start.x(),
+                                                         trace_start.y()};
+    // get trace_start point projection s
+    double trace_start_point_accumulate_s;
+    double trace_start_point_lateral;
+    if (nearest_lane_hpp_->GetProjection(trace_start_point_2d,
+                                     &trace_start_point_accumulate_s,
+                                     &trace_start_point_lateral)) {
+      std::cout << "trace_start point s:" <<
+      trace_start_point_accumulate_s
+                << ",lateral:" << trace_start_point_lateral << std::endl;
+    } else {
+      std::cout << " trace_start point get projection fail!! " << std::endl;
+      return;
+    }
+    // calculate sum distance
+    bool is_reached_trace_start_point =
+        nearest_s_hpp_ >= trace_start_point_accumulate_s;
+    const ad_common::math::Vec2d point(current_pose_.x, current_pose_.y);
+    if (is_reached_trace_start_point) {
+      std::cout << "reached trace start point!!" << std::endl;
+      route_info_output_.is_reached_hpp_start_point = true;
+      if (last_point_hpp_.x() != NL_NMAX && last_point_hpp_.y() != NL_NMAX) {
+        sum_distance_driving_ += point.DistanceTo(last_point_hpp_);
+      } else {
+        sum_distance_driving_ = 0;
+      }
+      route_info_output_.sum_distance_driving = sum_distance_driving_;
+      last_point_hpp_ = point;
+    } else {
+      std::cout << "cur point s less than trace start s" << std::endl;
+    }
+  } else {
+    std::cout << "not in hpp lane!!!" << std::endl;
+    ResetHpp();
+  }
+}
+
+void RouteInfo::ConstructBox() {
+  // ego box
+  double ego_pose_x = current_pose_.x;
+  double ego_pose_y = current_pose_.y;
+  double yaw = current_pose_.theta;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto center_x =
+      ego_pose_x + std::cos(yaw) * vehicle_param.rear_axle_to_center;
+  const auto center_y =
+      ego_pose_y + std::sin(yaw) * vehicle_param.rear_axle_to_center;
+  ad_common::math::Box2d ego_box(
+      {center_x, center_y}, yaw, vehicle_param.length, vehicle_param.width);
+  ego_box_hpp_ = ego_box;
+}
+
+void RouteInfo::ResetHpp() {
+  sum_distance_driving_ = -1;
+  last_point_hpp_.set_x(NL_NMAX);
+  last_point_hpp_.set_y(NL_NMAX);
+}
+
+void RouteInfo::CalculateDistanceToTargetSlot() {
+  // get target slot projection point on line
+  ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
+  double tar_slot_nearest_s = 0.0;
+  double tar_slot_nearest_l = 0.0;
+
+  const auto& lines = local_view_.static_map_info.road_map().lanes();
+  if (!lines.empty()) {
+    const auto& final_point = lines[0].points_on_central_line().rbegin();
+    const double tar_slot_pose_x = final_point->x();
+    const double tar_slot_pose_y = final_point->y();
+    const int tar_slot_res = hd_map_.GetNearestLane(
+        {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
+        &tar_slot_nearest_s, &tar_slot_nearest_l);
+    if (tar_slot_res != 0) {
+      std::cout << "not get target slot projection point on line!!!"
+                << std::endl;
+      return;
+    }
+    route_info_output_.distance_to_target_slot = tar_slot_nearest_s -
+    nearest_s_hpp_;
+  } else {
+    std::cout << "lines is empty from road_map!!!" << std::endl;
+  }
+}
+
+void RouteInfo::CalculateDistanceToNextSpeedBump() {
+  // ehr speed bump
+  const auto& road_marks =
+      local_view_.static_map_info.road_map().lane_groups(0).road_marks();
+  double distance_to_speed_bump_tmp = 0;
+  for (auto& road_mark : road_marks) {
+    if (road_mark.type() == IFLYParkingMap::RoadMark::SPEED_BUMP &&
+        road_mark.shape_size() == 4) {
+      ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
+      double speed_bump_nearest_s = 0.0;
+      double speed_bump_nearest_l = 0.0;
+
+      ad_common::math::Vec2d speed_bump_center_point(
+          (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
+          (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
+      const int speed_bump_res = hd_map_.GetNearestLane(
+          speed_bump_center_point, &speed_bump_nearest_lane,
+          &speed_bump_nearest_s, &speed_bump_nearest_l);
+      if (speed_bump_res != 0) {
+        std::cout << "not get speed_bump projection point on line!!!"
+                  << std::endl;
+        continue;
+      } else {
+        std::cout << "get s for speed_bump projection point on line:"
+                  << speed_bump_nearest_s << std::endl;
+      }
+      distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_hpp_;
+      if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
+        route_info_output_.distance_to_next_speed_bump =
+        distance_to_speed_bump_tmp; break;
+      }
+    }
+  }
+}
+
+// bool RouteInfo::GetCurrentNearestLane(
+//     const planning::framework::Session& session) {
+//   if (session_->environmental_model().get_hdmap_valid()) {
+//     const auto& local_view = session_->environmental_model().get_local_view();
+//     if (local_view.localization.status.status_info.mode !=
+//         iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR) {
+//       std::cout << "hdmap_valid is true,current timestamp:"
+//                 << session_->environmental_model()
+//                        .get_local_view()
+//                        .static_map_info.header()
+//                        .timestamp()
+//                 << std::endl;
+//       const auto& hd_map = session.environmental_model().get_hd_map();
+//       ad_common::math::Vec2d point;
+//       // TODO(fengwang31):把noa和hpp的定位需要合在一起
+//       const auto& ego_state =
+//           session.environmental_model().get_ego_state_manager();
+//       ego_pose_x_ = ego_state->ego_pose_raw().x;
+//       ego_pose_y_ = ego_state->ego_pose_raw().y;
+//       yaw_ = ego_state->ego_pose_raw().theta;
+//       point.set_x(ego_pose_x_);
+//       point.set_y(ego_pose_y_);
+//       // get nearest lane
+//       ad_common::hdmap::LaneInfoConstPtr nearest_lane;
+//       double nearest_s = 0.0;
+//       double nearest_l = 0.0;
+//       printf("NearestLane point: %f, %f\n", ego_pose_x_, ego_pose_y_);
+//       // const double distance = 10.0;
+//       // const double central_heading = pose.heading();
+//       // const double max_heading_difference = PI / 4;
+//       if (hd_map.GetNearestLane(point, &nearest_lane, &nearest_s, &nearest_l) !=
+//           0) {
+//         std::cout << "no get nearest lane!!!" << std::endl;
+//         return false;
+//       }
+//       // const int res = hd_map.GetNearestLaneWithHeading(
+//       //     point, distance, central_heading, max_heading_difference,
+//       //     &nearest_lane, &nearest_s, &nearest_l);
+//       // std::cout << "find current lane to current ego point dis:"
+//       //           << nearest_lane->DistanceTo(point) << std::endl;
+//       std::cout << "find the nearest lane!!!"
+//                 << "nearest_s_:" << nearest_s_
+//                 << ",nearest lane group id:" << nearest_lane->lane_group_id()
+//                 << std::endl;
+//       nearest_lane_ = nearest_lane;
+//       nearest_s_ = nearest_s;
+//       return true;
+//     } else {
+//       std::cout << "localization invalid" << std::endl;
+//     }
+//   } else {
+//     std::cout << "hdmap  is invalid" << std::endl;
 //   }
-//   // const int res = hd_map.GetNearestLaneWithHeading(
-//   //     point, distance, central_heading, max_heading_difference,
-//   //     &nearest_lane, &nearest_s, &nearest_l);
-//   // std::cout << "find current lane to current ego point dis:"
-//   //           << nearest_lane->DistanceTo(point) << std::endl;
-//   std::cout << "find the nearest lane!!!"
-//             << "nearest_s_:" << nearest_s
-//             << ",nearest lane group id:" << nearest_lane->lane_group_id()
-//             << std::endl;
-//   nearest_lane_hpp_ = nearest_lane;
-//   nearest_s_hpp_ = nearest_s;
-//   return true;
+//   return false;
 // }
 
-// void RouteInfo::CalculateHPPInfo() {
-//   ConstructBox();
+// void RouteInfo::CalculateHPPInfo(
+//     planning::framework::Session* session) {
+//   const auto& local_view = session_->environmental_model().get_local_view();
+//   // ego box
+//   const auto& vehicle_param =
+//       VehicleConfigurationContext::Instance()->get_vehicle_param();
+//   const auto center_x =
+//       ego_pose_x_ + std::cos(yaw_) * vehicle_param.rear_axle_to_center;
+//   const auto center_y =
+//       ego_pose_y_ + std::sin(yaw_) * vehicle_param.rear_axle_to_center;
+//   const ad_common::math::Box2d ego_box(
+//       {center_x, center_y}, yaw_, vehicle_param.length, vehicle_param.width);
 //   // if on hpp lane
-//   if (nearest_lane_hpp_->IsOnLane(ego_box_hpp_)) {
+//   if (nearest_lane_->IsOnLane(ego_box)) {
 //     std::cout << "is on hpp lane!" << std::endl;
-//     route_info_output_.is_on_hpp_lane = true;
-//     const auto trace_start = local_view_->parking_map_info.trace_start();
-//     const ad_common::math::Vec2d trace_start_point_2d =
-//     {trace_start.enu().x(),
-//                                                          trace_start.enu().x()};
+//     is_on_hpp_lane_ = true;
+//     const auto trace_start = local_view.static_map_info.parking_assist_info().trace_start();
+//     const ad_common::math::Vec2d trace_start_point_2d = {trace_start.x(),
+//                                                          trace_start.y()};
 //     // get trace_start point projection s
 //     double trace_start_point_accumulate_s;
 //     double trace_start_point_lateral;
-//     if (nearest_lane_hpp_->GetProjection(trace_start_point_2d,
+//     if (nearest_lane_->GetProjection(trace_start_point_2d,
 //                                      &trace_start_point_accumulate_s,
 //                                      &trace_start_point_lateral)) {
 //       std::cout << "trace_start point s:" <<
@@ -888,17 +1083,19 @@ void RouteInfo::UpdateMLCInfoDecider(
 //     }
 //     // calculate sum distance
 //     bool is_reached_trace_start_point =
-//         nearest_s_hpp_ >= trace_start_point_accumulate_s;
-//     const ad_common::math::Vec2d point(current_pose_.x, current_pose_.y);
+//         nearest_s_ >= trace_start_point_accumulate_s;
+//     const ad_common::math::Vec2d point(ego_pose_x_, ego_pose_y_);
 //     if (is_reached_trace_start_point) {
 //       std::cout << "reached trace start point!!" << std::endl;
-//       route_info_output_.is_reached_hpp_start_point = true;
+//       is_reached_hpp_start_point_ = true;
 //       if (last_point_hpp_.x() != NL_NMAX && last_point_hpp_.y() != NL_NMAX) {
 //         sum_distance_driving_ += point.DistanceTo(last_point_hpp_);
 //       } else {
 //         sum_distance_driving_ = 0;
 //       }
 //       last_point_hpp_ = point;
+//       // std::cout << "sum_distance_driving_:" << sum_distance_driving_
+//       //           << std::endl;
 //     } else {
 //       std::cout << "cur point s less than trace start s" << std::endl;
 //     }
@@ -908,40 +1105,30 @@ void RouteInfo::UpdateMLCInfoDecider(
 //   }
 // }
 
-// void RouteInfo::ConstructBox() {
-//   // ego box
-//   double ego_pose_x = current_pose_.x;
-//   double ego_pose_y = current_pose_.y;
-//   double yaw = current_pose_.theta;
-//   const auto& vehicle_param =
-//       VehicleConfigurationContext::Instance()->get_vehicle_param();
-//   const auto center_x =
-//       ego_pose_x + std::cos(yaw) * vehicle_param.rear_axle_to_center;
-//   const auto center_y =
-//       ego_pose_y + std::sin(yaw) * vehicle_param.rear_axle_to_center;
-//   ad_common::math::Box2d ego_box(
-//       {center_x, center_y}, yaw, vehicle_param.length, vehicle_param.width);
-//   ego_box_hpp_ = ego_box;
-// }
-
 // void RouteInfo::ResetHpp() {
+//   is_on_hpp_lane_ = false;
+//   is_reached_hpp_start_point_ = false;
 //   sum_distance_driving_ = -1;
 //   last_point_hpp_.set_x(NL_NMAX);
 //   last_point_hpp_.set_y(NL_NMAX);
 // }
 
-// void RouteInfo::CalculateDistanceToTargetSlot() {
+// void RouteInfo::CalculateDistanceToTargetSlot(
+//     planning::framework::Session* session) {
+//   const auto& local_view = session->environmental_model().get_local_view();
+//   const auto& hd_map = session->environmental_model().get_hd_map();
+
 //   // get target slot projection point on line
 //   ad_common::hdmap::LaneInfoConstPtr tar_slot_nearest_lane;
 //   double tar_slot_nearest_s = 0.0;
 //   double tar_slot_nearest_l = 0.0;
 
-//   const auto& lines = local_view_.static_map_info.road_map().lanes();
+//   const auto& lines = local_view.static_map_info.road_map().lanes();
 //   if (!lines.empty()) {
-//     const auto& final_point = lines[0].points_on_central_line().rbegin();
-//     const double tar_slot_pose_x = final_point->x();
-//     const double tar_slot_pose_y = final_point->y();
-//     const int tar_slot_res = hd_map_.GetNearestLane(
+//     const auto& last_point = lines[0].points_on_central_line().rbegin();
+//     const double tar_slot_pose_x = last_point->x();
+//     const double tar_slot_pose_y = last_point->y();
+//     const int tar_slot_res = hd_map.GetNearestLane(
 //         {tar_slot_pose_x, tar_slot_pose_y}, &tar_slot_nearest_lane,
 //         &tar_slot_nearest_s, &tar_slot_nearest_l);
 //     if (tar_slot_res != 0) {
@@ -949,16 +1136,20 @@ void RouteInfo::UpdateMLCInfoDecider(
 //                 << std::endl;
 //       return;
 //     }
-//     route_info_output_.distance_to_target_slot = tar_slot_nearest_s -
-//     nearest_s_hpp_;
+//     distance_to_target_slot_ = tar_slot_nearest_s - nearest_s_;
 //   } else {
 //     std::cout << "lines is empty from road_map!!!" << std::endl;
 //   }
 // }
 
-// void RouteInfo::CalculateDistanceToNextSpeedBump() {
-//   const auto& road_marks =
-//   local_view_.parking_map_info.road_tile_info().road_mark();
+// void RouteInfo::CalculateDistanceToNextSpeedBump(
+//     planning::framework::Session* session) {
+//   distance_to_next_speed_bump_ = NL_NMAX;
+//   auto& local_view = session_->environmental_model().get_local_view();
+//   const auto& road_marks = local_view.static_map_info.road_map().lane_groups(0).road_marks();
+//   const auto& hd_map =
+//   session->environmental_model().get_hd_map();
+
 //   double distance_to_speed_bump_tmp = 0;
 //   for (auto& road_mark : road_marks) {
 //     if (road_mark.type() == IFLYParkingMap::RoadMark::SPEED_BUMP &&
@@ -968,10 +1159,9 @@ void RouteInfo::UpdateMLCInfoDecider(
 //       double speed_bump_nearest_l = 0.0;
 
 //       ad_common::math::Vec2d speed_bump_center_point(
-//           (road_mark.shape(0).boot().x() + road_mark.shape(3).boot().x()) *
-//           0.5, (road_mark.shape(0).boot().y() +
-//           road_mark.shape(3).boot().y()) * 0.5);
-//       const int speed_bump_res = hd_map_.GetNearestLane(
+//           (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
+//           (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
+//       const int speed_bump_res = hd_map.GetNearestLane(
 //           speed_bump_center_point, &speed_bump_nearest_lane,
 //           &speed_bump_nearest_s, &speed_bump_nearest_l);
 //       if (speed_bump_res != 0) {
@@ -982,10 +1172,10 @@ void RouteInfo::UpdateMLCInfoDecider(
 //         std::cout << "get s for speed_bump projection point on line:"
 //                   << speed_bump_nearest_s << std::endl;
 //       }
-//       distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_hpp_;
+//       distance_to_speed_bump_tmp = speed_bump_nearest_s - nearest_s_;
 //       if (distance_to_speed_bump_tmp > 0) {  // TODO: 假设挡位为前进档
-//         route_info_output_.distance_to_next_speed_bump =
-//         distance_to_speed_bump_tmp; break;
+//         distance_to_next_speed_bump_ = distance_to_speed_bump_tmp;
+//         break;
 //       }
 //     }
 //   }

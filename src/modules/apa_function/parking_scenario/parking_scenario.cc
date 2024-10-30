@@ -19,6 +19,7 @@
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
+#include "planning_plan_c.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -163,17 +164,20 @@ void ParkingScenario::GenPlanningOutput() {
             << "  plan path pt size = "
             << current_path_point_global_vec_.size();
 
+  bool is_hpp = IsHppParkingStage(
+      apa_world_ptr_->GetApaDataPtr()->func_state_ptr->current_state);
+
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
-    SetFinishedPlanningOutput(planning_output_, current_ego_pose);
+    SetFinishedPlanningOutput(planning_output_, current_ego_pose, is_hpp);
   } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
-    SetFailedPlanningOutput(planning_output_, current_ego_pose);
+    SetFailedPlanningOutput(planning_output_, current_ego_pose, is_hpp);
   } else if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
              frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
              frame_.plan_stm.planning_status == PARKING_RUNNING ||
              frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    GenPlanningPath();
+    GenPlanningPath(is_hpp);
   } else if (frame_.plan_stm.planning_status == PARKING_IDLE) {
-    SetIdlePlanningOutput(planning_output_, current_ego_pose);
+    SetIdlePlanningOutput(planning_output_, current_ego_pose, is_hpp);
   }
 
   if (frame_.plan_stm.planning_status == PARKING_IDLE ||
@@ -200,11 +204,16 @@ void ParkingScenario::GenPlanningHmiOutput() {
   return;
 }
 
-void ParkingScenario::GenPlanningPath() {
+void ParkingScenario::GenPlanningPath(const bool is_hpp) {
   // planning_output_.Clear();
   memset(&planning_output_, 0, sizeof(planning_output_));
-  planning_output_.planning_status.apa_planning_status =
-      iflyauto::APA_IN_PROGRESS;
+  if (is_hpp) {
+    planning_output_.planning_status.hpp_planning_status =
+        iflyauto::HPP_RUNNING;
+  } else {
+    planning_output_.planning_status.apa_planning_status =
+        iflyauto::APA_IN_PROGRESS;
+  }
 
   auto trajectory = &(planning_output_.trajectory);
   trajectory->available = true;

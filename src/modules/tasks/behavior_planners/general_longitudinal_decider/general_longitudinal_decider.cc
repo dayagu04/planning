@@ -14,6 +14,7 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "func_state_machine_c.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "session.h"
@@ -311,6 +312,11 @@ bool GeneralLongitudinalDecider::Execute() {
   if (session_->is_hpp_scene()) {
     // set destination bound
     double distance_to_destination = get_distance_to_destination();
+    const size_t successful_slot_info_list_size = session_->planning_context().planning_output().successful_slot_info_list_size;
+    const auto& current_state = session_->environmental_model().get_local_view().function_state_machine_info.current_state;
+    if ((current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) && (successful_slot_info_list_size > 0)) {
+      distance_to_destination = 0.0;
+    }
     double stop_distance_to_destination = config_.stop_distance_to_destination;
     double destination_s = planning_init_point.frenet_state.s +
                            distance_to_destination -
@@ -505,7 +511,8 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   }
 
   if (session_->is_hpp_scene()) {
-    static constexpr double kVelocityPreviewDistance = 3.0;
+    //static constexpr double kVelocityPreviewDistance = 3.0;
+    double kVelocityPreviewDistance = ego_v * 1.0;
     // auto mff_cruise_velocity = session_
     //                                ->environmental_model()
     //                                .get_vehicle_status()
@@ -527,11 +534,10 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
     if (reference_path_ptr->get_reference_point_by_lon(
             frenet_ego_state.s() + kVelocityPreviewDistance, refpath_pt)) {
       user_velocity_limit = map_velocity_limit;
-      if (std::fabs(refpath_pt.path_point.kappa()) > 0.1) {
-        user_velocity_limit =
-            std::min((1.0 - std::fabs(refpath_pt.path_point.kappa())) *
-                         map_velocity_limit,
-                     5 / 3.6);
+      if (std::fabs(refpath_pt.path_point.kappa) > 0.07) {
+        user_velocity_limit = std::min(
+            (1.0 - std::fabs(refpath_pt.path_point.kappa)) * map_velocity_limit,
+            5 / 3.6);
         user_velocity_limit = std::max(user_velocity_limit, 2.0);
       }
       vel_limit_info_.v_limit_usr = user_velocity_limit;

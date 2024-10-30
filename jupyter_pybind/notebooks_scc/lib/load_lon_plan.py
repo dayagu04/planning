@@ -641,6 +641,15 @@ def load_lon_global_figure(bag_loader):
   EnvironmentalModelManagerCost_vec = []
   GeneralPlannerModuleCostTime_vec = []
   DynamicWorldAverageCostTime_vec = []
+  LaneChangeDeciderTime_vec = []
+  LateralObstacleDeciderTime_vec = []
+  HppGeneralLateralDeciderTime_vec = []
+  LateralMotionPlannerTime_vec = []
+  GeneralLongitudinalDeciderTime_vec = []
+  LongitudinalMotionPlannerTime_vec = []
+  ResultTrajectoryGeneratorTime_vec = []
+  ParkingSwitchDeciderTime_vec = []
+  ARAStarTime_vec = []
 
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_dis'], 2))
@@ -657,6 +666,15 @@ def load_lon_global_figure(bag_loader):
     EnvironmentalModelManagerCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['EnvironmentalModelManagerCost'], 2))
     GeneralPlannerModuleCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralPlannerModuleCostTime'], 2))
     DynamicWorldAverageCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['dynamic_world_cost'], 2))
+    LaneChangeDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LaneChangeDeciderTime'], 2))
+    LateralObstacleDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralObstacleDeciderTime'], 2))
+    HppGeneralLateralDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['HppGeneralLateralDeciderTime'], 2))
+    LateralMotionPlannerTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralMotionPlannerTime'], 2))
+    GeneralLongitudinalDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralLongitudinalDeciderTime'], 2))
+    LongitudinalMotionPlannerTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LongitudinalMotionPlannerTime'], 2))
+    ResultTrajectoryGeneratorTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ResultTrajectoryGeneratorTime'], 2))
+    ParkingSwitchDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ParkingSwitchDeciderTime'], 2))
+    ARAStarTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ARAStarTime'], 2))
 
   lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
   lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
@@ -672,6 +690,15 @@ def load_lon_global_figure(bag_loader):
   cost_time_fig.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime_vec', color="orange")
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime_vec', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+  # cost_time_fig.line(t_plan_vec, LaneChangeDeciderTime_vec, line_width=1, legend_label='LaneChangeDeciderTime_vec', color="black")
+  cost_time_fig.line(t_plan_vec, LateralObstacleDeciderTime_vec, line_width=1, legend_label='LateralObstacleDeciderTime_vec', color="brown")
+  cost_time_fig.line(t_plan_vec, HppGeneralLateralDeciderTime_vec, line_width=1, legend_label='HppGeneralLateralDeciderTime_vec', color="pink")
+  # cost_time_fig.line(t_plan_vec, LateralMotionPlannerTime_vec, line_width=1, legend_label='LateralMotionPlannerTime_vec', color="gray")
+  # cost_time_fig.line(t_plan_vec, GeneralLongitudinalDeciderTime_vec, line_width=1, legend_label='GeneralLongitudinalDeciderTime_vec', color="maroon")
+  # cost_time_fig.line(t_plan_vec, LongitudinalMotionPlannerTime_vec, line_width=1, legend_label='LongitudinalMotionPlannerTime_vec', color="navy")
+  # cost_time_fig.line(t_plan_vec, ResultTrajectoryGeneratorTime_vec, line_width=1, legend_label='ResultTrajectoryGeneratorTime_vec', color="gold")
+  # cost_time_fig.line(t_plan_vec, ParkingSwitchDeciderTime_vec, line_width=1, legend_label='ParkingSwitchDeciderTime_vec', color="silver")
+  cost_time_fig.line(t_plan_vec, ARAStarTime_vec, line_width=1, legend_label='ARAStarTime_vec', color="khaki")
   cost_time_fig.legend.click_policy = 'hide'
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
@@ -690,21 +717,21 @@ def load_lon_global_figure(bag_loader):
   cutin_fig.legend.click_policy = 'hide'
   # cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
   #                               legend_label='cutin_status', color="black")
-
-  LonBahaviorAverageCostTime = sum(SccLonBehaviorCostTime_vec) / len(t_plan_vec)
-  LonMotionAverageCostTime = sum(SccLonMotionCostTime_vec) / len(t_plan_vec)
-  LateralBahaviorAverageCostTime = sum(SccLateralBehaviorCostTime_vec) / len(t_plan_vec)
-  LateralMotionAverageCostTime = sum(SccLateralMotionCostTime_vec) / len(t_plan_vec)
-  EnvironmentalAverageCostTime = sum(EnvironmentalModelManagerCost_vec) / len(t_plan_vec)
-  GeneralPlannerAverageCostTime = sum(GeneralPlannerModuleCostTime_vec) / len(t_plan_vec)
-  DynamicWorldAverageCostTime = sum(DynamicWorldAverageCostTime_vec) / len(t_plan_vec)
-  print('lat_bahavior_average_cost', LateralBahaviorAverageCostTime)
-  print('lat_motion_average_cost', LateralMotionAverageCostTime)
-  print('lon_bahavior_average_cost', LonBahaviorAverageCostTime)
-  print('lon_motion_average_cost', LonMotionAverageCostTime)
-  print('Environmental_average_cost', EnvironmentalAverageCostTime)
-  print('GeneralPlanner_average_cost', GeneralPlannerAverageCostTime)
-  print('dynamic_world_average_cost', DynamicWorldAverageCostTime)
+  if len(t_plan_vec) > 0:
+    LonBahaviorAverageCostTime = sum(SccLonBehaviorCostTime_vec) / len(t_plan_vec)
+    LonMotionAverageCostTime = sum(SccLonMotionCostTime_vec) / len(t_plan_vec)
+    LateralBahaviorAverageCostTime = sum(SccLateralBehaviorCostTime_vec) / len(t_plan_vec)
+    LateralMotionAverageCostTime = sum(SccLateralMotionCostTime_vec) / len(t_plan_vec)
+    EnvironmentalAverageCostTime = sum(EnvironmentalModelManagerCost_vec) / len(t_plan_vec)
+    GeneralPlannerAverageCostTime = sum(GeneralPlannerModuleCostTime_vec) / len(t_plan_vec)
+    DynamicWorldAverageCostTime = sum(DynamicWorldAverageCostTime_vec) / len(t_plan_vec)
+    print('lat_bahavior_average_cost', LateralBahaviorAverageCostTime)
+    print('lat_motion_average_cost', LateralMotionAverageCostTime)
+    print('lon_bahavior_average_cost', LonBahaviorAverageCostTime)
+    print('lon_motion_average_cost', LonMotionAverageCostTime)
+    print('Environmental_average_cost', EnvironmentalAverageCostTime)
+    print('GeneralPlanner_average_cost', GeneralPlannerAverageCostTime)
+    print('dynamic_world_average_cost', DynamicWorldAverageCostTime)
 
   #get longtime obstacle id list in st-graph
   obs_st_ids = []

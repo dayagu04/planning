@@ -10,6 +10,7 @@
 #include "ifly_time.h"
 #include "local_view.h"
 #include "obstacle_manager.h"
+#include "occupancy_object_manager.h"
 #include "parking_slot_manager.h"
 #include "prediction_object.h"
 #include "route_info.h"
@@ -52,6 +53,7 @@ class EnvironmentalModelManager {
   ~EnvironmentalModelManager() = default;
   void setFaultcode(uint64_t faultcode);
   uint64_t getFaultcode();
+  void SetConfig(const planning::common::SceneType scene_type);
 
   //  private:
   //   void SetPlanningPesult(const PlanningResult &ego_prediction_result,
@@ -73,7 +75,7 @@ class EnvironmentalModelManager {
       std::vector<PredictionObject> &objects_infos);
   bool obstacle_prediction_update(double current_time,
                                   const LocalView &local_view);
-  bool ground_line_obstacles_update(const LocalView &local_view);
+
   bool InputReady(double current_time, std::string &error_msg);
   PredictionTrajectoryPoint GetPointAtTime(
       const std::vector<PredictionTrajectoryPoint> &trajectory_points,
@@ -94,6 +96,8 @@ class EnvironmentalModelManager {
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ObstacleManager> obstacle_manager_ptr_ = nullptr;
+  std::shared_ptr<planning::GroundLineManager> ground_line_manager_ptr_ =
+      nullptr;
   std::shared_ptr<planning::ParkingSlotManager> parking_slot_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ =
@@ -109,6 +113,8 @@ class EnvironmentalModelManager {
       nullptr;
   std::shared_ptr<planning::agent::AgentManager> agent_manager_ptr_ = nullptr;
   std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world_ =
+      nullptr;
+  std::shared_ptr<planning::OccupancyObjectManager> occupancy_object_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::RouteInfo> route_info_ptr_ = nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};

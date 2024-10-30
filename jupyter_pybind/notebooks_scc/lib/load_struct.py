@@ -53,15 +53,19 @@ def binary_search(in_list, target):
   return -1
 
 def find_nearest(msg, bag_time, find_json = False):
-  if msg['enable']  == True:
-    msg_idx = 0
-    while msg['t'][msg_idx] <= bag_time and msg_idx < (len(msg['t'])-2):
-      msg_idx = msg_idx + 1
-    if find_json:
-      return msg['json'][msg_idx]
+  try:
+    if msg['enable']  == True:
+      msg_idx = 0
+      while msg['t'][msg_idx] <= bag_time and msg_idx < (len(msg['t'])-2):
+        msg_idx = msg_idx + 1
+      if find_json:
+        return msg['json'][msg_idx]
+      else:
+        return msg['data'][msg_idx]
     else:
-      return msg['data'][msg_idx]
-  else:
+      return None
+  except:
+    print("find nearest error!")
     return None
 
 def load_car_params_patch(car_type = 'E0Y'):
@@ -580,6 +584,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         lane_info_l['line_x_vec'] = line_x
 
         left_line_type_vec = []
+        if (len(left_line.type_segments) == 0):
+          left_line_type_vec.append(['dashed'])
         for j in range(len(left_line.type_segments)):
           tp = left_line.type_segments[j].type
           if tp == 0 or tp == 1 or tp == 3 or tp == 4:
@@ -633,6 +639,8 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
         lane_info_r['line_y_vec'] = line_y
 
         right_line_type_vec = []
+        if (len(right_line.type_segments) == 0):
+          right_line_type_vec.append(['dashed'])
         for j in range(len(right_line.type_segments)):
           tp = right_line.type_segments[j].type
           if tp == 0 or tp == 1 or tp == 3 or tp == 4:
@@ -768,6 +776,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       try:
         for i in range(10):
           if i < virtual_lane_marks_size:
+            is_no_lm_point = True
             for j in range(virtual_lane_refline_points_size):
               if i == virtual_lane_marks_size - 1:
                 lane_mark_point_x.append(line_x[-1])
@@ -776,7 +785,11 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
               if line_s[j] >= lane_mark_s_vec[i]:
                 lane_mark_point_x.append(line_x[j])
                 lane_mark_point_y.append(line_y[j])
+                is_no_lm_point = False
                 break
+            if is_no_lm_point and (virtual_lane_refline_points_size > 0):
+              lane_mark_point_x.append(line_x[virtual_lane_refline_points_size - 1])
+              lane_mark_point_y.append(line_y[virtual_lane_refline_points_size - 1])
           else:
             break
       except:
@@ -785,11 +798,16 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       try:
         for i in range(10):
           if i < virtual_lane_marks_size:
+            is_no_lm_point = True
             for j in range(virtual_lane_refline_points_size):
               if line_s[j] >= (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
                 lane_mark_loc_x.append(line_x[j])
                 lane_mark_loc_y.append(line_y[j])
+                is_no_lm_point = False
                 break
+            if is_no_lm_point and (virtual_lane_refline_points_size > 0):
+              lane_mark_loc_x.append(line_x[virtual_lane_refline_points_size - 1])
+              lane_mark_loc_y.append(line_y[virtual_lane_refline_points_size - 1])
           else:
             break
       except:
@@ -973,9 +991,12 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
   obs_info_all = dict()
   fusion_object_size = fus_msg.fusion_object_size
   obstacle_list = fus_msg.fusion_object
+  local_point_valid = fus_msg.local_point_valid  # 障碍物中用到的绝对坐标是否有效
+  # print("obj local_point_valid: ", local_point_valid)
   num = 0
   for i in range(fusion_object_size):
     source = obstacle_list[i].additional_info.fusion_source
+    type = obstacle_list[i].common_info.type
     if source & 0x01: #相机融合障碍物
       source = 1
     elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
@@ -1101,7 +1122,8 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
 #             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
     if frenet_vs == 255 and  frenet_vl == 255:
       obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
-          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4)))
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4))+','+ str(type)+'\n'\
+            + lat_decision + '\n' + is_static)
     else:
       obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
           + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(obstacle_list[i].common_info.type)+'\n'\
@@ -1135,6 +1157,129 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
     obs_info_all[4] = obs_info
 
   return obs_info_all
+
+
+def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_info = None):
+  obs_info_all = dict()
+  fusion_object_size = fus_occ_obj_msg.fusion_object_size
+  obstacle_list = fus_occ_obj_msg.fusion_object
+  local_point_valid = fus_occ_obj_msg.local_point_valid  # 障碍物中用到的绝对坐标是否有效
+  # print("occ obj local_point_valid: ", local_point_valid)
+  num = 0
+  for i in range(fusion_object_size):
+    common_info = obstacle_list[i].common_occupancy_info
+    additional_info = obstacle_list[i].additional_occupancy_info
+    source = additional_info.fusion_source
+    source = 0  # hack
+    type = common_info.type
+    # if source & 0x01: #相机融合障碍物
+    #   source = 1
+    # elif (common_info.relative_center_position.x > 0 and \
+    #   math.tan(25) > math.fabs(common_info.relative_center_position.y / common_info.relative_center_position.x)) or \
+    #   math.fabs(common_info.relative_center_position.y) > 10:
+    #   continue
+    # else:
+    #   source = 4
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+      obs_info_all[source] = obs_info
+    try:
+      frenet_vs, frenet_vl = 255, 255
+      lat_decision = "None"
+      is_static = ""
+      for obstacle in environment_model_info.obstacle:
+        if obstacle.id == additional_info.track_id:
+          frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+          if (0 == obstacle.lat_decision):
+            lat_decision = "LEFT"
+          elif (1 == obstacle.lat_decision):
+            lat_decision = "RIGHT"
+          elif (2 == obstacle.lat_decision):
+            lat_decision = "IGNORE"
+          if obstacle.is_static:
+            is_static = "Static"
+          break
+    except:
+      pass
+    # pos_x_rel = common_info.relative_center_position.x
+    # pos_y_rel = common_info.relative_center_position.y
+    pos_x = common_info.relative_center_position.x
+    pos_y = common_info.relative_center_position.y
+    polygon_points_size = additional_info.polygon_points_size
+    polygon_points = additional_info.polygon_points
+    obs_x, obs_y = [], []
+    for index, points in enumerate(polygon_points):
+      obs_x.append(points.x)
+      obs_y.append(points.y)
+
+    num = num + 1
+
+    pos_x_rel, pos_y_rel = [], []
+    obs_x_rel, obs_y_rel = [], []
+    coord_tf = coord_transformer()
+    if loc_msg != None: # 长时轨迹
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obs_x_rel, obs_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+      pos_x_rel, pos_y_rel = coord_tf.global_to_local([pos_x], [pos_y])
+
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
+    obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(pos_x)
+    obs_info_all[source]['pos_y'].append(pos_y)
+    obs_info_all[source]['obstacles_vel'].append(common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(additional_info.track_id)
+
+    if frenet_vs == 255 and  frenet_vl == 255:
+      obs_info_all[source]['obs_label'].append('v(' + str(additional_info.track_id) + ')=' \
+          + str(round(common_info.relative_velocity.x, 2))+','+ str(round(common_info.relative_velocity.y, 4))+','+ str(type))
+    else:
+      obs_info_all[source]['obs_label'].append('vs(' + str(additional_info.track_id) + ')=' \
+          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(type)+'\n'\
+          + str(round(common_info.relative_velocity.x, 2))+','+ str(round(common_info.relative_velocity.y, 4))+'\n'\
+          + lat_decision + '\n' + is_static)
+
+  if fusion_object_size == 0:
+    obs_info = {
+      'obstacles_x_rel': [],
+      'obstacles_y_rel': [],
+      'obstacles_x': [],
+      'obstacles_y': [],
+      'pos_x_rel': [],
+      'pos_y_rel': [],
+      'pos_x': [],
+      'pos_y': [],
+      'obstacles_vel': [],
+      'obstacles_acc': [],
+      'obstacles_tid': [],
+      'is_cipv': [],
+      'obs_label':[]
+    }
+    obs_info_all[0] = obs_info
+
+  return obs_info_all
+
 
 def load_obstacle_me(camera_msg,is_rdg):
 
@@ -1234,6 +1379,89 @@ def load_obstacle_me(camera_msg,is_rdg):
 
   return obs_info_all
 
+def load_rdg_general_obstacle(camera_msg, loc_msg = None):
+  obs_info_all = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'obstacles_x': [],
+    'obstacles_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'obstacles_vel': [],
+    'obstacles_acc': [],
+    'obstacles_tid': [],
+    'is_cipv': [],
+    'obs_label':[]
+  }
+  obstacle_list = camera_msg.camera_perception_objects
+  obs_num = camera_msg.camera_perception_objects_size
+  num = 0
+  for i in range(obs_num):
+    #remove obstacle
+    type = obstacle_list[i].common_info.type
+    if type > 22 and type != 27 :
+      continue
+
+    long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].common_info.shape.width /2
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+                long_pos_rel + dx1 - dx2,
+                long_pos_rel- dx1 - dx2,
+                long_pos_rel - dx1 + dx2,
+                long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+                lat_pos_rel + dy1 - dy2,
+                lat_pos_rel - dy1 - dy2,
+                lat_pos_rel - dy1 + dy2,
+                lat_pos_rel + dy1 + dy2]
+    # 绝对坐标系下的数据
+    obs_x, obs_y = [], []
+    long_pos, lat_pos = [], []
+    if loc_msg != None:
+      coord_tf = coord_transformer()
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obs_x, obs_y = coord_tf.local_to_global(obs_x_rel, obs_y_rel)
+      long_pos, lat_pos = coord_tf.local_to_global([long_pos_rel], [lat_pos_rel])
+    else:
+      print("no loc_msg in load_rdg_general_obstacle")
+    obs_info_all['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all['pos_x_rel'].append(long_pos_rel)
+    obs_info_all['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obs_info_all['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obs_info_all['obstacles_tid'].append(obstacle_list[i].common_info.id)#contour不太确定
+    # obs_info_all['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)) + ',' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.y, 2)) + ',' \
+        + str(type))
+    obs_info_all['obstacles_x'].append(obs_x)
+    obs_info_all['obstacles_y'].append(obs_y)
+    obs_info_all['pos_x'].append(long_pos)
+    obs_info_all['pos_y'].append(lat_pos)
+    num = num + 1
+
+  return obs_info_all
 
 def load_obstacle_radar(obstacle_list,type,num):
   obs_info_all = dict()
@@ -1513,38 +1741,58 @@ def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = 
     print('generate_planning_trajectory error')
   return plan_x, plan_y, plan_theta, plan_dict
 
-def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = None, g_is_display_enu = False):
-  road_tile_info = ehr_parking_map_msg.road_tile_info
-  parking_space_info = road_tile_info.parking_space
+def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, g_is_display_enu = False):
   parking_space_boxes_x = []
   parking_space_boxes_y = []
-  road_mark_info = road_tile_info.road_mark
   road_mark_boxes_x = []
   road_mark_boxes_y = []
-
+  road_obstacle_x_vec = []
+  road_obstacle_y_vec = []
   try:
+    parking_assist_info = ehr_static_map_msg.parking_assist_info
+    parking_spaces = parking_assist_info.parking_spaces
+    # print("parking_space size: ", len(parking_spaces))
+    road_obstacles = parking_assist_info.road_obstacles
+    # 车道级
+    lanes = ehr_static_map_msg.road_map.lanes
+    # print("lanes: ", lanes)
+    # 道路级
+    lane_groups = ehr_static_map_msg.road_map.lane_groups
+    # print("lane_groups: ", lane_groups)
     if g_is_display_enu:
-      for parking_space in parking_space_info:
+      for parking_space in parking_spaces:
         parking_space_box_x = []
         parking_space_box_y = []
         for shape in parking_space.shape:
-          x = shape.boot.x
-          y = shape.boot.y
+          x = shape.x
+          y = shape.y
           parking_space_box_x.append(x)
           parking_space_box_y.append(y)
         parking_space_boxes_x.append(parking_space_box_x)
         parking_space_boxes_y.append(parking_space_box_y)
 
-      for road_mark in road_mark_info:
-        road_mark_box_x = []
-        road_mark_box_y = []
-        for shape in road_mark.shape:
-          x = shape.boot.x
-          y = shape.boot.y
-          road_mark_box_x.append(x)
-          road_mark_box_y.append(y)
-        road_mark_boxes_x.append(road_mark_box_x)
-        road_mark_boxes_y.append(road_mark_box_y)
+      for lane in lane_groups:
+        for road_mark in lane.road_marks:
+          road_mark_box_x = []
+          road_mark_box_y = []
+          for shape in road_mark.shape:
+            x = shape.x
+            y = shape.y
+            road_mark_box_x.append(x)
+            road_mark_box_y.append(y)
+          road_mark_boxes_x.append(road_mark_box_x)
+          road_mark_boxes_y.append(road_mark_box_y)
+
+      for road_obstacle in road_obstacles:
+        road_obstacle_x = []
+        road_obstacle_y = []
+        for shape in road_obstacle.shape:
+          x = shape.x
+          y = shape.y
+          road_obstacle_x.append(x)
+          road_obstacle_y.append(y)
+        road_obstacle_x_vec.append(road_obstacle_x)
+        road_obstacle_y_vec.append(road_obstacle_y)
     else:
       coord_tf = coord_transformer()
       if loc_msg != None: # 长时轨迹
@@ -1552,46 +1800,116 @@ def generate_ehr_parking_map(ehr_parking_map_msg, loc_msg = None, g_is_display_e
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
         coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        for parking_space in parking_space_info:
+        for parking_space in parking_spaces:
           parking_space_box_x = []
           parking_space_box_y = []
           for shape in parking_space.shape:
-            x = shape.boot.x
-            y = shape.boot.y
+            x = shape.x
+            y = shape.y
             local_x, local_y = coord_tf.global_to_local([x], [y])
             parking_space_box_x.append(local_x)
             parking_space_box_y.append(local_y)
           parking_space_boxes_x.append(parking_space_box_x)
           parking_space_boxes_y.append(parking_space_box_y)
 
-        for road_mark in road_mark_info:
-          road_mark_box_x = []
-          road_mark_box_y = []
-          for shape in road_mark.shape:
-            x = shape.boot.x
-            y = shape.boot.y
+        for lane in lane_groups:
+          for road_mark in lane.road_marks:
+            road_mark_box_x = []
+            road_mark_box_y = []
+            for shape in road_mark.shape:
+              x = shape.x
+              y = shape.y
+              local_x, local_y = coord_tf.global_to_local([x], [y])
+              road_mark_box_x.append(local_x)
+              road_mark_box_y.append(local_y)
+            road_mark_boxes_x.append(road_mark_box_x)
+            road_mark_boxes_y.append(road_mark_box_y)
+
+        for road_obstacle in road_obstacles:
+          road_obstacle_x = []
+          road_obstacle_y = []
+          for shape in road_obstacle.shape:
+            x = shape.x
+            y = shape.y
             local_x, local_y = coord_tf.global_to_local([x], [y])
-            road_mark_box_x.append(local_x)
-            road_mark_box_y.append(local_y)
-          road_mark_boxes_x.append(road_mark_box_x)
-          road_mark_boxes_y.append(road_mark_box_y)
+            road_obstacle_x.append(local_x)
+            road_obstacle_y.append(local_y)
+          road_obstacle_x_vec.append(road_obstacle_x)
+          road_obstacle_y_vec.append(road_obstacle_y)
   except:
-    print('generate_ehr_parking_map error')
-  return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y
+    print('generate_ehr_static_map error')
+  return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y, road_obstacle_x_vec, road_obstacle_y_vec
 
 def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
-  ground_lines = ground_line_msg.ground_lines
   groundline_x_vec = []
   groundline_y_vec = []
+  groundline_id_vec = []
   try:
+    groundline_size = ground_line_msg.groundline_size
+    ground_lines = ground_line_msg.groundline
+    ground_line_id = 5000000
     if g_is_display_enu:
-      for j in range(len(ground_lines)):
+      for j in range(groundline_size):
         groundline = ground_lines[j]
         single_groundline_x_vec = []
         single_groundline_y_vec = []
-        for k in range(len(groundline.points_3d)):
-          ground_x_enu = groundline.points_3d[k].x
-          ground_y_enu = groundline.points_3d[k].y
+        groundline_point_size = groundline.groundline_point_size
+        for k in range(groundline_point_size):
+          ground_x_enu = groundline.shape[k].x
+          ground_y_enu = groundline.shape[k].y
+          single_groundline_x_vec.append(ground_x_enu)
+          single_groundline_y_vec.append(ground_y_enu)
+        groundline_x_vec.append(single_groundline_x_vec)
+        groundline_y_vec.append(single_groundline_y_vec)
+        if groundline_point_size >= 3:
+          ground_line_id = ground_line_id + 1
+          groundline_id_vec.append(ground_line_id)
+        else:
+          groundline_id_vec.append(-1)
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for j in range(groundline_size):
+          groundline = ground_lines[j]
+          single_groundline_x_vec = []
+          single_groundline_y_vec = []
+          groundline_point_size = groundline.groundline_point_size
+          for k in range(groundline_point_size):
+            ground_x_enu = groundline.shape[k].x
+            ground_y_enu = groundline.shape[k].y
+            local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            single_groundline_x_vec.append(local_x)
+            single_groundline_y_vec.append(local_y)
+          groundline_x_vec.append(single_groundline_x_vec)
+          groundline_y_vec.append(single_groundline_y_vec)
+          if groundline_point_size >= 3:
+            ground_line_id = ground_line_id + 1
+            groundline_id_vec.append(ground_line_id)
+          else:
+            groundline_id_vec.append(-1)
+  except:
+    print('groundline error')
+  return groundline_x_vec, groundline_y_vec, groundline_id_vec
+
+def generate_rdg_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
+  groundline_x_vec = []
+  groundline_y_vec = []
+  try:
+    groundline_size = ground_line_msg.ground_lines_size
+    ground_lines = ground_line_msg.ground_lines
+    if not g_is_display_enu:
+      for j in range(groundline_size):
+        groundline = ground_lines[j]
+        single_groundline_x_vec = []
+        single_groundline_y_vec = []
+        groundline_point_size = groundline.points_2d_size
+        for k in range(groundline_point_size):
+          ground_x_enu = groundline.points_2d[k].x
+          ground_y_enu = groundline.points_2d[k].y
           single_groundline_x_vec.append(ground_x_enu)
           single_groundline_y_vec.append(ground_y_enu)
         groundline_x_vec.append(single_groundline_x_vec)
@@ -1603,20 +1921,22 @@ def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = Fal
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
         coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        for j in range(len(ground_lines)):
+        for j in range(groundline_size):
           groundline = ground_lines[j]
           single_groundline_x_vec = []
           single_groundline_y_vec = []
-          for k in range(len(groundline.points_3d)):
-            ground_x_enu = groundline.points_3d[k].x
-            ground_y_enu = groundline.points_3d[k].y
-            local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+          groundline_point_size = groundline.points_2d_size
+          for k in range(groundline_point_size):
+            ground_x_enu = groundline.points_2d[k].x
+            ground_y_enu = groundline.points_2d[k].y
+            # local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            local_x, local_y = coord_tf.local_to_global([ground_x_enu], [ground_y_enu])
             single_groundline_x_vec.append(local_x)
             single_groundline_y_vec.append(local_y)
           groundline_x_vec.append(single_groundline_x_vec)
           groundline_y_vec.append(single_groundline_y_vec)
   except:
-    print('groundline error')
+    print('rdg ground line error')
   return groundline_x_vec, groundline_y_vec
 
 def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
@@ -1671,7 +1991,7 @@ class GroundLinePoint:
       return not (self.point == other.point and self.status == other.status)
 
 class GroundLineDecider:
-  min_pts = 1
+  min_pts = 3
   eps = 0.5
 
   def update_params(min_pts, eps):
@@ -1698,7 +2018,7 @@ class GroundLineDecider:
     result.clear()
     cluster = []
     GroundLineDecider.calc_cluster(point, points, cluster)
-    if len(cluster) + 1 < GroundLineDecider.min_pts:
+    if len(cluster) < GroundLineDecider.min_pts:
       point.status = GroundLinePoint.Status.NOISE
       return
 
@@ -1722,17 +2042,19 @@ class GroundLineDecider:
             result.append(points[cluster_exp[j]].point)
 
 def generate_ground_line_clusters(ground_line_msg, loc_msg = None, g_is_display_enu = False):
-  ground_lines = ground_line_msg.ground_lines
   groundline_point_x_vec = []
   groundline_point_y_vec = []
   groundline_points = []
   try:
+    ground_lines = ground_line_msg.groundline
+    groundline_size = ground_line_msg.groundline_size
     if g_is_display_enu:
-      for j in range(len(ground_lines)):
+      for j in range(groundline_size):
         groundline = ground_lines[j]
-        for k in range(len(groundline.points_3d)):
-          ground_x_enu = groundline.points_3d[k].x
-          ground_y_enu = groundline.points_3d[k].y
+        groundline_point_size = groundline.groundline_point_size
+        for k in range(groundline_point_size):
+          ground_x_enu = groundline.shape[k].x
+          ground_y_enu = groundline.shape[k].y
           groundline_point_x_vec.append(ground_x_enu)
           groundline_point_y_vec.append(ground_y_enu)
           groundline_point = GroundLinePoint([ground_x_enu, ground_y_enu], GroundLinePoint.Status.UNCLASSIFIED)
@@ -1745,11 +2067,12 @@ def generate_ground_line_clusters(ground_line_msg, loc_msg = None, g_is_display_
         cur_pos_yn = loc_msg.position.position_boot.y
         cur_yaw = loc_msg.orientation.euler_boot.yaw
         coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        for j in range(len(ground_lines)):
+        for j in range(groundline_size):
           groundline = ground_lines[j]
-          for k in range(len(groundline.points_3d)):
-            ground_x_enu = groundline.points_3d[k].x
-            ground_y_enu = groundline.points_3d[k].y
+          groundline_point_size = groundline.groundline_point_size
+          for k in range(groundline_point_size):
+            ground_x_enu = groundline.shape[k].x
+            ground_y_enu = groundline.shape[k].y
             local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
             groundline_point_x_vec.append(local_x)
             groundline_point_y_vec.append(local_y)
@@ -1777,7 +2100,7 @@ def generate_ground_line_clusters(ground_line_msg, loc_msg = None, g_is_display_
     groundline_id_vec.append(single_groundline_id_vec)
   return groundline_point_x_vec, groundline_point_y_vec, groundline_x_vec, groundline_y_vec, groundline_id_vec
 
-# ParkingSlotManager & hpp_generate_ehr_parking_map must be consistent with C++ code
+# ParkingSlotManager & hpp_generate_ehr_static_map must be consistent with C++ code
 class ParkingSlotManager:
   kMaxDistanceY = 5
   kMaxDistanceFrontX = 40
@@ -1785,20 +2108,20 @@ class ParkingSlotManager:
 
   def update(parking_info, loc_info):
     points_ = []
-    park_spaces = parking_info.road_tile_info.parking_space
+    park_spaces = parking_info.parking_assist_info.parking_spaces
     for park_space in park_spaces:
       slot_point = []
       if len(park_space.shape) != 4:
         continue
       min_x, min_y, max_x, max_y = float('inf'), float('inf'), float('-inf'), float('-inf')
       for lot_point in park_space.shape:
-        v = np.array([[lot_point.boot.x], [lot_point.boot.y], [lot_point.boot.z]])
+        v = np.array([[lot_point.x], [lot_point.y], [lot_point.z]])
         park_space_point_car = ParkingSlotManager.enu2car_matrix(loc_info, v)
         min_x = min(min_x, park_space_point_car[0])
         min_y = min(min_y, park_space_point_car[1])
         max_x = max(max_x, park_space_point_car[0])
         max_y = max(max_y, park_space_point_car[1])
-        slot_point.append([lot_point.boot.x, lot_point.boot.y])
+        slot_point.append([lot_point.x, lot_point.y])
       if ((min_y > 0 and min_y < ParkingSlotManager.kMaxDistanceY) or (max_y < 0 and max_y > -ParkingSlotManager.kMaxDistanceY) or (min_y <= 0 and max_y >=0)) and min_x < ParkingSlotManager.kMaxDistanceFrontX and max_x > -ParkingSlotManager.kMaxDistanceBackX:
         points_.append(slot_point)
     return points_
@@ -1836,9 +2159,7 @@ class ParkingSlotManager:
                      [(xy + wz), (1.0 - (xx + zz)), (yz - wx)],
                      [(xz - wy), (yz + wx), (1.0 - (xx + yy))]])
 
-def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu = False):
-  parking_slot_points = ParkingSlotManager.update(ehr_parking_map_msg, loc_msg)
-  # road_mark_info = ehr_parking_map_msg.road_tile_info.road_mark
+def hpp_generate_ehr_static_map(ehr_static_map_msg, loc_msg, g_is_display_enu = False):
   # road_mark_boxes_x = []
   # road_mark_boxes_y = []
   parking_space_boxes_x = []
@@ -1846,6 +2167,8 @@ def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu 
   parking_space_boxes_id = []
   kParkingSlotIdOffset = 6000000
   try:
+    parking_slot_points = ParkingSlotManager.update(ehr_static_map_msg, loc_msg)
+    # road_mark_info = ehr_static_map_msg.
     if g_is_display_enu:
       for parking_slot_point in parking_slot_points:
         if len(parking_slot_point) != 4:
@@ -1883,7 +2206,7 @@ def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu 
         parking_space_box_x = []
         parking_space_box_y = []
         for points in parking_slot_point:
-          local_x, local_y = coord_tf.global_to_local([points[0]], [points[1]])
+          local_x, local_y = coord_tf.global_to_local(points[0], points[1])
           parking_space_box_x.append(local_x)
           parking_space_box_y.append(local_y)
         parking_space_boxes_x.append(parking_space_box_x)
@@ -1902,8 +2225,253 @@ def hpp_generate_ehr_parking_map(ehr_parking_map_msg, loc_msg, g_is_display_enu 
         # road_mark_boxes_x.append(road_mark_box_x)
         # road_mark_boxes_y.append(road_mark_box_y)
   except:
-    print('generate_ehr_parking_map error')
+    print('hpp_generate_ehr_static_map error')
   return parking_space_boxes_x, parking_space_boxes_y, parking_space_boxes_id  # , road_mark_boxes_x, road_mark_boxes_y
+
+
+def generate_parking_slot(fus_parking_msg, loc_msg, release_slot_id_list):
+  parking_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  release_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  plan_release_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  select_parking_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  try:
+    select_slot_id = fus_parking_msg.select_slot_id
+    parking_fusion_slot_lists_size = fus_parking_msg.parking_fusion_slot_lists_size
+    for j in range(parking_fusion_slot_lists_size):
+      parking_fusion_slot_lists = fus_parking_msg.parking_fusion_slot_lists[j]
+      id = parking_fusion_slot_lists.id
+      is_release = False
+      for release_id in release_slot_id_list:
+        if id == release_id.id:
+          is_release = True
+          break
+      # uss_id = parking_fusion_slot_lists.uss_id
+      resource_type = parking_fusion_slot_lists.resource_type
+      fusion_source = parking_fusion_slot_lists.fusion_source
+      type = parking_fusion_slot_lists.type
+      allow_parking = parking_fusion_slot_lists.allow_parking
+
+      corner_points = parking_fusion_slot_lists.corner_points
+      pos_x = 0.0
+      pos_y = 0.0
+      parking_slot_x, parking_slot_y = [], []
+      for index, points in enumerate(corner_points):
+        parking_slot_x.append(points.x)
+        parking_slot_y.append(points.y)
+        pos_x += points.x
+        pos_y += points.y
+
+      pos_x /= 4.0
+      pos_y /= 4.0
+
+      pos_x_rel, pos_y_rel = [], []
+      parking_slot_x_rel, parking_slot_y_rel = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        parking_slot_x_rel, parking_slot_y_rel = coord_tf.global_to_local(parking_slot_x, parking_slot_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([pos_x], [pos_y])
+
+      if id == select_slot_id:
+        select_parking_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        select_parking_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        select_parking_slot_info['pos_x_rel'].append(pos_x_rel)
+        select_parking_slot_info['pos_y_rel'].append(pos_y_rel)
+        select_parking_slot_info['parking_slot_x'].append(parking_slot_x)
+        select_parking_slot_info['parking_slot_y'].append(parking_slot_y)
+        select_parking_slot_info['pos_x'].append([pos_x])
+        select_parking_slot_info['pos_y'].append([pos_y])
+        select_parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+      elif is_release:
+        plan_release_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        plan_release_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        plan_release_slot_info['pos_x_rel'].append(pos_x_rel)
+        plan_release_slot_info['pos_y_rel'].append(pos_y_rel)
+        plan_release_slot_info['parking_slot_x'].append(parking_slot_x)
+        plan_release_slot_info['parking_slot_y'].append(parking_slot_y)
+        plan_release_slot_info['pos_x'].append([pos_x])
+        plan_release_slot_info['pos_y'].append([pos_y])
+        plan_release_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+      elif allow_parking == 1:
+        release_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        release_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        release_slot_info['pos_x_rel'].append(pos_x_rel)
+        release_slot_info['pos_y_rel'].append(pos_y_rel)
+        release_slot_info['parking_slot_x'].append(parking_slot_x)
+        release_slot_info['parking_slot_y'].append(parking_slot_y)
+        release_slot_info['pos_x'].append([pos_x])
+        release_slot_info['pos_y'].append([pos_y])
+        release_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+      else:
+        parking_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        parking_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        parking_slot_info['pos_x_rel'].append(pos_x_rel)
+        parking_slot_info['pos_y_rel'].append(pos_y_rel)
+        parking_slot_info['parking_slot_x'].append(parking_slot_x)
+        parking_slot_info['parking_slot_y'].append(parking_slot_y)
+        parking_slot_info['pos_x'].append([pos_x])
+        parking_slot_info['pos_y'].append([pos_y])
+        parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+  except:
+    print("fus_parking_msg error")
+  return parking_slot_info, release_slot_info, plan_release_slot_info, select_parking_slot_info
+
+
+def generate_rdg_parking_slot(rdg_parking_msg, loc_msg):
+  parking_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  try:
+    parking_slots_size = rdg_parking_msg.parking_slots_size
+    for j in range(parking_slots_size):
+      parking_camera_slot = rdg_parking_msg.parking_slots[j]
+      id = parking_camera_slot.id
+      type = parking_camera_slot.type
+      allow_parking = parking_camera_slot.allow_parking
+      corner_points = parking_camera_slot.corner_points
+      pos_x_rel = 0.0
+      pos_y_rel = 0.0
+      parking_slot_x_rel, parking_slot_y_rel = [], []
+      for index, points in enumerate(corner_points):
+        parking_slot_x_rel.append(points.x)
+        parking_slot_y_rel.append(points.y)
+        pos_x_rel += points.x
+        pos_y_rel += points.y
+
+      pos_x_rel /= 4.0
+      pos_y_rel /= 4.0
+
+      pos_x, pos_y= [], []
+      parking_slot_x, parking_slot_y = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        parking_slot_x, parking_slot_y = coord_tf.local_to_global(parking_slot_x_rel, parking_slot_y_rel)
+        pos_x, pos_y = coord_tf.local_to_global([pos_x_rel], [pos_y_rel])
+
+      parking_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+      parking_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+      parking_slot_info['pos_x_rel'].append(pos_x_rel)
+      parking_slot_info['pos_y_rel'].append(pos_y_rel)
+      parking_slot_info['parking_slot_x'].append(parking_slot_x)
+      parking_slot_info['parking_slot_y'].append(parking_slot_y)
+      parking_slot_info['pos_x'].append([pos_x])
+      parking_slot_info['pos_y'].append([pos_y])
+      parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(allow_parking) + ',' + str(type) + ')'])
+  except:
+    print("rdg_parking_msg error")
+  return parking_slot_info
+
+
+def generate_speed_bump(fus_speed_bump_msg, loc_msg):
+  speed_bump_info = {
+    'speed_bump_x_rel': [],
+    'speed_bump_y_rel': [],
+    'speed_bump_x': [],
+    'speed_bump_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'speed_bump_label':[]
+  }
+  try:
+    decelers_size = fus_speed_bump_msg.decelers_size
+    for j in range(decelers_size):
+      decelers = fus_speed_bump_msg.decelers[j]
+      id = decelers.id
+      # resource_type = decelers.resource_type
+      deceler_points = decelers.deceler_points
+      pos_x = 0.0
+      pos_y = 0.0
+      speed_bump_x, speed_bump_y = [], []
+      for index, points in enumerate(deceler_points):
+        speed_bump_x.append(points.x)
+        speed_bump_y.append(points.y)
+        pos_x += points.x
+        pos_y += points.y
+
+      pos_x /= 4.0
+      pos_y /= 4.0
+
+      pos_x_rel, pos_y_rel = [], []
+      speed_bump_x_rel, speed_bump_y_rel = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        speed_bump_x_rel, speed_bump_y_rel = coord_tf.global_to_local(speed_bump_x, speed_bump_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([pos_x], [pos_y])
+
+      speed_bump_info['speed_bump_x_rel'].append(speed_bump_x_rel)
+      speed_bump_info['speed_bump_y_rel'].append(speed_bump_y_rel)
+      speed_bump_info['pos_x_rel'].append(pos_x_rel)
+      speed_bump_info['pos_y_rel'].append(pos_y_rel)
+      speed_bump_info['speed_bump_x'].append(speed_bump_x)
+      speed_bump_info['speed_bump_y'].append(speed_bump_y)
+      speed_bump_info['pos_x'].append(pos_x)
+      speed_bump_info['pos_y'].append(pos_y)
+      speed_bump_info['speed_bump_label'].append(str(id))
+  except:
+    print("fus_speed_bump_msg error")
+  return speed_bump_info
+
 
 def load_lat_common(plan_debug, planning_json):
   vo_lat_motion_plan = plan_debug.vo_lat_motion_plan

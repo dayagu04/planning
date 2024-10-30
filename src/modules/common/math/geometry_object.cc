@@ -33,6 +33,14 @@ GeometryObject::GeometryObject(const Box2d& box, const int index,
       track_id_(track_id),
       type_(Type::BOX) {}
 
+GeometryObject::GeometryObject(const Box2d& box, const int index,
+                               const int32_t track_id,
+                               const Obstacle* obstacle_ptr)
+    : ptr_box_(std::make_shared<Box2d>(box)),
+      index_(index),
+      track_id_(track_id),
+      obstacle_ptr_(obstacle_ptr),
+      type_(Type::BOX){}
 GeometryObject::GeometryObject(const Polygon2d& polygon, const int index,
                                const int32_t track_id)
     : ptr_polygon_(std::make_shared<Polygon2d>(polygon)),
@@ -71,6 +79,7 @@ const Box2d* GeometryObject::box() const { return ptr_box_.get(); }
 const Polygon2d* GeometryObject::polygon() const { return ptr_polygon_.get(); }
 
 const Vec2d* GeometryObject::point() const { return ptr_point_.get(); }
+const Obstacle* GeometryObject::obstacle_ptr() const { return obstacle_ptr_; }
 
 double GeometryObject::max_x() const {
   switch (type_) {

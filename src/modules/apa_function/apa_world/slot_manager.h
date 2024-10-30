@@ -531,6 +531,8 @@ class SlotManager {
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
 
   void CopySlotReleaseInfo();
+
+  const bool IsHPPMAPSlot(const iflyauto::ParkingFusionSlot &fusion_slot);
 };
 }  // namespace apa_planner
 }  // namespace planning

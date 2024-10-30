@@ -43,7 +43,8 @@ static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
 static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
 static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
 static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
-static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
+static constexpr auto TOPIC_SPEED_BUMP = "/iflytek/fusion/speed_bump";
+// static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
 static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 static constexpr auto TOPIC_TRAFFIC_SIGN =
@@ -119,23 +120,15 @@ bool PlanningPlayer::FindSceneType(const std::string& scene_type,
         scene_type_ = "noa";
         auto_timestamp_ = fsm_msg->msg_header.stamp;
         break;
-      } else if ((current_state == iflyauto::FunctionalState_HPP_IN_MEMORY) ||
+      } else if ((current_state ==
+                  iflyauto::FunctionalState_HPP_CRUISE_ROUTING) ||
                  (current_state ==
-                  iflyauto::FunctionalState_HPP_IN_READY_EXISTROUTE) ||
-                 (current_state ==
-                  iflyauto::FunctionalState_HPP_IN_READY_REENTRYROUTE) ||
-                 (current_state ==
-                  iflyauto::FunctionalState_HPP_IN_MEMORY_READY) ||
-                 (current_state ==
-                  iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE) ||
-                 (current_state == iflyauto::FunctionalState_HPP_IN_SECURE)) {
+                  iflyauto::FunctionalState_HPP_CRUISE_SEARCHING)) {
         find_scene_type = true;
         scene_type_ = "hpp";
         auto_timestamp_ = fsm_msg->msg_header.stamp;
         break;
-      } else if ((current_state ==
-                  iflyauto::FunctionalState_PARK_IN_SEARCHING) ||
-                 (current_state == iflyauto::FunctionalState_PARK_GUIDANCE) ||
+      } else if ((current_state == iflyauto::FunctionalState_PARK_GUIDANCE) ||
                  (current_state == iflyauto::FunctionalState_PARK_SUSPEND) ||
                  (current_state == iflyauto::FunctionalState_PARK_COMPLETED) ||
                  (current_state ==
@@ -461,13 +454,18 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
     } else if (msg.getTopic() == TOPIC_PLANNING_HMI) {
       cache_with_ros_msg_time<struct_msgs::PlanningHMIOutputInfoStr>(msg);
       // } else if (msg.getTopic() == TOPIC_HD_MAP) {
-      //   cache_with_ros_msg_and_header_time<proto_msgs::StaticMap>(msg);
+      //   cache_with_ros_msg_time<proto_msgs::StaticMap>(msg);
+    } else if (msg.getTopic() == TOPIC_HD_MAP) {
+      cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_SD_MAP) {
       cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
-    } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
-      cache_with_ros_msg_and_header_time<struct_msgs::ParkingInfo>(msg);
+      // } else if (msg.getTopic() == TOPIC_EHR_PARKING_MAP) {
+      //   cache_with_ros_msg_time<sensor_interface::DebugInfo>(msg);
     } else if (msg.getTopic() == TOPIC_GROUND_LINE) {
-      cache_with_ros_msg_and_header_time<struct_msgs::GroundLinePerceptionInfo>(
+      cache_with_ros_msg_and_header_time<struct_msgs::FusionGroundLineInfo>(
+          msg);
+    } else if (msg.getTopic() == TOPIC_SPEED_BUMP) {
+      cache_with_ros_msg_and_header_time<struct_msgs::FusionDecelerInfo>(
           msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
@@ -569,17 +567,20 @@ void PlanningPlayer::StoreRosBag() {
         write_ros_msg<struct_msgs::FuncStateMachine::Ptr>(
             it_msg.second, TOPIC_FUNC_STATE_MACHINE, bag);
       } else if (it_msg.first == TOPIC_HD_MAP) {
-        write_ros_msg<proto_msgs::StaticMap::Ptr>(it_msg.second, TOPIC_HD_MAP,
-                                                  bag);
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
+                                                        TOPIC_HD_MAP, bag);
       } else if (it_msg.first == TOPIC_SD_MAP) {
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
                                                         TOPIC_SD_MAP, bag);
-      } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
-        write_ros_msg<struct_msgs::ParkingInfo::Ptr>(
-            it_msg.second, TOPIC_EHR_PARKING_MAP, bag);
+      // } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
+      //   write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
+      //                                                   TOPIC_EHR_PARKING_MAP, bag);
       } else if (it_msg.first == TOPIC_GROUND_LINE) {
-        write_ros_msg<struct_msgs::GroundLinePerceptionInfo::Ptr>(
+        write_ros_msg<struct_msgs::FusionGroundLineInfo::Ptr>(
             it_msg.second, TOPIC_GROUND_LINE, bag);
+      } else if (it_msg.first == TOPIC_SPEED_BUMP) {
+        write_ros_msg<struct_msgs::FusionDecelerInfo::Ptr>(
+            it_msg.second, TOPIC_SPEED_BUMP, bag);
       } else if (it_msg.first == TOPIC_TRAFFIC_SIGN) {
         write_ros_msg<struct_msgs::CameraPerceptionTsrInfo::Ptr>(
             it_msg.second, TOPIC_TRAFFIC_SIGN, bag);
@@ -827,26 +828,25 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing /iflytek/uss/uss_perception_info" << std::endl;
   }
 
-  // 不再使用，注释掉
-  // 由于static map的频率比planning低，为了避免重复feed同一帧static
-  // map导致对map更新频率的误判而做对应判断
-  // if (input_time_list_map_ != input_time_list.map()) {
-  //   input_time_list_map_ = input_time_list.map();
-  //   auto hd_map_ros_msg =
-  //   find_ros_msg_with_header_time<proto_msgs::StaticMap>(
-  //       TOPIC_HD_MAP, input_time_list.map());
-  //   if (hd_map_ros_msg) {
-  //     std::shared_ptr<Map::StaticMap> hd_map_msg;
-  //     StaticMapToProto(*hd_map_msg, *hd_map_ros_msg);
-  //     planning_adapter_->FeedMap(hd_map_msg);
-  //   } else {
-  //     std::cerr << "frame_num " << frame_num_
-  //               << " missing /iflytek/ehr/static_map" << std::endl;
-  //   }
-  // }
-
   if (input_time_list_map_ != input_time_list.map()) {
     input_time_list_map_ = input_time_list.map();
+    for (auto it = msg_cache_[TOPIC_HD_MAP].begin();
+         it != msg_cache_[TOPIC_HD_MAP].end(); it++) {
+      auto static_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string static_map_str(static_map_msg_i->debug_info.begin(),
+                                 static_map_msg_i->debug_info.end());
+      auto static_map = std::make_shared<Map::StaticMap>();
+      static_map->ParseFromString(static_map_str);
+      if (static_map->header().timestamp() == input_time_list_map_) {
+        planning_adapter_->FeedMap(static_map);
+        break;
+      }
+    }
+  }
+
+  if (input_time_list_sd_map_ != input_time_list.sd_map()) {
+    input_time_list_sd_map_ = input_time_list.sd_map();
     for (auto it = msg_cache_[TOPIC_SD_MAP].begin();
          it != msg_cache_[TOPIC_SD_MAP].end(); it++) {
       auto sd_map_msg_i =
@@ -861,38 +861,53 @@ void PlanningPlayer::PlayOneFrame(
       }
     }
   }
-  // TODO: for hpp, need FeedParkingMap() ready
-  // TODO(zkxie2): 等interface就位
-  // auto ehr_parking_map_ros_msg =
-  //     find_ros_msg_with_header_time<struct_msgs::ParkingInfo>(
-  //         TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
-  // if (ehr_parking_map_ros_msg) {
-  //   iflyauto::ParkingInfo ehr_parking_map_msg{};
-  //   convert(ehr_parking_map_msg, *ehr_parking_map_ros_msg,
-  //   ConvertTypeInfo::TO_STRUCT);
-  //   planning_adapter_->FeedParkingMap(ehr_parking_map_msg);
-  // } else {
-  //   // std::cerr << "frame_num " << frame_num_
-  //   //           << " missing /iflytek/ehr/parking_map" << std::endl;
+
+  // if (input_time_list_ehr_parking_map_ != input_time_list.ehr_parking_map()) {
+  //   input_time_list_ehr_parking_map_ = input_time_list.ehr_parking_map();
+  //   for (auto it = msg_cache_[TOPIC_EHR_PARKING_MAP].begin();
+  //        it != msg_cache_[TOPIC_EHR_PARKING_MAP].end(); it++) {
+  //     auto ehr_parking_map_msg_i =
+  //         boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+  //     std::string ehr_parking_map_str(ehr_parking_map_msg_i->debug_info.begin(),
+  //                                     ehr_parking_map_msg_i->debug_info.end());
+  //     auto ehr_parking_map = std::make_shared<IFLYParkingMap::ParkingInfo>();
+  //     ehr_parking_map->ParseFromString(ehr_parking_map_str);
+  //     if (ehr_parking_map->header().timestamp() ==
+  //         input_time_list_ehr_parking_map_) {
+  //       planning_adapter_->FeedParkingMap(*ehr_parking_map);
+  //       break;
+  //     }
+  //   }
   // }
 
-  // auto ground_line_ros_msg =
-  //     find_ros_msg_with_header_time<struct_msgs::GroundLinePerceptionInfo>(
-  //         TOPIC_GROUND_LINE, input_time_list.ground_line());
-  // if (ground_line_ros_msg) {
-  //   iflyauto::GroundLinePerceptionInfo ground_line_msg{};
-  //   convert(ground_line_msg, *ground_line_ros_msg,
-  //   ConvertTypeInfo::TO_STRUCT);
-  //   planning_adapter_->FeedGroundLinePerception(ground_line_msg);
-  // } else {
-  //   // std::cerr << "frame_num " << frame_num_
-  //   //           << " missing /iflytek/fusion/ground_line" << std::endl;
-  // }
+  auto ground_line_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs::FusionGroundLineInfo>(
+          TOPIC_GROUND_LINE, input_time_list.ground_line());
+  if (ground_line_ros_msg) {
+    iflyauto::FusionGroundLineInfo ground_line_msg{};
+    convert(ground_line_msg, *ground_line_ros_msg, ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedGroundLine(ground_line_msg);
+  } else {
+    // std::cerr << "frame_num " << frame_num_
+    //           << " missing /iflytek/fusion/ground_line" << std::endl;
+  }
+
+  auto speed_bump_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs::FusionDecelerInfo>(
+          TOPIC_SPEED_BUMP, input_time_list.fusion_speed_bump());
+  if (speed_bump_ros_msg) {
+    iflyauto::FusionDecelerInfo speed_bump_msg{};
+    convert(speed_bump_msg, *speed_bump_ros_msg,
+    ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->FeedFusionSpeedBump(speed_bump_msg);
+  } else {
+    // std::cerr << "frame_num " << frame_num_
+    //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
+  }
 
   if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
     bool find_function_state_machine = false;
     struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
-    uint8_t functional_state = iflyauto::FunctionalState_MANUAL;
     if (input_time_list.function_state_machine()) {
       auto cached_func_state_machine_ros_msg =
           find_ros_msg_with_header_time<struct_msgs::FuncStateMachine>(
@@ -906,6 +921,7 @@ void PlanningPlayer::PlayOneFrame(
                   << " missing /iflytek/fsm/soc_state" << std::endl;
       }
     }
+    uint8_t functional_state = func_state_machine_ros_msg.current_state;
     if (frame_num >= frame_num_before_enter_auto_) {  // enter auto after 1.5s
       if (scene_type_ == "acc") {
         functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
@@ -958,7 +974,7 @@ void PlanningPlayer::PlayOneFrame(
           functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
         }
       } else if (scene_type_ == "hpp") {
-        functional_state = iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE;
+        functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
       }
     }
     func_state_machine_ros_msg.current_state = functional_state;
@@ -1906,44 +1922,70 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
                 << " missing /iflytek/uss/uss_perception_info" << std::endl;
     }
 
-    // auto hd_map_ros_msg =
-    // find_ros_msg_with_header_time_upper_bound<proto_msgs::StaticMap>(
-    //     TOPIC_HD_MAP, start_time);
-    // if (hd_map_ros_msg) {
-    //   std::shared_ptr<Map::StaticMap> hd_map_msg;
-    //   StaticMapToProto(*hd_map_msg, *hd_map_ros_msg);
-    //   planning_adapter_->FeedMap(hd_map_msg);
-    // } else {
-    //   std::cerr << "frame_num " << frame_num_
-    //             << " missing /iflytek/ehr/static_map" << std::endl;
+    // for (auto it = msg_cache_[TOPIC_EHR_PARKING_MAP].begin();
+    //      it != msg_cache_[TOPIC_EHR_PARKING_MAP].end(); it++) {
+    //   auto ehr_parking_map_msg_i =
+    //       boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+    //   std::string ehr_parking_map_str(ehr_parking_map_msg_i->debug_info.begin(),
+    //                                   ehr_parking_map_msg_i->debug_info.end());
+    //   auto ehr_parking_map = std::make_shared<IFLYParkingMap::ParkingInfo>();
+    //   ehr_parking_map->ParseFromString(ehr_parking_map_str);
+    //   if (ehr_parking_map->header().timestamp() >= start_time) {
+    //     planning_adapter_->FeedParkingMap(*ehr_parking_map);
+    //     break;
+    //   }
     // }
 
-    // TODO: for hpp, need FeedParkingMap() ready
-    // auto ehr_parking_map_ros_msg =
-    //     find_ros_msg_with_header_time_upper_bound<struct_msgs::ParkingInfo>(
-    //         TOPIC_EHR_PARKING_MAP, input_time_list.ehr_parking_map());
-    // if (ehr_parking_map_ros_msg) {
-    //   iflyauto::ParkingInfo ehr_parking_map_msg{};
-    //   convert(ehr_parking_map_msg, *ehr_parking_map_ros_msg,
-    //   ConvertTypeInfo::TO_STRUCT);
-    //   planning_adapter_->FeedParkingMap(ehr_parking_map_msg);
-    // } else {
-    //   // std::cerr << "frame_num " << frame_num_
-    //   //           << " missing /iflytek/ehr/parking_map" << std::endl;
-    // }
+    for (auto it = msg_cache_[TOPIC_SD_MAP].begin();
+         it != msg_cache_[TOPIC_SD_MAP].end(); it++) {
+      auto sd_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string sd_map_str(sd_map_msg_i->debug_info.begin(),
+                             sd_map_msg_i->debug_info.end());
+      auto sd_map = std::make_shared<SdMapSwtx::SdMap>();
+      sd_map->ParseFromString(sd_map_str);
+      if (sd_map->header().timestamp() >= start_time) {
+        planning_adapter_->FeedSdMap(sd_map);
+        break;
+      }
+    }
 
-    // auto ground_line_ros_msg = find_ros_msg_with_header_time_upper_bound<
-    //     struct_msgs::GroundLinePerceptionInfo>(TOPIC_GROUND_LINE,
-    //     start_time);
-    // if (ground_line_ros_msg) {
-    //   iflyauto::GroundLinePerceptionInfo ground_line_msg{};
-    //   convert(ground_line_msg, *ground_line_ros_msg,
-    //           ConvertTypeInfo::TO_STRUCT);
-    //   planning_adapter_->FeedGroundLinePerception(ground_line_msg);
-    // } else {
-    //   // std::cerr << "frame_num " << frame_num_
-    //   //           << " missing /iflytek/fusion/ground_line" << std::endl;
-    // }
+    for (auto it = msg_cache_[TOPIC_HD_MAP].begin();
+         it != msg_cache_[TOPIC_HD_MAP].end(); it++) {
+      auto static_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string static_map_str(static_map_msg_i->debug_info.begin(),
+                                 static_map_msg_i->debug_info.end());
+      auto static_map = std::make_shared<Map::StaticMap>();
+      static_map->ParseFromString(static_map_str);
+      if (static_map->header().timestamp() >= start_time) {
+        planning_adapter_->FeedMap(static_map);
+        break;
+      }
+    }
+
+    auto ground_line_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs::FusionGroundLineInfo>(TOPIC_GROUND_LINE, start_time);
+    if (ground_line_ros_msg) {
+      iflyauto::FusionGroundLineInfo ground_line_msg{};
+      convert(ground_line_msg, *ground_line_ros_msg,
+              ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->FeedGroundLine(ground_line_msg);
+    } else {
+      // std::cerr << "frame_num " << frame_num_
+      //           << " missing /iflytek/fusion/ground_line" << std::endl;
+    }
+
+    auto speed_bump_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs::FusionDecelerInfo>(TOPIC_SPEED_BUMP, start_time);
+    if (speed_bump_ros_msg) {
+      iflyauto::FusionDecelerInfo speed_bump_msg{};
+      convert(speed_bump_msg, *speed_bump_ros_msg, ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->FeedFusionSpeedBump(speed_bump_msg);
+    } else {
+      // std::cerr << "frame_num " << frame_num_
+      //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
+    }
 
     if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
       bool find_function_state_machine = false;
@@ -2015,7 +2057,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
             functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
           }
         } else if (scene_type_ == "hpp") {
-          functional_state = iflyauto::FunctionalState_HPP_IN_MEMORY_CRUISE;
+          functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
         }
       }
 

@@ -45,7 +45,11 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   // Step 3) update
   if (ok) {
     auto current_time = IflyTime::Now_ms();
-    update_refpath_points(raw_reference_path_points);
+    if (session_->is_hpp_scene()) {
+      update_refpath_points_in_hpp(ego_projection_length_in_reference_path_, raw_reference_path_points);
+    } else {
+      update_refpath_points(raw_reference_path_points);
+    }
     valid_ = refined_ref_path_points_.size() >= 3;
     if (!valid_) {
       return;
@@ -143,12 +147,18 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     //     refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
     // ref_path_pt.distance_to_right_lane_border = std::fmin(
     //     refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_left_road_border = std::fmin(
-        refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_right_road_border = std::fmin(
-        refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_left_lane_border = width * 0.5;
-    ref_path_pt.distance_to_right_lane_border = width * 0.5;
+
+    // ref_path_pt.distance_to_left_road_border = std::fmin(
+    //     refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_right_road_border = std::fmin(
+    //     refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_left_lane_border = width * 0.5;
+    // ref_path_pt.distance_to_right_lane_border = width * 0.5;
+    // [Hack(bsniu)]: use default distance to road border & lane border in hpp
+    ref_path_pt.distance_to_left_road_border = 5.0;
+    ref_path_pt.distance_to_right_road_border = 5.0;
+    ref_path_pt.distance_to_left_lane_border = 5.0;
+    ref_path_pt.distance_to_right_lane_border = 5.0;
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
@@ -160,17 +170,17 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     ref_path_pt.is_in_intersection = refline_pt.is_in_intersection;
 
     // check direction
-    if (not ref_path_points.empty()) {
-      const auto &pre_pt = ref_path_points.back();
-      Vec2d delta{ref_path_pt.path_point.x() - pre_pt.path_point.x(),
-                  ref_path_pt.path_point.y() - pre_pt.path_point.y()};
-      Vec2d cur_direction =
-          Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta());
-      if (cur_direction.InnerProd(delta) < 0) {
+    // if (not ref_path_points.empty()) {
+    //   const auto &pre_pt = ref_path_points.back();
+    //   Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
+    //               ref_path_pt.path_point.y - pre_pt.path_point.y};
+    //   Vec2d cur_direction =
+    //       Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
+    //   if (cur_direction.InnerProd(delta) < 0) {
         // temporaly skip direction check since input data is bad @clren
         // continue;
-      }
-    }
+    //   }
+    // }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
   // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
@@ -183,22 +193,28 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
         pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
   }
   origin_reference_path_length_ = origin_reference_path_total_length;
-  const bool is_highway =
-      session_->get_scene_type() == planning::common::SceneType::HIGHWAY;
-  if (ref_path_points.size() >= 2 && is_highway) {
+  // ego_projection_length_in_reference_path_ = CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+  // const bool is_highway =
+  //     session_->get_scene_type() == planning::common::SceneType::HIGHWAY;
+  // if (ref_path_points.size() >= 2 && is_highway) {
+  if (ref_path_points.size() >= 2) {
     const std::shared_ptr<EgoStateManager> ego_state_mgr =
         session_->mutable_environmental_model()->get_ego_state_manager();
     const double ego_v = ego_state_mgr->ego_v();
     const double cruise_v = ego_state_mgr->ego_v_cruise();
-    const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
-    const double extend_buff = 5;
-    const double ego_projection_length_in_reference_path =
+    double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
+    double extend_buff = 5;
+    ego_projection_length_in_reference_path_ =
         CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
     // if need to extend reference path length
-    if (preview_dis + ego_projection_length_in_reference_path + extend_buff >
+    if (session_->is_hpp_scene()) {
+      preview_dis = 0.0;
+      extend_buff = 0.0;
+    }
+    if (ego_projection_length_in_reference_path_ + preview_dis + extend_buff >
         origin_reference_path_total_length) {
       const double extend_length =
-          preview_dis + ego_projection_length_in_reference_path -
+          ego_projection_length_in_reference_path_ + preview_dis -
           origin_reference_path_total_length + extend_buff;
       ReferencePathPoint extend_point;
       const int point_nums = ref_path_points.size();

@@ -117,6 +117,8 @@ class PlanningPlayer {
   ros::Time planning_dubug_info_msg_time_s_;
   uint64_t planning_dubug_info_header_time_us_ = 0;
   uint64_t input_time_list_map_ = 0;
+  uint64_t input_time_list_sd_map_ = 0;
+  // uint64_t input_time_list_ehr_parking_map_ = 0;
   uint64_t input_time_list_road_fusion_ = 0;
   uint64_t planning_start_timestamp_ = 0;
   uint64_t next_loc_header_time_us_ = 0;
@@ -319,8 +321,6 @@ void PlanningPlayer::write_ros_msg(
     auto msg = boost::any_cast<T>(i.second);
     if (early_stop_time_ == ros::TIME_MIN || i.first <= early_stop_time_) {
       bag.write(topic_name, i.first, msg);
-    } else {
-      continue;
     }
   }
 }
@@ -334,7 +334,6 @@ typename T::Ptr PlanningPlayer::find_ros_msg_with_header_time(
     if (it_time != it_topic->second.end()) {
       // typename T::Ptr msg = it_time->second->instantiate<T>();
       typename T::Ptr msg = boost::any_cast<typename T::Ptr>(it_time->second);
-
       return msg;
     }
   }
