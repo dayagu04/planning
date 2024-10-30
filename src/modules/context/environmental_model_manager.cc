@@ -553,6 +553,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   } else {
     vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
         function_state_machine_info.pilot_req.acc_curise_real_spd);
+    vehicle_status.mutable_following_distance_level_to_big_vehicle()
+        ->set_value_num(
+            function_state_machine_info.pilot_req.acc_curise_time_interval);
   }
 
   if (vehicle_service_output_info.yaw_rate_available) {

@@ -123,9 +123,19 @@ class StGraphGenerator {
   double CalcDesiredDistance(
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, const std::string &lc_request);
+  double CalcDesiredDistanceToBigVehicle(
+      const planning::common::TrackedObjectInfo &lead_obstacle,
+      const double v_ego, const std::string &lc_request,
+      size_t following_distance_level);
   double GetRSSDistance(const double obstacle_velocity, double ego_velocity);
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string &lc_request,
+                               const bool is_accident_car = false,
+                               const bool is_temp_lead = false,
+                               const bool is_lead = false);
+  double GetCalibratedDistance(const double v_lead, const double v_ego,
+                               const std::string &lc_request,
+                               size_t following_distance_level,
                                const bool is_accident_car = false,
                                const bool is_temp_lead = false,
                                const bool is_lead = false);
@@ -329,6 +339,10 @@ class StGraphGenerator {
   const std::vector<double> _AY_MAX_CURV_V{1.6, 0.9, 0.5, 0.4};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
+  // headway params
+  const std::vector<double> AGGRESSIVE_HEADWAY_TABLE{1.2, 1.4, 1.6, 1.8, 2.0};
+  const std::vector<double> NORMAL_HEADWAY_TABLE{1.2, 1.5, 2.0, 2.5, 3.0};
+  const std::vector<double> CONSERVATIVE_HEADWAY_TABLE{1.2, 1.8, 2.5, 3.0, 4.0};
   // linear slope
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};

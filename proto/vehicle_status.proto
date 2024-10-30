@@ -108,6 +108,11 @@ message CruiseVelocity {
   optional double value_mps = 2;
 }
 
+message FollowingDistanceLevelToBigVehicle {
+  optional uint64 timestamp_us = 1;
+  optional float value_num = 2;
+}
+
 message DoorStatusData {
   optional uint64 timestamp_us = 1;
   repeated DoorType opened_doors = 2;
@@ -331,4 +336,5 @@ message VehicleStatus {
   optional int32 start_stop_info = 17;
   optional DriverHandState driver_hand_state = 18;
   optional double navi_time_distance = 19;
+  optional FollowingDistanceLevelToBigVehicle following_distance_level_to_big_vehicle = 20;
 }

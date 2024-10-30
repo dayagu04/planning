@@ -168,6 +168,8 @@
   "enable_none_smooth": true,
   "obstacle_detect_distance_upper": 220,
   "obstacle_detect_distance_lower": -50,
+  "following_distance_level": 5,
+  "hack_lead_one_to_big_vehi" : false,
   "general_lateral_decider": {
     "lateral_ref_traj_type":false,
     "min_v_cruise": 4.0,
