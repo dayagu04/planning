@@ -36,8 +36,8 @@ static const double kMaxParkOutRootHeading = 25.0;
 static const double kLonBufferTrippleStep = 0.2;
 // static const double kLatBufferTrippleStep = 0.05;
 static const double kColBufferInSlot = 0.2;
-static const double kColBufferOutSlot = 0.46;
-static const double kColLargeLatBufferOutSlot = 0.46;
+static const double kColBufferOutSlot = 0.4;
+static const double kColLargeLatBufferOutSlot = 0.35;
 static const double kColSmallLatBufferOutSlot = 0.1;
 static const double kSmallColBufferInSlot = 0.1;
 
@@ -1305,6 +1305,7 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
 
   std::vector<double> min_buffer_vec = {kColLargeLatBufferOutSlot,
                                         kColLargeLatBufferOutSlot};
+
   for (size_t i = 0; i < min_real_dist_vec.size(); i++) {
     if (min_real_dist_vec[i] < kColLargeLatBufferOutSlot) {
       min_buffer_vec[i] =
@@ -1315,12 +1316,6 @@ const std::vector<double> ParallelPathPlanner::GetMinDistOfEgoToObs() {
           mathlib::Clamp(min_real_dist_vec[i] - 0.5, kColSmallLatBufferOutSlot,
                          kColLargeLatBufferOutSlot);
     }
-  }
-
-  DEBUG_PRINT("input_.tlane.channel_y = " << input_.tlane.channel_y);
-  if (std::fabs(input_.tlane.channel_y < 4.3 + 1.2)) {
-    min_real_dist_vec[0] = kColSmallLatBufferOutSlot;
-    min_real_dist_vec[1] = kColSmallLatBufferOutSlot;
   }
 
   DEBUG_PRINT("left min_real_dist = " << min_real_dist_vec[0]);
@@ -1395,11 +1390,12 @@ const bool ParallelPathPlanner::GenParallelPreparingLineVec(
   const double tlane_outer_y =
       std::fabs(input_.tlane.obs_pt_inside.y()) > half_slot_width
           ? input_.tlane.obs_pt_inside.y()
-          : half_slot_width * calc_params_.slot_side_sgn;
+          : (half_slot_width + std::fabs(input_.tlane.obs_pt_inside.y())) *
+                0.5 * calc_params_.slot_side_sgn;
 
   const double rac_tlane_bound =
-      tlane_outer_y +
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.4);
+      tlane_outer_y + calc_params_.slot_side_sgn *
+                          (0.5 * apa_param.GetParam().car_width + 0.35);
 
   const double rac_channel_bound =
       input_.tlane.channel_y -
@@ -1412,7 +1408,7 @@ const bool ParallelPathPlanner::GenParallelPreparingLineVec(
 
   const double y_bound = std::fabs(rac_channel_bound - rac_tlane_bound);
 
-  double dy = 0.3;
+  double dy = 0.2;
   int nums = static_cast<int>(y_bound / dy);
   if (nums < 5) {
     nums = 5;
@@ -1420,12 +1416,7 @@ const bool ParallelPathPlanner::GenParallelPreparingLineVec(
   dy = y_bound / nums;
 
   const double start_y = rac_tlane_bound + 0.2 * calc_params_.slot_side_sgn;
-  double end_y = (1.2 + 0.5 * apa_param.GetParam().car_width + 1.8) *
-                 calc_params_.slot_side_sgn;
-
-  if (std::fabs(end_y) > rac_channel_bound) {
-    end_y = rac_channel_bound;
-  }
+  double end_y = rac_channel_bound;
 
   pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, 0.0);
   prepare_pose.pos.y() = rac_tlane_bound;
