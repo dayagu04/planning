@@ -23,6 +23,7 @@ class PerpendicularParkInPlanner : public PerpendicularParkPlanner {
  private:
   // virtual func
   virtual const uint8_t PathPlanOnce() override;
+  const uint8_t NewPathPlanOnce();
   virtual const bool UpdateEgoSlotInfo() override;
   virtual void GenTlane() override;
   virtual void GenObstacles() override;

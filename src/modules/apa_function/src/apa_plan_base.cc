@@ -195,12 +195,12 @@ const bool ApaPlannerBase::CheckStuckFailed() {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
 }
 
-void ApaPlannerBase::UpdateRemainDist() {
+void ApaPlannerBase::UpdateRemainDist(const double uss_safe_dist) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
 
   // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss();
+  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist);
 
   return;
 }
@@ -234,39 +234,29 @@ const double ApaPlannerBase::CalRemainDistFromPath() {
   return remain_dist;
 }
 
-const double ApaPlannerBase::CalRemainDistFromUss() {
+const double ApaPlannerBase::CalRemainDistFromUss(const double safe_dist) {
   double remain_dist = 5.01;
 
-  // if (frame_.is_replan_first) {
-  //   return remain_dist;
-  // }
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
   uss_obstacle_avoider_ptr->Update(&planning_output_,
                                    apa_world_ptr_->GetApaDataPtr());
 
-  const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+  remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-                safe_uss_remain_dist;
+  const double obs_pt_remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
+      safe_dist;
 
   ILOG_INFO << "origin_uss remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
             << "  uss remain dist = " << remain_dist;
 
-  const double obs_pt_remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
-      safe_uss_remain_dist;
-
   ILOG_INFO << "origin_obs_pt remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
             << "  obs_pt remain dist = " << obs_pt_remain_dist;
-
-  // remain_dist = 5.01;
 
   if (apa_param.GetParam().enable_corner_uss_process) {
     return remain_dist;

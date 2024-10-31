@@ -81,6 +81,9 @@ class ApaPathPlanner {
     bool is_left_empty = false;
     bool is_right_empty = false;
 
+    pnc::geometry_lib::GlobalToLocalTf global2slot_tf;
+    pnc::geometry_lib::LocalToGlobalTf slot2global_tf;
+
     uint8_t path_planner_state = 0;
 
     void Set(const Tlane &tlane_in,

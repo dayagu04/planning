@@ -28,8 +28,15 @@ void DubinsLibrary::LineArcCalculate(DubinsLibrary::GeometryResult& result,
   const auto& p1 = input_.p1;
   const auto& p2 = input_.p2;
 
-  const auto t1 = Eigen::Vector2d(cos(input_.heading1), sin(input_.heading1));
-  const auto t2 = Eigen::Vector2d(cos(input_.heading2), sin(input_.heading2));
+  const Eigen::Vector2d t1 =
+      input_.heading_vec_flag
+          ? input_.heading1_vec
+          : Eigen::Vector2d(cos(input_.heading1), sin(input_.heading1));
+
+  const Eigen::Vector2d t2 =
+      input_.heading_vec_flag
+          ? input_.heading2_vec
+          : Eigen::Vector2d(cos(input_.heading2), sin(input_.heading2));
 
   // 1: start
   // 2: target
@@ -137,7 +144,10 @@ void DubinsLibrary::DubinsCalculate(DubinsLibrary::GeometryResult& result,
 
   // calculate c1 center: start pose
   Circle c1;
-  Eigen::Vector2d t1(cos(input_.heading1), sin(input_.heading1));
+  const Eigen::Vector2d t1 =
+      input_.heading_vec_flag
+          ? input_.heading1_vec
+          : Eigen::Vector2d(cos(input_.heading1), sin(input_.heading1));
   Eigen::Vector2d n1(-lambda1 * t1.y(), lambda1 * t1.x());
 
   c1.center = input_.p1 + input_.radius * n1;
@@ -145,7 +155,10 @@ void DubinsLibrary::DubinsCalculate(DubinsLibrary::GeometryResult& result,
 
   // calculate c2 center: target pose
   Circle c2;
-  Eigen::Vector2d t2(cos(input_.heading2), sin(input_.heading2));
+  const Eigen::Vector2d t2 =
+      input_.heading_vec_flag
+          ? input_.heading2_vec
+          : Eigen::Vector2d(cos(input_.heading2), sin(input_.heading2));
   Eigen::Vector2d n2(-lambda2 * t2.y(), lambda2 * t2.x());
 
   c2.center = input_.p2 + input_.radius * n2;
@@ -1074,6 +1087,10 @@ const std::vector<DubinsLibrary::Output> DubinsLibrary::Update() {
   std::vector<Output> output_vec;
   output_vec.reserve(14);
 
+  input_.heading1_vec = pnc::geometry_lib::GenHeadingVec(input_.heading1);
+  input_.heading2_vec = pnc::geometry_lib::GenHeadingVec(input_.heading2);
+  input_.heading_vec_flag = true;
+
   // try line method
   if (Solve()) {
     output_vec.emplace_back(output_);
@@ -1096,6 +1113,8 @@ const std::vector<DubinsLibrary::Output> DubinsLibrary::Update() {
   }
 
   dist_tol = dist;
+
+  input_.heading_vec_flag = false;
 
   return output_vec;
 }

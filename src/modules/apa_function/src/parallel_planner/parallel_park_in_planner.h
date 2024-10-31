@@ -39,7 +39,6 @@ class ParallelParkInPlanner : public ApaPlannerBase {
   virtual void Log() const override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
-  virtual const double CalRemainDistFromUss() override;
 
   void UpdateTlaneOnceInSlot();
 

@@ -142,6 +142,12 @@ struct LineSegment {
     length = 0.0;
     is_ignored = false;
   }
+
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO_IF(enable_log)
+        << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
+        << "  headingA = " << heading * kRad2Deg << "  length = " << length;
+  }
 };
 
 struct Circle {
@@ -189,14 +195,15 @@ struct Arc {
     circle_info.center = center;
   }
 
-  void PrintInfo() {
-    ILOG_INFO << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
-              << "  headingA = " << headingA * kRad2Deg
-              << "  headingB = " << headingB * kRad2Deg
-              << "  length = " << length << "  center = " << circle_info.center
-              << "  radius = " << circle_info.radius
-              << "  is_anti_clockwise = " << is_anti_clockwise
-              << "  is_ignored = " << is_ignored;
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO_IF(enable_log)
+        << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
+        << "  headingA = " << headingA * kRad2Deg
+        << "  headingB = " << headingB * kRad2Deg << "  length = " << length
+        << "  center = " << circle_info.center
+        << "  radius = " << circle_info.radius
+        << "  is_anti_clockwise = " << is_anti_clockwise
+        << "  is_ignored = " << is_ignored;
   }
 };
 
@@ -777,6 +784,7 @@ const bool IsOppositeSteer(const uint8_t steer1, const uint8_t steer2);
 
 struct GeometryPath {
   uint8_t gear_change_count = 0;
+  uint8_t steer_change_count = 0;
   double total_length = 0.0;
   double cur_gear_length = 0.0;
   uint8_t path_count = 0;
@@ -838,6 +846,28 @@ struct GeometryPath {
         if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
           gear_change_count++;
         }
+
+        // 直线到转弯
+        if (steer_cmd_vec[i] == SEG_STEER_STRAIGHT &&
+            (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
+             steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
+          steer_change_count++;
+        }
+
+        // 左转到右转 或 右转到左转
+        if ((steer_cmd_vec[i] == SEG_STEER_LEFT &&
+             steer_cmd_vec[i + 1] == SEG_STEER_RIGHT) ||
+            (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
+             steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
+          steer_change_count += 2;
+        }
+
+        // 转弯到直线  后续看是否可以不考虑 因为直线更容易跟踪
+        if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
+             steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
+            steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
+          steer_change_count++;
+        }
       }
     }
   }
@@ -897,41 +927,49 @@ struct GeometryPath {
     }
   }
 
-  void PrintInfo() const {
+  void PrintInfo(const bool enable_log = true) const {
     for (size_t i = 0; i < path_segment_vec.size(); i++) {
       const auto &current_seg = path_segment_vec[i];
-      ILOG_INFO << "col flag = " << current_seg.collision_flag;
+      ILOG_INFO_IF(enable_log) << "col flag = " << current_seg.collision_flag;
       if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
         const auto &line_seg = current_seg.line_seg;
 
-        ILOG_INFO << "Segment [" << i << "] "
-                  << " LINE_SEGMENT "
-                  << " length= " << line_seg.length;
+        ILOG_INFO_IF(enable_log) << "Segment [" << i << "] "
+                                 << " LINE_SEGMENT "
+                                 << " length= " << line_seg.length;
 
-        ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
+        ILOG_INFO_IF(enable_log)
+            << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-        ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
+        ILOG_INFO_IF(enable_log)
+            << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-        ILOG_INFO << "start_pos: " << line_seg.pA.transpose();
-        ILOG_INFO << "start_heading deg: " << line_seg.heading * kRad2Deg;
-        ILOG_INFO << "end_pos: " << line_seg.pB.transpose();
+        ILOG_INFO_IF(enable_log) << "start_pos: " << line_seg.pA.transpose();
+        ILOG_INFO_IF(enable_log)
+            << "start_heading deg: " << line_seg.heading * kRad2Deg;
+        ILOG_INFO_IF(enable_log) << "end_pos: " << line_seg.pB.transpose();
       } else {
         const auto &arc_seg = current_seg.arc_seg;
 
-        ILOG_INFO << "Segment [" << i << "] "
-                  << "ARC_SEGMENT "
-                  << "length= " << arc_seg.length;
+        ILOG_INFO_IF(enable_log) << "Segment [" << i << "] "
+                                 << "ARC_SEGMENT "
+                                 << "length= " << arc_seg.length;
 
-        ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
+        ILOG_INFO_IF(enable_log)
+            << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-        ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
+        ILOG_INFO_IF(enable_log)
+            << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-        ILOG_INFO << "start_pos: " << arc_seg.pA.transpose();
-        ILOG_INFO << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
-        ILOG_INFO << "end_pos: " << arc_seg.pB.transpose();
-        ILOG_INFO << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
-        ILOG_INFO << "center: " << arc_seg.circle_info.center.transpose()
-                  << " radius = " << arc_seg.circle_info.radius;
+        ILOG_INFO_IF(enable_log) << "start_pos: " << arc_seg.pA.transpose();
+        ILOG_INFO_IF(enable_log)
+            << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
+        ILOG_INFO_IF(enable_log) << "end_pos: " << arc_seg.pB.transpose();
+        ILOG_INFO_IF(enable_log)
+            << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
+        ILOG_INFO_IF(enable_log)
+            << "center: " << arc_seg.circle_info.center.transpose()
+            << " radius = " << arc_seg.circle_info.radius;
       }
     }
   }

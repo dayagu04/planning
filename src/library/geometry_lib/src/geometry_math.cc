@@ -11,6 +11,7 @@
 #include "Eigen/Core"
 #include "Eigen/Eigenvalues"
 #include "Eigen/Geometry"
+#include "log_glog.h"
 #include "math_lib.h"
 
 double kDeg2Rad = M_PI / 180;
@@ -1428,6 +1429,7 @@ const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err) {
   const auto dist = CalPoint2LineDist(arc.circle_info.center, line);
   if (!(dist <= arc.circle_info.radius + r_err &&
         dist >= arc.circle_info.radius - r_err)) {
+    return false;
     return LogErr(__func__, 1);
   }
 
@@ -2355,7 +2357,7 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
                                    Eigen::Vector2d &line_norm_vec) {
   using namespace mathlib;
   if (IsDoubleEqual((line.pB - line.pA).norm(), 0.0)) {
-    return LogErr(__func__, 0);
+    return LogErr(__func__, 0, 0);
   }
   const double cross = GetCrossFromTwoVec2d(line.pB - line.pA, pos - line.pA);
   const auto line_tang_vec = (line.pB - line.pA).normalized();
@@ -2371,7 +2373,7 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
               << "  line.pA = " << line.pA.transpose()
               << "  line.pB = " << line.pB.transpose()
               << "  line.heading = " << line.heading * kRad2Deg << std::endl;
-    return LogErr(__func__, 1);
+    return LogErr(__func__, 1, 1);
   }
   return true;
 }
@@ -2412,8 +2414,13 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
   // pose turn center (O), first assume turn radius is r, then assume the
   // tangent of arc and line is D, and D shoule be on the line,
   // so AD × AB = 0.0, and the r can be calculated
-  const auto AC = arc.pA - line.pA;
-  const auto line_tang_vec = (line.pB - line.pA).normalized();
+  const Eigen::Vector2d AC = arc.pA - line.pA;
+  const Eigen::Vector2d line_tang_vec = (line.pB - line.pA).normalized();
+  if (IsTwoNumerEqual(
+          GetCrossFromTwoVec2d(pose_norm_vec + line_norm_vec, line_tang_vec),
+          0.0)) {
+    return false;
+  }
   arc.circle_info.radius =
       -GetCrossFromTwoVec2d(AC, line_tang_vec) /
       GetCrossFromTwoVec2d(pose_norm_vec + line_norm_vec, line_tang_vec);
@@ -2441,7 +2448,8 @@ const bool LogErr(const std::string &func_name, uint8_t index,
     err_type = " fail ";
   }
 
-  ILOG_INFO << func_name + err_type + " err " + std::to_string(index);
+  std::cout << func_name + err_type + " err " + std::to_string(index)
+            << std::endl;
 
   return false;
 }

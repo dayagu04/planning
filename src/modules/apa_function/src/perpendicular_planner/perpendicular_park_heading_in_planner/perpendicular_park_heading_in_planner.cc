@@ -70,8 +70,7 @@ const double PerpendicularParkHeadingInPlanner::CalRemainDistFromPath() {
       remain_dist = frame_.current_path_length - s_proj;
 
       ILOG_INFO << "remain_dist = " << remain_dist << "  s_proj = " << s_proj
-                                   << "  current_path_length = "
-                                   << frame_.current_path_length;
+                << "  current_path_length = " << frame_.current_path_length;
     } else {
       ILOG_INFO << "remain_dist calculation error:input is error";
     }
@@ -101,8 +100,12 @@ void PerpendicularParkHeadingInPlanner::PlanCore() {
     return;
   }
 
+  const double safe_uss_remain_dist =
+      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
-  UpdateRemainDist();
+  UpdateRemainDist(safe_uss_remain_dist);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -164,7 +167,7 @@ void PerpendicularParkHeadingInPlanner::PlanCore() {
     JSON_DEBUG_VALUE("dynamic_plan_fail_flag", frame_.dynamic_plan_fail_flag)
 
     ILOG_INFO << "replan_consume_time = " << IflyTime::Now_ms() - start_time
-                                         << " ms";
+              << " ms";
     JSON_DEBUG_VALUE("replan_consume_time", IflyTime::Now_ms() - start_time)
 
     frame_.pathplan_result = pathplan_result;
@@ -197,7 +200,7 @@ void PerpendicularParkHeadingInPlanner::PlanCore() {
 
   // check planning status
   ILOG_INFO << "parking status = "
-              << static_cast<int>(GetPlannerStates().planning_status);
+            << static_cast<int>(GetPlannerStates().planning_status);
 }
 
 const bool PerpendicularParkHeadingInPlanner::UpdateEgoSlotInfo() {
@@ -461,15 +464,15 @@ const bool PerpendicularParkHeadingInPlanner::UpdateEgoSlotInfo() {
   }
 
   ILOG_INFO << "slot_side = " << static_cast<int>(slot_t_lane_.slot_side);
-  ILOG_INFO <<
-      "frame_.current_gear = " << static_cast<int>(frame_.current_gear);
+  ILOG_INFO << "frame_.current_gear = "
+            << static_cast<int>(frame_.current_gear);
   ILOG_INFO << "frame_.current_arc_steer = "
-              << static_cast<int>(frame_.current_arc_steer);
+            << static_cast<int>(frame_.current_arc_steer);
 
   ILOG_INFO << "terminal x error= " << ego_slot_info.terminal_err.pos.x();
   ILOG_INFO << "terminal y error= " << ego_slot_info.terminal_err.pos.y();
-  ILOG_INFO << "terminal heading error= " << ego_slot_info.terminal_err.heading *
-                                                kRad2Deg;
+  ILOG_INFO << "terminal heading error= "
+            << ego_slot_info.terminal_err.heading * kRad2Deg;
 
   ILOG_INFO << "slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio;
 
@@ -647,7 +650,7 @@ void PerpendicularParkHeadingInPlanner::GenTlane() {
           .y();
 
   ILOG_INFO << "virtual_left_y = " << virtual_left_y
-                                  << "  virtual_right_y = " << virtual_right_y;
+            << "  virtual_right_y = " << virtual_right_y;
 
   bool left_empty = false;
   bool right_empty = false;
@@ -678,9 +681,8 @@ void PerpendicularParkHeadingInPlanner::GenTlane() {
   const double real_slot_width = ego_slot_info.slot_width;
 
   ILOG_INFO << "max_car_width = " << apa_param.GetParam().max_car_width
-                                 << "  virtual slot width = "
-                                 << virtual_slot_width
-                                 << "  real slot width = " << real_slot_width;
+            << "  virtual slot width = " << virtual_slot_width
+            << "  real slot width = " << real_slot_width;
 
   double left_y = left_pq_for_y.top().y();
   double real_left_y = left_y;
@@ -720,11 +722,10 @@ void PerpendicularParkHeadingInPlanner::GenTlane() {
   }
 
   ILOG_INFO << "real_left_y = " << real_left_y
-                               << "  real_right_y = " << real_right_y;
+            << "  real_right_y = " << real_right_y;
 
   ILOG_INFO << "left_y = " << left_y << "  right_y = " << right_y
-                          << "  left_x = " << left_x
-                          << "  right_x = " << right_x;
+            << "  left_x = " << left_x << "  right_x = " << right_x;
 
   // TOOD: consider actual obs pos to let slot release or not release or move
   // target pose
@@ -762,8 +763,7 @@ void PerpendicularParkHeadingInPlanner::GenTlane() {
       ego_slot_info.move_slot_dist = safe_threshold - right_dis_obs_car;
     }
     ILOG_INFO << "left_dis_obs_car = " << left_dis_obs_car
-                                      << "  right_dis_obs_car = "
-                                      << right_dis_obs_car;
+              << "  right_dis_obs_car = " << right_dis_obs_car;
   }
 
   const bool need_move_slot =
@@ -893,16 +893,16 @@ void PerpendicularParkHeadingInPlanner::GenTlane() {
   ILOG_INFO << "pt_terminal_pos = " << slot_t_lane_.pt_terminal_pos.transpose();
   ILOG_INFO << "pt_terminal_heading = " << slot_t_lane_.pt_terminal_heading;
   ILOG_INFO << "pt_lower_boundry_pos = "
-              << slot_t_lane_.pt_lower_boundry_pos.transpose();
+            << slot_t_lane_.pt_lower_boundry_pos.transpose();
 
   ILOG_INFO << "-- obstacle_t_lane_ --";
   ILOG_INFO << "pt_outside = " << obstacle_t_lane_.pt_outside.transpose();
   ILOG_INFO << "pt_inside = " << obstacle_t_lane_.pt_inside.transpose();
-  ILOG_INFO <<
-      "pt_terminal_pos = " << obstacle_t_lane_.pt_terminal_pos.transpose();
+  ILOG_INFO << "pt_terminal_pos = "
+            << obstacle_t_lane_.pt_terminal_pos.transpose();
   ILOG_INFO << "pt_terminal_heading = " << obstacle_t_lane_.pt_terminal_heading;
   ILOG_INFO << "pt_lower_boundry_pos = "
-              << obstacle_t_lane_.pt_lower_boundry_pos.transpose();
+            << obstacle_t_lane_.pt_lower_boundry_pos.transpose();
 }
 
 void PerpendicularParkHeadingInPlanner::GenObstacles() {
@@ -1434,9 +1434,8 @@ const uint8_t PerpendicularParkHeadingInPlanner::PathPlanOnce() {
 
   double lat_path_opt_cost_time_ms = 0.0;
   if (perpendicular_optimization_enable && is_use_optimizer) {
-    ILOG_INFO <<
-        "------------------------ lateral path optimization "
-        "------------------------";
+    ILOG_INFO << "------------------------ lateral path optimization "
+                 "------------------------";
     ILOG_INFO << "gear_command_= " << static_cast<int>(gear_command_);
     ILOG_INFO << "origin path size= " << planner_output.path_point_vec.size();
 
@@ -1481,11 +1480,11 @@ const uint8_t PerpendicularParkHeadingInPlanner::PathPlanOnce() {
 
     ILOG_INFO << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms;
 
-    ILOG_INFO <<
-        "terminal point error = " << plan_debug_info.terminal_pos_error();
+    ILOG_INFO << "terminal point error = "
+              << plan_debug_info.terminal_pos_error();
 
     ILOG_INFO << "terminal heading error = "
-                << plan_debug_info.terminal_heading_error();
+              << plan_debug_info.terminal_heading_error();
   } else {
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_.reserve(
@@ -1504,7 +1503,7 @@ const uint8_t PerpendicularParkHeadingInPlanner::PathPlanOnce() {
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
   ILOG_INFO << "current_path_point_global_vec_.size() = "
-              << current_path_point_global_vec_.size();
+            << current_path_point_global_vec_.size();
 
   return plan_result;
 }
@@ -1685,7 +1684,7 @@ const bool PerpendicularParkHeadingInPlanner::CheckDynamicUpdate() {
   }
 
   ILOG_INFO << "dynamic_replan_count = "
-              << static_cast<int>(frame_.dynamic_replan_count);
+            << static_cast<int>(frame_.dynamic_replan_count);
 
   // std::cout << "gear_command_ = " << static_cast<int>(gear_command_)
   //           << std::endl;
@@ -2093,9 +2092,9 @@ void PerpendicularParkHeadingInPlanner::GenPlanningOutput() {
       apa_world_ptr_->GetApaDataPtr()->measurement_data.heading);
 
   ILOG_INFO << "frame_.plan_stm.planning_status = "
-              << static_cast<int>(frame_.plan_stm.planning_status)
-              << "  plan path pt size = "
-              << current_path_point_global_vec_.size();
+            << static_cast<int>(frame_.plan_stm.planning_status)
+            << "  plan path pt size = "
+            << current_path_point_global_vec_.size();
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
@@ -2405,11 +2404,10 @@ void PerpendicularParkHeadingInPlanner::RealTimeDynamicColDet(
     const double dmove_dist =
         car_already_move_dist - frame_.car_already_move_dist;
 
-    ILOG_INFO << "car real move dist = "
-                << car_already_move_dist
-                << "  last frame car_already_move_dist = "
-                << frame_.car_already_move_dist
-                << "  this frame car_already_move_dist = " << dmove_dist;
+    ILOG_INFO << "car real move dist = " << car_already_move_dist
+              << "  last frame car_already_move_dist = "
+              << frame_.car_already_move_dist
+              << "  this frame car_already_move_dist = " << dmove_dist;
 
     frame_.car_already_move_dist = car_already_move_dist;
 
@@ -2571,7 +2569,7 @@ void PerpendicularParkHeadingInPlanner::RealTimeDynamicColDet(
     ILOG_INFO << "remain_dist_col_det = " << frame_.remain_dist_col_det;
 
     ILOG_INFO << "dynamic_col_det_consume_time = "
-                << IflyTime::Now_ms() - start_time << " ms";
+              << IflyTime::Now_ms() - start_time << " ms";
     JSON_DEBUG_VALUE("dynamic_col_det_consume_time",
                      IflyTime::Now_ms() - start_time)
   }

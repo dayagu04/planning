@@ -307,9 +307,9 @@ class ApaPlannerBase {
   virtual void GenPlanningHmiOutput();
   virtual void GenPlanningPath();
   virtual const bool CheckStuckFailed();
-  virtual void UpdateRemainDist();
+  virtual void UpdateRemainDist(const double uss_safe_dist);
   virtual const double CalRemainDistFromPath();
-  virtual const double CalRemainDistFromUss();
+  virtual const double CalRemainDistFromUss(const double safe_dist);
   virtual const bool PostProcessPath();
 
   virtual const void SchedulerForGeometryWithAstar();

@@ -1010,6 +1010,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       plan_y.append(trajectory.trajectory_points[i].y - cur_pos_yn0)
       plan_heading.append(trajectory.trajectory_points[i].heading_yaw)
 
+    if len(plan_x) > 0:
+      print("last_x, last_y, last_heading = ", plan_x[-1], plan_y[-1], plan_heading[-1] * 57.3)
+
     local_view_data['data_planning'].data.update({
         'plan_traj_y' : plan_y,
         'plan_traj_x' : plan_x,
@@ -2083,11 +2086,19 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:
+    print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size)
+    for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size):
+      ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines[i]
       points_3d = ground_line.points_3d
-      for point_3d in points_3d:
+      for j in range(ground_line.points_3d_size):
+        point_3d = points_3d[j]
         pos_x.append(point_3d.x - cur_pos_xn0)
         pos_y.append(point_3d.y - cur_pos_yn0)
+    # for ground_line in bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines:
+    #   points_3d = ground_line.points_3d
+    #   for point_3d in points_3d:
+    #     pos_x.append(point_3d.x - cur_pos_xn0)
+    #     pos_y.append(point_3d.y - cur_pos_yn0)
 
     local_view_data['data_ground_line_obj'].data.update({
       'yn': pos_y,
@@ -3496,11 +3507,19 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find ground line error')
       else:
-        for ground_line in fus_ground_line_msg.ground_lines:
+        print("ground_lines_size = ",fus_ground_line_msg.ground_lines_size)
+        for i in range(fus_ground_line_msg.ground_lines_size):
+          ground_line = fus_ground_line_msg.ground_lines[i]
           points_3d = ground_line.points_3d
-          for point_3d in points_3d:
+          for j in range(ground_line.points_3d_size):
+            point_3d = points_3d[j]
             pos_x.append(point_3d.x)
             pos_y.append(point_3d.y)
+        # for ground_line in fus_ground_line_msg.ground_lines:
+        #   points_3d = ground_line.points_3d
+        #   for point_3d in points_3d:
+        #     pos_x.append(point_3d.x)
+        #     pos_y.append(point_3d.y)
       ground_line_generator.xys.append((pos_y, pos_x))
     ground_line_generator.ts = np.array(ctrl_debug_ts)
 
