@@ -30,7 +30,8 @@ def construct_scenario(
 
   # channel car
   x_offset_vec = [1.2, 3.6, 6.0, 8.9,12.3]
-  y_offset_vec = [-0.9, 0.3, 0.6, 0.2, 0.4]
+    # y_offset_vec = [-0.9, 0.3, 0.6, 0.2, 0.4]
+  y_offset_vec = [-0.3, 0.3, 0.6, 0.2, 0.4]
   heading_offset_vec = [0.0, 0.0, 0.0, 6.0 /57.3, 70 / 57.3]
 
   obs_car_file_name = '/asw/data/parallel_obs_car.json'

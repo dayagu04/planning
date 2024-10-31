@@ -219,12 +219,14 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   path_planner_output.path_seg_index.first = 0;
   path_planner_output.path_seg_index.second =
       path_planner_output.path_segment_vec.size() - 1;
-  pBase->SampleCurrentPathSeg();
+  if (path_plan_success) {
+    pBase->SampleCurrentPathSeg();
+  }
 
   DEBUG_PRINT(
       "path points size = " << pBase->GetOutput().path_point_vec.size());
 
-  return 1;
+  return static_cast<int>(path_plan_success);
 }
 
 std::vector<std::vector<double>> GetParkPlannerObs() {
@@ -253,7 +255,7 @@ std::vector<std::vector<double>> GenTraTBoundary(double slot_length) {
   double min_x = 10.0;
   double max_x = 0.0;
   for (const auto &pt : obs_map[CollisionDetector::CHANNEL_OBS]) {
-    if (pt.x() < 12.0 &&pt.x() > 0.0) {
+    if (pt.x() < 12.0 && pt.x() > 0.0) {
       channel_min_y = std::min(channel_min_y, pt.y());
     }
 
@@ -286,12 +288,12 @@ std::vector<std::vector<double>> GenTraTBoundary(double slot_length) {
     }
   }
   double curb_min_y = -1.5;
-      // double curb_min_y = 100.0;
-      // for (const auto &pt : obs_map[CollisionDetector::TLANE_OBS]) {
-      //   curb_min_y = std::min(curb_min_y, pt.y());
-      // }
+  // double curb_min_y = 100.0;
+  // for (const auto &pt : obs_map[CollisionDetector::TLANE_OBS]) {
+  //   curb_min_y = std::min(curb_min_y, pt.y());
+  // }
 
-      const Eigen::Vector2d A(channel_pt0.x(), rear_max_y);
+  const Eigen::Vector2d A(channel_pt0.x(), rear_max_y);
   const Eigen::Vector2d B(rear_max_x, rear_max_y);
   const Eigen::Vector2d C(rear_max_x, curb_min_y);
   const Eigen::Vector2d D(front_min_x, curb_min_y);
