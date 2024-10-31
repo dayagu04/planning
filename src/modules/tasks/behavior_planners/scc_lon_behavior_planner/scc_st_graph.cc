@@ -2931,7 +2931,8 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
     const double v_ego) {
   LOG_DEBUG("----> CalculateMergeSpeedLimit <--- \n");
   std::vector<string> debug_msg_names;
-  debug_msg_names.emplace_back("merge_agent_id");
+  debug_msg_names.emplace_back("merge_target_one_id");
+  debug_msg_names.emplace_back("merge_target_two_id");
   debug_msg_names.emplace_back("v_target_merge");
   debug_msg_names.emplace_back("rear_agent_merge_time");
   debug_msg_names.emplace_back("merge_orintation");
@@ -3265,8 +3266,10 @@ void StGraphGenerator::CalculateMergeSpeedLimit(
              MergeSplitPoints::RIGHT) {
     merge_orintation = 2;
   }
-  JSON_DEBUG_VALUE("merge_agent_id",
+  JSON_DEBUG_VALUE("merge_target_one_id",
                    t_merge_with_adjacent_or_rear_agent_.first & 0xFFFF)
+  JSON_DEBUG_VALUE("merge_target_two_id",
+                   t_merge_with_front_agent_.first & 0xFFFF)
   JSON_DEBUG_VALUE("v_target_merge",
                    std::fmin(merge_target_one_desired_velocity,
                              merge_target_two_desired_velocity))
@@ -4020,6 +4023,15 @@ void StGraphGenerator::MergeInfoReset() {
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
   merge_target_one_semantic_orientation_to_ego_ =
       MergeAgentsInfo::AgentOrientationToEgo::UNKNOWN;
+      
+  t_merge_with_front_agent_ = {planning_data::kInvalidId,
+                               std::numeric_limits<double>::max()};
+  d_relative_merge_with_front_agent_ = {planning_data::kInvalidId,
+                                        std::numeric_limits<double>::max()};
+  v_front_agent_merge_with_ego_ = {planning_data::kInvalidId,
+                                   std::numeric_limits<double>::lowest()};
+  d_relative_front_agent_current_to_ego_ = {planning_data::kInvalidId,
+                                            std::numeric_limits<double>::max()};
 
   agent_node_origin_lane_map_.clear();
   agent_node_left_neibor_lane_map_.clear();
