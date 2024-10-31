@@ -1,6 +1,6 @@
 #include "gap_selector_decider.h"
 
-#include <fastrtps/config.h>
+// #include <fastrtps/config.h>
 #include <sys/types.h>
 #include <unistd.h>
 

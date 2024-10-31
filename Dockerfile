@@ -18,6 +18,6 @@ RUN sed -i "s/$OLD_TEXT/$NEW_TEXT/g" $CONFIG_FILE && \
     mkdir -p /tmp && \
     make clean
 
-RUN bash -c "source /opt/ros/melodic/setup.sh && make pp_build BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/melodic/setup.sh && make pp_build BUILD_TYPE=Release && rm -rf /root/planning/build/"
 
 ENTRYPOINT ["/bin/bash", "/root/planning/CI_entrypoint_simulation.sh"]
