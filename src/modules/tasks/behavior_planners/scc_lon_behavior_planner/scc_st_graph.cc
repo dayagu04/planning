@@ -4015,8 +4015,6 @@ void StGraphGenerator::MergeInfoReset() {
   ego_has_right_of_target_lane_ = false;
   t_merge_with_adjacent_or_rear_agent_ = {planning_data::kInvalidId,
                                           std::numeric_limits<double>::max()};
-  t_merge_with_front_agent_ = {planning_data::kInvalidId,
-                               std::numeric_limits<double>::max()};
   d_relative_merge_with_adjacent_or_rear_agent_ = {
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
   v_adjacent_or_rear_agent_merge_with_ego_ = {
@@ -4025,6 +4023,15 @@ void StGraphGenerator::MergeInfoReset() {
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
   merge_target_one_semantic_orientation_to_ego_ =
       MergeAgentsInfo::AgentOrientationToEgo::UNKNOWN;
+      
+  t_merge_with_front_agent_ = {planning_data::kInvalidId,
+                               std::numeric_limits<double>::max()};
+  d_relative_merge_with_front_agent_ = {planning_data::kInvalidId,
+                                        std::numeric_limits<double>::max()};
+  v_front_agent_merge_with_ego_ = {planning_data::kInvalidId,
+                                   std::numeric_limits<double>::lowest()};
+  d_relative_front_agent_current_to_ego_ = {planning_data::kInvalidId,
+                                            std::numeric_limits<double>::max()};
 
   agent_node_origin_lane_map_.clear();
   agent_node_left_neibor_lane_map_.clear();
