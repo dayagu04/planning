@@ -49,9 +49,7 @@ class HybridAStarParkPlanner : public ApaPlannerBase {
 
   const bool CheckStuckFailed() override;
 
-  void UpdateRemainDist() override;
-
-  const double CalRemainDistFromUss() override;
+  void UpdateRemainDist(const double uss_safe_dist) override;
 
   const std::string GetPlanReason(const uint8_t type);
 

@@ -69,8 +69,13 @@ void PerpendicularParkInPlanner::PlanCore() {
     return;
   }
 
+  const double safe_uss_remain_dist =
+      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+
   // update remain dist
-  UpdateRemainDist();
+  UpdateRemainDist(safe_uss_remain_dist);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -117,7 +122,11 @@ void PerpendicularParkInPlanner::PlanCore() {
     uint8_t pathplan_result = PathPlannerResult::PLAN_FAILED;
 
     if (frame_.total_plan_count <= apa_param.GetParam().max_replan_count) {
-      pathplan_result = PathPlanOnce();
+      if (apa_param.GetParam().new_itervative_solution) {
+        pathplan_result = NewPathPlanOnce();
+      } else {
+        pathplan_result = PathPlanOnce();
+      }
       ILOG_INFO << "generate path by geometry";
     } else {
       ILOG_INFO << "replan count is exceed max count, fail, directly quit apa";
@@ -694,23 +703,21 @@ const bool PerpendicularParkInPlanner::UpdateEgoSlotInfo() {
   ILOG_INFO << "frame_.current_arc_steer = "
             << static_cast<int>(frame_.current_arc_steer);
 
-  // ILOG_INFO <<
-  //     "ego_pos = " << measures_ptr->pos_ego.transpose() << "  ego_heading = "
-  //                  << measures_ptr->heading_ego * kRad2Deg << "  ego_pos_slot
-  //                  = "
-  //                  << ego_slot_info.ego_pos_slot.transpose()
-  //                  << "  ego_heading_slot = "
-  //                  << ego_slot_info.ego_heading_slot * kRad2Deg);
+  ILOG_INFO << "ego_pos = " << measures_ptr->pos.transpose()
+            << "  ego_heading = " << measures_ptr->heading * kRad2Deg
+            << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
+            << "  ego_heading_slot = "
+            << ego_slot_info.ego_heading_slot * kRad2Deg;
 
-  // ILOG_INFO <<"ego_slot_info.limiter.first = "
-  //             << ego_slot_info.limiter.first.transpose()
-  //             << "  ego_slot_info.limiter.second = "
-  //             << ego_slot_info.limiter.second.transpose());
+  ILOG_INFO << "ego_slot_info.limiter.first = "
+            << ego_slot_info.limiter.first.transpose()
+            << "  ego_slot_info.limiter.second = "
+            << ego_slot_info.limiter.second.transpose();
 
-  // ILOG_INFO <<"target_ego_pos_slot = "
-  //             << ego_slot_info.target_ego_pos_slot.transpose()
-  //             << "  target_ego_heading_slot = "
-  //             << ego_slot_info.target_ego_heading_slot * kRad2Deg);
+  ILOG_INFO << "target_ego_pos_slot = "
+            << ego_slot_info.target_ego_pos_slot.transpose()
+            << "  target_ego_heading_slot = "
+            << ego_slot_info.target_ego_heading_slot * kRad2Deg;
 
   ILOG_INFO << "terminal x error= " << ego_slot_info.terminal_err.pos.x();
   ILOG_INFO << "terminal y error= " << ego_slot_info.terminal_err.pos.y();
@@ -1451,6 +1458,8 @@ const uint8_t PerpendicularParkInPlanner::PathPlanOnce() {
   path_planner_input.is_replan_dynamic = frame_.is_replan_dynamic;
   path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
                                   ego_slot_info.ego_heading_slot);
+  path_planner_input.slot2global_tf = ego_slot_info.l2g_tf;
+  path_planner_input.global2slot_tf = ego_slot_info.g2l_tf;
 
   if (frame_.replan_reason == DYNAMIC &&
       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
@@ -1495,7 +1504,6 @@ const uint8_t PerpendicularParkInPlanner::PathPlanOnce() {
 
   // retired
   // perpendicular_path_planner_.SetLineSegmentHeading();
-
   perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
       apa_param.GetParam().path_extend_distance);
 
@@ -1694,6 +1702,146 @@ const uint8_t PerpendicularParkInPlanner::PathPlanOnce() {
 
   JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
+
+  ILOG_INFO << "current_path_point_global_vec_.size() = "
+            << current_path_point_global_vec_.size();
+
+  return plan_result;
+}
+
+const uint8_t PerpendicularParkInPlanner::NewPathPlanOnce() {
+  ILOG_INFO << "-------------- PathPlanOnce --------------";
+  // construct input
+  const auto& ego_slot_info = frame_.ego_slot_info;
+  PerpendicularPathInPlanner::Input path_planner_input;
+  path_planner_input.pt_0 = ego_slot_info.pt_0;
+  path_planner_input.pt_1 = ego_slot_info.pt_1;
+  path_planner_input.sin_angle = ego_slot_info.sin_angle;
+  path_planner_input.origin_pt_0_heading = ego_slot_info.origin_pt_0_heading;
+
+  path_planner_input.tlane = slot_t_lane_;
+  path_planner_input.is_complete_path =
+      apa_world_ptr_->GetApaDataPtr()->simu_param.is_complete_path;
+  path_planner_input.sample_ds =
+      apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
+  path_planner_input.ref_arc_steer = frame_.current_arc_steer;
+  path_planner_input.ref_gear = frame_.current_gear;
+  path_planner_input.is_replan_first = frame_.is_replan_first;
+  path_planner_input.is_replan_second = frame_.is_replan_second;
+  path_planner_input.is_replan_dynamic = frame_.is_replan_dynamic;
+  path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
+                                  ego_slot_info.ego_heading_slot);
+
+  if (frame_.replan_reason == DYNAMIC &&
+      frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    ILOG_INFO << "dynamic replan, gear should be reverse";
+    path_planner_input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+  }
+
+  perpendicular_path_planner_.SetInput(path_planner_input);
+
+  // need replan all path
+  const bool path_plan_success =
+      perpendicular_path_planner_.ApaPathPlanner::Update(
+          apa_world_ptr_->GetCollisionDetectorPtr());
+
+  uint8_t plan_result = 0;
+  if (!path_plan_success &&
+      !apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
+      !frame_.is_replan_dynamic) {
+    ILOG_INFO << "path plan fail";
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    current_plan_path_vec_.clear();
+    current_path_point_global_vec_.clear();
+    return plan_result;
+  }
+
+  if (!path_plan_success && frame_.is_replan_dynamic) {
+    ILOG_INFO << "path dynamic plan fail, save last plan path.";
+    plan_result = PathPlannerResult::PLAN_UPDATE;
+    frame_.dynamic_plan_fail_flag = true;
+    return plan_result;
+  }
+
+  plan_result = PathPlannerResult::PLAN_UPDATE;
+
+  if (!perpendicular_path_planner_.SetCurrentPathSegIndex()) {
+    ILOG_INFO << "path plan fail";
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = SET_SEG_INDEX;
+    return plan_result;
+  }
+
+  if (!perpendicular_path_planner_.CheckCurrentGearLength()) {
+    ILOG_INFO << "path plan fail";
+    plan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = CHECK_GEAR_LENGTH;
+    return plan_result;
+  }
+
+  perpendicular_path_planner_.SampleCurrentPathSeg();
+
+  perpendicular_path_planner_.PrintOutputSegmentsInfo();
+
+  const auto& planner_output = perpendicular_path_planner_.GetOutput();
+  current_plan_path_vec_.clear();
+  current_plan_path_vec_.reserve(5);
+
+  for (size_t i = planner_output.path_seg_index.first;
+       i <= planner_output.path_seg_index.second; ++i) {
+    const auto& path_seg_local = planner_output.path_segment_vec[i];
+    pnc::geometry_lib::PathSegment path_seg_global = path_seg_local;
+    if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+      path_seg_global.line_seg.pA =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pA);
+      path_seg_global.line_seg.pB =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pB);
+      path_seg_global.line_seg.heading =
+          ego_slot_info.l2g_tf.GetHeading(path_seg_local.GetLineSeg().heading);
+    } else if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+      path_seg_global.arc_seg.pA =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pA);
+      path_seg_global.arc_seg.pB =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pB);
+      path_seg_global.arc_seg.circle_info.center = ego_slot_info.l2g_tf.GetPos(
+          path_seg_local.GetArcSeg().circle_info.center);
+      path_seg_global.arc_seg.headingA =
+          ego_slot_info.l2g_tf.GetHeading(path_seg_local.GetArcSeg().headingA);
+      path_seg_global.arc_seg.headingB =
+          ego_slot_info.l2g_tf.GetHeading(path_seg_local.GetArcSeg().headingB);
+    }
+    current_plan_path_vec_.emplace_back(std::move(path_seg_global));
+  }
+
+  frame_.current_gear =
+      pnc::geometry_lib::ReverseGear(planner_output.current_gear);
+
+  if (frame_.is_replan_first) {
+    frame_.is_replan_first = false;
+    frame_.is_replan_second = true;
+  } else {
+    if (frame_.is_replan_second) {
+      frame_.is_replan_second = false;
+    }
+  }
+
+  if (!path_plan_success) {
+    return plan_result;
+  }
+
+  frame_.gear_command = planner_output.current_gear;
+
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(planner_output.path_point_vec.size());
+
+  pnc::geometry_lib::PathPoint global_point;
+  for (const auto& path_point : planner_output.path_point_vec) {
+    global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
+                     ego_slot_info.l2g_tf.GetHeading(path_point.heading));
+
+    current_path_point_global_vec_.emplace_back(global_point);
+  }
 
   ILOG_INFO << "current_path_point_global_vec_.size() = "
             << current_path_point_global_vec_.size();

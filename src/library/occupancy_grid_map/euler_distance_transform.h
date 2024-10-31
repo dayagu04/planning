@@ -39,6 +39,10 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   const bool DistanceCheckForPoint(float *min_dist, Transform2d *tf,
                                    const AstarPathGear gear);
 
+  const bool DistanceCheckForPoint(float *min_dist,
+                                   const pnc::geometry_lib::PathPoint &pose,
+                                   const uint8_t gear);
+
   const bool IsCollisionForPoint(Transform2d *tf, const AstarPathGear gear);
 
   const bool IsCollisionForPoint(const pnc::geometry_lib::PathPoint &pose,
@@ -49,6 +53,10 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
       const uint8_t gear);
 
   const double CalPathSafeDist(
+      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+      const double ds, const uint8_t gear);
+
+  const std::pair<double, double> CalPathRemainDistAndObsDist(
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
       const double ds, const uint8_t gear);
 

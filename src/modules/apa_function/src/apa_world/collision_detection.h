@@ -58,6 +58,7 @@ class CollisionDetector {
     double remain_dist = 25.0;
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
+    double obs2car_dist = 25.0;
     Eigen::Vector2d col_pt_ego_global;
     Eigen::Vector2d col_pt_ego_local;
     Eigen::Vector2d col_pt_obs_global;
@@ -112,7 +113,7 @@ class CollisionDetector {
 
   const CollisionResult UpdateByEDT(
       const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
-      const double lon_buffer);
+      const double lon_buffer, const bool need_cal_obs_dist = false);
 
   const CollisionResult UpdateByEDT(
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
@@ -177,8 +178,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
-      &GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
+  GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 

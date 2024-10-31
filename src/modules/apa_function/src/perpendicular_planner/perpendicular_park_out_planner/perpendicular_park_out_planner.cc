@@ -43,8 +43,12 @@ void PerpendicularParkOutPlanner::PlanCore() {
     return;
   }
 
+  const double safe_uss_remain_dist =
+      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
-  UpdateRemainDist();
+  UpdateRemainDist(safe_uss_remain_dist);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {

@@ -44,6 +44,9 @@ class DubinsLibrary {
     Eigen::Vector2d p2 = Eigen::Vector2d::Zero();
     double heading1 = 0.0;
     double heading2 = 0.0;
+    Eigen::Vector2d heading1_vec = Eigen::Vector2d::Zero();
+    Eigen::Vector2d heading2_vec = Eigen::Vector2d::Zero();
+    bool heading_vec_flag = false;
     double radius = 0.0;
 
     Input() {}

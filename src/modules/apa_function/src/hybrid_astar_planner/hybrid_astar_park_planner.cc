@@ -233,8 +233,11 @@ void HybridAStarParkPlanner::PlanCore() {
     return;
   }
 
+  // hack: use uss circle dist. In the future, will use uss point cloud to do
+  // safe check.
+  const double safe_uss_remain_dist = 0.31;
   // update remain dist
-  UpdateRemainDist();
+  UpdateRemainDist(safe_uss_remain_dist);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -543,12 +546,12 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
   return;
 }
 
-void HybridAStarParkPlanner::UpdateRemainDist() {
+void HybridAStarParkPlanner::UpdateRemainDist(const double uss_safe_dist) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
 
   // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss();
+  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist);
 
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss
@@ -1250,23 +1253,6 @@ HybridAStarParkPlanner::~HybridAStarParkPlanner() {}
 
 const bool HybridAStarParkPlanner::CheckStuckFailed() {
   return frame_.stuck_time > 12.0;
-}
-
-const double HybridAStarParkPlanner::CalRemainDistFromUss() {
-  double remain_dist = 10.0;
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
-
-  uss_obstacle_avoider_ptr->Update(&planning_output_,
-                                   apa_world_ptr_->GetApaDataPtr());
-
-  // hack: use uss circle dist. In the future, will use uss point cloud to do
-  // safe check.
-  const double safe_uss_remain_dist = 0.31;
-  remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-                safe_uss_remain_dist;
-
-  return remain_dist;
 }
 
 void HybridAStarParkPlanner::PathShrinkBySlotLimiter() {

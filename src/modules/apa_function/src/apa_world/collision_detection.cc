@@ -198,7 +198,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
     const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
-    const double lon_buffer) {
+    const double lon_buffer, const bool need_cal_obs_dist) {
   std::vector<pnc::geometry_lib::PathPoint> point_set;
   CollisionResult col_res;
   if (!pnc::geometry_lib::SamplePointSetInPathSeg(point_set, path_seg,
@@ -211,8 +211,18 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
 
   col_res.remain_car_dist = path_seg.Getlength();
 
-  col_res.remain_dist =
-      edt_col_det_.CalPathSafeDist(point_set, col_sample_ds, path_seg.seg_gear);
+  if (need_cal_obs_dist) {
+    std::pair<double, double> remain_dist_obs_dist_pair =
+        edt_col_det_.CalPathRemainDistAndObsDist(point_set, col_sample_ds,
+                                                 path_seg.seg_gear);
+    col_res.remain_dist = remain_dist_obs_dist_pair.first;
+    col_res.obs2car_dist = remain_dist_obs_dist_pair.second;
+  } else {
+    col_res.remain_dist = edt_col_det_.CalPathSafeDist(point_set, col_sample_ds,
+                                                       path_seg.seg_gear);
+  }
+
+  col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;
 
   return col_res;
 }
