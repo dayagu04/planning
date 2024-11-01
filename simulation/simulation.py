@@ -16,6 +16,7 @@ bag_file = data["bag_file"]
 task_id = data["task_id"]
 scene_lib_id = data["scene_lib_id"]
 case_id = data["case_id"]
+task_time = data["task_time"]
 checker_list = data["checker_list"]
 config_version = data["config_version"]
 common_tools_branch  = data["common_tools_branch"]
@@ -26,7 +27,7 @@ s3_access_key = data["s3_access_key"]
 s3_secret_key = data["s3_secret_key"]
 
 # 定义S3 client
-object_prefix = f"{task_id}/{scene_lib_id}/{case_id}"
+object_prefix = f"{task_time}/{task_id}/{scene_lib_id}/{case_id}"
 client = boto3.client(
     's3',
     endpoint_url=s3_url,  # Ceph S3端点
