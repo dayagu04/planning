@@ -162,8 +162,6 @@ void ApaWorld::UpdateStateMachine() {
   const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
   apa_data_ptr_->current_state = state;
 
-  ILOG_INFO << "apa world -> current_state : " << state;
-
   cur_state = ApaStateMachine::INVALID;
   if (state == iflyauto::FunctionalState_PARK_STANDBY) {
     cur_state = ApaStateMachine::INVALID;
@@ -393,22 +391,22 @@ const bool ApaWorld::Update() {
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
-      if (apa_param.GetParam().is_heading_in) {
-        apa_data_ptr_->planner_type =
-            ApaPlannerType::PERPENDICULAR_PARK_HEADING_IN_PLANNER;
+        if (apa_param.GetParam().is_heading_in) {
+          apa_data_ptr_->planner_type =
+              ApaPlannerType::PERPENDICULAR_PARK_HEADING_IN_PLANNER;
 
-        ILOG_INFO << "planner_type = PERPENDICULAR_PARK_HEADING_IN!";
-      } else {
-        apa_data_ptr_->planner_type =
-            ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
+          ILOG_INFO << "planner_type = PERPENDICULAR_PARK_HEADING_IN!";
+        } else {
+          apa_data_ptr_->planner_type =
+              ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
 
-        AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
-        if (astar_scheduler->IsNeedAstarSearch()) {
-          apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+          AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+          if (astar_scheduler->IsNeedAstarSearch()) {
+            apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+          }
+
+          ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
         }
-
-        ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
-      }
       } else {
         apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
       }
@@ -434,7 +432,7 @@ const bool ApaWorld::Update() {
       return false;
     }
   } else if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_OUT) {
-    DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_OUT!");
+    ILOG_INFO << "planner_type = PERPENDICULAR_PARK_OUT!";
     apa_data_ptr_->planner_type =
         ApaPlannerType::PERPENDICULAR_PARK_OUT_PLANNER;
   }
