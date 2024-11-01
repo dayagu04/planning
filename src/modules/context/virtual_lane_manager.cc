@@ -590,11 +590,15 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 对下游输出是否处于主路下匝道、匝道选分叉场景
   set_is_exist_ramp_on_road(ego_lane_track_manager_->is_exist_ramp_on_road());
   LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
-  JSON_DEBUG_VALUE("is_exist_ramp_on_road_", is_exist_ramp_on_road_);
+  JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
   set_is_exist_split_on_ramp(ego_lane_track_manager_->is_exist_split_on_ramp());
   LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
+
+  set_is_exist_split_on_expressway(ego_lane_track_manager_->is_exist_split_on_expressway());
+  LOG_DEBUG("is_exist_split_on_expressway_: %d \n", is_exist_split_on_expressway_);
+  JSON_DEBUG_VALUE("is_exist_split_on_expressway", is_exist_split_on_expressway_);
 
   set_is_exist_intersection_split(
       ego_lane_track_manager_->is_exist_intersection_split());

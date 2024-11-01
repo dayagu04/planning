@@ -47,9 +47,9 @@ constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 4.0;
 constexpr int32_t kLaneCenterMinPointsThr = 3;
 constexpr double kLaneLineSegmentLength = 5.0;
-constexpr double kConsiderLaneLineLength = 40.0;
+constexpr double kConsiderLaneLineLength = 50.0;
 constexpr double kDefaultRoadRadius = 750.0;
-constexpr int32_t kDefaultPointNums = 25;
+constexpr int32_t kDefaultPointNums = 33;
 constexpr int32_t kLeastDefaultPointNums = 3;
 }  // namespace
 
@@ -80,6 +80,7 @@ void EgoLaneTrackManger::TrackEgoLane(
 
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
+  is_exist_split_on_expressway_ = false;
   is_exist_split_on_intersection_ = false;
   virtual_lane_relative_id_switch_flag_ = false;
   is_select_ego_lane_without_plan_ = false;
@@ -143,6 +144,15 @@ void EgoLaneTrackManger::TrackEgoLane(
             if (is_exist_split_on_ramp_) {
               return;
             }
+          }
+
+          //处理高架快速路普通分流口
+          PreprocessOrdinarySplit(relative_id_lanes,
+                                  order_ids_of_same_zero_relative_id);
+          LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
+                    is_exist_split_on_expressway_);
+          if (is_exist_split_on_expressway_) {
+            return;
           }
         }
       } else if (function_info.function_mode() ==
@@ -325,6 +335,7 @@ void EgoLaneTrackManger::Reset() {
   split_direction_dis_info_list_.clear();
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
+  is_exist_split_on_expressway_ = false;
   is_exist_split_on_intersection_ = false;
   virtual_lane_relative_id_switch_flag_ = false;
   is_select_ego_lane_without_plan_ = false;
@@ -988,6 +999,110 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   return;
 }
 
+void EgoLaneTrackManger::PreprocessOrdinarySplit(
+    std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+    const std::vector<int>& order_ids) {
+  int origin_order_id = 0;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+
+  for (size_t i = 0; i < order_ids.size(); i++) {
+    if (relative_id_lanes.size() >= order_ids[i] + 1) {
+      std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
+      if (base_lane == nullptr) {
+        continue;
+      }
+      bool left_boundary_exist_virtual_type = false;
+      double left_lane_line_length = 0.0;
+      int left_current_segment_count = 0;
+      double left_ego_s = 0.0, left_ego_l = 0.0;
+      // 判断左侧车道线类型
+      auto left_lane_boundarys = base_lane->get_left_lane_boundary();
+      std::shared_ptr<planning_math::KDPath> left_base_boundary_path =
+          MakeBoundaryPath(left_lane_boundarys);
+      if (left_base_boundary_path != nullptr) {
+        if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
+                                            &left_ego_l)) {
+          continue;
+        }
+      } else {
+        continue;
+      }
+      for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
+        left_lane_line_length += left_lane_boundarys.type_segments[i].length;
+        if (left_lane_line_length > left_ego_s) {
+          left_current_segment_count = i;
+          break;
+        }
+      }
+      for (int i = left_current_segment_count;
+          i < left_lane_boundarys.type_segments_size; i++) {
+        if (left_lane_boundarys.type_segments[i].type ==
+            iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          left_boundary_exist_virtual_type = true;
+          break;
+        } else {
+          continue;
+        }
+      }
+
+      // 判断右侧车道线类型
+      bool right_boundary_exist_virtual_type = false;
+      double right_lane_line_length = 0.0;
+      int right_current_segment_count = 0;
+      double right_ego_s = 0.0, right_ego_l = 0.0;
+      auto right_lane_boundarys = base_lane->get_right_lane_boundary();
+      std::shared_ptr<planning_math::KDPath> right_base_boundary_path =
+          MakeBoundaryPath(right_lane_boundarys);
+      if (right_base_boundary_path != nullptr) {
+        if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
+                                              &right_ego_l)) {
+          continue;;
+        }
+      } else {
+        continue;
+      }
+      for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
+        right_lane_line_length += right_lane_boundarys.type_segments[i].length;
+        if (right_lane_line_length > right_ego_s) {
+          right_current_segment_count = i;
+          break;
+        }
+      }
+      for (int i = right_current_segment_count;
+          i < right_lane_boundarys.type_segments_size; i++) {
+        if (right_lane_boundarys.type_segments[i].type ==
+            iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          right_boundary_exist_virtual_type = true;
+          break;
+        } else {
+          continue;
+        }
+      }
+
+      if (left_boundary_exist_virtual_type || right_boundary_exist_virtual_type) {
+        continue;
+      } else {
+        is_exist_split_on_expressway_ = true;
+        relative_id_lanes[order_ids[i]]->set_relative_id(0);
+        origin_order_id = relative_id_lanes[order_ids[i]]->get_order_id();
+        last_zero_relative_id_order_id_index_ = i;
+        break;
+      }
+    }
+  }
+
+  for (auto& lane : relative_id_lanes) {
+    int lane_order_id = lane->get_order_id();
+    int lane_relative_id = lane_order_id - origin_order_id;
+    lane->set_relative_id(lane_relative_id);
+  }
+  return;
+}
+
 void EgoLaneTrackManger::PreprocessIntersectionSplit(
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids) {
@@ -1297,7 +1412,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
   const double default_lane_mapping_cost = 10.0;
-  const double default_consider_lane_length = 50.0;
+  const double default_consider_lane_length = 66.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();

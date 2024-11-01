@@ -149,6 +149,12 @@ class VirtualLaneManager {
 
   bool get_is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
 
+  void set_is_exist_split_on_expressway(const bool is_exist_split_on_expressway) {
+    is_exist_split_on_expressway_ = is_exist_split_on_expressway;
+  }
+
+  bool get_is_exist_split_on_expressway() const { return is_exist_split_on_expressway_; };
+
   void set_is_exist_intersection_split(const bool is_exist_intersection_split) {
     is_exist_intersection_split_ = is_exist_intersection_split;
   }
@@ -376,6 +382,7 @@ class VirtualLaneManager {
   // bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
+  bool is_exist_split_on_expressway_ = false;
   bool is_exist_intersection_split_ = false;
   double current_segment_passed_distance_ = 0.0;
   double distance_to_route_end_ = NL_NMAX;
