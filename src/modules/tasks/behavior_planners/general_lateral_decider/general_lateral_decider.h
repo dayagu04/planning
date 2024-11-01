@@ -34,6 +34,7 @@ class GeneralLateralDecider : public Task {
 
   bool InitInfo();
   void UnitTest();
+
  private:
   bool CalCruiseVelByCurvature(const double ego_v,
                                const std::vector<double> &d_poly,
@@ -70,7 +71,8 @@ class GeneralLateralDecider : public Task {
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
-  double CalculateExtraDecreaseBuffer(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
+  double CalculateExtraDecreaseBuffer(
+      const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
   bool CheckObstacleNudgeDecision(
       const std::shared_ptr<FrenetObstacle> &obstacle);
 
@@ -79,11 +81,14 @@ class GeneralLateralDecider : public Task {
 
   void RefineConflictLatDecisions(const double &ego_l,
                                   ObstacleDecision &obstacle_decision);
-  bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left, double& limit_overlap_min_y,
-      double& limit_overlap_max_y);
-  bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, double& limit_overlap_min_y,
-                            double& limit_overlap_max_y);
-  void PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds);
+  bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
+                           bool is_nudge_left, double &limit_overlap_min_y,
+                           double &limit_overlap_max_y);
+  bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
+                            double &limit_overlap_min_y,
+                            double &limit_overlap_max_y);
+  void PostProcessReferenceTrajBySoftBound(
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -94,11 +99,10 @@ class GeneralLateralDecider : public Task {
   void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
   void ExtractStaticObstacleBound(const ObstacleDecision &obstacle_decision);
 
-  void PostProcessBound(
-    const double planning_init_point_l,
-    const std::vector<WeightedBound> &bounds_input,
-    std::pair<double, double> &bound_output,
-    std::pair<BoundInfo, BoundInfo> &bound_info);
+  void PostProcessBound(const double planning_init_point_l,
+                        const std::vector<WeightedBound> &bounds_input,
+                        std::pair<double, double> &bound_output,
+                        std::pair<BoundInfo, BoundInfo> &bound_info);
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -114,8 +118,9 @@ class GeneralLateralDecider : public Task {
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t, BoundType bound_type, double overlap_min_y,
-                                double overlap_max_y, double lat_buf_dis,
+  void AddObstacleDecisionBound(int id, double t, BoundType bound_type,
+                                double overlap_min_y, double overlap_max_y,
+                                double lat_buf_dis,
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
@@ -139,7 +144,8 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
-  void HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer);
+  void HandleAvoidScene(TrajectoryPoints &traj_points,
+                        double dynamic_ref_buffer);
   void CalcLateralBehaviorOutput();
   bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);

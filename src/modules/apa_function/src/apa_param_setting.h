@@ -20,6 +20,22 @@ enum class ParkPathGenerationType {
   PARK_PATH_GENERATION_MAX_NUM,
 };
 
+struct AstarParkingConfig {
+  bool vertical_slot_auto_scheduler_for_astar;
+  bool parallel_slot_auto_scheduler_for_astar;
+  double parallel_finish_lon_err;
+  double parallel_finish_center_lat_err;
+  double parallel_finish_head_lat_err;
+  double parallel_finish_heading_err;
+
+  bool cubic_polynomial_pose_adjustment = true;
+  // move target point in slot to another point for easy tracking
+  double vertical_slot_end_straight_dist = 1.0;
+  double parallel_slot_end_straight_dist = 0.0;
+  bool enable_delete_fusion_obj_in_slot = true;
+  double deadend_uss_stuck_replan_wait_time;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -27,6 +43,44 @@ enum class ParkPathGenerationType {
 // and algorithm parameters into different configurature file or struct.
 struct ApaParameters {
   // length unit: m   deg unit: deg  time unit: s
+
+  /***headin***/
+  // parking heading in params
+  bool is_heading_in = true;
+  double headin_fix_slot_occupied_ratio = 0.938;
+  double headin_multi_plan_min_heading_err = 22.86;    // 28.86
+  double headin_multi_plan_min_lat_err = 0.8;          // 1.2
+  double headin_multi_plan_max_occupied_ratio = 0.36;  // 0.3
+  double headin_linearc_plan_min_lat_err = 0.8;
+  double headin_linearc_plan_min_heading_err = 8.68;
+  double headin_linearc_plan_max_occupied_ratio = 0.8;
+  double headin_adjust_plan_max_heading1_err = 8.68;   // big
+  double headin_adjust_plan_max_heading2_err = 20.68;  // big
+  double headin_adjust_plan_max_lon_err = 0.68;        // big
+  double headin_extend_line_min_heading_err = 6.6;
+  double headin_extend_length = 0.0;
+  double headin_reverse_deg = 12.68;
+  double headin_prepare_line_min_x_offset_slot = 2.0;
+  double headin_prepare_line_max_x_offset_slot = 5.2;
+  double headin_prepare_line_max_heading_offset_slot_deg = 26.8;
+  double headin_prepare_line_min_heading_offset_slot_deg = 8.8;
+  double headin_max_pt_inside_drop_dy = 0.3;
+  double max_obs_invasion_slot_dist = 0.026;
+  double headin_virtual_obs_y_pos = 1.886;
+  double headin_virtual_obs_x_pos = 2.868;
+  double headin_obs_consider_lat_threshold = 2.0;
+  double headin_tlane_obs_omit_x = 0.3;
+  double headin_target_pos_err = 0.0568;
+  double headin_target_heading_err = 0.88;
+  double headin_max_radius_in_slot = 12.66;
+  double headin_min_radius_out_slot = 11.8;
+  double headin_sturn_steer_ratio_dist = 0.5;
+  // double headin_target_pos_err = 0.088;
+  // for simulation
+  double max_pt_inside_drop_dx_mono_headin = 0.0;
+  double max_pt_inside_drop_dx_multi_headin = 0.0;
+  double radius_add = 0.0;
+  /******/
 
   // schedule params
   double plan_time = 0.1;
@@ -125,11 +179,13 @@ struct ApaParameters {
   std::vector<int> uss_wdis_index_front = {0, 9, 6, 3, 1, 11};
   std::vector<int> uss_wdis_index_back = {0, 1, 3, 6, 9, 11};
   std::vector<int> uss_directly_behind_index = {8, 9};
+  std::vector<int> uss_directly_front_index = {2, 3};
 
   // check replan params
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
   int max_replan_count = 12;
+  int headin_max_replan_count = 14;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;
@@ -159,6 +215,7 @@ struct ApaParameters {
   double parallel_occupied_pt_inside_dx = 0.0;
   double parallel_occupied_pt_inside_dy = 0.3;
   double curb_offset = 3.0;
+  double mov_curb_out_dist = 0.3;
 
   // construce obstacles params
   double channel_width = 12.28;
@@ -224,6 +281,7 @@ struct ApaParameters {
 
   // path planner params
   bool new_itervative_solution = false;
+  double prepare_max_reverse_heading_err = 1.68;
   double prepare_line_min_x_offset_slot = 7.2;
   double prepare_line_dx_offset_slot = 0.1;
   double prepare_line_max_x_offset_slot = 9.7;
@@ -252,6 +310,8 @@ struct ApaParameters {
   double target_pos_err = 0.068;
   double target_heading_err = 0.88;
   double target_radius_err = 0.036;
+  double perpendicular_park_out_max_target_heading = 95;
+  double perpendicular_park_out_min_target_heading = 85;
   double path_extend_distance = 0.3;
   bool actual_mono_plan_enable = false;
   bool mono_plan_enable = false;
@@ -273,6 +333,8 @@ struct ApaParameters {
   double vertical_slot_target_adjust_dist = 1.0;
   bool enable_delete_fusion_obj_in_slot = true;
   double deadend_uss_stuck_replan_wait_time;
+  bool perpendicular_parking_out_right = true;
+  bool perpendicular_parking_out_state = false;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
@@ -325,6 +387,8 @@ struct ApaParameters {
                                             0.88, 0.0,  0.0,   0.0,   0.0};
   std::vector<double> footprint_circle_r = {2.4,  0.35, 0.35, 0.18, 0.35, 0.35,
                                             0.18, 0.95, 0.95, 0.95, 0.95};
+
+  AstarParkingConfig astar_config;
 };
 
 class ApaParametersSetting {

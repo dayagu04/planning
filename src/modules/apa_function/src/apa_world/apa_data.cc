@@ -28,6 +28,9 @@ void PrintApaPlannerType(const ApaPlannerType planner_type) {
     case ApaPlannerType::PARALLER_PARK_OUT_PLANNER:
       ILOG_INFO << "planner_type = PARALLER_PARK_OUT_PLANNER";
       break;
+    case ApaPlannerType::HYBRID_ASTAR_PLANNER:
+      ILOG_INFO << "planner_type = HYBRID_ASTAR_PLANNER";
+      break;
     default:
       ILOG_INFO << "planner_type = INVALID_planner";
       break;

@@ -539,6 +539,7 @@
     "max_acc_adjust_ratio_upper": 1.15,
     "min_dec_filter_speed": 10.0,
     "max_acc_filter_speed": 10.0,
+    "min_dec_filter_speed_in_deceleration_scene":30.0,
     "enable_speed_adjust": true
   }
 }

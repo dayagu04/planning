@@ -863,7 +863,8 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                            virtual_lane_manager_->get_lane_num() - 2 &&
                        virtual_lane_manager_->get_right_lane() != nullptr &&
                        virtual_lane_manager_->get_right_lane()
-                               ->get_lane_type() == iflyauto::LANETYPE_NON_MOTOR)) {
+                               ->get_lane_type() ==
+                           iflyauto::LANETYPE_NON_MOTOR)) {
                     if (!session_->environmental_model().is_on_highway() &&
                         // map_info.dist_to_intsect() > 80 &&  // hack
                         // map_info.dist_to_intsect() - avd_car_past[0][3] > 80
@@ -1288,7 +1289,8 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                           virtual_lane_manager_->get_lane_num() - 2 &&
                       virtual_lane_manager_->get_right_lane() != nullptr &&
                       virtual_lane_manager_->get_right_lane()
-                              ->get_lane_type() == iflyauto::LANETYPE_NON_MOTOR))) {
+                              ->get_lane_type() ==
+                          iflyauto::LANETYPE_NON_MOTOR))) {
                   if (!session_->environmental_model().is_on_highway() &&
                       // map_info.dist_to_intsect() > 80 &&  //hack
                       // map_info.dist_to_intsect() - avd_car_past[0][3] > 80 &&
@@ -1342,10 +1344,12 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                   ((virtual_lane_manager_->current_lane_index() ==
                         virtual_lane_manager_->get_lane_num() - 1 &&
                     ((virtual_lane_manager_->get_current_lane()
-                              ->get_lane_type() != iflyauto::LANETYPE_NON_MOTOR &&
+                              ->get_lane_type() !=
+                          iflyauto::LANETYPE_NON_MOTOR &&
                       virtual_lane_manager_->current_lane_index() >= 1) ||
                      (virtual_lane_manager_->get_current_lane()
-                              ->get_lane_type() == iflyauto::LANETYPE_NON_MOTOR &&
+                              ->get_lane_type() ==
+                          iflyauto::LANETYPE_NON_MOTOR &&
                       virtual_lane_manager_->current_lane_index() >= 2))) ||
                    (virtual_lane_manager_->current_lane_index() ==
                         virtual_lane_manager_->get_lane_num() - 2 &&
@@ -1876,7 +1880,8 @@ bool VisionLateralMotionPlanner::update_avoidance_path(
                              virtual_lane_manager_->get_lane_num() - 2 &&
                          virtual_lane_manager_->get_right_lane() != nullptr &&
                          virtual_lane_manager_->get_right_lane()
-                                 ->get_lane_type() == iflyauto::LANETYPE_NON_MOTOR &&
+                                 ->get_lane_type() ==
+                             iflyauto::LANETYPE_NON_MOTOR &&
                          virtual_lane_manager_->current_lane_index() >= 1))) {
               lat_offset =
                   std::min(1.5 + avd_car_past[0][6], avd_car_past[0][9]);

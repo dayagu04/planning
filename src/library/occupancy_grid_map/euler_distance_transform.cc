@@ -3,6 +3,7 @@
 
 #include <opencv2/imgproc/types_c.h>
 
+#include <limits>
 #include <opencv2/imgproc.hpp>
 
 #include "log_glog.h"
@@ -215,6 +216,20 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
   return false;
 }
 
+const bool EulerDistanceTransform::DistanceCheckForPoint(
+    float *min_dist, const pnc::geometry_lib::PathPoint &pose,
+    const uint8_t gear) {
+  const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
+                                      ? AstarPathGear::drive
+                                      : AstarPathGear::reverse;
+
+  const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
+
+  Transform2d tf(pose_2d);
+
+  return DistanceCheckForPoint(min_dist, &tf, path_gear);
+}
+
 const bool EulerDistanceTransform::IsCollisionForPoint(
     Transform2d *tf, const AstarPathGear gear) {
   FootPrintCircle *circle;
@@ -324,6 +339,38 @@ const double EulerDistanceTransform::CalPathSafeDist(
   }
 
   return safe_dist;
+}
+
+const std::pair<double, double>
+EulerDistanceTransform::CalPathRemainDistAndObsDist(
+    const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+    const double ds, const uint8_t gear) {
+  double remain_dist = 0.0;
+  float obs_dist = 0.0;
+
+  if (path_pt_vec.size() < 1) {
+    return std::pair<double, double>{remain_dist, obs_dist};
+  }
+
+  if (DistanceCheckForPoint(&obs_dist, path_pt_vec[0], gear)) {
+    return std::pair<double, double>{remain_dist, obs_dist};
+  }
+
+  float min_obs_dist = std::numeric_limits<float>::infinity();
+  for (size_t i = 1; i < path_pt_vec.size(); ++i) {
+    const bool col_flag =
+        DistanceCheckForPoint(&obs_dist, path_pt_vec[i], gear);
+    if (obs_dist < min_obs_dist) {
+      min_obs_dist = obs_dist;
+    }
+    if (col_flag) {
+      break;
+    } else {
+      remain_dist += ds;
+    }
+  }
+
+  return std::pair<double, double>{remain_dist, min_obs_dist};
 }
 
 const bool EulerDistanceTransform::IsCollisionForPath(

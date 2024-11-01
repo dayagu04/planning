@@ -1,13 +1,13 @@
 #pragma once
 
 #include <memory>
+#include "crossing_agent_decider/crossing_agent_decider.h"
 #include "dynamic_world/dynamic_world.h"
 #include "ego_state_manager.h"
 #include "session.h"
 #include "tasks/task.h"
 #include "utils/kd_path.h"
 #include "virtual_lane_manager.h"
-#include "crossing_agent_decider/crossing_agent_decider.h"
 
 namespace planning {
 

@@ -13,11 +13,7 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-11-52-27/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-11-52-27_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-15-42-25/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-15-42-26_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240920/20240920-11-22-13/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-20-11-22-14_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240923/20240923-21-26-44/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-09-23-21-26-44_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241009/20241009-11-52-32/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-10-09-11-52-32_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241029/20241029-19-38-59/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-29-19-39-00_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -164,7 +160,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     vehicle_type = 'CHERY_E0X'
 
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data)
-  car_xb, car_yb = load_car_params_patch_parking(vehicle_type)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)
   index_map = bag_loader.get_msg_index(bag_time)
 
   if bag_loader.plan_debug_msg['enable'] == True:
@@ -215,7 +211,10 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     fus_occ_obj_msg = FusionOccupancyObjectsInfo()
 
   slot_management_info = bag_loader.plan_debug_msg['data'][index_map['plan_debug_msg_idx']].slot_management_info
-  select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
+  try:
+    select_slot_id = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']].select_slot_id
+  except:
+    select_slot_id = -1
   target_managed_slot_x_vec = []
   target_managed_slot_y_vec = []
   for i in range(len(slot_management_info.slot_info_vec)):
@@ -397,11 +396,43 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
       plan_path_y.append(tuned_planning_output.trajectory.trajectory_points[i].y)
       plan_path_heading.append(tuned_planning_output.trajectory.trajectory_points[i].heading_yaw)
 
-    if (len(plan_path_x) > 1):
+    if (len(plan_path_x) > 2):
       half_car_width = 0.9
-      last_x = plan_path_x[-1]
-      last_y = plan_path_y[-1]
-      last_heading = plan_path_heading[-1]
+      i = 0
+      gear_change = False
+      gear_change_index = -1
+      while i <= len(plan_path_x) - 3:
+        pt0 = [plan_path_x[i], plan_path_y[i]]
+        pt1 = [plan_path_x[i+1], plan_path_y[i+1]]
+        pt2 = [plan_path_x[i+2], plan_path_y[i+2]]
+        A = np.array([pt0[0] - pt1[0], pt0[1] - pt1[1]])
+        B = np.array([pt2[0] - pt1[0], pt2[1] - pt1[1]])
+        # 计算点积
+        dot_product = np.dot(A, B)
+
+        # 计算模（长度）
+        magnitude_A = np.linalg.norm(A)
+        magnitude_B = np.linalg.norm(B)
+
+        # 计算夹角（弧度）
+        cos_theta = dot_product / (magnitude_A * magnitude_B)
+
+        # theta_radians = np.arccos(cos_theta)
+        # theta_degrees = np.degrees(theta_radians)
+
+        if cos_theta > 0.0:
+          gear_change = True
+          break
+
+        i = i + 1
+
+      if gear_change == True:
+        gear_change_index = i + 1
+
+      last_x = plan_path_x[gear_change_index]
+      last_y = plan_path_y[gear_change_index]
+      last_heading = plan_path_heading[gear_change_index]
+      print("simu last_x, last_y, last_heading = ", last_x, last_y, last_heading * 57.3)
       last_plan_pose_.clear()
       last_plan_pose_.append(last_x)
       last_plan_pose_.append(last_y)

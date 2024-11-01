@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 #include "debug_info_log.h"
-#include "tasks/task.h"
 #include "planning_context.h"
+#include "tasks/task.h"
 #include "traffic_light_decision_manager.h"
 
 namespace planning {
@@ -23,10 +23,10 @@ class TrafficLightDecider : public Task {
   // add virtual agent to agent manager
   bool AddVirtualObstacle();
 
-  //intersection before is small intersection or not
+  // intersection before is small intersection or not
   bool IsSmallFrontIntersection();
 
-  //small intersection is matchable with tfl or not
+  // small intersection is matchable with tfl or not
   bool IsIntersectionMatchTFL();
 
   TrafficLightDeciderConfig config_;

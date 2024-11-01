@@ -17,7 +17,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 
 # bag path and frame dt
 # bag_path = '/docker_share/astar_0711_2/test_0.00000'
-bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241009/20241009-16-54-58/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-10-09-16-54-58_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241023/20241023-18-57-12/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-10-23-18-57-12_no_camera.bag'
 # bag_path = '/data_cold/abu_zone/autoparse/chery_tiggo9_f5n22/trigger/20240822/20240822-09-51-18/park_in_data_collection_CHERY_TIGGO9_F5N22_ALL_FILTER_2024-08-22-09-51-19.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -223,7 +223,7 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
   # vehicle_type = 'CHERY_T26'
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
   car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
-  car_polygon_x, car_polygon_y = load_car_params_patch_parking(
+  car_polygon_x, car_polygon_y, wheel_base = load_car_params_patch_parking(
       vehicle_type, 0.0)
   index_map = bag_loader.get_msg_index(bag_time)
 

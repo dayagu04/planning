@@ -14,6 +14,7 @@
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "slot_management_info.pb.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -161,6 +162,8 @@ void ApaWorld::UpdateStateMachine() {
   const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
   apa_data_ptr_->current_state = state;
 
+  ILOG_INFO << "apa world -> current_state : " << state;
+
   cur_state = ApaStateMachine::INVALID;
   if (state == iflyauto::FunctionalState_PARK_STANDBY) {
     cur_state = ApaStateMachine::INVALID;
@@ -175,8 +178,13 @@ void ApaWorld::UpdateStateMachine() {
   }
 
   if (state == iflyauto::FunctionalState_PARK_IN_SEARCHING) {
-    cur_state = ApaStateMachine::SEARCH_IN;
-    apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
+    if (apa_param.GetParam().perpendicular_parking_out_state) {
+      cur_state = ApaStateMachine::SEARCH_OUT;
+      apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
+    } else {
+      cur_state = ApaStateMachine::SEARCH_IN;
+      apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
+    }
   }
 
   if (state == iflyauto::FunctionalState_PARK_GUIDANCE) {
@@ -195,7 +203,145 @@ void ApaWorld::UpdateStateMachine() {
 
 void ApaWorld::UpdateSlots() {}
 void ApaWorld::UpdateUssDistance() {}
-void ApaWorld::UpdateObstacles() {}
+void ApaWorld::UpdateObstacles() {
+  apa_data_ptr_->apa_obs_map.clear();
+  UpdateFuisonObs();
+  UpdateGroundLineObs();
+  UpdateUssObs();
+}
+
+void ApaWorld::UpdateFuisonObs() {
+  const bool use_fus_occ_obj = apa_param.GetParam().use_fus_occ_obj;
+  if (use_fus_occ_obj &&
+      apa_data_ptr_->fusion_occupancy_objects_info_ptr == nullptr) {
+    ILOG_INFO << "fusion_occ_objects_info_ptr is nullptr";
+    return;
+  }
+  if (!use_fus_occ_obj && apa_data_ptr_->fusion_objects_info_ptr == nullptr) {
+    ILOG_INFO << "fusion_objects_info_ptr is nullptr";
+    return;
+  }
+
+  uint8 fusion_object_num;
+  if (use_fus_occ_obj) {
+    fusion_object_num =
+        apa_data_ptr_->fusion_occupancy_objects_info_ptr->fusion_object_size;
+  } else {
+    fusion_object_num =
+        apa_data_ptr_->fusion_objects_info_ptr->fusion_object_size;
+  }
+
+  if (fusion_object_num == 0) {
+    ILOG_INFO << "fusion objects is empty";
+    return;
+  }
+
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  // Assuming an object has a maximum of 66 obstacle points
+  obs_pt_vec.reserve(fusion_object_num * 66);
+
+  Eigen::Vector2d fs_pt;
+  if (use_fus_occ_obj) {
+    iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
+    for (uint8 i = 0; i < fusion_object_num; ++i) {
+      fusion_occupancy_object =
+          apa_data_ptr_->fusion_occupancy_objects_info_ptr->fusion_object[i]
+              .additional_occupancy_info;
+      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_size; ++j) {
+        fs_pt << fusion_occupancy_object.polygon_points[j].x,
+            fusion_occupancy_object.polygon_points[j].y;
+        obs_pt_vec.emplace_back(fs_pt);
+      }
+    }
+  } else {
+    iflyauto::FusionObjectsAdditional fusion_object;
+    for (uint8 i = 0; i < fusion_object_num; ++i) {
+      fusion_object = apa_data_ptr_->fusion_objects_info_ptr->fusion_object[i]
+                          .additional_info;
+      for (uint32 j = 0; j < fusion_object.polygon_points_size; ++j) {
+        fs_pt << fusion_object.polygon_points[j].x,
+            fusion_object.polygon_points[j].y;
+        obs_pt_vec.emplace_back(fs_pt);
+      }
+    }
+  }
+
+  apa_data_ptr_->apa_obs_map[ObstacleType::FUSION] = obs_pt_vec;
+
+  ILOG_INFO << "fusion objects size = " << obs_pt_vec.size();
+
+  return;
+}
+
+void ApaWorld::UpdateGroundLineObs() {
+  if (apa_data_ptr_->ground_line_perception_info_ptr == nullptr) {
+    ILOG_INFO << "ground_line_perception_info_ptr is nullptr";
+    return;
+  }
+
+  const uint8_t ground_lines_size =
+      apa_data_ptr_->ground_line_perception_info_ptr->ground_lines_size;
+
+  if (ground_lines_size == 0) {
+    ILOG_INFO << "ground line is empty";
+    return;
+  }
+
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  // Assuming an object has a maximum of 33 obstacle points
+  obs_pt_vec.reserve(ground_lines_size * 66);
+
+  Eigen::Vector2d gl_pt;
+  iflyauto::GroundLine gl;
+  for (uint8_t i = 0; i < ground_lines_size; ++i) {
+    gl = apa_data_ptr_->ground_line_perception_info_ptr->ground_lines[i];
+    for (uint8 j = 0; j < gl.points_3d_size; ++j) {
+      gl_pt << gl.points_3d[j].x, gl.points_3d[j].y;
+      obs_pt_vec.emplace_back(gl_pt);
+    }
+  }
+
+  apa_data_ptr_->apa_obs_map[ObstacleType::GROUND_LINE] = obs_pt_vec;
+
+  ILOG_INFO << "ground line objects size = " << obs_pt_vec.size();
+
+  return;
+}
+
+void ApaWorld::UpdateUssObs() {
+  if (apa_data_ptr_->uss_percept_info_ptr == nullptr) {
+    ILOG_INFO << "uss_percept_info_ptr is empty";
+    return;
+  }
+
+  const auto& obj_info_desample =
+      apa_data_ptr_->uss_percept_info_ptr
+          ->out_line_dataori[0];  // 0 means desample while 1 means raw model
+                                  // output
+
+  const uint32 uss_pt_num = obj_info_desample.obj_pt_cnt;
+
+  if (uss_pt_num == 0) {
+    ILOG_INFO << "uss obs is empty";
+    return;
+  }
+
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  obs_pt_vec.reserve(uss_pt_num);
+
+  Eigen::Vector2d uss_pt;
+  for (uint32 i = 0; i < uss_pt_num; ++i) {
+    uss_pt << obj_info_desample.obj_pt_global[i].x,
+        obj_info_desample.obj_pt_global[i].y;
+    obs_pt_vec.emplace_back(uss_pt);
+  }
+
+  apa_data_ptr_->apa_obs_map[ObstacleType::USS] = obs_pt_vec;
+
+  ILOG_INFO << "uss objects size = " << obs_pt_vec.size();
+
+  return;
+}
 
 const bool ApaWorld::Update() {
   if (local_view_ptr_ == nullptr) {
@@ -245,21 +391,40 @@ const bool ApaWorld::Update() {
       apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_IN) {
     if (apa_data_ptr_->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-      ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
-
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
+      if (apa_param.GetParam().is_heading_in) {
+        apa_data_ptr_->planner_type =
+            ApaPlannerType::PERPENDICULAR_PARK_HEADING_IN_PLANNER;
+
+        ILOG_INFO << "planner_type = PERPENDICULAR_PARK_HEADING_IN!";
+      } else {
         apa_data_ptr_->planner_type =
             ApaPlannerType::PERPENDICULAR_PARK_IN_PLANNER;
+
+        AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+        if (astar_scheduler->IsNeedAstarSearch()) {
+          apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+        }
+
+        ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
+      }
       } else {
         apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
       }
       ILOG_INFO << "path plan method = "
                 << static_cast<int>(apa_data_ptr_->planner_type);
+
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       ILOG_INFO << "planner_type = PARALLEL_PARK_IN!";
-      apa_data_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::GEOMETRY_BASED) {
+        apa_data_ptr_->planner_type = ApaPlannerType::PARALLEL_PARK_IN_PLANNER;
+
+      } else {
+        apa_data_ptr_->planner_type = ApaPlannerType::HYBRID_ASTAR_PLANNER;
+      }
     } else if (apa_data_ptr_->slot_type ==
                Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
       ILOG_INFO << "planner_type = SLANT_PARK_IN!";
@@ -268,6 +433,10 @@ const bool ApaWorld::Update() {
       ILOG_INFO << "current slot type is not supported now!";
       return false;
     }
+  } else if (apa_data_ptr_->cur_state == ApaStateMachine::ACTIVE_OUT) {
+    DEBUG_PRINT("planner_type = PERPENDICULAR_PARK_OUT!");
+    apa_data_ptr_->planner_type =
+        ApaPlannerType::PERPENDICULAR_PARK_OUT_PLANNER;
   }
 
   PrintApaPlannerType(apa_data_ptr_->planner_type);

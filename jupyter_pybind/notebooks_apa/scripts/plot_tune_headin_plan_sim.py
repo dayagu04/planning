@@ -1,0 +1,464 @@
+import math
+import numpy as np
+import sys, os
+sys.path.append("..")
+# from lib.load_cyberbag import *
+from lib.load_local_view_parking import *
+from bokeh.models import HoverTool, Slider, CustomJS, Div, WheelZoomTool, DataTable, TableColumn, Panel, Tabs, Arrow, NormalHead, Label
+from bokeh.events import Tap
+sys.path.append('../..')
+sys.path.append('../../../build')
+sys.path.append('../../../')
+sys.path.append('python_proto')
+from jupyter_pybind import headin_planning_py
+
+display(HTML("<style>.container { width:95% !important;  }</style>"))
+output_notebook()
+
+# JAC_S811
+# wheel_base = 2.7
+# E0Y
+# wheel_base = 3.0
+# CHERY_26
+wheel_base = 2.796
+
+car_xb, car_yb, wheel_base = load_car_params_patch_parking(CHERY_T26)
+coord_tf = coord_transformer()
+
+data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
+data_car_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
+data_car_target_line = ColumnDataSource(data = {'y':[], 'x':[]})
+data_car_safe_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
+data_car_safe_line = ColumnDataSource(data = {'y':[], 'x':[]})
+data_car_start_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+data_car_end_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+data_safe_circle_tang_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+data_safe_circle_tang_line = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_rectangle_slot = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+
+data_simu_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+
+data_pt_inside_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+
+data_real_pt_inside_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+
+data_obs_pos = ColumnDataSource(data = {'x':[], 'y':[]})
+
+
+
+data_planning_tune = ColumnDataSource(data = {'plan_path_x':[],
+                                              'plan_path_y':[],
+                                              'plan_path_heading':[],})
+
+data_control_planning_tune = ColumnDataSource(data = {'control_path_x':[],
+                                              'control_path_y':[],
+                                              'control_path_heading':[],})
+
+fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
+fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+fig1.patch('car_xn', 'car_yn', source = data_car_target_pos, fill_color = "blue", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target_pos')
+fig1.patch('car_xn', 'car_yn', source = data_car_safe_pos, fill_color = "orange", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_safe_pos')
+fig1.line('x', 'y', source = data_car_target_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_target_line')
+fig1.line('x', 'y', source = data_car_safe_line, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'car_safe_line')
+fig1.patches('x_vec', 'y_vec', source = data_simu_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'sim_sampled_carbox', visible = False)
+
+fig1.circle('x','y', source = data_pt_inside_pos, size=8, color='green', legend_label = 'pt_inside_pos')
+fig1.circle('x','y', source = data_real_pt_inside_pos, size=8, color='orange', legend_label = 'real_pt_inside_pos')
+fig1.circle('x','y', source = data_obs_pos, size=8, color='green', legend_label = 'obs_pos')
+
+
+fig1.circle('x','y', source = data_car_start_pos, size=8, color='red', legend_label = 'car_start_pos')
+fig1.circle('x','y', source = data_car_end_pos, size=8, color='blue', legend_label = 'car_end_pos')
+fig1.circle('x','y', source = data_safe_circle_tang_pos, size=8, color='black', legend_label = 'safe_circle_tang_pos')
+fig1.multi_line('x_vec', 'y_vec',source = data_safe_circle_tang_line, line_width = 3, line_color = 'black', line_dash = 'solid',legend_label = 'safe_circle_tang_line')
+fig1.multi_line('x_vec', 'y_vec',source = data_rectangle_slot, line_width = 1.5, line_color = 'blue', line_dash = 'solid',legend_label = 'rectangle slot')
+
+fig1.circle('plan_path_x', 'plan_path_y', source = data_planning_tune, size=4, color='yellow', legend_label = 'sim_tuned_plan')
+fig1.line('plan_path_x', 'plan_path_y', source = data_planning_tune, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
+fig1.line('control_path_x', 'control_path_y', source = data_control_planning_tune, line_width = 6, line_color = 'blue', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_control_plan')
+
+source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
+line_source = ColumnDataSource(data=dict(x=[], y=[]))
+fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
+text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
+
+# Define the JavaScript callback code
+callback_code = """
+    var x = cb_obj.x;
+    var y = cb_obj.y;
+
+    source.data['x'].push(x);
+    source.data['y'].push(y);
+
+    if (source.data['x'].length > 2) {
+        source.data['x'].shift();
+        source.data['y'].shift();
+        source.data['x'].shift();
+        source.data['y'].shift();
+    }
+    source.change.emit();
+
+    if (source.data['x'].length >= 2) {
+        var x1 = source.data['x'][source.data['x'].length - 2];
+        var y1 = source.data['y'][source.data['y'].length - 2];
+        var x2 = x;
+        var y2 = y;
+        var x3 = (x1 + x2) / 2;
+        var y3 = (y1 + y2) / 2;
+
+        var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+        console.log("Distance between the last two points: " + distance);
+
+        distance = distance.toFixed(4);
+        text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+        text_source.change.emit();
+
+        line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+        line_source.change.emit();
+    }
+
+    if (source.data['x'].length == 1) {
+        text_source.data['x'].shift();
+        text_source.data['y'].shift();
+        text_source.data['text'].shift();
+    }
+    text_source.change.emit();
+"""
+
+# Create a CustomJS callback with the defined code
+callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+
+# Attach the callback to the Tap event on the plot
+fig1.js_on_event(Tap, callback)
+
+
+fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
+fig1.legend.click_policy = 'hide'
+
+headin_planning_py.Init()
+
+class LocalViewSlider:
+  def __init__(self,  slider_callback):
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-20, max=10, value= 2.0, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value= 1.5, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=-180, max=180, value=0.0, step=1.0)
+
+    self.slot_inside_x_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs_x",min=-10.0, max=10.0, value=0.0, step=0.2)
+    self.slot_inside_y_obs_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_inside_obs_y",min= -10.0, max=10.0, value=0.0, step=0.2)
+    self.radius_add_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "radius_adjust",min=0.0, max=5.0, value=0.0, step=0.2)
+    self.right_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dx",min=-10.0, max=10.0, value=0.0, step=0.05)
+    self.right_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "right_obj_dy",min=-10, max=10.0, value=0.2, step=0.05)
+    self.left_obj_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dx",min=-10.0, max=10.0, value=0.0, step=0.05)
+    self.left_obj_dy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "left_obj_dy",min=-10, max=10.0, value=0.2, step=0.05)
+    self.channel_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "channel_width",min=3.0, max=12.4, value=6.0, step=0.1)
+
+    self.slot_width_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_width",min=0, max=10, value=2.6, step=0.01)
+    self.slot_length_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_length",min=0, max=6, value=5.0, step=0.01)
+    self.inside_dx_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "inside_dx",min=-6, max=6, value=0.0, step=0.1)
+
+    self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
+    self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
+
+    ipywidgets.interact(slider_callback, ego_x = self.ego_x_slider,
+                                         ego_y = self.ego_y_slider,
+                                         ego_heading = self.ego_heading_slider,
+                                         slot_inside_obs_x = self.slot_inside_x_obs_slider,
+                                         slot_inside_obs_y = self.slot_inside_y_obs_slider,
+                                         radius_add = self.radius_add_slider,
+                                         right_obj_dx = self.right_obj_dx_slider,
+                                         right_obj_dy = self.right_obj_dy_slider,
+                                         left_obj_dx = self.left_obj_dx_slider,
+                                         left_obj_dy = self.left_obj_dy_slider,
+                                         channel_width = self.channel_width_slider,
+
+                                         slot_pt0_x = self.slot_pt0_x_slider,
+                                         slot_pt0_y  = self.slot_pt0_y_slider,
+
+                                         slot_width = self.slot_width_slider,
+                                         slot_length = self.slot_length_slider,
+                                         inside_dx = self.inside_dx_slider,
+                                       )
+
+### sliders callback
+def slider_callback(ego_x, ego_y, ego_heading, slot_inside_obs_x, slot_inside_obs_y, radius_add, right_obj_dx,
+                    right_obj_dy, left_obj_dx, left_obj_dy, channel_width,  slot_pt0_x, slot_pt0_y, slot_width, slot_length, inside_dx, ):
+  kwargs = locals()
+  is_head_ego = False
+  car_xn = []
+  car_yn = []
+  for i in range(len(car_xb)):
+      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_x, ego_y, ego_heading/57.3)
+      car_xn.append(tmp_x)
+      car_yn.append(tmp_y)
+  data_car.data.update({
+    'car_xn': car_xn,
+    'car_yn': car_yn,
+  })
+
+  # update start point pos
+  if(is_head_ego):
+    head_ego_pose_x = ego_x + wheel_base * math.cos(ego_heading / 57.3)
+    head_ego_pose_y = ego_y + wheel_base * math.sin(ego_heading / 57.3)
+  else:
+    head_ego_pose_x = ego_x
+    head_ego_pose_y = ego_y
+
+  data_car_start_pos.data.update({
+    'x': [head_ego_pose_x],
+    'y': [head_ego_pose_y],
+  })
+
+
+  slot_pt1_x = slot_pt0_x - slot_width
+  slot_pt1_y = slot_pt0_y
+  slot_pt2_x = slot_pt0_x
+  slot_pt2_y = slot_pt0_y - slot_length
+  slot_pt3_x = slot_pt2_x - slot_width
+  slot_pt3_y = slot_pt2_y
+  ego_pose = [head_ego_pose_x , head_ego_pose_y, ego_heading / 57.3]
+  slot_pt = [[slot_pt0_x, slot_pt0_y], [slot_pt1_x, slot_pt1_y], [slot_pt2_x, slot_pt2_y], [slot_pt3_x, slot_pt3_y],]
+
+  obs_params = [right_obj_dx, right_obj_dy, left_obj_dx, left_obj_dy, channel_width, slot_inside_obs_x, slot_inside_obs_y]
+
+  current_path_point_global_vec_ = headin_planning_py.Update(ego_pose, slot_pt, 0.2, True, inside_dx, radius_add, obs_params)
+
+  rectangle_solt_pos_vec_ = headin_planning_py.GetRectangleSoltPos()
+
+  slot_rectangle_x_vec, slot_rectangle_y_vec = [], []
+
+  if (len(rectangle_solt_pos_vec_) > 1):
+    slot_rectangle_x_vec.append([rectangle_solt_pos_vec_[0][0], rectangle_solt_pos_vec_[1][0]])
+    slot_rectangle_x_vec.append([rectangle_solt_pos_vec_[1][0], rectangle_solt_pos_vec_[3][0]])
+    slot_rectangle_x_vec.append([rectangle_solt_pos_vec_[3][0], rectangle_solt_pos_vec_[2][0]])
+    slot_rectangle_x_vec.append([rectangle_solt_pos_vec_[2][0], rectangle_solt_pos_vec_[0][0]])
+
+    slot_rectangle_y_vec.append([rectangle_solt_pos_vec_[0][1], rectangle_solt_pos_vec_[1][1]])
+    slot_rectangle_y_vec.append([rectangle_solt_pos_vec_[1][1], rectangle_solt_pos_vec_[3][1]])
+    slot_rectangle_y_vec.append([rectangle_solt_pos_vec_[3][1], rectangle_solt_pos_vec_[2][1]])
+    slot_rectangle_y_vec.append([rectangle_solt_pos_vec_[2][1], rectangle_solt_pos_vec_[0][1]])
+
+
+  data_rectangle_slot.data.update({
+    'x_vec': slot_rectangle_x_vec,
+    'y_vec': slot_rectangle_y_vec,})
+
+  car_end_pose = headin_planning_py.GetTargetPose()
+  data_car_end_pos.data.update({
+    'x': [car_end_pose[0]],
+    'y': [car_end_pose[1]],
+  })
+
+
+  print("path length = ",len(current_path_point_global_vec_))
+  print('\n')
+
+
+  data_planning_tune.data.update({
+    'plan_path_x': [],
+    'plan_path_y': [],
+    'plan_path_heading': [],
+  })
+
+  plan_path_x = []
+  plan_path_y = []
+  plan_path_heading = []
+
+  data_control_planning_tune.data.update({
+    'control_path_x': [],
+    'control_path_y': [],
+    'control_path_heading': [],
+  })
+
+  control_path_x = []
+  control_path_y = []
+  control_path_heading = []
+
+  for i in range(len(current_path_point_global_vec_)):
+    tmp_x = current_path_point_global_vec_[i][0]
+    tmp_y = current_path_point_global_vec_[i][1]
+    tmp_heading = current_path_point_global_vec_[i][2]
+    plan_path_x.append(tmp_x)
+    plan_path_y.append(tmp_y)
+    plan_path_heading.append(tmp_heading)
+    if is_head_ego:
+      con_x = tmp_x - wheel_base * math.cos(tmp_heading)
+      con_y = tmp_y - wheel_base * math.sin(tmp_heading)
+      control_path_x.append(con_x)
+      control_path_y.append(con_y)
+      control_path_heading.append(tmp_heading)
+
+
+  data_planning_tune.data.update({
+    'plan_path_x': plan_path_x,
+    'plan_path_y': plan_path_y,
+    'plan_path_heading': plan_path_heading,
+  })
+
+  data_control_planning_tune.data.update({
+    'control_path_x': control_path_x,
+    'control_path_y': control_path_y,
+    'control_path_heading': control_path_heading,
+  })
+
+  cur_pos_xn0 = 0
+  cur_pos_yn0 = 0
+  car_xn = []
+  car_yn = []
+  line_xn = []
+  line_yn = []
+  car_box_x_vec = []
+  car_box_y_vec = []
+  if (len(plan_path_x) > 1):
+    half_car_width = car_yb[0]
+    last_x = plan_path_x[-1]
+    last_y = plan_path_y[-1]
+    last_heading = plan_path_heading[-1]
+    for i in range(len(car_xb)):
+      if is_head_ego:
+        ego_pos_x = last_x - wheel_base * math.cos(last_heading)
+        ego_pos_y = last_y - wheel_base * math.sin(last_heading)
+      else:
+        ego_pos_x = last_x
+        ego_pos_y = last_y
+      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_x, ego_pos_y, last_heading)
+      car_xn.append(tmp_x - cur_pos_xn0)
+      car_yn.append(tmp_y - cur_pos_yn0)
+
+    heading_vec = [math.cos(last_heading), math.sin(last_heading)]
+    norm_vec_1 = [-half_car_width * heading_vec[1], half_car_width * heading_vec[0]]
+    norm_vec_2 = [half_car_width * heading_vec[1], -half_car_width * heading_vec[0]]
+    x1 = ego_pos_x + norm_vec_1[0]
+    y1 = ego_pos_y + norm_vec_1[1]
+    x2 = ego_pos_x + norm_vec_2[0]
+    y2 = ego_pos_y + norm_vec_2[1]
+    line_xn = [x1, x2]
+    line_yn = [y1, y2]
+
+  data_car_target_pos.data.update({
+    'car_xn': car_xn,
+    'car_yn': car_yn,
+  })
+
+  data_car_target_line.data.update({
+    'x' : line_xn,
+    'y' : line_yn,
+  })
+
+  for k in range(len(plan_path_x)):
+    car_xn = []
+    car_yn = []
+    if is_head_ego:
+      ego_pos_x = plan_path_x[k] - wheel_base * math.cos(plan_path_heading[k])
+      ego_pos_y = plan_path_y[k] - wheel_base * math.sin(plan_path_heading[k])
+    else:
+      ego_pos_x = plan_path_x[k]
+      ego_pos_y = plan_path_y[k]
+    for i in range(len(car_xb)):
+        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_x, ego_pos_y, plan_path_heading[k])
+        car_xn.append(tmp_x)
+        car_yn.append(tmp_y)
+    car_box_x_vec.append(car_xn)
+    car_box_y_vec.append(car_yn)
+
+  data_simu_car_box.data.update({
+    'x_vec': car_box_x_vec,
+    'y_vec': car_box_y_vec,
+  })
+
+  pt_inside_pos = headin_planning_py.GetPtInsidePose()
+  real_pt_inside_pos = headin_planning_py.GetRealPtInsidePose()
+
+  data_pt_inside_pos.data.update({
+    'x' : [pt_inside_pos[0]],
+    'y' : [pt_inside_pos[1]],
+  })
+
+  data_real_pt_inside_pos.data.update({
+    'x' : [real_pt_inside_pos[0]],
+    'y' : [real_pt_inside_pos[1]],
+  })
+
+  safe_circle_tang_pose = headin_planning_py.GetCircleTangentPose()
+  # print('circle_tang_pos handing: ', safe_circle_tang_pose[2] * 57.3)
+  extend_pos_x = safe_circle_tang_pose[0] + math.cos(safe_circle_tang_pose[2])
+  extend_pos_y = safe_circle_tang_pose[1] + math.sin(safe_circle_tang_pose[2])
+
+  data_safe_circle_tang_pos.data.update({
+    'x': [safe_circle_tang_pose[0]],
+    'y': [safe_circle_tang_pose[1]],
+  })
+
+  tang_line_x_vec = []
+  tang_line_y_vec = []
+  tang_line_x_vec.append([safe_circle_tang_pose[0], extend_pos_x])
+  tang_line_y_vec.append([safe_circle_tang_pose[1], extend_pos_y])
+
+  data_safe_circle_tang_line.data.update({
+    'x_vec': tang_line_x_vec,
+    'y_vec': tang_line_y_vec,
+  })
+
+  #update tangent pos car
+  car_xn = []
+  car_yn = []
+  line_xn = []
+  line_yn = []
+  car_box_x_vec = []
+  car_box_y_vec = []
+  if (len(plan_path_x) > 1):
+    half_car_width = car_yb[0]
+    last_x = safe_circle_tang_pose[0]
+    last_y = safe_circle_tang_pose[1]
+    last_heading = safe_circle_tang_pose[2]
+    if is_head_ego:
+      ego_pos_x = last_x - wheel_base * math.cos(last_heading)
+      ego_pos_y = last_y - wheel_base * math.sin(last_heading)
+    else:
+      ego_pos_x = last_x
+      ego_pos_y = last_y
+
+    for i in range(len(car_xb)):
+      tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], ego_pos_x, ego_pos_y, last_heading)
+      car_xn.append(tmp_x - cur_pos_xn0)
+      car_yn.append(tmp_y - cur_pos_yn0)
+
+    heading_vec = [math.cos(last_heading), math.sin(last_heading)]
+    norm_vec_1 = [-half_car_width * heading_vec[1], half_car_width * heading_vec[0]]
+    norm_vec_2 = [half_car_width * heading_vec[1], -half_car_width * heading_vec[0]]
+    x1 = ego_pos_x + norm_vec_1[0]
+    y1 = ego_pos_y + norm_vec_1[1]
+    x2 = ego_pos_x + norm_vec_2[0]
+    y2 = ego_pos_y + norm_vec_2[1]
+    line_xn = [x1, x2]
+    line_yn = [y1, y2]
+
+  data_car_safe_pos.data.update({
+    'car_xn': car_xn,
+    'car_yn': car_yn,
+  })
+
+  data_car_safe_line.data.update({
+    'x' : line_xn,
+    'y' : line_yn,
+  })
+
+  obs_pts = headin_planning_py.GetObstacles()
+  obs_pt_x, obs_pt_y = [], []
+  for i in range(len(obs_pts)):
+    obs_pt_x.append(obs_pts[i][0])
+    obs_pt_y.append(obs_pts[i][1])
+
+  data_obs_pos.data.update({
+    'x': obs_pt_x,
+    'y': obs_pt_y,
+  })
+
+
+
+  push_notebook()
+
+bkp.show(row(fig1), notebook_handle=True)
+slider_class = LocalViewSlider(slider_callback)

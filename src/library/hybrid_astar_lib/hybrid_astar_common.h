@@ -47,17 +47,20 @@ enum class AstarPathGenerateType {
 };
 
 enum class ParkSpaceType {
-  none,
-  vertical,
-  parallel,
-  max_number,
+  NONE,
+  VERTICAL,
+  PARALLEL,
+  SLANTING,
+  MAX_NUMBER,
 };
 
 enum class ParkingTask {
-  none,
-  parking_in,
-  parking_out,
-  max_number,
+  NONE,
+  TAIL_PARKING_IN,
+  HEAD_PARKING_IN,
+  HEAD_PARKING_OUT,
+  TAIL_PARKING_OUT,
+  MAX_NUMBER,
 };
 
 enum class ParkingVehDirectionRequest {
@@ -273,7 +276,42 @@ struct DebugAstarSearchPoint {
   DebugAstarSearchPoint(const double x, const double y, const bool is_safe) {
     pos.x = x;
     pos.y = y;
-    safe  = is_safe;
+    safe = is_safe;
+  }
+};
+
+enum class SlotRelativePosition {
+  NONE,
+  RIGHT,
+  LEFT,
+  MAX_NUMBER
+};
+
+enum class VehRelativePosition {
+  NONE,
+  RIGHT,
+  LEFT,
+  MIDDLE,
+  MAX_NUMBER
+};
+
+struct Boundary2D {
+  double min;
+  double max;
+};
+
+struct PolynomialPathCost {
+  double offset_to_center;
+  double accumulated_s;
+  double tail_heading;
+
+  size_t point_size;
+
+  void Clear() {
+    offset_to_center = 100.0;
+    tail_heading = 100.0;
+    point_size = 0;
+    return;
   }
 };
 
@@ -282,5 +320,10 @@ std::string PathGearDebugString(const AstarPathGear gear);
 std::string GetPathSteerDebugString(const AstarPathSteer type);
 
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
+
+std::string PlanReasonDebugString(const PlanningReason reason);
+
+const bool PolynomialPathBetter(const PolynomialPathCost& path,
+                                const PolynomialPathCost& base);
 
 }  // namespace planning

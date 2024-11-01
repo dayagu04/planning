@@ -170,7 +170,15 @@ class ParallelPathPlanner : public ApaPathPlanner {
 
   const bool AssempleGeometryPath(
       GeometryPath &geometry_path,
-      const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
+      const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec) const;
+
+  const bool AssempleGeometryPathVec(
+      std::vector<GeometryPath> &geometry_path_vec,
+      const std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec)
+      const;
+
+  const uint8_t GetMinShiftTimeInGeometryPathVec(
+      const std::vector<GeometryPath> &geometry_path_vec);
 
   const bool CalcParkOutPath(
       std::vector<pnc::geometry_lib::PathSegment> &reversed_park_out_path,
@@ -182,6 +190,13 @@ class ParallelPathPlanner : public ApaPathPlanner {
   const bool OneStepDubinsPlan(const pnc::geometry_lib::PathPoint &start_pose,
                                const pnc::geometry_lib::PathPoint &target_pose,
                                const double radius, const double buffer = 0.0);
+
+  const bool DubinsPlan(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::PathPoint &target_pose, const double radius,
+      const double buffer);
+
   const bool IsDubinsCollided(const double buffer = 0.0);
 
   const bool RSCurvePlan(const pnc::geometry_lib::PathPoint &current_pose,
@@ -239,9 +254,14 @@ class ParallelPathPlanner : public ApaPathPlanner {
   const std::vector<double> GetMinDistOfEgoToObs();
 
   const bool GenAlignedPreparingLine(
-      std::vector<double> &preparing_y_vec,
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec,
       const pnc::geometry_lib::PathPoint &ego_pose);
-  const bool GenPreparingLineVec(std::vector<double> &preparing_y_vec);
+
+  const bool GenParallelPreparingLineVec(
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
+
+  const bool GenTiltedPreparingLine(
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
 
   const bool CheckEgoInSlot() const;
   const bool CalMinSafeCircle();
@@ -367,11 +387,23 @@ class ParallelPathPlanner : public ApaPathPlanner {
       pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
       const uint8_t current_arc_steer);
 
+  const bool TwoArcPath(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &start_pose,
+      const pnc::geometry_lib::LineSegment &target_line, const uint8_t ref_gear,
+      const double radius, const double lon_buffer);
+
   const bool LineArcPlan(
       pnc::geometry_lib::Arc &arc,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       pnc::geometry_lib::LineSegment &target_line, const uint8_t current_gear,
       const uint8_t current_arc_steer);
+
+  const bool LineArcPlan(
+      std::vector<std::vector<pnc::geometry_lib::PathSegment>> &path_vec,
+      const pnc::geometry_lib::PathPoint &ego_pose,
+      const pnc::geometry_lib::LineSegment &target_line, const uint8_t ref_gear,
+      const uint8_t ref_steer, const double radius, const double lon_buffer);
 
   const bool AlignBodyPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -420,10 +452,6 @@ class ParallelPathPlanner : public ApaPathPlanner {
                          const pnc::geometry_lib::PathPoint &start_pose,
                          const pnc::geometry_lib::LineSegment &target_line,
                          const double lon_buffer = 0.3) const;
-
-  const bool OneLinePlanInCSCS(
-      pnc::geometry_lib::LineSegment &line,
-      const pnc::geometry_lib::PathPoint &target_pose) const;
 
   const bool OneLinePlanAlongEgoHeading(
       pnc::geometry_lib::LineSegment &line,

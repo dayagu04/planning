@@ -44,6 +44,9 @@ class DubinsLibrary {
     Eigen::Vector2d p2 = Eigen::Vector2d::Zero();
     double heading1 = 0.0;
     double heading2 = 0.0;
+    Eigen::Vector2d heading1_vec = Eigen::Vector2d::Zero();
+    Eigen::Vector2d heading2_vec = Eigen::Vector2d::Zero();
+    bool heading_vec_flag = false;
     double radius = 0.0;
 
     Input() {}
@@ -78,6 +81,7 @@ class DubinsLibrary {
     uint8_t gear_change_count = 0;
     uint8_t gear_change_index = 0;
     uint8_t path_seg_count = 0;
+    std::vector<double> length_vec = {0.0, 0.0, 0.0};
     std::vector<uint8_t> gear_cmd_vec = {0, 0, 0};
     double length = 0.0;
     double current_length = 0.0;
@@ -108,6 +112,7 @@ class DubinsLibrary {
   const bool OneStepDubinsUpdate();
   const bool OneStepDubinsUpdateByVer();
   const bool OneStepDubinsUpdateByVer(const double min_length);
+  const std::vector<Output> Update();
   void SetInput(Input& input) { input_ = input; }
   void PrintOutput() const;
 

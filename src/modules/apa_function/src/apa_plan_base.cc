@@ -1,10 +1,16 @@
 #include "apa_plan_base.h"
+#include <bits/stdint-uintn.h>
+#include <sys/types.h>
 
 #include <memory>
 
+#include "apa_param_setting.h"
 #include "apa_utils.h"
+#include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "log_glog.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -42,7 +48,7 @@ const bool ApaPlannerBase::CheckPaused() const {
 const bool ApaPlannerBase::CheckPlanSkip() const {
   if (frame_.plan_stm.planning_status == PARKING_FINISHED ||
       frame_.plan_stm.planning_status == PARKING_FAILED) {
-    DEBUG_PRINT("plan has been finished or failed, need reset");
+    ILOG_INFO << "plan has been finished or failed, need reset";
 
     if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
       apa_world_ptr_->GetSlotManagerPtr()->Reset();
@@ -70,10 +76,12 @@ void ApaPlannerBase::GenPlanningOutput() {
       apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
       apa_world_ptr_->GetApaDataPtr()->measurement_data.heading);
 
-  DEBUG_PRINT("frame_.plan_stm.planning_status = "
-              << static_cast<int>(frame_.plan_stm.planning_status)
-              << "  plan path pt size = "
-              << current_path_point_global_vec_.size());
+  ILOG_INFO << "frame_.plan_stm.planning_status = "
+            << static_cast<int>(frame_.plan_stm.planning_status)
+            << "  plan path pt size = "
+            << current_path_point_global_vec_.size();
+
+  SchedulerForGeometryWithAstar();
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
@@ -97,7 +105,7 @@ void ApaPlannerBase::GenPlanningOutput() {
     apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   }
 
-  DEBUG_PRINT("gen plan output success.");
+  ILOG_INFO << "gen plan output success.";
 }
 
 void ApaPlannerBase::GenPlanningHmiOutput() {
@@ -123,7 +131,7 @@ void ApaPlannerBase::GenPlanningPath() {
 
   size_t N = current_path_point_global_vec_.size();
   if (N > PLANNING_TRAJ_POINTS_NUM - 1) {
-    std::cout << "sample ds is possible err\n";
+    ILOG_INFO << "sample ds is possible err";
     N = PLANNING_TRAJ_POINTS_NUM - 1;
   }
   trajectory->trajectory_points_size = N;
@@ -187,12 +195,12 @@ const bool ApaPlannerBase::CheckStuckFailed() {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
 }
 
-void ApaPlannerBase::UpdateRemainDist() {
+void ApaPlannerBase::UpdateRemainDist(const double uss_safe_dist) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
 
   // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss();
+  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist);
 
   return;
 }
@@ -214,53 +222,54 @@ const double ApaPlannerBase::CalRemainDistFromPath() {
     if (success == true) {
       remain_dist = frame_.current_path_length - s_proj;
 
-      DEBUG_PRINT("remain_dist = " << remain_dist << "  s_proj = " << s_proj
-                                   << "  current_path_length = "
-                                   << frame_.current_path_length);
+      ILOG_INFO << "remain_dist = " << remain_dist << "  s_proj = " << s_proj
+                << "  current_path_length = " << frame_.current_path_length;
     } else {
-      DEBUG_PRINT("remain_dist calculation error:input is error");
+      ILOG_INFO << "remain_dist calculation error:input is error";
     }
   } else {
-    DEBUG_PRINT("remain_dist calculation error: path spline failed!");
+    ILOG_INFO << "remain_dist calculation error: path spline failed!";
   }
 
   return remain_dist;
 }
 
-const double ApaPlannerBase::CalRemainDistFromUss() {
+const double ApaPlannerBase::CalRemainDistFromUss(const double safe_dist) {
   double remain_dist = 5.01;
 
-  // if (frame_.is_replan_first) {
-  //   return remain_dist;
-  // }
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
   uss_obstacle_avoider_ptr->Update(&planning_output_,
                                    apa_world_ptr_->GetApaDataPtr());
 
-  const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+  remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-                safe_uss_remain_dist;
+  const double obs_pt_remain_dist =
+      uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
+      safe_dist;
 
-  DEBUG_PRINT("origin_uss remain dist = "
-              << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-              << "  uss remain dist = " << remain_dist);
+  ILOG_INFO << "origin_uss remain dist = "
+            << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
+            << "  uss remain dist = " << remain_dist;
 
-  // remain_dist = 5.01;
+  ILOG_INFO << "origin_obs_pt remain dist = "
+            << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
+            << "  obs_pt remain dist = " << obs_pt_remain_dist;
 
-  return remain_dist;
+  if (apa_param.GetParam().enable_corner_uss_process) {
+    return remain_dist;
+  } else {
+    return obs_pt_remain_dist;
+  }
 }
 
 const bool ApaPlannerBase::PostProcessPath() {
   size_t origin_trajectory_size = current_path_point_global_vec_.size();
   if (origin_trajectory_size < 2) {
     frame_.spline_success = false;
-    DEBUG_PRINT("error: origin_trajectory_size = " << origin_trajectory_size);
+    ILOG_INFO << "error: origin_trajectory_size = " << origin_trajectory_size;
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
     return false;
   }
@@ -308,7 +317,7 @@ const bool ApaPlannerBase::PostProcessPath() {
 
   if (success == false) {
     frame_.spline_success = false;
-    DEBUG_PRINT("fit line by spline error!");
+    ILOG_INFO << "fit line by spline error!";
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SAME;
     return false;
   }
@@ -325,6 +334,38 @@ const bool ApaPlannerBase::PostProcessPath() {
   frame_.spline_success = true;
 
   return true;
+}
+
+const void ApaPlannerBase::SchedulerForGeometryWithAstar() {
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type !=
+      Common::PARKING_SLOT_TYPE_VERTICAL) {
+    return;
+  }
+
+  if (frame_.replan_reason != FIRST_PLAN) {
+    return;
+  }
+
+  if (frame_.plan_stm.planning_status != PARKING_FAILED) {
+    return;
+  }
+
+  if (!apa_param.GetParam()
+           .astar_config.vertical_slot_auto_scheduler_for_astar) {
+    return;
+  }
+
+  AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+  astar_scheduler->Process(
+      apa_world_ptr_->GetApaDataPtr()->slot_type, 1, frame_.replan_reason,
+      frame_.plan_stm.planning_status,
+      static_cast<uint8_t>(apa_world_ptr_->GetApaDataPtr()->planner_type));
+
+  if (astar_scheduler->IsNeedAstarSearch()) {
+    frame_.plan_stm.planning_status = PARKING_PLANNING;
+  }
+
+  return;
 }
 
 }  // namespace apa_planner

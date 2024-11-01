@@ -5,25 +5,29 @@
 #include "./../../modules/common/local_view.h"
 #include "./../collision_detection/aabb2d.h"
 #include "./../collision_detection/polygon_base.h"
+#include "library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
 
 namespace planning {
 
 enum class ParkObstacleType {
-  none = 0,
-  map_bound,
-  slot_line,
-  virtual_wall,
-  ground_line,
-  fusion_obj,
-  uss_obj,
-  max_num
+  NONE = 0,
+  MAP_BOUND,
+  SLOT_LINE,
+  VIRTUAL_WALL,
+  GROUND_LINE,
+  FUSION_OBJ,
+  USS_OBJ,
+  LIMITER,
+  MAX_NUM
 };
 
 // now, use convex hull collision detection API, so we use point to restore
 // point cloud. But in the future, we will use occupancy grid
 // map (ogm) to represent all obstacle in astar search.
+// todo: use heirachy collision checker by different height.
+// e.g. lower obs < 0.3 meter. upper obs > 2.3 meter.
 struct PointCloudObstacle {
   std::vector<Position2D> points;
 
@@ -56,16 +60,22 @@ class PointCloudObstacleTransform {
  public:
   PointCloudObstacleTransform() = default;
 
-  const int GenerateLocalObstacle(
+  const void GenerateLocalObstacle(
       ParkObstacleList& obs_list, const LocalView* local_view,
       const bool delete_obs_around_ego, const double slot_length,
       const double slot_width, const Pose2D& slot_base_pose,
-      const Pose2D& ego_start, const Pose2D& ego_final_goal);
+      const Pose2D& ego_start, const Pose2D& ego_final_goal,
+      const ParkSpaceType slot_type,
+      const SlotRelativePosition slot_side);
 
   void GenerateGlobalObstacle(ParkObstacleList& obs_list,
-                              const LocalView* local_view);
+                              const LocalView* local_view,
+                              const ParkSpaceType slot_type);
 
  private:
+  void SampleInLineSegment(const Eigen::Vector2d& start,
+                           const Eigen::Vector2d& end,
+                           std::vector<Position2D>* points);
 };
 
 }  // namespace planning

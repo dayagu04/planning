@@ -12,8 +12,8 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
-#include "math_lib.h"
 #include "log_glog.h"
+#include "math_lib.h"
 
 namespace planning {
 namespace apa_planner {
@@ -198,7 +198,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
     const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
-    const double lon_buffer) {
+    const double lon_buffer, const bool need_cal_obs_dist) {
   std::vector<pnc::geometry_lib::PathPoint> point_set;
   CollisionResult col_res;
   if (!pnc::geometry_lib::SamplePointSetInPathSeg(point_set, path_seg,
@@ -211,8 +211,18 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByEDT(
 
   col_res.remain_car_dist = path_seg.Getlength();
 
-  col_res.remain_dist =
-      edt_col_det_.CalPathSafeDist(point_set, col_sample_ds, path_seg.seg_gear);
+  if (need_cal_obs_dist) {
+    std::pair<double, double> remain_dist_obs_dist_pair =
+        edt_col_det_.CalPathRemainDistAndObsDist(point_set, col_sample_ds,
+                                                 path_seg.seg_gear);
+    col_res.remain_dist = remain_dist_obs_dist_pair.first;
+    col_res.obs2car_dist = remain_dist_obs_dist_pair.second;
+  } else {
+    col_res.remain_dist = edt_col_det_.CalPathSafeDist(point_set, col_sample_ds,
+                                                       path_seg.seg_gear);
+  }
+
+  col_res.collision_flag = col_res.remain_dist < col_res.remain_car_dist;
 
   return col_res;
 }
@@ -352,10 +362,12 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   }
 
   std::vector<Eigen::Vector2d> traj_bound;
-  pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
-  pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
-  // CalTrajBound(traj_bound, start_pose, target_pose, true);
-  traj_bound = CalTrajBound(start_pose, target_pose);
+  if (box) {
+    pnc::geometry_lib::PathPoint start_pose(line_seg.pA, line_seg.heading);
+    pnc::geometry_lib::PathPoint target_pose(line_seg.pB, line_seg.heading);
+    // CalTrajBound(traj_bound, start_pose, target_pose, true);
+    traj_bound = CalTrajBound(start_pose, target_pose);
+  }
 
   // detect if there is intersection(point_P) between obstacle and car line
   // segment
@@ -562,10 +574,12 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   }
 
   std::vector<Eigen::Vector2d> traj_bound;
-  pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
-  pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
-  // CalTrajBound(traj_bound, start_pose, target_pose, false);
-  traj_bound = CalTrajBound(start_pose, target_pose, arc);
+  if (box) {
+    pnc::geometry_lib::PathPoint start_pose(arc.pA, arc.headingA);
+    pnc::geometry_lib::PathPoint target_pose(arc.pB, arc.headingB);
+    // CalTrajBound(traj_bound, start_pose, target_pose, false);
+    traj_bound = CalTrajBound(start_pose, target_pose, arc);
+  }
 
   // obstacle arc segment
   const auto v_OA = arc.pA - arc.circle_info.center;

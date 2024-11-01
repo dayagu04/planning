@@ -61,10 +61,13 @@ bool SlotManagement::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
   bool update_slot_in_searching_flag = false;
   bool update_slot_in_parking_flag = false;
   // update_slot_in_searching_flag is always false, only update slot
-  if (frame_.apa_state == ApaStateMachine::SEARCH_IN) {
+  if (frame_.apa_state == ApaStateMachine::SEARCH_IN ||
+      frame_.apa_state == ApaStateMachine::SEARCH_OUT) {
     update_slot_in_searching_flag = UpdateSlotsInSearching();
   } else if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-             frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
+             frame_.apa_state == ApaStateMachine::ACTIVE_IN ||
+             frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_OUT ||
+             frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
   } else if (frame_.apa_state == ApaStateMachine::SUSPEND) {
   } else {
@@ -1185,7 +1188,8 @@ bool SlotManagement::UpdateSlotsInSearching() {
              Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) &&
         slot->is_release() &&
         apa_param.GetParam().path_generator_type ==
-            apa_planner::ParkPathGenerationType::GEOMETRY_BASED) {
+            apa_planner::ParkPathGenerationType::GEOMETRY_BASED &&
+        !apa_param.GetParam().perpendicular_parking_out_state) {
       if (IflyTime::Now_ms() - time_start >
           apa_param.GetParam().prepare_single_max_allow_time) {
         slot->set_is_release(false);
@@ -1779,13 +1783,16 @@ const bool SlotManagement::SlotInfoTransfer(
 
   slot_info.set_id(fusion_slot.id);
 
-  if (frame_.apa_state == ApaStateMachine::SEARCH_IN) {
+  if (frame_.apa_state == ApaStateMachine::SEARCH_IN ||
+      frame_.apa_state == ApaStateMachine::SEARCH_OUT) {
     slot_info.set_is_release((fusion_slot.allow_parking == 1));
     slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
   }
 
   if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-      frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
+      frame_.apa_state == ApaStateMachine::ACTIVE_IN ||
+      frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_OUT ||
+      frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
     // the selected slot in parking state is forced to release
     slot_info.set_is_release(true);
     slot_info.set_is_occupied(false);
@@ -2303,7 +2310,26 @@ const double SlotManagement::CalAngleSlot2Car(
 bool SlotManagement::UpdateSlotsInParking() {
   ILOG_INFO << "apa state is in parking";
 
-  const size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
+  size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
+
+  if (apa_param.GetParam().perpendicular_parking_out_state) {
+    if (frame_.park_out_select_id == 0) {
+      double dist = std::numeric_limits<double>::infinity();
+      for (auto &pair : frame_.slot_info_window_map) {
+        const auto &slot_center_pt = pair.second.GetFusedInfo().center();
+        const Eigen::Vector2d slot_center(slot_center_pt.x(),
+                                          slot_center_pt.y());
+        const double temp_dist =
+            (frame_.measurement_data_ptr->pos - slot_center).norm();
+        if (temp_dist < dist) {
+          dist = temp_dist;
+          frame_.park_out_select_id = pair.first;
+        }
+      }
+    }
+    select_slot_id = frame_.park_out_select_id;
+  }
+
   if (select_slot_id == 0) {
     ILOG_INFO << "select_slot_id = 0, is not valid";
     return false;

@@ -12,8 +12,9 @@
 #include "log_glog.h"
 #include "spline.h"
 
-extern double kDeg2Rad;
-extern double kRad2Deg;
+extern double kEqualHeadingEps;
+extern const double kDeg2Rad;
+extern const double kRad2Deg;
 
 namespace pnc {
 
@@ -142,6 +143,12 @@ struct LineSegment {
     length = 0.0;
     is_ignored = false;
   }
+
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO_IF(enable_log)
+        << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
+        << "  headingA = " << heading * kRad2Deg << "  length = " << length;
+  }
 };
 
 struct Circle {
@@ -189,14 +196,15 @@ struct Arc {
     circle_info.center = center;
   }
 
-  void PrintInfo() {
-    ILOG_INFO << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
-              << "  headingA = " << headingA * kRad2Deg
-              << "  headingB = " << headingB * kRad2Deg
-              << "  length = " << length << "  center = " << circle_info.center
-              << "  radius = " << circle_info.radius
-              << "  is_anti_clockwise = " << is_anti_clockwise
-              << "  is_ignored = " << is_ignored;
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO_IF(enable_log)
+        << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
+        << "  headingA = " << headingA * kRad2Deg
+        << "  headingB = " << headingB * kRad2Deg << "  length = " << length
+        << "  center = " << circle_info.center
+        << "  radius = " << circle_info.radius
+        << "  is_anti_clockwise = " << is_anti_clockwise
+        << "  is_ignored = " << is_ignored;
   }
 };
 
@@ -360,6 +368,8 @@ struct TangentOutput {
   Eigen::Vector2d cross_point;
 };
 
+const double NormalizeAngle(const double angle);
+const double NormalizeAnglePI(const double angle);
 struct GlobalToLocalTf {
   Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
@@ -433,6 +443,7 @@ struct Compare {
   }
 };
 
+const bool IsHeadingEqual(const double heading_1, const double heading_2);
 const Eigen::Vector2d GenHeadingVec(const double heading);
 
 const double NormSquareOfTwoVector2d(const Eigen::Vector2d &p1,
@@ -753,9 +764,13 @@ void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
 
 const double GetTwoPointDist(const PathPoint &start, const PathPoint &end);
+
+const bool CalLineFromPt(const uint8_t gear, const double length,
+                         const PathPoint &pose, PathSegment &line_seg);
+
 const bool CalArcFromPt(const uint8_t gear, const uint8_t steer,
                         const double length, const double radius,
-                        const PathPoint pose, PathSegment &arc_seg);
+                        const PathPoint &pose, PathSegment &arc_seg);
 
 const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
                             const double length);
@@ -770,6 +785,7 @@ const bool IsOppositeSteer(const uint8_t steer1, const uint8_t steer2);
 
 struct GeometryPath {
   uint8_t gear_change_count = 0;
+  uint8_t steer_change_count = 0;
   double total_length = 0.0;
   double cur_gear_length = 0.0;
   uint8_t path_count = 0;
@@ -778,6 +794,8 @@ struct GeometryPath {
   PathPoint end_pose;
   uint8_t cur_gear = SEG_GEAR_INVALID;
   uint8_t cur_steer = SEG_STEER_INVALID;
+  uint8_t last_gear = SEG_GEAR_INVALID;
+  uint8_t last_steer = SEG_STEER_INVALID;
   std::vector<uint8_t> steer_cmd_vec;
   std::vector<uint8_t> gear_cmd_vec;
   std::vector<PathSegment> path_segment_vec;
@@ -802,9 +820,13 @@ struct GeometryPath {
       path_count = path_segment_vec.size();
       cur_gear = path_segment_vec.front().seg_gear;
       cur_steer = path_segment_vec.front().seg_steer;
+      last_gear = path_segment_vec.back().seg_gear;
+      last_steer = path_segment_vec.back().seg_steer;
       start_pose = path_segment_vec.front().GetStartPose();
       end_pose = path_segment_vec.back().GetEndPose();
-      for (const auto &path_seg : path_segment_vec) {
+      gear_cmd_vec.reserve(path_count);
+      steer_cmd_vec.reserve(path_count);
+      for (const PathSegment &path_seg : path_segment_vec) {
         gear_cmd_vec.emplace_back(path_seg.seg_gear);
         steer_cmd_vec.emplace_back(path_seg.seg_steer);
         total_length += path_seg.Getlength();
@@ -825,6 +847,28 @@ struct GeometryPath {
         if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
           gear_change_count++;
         }
+
+        // 直线到转弯
+        if (steer_cmd_vec[i] == SEG_STEER_STRAIGHT &&
+            (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
+             steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
+          steer_change_count++;
+        }
+
+        // 左转到右转 或 右转到左转
+        if ((steer_cmd_vec[i] == SEG_STEER_LEFT &&
+             steer_cmd_vec[i + 1] == SEG_STEER_RIGHT) ||
+            (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
+             steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
+          steer_change_count += 2;
+        }
+
+        // 转弯到直线  后续看是否可以不考虑 因为直线更容易跟踪
+        if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
+             steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
+            steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
+          steer_change_count++;
+        }
       }
     }
   }
@@ -843,6 +887,14 @@ struct GeometryPath {
     SetPath(__path_segment_vec);
   }
 
+  void AddPath(const GeometryPath &geometry_path) {
+    std::vector<PathSegment> __path_segment_vec = path_segment_vec;
+    __path_segment_vec.insert(__path_segment_vec.end(),
+                              geometry_path.path_segment_vec.begin(),
+                              geometry_path.path_segment_vec.end());
+    SetPath(__path_segment_vec);
+  }
+
   void Reset() {
     path_segment_vec.clear();
     gear_change_count = 0;
@@ -853,6 +905,8 @@ struct GeometryPath {
     end_pose.Reset();
     cur_gear = geometry_lib::SEG_GEAR_INVALID;
     cur_steer = geometry_lib::SEG_STEER_INVALID;
+    last_gear = geometry_lib::SEG_GEAR_INVALID;
+    last_steer = geometry_lib::SEG_STEER_INVALID;
     steer_cmd_vec.clear();
     gear_cmd_vec.clear();
     path_pt_vec.clear();
@@ -874,41 +928,49 @@ struct GeometryPath {
     }
   }
 
-  void PrintInfo() {
+  void PrintInfo(const bool enable_log = true) const {
     for (size_t i = 0; i < path_segment_vec.size(); i++) {
       const auto &current_seg = path_segment_vec[i];
-      ILOG_INFO << "col flag = " << current_seg.collision_flag;
+      ILOG_INFO_IF(enable_log) << "col flag = " << current_seg.collision_flag;
       if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
         const auto &line_seg = current_seg.line_seg;
 
-        ILOG_INFO << "Segment [" << i << "] "
-                  << " LINE_SEGMENT "
-                  << " length= " << line_seg.length;
+        ILOG_INFO_IF(enable_log) << "Segment [" << i << "] "
+                                 << " LINE_SEGMENT "
+                                 << " length= " << line_seg.length;
 
-        ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
+        ILOG_INFO_IF(enable_log)
+            << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-        ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
+        ILOG_INFO_IF(enable_log)
+            << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-        ILOG_INFO << "start_pos: " << line_seg.pA.transpose();
-        ILOG_INFO << "start_heading deg: " << line_seg.heading * kRad2Deg;
-        ILOG_INFO << "end_pos: " << line_seg.pB.transpose();
+        ILOG_INFO_IF(enable_log) << "start_pos: " << line_seg.pA.transpose();
+        ILOG_INFO_IF(enable_log)
+            << "start_heading deg: " << line_seg.heading * kRad2Deg;
+        ILOG_INFO_IF(enable_log) << "end_pos: " << line_seg.pB.transpose();
       } else {
         const auto &arc_seg = current_seg.arc_seg;
 
-        ILOG_INFO << "Segment [" << i << "] "
-                  << "ARC_SEGMENT "
-                  << "length= " << arc_seg.length;
+        ILOG_INFO_IF(enable_log) << "Segment [" << i << "] "
+                                 << "ARC_SEGMENT "
+                                 << "length= " << arc_seg.length;
 
-        ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
+        ILOG_INFO_IF(enable_log)
+            << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-        ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
+        ILOG_INFO_IF(enable_log)
+            << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-        ILOG_INFO << "start_pos: " << arc_seg.pA.transpose();
-        ILOG_INFO << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
-        ILOG_INFO << "end_pos: " << arc_seg.pB.transpose();
-        ILOG_INFO << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
-        ILOG_INFO << "center: " << arc_seg.circle_info.center.transpose()
-                  << " radius = " << arc_seg.circle_info.radius;
+        ILOG_INFO_IF(enable_log) << "start_pos: " << arc_seg.pA.transpose();
+        ILOG_INFO_IF(enable_log)
+            << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
+        ILOG_INFO_IF(enable_log) << "end_pos: " << arc_seg.pB.transpose();
+        ILOG_INFO_IF(enable_log)
+            << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
+        ILOG_INFO_IF(enable_log)
+            << "center: " << arc_seg.circle_info.center.transpose()
+            << " radius = " << arc_seg.circle_info.radius;
       }
     }
   }

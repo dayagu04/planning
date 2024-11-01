@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class CipvLostProhibitStartDeciderOutput {
-public:
+ public:
   CipvLostProhibitStartDeciderOutput() = default;
   ~CipvLostProhibitStartDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

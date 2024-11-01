@@ -77,6 +77,12 @@ class ApaPathPlanner {
     Eigen::Vector2d pt_0 = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_1 = Eigen::Vector2d::Zero();
     bool is_simulation = false;
+    double channel_width = 0.0;
+    bool is_left_empty = false;
+    bool is_right_empty = false;
+
+    pnc::geometry_lib::GlobalToLocalTf global2slot_tf;
+    pnc::geometry_lib::LocalToGlobalTf slot2global_tf;
 
     uint8_t path_planner_state = 0;
 
@@ -95,6 +101,7 @@ class ApaPathPlanner {
     bool is_last_path = false;
     bool gear_shift = false;
     bool multi_reach_target_pose = false;
+    bool linearc_reach_target_pose = false;
     double length = 0.0;
     uint8_t gear_change_count = 0;
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
@@ -111,6 +118,7 @@ class ApaPathPlanner {
       is_last_path = false;
       gear_shift = false;
       multi_reach_target_pose = false;
+      linearc_reach_target_pose = false;
       length = 0.0;
       gear_change_count = 0;
       path_seg_index = std::make_pair(0, 0);

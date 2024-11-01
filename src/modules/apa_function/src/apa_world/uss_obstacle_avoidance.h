@@ -9,6 +9,7 @@
 #include "Eigen/Core"
 #include "apa_data.h"
 #include "apa_param_setting.h"
+#include "collision_detection.h"
 #include "geometry_math.h"
 #include "local_view.h"
 #include "math_lib.h"
@@ -36,12 +37,14 @@ class UssObstacleAvoidance {
 
   struct RemainDistInfo {
     double remain_dist = 2.5;
+    double obs_pt_remain_dist = 2.5;
     size_t car_index = 0;
     int uss_index = 0;
     bool is_available = false;
 
     void Reset() {
       remain_dist = 2.5;
+      obs_pt_remain_dist = 2.5;
       car_index = 0;
       uss_index = 0;
       is_available = false;
@@ -89,6 +92,7 @@ class UssObstacleAvoidance {
   }
 
   const bool CheckIsDirectlyBehindUss();
+  const bool CheckIsDirectlyFrontUss();
 
   void SetLatInflation();
 
@@ -144,6 +148,8 @@ class UssObstacleAvoidance {
 
   std::shared_ptr<ApaData> apa_data_ptr_ = nullptr;
   iflyauto::PlanningOutput* planning_output_;
+
+  CollisionDetector col_det;
 };
 }  // namespace apa_planner
 }  // namespace planning

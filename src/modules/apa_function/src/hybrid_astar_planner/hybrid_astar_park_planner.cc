@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdio>
 
+#include "common.pb.h"
+#include "common_c.h"
+#include "geometry_math.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "hybrid_astar_response.h"
@@ -17,6 +20,7 @@
 #include "pose2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
+#include "src/library/hybrid_astar_lib/astar_scheduler.h"
 
 namespace planning {
 namespace apa_planner {
@@ -75,13 +79,11 @@ void HybridAStarParkPlanner::Init() {
 
 const bool HybridAStarParkPlanner::CheckSegCompleted() {
   bool is_seg_complete = false;
-  if (frame_.spline_success) {
-    if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag &&
-        frame_.current_path_length > 1e-2) {
-      if (frame_.stuck_uss_time > 0.068) {
-        is_seg_complete = true;
-      }
+  if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
+      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag &&
+      frame_.current_path_length > 1e-2) {
+    if (frame_.stuck_uss_time > 0.068) {
+      is_seg_complete = true;
     }
   }
 
@@ -92,7 +94,7 @@ const bool HybridAStarParkPlanner::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
       apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
     if (frame_.stuck_uss_time >
-        apa_param.GetParam().deadend_uss_stuck_replan_wait_time) {
+        apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time) {
       frame_.is_replan_by_uss = true;
       return true;
     }
@@ -132,6 +134,18 @@ const bool HybridAStarParkPlanner::CheckReplan() {
 }
 
 const bool HybridAStarParkPlanner::CheckFinished() {
+  bool ret = false;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    ret = CheckParallelSlotFinished();
+  } else {
+    ret = CheckVerticalSlotFinished();
+  }
+
+  return ret;
+}
+
+const bool HybridAStarParkPlanner::CheckVerticalSlotFinished() {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const bool lon_condition =
@@ -219,8 +233,11 @@ void HybridAStarParkPlanner::PlanCore() {
     return;
   }
 
+  // hack: use uss circle dist. In the future, will use uss point cloud to do
+  // safe check.
+  const double safe_uss_remain_dist = 0.31;
   // update remain dist
-  UpdateRemainDist();
+  UpdateRemainDist(safe_uss_remain_dist);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -482,7 +499,17 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
   Pose2D ego_pose(measures_ptr->pos[0], measures_ptr->pos[1],
                   measures_ptr->heading);
 
-  obstacle_generator.GenerateGlobalObstacle(obs, local_view);
+  ParkSpaceType slot_type;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    slot_type = ParkSpaceType::PARALLEL;
+  } else if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+             iflyauto::PARKING_SLOT_TYPE_SLANTING) {
+    slot_type = ParkSpaceType::SLANTING;
+  } else {
+    slot_type = ParkSpaceType::VERTICAL;
+  }
+  obstacle_generator.GenerateGlobalObstacle(obs, local_view, slot_type);
 
   PathSafeChecker path_safe_checker;
   path_safe_checker.Excute(
@@ -519,12 +546,12 @@ void HybridAStarParkPlanner::ShrinkPathByFusionObj() {
   return;
 }
 
-void HybridAStarParkPlanner::UpdateRemainDist() {
+void HybridAStarParkPlanner::UpdateRemainDist(const double uss_safe_dist) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
 
   // 2.calculate remain dist uss according to uss
-  frame_.remain_dist_uss = CalRemainDistFromUss();
+  frame_.remain_dist_uss = CalRemainDistFromUss(uss_safe_dist);
 
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss
@@ -556,7 +583,24 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
 
   // astar end, maybe different with real end.
   Pose2D end = real_end;
-  end.x = real_end.x + apa_param.GetParam().vertical_slot_target_adjust_dist;
+  double end_straight_len;
+  ParkSpaceType slot_type;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    end_straight_len =
+        apa_param.GetParam().astar_config.parallel_slot_end_straight_dist;
+    slot_type = ParkSpaceType::PARALLEL;
+  } else if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+             iflyauto::PARKING_SLOT_TYPE_SLANTING) {
+    end_straight_len =
+        apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+    slot_type = ParkSpaceType::SLANTING;
+  } else {
+    end_straight_len =
+        apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+    slot_type = ParkSpaceType::VERTICAL;
+  }
+  end.x = real_end.x + end_straight_len;
 
   double astar_start_time = IflyTime::Now_ms();
   // obs generate
@@ -572,7 +616,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   // retired.
   obstacle_generator.GenerateLocalObstacle(
       obs, local_view, true, ego_slot_info.slot_length,
-      ego_slot_info.slot_width, slot_base_pose, start, real_end);
+      ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
+      slot_side_);
 
   double search_start_time = IflyTime::Now_ms();
   ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;
@@ -583,8 +628,8 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       planning::AstarPathGenerateType::ASTAR_SEARCHING;
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::none;
-  cur_request.space_type = ParkSpaceType::vertical;
-  cur_request.parking_task = ParkingTask::parking_in;
+  cur_request.space_type = slot_type;
+  cur_request.parking_task = ParkingTask::TAIL_PARKING_IN;
   cur_request.head_request = ParkingVehDirectionRequest::tail_in_first;
   cur_request.rs_request = RSPathRequestType::none;
   cur_request.timestamp_ms = astar_start_time;
@@ -593,8 +638,6 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   cur_request.base_pose_ = slot_base_pose;
   cur_request.real_goal = real_end;
 
-  cur_request.vertical_slot_target_adjust_dist_ =
-      apa_param.GetParam().vertical_slot_target_adjust_dist;
   cur_request.slot_width = ego_slot_info.slot_width;
   cur_request.slot_length = ego_slot_info.slot_length;
   cur_request.history_gear = current_gear_;
@@ -629,8 +672,13 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
   bool need_drive_forward = IsEgoNeedDriveForwardInSlot(
       start, ego_slot_info.slot_width, ego_slot_info.slot_length);
   if (need_drive_forward) {
-    cur_request.path_generate_method =
-        planning::AstarPathGenerateType::REEDS_SHEPP;
+    if (apa_param.GetParam().astar_config.cubic_polynomial_pose_adjustment) {
+      cur_request.path_generate_method =
+          planning::AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING;
+    } else {
+      cur_request.path_generate_method =
+          planning::AstarPathGenerateType::REEDS_SHEPP;
+    }
 
     end.y = real_end.y;
     end.x = start.x + 30.0;
@@ -720,12 +768,18 @@ HybridAStarParkPlanner::PlanBySearchBasedMethod() {
       double publish_end_time = IflyTime::Now_ms();
       ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
 
+      AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+      astar_scheduler->SetSchedulerState(AstarSearchState::SUCCESS);
+
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
       res = PathPlannerResult::WAIT_PATH;
 
       // publish fallback path
       GenerateFallBackPath();
+
+      AstarScheduler* astar_scheduler = AstarScheduler::GetAstarScheduler();
+      astar_scheduler->SetSchedulerState(AstarSearchState::FAILURE);
 
       ILOG_INFO << "path plan point less 5";
     }
@@ -915,6 +969,18 @@ const bool HybridAStarParkPlanner::UpdateThreadPath() {
 }
 
 const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
+  bool ret = true;
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
+      iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+    ret = UpdateParallelSlotInfo();
+  } else {
+    ret = UpdateVerticalSlotInfo();
+  }
+
+  return ret;
+}
+
+const bool HybridAStarParkPlanner::UpdateVerticalSlotInfo() {
   const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
   const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
 
@@ -1178,6 +1244,8 @@ const bool HybridAStarParkPlanner::UpdateEgoSlotInfo() {
     ego_slot_info.fix_limiter = true;
   }
 
+  ego_slot_info.slot_type = 2;
+
   return true;
 }
 
@@ -1185,23 +1253,6 @@ HybridAStarParkPlanner::~HybridAStarParkPlanner() {}
 
 const bool HybridAStarParkPlanner::CheckStuckFailed() {
   return frame_.stuck_time > 12.0;
-}
-
-const double HybridAStarParkPlanner::CalRemainDistFromUss() {
-  double remain_dist = 10.0;
-  const auto& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetUssObstacleAvoidancePtr();
-
-  uss_obstacle_avoider_ptr->Update(&planning_output_,
-                                   apa_world_ptr_->GetApaDataPtr());
-
-  // hack: use uss circle dist. In the future, will use uss point cloud to do
-  // safe check.
-  const double safe_uss_remain_dist = 0.31;
-  remain_dist = uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-                safe_uss_remain_dist;
-
-  return remain_dist;
 }
 
 void HybridAStarParkPlanner::PathShrinkBySlotLimiter() {
@@ -1281,7 +1332,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   double ego_x_diff = std::fabs(ego_slot_info.target_ego_pos_slot[0] -
                                 ego_slot_info.ego_pos_slot[0]);
   double ego_y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
-                            ego_slot_info.ego_pos_slot[1]);
+                                ego_slot_info.ego_pos_slot[1]);
   if (ego_x_diff > 1.5 || ego_y_diff > 0.5) {
     return;
   }
@@ -1335,8 +1386,7 @@ void HybridAStarParkPlanner::PathExpansionBySlotLimiter() {
   return;
 }
 
-const bool HybridAStarParkPlanner::CheckEgoReplanNumber(
-    const bool is_replan) {
+const bool HybridAStarParkPlanner::CheckEgoReplanNumber(const bool is_replan) {
   if (is_replan) {
     // check total plan number
     if (frame_.total_plan_count > 30) {
@@ -1405,7 +1455,7 @@ const double HybridAStarParkPlanner::CalRemainDistFromPath() {
   }
 
   // calc base vector
-  pnc::geometry_lib::PathPoint *base_point;
+  pnc::geometry_lib::PathPoint* base_point;
   base_point = &current_path_point_global_vec_[nearest_point_id];
   ad_common::math::Vec2d base_vector;
   if (nearest_point_id == path_point_size - 1) {
@@ -1506,6 +1556,203 @@ void HybridAStarParkPlanner::DebugPathString(
               << ",y = " << path[i].pos.y();
   }
   return;
+}
+
+const bool HybridAStarParkPlanner::UpdateParallelSlotInfo() {
+  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
+
+  const auto& select_slot_filter =
+      slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
+  if (!select_slot_filter.has_corner_points()) {
+    return false;
+  }
+
+  if (select_slot_filter.corner_points().corner_point_size() != 4) {
+    return false;
+  }
+
+  auto& ego_slot_info = frame_.ego_slot_info;
+  // notice: get slot from GetEgoSlotInfo.select_slot_filter in slot management
+  ego_slot_info.target_managed_slot.CopyFrom(select_slot_filter);
+
+  const auto& slot_points =
+      ego_slot_info.target_managed_slot.corner_points().corner_point();
+
+  // 顶点顺序,来自感知
+  std::vector<Eigen::Vector2d> pt;
+  pt.resize(slot_points.size());
+  Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
+
+  for (int i = 0; i < slot_points.size(); i++) {
+    pt[i] << slot_points[i].x(), slot_points[i].y();
+    slot_center += pt[i];
+  }
+  ego_slot_info.slot_corner = pt;
+  slot_center *= 0.25;
+
+  Eigen::Vector2d n = Eigen::Vector2d::Zero();
+  Eigen::Vector2d t = Eigen::Vector2d::Zero();
+
+  ego_slot_info.slot_length = (pt[0] - pt[1]).norm();
+  pnc::geometry_lib::LineSegment line_01(pt[0], pt[1]);
+
+  // note: slot points' order is corrected in slot management
+  Pose2D vec02;
+  vec02.x =  pt[2].x()-pt[0].x();
+  vec02.y =  pt[2].y()-pt[0].y();
+
+  Pose2D ego_vector;
+  ego_vector.x  = std::cos(measures_ptr->heading);
+  ego_vector.y  = std::sin(measures_ptr->heading);
+
+  slot_side_ = SlotRelativePosition::NONE;
+  double cross = CrossProduct(ego_vector, vec02);
+  if (cross > 0) {
+    slot_side_ = SlotRelativePosition::LEFT;
+  } else if (cross < 0) {
+    slot_side_ = SlotRelativePosition::RIGHT;
+  } else {
+
+    ILOG_ERROR <<"ego is vertical";
+    return false;
+  }
+
+  if (slot_side_ == SlotRelativePosition::RIGHT) {
+    ego_slot_info.slot_width =
+        std::min(pnc::geometry_lib::CalPoint2LineDist(pt[2], line_01),
+                 pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01));
+
+    n = (pt[0] - pt[1]).normalized();
+    t << -n.y(), n.x();
+    ego_slot_info.slot_origin_pos = pt[0] - ego_slot_info.slot_length * n -
+                                    0.5 * ego_slot_info.slot_width * t;
+  } else {
+    ego_slot_info.slot_width =
+        pnc::geometry_lib::CalPoint2LineDist(pt[3], line_01);
+
+    n = (pt[1] - pt[0]).normalized();
+    t << -n.y(), n.x();
+    ego_slot_info.slot_origin_pos = pt[1] - ego_slot_info.slot_length * n +
+                                    0.5 * ego_slot_info.slot_width * t;
+  }
+
+  ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
+  ego_slot_info.slot_origin_heading_vec = n;
+
+  ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+  ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
+                            ego_slot_info.slot_origin_heading);
+
+  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_heading_slot =
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+  ego_slot_info.ego_heading_slot_vec
+      << std::cos(ego_slot_info.ego_heading_slot),
+      std::sin(ego_slot_info.ego_heading_slot);
+
+  // calc terminal pos, try best to stop in the middle of slot
+  const double goal_x =
+      0.5 * (ego_slot_info.slot_length - apa_param.GetParam().car_length) +
+      apa_param.GetParam().rear_overhanging;
+  const double goal_y = 0.0;
+  ego_slot_info.target_ego_pos_slot << goal_x, goal_y;
+  ego_slot_info.target_ego_heading_slot = 0.0;
+
+  // calc terminal error once
+  ego_slot_info.terminal_err.Set(
+      ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
+      pnc::geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
+                                        ego_slot_info.target_ego_heading_slot));
+
+  // calc slot occupied ratio
+  double slot_occupied_ratio = 0.0;
+  if (pnc::mathlib::IsInBound(ego_slot_info.terminal_err.pos.x(), -3.0, 4.0)) {
+    const double y_err_ratio =
+        ego_slot_info.terminal_err.pos.y() / (0.5 * ego_slot_info.slot_width);
+
+    if (slot_side_ == SlotRelativePosition::RIGHT) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
+    } else {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
+    }
+  }
+  ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
+
+  // update stuck by uss time
+  // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
+  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
+      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      apa_world_ptr_->GetApaDataPtr()->cur_state ==
+          ApaStateMachine::ACTIVE_IN) {
+    frame_.stuck_uss_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.stuck_uss_time = 0.0;
+  }
+
+  // update stuck time
+  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
+      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      apa_world_ptr_->GetApaDataPtr()->cur_state ==
+          ApaStateMachine::ACTIVE_IN) {
+    frame_.stuck_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.stuck_time = 0.0;
+  }
+
+  // update pause time
+  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
+    frame_.pause_time += apa_param.GetParam().plan_time;
+  } else {
+    frame_.pause_time = 0.0;
+  }
+
+  ego_slot_info.slot_type  = 1;
+
+  return true;
+}
+
+const bool HybridAStarParkPlanner::CheckParallelSlotFinished() {
+  const ApaParameters& config = apa_param.GetParam();
+  const auto& ego_slot_info = frame_.ego_slot_info;
+
+  const bool rear_axis_lon_condition =
+      ego_slot_info.terminal_err.pos.x() <
+      config.astar_config.parallel_finish_lon_err;
+
+  const double rear_axis_lat_offset = ego_slot_info.ego_pos_slot.y();
+  const double veh_head_lat_offset =
+      (ego_slot_info.ego_pos_slot +
+       (config.wheel_base + config.front_overhanging) *
+           ego_slot_info.ego_heading_slot_vec)
+          .y();
+
+  const bool ego_center_lat_condition =
+      std::fabs(rear_axis_lat_offset) <=
+      config.astar_config.parallel_finish_center_lat_err;
+
+  const bool ego_head_lat_condition =
+      std::fabs(veh_head_lat_offset) <=
+      config.astar_config.parallel_finish_head_lat_err;
+
+  const bool heading_condition =
+      std::fabs(ego_slot_info.terminal_err.heading) <=
+      config.astar_config.parallel_finish_heading_err * kDeg2Rad;
+
+  const bool lat_condition =
+      ego_center_lat_condition && ego_head_lat_condition && heading_condition;
+
+  const bool static_condition =
+      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+
+  const bool remain_s_condition =
+      frame_.remain_dist < config.max_replan_remain_dist;
+
+  bool parking_finish = rear_axis_lon_condition && lat_condition &&
+                        static_condition && remain_s_condition;
+
+  return parking_finish;
 }
 
 }  // namespace apa_planner

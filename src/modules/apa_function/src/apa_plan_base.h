@@ -39,6 +39,10 @@ class ApaPlannerBase {
     Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
     double target_ego_heading_slot = 0.0;
 
+    // for parking out
+    Eigen::Vector2d limiter_min_point_slot = Eigen::Vector2d::Zero();
+    double limiter_vertical_heanding_slot  = 0.0;
+
     std::vector<Eigen::Vector2d> slot_corner;
     double last_move_slot_dist = 0.0;
     double move_slot_dist = 0.0;
@@ -61,6 +65,7 @@ class ApaPlannerBase {
     double slot_length = 5.2;
 
     pnc::geometry_lib::PathPoint terminal_err;
+    pnc::geometry_lib::PathPoint initial_err;
     double slot_occupied_ratio = 0.0;
 
     pnc::geometry_lib::GlobalToLocalTf g2l_tf;
@@ -161,6 +166,7 @@ class ApaPlannerBase {
       car_already_move_dist = 0.0;
       spline_success = false;
       current_path_length = 0.0;
+      headin_current_path_length = 0.0;
       path_extended_dist = 1.0;
       is_replan_by_uss = false;
       ego_slot_info.Reset();
@@ -175,7 +181,12 @@ class ApaPlannerBase {
       replan_flag = false;
       dynamic_plan_fail_flag = false;
       gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
+
+      is_left_empty = false;
+      is_right_empty = false;
     }
+    bool is_left_empty = false;
+    bool is_right_empty = false;
 
     bool is_replan = false;
     bool is_replan_first = true;
@@ -194,6 +205,7 @@ class ApaPlannerBase {
     uint8_t pathplan_result = 0;
     size_t gear_change_count = 0;
     double current_path_length = 0.0;
+    double headin_current_path_length = 0.0;
     double path_extended_dist = 1.0;
     double stuck_time = 0.0;
     double stuck_uss_time = 0.0;
@@ -205,6 +217,8 @@ class ApaPlannerBase {
     double car_already_move_dist = 0.0;
     pnc::mathlib::spline x_s_spline;
     pnc::mathlib::spline y_s_spline;
+    pnc::mathlib::spline headin_x_s_spline;
+    pnc::mathlib::spline headin_y_s_spline;
 
     PlannerStateMachine plan_stm;
     EgoSlotInfo ego_slot_info;
@@ -273,6 +287,8 @@ class ApaPlannerBase {
     apa_world_ptr_ = apa_world_ptr;
   }
 
+  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
+
  protected:
   virtual const bool CheckFinished() = 0;
   virtual const bool CheckReplan() = 0;
@@ -291,10 +307,12 @@ class ApaPlannerBase {
   virtual void GenPlanningHmiOutput();
   virtual void GenPlanningPath();
   virtual const bool CheckStuckFailed();
-  virtual void UpdateRemainDist();
+  virtual void UpdateRemainDist(const double uss_safe_dist);
   virtual const double CalRemainDistFromPath();
-  virtual const double CalRemainDistFromUss();
+  virtual const double CalRemainDistFromUss(const double safe_dist);
   virtual const bool PostProcessPath();
+
+  virtual const void SchedulerForGeometryWithAstar();
 
   std::shared_ptr<ApaWorld> apa_world_ptr_;
 

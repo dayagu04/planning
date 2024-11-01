@@ -43,7 +43,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   lon_min_safe_buffer = 0.1;
 
   expect_gear_penalty = 50.0;
-  expect_dist_penalty = 50.0;
+  expect_dist_penalty = 7.0;
   gear_switch_penalty_heu = 10.0;
 
   enable_euler_cost_for_vertical_park = true;

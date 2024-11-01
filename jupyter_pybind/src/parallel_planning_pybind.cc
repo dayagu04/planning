@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 #include <stddef.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <vector>
@@ -13,8 +14,12 @@
 #include "config_context.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
+#include "ifly_time.h"
+#include "math_lib.h"
 #include "parallel_park_in_planner.h"
 #include "parallel_path_planner.h"
+#include "slot_management.h"
+#include "slot_management_info.pb.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -22,6 +27,8 @@ using namespace planning::apa_planner;
 static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
+
+static planning::apa_planner::ParallelParkInPlanner parallel_park_planner;
 
 int Init() {
   (void)planning::common::ConfigurationContext::Instance();
@@ -133,6 +140,171 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
     }
   }
   return 0;
+}
+
+int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
+                 double slot_width, double slot_length, double ego_x,
+                 double ego_y, double ego_heading, double path_ds) {
+  parallel_park_planner.Reset();
+  DEBUG_PRINT("0");
+  std::shared_ptr<ApaWorld> apa_world_ptr = std::make_shared<ApaWorld>();
+  apa_world_ptr->GetApaDataPtr()->simu_param.sample_ds = path_ds;
+  apa_world_ptr->GetApaDataPtr()->simu_param.is_complete_path = true;
+
+  apa_world_ptr->GetApaDataPtr()->measurement_data.pos << ego_x, ego_y;
+  apa_world_ptr->GetApaDataPtr()->measurement_data.heading = ego_heading;
+  apa_world_ptr->GetApaDataPtr()->measurement_data.heading_vec =
+      geometry_lib::GetUnitTangVecByHeading(ego_heading);
+
+  DEBUG_PRINT("1");
+  planning::common::SlotInfo select_slot_filter;
+  const std::vector<double> slot_x_vec = {slot_length, 0.0, slot_length, 0.0};
+  const std::vector<double> slot_y_vec = {0.5 * slot_width, 0.5 * slot_width,
+                                          -0.5 * slot_width, -0.5 * slot_width};
+  DEBUG_PRINT("2");
+  for (size_t i = 0; i < slot_x_vec.size(); i++) {
+    auto corner_pt =
+        select_slot_filter.mutable_corner_points()->add_corner_point();
+    corner_pt->set_x(slot_x_vec[i]);
+    corner_pt->set_y(slot_y_vec[i]);
+  }
+  SlotManagement::Frame slm_frame;
+  slm_frame.ego_slot_info.ego_pos_slot << ego_x, ego_y;
+  slm_frame.ego_slot_info.ego_heading_slot = ego_heading;
+  slm_frame.ego_slot_info.select_slot_filter = select_slot_filter;
+  slm_frame.ego_slot_info.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+  slm_frame.ego_slot_info.slot_origin_pos << 0.0, 0.5 * slot_width;
+  slm_frame.ego_slot_info.slot_origin_heading = 0.0;
+  slm_frame.ego_slot_info.ego_heading_slot_vec << 1.0, 0.0;
+
+  for (size_t i = 0; i < obs_x_vec.size(); i++) {
+    slm_frame.obs_pt_vec.emplace_back(
+        Eigen::Vector2d(obs_x_vec[i], obs_y_vec[i]));
+  }
+  DEBUG_PRINT("3");
+
+  apa_world_ptr->GetSlotManagerPtr()->SetFrame(slm_frame);
+  parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
+  DEBUG_PRINT("after l_park_planner.SetApaWorldPtr(apa_wo");
+
+  parallel_park_planner.UpdateEgoSlotInfo();
+  parallel_park_planner.GenTlane();
+  parallel_park_planner.GenTBoundaryObstacles();
+  DEBUG_PRINT("after GenTBoundaryObstacles");
+  parallel_park_planner.PathPlanOnce();
+
+  ParallelPathPlanner::Input path_planner_input;
+  path_planner_input.tlane = parallel_park_planner.GetTlane();
+  path_planner_input.sample_ds = path_ds;
+  path_planner_input.is_replan_first = true;
+  path_planner_input.is_complete_path = true;
+
+  const auto &ego_slot_info = parallel_park_planner.GetFrame().ego_slot_info;
+  path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
+  path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
+                                  ego_slot_info.ego_heading_slot);
+
+  pBase->SetInput(path_planner_input);
+
+  const double path_plan_start_time = IflyTime::Now_ms();
+
+  const bool path_plan_success =
+      pBase->Update(apa_world_ptr->GetCollisionDetectorPtr());
+
+  DEBUG_PRINT("path planner cost time(ms) = " << IflyTime::Now_ms() -
+                                                     path_plan_start_time);
+  // const auto& path_planner_output = parallel_path_planner_.GetOutput();
+
+  auto path_planner_output = pBase->GetOutput();
+  path_planner_output.path_seg_index.first = 0;
+  path_planner_output.path_seg_index.second =
+      path_planner_output.path_segment_vec.size() - 1;
+  if (path_plan_success) {
+    pBase->SampleCurrentPathSeg();
+  }
+
+  DEBUG_PRINT(
+      "path points size = " << pBase->GetOutput().path_point_vec.size());
+
+  return static_cast<int>(path_plan_success);
+}
+
+std::vector<std::vector<double>> GetParkPlannerObs() {
+  auto obs_map = parallel_park_planner.GetApaWorldPtr()
+                     ->GetCollisionDetectorPtr()
+                     ->GetObstaclesMap();
+  std::vector<double> obs_x_vec;
+  std::vector<double> obs_y_vec;
+  for (const auto obs_pair : obs_map) {
+    if (obs_pair.first == CollisionDetector::VIRTUAL_OBS) {
+      continue;
+    }
+    for (const auto pt : obs_pair.second) {
+      obs_x_vec.emplace_back(pt.x());
+      obs_y_vec.emplace_back(pt.y());
+    }
+  }
+  return {obs_x_vec, obs_y_vec};
+}
+
+std::vector<std::vector<double>> GenTraTBoundary(double slot_length) {
+  auto obs_map = parallel_park_planner.GetApaWorldPtr()
+                     ->GetCollisionDetectorPtr()
+                     ->GetObstaclesMap();
+  double channel_min_y = 20.0;
+  double min_x = 10.0;
+  double max_x = 0.0;
+  for (const auto &pt : obs_map[CollisionDetector::CHANNEL_OBS]) {
+    if (pt.x() < 12.0 && pt.x() > 0.0) {
+      channel_min_y = std::min(channel_min_y, pt.y());
+    }
+
+    min_x = std::min(min_x, pt.x());
+    max_x = std::max(max_x, pt.x());
+  }
+  const Eigen::Vector2d channel_pt0(min_x, channel_min_y);
+  const Eigen::Vector2d channel_pt1(max_x, channel_min_y);
+
+  double rear_max_y = -10.0;
+  double rear_max_x = -10.0;
+
+  double front_max_y = -10.0;
+  double front_min_x = 100.0;
+
+  for (const auto &pt : obs_map[CollisionDetector::TLANE_BOUNDARY_OBS]) {
+    bool is_rear_tb = mathlib::IsInBound(pt.x(), -2.0, 0.3) &&
+                      mathlib::IsInBound(pt.y(), 0.0, 2.2);
+    if (is_rear_tb) {
+      rear_max_x = std::max(rear_max_x, pt.x());
+      rear_max_y = std::max(rear_max_y, pt.y());
+      continue;
+    }
+
+    bool is_front_tb = mathlib::IsInBound(pt.x(), slot_length - 0.3, 20.0) &&
+                       mathlib::IsInBound(pt.y(), 0.0, 2.2);
+    if (is_front_tb) {
+      front_min_x = std::min(front_min_x, pt.x());
+      front_max_y = std::max(front_max_y, pt.y());
+    }
+  }
+  double curb_min_y = -1.5;
+  // double curb_min_y = 100.0;
+  // for (const auto &pt : obs_map[CollisionDetector::TLANE_OBS]) {
+  //   curb_min_y = std::min(curb_min_y, pt.y());
+  // }
+
+  const Eigen::Vector2d A(channel_pt0.x(), rear_max_y);
+  const Eigen::Vector2d B(rear_max_x, rear_max_y);
+  const Eigen::Vector2d C(rear_max_x, curb_min_y);
+  const Eigen::Vector2d D(front_min_x, curb_min_y);
+  const Eigen::Vector2d E(front_min_x, front_max_y);
+  const Eigen::Vector2d F(channel_pt1.x(), front_max_y);
+  std::vector<double> x_vec = {A.x(), B.x(), C.x(),           D.x(),
+                               E.x(), F.x(), channel_pt1.x(), channel_pt0.x()};
+
+  std::vector<double> y_vec = {A.y(), B.y(), C.y(),           D.y(),
+                               E.y(), F.y(), channel_pt1.y(), channel_pt0.y()};
+  return {x_vec, y_vec};
 }
 
 int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
@@ -337,6 +509,9 @@ PYBIND11_MODULE(parallel_planning_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
+      .def("UpdateByJson", &UpdateByJson)
+      .def("GetParkPlannerObs", &GetParkPlannerObs)
+      .def("GenTraTBoundary", &GenTraTBoundary)
       .def("Update", &Update)
       .def("SampleAllDebugPaths", &SampleAllDebugPaths)
       .def("GetTraSearchOutPath", &GetTraSearchOutPath)

@@ -15,7 +15,7 @@ from jupyter_pybind import vertical_planning_py
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
 
-car_xb, car_yb = load_car_params_patch_parking()
+car_xb, car_yb, wheel_base = load_car_params_patch_parking()
 coord_tf = coord_transformer()
 
 data_car = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})

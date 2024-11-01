@@ -65,11 +65,11 @@ class HybridAStar {
   // no astar search, just use rs path link start point and end point to adjust
   // ego position.
   bool PlanByRSPathLink(HybridAStarResult* result, const Pose2D& start,
-                        const Pose2D& end, const double expected_path_dist,
+                        const Pose2D& end, const double lon_min_sampling_length,
                         const MapBound& XYbounds,
                         const ParkObstacleList& obstacles,
                         const AstarRequest& request,
-                        const ObstacleClearZone *clear_zone,
+                        const ObstacleClearZone* clear_zone,
                         EulerDistanceTransform* edt,
                         ParkReferenceLine* ref_line);
 
@@ -82,13 +82,12 @@ class HybridAStar {
       ParkReferenceLine* ref_line);
 
   // use cubic path sampling to link start point and end point.
-  bool PlanByCubicPath(HybridAStarResult* result, const Pose2D& start,
-                       const Pose2D& target, const double expected_path_dist,
-                       const MapBound& XYbounds,
-                       const ParkObstacleList& obstacles,
-                       const AstarRequest& request, EulerDistanceTransform* edt,
-                       const ObstacleClearZone* clear_zone,
-                       ParkReferenceLine* ref_line);
+  bool SamplingByCubicPolyForVerticalSlot(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& target,
+      const double lon_min_sampling_length, const MapBound& XYbounds,
+      const ParkObstacleList& obstacles, const AstarRequest& request,
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
 
   void GetRSPathForDebug(std::vector<double>& x, std::vector<double>& y,
                          std::vector<double>& phi);
@@ -128,6 +127,14 @@ class HybridAStar {
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;
+
+  // use cubic path sampling to link start point and end point.
+  bool SamplingByCubicPolyForParallelSlot(
+      HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+      const double lon_min_sampling_length, const MapBound& XYbounds,
+      const ParkObstacleList& obstacles, const AstarRequest& request,
+      EulerDistanceTransform* edt, const ObstacleClearZone* clear_zone,
+      ParkReferenceLine* ref_line);
 
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
@@ -291,6 +298,8 @@ class HybridAStar {
 
   void DebugPolynomialPath(const std::vector<AStarPathPoint>& poly_path);
 
+  size_t GetPathCollisionIDByEDT(const std::vector<AStarPathPoint>& poly_path);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
@@ -336,7 +345,7 @@ class HybridAStar {
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;
-  const ObstacleClearZone *clear_zone_;
+  const ObstacleClearZone* clear_zone_;
 
   EulerDistanceTransform* edt_;
 
@@ -357,7 +366,7 @@ class HybridAStar {
 
   std::unique_ptr<GridSearch> dp_heuristic_generator_;
 
-  ParkReferenceLine *ref_line_;
+  ParkReferenceLine* ref_line_;
 
   AstarRequest request_;
 

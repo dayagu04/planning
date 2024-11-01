@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 
+#include "aabb2d.h"
 #include "debug_info_log.h"
 #include "future_path_decider.h"
 #include "hybrid_a_star.h"
@@ -16,7 +17,6 @@
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
-#include "aabb2d.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
@@ -87,12 +87,6 @@ int HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
                                       const AstarRequest& request) {
   request_ = request;
 
-  // range
-  map_bounds_.x_min = -2;
-  map_bounds_.x_max = 20;
-  map_bounds_.y_min = -20;
-  map_bounds_.y_max = 20;
-
   // start state
   initial_state_ = request.start_;
   ego_pose_ = initial_state_;
@@ -113,9 +107,7 @@ int HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
 
 int HybridAStarInterface::UpdateEDT() {
   Pose2D ogm_base_pose;
-  ogm_base_pose.x = -3.0;
-  ogm_base_pose.y = -20.0;
-  ogm_base_pose.theta = 0.0;
+  UpdateEDTBasePose(ogm_base_pose);
 
   ogm_.Clear();
   ogm_.Process(ogm_base_pose);
@@ -128,9 +120,7 @@ int HybridAStarInterface::UpdateEDT() {
 
 int HybridAStarInterface::UpdateEDTByObs(const ParkObstacleList& obs_list) {
   Pose2D ogm_base_pose;
-  ogm_base_pose.x = -3.0;
-  ogm_base_pose.y = -20.0;
-  ogm_base_pose.theta = 0.0;
+  UpdateEDTBasePose(ogm_base_pose);
 
   ogm_.Clear();
   ogm_.Process(ogm_base_pose);
@@ -181,6 +171,8 @@ int HybridAStarInterface::UpdateOutput() {
 
   search_state_ = AstarSearchState::SEARCHING;
 
+  UpdateSearchBoundary();
+
   UpdateEDT();
   // update clear zone. This zone not contain any obstacle.
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
@@ -199,7 +191,7 @@ int HybridAStarInterface::UpdateOutput() {
   bool no_gear_switch;
   edt_.UpdateSafeBuffer(0.2, 0.4, 0.2);
   future_path_decider.Process(&coarse_traj_, request_.plan_reason, ego_pose_,
-                              &edt_, &ref_line_,
+                              &edt_, &ref_line_, vehicle_param_.min_turn_radius,
                               &request_.first_action_request);
   no_gear_switch = future_path_decider.IsNextPathNoGearSwitchByHistory();
 
@@ -257,7 +249,13 @@ int HybridAStarInterface::UpdateOutput() {
   } else {
     double dist_to_slot_up_edge =
         request_.slot_length - initial_state_.DistanceToOrigin();
-    double lon_min_sampling_length = std::max(2.0, dist_to_slot_up_edge);
+    double lon_min_sampling_length;
+    if (request_.space_type == ParkSpaceType::VERTICAL ||
+        request_.space_type == ParkSpaceType::SLANTING) {
+      lon_min_sampling_length = std::max(2.0, dist_to_slot_up_edge);
+    } else {
+      lon_min_sampling_length = 0.4;
+    }
 
     for (size_t i = 0; i < config_.lat_hierarchy_safe_buffer.size(); i++) {
       lat_buffer = config_.lat_hierarchy_safe_buffer[i];
@@ -268,29 +266,25 @@ int HybridAStarInterface::UpdateOutput() {
 
       hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
 
-      if (apa_param.GetParam().use_a_cubic_polynomial_for_adjustment) {
-        if (hybrid_astar_->PlanByCubicPath(&coarse_traj_, initial_state_,
-                                           goal_state_, lon_min_sampling_length,
-                                           map_bounds_, obs_, request_, &edt_,
-                                           &clear_zone_, &ref_line_)) {
-          double response_end_time = IflyTime::Now_ms();
-
-          ILOG_INFO << "hybrid astar finish, cubic path point size = "
-                    << coarse_traj_.x.size() << " ,plan once time = "
-                    << response_end_time - response_start_time
-                    << ",safe buffer = " << lat_buffer;
-        } else {
-          hybrid_astar_->PlanByRSPathSampling(
+      if (request_.path_generate_method ==
+          AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
+        // parallel
+        if (request_.space_type == ParkSpaceType::PARALLEL) {
+          hybrid_astar_->SamplingByCubicPolyForParallelSlot(
               &coarse_traj_, initial_state_, goal_state_,
               lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
               &clear_zone_, &ref_line_);
-
-          double response_end_time = IflyTime::Now_ms();
-
-          ILOG_INFO << "hybrid astar finish, rs path point size = "
-                    << coarse_traj_.x.size() << " ,plan once time = "
-                    << response_end_time - response_start_time
-                    << ",safe buffer = " << lat_buffer;
+        } else {
+          if (hybrid_astar_->SamplingByCubicPolyForVerticalSlot(
+                  &coarse_traj_, initial_state_, goal_state_,
+                  lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+                  &clear_zone_, &ref_line_)) {
+          } else {
+            hybrid_astar_->PlanByRSPathSampling(
+                &coarse_traj_, initial_state_, goal_state_,
+                lon_min_sampling_length, map_bounds_, obs_, request_, &edt_,
+                &clear_zone_, &ref_line_);
+          }
         }
 
       } else {
@@ -298,13 +292,10 @@ int HybridAStarInterface::UpdateOutput() {
             &coarse_traj_, initial_state_, goal_state_, lon_min_sampling_length,
             map_bounds_, obs_, request_, &edt_, &clear_zone_, &ref_line_);
 
-        double response_end_time = IflyTime::Now_ms();
-
-        ILOG_INFO << "hybrid astar finish, rs path point size = "
-                  << coarse_traj_.x.size() << " ,plan once time = "
-                  << response_end_time - response_start_time
-                  << ",safe buffer = " << lat_buffer;
       }
+
+      ILOG_INFO << "hybrid astar finish, rs path point size = "
+                << coarse_traj_.x.size();
 
       // check time
       if (coarse_traj_.time_ms > 1000.0) {
@@ -324,6 +315,9 @@ int HybridAStarInterface::UpdateOutput() {
   }
 
   search_state_ = AstarSearchState::SUCCESS;
+  double response_end_time = IflyTime::Now_ms();
+  ILOG_INFO << "hybrid astar finish, plan once time = "
+            << response_end_time - response_start_time;
 
   // hybrid_astar_->DebugPathString(&coarse_traj_);
 
@@ -338,14 +332,12 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     ILOG_INFO << "path searching, please wait";
     return 0;
   }
+  request_ = request;
 
   DebugAstarRequestString(request);
 
   // range
-  map_bounds_.x_min = -2;
-  map_bounds_.x_max = 20;
-  map_bounds_.y_min = -20;
-  map_bounds_.y_max = 20;
+  UpdateSearchBoundary();
 
   ILOG_INFO << "map bound, xmin " << map_bounds_.x_min << " , ymin "
             << map_bounds_.y_min << " ,xmax " << map_bounds_.x_max << " , ymax "
@@ -402,11 +394,17 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
     search_state_ = AstarSearchState::SEARCHING;
 
-    double dist_to_up = request.slot_length - initial_state_.DistanceToOrigin();
-    double expected_forward_dist = std::max(2.0, dist_to_up);
+    double dist_to_slot_up_edge = request.slot_length - initial_state_.DistanceToOrigin();
+    double lon_min_sampling_dist;
+    if (request_.space_type == ParkSpaceType::VERTICAL ||
+        request_.space_type == ParkSpaceType::SLANTING) {
+      lon_min_sampling_dist = std::max(2.0, dist_to_slot_up_edge);
+    } else {
+      lon_min_sampling_dist = 0.4;
+    }
 
     hybrid_astar_->PlanByRSPathSampling(
-        &coarse_traj_, start_pose, end_pose, expected_forward_dist, map_bounds_,
+        &coarse_traj_, start_pose, end_pose, lon_min_sampling_dist, map_bounds_,
         obs_list, request, &edt_, &clear_zone_, &ref_line_);
   }
 
@@ -629,8 +627,8 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
 }
 
 const AstarSearchState HybridAStarInterface::TransformFirstSegmentPath(
-    std::vector<AStarPathPoint>& result,
-    const HybridAStarResult& full_path, const Pose2D& start) {
+    std::vector<AStarPathPoint>& result, const HybridAStarResult& full_path,
+    const Pose2D& start) {
   // init
   result.clear();
   AstarSearchState state;
@@ -781,6 +779,40 @@ void HybridAStarInterface::GetPolynomialPathForDebug(std::vector<double>& x,
       y.push_back(coarse_traj_.y[i]);
       phi.push_back(coarse_traj_.phi[i]);
     }
+  }
+
+  return;
+}
+
+void HybridAStarInterface::UpdateSearchBoundary() {
+  // range
+  if (request_.space_type == ParkSpaceType::VERTICAL ||
+      request_.space_type == ParkSpaceType::SLANTING) {
+    map_bounds_.x_min = -2;
+    map_bounds_.x_max = 20;
+    map_bounds_.y_min = -20;
+    map_bounds_.y_max = 20;
+  } else {
+    map_bounds_.x_min = -10;
+    map_bounds_.x_max = 14;
+    map_bounds_.y_min = -12;
+    map_bounds_.y_max = 15;
+  }
+
+  return;
+}
+
+void HybridAStarInterface::UpdateEDTBasePose(Pose2D& ogm_base_pose) {
+  // range
+  if (request_.space_type == ParkSpaceType::VERTICAL ||
+      request_.space_type == ParkSpaceType::SLANTING) {
+    ogm_base_pose.x = -3.0;
+    ogm_base_pose.y = -20.0;
+    ogm_base_pose.theta = 0.0;
+  } else {
+    ogm_base_pose.x = -10.0;
+    ogm_base_pose.y = -20.0;
+    ogm_base_pose.theta = 0.0;
   }
 
   return;

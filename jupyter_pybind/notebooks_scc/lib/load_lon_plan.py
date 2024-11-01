@@ -27,7 +27,7 @@ coord_tf = coord_transformer()
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', 'prohibit_acc_',\
-                              'merge_agent_id', 'v_target_merge', 'rear_agent_merge_time', 'merge_orintation', 'merge_direction_plan',
+                              'merge_target_one_id', 'merge_target_two_id', 'v_target_merge', 'rear_agent_merge_time', 'merge_orintation', 'merge_direction_plan',
                               'merge_exist','is_merge_region_plan', 'merge_point_distance', 'ego_has_rightof_tar_lane',
                               'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',"max_brake_distance",\
                               'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'v_target_intersection', 'v_target_virtual_obs', \

@@ -212,3 +212,49 @@ target_link_libraries(hybrid_astar_py PRIVATE
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
   )
+
+pybind11_add_module(astar_parallel_py MODULE src/astar_parallel_pybind.cc)
+target_link_libraries(astar_parallel_py PRIVATE
+  autoplt
+  ad_common
+  modules
+  modules_apa_function
+  modules_common
+  modules_context
+  modules_tasks
+  hybrid_astar_lib
+  reeds_shepp
+  occupancy_grid_map
+  ${OpenCV_LIBRARIES}
+  )
+
+pybind11_add_module(astar_parallel_replay_py MODULE src/astar_parallel_pybind_replay.cc)
+target_link_libraries(astar_parallel_replay_py PRIVATE
+  ${catkin_LIBRARIES}
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  ad_common
+  hybrid_astar_lib
+  reeds_shepp
+  occupancy_grid_map
+  ${OpenCV_LIBRARIES}
+  )
+  
+pybind11_add_module(headin_planning_py MODULE src/headin_planning_pybind.cc)
+  target_link_libraries(headin_planning_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)
+
+pybind11_add_module(prepareplan_py MODULE src/prepare_plan_pybind.cc)
+  target_link_libraries(prepareplan_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)

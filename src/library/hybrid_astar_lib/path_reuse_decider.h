@@ -1,8 +1,8 @@
 #pragma once
 
 #include "astar_decider.h"
-#include "hybrid_astar_common.h"
 #include "future_path_decider.h"
+#include "hybrid_astar_common.h"
 
 namespace planning {
 

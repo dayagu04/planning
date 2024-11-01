@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class SpeedLimitDeciderOutput {
-public:
+ public:
   SpeedLimitDeciderOutput() = default;
   ~SpeedLimitDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

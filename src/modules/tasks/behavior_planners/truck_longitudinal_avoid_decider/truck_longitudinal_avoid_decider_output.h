@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class TruckLongitudinalAvoidDeciderOutput {
-public:
+ public:
   TruckLongitudinalAvoidDeciderOutput() = default;
   ~TruckLongitudinalAvoidDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

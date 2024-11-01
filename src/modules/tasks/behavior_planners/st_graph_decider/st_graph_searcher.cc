@@ -2,11 +2,11 @@
 
 namespace planning {
 
-StGraphSearcher::StGraphSearcher(
-    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+StGraphSearcher::StGraphSearcher(const EgoPlanningConfigBuilder *config_builder,
+                                 framework::Session *session)
     : Task(config_builder, session) {
   name_ = "StGraphSearcher";
 }
-bool StGraphSearcher::Execute(){return true;}
+bool StGraphSearcher::Execute() { return true; }
 
 }  // namespace planning

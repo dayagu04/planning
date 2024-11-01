@@ -407,6 +407,8 @@ class SlotManagement {
     bool parallel_slot_reseted_once = false;
     bool is_side_calc_in_parking = false;
 
+    size_t park_out_select_id = 0;
+
     std::vector<Eigen::Vector2d> obs_pt_vec;
     std::vector<Eigen::Vector2d> ground_line_point_vec;
 
@@ -440,6 +442,8 @@ class SlotManagement {
       replan_flag = true;
       is_fix_slot = false;
 
+      park_out_select_id = 0;
+
       collision_detector_ptr->Reset();
     }
   };
@@ -457,6 +461,8 @@ class SlotManagement {
   const bool SetRealtime();
 
   void SetParam(const Param& param) { frame_.param = param; }
+
+  void SetFrame(const Frame& frame) { frame_ = frame; }
 
   void Reset();
 
@@ -494,6 +500,8 @@ class SlotManagement {
   Frame frame_;
 
   void AddObstacles();
+
+  bool UpdateSlotsInParkingOut();
 
   bool UpdateSlotsInSearching();
 

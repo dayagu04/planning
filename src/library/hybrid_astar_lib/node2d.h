@@ -51,7 +51,6 @@ class Node2d {
     } else {
       id_ = -1;
     }
-
   }
 
   Node2d(const int grid_x, const int grid_y, const MapBound& XYbounds,

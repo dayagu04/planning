@@ -188,7 +188,7 @@ void GetTrajPoseBySDist(const double s) {
 }
 
 int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
-                           const double vertical_slot_target_adjust_dist,
+                           const double vertical_slot_end_straight_dist,
                            const Eigen::Vector3d &ego_pose) {
   //
   global_path_.clear();
@@ -851,7 +851,7 @@ std::vector<Eigen::Vector3d> Update(
 
   Eigen::Vector3d end;
   end[0] = ego_slot_info.target_ego_pos_slot[0] +
-           parking_param.vertical_slot_target_adjust_dist;
+           parking_param.astar_config.vertical_slot_end_straight_dist;
   end[1] = ego_slot_info.target_ego_pos_slot[1];
   end[2] = ego_slot_info.target_ego_heading_slot;
 
@@ -877,12 +877,10 @@ std::vector<Eigen::Vector3d> Update(
     request.real_goal = Pose2D(ego_slot_info.target_ego_pos_slot[0],
                                ego_slot_info.target_ego_pos_slot[1],
                                ego_slot_info.target_ego_heading_slot);
-    request.vertical_slot_target_adjust_dist_ =
-        apa_param.GetParam().vertical_slot_target_adjust_dist;
     request.base_pose_ = Pose2D(0, 0, 0);
 
-    request.space_type = ParkSpaceType::vertical;
-    request.parking_task = ParkingTask::parking_in;
+    request.space_type = ParkSpaceType::VERTICAL;
+    request.parking_task = ParkingTask::TAIL_PARKING_IN;
     request.head_request = ParkingVehDirectionRequest::tail_in_first;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
@@ -896,7 +894,7 @@ std::vector<Eigen::Vector3d> Update(
 
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(ego_slot_info,
-                           parking_param.vertical_slot_target_adjust_dist,
+                           parking_param.astar_config.vertical_slot_end_straight_dist,
                            ego_global_pose);
 
     // just test rs library

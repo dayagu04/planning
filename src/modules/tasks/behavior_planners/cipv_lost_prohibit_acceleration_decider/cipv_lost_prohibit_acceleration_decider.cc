@@ -80,7 +80,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
     if (pre_cipv_lost_id_ > 0 && cipv_id_ == pre_cipv_lost_id_) {
       ++counter_;
     } else if (pre_cipv_id_ > 0 && cipv_id_ == pre_cipv_id_ && continous_flag &&
-              (pre_cipv_ttc_ < kCipvLostTtcThr)) {
+               (pre_cipv_ttc_ < kCipvLostTtcThr)) {
       // 更新cipv lost id，满足：
       // 1. 上一帧cipv id是否为当前cipv id
       // 2. cipv是否连续3帧稳定
@@ -212,7 +212,7 @@ void CipvLostProhibitAccelerationDecider::Update() {
 
       pre_cipv_rel_s_ = CalculateRelativeDistance(planned_path, cipv);
       pre_cipv_ttc_ =
-          pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, v_ego);
+          pre_cipv_rel_s_ / std::fmax(kMinSpeedThr, (v_ego - cipv->speed()));
     } else {
       pre_cipv_rel_s_ = std::numeric_limits<double>::max();
       pre_cipv_ttc_ = std::numeric_limits<double>::max();

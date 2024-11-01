@@ -1,7 +1,6 @@
 
 #include "dynamic_programing_cost.h"
 
-#include <bits/stdint-intn.h>
 #include <opencv2/imgproc/types_c.h>
 
 #include <algorithm>
@@ -24,9 +23,9 @@ namespace planning {
 #define DEBUG_NODE_COST (0)
 
 GridSearch::GridSearch(const PlannerOpenSpaceConfig& open_space_conf) {
-  xy_grid_resolution_ = open_space_conf.heuristic_grid_resolution;
-  inv_xy_resolution_ = 1.0 / xy_grid_resolution_;
-  xy_grid_resolution_half_ = xy_grid_resolution_ / 2.0;
+  heuristic_grid_resolution_ = open_space_conf.heuristic_grid_resolution;
+  inv_xy_resolution_ = 1.0 / heuristic_grid_resolution_;
+  xy_grid_resolution_half_ = heuristic_grid_resolution_ / 2.0;
   safe_width_ = open_space_conf.heuristic_safe_dist;
 }
 
@@ -110,35 +109,35 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
   double edge_distance = 1.0;
 
   Node2d up = Node2d(current_node_x, current_node_y + 1, XYbounds_,
-                     xy_grid_resolution_);
+                     heuristic_grid_resolution_);
   up.SetCost(current_node_path_cost + edge_distance);
 
   Node2d up_right = Node2d(current_node_x + 1, current_node_y + 1, XYbounds_,
-                           xy_grid_resolution_);
+                           heuristic_grid_resolution_);
   up_right.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d right = Node2d(current_node_x + 1, current_node_y, XYbounds_,
-                        xy_grid_resolution_);
+                        heuristic_grid_resolution_);
   right.SetCost(current_node_path_cost + edge_distance);
 
   Node2d down_right = Node2d(current_node_x + 1, current_node_y - 1, XYbounds_,
-                             xy_grid_resolution_);
+                             heuristic_grid_resolution_);
   down_right.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d down = Node2d(current_node_x, current_node_y - 1, XYbounds_,
-                       xy_grid_resolution_);
+                       heuristic_grid_resolution_);
   down.SetCost(current_node_path_cost + edge_distance);
 
   Node2d down_left = Node2d(current_node_x - 1, current_node_y - 1, XYbounds_,
-                            xy_grid_resolution_);
+                            heuristic_grid_resolution_);
   down_left.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d left = Node2d(current_node_x - 1, current_node_y, XYbounds_,
-                       xy_grid_resolution_);
+                       heuristic_grid_resolution_);
   left.SetCost(current_node_path_cost + edge_distance);
 
   Node2d up_left = Node2d(current_node_x - 1, current_node_y + 1, XYbounds_,
-                          xy_grid_resolution_);
+                          heuristic_grid_resolution_);
   up_left.SetCost(current_node_path_cost + diagonal_distance);
 
   if (NodeIndexValid(up.GetGridIndex()) &&
@@ -196,7 +195,7 @@ bool GridSearch::GenerateDpMap(const double ex, const double ey,
                                const MapBound& XYbounds,
                                const ParkObstacleList* obstacles,
                                const double veh_half_width_with_safe_dist) {
-  // init
+// init
 #if DEBUG_NODE_COST
   double start_timestamp = IflyTime::Now_ms();
 #endif
@@ -342,13 +341,13 @@ double GridSearch::CheckDpMap(const double sx, const double sy) {
     return max_cost;
   }
 
-  return node->GetCost() * xy_grid_resolution_;
+  return node->GetCost() * heuristic_grid_resolution_;
 }
 
 void GridSearch::DebugNodePool() {
   for (int32_t i = 0; i < DP_MAX_X_SEARCH_SIZE; i++) {
     for (int32_t k = 0; k < DP_MAX_Y_SEARCH_SIZE; k++) {
-      node_pool_[i][k].DebugNodeString(xy_grid_resolution_);
+      node_pool_[i][k].DebugNodeString(heuristic_grid_resolution_);
     }
   }
 
@@ -364,7 +363,7 @@ void GridSearch::DebugNodePool() {
     uchar* data = map_matrix.ptr<uchar>(i);
 
     for (int32_t j = 0; j < column_num; j++) {
-      value = node_pool_[i][j].GetCost() * xy_grid_resolution_;
+      value = node_pool_[i][j].GetCost() * heuristic_grid_resolution_;
       value = value / 50.0 * 255;
 
       if (value < 0.0) {
@@ -451,9 +450,7 @@ const bool GridSearch::IsPointInMapBound(const double x, const double y) {
   return true;
 }
 
-void GridSearch::Init() {
-  return;
-}
+void GridSearch::Init() { return; }
 
 void GridSearch::ProjectObstacleToNodeMap() {
   Node2d* node = nullptr;

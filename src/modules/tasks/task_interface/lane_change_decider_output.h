@@ -117,6 +117,7 @@ struct LaneChangeDeciderOutput {
   Point2D merge_point;
   Point2D boundary_merge_point;
   bool cur_lane_is_continue;
+  bool boundary_merge_point_valid = false;
 };
 
 }  // namespace planning

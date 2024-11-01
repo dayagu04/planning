@@ -81,6 +81,8 @@ class LaneChangeRequestManager {
 
   void GenerateHMIInfo();
 
+  const bool is_near_merge_region() { return is_near_merge_region_; };
+
  private:
   EgoPlanningConfig config_;
   RequestType request_ = NO_CHANGE;
@@ -95,6 +97,7 @@ class LaneChangeRequestManager {
   EmergenceAvoidRequest emergence_avoid_request_;
   ConeRequest cone_change_request_;
   MergeRequest merge_change_request_;
+  bool is_near_merge_region_{false};
 
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_;
   framework::Session* session_;

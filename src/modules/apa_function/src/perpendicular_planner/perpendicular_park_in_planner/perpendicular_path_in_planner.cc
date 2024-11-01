@@ -51,7 +51,9 @@ void PerpendicularPathInPlanner::Preprocess() {
   calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
   calc_params_.can_insert_line = true;
   calc_params_.is_searching_stage = false;
-  calc_params_.statistical_time = 0.0;
+  calc_params_.col_det_time = 0.0;
+  calc_params_.dubins_plan_time = 0.0;
+  calc_params_.rough_plan_time = 0.0;
   calc_params_.strict_car_lat_inflation =
       apa_param.GetParam().car_lat_inflation_strict + 0.068;
   calc_params_.strict_col_lon_safe_dist =
@@ -76,6 +78,10 @@ void PerpendicularPathInPlanner::Preprocess() {
 
 const bool PerpendicularPathInPlanner::Update() {
   ILOG_INFO << "--------perpendicular path planner --------";
+
+  if (apa_param.GetParam().new_itervative_solution) {
+    return NewUpdatePathPlan();
+  }
 
   // preprocess
   Preprocess();
@@ -1597,9 +1603,13 @@ const bool PerpendicularPathInPlanner::IsPathSafe(
 const bool PerpendicularPathInPlanner::IsGeometryPathSafe(
     const geometry_lib::GeometryPath& geometry_path, const double lat_inflation,
     const double lon_safe_dist) {
-  return !collision_detector_ptr_
-              ->UpdateByEDT(geometry_path, lat_inflation, lon_safe_dist)
-              .collision_flag;
+  const double time = IflyTime::Now_ms();
+  const bool col_flag =
+      collision_detector_ptr_
+          ->UpdateByEDT(geometry_path, lat_inflation, lon_safe_dist)
+          .collision_flag;
+  calc_params_.col_det_time += IflyTime::Now_ms() - time;
+  return !col_flag;
 }
 
 const bool PerpendicularPathInPlanner::PreparePlanSecond() {
@@ -3879,6 +3889,8 @@ PerpendicularPathInPlanner::TrimPathByCollisionDetection(
               << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose()
               << "  car_line_order = " << col_res.car_line_order
               << "  obs_type = " << static_cast<int>(col_res.obs_type);
+
+    geometry_lib::CompletePathSegInfo(path_seg, 1e-3);
 
     // if 1R col by channel obs, even if safe_remain_dist is small. also plan
     // again

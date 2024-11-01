@@ -1,16 +1,13 @@
 #pragma once
 
-
 namespace planning {
 
 class ClosestInPathVehicleDeciderOutput {
-public:
+ public:
   ClosestInPathVehicleDeciderOutput() = default;
   ~ClosestInPathVehicleDeciderOutput() = default;
 
-
-private:
-
+ private:
 };
 
-} // namespace planning
+}  // namespace planning

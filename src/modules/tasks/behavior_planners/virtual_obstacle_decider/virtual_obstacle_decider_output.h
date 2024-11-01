@@ -7,7 +7,8 @@ class VirtualObstacleDeciderOutput {
   VirtualObstacleDeciderOutput() = default;
   ~VirtualObstacleDeciderOutput() = default;
 
-  // const std::map<std::string, cp_common::agent::Agent>& get_virtual_obstacles()
+  // const std::map<std::string, cp_common::agent::Agent>&
+  // get_virtual_obstacles()
   //     const;
   void get_multable_virtual_obstacles();
 

@@ -595,6 +595,17 @@ const bool PlanOnce(
     ParkObstacleList virtual_wall_obs;
     VirtualWallDecider wall_decider;
 
+    ParkSpaceType slot_type;
+    if (ego_slot_info.slot_type ==
+        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+      slot_type = ParkSpaceType::PARALLEL;
+    } else if (ego_slot_info.slot_type ==
+               Common::PARKING_SLOT_TYPE_SLANTING) {
+      slot_type = ParkSpaceType::SLANTING;
+    } else {
+      slot_type = ParkSpaceType::VERTICAL;
+    }
+
     wall_decider.Process(
         virtual_wall_obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
         ego_slot_info.slot_length,
@@ -602,7 +613,8 @@ const bool PlanOnce(
                ego_slot_info.ego_heading_slot),
         Pose2D(ego_slot_info.target_ego_pos_slot[0],
                ego_slot_info.target_ego_pos_slot[1],
-               ego_slot_info.target_ego_heading_slot));
+               ego_slot_info.target_ego_heading_slot),
+        slot_type, SlotRelativePosition::NONE);
 
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
@@ -750,9 +762,21 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                              ego_slot_info.target_ego_pos_slot[1],
                              ego_slot_info.target_ego_heading_slot);
     PointCloudObstacleTransform obstacle_generator;
+
+    ParkSpaceType slot_type;
+    if (ego_slot_info.slot_type ==
+        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+      slot_type = ParkSpaceType::PARALLEL;
+    } else if (ego_slot_info.slot_type ==
+               Common::PARKING_SLOT_TYPE_SLANTING) {
+      slot_type = ParkSpaceType::SLANTING;
+    } else {
+      slot_type = ParkSpaceType::VERTICAL;
+    }
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, real_end);
+        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
+        SlotRelativePosition::NONE);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 
@@ -765,7 +789,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     // end
     Eigen::Vector3d end;
     end[0] = ego_slot_info.target_ego_pos_slot[0] +
-             park_param.vertical_slot_target_adjust_dist;
+             park_param.astar_config.vertical_slot_end_straight_dist;
     end[1] = ego_slot_info.target_ego_pos_slot[1];
     end[2] = ego_slot_info.target_ego_heading_slot;
 
@@ -786,13 +810,10 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.goal_ = Pose2D(end[0], end[1], end[2]);
 
     request.real_goal = real_end;
-    request.vertical_slot_target_adjust_dist_ =
-        apa_param.GetParam().vertical_slot_target_adjust_dist;
-
     request.base_pose_ = base_pose_;
 
-    request.space_type = ParkSpaceType::vertical;
-    request.parking_task = ParkingTask::parking_in;
+    request.space_type = ParkSpaceType::VERTICAL;
+    request.parking_task = ParkingTask::TAIL_PARKING_IN;
     request.head_request = ParkingVehDirectionRequest::tail_in_first;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
