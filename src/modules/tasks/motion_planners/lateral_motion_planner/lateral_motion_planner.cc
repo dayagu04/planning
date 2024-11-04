@@ -573,15 +573,19 @@ void LateralMotionPlanner::Update() {
   d_curv_vec[0] = d_curv_vec[1];
   t_vec[0] = -0.2;
 
-  if ((!session_->planning_context().general_lateral_decider_output().lane_change_scene) &&
-      (!planning_input_.complete_follow())) {
-    const double end_points_size =
-        planning_input_.motion_plan_concerned_index() + 1;
+  const double concerned_index = planning_input_.motion_plan_concerned_index();
+  double concerned_dis_to_ref =
+      std::hypot(x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
+                y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
+  const double end_points_size = concerned_index + 1;
+  if ((!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
+      (!session_->planning_context().general_lateral_decider_output().lane_change_scene)) {
+    const double end_points_size = concerned_index + 1;
     std::vector<double> end_x_vec(end_points_size + 1);
     std::vector<double> end_y_vec(end_points_size + 1);
     std::vector<double> end_s_vec(end_points_size + 1);
     for (size_t i = 0; i < end_points_size + 1; ++i) {
-      if (i > planning_input_.motion_plan_concerned_index()) {
+      if (i > concerned_index) {
         end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
         end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
         end_s_vec[i] = end_s_vec[i - 1] +
@@ -601,6 +605,7 @@ void LateralMotionPlanner::Update() {
     double end_ds =
         (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
         (N - end_points_size);
+    end_ds = std::min(end_ds, planning_input_.ref_vel() * 0.2);
     double end_s = end_s_vec[end_points_size - 1];
     for (size_t i = end_points_size; i < N; ++i) {
       end_s += end_ds;
