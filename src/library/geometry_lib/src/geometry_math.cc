@@ -14,8 +14,8 @@
 #include "log_glog.h"
 #include "math_lib.h"
 
-double kDeg2Rad = M_PI / 180;
-double kRad2Deg = 180 / M_PI;
+const double kDeg2Rad = M_PI / 180.0;
+const double kRad2Deg = 180.0 / M_PI;
 
 namespace pnc {
 namespace geometry_lib {

@@ -254,7 +254,7 @@ class ParallelPathPlanner : public ApaPathPlanner {
   const std::vector<double> GetMinDistOfEgoToObs();
 
   const bool GenAlignedPreparingLine(
-      std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec,
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec,
       const pnc::geometry_lib::PathPoint &ego_pose);
 
   const bool GenParallelPreparingLineVec(

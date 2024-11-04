@@ -12,9 +12,10 @@
 #include "log_glog.h"
 #include "spline.h"
 
-extern double kDeg2Rad;
-extern double kRad2Deg;
 extern double kEqualHeadingEps;
+extern const double kDeg2Rad;
+extern const double kRad2Deg;
+
 namespace pnc {
 
 namespace geometry_lib {
