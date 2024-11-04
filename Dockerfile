@@ -5,7 +5,7 @@ WORKDIR /root/planning
 ENV LD_LIBRARY_PATH=/opt/ros/melodic/lib:$LD_LIBRARY_PATH \
     CMAKE_PREFIX_PATH=/opt/ros/melodic:$CMAKE_PREFIX_PATH
 
-RUN /root/miniconda3/bin/pip install empy==3.3.4 boto3 && \
+RUN /root/miniconda3/bin/pip install empy==3.3.4 shapely boto3 && \
     echo 'source /opt/ros/melodic/setup.sh' >> ~/.bashrc && \
     mkdir -p /tmp
 
