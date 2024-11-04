@@ -208,6 +208,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
     if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
+    } else if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
+               *lane_change_type == CONE_REQUEST) {
+      return true;
     } else {
       return is_ego_in_perfect_pose;
     }
