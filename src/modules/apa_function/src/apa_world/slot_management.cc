@@ -1189,7 +1189,7 @@ bool SlotManagement::UpdateSlotsInSearching() {
         slot->is_release() &&
         apa_param.GetParam().path_generator_type ==
             apa_planner::ParkPathGenerationType::GEOMETRY_BASED &&
-        !apa_param.GetParam().perpendicular_parking_out_state) {
+        frame_.apa_state != ApaStateMachine::ACTIVE_OUT) {
       if (IflyTime::Now_ms() - time_start >
           apa_param.GetParam().prepare_single_max_allow_time) {
         slot->set_is_release(false);
@@ -2312,7 +2312,7 @@ bool SlotManagement::UpdateSlotsInParking() {
 
   size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
 
-  if (apa_param.GetParam().perpendicular_parking_out_state) {
+  if (frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
     if (frame_.park_out_select_id == 0) {
       double dist = std::numeric_limits<double>::infinity();
       for (auto &pair : frame_.slot_info_window_map) {
