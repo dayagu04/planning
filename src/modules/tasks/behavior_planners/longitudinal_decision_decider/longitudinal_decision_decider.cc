@@ -234,20 +234,65 @@ bool LongitudinalDecisionDecider::IsMaxAccCurvSafeInStGraph() const {
   const auto &planning_context = session_->planning_context();
   const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
 
-  // 依赖ST的合入
-  // const auto *st_graph = planning_context.st_graph_helper();
-  // if (st_graph == nullptr) {
-  //   return false;
-  // }
-  // const auto &planning_init_point = ego_state_mgr->planning_init_point();
-  // const double ego_vel = planning_init_point.v;
+  const auto *st_graph = planning_context.st_graph_helper();
+  if (st_graph == nullptr) {
+    return false;
+  }
+  const auto &planning_init_point = ego_state_mgr->planning_init_point();
+  const double ego_vel = planning_init_point.v;
 
-  // const auto& agents_headway_map =
-  //     planning_data->decision_output().agent_headway_decider_output().agents_headway_Info();
-  // auto max_deceleration_curve =
-  // GenerateMaxDecelerationCurve(planning_init_point);
+  // 依赖agents_headway_Info
+  // const auto &agents_headway_map = planning_data->decision_output()
+  //                                      .agent_headway_decider_output()
+  //                                      .agents_headway_Info();
+
+  // acc:[-1.0, 2.0]  jerk:[-2.0, 4.0]
+  auto max_deceleration_curve =
+      GenerateMaxDecelerationCurve(planning_init_point);
+  for (size_t i = 0; i < plan_points_num_; ++i) {
+    const double t = i * dt_;
+    // const auto &upper_bound = st_graph->GetPassCorridorUpperBound(t);
+    // if (upper_bound.agent_id() != speed::kNoAgentId) {
+      //     auto iter = agents_headway_map.find(upper_bound.agent_id());
+      // double follow_time_gap = kFollowTimeGap;
+      //     if (iter != agents_headway_map.end()) {
+      //       follow_time_gap = iter->second.current_headway;
+      //     }
+    //   const double target_s_disatnce = std::max(
+    //       ego_vel * follow_time_gap + kMinFollowDistance, kMinFollowDistance);
+    //   const double max_curve_s = max_deceleration_curve.Evaluate(0, t);
+    //   if (max_curve_s + target_s_disatnce > upper_bound.s()) {
+    //     return false;
+    //   }
+    // }
+  }
 
   return true;
+}
+
+SecondOrderTimeOptimalTrajectory
+LongitudinalDecisionDecider::GenerateMaxDecelerationCurve(
+    const PlanningInitPoint &init_point) const {
+  LonState init_state;
+  init_state.p = init_point.lon_init_state.s();
+  init_state.v = init_point.lon_init_state.v();
+  init_state.a = init_point.lon_init_state.a();
+
+  StateLimit state_limit;
+
+  const double acc_upper_bound = 2.0;
+  const double acc_lower_bound = -1.0;
+  const double jerk_upper_bound = 4.0;
+  const double jerk_lower_bound = -2.0;
+
+  // state_limit.v_end = agent_vel;
+  state_limit.v_end = 0.0;
+  state_limit.a_max = acc_upper_bound;
+  state_limit.a_min = acc_lower_bound;
+  state_limit.j_max = jerk_upper_bound;
+  state_limit.j_min = jerk_lower_bound;
+
+  return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
 
 void LongitudinalDecisionDecider::MakeDebugMessage() {

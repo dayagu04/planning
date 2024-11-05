@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tasks/task.h"
+#include "trajectory1d/second_order_time_optimal_trajectory.h"
 
 namespace planning {
 
@@ -25,13 +26,16 @@ class LongitudinalDecisionDecider : public Task {
 
   bool IsMaxAccCurvSafeInStGraph() const;
 
+  SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve(
+      const PlanningInitPoint &init_point) const;
+
  private:
   EgoPlanningConfig config_;
   // <counter, flag>
   std::pair<int32_t, int32_t> cruise_accelerate_count_{0, 0};
-  int32_t plan_points_num_ = 0;
-  double plan_time_ = 0.0;
-  double dt_ = 0.0;
+  int32_t plan_points_num_ = 26;
+  double plan_time_ = 5.0;
+  double dt_ = 0.2;
 
   static constexpr double kCruiseSpeedMinThd = 60.0 / 3.6;
   static constexpr double kEgoSpeedWithCruiseSpeedDiffThd = 15.0 / 3.6;
