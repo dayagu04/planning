@@ -99,13 +99,14 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
   }
 
   // 5.path curv
-  const auto &planned_path = planning_context.planner_output().planned_path();
+  const auto &planned_path =
+      planning_context.motion_planner_output().lateral_path_coord;
   // binwang33: 翼闻添加接口合入后，此处统一掉
   const double k_preview_distance_thd = ego_vel * kEgoPreviewTimeThd;
   double sample_distance = 0.0;
   while (sample_distance < k_preview_distance_thd) {
     sample_distance += kPreviewDistanceStep;
-    auto path_point = planned_path.GetPathPointByS(sample_distance);
+    auto path_point = planned_path->GetPathPointByS(sample_distance);
     const double curr_kappa = path_point.kappa();
     if (curr_kappa > kMaxCurvThd) {
       can_increase_acc_bound = false;
@@ -243,8 +244,8 @@ bool LongitudinalDecisionDecider::IsMaxAccCurvSafeInStGraph() const {
 
   // const auto& agents_headway_map =
   //     planning_data->decision_output().agent_headway_decider_output().agents_headway_Info();
-  // auto max_deceleration_curve = GenerateMaxDecelerationCurve(planning_init_point);
-
+  // auto max_deceleration_curve =
+  // GenerateMaxDecelerationCurve(planning_init_point);
 
   return true;
 }
