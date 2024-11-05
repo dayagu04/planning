@@ -34,7 +34,7 @@ def construct_scenario(
   y_offset_vec = [-0.3, 0.3, 0.6, 0.2, 0.4]
   heading_offset_vec = [0.0, 0.0, 0.0, 6.0 /57.3, 70 / 57.3]
 
-  obs_car_file_name = '/asw/data/parallel_obs_car.json'
+  obs_car_file_name = '/asw/data/parallel_obs_car_0p1.json'
   curb_file_name = '/asw/data/curb.json'
   channel_file_name = '/asw/data/channel.json'
 
