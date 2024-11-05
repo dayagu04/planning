@@ -46,7 +46,6 @@ struct ApaParameters {
 
   /***headin***/
   // parking heading in params
-  bool is_heading_in = true;
   double headin_fix_slot_occupied_ratio = 0.938;
   double headin_multi_plan_min_heading_err = 22.86;    // 28.86
   double headin_multi_plan_min_lat_err = 0.8;          // 1.2
@@ -333,8 +332,7 @@ struct ApaParameters {
   double vertical_slot_target_adjust_dist = 1.0;
   bool enable_delete_fusion_obj_in_slot = true;
   double deadend_uss_stuck_replan_wait_time;
-  bool perpendicular_parking_out_right = true;
-  bool perpendicular_parking_out_state = false;
+
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
