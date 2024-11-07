@@ -176,6 +176,8 @@ uint8_t LateralMotionPlanningProblem::Update(
             end_ratio_for_qtheta * cost_config_vec.at(i - 1)[W_REF_THETA];
         cost_config_vec.at(i)[W_JERK] =
             end_ratio_for_qjerk * cost_config_vec.at(i - 1)[W_JERK];
+        cost_config_vec.at(i)[W_SOFT_CORRIDOR] = cost_config_vec.at(i - 1)[W_SOFT_CORRIDOR] * 0.7;
+        cost_config_vec.at(i)[W_HARD_CORRIDOR] = cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.7;
         // LOG_DEBUG(
         //   "motion_plan_concerned_start_index: %zu, remote_qxy: %f,
         //   remote_qjerk: %f", motion_plan_concerned_start_index, remote_xy,
@@ -396,6 +398,8 @@ uint8_t LateralMotionPlanningProblem::Update(
             end_ratio_for_qtheta * cost_config_vec.at(i - 1)[W_REF_THETA];
         cost_config_vec.at(i)[W_JERK] =
             end_ratio_for_qjerk * cost_config_vec.at(i - 1)[W_JERK];
+        cost_config_vec.at(i)[W_SOFT_CORRIDOR] = cost_config_vec.at(i - 1)[W_SOFT_CORRIDOR] * 0.7;
+        cost_config_vec.at(i)[W_HARD_CORRIDOR] = cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.7;
       }
     }
 

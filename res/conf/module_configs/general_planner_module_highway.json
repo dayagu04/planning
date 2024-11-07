@@ -168,6 +168,7 @@
   "lc_finish_dist_thr": 0.5,
   "lc_finish_heading_deg_thr":1.0,
   "lc_finished_dist_thr": [0.15, 0.15, 0.15, 0.15],
+  "min_ego_v_cruise": 2.0,
   "none_consider_slope_thr": 0.003,
   "v_limit_max":60,
   "enable_none_smooth": true,
@@ -175,7 +176,7 @@
   "obstacle_detect_distance_lower": -50,
   "general_lateral_decider": {
     "lateral_ref_traj_type":false,
-    "low_speed_limit_for_ref": 0.5,
+    "min_v_cruise": 4.0,
     "lc_second_dist_thr": 2.0,
     "dynamic_ref_buffer": [0.0, 0.0, 0.15, 0.3],
     "not_use_gap_flag": true,
@@ -305,7 +306,8 @@
     "warm_start_enable": true,
     "curv_factor": 0.33,
     "delta_t": 0.2,
-    "min_ego_vel": 5.0,
+    "min_v_cruise": 2.0,
+    "min_ego_vel": 2.0,
     "acc_bound": 1.0,
     "map_jerk_bound": [1.2, 1.0, 0.8, 0.25],
     "jerk_bound_avoid": 0.4,
@@ -521,7 +523,8 @@
     "lb_t_max": 4.0,
     "lb_t_min":3.5,
     "use_gs": true,
-    "lat_ref_offset": [0.1, 0.15, 0.2, 0.3]
+    "lat_ref_offset": [0.1, 0.15, 0.2, 0.3],
+    "min_ego_v_cruise": 2.0
   },
   "speed_adjust": {
     "max_acc_limit_lower": 0.5,

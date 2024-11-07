@@ -755,10 +755,10 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
           .planning_init_point();
   // Step 3) calculate trajectory points
   // generate reference path
-  static const double min_ego_v_cruise = 2.0;
+  // static const double min_ego_v_cruise = 2.0;
   const auto &v_ref_cruise = std::fmax(
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise(),
-      min_ego_v_cruise);
+      config_.min_ego_v_cruise);
 
   static const size_t &N = config_.num_point;
   const auto &delta_time = config_.delta_t;
