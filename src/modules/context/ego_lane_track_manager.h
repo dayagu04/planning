@@ -103,6 +103,9 @@ class EgoLaneTrackManger {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
+  int CalcTargetLaneLineSegment(
+  const std::shared_ptr<VirtualLane> base_lane, Point2D ego_cart_point);
+
   void SetLastZeroRelativeIdNums(int last_zero_relative_id_nums) {
     last_zero_relative_id_nums_ = last_zero_relative_id_nums;
   }
@@ -161,6 +164,7 @@ class EgoLaneTrackManger {
   std::shared_ptr<VirtualLane> current_lane_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;
   // uint lane_num_ = 0;
   uint last_zero_relative_id_nums_ = 0;
   int last_zero_relative_id_order_id_index_ = -1;
