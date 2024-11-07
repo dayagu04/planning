@@ -1834,7 +1834,7 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
                                         ->polygon()
                                         .points();
   double ego_dis_to_ref_lane = NL_NMAX;
-  for (auto ego_vertices_point : ego_vertices_points) {
+  for (const auto& ego_vertices_point : ego_vertices_points) {
     Point2D frenet_point;
     Point2D ego_vertices_point_tem = {ego_vertices_point.x(),
                                       ego_vertices_point.y()};
