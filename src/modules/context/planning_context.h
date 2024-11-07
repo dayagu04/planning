@@ -1,7 +1,10 @@
 #pragma once
 
-#include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include <memory>
+
+#include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
+#include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
+#include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
@@ -13,7 +16,6 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
-#include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -256,8 +258,16 @@ class PlanningContext {
     return cipv_lost_prohibit_acceleration_decider_output_;
   }
 
-  const std::shared_ptr<AdaptiveCruiseControl>
-      &adaptive_cruise_control_function() {
+  const ClosestInPathVehicleDeciderOutput &cipv_decider_output() const {
+    return cipv_decider_output_;
+  }
+
+  ClosestInPathVehicleDeciderOutput &mutable_cipv_decider_output() {
+    return cipv_decider_output_;
+  }
+
+  const std::shared_ptr<AdaptiveCruiseControl> &
+  adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(
@@ -288,8 +298,8 @@ class PlanningContext {
     lane_keep_assit_ptr_ = lane_keep_assit;
   }
 
-  const std::shared_ptr<class IntelligentHeadlightControl>
-      &intelligent_headlight_control_function() {
+  const std::shared_ptr<class IntelligentHeadlightControl> &
+  intelligent_headlight_control_function() {
     return intelligent_headlight_control_;
   }
   void set_intelligent_headlight_control_function(
@@ -298,8 +308,8 @@ class PlanningContext {
     intelligent_headlight_control_ = intelligent_headlight_control;
   }
 
-  const std::shared_ptr<TrafficSignRecognition>
-      &traffic_sign_recognition_function() {
+  const std::shared_ptr<TrafficSignRecognition> &
+  traffic_sign_recognition_function() {
     return traffic_sign_recognition_;
   }
   void set_traffic_sign_recognition_function(
@@ -408,6 +418,9 @@ class PlanningContext {
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
   StGraphSearcherOutput st_graph_searcher_output_;
+
+  // longitudinal deciders output
+  ClosestInPathVehicleDeciderOutput cipv_decider_output_;
 };
 
 }  // namespace planning

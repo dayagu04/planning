@@ -40,6 +40,65 @@ const bool StGraphHelper::GetAgentStBoundaries(
   return true;
 }
 
+const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
+StGraphHelper::GetAllStBoundaries() const {
+  return st_graph_.boundary_id_st_boundaries_map();
+}
+
+void StGraphHelper::DetermineIfConeBucketCIPV(
+    const std::vector<const agent::Agent*>& agents) {
+  std::vector<const planning::agent::Agent*> speed_limited_cone_buckets;
+  speed_limited_cone_buckets.reserve(agents.size());
+  std::unordered_map<int64_t, std::unique_ptr<STBoundary>>
+      cone_boundary_id_st_boundaries_map;
+  for (const auto* agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    if (!agent->need_speed_limit()) {
+      continue;
+    }
+    MakeSpeedLimitedConeBucketStBoundary(*agent,
+                                         cone_boundary_id_st_boundaries_map);
+  }
+  if (cone_boundary_id_st_boundaries_map.empty()) {
+    return;
+  }
+  int64_t closest_cone_boundary_id = -1, closest_st_boundary_id = -1;
+  double closest_cone_s = std::numeric_limits<double>::max();
+  double closest_st_s = std::numeric_limits<double>::max();
+  StGraphUtils::DetermineClosetStBoundary(cone_boundary_id_st_boundaries_map,
+                                          closest_cone_boundary_id,
+                                          closest_cone_s);
+  StGraphUtils::DetermineClosetStBoundary(
+      st_graph_.boundary_id_st_boundaries_map(), closest_st_boundary_id,
+      closest_st_s);
+  bool is_cone_bucket_cipv = false;
+  if (closest_cone_boundary_id != -1) {
+    if (closest_st_boundary_id != -1) {
+      if (closest_cone_s < closest_st_s) {
+        is_cone_bucket_cipv = true;
+      }
+    } else {
+      is_cone_bucket_cipv = true;
+    }
+  }
+  if (is_cone_bucket_cipv) {
+    const auto agent_id = closest_cone_boundary_id >> 8;
+    for (const auto* agent : agents) {
+      if (agent == nullptr) {
+        continue;
+      }
+      if (agent->agent_id() != agent_id) {
+        continue;
+      }
+      auto* mutable_agent = const_cast<agent::Agent*>(agent);
+      mutable_agent->set_is_cone_bucket_cipv(true);
+      break;
+    }
+  }
+}
+
 bool StGraphHelper::GetBorderByStPoint(double s, double t,
                                        STPoint* const lower_st_point,
                                        STPoint* const upper_st_point) const {
@@ -120,6 +179,50 @@ bool StGraphHelper::GetBorderByStPoint(double s, double t,
     }
   }
   return true;
+}
+
+void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
+    const agent::Agent& agent,
+    std::unordered_map<int64_t, std::unique_ptr<STBoundary>>& boundary_id_st_boundaries_map) {
+  const auto& st_graph_input = st_graph_.st_graph_input();
+  const auto* path_border_querier = st_graph_input.path_border_querier();
+  const int32_t reserve_num = st_graph_.reserve_num();
+  const auto planned_kd_path = st_graph_input.processed_path();
+  const auto& planning_init_point_box = st_graph_input.planning_init_point_box();
+  if (nullptr == planned_kd_path || nullptr == path_border_querier || reserve_num <= 0) {
+    return;
+  }
+  const auto& time_range = st_graph_.time_range();
+  const auto& path_range = st_graph_.path_range();
+  const double lat_buffer = st_graph_input.lat_buffer();
+  auto obs_box = agent.box();
+  obs_box.LateralExtend(lat_buffer * 2.0);
+  // max_s min_s max_l min_l
+  std::vector<double> agent_sl_boundary(4);
+  std::vector<std::pair<int32_t, Vec2d>> considered_corners;
+  StGraphUtils::CalculateAgentSLBoundary(planned_kd_path, obs_box, path_range,
+                                         StBoundaryType::NORMAL, &agent_sl_boundary,
+                                         &considered_corners);
+
+  std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
+  st_point_pairs.reserve(reserve_num);
+  double lower_s = std::numeric_limits<double>::max();
+  double upper_s = std::numeric_limits<double>::lowest();
+  const int64_t boundary_id = (agent.agent_id() << 8) + 0;
+
+  if (StGraphUtils::CalculateSRange(
+          planned_kd_path, *path_border_querier, obs_box, StBoundaryType::NORMAL, path_range,
+          agent_sl_boundary, considered_corners, planning_init_point_box, &lower_s, &upper_s)) {
+    for (double t = time_range.first; t < time_range.second; t += kTimeResolution) {
+      st_point_pairs.emplace_back(STPoint(lower_s, t, agent.agent_id(), boundary_id, 0.0, 0.0),
+                                  STPoint(upper_s, t, agent.agent_id(), boundary_id, 0.0, 0.0));
+    }
+  }
+  if (!st_point_pairs.empty()) {
+    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    st_boundary->set_id(boundary_id);
+    boundary_id_st_boundaries_map.insert(std::make_pair(boundary_id, std::move(st_boundary)));
+  }
 }
 
 }  // namespace speed
