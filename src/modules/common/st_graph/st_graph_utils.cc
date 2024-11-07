@@ -434,7 +434,7 @@ void StGraphUtils::UpdateStBoundaryForLaneChange(
     }
   }
 
-  bool need_fallback = false;
+  // bool need_fallback = false;
   if (!need_process && first_meet_invalid &&
       last_rear_upper_s < last_front_lower_s) {
     // fallback for that the safety_buffer_m is not small enough
@@ -680,7 +680,7 @@ double StGraphUtils::RecalculateLateralBufferForLargeAgent(
   const auto& prev_st_info = ptr_prev_agent->agent_st_info();
   const bool prev_in_st_graph = prev_st_info.is_in_st_graph_;
   const double prev_lateral_buffer = prev_st_info.lateral_buffer_;
-  const double prev_min_t = prev_st_info.min_t_;
+  // const double prev_min_t = prev_st_info.min_t_;
   *prev_st_count = prev_st_info.st_graph_count_;
 
   // previous is in st-graph,the first frame need expand buffer, other case just
@@ -735,7 +735,7 @@ bool StGraphUtils::CalculateSRange(
     std::vector<std::pair<int32_t, planning_math::Vec2d>>& considered_corners,
     const planning_math::Box2d& planning_init_point_box, double* const lower_s,
     double* const upper_s) {
-  const auto& obs_corners = obs_box.GetAllCorners();
+  // const auto& obs_corners = obs_box.GetAllCorners();
   // max_s min_s max_l min_l
   const double max_s = agent_sl_boundary[0];
   const double min_s = agent_sl_boundary[1];
@@ -1308,7 +1308,7 @@ StGraphUtils::GenerateMaxDecelerationCurveByAgentVel(
   const double jerk_upper_bound = 5.0;
   const double jerk_lower_bound = -2.0;
 
-  constexpr double kSlowAccLowerBound = -3.0;
+  // constexpr double kSlowAccLowerBound = -3.0;
   // state_limit.v_end = agent_vel;
   state_limit.v_end = 0.0;
   state_limit.a_max = acc_upper_bound;

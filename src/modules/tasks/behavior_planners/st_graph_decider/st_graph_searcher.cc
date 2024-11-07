@@ -18,10 +18,10 @@ namespace planning {
 
 namespace {
 
-constexpr double kMinBuffer = 1.0;
+// constexpr double kMinBuffer = 1.0;
 constexpr double kEpsilon = 1e-10;
 constexpr double kUpsamplingStep = 0.1;
-constexpr double kMilliSecondToSecond = 0.001;
+// constexpr double kMilliSecondToSecond = 0.001;
 constexpr double kBestNodeMinT = 4.5;
 constexpr double kTimeResolution = 0.1;
 constexpr double kMaxNodeSpeedLimit = 100.0;
@@ -50,14 +50,14 @@ MakeTargetLaneFrontRearAgents(framework::Session* session) {
   // get lane change status
   const auto& lane_change_decider_output =
       session->planning_context().lane_change_decider_output();
-  const auto& coarse_planning_info =
-      lane_change_decider_output.coarse_planning_info;
+  // const auto& coarse_planning_info =
+  //     lane_change_decider_output.coarse_planning_info;
   const auto lc_request_direction = lane_change_decider_output.lc_request;
   const auto lane_change_state = lane_change_decider_output.curr_state;
-  const auto is_in_lane_change_execution =
-      lane_change_state == kLaneChangeExecution;
-  const auto is_in_lane_change_complete =
-      lane_change_state == kLaneChangeComplete;
+  // const auto is_in_lane_change_execution =
+  //     lane_change_state == kLaneChangeExecution;
+  // const auto is_in_lane_change_complete =
+  //     lane_change_state == kLaneChangeComplete;
 
   // get front and rear agents
   int64_t target_lane_front_node_id = -1;
@@ -299,7 +299,7 @@ bool StGraphSearcher::SearchStPath(
   const double s_step = config_.s_step;
   const double t_step = config_.t_step;
   const double vel_step = config_.vel_step;
-  const double max_search_time = config_.max_search_time_s;
+  // const double max_search_time = config_.max_search_time_s;
 
   double planning_distance = planned_kd_path->Length();
   UpdateHeuristicTargetSInLaneChange(session_, planning_time_horizon,
@@ -324,7 +324,7 @@ bool StGraphSearcher::SearchStPath(
   bool is_goal_reached = false;
 
   // record time
-  const double start_time = IflyTime::Now_ms();
+  // const double start_time = IflyTime::Now_ms();
   int count = 0;
   auto current_node = start_node;
   auto best_node = current_node;
@@ -332,9 +332,9 @@ bool StGraphSearcher::SearchStPath(
 
   // start A* search loop
   while (!open_set.IsEmpty()) {
-    const double current_time = IflyTime::Now_ms();
-    const double time_used = current_time - start_time;
-    const double max_search_time_ms = max_search_time * 1e3;
+    // const double current_time = IflyTime::Now_ms();
+    // const double time_used = current_time - start_time;
+    // const double max_search_time_ms = max_search_time * 1e3;
     // max search time < 0.1s
     // if (time_used > max_search_time_ms) {
     //   LOG_DEBUG("time out, time used: %.4f", time_used);
@@ -391,7 +391,7 @@ bool StGraphSearcher::SearchStPath(
     }
   }
 
-  const double end_time = IflyTime::Now_ms();
+  // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
     LOG_DEBUG("st search fail, goal not reached");
     bool is_visualize_all_vertexes = config_.is_visualize_st_search_process;
@@ -447,14 +447,14 @@ bool StGraphSearcher::SearchStPath(
 std::unordered_set<int64_t>
 StGraphSearcher::GetTargetLaneRearAgentStBoundaries() const {
   std::unordered_set<int64_t> st_boundaries_set;
-  const auto& dynamic_world =
-      session_->environmental_model().get_dynamic_world();
+  // const auto& dynamic_world =
+  //     session_->environmental_model().get_dynamic_world();
   // get lane change status
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto& coarse_planning_info =
-      lane_change_decider_output.coarse_planning_info;
-  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  // const auto& coarse_planning_info =
+  //     lane_change_decider_output.coarse_planning_info;
+  // const auto lc_request_direction = lane_change_decider_output.lc_request;
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const auto is_in_lane_change_execution =
       lane_change_state == kLaneChangeExecution ||
@@ -464,7 +464,7 @@ StGraphSearcher::GetTargetLaneRearAgentStBoundaries() const {
   }
 
   // get rear agents
-  int64_t target_lane_rear_node_id = -1;
+  // int64_t target_lane_rear_node_id = -1;
   std::unordered_set<int32_t> target_lane_rear_agents;
   const auto target_lane_front_rear_agents =
       MakeTargetLaneFrontRearAgents(session_);
@@ -685,7 +685,7 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
   const double weight_accel = config_.weight_accel;
   const double weight_accel_sign = config_.weight_accel_sign;
   const double weight_jerk = config_.weight_jerk;
-  const double weight_virtual_yield = config_.weight_virtual_yield;
+  // const double weight_virtual_yield = config_.weight_virtual_yield;
 
   double cost_yield = ComputeYieldCost(input_info, *succ_node);
 
@@ -777,7 +777,7 @@ double StGraphSearcher::ComputeVirtualYieldCost(
   //     planning_data.decision_output().expand_st_boundaries_decider_output();
 
   speed::STPoint lower_bound, upper_bound;
-  const bool has_no_collision = false;
+  // const bool has_no_collision = false;
   // const bool has_no_collision =
   //     extend_st_boundary.GetBorderByStPoint(node.s(), node.t(), &lower_bound,
   //     &upper_bound);
@@ -994,7 +994,7 @@ bool StGraphSearcher::CheckYieldBackVehicle(
 
     auto lower_it = decision_table.find(boundary_id);
     if (lower_it == decision_table.end()) {
-      int32_t id = agent_id;
+      // int32_t id = agent_id;
       continue;
     } else {
       if (lower_it->second == speed::STBoundary::DecisionType::YIELD) {

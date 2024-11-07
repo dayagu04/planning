@@ -10,7 +10,7 @@ namespace {
 constexpr double kMaxPathLength = 400.0;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
-constexpr bool kEnablePlotLowSpeedAgentOriginStBoundary = false;
+// constexpr bool kEnablePlotLowSpeedAgentOriginStBoundary = false;
 }  // namespace
 
 StGraphHelper::StGraphHelper(const STGraph& st_graph) : st_graph_(st_graph) {}

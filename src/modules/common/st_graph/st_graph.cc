@@ -38,7 +38,7 @@ namespace speed {
 
 namespace {
 
-constexpr double kSearchBuffer = 5.0;
+// constexpr double kSearchBuffer = 5.0;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
 }  // namespace
@@ -352,8 +352,8 @@ void STGraph::MakeDynamicAgentStBoundary(
           ? agent.time_range()
           : st_graph_input_.time_range();
   const auto& path_range = st_graph_input_.path_range();
-  const double obs_diagonal = agent.box().diagonal();
-  const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
+  // const double obs_diagonal = agent.box().diagonal();
+  // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
   const auto& trajectories = agent.trajectories();
 

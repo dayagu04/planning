@@ -3,6 +3,7 @@
 #include "st_graph/st_boundary.h"
 #include "st_graph/st_point.h"
 #include "vec2d.h"
+#include <unordered_map>
 
 namespace planning {
 

@@ -22,13 +22,13 @@ constexpr double IsoJerkLimitLower = -5.0;
 constexpr double IsoJerkLimitSpeedUpper = 20.0;
 constexpr double IsoJerkLimitSpeedLower = 5.0;
 
-constexpr double kSlowJerkUpperBound = 6.0;
+// constexpr double kSlowJerkUpperBound = 6.0;
 
-constexpr double kFollowBuffer = 0.2;
-constexpr double kOvertakeBuffer = 2.0;
+// constexpr double kFollowBuffer = 0.2;
+// constexpr double kOvertakeBuffer = 2.0;
 
-constexpr double kSpeedBoundFactor = 1.1;
-constexpr double kPerSecondPlanLenth = 50.0;
+// constexpr double kSpeedBoundFactor = 1.1;
+// constexpr double kPerSecondPlanLenth = 50.0;
 constexpr double kTimeResolution = 0.1;
 constexpr double kLowerSpeedAccUpperBound = 1.8;
 constexpr double kHighSpeedAccUpperBound = 1.2;
@@ -49,11 +49,11 @@ YieldFrontVehicleSafeFunction::GenerateMaxDecelerationCurve(
   const auto& planning_init_point = ego_state_manager->planning_init_point();
   LonState init_state = {0.0, planning_init_point.v, planning_init_point.a};
 
-  constexpr double kRefSpeedBuffer = 0.1;
-  constexpr double kSpeedBoundFactor = 1.1;
-  const double cruise_speed = ego_state_manager->ego_v_cruise();
-  const double cruise_speed_uppper_bound = cruise_speed * kSpeedBoundFactor;
-  const double ego_speed_upper_bound = init_state.v * kSpeedBoundFactor;
+  // constexpr double kRefSpeedBuffer = 0.1;
+  // constexpr double kSpeedBoundFactor = 1.1;
+  // const double cruise_speed = ego_state_manager->ego_v_cruise();
+  // const double cruise_speed_uppper_bound = cruise_speed * kSpeedBoundFactor;
+  // const double ego_speed_upper_bound = init_state.v * kSpeedBoundFactor;
 
   StateLimit state_limit;
   state_limit.v_end = front_node_vel;

@@ -12,7 +12,6 @@ StSearchInput::StSearchInput(
     const double min_jerk_limit, const int64_t accel_sample_num,
     const double s_step, const double t_step, const double vel_step)
     : ego_init_state_(ego_init_state),
-      init_vel_(ego_init_state.vel()),
       planning_distance_(planning_distance),
       planning_time_horizon_(planning_time_horizon),
       cruise_speed_(cruise_speed),
@@ -20,9 +19,10 @@ StSearchInput::StSearchInput(
       min_accel_limit_(min_accel_limit),
       max_jerk_limit_(max_jerk_limit),
       min_jerk_limit_(min_jerk_limit),
-      accel_sample_num_(accel_sample_num),
       s_step_(s_step),
       t_step_(t_step),
+      accel_sample_num_(accel_sample_num),
+      init_vel_(ego_init_state.vel()),
       vel_step_(vel_step) {
   init_s_ = 0.0;
   init_t_ = 0.0;

@@ -228,7 +228,7 @@ void StGraphInput::ForwardExtendPlannedPath(
   // cal desire path length
   constexpr double kMinLength = 30.0;
   const double init_v = std::fmax(0.0, planning_init_point_.vel());
-  const double init_acc = std::fmax(0.0, planning_init_point_.acc());
+  // const double init_acc = std::fmax(0.0, planning_init_point_.acc());
   const double ego_max_acc = 5.0;
   const double plan_time_length = 5.0;
   double desired_path_length =
@@ -342,7 +342,7 @@ void StGraphInput::ForwardLinearlyExtendPlannedPath(
   const double remain_length =
       desired_path_length - planned_path->Length();  // must satisfy
   // 2. extend path with ego lane
-  constexpr double kMinRemainLaneLength = 10.0;
+  // constexpr double kMinRemainLaneLength = 10.0;
   *ptr_path_points = planned_path->path_points();
   constexpr double kConsiderPathHeadingBuffer = 1.0;
   auto back_point = planned_path->GetPathPointByS(planned_path->Length() -
@@ -574,8 +574,8 @@ void StGraphInput::MakeBuffer(const std::string lane_change_status,
       config.lane_keeping_lower_speed_kph;
   const double lane_keeping_upper_speed_kph =
       config.lane_keeping_upper_speed_kph;
-  const double lane_keeping_large_agent_lateral_buffer_m =
-      config.lane_keeping_large_agent_lateral_buffer_m;
+  // const double lane_keeping_large_agent_lateral_buffer_m =
+  //     config.lane_keeping_large_agent_lateral_buffer_m;
   const double lane_change_lateral_buffer_m =
       config.lane_change_lateral_buffer_m;
   const double lane_keeping_large_agent_lower_lateral_buffer_m =
@@ -782,7 +782,7 @@ StGraphInput::GenerateMaxAccelerationCurve(
   LonState init_state = {0.0, planning_init_point.vel(),
                          planning_init_point.acc()};
 
-  constexpr double kRefSpeedBuffer = 0.1;
+  // constexpr double kRefSpeedBuffer = 0.1;
   constexpr double kSpeedBoundFactor = 1.1;
   const double cruise_speed = ego_state_manager->ego_v_cruise();
   const double cruise_speed_uppper_bound = cruise_speed * kSpeedBoundFactor;

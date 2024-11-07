@@ -133,7 +133,7 @@ const std::vector<STPoint>& STBoundary::lower_points() const {
 }
 
 void STBoundary::clear() {
-  DecisionType boundary_type_ = DecisionType::UNKNOWN;
+  // DecisionType boundary_type_ = DecisionType::UNKNOWN;
 
   upper_points_.clear();
   lower_points_.clear();
