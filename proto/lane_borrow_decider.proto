@@ -1,0 +1,13 @@
+syntax = "proto2";
+package planning.common;
+import "basic_types.proto";
+
+message BlockedObsArea {
+  optional Point2d front_left_corner = 1;
+  optional Point2d front_right_corner = 2;
+  optional Point2d back_right_corner = 3;
+  optional Point2d back_left_corner = 4;
+}
+message LaneBorrowDeciderInfo {
+  optional BlockedObsArea block_obs_area = 1;
+};

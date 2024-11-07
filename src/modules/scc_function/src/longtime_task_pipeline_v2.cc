@@ -15,6 +15,8 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
       std::make_unique<LaneChangeDecider>(config_builder, session);
   speed_adjust_decider_ =
       std::make_unique<SpeedAdjustDecider>(config_builder, session);
+  lane_borrow_decider_ =
+      std::make_unique<LaneBorrowDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -60,6 +62,12 @@ bool LongTimeTaskPipelineV2::Run() {
   ok = speed_adjust_decider_->Execute();
   if (!ok) {
     AddErrorInfo(speed_adjust_decider_->Name());
+    return false;
+  }
+
+  ok = lane_borrow_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(lane_borrow_decider_->Name());
     return false;
   }
 

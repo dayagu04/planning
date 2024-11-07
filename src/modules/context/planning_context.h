@@ -20,6 +20,8 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
+#include "../tasks/task_interface/lane_borrow_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -268,6 +270,14 @@ class PlanningContext {
     return lateral_offset_decider_output_;
   }
 
+  LaneBorrowDeciderOutput &mutable_lane_borrow_decider_output(){
+    return lane_borrow_decider_output_;
+  }
+  const LaneBorrowDeciderOutput &lane_borrow_decider_output() const {
+    return lane_borrow_decider_output_;
+  }
+
+
   LateralOffsetDeciderOutput &mutable_lateral_offset_decider_output() {
     return lateral_offset_decider_output_;
   }
@@ -436,6 +446,8 @@ class PlanningContext {
       cipv_lost_prohibit_acceleration_decider_output_;
   LongitudinalDecisionDeciderOutput longitudinal_decision_decider_output_;
   TrafficLightDeciderOutput traffic_light_decider_output_;
+  LaneBorrowDeciderOutput lane_borrow_decider_output_;
+
 
   // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
