@@ -2,6 +2,7 @@
 
 #include <type_traits>
 
+#include "longitudinal_decision_decider_output.h"
 #include "src/modules/context/environmental_model.h"
 #include "src/modules/context/planning_context.h"
 #include "utils_math.h"
@@ -52,6 +53,7 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
   const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto &dynamic_world = environmental_model.get_dynamic_world();
   const auto &planning_context = session_->planning_context();
+  const auto &mutable_planning_context = session_->mutable_planning_context();
 
   // 获取init point
   const auto &planning_init_point = ego_state_mgr->planning_init_point();
@@ -137,6 +139,27 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
   } else {
     cruise_accelerate_count_.first =
         std::max(--(cruise_accelerate_count_.first), 0);
+  }
+
+  // update flag
+  if (cruise_accelerate_count_.first == kIncreaseAccBoundCountThd) {
+    cruise_accelerate_count_.second = 1;
+  }
+  if (cruise_accelerate_count_.first == 0) {
+    cruise_accelerate_count_.second = 0;
+  }
+
+  if (cruise_accelerate_count_.second > 0) {
+    KinematicsBound determined_cruise_bound;
+    determined_cruise_bound.acc_positive_mps2 = kCruiseAccelerateThd;
+    auto *mutable_longitudinal_decision_decider_output =
+        mutable_planning_context
+            ->mutable_longitudinal_decision_decider_output();
+    if (mutable_longitudinal_decision_decider_output == nullptr) {
+      return;
+    }
+    mutable_longitudinal_decision_decider_output->set_determined_cruise_bound(
+        determined_cruise_bound);
   }
 }
 
@@ -253,13 +276,14 @@ bool LongitudinalDecisionDecider::IsMaxAccCurvSafeInStGraph() const {
     const double t = i * dt_;
     // const auto &upper_bound = st_graph->GetPassCorridorUpperBound(t);
     // if (upper_bound.agent_id() != speed::kNoAgentId) {
-      //     auto iter = agents_headway_map.find(upper_bound.agent_id());
-      // double follow_time_gap = kFollowTimeGap;
-      //     if (iter != agents_headway_map.end()) {
-      //       follow_time_gap = iter->second.current_headway;
-      //     }
+    //     auto iter = agents_headway_map.find(upper_bound.agent_id());
+    // double follow_time_gap = kFollowTimeGap;
+    //     if (iter != agents_headway_map.end()) {
+    //       follow_time_gap = iter->second.current_headway;
+    //     }
     //   const double target_s_disatnce = std::max(
-    //       ego_vel * follow_time_gap + kMinFollowDistance, kMinFollowDistance);
+    //       ego_vel * follow_time_gap + kMinFollowDistance,
+    //       kMinFollowDistance);
     //   const double max_curve_s = max_deceleration_curve.Evaluate(0, t);
     //   if (max_curve_s + target_s_disatnce > upper_bound.s()) {
     //     return false;
