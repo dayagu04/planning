@@ -1465,12 +1465,13 @@ const bool ParallelParkInPlanner::CheckFinished() {
 
   const bool lon_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.x()) <
                                apa_param.GetParam().finish_parallel_lon_err;
-  const bool lon_condition_2 =
-      rear_bumper_center.x() >=
-          apa_param.GetParam().finish_parallel_lon_overhaing_error &&
-      front_bumper_center.x() <=
-          ego_slot_info.slot_length -
-              apa_param.GetParam().finish_parallel_lon_overhaing_error;
+  // const bool lon_condition_2 =
+  //     rear_bumper_center.x() >=
+  //         apa_param.GetParam().finish_parallel_lon_overhaing_error &&
+  //     front_bumper_center.x() <=
+  //         ego_slot_info.slot_length -
+  //             apa_param.GetParam().finish_parallel_lon_overhaing_error;
+  const bool lon_condition_2 = false;
 
   DEBUG_PRINT("terminal x error = " << ego_slot_info.terminal_err.pos.x());
 

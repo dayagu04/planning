@@ -238,7 +238,6 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().plan_time, double, "plan_time");
 
   // head in param
-  JSON_READ_VALUE(apa_param.SetPram().is_heading_in, bool, "is_heading_in");
 
   JSON_READ_VALUE(apa_param.SetPram().headin_fix_slot_occupied_ratio, double,
                   "headin_fix_slot_occupied_ratio");
@@ -922,12 +921,6 @@ void ApaPlanInterface::SyncParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().parallel_search_out_heading, double,
                   "parallel_search_out_heading");
-
-  JSON_READ_VALUE(apa_param.SetPram().perpendicular_parking_out_right, bool,
-                  "perpendicular_parking_out_right");
-
-  JSON_READ_VALUE(apa_param.SetPram().perpendicular_parking_out_state, bool,
-                  "perpendicular_parking_out_state");
 
   JSON_READ_VALUE(apa_param.SetPram().is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");

@@ -211,7 +211,7 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',"cur_lane_is_continue",
              'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'virtual_lane_relative_id_switch_flag',
-             'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_intersection_split',
+             'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split',
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
              'select_ego_lane_without_plan', 'select_ego_lane_with_plan']
   for name in vars_lc:

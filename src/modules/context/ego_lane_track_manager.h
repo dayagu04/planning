@@ -63,6 +63,10 @@ class EgoLaneTrackManger {
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
+  void PreprocessOrdinarySplit(
+    std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+    const std::vector<int>& order_ids);
+
   void PreprocessIntersectionSplit(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
@@ -99,6 +103,9 @@ class EgoLaneTrackManger {
       const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
       bool *cross_lane);
 
+  int CalcTargetLaneLineSegment(
+  const std::shared_ptr<VirtualLane> base_lane, Point2D ego_cart_point);
+
   void SetLastZeroRelativeIdNums(int last_zero_relative_id_nums) {
     last_zero_relative_id_nums_ = last_zero_relative_id_nums;
   }
@@ -112,6 +119,8 @@ class EgoLaneTrackManger {
   bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
 
   bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
+
+  bool is_exist_split_on_expressway() const { return is_exist_split_on_expressway_; };
 
   bool is_exist_intersection_split() const {
     return is_exist_split_on_intersection_;
@@ -155,6 +164,7 @@ class EgoLaneTrackManger {
   std::shared_ptr<VirtualLane> current_lane_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;
   // uint lane_num_ = 0;
   uint last_zero_relative_id_nums_ = 0;
   int last_zero_relative_id_order_id_index_ = -1;
@@ -171,6 +181,7 @@ class EgoLaneTrackManger {
   bool virtual_lane_relative_id_switch_flag_ = false;
   bool is_exist_split_on_ramp_ = false;
   bool is_exist_ramp_on_road_ = false;
+  bool is_exist_split_on_expressway_ = false;
   bool is_exist_split_on_intersection_ = false;
   bool is_in_ramp_select_split_situation_ = false;
   bool is_on_road_select_ramp_situation_ = false;

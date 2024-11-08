@@ -79,6 +79,16 @@ enum class ApaFunction : uint8_t {
   INVALID,
 };
 
+enum class ApaParkingOutDirection: uint8_t {
+  LEFT_FRONT,
+  RIGHT_FRONT,
+  FRONT,
+  LEFT_REAR,
+  RIGHT_REAR,
+  REAR,
+  INVALID,
+};
+
 enum class ApaPlannerType : uint8_t {
   PERPENDICULAR_PARK_IN_PLANNER,
   PERPENDICULAR_PARK_HEADING_IN_PLANNER,
@@ -92,6 +102,12 @@ enum class ApaPlannerType : uint8_t {
   HYBRID_ASTAR_PLANNER,
   COUNT_PLANNER,
   INVALID_PLANNER,
+};
+
+enum class ApaParkingDirection{
+  PARKING_DIRECTION_INVALID,
+  BACK_END_PARKING_DIRECTION,    // 车尾泊入
+  FRONT_END_PARKING_DIRECTION,   // 车头泊入
 };
 
 enum class ApaStateMachine : uint8_t {
@@ -226,6 +242,8 @@ struct ApaData {
   ApaStateMachine cur_state = ApaStateMachine::INVALID;
   ApaPlannerType planner_type = ApaPlannerType::INVALID_PLANNER;
   ApaFunction apa_function = ApaFunction::INVALID;
+  ApaParkingDirection apa_parking_direction = ApaParkingDirection::PARKING_DIRECTION_INVALID;
+  ApaParkingOutDirection park_out_direction = ApaParkingOutDirection::INVALID;
 
   MeasurementData measurement_data;
   ApaSlots apa_slots;
@@ -248,6 +266,7 @@ struct ApaData {
     cur_state = ApaStateMachine::INVALID;
     planner_type = ApaPlannerType::INVALID_PLANNER;
     apa_function = ApaFunction::INVALID;
+    park_out_direction = ApaParkingOutDirection::INVALID;
 
     measurement_data.Reset();
     apa_slots.Reset();
@@ -266,6 +285,8 @@ void PrintApaPlannerType(const ApaPlannerType planner_type);
 const std::string GetApaPlannerTypeString(const ApaPlannerType planner_type);
 
 void PrintApaStateMachine(const ApaStateMachine apa_state);
+
+void PrintApaParkingOutDirection(const ApaParkingOutDirection apa_park_out_direction);
 
 const std::string GetApaStateMachine(const ApaStateMachine apa_state);
 

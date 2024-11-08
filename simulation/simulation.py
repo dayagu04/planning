@@ -16,6 +16,7 @@ bag_file = data["bag_file"]
 task_id = data["task_id"]
 scene_lib_id = data["scene_lib_id"]
 case_id = data["case_id"]
+task_time = data["task_time"]
 checker_list = data["checker_list"]
 config_version = data["config_version"]
 common_tools_branch  = data["common_tools_branch"]
@@ -26,7 +27,7 @@ s3_access_key = data["s3_access_key"]
 s3_secret_key = data["s3_secret_key"]
 
 # 定义S3 client
-object_prefix = f"{task_id}/{scene_lib_id}/{case_id}"
+object_prefix = f"{task_time}/{task_id}/{scene_lib_id}/{case_id}"
 client = boto3.client(
     's3',
     endpoint_url=s3_url,  # Ceph S3端点
@@ -72,7 +73,7 @@ print("Creat out_dir successfully !")
 start_time = time.time()
 PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 result_path = f"{out_dir}/case_result.json"
-command = f"/root/planning/build/tools/planning_player/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
+command = f"/root/planning/install/bin/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
 try:
     result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:

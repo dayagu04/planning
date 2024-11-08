@@ -7,7 +7,7 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <fastdds/dds/log/Log.hpp>
+// #include <fastdds/dds/log/Log.hpp>
 #include <limits>
 #include <memory>
 #include <vector>
@@ -2923,6 +2923,7 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
                           .boundary_merge_point;
   JSON_DEBUG_VALUE("is_merge_region_plan", is_merge_region_)
   JSON_DEBUG_VALUE("merge_direction_plan", static_cast<int>(merge_direction_))
+  JSON_DEBUG_VALUE("current_lane_is_continue", current_lane_is_continue_)
 }
 
 void StGraphGenerator::CalculateMergeSpeedLimit(
