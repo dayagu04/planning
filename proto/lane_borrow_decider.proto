@@ -7,7 +7,12 @@ message BlockedObsArea {
   optional Point2d front_right_corner = 2;
   optional Point2d back_right_corner = 3;
   optional Point2d back_left_corner = 4;
+  optional double obs_left_l =5;
+  optional double obs_right_l =6;
+  optional double obs_start_s =7;
+  optional double obs_end_s =8;
 }
+
 message LaneBorrowDeciderInfo {
   optional BlockedObsArea block_obs_area = 1;
 };

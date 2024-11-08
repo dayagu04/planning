@@ -96,6 +96,66 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
       lane_borrow_decider_output_;
 
+  // debug info
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
+  auto current_reference_path = session_->environmental_model()
+                                    .get_reference_path_manager()
+                                    ->get_reference_path_by_current_lane();
+
+  const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
+
+  Point2D front_left_corner, front_right_corner, back_right_corner,
+      back_left_corner;
+  current_frenet_coord->SLToXY(obs_end_s_, obs_left_l_, &front_left_corner.x,
+                               &front_left_corner.y);
+  current_frenet_coord->SLToXY(obs_end_s_, obs_right_l_, &front_right_corner.x,
+                               &front_right_corner.y);
+  current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x,
+                               &back_right_corner.y);
+  current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
+                               &back_left_corner.y);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_left_corner()
+      ->set_x(front_left_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_left_corner()
+      ->set_y(front_left_corner.y);
+
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_right_corner()
+      ->set_x(front_right_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_right_corner()
+      ->set_y(front_right_corner.y);
+
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_left_corner()
+      ->set_x(back_left_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_left_corner()
+      ->set_y(back_left_corner.y);
+
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_right_corner()
+      ->set_x(back_right_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_right_corner()
+      ->set_y(back_right_corner.y);
+  // lane_borrow_pb_info->mutable_block_obs_area()
+  //     ->mutable_set
+  //     ->set_y(back_right_corner.y);
+  // lane_borrow_pb_info->mutable_block_obs_area()
+  //     ->mutable_back_right_corner()
+  //     ->set_y(back_right_corner.y);
+  // lane_borrow_pb_info->mutable_block_obs_area()
+  //     ->mutable_back_right_corner()
+  //     ->set_y(back_right_corner.y);
+  // lane_borrow_pb_info->mutable_block_obs_area()
+  //     ->mutable_back_right_corner()
+  //     ->set_y(back_right_corner.y);
+
   return true;
 }
 
@@ -493,30 +553,6 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
   }
   obs_left_l_ += kObsLatBuffer;
   obs_right_l_ -= kObsLatBuffer;
-
-  // debug info
-  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
-                                 .GetDebugInfoPb()
-                                 ->mutable_lane_borrow_decider_info();
-  const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
-
-  Point2D front_left_corner, front_right_corner, back_right_corner, back_left_corner;
-  current_frenet_coord->SLToXY(obs_end_s_, obs_left_l_, &front_left_corner.x , &front_left_corner.y);
-  current_frenet_coord->SLToXY(obs_end_s_, obs_right_l_, &front_right_corner.x , &front_right_corner.y);
-  current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x , &back_right_corner.y);
-  current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x , &back_left_corner.y);
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_front_left_corner()->set_x(front_left_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_front_left_corner()->set_y(front_left_corner.y);
-
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_front_right_corner()->set_x(front_right_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_front_right_corner()->set_y(front_right_corner.y);
-
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_back_left_corner()->set_x(back_left_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_back_left_corner()->set_y(back_left_corner.y);
-
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_back_right_corner()->set_x(back_right_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()->mutable_back_right_corner()->set_y(back_right_corner.y);
-
   return true;
 }
 
@@ -583,11 +619,11 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
   double right_l = right_bounds_l;
 
   if (left_borrow_) {
-    left_l = std::min(left_l,
-                      right_l + vehicle_param_.width + kObsLatExpendBuffer);
+    left_l =
+        std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
   } else {
-    right_l = std::max(right_l,
-                       left_l - vehicle_param_.width - kObsLatExpendBuffer);
+    right_l =
+        std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
   }
 
   auto virtual_lane_manager =

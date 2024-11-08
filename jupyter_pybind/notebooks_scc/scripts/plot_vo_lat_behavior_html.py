@@ -21,7 +21,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241107/20241107-11-30-38/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-11-07-11-30-38_no_camera.bag"
+bag_path = "/root/code/bags/lane_borrow/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2024-09-19-09-43-28.bag_2024-11-07-15-56-09.1730981728.open-loop.plan"
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
@@ -80,6 +80,15 @@ speed_search_j_params = {
     'line_dash': 'dashed',
     'legend_label': 'j_search'
 }
+
+lane_borrow_obstacle_params = {
+  'line_color' : "red",
+  'line_width' : 2.0,
+  # 'fill_alpha' : 0.3,
+  'line_dash': 'dashed',
+  'legend_label': 'lane_borrow_static_area'
+}
+
 def isINJupyter():
     try:
         __file__
@@ -189,7 +198,7 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
 
   # 2. 可视化障碍物数据debug信息
   obj_vars = ['id','type','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
-          'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
+            'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
             'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
             'current_lead_obstacle_to_ego','cutin_p']
   # 'vs_lat_relative','vs_lon_relative'
@@ -421,6 +430,60 @@ def draw_v_a_j_fig():
     fig_jt.legend.click_policy = "hide"
     return fig_vt, fig_at, fig_jt
 
+def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
+  loc_msg = dataLoader.loc_msg
+  ts = []
+  xys = []
+  coord_tf = coord_transformer()
+  for i, debug_info in enumerate(dataLoader.plan_debug_msg["data"]):
+    input_topic_timestamp = debug_info.input_topic_timestamp
+    if lib.load_ros_bag.is_new_loc:
+      if 0 != input_topic_timestamp.localization:
+        localization_timestamp = input_topic_timestamp.localization
+      else :
+        localization_timestamp = input_topic_timestamp.localization_estimate
+    else :
+      if is_bag_main:
+        localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+      else:
+        localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
+    match_loc_msg = find(loc_msg, localization_timestamp)
+    if match_loc_msg != None: # 长时轨迹
+      cur_pos_xn = match_loc_msg.position.position_boot.x
+      cur_pos_yn = match_loc_msg.position.position_boot.y
+      cur_yaw = match_loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+
+    ts.append(dataLoader.plan_debug_msg["t"][i])
+    corner_point_x = []
+    corner_point_y = []
+    rel_front_left_corner_x, rel_front_left_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.front_left_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.front_left_corner.y)
+    rel_front_right_corner_x, rel_front_right_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.front_right_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.front_right_corner.y)
+    rel_back_right_corner_x, rel_back_right_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.back_right_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.back_right_corner.y)
+    rel_back_left_corner_x, rel_back_left_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.back_left_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.back_left_corner.y)
+    corner_point_x.append(rel_front_left_corner_x)
+    corner_point_x.append(rel_front_right_corner_x)
+    corner_point_x.append(rel_back_right_corner_x)
+    corner_point_x.append(rel_back_left_corner_x)
+    corner_point_x.append(rel_front_left_corner_x)
+
+    corner_point_y.append(rel_front_left_corner_y)
+    corner_point_y.append(rel_front_right_corner_y)
+    corner_point_y.append(rel_back_right_corner_y)
+    corner_point_y.append(rel_back_left_corner_y)
+    corner_point_y.append(rel_front_left_corner_y)
+    xys.append((corner_point_y, corner_point_x))
+  lane_borrow_base_static_obs_area_generator = CommonGenerator()
+  lane_borrow_base_static_obs_area_generator.xys = xys
+  lane_borrow_base_static_obs_area_generator.ts = ts
+  lane_borrow_base_static_obs_area_layer = CurveLayer(fig_local_view, lane_borrow_obstacle_params)
+  layer_manager.AddLayer(lane_borrow_base_static_obs_area_layer, 'lane_borrow_base_static_obs_area_layer', lane_borrow_base_static_obs_area_generator, 'lane_borrow_base_static_obs_area_generator', 2)
+
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
@@ -442,6 +505,7 @@ def plotOnce(bag_path, html_file):
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
 
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
+    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
 
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
