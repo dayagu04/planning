@@ -21,7 +21,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/root/code/bags/lane_borrow/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2024-09-19-09-43-28.bag_2024-11-07-15-56-09.1730981728.open-loop.plan"
+bag_path = "/data_cold/abu_zone/cailiu2/lane_borrow_decider_2.bag"
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
@@ -121,7 +121,6 @@ def draw_speed_adjust_decider(dataLoader, layer_manager):
   layer_manager.AddLayer(
       tab_speed_adjust_decider_table_layer1, 'speed_adjust_decider1', speed_adjust_decider_table, 'speed_adjust_decider_table1', 3)
   return tab_speed_adjust_decider_table_layer1.plot
-
 
 def draw_vo_lat_behavior(dataLoader, layer_manager):
   lat_behavior_table1 = TextGenerator()
@@ -483,6 +482,36 @@ def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
   lane_borrow_base_static_obs_area_layer = CurveLayer(fig_local_view, lane_borrow_obstacle_params)
   layer_manager.AddLayer(lane_borrow_base_static_obs_area_layer, 'lane_borrow_base_static_obs_area_layer', lane_borrow_base_static_obs_area_generator, 'lane_borrow_base_static_obs_area_generator', 2)
 
+def load_lane_borrow_tab_info(dataLoader, layer_manager):
+  lane_borrow_decider_table = TextGenerator()
+  plan_debug_ts = []
+  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+    t = dataLoader.plan_debug_msg["t"][i]
+    plan_debug_ts.append(t)
+    lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
+    vars = ['lane_borrow_decider_status', 'static_blocked_obj_vec']
+    names  = []
+    datas = []
+    for name in vars:
+      try:
+        value = getattr(lane_borrow_decider_info, name)
+        if name == 'static_blocked_obj_vec':
+          for value_i in list(value):
+            datas.append(value_i)
+        else:
+          datas.append(value)
+
+        names.append(name)
+      except:
+        pass
+    lane_borrow_decider_table.xys.append((names, datas, [None] * len(names)))
+  lane_borrow_decider_table.ts = plan_debug_ts
+  tab_attr_list = ['Attr', 'Val']
+
+  lane_borrow_decider_table_layer = TableLayerV2(None, tab_attr_list, table_params)
+  layer_manager.AddLayer(
+      lane_borrow_decider_table_layer, 'lane_borrow_decider1', lane_borrow_decider_table, 'lane_borrow_decider_table1', 3)
+  return lane_borrow_decider_table_layer.plot
 
 def plotOnce(bag_path, html_file):
     # 加载bag
@@ -505,8 +534,9 @@ def plotOnce(bag_path, html_file):
     overtake_lc_info_view = draw_overtake_lc_data_view(dataLoader, layer_manager)
 
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
-    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
 
+    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
+    tab_lane_borrow_decider = load_lane_borrow_tab_info(dataLoader, layer_manager)
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
@@ -644,7 +674,9 @@ def plotOnce(bag_path, html_file):
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
-    pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info])
+    pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
+
+    pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info, pan_lane_borrow_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():

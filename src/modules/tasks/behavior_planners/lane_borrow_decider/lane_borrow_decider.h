@@ -48,7 +48,6 @@ class LaneBorrowDecider : public Task {
   void ClearLaneBorrowStatus();
   bool CheckIfBorrowAgain();
 
-
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double junction_start_s_{1000.0};
@@ -76,6 +75,7 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
 
   int observe_frame_num_{0};
+  std::vector<int> static_blocked_obj_vec_;
 
   std::pair<double, double> front_pass_point_;  // static obs area,
   std::pair<double, double> front_pass_sl_point_;

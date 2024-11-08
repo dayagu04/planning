@@ -93,6 +93,15 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
     }
   }
 
+  if(lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow){
+    lane_borrow_decider_output_.is_in_lane_borrow_status = true;
+    lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
+    lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
+  }else{
+    lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+    lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
+  }
+
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
       lane_borrow_decider_output_;
 
@@ -143,18 +152,17 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
   lane_borrow_pb_info->mutable_block_obs_area()
       ->mutable_back_right_corner()
       ->set_y(back_right_corner.y);
-  // lane_borrow_pb_info->mutable_block_obs_area()
-  //     ->mutable_set
-  //     ->set_y(back_right_corner.y);
-  // lane_borrow_pb_info->mutable_block_obs_area()
-  //     ->mutable_back_right_corner()
-  //     ->set_y(back_right_corner.y);
-  // lane_borrow_pb_info->mutable_block_obs_area()
-  //     ->mutable_back_right_corner()
-  //     ->set_y(back_right_corner.y);
-  // lane_borrow_pb_info->mutable_block_obs_area()
-  //     ->mutable_back_right_corner()
-  //     ->set_y(back_right_corner.y);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_left_l(obs_left_l_);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_right_l(obs_right_l_);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_start_s(obs_start_s_);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_end_s(obs_end_s_);
+
+  lane_borrow_pb_info->set_lane_borrow_decider_status(lane_borrow_status_);
+
+  lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Clear();
+  for (auto static_obs_id : static_blocked_obj_vec_) {
+    lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Add(static_obs_id);
+  }
 
   return true;
 }
@@ -466,6 +474,7 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
   const auto& obstacle_manager =
       session_->environmental_model().get_obstacle_manager();
   const auto& frenet_obstacles = current_reference_path->get_obstacles();
+  static_blocked_obj_vec_.clear();
 
   for (const auto& frenet_obstacle : frenet_obstacles) {
     const auto& id = frenet_obstacle->obstacle()->id();
@@ -535,6 +544,8 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
     obs_right_l_ = std::min(obs_right_l_, frenet_obstacle_sl.l_start);
     obs_start_s_ = std::min(obs_start_s_, frenet_obstacle_sl.s_start);
     obs_end_s_ = std::max(obs_end_s_, frenet_obstacle_sl.s_end);
+
+    static_blocked_obj_vec_.emplace_back(frenet_obstacle->obstacle()->id());
   }
   obs_start_s_ = std::max(ego_frenet_boundary_.s_end, obs_start_s_);
 
@@ -645,6 +656,10 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
           OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
+    if (!frenet_obstacle->b_frenet_valid()) {
+      continue;
+    }
+
     const auto frenet_obstacle_sl = frenet_obstacle->frenet_obstacle_boundary();
 
     if (frenet_obstacle_sl.s_start >
