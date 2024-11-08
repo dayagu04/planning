@@ -782,6 +782,11 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "truck_decrease_extra_buffer"},
         truck_decrease_extra_buffer);
+    care_exceed_distance_with_blocked_obstacle = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "care_exceed_distance_with_blocked_obstacle"},
+        care_exceed_distance_with_blocked_obstacle);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -841,6 +846,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> _relative_v_decrease_extra_buffer = {0,   0.02, 0.05,
                                                            0.1, 0.15, 0.23};
   double truck_decrease_extra_buffer = 0.05;
+  double care_exceed_distance_with_blocked_obstacle = 2.0;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

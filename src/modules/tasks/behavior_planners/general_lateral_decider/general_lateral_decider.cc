@@ -1049,7 +1049,8 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
-    if (!IsFilterForStaticObstacle(obstacle)) {
+    // filter lane borrow obstacle
+    if ((!IsFilterForStaticObstacle(obstacle)) && (!IsBlockObstacleInLaneBorrow(obstacle))) {
       continue;
     }
 
@@ -1079,6 +1080,10 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   const auto &lat_obstacle_decision = session_->environmental_model()
                                           .get_lateral_obstacle()
                                           ->lat_obstacle_decision();
+  const auto &lane_borrow_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lane_borrow_decider_output();
+
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
 
@@ -1106,6 +1111,20 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
 
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
+
+  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
+  const int borrow_direction = lane_borrow_decider_output.borrow_direction;
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    if (borrow_direction == 1) {
+      // 向左借道
+      is_nudge_left = false;
+    } else if (borrow_direction == 2) {
+      // 向右借道
+      is_nudge_left = true;
+    }
+  }
+
   const BoundType bound_type = BoundType::AGENT;
 
   bool is_cross_obj{false};
@@ -1289,7 +1308,8 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
     ObstacleDecisions &obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
-    if (!IsFilterForDynamicObstacle(obstacle)) {
+    // filter lane borrow obstacle
+    if ((!IsFilterForDynamicObstacle(obstacle)) && (!IsBlockObstacleInLaneBorrow(obstacle))) {
       continue;
     }
 
@@ -1321,6 +1341,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
                              .get_virtual_lane_manager()
                              ->GetIntersectionState() ==
                          common::IntersectionState::IN_INTERSECTION;
+  const auto &lane_borrow_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lane_borrow_decider_output();
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1356,6 +1379,19 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
+
+  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
+  const int borrow_direction = lane_borrow_decider_output.borrow_direction;
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    if (borrow_direction == 1) {
+      // 向左借道
+      is_nudge_left = false;
+    } else if (borrow_direction == 2) {
+      // 向右借道
+      is_nudge_left = true;
+    }
+  }
 
   bool is_cross_obj{false};
   bool has_lat_decision{false};
@@ -2462,6 +2498,26 @@ bool GeneralLateralDecider::IsRearObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   return reference_path_ptr_->get_ego_frenet_boundary().s_start >
          obstacle->frenet_obstacle_boundary().s_end;
+}
+
+bool GeneralLateralDecider::IsBlockObstacleInLaneBorrow(
+    const std::shared_ptr<FrenetObstacle> obstacle) {
+  const auto &lane_borrow_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lane_borrow_decider_output();
+
+  std::vector<int> blocked_obstacles = lane_borrow_decider_output.blocked_obs_id;
+  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
+
+  const bool is_exceed_blocked_obstacle = reference_path_ptr_->get_ego_frenet_boundary().s_start >
+      obstacle->frenet_obstacle_boundary().s_end + config_.care_exceed_distance_with_blocked_obstacle;
+
+  if ((is_in_lane_borrow_status) && (!is_exceed_blocked_obstacle) &&
+      (std::find(blocked_obstacles.begin(), blocked_obstacles.end(), obstacle->id()) != blocked_obstacles.end())) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool GeneralLateralDecider::IsFilterForStaticObstacle(
