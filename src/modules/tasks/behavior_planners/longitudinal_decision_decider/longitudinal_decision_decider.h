@@ -2,6 +2,7 @@
 
 #include "tasks/task.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
+#include "src/modules/common/agent/agent.h"
 
 namespace planning {
 
@@ -19,6 +20,8 @@ class LongitudinalDecisionDecider : public Task {
   void DetermineKinematicBoundForCruiseScenario();
 
   void UpdateInvadeNeighborResults();
+
+  bool ConstructNeighborLaneStGraph(const agent::Agent *const invade_agent);
 
   void MakeDebugMessage();
 

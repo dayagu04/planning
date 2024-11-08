@@ -26,6 +26,8 @@ void LongitudinalDecisionDecider::Reset() {
 }
 
 bool LongitudinalDecisionDecider::Execute() {
+  LOG_DEBUG("=======LongitudinalDecisionDecider======= \n");
+  const auto start_timestamp = IflyTime::Now_ms();
   if (!PreCheck()) {
     LOG_DEBUG("PreCheck failed\n");
     return false;
@@ -35,15 +37,15 @@ bool LongitudinalDecisionDecider::Execute() {
   if (need_reset) {
     Reset();
   }
-
-  const auto &environmental_model = session_->environmental_model();
   DetermineKinematicBoundForCruiseScenario();
 
-  // 对于横向侵入无避让的障碍物, 放入ST图中
-  // UpdateInvadeNeighborResults();
+  // put agents that do not yield in lateral intrusion into the ST graph
+  UpdateInvadeNeighborResults();
 
-  // 存储debug信息，这种形式挺好的
   MakeDebugMessage();
+  const auto end_timestamp = IflyTime::Now_ms();
+  LOG_DEBUG("LongitudinalDecisionDecider time cost: [%f]ms \n",
+            end_timestamp - start_timestamp);
 
   return true;
 }
@@ -190,8 +192,7 @@ double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
       ego_vel * kAroundEgoLongitudinalBackwardTimeThd;
 
   const auto &ego_lane = virtual_lane_manager->get_current_lane();
-  if (ego_lane == nullptr || ego_lane->get_reference_path() == nullptr ||
-      ego_lane->get_reference_path()->get_frenet_coord()) {
+  if (ego_lane == nullptr || ego_lane->get_reference_path() == nullptr) {
     return 0.0;
   }
 
@@ -317,6 +318,90 @@ LongitudinalDecisionDecider::GenerateMaxDecelerationCurve(
   state_limit.j_min = jerk_lower_bound;
 
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
+}
+
+void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
+  LOG_DEBUG("=== AgentLongituainalDecider::UpdateCutinNeighborResults ===\n");
+
+  const auto &environmental_model = session_->environmental_model();
+  const auto &mutable_planning_context = session_->mutable_planning_context();
+  //  const auto &ego_state_mgr =
+  // environmental_model.get_ego_state_manager();
+  const auto &dynamic_world = environmental_model.get_dynamic_world();
+  const auto &virtual_lane_manager =
+      environmental_model.get_virtual_lane_manager();
+
+  // 在路口中不启用
+  planning::common::IntersectionState intersection_state =
+      virtual_lane_manager->GetIntersectionState();
+  if (intersection_state == planning::common::IN_INTERSECTION) {
+    return;
+  }
+  if (dynamic_world == nullptr) {
+    return;
+  }
+  const auto *agent_manger = dynamic_world->agent_manager();
+  if (agent_manger == nullptr) {
+    return;
+  }
+
+  auto *mutable_st_graph = mutable_planning_context->st_graph();
+  if (mutable_st_graph == nullptr) {
+    return;
+  }
+
+  // binwang33: 待横向障碍物决策开发，横向侵入但是无法nudge
+  // const auto& lateral_invade_agents_info =
+  // lateral_decision_data->LateralInvadeAgentInfo();
+  std::unordered_map<int32_t, speed::STBoundary::DecisionType>
+      neighbor_agents_decision_table;
+  const auto agent_id_st_boundaries_map =
+      mutable_st_graph->agent_id_st_boundaries_map();
+  const auto neighbor_agent_id_st_boundraies_map =
+      mutable_st_graph->neighbor_agent_id_st_boundaries_map();
+  // for (const auto &invade_agent_info : lateral_invade_agents_info) {
+  //   const auto invade_agent_id = invade_agent_info.agent_id;
+  //   if (agent_id_st_boundaries_map.count(invade_agent_id) > 0) {
+  //     continue;
+  //   }
+  //   bool is_not_in_neighbor_agent_id =
+  //       neighbor_agent_id_st_boundraies_map.count(invade_agent_id) == 0;
+  //   LOG_DEBUG("is_not_in_neighbor_agent_id =  [%d] \n",
+  //             is_not_in_neighbor_agent_id);
+  //   if (is_not_in_neighbor_agent_id) {
+  //     const agent::Agent *invade_agent =
+  //         agent_manger->GetAgent(invade_agent_id);
+  //     const bool is_succeeded_construct_neighbor_lane_st_graph =
+  //         ConstructNeighborLaneStGraph(invade_agent);
+  //     LOG_DEBUG("tis_succeeded_construct_neighbor_lane_st_graph =  [%d] \n",
+  //               is_succeeded_construct_neighbor_lane_st_graph);
+  //     if (!is_succeeded_construct_neighbor_lane_st_graph) {
+  //       continue;
+  //     }
+  //   }
+
+  //   neighbor_agents_decision_table[invade_agent_id] =
+  //       speed::STBoundary::DecisionType::NEIGHBOR_YIELD;
+  //   LOG_DEBUG("invade agent id =  [%d] \n", invade_agent_id);
+  // }
+
+  if (!neighbor_agents_decision_table.empty()) {
+    LOG_DEBUG("mutable_st_graph->UpdateNeighborAgentResults \n");
+    // binwang33: 待ST接口合入
+    // mutable_st_graph->UpdateNeighborAgentResults(
+    //     neighbor_agents_decision_table);
+  }
+}
+
+bool LongitudinalDecisionDecider::ConstructNeighborLaneStGraph(
+    const agent::Agent *const invade_agent) {
+  const auto &planning_context = session_->planning_context();
+  auto *mutable_st_graph = planning_context.st_graph();
+  if (nullptr == invade_agent) {
+    return false;
+  }
+  return mutable_st_graph->InsertAgent(*invade_agent,
+                                       speed::StBoundaryType::NEIGHBOR);
 }
 
 void LongitudinalDecisionDecider::MakeDebugMessage() {
