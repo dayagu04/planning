@@ -12,11 +12,15 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
+                                bool is_same_side_obstacle_during_lane_change,
                                 GeneralLateralDeciderConfig &config);
 
-double CalDesireLonDistance(double ego_vel, double agent_vel);
 double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
                                    bool use_obstacle_prediction_model_in_planning);
+double CalDesireLonDistance(double ego_vel, double agent_vel,
+                            bool is_same_side_obstacle_during_lane_change,
+                            GeneralLateralDeciderConfig &config);
+
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,

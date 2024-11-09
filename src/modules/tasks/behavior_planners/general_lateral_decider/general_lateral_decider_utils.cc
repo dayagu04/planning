@@ -10,6 +10,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const double agent_lateral_relative_speed,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
+                                bool is_same_side_obstacle_during_lane_change,
                                 GeneralLateralDeciderConfig &config) {
   double base_dis = 0.7;
   if (IsVRU(obstacle->type())) {
@@ -20,14 +21,23 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   if (in_intersection) {
     base_dis += config.nudge_extra_buffer_in_intersection;
   }
+  if (is_same_side_obstacle_during_lane_change) {
+    base_dis -= config.nudge_extra_buffer_in_lane_change_scene;
+  }
   double extra_pred_ts_decrease_buffer = interp(pred_ts, config.obstacle_pred_ts_bp,
                                config.obstacle_pred_decrease_buffer);
   // return std::fmax(base_dis + 0.015 * ego_vel, 0.);
   return std::fmax(base_dis + 0.015 * ego_vel - extra_pred_ts_decrease_buffer, 0.);
 }
 
-double CalDesireLonDistance(double ego_vel, double agent_vel) {
-  return 3.0 + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
+double CalDesireLonDistance(double ego_vel, double agent_vel,
+                            bool is_same_side_obstacle_during_lane_change,
+                            GeneralLateralDeciderConfig &config) {
+  double base_dis = 3.0;
+  if (is_same_side_obstacle_during_lane_change) {
+    return std::fmax(base_dis - config.nudge_extra_front_lon_buf_dis_in_lane_change_scene,0);
+  }
+  return base_dis + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
 
 double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
@@ -105,6 +115,8 @@ int GetBoundTypePriority(BoundType type) {
     case BoundType::ROAD_BORDER:
       return 3;
     case BoundType::REAR_AGENT:
+      return 3;
+    case BoundType::LOW_PRIORITY_AGENT:
       return 3;
     //  the same level
     // case BoundType::PURNE_VEHICLE_WIDTH:

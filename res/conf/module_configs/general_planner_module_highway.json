@@ -224,9 +224,12 @@
     "map_bound_weight": [0.4, 0.4, 0.6, 0.1],
     "nudge_extra_buffer_in_intersection": 0.15,
     "bound_rear_agent_weight":0.25,
+    "nudge_extra_buffer_in_lane_change_scene": 0.2,
+    "nudge_extra_front_lon_buf_dis_in_lane_change_scene": 2.0,
     "bound_static_agent_weight":0.4,
     "bound_dynamic_agent_weight":0.4,
     "bound_adjacent_agent_weight":0.4,
+    "bound_low_priority_agent_weight":0.2,
     "bound_road_border_weight":0.6,
     "relative_positon_bp":[-0.0001, 0, 0.5, 1, 2, 2.5],
     "relative_position_decrease_extra_buffer":[0, 0.18, 0.15, 0.13, 0.1, 0.0],
@@ -245,7 +248,9 @@
     "extra_road_decrease_buffer_for_lane_width_bp":[2.8, 3.1, 3.3, 3.5, 3.7],
     "extra_road_decrease_buffer":[0.15, 0.1, 0.06, 0.02, 0.0],
     "extra_lane_type_decrease_buffer":0.05,
-    "static_nudge_buffer2lane_boundary": 0.1
+    "static_nudge_buffer2lane_boundary": 0.1,
+    "agent_predlonoverlap_up_total_count": 1,
+    "agent_predlonoverlap_down_total_count": 3
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
