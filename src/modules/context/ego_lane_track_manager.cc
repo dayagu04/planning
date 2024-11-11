@@ -816,7 +816,8 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
     LOG_DEBUG("PreprocessRoadSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
       if (order_ids.size() == 2 && 
-          last_zero_relative_id_nums_ != order_ids.size()) {
+          last_zero_relative_id_nums_ == order_ids.size() &&
+          zero_relative_id_order_id_index < order_ids.size()) {
         last_track_ego_lane_ = 
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         for (auto& lane : relative_id_lanes) {
@@ -959,7 +960,8 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     LOG_DEBUG("last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
       if (order_ids.size() == 2 && 
-          last_zero_relative_id_nums_ != order_ids.size()) {
+          last_zero_relative_id_nums_ == order_ids.size() &&
+          zero_relative_id_order_id_index < order_ids.size()) {
         last_track_ego_lane_ = 
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         for (auto& lane : relative_id_lanes) {
@@ -1329,7 +1331,8 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   // 优先判断上一帧选择的车道结果是否为直行车道
   if (last_zero_relative_id_order_id_index_ != -1) {
     if (order_ids.size() == 2 && 
-        last_zero_relative_id_nums_ != order_ids.size()) {
+        last_zero_relative_id_nums_ == order_ids.size() &&
+        zero_relative_id_order_id_index < order_ids.size()) {
       last_track_ego_lane_ = 
           relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
       for (auto& lane : relative_id_lanes) {
