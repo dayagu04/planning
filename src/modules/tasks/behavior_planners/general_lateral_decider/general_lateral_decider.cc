@@ -2505,6 +2505,11 @@ bool GeneralLateralDecider::IsBlockObstacleInLaneBorrow(
   const auto &lane_borrow_decider_output =
       session_->mutable_planning_context()
           ->mutable_lane_borrow_decider_output();
+  const auto &otype = obstacle->type();
+  const auto ofusion_source = obstacle->obstacle()->fusion_source();
+  if ((ofusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
+    return false;
+  }
 
   std::vector<int> blocked_obstacles = lane_borrow_decider_output.blocked_obs_id;
   const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
