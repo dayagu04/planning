@@ -1,5 +1,6 @@
 #include "longtime_task_pipeline_v3.h"
 
+#include "log.h"
 #include "speed/st_graph_input.h"
 
 namespace planning {
@@ -144,7 +145,7 @@ bool LongTimeTaskPipelineV3::Run() {
   planning_context->set_st_graph_helper(st_graph_helper_);
   double time_end = IflyTime::Now_ms();
   if (!ok) {
-    std::cout << "st graph init error" << std::endl;
+    LOG_ERROR("st graph init error" );
     return false;
   }
   JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);

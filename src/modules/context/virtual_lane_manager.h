@@ -56,9 +56,8 @@ class VirtualLaneManager {
   }
 
   const std::shared_ptr<VirtualLane> get_current_lane() const {
-    // assert(current_lane_ != nullptr);
     if (current_lane_ == nullptr) {
-      LOG_DEBUG("current_lane_ is nullptr\n");
+      LOG_ERROR("current_lane_ is nullptr\n");
     }
     return current_lane_;
   }

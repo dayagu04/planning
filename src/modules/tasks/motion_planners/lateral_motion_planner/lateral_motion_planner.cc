@@ -628,7 +628,7 @@ void LateralMotionPlanner::Update() {
   // construct lateral kd path
   motion_planner_output.lateral_path_coord =
       ConstructLateralKDPath(x_vec, y_vec);
-      
+
   // set state spline
   motion_planner_output.x_s_spline.set_points(s_vec, x_vec);
   motion_planner_output.y_s_spline.set_points(s_vec, y_vec);
@@ -697,7 +697,7 @@ std::shared_ptr<KDPath> LateralMotionPlanner::ConstructLateralKDPath(
     const std::vector<double> &x_vec, const std::vector<double> &y_vec) {
   std::vector<planning_math::PathPoint> lat_path_points;
   lat_path_points.reserve(x_vec.size());
-  for (int i = 0; i <= 26; ++i) {
+  for (int i = 1; i <= 26; ++i) {
     if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
       LOG_ERROR("skip NaN point");
       continue;
