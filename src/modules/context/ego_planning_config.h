@@ -2517,4 +2517,91 @@ struct EgoPlanningUrgentChangeEvaluatorConfig
 struct VisionOnlyAdasFunctionTaskConfig : public EgoPlanningConfig {
   void init(const Json &json) override { EgoPlanningConfig::init(json); }
 };
+
+struct STGraphConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  bool enable_backward_extend_st_boundary = false;
+  double backward_extend_length_for_lane_change = 50.0;
+  double backward_extend_sample_resolution = 3.0;
+  double lane_keeping_lower_lateral_buffer_m = 0.3;
+  double lane_keeping_upper_lateral_buffer_m = 0.3;
+  double lane_keeping_lower_speed_kph = 10.0;
+  double lane_keeping_upper_speed_kph = 30.0;
+  double lane_keeping_large_agent_lateral_buffer_m = 0.2;
+  double lane_change_lateral_buffer_m = 0.2;
+  double lane_keeping_large_agent_lower_lateral_buffer_m = 0.20;
+  double lane_keeping_large_agent_upper_lateral_buffer_m = 0.20;
+  double lane_keeping_large_agent_lower_speed_kph = 10.0;
+  double lane_keeping_large_agent_upper_speed_kph = 30.0;
+  double front_agent_lower_s_safety_buffer_for_lane_change = 8.0;
+  double large_agent_expand_param_for_consistency = 0.20;
+  double large_agent_small_expand_param_for_consistency = 0.15;
+  double cone_lateral_buffer_m = 0.20;
+  double lane_keeping_large_heading_diff_lon_buffer_m = 0.30;
+  double person_lat_buffer_m = 0.4;
+  double person_lon_buffer_m = 0.4;
+  double bycicle_lat_buffer_m = 0.4;
+  double bycicle_lon_buffer_m = 0.4;
+  double tricycle_lat_buffer_m = 0.4;
+  double tricycle_lon_buffer_m = 0.4;
+  double backward_extend_time_s = 2.0;
+  double reverse_vehicle_lat_buffer_m = 0.2;
+};
+
+struct StGraphSearcherConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  double planning_time_horizon = 5.0;
+  double upper_collision_dist = 1.0;
+  double lower_collision_dist = 5.0;
+  double max_accel_limit = 5.0;
+  double min_accel_limit = -6.0;
+  double max_jerk_limit = 10.0;
+  double min_jerk_limit = -10.0;
+  double accel_sample_num = 20;
+  double s_step = 0.25;
+  double t_step = 0.25;
+  double vel_step = 0.4;
+
+  double weight_yield = 2.0;
+  double weight_overtake = 2.0;
+  double weight_vel = 0.10;
+  double weight_accel = 0.10;
+  double weight_accel_sign = 0.5;
+  double weight_jerk = 1.0;
+
+  double weight_hcost_s = 2.0;
+  double weight_hcost_t = 20.0;
+
+  double upper_truncation_time_buffer = 0.5;
+  double lower_truncation_time_buffer = 0.5;
+
+  double velocity_tolerance = 2.0;
+  double proper_accel_value = 1.0;
+
+  double max_search_time_s = 0.1;
+  bool is_visualize_st_search_process = false;
+
+  double speed_limit_scale = 1.2;
+
+  double min_lower_collision_dist = 5.0;
+  double max_lower_collision_dist = 15.0;
+  double lower_collision_dist_speed_scale = 0.5;
+
+  double weight_length_s = 0.0;
+  double weight_length_t = 0.0;
+
+  double weight_virtual_yield = 20.0;
+
+  double min_lower_distance_buffer = 3.0;
+  double min_upper_distance_buffer = 3.0;
+  double rear_agent_max_start_yield_time_s = 4.0;
+  double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
+  double yield_front_vehicle_collision_s_buffer = 1.0;
+};
 }  // namespace planning

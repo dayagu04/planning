@@ -72,6 +72,31 @@ class AgentLongitudinalDecider : public Task {
 
   void UpdateCutInAgentTable();
 
+  // filter agent for st graph
+  // 1.rear agent (lane keep)
+  // 2.rear agent except target lane rear agent (lane change)
+  // 3.ultradistant agent
+  // 4.reverse agent
+  void FilterRearAgents();
+
+  void FilterUltradistantObs();
+
+  void FilterReverseAgents();
+
+  bool IsConsiderBackObs(const std::shared_ptr<KDPath> planned_path,
+                         const PlanningInitPoint& init_point,
+                         const agent::Agent *agent, const double ego_front_s,
+                         const double ego_back_s,
+                         const double ego_center_s, const double agent_s,
+                         const double agent_l) const;
+
+  bool FilterRearNoCutInAgent(const std::shared_ptr<KDPath> planned_path,
+                              const PlanningInitPoint& init_point,
+                              const double ego_front_s, const double agent_front_s,
+                              const agent::Agent* agent) const;
+
+  double GetFilterUltraDistanceWithEgoVel(const double ego_vel) const;
+
  private:
   // framework::Session *session_ = nullptr;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;

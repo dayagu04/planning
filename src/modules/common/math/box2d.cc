@@ -110,6 +110,16 @@ void Box2d::GetAllCorners(std::vector<Vec2d> *const corners) const {
 
 std::vector<Vec2d> Box2d::GetAllCorners() const { return corners_; }
 
+std::vector<LineSegment2d> Box2d::GetAllEdges() const {
+  std::vector<LineSegment2d> ret;
+  ret.reserve(corners_.size());
+  for (int i = 0; i < (int)corners_.size() - 1; ++i) {
+    ret.emplace_back(corners_[i], corners_[i + 1]);
+  }
+  ret.emplace_back(corners_.back(), corners_.front());
+  return ret;
+}
+
 bool Box2d::IsPointIn(const Vec2d &point) const {
   const double x0 = point.x() - center_.x();
   const double y0 = point.y() - center_.y();

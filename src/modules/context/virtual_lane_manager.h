@@ -56,9 +56,8 @@ class VirtualLaneManager {
   }
 
   const std::shared_ptr<VirtualLane> get_current_lane() const {
-    assert(current_lane_ != nullptr);
     if (current_lane_ == nullptr) {
-      LOG_DEBUG("current_lane_ is nullptr\n");
+      LOG_ERROR("current_lane_ is nullptr\n");
     }
     return current_lane_;
   }
@@ -136,6 +135,8 @@ class VirtualLaneManager {
   double get_distance_to_toll_station() const {
     return distance_to_toll_station_;
   }
+  std::shared_ptr<VirtualLane> GetNearestLane(
+    Point2D point, double* nearest_s, double* nearest_l);
 
   void set_is_exist_split_on_ramp(const bool is_exist_split_on_ramp) {
     is_exist_split_on_ramp_ = is_exist_split_on_ramp;

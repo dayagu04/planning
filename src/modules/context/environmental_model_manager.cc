@@ -1141,6 +1141,22 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
       prediction_object.relative_speed_x, prediction_object.relative_speed_y);
   PredictionTrajectory tra;
   tra.trajectory.emplace_back(std::move(trajectory_point));
+  // hack:linear add trajectory point
+  // for (int i = 1; i < 26; i++) {
+  //   PredictionTrajectoryPoint trajectory_point_tmp;
+  //   trajectory_point_tmp.relative_time = i * 0.2;
+  //   const double dt = i * 0.2;
+  //   const double vel = prediction_object.speed;
+  //   const double theta = prediction_object.yaw;
+  //   const double pred_ds = std::fmax(0.0, vel * dt);
+  //   planning_math::Vec2d last_point(prediction_object.position_x,
+  //                                   prediction_object.position_y);
+  //   auto pred_point =
+  //       last_point + planning_math::Vec2d::CreateUnitVec2d(theta) * pred_ds;
+  //   trajectory_point_tmp.x = pred_point.x();
+  //   trajectory_point_tmp.y = pred_point.y();
+  //   tra.trajectory.emplace_back(std::move(trajectory_point_tmp));
+  // }
   prediction_object.trajectory_array.emplace_back(std::move(tra));
   prediction_object.is_static = IsStatic(prediction_object);
   objects_infos.emplace_back(std::move(prediction_object));

@@ -625,6 +625,10 @@ void LateralMotionPlanner::Update() {
     }
   }
 
+  // construct lateral kd path
+  motion_planner_output.lateral_path_coord =
+      ConstructLateralKDPath(x_vec, y_vec);
+
   // set state spline
   motion_planner_output.x_s_spline.set_points(s_vec, x_vec);
   motion_planner_output.y_s_spline.set_points(s_vec, y_vec);
@@ -689,4 +693,29 @@ void LateralMotionPlanner::Update() {
   }
 }
 
+std::shared_ptr<KDPath> LateralMotionPlanner::ConstructLateralKDPath(
+    const std::vector<double> &x_vec, const std::vector<double> &y_vec) {
+  std::vector<planning_math::PathPoint> lat_path_points;
+  lat_path_points.reserve(x_vec.size());
+  for (int i = 1; i <= 26; ++i) {
+    if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
+      LOG_ERROR("skip NaN point");
+      continue;
+    }
+    planning_math::PathPoint path_point{x_vec[i], y_vec[i]};
+    lat_path_points.emplace_back(path_point);
+    if (not lat_path_points.empty()) {
+      auto &last_pt = lat_path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - path_point.x(),
+                               last_pt.y() - path_point.y())
+              .Length() < 1e-3) {
+        continue;
+      }
+    }
+  }
+  if (lat_path_points.size() <= 2) {
+    return nullptr;
+  }
+  return std::make_shared<KDPath>(std::move(lat_path_points));
+}
 }  // namespace planning

@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package planning.common;
+
+message StPoint2D {
+  optional double s = 1;
+  optional double t = 2;
+}
+
+message StGraphSearcher {
+  repeated StPoint2D st_search_path = 1;
+}

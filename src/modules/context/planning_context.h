@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
+#include <memory>
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
@@ -12,6 +13,7 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -21,6 +23,8 @@
 #include "planning_hmi_c.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "speed/speed_limit.h"
+#include "st_graph/st_graph.h"
+#include "st_graph/st_graph_helper.h"
 
 namespace planning {
 
@@ -78,6 +82,28 @@ class PlanningContext {
 
   GapSelectorDeciderOutput &mutable_gap_selector_decider_output() {
     return gap_selector_decider_output_;
+  }
+
+  speed::STGraph *st_graph() const { return st_graph_.get(); }
+
+  void set_st_graph(std::shared_ptr<speed::STGraph> st_graph) {
+    st_graph_ = st_graph;
+  }
+
+  const speed::StGraphHelper *st_graph_helper() const {
+    return st_graph_helper_.get();
+  }
+
+  void set_st_graph_helper(
+      std::shared_ptr<speed::StGraphHelper> st_graph_helper) {
+    st_graph_helper_ = st_graph_helper;
+  }
+
+  const StGraphSearcherOutput &st_graph_searcher_output() const {
+    return st_graph_searcher_output_;
+  }
+  StGraphSearcherOutput *mutable_st_graph_searcher_output() {
+    return &st_graph_searcher_output_;
   }
 
   const VisionLateralBehaviorPlannerOutput &
@@ -377,6 +403,11 @@ class PlanningContext {
   std::shared_ptr<LaneKeepAssistManager> lane_keep_assit_ptr_;
   std::shared_ptr<IntelligentHeadlightControl> intelligent_headlight_control_;
   std::shared_ptr<TrafficSignRecognition> traffic_sign_recognition_;
+
+  // ST Graph
+  std::shared_ptr<speed::STGraph> st_graph_;
+  std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
+  StGraphSearcherOutput st_graph_searcher_output_;
 };
 
 }  // namespace planning

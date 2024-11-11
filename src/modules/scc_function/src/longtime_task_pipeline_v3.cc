@@ -1,5 +1,6 @@
 #include "longtime_task_pipeline_v3.h"
 
+#include "log.h"
 #include "speed/st_graph_input.h"
 
 namespace planning {
@@ -36,6 +37,10 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   cipv_lost_prohibit_acceleration_decider_ =
       std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
                                                             session);
+  st_graph_input_ =
+      std::make_shared<speed::StGraphInput>(config_builder, session);
+  st_graph_ = std::make_shared<speed::STGraph>();
+  st_graph_helper_ = std::make_shared<speed::StGraphHelper>(*st_graph_);
   st_graph_searcher_ =
       std::make_unique<StGraphSearcher>(config_builder, session);
   truck_longitudinal_avoid_decider_ =
@@ -46,6 +51,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LongitudinalDecisionDecider>(config_builder, session);
   speed_limit_decider_ =
       std::make_unique<SpeedLimitDecider>(config_builder, session);
+  scc_lon_behavior_planner_ =
+      std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
 
@@ -130,8 +137,19 @@ bool LongTimeTaskPipelineV3::Run() {
   // }
 
   // 构建st input
-  // StGraphInput st_graph_input();  // TBD：jwliu23
-  // session_->mutable_st_graph_base()->Init(st_graph_input); // TBD: jwliu23
+  double time_start = IflyTime::Now_ms();
+  st_graph_input_->Update();
+  ok = st_graph_->Init(st_graph_input_);
+  auto planning_context = session_->mutable_planning_context();
+  planning_context->set_st_graph(st_graph_);
+  planning_context->set_st_graph_helper(st_graph_helper_);
+  double time_end = IflyTime::Now_ms();
+  if (!ok) {
+    LOG_ERROR("st graph init error" );
+    return false;
+  }
+  JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);
+
 
   ok = expand_st_boundaries_decider_->Execute();
   if (!ok) {
@@ -157,11 +175,14 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+  time_start = IflyTime::Now_ms();
   ok = st_graph_searcher_->Execute();
+  time_end = IflyTime::Now_ms();
   if (!ok) {
     AddErrorInfo(st_graph_searcher_->Name());
     return false;
   }
+  JSON_DEBUG_VALUE("st_graph_searcher_cost", time_end - time_start);
 
   ok = truck_longitudinal_avoid_decider_->Execute();
   if (!ok) {
@@ -192,6 +213,13 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(speed_limit_decider_->Name());
     return false;
   }
+
+  ok = scc_lon_behavior_planner_->Execute();
+  if (!ok) {
+    AddErrorInfo(scc_lon_behavior_planner_->Name());
+    return false;
+  }
+
   // --↑↑↑↑↑↑--long behavior--↑↑↑↑↑↑--
 
   // ------ long motion planner ------

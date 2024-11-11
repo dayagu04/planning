@@ -204,6 +204,9 @@ class EnvironmentalModel {
   const std::shared_ptr<agent::AgentManager> &get_agent_manager() const {
     return agent_manager_;
   }
+  std::shared_ptr<agent::AgentManager> &mutable_agent_manager() {
+    return agent_manager_;
+  }
   void set_agent_manager(
       const std::shared_ptr<agent::AgentManager> agent_manager) {
     agent_manager_ = agent_manager;

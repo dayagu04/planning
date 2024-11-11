@@ -68,7 +68,7 @@ class DynamicAgentNode {
   double node_back_edge_to_ego_front_edge_distance() const;
   double node_front_edge_to_ego_back_edge_distance() const;
   const std::vector<trajectory::Trajectory>& node_trajectories() const;
-  const iflyauto::ObjectType type() const;
+  const agent::AgentType type() const;
 
   bool is_agent_within_lane() const;
   bool is_agent_most_within_lane() const;
