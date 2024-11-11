@@ -63,6 +63,7 @@ constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
+constexpr double kLaneBorrowLimitedSpeed = 8.33;  // 30kph
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -359,11 +360,23 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
+
+  // filter lane borrow agent
+  bool is_exist_lane_borrow_agent = false;
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  auto lead_one_iter = std::find(blocked_obs_id.begin(), blocked_obs_id.end(),
+                                 lead_one.track_id());
+  if (lead_one_iter != blocked_obs_id.end()) {
+    is_exist_lane_borrow_agent = true;
+  }
+
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
       lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
       lead_fusion_enable && !is_reverse_obs_in_large_curv &&
-      !is_far_obs_in_large_curv) {
+      !is_far_obs_in_large_curv && !is_exist_lane_borrow_agent) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
 
@@ -428,9 +441,15 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("desired_distance_lead_one", desired_distance_filtered);
 
     // 对lead two进行类似的计算
+    auto lead_two_iter = std::find(blocked_obs_id.begin(), blocked_obs_id.end(),
+                                   lead_two.track_id());
+    if (lead_two_iter != blocked_obs_id.end()) {
+      is_exist_lane_borrow_agent = true;
+    }
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
         !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+        !is_exist_lane_borrow_agent &&
         start_stop_info_.state() != common::StartStopInfo::START) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
@@ -494,6 +513,12 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
 
   } else {
+    // if filter lane borrow agent, give a limited vel
+    if (is_exist_lane_borrow_agent) {
+      v_target_ = std::min(std::min(v_target_, kLaneBorrowLimitedSpeed),
+                           last_v_target_);
+    }
+
     LOG_DEBUG("There is no lead \n");
     lon_behav_input_->mutable_lon_decision_info()
         ->mutable_leadone_info()
