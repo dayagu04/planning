@@ -208,6 +208,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
     if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
+    } else if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
+               *lane_change_type == CONE_REQUEST) {
+      return true;
     } else {
       return is_ego_in_perfect_pose;
     }
@@ -1848,7 +1851,7 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
                                         ->polygon()
                                         .points();
   double ego_dis_to_ref_lane = NL_NMAX;
-  for (auto ego_vertices_point : ego_vertices_points) {
+  for (const auto& ego_vertices_point : ego_vertices_points) {
     Point2D frenet_point;
     Point2D ego_vertices_point_tem = {ego_vertices_point.x(),
                                       ego_vertices_point.y()};
