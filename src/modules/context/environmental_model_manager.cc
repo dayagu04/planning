@@ -154,6 +154,7 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("EnvironmentalModelManager run\n");
 
   auto current_time = IflyTime::Now_ms();
+  auto current_time_s = current_time / 1e3;
 
   if (!session_->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
@@ -300,7 +301,7 @@ bool EnvironmentalModelManager::Run() {
   JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
   time_start = IflyTime::Now_ms();
-  agent_manager_ptr_->Update();
+  agent_manager_ptr_->Update(current_time_s);
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("agent manager cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);

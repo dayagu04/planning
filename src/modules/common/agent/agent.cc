@@ -38,7 +38,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   type_ = static_cast<AgentType>(prediction_object.type);
   fusion_source_ = prediction_object.fusion_source;
   timestamp_us_ = prediction_object.timestamp_us;
-  timestamp_s_ = prediction_object.timestamp_us / 1000000.0;
+  timestamp_s_ = prediction_object.timestamp_us / 1e6;
 
   if (prediction_object.trajectory_array.empty()) {
     return;
