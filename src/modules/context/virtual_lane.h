@@ -50,6 +50,9 @@ struct GeneralTaskMapInfo {
   RampDirection first_merge_direction;
   RampDirection second_split_direction;
   RampDirection second_merge_direction;
+  int split_seg_forward_lane_nums;
+  int split_next_seg_forward_lane_nums;
+  int lc_nums_for_split;
 };
 
 // hack :clren

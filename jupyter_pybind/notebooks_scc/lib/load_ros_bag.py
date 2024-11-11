@@ -623,7 +623,7 @@ class LoadRosbag:
                          'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
                          'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
                          'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y',
-                         'boundary_line_merge_point_x','boundary_line_merge_point_y','cur_lane_is_continue']
+                         'boundary_line_merge_point_x','boundary_line_merge_point_y','cur_lane_is_continue','forward_lane_num']
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",

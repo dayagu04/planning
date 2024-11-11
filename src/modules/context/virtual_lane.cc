@@ -388,7 +388,11 @@ void VirtualLane::ProcessEgoOnRoadMLC(
   const int lane_num = general_task_map_info.lane_num_except_emergency;
   bool is_trigger_ego_not_on_side = general_task_map_info.is_leaving_ramp &&
                                     !general_task_map_info.is_on_ramp;
-  if (is_nearing_other_lane_merge_to_road_point) {  //主路前方接近汇入区域的变道
+  int lc_nums_for_split = general_task_map_info.lc_nums_for_split;
+  //处理在接近split的变道请求
+  if (lc_nums_for_split != 0) {
+    current_tasks_.emplace_back(lc_nums_for_split);
+  } else if (is_nearing_other_lane_merge_to_road_point) {  //主路前方接近汇入区域的变道
     if (first_merge_direction == RAMP_ON_LEFT) {
       if (order_id_ + 1 == lane_num) {
         current_tasks_.emplace_back(-1);

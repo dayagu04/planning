@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_48160/trigger/20240919/20240919-17-09-30/data_collection_CHERY_E0Y_48160_EVENT_MANUAL_2024-09-19-17-09-30_no_camera.bag.1727070962.open-loop.plan"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241107/20241107-15-48-04/data_collection_CHERY_E0Y_18047_EVENT_FILTER_2024-11-07-15-48-04_no_camera.bag.1731334401.open-loop.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -213,7 +213,7 @@ def update_lc_data (noa_info, plan_debug_json):
              'virtual_lane_relative_id_switch_flag',
              'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split',
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
-             'select_ego_lane_without_plan', 'select_ego_lane_with_plan']
+             'select_ego_lane_without_plan', 'select_ego_lane_with_plan','forward_lane_num']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))
