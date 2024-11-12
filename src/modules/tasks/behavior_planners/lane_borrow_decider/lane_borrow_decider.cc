@@ -62,17 +62,18 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
 
   switch (lane_borrow_status_) {
     case LaneBorrowStatus::kNoLaneBorrow: {
-      if (CheckIfNoBorrowToDriving()) {
+      if (CheckIfLaneBorrowDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving;
       }
 
       break;
     }
     case LaneBorrowStatus::kLaneBorrowDriving: {
-      if (CheckIfDrivingToPassSide()) {
+      if (!CheckIfLaneBorrowDriving()) {
+        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
+      } else if (CheckIfDrivingToPassSide()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowPassSide;
       }
-
       break;
     }
     case LaneBorrowStatus::kLaneBorrowPassSide: {
@@ -93,12 +94,13 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
     }
   }
 
-  if(lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow){
+  if (lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow) {
     lane_borrow_decider_output_.is_in_lane_borrow_status = true;
     lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
-  }else{
+  } else {
     lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+    static_blocked_obj_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
   }
 
@@ -271,7 +273,7 @@ bool LaneBorrowDecider::CheckIfDrivingToPassSide() {
   return true;
 }
 
-bool LaneBorrowDecider::CheckIfNoBorrowToDriving() {
+bool LaneBorrowDecider::CheckIfLaneBorrowDriving() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   auto ego_state_manager =
@@ -342,6 +344,10 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
   if (left_borrow_) {
     right_bounds_l = obs_left_l_;
     const auto& left_lane = virtual_lane_manager->get_left_lane();
+    if (left_lane == nullptr) {
+      std::cout << "left lane is nullptr!" << std::endl;
+      return false;
+    }
     const double neighbor_width =
         left_lane->width(  // todo: add lane ptr protect
             vehicle_param_
@@ -363,6 +369,10 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
     left_borrow_ = false;
     left_bounds_l = obs_right_l_;
     const auto& right_lane = virtual_lane_manager->get_right_lane();
+    if (right_lane == nullptr) {
+      std::cout << "right lane is nullptr!" << std::endl;
+      return false;
+    }
     const double neighbor_width =
         right_lane->width(  // todo: add lane ptr protect
             vehicle_param_

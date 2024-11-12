@@ -21,7 +21,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/cailiu2/lane_borrow_decider_2.bag"
+bag_path = "/data_cold/abu_zone/cailiu2/lane_borrow_test1.bag.1731395572.close-loop.plan"
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
@@ -496,8 +496,10 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
       try:
         value = getattr(lane_borrow_decider_info, name)
         if name == 'static_blocked_obj_vec':
-          for value_i in list(value):
-            datas.append(value_i)
+          data_i = []
+          for value_i in value:
+            data_i.append(value_i)
+          datas.append(data_i)
         else:
           datas.append(value)
 
