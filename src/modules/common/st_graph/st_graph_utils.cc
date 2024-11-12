@@ -922,6 +922,35 @@ void StGraphUtils::CalculateIntersectS(
   }
 }
 
+void StGraphUtils::DetermineClosetStBoundary(
+    const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>& boundary_id_st_boundaries_map,
+    int64_t& closest_boundary_id, double& closest_s) {
+  closest_s = std::numeric_limits<double>::max();
+  closest_boundary_id = -1;
+  for (const auto& boundary_id_st_boundary : boundary_id_st_boundaries_map) {
+    const auto& boundary_id = boundary_id_st_boundary.first;
+    const auto& st_boundary = boundary_id_st_boundary.second;
+    if (!st_boundary) {
+      continue;
+    }
+    if (st_boundary->min_t() > kMathEpsilon) {
+      continue;
+    }
+    const auto& lower_points = st_boundary->lower_points();
+    if (lower_points.empty()) {
+      continue;
+    }
+    const auto first_lower_point_s = lower_points.front().s();
+    if (first_lower_point_s < kMathEpsilon) {
+      continue;
+    }
+    if (closest_s > first_lower_point_s) {
+      closest_s = first_lower_point_s;
+      closest_boundary_id = boundary_id;
+    }
+  }
+}
+
 // Check whether need to adjust the lateral buffer of the agent by t.
 bool StGraphUtils::CheckAdjustLateralBufferByT(
     const trajectory::TrajectoryPoint& init_point,

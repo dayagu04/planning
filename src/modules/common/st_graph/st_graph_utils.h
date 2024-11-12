@@ -135,6 +135,11 @@ class StGraphUtils {
       bool* const has_intersect_point, double* const lower_s,
       double* const upper_s);
 
+  static void DetermineClosetStBoundary(
+      const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
+          boundary_id_st_boundaries_map,
+      int64_t& closest_boundary_id, double& closest_s);
+
   static bool CheckAdjustLateralBufferByT(
       const trajectory::TrajectoryPoint& init_point,
       const std::shared_ptr<VirtualLaneManager>& virtual_lane_manager,
