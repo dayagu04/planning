@@ -72,6 +72,8 @@ class LogFileObject : public google::base::Logger {
 
   const string& hostname();
 
+  void SetNewFile(const bool need_new) { need_new_file = need_new; }
+
  private:
   static const uint32 kRolloverAttemptFrequency = 0x20;
 
@@ -87,6 +89,8 @@ class LogFileObject : public google::base::Logger {
   unsigned int rollover_attempt_;
   int64 next_flush_time_;  // cycle count at which to flush log
   string hostname_;
+
+  bool need_new_file;
 
   // Actually create a logfile using the value of base_filename_ and the
   // supplied argument time_pid_string

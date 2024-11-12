@@ -47,4 +47,6 @@
                                                                           \
  private:
 
+#define IFLY_DEFINE_UNUSED(param) (void)param
+
 #endif  // ZNQC_COMMON_MACRO_H_

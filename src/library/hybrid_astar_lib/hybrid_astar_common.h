@@ -54,15 +54,6 @@ enum class ParkSpaceType {
   MAX_NUMBER,
 };
 
-enum class ParkingTask {
-  NONE,
-  TAIL_PARKING_IN,
-  HEAD_PARKING_IN,
-  HEAD_PARKING_OUT,
-  TAIL_PARKING_OUT,
-  MAX_NUMBER,
-};
-
 enum class ParkingVehDirectionRequest {
   none,
   tail_in_first,

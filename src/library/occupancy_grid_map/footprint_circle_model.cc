@@ -3,8 +3,7 @@
 #include "log_glog.h"
 #include "pose2d.h"
 #include "transform2d.h"
-
-#include "./../../modules/apa_function/src/apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 

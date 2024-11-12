@@ -32,8 +32,6 @@ struct AstarRequest {
 
   ParkSpaceType space_type;
 
-  ParkingTask parking_task;
-
   ParkingVehDirectionRequest head_request;
 
   RSPathRequestType rs_request;

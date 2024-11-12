@@ -7,15 +7,20 @@ file(GLOB_RECURSE SRC_FILES
 
 set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}
-  ${CMAKE_CURRENT_LIST_DIR}/src
-  ${CMAKE_CURRENT_LIST_DIR}/src/apa_world/lateral_path_optimizer
-  ${CMAKE_CURRENT_LIST_DIR}/src/apa_world
-  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner
-  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner/perpendicular_park_in_planner
-  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner/perpendicular_park_heading_in_planner
-  ${CMAKE_CURRENT_LIST_DIR}/src/perpendicular_planner/perpendicular_park_out_planner
-  ${CMAKE_CURRENT_LIST_DIR}/src/parallel_planner
-  ${CMAKE_CURRENT_LIST_DIR}/src/hybrid_astar_planner)
+  ${CMAKE_CURRENT_LIST_DIR}/apa_world
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/parallel
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/slot_searching
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/narrow_space
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/parallel
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers/lateral_path_optimizer
+  ${CMAKE_CURRENT_LIST_DIR}/util)
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 

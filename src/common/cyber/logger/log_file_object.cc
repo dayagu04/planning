@@ -211,13 +211,16 @@ void LogFileObject::Write(bool force_flush, time_t timestamp,
     return;
   }
 
-  if (static_cast<int>(file_length_ >> 20) >= MaxLogSize() || PidHasChanged()) {
+  if (static_cast<int>(file_length_ >> 20) >= MaxLogSize() || PidHasChanged() ||
+      need_new_file) {
     if (file_ != nullptr) {
       fclose(file_);
     }
     file_ = nullptr;
     file_length_ = bytes_since_flush_ = 0;
     rollover_attempt_ = kRolloverAttemptFrequency - 1;
+
+    need_new_file = false;
   }
 
   // If there's no destination file, make one before outputting

@@ -8,35 +8,35 @@
 #include <iostream>
 #include <vector>
 
-#include "apa_plan_base.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
-#include "collision_detection.h"
+#include "collision_detection/collision_detection.h"
 #include "config_context.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "math_lib.h"
-#include "parallel_park_in_planner.h"
-#include "parallel_path_planner.h"
-#include "slot_management.h"
+#include "parallel_park_in_scenario.h"
+#include "parallel_path_generator.h"
+#include "slot_manager.h"
 #include "slot_management_info.pb.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static planning::apa_planner::ParallelPathPlanner *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
+static planning::apa_planner::ParallelPathGenerator *pBase = nullptr;
+static planning::apa_planner::ApaPlanInterface*pApaPlanInterface= nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
-static planning::apa_planner::ParallelParkInPlanner parallel_park_planner;
+static planning::apa_planner::ParallelParkInScenario parallel_park_planner;
 
 int Init() {
   (void)planning::common::ConfigurationContext::Instance();
-  pBase = new ParallelPathPlanner();
+  pBase = new ParallelPathGenerator();
   pBase->Reset();
 
-  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
-  pApaPlanInterface->SyncParameters(true);
+  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
+  SyncParkingParameters(true);
   return 0;
 }
 
@@ -168,7 +168,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
     corner_pt->set_x(slot_x_vec[i]);
     corner_pt->set_y(slot_y_vec[i]);
   }
-  SlotManagement::Frame slm_frame;
+  SlotManager::Frame slm_frame;
   slm_frame.ego_slot_info.ego_pos_slot << ego_x, ego_y;
   slm_frame.ego_slot_info.ego_heading_slot = ego_heading;
   slm_frame.ego_slot_info.select_slot_filter = select_slot_filter;
@@ -193,7 +193,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   DEBUG_PRINT("after GenTBoundaryObstacles");
   parallel_park_planner.PathPlanOnce();
 
-  ParallelPathPlanner::Input path_planner_input;
+  ParallelPathGenerator::Input path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
   path_planner_input.sample_ds = path_ds;
   path_planner_input.is_replan_first = true;
@@ -323,7 +323,7 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   channel_y = slot_side_sgn * std::fabs(channel_y);
   curb_y = -slot_side_sgn * std::fabs(curb_y);
 
-  planning::apa_planner::ParallelPathPlanner::Input input;
+  planning::apa_planner::ParallelPathGenerator::Input input;
 
   input.ego_pose.pos << ego_x, ego_y;
   input.ego_pose.heading = ego_heading;
@@ -359,7 +359,7 @@ int Update(double ego_x, double ego_y, double ego_heading, double obs_pt_in_x,
   const Eigen::Vector2d terminal_err =
       input.ego_pose.pos - Eigen::Vector2d(p_target_x, p_target_y);
 
-  ParallelParkInPlanner park_planner;
+  ParallelParkInScenario park_planner;
   const double slot_occupied_ratio = park_planner.CalcSlotOccupiedRatio(
       terminal_err, 0.5 * slot_width, !set_left_side);
 

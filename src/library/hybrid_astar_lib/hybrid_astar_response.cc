@@ -65,11 +65,6 @@ const bool IsResponseNice(const AstarRequest& request,
   //   return false;
   // }
 
-  if (request.parking_task != response.request.parking_task) {
-    ILOG_INFO << "task is change";
-    return false;
-  }
-
   // if (request.path_generate_method != response.request.path_generate_method)
   // {
   //   ILOG_INFO << "method is change, cur method: "

@@ -152,6 +152,8 @@ const bool CreateLogDirectory(const std::string& path);
 
 // void SignalHandler(const char* data, int size);
 
+const void ResetGLogFile();
+
 }  // namespace planning
 
 #endif  // __PLANNING_COMMON_GLOG_H__

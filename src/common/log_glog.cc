@@ -70,7 +70,13 @@ void InitGlog(const char *file) {
   //  50 Mb
   FLAGS_max_log_size = 50;
 
-  bool create_path = CreateLogDirectory(path_dir);
+  bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");
+  if (create_path) {
+    printf("create /opt/usr/iflytek/cluster_b/gea/log success\n");
+    create_path = CreateLogDirectory(path_dir);
+  } else {
+    printf("create log path fail\n");
+  }
 
   // Init glog
   if (glog_flag_.is_init == false) {
@@ -109,6 +115,15 @@ void StopGlog() {
 
     google::ShutdownGoogleLogging();
   }
+  return;
+}
+
+const void ResetGLogFile() {
+  ILOG_INFO << "reset glog file";
+  if (async_logger_ != nullptr) {
+    async_logger_->CreateNewFile();
+  }
+
   return;
 }
 }  // namespace planning

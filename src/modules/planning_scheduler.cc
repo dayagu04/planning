@@ -13,7 +13,7 @@
 #include "adas_function/mrc_condition.h"
 #include "adas_function/start_stop_enable.h"
 #include "adas_function/tsr_function/traffic_sign_recognition.h"
-#include "apa_function/src/apa_utils.h"
+#include "apa_function/util/apa_utils.h"
 #include "basic_types.pb.h"
 #include "common/config_context.h"
 #include "config/basic_type.h"
@@ -149,6 +149,8 @@ bool PlanningScheduler::RunOnce(
     if (g_context.GetStatemachine().apa_reset_flag) {
       apa_function_->Reset();
       ILOG_INFO << "reset parking";
+
+      ResetGLogFile();
     }
     planning_success = apa_function_->Plan();
     *planning_output = session_.planning_context().planning_output();

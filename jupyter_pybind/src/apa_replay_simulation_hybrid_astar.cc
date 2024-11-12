@@ -14,8 +14,9 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-#include "apa_param_setting.h"
-#include "apa_plan_base.h"
+#include "apa_data.h"
+#include "apa_param_config.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "func_state_machine_c.h"
 #include "hybrid_astar_common.h"
@@ -33,7 +34,7 @@
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
 #include "serialize_utils.h"
-#include "slot_management.h"
+#include "slot_manager.h"
 #include "src/common/debug_info_log.h"
 #include "log_glog.h"
 #include "pose2d.h"
@@ -41,7 +42,6 @@
 #include "src/library/collision_detection/gjk2d_interface.h"
 #include "polygon_base.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
-#include "src/library/occupancy_grid_map/virtual_wall_decider.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
@@ -64,7 +64,8 @@
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "path_safe_checker.h"
-#include "hybrid_astar_park_planner.h"
+#include "narrow_space_scenario.h"
+#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -76,9 +77,9 @@ typedef std::vector<Eigen::Vector2d> EigenPointSet2d;
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
-std::shared_ptr<apa_planner::HybridAStarParkPlanner> hybrid_astar_park_;
+std::shared_ptr<apa_planner::NarrowSpaceScenario> hybrid_astar_park_;
 HybridAStarThreadSolver *thread_solver_;
-planning::apa_planner::ApaPlannerBase::EgoSlotInfo ego_slot_info_;
+planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info_;
 
 static planning::LocalView local_view;
 std::vector<Eigen::Vector3d> global_astar_path_;
@@ -115,10 +116,11 @@ int Init() {
   perfect_control_ptr = new PerfectControl();
   perfect_control_ptr->Init();
 
-  std::shared_ptr<apa_planner::ApaPlannerBase> planner =
-      apa_interface_ptr->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
+  std::shared_ptr<apa_planner::ParkingScenario> planner =
+      apa_interface_ptr->GetPlannerByType(
+          ParkingScenarioType::SCENARIO_NARROW_SPACE);
   hybrid_astar_park_ =
-      std::dynamic_pointer_cast<apa_planner::HybridAStarParkPlanner>(planner);
+      std::dynamic_pointer_cast<apa_planner::NarrowSpaceScenario>(planner);
 
   thread_solver_ = hybrid_astar_park_->GetThread();
   hybrid_astar_interface_ = thread_solver_->GetHybridAStarInterface();
@@ -377,7 +379,7 @@ const void UpdateLocalView(
 
 static const int CopyVirtualWallForPlot(
     const ParkObstacleList &obs_list,
-    const planning::apa_planner::ApaPlannerBase::EgoSlotInfo &slot) {
+    const planning::apa_planner::ParkingScenario::EgoSlotInfo &slot) {
   const ApaParameters &park_param = apa_param.GetParam();
 
   // publish to python
@@ -578,14 +580,15 @@ const bool PlanOnce(
   double plan_time = IflyTime::Now_us();
   ILOG_INFO << "plan time ms " << (plan_time - copy_data_time) / 1000.0;
 
-  const std::shared_ptr<apa_planner::ApaPlannerBase> vertical_space_decider_ =
-      apa_interface_ptr->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
+  const std::shared_ptr<apa_planner::ParkingScenario> vertical_space_decider_ =
+      apa_interface_ptr->GetPlannerByType(
+          ParkingScenarioType::SCENARIO_NARROW_SPACE);
 
   if (vertical_space_decider_ != nullptr) {
-    const apa_planner::ApaPlannerBase::Frame &frame =
+    const apa_planner::ParkingScenario::Frame &frame =
         vertical_space_decider_->GetFrame();
 
-    const apa_planner::ApaPlannerBase::EgoSlotInfo &ego_slot_info =
+    const apa_planner::ParkingScenario::EgoSlotInfo &ego_slot_info =
         frame.ego_slot_info;
 
     ego_slot_info_ = ego_slot_info;
@@ -668,8 +671,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   bool update_path = false;
 
   if (force_plan) {
-    planning::apa_planner::ApaPlannerBase::Frame frame;
-    planning::apa_planner::ApaPlannerBase::EgoSlotInfo ego_slot_info =
+    planning::apa_planner::ParkingScenario::Frame frame;
+    planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info =
         frame.ego_slot_info;
 
     if (1) {
@@ -773,6 +776,12 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     } else {
       slot_type = ParkSpaceType::VERTICAL;
     }
+
+    VirtualWallDecider wall_decider;
+    wall_decider.Process(hybrid_astar_obs_.virtual_obs, 40.0, 15.0,
+                         ego_slot_info.slot_width, ego_slot_info.slot_length,
+                         start, real_end, slot_type, SlotRelativePosition::NONE);
+
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
         ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
@@ -813,7 +822,6 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.base_pose_ = base_pose_;
 
     request.space_type = ParkSpaceType::VERTICAL;
-    request.parking_task = ParkingTask::TAIL_PARKING_IN;
     request.head_request = ParkingVehDirectionRequest::tail_in_first;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;

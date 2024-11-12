@@ -116,6 +116,11 @@ void AsyncLogger::FlushBuffer(const std::unique_ptr<std::deque<Msg>>& buffer) {
       module_logger_map_[module_name]->SetSymlinkBasename(module_name.c_str());
     }
     const bool force_flush = msg.level > 0;
+    if (create_new_file) {
+      module_logger_map_.find(module_name)->second->SetNewFile(true);
+      create_new_file.store(false);
+    }
+
     module_logger_map_.find(module_name)
         ->second->Write(force_flush, msg.ts, msg.message.data(),
                         static_cast<int>(msg.message.size()));

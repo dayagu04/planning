@@ -13,7 +13,7 @@
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "log_glog.h"
-#include "modules/apa_function/src/apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
