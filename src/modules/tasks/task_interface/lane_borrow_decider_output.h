@@ -3,7 +3,6 @@
 enum LaneBorrowStatus {
   kNoLaneBorrow = 0,
   kLaneBorrowDriving,
-  kLaneBorrowPassSide,
   kLaneBorrowBackDriving,
 };
 
@@ -16,7 +15,8 @@ enum LaneBorrowFailedReason {
   OBSERVE_TIME_CHECK_FAILED,
   BOUNDS_TOO_NARROW,
   STATIC_OBSTACLE_BLOCKED,
-  BACKWARD_OBSTACLE_TOO_CLOSE
+  BACKWARD_OBSTACLE_TOO_CLOSE,
+  LANE_CHANGE_STATE
 };
 
 struct LaneBorrowDeciderOutput {

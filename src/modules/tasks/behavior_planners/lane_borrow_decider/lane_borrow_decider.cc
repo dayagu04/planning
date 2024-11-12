@@ -33,6 +33,7 @@ constexpr double kObsSpeedRatio = 3.5;
 constexpr double kForwardOtherObsDistance = 20.0;
 constexpr double kObsSpeedBuffer = 1.0;
 constexpr double kObsLatExpendBuffer = 0.4;
+constexpr double kObsLonDisBuffer = 2.0;
 };  // namespace
 
 namespace planning {
@@ -57,6 +58,17 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
                                          .coarse_planning_info;
 
   if (coarse_planning_info.target_state != kLaneKeeping) {
+    ClearLaneBorrowStatus();
+    lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
+    lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+    lane_borrow_decider_output_.lane_borrow_failed_reason = LANE_CHANGE_STATE;
+    static_blocked_obj_vec_.clear();
+    lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
+    DebugInfoManager::GetInstance()
+        .GetDebugInfoPb()
+        ->mutable_lane_borrow_decider_info()
+        ->set_lane_borrow_failed_reason(
+            lane_borrow_decider_output_.lane_borrow_failed_reason);
     return true;
   }
 
@@ -71,25 +83,17 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
     case LaneBorrowStatus::kLaneBorrowDriving: {
       if (!CheckIfLaneBorrowDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
-      } else if (CheckIfDrivingToPassSide()) {
-        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowPassSide;
-      }
-      break;
-    }
-    case LaneBorrowStatus::kLaneBorrowPassSide: {
-      if (CheckIfPassSideToBackDriving()) {
+      } else if (CheckIfLaneBorrowDrivingToBackDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowBackDriving;
       }
-
       break;
     }
     case LaneBorrowStatus::kLaneBorrowBackDriving: {
       if (CheckIfBackDrivingToNoBorrow()) {
         lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
       } else if (CheckIfBorrowAgain()) {
-        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowPassSide;
+        lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving;
       }
-
       break;
     }
   }
@@ -488,6 +492,11 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
 
   for (const auto& frenet_obstacle : frenet_obstacles) {
     const auto& id = frenet_obstacle->obstacle()->id();
+    const auto& obs_type = frenet_obstacle->obstacle()->type();
+    if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+      continue;
+    }
+
     if (!(frenet_obstacle->obstacle()->fusion_source() &
           OBSTACLE_SOURCE_CAMERA)) {
       continue;
@@ -495,7 +504,8 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
     const auto frenet_obstacle_sl = frenet_obstacle->frenet_obstacle_boundary();
 
     if (frenet_obstacle_sl.s_start > forward_obs_s ||
-        frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_end) {
+        frenet_obstacle_sl.s_end + kObsLonDisBuffer <
+            ego_frenet_boundary_.s_start) {
       // obstacle is not in concern area
       continue;
     }
@@ -506,7 +516,7 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
       continue;
     }
 
-    // todo: reverse obstacle nees to filter
+    // todo: reverse obstacle need to filter
     if ((frenet_obstacle_sl.s_start > distance_to_cross_walk_ &&
          frenet_obstacle_sl.s_start <
              distance_to_cross_walk_ + kDefaultStopLineAreaDistance) ||
@@ -752,7 +762,7 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
   return true;
 }
 
-bool LaneBorrowDecider::CheckIfPassSideToBackDriving() {
+bool LaneBorrowDecider::CheckIfLaneBorrowDrivingToBackDriving() {
   if (!IsSafeForBack()) {
     return false;
   }

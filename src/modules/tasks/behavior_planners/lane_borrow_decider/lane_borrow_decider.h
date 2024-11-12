@@ -31,7 +31,7 @@ class LaneBorrowDecider : public Task {
 
   bool CheckIfLaneBorrowDriving();
   bool CheckIfDrivingToPassSide();
-  bool CheckIfPassSideToBackDriving();
+  bool CheckIfLaneBorrowDrivingToBackDriving();
   bool CheckIfBackDrivingToPassSide();
   bool CheckIfBackDrivingToNoBorrow();
 

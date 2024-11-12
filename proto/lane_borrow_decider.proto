@@ -17,4 +17,5 @@ message LaneBorrowDeciderInfo {
   optional BlockedObsArea block_obs_area = 1;
   optional int32 lane_borrow_decider_status =2;
   repeated int32 static_blocked_obj_vec=3;
+  optional int32 lane_borrow_failed_reason =4;
 };
