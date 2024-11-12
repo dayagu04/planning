@@ -47,6 +47,7 @@ class LaneBorrowDecider : public Task {
                           const double& right_bounds_l);
   void ClearLaneBorrowStatus();
   bool CheckIfBorrowAgain();
+  void LogDebugInfo();
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};

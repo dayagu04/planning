@@ -25,7 +25,7 @@ constexpr double kDefaultStopLineAreaDistance = 5.0;
 constexpr double kFilterStopObsDistance = 25.0;
 constexpr double kObsSpeedLimit = 3.0;
 constexpr double kLatPassableBuffer =
-    0.5;  // todo: same with lat decider and lon decider
+    0.8;  // todo: same with lat decider and lon decider
 constexpr double kObsLatBuffer = 0.3;
 constexpr int kObserveFrames = 30;
 constexpr double kBackwardSafeDistance = 50.0;
@@ -64,11 +64,7 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
     lane_borrow_decider_output_.lane_borrow_failed_reason = LANE_CHANGE_STATE;
     static_blocked_obj_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
-    DebugInfoManager::GetInstance()
-        .GetDebugInfoPb()
-        ->mutable_lane_borrow_decider_info()
-        ->set_lane_borrow_failed_reason(
-            lane_borrow_decider_output_.lane_borrow_failed_reason);
+    LogDebugInfo();
     return true;
   }
 
@@ -111,64 +107,7 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
       lane_borrow_decider_output_;
 
-  // debug info
-  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
-                                 .GetDebugInfoPb()
-                                 ->mutable_lane_borrow_decider_info();
-  auto current_reference_path = session_->environmental_model()
-                                    .get_reference_path_manager()
-                                    ->get_reference_path_by_current_lane();
-
-  const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
-
-  Point2D front_left_corner, front_right_corner, back_right_corner,
-      back_left_corner;
-  current_frenet_coord->SLToXY(obs_end_s_, obs_left_l_, &front_left_corner.x,
-                               &front_left_corner.y);
-  current_frenet_coord->SLToXY(obs_end_s_, obs_right_l_, &front_right_corner.x,
-                               &front_right_corner.y);
-  current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x,
-                               &back_right_corner.y);
-  current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
-                               &back_left_corner.y);
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_front_left_corner()
-      ->set_x(front_left_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_front_left_corner()
-      ->set_y(front_left_corner.y);
-
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_front_right_corner()
-      ->set_x(front_right_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_front_right_corner()
-      ->set_y(front_right_corner.y);
-
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_back_left_corner()
-      ->set_x(back_left_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_back_left_corner()
-      ->set_y(back_left_corner.y);
-
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_back_right_corner()
-      ->set_x(back_right_corner.x);
-  lane_borrow_pb_info->mutable_block_obs_area()
-      ->mutable_back_right_corner()
-      ->set_y(back_right_corner.y);
-  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_left_l(obs_left_l_);
-  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_right_l(obs_right_l_);
-  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_start_s(obs_start_s_);
-  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_end_s(obs_end_s_);
-
-  lane_borrow_pb_info->set_lane_borrow_decider_status(lane_borrow_status_);
-
-  lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Clear();
-  for (auto static_obs_id : static_blocked_obj_vec_) {
-    lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Add(static_obs_id);
-  }
+  LogDebugInfo();
 
   return true;
 }
@@ -189,6 +128,23 @@ bool LaneBorrowDecider::CheckIfBorrowAgain() {
   const auto& frenet_obstacles = current_reference_path->get_obstacles();
 
   for (const auto& frenet_obstacle : frenet_obstacles) {
+    const auto& id = frenet_obstacle->obstacle()->id();
+    const auto& obs_type = frenet_obstacle->obstacle()->type();
+    if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+      continue;
+    }
+
+    if (!(frenet_obstacle->obstacle()->fusion_source() &
+          OBSTACLE_SOURCE_CAMERA)) {
+      continue;
+    }
+
+    auto it = std::find(static_blocked_obj_vec_.begin(),
+                        static_blocked_obj_vec_.end(), id);
+    if (it != static_blocked_obj_vec_.end()) {
+      continue;
+    }
+
     const auto& frenet_obstacle_sl =
         frenet_obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start >
@@ -477,7 +433,7 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
   double right_width = lane->width(ego_frenet_boundary_.s_end) * 0.5;
   double vehicle_length = vehicle_param_.length;
 
-  obs_left_l_ = -left_width;
+  obs_left_l_ = -left_width; // default value
   obs_right_l_ = right_width;
   obs_start_s_ = forward_obs_s;
   obs_end_s_ = 0.0;
@@ -506,7 +462,7 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
     if (frenet_obstacle_sl.s_start > forward_obs_s ||
         frenet_obstacle_sl.s_end + kObsLonDisBuffer <
             ego_frenet_boundary_.s_start) {
-      // obstacle is not in concern area
+      // obstacle is not in lon concern area
       continue;
     }
 
@@ -690,7 +646,7 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
       if (frenet_obstacle_sl.s_start > obs_end_s_) {
         continue;
       }
-      if (left_borrow_) {
+      if (left_borrow_) { // check the whether the left path is ok for lane borrow
         if (frenet_obstacle_sl.l_start > left_bounds_l ||
             frenet_obstacle_sl.l_end < left_width) {
           continue;  // todo: why?
@@ -707,7 +663,7 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
               frenet_obstacle->obstacle()->id();
           return false;
         }
-      } else {
+      } else { // check the whether the right path is ok for lane borrow
         if (frenet_obstacle_sl.l_start > -right_width ||
             frenet_obstacle_sl.l_end < right_bounds_l) {
           continue;  // why
@@ -846,4 +802,66 @@ bool LaneBorrowDecider::IsSafeForBack() {
   return true;
 }
 
+void LaneBorrowDecider::LogDebugInfo() {
+  // debug info
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
+  lane_borrow_pb_info->set_lane_borrow_failed_reason(
+      lane_borrow_decider_output_.lane_borrow_failed_reason);
+  auto current_reference_path = session_->environmental_model()
+                                    .get_reference_path_manager()
+                                    ->get_reference_path_by_current_lane();
+
+  const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
+
+  Point2D front_left_corner, front_right_corner, back_right_corner,
+      back_left_corner;
+  current_frenet_coord->SLToXY(obs_end_s_, obs_left_l_, &front_left_corner.x,
+                               &front_left_corner.y);
+  current_frenet_coord->SLToXY(obs_end_s_, obs_right_l_, &front_right_corner.x,
+                               &front_right_corner.y);
+  current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x,
+                               &back_right_corner.y);
+  current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
+                               &back_left_corner.y);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_left_corner()
+      ->set_x(front_left_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_left_corner()
+      ->set_y(front_left_corner.y);
+
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_right_corner()
+      ->set_x(front_right_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_front_right_corner()
+      ->set_y(front_right_corner.y);
+
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_left_corner()
+      ->set_x(back_left_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_left_corner()
+      ->set_y(back_left_corner.y);
+
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_right_corner()
+      ->set_x(back_right_corner.x);
+  lane_borrow_pb_info->mutable_block_obs_area()
+      ->mutable_back_right_corner()
+      ->set_y(back_right_corner.y);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_left_l(obs_left_l_);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_right_l(obs_right_l_);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_start_s(obs_start_s_);
+  lane_borrow_pb_info->mutable_block_obs_area()->set_obs_end_s(obs_end_s_);
+
+  lane_borrow_pb_info->set_lane_borrow_decider_status(lane_borrow_status_);
+
+  lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Clear();
+  for (auto static_obs_id : static_blocked_obj_vec_) {
+    lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Add(static_obs_id);
+  }
+}
 }  // namespace planning

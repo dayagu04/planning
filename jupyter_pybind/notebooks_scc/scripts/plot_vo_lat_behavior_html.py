@@ -21,7 +21,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/cailiu2/lane_borrow_1.bag.1731410617.close-loop.plan"
+bag_path = "/data_cold/abu_zone/cailiu2/lane_borrow_test1.bag.1731415194.close-loop.plan"
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
