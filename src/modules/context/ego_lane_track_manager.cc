@@ -150,12 +150,14 @@ void EgoLaneTrackManger::TrackEgoLane(
           }
 
           //处理高架快速路普通分流口
-          PreprocessOrdinarySplit(relative_id_lanes,
-                                  order_ids_of_same_zero_relative_id);
-          LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
-                    is_exist_split_on_expressway_);
-          if (is_exist_split_on_expressway_) {
-            return;
+          if (lane_keep_status) {
+            PreprocessOrdinarySplit(relative_id_lanes,
+                                    order_ids_of_same_zero_relative_id);
+            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
+                      is_exist_split_on_expressway_);
+            if (is_exist_split_on_expressway_) {
+              return;
+            }
           }
         }
       } else if (function_info.function_mode() ==
