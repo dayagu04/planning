@@ -2597,7 +2597,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size());
   const auto &spline_x_vec = lon_behav_input_->lat_output().spline_x_vec();
   const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
-  for (int i = 1; i <= (config_.lon_num_step + 1); ++i) {
+  for (int i = 1; i <= config_.lon_num_step; ++i) {
     if (std::isnan(spline_x_vec[i]) || std::isnan(spline_y_vec[i])) {
       LOG_ERROR("skip NaN point");
       continue;
