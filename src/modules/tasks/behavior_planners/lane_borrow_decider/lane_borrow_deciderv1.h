@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <memory>
 #include <vector>
 
 #include "config/vehicle_param.h"
@@ -11,43 +12,34 @@
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tasks/task.h"
+#include "virtual_lane.h"
 
 namespace planning {
 
-class LaneBorrowDeciderV0 : public Task {
+class LaneBorrowDecider : public Task {
  public:
-  LaneBorrowDeciderV0(const EgoPlanningConfigBuilder* config_builder,
-                      framework::Session* session)
+  LaneBorrowDecider(const EgoPlanningConfigBuilder* config_builder,
+                    framework::Session* session)
       : Task(config_builder, session) {
     vehicle_param_ =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
   };
-  virtual ~LaneBorrowDeciderV0() = default;
+  virtual ~LaneBorrowDecider() = default;
 
   bool Execute() override;
 
  private:
-  bool RunLaneBorrowStateMachine();
-
-  bool CheckIfLaneBorrowDriving();
-  bool CheckIfDrivingToPassSide();
-  bool CheckIfLaneBorrowDrivingToBackDriving();
-  bool CheckIfBackDrivingToPassSide();
-  bool CheckIfBackDrivingToNoBorrow();
-
-  void UpdateForwardMapInfo();
-  void CalcDistanceToSolidLane();
-  bool HasBlockingObstacle();
-  void UpdateAdcInfo();
-
-  bool IsSafeForLaneBorrow();
-  bool IsSafeForBack();
-
-  bool ClearForLaneBorrow(const double ego_speed, const double& left_bounds_l,
-                          const double& right_bounds_l);
-  void ClearLaneBorrowStatus();
-  bool CheckIfBorrowAgain();
+  bool ProcessEnvInfos();
+  void Update();
   void LogDebugInfo();
+
+  bool CheckIfNoLaneBorrowToLaneBorrowDriving();
+  void UpdateJunctionInfo();
+
+  bool SelectStaticBlockingArea();
+  bool UpdateLaneBorrowDirection();
+  bool IsSafeForLaneBorrow();
+  bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
@@ -76,11 +68,20 @@ class LaneBorrowDeciderV0 : public Task {
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
 
   int observe_frame_num_{0};
+  int lane_change_state_{0};
+  double current_left_lane_width_{1.75};
+  double current_right_lane_width_{1.75};
   std::vector<int> static_blocked_obj_vec_;
 
   std::pair<double, double> front_pass_point_;  // static obs area,
   std::pair<double, double> front_pass_sl_point_;
   std::pair<double, double> last_ego_center_position_;
+  std::pair<double, double> ego_pose_;  // x, y
+
+  std::shared_ptr<ReferencePath> current_reference_path_ptr_ = nullptr;
+  std::shared_ptr<VirtualLane> current_lane_ptr_ = nullptr;
+  std::shared_ptr<VirtualLane> left_lane_ptr_ = nullptr;
+  std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
 };
 
 }  // namespace planning

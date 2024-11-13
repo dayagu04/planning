@@ -1083,6 +1083,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   const auto &lane_borrow_decider_output =
       session_->mutable_planning_context()
           ->mutable_lane_borrow_decider_output();
+  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1101,6 +1102,12 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     front_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(
         ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
   }
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    front_lon_buf_dis += config_.extra_front_lon_buffer2blockobstacle;
+    rear_lon_buf_dis += config_.extra_rear_lon_buffer2blockobstacle;
+  }
+
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
   const bool init_lon_no_overlap =
@@ -1112,7 +1119,6 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
 
-  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
   const int borrow_direction = lane_borrow_decider_output.borrow_direction;
 
   if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
@@ -1178,6 +1184,10 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
         general_lateral_decider_utils::CalDesireStaticLateralDistance(
             config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
             ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound);
+
+    if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+      lat_buf_dis += config_.extra_hard_buffer2blockobstacle;
+    }
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -1344,6 +1354,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &lane_borrow_decider_output =
       session_->mutable_planning_context()
           ->mutable_lane_borrow_decider_output();
+  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1356,10 +1367,16 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       ego_cur_s - vehicle_param.rear_edge_to_rear_axle;
   const double ego_cur_s_end = ego_cur_s + rear_axle_to_front_bumper;
 
-  const double front_lon_buf_dis =
+  double front_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
           ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s());
-  const double rear_lon_buf_dis = 1.0;
+  double rear_lon_buf_dis = 1.0;
+
+  if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+    front_lon_buf_dis += config_.extra_front_lon_buffer2blockobstacle;
+    rear_lon_buf_dis += config_.extra_rear_lon_buffer2blockobstacle;
+  }
+
   auto pre_lateral_decision = LatObstacleDecisionType::IGNORE;
 
   const bool init_lon_no_overlap =
@@ -1380,7 +1397,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
 
-  const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
   const int borrow_direction = lane_borrow_decider_output.borrow_direction;
 
   if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
@@ -1467,6 +1483,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle->type(),
             is_nudge_left, in_intersection, config_);
+
+    if ((is_in_lane_borrow_status) && (IsBlockObstacleInLaneBorrow(obstacle))) {
+      lat_buf_dis += config_.extra_hard_buffer2blockobstacle;
+    }
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;

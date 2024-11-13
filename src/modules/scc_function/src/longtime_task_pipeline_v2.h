@@ -54,7 +54,7 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   std::unique_ptr<CipvLostProhibitAccelerationDecider>
       cipv_lost_prohibit_acceleration_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
-  std::unique_ptr<LaneBorrowDecider> lane_borrow_decider_;
+  std::unique_ptr<LaneBorrowDeciderV0> lane_borrow_decider_;
 };
 
 }  // namespace planning

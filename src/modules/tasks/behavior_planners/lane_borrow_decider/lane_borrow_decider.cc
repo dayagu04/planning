@@ -38,7 +38,7 @@ constexpr double kObsLonDisBuffer = 2.0;
 
 namespace planning {
 
-bool LaneBorrowDecider::Execute() {
+bool LaneBorrowDeciderV0::Execute() {
   ego_frenet_boundary_ = session_->environmental_model()
                              .get_reference_path_manager()
                              ->get_reference_path_by_current_lane()
@@ -52,7 +52,7 @@ bool LaneBorrowDecider::Execute() {
   return true;
 }
 
-bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
+bool LaneBorrowDeciderV0::RunLaneBorrowStateMachine() {
   const auto& coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
@@ -112,7 +112,7 @@ bool LaneBorrowDecider::RunLaneBorrowStateMachine() {
   return true;
 }
 
-bool LaneBorrowDecider::CheckIfBorrowAgain() {
+bool LaneBorrowDeciderV0::CheckIfBorrowAgain() {
   auto current_reference_path = session_->environmental_model()
                                     .get_reference_path_manager()
                                     ->get_reference_path_by_current_lane();
@@ -198,7 +198,7 @@ bool LaneBorrowDecider::CheckIfBorrowAgain() {
   return false;
 }
 
-bool LaneBorrowDecider::CheckIfBackDrivingToNoBorrow() {
+bool LaneBorrowDeciderV0::CheckIfBackDrivingToNoBorrow() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   auto lane = virtual_lane_manager->get_current_lane();
@@ -216,13 +216,13 @@ bool LaneBorrowDecider::CheckIfBackDrivingToNoBorrow() {
   }
 }
 
-void LaneBorrowDecider::ClearLaneBorrowStatus() {
+void LaneBorrowDeciderV0::ClearLaneBorrowStatus() {
   observe_frame_num_ = 0;
   left_borrow_ = false;
   right_borrow_ = false;
 }
 
-bool LaneBorrowDecider::CheckIfDrivingToPassSide() {
+bool LaneBorrowDeciderV0::CheckIfDrivingToPassSide() {
   // check if driving on side
   if (ego_frenet_boundary_.s_start < front_pass_sl_point_.first) {
     return false;
@@ -233,7 +233,7 @@ bool LaneBorrowDecider::CheckIfDrivingToPassSide() {
   return true;
 }
 
-bool LaneBorrowDecider::CheckIfLaneBorrowDriving() {
+bool LaneBorrowDeciderV0::CheckIfLaneBorrowDriving() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   auto ego_state_manager =
@@ -252,6 +252,7 @@ bool LaneBorrowDecider::CheckIfLaneBorrowDriving() {
               << std::endl;
     std::cout << "Ego car dis to stop line " << distance_to_stop_line_
               << std::endl;
+    lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
     return false;
   }
 
@@ -282,7 +283,7 @@ bool LaneBorrowDecider::CheckIfLaneBorrowDriving() {
   return true;
 }
 
-bool LaneBorrowDecider::IsSafeForLaneBorrow() {
+bool LaneBorrowDeciderV0::IsSafeForLaneBorrow() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   auto current_lane = virtual_lane_manager->get_current_lane();
@@ -364,7 +365,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
   return true;
 };
 
-void LaneBorrowDecider::CalcDistanceToSolidLane() {
+void LaneBorrowDeciderV0::CalcDistanceToSolidLane() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   auto lane = virtual_lane_manager->get_current_lane();
@@ -417,7 +418,7 @@ void LaneBorrowDecider::CalcDistanceToSolidLane() {
   return;
 }
 
-bool LaneBorrowDecider::HasBlockingObstacle() {
+bool LaneBorrowDeciderV0::HasBlockingObstacle() {
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   auto lane = virtual_lane_manager->get_current_lane();
@@ -433,7 +434,7 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
   double right_width = lane->width(ego_frenet_boundary_.s_end) * 0.5;
   double vehicle_length = vehicle_param_.length;
 
-  obs_left_l_ = -left_width; // default value
+  obs_left_l_ = -left_width;  // default value
   obs_right_l_ = right_width;
   obs_start_s_ = forward_obs_s;
   obs_end_s_ = 0.0;
@@ -543,7 +544,7 @@ bool LaneBorrowDecider::HasBlockingObstacle() {
   return true;
 }
 
-void LaneBorrowDecider::UpdateAdcInfo() {
+void LaneBorrowDeciderV0::UpdateAdcInfo() {
   left_borrow_ = true;
   right_borrow_ = true;
 
@@ -573,7 +574,7 @@ void LaneBorrowDecider::UpdateAdcInfo() {
 
   if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
       left_lane_boundary_type !=
-          iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID &&
+          iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
       left_lane_boundary_type !=
           iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
     left_borrow_ = false;
@@ -594,9 +595,9 @@ void LaneBorrowDecider::UpdateAdcInfo() {
   return;
 }
 
-bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
-                                           const double& left_bounds_l,
-                                           const double& right_bounds_l) {
+bool LaneBorrowDeciderV0::ClearForLaneBorrow(const double ego_speed,
+                                             const double& left_bounds_l,
+                                             const double& right_bounds_l) {
   if (left_bounds_l - right_bounds_l < vehicle_param_.width) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
     return false;
@@ -646,7 +647,8 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
       if (frenet_obstacle_sl.s_start > obs_end_s_) {
         continue;
       }
-      if (left_borrow_) { // check the whether the left path is ok for lane borrow
+      if (left_borrow_) {  // check the whether the left path is ok for lane
+                           // borrow
         if (frenet_obstacle_sl.l_start > left_bounds_l ||
             frenet_obstacle_sl.l_end < left_width) {
           continue;  // todo: why?
@@ -663,7 +665,7 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
               frenet_obstacle->obstacle()->id();
           return false;
         }
-      } else { // check the whether the right path is ok for lane borrow
+      } else {  // check the whether the right path is ok for lane borrow
         if (frenet_obstacle_sl.l_start > -right_width ||
             frenet_obstacle_sl.l_end < right_bounds_l) {
           continue;  // why
@@ -718,14 +720,14 @@ bool LaneBorrowDecider::ClearForLaneBorrow(const double ego_speed,
   return true;
 }
 
-bool LaneBorrowDecider::CheckIfLaneBorrowDrivingToBackDriving() {
+bool LaneBorrowDeciderV0::CheckIfLaneBorrowDrivingToBackDriving() {
   if (!IsSafeForBack()) {
     return false;
   }
   return true;
 }
 
-bool LaneBorrowDecider::IsSafeForBack() {
+bool LaneBorrowDeciderV0::IsSafeForBack() {
   auto current_reference_path = session_->environmental_model()
                                     .get_reference_path_manager()
                                     ->get_reference_path_by_current_lane();
@@ -802,7 +804,7 @@ bool LaneBorrowDecider::IsSafeForBack() {
   return true;
 }
 
-void LaneBorrowDecider::LogDebugInfo() {
+void LaneBorrowDeciderV0::LogDebugInfo() {
   // debug info
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()

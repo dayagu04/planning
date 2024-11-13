@@ -203,7 +203,10 @@
     "relative_v_bp":[-0.05, 0, 1, 2, 3, 4],
     "relative_v_decrease_extra_buffer":[0.0, 0.06, 0.12, 0.17, 0.2, 0.25],
     "truck_decrease_extra_buffer":0.1,
-    "care_exceed_distance_with_blocked_obstacle":2.5
+    "care_exceed_distance_with_blocked_obstacle":2.5,
+    "extra_front_lon_buffer2blockobstacle":1.0,
+    "extra_rear_lon_buffer2blockobstacle":4.0,
+    "extra_hard_buffer2blockobstacle":0.15
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
