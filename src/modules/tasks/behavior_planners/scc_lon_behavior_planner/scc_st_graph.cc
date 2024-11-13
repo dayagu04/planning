@@ -386,12 +386,13 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     //   following_distance_level = following_distance_level_to_big_vehicle;
     // }
 
-    lead_one_desired_distance =
-        CalcDesiredDistance(lead_one, v_ego, lc_request);
-    if (5 == following_distance_level_to_big_vehicle) {
-      lead_one_desired_distance = CalcDesiredDistanceToBigVehicle(
-          lead_one, v_ego, lc_request, following_distance_level_to_big_vehicle);
-    }
+    lead_one_desired_distance = CalcDesiredDistance(
+        lead_one, v_ego, lc_request, following_distance_level_to_big_vehicle);
+    // if (5 == following_distance_level_to_big_vehicle) {
+    //   lead_one_desired_distance = CalcDesiredDistanceToBigVehicle(
+    //       lead_one, v_ego, lc_request,
+    //       following_distance_level_to_big_vehicle);
+    // }
     JSON_DEBUG_VALUE("following_distance_level",
                      following_distance_level_to_big_vehicle);
     JSON_DEBUG_VALUE("desired_distance", lead_one_desired_distance);
@@ -1369,32 +1370,9 @@ double StGraphGenerator::ProcessObstacleAcc(const double a_lead) {
 
 double StGraphGenerator::CalcDesiredDistance(
     const planning::common::TrackedObjectInfo &lead_obstacle,
-    const double v_ego, const std::string &lc_request) {
-  LOG_DEBUG("-----CalcDesiredDistance \n");
-  double desired_distance = 50.0;  // default value
-
-  // 跟车距离两种方式：RSS和标定
-  double desired_distance_rss = GetRSSDistance(lead_obstacle.v_lead(), v_ego);
-  double desired_distance_calibrate = GetCalibratedDistance(
-      lead_obstacle.v_lead(), v_ego, lc_request,
-      lead_obstacle.is_accident_car(), lead_obstacle.is_temp_lead(),
-      lead_obstacle.is_lead());
-  JSON_DEBUG_VALUE("RealTime_desired_distance_rss", desired_distance_rss);
-  JSON_DEBUG_VALUE("RealTime_desired_distance_calibrate",
-                   desired_distance_calibrate);
-  if (config_.enable_rss_model && lc_request == "none") {
-    desired_distance = desired_distance_rss;
-  } else {
-    desired_distance = desired_distance_calibrate;
-  }
-  return desired_distance;
-}
-
-double StGraphGenerator::CalcDesiredDistanceToBigVehicle(
-    const planning::common::TrackedObjectInfo &lead_obstacle,
     const double v_ego, const std::string &lc_request,
     size_t following_distance_level) {
-  LOG_DEBUG("-----CalcDesiredDistanceToBigVehicle----- \n");
+  LOG_DEBUG("-----CalcDesiredDistance \n");
   double desired_distance = 50.0;  // default value
 
   // 跟车距离两种方式：RSS和标定
@@ -1439,44 +1417,22 @@ double StGraphGenerator::GetRSSDistance(const double obstacle_velocity,
 
 double StGraphGenerator::GetCalibratedDistance(
     const double v_lead, const double v_ego, const std::string &lc_request,
-    const bool is_accident_car, const bool is_temp_lead, const bool is_lead) {
-  LOG_DEBUG("-----calc_desired_distance \n");
-  // 受限感知性能，取非负
-  double v_lead_clip = std::max(v_lead, 0.0);
-  // 这里查表、魔数都要优化
-  double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
-  // if (lc_request != "none") {
-  //   t_gap = t_gap * (0.6 + v_ego * 0.01);
-  // }
-  // 同一个障碍物从temp_lead_one变成lead_one后，temp_lead的标志未清除，导致t_gap计算有问题，这里先加一个二者互斥的判断
-  if (is_temp_lead && !is_lead) {
-    t_gap = t_gap * 0.3;
-  }
-  // Brake hysteresis
-  double v_relative = std::min(std::max(v_ego - v_lead_clip, 0.0), 5.0);
-  double distance_hysteresis = v_relative * config_.ttc_brake_hysteresis;
-  // distance when at zero speed
-  double d_offset = config_.dis_zero_speed;
-  std::cout << "d_offset from config === : " << d_offset << std::endl;
-  if (is_accident_car) {
-    d_offset = config_.dis_zero_speed_accident;
-  }
-  LOG_DEBUG("distance_hysteresis : [%f] \n", distance_hysteresis);
-  LOG_DEBUG("ttc gap : [%f] \n", t_gap);
-  LOG_DEBUG("desired_distance : [%f] \n",
-            d_offset + v_lead_clip * t_gap + distance_hysteresis);
-  return d_offset + v_lead_clip * t_gap + distance_hysteresis;
-}
-
-double StGraphGenerator::GetCalibratedDistance(
-    const double v_lead, const double v_ego, const std::string &lc_request,
     size_t following_distance_level, const bool is_accident_car,
     const bool is_temp_lead, const bool is_lead) {
   LOG_DEBUG("-----calc_desired_distance \n");
   // 受限感知性能，取非负
   double v_lead_clip = std::max(v_lead, 0.0);
   // 这里查表、魔数都要优化
-  double t_gap = NORMAL_HEADWAY_TABLE[following_distance_level - 1];
+  size_t following_distance_level_clip;
+  if (following_distance_level < 1) {
+    following_distance_level_clip = 1;
+  } else if (following_distance_level > 5) {
+    following_distance_level_clip = 5;
+  } else {
+    following_distance_level_clip = following_distance_level;
+  }
+  double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V) +
+                 _HEADWAY_BP[following_distance_level_clip - 1];
   // if (lc_request != "none") {
   //   t_gap = t_gap * (0.6 + v_ego * 0.01);
   // }
@@ -3422,7 +3378,8 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
   const auto ego_lane_width = ego_lane->width();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  // const auto ego_rear_edge_to_rear_axle =
+  // vehicle_param.rear_edge_to_rear_axle;
   Point2D agent_current_xy(agent->x(), agent->y());
   Point2D agent_current_sl_to_ego_lane{0.0, 0.0};
   const auto status_agent = ego_lane->get_lane_frenet_coord()->XYPointToSLPoint(
@@ -3620,7 +3577,8 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       lane_manager->get_current_lane()->get_lane_frenet_coord();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  // const auto ego_rear_edge_to_rear_axle =
+  // vehicle_param.rear_edge_to_rear_axle;
   const auto ego_front_edge_to_rear_axle =
       vehicle_param.front_edge_to_rear_axle;
 

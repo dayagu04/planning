@@ -5,6 +5,7 @@
  *  @brief Construct obstacle S-T graph for generating S-bounds and performing
  *velocity planning
  **/
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -122,7 +123,8 @@ class StGraphGenerator {
   // compute desired distance
   double CalcDesiredDistance(
       const planning::common::TrackedObjectInfo &lead_obstacle,
-      const double v_ego, const std::string &lc_request);
+      const double v_ego, const std::string &lc_request,
+      size_t following_distance_level = 3);
   double CalcDesiredDistanceToBigVehicle(
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, const std::string &lc_request,
@@ -130,16 +132,11 @@ class StGraphGenerator {
   double GetRSSDistance(const double obstacle_velocity, double ego_velocity);
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string &lc_request,
+                               size_t following_distance_level = 1,
                                const bool is_accident_car = false,
                                const bool is_temp_lead = false,
                                const bool is_lead = false);
-  double GetCalibratedDistance(const double v_lead, const double v_ego,
-                               const std::string &lc_request,
-                               size_t following_distance_level,
-                               const bool is_accident_car = false,
-                               const bool is_temp_lead = false,
-                               const bool is_lead = false);
-
+                               
   // compute safe distance
   double CalcSafeDistance(const double obstacle_velocity, const double v_ego);
 
@@ -343,6 +340,7 @@ class StGraphGenerator {
   const std::vector<double> AGGRESSIVE_HEADWAY_TABLE{1.2, 1.4, 1.6, 1.8, 2.0};
   const std::vector<double> NORMAL_HEADWAY_TABLE{1.2, 1.5, 2.0, 2.5, 3.0};
   const std::vector<double> CONSERVATIVE_HEADWAY_TABLE{1.2, 1.8, 2.5, 3.0, 4.0};
+  const std::vector<double> _HEADWAY_BP{0.0, 0.15, 0.35, 0.5, 1.0};
   // linear slope
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
   const std::vector<double> _L_SLOPE_V{0.35, 0.08};
