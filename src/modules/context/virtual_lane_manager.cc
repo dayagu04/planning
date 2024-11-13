@@ -1385,6 +1385,16 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   } else {
     is_in_sdmaproad_ = true;
   }
+
+  if (current_segment->shape_points_size() > 0) {
+      const auto& temp_point_LLH = current_segment->shape_points(0);
+      std::cout << "lat:" << temp_point_LLH.lat() << 
+      ",lon:" << temp_point_LLH.lon() <<
+      ",height:" << temp_point_LLH.height() << std::endl;
+    JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lat());
+    JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lon());
+    JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.height());
+  }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
   std::cout << "forward_lane_num:" << current_segment->forward_lane_num() << std::endl;
   JSON_DEBUG_VALUE("forward_lane_num", current_segment->forward_lane_num());
