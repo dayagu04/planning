@@ -65,7 +65,9 @@ class EgoLaneTrackManger {
 
   void PreprocessOrdinarySplit(
     std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-    const std::vector<int>& order_ids);
+    const std::vector<int>& order_ids,
+    const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
+        virtual_id_mapped_lane);
 
   void PreprocessIntersectionSplit(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
@@ -156,6 +158,12 @@ class EgoLaneTrackManger {
 
   double ComputeAverageHeadingDiff(std::shared_ptr<VirtualLane> base_lane,
                                    const double ego_heading_angle);
+
+  void ComputeZeroRelativeIdOrderIdIndex(
+      std::shared_ptr<VirtualLane> last_track_ego_lane,
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids,
+      int zero_relative_id_order_id_index);
 
  private:
   planning::framework::Session *session_ = nullptr;
