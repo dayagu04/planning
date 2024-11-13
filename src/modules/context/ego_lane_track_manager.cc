@@ -75,7 +75,7 @@ void EgoLaneTrackManger::TrackEgoLane(
 
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   const double dis_to_split_threshold = 1000.0;
-  const double dis_to_last_split_threshold = 150.0;
+  // const double dis_to_last_split_threshold = 150.0;
   auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int zero_relative_id_nums = order_ids_of_same_zero_relative_id.size();
@@ -118,8 +118,7 @@ void EgoLaneTrackManger::TrackEgoLane(
 
           if (is_on_road_select_ramp_situation_ &&
               distance_to_first_road_split_ < dis_to_split_threshold &&
-              !is_leaving_ramp_ && lane_keep_status &&
-              sum_dis_to_last_split_point_ > dis_to_last_split_threshold) {
+              !is_leaving_ramp_ && lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
