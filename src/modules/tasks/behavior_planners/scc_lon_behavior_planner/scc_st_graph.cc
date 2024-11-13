@@ -63,7 +63,7 @@ constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
-constexpr double kLaneBorrowLimitedSpeed = 8.33;  // 30kph
+constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -223,6 +223,8 @@ void StGraphGenerator::Update(
                         leads_st_info);
   CalculateNarrowLimitSpeed(lon_behav_input_->lat_obs_info(), dynamic_world,
                             current_lane, leads_st_info);
+  CalculateLaneBorrowLimitSpeed(lon_behav_input_->lat_obs_info(), dynamic_world,
+                                leads_st_info);
 
   // 2.2 计算temp lead one, 选择性使用lead two
   std::vector<planning::common::RealTimeLonObstacleSTInfo> temp_leads_st_info;
@@ -2892,6 +2894,141 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
       v_target_ = std::min(v_target_, it->v_limit);
       JSON_DEBUG_VALUE("narrow_agent_id", it->id)
       JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
+    }
+  }
+}
+
+void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
+    const planning::common::LatObsInfo &lateral_obstacles,
+    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+    std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info) {
+  // get lane borrow agent
+  bool is_exist_lane_borrow_agent = false;
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto blocked_obs_id = lane_borrow_output.blocked_obs_id;
+
+  // judge leadone/leadtwo is lane borrow agent?
+  const auto lead_one_id = lateral_obstacles.lead_one().track_id();
+  const auto lead_two_id = lateral_obstacles.lead_two().track_id();
+  auto lead_one_iter =
+      std::find(blocked_obs_id.begin(), blocked_obs_id.end(), lead_one_id);
+  if (lead_one_iter != blocked_obs_id.end()) {
+    is_exist_lane_borrow_agent = true;
+  }
+  auto lead_two_iter =
+      std::find(blocked_obs_id.begin(), blocked_obs_id.end(), lead_one_id);
+  if (lead_two_iter != blocked_obs_id.end()) {
+    is_exist_lane_borrow_agent = true;
+  }
+
+  // calculate lane borrow limited speed
+  if (!is_exist_lane_borrow_agent) {
+    return;
+  }
+
+  const auto &agent_manager = dynamic_world->agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+  const auto* lead_one_agent = agent_manager->GetAgent(lead_one_id);
+  const auto* lead_two_agent = agent_manager->GetAgent(lead_two_id);
+  std::vector<const agent::Agent*> lead_agent;
+  if (lead_one_agent != nullptr) {
+    lead_agent.emplace_back(lead_one_agent);
+  }
+  if (lead_two_agent != nullptr) {
+    lead_agent.emplace_back(lead_two_agent);
+  }
+
+  std::vector<NarrowLead> lane_borrow_agent;
+  if (lat_path_coord_ == nullptr) {
+    return;
+  }
+
+  for (auto agent : lead_agent) {
+    double min_s_by_lat_path = std::numeric_limits<double>::max();
+    double max_s_by_lat_path = std::numeric_limits<double>::lowest();
+    double min_l_by_lat_path = std::numeric_limits<double>::max();
+    double max_l_by_lat_path = std::numeric_limits<double>::lowest();
+    CalculateAgentSLBoundary(lat_path_coord_, *agent,
+                             &min_s_by_lat_path, &max_s_by_lat_path,
+                             &min_l_by_lat_path, &max_l_by_lat_path);
+    double min_lat_l_by_lat_path = 0.0;
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    lat_path_coord_->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l);
+    if (agent_l >= 0) {
+      min_lat_l_by_lat_path =
+          (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    } else {
+      min_lat_l_by_lat_path =
+          (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
+    }
+
+    // lateral collision check
+    double agent_half_length = 0.5 * agent->length();
+    double start_s = agent_s - agent_half_length;
+    double end_s = start_s + kHalfEgoLength * 2 + 0.5 * agent->length();
+    bool is_collision =
+        LateralCollisionCheck(start_s, end_s, min_lat_l_by_lat_path);
+
+    double v_ego = lon_behav_input_->ego_info().ego_v();
+    double s_target = GetCalibratedDistance(
+        agent->speed(), v_ego, lon_behav_input_->lat_output().lc_request(),
+        false, false, false);
+    double s_safe = CalcSafeDistance(agent->speed(), v_ego);
+    double v_target = CalcDesiredVelocity(start_s, s_target, agent->speed());
+    std::array<double, 2> xp2{kStaticAgentPosThr, 1.8};
+    std::array<double, 2> fp2{v_target, v_ego};
+    double v_limit = interp(fabs(min_lat_l_by_lat_path), xp2, fp2);
+    v_limit = std::max(v_limit, kLaneBorrowLimitedSpeed);
+
+    NarrowLead lane_borrow_lead;
+    lane_borrow_lead.id = agent->agent_id();
+    lane_borrow_lead.desire_distance = s_target;
+    lane_borrow_lead.min_s = start_s;
+    lane_borrow_lead.safe_distance = s_safe;
+    lane_borrow_lead.v_limit = v_limit;
+    lane_borrow_lead.is_collison = is_collision;
+
+    lane_borrow_agent.emplace_back(lane_borrow_lead);
+
+    // sort
+    auto comp = [](const NarrowLead &a, const NarrowLead &b) {
+      return a.min_s < b.min_s;
+    };
+    std::sort(lane_borrow_agent.begin(), lane_borrow_agent.end(), comp);
+  }
+
+  if (lane_borrow_agent.empty()) {
+    return;
+  }
+
+  auto it = lane_borrow_agent.begin();
+  if (it != lane_borrow_agent.end()) {
+    if (it->is_collison) {
+      // if have collison, update lead one st
+      common::RealTimeLonObstacleSTInfo lead_one_st_info;
+      lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
+      lead_one_st_info.set_id(it->id);
+      lead_one_st_info.set_a_lead(0.0);
+      lead_one_st_info.set_v_lead(0.0);
+      lead_one_st_info.set_s_lead(it->min_s);
+      lead_one_st_info.set_desired_distance(it->desire_distance);
+      lead_one_st_info.set_desired_velocity(it->v_limit);
+      lead_one_st_info.set_safe_distance(it->safe_distance);
+      lead_one_st_info.set_start_time(0.0);  // TBD:使用可配置参数
+      lead_one_st_info.set_end_time(5.0);    // TBD:使用可配置参数
+      lead_one_st_info.set_start_s(it->min_s);
+      leads_st_info.emplace_back(lead_one_st_info);
+      v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("lane_borrow_agent_id", it->id)
+      JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", v_target_)
+    } else {
+      v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("lane_borrow_agent_id", it->id)
+      JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", v_target_)
     }
   }
 }
