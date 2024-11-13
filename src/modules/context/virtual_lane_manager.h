@@ -209,6 +209,8 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
+  const int get_lc_nums_for_split() const { return lc_nums_for_split_; }
+
   const bool is_on_highway() const { return is_on_highway_; }
 
   const double sum_dis_to_last_merge_point() const {
@@ -371,6 +373,7 @@ class VirtualLaneManager {
   int lane_num_except_emergency_ = 0;
   int split_seg_forward_lane_nums_ = 0;
   int split_next_seg_forward_lane_nums_ = 0;
+  int lc_nums_for_split_ = 0;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;

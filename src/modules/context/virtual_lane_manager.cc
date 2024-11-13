@@ -2197,6 +2197,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_on_highway_ = false;
   split_seg_forward_lane_nums_ = 0;
   split_next_seg_forward_lane_nums_ = 0;
+  lc_nums_for_split_ = 0;
 }
 
 SplitSegInfo VirtualLaneManager::MakesureSplitDirection(
@@ -2417,16 +2418,15 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
     is_nearing_split = true;
   }
   //(5)、判断是否需要生成split的变道任务
-  int lc_nums = 0;
   if (is_nearing_split) {
     //后面的车道数比当前车道数少一条的sceneray，意味着可能有一条车道从当前分流出去
     if ((split_seg_forward_lane_nums_ - split_next_seg_forward_lane_nums_) >= 0) {
       if (first_split_direction_ == RAMP_ON_LEFT &&
           is_ego_on_rightest_lane) {
-        lc_nums = -1;
+        lc_nums_for_split_ = -1;
       } else if (first_split_direction_ == RAMP_ON_RIGHT &&
           is_ego_on_leftest_lane) {
-        lc_nums = 1;
+        lc_nums_for_split_ = 1;
       }
     }
   }
@@ -2466,7 +2466,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       sum_dis_to_last_split_point_on_ramp_;
   general_task_map_info.split_seg_forward_lane_nums = split_seg_forward_lane_nums_;
   general_task_map_info.split_next_seg_forward_lane_nums = split_next_seg_forward_lane_nums_;
-  general_task_map_info.lc_nums_for_split = lc_nums;
+  general_task_map_info.lc_nums_for_split = lc_nums_for_split_;
 
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {
