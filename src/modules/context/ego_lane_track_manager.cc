@@ -153,8 +153,9 @@ void EgoLaneTrackManger::TrackEgoLane(
             PreprocessOrdinarySplit(relative_id_lanes,
                                     order_ids_of_same_zero_relative_id,
                                     virtual_id_mapped_lane);
-            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
-                      is_exist_split_on_expressway_);
+            LOG_DEBUG(
+                "EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
+                is_exist_split_on_expressway_);
             if (is_exist_split_on_expressway_) {
               return;
             }
@@ -817,10 +818,10 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("PreprocessRoadSplit::last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 && 
+      if (order_ids.size() == 2 &&
           last_zero_relative_id_nums_ == order_ids.size() &&
           zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ = 
+        last_track_ego_lane_ =
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         for (auto& lane : relative_id_lanes) {
           int lane_order_id = lane->get_order_id();
@@ -831,15 +832,18 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
         is_exist_ramp_on_road_ = true;
         return;
       } else {
-        ComputeZeroRelativeIdOrderIdIndex(
-          last_track_ego_lane_, relative_id_lanes, order_ids, zero_relative_id_order_id_index);
+        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                          relative_id_lanes, order_ids,
+                                          zero_relative_id_order_id_index);
 
         if (enable_using_last_frame_track_ego_lane) {
           if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() > order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ = 
+              relative_id_lanes.size() >
+                  order_ids[zero_relative_id_order_id_index]) {
+            last_track_ego_lane_ =
                 relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
+            last_zero_relative_id_order_id_index_ =
+                zero_relative_id_order_id_index;
             for (auto& lane : relative_id_lanes) {
               int lane_order_id = lane->get_order_id();
               int lane_relative_id =
@@ -851,7 +855,7 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
           } else {
             return;
           }
-        }      
+        }
       }
     }
   }
@@ -898,10 +902,10 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 && 
+      if (order_ids.size() == 2 &&
           last_zero_relative_id_nums_ == order_ids.size() &&
           zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ = 
+        last_track_ego_lane_ =
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         for (auto& lane : relative_id_lanes) {
           int lane_order_id = lane->get_order_id();
@@ -912,15 +916,18 @@ void EgoLaneTrackManger::PreprocessRampSplit(
         is_exist_split_on_ramp_ = true;
         return;
       } else {
-        ComputeZeroRelativeIdOrderIdIndex(
-          last_track_ego_lane_, relative_id_lanes, order_ids, zero_relative_id_order_id_index);
+        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                          relative_id_lanes, order_ids,
+                                          zero_relative_id_order_id_index);
 
         if (enable_using_last_frame_track_ego_lane) {
           if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() > order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ = 
+              relative_id_lanes.size() >
+                  order_ids[zero_relative_id_order_id_index]) {
+            last_track_ego_lane_ =
                 relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
+            last_zero_relative_id_order_id_index_ =
+                zero_relative_id_order_id_index;
             for (auto& lane : relative_id_lanes) {
               int lane_order_id = lane->get_order_id();
               int lane_relative_id =
@@ -1031,7 +1038,6 @@ void EgoLaneTrackManger::PreprocessRampSplit(
             if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
                                                   &right_ego_l)) {
               continue;
-              ;
             }
           } else {
             continue;
@@ -1080,10 +1086,10 @@ void EgoLaneTrackManger::PreprocessRampSplit(
 }
 
 void EgoLaneTrackManger::PreprocessOrdinarySplit(
-    std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+    std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
-    virtual_id_mapped_lane) {
+        virtual_id_mapped_lane) {
   int origin_order_id = 0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -1112,10 +1118,10 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
   if (last_zero_relative_id_nums_ > 1) {
     LOG_DEBUG("last_zero_relative_id_nums_ > 1");
     if (last_zero_relative_id_order_id_index_ != -1) {
-      if (order_ids.size() == 2 && 
+      if (order_ids.size() == 2 &&
           last_zero_relative_id_nums_ == order_ids.size() &&
           zero_relative_id_order_id_index < order_ids.size()) {
-        last_track_ego_lane_ = 
+        last_track_ego_lane_ =
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         for (auto& lane : relative_id_lanes) {
           int lane_order_id = lane->get_order_id();
@@ -1126,15 +1132,18 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
         is_exist_split_on_expressway_ = true;
         return;
       } else {
-        ComputeZeroRelativeIdOrderIdIndex(
-          last_track_ego_lane_, relative_id_lanes, order_ids, zero_relative_id_order_id_index);
+        ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
+                                          relative_id_lanes, order_ids,
+                                          zero_relative_id_order_id_index);
 
         if (enable_using_last_frame_track_ego_lane) {
           if (zero_relative_id_order_id_index < order_ids.size() &&
-              relative_id_lanes.size() > order_ids[zero_relative_id_order_id_index]) {
-            last_track_ego_lane_ = 
+              relative_id_lanes.size() >
+                  order_ids[zero_relative_id_order_id_index]) {
+            last_track_ego_lane_ =
                 relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-            last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
+            last_zero_relative_id_order_id_index_ =
+                zero_relative_id_order_id_index;
             for (auto& lane : relative_id_lanes) {
               int lane_order_id = lane->get_order_id();
               int lane_relative_id =
@@ -1151,12 +1160,14 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
     }
   }
 
-  ComputeZeroRelativeIdOrderIdIndex(
-    last_track_virtual_id_lane, relative_id_lanes, order_ids, zero_relative_id_order_id_index);
+  ComputeZeroRelativeIdOrderIdIndex(last_track_virtual_id_lane,
+                                    relative_id_lanes, order_ids,
+                                    zero_relative_id_order_id_index);
   bool enable_using_last_track_virtual_id_lane = true;
   if (zero_relative_id_order_id_index < order_ids.size() &&
       relative_id_lanes.size() > order_ids[zero_relative_id_order_id_index]) {
-    std::shared_ptr<VirtualLane> first_check_last_lane = relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+    std::shared_ptr<VirtualLane> first_check_last_lane =
+        relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
     bool left_boundary_exist_virtual_type = false;
     double left_lane_line_length = 0.0;
     int left_current_segment_count = 0;
@@ -1167,11 +1178,11 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
         MakeBoundaryPath(left_lane_boundarys);
     if (left_base_boundary_path != nullptr) {
       if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
-                                          &left_ego_l)) {
+                                           &left_ego_l)) {
         enable_using_last_track_virtual_id_lane = false;
       }
     } else {
-      enable_using_last_track_virtual_id_lane = false;;
+      enable_using_last_track_virtual_id_lane = false;
     }
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
       left_lane_line_length += left_lane_boundarys.type_segments[i].length;
@@ -1181,7 +1192,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
       }
     }
     for (int i = left_current_segment_count;
-        i < left_lane_boundarys.type_segments_size; i++) {
+         i < left_lane_boundarys.type_segments_size; i++) {
       if (left_lane_boundarys.type_segments[i].type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         left_boundary_exist_virtual_type = true;
@@ -1196,7 +1207,8 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
     double right_lane_line_length = 0.0;
     int right_current_segment_count = 0;
     double right_ego_s = 0.0, right_ego_l = 0.0;
-    auto right_lane_boundarys = first_check_last_lane->get_right_lane_boundary();
+    auto right_lane_boundarys =
+        first_check_last_lane->get_right_lane_boundary();
     std::shared_ptr<planning_math::KDPath> right_base_boundary_path =
         MakeBoundaryPath(right_lane_boundarys);
     if (right_base_boundary_path != nullptr) {
@@ -1215,7 +1227,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
       }
     }
     for (int i = right_current_segment_count;
-        i < right_lane_boundarys.type_segments_size; i++) {
+         i < right_lane_boundarys.type_segments_size; i++) {
       if (right_lane_boundarys.type_segments[i].type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         right_boundary_exist_virtual_type = true;
@@ -1228,19 +1240,23 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
     if (left_boundary_exist_virtual_type || right_boundary_exist_virtual_type) {
       enable_using_last_track_virtual_id_lane = false;
     } else {
-      last_track_ego_lane_ = 
+      last_track_ego_lane_ =
           relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
       last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
       is_exist_split_on_expressway_ = true;
-      relative_id_lanes[order_ids[zero_relative_id_order_id_index]]->set_relative_id(0);
-      origin_order_id = relative_id_lanes[order_ids[zero_relative_id_order_id_index]]->get_order_id();
+      relative_id_lanes[order_ids[zero_relative_id_order_id_index]]
+          ->set_relative_id(0);
+      origin_order_id =
+          relative_id_lanes[order_ids[zero_relative_id_order_id_index]]
+              ->get_order_id();
     }
   }
-    
+
   if (!enable_using_last_track_virtual_id_lane) {
     for (size_t i = 0; i < order_ids.size(); i++) {
       if (relative_id_lanes.size() > order_ids[i]) {
-        std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
+        std::shared_ptr<VirtualLane> base_lane =
+            relative_id_lanes[order_ids[i]];
         if (base_lane == nullptr) {
           continue;
         }
@@ -1254,7 +1270,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
             MakeBoundaryPath(left_lane_boundarys);
         if (left_base_boundary_path != nullptr) {
           if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
-                                              &left_ego_l)) {
+                                               &left_ego_l)) {
             continue;
           }
         } else {
@@ -1268,7 +1284,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
           }
         }
         for (int i = left_current_segment_count;
-            i < left_lane_boundarys.type_segments_size; i++) {
+             i < left_lane_boundarys.type_segments_size; i++) {
           if (left_lane_boundarys.type_segments[i].type ==
               iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
             left_boundary_exist_virtual_type = true;
@@ -1289,20 +1305,21 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
         if (right_base_boundary_path != nullptr) {
           if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
                                                 &right_ego_l)) {
-            continue;;
+            continue;
           }
         } else {
           continue;
         }
         for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-          right_lane_line_length += right_lane_boundarys.type_segments[i].length;
+          right_lane_line_length +=
+              right_lane_boundarys.type_segments[i].length;
           if (right_lane_line_length > right_ego_s) {
             right_current_segment_count = i;
             break;
           }
         }
         for (int i = right_current_segment_count;
-            i < right_lane_boundarys.type_segments_size; i++) {
+             i < right_lane_boundarys.type_segments_size; i++) {
           if (right_lane_boundarys.type_segments[i].type ==
               iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
             right_boundary_exist_virtual_type = true;
@@ -1312,15 +1329,16 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
           }
         }
 
-        if (left_boundary_exist_virtual_type || right_boundary_exist_virtual_type) {
+        if (left_boundary_exist_virtual_type ||
+            right_boundary_exist_virtual_type) {
           continue;
         } else {
           is_exist_split_on_expressway_ = true;
           relative_id_lanes[order_ids[i]]->set_relative_id(0);
           origin_order_id = relative_id_lanes[order_ids[i]]->get_order_id();
           last_zero_relative_id_order_id_index_ = i;
-          last_track_ego_lane_ = 
-              relative_id_lanes[order_ids[last_zero_relative_id_order_id_index_]];
+          last_track_ego_lane_ = relative_id_lanes
+              [order_ids[last_zero_relative_id_order_id_index_]];
           break;
         }
       }
@@ -1357,10 +1375,10 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   // 根据感知所检出的分流场景（一分二或者一分多） 选择符合预期分叉
   // 优先判断上一帧选择的车道结果是否为直行车道
   if (last_zero_relative_id_order_id_index_ != -1) {
-    if (order_ids.size() == 2 && 
+    if (order_ids.size() == 2 &&
         last_zero_relative_id_nums_ == order_ids.size() &&
         zero_relative_id_order_id_index < order_ids.size()) {
-      last_track_ego_lane_ = 
+      last_track_ego_lane_ =
           relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
       for (auto& lane : relative_id_lanes) {
         int lane_order_id = lane->get_order_id();
@@ -1371,12 +1389,14 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
       is_exist_split_on_intersection_ = true;
       return;
     } else {
-      ComputeZeroRelativeIdOrderIdIndex(
-        last_track_ego_lane_, relative_id_lanes, order_ids, zero_relative_id_order_id_index);
+      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
+                                        order_ids,
+                                        zero_relative_id_order_id_index);
 
       if (zero_relative_id_order_id_index < order_ids.size() &&
-          relative_id_lanes.size() > order_ids[zero_relative_id_order_id_index]) {
-        std::shared_ptr<VirtualLane> base_lane = 
+          relative_id_lanes.size() >
+              order_ids[zero_relative_id_order_id_index]) {
+        std::shared_ptr<VirtualLane> base_lane =
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
         std::shared_ptr<KDPath> base_lane_frenet_crd =
@@ -1426,7 +1446,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
       }
 
       if (enable_using_last_frame_track_ego_lane) {
-        last_track_ego_lane_ = 
+        last_track_ego_lane_ =
             relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
         last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
         for (auto& lane : relative_id_lanes) {
@@ -2084,8 +2104,7 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
 
   Point2D ego_cart_frenet_point;
   double ego_s = 0.0;
-  if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
-                                    ego_cart_frenet_point)) {
+  if (!base_lane_frenet_crd->XYToSL(ego_cart_point, ego_cart_frenet_point)) {
     return segment;
   } else {
     ego_s = ego_cart_frenet_point.x;
@@ -2096,8 +2115,7 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
   for (int i = 0; i < lane_marks.size(); i++) {
     lane_line_length = lane_marks[i].end;
     if ((lane_line_length > ego_s + kConsiderLaneStraightFrontEgo) &&
-        (lane_marks[i].begin <=
-          ego_s + kConsiderLaneStraightFrontEgo)) {
+        (lane_marks[i].begin <= ego_s + kConsiderLaneStraightFrontEgo)) {
       segment = i;
       break;
     }
@@ -2107,9 +2125,8 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
 
 void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
     std::shared_ptr<VirtualLane> last_track_ego_lane,
-    std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-    const std::vector<int> &order_ids,
-    int zero_relative_id_order_id_index) {
+    std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const std::vector<int>& order_ids, int zero_relative_id_order_id_index) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& plannig_init_point = ego_state->planning_init_point();
@@ -2129,18 +2146,19 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
     return;
   } else {
     if (!last_track_ego_lane_frenet_coord->XYToSL(ego_cart_point,
-                                                ego_cart_target_frenet)) {
+                                                  ego_cart_target_frenet)) {
       return;
     } else {
       target_ego_s = ego_cart_target_frenet.x;
       target_ego_l = ego_cart_target_frenet.y;
-    }    
+    }
   }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
-      std::shared_ptr<VirtualLane> relative_id_lane = relative_id_lanes[order_ids[i]];
+      std::shared_ptr<VirtualLane> relative_id_lane =
+          relative_id_lanes[order_ids[i]];
       const auto& lane_points = relative_id_lane->lane_points();
 
       if (lane_points.size() <= 2) {
@@ -2150,8 +2168,7 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
       double total_lateral_offset = 0.0;
       double cumu_lat_dis_cost = 0.0;
       int select_lane_point_interval = 1;
-      for (int i = 0; i < lane_points.size();
-          i += select_lane_point_interval) {
+      for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
         iflyauto::ReferencePoint point = lane_points[i];
         if (std::isnan(point.local_point.x) ||
             std::isnan(point.local_point.y)) {
@@ -2162,7 +2179,8 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
         double s = 0.0;
         Point2D cur_point_frenet;
         Point2D cur_point(point.local_point.x, point.local_point.y);
-        if (!last_track_ego_lane_frenet_coord->XYToSL(cur_point, cur_point_frenet)) {
+        if (!last_track_ego_lane_frenet_coord->XYToSL(cur_point,
+                                                      cur_point_frenet)) {
           lateral_offset = 10.0;
         } else {
           s = cur_point_frenet.x;
