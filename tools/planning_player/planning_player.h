@@ -41,6 +41,7 @@ class PlanningPlayer {
     double heading = 0.0;
     double static_time = 0.0;
     bool static_flag = false;
+    double s_proj = 0.0;
 
     void Reset() {
       vel = 0.0;
@@ -72,12 +73,7 @@ class PlanningPlayer {
   void PerfectControlEgoPose(
       uint64_t delta_t,
       struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
-  void PerfectControlAPA(
-      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
-      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
-  void PerfectControlAPANewLocalization(
-      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
-      struct_msgs::IFLYLocalization::Ptr loc_msg);
+
   void UpdateVehicleService(
       uint64_t delta_t,
       struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
@@ -85,6 +81,20 @@ class PlanningPlayer {
   void getCommitHash(const std::string &directory, const int num,
                      std::string &outVersion);
   void VersinCheck(const std::string &bag_path);
+  // apa planning player module
+  void UpdateVehicleServiceAPA(
+      uint64_t delta_t,
+      struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
+
+  void UpdateVehicleServiceDataAPA();
+
+  void PerfectControlAPA(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
+
+  void PerfectControlAPANewLocalization(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs::IFLYLocalization::Ptr loc_msg);
 
  private:
   DynamicState state_;
@@ -134,6 +144,17 @@ class PlanningPlayer {
   std::string bag_planning_version_;
   std::string bag_interface_version_;
   std::string car_;
+  // apa planning player module
+  bool early_stop_ = false;
+  ros::Time early_stop_time_ = ros::TIME_MIN;
+  bool update_spline_ = false;
+  std::vector<double> path_s_vec_;
+  std::vector<double> path_x_vec_;
+  std::vector<double> path_y_vec_;
+  std::vector<double> path_heading_vec_;
+  pnc::mathlib::spline x_s_spline_;
+  pnc::mathlib::spline y_s_spline_;
+  pnc::mathlib::spline heading_s_spline_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);
@@ -295,7 +316,11 @@ void PlanningPlayer::write_ros_msg(
     const std::string &topic_name, rosbag::Bag &bag) {
   for (const auto &i : write_msg) {
     auto msg = boost::any_cast<T>(i.second);
-    bag.write(topic_name, i.first, msg);
+    if (early_stop_time_ == ros::TIME_MIN || i.first <= early_stop_time_) {
+      bag.write(topic_name, i.first, msg);
+    } else {
+      continue;
+    }
   }
 }
 
