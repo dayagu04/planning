@@ -24,6 +24,7 @@
 #include "general_planning_context.h"
 #include "history_obstacle_manager.h"
 #include "ifly_localization_c.h"
+#include "ifly_time.h"
 #include "lateral_obstacle.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
@@ -154,7 +155,7 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("EnvironmentalModelManager run\n");
 
   auto current_time = IflyTime::Now_ms();
-  auto current_time_s = current_time / 1e3;
+  auto current_time_s = IflyTime::Now_s();
 
   if (!session_->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
