@@ -8,6 +8,7 @@
 #include "agent/agent.h"
 #include "common_c.h"
 #include "environmental_model.h"
+#include "ifly_time.h"
 #include "session.h"
 
 namespace planning {
@@ -33,7 +34,7 @@ const std::unordered_set<int32_t>& AgentManager::GetAgentSet() const {
   return current_agents_ids_;
 }
 
-void AgentManager::Update() {
+void AgentManager::Update(const double start_timestamp_s) {
   current_agents_.clear();
   current_agents_ids_.clear();
   const auto& ego_state =
@@ -42,6 +43,20 @@ void AgentManager::Update() {
   const auto& prediction_objects =
       session_->environmental_model().get_prediction_info();
   const double HALF_FOV = 25.0;
+
+  constexpr double kTooOldThreshold = 2.0;
+  for (auto iter = historical_agents_.begin();
+       iter != historical_agents_.end();) {
+    bool is_too_old = (start_timestamp_s - iter->second.back()->timestamp_s()) >
+                      kTooOldThreshold;
+    bool is_del = is_too_old;
+    if (is_del) {
+      historical_agents_.erase(iter++);
+    } else {
+      ++iter;
+    }
+  }
+
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
@@ -112,32 +127,32 @@ void AgentManager::Update() {
   DeleteOlderAgent();
 }
 
-void AgentManager::Update(
-    const double start_timestamp_s,
-    const std::unordered_map<int32_t, Agent>& agent_table) {
-  current_agents_.clear();
-  current_agents_ids_.clear();
-  constexpr double kTooOldThreshold = 2.0;
-  for (auto iter = historical_agents_.begin();
-       iter != historical_agents_.end();) {
-    bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s() >
-                      kTooOldThreshold;
-    bool is_del = is_too_old;
-    if (is_del) {
-      historical_agents_.erase(iter++);
-    } else {
-      ++iter;
-    }
-  }
+// void AgentManager::Update(
+//     const double start_timestamp_s,
+//     const std::unordered_map<int32_t, Agent>& agent_table) {
+//   current_agents_.clear();
+//   current_agents_ids_.clear();
+//   constexpr double kTooOldThreshold = 2.0;
+//   for (auto iter = historical_agents_.begin();
+//        iter != historical_agents_.end();) {
+//     bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s() >
+//                       kTooOldThreshold;
+//     bool is_del = is_too_old;
+//     if (is_del) {
+//       historical_agents_.erase(iter++);
+//     } else {
+//       ++iter;
+//     }
+//   }
 
-  for (const auto& data : agent_table) {
-    auto agent = std::make_unique<Agent>(data.second);
-    current_agents_.emplace_back(agent.get());
-    current_agents_ids_.insert(agent->agent_id());
-    historical_agents_[agent->agent_id()].emplace_back(std::move(agent));
-  }
-  DeleteOlderAgent();
-}
+//   for (const auto& data : agent_table) {
+//     auto agent = std::make_unique<Agent>(data.second);
+//     current_agents_.emplace_back(agent.get());
+//     current_agents_ids_.insert(agent->agent_id());
+//     historical_agents_[agent->agent_id()].emplace_back(std::move(agent));
+//   }
+//   DeleteOlderAgent();
+// }
 
 void AgentManager::Append(
     const std::unordered_map<int32_t, Agent>& agent_table) {
