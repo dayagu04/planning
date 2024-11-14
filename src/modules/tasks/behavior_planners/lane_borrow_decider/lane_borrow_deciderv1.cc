@@ -35,6 +35,7 @@ constexpr double kForwardOtherObsDistance = 20.0;
 constexpr double kObsSpeedBuffer = 1.0;
 constexpr double kObsLatExpendBuffer = 0.4;
 constexpr double kObsLonDisBuffer = 2.0;
+constexpr double kObsFilterVel = 2.5;
 };  // namespace
 
 namespace planning {
@@ -599,6 +600,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   for (const auto& obstacle : obstacles) {
+    const auto& id = obstacle->obstacle()->id();
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
@@ -608,7 +610,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {
-      if (!obstacle->obstacle()->is_static()) {
+      if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
       if (frenet_obstacle_sl.s_start > obs_end_s_) {
