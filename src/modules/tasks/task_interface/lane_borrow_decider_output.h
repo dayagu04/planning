@@ -3,7 +3,7 @@
 enum LaneBorrowStatus {
   kNoLaneBorrow = 0,
   kLaneBorrowDriving,
-  kLaneBorrowBackDriving,
+  kLaneBorrowBackOriginLane,
 };
 
 enum LaneBorrowFailedReason {

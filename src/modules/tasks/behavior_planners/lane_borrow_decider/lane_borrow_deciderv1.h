@@ -34,10 +34,16 @@ class LaneBorrowDecider : public Task {
   void LogDebugInfo();
 
   bool CheckIfNoLaneBorrowToLaneBorrowDriving();
+  bool CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane();
+  bool CheckIfLaneBorrowBackOriginLaneToNoBorrow();
   void UpdateJunctionInfo();
 
+  void ClearLaneBorrowStatus();
+  bool CheckLaneBorrowCondition();
+  bool IsSafeForBackOriginLane();
   bool SelectStaticBlockingArea();
   bool UpdateLaneBorrowDirection();
+  bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
   bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
 
