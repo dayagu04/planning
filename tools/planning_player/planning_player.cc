@@ -555,8 +555,6 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
           if (early_stop_time_ == ros::TIME_MIN ||
               i.first <= early_stop_time_) {
             bag.write(TOPIC_PLANNING_PLAN, i.first, i.second);
-          } else {
-            continue;
           }
         }
       }
@@ -568,8 +566,6 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
           if (early_stop_time_ == ros::TIME_MIN ||
               i.first <= early_stop_time_) {
             bag.write(TOPIC_PLANNING_HMI, i.first, i.second);
-          } else {
-            continue;
           }
         }
       }
@@ -581,8 +577,6 @@ void PlanningPlayer::StoreRosBag(const std::string& bag_path) {
           if (early_stop_time_ == ros::TIME_MIN ||
               i.first <= early_stop_time_) {
             bag.write(TOPIC_PLANNING_DEBUG_INFO, i.first, i.second);
-          } else {
-            continue;
           }
         }
       }
