@@ -78,11 +78,6 @@ struct Vector2f {
   float y;
 };
 
-enum Status {
-  OK,
-  FAILURE,
-};
-
 struct Interval {
   double begin;
   double end;
