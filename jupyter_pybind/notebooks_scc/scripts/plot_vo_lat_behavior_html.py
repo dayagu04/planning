@@ -21,7 +21,15 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/data_cold/abu_zone/cailiu2/lane_borrow_test3.bag.1731565949.close-loop.plan"
+# bag_path = "/root/clzhao/lane_borrow_data/data_11-16-11.bag.1731912596.close-loop.plan"
+# bag_path = "/root/clzhao/lane_borrow_data/2024-11-16-11-08-15.bag_2024-11-18-09-43-39.1732007043.open-loop.plan"
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732007748.open-loop.plan'# jump
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732002874.close-loop.plan'
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732017055.open-loop.plan'
+# bag_path ='/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732017450.close-loop.plan'
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732018741.close-loop.plan'# jump one
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732067308.close-loop.plan'
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732067517.open-loop.plan'
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -

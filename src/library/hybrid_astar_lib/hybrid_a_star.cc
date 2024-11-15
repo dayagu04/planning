@@ -88,15 +88,12 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
   return true;
 }
 
-bool HybridAStar::PlanByRSPathLink(HybridAStarResult* result,
-                                   const Pose2D& start, const Pose2D& end,
-                                   const double lon_min_sampling_length,
-                                   const MapBound& XYbounds,
-                                   const ParkObstacleList& obstacles,
-                                   const AstarRequest& request,
-                                   const ObstacleClearZone *clear_zone,
-                                   EulerDistanceTransform* edt,
-                                   ParkReferenceLine* ref_line) {
+bool HybridAStar::PlanByRSPathLink(
+    HybridAStarResult* result, const Pose2D& start, const Pose2D& end,
+    const double lon_min_sampling_length, const MapBound& XYbounds,
+    const ParkObstacleList& obstacles, const AstarRequest& request,
+    const ObstacleClearZone* clear_zone, EulerDistanceTransform* edt,
+    ParkReferenceLine* ref_line) {
   double astar_start_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar begin, generate path by rs.";
 
@@ -4194,8 +4191,7 @@ bool HybridAStar::SamplingByCubicPolyForParallelSlot(
                                                                sampling_end);
 
       cubic_path_interface_.GeneratePolynomialPath(cubic_path, coefficients_vec,
-                                                   0.05, start,
-                                                   sampling_end);
+                                                   0.05, start, sampling_end);
 
       if (cubic_path.empty()) {
         ILOG_INFO << "cubic_path empty";
@@ -4223,7 +4219,7 @@ bool HybridAStar::SamplingByCubicPolyForParallelSlot(
         x_diff = cubic_path[i].x - last_x;
         y_diff = cubic_path[i].y - last_y;
         accumulated_s += std::sqrt(x_diff * x_diff + y_diff * y_diff);
-        cubic_path[i].accumulated_s =  accumulated_s;
+        cubic_path[i].accumulated_s = accumulated_s;
 
         last_x = cubic_path[i].x;
         last_y = cubic_path[i].y;
@@ -4257,7 +4253,6 @@ bool HybridAStar::SamplingByCubicPolyForParallelSlot(
 
       ILOG_INFO << "cubic poly point size= " << cubic_path.size()
                 << ", path len= " << cubic_path.back().accumulated_s;
-
     }
 
     if (std::fabs(best_path_cost.tail_heading) < DEG2RAD(1.5) &&
@@ -4308,7 +4303,6 @@ bool HybridAStar::SamplingByCubicPolyForParallelSlot(
   double astar_end_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar total time (ms): "
             << astar_end_time - astar_start_time;
-
 
   return true;
 }

@@ -170,8 +170,8 @@ class CollisionDetector {
     return obs_pt_global_vec_;
   }
 
-  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>> &
-  GetObstaclesMap() const {
+  const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>
+      &GetObstaclesMap() const {
     return obs_pt_global_map_;
   }
 

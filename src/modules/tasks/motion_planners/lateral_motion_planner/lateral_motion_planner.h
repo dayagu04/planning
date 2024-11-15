@@ -29,8 +29,8 @@ namespace planning {
 
 class LateralMotionPlanner : public Task {
  public:
-  LateralMotionPlanner(const EgoPlanningConfigBuilder *config_builder,
-                       framework::Session *session);
+  LateralMotionPlanner(const EgoPlanningConfigBuilder* config_builder,
+                       framework::Session* session);
 
   void Init();
   bool Execute() override;

@@ -320,7 +320,6 @@ int HybridAStarInterface::UpdateOutput() {
         hybrid_astar_->PlanByRSPathSampling(
             &coarse_traj_, initial_state_, goal_state_, lon_min_sampling_length,
             map_bounds_, obs_, request_, &edt_, &clear_zone_, &ref_line_);
-
       }
 
       ILOG_INFO << "hybrid astar finish, rs path point size = "

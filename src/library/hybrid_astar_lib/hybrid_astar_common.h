@@ -280,20 +280,9 @@ struct DebugAstarSearchPoint {
   }
 };
 
-enum class SlotRelativePosition {
-  NONE,
-  RIGHT,
-  LEFT,
-  MAX_NUMBER
-};
+enum class SlotRelativePosition { NONE, RIGHT, LEFT, MAX_NUMBER };
 
-enum class VehRelativePosition {
-  NONE,
-  RIGHT,
-  LEFT,
-  MIDDLE,
-  MAX_NUMBER
-};
+enum class VehRelativePosition { NONE, RIGHT, LEFT, MIDDLE, MAX_NUMBER };
 
 struct Boundary2D {
   double min;

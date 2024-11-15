@@ -43,7 +43,8 @@
 //   bool IsSafeForLaneBorrow();
 //   bool IsSafeForBack();
 
-//   bool ClearForLaneBorrow(const double ego_speed, const double& left_bounds_l,
+//   bool ClearForLaneBorrow(const double ego_speed, const double&
+//   left_bounds_l,
 //                           const double& right_bounds_l);
 //   void ClearLaneBorrowStatus();
 //   bool CheckIfBorrowAgain();
