@@ -1,4 +1,5 @@
 #pragma once
+#include "agent/agent.h"
 #include "ego_planning_config.h"
 #include "session.h"
 
@@ -63,10 +64,72 @@ class TargetValue {
 
 class Target {
  public:
-  Target(const EgoPlanningConfigBuilder *config_builder,
-         framework::Session *session);
+  Target(const SpeedPlannerConfig config, framework::Session* session);
 
   virtual ~Target() = default;
+
+  struct CipvInfo {
+    int32_t agent_id = -1;
+    double vel = 0.0;
+    double upper_bound_s = 0.0;
+    bool is_large_vehicle = false;
+    agent::AgentType type = agent::AgentType::UNKNOWN;
+    bool is_tfl_virtual_obs = false;
+  };
+
+  virtual TargetValue target_value(const double t) const;
+
+  virtual bool has_target(const double t) const;
+
+  static TargetValue TargetMax(const TargetValue& v1, const TargetValue& v2) {
+    return v1.s_target_val() > v2.s_target_val() ? v1 : v2;
+  }
+
+  static TargetValue TargetMin(const TargetValue& v1, const TargetValue& v2) {
+    return v1.s_target_val() > v2.s_target_val() ? v2 : v1;
+  }
+
+  static std::string TargetValueType(const TargetType& type) {
+    if (type == TargetType::kCruiseSpeed) {
+      return "kCruiseSpeed";
+    } else if (type == TargetType::kFollow) {
+      return "kFollow";
+    } else if (type == TargetType::kOvertake) {
+      return "kOvertake";
+    } else if (type == TargetType::kNeighbor) {
+      return "kNeighbor";
+    } else if (type == TargetType::kNeighborYeild) {
+      return "kNeighborYeild";
+    } else if (type == TargetType::kNeighborOvertake) {
+      return "kNeighborOvertake";
+    } else {
+      return "kNotSet";
+    }
+  }
+
+  // std::unique_ptr<TargetFollowCurve> MakeTargetFollowCurve();
+
+  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve();
+
+ private:
+  std::unique_ptr<Trajectory1d> MakeMaxSpeedLimitCurve();
+
+ protected:
+  framework::Session* session_;
+  SpeedPlannerConfig config_;
+  std::vector<TargetValue> target_values_;
+  std::array<double, 3> init_lon_state_;
+  int32_t plan_points_num_ = 0;
+  double planning_time_ = 0.0;
+  double dt_ = 0.0;
+
+  std::unique_ptr<Trajectory1d> virtual_zero_acc_curve_;
+  std::unique_ptr<Trajectory1d> max_speed_limit_curve_;
+
+  // for target follow curve
+  // std::unique_ptr<TargetFollowCurve> target_follow_curve_;
+  bool has_follow_target_curve_ = false;
+  CipvInfo cipv_info_;
 };
 
 }  // namespace planning

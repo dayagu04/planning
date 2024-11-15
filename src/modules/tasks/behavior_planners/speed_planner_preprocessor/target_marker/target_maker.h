@@ -1,7 +1,7 @@
 #pragma once
 #include "ego_planning_config.h"
 #include "session.h"
-#include "src/modules/common/status/status.h"
+#include "target.h"
 
 namespace planning {
 
@@ -11,13 +11,11 @@ class TargetMaker {
               framework::Session *session);
   ~TargetMaker() = default;
 
-  common::Status Run();
-
-
-
-  
+  bool Run();
 
  private:
+  SpeedPlannerConfig config_;
+  framework::Session *session_;
 };
 
 }  // namespace planning

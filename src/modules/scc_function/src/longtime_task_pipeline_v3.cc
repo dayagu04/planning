@@ -221,6 +221,7 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+  // 上游补充完成后，后续替换
   ok = scc_lon_behavior_planner_->Execute();
   if (!ok) {
     AddErrorInfo(scc_lon_behavior_planner_->Name());

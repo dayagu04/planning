@@ -72,6 +72,49 @@ inline double LerpWithLimit(const double x0, const double t0, const double x1,
 double slerp(const double a0, const double t0, const double a1, const double t1,
              const double t);
 
+template <class T>
+typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type
+floating_equal(T x, T y) {
+  // the machine epsilon has to be scaled to the magnitude of the values used
+  // and multiplied by the desired precision in ULPs (units in the last place)
+  T ulp = 2;
+  return std::fabs(x - y) <=
+             std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp
+         // unless the result is subnormal
+         || std::fabs(x - y) < std::numeric_limits<T>::min();
+}
+
+inline double GetInterpolationRatio(double a, double b, double t) {
+  return floating_equal(a, b) ? 0 : (t - a) / (b - a);
+}
+
+// Calculates linear interpolation result. Note that ratio may or may not be
+// in the interval of [0, 1].
+inline double LinearInterpolate(double a, double b, double ratio) {
+  return (1 - ratio) * a + ratio * b;
+}
+
+// Calculate the corresponding f(x) in a lookup table
+inline double TableInterpolate(
+    const std::vector<std::pair<double, double>> &table, double x) {
+  if (table.size() == 0) {
+    // std::cout << "The table is empty!";
+    return x;
+  }
+
+  // Assumes that "table" is sorted by .first. assert if x is out of bound
+  if (x >= table.back().first) return table.back().second;
+  if (x <= table.front().first) return table.front().second;
+  auto upper_pair =
+      std::lower_bound(table.begin(), table.end(), std::make_pair(x, 0.0));
+  // Corner case
+  if (upper_pair == table.begin()) return upper_pair->second;
+  auto lower_pair = upper_pair;
+  --lower_pair;
+  double ratio = GetInterpolationRatio(lower_pair->first, upper_pair->first, x);
+  return LinearInterpolate(lower_pair->second, upper_pair->second, ratio);
+}
+
 planning::SLPoint InterpolateUsingLinearApproximation(const SLPoint &p0,
                                                       const SLPoint &p1,
                                                       const double w);

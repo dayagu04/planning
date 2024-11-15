@@ -2586,4 +2586,28 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
 };
+
+struct SpeedPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  double planning_time = 5.0;
+  double dt = 0.2;
+  double zero_acc_jerk_max = 0.5;
+  double zero_acc_jerk_min = -1.0;
+  double max_speed_limit_curve_acc_upper_bound = 2.4;
+  double max_speed_limit_curve_acc_lower_bound = -1.0;
+  double max_speed_limit_curve_jerk_upper_bound = 10.0;
+  double max_speed_limit_curve_jerk_lower_bound = -1.0;
+  double max_speed_limit_curve_velocity_upper_bound = 37.5;
+  double curr_vel_thres = 0.2;
+  double max_v_thres = 0.9;
+  double mean_a_thres = 0.15;
+  double stop_acc_upper_bound = 0.1;
+  double stop_acc_lower_bound = -0.3;
+  double stop_jerk_upper_bound = 0.8;
+  double stop_jerk_lower_bound = -0.8;
+};
+
 }  // namespace planning
