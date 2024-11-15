@@ -111,7 +111,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
   std::shared_ptr<ParkingScenario> scenario_ =
       scenario_manager_.MutableScenarioPtr();
   if (scenario_ != nullptr &&
-      scenario_status != ParkingScenarioStatus::STATUS_UNKNOWN) {
+      scenario_status == ParkingScenarioStatus::STATUS_RUNNING) {
     scenario_->Process();
 
     planning_output_ = scenario_->GetOutput();

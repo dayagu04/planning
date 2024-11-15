@@ -10,7 +10,8 @@
 namespace planning {
 namespace apa_planner {
 
-// TODO: 这个场景处理断头路，或者用来作为通用场景，任何场景都能处理？
+// TODO: 目前默认几何规划无解的场景，就是狭窄场景，调用hybrid astar即可.
+// 后续需要在普通场景中，调用A star.
 class NarrowSpaceScenario : public ParkingScenario {
  public:
   NarrowSpaceScenario() = default;

@@ -130,9 +130,21 @@ ParkingScenarioStatus ParkingScenarioManager::Excute(
       }
 
       type_ = apa_data->scenario_type;
-      return ParkingScenarioStatus::STATUS_RUNNING;
+      break;
     }
   }
+
+  if (current_scenario_ != nullptr &&
+      current_scenario_->GetStatus() == ParkingScenarioStatus::STATUS_RUNNING) {
+    return ParkingScenarioStatus::STATUS_RUNNING;
+  }
+
+  // 场景尝试
+  if (scenario_status == ParkingScenarioStatus::STATUS_TRY &&
+      current_scenario_ != nullptr) {
+    ScenarioTry();
+  }
+
   ILOG_INFO << "scenario type error!";
 
   return ParkingScenarioStatus::STATUS_UNKNOWN;
@@ -162,6 +174,13 @@ std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
 
   ILOG_ERROR << "invalid index";
   return nullptr;
+}
+
+void ParkingScenarioManager::ScenarioTry() {
+  current_scenario_->ScenarioTry();
+
+  // 如果不释放，用Astar尝试一次
+  return;
 }
 }  // namespace apa_planner
 }  // namespace planning

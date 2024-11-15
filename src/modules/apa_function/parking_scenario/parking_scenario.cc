@@ -64,9 +64,6 @@ void ParkingScenario::Reset() {
 void ParkingScenario::Process() {
   if (scenario_status_ == ParkingScenarioStatus::STATUS_RUNNING) {
     ScenarioRunning();
-  } else if (scenario_status_ == ParkingScenarioStatus::STATUS_TRY) {
-    ScenarioTry();
-  } else if (scenario_status_ == ParkingScenarioStatus::STATUS_UNKNOWN) {
   }
 
   return;

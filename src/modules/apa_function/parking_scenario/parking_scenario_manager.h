@@ -34,6 +34,9 @@ class ParkingScenarioManager final {
     return current_scenario_;
   }
 
+  private:
+  void ScenarioTry();
+
  private:
   std::shared_ptr<ParkingScenario> current_scenario_;
   std::shared_ptr<ParkingScenario> default_scenario_;
