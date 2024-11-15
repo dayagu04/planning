@@ -10,7 +10,6 @@
 #include "scc_st_graph.h"
 #include "scc_sv_graph.h"
 #include "task_basic_types.pb.h"
-#include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_planner.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/longitudinal_decider_output.h"
 #include "virtual_lane_manager.h"
