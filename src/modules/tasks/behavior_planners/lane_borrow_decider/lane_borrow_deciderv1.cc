@@ -577,7 +577,8 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
 
 bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
                                       const double& right_bounds_l) {
-  if (left_bounds_l - right_bounds_l < vehicle_param_.width) {
+  if (left_bounds_l - right_bounds_l <
+      vehicle_param_.width + kObsLatExpendBuffer) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
     return false;
   }
@@ -654,7 +655,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
       }
     } else {
       if (frenet_obstacle_sl.l_start < left_l ||
-          frenet_obstacle_sl.l_end < right_l) {
+          frenet_obstacle_sl.l_end > right_l) {
         continue;
       }
 
