@@ -723,7 +723,7 @@ def load_lon_global_figure(bag_loader):
   plan_debug_multi = ColumnDataSource(data ={
   'time': [],
   'replan_status':[],
-  'lon_err':[],
+  'lon_station_err':[],
   'is_overlap':[],
   })
 
@@ -748,7 +748,7 @@ def load_lon_global_figure(bag_loader):
   })
 
   replan_status = []
-  lon_err = []
+  lon_station_err = []
   is_overlap = []
   t_plan_debug = []
 
@@ -760,7 +760,7 @@ def load_lon_global_figure(bag_loader):
   for i in range(len(plan_debug_info)):
      t_plan_debug.append(bag_loader.plan_debug_msg['t'][i])
      replan_status.append(plan_debug_info[i]['replan_status'])
-     lon_err.append(plan_debug_info[i]['lon_err'])
+     lon_station_err.append(plan_debug_info[i]['lon_err'])
      is_overlap.append(plan_debug_info[i]['is_overlap'])
      following_distance_level.append(plan_debug_info[i]['following_distance_level'])
      desired_distance.append(plan_debug_info[i]['desired_distance'])
@@ -769,7 +769,7 @@ def load_lon_global_figure(bag_loader):
   plan_debug_multi.data.update({
     'time': t_plan_debug,
     'replan_status': replan_status,
-    'lon_err': lon_err,
+    'lon_station_err': lon_station_err,
     'is_overlap': is_overlap,
     'following_distance_level': following_distance_level,
     'desired_distance': desired_distance,
@@ -789,8 +789,8 @@ def load_lon_global_figure(bag_loader):
 
   fig_replan_status = bkp.figure(x_axis_label='time', y_axis_label='plan debug multi',x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600, height=300)
   f_replan_status = fig_replan_status.line('time', 'replan_status', source = plan_debug_multi, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'replan_status')
-  fig_replan_status.line('time', 'lon_err', source = plan_debug_multi, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lon_station_err')
-  fig_replan_status.line('time', 'is_overlap', source = plan_debug_multi, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'is_overlap')
+  fig_replan_status.line('time', 'lon_station_err', source = plan_debug_multi, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lon_station_err')
+  # fig_replan_status.line('time', 'is_overlap', source = plan_debug_multi, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'is_overlap')
   fig_replan_status.line('time', 'following_distance_level', source = plan_debug_multi, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'following_distance_level')
   fig_replan_status.line('time', 'desired_distance', source = plan_debug_multi, line_width = 1, line_color = 'brown', line_dash = 'solid', legend_label = 'desired_distance')
   fig_replan_status.line('time', 'desired_distance_filtered', source = plan_debug_multi, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'desired_distance_filtered')
@@ -810,7 +810,7 @@ def load_lon_global_figure(bag_loader):
   fig_fsm_state.toolbar.active_scroll = fig_fsm_state.select_one(WheelZoomTool)
   fig_fsm_state.legend.click_policy = 'hide'
 
-  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status'), ('lon_station_err', '@lon_station_err'), ('is_overlap', '@is_overlap'),
+  hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status'), ('lon_station_err', '@lon_station_err'),
                                                                          ('following_distance_level', '@following_distance_level'), ('desired_distance', '@desired_distance'),('desired_distance_filtered', '@desired_distance_filtered')], mode='vline')
   fig_replan_status.add_tools(hover_replan_status)
   fig_replan_status.toolbar.active_scroll = fig_replan_status.select_one(WheelZoomTool)
