@@ -183,13 +183,16 @@ bool StGraphHelper::GetBorderByStPoint(double s, double t,
 
 void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
     const agent::Agent& agent,
-    std::unordered_map<int64_t, std::unique_ptr<STBoundary>>& boundary_id_st_boundaries_map) {
+    std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
+        boundary_id_st_boundaries_map) {
   const auto& st_graph_input = st_graph_.st_graph_input();
   const auto* path_border_querier = st_graph_input.path_border_querier();
   const int32_t reserve_num = st_graph_.reserve_num();
   const auto planned_kd_path = st_graph_input.processed_path();
-  const auto& planning_init_point_box = st_graph_input.planning_init_point_box();
-  if (nullptr == planned_kd_path || nullptr == path_border_querier || reserve_num <= 0) {
+  const auto& planning_init_point_box =
+      st_graph_input.planning_init_point_box();
+  if (nullptr == planned_kd_path || nullptr == path_border_querier ||
+      reserve_num <= 0) {
     return;
   }
   const auto& time_range = st_graph_.time_range();
@@ -200,9 +203,9 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
   // max_s min_s max_l min_l
   std::vector<double> agent_sl_boundary(4);
   std::vector<std::pair<int32_t, Vec2d>> considered_corners;
-  StGraphUtils::CalculateAgentSLBoundary(planned_kd_path, obs_box, path_range,
-                                         StBoundaryType::NORMAL, &agent_sl_boundary,
-                                         &considered_corners);
+  StGraphUtils::CalculateAgentSLBoundary(
+      planned_kd_path, obs_box, path_range, StBoundaryType::NORMAL,
+      &agent_sl_boundary, &considered_corners);
 
   std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
   st_point_pairs.reserve(reserve_num);
@@ -211,18 +214,135 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
   const int64_t boundary_id = (agent.agent_id() << 8) + 0;
 
   if (StGraphUtils::CalculateSRange(
-          planned_kd_path, *path_border_querier, obs_box, StBoundaryType::NORMAL, path_range,
-          agent_sl_boundary, considered_corners, planning_init_point_box, &lower_s, &upper_s)) {
-    for (double t = time_range.first; t < time_range.second; t += kTimeResolution) {
-      st_point_pairs.emplace_back(STPoint(lower_s, t, agent.agent_id(), boundary_id, 0.0, 0.0),
-                                  STPoint(upper_s, t, agent.agent_id(), boundary_id, 0.0, 0.0));
+          planned_kd_path, *path_border_querier, obs_box,
+          StBoundaryType::NORMAL, path_range, agent_sl_boundary,
+          considered_corners, planning_init_point_box, &lower_s, &upper_s)) {
+    for (double t = time_range.first; t < time_range.second;
+         t += kTimeResolution) {
+      st_point_pairs.emplace_back(
+          STPoint(lower_s, t, agent.agent_id(), boundary_id, 0.0, 0.0),
+          STPoint(upper_s, t, agent.agent_id(), boundary_id, 0.0, 0.0));
     }
   }
   if (!st_point_pairs.empty()) {
     std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
     st_boundary->set_id(boundary_id);
-    boundary_id_st_boundaries_map.insert(std::make_pair(boundary_id, std::move(st_boundary)));
+    boundary_id_st_boundaries_map.insert(
+        std::make_pair(boundary_id, std::move(st_boundary)));
   }
+}
+
+bool StGraphHelper::GetFirstNeighborUpperBound(
+    STPoint* const upper_point) const {
+  const auto& neighbor_corridor = st_graph_.neighbor_corridor();
+  const int32_t first_neighbor_yield_index =
+      st_graph_.first_neighbor_yield_index();
+  if (first_neighbor_yield_index >= neighbor_corridor.size() ||
+      first_neighbor_yield_index < 0) {
+    return false;
+  }
+  *upper_point = neighbor_corridor.at(first_neighbor_yield_index).first;
+  return true;
+}
+
+bool StGraphHelper::GetFirstNeighborLowerBound(
+    STPoint* const lower_point) const {
+  const auto& neighbor_corridor = st_graph_.neighbor_corridor();
+  const int32_t first_neighbor_overtake_index =
+      st_graph_.first_neighbor_overtake_index();
+  if (first_neighbor_overtake_index >= neighbor_corridor.size() ||
+      first_neighbor_overtake_index < 0) {
+    return false;
+  }
+  *lower_point = neighbor_corridor.at(first_neighbor_overtake_index).second;
+  return true;
+}
+
+const std::unordered_map<int32_t, std::vector<int64_t>>&
+StGraphHelper::GetAgentIdSTBoundariesMap() const {
+  return st_graph_.agent_id_st_boundaries_map();
+}
+
+const STPoint StGraphHelper::GetPassCorridorUpperBound(const double t) const {
+  const auto& time_range = st_graph_.time_range();
+  const auto& st_pass_corridor = st_graph_.st_pass_corridor();
+  STPoint init_upper_point;
+  init_upper_point.set_agent_id(kNoAgentId);
+  init_upper_point.set_s(std::numeric_limits<double>::max());
+  init_upper_point.set_velocity(std::numeric_limits<double>::max());
+  init_upper_point.set_acceleration(std::numeric_limits<double>::max());
+  if (!IsTimeInRange(t)) {
+    return init_upper_point;
+  }
+  int32_t index = int32_t((t - time_range.first) / kTimeResolution);
+  if (index < 0 || index >= st_pass_corridor.size()) {
+    return init_upper_point;
+  }
+  return st_pass_corridor.at(index).first;
+}
+
+const STPoint StGraphHelper::GetPassCorridorLowerBound(const double t) const {
+  const auto& time_range = st_graph_.time_range();
+  const auto& st_pass_corridor = st_graph_.st_pass_corridor();
+  STPoint init_lower_point;
+  init_lower_point.set_agent_id(kNoAgentId);
+  init_lower_point.set_s(std::numeric_limits<double>::lowest());
+  init_lower_point.set_velocity(std::numeric_limits<double>::lowest());
+  init_lower_point.set_acceleration(std::numeric_limits<double>::lowest());
+  if (!IsTimeInRange(t)) {
+    return init_lower_point;
+  }
+  int32_t index = int32_t((t - time_range.first) / kTimeResolution);
+  if (index < 0 || index >= st_pass_corridor.size()) {
+    return init_lower_point;
+  }
+  return st_pass_corridor.at(index).second;
+}
+
+const STPoint StGraphHelper::GetSoftPassCorridorUpperBound(
+    const double t) const {
+  const auto& time_range = st_graph_.time_range();
+  STPoint init_upper_point;
+  init_upper_point.set_agent_id(kNoAgentId);
+  init_upper_point.set_s(std::numeric_limits<double>::max());
+  init_upper_point.set_velocity(std::numeric_limits<double>::max());
+  init_upper_point.set_acceleration(std::numeric_limits<double>::max());
+  if (!IsTimeInRange(t)) {
+    return init_upper_point;
+  }
+  const auto& boundary_id_st_boundaries_map =
+      st_graph_.boundary_id_st_boundaries_map();
+  for (const auto& pair : boundary_id_st_boundaries_map) {
+    const auto& boundary_id = pair.first;
+    const auto& boundary = pair.second;
+    if (boundary->decision_type() != STBoundary::DecisionType::CAUTION_YIELD) {
+      continue;
+    }
+    if (t < boundary->min_t() || t > boundary->max_t()) {
+      continue;
+    }
+    STPoint lower_point, upper_point;
+    if (!boundary->GetBoundaryBounds(t, &lower_point, &upper_point)) {
+      continue;
+    }
+    if (lower_point.s() < init_upper_point.s()) {
+      init_upper_point = lower_point;
+    }
+  }
+  return init_upper_point;
+}
+
+const std::pair<double, double> StGraphHelper::GetPathRange() const {
+  return st_graph_.path_range();
+}
+
+const std::pair<double, double> StGraphHelper::GetTimeRange() const {
+  return st_graph_.time_range();
+}
+
+bool StGraphHelper::IsTimeInRange(double t) const {
+  const auto& time_range = st_graph_.time_range();
+  return !(t < time_range.first || t > time_range.second);
 }
 
 }  // namespace speed

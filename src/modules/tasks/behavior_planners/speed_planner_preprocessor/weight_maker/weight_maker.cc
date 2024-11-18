@@ -2,7 +2,7 @@
 
 namespace planning {
 
-WeightMaker::WeightMaker(const EgoPlanningConfigBuilder *config_builder,
+WeightMaker::WeightMaker(const SpeedPlannerConfig& speed_planning_config,
                          framework::Session *session,
                          const TargetMaker &target_maker) {
   ;

@@ -8,7 +8,7 @@ namespace planning {
 
 class WeightMaker {
  public:
-  WeightMaker(const EgoPlanningConfigBuilder *config_builder,
+  WeightMaker(const SpeedPlannerConfig& speed_planning_config,
               framework::Session *session, const TargetMaker &target_maker);
   ~WeightMaker() = default;
 

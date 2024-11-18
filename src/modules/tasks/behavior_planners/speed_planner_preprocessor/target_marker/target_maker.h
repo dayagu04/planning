@@ -1,21 +1,27 @@
 #pragma once
 #include "ego_planning_config.h"
 #include "session.h"
+#include "src/modules/common/status/status.h"
 #include "target.h"
 
 namespace planning {
 
 class TargetMaker {
  public:
-  TargetMaker(const EgoPlanningConfigBuilder *config_builder,
+  TargetMaker(const SpeedPlannerConfig& speed_planning_config,
               framework::Session *session);
   ~TargetMaker() = default;
 
-  bool Run();
+  common::Status Run();
 
  private:
-  SpeedPlannerConfig config_;
   framework::Session *session_;
+  SpeedPlannerConfig speed_planning_config_;
+  double dt_ = 0.0;
+  double plan_time_ = 0.0;
+  int32_t plan_points_num_ = 0.0;
+
+  std::vector<TargetValue> target_values_;
 };
 
 }  // namespace planning

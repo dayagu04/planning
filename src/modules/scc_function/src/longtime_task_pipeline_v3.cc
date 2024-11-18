@@ -220,14 +220,6 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(speed_planner_preprocessor_->Name());
     return false;
   }
-
-  // 上游补充完成后，后续替换
-  ok = scc_lon_behavior_planner_->Execute();
-  if (!ok) {
-    AddErrorInfo(scc_lon_behavior_planner_->Name());
-    return false;
-  }
-
   // --↑↑↑↑↑↑--long behavior--↑↑↑↑↑↑--
 
   // ------ long motion planner ------

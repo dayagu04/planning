@@ -53,7 +53,7 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
   if (st_graph_input_.enable_backward_extend_st_boundary()) {
     BackwardExtendStBoundaries();
   }
-  
+
   // TODO: add cautin yield and cross agent decision first
   // StGraphUtils::DetermineCautionYieldDecision(
   //     st_graph_input_, st_graph_input.lane_change_status(),
@@ -912,6 +912,116 @@ STGraph::agent_id_st_boundaries_map() const {
 
 const std::vector<int32_t>& STGraph::caution_yield_agent_ids() const {
   return caution_yield_agent_ids_;
+}
+
+const std::vector<std::pair<STPoint, STPoint>>& STGraph::st_pass_corridor()
+    const {
+  return st_pass_corridor_;
+}
+
+const std::vector<std::pair<STPoint, STPoint>>& STGraph::neighbor_corridor()
+    const {
+  return neighbor_corridor_;
+}
+
+const int32_t STGraph::first_neighbor_yield_index() const {
+  return first_neighbor_yield_index_;
+}
+
+const int32_t STGraph::first_neighbor_overtake_index() const {
+  return first_neighbor_overtake_index_;
+}
+
+bool STGraph::UpdateNeighborAgentResults(
+    const std::unordered_map<int32_t, STBoundary::DecisionType>&
+        neighbor_agent_decision_table) {
+  if (neighbor_agent_decision_table.empty()) {
+    return true;
+  }
+  for (const auto& neighbor_decision_entry : neighbor_agent_decision_table) {
+    auto agent_id = neighbor_decision_entry.first;
+    auto decision = neighbor_decision_entry.second;
+    auto id_iter = neighbor_agent_id_st_boundaries_map_.find(agent_id);
+    if (id_iter == neighbor_agent_id_st_boundaries_map_.end()) {
+      continue;
+    }
+    auto agent_st_boundary_ids = id_iter->second;
+    if (agent_st_boundary_ids.empty()) {
+      continue;
+    }
+    for (const auto boundary_id : agent_st_boundary_ids) {
+      auto boundary_iter =
+          neighbor_boundary_id_st_boundaries_map_.find(boundary_id);
+      if (boundary_iter == neighbor_boundary_id_st_boundaries_map_.end()) {
+        continue;
+      }
+      auto* st_boundary = boundary_iter->second.get();
+      if (st_boundary == nullptr) {
+        continue;
+      }
+      st_boundary->set_decision_type(decision);
+    }
+  }
+
+  const bool is_success = CalculateNeighborCorridor();
+  return is_success;
+}
+
+bool STGraph::CalculateNeighborCorridor() {
+  if (neighbor_boundary_id_st_boundaries_map_.empty()) {
+    return false;
+  }
+
+  const auto& time_range = st_graph_input_.time_range();
+  for (size_t i = 0; i < neighbor_corridor_.size(); i++) {
+    double t = time_range.first + i * kTimeResolution;
+    STPoint upper_point = STPoint::HighestSTPoint();
+    STPoint lower_point = STPoint::LowestSTPoint();
+    bool find_upper = false;
+    bool find_lower = false;
+
+    for (const auto& st_boundary_entry :
+         neighbor_boundary_id_st_boundaries_map_) {
+      const auto& st_boundary = st_boundary_entry.second;
+      if (st_boundary == nullptr) {
+        continue;
+      }
+      const auto& decision_type = st_boundary->decision_type();
+      if (decision_type == STBoundary::DecisionType::NEIGHBOR_YIELD) {
+        STPoint cur_upper_pt, cur_lower_pt;
+        if (!st_boundary->GetBoundaryBounds(t, &cur_lower_pt, &cur_upper_pt)) {
+          continue;
+        }
+        if (cur_lower_pt.s() < upper_point.s()) {
+          find_upper = true;
+          upper_point = cur_lower_pt;
+        }
+      } else if (decision_type == STBoundary::DecisionType::NEIGHBOR_OVERTAKE) {
+        STPoint cur_upper_pt, cur_lower_pt;
+        if (!st_boundary->GetBoundaryBounds(t, &cur_lower_pt, &cur_upper_pt)) {
+          continue;
+        }
+        if (cur_upper_pt.s() > lower_point.s()) {
+          find_lower = true;
+          lower_point = cur_upper_pt;
+        }
+      }
+    }
+    if (find_upper) {
+      neighbor_corridor_[i].first = upper_point;
+      if (i < first_neighbor_yield_index_) {
+        first_neighbor_yield_index_ = i;
+      }
+    }
+    if (find_lower) {
+      neighbor_corridor_[i].second = lower_point;
+      if (i < first_neighbor_overtake_index_) {
+        first_neighbor_overtake_index_ = i;
+      }
+    }
+  }
+
+  return true;
 }
 
 void STGraph::AddStGraphDataToProto() {

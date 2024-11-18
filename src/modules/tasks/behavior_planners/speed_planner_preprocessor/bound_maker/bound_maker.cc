@@ -2,7 +2,7 @@
 
 namespace planning {
 
-BoundMaker::BoundMaker(const EgoPlanningConfigBuilder *config_builder,
+BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
                        framework::Session *session) {}
 
 common::Status BoundMaker::Run() { return common::Status::OK(); }

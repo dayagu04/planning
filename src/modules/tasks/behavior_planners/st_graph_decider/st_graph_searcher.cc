@@ -393,13 +393,13 @@ bool StGraphSearcher::SearchStPath(
 
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
-    LOG_DEBUG("st search fail, goal not reached");
+    LOG_DEBUG("st search fail, goal not reached \n");
     bool is_visualize_all_vertexes = config_.is_visualize_st_search_process;
     if (is_visualize_all_vertexes) {
       // VisualizeStSearchVertexes(nodes);
     }
     if (best_node.h_cost() == std::numeric_limits<double>::max()) {
-      LOG_DEBUG("st search fail, goal not reached");
+      LOG_DEBUG("st search fail, goal not reached \n");
       return false;
     } else {
       current_node = best_node;

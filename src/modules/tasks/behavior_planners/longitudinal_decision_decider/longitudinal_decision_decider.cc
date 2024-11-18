@@ -321,7 +321,7 @@ LongitudinalDecisionDecider::GenerateMaxDecelerationCurve(
 }
 
 void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
-  LOG_DEBUG("=== AgentLongituainalDecider::UpdateCutinNeighborResults ===\n");
+  LOG_DEBUG("=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
 
   const auto &environmental_model = session_->environmental_model();
   const auto &mutable_planning_context = session_->mutable_planning_context();

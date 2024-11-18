@@ -2587,6 +2587,44 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double yield_front_vehicle_collision_s_buffer = 1.0;
 };
 
+struct AgentHeadwayConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  double plan_time = 5.0;
+  double dt = 0.2;
+  double cutin_headway_threshold = 1.0;
+  double smallest_headway_threshold = 1.2;
+  double headway_step = 0.025;
+  std::vector<std::pair<int32_t, double>> normal_headway_table = {
+      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+  std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
+      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+  std::vector<std::pair<int32_t, double>> conservative_headway_table = {
+      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+  std::vector<std::pair<int32_t, double>> aggressive_acc_max_table = {
+      {5.0, 2.5}, {10.0, 1.9}, {20.0, 1.5}, {25.0, 1.3}, {35.0, 0.9}};
+  std::vector<std::pair<int32_t, double>> normal_acc_max_table = {
+      {5.0, 1.7}, {10.0, 1.4}, {20.0, 1.0}, {25.0, 0.8}, {35.0, 0.6}};
+  std::vector<std::pair<int32_t, double>> conservative_acc_max_table = {
+      {5.0, 1.2}, {10.0, 1.0}, {20.0, 0.7}, {25.0, 0.6}, {35.0, 0.4}};
+  std::vector<std::pair<int32_t, double>> normal_cut_in_headway_table = {
+      {0, 1.0}, {1, 1.25}, {2, 1.67}, {3, 2.08}, {4, 2.5}};
+  double cut_in_velocity_upper_bound = 4.16;
+  double cut_in_headway_lower_bound = 0.0;
+  double cut_in_velocity_lower_bound = 3.33;
+  double cut_in_headway_upper_bound = 0.2;
+  // follow_distance_gap
+  double lower_speed_min_follow_distance_gap = 3.0;
+  double high_speed_min_follow_distance_gap = 4.5;
+  double low_speed_threshold_kmph = 18;
+  double high_speed_threshold_kmph = 30;
+  double large_vehicle_min_follow_distance_gap = 4.5;
+  double cone_min_follow_distance_gap = 4.5;
+  double traffic_light_min_follow_distance_gap = 2.0;
+};
+
 struct SpeedPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

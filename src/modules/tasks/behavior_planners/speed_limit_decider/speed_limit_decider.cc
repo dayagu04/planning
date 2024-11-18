@@ -6,5 +6,9 @@ SpeedLimitDecider::SpeedLimitDecider(
     : Task(config_builder, session) {
   name_ = "SpeedLimitDecider";
 }
-bool SpeedLimitDecider::Execute() { return true; }
+bool SpeedLimitDecider::Execute() {
+  LOG_DEBUG("=======SpeedLimitDecider======= \n");
+
+  return true;
+}
 }  // namespace planning

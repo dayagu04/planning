@@ -7,7 +7,7 @@
 
 namespace planning {
 
-Target::Target(const SpeedPlannerConfig config, framework::Session* session)
+Target::Target(const SpeedPlannerConfig& config, framework::Session* session)
     : config_(config),
       session_(session),
       planning_time_(config.planning_time),

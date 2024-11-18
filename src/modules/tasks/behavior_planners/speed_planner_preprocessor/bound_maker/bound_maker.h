@@ -7,7 +7,7 @@ namespace planning {
 
 class BoundMaker {
  public:
-  BoundMaker(const EgoPlanningConfigBuilder *config_builder,
+  BoundMaker(const SpeedPlannerConfig& speed_planning_config,
              framework::Session *session);
   ~BoundMaker() = default;
 

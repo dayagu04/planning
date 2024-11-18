@@ -64,7 +64,7 @@ class TargetValue {
 
 class Target {
  public:
-  Target(const SpeedPlannerConfig config, framework::Session* session);
+  Target(const SpeedPlannerConfig& config, framework::Session* session);
 
   virtual ~Target() = default;
 
@@ -116,7 +116,7 @@ class Target {
 
  protected:
   framework::Session* session_;
-  SpeedPlannerConfig config_;
+  const SpeedPlannerConfig& config_;
   std::vector<TargetValue> target_values_;
   std::array<double, 3> init_lon_state_;
   int32_t plan_points_num_ = 0;
