@@ -177,7 +177,12 @@ std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
 }
 
 void ParkingScenarioManager::ScenarioTry() {
-  current_scenario_->ScenarioTry();
+  ParkingScenarioStatus status = current_scenario_->ScenarioTry();
+
+  if(status == ParkingScenarioStatus::STATUS_FAIL)
+  {
+    
+  }
 
   // 如果不释放，用Astar尝试一次
   return;

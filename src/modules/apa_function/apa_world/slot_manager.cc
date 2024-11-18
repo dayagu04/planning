@@ -274,13 +274,13 @@ bool SlotManager::UpdateSlotsInSearching(
                                      frame_.measurement_data_ptr,
                                      fusion_slot_map, frame_);
 
-  // 没有点击泊车，但是点击了车位，此时需要尝试一下
+  // 没有点击泊车，但是点击了车位，此时需要场景尝试一下
   if (!frame_.slot_info_window_map.empty() &&
       !frame_.slot_info_window_map[frame_.parking_slot_ptr->select_slot_id]
            .IsEmpty()) {
     UpdateSlotsInParking();
 
-    ILOG_INFO << "try park plan";
+    ILOG_INFO << "try park planning";
   }
 
   return false;
@@ -1830,8 +1830,8 @@ void SlotManager::CopySlotReleaseInfo() {
   return;
 }
 
-void SlotManager::SlotRealeseByScenarioTry(const bool release,
-                                           const SlotReleaseMethod method) {
+void SlotManager::SlotReleaseByScenarioTry(
+    const bool release, const common::SlotReleaseMethod method) {
   for (int i = 0; i < frame_.slot_management_info.slot_info_vec_size(); i++) {
     common::SlotInfo *slot_info =
         frame_.slot_management_info.mutable_slot_info_vec(i);
@@ -1846,8 +1846,9 @@ void SlotManager::SlotRealeseByScenarioTry(const bool release,
         slot_info->set_is_occupied(false);
       }
 
-      uint32 tmp = static_cast<uint32>(method);
-      slot_info->set_slot_release_method(tmp);
+      // todo
+      // uint32 tmp = static_cast<uint32>(method);
+      // slot_info->set_slot_release_method(tmp);
 
       // find target slot, break
       break;

@@ -429,7 +429,7 @@ void ParkingScenario::Enter(const ParkingScenarioStatus status) {
 const ParkingScenarioStatus ParkingScenario::ScenarioTry() {
 
   // todo: use geometry method first, if no result, use hybrid astar.
-  return ParkingScenarioStatus::STATUS_UNKNOWN;
+  return ParkingScenarioStatus::STATUS_RUNNING;
 }
 
 void ParkingScenario::Exit() {

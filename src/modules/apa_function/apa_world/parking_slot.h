@@ -14,6 +14,7 @@
 #include "utils/index_list.h"
 #include "common_c.h"
 #include "pose2d.h"
+#include "slot_management_info.pb.h"
 
 namespace planning {
 
@@ -90,14 +91,6 @@ struct ApaSlots {
   }
 };
 
-enum class SlotReleaseMethod {
-  NONE = 0,
-  COARSE_RULE_BASED_RELEASE = 1,
-  FINE_RULE_BASED_RELEASE = 2,
-  GEOMETRY_PLANNING_RELEASE = 3,
-  ASTAR_PLANNING_RELEASE = 4,
-};
-
 class ParkSlot {
  public:
   ParkSlot() = default;
@@ -140,7 +133,7 @@ class ParkSlot {
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
   int id_ = 0;
   bool is_planning_release_;
-  SlotReleaseMethod release_method_;
+  common::SlotReleaseMethod release_method_;
 
   // 后轴中心的停车点，该值由决策器生成
   Pose2D target_pose_;

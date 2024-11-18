@@ -61,13 +61,7 @@ class RuleBasedSlotRelease {
   const bool IsPerpendicularSlotCoarseRelease(
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
 
-  const bool IsPerpendicularSlotFineRelease(
-      common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
-
   const bool IsParallelSlotCoarseRelease(
-      common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
-
-  const bool IsParallelSlotFineRelease(
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
 
   // todo: remove this code

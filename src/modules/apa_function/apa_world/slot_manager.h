@@ -412,6 +412,7 @@ class SlotManager {
     Param param;
     size_t fusion_order_error_cnt = 0;
 
+    // current frame info + history info
     EgoSlotInfo ego_slot_info;
 
     int no_update_slot_count = 0;
@@ -505,8 +506,8 @@ class SlotManager {
     return frame_.release_slot_id_vec;
   }
 
-  void SlotRealeseByScenarioTry(const bool release,
-                                const SlotReleaseMethod method);
+  void SlotReleaseByScenarioTry(const bool release,
+                                const common::SlotReleaseMethod method);
 
  private:
   Frame frame_;
