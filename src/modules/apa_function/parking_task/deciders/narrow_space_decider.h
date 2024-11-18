@@ -14,8 +14,7 @@ class NarrowScenarioDecider : public ParkingTask{
   NarrowScenarioDecider() = default;
   ~NarrowScenarioDecider() = default;
 
-  void Process(const uint8_t slot_type, const uint8_t park_task,
-               const uint8_t plan_reason, const uint8_t planning_status,
+  void Process(const uint8_t slot_type,
                const apa_planner::ParkingScenarioType scene_type);
 
   void Clear();
@@ -24,23 +23,17 @@ class NarrowScenarioDecider : public ParkingTask{
 
   const bool IsNeedAstar() const;
 
-  static NarrowScenarioDecider* GetNarrowScenarioDecider() {
-    static NarrowScenarioDecider astar_scheduler_;
-
-    return &astar_scheduler_;
-  }
-
   void SetAstarState(const AstarSearchState state);
 
-  private:
-   void UpdateNarrowScenario(const ParkSpaceType slot_type,
-                             const PlanningReason plan_reason);
+  const AstarSearchState GetAstarState() { return astar_search_state_; }
 
-  private:
-   ParkSpaceType slot_type_;
-   PlanningReason plan_reason_;
-   AstarSearchState astar_search_state_;
-   bool is_narrow_space_;
-   bool is_need_astar_;
+ private:
+  void UpdateNarrowScenario(const ParkSpaceType slot_type);
+
+ private:
+  ParkSpaceType slot_type_;
+  AstarSearchState astar_search_state_;
+  bool is_narrow_space_;
+  bool is_need_astar_;
 };
 }  // namespace planning

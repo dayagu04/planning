@@ -58,6 +58,8 @@ void NarrowSpaceScenario::Reset() {
 
   ParkingScenario::Reset();
 
+  narrow_space_decider_.Clear();
+
   return;
 }
 
@@ -775,20 +777,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod() {
       double publish_end_time = IflyTime::Now_ms();
       ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
 
-      NarrowScenarioDecider* narrow_scenario_decider =
-          NarrowScenarioDecider::GetNarrowScenarioDecider();
-      narrow_scenario_decider->SetAstarState(AstarSearchState::SUCCESS);
-
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
-      res = PathPlannerResult::WAIT_PATH;
+      res = PathPlannerResult::PLAN_FAILED;
 
       // publish fallback path
       GenerateFallBackPath();
-
-      NarrowScenarioDecider* narrow_scenario_decider =
-          NarrowScenarioDecider::GetNarrowScenarioDecider();
-      narrow_scenario_decider->SetAstarState(AstarSearchState::FAILURE);
 
       ILOG_INFO << "path plan point less 5";
     }
@@ -1762,6 +1756,63 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
                         static_condition && remain_s_condition;
 
   return parking_finish;
+}
+
+const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
+  if (apa_world_ptr_->GetApaDataPtr()->slot_type !=
+      Common::PARKING_SLOT_TYPE_VERTICAL) {
+    return ParkingScenarioStatus::STATUS_FAIL;
+  }
+
+  if (!apa_param.GetParam()
+           .astar_config.vertical_slot_auto_switch_to_astar) {
+    return ParkingScenarioStatus::STATUS_FAIL;
+  }
+
+  std::shared_ptr<SlotManager> slot_manager =
+      apa_world_ptr_->GetSlotManagerPtr();
+
+  // update ego slot info
+  if (!UpdateEgoSlotInfo()) {
+    SetParkingStatus(PARKING_FAILED);
+    slot_manager->SlotReleaseByScenarioTry(
+        false, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
+    return ParkingScenarioStatus::STATUS_FAIL;
+  }
+
+  narrow_space_decider_.Process(apa_world_ptr_->GetApaDataPtr()->slot_type,
+                                apa_world_ptr_->GetApaDataPtr()->scenario_type);
+
+  PathPlannerResult res = PathPlannerResult::WAIT_PATH;
+  bool has_response = UpdateThreadPath();
+
+  if (narrow_space_decider_.IsNeedAstar() &&
+      narrow_space_decider_.GetAstarState() == AstarSearchState::NONE) {
+    narrow_space_decider_.SetAstarState(AstarSearchState::SEARCHING);
+    res = PlanBySearchBasedMethod();
+  } else if (narrow_space_decider_.IsNeedAstar() && has_response) {
+    res = PlanBySearchBasedMethod();
+  }
+
+  if (res == PathPlannerResult::PLAN_FAILED) {
+    narrow_space_decider_.SetAstarState(AstarSearchState::FAILURE);
+    slot_manager->SlotReleaseByScenarioTry(
+        false, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
+
+    ILOG_INFO << "astar path try fail";
+
+    return ParkingScenarioStatus::STATUS_FAIL;
+  } else if (res == PathPlannerResult::PLAN_UPDATE) {
+    narrow_space_decider_.SetAstarState(AstarSearchState::SUCCESS);
+    slot_manager->SlotReleaseByScenarioTry(
+        true, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
+
+    ILOG_INFO << "hybrid astar path try success";
+
+    return ParkingScenarioStatus::STATUS_RUNNING;
+  }
+
+  return ParkingScenarioStatus::STATUS_TRY;
 }
 
 }  // namespace apa_planner

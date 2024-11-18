@@ -287,8 +287,12 @@ class SlotManager {
     uint8_t slot_type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_INVALID;
     uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     iflyauto::ParkingFusionSlot select_fusion_slot;
+
+    // clear in per frame. todo: record history.
     common::SlotInfo select_slot;
     common::SlotInfo select_slot_filter;
+    // current frame + history frame, 更新选中车位释放信息
+    SlotReleaseInfo release_info;
 
     Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
     double slot_origin_heading = 0.0;
@@ -331,6 +335,7 @@ class SlotManager {
 
     double channel_width;
 
+    // 重新巡库时，重置
     void Reset() {
       select_slot_id = 0;
       slot_type = Common::PARKING_SLOT_TYPE_INVALID;
@@ -368,6 +373,7 @@ class SlotManager {
       channel_width = apa_param.GetParam().channel_width;
 
       fus_obj_valid_flag = false;
+      release_info.Clear();
     }
   };
 
@@ -507,7 +513,7 @@ class SlotManager {
   }
 
   void SlotReleaseByScenarioTry(const bool release,
-                                const common::SlotReleaseMethod method);
+                                const SlotReleaseMethod method);
 
  private:
   Frame frame_;

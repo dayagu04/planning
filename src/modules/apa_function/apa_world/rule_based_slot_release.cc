@@ -66,30 +66,22 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
     *slot = pair.second->GetFusedInfo();
 
     // only extra protect, it can delete to be fast
-    common::SlotReleaseInfo *release_info = slot->add_release_info();
-    release_info->set_method(common::SlotReleaseMethod::RULE_BASED_RELEASE);
-
     if (fusion_slot_map.count(slot->id()) == 0) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
-      release_info->set_is_release(false);
       continue;
     }
 
     if (is_ego_collision) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
-      release_info->set_is_release(false);
-
       continue;
     }
 
     if (fusion_slot_map[static_cast<size_t>(slot->id())].allow_parking == 1) {
       slot->set_is_release(true);
-      release_info->set_is_release(true);
     } else {
       slot->set_is_release(false);
-      release_info->set_is_release(false);
     }
     slot->set_is_occupied(!slot->is_release());
 
@@ -97,15 +89,12 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
     if (pair.first > 100.0) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
-      release_info->set_is_release(false);
-
       ILOG_INFO << "distance is big";
     }
 
     if (slot->corner_points().corner_point_size() != 4) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
-      release_info->set_is_release(false);
     }
 
     if ((slot->slot_type() ==
@@ -120,7 +109,6 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
           config_->prepare_single_max_allow_time) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
-        release_info->set_is_release(false);
         continue;
       }
 
@@ -142,12 +130,10 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
           pair.second->GetOccupied()) {
         slot->set_is_release(false);
         slot->set_is_occupied(true);
-        release_info->set_is_release(false);
       } else {
         pair.second->SetOccupied(false);
         slot->set_is_release(true);
         slot->set_is_occupied(false);
-        release_info->set_is_release(true);
       }
     }
   }
@@ -1271,19 +1257,9 @@ const bool RuleBasedSlotRelease::IsParallelSlotCoarseRelease(
   apa_planner::SlotManager::EgoSlotInfo ego_slot_info;
   const double lon_dist = CalLonDistSlot2Car(*slot);
 
-  // init
-  common::SlotReleaseInfo *release_info;
-  if (slot->release_info_size() > 0) {
-    release_info = slot->mutable_release_info(0);
-  } else {
-    release_info = slot->add_release_info();
-    release_info->set_method(common::SlotReleaseMethod::RULE_BASED_RELEASE);
-  }
-
   if (!UpdateEgoParallelSlotInfoInSearching(ego_slot_info, slot)) {
     slot->set_is_release(false);
     slot->set_is_occupied(true);
-    release_info->set_is_release(false);
     ILOG_INFO << "Update Parallel In Searching, slot id = " << slot->id()
               << "  slot type = " << slot->slot_type()
               << "  is_release = " << slot->is_release();
@@ -1303,16 +1279,12 @@ const bool RuleBasedSlotRelease::IsParallelSlotCoarseRelease(
         slot_history->GetOccupied()) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
-      release_info->set_is_release(false);
     } else {
       slot_history->SetOccupied(false);
       slot->set_is_release(true);
       slot->set_is_occupied(false);
-      release_info->set_is_release(true);
     }
   }
-
-  release_info->set_is_release(true);
 
   ILOG_INFO << "Parallel slot id = " << slot->id()
             << "  is_release = " << slot->is_release()
@@ -1323,22 +1295,12 @@ const bool RuleBasedSlotRelease::IsParallelSlotCoarseRelease(
 
 const bool RuleBasedSlotRelease::IsPerpendicularSlotCoarseRelease(
     common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history) {
-  // init
-  common::SlotReleaseInfo *release_info;
-  if (slot->release_info_size() > 0) {
-    release_info = slot->mutable_release_info(0);
-  } else {
-    release_info = slot->add_release_info();
-    release_info->set_method(common::SlotReleaseMethod::RULE_BASED_RELEASE);
-  }
-
   if (slot->slot_type() ==
           Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING &&
       frame_->slot_info_direction.count(slot->id()) != 0) {
     if (!frame_->slot_info_direction[slot->id()]) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
-      release_info->set_is_release(false);
       ILOG_INFO << "car and slot is no same direction slot id = " << slot->id()
                 << "  slot type = " << slot->slot_type()
                 << "  is_release = " << slot->is_release();
@@ -1361,7 +1323,6 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotCoarseRelease(
   if (lon_dist < min_slot_release_long_dist && slot_history->GetOccupied()) {
     slot->set_is_release(false);
     slot->set_is_occupied(true);
-    release_info->set_is_release(false);
     ILOG_INFO << "CalLonDistSlot2Car slot id = " << slot->id()
               << "  slot type = " << slot->slot_type()
               << "  is_release = " << slot->is_release();
@@ -1373,7 +1334,6 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotCoarseRelease(
   if (IsSlotOccupied(slot)) {
     slot->set_is_release(false);
     slot->set_is_occupied(true);
-    release_info->set_is_release(false);
 
     ILOG_INFO << "slot id = " << slot->id()
               << "  slot type = " << slot->slot_type() << "slot is occupied";
@@ -1383,14 +1343,11 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotCoarseRelease(
   if (!IsPassageAreaEnough(slot)) {
     slot->set_is_release(false);
     slot->set_is_occupied(true);
-    release_info->set_is_release(false);
 
     ILOG_INFO << "slot id = " << slot->id()
               << "  slot type = " << slot->slot_type() << "passage is small";
     return false;
   }
-
-  release_info->set_is_release(true);
 
   ILOG_INFO << "slot id = " << slot->id()
             << "  slot type = " << slot->slot_type()

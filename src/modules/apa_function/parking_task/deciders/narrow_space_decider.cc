@@ -6,8 +6,7 @@
 namespace planning {
 
 void NarrowScenarioDecider::Process(
-    const uint8_t slot_type, const uint8_t park_task,
-    const uint8_t plan_reason, const uint8_t planning_status,
+    const uint8_t slot_type,
     const apa_planner::ParkingScenarioType scene_type) {
   switch (slot_type) {
     case Common::PARKING_SLOT_TYPE_VERTICAL:
@@ -24,33 +23,21 @@ void NarrowScenarioDecider::Process(
       break;
   }
 
-  plan_reason_ = PlanningReason::NONE;
-  if (plan_reason == apa_planner::ParkingScenario::FIRST_PLAN &&
-      slot_type_ == ParkSpaceType::VERTICAL &&
-      planning_status ==
-          apa_planner::ParkingScenario::ParkingStatus::PARKING_FAILED) {
-    plan_reason_ = PlanningReason::GEOMETRY_CURVE_FAIL;
-  }
-
   // is astar
   if (scene_type == apa_planner::ParkingScenarioType::SCENARIO_NARROW_SPACE) {
     return;
   }
 
-  UpdateNarrowScenario(slot_type_, plan_reason_);
+  UpdateNarrowScenario(slot_type_);
 
   return;
 }
 
 void NarrowScenarioDecider::UpdateNarrowScenario(
-    const ParkSpaceType slot_type, const PlanningReason plan_reason) {
+    const ParkSpaceType slot_type) {
   is_narrow_space_ = false;
   is_need_astar_ = false;
   if (slot_type != ParkSpaceType::VERTICAL) {
-    return;
-  }
-
-  if (plan_reason != PlanningReason::GEOMETRY_CURVE_FAIL) {
     return;
   }
 
@@ -68,7 +55,6 @@ void NarrowScenarioDecider::UpdateNarrowScenario(
 
 void NarrowScenarioDecider::Clear() {
   slot_type_ = ParkSpaceType::NONE;
-  plan_reason_ = PlanningReason::NONE;
   astar_search_state_ = AstarSearchState::NONE;
 
   is_narrow_space_ = false;

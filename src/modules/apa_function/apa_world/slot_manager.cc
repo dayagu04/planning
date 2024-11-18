@@ -269,16 +269,24 @@ bool SlotManager::UpdateSlotsInSearching(
   }
 
   // todo: move to task list.
+  // 没有选择的车位，根据规则决定是否释放.
   RuleBasedSlotRelease rule_based_release_decider;
   rule_based_release_decider.Process(apa_data_ptr->local_view_ptr_,
                                      frame_.measurement_data_ptr,
                                      fusion_slot_map, frame_);
 
-  // 没有点击泊车，但是点击了车位，此时需要场景尝试一下
+  // 没有点击泊车，但是点击了车位，此时需要场景尝试一下。并且使用尝试后的场景覆盖基于规则的.
   if (!frame_.slot_info_window_map.empty() &&
       !frame_.slot_info_window_map[frame_.parking_slot_ptr->select_slot_id]
            .IsEmpty()) {
-    UpdateSlotsInParking();
+    // 填充基于规则的方式，是否释放。后续会基于规划的方式
+    if (UpdateSlotsInParking()) {
+      frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] =
+          SlotReleaseState::RELEASE;
+    } else {
+      frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+    }
 
     ILOG_INFO << "try park planning";
   }
@@ -1123,6 +1131,7 @@ bool SlotManager::UpdateEgoSlotInfo(
       return false;
     }
   }
+
   if (!frame_.is_fix_slot) {
     ego_slot_info.slot_type = select_fusion_slot.type;
     ego_slot_info.select_slot_id = select_slot_id;
@@ -1831,7 +1840,7 @@ void SlotManager::CopySlotReleaseInfo() {
 }
 
 void SlotManager::SlotReleaseByScenarioTry(
-    const bool release, const common::SlotReleaseMethod method) {
+    const bool release, const SlotReleaseMethod method) {
   for (int i = 0; i < frame_.slot_management_info.slot_info_vec_size(); i++) {
     common::SlotInfo *slot_info =
         frame_.slot_management_info.mutable_slot_info_vec(i);
@@ -1846,13 +1855,16 @@ void SlotManager::SlotReleaseByScenarioTry(
         slot_info->set_is_occupied(false);
       }
 
-      // todo
-      // uint32 tmp = static_cast<uint32>(method);
-      // slot_info->set_slot_release_method(tmp);
-
-      // find target slot, break
       break;
     }
+  }
+
+  if (!release) {
+    frame_.ego_slot_info.release_info.release_state[GEOMETRY_PLANNING_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+  } else {
+    frame_.ego_slot_info.release_info.release_state[GEOMETRY_PLANNING_RELEASE] =
+        SlotReleaseState::RELEASE;
   }
 
   CopySlotReleaseInfo();

@@ -54,10 +54,6 @@ void ParkingScenario::ScenarioRunning() {
 void ParkingScenario::Reset() {
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
 
-  NarrowScenarioDecider* narrow_scenario_decider =
-      NarrowScenarioDecider::GetNarrowScenarioDecider();
-  narrow_scenario_decider->Clear();
-
   return;
 }
 
@@ -122,8 +118,6 @@ void ParkingScenario::GenPlanningOutput() {
             << static_cast<int>(frame_.plan_stm.planning_status)
             << "  plan path pt size = "
             << current_path_point_global_vec_.size();
-
-  IsNarrowSpaceScenario();
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
@@ -380,39 +374,6 @@ const bool ParkingScenario::PostProcessPath() {
   frame_.spline_success = true;
 
   return true;
-}
-
-const void ParkingScenario::IsNarrowSpaceScenario() {
-  if (apa_world_ptr_->GetApaDataPtr()->slot_type !=
-      Common::PARKING_SLOT_TYPE_VERTICAL) {
-    return;
-  }
-
-  if (frame_.replan_reason != FIRST_PLAN) {
-    return;
-  }
-
-  if (frame_.plan_stm.planning_status != PARKING_FAILED) {
-    return;
-  }
-
-  if (!apa_param.GetParam()
-           .astar_config.vertical_slot_auto_switch_to_astar) {
-    return;
-  }
-
-  NarrowScenarioDecider* narrow_scenario_decider =
-      NarrowScenarioDecider::GetNarrowScenarioDecider();
-  narrow_scenario_decider->Process(
-      apa_world_ptr_->GetApaDataPtr()->slot_type, 1, frame_.replan_reason,
-      frame_.plan_stm.planning_status,
-      apa_world_ptr_->GetApaDataPtr()->scenario_type);
-
-  if (narrow_scenario_decider->IsNeedAstar()) {
-    frame_.plan_stm.planning_status = PARKING_PLANNING;
-  }
-
-  return;
 }
 
 void ParkingScenario::CreateTasks() {

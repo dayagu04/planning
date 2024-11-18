@@ -361,8 +361,6 @@ class ParkingScenario {
   virtual const double CalRemainDistFromUss(const double safe_dist);
   virtual const bool PostProcessPath();
 
-  virtual const void IsNarrowSpaceScenario();
-
   void CreateTasks();
 
  protected:

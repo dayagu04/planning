@@ -6,12 +6,13 @@
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
 #include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
+#include "narrow_space_decider.h"
 
 namespace planning {
 namespace apa_planner {
 
 // TODO: 目前默认几何规划无解的场景，就是狭窄场景，调用hybrid astar即可.
-// 后续需要在普通场景中，调用A star.
+// 后续需要在普通场景中，调用A star. 等后续需要普通场景优先调用A星时，再升级.
 class NarrowSpaceScenario : public ParkingScenario {
  public:
   NarrowSpaceScenario() = default;
@@ -31,6 +32,8 @@ class NarrowSpaceScenario : public ParkingScenario {
   const size_t GetPathCollisionID() const { return path_collision_id_; }
 
   const bool IsPathCollision() const { return is_path_collision_; }
+
+  const ParkingScenarioStatus ScenarioTry() override;
 
  private:
   virtual const bool CheckReplan() override;
@@ -135,6 +138,8 @@ class NarrowSpaceScenario : public ParkingScenario {
   bool is_path_single_shot_to_goal_;
 
   SlotRelativePosition slot_side_;
+
+  NarrowScenarioDecider narrow_space_decider_;
 };
 
 }  // namespace apa_planner

@@ -2615,16 +2615,17 @@ const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
       apa_world_ptr_->GetSlotManagerPtr();
   if (result != PathPlannerResult::PLAN_UPDATE) {
     slot_manager->SlotReleaseByScenarioTry(
-        false, common::SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+        false, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
 
-    ILOG_INFO << "update path fail";
+    ILOG_INFO << "geometry path fail";
     return ParkingScenarioStatus::STATUS_FAIL;
   } else {
     slot_manager->SlotReleaseByScenarioTry(
-        true, common::SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+        true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+
+    ILOG_INFO << "geometry path success";
   }
 
-  ILOG_INFO << "update path success";
   return ParkingScenarioStatus::STATUS_RUNNING;
 }
 

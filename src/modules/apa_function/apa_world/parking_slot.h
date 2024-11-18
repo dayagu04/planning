@@ -91,6 +91,33 @@ struct ApaSlots {
   }
 };
 
+enum SlotReleaseMethod : int {
+  RULE_BASED_RELEASE = 0,
+  GEOMETRY_PLANNING_RELEASE = 1,
+  ASTAR_PLANNING_RELEASE = 2,
+  SLOT_RELEASE_METHOD_MAX_NUM = 3,
+};
+
+enum class SlotReleaseState : int {
+  // 不经过计算，不确定是否释放
+  UNKOWN = 0,
+  RELEASE = 1,
+  NOT_RELEASE = 2,
+};
+
+struct SlotReleaseInfo {
+  SlotReleaseState release_state[4];
+
+  void Clear() {
+    for (int i = 0; i < 4; i++) {
+      release_state[i] = SlotReleaseState::UNKOWN;
+    }
+  }
+};
+
+// todo: 统一所有和车位相关的信息,现在有:
+// ApaSlot,iflyauto::ParkingFusionSlot,common::SlotInfo,SlotManagementInfo,
+// SlotInfoWindow,
 class ParkSlot {
  public:
   ParkSlot() = default;
@@ -133,7 +160,7 @@ class ParkSlot {
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
   int id_ = 0;
   bool is_planning_release_;
-  common::SlotReleaseMethod release_method_;
+  SlotReleaseInfo release_info_;
 
   // 后轴中心的停车点，该值由决策器生成
   Pose2D target_pose_;

@@ -7,18 +7,6 @@ message CornerPoints {
   repeated Point2d corner_point = 1;
 }
 
-enum SlotReleaseMethod {
-  NONE = 0;
-  RULE_BASED_RELEASE = 1;
-  GEOMETRY_PLANNING_RELEASE = 2;
-  ASTAR_PLANNING_RELEASE = 3;
-};
-
-message SlotReleaseInfo {
-  optional bool is_release = 1;
-  optional SlotReleaseMethod method = 2;
-}
-
 message SlotInfo {
   optional uint32 id = 1;
   optional CornerPoints corner_points = 2;
@@ -26,7 +14,6 @@ message SlotInfo {
   optional bool is_release = 4;
   optional bool is_occupied = 5;
   optional uint32 slot_type = 6;
-  repeated SlotReleaseInfo release_info = 7;
 }
 
 message SlotManagementInfo {

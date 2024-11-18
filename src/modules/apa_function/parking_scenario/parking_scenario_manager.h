@@ -13,7 +13,7 @@ namespace apa_planner {
 // todo: move all scenario manager related in here.
 class ParkingScenarioManager final {
  public:
-  bool Init(const std::shared_ptr<ApaWorld>& apa_data);
+  bool Init(const std::shared_ptr<ApaWorld>& apa_world);
 
   ParkingScenarioStatus Excute(std::shared_ptr<apa_planner::ApaData> frame);
 
@@ -46,6 +46,7 @@ class ParkingScenarioManager final {
       scenario_list_;
 
   bool init_ = false;
+  std::shared_ptr<ApaWorld> apa_world_;
 };
 }  // namespace apa_planner
 }  // namespace planning
