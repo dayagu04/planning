@@ -11,6 +11,7 @@
 namespace planning {
 
 // in system, you can use polygon foot_print or circle foot print.
+// todo: move to collision detection
 struct PolygonFootPrint {
   Polygon2D body;
   Polygon2D mirror_left;

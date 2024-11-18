@@ -7,8 +7,8 @@
 #include <vector>
 #include "Eigen/Core"
 #include "local_view.h"
-#include "parking_obstacle.h"
-#include "parking_slot.h"
+#include "apa_obstacle.h"
+#include "apa_slot.h"
 
 namespace planning {
 namespace apa_planner {
@@ -164,7 +164,7 @@ struct ApaData {
   ApaFunction apa_function = ApaFunction::INVALID;
 
   MeasurementData measurement_data;
-  ApaSlots apa_slots;
+  ApaSlotList apa_slots;
   UssDistance uss_dis;
 
   // 暂时用这个 无需改变太多之前代码

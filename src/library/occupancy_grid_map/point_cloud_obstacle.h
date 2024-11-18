@@ -8,7 +8,7 @@
 #include "library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
-#include "parking_obstacle.h"
+#include "src/modules/apa_function/apa_world/apa_obstacle.h"
 
 namespace planning {
 
@@ -17,6 +17,7 @@ namespace planning {
 // map (ogm) to represent all obstacle in astar search.
 // todo: use heirachy collision checker by different height.
 // e.g. lower obs < 0.3 meter. upper obs > 2.3 meter.
+// todo: move to apa_function
 struct PointCloudObstacle {
   std::vector<Position2D> points;
 

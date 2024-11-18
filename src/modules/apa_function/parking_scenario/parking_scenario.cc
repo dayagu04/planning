@@ -390,6 +390,11 @@ void ParkingScenario::Enter(const ParkingScenarioStatus status) {
 const ParkingScenarioStatus ParkingScenario::ScenarioTry() {
 
   // todo: use geometry method first, if no result, use hybrid astar.
+  std::shared_ptr<SlotManager> slot_manager =
+      apa_world_ptr_->GetSlotManagerPtr();
+  slot_manager->SlotReleaseByScenarioTry(
+      true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+
   return ParkingScenarioStatus::STATUS_RUNNING;
 }
 

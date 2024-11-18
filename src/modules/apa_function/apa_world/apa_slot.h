@@ -61,53 +61,27 @@ enum class SlotSide : uint8_t {
   INVALID,
 };
 
-struct ApaSlot {
-  SlotCoord slot_coord;
-  SlotType slot_type = SlotType::INVALID;
-  SlotSide slot_side = SlotSide::INVALID;
-  int slot_id = 0;
-  Limiter limiter;
-  double heading = 0.0;
-  Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
-
-  void Reset() {
-    slot_coord.Reset();
-    slot_type = SlotType::INVALID;
-    slot_side = SlotSide::INVALID;
-    slot_id = 0;
-    limiter.Reset();
-    heading = 0.0;
-    heading_vec.setZero();
-  }
-};
-
-struct ApaSlots {
-  std::vector<ApaSlot> slots_vec;
-  int slot_size = 0;
-
-  void Reset() {
-    slots_vec.clear();
-    slot_size = 0;
-  }
-};
-
-enum SlotReleaseMethod : int {
+enum SlotReleaseMethod : uint8_t {
   RULE_BASED_RELEASE = 0,
   GEOMETRY_PLANNING_RELEASE = 1,
   ASTAR_PLANNING_RELEASE = 2,
   SLOT_RELEASE_METHOD_MAX_NUM = 3,
 };
 
-enum class SlotReleaseState : int {
+enum class SlotReleaseState : uint8_t {
   // 不经过计算，不确定是否释放
   UNKOWN = 0,
   RELEASE = 1,
   NOT_RELEASE = 2,
 };
 
+// todo:每一个车位都应该有SlotReleaseInfo，但是暂时只有ego_slot_info选中的车位有.
 struct SlotReleaseInfo {
   SlotReleaseState release_state[4];
 
+  // 重新巡库时，重置;
+  // 重新选择车位后，也要重置；
+  // 同一个车位巡库中、泊车中不重置.
   void Clear() {
     for (int i = 0; i < 4; i++) {
       release_state[i] = SlotReleaseState::UNKOWN;
@@ -115,12 +89,30 @@ struct SlotReleaseInfo {
   }
 };
 
+struct SlotObstacleInfo {
+  bool is_occupied_by_obs;
+
+  double left_line_obs_dist;
+  double right_line_obs_dist;
+  double top_line_obs_dist;
+  double bottom_line_obs_dist;
+};
+
+enum class SlotMaterialType : uint8_t {
+  UNKOWN = 0,
+  SLOT_LINE = 1,
+  // 机械车位
+  MECHANICAL = 2,
+  // 空间车位
+  FREEDOM_SPACE = 3,
+};
+
 // todo: 统一所有和车位相关的信息,现在有:
-// ApaSlot,iflyauto::ParkingFusionSlot,common::SlotInfo,SlotManagementInfo,
-// SlotInfoWindow,
-class ParkSlot {
+// iflyauto::ParkingFusionSlot,common::SlotInfo,SlotManagementInfo,
+// SlotInfoWindow. 可以统一成一种类型.
+class ApaSlot {
  public:
-  ParkSlot() = default;
+  ApaSlot() = default;
 
   void Init();
 
@@ -134,47 +126,52 @@ class ParkSlot {
   const int Id() const { return id_; }
 
  private:
-  //  perception
+  //  perception related
   std::vector<Eigen::Vector2d> perception_corners_;
   SlotType slot_type = SlotType::INVALID;
   SlotSide slot_side = SlotSide::INVALID;
-
   std::vector<Eigen::Vector2d> perception_limiters_;
   int perception_id_ = 0;
-
-  // 记录车位高度信息
+  // 记录车位高度信息, 对于机械车位，判定底部高度和顶部高度
   double height_top_;
   double height_bottom_;
   iflyauto::SlotSourceType perception_source_type_;
-
   bool is_perception_release_;
+  SlotMaterialType slot_material_type_;
 
-  // planning
+  // planning related
   // construct lot from 4 corners
   //  corner should be ordered counter-clockwise
   //  and corners[0] and corners[3] is the open edge
   std::vector<Eigen::Vector2d> ccw_corners_;
-
-  std::vector<Eigen::Vector2d> limiters_;
-  double heading = 0.0;
-  Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
+  Limiter limiters_;
+  double heading_;
+  Eigen::Vector2d heading_vec_;
   int id_ = 0;
   bool is_planning_release_;
   SlotReleaseInfo release_info_;
+  bool is_suggested_slot_;
 
   // 后轴中心的停车点，该值由决策器生成
-  Pose2D target_pose_;
-
-  double left_obs_dist_;
-  double right_obs_dist_;
-  double top_obs_dist_;
-  double bottom_obs_dist_;
+  Pose2D stop_pose_;
 
   double ego_occupied_ratio_;
 
   ad_common::math::LineSegment2d center_line_;
+
+  SlotObstacleInfo obs_info_;
 };
 
-typedef IndexedList<int, ParkSlot> IndexedParkLots;
+struct ApaSlotList {
+  std::vector<ApaSlot> slots_vec;
+  int slot_size = 0;
+
+  void Reset() {
+    slots_vec.clear();
+    slot_size = 0;
+  }
+};
+
+typedef IndexedList<int, ApaSlot> IndexedParkSlots;
 
 }  // namespace planning

@@ -6,9 +6,8 @@
 
 namespace planning {
 
-// 目前的调用逻辑是：几何规划器第一次规划失败，调用Hybrid astar;
-// 如果几何规划中途失败，不再调用A星;
-
+// 目前的调用逻辑是：点击车位后，进行预规划，几何规划器失败，才调用Hybrid astar预规划;
+// 根据预规划结果，在正式泊车中选择几何还是A星;
 class NarrowScenarioDecider : public ParkingTask{
  public:
   NarrowScenarioDecider() = default;

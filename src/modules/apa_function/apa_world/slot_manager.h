@@ -31,7 +31,7 @@
 #include "task_basic_types.pb.h"
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
-#include "parking_slot.h"
+#include "apa_slot.h"
 
 static const size_t slot_corner_pt_nums = 4;
 
@@ -237,6 +237,9 @@ class LimiterPointWindow {
 // todo:
 // 1. SlotManager需要和ParkingSlotManager统一起来.
 // 2. 内部的很多计算，也需要独立出去.
+// 3. slot manager 统计所有车位信息，包括历史信息，是否释放信息,等.
+// 而ApaSlot是通用数据结构, 和slot manager不同.
+// 4. 为了清晰起见，通用数据结构最好定义成一个单独的头文件.
 class SlotManager {
  public:
   struct Param {

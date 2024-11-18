@@ -11,12 +11,19 @@ set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/parallel
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular
-  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/slot_searching
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular/head_in
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular/head_out
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular/tail_in
+  ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular/tail_out
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/narrow_space
   ${CMAKE_CURRENT_LIST_DIR}/parking_task
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular/head_in
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular/head_out
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular/tail_in
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular/tail_out
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/parallel
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers/lateral_path_optimizer

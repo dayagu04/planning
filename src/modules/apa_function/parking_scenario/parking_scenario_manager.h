@@ -34,8 +34,10 @@ class ParkingScenarioManager final {
     return current_scenario_;
   }
 
-  private:
+ private:
   void ScenarioTry();
+
+  const bool IsSlotReleaseByHybridAstar();
 
  private:
   std::shared_ptr<ParkingScenario> current_scenario_;

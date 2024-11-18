@@ -1,6 +1,6 @@
 #pragma once
 
-#include "parking_obstacle.h"
+#include "apa_obstacle.h"
 #include <limits>
 #include <memory>
 #include <string>
@@ -8,6 +8,7 @@
 
 namespace planning {
 
+// obstacle manager: 管理所有障碍物，包括超声波、限位器、视觉、虚拟
 class ParkObstacleManager {
  public:
   ParkObstacleManager(planning::framework::Session *session);

@@ -1860,10 +1860,10 @@ void SlotManager::SlotReleaseByScenarioTry(
   }
 
   if (!release) {
-    frame_.ego_slot_info.release_info.release_state[GEOMETRY_PLANNING_RELEASE] =
+    frame_.ego_slot_info.release_info.release_state[method] =
         SlotReleaseState::NOT_RELEASE;
   } else {
-    frame_.ego_slot_info.release_info.release_state[GEOMETRY_PLANNING_RELEASE] =
+    frame_.ego_slot_info.release_info.release_state[method] =
         SlotReleaseState::RELEASE;
   }
 

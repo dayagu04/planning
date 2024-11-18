@@ -10,7 +10,7 @@
 #include "narrow_space_decider.h"
 #include "narrow_space_scenario.h"
 #include "parallel_park_in_scenario.h"
-#include "parking_slot.h"
+#include "apa_slot.h"
 #include "perpendicular_head_in_scenario.h"
 #include "perpendicular_head_out_scenario.h"
 #include "perpendicular_park_scenario.h"
@@ -72,6 +72,12 @@ ParkingScenarioStatus ParkingScenarioManager::Excute(
         } else {
           apa_data->scenario_type =
               ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+
+          // check is narrow space or not
+          if (IsSlotReleaseByHybridAstar()) {
+            apa_data->scenario_type =
+                ParkingScenarioType::SCENARIO_NARROW_SPACE;
+          }
 
           ILOG_INFO << "planner_type = PERPENDICULAR_PARK_IN!";
         }
@@ -135,13 +141,11 @@ ParkingScenarioStatus ParkingScenarioManager::Excute(
     return ParkingScenarioStatus::STATUS_RUNNING;
   }
 
-  // 场景尝试
+  // 点击了车位，但是没有点击泊车，进行场景尝试
   if (scenario_status == ParkingScenarioStatus::STATUS_TRY &&
       current_scenario_ != nullptr) {
     ScenarioTry();
   }
-
-  ILOG_INFO << "scenario type error!";
 
   return ParkingScenarioStatus::STATUS_UNKNOWN;
 }
@@ -177,10 +181,6 @@ void ParkingScenarioManager::ScenarioTry() {
       apa_world_->GetSlotManagerPtr()
           ->GetEgoSlotInfo()
           .release_info.release_state[GEOMETRY_PLANNING_RELEASE];
-  SlotReleaseState astar_path_release =
-      apa_world_->GetSlotManagerPtr()
-          ->GetEgoSlotInfo()
-        .release_info.release_state[ASTAR_PLANNING_RELEASE];
 
   // check geometry release
   if (geometry_path_release == SlotReleaseState::UNKOWN) {
@@ -193,11 +193,15 @@ void ParkingScenarioManager::ScenarioTry() {
   }
 
   // check geometry path generator again
+  SlotReleaseState astar_path_release =
+      apa_world_->GetSlotManagerPtr()
+          ->GetEgoSlotInfo()
+          .release_info.release_state[ASTAR_PLANNING_RELEASE];
+
   if (geometry_path_release == SlotReleaseState::RELEASE) {
     ILOG_INFO << "scenario geometry path release";
-  }
-  // 如果几何规划不释放，用Astar只尝试一次
-  else if (geometry_path_release == SlotReleaseState::NOT_RELEASE) {
+  } else if (geometry_path_release == SlotReleaseState::NOT_RELEASE) {
+    // 如果几何规划不释放，用Astar只尝试一次
     if (astar_path_release == SlotReleaseState::UNKOWN) {
       std::shared_ptr<ParkingScenario> narrow_scenario_ =
           scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
@@ -210,5 +214,24 @@ void ParkingScenarioManager::ScenarioTry() {
 
   return;
 }
+
+const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
+  SlotReleaseState astar_path_release =
+      apa_world_->GetSlotManagerPtr()
+          ->GetEgoSlotInfo()
+          .release_info.release_state[ASTAR_PLANNING_RELEASE];
+
+  switch (astar_path_release) {
+    case SlotReleaseState::RELEASE:
+      return true;
+    case SlotReleaseState::UNKOWN:
+    case SlotReleaseState::NOT_RELEASE:
+    default:
+      break;
+  }
+
+  return false;
+}
+
 }  // namespace apa_planner
 }  // namespace planning
