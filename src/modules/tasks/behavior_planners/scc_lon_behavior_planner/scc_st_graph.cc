@@ -371,7 +371,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     safe_distance = CalcSafeDistance(lead_one.v_lead(), v_ego);
 
     const auto following_distance_level_to_big_vehicle =
-        ego_state_manager->following_distance_level_to_big_vehicle();
+        ego_state_manager->time_headway_level();
     // auto engine_config =
     //     common::ConfigurationContext::Instance()->engine_config();
     // std::string config_file = common::util::ReadFile(
@@ -388,11 +388,6 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
     lead_one_desired_distance = CalcDesiredDistance(
         lead_one, v_ego, lc_request, following_distance_level_to_big_vehicle);
-    // if (5 == following_distance_level_to_big_vehicle) {
-    //   lead_one_desired_distance = CalcDesiredDistanceToBigVehicle(
-    //       lead_one, v_ego, lc_request,
-    //       following_distance_level_to_big_vehicle);
-    // }
     JSON_DEBUG_VALUE("following_distance_level",
                      following_distance_level_to_big_vehicle);
     JSON_DEBUG_VALUE("desired_distance", lead_one_desired_distance);
