@@ -9,7 +9,7 @@ sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 # bag path and frame dt
-bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241107/20241107-15-48-04/data_collection_CHERY_E0Y_18047_EVENT_FILTER_2024-11-07-15-48-04_no_camera.bag.1731334401.open-loop.plan"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241104/20241104-15-12-06/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-11-04-15-12-06_no_camera.bag.1732021904.open-loop.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -213,7 +213,8 @@ def update_lc_data (noa_info, plan_debug_json):
              'virtual_lane_relative_id_switch_flag',
              'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split',
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
-             'select_ego_lane_without_plan', 'select_ego_lane_with_plan','forward_lane_num']
+             'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'forward_lane_num',
+             'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))

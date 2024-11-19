@@ -2486,6 +2486,12 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
                    distance_to_first_road_merge_);
   JSON_DEBUG_VALUE("distance_to_first_road_split",
                    distance_to_first_road_split_);
+  JSON_DEBUG_VALUE("is_ego_on_split_region",
+                  is_ego_on_split_region);
+  JSON_DEBUG_VALUE("last_split_seg_dir",
+                  int(last_split_seg_dir_));
+  JSON_DEBUG_VALUE("need_continue_lc_num_on_off_ramp_region",
+                  need_continue_lc_num_on_off_ramp_region);
   GeneralTaskMapInfo general_task_map_info;
   general_task_map_info.distance_to_ramp = dis_to_ramp_;
   general_task_map_info.distance_to_first_road_merge =
