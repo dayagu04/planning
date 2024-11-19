@@ -2499,6 +2499,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   general_task_map_info.split_seg_forward_lane_nums = split_seg_forward_lane_nums_;
   general_task_map_info.split_next_seg_forward_lane_nums = split_next_seg_forward_lane_nums_;
   general_task_map_info.lc_nums_for_split = lc_nums_for_split_;
+  general_task_map_info.is_ego_on_split_region = is_ego_on_split_region;
 
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {

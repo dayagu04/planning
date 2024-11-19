@@ -389,6 +389,7 @@ void VirtualLane::ProcessEgoOnRoadMLC(
   bool is_trigger_ego_not_on_side = general_task_map_info.is_leaving_ramp &&
                                     !general_task_map_info.is_on_ramp;
   int lc_nums_for_split = general_task_map_info.lc_nums_for_split;
+  bool is_ego_on_split_region = general_task_map_info.is_ego_on_split_region;
   //处理在接近split的变道请求
   if (lc_nums_for_split != 0) {
     current_tasks_.emplace_back(lc_nums_for_split);
@@ -406,7 +407,7 @@ void VirtualLane::ProcessEgoOnRoadMLC(
                   << std::endl;
       }
     }
-  } else if (is_nearing_ramp && !is_on_ramp) {  //在主路上，前方接近ramp的变道
+  } else if (is_nearing_ramp && !is_on_ramp && !is_ego_on_split_region) {  //在主路上，前方接近ramp的变道
     if (ramp_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
@@ -433,8 +434,6 @@ void VirtualLane::ProcessEgoOnRampMLC(
       general_task_map_info.distance_to_first_road_split;
   const RampDirection first_merge_direction =
       general_task_map_info.first_merge_direction;
-  const double trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp =
-      266;
   const RampDirection first_split_direction =
       general_task_map_info.first_split_direction;
   const int lane_num = general_task_map_info.lane_num_except_emergency;
@@ -449,14 +448,12 @@ void VirtualLane::ProcessEgoOnRampMLC(
       general_task_map_info.sum_dis_to_last_split_point_on_ramp;
   const RampDirection second_merge_direction =
       general_task_map_info.second_merge_direction;
-  //在匝道上，经过split点50m后再开始触发变道任务，避免自车还在split的区域内
-  const double dis_to_last_spli_threshold = 50;
+  const bool is_ego_on_split_region = general_task_map_info.is_ego_on_split_region;
   //在匝道汇入匝道时，距离merge的距离在200m范围内时，再生成地图变道任务，避免前面有1分2场景的不合理变道
   const double dis_to_first_merge_threshold = 100;
   //首先处理匝道上的分叉口
   if (dis_to_first_merge > dis_to_first_split &&
-      dis_to_first_split <
-          trigger_mlc_distance_threshold_to_first_split_when_ego_on_ramp) {
+     !is_ego_on_split_region) {
     if (first_split_direction == RAMP_ON_RIGHT) {
       for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
         current_tasks_.emplace_back(1);
@@ -478,7 +475,7 @@ void VirtualLane::ProcessEgoOnRampMLC(
       }
     }
   } else if (is_ramp_merge_to_ramp_on_expressway &&
-             sum_dis_to_last_split_point_on_ramp > dis_to_last_spli_threshold &&
+             !is_ego_on_split_region &&
              dis_to_first_merge < dis_to_first_merge_threshold) {
     RampDirection next_lc_dir = RAMP_NONE;
     if (dis_to_second_merge < dis_to_first_split) {

@@ -53,6 +53,7 @@ struct GeneralTaskMapInfo {
   int split_seg_forward_lane_nums;
   int split_next_seg_forward_lane_nums;
   int lc_nums_for_split;
+  bool is_ego_on_split_region;
 };
 
 // hack :clren
