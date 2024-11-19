@@ -124,15 +124,11 @@ class StGraphGenerator {
   double CalcDesiredDistance(
       const planning::common::TrackedObjectInfo &lead_obstacle,
       const double v_ego, const std::string &lc_request,
-      size_t following_distance_level = 3);
-  double CalcDesiredDistanceToBigVehicle(
-      const planning::common::TrackedObjectInfo &lead_obstacle,
-      const double v_ego, const std::string &lc_request,
-      size_t following_distance_level);
+      size_t time_headway_level = 3);
   double GetRSSDistance(const double obstacle_velocity, double ego_velocity);
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string &lc_request,
-                               size_t following_distance_level = 1,
+                               size_t time_headway_level = 1,
                                const bool is_accident_car = false,
                                const bool is_temp_lead = false,
                                const bool is_lead = false);

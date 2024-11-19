@@ -752,7 +752,7 @@ def load_lon_global_figure(bag_loader):
   is_overlap = []
   t_plan_debug = []
 
-  following_distance_level = []
+  time_headway_level = []
   desired_distance = []
   desired_distance_filtered = []
 
@@ -762,7 +762,7 @@ def load_lon_global_figure(bag_loader):
      replan_status.append(plan_debug_info[i]['replan_status'])
      lon_station_err.append(plan_debug_info[i]['lon_err'])
      is_overlap.append(plan_debug_info[i]['is_overlap'])
-     following_distance_level.append(plan_debug_info[i]['following_distance_level'])
+     time_headway_level.append(plan_debug_info[i]['time_headway_level'])
      desired_distance.append(plan_debug_info[i]['desired_distance'])
      desired_distance_filtered.append(plan_debug_info[i]['desired_distance_filtered'])
 
@@ -771,7 +771,7 @@ def load_lon_global_figure(bag_loader):
     'replan_status': replan_status,
     'lon_station_err': lon_station_err,
     'is_overlap': is_overlap,
-    'following_distance_level': following_distance_level,
+    'time_headway_level': time_headway_level,
     'desired_distance': desired_distance,
     'desired_distance_filtered': desired_distance_filtered,
   })
@@ -791,7 +791,7 @@ def load_lon_global_figure(bag_loader):
   f_replan_status = fig_replan_status.line('time', 'replan_status', source = plan_debug_multi, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'replan_status')
   fig_replan_status.line('time', 'lon_station_err', source = plan_debug_multi, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'lon_station_err')
   # fig_replan_status.line('time', 'is_overlap', source = plan_debug_multi, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'is_overlap')
-  fig_replan_status.line('time', 'following_distance_level', source = plan_debug_multi, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'following_distance_level')
+  fig_replan_status.line('time', 'time_headway_level', source = plan_debug_multi, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'time_headway_level')
   fig_replan_status.line('time', 'desired_distance', source = plan_debug_multi, line_width = 1, line_color = 'brown', line_dash = 'solid', legend_label = 'desired_distance')
   fig_replan_status.line('time', 'desired_distance_filtered', source = plan_debug_multi, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'desired_distance_filtered')
   # fig_replan_status.line('time', 'location_latency', source = plan_debug_multi, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'location_latency')
@@ -811,7 +811,7 @@ def load_lon_global_figure(bag_loader):
   fig_fsm_state.legend.click_policy = 'hide'
 
   hover_replan_status = HoverTool(renderers=[f_replan_status], tooltips=[('time', '@time'), ('replan_status', '@replan_status'), ('lon_station_err', '@lon_station_err'),
-                                                                         ('following_distance_level', '@following_distance_level'), ('desired_distance', '@desired_distance'),('desired_distance_filtered', '@desired_distance_filtered')], mode='vline')
+                                                                         ('time_headway_level', '@time_headway_level'), ('desired_distance', '@desired_distance'),('desired_distance_filtered', '@desired_distance_filtered')], mode='vline')
   fig_replan_status.add_tools(hover_replan_status)
   fig_replan_status.toolbar.active_scroll = fig_replan_status.select_one(WheelZoomTool)
   fig_replan_status.legend.click_policy = 'hide'

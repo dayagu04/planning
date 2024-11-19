@@ -370,7 +370,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_a_processed = ProcessObstacleAcc(lead_one.a_lead_k());
     safe_distance = CalcSafeDistance(lead_one.v_lead(), v_ego);
 
-    const auto following_distance_level_to_big_vehicle =
+    const auto time_headway_level =
         ego_state_manager->time_headway_level();
     // auto engine_config =
     //     common::ConfigurationContext::Instance()->engine_config();
@@ -387,9 +387,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // }
 
     lead_one_desired_distance = CalcDesiredDistance(
-        lead_one, v_ego, lc_request, following_distance_level_to_big_vehicle);
-    JSON_DEBUG_VALUE("following_distance_level",
-                     following_distance_level_to_big_vehicle);
+        lead_one, v_ego, lc_request, time_headway_level);
+    JSON_DEBUG_VALUE("time_headway_level",
+                     time_headway_level);
     JSON_DEBUG_VALUE("desired_distance", lead_one_desired_distance);
 
     lead_one_desired_velocity = CalcDesiredVelocity(
@@ -1366,14 +1366,14 @@ double StGraphGenerator::ProcessObstacleAcc(const double a_lead) {
 double StGraphGenerator::CalcDesiredDistance(
     const planning::common::TrackedObjectInfo &lead_obstacle,
     const double v_ego, const std::string &lc_request,
-    size_t following_distance_level) {
+    size_t time_headway_level) {
   LOG_DEBUG("-----CalcDesiredDistance \n");
   double desired_distance = 50.0;  // default value
 
   // 跟车距离两种方式：RSS和标定
   double desired_distance_rss = GetRSSDistance(lead_obstacle.v_lead(), v_ego);
   double desired_distance_calibrate = GetCalibratedDistance(
-      lead_obstacle.v_lead(), v_ego, lc_request, following_distance_level,
+      lead_obstacle.v_lead(), v_ego, lc_request, time_headway_level,
       lead_obstacle.is_accident_car(), lead_obstacle.is_temp_lead(),
       lead_obstacle.is_lead());
   JSON_DEBUG_VALUE("RealTime_desired_distance_rss", desired_distance_rss);
@@ -1412,22 +1412,22 @@ double StGraphGenerator::GetRSSDistance(const double obstacle_velocity,
 
 double StGraphGenerator::GetCalibratedDistance(
     const double v_lead, const double v_ego, const std::string &lc_request,
-    size_t following_distance_level, const bool is_accident_car,
+    size_t time_headway_level, const bool is_accident_car,
     const bool is_temp_lead, const bool is_lead) {
   LOG_DEBUG("-----calc_desired_distance \n");
   // 受限感知性能，取非负
   double v_lead_clip = std::max(v_lead, 0.0);
   // 这里查表、魔数都要优化
-  size_t following_distance_level_clip;
-  if (following_distance_level < 1) {
-    following_distance_level_clip = 1;
-  } else if (following_distance_level > 5) {
-    following_distance_level_clip = 5;
+  size_t time_headway_level_clip;
+  if (time_headway_level < 1) {
+    time_headway_level = 1;
+  } else if (time_headway_level > 5) {
+    time_headway_level = 5;
   } else {
-    following_distance_level_clip = following_distance_level;
+    time_headway_level = time_headway_level;
   }
   double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V) +
-                 _HEADWAY_BP[following_distance_level_clip - 1];
+                 _HEADWAY_BP[time_headway_level - 1];
   // if (lc_request != "none") {
   //   t_gap = t_gap * (0.6 + v_ego * 0.01);
   // }
