@@ -1624,24 +1624,24 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   JSON_DEBUG_VALUE("sum_dis_to_last_split_point", sum_dis_to_last_split_point_);
 
   // 计算在匝道上距离上一个split点的信息
-  const SdMapSwtx::Segment* last_split_seg_on_ramp =
+  const SdMapSwtx::Segment* temp_last_split_seg =
       sd_map.GetPreviousRoadSegment(current_segment->id());
-  double sum_dis_to_last_split_point_on_ramp = nearest_s;
-  sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
-  if (current_segment->usage() == SdMapSwtx::RAMP && last_split_seg_on_ramp) {
-    while (last_split_seg_on_ramp->out_link().size() == 1) {
-      sum_dis_to_last_split_point_on_ramp =
-          sum_dis_to_last_split_point_on_ramp + last_split_seg_on_ramp->dis();
-      last_split_seg_on_ramp =
-          sd_map.GetPreviousRoadSegment(last_split_seg_on_ramp->id());
-      if (!last_split_seg_on_ramp) {
+  double accumulate_dis_ego_to_last_split_point = nearest_s;
+  accumulate_dis_ego_to_last_split_point_ = NL_NMAX;
+  if (temp_last_split_seg) {
+    while (temp_last_split_seg->out_link().size() == 1) {
+      accumulate_dis_ego_to_last_split_point =
+          accumulate_dis_ego_to_last_split_point + temp_last_split_seg->dis();
+      temp_last_split_seg =
+          sd_map.GetPreviousRoadSegment(temp_last_split_seg->id());
+      if (!temp_last_split_seg) {
         break;
       }
     }
-    if (last_split_seg_on_ramp &&
-        last_split_seg_on_ramp->out_link().size() == 2) {
-      sum_dis_to_last_split_point_on_ramp_ =
-          sum_dis_to_last_split_point_on_ramp;
+    if (temp_last_split_seg &&
+        temp_last_split_seg->out_link().size() == 2) {
+      accumulate_dis_ego_to_last_split_point_ =
+          accumulate_dis_ego_to_last_split_point;
     }
   }
 
@@ -2193,7 +2193,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   is_leaving_ramp_ = false;
   sum_dis_to_last_merge_point_ = NL_NMAX;
   sum_dis_to_last_split_point_ = NL_NMAX;
-  sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
+  accumulate_dis_ego_to_last_split_point_ = NL_NMAX;
   distance_to_toll_station_ = NL_NMAX;
   is_ego_on_city_expressway_hmi_ = false;
   is_ego_on_expressway_hmi_ = false;
@@ -2451,6 +2451,17 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       }
     }
   }
+  //(6)、判断当前是否在split的起点后100m范围内；
+  bool is_ego_on_split_region = false;
+  double length_for_split_region = std::numeric_limits<double>::max();
+  const double dis_to_next_split_point = std::min(distance_to_first_road_split_, dis_to_ramp_);
+  std::array<double, 2> xp{50, 150};
+  std::array<double, 2> fp{0, 100};
+  const double split_region_dis_threshold = interp(dis_to_next_split_point, xp, fp);
+  if (accumulate_dis_ego_to_last_split_point_ < split_region_dis_threshold) {
+    is_ego_on_split_region = true;
+  }
+  
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
   JSON_DEBUG_VALUE("is_nearing_ramp", is_nearing_ramp_);
   JSON_DEBUG_VALUE("distance_to_ramp", dis_to_ramp_);
@@ -2484,7 +2495,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   general_task_map_info.distance_to_second_road_split =
       distance_to_second_road_split_;
   general_task_map_info.sum_dis_to_last_split_point_on_ramp =
-      sum_dis_to_last_split_point_on_ramp_;
+      accumulate_dis_ego_to_last_split_point_;
   general_task_map_info.split_seg_forward_lane_nums = split_seg_forward_lane_nums_;
   general_task_map_info.split_next_seg_forward_lane_nums = split_next_seg_forward_lane_nums_;
   general_task_map_info.lc_nums_for_split = lc_nums_for_split_;
