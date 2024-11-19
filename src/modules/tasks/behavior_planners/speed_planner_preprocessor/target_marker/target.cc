@@ -8,8 +8,8 @@
 namespace planning {
 
 Target::Target(const SpeedPlannerConfig& config, framework::Session* session)
-    : config_(config),
-      session_(session),
+    : session_(session),
+      config_(config),
       planning_time_(config.planning_time),
       dt_(config.dt) {
   const auto& ego_state_manager =

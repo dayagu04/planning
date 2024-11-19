@@ -235,13 +235,27 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   t_search_vec = []
   s_search_vec = []
+
+  t_cruise_target_vec = []
+  s_cruise_target_vec = []
+
   for item in (plan_debug_info.st_graph_searcher.st_search_path):
     t_search_vec.append(item.t)
   for item in (plan_debug_info.st_graph_searcher.st_search_path):
     s_search_vec.append(item.s)
+
+  for item in (plan_debug_info.lon_cruise_target_s_ref.cruise_target_s_ref):
+    t_cruise_target_vec.append(item.t)
+  for item in (plan_debug_info.lon_cruise_target_s_ref.cruise_target_s_ref):
+    s_cruise_target_vec.append(item.s)
+
   lon_plan_data['data_st_searcher'].data.update({
     't_search': t_search_vec,
     's_search': s_search_vec,
+  })
+  lon_plan_data['data_cruise_target'].data.update({
+    't_cruise_target': t_cruise_target_vec,
+    's_cruise_target': s_cruise_target_vec
   })
 
   # behavior planning
@@ -958,6 +972,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[]})
+  data_cruise_target = ColumnDataSource(data = {'t_cruise_target':[], 's_cruise_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -997,6 +1012,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_lon_motion_plan': data_lon_motion_plan, \
                    'data_planning':data_planning, \
                    'data_st_searcher':data_st_searcher, \
+                   'data_cruise_target': data_cruise_target,\
+                   
   }
 
   for i in range(20):
@@ -1112,6 +1129,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
 
   fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
+  fig3.line('t_cruise_target', 's_cruise_target', source = data_cruise_target, line_width = 3.0, line_color = 'blue', line_dash = 'solid', legend_label = 's_cruise_target')
+  fig3.circle('t_cruise_target', 's_cruise_target', source=data_cruise_target, size=5, color='brown', legend_label='s_cruise_target')
 
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')

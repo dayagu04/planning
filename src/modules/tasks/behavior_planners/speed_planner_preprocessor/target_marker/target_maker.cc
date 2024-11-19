@@ -1,14 +1,13 @@
 #include "target_maker.h"
 
 #include "follow_target.h"
+#include "cruise_target.h"
 
 namespace planning {
 
 TargetMaker::TargetMaker(const SpeedPlannerConfig& speed_planning_config,
-                         framework::Session* session) {
-  speed_planning_config_ = speed_planning_config;
-  session_ = session;
-}
+                         framework::Session* session)
+    : session_(session), speed_planning_config_(speed_planning_config) {}
 
 common::Status TargetMaker::Run() {
   LOG_DEBUG("=======SpeedPlannerPreProcessor: TargetMaker======= \n");
@@ -17,7 +16,7 @@ common::Status TargetMaker::Run() {
   plan_points_num_ = static_cast<int32_t>(plan_time_ / dt_) + 1;
 
   // 1. cruise target @建伟
-  // CruiseTarget cruise_target(config_, session_);
+  CruiseTarget cruise_target(speed_planning_config_, session_);
 
   // 2. follow target @翼闻
   FollowTarget follow_target(speed_planning_config_, session_);
@@ -34,7 +33,7 @@ common::Status TargetMaker::Run() {
   // 6. decider final target values
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
-    // TargetValue cruise_target_value = cruise_target.target_value(relative_t);
+    TargetValue cruise_target_value = cruise_target.target_value(relative_t);
     // TargetValue follow_target_value = follow_target.target_value(relative_t);
     // TargetValue overtake_target_value =
     // overtake_target.target_value(relative_t); TargetValue
@@ -111,6 +110,7 @@ common::Status TargetMaker::Run() {
 
     // hack: 先用默认值
     auto final_lower_bound_value = lower_target_value;
+    final_lower_bound_value = cruise_target_value;
     // auto final_lower_bound_value =
     //     Target::TargetMax(lower_target_value, cruise_target_value);
     auto final_target_value =

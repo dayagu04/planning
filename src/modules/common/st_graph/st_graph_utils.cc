@@ -1,6 +1,7 @@
 #include "st_graph_utils.h"
 
 #include "common_c.h"
+#include "math/box2d.h"
 #include "vehicle_config_context.h"
 
 namespace planning {
@@ -923,7 +924,8 @@ void StGraphUtils::CalculateIntersectS(
 }
 
 void StGraphUtils::DetermineClosetStBoundary(
-    const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>& boundary_id_st_boundaries_map,
+    const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
+        boundary_id_st_boundaries_map,
     int64_t& closest_boundary_id, double& closest_s) {
   closest_s = std::numeric_limits<double>::max();
   closest_boundary_id = -1;
@@ -1374,6 +1376,21 @@ bool StGraphUtils::IsBoundaryAboveRearTargetBoundary(
     }
   }
   return false;
+}
+
+planning_math::Box2d StGraphUtils::MakeEgoBox(
+    const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
+    const double s) {
+  const auto& param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vehicle_length = param.length;
+  const double vehicle_width = param.width;
+  const double back_axle_to_center_dist = param.rear_axle_to_center;
+  auto point = planned_kd_path->GetPathPointByS(s);
+  Vec2d center =
+      point + Vec2d::CreateUnitVec2d(point.theta()) * back_axle_to_center_dist;
+  Box2d ego_box(center, point.theta(), vehicle_length, vehicle_width);
+  return ego_box;
 }
 
 }  // namespace speed

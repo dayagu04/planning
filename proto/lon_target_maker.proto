@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package planning.common;
+
+message TargetPoint2D {
+  optional double s = 1;
+  optional double t = 2;
+}
+
+message CruiseTarget {
+  repeated TargetPoint2D cruise_target_s_ref = 1;
+}
