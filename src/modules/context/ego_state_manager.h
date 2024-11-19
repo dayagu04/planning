@@ -71,6 +71,8 @@ class EgoStateManager {
   void set_planning_init_point_valid(bool planning_init_point_valid) {
     planning_init_point_valid_ = planning_init_point_valid;
   };
+  void set_time_headway_level(
+      const planning::common::VehicleStatus &vehicle_status);
   void set_ego_gear(const planning::common::VehicleStatus &vehicle_status);
 
   // const planning::VehicleParam &get_vehicle_param() const {
@@ -104,7 +106,10 @@ class EgoStateManager {
   bool is_auto() const { return is_auto_; };
   bool flag_is_replan() const { return flag_is_replan_; };
   bool throttle_override() const { return throttle_override_; };
-  const planning_math::Polygon2d& polygon() const { return polygon_; }
+  const planning_math::Polygon2d polygon() const { return polygon_; }
+  uint32_t time_headway_level() const {
+    return time_headway_level_;
+  }
 
   const PlanningInitPoint &planning_init_point() const {
     return planning_init_point_;
@@ -180,6 +185,7 @@ class EgoStateManager {
   bool throttle_override_ = false;
   bool enable_delta_stitch_in_replan_ = true;
   bool enable_ego_state_compensation_ = false;
+  uint32_t time_headway_level_ = 4;
   planning_math::Polygon2d polygon_;
   PlanningInitPoint planning_init_point_;
   bool planning_init_point_valid_ = false;

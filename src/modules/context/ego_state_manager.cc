@@ -176,6 +176,12 @@ void EgoStateManager::set_ego_gear(
   ego_gear_ = vehicle_status.gear().gear_data().gear_status().value();
 }
 
+void EgoStateManager::set_time_headway_level(
+    const planning::common::VehicleStatus &vehicle_status) {
+  time_headway_level_ = std::round(
+      vehicle_status.time_headway_level().value_num());
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -216,6 +222,7 @@ bool EgoStateManager::update(
   set_driver_hand_state(vehicle_status);
   set_ego_gear(vehicle_status);
   set_ego_jerk();
+  set_time_headway_level(vehicle_status);
   const auto &planning_result = session_->planning_context().planning_result();
   const auto &last_planning_result =
       session_->planning_context().last_planning_result();
