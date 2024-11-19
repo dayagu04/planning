@@ -103,8 +103,13 @@ print("Pulling common_tools successfully !")
 end_time = time.time()
 print(f"Pulling common_tools 耗时：{end_time - start_time}秒")
 
-checker_path = "/root/common_tools/checker_scc/task"
-json_path = f"{checker_path}/scc_checker_task.json"
+with open(result_path, 'r', encoding='utf-8') as file:
+    result_data = json.load(file)
+scene_type = result_data["scene_type"]
+if (scene_type == "apa"):
+    json_path = f"/root/common_tools/checker/task/checker_task.json"
+else:
+    json_path = f"/root/common_tools/checker_scc/task/scc_checker_task.json"
 # 修改JSON文件
 start_time = time.time()
 with open(json_path, 'r', encoding='utf-8') as file:
@@ -121,16 +126,18 @@ end_time = time.time()
 print(f"Update json 耗时：{end_time - start_time}秒")
 
 start_time = time.time()
-os.chdir('/root/common_tools/checker_scc/task')
-sys.path.append('/root/common_tools/checker_scc/task')
-import scc_checker_task_for_simu
-
-try:
-    t1 = Process(target=scc_checker_task_for_simu.main, args=("scc_checker_task.json",))
-    t1.start()
-except Exception as e:
-    print(f"Runing checker error: {e}")
-    sys.exit(1)
+if (scene_type == "apa"):
+    pass
+else:
+    os.chdir('/root/common_tools/checker_scc/task')
+    sys.path.append('/root/common_tools/checker_scc/task')
+    import scc_checker_task_for_simu
+    try:
+        t1 = Process(target=scc_checker_task_for_simu.main, args=("scc_checker_task.json",))
+        t1.start()
+    except Exception as e:
+        print(f"Runing checker error: {e}")
+        sys.exit(1)
 end_time = time.time()
 print(f"Run checker 耗时：{end_time - start_time}秒")
 
@@ -150,28 +157,29 @@ def upload_and_remove_file(suffix, result_data, key):
     #         print(f"Error removing {key} file: {e}")
 
 start_time = time.time()
-with open(result_path, 'r', encoding='utf-8') as file:
-    result_data = json.load(file)
 
-script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
-command_proto = f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py"
-command = f"cd {script_path} && /root/miniconda3/bin/python plot_mutil_html.py {PP_bag}"
-try:
-    result0 = subprocess.run(command_proto, shell=True, text=True, check=True)
-    result1 = subprocess.run(command, shell=True, text=True, check=True)
-    html_start_time = time.time()
-    upload_and_remove_file('.lat_plan.html', result_data, "lat_html_url")
-    upload_and_remove_file('.lon_plan.html', result_data, "lon_html_url")
-    upload_and_remove_file('.enu_local_view.html', result_data, "local_view_html_url")
-    upload_and_remove_file('.vo_lat_behavior.html', result_data, "behavior_html_url")
-    html_end_time = time.time()
-    print(f"Upload html file 耗时：{html_end_time - html_start_time}秒")
-except Exception as e:
-    print(f"Creating html error: {e}")
-    sys.exit(1)
-if (result0.returncode != 0 or result1.returncode != 0):
-    print(f"Creating html error")
-    sys.exit(1)
+if (scene_type == "apa"):
+    pass
+else:
+    script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
+    command_proto = f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py"
+    command = f"cd {script_path} && /root/miniconda3/bin/python plot_mutil_html.py {PP_bag}"
+    try:
+        result0 = subprocess.run(command_proto, shell=True, text=True, check=True)
+        result1 = subprocess.run(command, shell=True, text=True, check=True)
+        html_start_time = time.time()
+        upload_and_remove_file('.lat_plan.html', result_data, "lat_html_url")
+        upload_and_remove_file('.lon_plan.html', result_data, "lon_html_url")
+        upload_and_remove_file('.enu_local_view.html', result_data, "local_view_html_url")
+        upload_and_remove_file('.vo_lat_behavior.html', result_data, "behavior_html_url")
+        html_end_time = time.time()
+        print(f"Upload html file 耗时：{html_end_time - html_start_time}秒")
+    except Exception as e:
+        print(f"Creating html error: {e}")
+        sys.exit(1)
+    if (result0.returncode != 0 or result1.returncode != 0):
+        print(f"Creating html error")
+        sys.exit(1)
 print("Creat html successfully !")
 end_time = time.time()
 print(f"Creat and upload html 耗时：{end_time - start_time}秒")

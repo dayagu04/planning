@@ -81,7 +81,7 @@ build/tools/planning_player/pp --play <bag的路径>
 ```
 --auto-time=1.5
 ```
-- 可选参数，支持指定场景，行车/泊车，默认scc
+- 可选参数，程序会自动判断，如果自动判断失败，会使用手动指定的场景，默认scc，可选acc/scc/noa/hpp/apa。
 ```
 --scene-type=acc 或 apa
 ```
@@ -105,7 +105,8 @@ p arg ：打印arg变量的值
 p (planning::SomeClass)*0x12345678 ：通过指针打印变量的值
 ```
 **3.4 在vscode中使用PP**
-- 修改`.vscode/launch.json`中 "(gdb) planning_player" 下的bag路径，在VSCode调试界面选择 planning player，可以断点调试代码
+- 修改`.vscode/launch.json`中 "(gdb) pp open loop" 下的bag路径，在VSCode调试界面选择 (gdb) pp open loop，可以用开环模式断点调试代码
+- 修改`.vscode/launch.json`中 "(gdb) pp close loop" 下的bag路径，在VSCode调试界面选择 (gdb) pp close loop，可以用闭环模式断点调试代码
 - 修改`.vscode/launch.json`中 "(gdb) pp no debug" 下的bag路径，在VSCode调试界面选择 pp no debug，可以用no-debug模式断点调试代码
 - localview画图中会打印当前帧号frame_num，据此可以在planning log中找到对应帧日志
 - 如果想断点调试特定时刻，在可视化中确定该时刻对应的frame_num，通常会在可视化的底部通过类似`planning debug info: 171`打印出来，然后在`planning_player.cc`对应位置添加条件断点，类似 frame_num_ == 171 或 frame_num_ >= 171
