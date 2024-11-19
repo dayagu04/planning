@@ -23,6 +23,7 @@ enum class ParkObstacleType {
   MAP_BOUND,
   SLOT_LIMITER,
   SLOT_LINE,
+  HOLE,
   COUNT,
   INVALID,
 };

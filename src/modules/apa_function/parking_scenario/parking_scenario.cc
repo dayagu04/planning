@@ -19,14 +19,10 @@ namespace apa_planner {
 ParkingScenario::ParkingScenario()
     : scenario_status_(ParkingScenarioStatus::STATUS_UNKNOWN), name_("") {}
 
-ParkingScenario::ParkingScenario(const ParkingScenarioType type)
+ParkingScenario::ParkingScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr)
     : scenario_status_(ParkingScenarioStatus::STATUS_UNKNOWN),
       name_(""),
-      type_(type) {}
-
-ParkingScenario::ParkingScenario(
-    const std::shared_ptr<ApaWorld>& apa_world_ptr) {
-  scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
+      type_(ParkingScenarioType::SCENARIO_UNKNOWN) {
   SetApaWorldPtr(apa_world_ptr);
 }
 
@@ -386,6 +382,8 @@ void ParkingScenario::Enter(const ParkingScenarioStatus status) {
 
   return;
 }
+
+void ParkingScenario::ThreadClear() { return; }
 
 const ParkingScenarioStatus ParkingScenario::ScenarioTry() {
 

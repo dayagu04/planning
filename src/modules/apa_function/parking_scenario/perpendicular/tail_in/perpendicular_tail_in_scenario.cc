@@ -2599,9 +2599,15 @@ void PerpendicularTailInScenario::Log() const {
 }
 
 const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
+  std::shared_ptr<SlotManager> slot_manager =
+      apa_world_ptr_->GetSlotManagerPtr();
+
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     ILOG_INFO << "update ego slot info fail";
+    slot_manager->SlotReleaseByScenarioTry(
+        false, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+
     return ParkingScenarioStatus::STATUS_FAIL;
   }
 
@@ -2610,9 +2616,6 @@ const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
   GenObstacles();
 
   uint8_t result = PathPlanOnce();
-
-  std::shared_ptr<SlotManager> slot_manager =
-      apa_world_ptr_->GetSlotManagerPtr();
   if (result != PathPlannerResult::PLAN_UPDATE) {
     slot_manager->SlotReleaseByScenarioTry(
         false, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);

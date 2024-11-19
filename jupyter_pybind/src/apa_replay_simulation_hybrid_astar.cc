@@ -822,7 +822,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     request.base_pose_ = base_pose_;
 
     request.space_type = ParkSpaceType::VERTICAL;
-    request.head_request = ParkingVehDirectionRequest::tail_in_first;
+    request.direction_request = ParkingVehDirection::TAIL_IN;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;

@@ -5,9 +5,7 @@
 
 namespace planning {
 
-void NarrowScenarioDecider::Process(
-    const uint8_t slot_type,
-    const apa_planner::ParkingScenarioType scene_type) {
+void NarrowScenarioDecider::Process(const uint8_t slot_type) {
   switch (slot_type) {
     case Common::PARKING_SLOT_TYPE_VERTICAL:
       slot_type_ = ParkSpaceType::VERTICAL;
@@ -21,11 +19,6 @@ void NarrowScenarioDecider::Process(
     default:
       slot_type_ = ParkSpaceType::NONE;
       break;
-  }
-
-  // is astar
-  if (scene_type == apa_planner::ParkingScenarioType::SCENARIO_NARROW_SPACE) {
-    return;
   }
 
   UpdateNarrowScenario(slot_type_);

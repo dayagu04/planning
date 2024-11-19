@@ -13,8 +13,7 @@ class NarrowScenarioDecider : public ParkingTask{
   NarrowScenarioDecider() = default;
   ~NarrowScenarioDecider() = default;
 
-  void Process(const uint8_t slot_type,
-               const apa_planner::ParkingScenarioType scene_type);
+  void Process(const uint8_t slot_type);
 
   void Clear();
 

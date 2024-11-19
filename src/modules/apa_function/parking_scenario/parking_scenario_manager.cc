@@ -29,18 +29,28 @@ bool ParkingScenarioManager::Init(
   // init planners
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN] =
       std::make_shared<PerpendicularTailInScenario>(apa_world);
+  scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN]
+      ->SetScenerioType(ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN);
 
   scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_IN] =
       std::make_shared<ParallelParkInScenario>(apa_world);
+  scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_IN]->SetScenerioType(
+      ParkingScenarioType::SCENARIO_PARALLEL_IN);
 
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT] =
       std::make_shared<PerpendicularHeadOutScenario>(apa_world);
+  scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT]
+      ->SetScenerioType(ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT);
 
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN] =
       std::make_shared<PerpendicularHeadInScenario>(apa_world);
+  scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN]
+      ->SetScenerioType(ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
 
   scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE] =
       std::make_shared<NarrowSpaceScenario>(apa_world);
+  scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE]->SetScenerioType(
+      ParkingScenarioType::SCENARIO_NARROW_SPACE);
 
   default_scenario_ =
       scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
@@ -177,37 +187,28 @@ std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
 }
 
 void ParkingScenarioManager::ScenarioTry() {
+  // check geometry path release in per frame.
+  current_scenario_->ScenarioTry();
   SlotReleaseState geometry_path_release =
       apa_world_->GetSlotManagerPtr()
           ->GetEgoSlotInfo()
           .release_info.release_state[GEOMETRY_PLANNING_RELEASE];
 
-  // check geometry release
-  if (geometry_path_release == SlotReleaseState::UNKOWN) {
-    current_scenario_->ScenarioTry();
-
-    geometry_path_release =
-        apa_world_->GetSlotManagerPtr()
-            ->GetEgoSlotInfo()
-            .release_info.release_state[GEOMETRY_PLANNING_RELEASE];
-  }
-
-  // check geometry path generator again
-  SlotReleaseState astar_path_release =
-      apa_world_->GetSlotManagerPtr()
-          ->GetEgoSlotInfo()
-          .release_info.release_state[ASTAR_PLANNING_RELEASE];
-
+  std::shared_ptr<ParkingScenario> narrow_scenario_ =
+      scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
   if (geometry_path_release == SlotReleaseState::RELEASE) {
     ILOG_INFO << "scenario geometry path release";
-  } else if (geometry_path_release == SlotReleaseState::NOT_RELEASE) {
-    // 如果几何规划不释放，用Astar只尝试一次
-    if (astar_path_release == SlotReleaseState::UNKOWN) {
-      std::shared_ptr<ParkingScenario> narrow_scenario_ =
-          scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
 
-      narrow_scenario_->ScenarioTry();
-    }
+    // A星跑了一半，也要将其清空.
+    narrow_scenario_->ThreadClear();
+  } else if (geometry_path_release == SlotReleaseState::NOT_RELEASE &&
+             current_scenario_->ScenarioType() !=
+                 ParkingScenarioType::SCENARIO_NARROW_SPACE) {
+    // 如果几何规划不释放，用Astar尝试
+    std::shared_ptr<ParkingScenario> narrow_scenario_ =
+        scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
+
+    narrow_scenario_->ScenarioTry();
   }
 
   ILOG_INFO << "scenario try";

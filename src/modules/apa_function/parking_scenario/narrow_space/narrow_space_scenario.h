@@ -26,6 +26,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void Reset() override;
 
+  void ThreadClear() override;
+
   virtual std::string GetName() override { return typeid(this).name(); }
 
   HybridAStarThreadSolver* GetThread() { return &thread_; }
@@ -74,7 +76,7 @@ class NarrowSpaceScenario : public ParkingScenario {
    *          y  ________|
    *
    */
-  PathPlannerResult PlanBySearchBasedMethod();
+  PathPlannerResult PlanBySearchBasedMethod(const bool is_scenario_try);
 
   const int PathOptimizationByCILRQ(
       const double paht_s,

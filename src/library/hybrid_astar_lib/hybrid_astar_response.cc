@@ -80,6 +80,16 @@ const bool IsResponseNice(const AstarRequest& request,
     return false;
   }
 
+  if (request.slot_id != response.request.slot_id) {
+    ILOG_INFO << "slot id is change";
+    return false;
+  }
+
+  if (request.path_generate_method != response.request.path_generate_method) {
+    ILOG_INFO << "path generate request is different";
+    return false;
+  }
+
   // if (request.plan_reason != response.request.plan_reason) {
   //   ILOG_INFO << "plan reason is change";
   //   return false;

@@ -28,9 +28,8 @@ namespace planning {
 namespace apa_planner {
 
 NarrowSpaceScenario::NarrowSpaceScenario(
-    const std::shared_ptr<ApaWorld>& apa_world_ptr) {
-  SetApaWorldPtr(apa_world_ptr);
-
+    const std::shared_ptr<ApaWorld>& apa_world_ptr)
+    : ParkingScenario(apa_world_ptr) {
   Init();
 }
 
@@ -294,7 +293,7 @@ void NarrowSpaceScenario::PlanCore() {
               << ",is_replan = " << is_replan;
 
     frame_.replan_flag = true;
-    path_plan_result = PlanBySearchBasedMethod();
+    path_plan_result = PlanBySearchBasedMethod(false);
     frame_.pathplan_result = static_cast<uint8_t>(path_plan_result);
 
     switch (path_plan_result) {
@@ -569,7 +568,8 @@ void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
   return;
 }
 
-PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod() {
+PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
+    const bool is_scenario_try) {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
@@ -639,9 +639,10 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod() {
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::none;
   cur_request.space_type = slot_type;
-  cur_request.head_request = ParkingVehDirectionRequest::tail_in_first;
+  cur_request.direction_request = ParkingVehDirection::TAIL_IN;
   cur_request.rs_request = RSPathRequestType::none;
   cur_request.timestamp_ms = astar_start_time;
+  cur_request.slot_id = ego_slot_info.selected_slot_id;
 
   cur_request.start_ = start;
   cur_request.base_pose_ = slot_base_pose;
@@ -710,6 +711,11 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod() {
     }
 
     cur_request.goal_ = end;
+  }
+
+  if (is_scenario_try) {
+    cur_request.path_generate_method =
+        planning::AstarPathGenerateType::TRY_SEARCHING;
   }
 
   // search state
@@ -1410,7 +1416,7 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
 
 const bool NarrowSpaceScenario::IsEgoNeedDriveForwardInSlot(
     const Pose2D& ego_pose, const double slot_width, const double slot_len) {
-  if (current_gear_ == AstarPathGear::drive) {
+  if (current_gear_ != AstarPathGear::reverse) {
     return false;
   }
 
@@ -1765,7 +1771,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
   }
 
   if (!apa_param.GetParam()
-           .astar_config.vertical_slot_auto_switch_to_astar) {
+           .astar_config.perpendicular_slot_auto_switch_to_astar) {
     return ParkingScenarioStatus::STATUS_FAIL;
   }
 
@@ -1774,14 +1780,13 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
-    SetParkingStatus(PARKING_FAILED);
     slot_manager->SlotReleaseByScenarioTry(
         false, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
+
     return ParkingScenarioStatus::STATUS_FAIL;
   }
 
-  narrow_space_decider_.Process(apa_world_ptr_->GetApaDataPtr()->slot_type,
-                                apa_world_ptr_->GetApaDataPtr()->scenario_type);
+  narrow_space_decider_.Process(apa_world_ptr_->GetApaDataPtr()->slot_type);
 
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
   bool has_response = UpdateThreadPath();
@@ -1789,9 +1794,9 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
   if (narrow_space_decider_.IsNeedAstar() &&
       narrow_space_decider_.GetAstarState() == AstarSearchState::NONE) {
     narrow_space_decider_.SetAstarState(AstarSearchState::SEARCHING);
-    res = PlanBySearchBasedMethod();
+    res = PlanBySearchBasedMethod(true);
   } else if (narrow_space_decider_.IsNeedAstar() && has_response) {
-    res = PlanBySearchBasedMethod();
+    res = PlanBySearchBasedMethod(true);
   }
 
   if (res == PathPlannerResult::PLAN_FAILED) {
@@ -1810,9 +1815,24 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
     ILOG_INFO << "hybrid astar path try success";
 
     return ParkingScenarioStatus::STATUS_RUNNING;
+  } else if (res == PathPlannerResult::WAIT_PATH) {
+    SlotReleaseState astar_release_state =
+        slot_manager->GetEgoSlotInfo()
+            .release_info.release_state[ASTAR_PLANNING_RELEASE];
+
+    // 如果上一帧A星释放车位，在当前帧结果还没有出来时，使用上一帧的结果填充.
+    if (astar_release_state == SlotReleaseState::RELEASE) {
+      slot_manager->SlotReleaseByScenarioTry(
+          true, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
+    }
   }
 
   return ParkingScenarioStatus::STATUS_TRY;
+}
+
+void NarrowSpaceScenario::ThreadClear() {
+  thread_.Clear();
+  return;
 }
 
 }  // namespace apa_planner

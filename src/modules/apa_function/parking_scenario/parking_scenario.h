@@ -292,8 +292,6 @@ class ParkingScenario {
 
   ParkingScenario();
 
-  ParkingScenario(const ParkingScenarioType type);
-
   ParkingScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr);
 
   virtual void Init();
@@ -337,6 +335,14 @@ class ParkingScenario {
 
   // 如果用户点击了车位，但是还没有点击开始泊车，那么调用这个函数，尝试一下看看路径生成是否成功.
   virtual const ParkingScenarioStatus ScenarioTry();
+
+  // clear thread related
+  virtual void ThreadClear();
+
+  void SetScenerioType(const ParkingScenarioType type) {
+    type_ = type;
+    return;
+  }
 
  protected:
   virtual const bool CheckFinished() = 0;

@@ -840,7 +840,7 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
   AstarPathGear gear = reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
   if (request_.space_type == ParkSpaceType::VERTICAL &&
-      request_.head_request == ParkingVehDirectionRequest::tail_in_first &&
+      request_.direction_request == ParkingVehDirection::TAIL_IN &&
       request_.rs_request == RSPathRequestType::last_path_forbid_forward) {
     if (gear == AstarPathGear::drive) {
       // ILOG_INFO << " rs path last seg len is drive gear ";
@@ -3210,6 +3210,12 @@ bool HybridAStar::AstarSearch(
       }
 
       if (rs_path_success_num > 5) {
+        break;
+      }
+
+      // in try searching, no need optimal path.
+      if (request_.path_generate_method ==
+          AstarPathGenerateType::TRY_SEARCHING) {
         break;
       }
     }

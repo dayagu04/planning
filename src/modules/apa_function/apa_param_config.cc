@@ -859,8 +859,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "footprint_circle_r");
 
   JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.vertical_slot_auto_switch_to_astar,
-      bool, "vertical_slot_auto_switch_to_astar");
+      apa_param.SetPram().astar_config.perpendicular_slot_auto_switch_to_astar,
+      bool, "perpendicular_slot_auto_switch_to_astar");
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.parallel_slot_auto_switch_to_astar,
       bool, "parallel_slot_auto_switch_to_astar");

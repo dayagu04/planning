@@ -21,7 +21,7 @@ enum class ParkPathGenerationType {
 };
 
 struct AstarParkingConfig {
-  bool vertical_slot_auto_switch_to_astar;
+  bool perpendicular_slot_auto_switch_to_astar;
   bool parallel_slot_auto_switch_to_astar;
   double parallel_finish_lon_err;
   double parallel_finish_center_lat_err;
