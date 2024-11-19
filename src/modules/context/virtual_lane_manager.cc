@@ -1642,6 +1642,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
         temp_last_split_seg->out_link().size() == 2) {
       accumulate_dis_ego_to_last_split_point_ =
           accumulate_dis_ego_to_last_split_point;
+      SplitSegInfo split_seg_info;
+      split_seg_info = MakesureSplitDirection(*temp_last_split_seg, sd_map);
+      last_split_seg_dir_ = split_seg_info.split_direction;
     }
   }
 
@@ -2208,6 +2211,7 @@ void VirtualLaneManager::ResetForRampInfo() {
   split_seg_forward_lane_nums_ = 0;
   split_next_seg_forward_lane_nums_ = 0;
   lc_nums_for_split_ = 0;
+  last_split_seg_dir_ = RAMP_NONE;
 }
 
 SplitSegInfo VirtualLaneManager::MakesureSplitDirection(
@@ -2454,14 +2458,27 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   //(6)、判断当前是否在split的起点后100m范围内；
   bool is_ego_on_split_region = false;
   double length_for_split_region = std::numeric_limits<double>::max();
-  const double dis_to_next_split_point = std::min(distance_to_first_road_split_, dis_to_ramp_);
+  const double dis_to_next_split_point = 
+      std::min(distance_to_first_road_split_, dis_to_ramp_);
   std::array<double, 2> xp{50, 150};
   std::array<double, 2> fp{0, 100};
   const double split_region_dis_threshold = interp(dis_to_next_split_point, xp, fp);
   if (accumulate_dis_ego_to_last_split_point_ < split_region_dis_threshold) {
     is_ego_on_split_region = true;
   }
-  
+  //(7)、判断当前是否需要在下匝道的分流区域继续生成下匝道的变道请求；
+  bool is_exit_lane_on_last_ramp_dir = 
+      last_split_seg_dir_ == RAMP_NONE ? false : 
+      (last_split_seg_dir_ == RAMP_ON_LEFT ? !is_ego_on_leftest_lane : !is_ego_on_rightest_lane);
+  bool is_need_continue_lc_on_off_ramp_region = 
+      is_exit_lane_on_last_ramp_dir &&
+      is_ego_on_split_region;
+  int need_continue_lc_num_on_off_ramp_region = 0;
+  if (is_need_continue_lc_on_off_ramp_region) {
+    need_continue_lc_num_on_off_ramp_region = 
+    last_split_seg_dir_ == RAMP_ON_LEFT ? -1 : 1;
+  }
+   
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
   JSON_DEBUG_VALUE("is_nearing_ramp", is_nearing_ramp_);
   JSON_DEBUG_VALUE("distance_to_ramp", dis_to_ramp_);
@@ -2500,6 +2517,7 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   general_task_map_info.split_next_seg_forward_lane_nums = split_next_seg_forward_lane_nums_;
   general_task_map_info.lc_nums_for_split = lc_nums_for_split_;
   general_task_map_info.is_ego_on_split_region = is_ego_on_split_region;
+  general_task_map_info.need_continue_lc_num_on_off_ramp_region = need_continue_lc_num_on_off_ramp_region;
 
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {
