@@ -113,8 +113,6 @@ class PlanningPlayer {
   std::map<std::string, std::string> proto_desc_map_{};
   ros::Time planning_msg_time_s_;
   uint64_t planning_header_time_us_ = 0;
-  ros::Time planning_hmi_msg_time_ns_;
-  uint64_t planning_hmi_header_time_us_ = 0;
   int frame_num_ = 0;
   ros::Time planning_dubug_info_msg_time_s_;
   uint64_t planning_dubug_info_header_time_us_ = 0;

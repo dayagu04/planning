@@ -311,8 +311,8 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
           ros_time = ros_start_time + duration;
         } else {
           planning_hmi_ouput_info_struct.msg_header.stamp =
-              planning_hmi_header_time_us_;
-          ros_time = planning_hmi_msg_time_ns_;
+              planning_dubug_info_header_time_us_;
+          ros_time = planning_dubug_info_msg_time_s_;
         }
         struct_msgs::PlanningHMIOutputInfoStr planning_hmi_output_ros_msg{};
         convert(planning_hmi_ouput_info_struct, planning_hmi_output_ros_msg,
@@ -976,7 +976,6 @@ void PlanningPlayer::PlayOneFrame(
 
 void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
   auto it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
-  auto it_planning_hmi_msg = msg_cache_[TOPIC_PLANNING_HMI].begin();
 
   for (size_t i = 0; i < msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 2;
        ++i) {
@@ -988,10 +987,6 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
     auto debug_info_topic_timestamp =
         planning_debug_info->input_topic_timestamp();
     auto early_stop_time_tmp = debug_info_topic_timestamp.localization();
-
-    auto planning_hmi_msg =
-        boost::any_cast<struct_msgs::PlanningHMIOutputInfoStr::Ptr>(
-            it_planning_hmi_msg->second);
 
     auto& debug_data_json = planning_debug_info->data_json();
     auto planning_loop_dt_start = debug_data_json.find("planning_loop_dt");
@@ -1055,10 +1050,6 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
       next_loc_esti_header_time_us_ = UINT64_MAX;
       next_vehi_svc_header_time_us_ = UINT64_MAX;
     }
-
-    planning_hmi_header_time_us_ = planning_hmi_msg->msg_header.stamp;
-    planning_hmi_msg_time_ns_ = it_planning_hmi_msg->first;
-    it_planning_hmi_msg++;
 
     loc_header_time_us_ =
         planning_debug_info->input_topic_timestamp().localization();
