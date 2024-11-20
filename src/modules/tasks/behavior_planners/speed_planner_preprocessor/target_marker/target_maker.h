@@ -9,13 +9,19 @@ namespace planning {
 class TargetMaker {
  public:
   TargetMaker(const SpeedPlannerConfig& speed_planning_config,
-              framework::Session *session);
+              framework::Session* session);
   ~TargetMaker() = default;
 
   common::Status Run();
 
+  double s_target(const double t) const;
+
+  double v_target(const double t) const;
+
+  const TargetValue& target_value(const double t) const;
+
  private:
-  framework::Session *session_;
+  framework::Session* session_;
   SpeedPlannerConfig speed_planning_config_;
   double dt_ = 0.0;
   double plan_time_ = 0.0;

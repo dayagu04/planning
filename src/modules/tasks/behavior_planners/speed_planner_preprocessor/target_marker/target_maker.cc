@@ -5,12 +5,13 @@
 namespace planning {
 
 TargetMaker::TargetMaker(const SpeedPlannerConfig& speed_planning_config,
-                         framework::Session *session) {
+                         framework::Session* session) {
   speed_planning_config_ = speed_planning_config;
   session_ = session;
 }
 
 common::Status TargetMaker::Run() {
+  LOG_DEBUG("=======SpeedPlannerPreProcessor: TargetMaker======= \n");
   dt_ = speed_planning_config_.dt;
   plan_time_ = speed_planning_config_.planning_time;
   plan_points_num_ = static_cast<int32_t>(plan_time_ / dt_) + 1;
@@ -34,7 +35,7 @@ common::Status TargetMaker::Run() {
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     // TargetValue cruise_target_value = cruise_target.target_value(relative_t);
-    TargetValue follow_target_value = follow_target.target_value(relative_t);
+    // TargetValue follow_target_value = follow_target.target_value(relative_t);
     // TargetValue overtake_target_value =
     // overtake_target.target_value(relative_t); TargetValue
     // neighbor_target_value = neighbor_target.target_value(relative_t);
@@ -48,28 +49,28 @@ common::Status TargetMaker::Run() {
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
     // 1. update lower and upper value by follow target and overtake target
-    if (follow_target_value.has_target() &&
-        follow_target_value.s_target_val() <
-            upper_target_value.s_target_val()) {
-      // TBD: 国朋合入overtake
-      //   if (overtake_target_value.has_target()) {
-      //     if (overtake_target_value.s_target_val() >
-      //         follow_target_value.s_target_val()) {
-      //       // final_target_value = overtake_target_value;
-      //       target_values_.push_back(std::move(overtake_target_value));
-      //       continue;
-      //     } else {
-      //       upper_target_value = follow_target_value;
-      //       lower_target_value = overtake_target_value;
-      //     }
-      //   } else {
-      upper_target_value = follow_target_value;
-      //   }
-      // } else if (overtake_target_value.has_target() &&
-      //            overtake_target_value.s_target_val() >
-      //                lower_target_value.s_target_val()) {
-      //   lower_target_value = overtake_target_value;
-    }
+    // if (follow_target_value.has_target() &&
+    //     follow_target_value.s_target_val() <
+    //         upper_target_value.s_target_val()) {
+    // TBD: 国朋合入overtake
+    //   if (overtake_target_value.has_target()) {
+    //     if (overtake_target_value.s_target_val() >
+    //         follow_target_value.s_target_val()) {
+    //       // final_target_value = overtake_target_value;
+    //       target_values_.push_back(std::move(overtake_target_value));
+    //       continue;
+    //     } else {
+    //       upper_target_value = follow_target_value;
+    //       lower_target_value = overtake_target_value;
+    //     }
+    //   } else {
+    // upper_target_value = follow_target_value;
+    //   }
+    // } else if (overtake_target_value.has_target() &&
+    //            overtake_target_value.s_target_val() >
+    //                lower_target_value.s_target_val()) {
+    //   lower_target_value = overtake_target_value;
+    // }
 
     // TBD: 国朋合入caution
     // 2.update upper value by caution yield target
@@ -118,6 +119,22 @@ common::Status TargetMaker::Run() {
   }
 
   return common::Status::OK();
+}
+
+double TargetMaker::s_target(const double t) const {
+  size_t index = static_cast<size_t>(std::round(t / dt_));
+
+  return target_values_.at(index).s_target_val();
+}
+
+double TargetMaker::v_target(const double t) const {
+  size_t index = static_cast<size_t>(std::round(t / dt_));
+  return target_values_.at(index).v_target_val();
+}
+
+const TargetValue& TargetMaker::target_value(const double t) const {
+  size_t index = static_cast<size_t>(std::round(t / dt_));
+  return target_values_.at(index);
 }
 
 }  // namespace planning
