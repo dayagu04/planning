@@ -146,6 +146,10 @@ void LateralMotionPlanner::AssembleInput() {
   const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
   assert(enu_ref_path.size() == enu_ref_theta.size());
 
+  // static const double min_v_cruise = 0.5;
+  const double ref_vel = std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
+  planning_input_.set_ref_vel(ref_vel);
+
   // set reference trajectory
   std::vector<double> ref_theta_vec(enu_ref_theta.size());
 
@@ -193,7 +197,10 @@ void LateralMotionPlanner::AssembleInput() {
   // set last trajectory: temporarily same as reference: TODO
   double final_t = 5.0;  // hack now
   double tmp_t = 0.0;
-  if (motion_planner_output.lat_init_flag == true) {
+  auto last_s_vec = motion_planner_output.s_lat_vec;
+  double last_path_length = last_s_vec.size() > 0 ? last_s_vec.back() : 0.0;
+  bool is_ref_consistent = (ref_vel * final_t - last_path_length) <= 2.0;
+  if ((motion_planner_output.lat_init_flag == true) && is_ref_consistent) {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
       planning_input_.mutable_last_x_vec()->Set(
@@ -287,10 +294,6 @@ void LateralMotionPlanner::AssembleInput() {
         i, next_hard_upper_bound.y);
   }
 
-  static const double min_v_cruise = 0.5;
-  planning_input_.set_ref_vel(
-      std::max(general_lateral_decider_output.v_cruise, min_v_cruise));
-
   planning_input_.set_curv_factor(config_.curv_factor);
 
   // set init info
@@ -361,7 +364,7 @@ void LateralMotionPlanner::AssembleInput() {
       intersection_state ==
       planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
-  if (is_approach_intersection || is_in_intersection || is_off_intersection) {
+  if ((is_approach_intersection || is_in_intersection || is_off_intersection) && is_ref_consistent) {
     planning_weight_ptr_->SetIsInIntersection(true);
   } else {
     planning_weight_ptr_->SetIsInIntersection(false);
@@ -570,14 +573,19 @@ void LateralMotionPlanner::Update() {
   d_curv_vec[0] = d_curv_vec[1];
   t_vec[0] = -0.2;
 
-  if (!planning_input_.complete_follow()) {
-    const double end_points_size =
-        planning_input_.motion_plan_concerned_index() + 1;
+  const double concerned_index = planning_input_.motion_plan_concerned_index();
+  double concerned_dis_to_ref =
+      std::hypot(x_vec[concerned_index + 1] - planning_input_.ref_x_vec(concerned_index),
+                y_vec[concerned_index + 1] - planning_input_.ref_y_vec(concerned_index));
+  const double end_points_size = concerned_index + 1;
+  if ((!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
+      (!session_->planning_context().general_lateral_decider_output().lane_change_scene)) {
+    const double end_points_size = concerned_index + 1;
     std::vector<double> end_x_vec(end_points_size + 1);
     std::vector<double> end_y_vec(end_points_size + 1);
     std::vector<double> end_s_vec(end_points_size + 1);
     for (size_t i = 0; i < end_points_size + 1; ++i) {
-      if (i > planning_input_.motion_plan_concerned_index()) {
+      if (i > concerned_index) {
         end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
         end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
         end_s_vec[i] = end_s_vec[i - 1] +
@@ -597,6 +605,7 @@ void LateralMotionPlanner::Update() {
     double end_ds =
         (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
         (N - end_points_size);
+    end_ds = std::min(end_ds, planning_input_.ref_vel() * 0.2);
     double end_s = end_s_vec[end_points_size - 1];
     for (size_t i = end_points_size; i < N; ++i) {
       end_s += end_ds;
@@ -615,6 +624,10 @@ void LateralMotionPlanner::Update() {
       s_vec[i + 1] = end_s;
     }
   }
+
+  // construct lateral kd path
+  motion_planner_output.lateral_path_coord =
+      ConstructLateralKDPath(x_vec, y_vec);
 
   // set state spline
   motion_planner_output.x_s_spline.set_points(s_vec, x_vec);
@@ -680,4 +693,29 @@ void LateralMotionPlanner::Update() {
   }
 }
 
+std::shared_ptr<KDPath> LateralMotionPlanner::ConstructLateralKDPath(
+    const std::vector<double> &x_vec, const std::vector<double> &y_vec) {
+  std::vector<planning_math::PathPoint> lat_path_points;
+  lat_path_points.reserve(x_vec.size());
+  for (int i = 1; i <= 26; ++i) {
+    if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
+      LOG_ERROR("skip NaN point");
+      continue;
+    }
+    planning_math::PathPoint path_point{x_vec[i], y_vec[i]};
+    lat_path_points.emplace_back(path_point);
+    if (not lat_path_points.empty()) {
+      auto &last_pt = lat_path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - path_point.x(),
+                               last_pt.y() - path_point.y())
+              .Length() < 1e-3) {
+        continue;
+      }
+    }
+  }
+  if (lat_path_points.size() <= 2) {
+    return nullptr;
+  }
+  return std::make_shared<KDPath>(std::move(lat_path_points));
+}
 }  // namespace planning

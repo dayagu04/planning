@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-
+#include "agent/agent.h"
 #include "ifly_time.h"
 #include "reference_path.h"
 #include "trajectory/center_line_point.h"
@@ -359,7 +359,7 @@ const std::vector<trajectory::Trajectory>& DynamicAgentNode::node_trajectories()
   return agent_->trajectories();
 }
 
-const iflyauto::ObjectType DynamicAgentNode::type() const {
+const agent::AgentType DynamicAgentNode::type() const {
   return agent_->type();
 }
 

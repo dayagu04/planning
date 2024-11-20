@@ -1,11 +1,175 @@
 #include "closest_in_path_vehicle_decider.h"
 
+#include <cmath>
+
+#include "debug_info_log.h"
+#include "environmental_model_manager.h"
+#include "log.h"
+#include "st_graph/st_graph_helper.h"
+
 namespace planning {
+namespace {
+constexpr int32_t kInvalidId = -1;
+constexpr double kDefaultTTC = 100.0;
+constexpr double KSpeedDiffThr = 0.1;
+constexpr double dangerous_level_ttc_thr_1 = 1.0;
+constexpr double dangerous_level_ttc_thr_2 = 0.8;
+constexpr double dangerous_level_ttc_thr_3 = 0.5;
+}  // namespace
+
 ClosestInPathVehicleDecider::ClosestInPathVehicleDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
   name_ = "ClosestInPathVehicleDecider";
 }
 
-bool ClosestInPathVehicleDecider::Execute() { return true; }
+bool ClosestInPathVehicleDecider::Execute() {
+  auto res = CipvDecision();
+  if (!res) {
+    JSON_DEBUG_VALUE("cipv_id_st", -1.0)
+    return false;
+  }
+  res = DetermineIfConeBucketCIPV();
+  const auto cipv_decider_output =
+      session_->planning_context().cipv_decider_output();
+  JSON_DEBUG_VALUE("cipv_id_st", cipv_decider_output.cipv_id())
+  return true;
+}
+
+bool ClosestInPathVehicleDecider::CipvDecision() {
+  const auto ptr_st_graph_helper =
+      session_->planning_context().st_graph_helper();
+  if (nullptr == ptr_st_graph_helper) {
+    return false;
+  }
+  const auto &st_boundaries = ptr_st_graph_helper->GetAllStBoundaries();
+  double min_s = std::numeric_limits<double>::max();
+  int32_t id = kInvalidId;
+  double releative_s = 0.0;
+  double cipv_v_frenet = 0.0;
+  double cipv_ttc = kDefaultTTC;
+  int32_t dangerous_level = -1;
+  bool is_virtual = false;
+  for (const auto &item : st_boundaries) {
+    const auto *ptr_st_boundary = item.second.get();
+    if (nullptr == ptr_st_boundary) {
+      continue;
+    }
+    speed::STPoint lower_point;
+    speed::STPoint upper_point;
+    if (!ptr_st_boundary->GetBoundaryBounds(0.0, &lower_point, &upper_point)) {
+      continue;
+    }
+    double lower_s = lower_point.s();
+    if (lower_s < 0.0) {
+      continue;
+    }
+    if (lower_s < min_s) {
+      min_s = lower_s;
+      id = lower_point.agent_id();
+    }
+    auto& mutable_cipv_decider_output =
+        session_->mutable_planning_context()->mutable_cipv_decider_output();
+    if (kInvalidId == id) {
+      mutable_cipv_decider_output.Reset();
+    } else {
+      MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_ttc,
+                   &dangerous_level, &is_virtual);
+      mutable_cipv_decider_output.set_cipv_id(id);
+      mutable_cipv_decider_output.set_relative_s(releative_s);
+      mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+      mutable_cipv_decider_output.set_ttc(cipv_ttc);
+      mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
+      mutable_cipv_decider_output.set_is_virtual(is_virtual);
+    }
+  }
+  return true;
+}
+
+void ClosestInPathVehicleDecider::MakeCipvInfo(const int32_t cipv_id,
+                                               double *const relative_s,
+                                               double *const v_frenet,
+                                               double *const cipv_ttc,
+                                               int32_t *const dangerous_level,
+                                               bool *const is_virtual) {
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (nullptr == agent_manager) {
+    return;
+  }
+  auto agent = agent_manager->GetAgent(cipv_id);
+  if (nullptr == agent) {
+    return;
+  }
+  const auto &planned_kd_path =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  const auto ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_v =
+      ego_state_manager->planning_init_point().lon_init_state.v();
+  double min_s = std::numeric_limits<double>::max();
+  for (const auto &point : agent->box().GetAllCorners()) {
+    double s = 0.0;
+    double l = 0.0;
+    if (!planned_kd_path->XYToSL(point.x(), point.y(), &s, &l)) {
+      LOG_DEBUG("----planned_kd_path err--- \n");
+      return;
+    }
+    min_s = std::fmin(min_s, s);
+  }
+  // consider back bumper to center distance of ego
+  constexpr double kEgoCenterToBackCenter = 1.1;
+  *relative_s = min_s - kEgoCenterToBackCenter;
+
+  double center_s = 0.0;
+  double center_l = 0.0;
+  const auto &center = agent->box().center();
+  if (!planned_kd_path->XYToSL(center.x(), center.y(), &center_s, &center_l)) {
+    LOG_DEBUG("----planned_kd_path err--- \n");
+    return;
+  }
+  auto matched_point = planned_kd_path->GetPathPointByS(center_s);
+  double heading_diff = agent->box().heading() - matched_point.theta();
+
+  *v_frenet = agent->speed() * std::cos(heading_diff);
+  if (ego_v - *v_frenet > KSpeedDiffThr) {
+    *cipv_ttc = *relative_s / (ego_v - *v_frenet);
+  } else {
+    *cipv_ttc = kDefaultTTC;
+  }
+
+  if (*cipv_ttc <= dangerous_level_ttc_thr_3) {
+    *dangerous_level = 3;
+  } else if (*cipv_ttc > dangerous_level_ttc_thr_3 &&
+             *cipv_ttc <= dangerous_level_ttc_thr_2) {
+    *dangerous_level = 2;
+  } else if (*cipv_ttc <= dangerous_level_ttc_thr_1 &&
+             *cipv_ttc > dangerous_level_ttc_thr_2) {
+    *dangerous_level = 1;
+  } else {
+    *dangerous_level = -1;
+  }
+  *is_virtual = agent->type() == agent::AgentType::VIRTUAL;
+}
+
+bool ClosestInPathVehicleDecider::DetermineIfConeBucketCIPV() {
+  const auto dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto agent_manager =
+      session_->environmental_model().get_dynamic_world()->agent_manager();
+  if (nullptr == dynamic_world || nullptr == agent_manager) {
+    LOG_DEBUG("dynamic_world or agent_manager is nullptr");
+    return true;
+  }
+  const auto *st_graph_helper = session_->planning_context().st_graph_helper();
+  if (nullptr == st_graph_helper) {
+    LOG_DEBUG("st_graph_helper is nullptr");
+    return false;
+  }
+  const auto &all_agents = agent_manager->GetAllCurrentAgents();
+  auto *mutable_helper = const_cast<speed::StGraphHelper *>(st_graph_helper);
+  mutable_helper->DetermineIfConeBucketCIPV(all_agents);
+  return true;
+}
+
 }  // namespace planning

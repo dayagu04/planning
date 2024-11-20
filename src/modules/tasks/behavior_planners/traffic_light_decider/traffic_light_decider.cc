@@ -191,7 +191,7 @@ bool TrafficLightDecider::Execute() {
 bool TrafficLightDecider::AddVirtualObstacle() {
   planning::agent::Agent virtual_agent;
   virtual_agent.set_agent_id(100000);
-  virtual_agent.set_type(iflyauto::OBJECT_TYPE_UNKNOWN_IMMOVABLE);
+  virtual_agent.set_type(agent::AgentType::VIRTUAL);
   virtual_agent.set_is_tfl_virtual_obs(true);
 
   // note stopline jump

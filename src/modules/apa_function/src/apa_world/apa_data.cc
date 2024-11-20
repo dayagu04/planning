@@ -100,6 +100,32 @@ void PrintApaStateMachine(const ApaStateMachine apa_state) {
   }
 }
 
+void PrintApaParkingOutDirection(
+    const ApaParkingOutDirection apa_park_out_direction) {
+  switch (apa_park_out_direction) {
+    case ApaParkingOutDirection::RIGHT_FRONT:
+      DEBUG_PRINT("apa_park_out_direction = RIGHT_FRONT");
+      break;
+    case ApaParkingOutDirection::RIGHT_REAR:
+      DEBUG_PRINT("apa_park_out_direction = RIGHT_REAR");
+      break;
+    case ApaParkingOutDirection::LEFT_FRONT:
+      DEBUG_PRINT("apa_park_out_direction = ACTILEFT_FRONTVE_OUT");
+      break;
+    case ApaParkingOutDirection::LEFT_REAR:
+      DEBUG_PRINT("apa_park_out_direction = LEFT_REAR");
+      break;
+    case ApaParkingOutDirection::FRONT:
+      DEBUG_PRINT("apa_park_out_direction = FRONT");
+      break;
+    case ApaParkingOutDirection::REAR:
+      DEBUG_PRINT("apa_park_out_direction = REAR");
+      break;
+    case ApaParkingOutDirection::INVALID:
+      break;
+  }
+}
+
 const std::string GetApaStateMachine(const ApaStateMachine apa_state) {
   std::string state;
   switch (apa_state) {

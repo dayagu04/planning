@@ -11,6 +11,42 @@
 namespace planning {
 namespace agent {
 
+//与iflyauto::ObjectType对齐
+enum class AgentType {
+  UNKNOWN = 0,                // 未知障碍物
+  UNKNOWN_MOVABLE = 1,        // 未知可移动障碍物
+  UNKNOWN_IMMOVABLE = 2,      // 未知不可移动障碍物
+  COUPE = 3,                  // 轿车
+  MINIBUS = 4,                // 面包车
+  VAN = 5,                    // 厢式轿车
+  BUS = 6,                    // 大型客车
+  TRUCK = 7,                  // 卡车
+  TRAILER = 8,                // 拖车
+  BICYCLE = 9,                // 自行车
+  MOTORCYCLE = 10,            // 摩托车
+  TRICYCLE = 11,              // 三轮车
+  PEDESTRIAN = 12,            // 行人
+  ANIMAL = 13,                // 动物
+  TRAFFIC_CONE = 14,          // 交通锥
+  TRAFFIC_BARREL = 15,        // 隔离墩
+  TRAFFIC_TEM_SIGN = 16,      // 临时指示牌
+  FENCE = 17,                 // 栅栏
+  CYCLE_RIDING = 18,          // 人骑着自行车
+  MOTORCYCLE_RIDING = 19,     // 人骑着摩托车
+  TRICYCLE_RIDING = 20,       // 人骑着三轮车
+  WATER_SAFETY_BARRIER = 21,  // 水马
+  CTASH_BARREL = 22,          // 防撞桶
+  WARNING_TRIANGLE = 23,      // 三角牌
+  PARKING_GATE = 24,          // 停车杆
+  POLE = 25,                  // 杆
+  SPEED_BUMP = 26,            // 减速带
+  PARKING_SPOT_LOCK = 27,     // 地锁
+  SQUARE_COLUMN = 28,         // 方柱
+  CYLINDER = 29,              // 圆柱
+  SUV = 30,                   // SUV车辆
+  VIRTUAL = 31,               // 虚拟障碍物
+};
+
 struct AgentStInfo {
   bool is_in_st_graph_ = false;
   int32_t st_graph_count_ = 0;
@@ -51,8 +87,8 @@ class Agent {
   const double accel() const;
   void set_accel(const double accel);
 
-  const iflyauto::ObjectType type() const;
-  void set_type(const iflyauto::ObjectType type);
+  const AgentType type() const;
+  void set_type(const AgentType type);
 
   // void set_agent_light_state_info(const AgentLightStateInfo&
   // agent_light_state_info); const AgentLightStateInfo&
@@ -154,7 +190,7 @@ class Agent {
  private:
   int32_t agent_id_ = -1;
 
-  iflyauto::ObjectType type_ = iflyauto::OBJECT_TYPE_UNKNOWN;
+  AgentType type_ = AgentType::UNKNOWN;
 
   double length_ = 0.0;
   double width_ = 0.0;

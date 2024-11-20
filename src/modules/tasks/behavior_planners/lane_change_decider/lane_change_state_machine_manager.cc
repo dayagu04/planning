@@ -208,6 +208,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     JSON_DEBUG_VALUE("is_ego_in_perfect_pose", is_ego_in_perfect_pose)
     if (*lane_change_type == INT_REQUEST && is_dashed_line) {
       return true;
+    } else if (*lane_change_type == EMERGENCE_AVOID_REQUEST ||
+               *lane_change_type == CONE_REQUEST) {
+      return true;
     } else {
       return is_ego_in_perfect_pose;
     }
@@ -755,10 +758,10 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
           .planning_init_point();
   // Step 3) calculate trajectory points
   // generate reference path
-  static const double min_ego_v_cruise = 2.0;
+  // static const double min_ego_v_cruise = 2.0;
   const auto &v_ref_cruise = std::fmax(
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise(),
-      min_ego_v_cruise);
+      config_.min_ego_v_cruise);
 
   static const size_t &N = config_.num_point;
   const auto &delta_time = config_.delta_t;
@@ -1848,7 +1851,7 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
                                         ->polygon()
                                         .points();
   double ego_dis_to_ref_lane = NL_NMAX;
-  for (auto ego_vertices_point : ego_vertices_points) {
+  for (const auto& ego_vertices_point : ego_vertices_points) {
     Point2D frenet_point;
     Point2D ego_vertices_point_tem = {ego_vertices_point.x(),
                                       ego_vertices_point.y()};

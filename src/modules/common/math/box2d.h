@@ -152,6 +152,8 @@ class Box2d {
    */
   std::vector<Vec2d> GetAllCorners() const;
 
+  std::vector<LineSegment2d> GetAllEdges() const;
+
   /**
    * @brief Tests points for membership in the box
    * @param point A point that we wish to test for membership in the box

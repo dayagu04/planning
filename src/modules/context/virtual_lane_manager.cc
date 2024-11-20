@@ -590,11 +590,15 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 对下游输出是否处于主路下匝道、匝道选分叉场景
   set_is_exist_ramp_on_road(ego_lane_track_manager_->is_exist_ramp_on_road());
   LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
-  JSON_DEBUG_VALUE("is_exist_ramp_on_road_", is_exist_ramp_on_road_);
+  JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
   set_is_exist_split_on_ramp(ego_lane_track_manager_->is_exist_split_on_ramp());
   LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
+
+  set_is_exist_split_on_expressway(ego_lane_track_manager_->is_exist_split_on_expressway());
+  LOG_DEBUG("is_exist_split_on_expressway_: %d \n", is_exist_split_on_expressway_);
+  JSON_DEBUG_VALUE("is_exist_split_on_expressway", is_exist_split_on_expressway_);
 
   set_is_exist_intersection_split(
       ego_lane_track_manager_->is_exist_intersection_split());
@@ -2490,4 +2494,42 @@ std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
   return boundary_path;
 }
 
+std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
+    Point2D point, double* nearest_s, double* nearest_l) {
+  double default_lateral_offset = 10.0;
+  int current_order_id = -1;
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane == nullptr) {
+      continue;
+    }
+    std::shared_ptr<KDPath> frenet_coord;
+    if (relative_id_lane->get_lane_frenet_coord() == nullptr) {
+      continue;
+    }
+    frenet_coord = relative_id_lane->get_lane_frenet_coord();
+    Point2D frenet_point;
+    double point_s = 0.0;
+    double point_l = 0.0;
+    if (!frenet_coord->XYToSL(point, frenet_point)) {
+      continue;
+    } else {
+      point_l = fabs(frenet_point.y);
+    }
+    if (point_l < default_lateral_offset) {
+      default_lateral_offset = point_l;
+      current_order_id = relative_id_lane->get_order_id();
+      *nearest_s = point_s;
+      *nearest_l = point_l;
+    }
+  }
+
+  for(const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_order_id() == current_order_id) {
+      return relative_id_lane;
+    } else {
+      continue;
+    }
+  }
+  return nullptr;
+}
 }  // namespace planning

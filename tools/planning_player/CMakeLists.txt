@@ -31,9 +31,9 @@ add_executable(${PROJECT_NAME} ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
   ${catkin_LIBRARIES}
   modules
-  cyber
-  fastrtps
-  autoplt
+  # cyber
+  # fastrtps
+  # autoplt
   legacy_c_interface
 )
 

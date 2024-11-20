@@ -25,7 +25,7 @@
 namespace planning {
 
 namespace {
-constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.6;
+constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.33;
 constexpr double kEmergencyAvoidancelongitudinalDistanceThreshold = 100.0;
 constexpr int kInvalidAgentId = -1;
 constexpr double kEmergencySituationDuration = 0.4;

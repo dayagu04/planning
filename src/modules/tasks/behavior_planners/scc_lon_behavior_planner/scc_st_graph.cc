@@ -7,11 +7,12 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-#include <fastdds/dds/log/Log.hpp>
+// #include <fastdds/dds/log/Log.hpp>
 #include <limits>
 #include <memory>
 #include <vector>
 
+#include "agent/agent.h"
 #include "agent_node_manager.h"
 #include "basic_types.pb.h"
 #include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
@@ -48,10 +49,10 @@ constexpr double kEgoLength = 5.1;
 constexpr double kExpandWidthBuffer = 0.0;
 constexpr double kExpandLengthBuffer = 0.0;
 constexpr double kLaneWidthBuffer = 0.1;
-constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
+// constexpr double kRearAgentFollowEgoSafeDistance = 3.0;
 constexpr double kLargeCurvRadius = 500;
 constexpr double kConsiderTimeLargeCurv = 5.0;
-constexpr double kDistanceToStopLineBufferAgent = 1.8;
+// constexpr double kDistanceToStopLineBufferAgent = 1.8;
 constexpr double kDistanceToStopLineBufferEgo = 7.5;
 constexpr double kConfideceDegree = 0.8;
 constexpr double kMinNarrowConeSpeed = 10.0;
@@ -834,10 +835,10 @@ void StGraphGenerator::UpdateSTGraphs(
     }
 
     double s_step = 0.0;
-    double s_step_hard_bound = 0.0;
+    double s_step_bound = 0.0;
     double st_obs_v = st.v_lead();
     double st_obs_a = st.a_lead();
-    double st_obs_j = 0.5;  //_J_Obj 常规jerk
+    double st_obs_j = 3.0;  //_J_Obj 常规jerk
     // 2.将st信息转换为离散bounds
     for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
       sample_time = i * t;
@@ -845,7 +846,7 @@ void StGraphGenerator::UpdateSTGraphs(
       // 考虑前车减速的情况
       if (st.a_lead() < 0) {
         // s_step += CalcDeceleratedObstacleST();
-        s_step_hard_bound += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
+        s_step_bound += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
                                           1.0 / 6 * st_obs_j * t_cube,
                                       0.0);
         st_obs_v =
@@ -855,7 +856,7 @@ void StGraphGenerator::UpdateSTGraphs(
           st_obs_j = 0.0;
         }
       } else {
-        s_step_hard_bound = s_step;
+        s_step_bound = s_step;
       }
       // 只更新关注的t区间内
       if (sample_time >= st.start_time() && sample_time <= st.end_time()) {
@@ -870,10 +871,10 @@ void StGraphGenerator::UpdateSTGraphs(
             s_ref = st.start_s() - st.desired_distance() + s_step;
           }
           */
-          s_ref = st.start_s() - st.desired_distance() + s_step;
+          s_ref = st.start_s() - st.desired_distance() + s_step_bound;
           // hard bound使用安全距离
           hard_bound.upper = std::max(
-              st.start_s() - st.safe_distance() + s_step_hard_bound, 0.1);
+              st.start_s() - st.safe_distance() + s_step_bound, 0.1);
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
           hard_bound.vel = st.v_lead();
           hard_bound.acc = st.a_lead();
@@ -883,7 +884,7 @@ void StGraphGenerator::UpdateSTGraphs(
               hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
           soft_bound.upper =
               std::min(0.5 * (hard_bound.upper + s_ref_update),
-                       std::max(st.start_s() - st.desired_distance() + s_step +
+                       std::max(st.start_s() - st.desired_distance() + s_step_bound +
                                     static_soft_bound_buffer,
                                 0.0));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
@@ -893,11 +894,11 @@ void StGraphGenerator::UpdateSTGraphs(
           // 根据障碍物跟车距离刷新s_refs
           sref_update[i] = s_ref_update;
         } else {
-          s_ref = st.start_s() + st.desired_distance() + s_step;
+          s_ref = st.start_s() + st.desired_distance() + s_step_bound;
           // hard bound使用安全距离
           hard_bound.upper = s_upper_bound;
           hard_bound.lower = std::max(
-              st.start_s() + st.safe_distance() + s_step_hard_bound, 0.0);
+              st.start_s() + st.safe_distance() + s_step_bound, 0.0);
           hard_bound.vel = st.v_lead();
           hard_bound.acc = st.a_lead();
           hard_bound.id = st.id();
@@ -2596,7 +2597,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size());
   const auto &spline_x_vec = lon_behav_input_->lat_output().spline_x_vec();
   const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
-  for (int i = 0; i <= config_.lon_num_step; ++i) {
+  for (int i = 1; i <= config_.lon_num_step; ++i) {
     if (std::isnan(spline_x_vec[i]) || std::isnan(spline_y_vec[i])) {
       LOG_ERROR("skip NaN point");
       continue;
@@ -2775,7 +2776,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
         kConfideceDegree * v_limit_narrow + (1 - kConfideceDegree) * v_ego;
     // distinguish narrow cone/narrow vehicle
     double v_limit_lower = 0.0;
-    if (agent->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+    if (agent->type() == agent::AgentType::TRAFFIC_CONE) {
       v_limit_lower = kMinNarrowConeSpeed;
     } else if (agent->is_vehicle_type()) {
       v_limit_lower = kMinNarrowVehicleSpeed;
@@ -2923,6 +2924,7 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
                           .boundary_merge_point;
   JSON_DEBUG_VALUE("is_merge_region_plan", is_merge_region_)
   JSON_DEBUG_VALUE("merge_direction_plan", static_cast<int>(merge_direction_))
+  JSON_DEBUG_VALUE("current_lane_is_continue", current_lane_is_continue_)
 }
 
 void StGraphGenerator::CalculateMergeSpeedLimit(
@@ -3328,12 +3330,12 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
     return true;
   }
   // filter rear agent
-  const double agent_length = agent->length();
+  // const double agent_length = agent->length();
   const double agent_width = agent->width();
   const auto ego_lane_width = ego_lane->width();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  // const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
   Point2D agent_current_xy(agent->x(), agent->y());
   Point2D agent_current_sl_to_ego_lane{0.0, 0.0};
   const auto status_agent = ego_lane->get_lane_frenet_coord()->XYPointToSLPoint(
@@ -3362,9 +3364,9 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
     ego_current_sl_to_ego_lane.x = 200.0;
     ego_current_sl_to_ego_lane.y = 0.0;
   }
-  const double distance_current_relative =
-      agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x +
-      agent_length * 0.5 + ego_rear_edge_to_rear_axle;
+  // const double distance_current_relative =
+  //     agent_current_sl_to_ego_lane.x - ego_current_sl_to_ego_lane.x +
+  //     agent_length * 0.5 + ego_rear_edge_to_rear_axle;
   if (/*distance_current_relative < -kRearAgentFollowEgoSafeDistance &&*/
       (agent_semanctic_orientation_to_ego ==
            MergeAgentsInfo::AgentOrientationToEgo::LEFT_REAR ||
@@ -3531,7 +3533,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       lane_manager->get_current_lane()->get_lane_frenet_coord();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  // const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
   const auto ego_front_edge_to_rear_axle =
       vehicle_param.front_edge_to_rear_axle;
 
@@ -4023,7 +4025,7 @@ void StGraphGenerator::MergeInfoReset() {
       planning_data::kInvalidId, std::numeric_limits<double>::max()};
   merge_target_one_semantic_orientation_to_ego_ =
       MergeAgentsInfo::AgentOrientationToEgo::UNKNOWN;
-      
+
   t_merge_with_front_agent_ = {planning_data::kInvalidId,
                                std::numeric_limits<double>::max()};
   d_relative_merge_with_front_agent_ = {planning_data::kInvalidId,
@@ -4356,8 +4358,8 @@ void StGraphGenerator::GenerateSrefByVrefJLT(std::vector<double> &s_refs) {
   state_limit.v_end = v_target_;
   state_limit.a_min = acc_target_.first;
   state_limit.a_max = acc_target_.second;
-  state_limit.j_min = -1.0;
-  state_limit.j_max = 1.5;
+  state_limit.j_min = -2.0;
+  state_limit.j_max = 2.0;
   if (start_stop_info_.state() == common::StartStopInfo::START) {
     state_limit.a_min = acc_target_.first;
     state_limit.a_max = config_.acc_start_max_bound;

@@ -1,6 +1,8 @@
 #pragma once
+#include <memory>
 #include "ilqr_define.h"
 #include "spline.h"
+#include "utils/kd_path.h"
 namespace planning {
 
 struct MotionPlannerOutput {
@@ -41,6 +43,9 @@ struct MotionPlannerOutput {
   std::vector<double> s_lat_vec;
 
   ilqr_solver::ControlVec u_vec;
+
+  // lateral kd path
+  std::shared_ptr<planning_math::KDPath> lateral_path_coord;
 };
 
 }  // namespace planning

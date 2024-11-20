@@ -24,6 +24,7 @@
 #include "general_planning_context.h"
 #include "history_obstacle_manager.h"
 #include "ifly_localization_c.h"
+#include "ifly_time.h"
 #include "lateral_obstacle.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
@@ -154,6 +155,7 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("EnvironmentalModelManager run\n");
 
   auto current_time = IflyTime::Now_ms();
+  auto current_time_s = IflyTime::Now_s();
 
   if (!session_->environmental_model().GetVehicleDbwStatus()) {
     LOG_WARNING("DBW_Disable, but EnvironmentalModelManager continue\n");
@@ -300,7 +302,7 @@ bool EnvironmentalModelManager::Run() {
   JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
   time_start = IflyTime::Now_ms();
-  agent_manager_ptr_->Update();
+  agent_manager_ptr_->Update(current_time_s);
   time_end = IflyTime::Now_ms();
   LOG_DEBUG("agent manager cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
@@ -1141,6 +1143,22 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
       prediction_object.relative_speed_x, prediction_object.relative_speed_y);
   PredictionTrajectory tra;
   tra.trajectory.emplace_back(std::move(trajectory_point));
+  // hack:linear add trajectory point
+  // for (int i = 1; i < 26; i++) {
+  //   PredictionTrajectoryPoint trajectory_point_tmp;
+  //   trajectory_point_tmp.relative_time = i * 0.2;
+  //   const double dt = i * 0.2;
+  //   const double vel = prediction_object.speed;
+  //   const double theta = prediction_object.yaw;
+  //   const double pred_ds = std::fmax(0.0, vel * dt);
+  //   planning_math::Vec2d last_point(prediction_object.position_x,
+  //                                   prediction_object.position_y);
+  //   auto pred_point =
+  //       last_point + planning_math::Vec2d::CreateUnitVec2d(theta) * pred_ds;
+  //   trajectory_point_tmp.x = pred_point.x();
+  //   trajectory_point_tmp.y = pred_point.y();
+  //   tra.trajectory.emplace_back(std::move(trajectory_point_tmp));
+  // }
   prediction_object.trajectory_array.emplace_back(std::move(tra));
   prediction_object.is_static = IsStatic(prediction_object);
   objects_infos.emplace_back(std::move(prediction_object));

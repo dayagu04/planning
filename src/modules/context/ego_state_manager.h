@@ -104,7 +104,7 @@ class EgoStateManager {
   bool is_auto() const { return is_auto_; };
   bool flag_is_replan() const { return flag_is_replan_; };
   bool throttle_override() const { return throttle_override_; };
-  const planning_math::Polygon2d polygon() const { return polygon_; }
+  const planning_math::Polygon2d& polygon() const { return polygon_; }
 
   const PlanningInitPoint &planning_init_point() const {
     return planning_init_point_;
