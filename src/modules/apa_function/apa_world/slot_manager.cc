@@ -1890,7 +1890,7 @@ const bool SlotManager::IsReleaseByRuleBased(const uint32_t select_slot_id) {
   }
 
   return false;
+}
 
 }  // namespace apa_planner
-
 }  // namespace planning
