@@ -8,7 +8,7 @@
 #include <iostream>
 #include <utility>
 
-#include "../../../modules/apa_function/src/apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include "./../../modules/apa_function/src/apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "./../geometry_lib/include/geometry_math.h"
 #include "point_cloud_obstacle.h"
@@ -11,6 +11,7 @@
 namespace planning {
 
 // in system, you can use polygon foot_print or circle foot print.
+// todo: move to collision detection
 struct PolygonFootPrint {
   Polygon2D body;
   Polygon2D mirror_left;
@@ -27,6 +28,7 @@ enum class VehCollisionPosition {
 };
 
 // check path safe for polygon obs and ogm obstacle
+// todo: move to collision detection directory.
 class PathSafeChecker {
  public:
   PathSafeChecker() = default;
@@ -47,14 +49,30 @@ class PathSafeChecker {
 
   const size_t GetPathCollisionID() const { return path_collision_idx_; }
 
- private:
-  void GenerateVehBox(const pnc::geometry_lib::PathSegGear gear,
-                      const double lateral_safe_buffer,
+  void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
+                                   const double lon_buffer);
+
+  void GenerateVehBox(const double lateral_safe_buffer,
                       const double lon_safe_buffer);
 
   void GenerateVehCompactPolygon(const pnc::geometry_lib::PathSegGear gear,
                                  const double lateral_safe_buffer,
                                  const double lon_safe_buffer);
+
+  bool CalcEgoCollision(const ParkObstacleList* obs, const Pose2D& ego_pose,
+                        const double lat_buffer, const double lon_buffer);
+
+  const bool IsPolygonCollision(const Polygon2D* car);
+
+  void SetObstacle(const ParkObstacleList* obs) {
+    obs_ = obs;
+
+    return;
+  }
+
+ private:
+  void GeneratePathEndPolygon(const double lateral_safe_buffer,
+                              const double lon_safe_buffer);
 
   size_t GetNearestPathPoint(
       const std::vector<pnc::geometry_lib::PathPoint>& path,
@@ -62,11 +80,6 @@ class PathSafeChecker {
 
   int GenerateMirrorPolygon(Polygon2D* box, const double x_length,
                             const double y_length, const Position2D& center);
-
-  const bool IsPolygonCollision(const Polygon2D* car);
-
-  int GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
-                                  const double lon_buffer);
 
   const bool IsFootPrintPolygonCollision(const Transform2d& tf,
                                          PolygonFootPrint* foot_print,

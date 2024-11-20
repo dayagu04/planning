@@ -6,29 +6,28 @@
 #include <iostream>
 #include <vector>
 
-#include "apa_plan_base.h"
-#include "perpendicular_park_in_planner.h"
-#include "perpendicular_path_in_planner.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "perpendicular_tail_in_path_generator.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static planning::apa_planner::PerpendicularPathInPlanner *pBase = nullptr;
+static planning::apa_planner::PerpendicularTailInPathGenerator *pBase = nullptr;
 
 int Init() {
-  pBase = new PerpendicularPathInPlanner();
+  pBase = new PerpendicularTailInPathGenerator();
   pBase->Reset();
   return 0;
 }
 
-static PerpendicularPathInPlanner::DebugInfo debuginfo;
+static PerpendicularTailInPathGenerator::DebugInfo debuginfo;
 static std::vector<double> res;
 
 int Update(double ego_x, double ego_y, double ego_heading, double tlane_p0_x,
            double tlane_p0_y, double tlane_p1_x, double tlane_p1_y,
            double tlane_pt_x, double tlane_pt_y, double channel_x, double ds,
            bool is_complete_path) {
-  planning::apa_planner::PerpendicularPathInPlanner::Input input;
+  planning::apa_planner::PerpendicularTailInPathGenerator::Input input;
 
   input.ego_pose.pos << ego_x, ego_y;
   input.ego_pose.heading = ego_heading;

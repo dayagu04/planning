@@ -43,6 +43,8 @@ enum class AstarPathGenerateType {
   SPIRAL_SAMPLING,
   CUBIC_POLYNOMIAL_SAMPLING,
   QUNTIC_POLYNOMIAL_SAMPLING,
+  // 点击车位之后，尝试搜索
+  TRY_SEARCHING,
   MAX_NUMBER,
 };
 
@@ -54,20 +56,17 @@ enum class ParkSpaceType {
   MAX_NUMBER,
 };
 
-enum class ParkingTask {
+enum class ParkingVehDirection {
   NONE,
-  TAIL_PARKING_IN,
-  HEAD_PARKING_IN,
-  HEAD_PARKING_OUT,
-  TAIL_PARKING_OUT,
+  TAIL_IN,
+  TAIL_OUT_TO_LEFT,
+  TAIL_OUT_TO_RIGHT,
+  TAIL_OUT_TO_MIDDLE,
+  HEAD_IN,
+  HEAD_OUT_TO_LEFT,
+  HEAD_OUT_TO_RIGHT,
+  HEAD_OUT_TO_MIDDLE,
   MAX_NUMBER,
-};
-
-enum class ParkingVehDirectionRequest {
-  none,
-  tail_in_first,
-  head_in_first,
-  max_number,
 };
 
 enum class NodeCollisionType {

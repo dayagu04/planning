@@ -11,18 +11,18 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-#include "apa_param_setting.h"
-#include "apa_plan_base.h"
+#include "apa_data.h"
+#include "apa_param_config.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
-#include "collision_detection.h"
+#include "collision_detection/collision_detection.h"
 #include "common.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
-#include "hybrid_astar_park_planner.h"
+#include "narrow_space_scenario.h"
 #include "log_glog.h"
 #include "math_lib.h"
-#include "perpendicular_park_in_planner.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
@@ -32,7 +32,7 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
-#include "src/library/occupancy_grid_map/virtual_wall_decider.h"
+#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
 #include "src/library/reeds_shepp/reeds_shepp_interface.h"
 #include "transform2d.h"
 #include "ad_common/math/math_utils.h"
@@ -43,7 +43,7 @@ using namespace planning;
 using namespace pnc::geometry_lib;
 
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
-static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
+static planning::apa_planner::ApaPlanInterface*parking_interface = nullptr;
 
 std::vector<Eigen::Vector3d> global_path_;
 std::vector<double> global_path_s_;
@@ -57,7 +57,7 @@ Eigen::Vector3d safe_circle_tang_pose_;
 Eigen::Vector2d pt_inside_pose_;
 // global park space
 std::vector<Eigen::Vector2d> corrected_park_space_points_;
-PerpendicularPathPlanner::Tlane slot_t_lane_;
+PerpendicularPathGenerator::Tlane slot_t_lane_;
 Eigen::Vector2d right_obs_start_;
 
 std::vector<Eigen::Vector2d> obs_global_points_;
@@ -87,11 +87,12 @@ int Init() {
 
   parking_interface->Init();
 
-  std::shared_ptr<apa_planner::ApaPlannerBase> planner =
-      parking_interface->GetPlannerByType(ApaPlannerType::HYBRID_ASTAR_PLANNER);
+  std::shared_ptr<apa_planner::ParkingScenario> planner =
+      parking_interface->GetPlannerByType(
+          ParkingScenarioType::SCENARIO_NARROW_SPACE);
 
-  std::shared_ptr<apa_planner::HybridAStarParkPlanner> hybrid_astar_park_ =
-      std::dynamic_pointer_cast<apa_planner::HybridAStarParkPlanner>(planner);
+  std::shared_ptr<apa_planner::NarrowSpaceScenario> hybrid_astar_park_ =
+      std::dynamic_pointer_cast<apa_planner::NarrowSpaceScenario>(planner);
 
   HybridAStarThreadSolver *thread = hybrid_astar_park_->GetThread();
   hybrid_astar_interface_ = thread->GetHybridAStarInterface();
@@ -187,7 +188,7 @@ void GetTrajPoseBySDist(const double s) {
   return;
 }
 
-int GetPathFromHybridAstar(const ApaPlannerBase::EgoSlotInfo &ego_slot_info,
+int GetPathFromHybridAstar(const ParkingScenario::EgoSlotInfo &ego_slot_info,
                            const double vertical_slot_end_straight_dist,
                            const Eigen::Vector3d &ego_pose) {
   //
@@ -353,7 +354,7 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
 }
 
 int GetParkingSpaceOccupiedRatio(const ApaParameters &parking_param,
-                                 ApaPlannerBase::EgoSlotInfo &slot_info) {
+                                 ParkingScenario::EgoSlotInfo &slot_info) {
   if (std::fabs(slot_info.terminal_err.pos.y()) <
           parking_param.slot_occupied_ratio_max_lat_err &&
       std::fabs(slot_info.ego_heading_slot) <
@@ -372,8 +373,8 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
                                  const Eigen::Vector2d &lower_middle_pt,
                                  const Eigen::Vector2d &ego_global_position,
                                  const Eigen::Vector3d &ego_global_pose,
-                                 ApaPlannerBase::EgoSlotInfo &slot_info,
-                                 ApaPlannerBase::Frame &frame) {
+                                 ParkingScenario::EgoSlotInfo &slot_info,
+                                 ParkingScenario::Frame &frame) {
   Eigen::Vector2d ego_to_slot_center =
       0.5 * (upper_middle_pt + lower_middle_pt) - ego_global_position;
 
@@ -427,7 +428,7 @@ int GetParkSpaceRelativePosition(const Eigen::Vector2d &upper_middle_pt,
 }
 
 int UpdateParkSpaceKeyPoints(
-    const ApaParameters &parking_param, ApaPlannerBase::EgoSlotInfo &slot_info,
+    const ApaParameters &parking_param, ParkingScenario::EgoSlotInfo &slot_info,
     double inside_dx,
     const std::vector<Eigen::Vector2d> &global_park_space_points,
     double cos_theta, double real_slot_length) {
@@ -523,7 +524,7 @@ int GenerateObstacleByJupyter(
     const std::vector<double> &obs_params, const Eigen::Vector2d &vec_01,
     const Eigen::Vector2d &vec_02, const Eigen::Vector2d &unit_vec_02,
     const Eigen::Vector2d &unit_vec_01,
-    ApaPlannerBase::EgoSlotInfo &slot_info) {
+    ParkingScenario::EgoSlotInfo &slot_info) {
   obs_global_points_.clear();
 
   // base point is slot right upper point
@@ -666,7 +667,7 @@ std::vector<Eigen::Vector3d> Update(
     std::vector<Eigen::Vector2d> global_park_space_points, double inside_dx,
     std::vector<double> obs_params, const bool trigger_plan) {
   obs_global_points_.clear();
-  planning::apa_planner::ApaPlannerBase::Frame frame;
+  planning::apa_planner::ParkingScenario::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;
 
   corrected_park_space_points_.clear();
@@ -880,8 +881,7 @@ std::vector<Eigen::Vector3d> Update(
     request.base_pose_ = Pose2D(0, 0, 0);
 
     request.space_type = ParkSpaceType::VERTICAL;
-    request.parking_task = ParkingTask::TAIL_PARKING_IN;
-    request.head_request = ParkingVehDirectionRequest::tail_in_first;
+    request.direction_request = ParkingVehDirection::TAIL_IN;
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;

@@ -8,23 +8,22 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "apa_plan_base.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
-#include "collision_detection.h"
-#include "perpendicular_park_in_planner.h"
-#include "perpendicular_path_in_planner.h"
+#include "collision_detection/collision_detection.h"
+#include "perpendicular_tail_in_path_generator.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static planning::apa_planner::PerpendicularPathInPlanner *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
+static planning::apa_planner::PerpendicularTailInPathGenerator *pBase = nullptr;
+static planning::apa_planner::ApaPlanInterface*pApaPlanInterface= nullptr;
 
 int Init() {
-  pBase = new PerpendicularPathInPlanner();
+  pBase = new PerpendicularTailInPathGenerator();
   pBase->Reset();
 
-  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init();
 
@@ -44,7 +43,7 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-static PerpendicularPathInPlanner::DebugInfo debuginfo;
+static PerpendicularTailInPathGenerator::DebugInfo debuginfo;
 static std::vector<double> res;
 std::vector<Eigen::Vector3d> current_path_point_global_vec_;
 Eigen::Vector3d global_target_pose_;
@@ -54,7 +53,7 @@ Eigen::Vector2d pt_inside_pose_;
 std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     std::vector<Eigen::Vector2d> pt, double ds,
                                     bool is_complete_path, double inside_dx) {
-  planning::apa_planner::ApaPlannerBase::Frame frame;
+  planning::apa_planner::ParkingScenario::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;
 
   const auto pM01 = 0.5 * (pt[0] + pt[1]);
@@ -150,7 +149,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularPathInPlanner::Tlane slot_t_lane;
+  planning::apa_planner::PerpendicularTailInPathGenerator::Tlane slot_t_lane;
   // judge slot side via slot center and heading
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -220,7 +219,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   ego_slot_info.pt_0 = pt_0;
   ego_slot_info.pt_1 = pt_1;
 
-  planning::apa_planner::PerpendicularPathInPlanner::Input input;
+  planning::apa_planner::PerpendicularTailInPathGenerator::Input input;
   input.pt_0 = ego_slot_info.pt_0;
   input.pt_1 = ego_slot_info.pt_1;
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;

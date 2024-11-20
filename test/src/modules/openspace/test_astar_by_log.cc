@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
   planning::VehicleConfigurationContext::Instance()->set_vehicle_param(
       vehicle_param);
 
-  // planning::apa_planner::ApaPlanInterface parking_interface;
+  // planning::apa_planner::ApaPlanInterfaceparking_interface;
   // parking_interface.Init();
 
   // planning::apa_planner::ApaParameters parking_param;

@@ -9,17 +9,17 @@
 #include "geometry_math.h"
 #include "math_lib.h"
 #include "transform_lib.h"
-#include "uss_obstacle_avoidance.h"
+#include "collision_detection/uss_obstacle_avoidance.h"
 
 namespace py = pybind11;
 using namespace planning;
 using namespace planning::apa_planner;
 static UssObstacleAvoidance* pBaseUssOaAir = nullptr;
 
-static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
+static planning::apa_planner::ApaPlanInterface* pApaPlanInterface= nullptr;
 
 int Init() {
-  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init();
 

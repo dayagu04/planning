@@ -7,7 +7,8 @@
 #include "base_function.h"
 #include "plan_data.h"
 #include "session.h"
-#include "src/apa_plan_interface.h"
+#include "apa_plan_interface.h"
+
 namespace planning {
 
 class ApaFunction : public BaseFunction {

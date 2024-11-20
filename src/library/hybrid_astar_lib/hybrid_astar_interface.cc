@@ -13,7 +13,7 @@
 #include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "log_glog.h"
-#include "modules/apa_function/src/apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "node3d.h"
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
@@ -246,6 +246,22 @@ int HybridAStarInterface::UpdateOutput() {
         break;
       }
     }
+  } else if (request_.path_generate_method ==
+             AstarPathGenerateType::TRY_SEARCHING) {
+    lat_buffer = 0.11;
+    lon_buffer = 0.4;
+    edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
+                          static_cast<float>(config_.lon_front_safe_buffer),
+                          static_cast<float>(lat_buffer));
+
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
+
+    // todo: 需要限制搜索时间
+    ILOG_INFO << "scenario try planning";
+    hybrid_astar_->AstarSearch(initial_state_, goal_state_, map_bounds_, obs_,
+                               request_, &clear_zone_, &coarse_traj_, &edt_,
+                               &ref_line_);
+
   } else {
     double dist_to_slot_up_edge =
         request_.slot_length - initial_state_.DistanceToOrigin();

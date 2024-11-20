@@ -6,12 +6,15 @@
 #include "ego_state_manager.h"
 #include "environmental_model.h"
 #include "log.h"
+
 namespace planning {
 const double kMaxDistanceY = 5;
 const double kMaxDistanceFrontX = 40;  // 后续根据实际需求更改
 const double kMaxDistanceBackX = 30;
+
 ParkingSlotManager::ParkingSlotManager(planning::framework::Session *session)
     : session_(session) {}
+
 bool ParkingSlotManager::update(const iflyauto::ParkingInfo &parking_info) {
   points_.clear();
   const auto ego_state_manager =

@@ -9,20 +9,19 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "apa_param_setting.h"
-#include "apa_plan_base.h"
+#include "apa_param_config.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
-#include "collision_detection.h"
+#include "collision_detection/collision_detection.h"
 #include "config_context.h"
 #include "math_lib.h"
-#include "perpendicular_park_in_planner.h"
-#include "perpendicular_path_in_planner.h"
+#include "perpendicular_tail_in_path_generator.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
-static planning::apa_planner::PerpendicularPathInPlanner *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
+static planning::apa_planner::PerpendicularTailInPathGenerator *pBase = nullptr;
+static planning::apa_planner::ApaPlanInterface*pApaPlanInterface= nullptr;
 
 int Init() {
   // const std::string flag_file_path =
@@ -33,10 +32,10 @@ int Init() {
   planning::InitGlog(planning::FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
 
-  pBase = new PerpendicularPathInPlanner();
+  pBase = new PerpendicularTailInPathGenerator();
   pBase->Reset();
 
-  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init(true);
 
@@ -56,7 +55,7 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-static PerpendicularPathInPlanner::DebugInfo debuginfo;
+static PerpendicularTailInPathGenerator::DebugInfo debuginfo;
 static std::vector<double> res;
 std::vector<Eigen::Vector3d> current_path_point_global_vec_;
 Eigen::Vector3d global_target_pose_;
@@ -73,7 +72,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                     double inside_dx,
                                     std::vector<double> obs_params) {
   obs_pts_.clear();
-  planning::apa_planner::ApaPlannerBase::Frame frame;
+  planning::apa_planner::ParkingScenario::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;
   pt_.clear();
   pt_.resize(4);
@@ -198,7 +197,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularPathInPlanner::Tlane slot_t_lane;
+  planning::apa_planner::PerpendicularTailInPathGenerator::Tlane slot_t_lane;
   // judge slot side via slot center and heading
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -428,7 +427,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 
   collision_detector_ptr->TransObsMapToOccupancyGridMap(bound);
 
-  planning::apa_planner::PerpendicularPathInPlanner::Input input;
+  planning::apa_planner::PerpendicularTailInPathGenerator::Input input;
   input.pt_0 = ego_slot_info.pt_0;
   input.pt_1 = ego_slot_info.pt_1;
   input.sin_angle = ego_slot_info.sin_angle;

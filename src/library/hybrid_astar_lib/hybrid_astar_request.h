@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bits/stdint-uintn.h>
+#include <cstddef>
 #include "./../reeds_shepp/rs_path_request.h"
 #include "hybrid_astar_common.h"
 #include "node3d.h"
@@ -31,10 +33,9 @@ struct AstarRequest {
   AstarPathGear history_gear;
 
   ParkSpaceType space_type;
+  size_t slot_id;
 
-  ParkingTask parking_task;
-
-  ParkingVehDirectionRequest head_request;
+  ParkingVehDirection direction_request;
 
   RSPathRequestType rs_request;
   PlanningReason plan_reason;

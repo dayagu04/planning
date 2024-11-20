@@ -1,4 +1,4 @@
-#include "apa_function/src/lateral_path_optimizer/src/lateral_path_optimizer_cost.h"
+#include "apa_function/lateral_path_optimizer/src/lateral_path_optimizer_cost.h"
 
 #include <math.h>
 

@@ -10,7 +10,6 @@
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
-#include "parking_slot_manager.h"
 #include "planning_scheduler.h"
 #include "reference_path_manager.h"
 #include "scene_type_config.pb.h"
