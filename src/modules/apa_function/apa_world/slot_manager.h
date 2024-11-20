@@ -518,6 +518,8 @@ class SlotManager {
   void SlotReleaseByScenarioTry(const bool release,
                                 const SlotReleaseMethod method);
 
+  const bool IsReleaseByRuleBased(const uint32_t select_slot_id);
+
  private:
   Frame frame_;
 

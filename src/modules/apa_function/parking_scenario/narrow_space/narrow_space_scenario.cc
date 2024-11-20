@@ -773,15 +773,17 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
                 << ",dist = " << path_dist
                 << ",gear_change_num=" << response.result.gear_change_num;
 
-      PathOptimizationByCILRQ(path_dist, local_path, &response_tf);
+      PathOptimizationByCILRQ(local_path, &response_tf);
 
       double lqr_end_time = IflyTime::Now_ms();
       ILOG_INFO << "lqr time ms " << lqr_end_time - search_end_time;
 
-      PublishHybridAstarDebugInfo(response.result, &thread_, &response_tf);
+      if (!is_scenario_try) {
+        PublishHybridAstarDebugInfo(response.result, &thread_, &response_tf);
 
-      double publish_end_time = IflyTime::Now_ms();
-      ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
+        double publish_end_time = IflyTime::Now_ms();
+        ILOG_INFO << "publish time ms " << publish_end_time - lqr_end_time;
+      }
 
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
@@ -877,21 +879,24 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     }
   }
 
-  planning::common::AstarNodeList* list = debug_->mutable_node_list();
-  list->Clear();
+  // do not publish it.
+  if (0) {
+    planning::common::AstarNodeList* list = debug_->mutable_node_list();
+    list->Clear();
 
-  thread->GetNodeListMessagePublish(list);
-  ILOG_INFO << "list size " << list->nodes_size();
+    thread->GetNodeListMessagePublish(list);
+    ILOG_INFO << "list size " << list->nodes_size();
 
-  for (int i = 0; i < list->nodes_size(); i++) {
-    for (int j = 0; j < list->nodes(i).path_point_size(); j++) {
-      local_position.x = list->nodes(i).path_point(j).x();
-      local_position.y = list->nodes(i).path_point(j).y();
+    for (int i = 0; i < list->nodes_size(); i++) {
+      for (int j = 0; j < list->nodes(i).path_point_size(); j++) {
+        local_position.x = list->nodes(i).path_point(j).x();
+        local_position.y = list->nodes(i).path_point(j).y();
 
-      tf->ULFLocalPoseToGlobal(&global_position, local_position);
+        tf->ULFLocalPoseToGlobal(&global_position, local_position);
 
-      list->mutable_nodes(i)->mutable_path_point(j)->set_x(global_position.x);
-      list->mutable_nodes(i)->mutable_path_point(j)->set_y(global_position.y);
+        list->mutable_nodes(i)->mutable_path_point(j)->set_x(global_position.x);
+        list->mutable_nodes(i)->mutable_path_point(j)->set_y(global_position.y);
+      }
     }
   }
 
@@ -931,7 +936,6 @@ const int NarrowSpaceScenario::GenerateFallBackPath() {
 }
 
 const int NarrowSpaceScenario::PathOptimizationByCILRQ(
-    const double paht_s,
     const std::vector<pnc::geometry_lib::PathPoint>& local_path,
     Transform2d* tf) {
   LocalPathToGlobal(local_path, tf);

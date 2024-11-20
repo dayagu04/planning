@@ -2599,6 +2599,8 @@ void PerpendicularTailInScenario::Log() const {
 }
 
 const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
+  Reset();
+
   std::shared_ptr<SlotManager> slot_manager =
       apa_world_ptr_->GetSlotManagerPtr();
 

@@ -1,5 +1,6 @@
 #include "slot_manager.h"
 
+#include <bits/stdint-uintn.h>
 #include <math.h>
 #include <sys/types.h>
 
@@ -275,12 +276,15 @@ bool SlotManager::UpdateSlotsInSearching(
                                      frame_.measurement_data_ptr,
                                      fusion_slot_map, frame_);
 
-  // 没有点击泊车，但是点击了车位，此时需要场景尝试一下。并且使用尝试后的场景覆盖基于规则的.
+  // 点击了车位,更新车位基本信息
   if (!frame_.slot_info_window_map.empty() &&
       !frame_.slot_info_window_map[frame_.parking_slot_ptr->select_slot_id]
            .IsEmpty()) {
-    // 填充基于规则的方式，是否释放。后续会基于规划的方式
-    if (UpdateSlotsInParking()) {
+    // 基于规则的方式，是否释放. 真正的释放任务由后续预规划决定.
+    bool update_slot = UpdateSlotsInParking();
+    bool is_release =
+        IsReleaseByRuleBased(frame_.parking_slot_ptr->select_slot_id);
+    if (update_slot && is_release) {
       frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::RELEASE;
     } else {
@@ -1871,6 +1875,21 @@ void SlotManager::SlotReleaseByScenarioTry(
 
   return;
 }
+
+const bool SlotManager::IsReleaseByRuleBased(const uint32_t select_slot_id) {
+  for (int i = 0; i < frame_.slot_management_info.slot_info_vec_size(); i++) {
+    const common::SlotInfo &slot_info =
+        frame_.slot_management_info.slot_info_vec(i);
+
+    if (slot_info.has_id() && slot_info.id() == select_slot_id) {
+      if (slot_info.is_release()) {
+        return true;
+      }
+      return false;
+    }
+  }
+
+  return false;
 
 }  // namespace apa_planner
 
