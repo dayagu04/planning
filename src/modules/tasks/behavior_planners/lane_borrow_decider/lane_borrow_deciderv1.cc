@@ -16,6 +16,7 @@
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tracked_object.h"
+#include <cmath>
 
 namespace {
 constexpr double kMinDisToSolidLane = 50.0;// 编译求值
@@ -267,7 +268,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {//借道触发判断条件
   }
   if (lane_borrow_status_ == LaneBorrowStatus::kNoLaneBorrow)
   {
-    if (!IsSafeForLaneBorrow()) {// 更新方向
+    if (!IsSafeForLaneBorrow2()) {// 更新方向
       return false;
     }
   }
@@ -316,7 +317,7 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
 
     if (frenet_obstacle_sl.l_start > left_width ||
         frenet_obstacle_sl.l_end < -right_width) {
-      // obstacle is absolutly out ego current lane
+      // obstacle is absolutly out ego current lane 车道外的不考虑
       continue;
     }
 
@@ -357,8 +358,8 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
 
 bool LaneBorrowDecider::UpdateLaneBorrowDirection() {// 借道方向
 
-      left_borrow_ = true;// 默认true
-      right_borrow_ = true;
+  left_borrow_ = true;// 默认true
+  right_borrow_ = true;
 
 
 
@@ -517,6 +518,111 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
       obs_start_s_, 0.0, &front_pass_point_.first, &front_pass_point_.second);
   return true;
 }
+// select direction according to delta L
+bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
+  double right_bounds_l = 0.0;
+  double left_bounds_l = 0.0;
+  //左侧通行bound
+  double left_right_bounds_l = 0.0;
+  double left_left_bounds_l = 0.0;
+  //右侧通行bound
+  double right_right_bounds_l = 0.0;
+  double right_left_bounds_l = 0.0;
+
+  bool safe_to_left_lane_borrow = false;
+  double target_l = 0.0;
+  double target_left_l = 0.0;
+  double target_right_l = 0.0;
+  double neighbor_left_width = 1.75;  // defualt init
+  double neighbor_right_width = 1.75;
+
+  const double current_left_lane_width = current_lane_ptr_->width() * 0.5;
+  const double current_right_lane_width = current_lane_ptr_->width() * 0.5;
+
+  if (left_borrow_) {
+    left_right_bounds_l = obs_left_l_;
+    const double neighbor_width =
+        left_lane_ptr_->width(vehicle_param_.front_edge_to_rear_axle);
+    neighbor_left_width = neighbor_width * 0.5;
+    neighbor_right_width = neighbor_width * 0.5;
+
+    left_left_bounds_l =
+        current_left_lane_width + neighbor_right_width + neighbor_left_width;
+    safe_to_left_lane_borrow = IsSafeForPath(left_left_bounds_l, left_right_bounds_l);//左侧安全性
+    // target_l = std::min(
+    //     left_bounds_l - kLatPassableBuffer - vehicle_param_.width * 0.5,
+    //     right_bounds_l + kLatPassableBuffer + vehicle_param_.width * 0.5);
+    // target_l = std::max(target_l, right_bounds_l + vehicle_param_.width * 0.5);
+    // target_l = std::min(target_l, left_bounds_l - vehicle_param_.width * 0.5);
+        target_left_l = std::min(
+        left_left_bounds_l - kLatPassableBuffer - vehicle_param_.width * 0.5,
+        left_right_bounds_l + kLatPassableBuffer + vehicle_param_.width * 0.5);
+    target_left_l = std::max(target_left_l, left_right_bounds_l + vehicle_param_.width * 0.5);
+    target_left_l = std::min(target_left_l, left_left_bounds_l - vehicle_param_.width * 0.5);
+  }
+  bool safe_to_right_lane_borrow = false;
+  // if (!safe_to_left_lane_borrow && right_borrow_) {// 如果左侧不安全并且右侧车道可变道才会考虑右侧
+  if (right_borrow_) {
+    left_borrow_ = false;// 现在这个标志只是假设作用 为了复用原来的 IsSafeForPath 逻辑
+    right_left_bounds_l = obs_right_l_;
+    if (right_lane_ptr_ == nullptr) {
+      std::cout << "right lane is nullptr!" << std::endl;
+      return false;
+    }
+    const double neighbor_width =
+        right_lane_ptr_->width(  // todo: add lane ptr protect
+            vehicle_param_
+                .front_edge_to_rear_axle);  // use ego front bump width
+    right_right_bounds_l =
+        -current_right_lane_width - neighbor_left_width - neighbor_right_width;
+    safe_to_right_lane_borrow = IsSafeForPath(right_left_bounds_l, right_right_bounds_l);
+    target_right_l = std::max(
+        right_right_bounds_l + kLatPassableBuffer + vehicle_param_.width * 0.5,
+        right_left_bounds_l - kLatPassableBuffer - vehicle_param_.width * 0.5);
+    target_right_l = std::min(target_right_l, right_left_bounds_l - vehicle_param_.width * 0.5);
+  }
+
+  //如果都是不安全
+  if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
+    return false;
+  }
+  else if(safe_to_left_lane_borrow&&safe_to_right_lane_borrow)// 都安全
+  {
+    if(abs(target_left_l) < abs(target_right_l))//左侧
+    {
+      lane_borrow_decider_output_.target_l = target_left_l;
+      lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
+      lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
+      lane_borrow_decider_output_.borrow_direction = 1;
+    }else {
+      lane_borrow_decider_output_.target_l = target_right_l;
+      lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
+      lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
+      lane_borrow_decider_output_.borrow_direction = 2;
+    }
+  }
+  else if(safe_to_left_lane_borrow)
+  {
+    lane_borrow_decider_output_.target_l = target_left_l;
+    lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
+    lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
+    lane_borrow_decider_output_.borrow_direction = 1;
+  }else {
+    lane_borrow_decider_output_.target_l = target_right_l;
+    lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
+    lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
+    lane_borrow_decider_output_.borrow_direction = 2;
+  }
+
+  front_pass_sl_point_.first = obs_start_s_;
+  front_pass_sl_point_.second = 0.0;
+  Point2D frenet_front_pass_point{obs_start_s_, 0.0};
+
+  current_reference_path_ptr_->get_frenet_coord()->SLToXY(
+      obs_start_s_, 0.0, &front_pass_point_.first, &front_pass_point_.second);
+  return true;
+}
+
 
 bool LaneBorrowDecider::IsSafeForBackOriginLane() {
   double left_width =
@@ -605,7 +711,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   }
 
   const double left_width =
-      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;// 当前车道绑定会发生变化吗
+      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;// 当前车道绑定不会发生变化
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
 
@@ -620,7 +726,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
     }
 
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
-    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_start) {
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_start) {// 前方障碍物
       if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
@@ -663,7 +769,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
           return false;
         }
       }
-    } else {
+    } else {// 后方障碍物
       if (frenet_obstacle_sl.l_start < left_l ||
           frenet_obstacle_sl.l_end > right_l) {
         continue;
@@ -684,7 +790,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
       double dist = std::max(kBackwardSafeDistance,
                              obstacle->obstacle()->velocity() * kObsSpeedRatio);
-      if (frenet_obstacle_sl.s_end + dist > ego_frenet_boundary_.s_start) {// 后方太近
+      if (frenet_obstacle_sl.s_end + dist > ego_frenet_boundary_.s_start) {// 后
         lane_borrow_decider_output_.lane_borrow_failed_reason =
             BACKWARD_OBSTACLE_TOO_CLOSE;
         lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
@@ -694,7 +800,121 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   }
   return true;
 }
+bool LaneBorrowDecider::IsSafeForPath2(const double& left_bounds_l, const double& right_bounds_l)
+{
+// 输入左右通行信号时候的初始bound[基于车道线和静态区域] 然后开始遍历障碍物
+// 输出综合的是否安全(左or右)
 
+//输入 左右通行信号 遍历障碍物
+//输出 左右所需移动横向距离
+  if (left_bounds_l - right_bounds_l <
+      vehicle_param_.width + kObsLatExpendBuffer) {//不会发生？
+    lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
+    return false;
+  }
+
+  double left_l = left_bounds_l;
+  double right_l = right_bounds_l;
+
+  if (left_borrow_) {
+    left_l =
+        std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
+  } else {
+    right_l =
+        std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
+  }
+
+  const double left_width =
+      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;// 当前车道绑定不会发生变化
+  const double right_width =
+      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
+
+  const auto& obstacles = current_reference_path_ptr_->get_obstacles();//遍历障碍物
+  for (const auto& obstacle : obstacles) {
+    const auto& id = obstacle->obstacle()->id();
+    if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
+      continue;
+    }
+    if (!obstacle->b_frenet_valid()) {
+      continue;
+    }
+
+    const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_start) {// 前方障碍物
+      if (obstacle->obstacle()->velocity() > kObsFilterVel) {
+        continue;
+      }
+      if (frenet_obstacle_sl.s_start > obs_end_s_) {
+        continue;
+      }
+      if (left_borrow_) {
+        if (frenet_obstacle_sl.l_start > left_bounds_l ||
+            frenet_obstacle_sl.l_end < left_width) { // 筛选侵入借道车道的静态障碍物
+          continue;
+        }
+        if (frenet_obstacle_sl.l_end + vehicle_param_.width +
+                    kLatPassableBuffer >// 通过左侧所需左侧的bound
+                left_bounds_l &&//最大的左侧边界了 一个半车道  借道车道右边被侵入过多才不可通行
+            frenet_obstacle_sl.l_start - vehicle_param_.width -
+                    kLatPassableBuffer <//借道车道左边被侵入过多才不可通行
+                obs_left_l_) {//kObsLatBuffer = 0.3; obs_left_l_ 静态区域的
+          lane_borrow_decider_output_.lane_borrow_failed_reason =
+              STATIC_OBSTACLE_BLOCKED;
+          lane_borrow_decider_output_.failed_obs_id =
+              obstacle->obstacle()->id();
+          return false;
+        }
+      } else {// 右侧借道
+        if (frenet_obstacle_sl.l_start > -right_width ||
+            frenet_obstacle_sl.l_end < right_bounds_l) {
+          continue;
+        }
+
+        if (frenet_obstacle_sl.l_end + vehicle_param_.width +
+                    kLatPassableBuffer >
+                obs_right_l_ &&
+            frenet_obstacle_sl.l_end - vehicle_param_.width -
+                    kLatPassableBuffer <
+                right_bounds_l) {
+          lane_borrow_decider_output_.lane_borrow_failed_reason =
+              STATIC_OBSTACLE_BLOCKED;
+          lane_borrow_decider_output_.failed_obs_id =
+              obstacle->obstacle()->id();
+          return false;
+        }
+      }
+    } else {// 后方障碍物
+      if (frenet_obstacle_sl.l_start < left_l ||
+          frenet_obstacle_sl.l_end > right_l) {
+        continue;
+      }
+
+      const double l_buffer = 0.5;
+      if (left_borrow_) {
+        if (frenet_obstacle_sl.l_start <
+            ego_frenet_boundary_.l_end - l_buffer) {
+          continue;
+        }
+      } else {
+        if (frenet_obstacle_sl.l_end <
+            ego_frenet_boundary_.l_start + l_buffer) {
+          continue;
+        }
+      }
+
+      double dist = std::max(kBackwardSafeDistance,
+                             obstacle->obstacle()->velocity() * kObsSpeedRatio);
+      if (frenet_obstacle_sl.s_end + dist > ego_frenet_boundary_.s_start) {// 后
+        lane_borrow_decider_output_.lane_borrow_failed_reason =
+            BACKWARD_OBSTACLE_TOO_CLOSE;
+        lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+        return false;
+      }
+    }
+  }
+  return true;
+
+}
 void LaneBorrowDecider::LogDebugInfo() {
   // debug info
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()

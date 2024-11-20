@@ -45,8 +45,9 @@ class LaneBorrowDecider : public Task {
   bool UpdateLaneBorrowDirection();
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
+  bool IsSafeForLaneBorrow2();
   bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
-
+  bool  IsSafeForPath2(const double& left_bounds_l, const double& right_bounds_l);
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double junction_start_s_{1000.0};

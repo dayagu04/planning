@@ -8,6 +8,7 @@ from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
 
+# +
 import numpy as np
 from IPython.core.display import display, HTML
 from plot_local_view_html import *
@@ -24,12 +25,13 @@ from lib.local_view_lib import *
 # bag_path = "/root/clzhao/lane_borrow_data/data_11-16-11.bag.1731912596.close-loop.plan"
 # bag_path = "/root/clzhao/lane_borrow_data/2024-11-16-11-08-15.bag_2024-11-18-09-43-39.1732007043.open-loop.plan"
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732007748.open-loop.plan'# jump
-# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732002874.close-loop.plan'
-# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732017055.open-loop.plan'
-# bag_path ='/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732017450.close-loop.plan'
+
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732018741.close-loop.plan'# jump one
-bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732067308.close-loop.plan'
-# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732067517.open-loop.plan'
+
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732074900.close-loop.plan'#good 
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46.1732082318.close-loop.plan'
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46.1732082581.open-loop.plan'
+# -
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
