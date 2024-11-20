@@ -2096,7 +2096,8 @@ void LaneChangeStateMachineManager::CalculateMergePoint(
   const double num = std::max(need_judgement_length / step_length, 0.0);
   bool is_find_merge_point = false;
   bool is_find_boundary_merge_point = false;
-  const double lat_err = 0.3;
+  const double standard_lane_width = 3.8;
+  const double lat_err = standard_lane_width / 4;;
   for (double i = 0; i < num; i++) {
     ReferencePathPoint cur_ref_path_point_temp{};
     if (!cur_path->get_reference_point_by_lon(cur_ego_s + i * step_length,
