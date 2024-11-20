@@ -178,8 +178,8 @@ void EgoStateManager::set_ego_gear(
 
 void EgoStateManager::set_time_headway_level(
     const planning::common::VehicleStatus &vehicle_status) {
-  time_headway_level_ = std::round(
-      vehicle_status.time_headway_level().value_num());
+  time_headway_level_ =
+      std::round(vehicle_status.time_headway_level().value_num());
 }
 
 void EgoStateManager::update_transform() {
@@ -810,12 +810,11 @@ void EgoStateManager::UpdatePlanningInitState() {
     if (!session_->environmental_model().GetVehicleDbwStatus()) {
       set_lat_replan = true;
       set_lon_replan = true;
-    } else if (session_->environmental_model()
-                   .function_info()
-                   .function_mode() == common::DrivingFunctionInfo::ACC) {
+    } else if (cur_fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) {
       set_lat_replan = true;
     } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
-               cur_fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) {
+               cur_fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE ||
+               cur_fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE) {
       set_lat_replan = true;
       set_lon_replan = true;
     }
