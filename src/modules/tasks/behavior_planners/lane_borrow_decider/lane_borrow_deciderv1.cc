@@ -105,7 +105,7 @@ void LaneBorrowDecider::Update() {//1
     }
     case LaneBorrowStatus::kLaneBorrowBackOriginLane: {
       if (CheckIfLaneBorrowBackOriginLaneToNoBorrow()) {
-        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;//切换到征程
+        lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;//切换到
       } else if (CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving;//切换到借道
       }// else
@@ -157,71 +157,75 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {//
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;// 左右等宽
 
-  for (const auto& obstacle : obstacles) {
+  for (const auto& obstacle : obstacles) {//遍历 筛选出一个障碍物 使得自车继续借道
     const auto& id = obstacle->obstacle()->id();
     const auto& obs_type = obstacle->obstacle()->type();
     if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
-      continue;//l过滤
+      continue;// 行人不影响借道结束
     }
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
-      continue;
+      continue;// 非视觉障碍物不影响
     }
     auto it = std::find(static_blocked_obj_vec_.begin(),
-                        static_blocked_obj_vec_.end(), id);
-    if (it != static_blocked_obj_vec_.end()) {
+                        static_blocked_obj_vec_.end(), id);// 找不到会返回end迭代
+    if (it != static_blocked_obj_vec_.end()) {// 如果找到 == 在静态区域的障碍物 不影响借道结束 已经划定区域绕过
       continue;
     }
-    const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();// four sl point
-    if (frenet_obstacle_sl.s_start >
+    const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
+    if (frenet_obstacle_sl.s_start >// 障碍物尾部 在自车车头前方20 以外不影响借道返回
         ego_frenet_boundary_.s_end + kForwardOtherObsDistance) {// 距离 20m 以外
       continue;
     }
     if (frenet_obstacle_sl.l_start > left_width ||
         frenet_obstacle_sl.l_end < -right_width) {
-      continue;// 没有侵入车道
+      continue;// 没有侵入原车道
     }
 
     const double obs_v = obstacle->obstacle()->velocity();
-    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {
+    if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end) {//车头前方 动态的不影响借道结束
       if (!obstacle->obstacle()->is_static()) {
-        continue;// 动态的
+        continue;//
       }
 
-    } else {
+    } else {//车头后方
       if (lane_borrow_decider_output_.borrow_direction == 1) {//左借道
-        if (frenet_obstacle_sl.l_end > ego_frenet_boundary_.l_start) {
+        if (frenet_obstacle_sl.l_end > ego_frenet_boundary_.l_start) { // 在自车右侧
           continue;
         }
         if (frenet_obstacle_sl.l_end < -right_width &&
-            obstacle->obstacle()->is_static()) {
+            obstacle->obstacle()->is_static()) {//在原车道右侧以外 并且是静止的 不影响借道结束
           continue;
         }
-        if (frenet_obstacle_sl.l_end + kLatPassableBuffer < -right_width) {
+        if (frenet_obstacle_sl.l_end + kLatPassableBuffer < -right_width) {// 在车道以外不是 静止的 但是足够远离 不影响借道结束
+          continue;
+        }
+        if (frenet_obstacle_sl.s_end + obs_v * kObsSpeedRatio <// 观测速度 * 3.5   仍然在车后方
+          ego_frenet_boundary_.s_start) {
           continue;
         }
 
-      } else {
-        if (frenet_obstacle_sl.l_start < ego_frenet_boundary_.l_end) {
+      } else {// 右侧借道
+        if (frenet_obstacle_sl.l_start < ego_frenet_boundary_.l_end) {// 自车左侧不影响
           continue;
         }
         if (frenet_obstacle_sl.l_start > left_width &&
-            obstacle->obstacle()->is_static()) {
+            obstacle->obstacle()->is_static()) {//车道左侧并且静止 的不影响
           continue;
         }
-        if (frenet_obstacle_sl.l_start - kLatPassableBuffer > left_width) {
+        if (frenet_obstacle_sl.l_start - kLatPassableBuffer > left_width) {//车道左侧够远
           continue;
         }
-        if (frenet_obstacle_sl.s_end + obs_v * kObsSpeedRatio <
+        if (frenet_obstacle_sl.s_end + obs_v * kObsSpeedRatio <// 观测速度 * 3.5   仍然在车后方
             ego_frenet_boundary_.s_start) {
           continue;
         }
       }
     }
 
-    return true;
+    return true;// 某个障碍物 所有条件 no continue 返回继续借道
   }
 
-  return false;
+  return false;// 所有障碍物 在某处都continue  不返回借道
 }
 
 bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToNoBorrow() {//从借道返回 到 不借道
