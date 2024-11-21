@@ -994,7 +994,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     })
 
     vel_ego = bag_loader.loc_msg['data'][loc_msg_idx].velocity.velocity_body.vx
-    remain_s_ctrl = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
+    try:
+      remain_s_ctrl = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]['remain_s_ctrl'] * 100
+    except:
+      remain_s_ctrl = 10.0
     if bag_loader.vs_msg['enable'] == True:
       steer_deg = bag_loader.vs_msg['data'][vs_msg_idx].steering_wheel_angle * 57.3
     else:

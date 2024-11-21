@@ -232,7 +232,7 @@
   "max_one_step_arc_radius": 8.5,
   "radius_eps": 0.01,
   "min_line_length": 0.3,
-  "min_path_length": 0.35,
+  "min_path_length": 0.20,
   "insert_line_after_arc": 0.2268,
   "min_one_step_path_length": 0.6,
   "min_one_step_path_length_in_slot": 1.2,

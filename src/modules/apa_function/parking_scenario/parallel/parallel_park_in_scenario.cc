@@ -47,9 +47,10 @@ static double kMaxDistDeleteObsToEgoOutSlot = 0.35;
 
 static double kMinChannelYMagIdentification = 3.3;
 
+static double kExtendLengthOutsideSlot = 0.4;
 static double kTBoundarySampleDist = 0.38;
 static double kChannelSampleDist = 0.46;
-static double kEnterMultiPlanSlotRatio = 0.3;
+static double kEnterMultiPlanSlotRatio = 0.1;
 static double kEps = 1e-5;
 
 void ParallelParkInScenario::Reset() {
@@ -346,7 +347,7 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 
     const auto obs_pt_local = frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global);
     // outof total box range
-    if (!pnc::mathlib::IsInBound(obs_pt_local.x(), -1.6,
+    if (!pnc::mathlib::IsInBound(obs_pt_local.x(), -5.0,
                                  apa_param.GetParam().parallel_channel_x_mag)) {
       // total_box_x_fail_cnt++;
       continue;
@@ -369,7 +370,7 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
     }
 
     // remote rear T-boundary obs
-    if (obs_pt_local.x() < -1.6 &&
+    if (obs_pt_local.x() < -5.0 &&
         obs_pt_local.y() * slot_side_sgn < -0.3 * slot_side_sgn) {
       // rear_box_fail_cnt++;
       continue;
@@ -569,7 +570,6 @@ void ParallelParkInScenario::GenTlane() {
 
   JSON_DEBUG_VALUE("para_tlane_is_front_vacant", front_vacant)
   JSON_DEBUG_VALUE("para_tlane_is_rear_vacant", rear_vacant)
-  JSON_DEBUG_VALUE("para_tlane_side_sgn", side_sgn)
 
   if (front_vacant && rear_vacant) {
     front_min_x = slot_length + kFrontDetaXMagWhenFrontVacant;
@@ -819,7 +819,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   const Eigen::Vector2d B(t_lane_.obs_pt_outside.x(),
                           0.5 * t_lane_.slot_side_sgn);
 
-  const Eigen::Vector2d A(B.x() - 1.2, B.y());
+  const Eigen::Vector2d A(B.x() - 3.2, B.y());
   const Eigen::Vector2d E(
       t_lane_.obs_pt_inside.x(),
       t_lane_.obs_pt_inside.y() - t_lane_.slot_side_sgn * 0.5);
@@ -841,14 +841,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   const pnc::geometry_lib::LineSegment channel_line(channel_point_1,
                                                     channel_point_2);
 
-  // sample channel
+  // sample channel boundary line
   std::vector<Eigen::Vector2d> channel_obstacle_vec;
   pnc::geometry_lib::SamplePointSetInLineSeg(channel_obstacle_vec, channel_line,
                                              kChannelSampleDist);
 
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
+    // add obs near channel
     const bool channel_y_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(), F.x()) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), channel_point_1.x(),
+                                channel_point_2.x()) &&
         pnc::mathlib::IsInBound(
             obstacle_point_slot.y(),
             kMinChannelYMagIdentification * t_lane_.slot_side_sgn,
@@ -875,17 +877,15 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
   std::vector<pnc::geometry_lib::LineSegment> tlane_line_vec;
-  // currently channel and curb are set as obstacles
+  // set tlane parallel line obs
   tlane_line.SetPoints(A, B);
   tlane_line_vec.emplace_back(tlane_line);
 
   tlane_line.SetPoints(E, F);
   tlane_line_vec.emplace_back(tlane_line);
 
-  std::vector<Eigen::Vector2d> tlane_obstacle_vec;
-  tlane_obstacle_vec.clear();
-  tlane_obstacle_vec.reserve(100);
   std::vector<Eigen::Vector2d> point_set;
+  std::vector<Eigen::Vector2d> tlane_obstacle_vec;
   for (const auto& line : tlane_line_vec) {
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, line,
                                                kTBoundarySampleDist);
@@ -1216,6 +1216,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   const auto path_planner_output = parallel_path_planner_.GetOutput();
 
+  // enter slot
   if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
     double current_path_length = 0.0;
     for (size_t i = path_planner_output.path_seg_index.first;
@@ -1224,8 +1225,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
           path_planner_output.path_segment_vec[i].Getlength();
     }
 
-    if (current_path_length < apa_param.GetParam().min_line_length) {
-      const double extend_lenth = 0.15;
+    if (current_path_length < apa_param.GetParam().min_path_length) {
+      const double extend_lenth = std::max(
+          apa_param.GetParam().min_path_length - current_path_length, 0.1);
       parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
           extend_lenth);
     }
@@ -1235,11 +1237,11 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             .path_segment_vec[path_planner_output.path_seg_index.second]
             .GetEndPose();
 
-    if (std::fabs(end_pose.pos.y()) > 0.5) {
-      const double extend_lenth = 0.4;
-      parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
-          extend_lenth);
-    }
+    // pnc::geometry_lib::PrintPose("current path end pose", end_pose);
+
+    const double extend_lenth = kExtendLengthOutsideSlot;
+    parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
+        extend_lenth);
   }
   parallel_path_planner_.SampleCurrentPathSeg();
 

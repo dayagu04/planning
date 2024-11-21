@@ -4451,14 +4451,35 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   if (pnc::mathlib::IsDoubleEqual(extend_distance, 0.0)) {
     return;
   }
-  // if (output_.is_last_path == true) {
-  //   std::cout << "is last path, not extend path\n";
-  //   return;
-  // }
 
   if (output_.path_segment_vec.size() < 1) {
     return;
   }
+
+  double current_path_len = 0.0;
+  for (size_t i = output_.path_seg_index.first;
+       i < output_.path_seg_index.second; i++) {
+    current_path_len += output_.path_segment_vec[i].Getlength();
+  }
+
+  const pnc::geometry_lib::PathPoint current_path_end =
+      output_.path_segment_vec[output_.path_seg_index.second].GetEndPose();
+  pnc::geometry_lib::PrintPose("end pose = ", current_path_end);
+
+  const bool is_last_path =
+      std::fabs(current_path_end.pos.x() - calc_params_.target_pose.pos.x()) <
+          1e-2 &&
+      std::fabs(current_path_end.heading * kRad2Deg) < 1.0;
+
+  if (is_last_path &&
+      current_path_len >= apa_param.GetParam().min_path_length) {
+    return;
+  }
+
+  // if (output_.is_last_path == true) {
+  //   std::cout << "is last path, not extend path\n";
+  //   return;
+  // }
 
   auto& path_seg = output_.path_segment_vec[output_.path_seg_index.second];
 
@@ -4479,7 +4500,13 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
     new_line.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
 
     if (path_len < apa_param.GetParam().min_path_length) {
-      extend_distance = apa_param.GetParam().min_path_length;
+      if (is_last_path) {
+        extend_distance = std::max(
+            0.1, 0.1 + 2.0 * apa_param.GetParam().min_path_length - path_len);
+      } else {
+        extend_distance =
+            std::max(0.1, apa_param.GetParam().min_path_length - path_len);
+      }
     }
 
     new_line.line_seg.length = extend_distance;

@@ -1559,40 +1559,48 @@ void SlotManager::UpdateSlotInfoInParking() {
   }
 }
 
-void SlotManager::UpdateParallelSlotInfoInParking() {
-  // update real time outside slot
-  if (frame_.ego_slot_info.slot_occupied_ratio < 1e-5) {
-    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
-    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
-        frame_.ego_slot_info.select_slot);
+void SlotManagement::UpdateParallelSlotInfoInParking() {
+  // reset parallel slot all the time
+  frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
+  frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
+      frame_.ego_slot_info.select_slot);
 
-    frame_.ego_slot_info.select_slot_filter =
-        frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
-            .GetFusedInfo();
-  }
+  frame_.ego_slot_info.select_slot_filter =
+      frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
+          .GetFusedInfo();
+  // // update real time outside slot
+  // if (frame_.ego_slot_info.slot_occupied_ratio < 1e-5) {
+  //   frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
+  //   frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
+  //       frame_.ego_slot_info.select_slot);
 
-  // update once in slot
-  if ((frame_.ego_slot_info.slot_occupied_ratio > 0.55) &&
-      (std::fabs(frame_.measurement_data_ptr->vel) <
-       apa_param.GetParam().car_static_velocity_strict) &&
-      (!frame_.parallel_slot_reseted_once)) {
-    ILOG_INFO << "reset parallel slot once!";
+  //   frame_.ego_slot_info.select_slot_filter =
+  //       frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
+  //           .GetFusedInfo();
+  // }
 
-    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
+  // // update once in slot
+  // if ((frame_.ego_slot_info.slot_occupied_ratio > 0.55) &&
+  //     (std::fabs(frame_.measurement_data_ptr->vel) <
+  //      apa_param.GetParam().car_static_velocity_strict) &&
+  //     (!frame_.parallel_slot_reseted_once)) {
+  //   ILOG_INFO << "reset parallel slot once!";
 
-    frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
-        frame_.ego_slot_info.select_slot);
+  //   frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Reset();
 
-    // auto slot =
-    // frame_.slot_management_info.mutable_slot_info_vec(slot_idx); *slot =
-    // frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
+  //   frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id].Add(
+  //       frame_.ego_slot_info.select_slot);
 
-    frame_.ego_slot_info.select_slot_filter =
-        frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
-            .GetFusedInfo();
+  //   // auto slot =
+  //   // frame_.slot_management_info.mutable_slot_info_vec(slot_idx); *slot =
+  //   // frame_.slot_info_window_vec[slot_idx].GetFusedInfo();
 
-    frame_.parallel_slot_reseted_once = true;
-  }
+  //   frame_.ego_slot_info.select_slot_filter =
+  //       frame_.slot_info_window_map[frame_.ego_slot_info.select_slot_id]
+  //           .GetFusedInfo();
+
+  //   frame_.parallel_slot_reseted_once = true;
+  // }
 }
 
 void SlotManager::UpdateLimiterInfoInParking() {
