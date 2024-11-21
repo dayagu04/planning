@@ -52,13 +52,14 @@ class PlanningPlayer {
   PlanningPlayer() = default;
   ~PlanningPlayer() = default;
 
-  void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type, bool no_debug,
-            const std::string &car);
+  bool Init(bool is_close_loop, double auto_time_sec, bool no_debug,
+            const std::string &car, std::string &out_bag);
+  bool FindSceneType(const std::string &scene_type, const std::string &bag_path,
+                     std::string &out_bag);
   void Clear();
-  bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
-                  bool is_close_loop, bool no_debug, bool interface_check);
-  void StoreRosBag(const std::string &bag_path);
+  bool LoadRosBag(const std::string &bag_path, bool is_close_loop,
+                  bool no_debug, bool interface_check);
+  void StoreRosBag();
   void GenMileage(const std::string &mileage_path);
   void NoDebugInfoMode(bool is_close_loop);
   void PlayOneFrame(int frame_num,
@@ -112,8 +113,6 @@ class PlanningPlayer {
   std::map<std::string, std::string> proto_desc_map_{};
   ros::Time planning_msg_time_s_;
   uint64_t planning_header_time_us_ = 0;
-  ros::Time planning_hmi_msg_time_ns_;
-  uint64_t planning_hmi_header_time_us_ = 0;
   int frame_num_ = 0;
   ros::Time planning_dubug_info_msg_time_s_;
   uint64_t planning_dubug_info_header_time_us_ = 0;
@@ -129,7 +128,7 @@ class PlanningPlayer {
   uint64_t planning_dubug_info_frame_num_ = 0;
   uint64_t local_time_ = 0;
   int frame_num_before_enter_auto_ = 0;
-  std::string scene_type_ = "acc";
+  std::string scene_type_ = "";
   uint8_t last_functional_state = iflyauto::FunctionalState_MANUAL;
   pnc::mathlib::spline x_t_spline_;
   pnc::mathlib::spline y_t_spline_;
@@ -144,6 +143,8 @@ class PlanningPlayer {
   std::string bag_planning_version_;
   std::string bag_interface_version_;
   std::string car_;
+  uint64_t auto_timestamp_ = 0;
+  std::string out_bag_;
   // apa planning player module
   bool early_stop_ = false;
   ros::Time early_stop_time_ = ros::TIME_MIN;
