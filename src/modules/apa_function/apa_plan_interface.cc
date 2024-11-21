@@ -1,3 +1,5 @@
+#include "apa_plan_interface.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -7,7 +9,6 @@
 
 #include "apa_data.h"
 #include "apa_param_config.h"
-#include "apa_plan_interface.h"
 #include "apa_world.h"
 #include "common/config_context.h"
 #include "debug_info_log.h"
@@ -29,7 +30,7 @@
 namespace planning {
 namespace apa_planner {
 
-void ApaPlanInterface ::Init(const bool is_simulation) {
+void ApaPlanInterface::Init(const bool is_simulation) {
   // sync parameters
   SyncParkingParameters(is_simulation);
 
@@ -41,7 +42,7 @@ void ApaPlanInterface ::Init(const bool is_simulation) {
   return;
 }
 
-void ApaPlanInterface ::Reset() {
+void ApaPlanInterface::Reset() {
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
 
@@ -56,7 +57,7 @@ void ApaPlanInterface ::Reset() {
   return;
 }
 
-void ApaPlanInterface ::ResetForSearching() {
+void ApaPlanInterface::ResetForSearching() {
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
 
@@ -67,7 +68,7 @@ void ApaPlanInterface ::ResetForSearching() {
   return;
 }
 
-const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
+const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   ILOG_INFO << "\n------------------------ apa_interface: Update() "
                "------------------------";
   if (local_view_ptr == nullptr) {
@@ -136,7 +137,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
                                                                     : false;
 }
 
-void ApaPlanInterface ::AddReleasedSlotInfo(
+void ApaPlanInterface::AddReleasedSlotInfo(
     iflyauto::PlanningOutput &planning_output) {
   planning_output.successful_slot_info_list_size = 0;
   const std::vector<int> &release_slot_id_vec =
@@ -154,7 +155,7 @@ void ApaPlanInterface ::AddReleasedSlotInfo(
   ILOG_INFO << "plan release slot id = " << release_slot_id;
 }
 
-void ApaPlanInterface ::UpdateDebugInfo() {
+void ApaPlanInterface::UpdateDebugInfo() {
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
   planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
@@ -162,7 +163,7 @@ void ApaPlanInterface ::UpdateDebugInfo() {
   planning_debug_info_ = *planning_debug_data;
 }
 
-void ApaPlanInterface ::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
+void ApaPlanInterface::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
   JSON_DEBUG_VALUE("statemachine_timestamp",
                    local_view_ptr->function_state_machine_info_recv_time);
   JSON_DEBUG_VALUE("fusion_slot_timestamp",
@@ -183,7 +184,7 @@ void ApaPlanInterface ::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
                    local_view_ptr->control_output_recv_time);
 }
 
-std::shared_ptr<ParkingScenario> ApaPlanInterface ::GetPlannerByType(
+std::shared_ptr<ParkingScenario> ApaPlanInterface::GetPlannerByType(
     const ParkingScenarioType type) {
   return scenario_manager_.GetScenarioByType(type);
 }

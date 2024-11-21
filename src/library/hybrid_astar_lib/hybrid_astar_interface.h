@@ -76,6 +76,16 @@ class HybridAStarInterface {
     return &edt_;
   }
 
+  void SwapStartGoal() {
+    Pose2D tmp = initial_state_;
+    initial_state_ = goal_state_;
+    goal_state_ = tmp;
+
+    return;
+  }
+
+  void UpdateReqeustBySwapStartGoal();
+
  public:
   // for debug
   void GetRSPathHeuristic(

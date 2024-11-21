@@ -6,11 +6,11 @@ namespace planning {
 
 std::string PathGearDebugString(const AstarPathGear gear) {
   switch (gear) {
-    case AstarPathGear::drive:
+    case AstarPathGear::DRIVE:
       return "drive";
-    case AstarPathGear::reverse:
+    case AstarPathGear::REVERSE:
       return "reverse";
-    case AstarPathGear::normal:
+    case AstarPathGear::NORMAL:
       return "normal";
     default:
       return "parking";
@@ -22,11 +22,11 @@ std::string PathGearDebugString(const AstarPathGear gear) {
 
 std::string GetPathSteerDebugString(const AstarPathSteer type) {
   switch (type) {
-    case AstarPathSteer::left:
+    case AstarPathSteer::LEFT:
       return "left";
-    case AstarPathSteer::right:
+    case AstarPathSteer::RIGHT:
       return "right";
-    case AstarPathSteer::straight:
+    case AstarPathSteer::STRAIGHT:
       return "straight";
     default:
       break;
@@ -36,11 +36,11 @@ std::string GetPathSteerDebugString(const AstarPathSteer type) {
 }
 
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right) {
-  if (left == AstarPathGear::drive && right == AstarPathGear::reverse) {
+  if (left == AstarPathGear::DRIVE && right == AstarPathGear::REVERSE) {
     return true;
   }
 
-  if (left == AstarPathGear::reverse && right == AstarPathGear::drive) {
+  if (left == AstarPathGear::REVERSE && right == AstarPathGear::DRIVE) {
     return true;
   }
 

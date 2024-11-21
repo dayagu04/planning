@@ -14,11 +14,13 @@ void FuturePathDecider::Process(const HybridAStarResult *history_path,
                                 const Pose2D &ego_pose,
                                 EulerDistanceTransform *edt,
                                 const ParkReferenceLine *ref_line,
-                                double min_turn_radius,
+                                const double min_turn_radius,
+                                const bool swap_start_goal,
                                 ParkFirstActionRequest *future_path_request) {
   ILOG_INFO << "plan reason=" << static_cast<int>(plan_reason);
 
   min_turn_radius_ = min_turn_radius;
+  swap_start_goal_ = swap_start_goal;
 
   CalcDriveDistByLineModel(ego_pose, edt, ref_line);
 
@@ -106,7 +108,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     global_pose.theta = ego_pose.theta;
     tf.SetBasePose(global_pose, sin_theta, cos_theta);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::DRIVE)) {
       future_drive_dist_info_.gear_drive_has_obs = true;
       break;
     }
@@ -128,7 +130,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     global_pose.theta = ego_pose.theta;
     tf.SetBasePose(global_pose, sin_theta, cos_theta);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::reverse)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::REVERSE)) {
       future_drive_dist_info_.gear_reverse_has_obs = true;
 
       break;
@@ -167,7 +169,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::DRIVE)) {
       future_drive_dist_info_.gear_drive_has_obs = true;
       break;
     }
@@ -188,7 +190,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::drive)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::DRIVE)) {
       future_drive_dist_info_.gear_drive_has_obs = true;
       break;
     }
@@ -209,7 +211,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::reverse)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::REVERSE)) {
       future_drive_dist_info_.gear_reverse_has_obs = true;
       break;
     }
@@ -228,7 +230,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
     global_pose = path[i];
     tf.SetBasePose(global_pose);
 
-    if (edt->IsCollisionForPoint(&tf, AstarPathGear::reverse)) {
+    if (edt->IsCollisionForPoint(&tf, AstarPathGear::REVERSE)) {
       future_drive_dist_info_.gear_reverse_has_obs = true;
       break;
     }
@@ -245,7 +247,7 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
 
 void FuturePathDecider::CalcDriveDistByHistoryPath(
     const HybridAStarResult *history_path, const PlanningReason plan_reason) {
-  history_path_info_.gear_ = AstarPathGear::none;
+  history_path_info_.gear_ = AstarPathGear::NONE;
   history_path_info_.gear_switch_number_ = PathGearSwitchNumber::NONE;
   history_path_info_.dist_ = 0;
 
@@ -260,10 +262,10 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
   // 如果path被障碍物阻挡，不好推理下次path的信息
   if (plan_reason == PlanningReason::PATH_STUCKED) {
     if (history_path->gear.size() > 0) {
-      if (history_path->gear[0] == AstarPathGear::drive) {
-        history_path_info_.gear_ = AstarPathGear::reverse;
+      if (history_path->gear[0] == AstarPathGear::DRIVE) {
+        history_path_info_.gear_ = AstarPathGear::REVERSE;
       } else {
-        history_path_info_.gear_ = AstarPathGear::drive;
+        history_path_info_.gear_ = AstarPathGear::DRIVE;
       }
     }
     history_path_info_.gear_switch_number_ = PathGearSwitchNumber::MANY_TIMES;
@@ -272,7 +274,7 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
   }
 
   AstarPathGear first_point_gear = history_path->gear[0];
-  AstarPathGear second_path_gear = AstarPathGear::none;
+  AstarPathGear second_path_gear = AstarPathGear::NONE;
 
   history_path_info_.start_point_id_ = 0;
   history_path_info_.end_point_id_ = 0;
@@ -294,7 +296,7 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
         break;
       }
 
-      if (second_path_gear == AstarPathGear::none) {
+      if (second_path_gear == AstarPathGear::NONE) {
         if (history_path->gear[i] == first_point_gear) {
           continue;
         }
@@ -347,18 +349,25 @@ void FuturePathDecider::CalcDriveDistByHistoryPath(
 
 void FuturePathDecider::UpdateFuturePathRequest(
     ParkFirstActionRequest *future_path_request) {
+  if (swap_start_goal_) {
+    future_path_request->dist_request = 0.0;
+    future_path_request->has_request = false;
+    future_path_request->gear_request = AstarPathGear::NONE;
+    return;
+  }
+
   // advised path: drive to ref line.
   future_path_request->dist_request =
       std::max(future_drive_dist_info_.dist_to_ref_line,
                future_drive_dist_info_.advised_drive_dist);
 
-  if (future_path_request->gear_request == AstarPathGear::drive) {
+  if (future_path_request->gear_request == AstarPathGear::DRIVE) {
     if (future_drive_dist_info_.gear_drive_dist_to_obs <
         future_path_request->dist_request) {
       future_path_request->dist_request =
           future_drive_dist_info_.gear_drive_dist_to_obs;
     }
-  } else if (future_path_request->gear_request == AstarPathGear::reverse) {
+  } else if (future_path_request->gear_request == AstarPathGear::REVERSE) {
     if (future_drive_dist_info_.gear_reverse_dist_to_obs <
         future_path_request->dist_request) {
       future_path_request->dist_request =
@@ -408,9 +417,9 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
   VehicleCircle veh_circle;
   AstarPathGear gear;
   if (is_forward) {
-    gear = AstarPathGear::drive;
+    gear = AstarPathGear::DRIVE;
   } else {
-    gear = AstarPathGear::reverse;
+    gear = AstarPathGear::REVERSE;
   }
 
   GetVehCircleByPose(start_point_pose, radius, gear, &veh_circle);
@@ -447,12 +456,12 @@ void FuturePathDecider::InterpolateByArcOffset(const VehicleCircle *veh_circle,
 
   // left turn
   if (veh_circle->radius > 0.0) {
-    if (veh_circle->gear == AstarPathGear::reverse) {
+    if (veh_circle->gear == AstarPathGear::REVERSE) {
       delta_theta = -delta_theta;
     }
   } else {
     // right turn, gear is d
-    if (veh_circle->gear == AstarPathGear::drive) {
+    if (veh_circle->gear == AstarPathGear::DRIVE) {
       delta_theta = -delta_theta;
     }
   }

@@ -45,7 +45,7 @@ int RSPathInterface::GeneShortestRSPath(
   // ILOG_INFO << "check gear";
 
   // check gear
-  veh_dir = AstarPathGear::none;
+  veh_dir = AstarPathGear::NONE;
   rs_interpolate_.UpdateGearSwitchNum(&kappa_list, veh_dir);
 
   if (kappa_list.gear_change_num > 8) {
@@ -160,7 +160,7 @@ int RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
   // ILOG_INFO << "check gear";
 
   // check gear
-  veh_dir = AstarPathGear::none;
+  veh_dir = AstarPathGear::NONE;
   rs_interpolate_.UpdateGearSwitchNum(&kappa_list, veh_dir);
 
   if (kappa_list.gear_change_num > 8) {

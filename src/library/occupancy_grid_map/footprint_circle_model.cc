@@ -171,9 +171,9 @@ void FootPrintCircleModel::LocalToGlobalByGear(
     const AstarPathGear gear) const {
   const FootPrintCircleList *local;
 
-  if (gear == AstarPathGear::drive) {
+  if (gear == AstarPathGear::DRIVE) {
     local = &drive_gear_circles_;
-  } else if (gear == AstarPathGear::reverse) {
+  } else if (gear == AstarPathGear::REVERSE) {
     local = &reverse_gear_circles_;
   } else {
     local = &local_circles_;
@@ -232,9 +232,9 @@ const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircleByGear(
 
 const FootPrintCircleList FootPrintCircleModel::GetLocalFootPrintCircleByGear(
     const AstarPathGear gear) const {
-  if (gear == AstarPathGear::drive) {
+  if (gear == AstarPathGear::DRIVE) {
     return drive_gear_circles_;
-  } else if (gear == AstarPathGear::reverse) {
+  } else if (gear == AstarPathGear::REVERSE) {
     return reverse_gear_circles_;
   }
   return local_circles_;

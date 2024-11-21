@@ -186,7 +186,7 @@ class Node3d {
 
   void CopyNode(const Node3d* node);
 
-  const bool IsForward() const { return gear_type_ == AstarPathGear::drive; }
+  const bool IsForward() const { return gear_type_ == AstarPathGear::DRIVE; }
 
   void DebugString() const;
 

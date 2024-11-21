@@ -8,16 +8,16 @@
 namespace planning {
 
 #define is_veh_move_forward(mov_dir) \
-  ((AstarPathGear::drive == mov_dir) ? true : false)
+  ((AstarPathGear::DRIVE == mov_dir) ? true : false)
 
 #define is_veh_move_backward(mov_dir) \
-  ((AstarPathGear::reverse == mov_dir) ? true : false)
+  ((AstarPathGear::REVERSE == mov_dir) ? true : false)
 
 #define get_signed_segment_dir(signed_length)                       \
   ((1 == ifly_sign(signed_length))                                  \
-       ? AstarPathGear::drive                                       \
-       : ((-1 == ifly_sign(signed_length)) ? AstarPathGear::reverse \
-                                           : AstarPathGear::none))
+       ? AstarPathGear::DRIVE                                       \
+       : ((-1 == ifly_sign(signed_length)) ? AstarPathGear::REVERSE \
+                                           : AstarPathGear::NONE))
 
 enum RSPathSteer {
   RS_NOP = 0,

@@ -59,7 +59,7 @@ void InitGlog(const char *file) {
 
 #ifdef IFLY_LOG_PATH
   path_dir = "/asw/planning/glog";
-  bool create_path = CreateLogDirectory("/asw/planning/glog");
+  bool create_path = CreateLogDirectory(path_dir);
 #else
   path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
   bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");

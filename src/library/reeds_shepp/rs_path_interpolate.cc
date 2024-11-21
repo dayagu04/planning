@@ -190,7 +190,7 @@ int RSPathInterpolator::GetStraightLinePoint(RSPoint *goal_state,
                                              const RSPoint *start_state,
                                              AstarPathGear direction,
                                              double length) {
-  if (direction == AstarPathGear::drive) {
+  if (direction == AstarPathGear::DRIVE) {
     goal_state->x = start_state->x + length * ifly_cos(start_state->theta);
     goal_state->y = start_state->y + length * ifly_sin(start_state->theta);
   } else {
@@ -226,7 +226,7 @@ int RSPathInterpolator::GetCirclePoint(RSPoint *goal_state,
   double radius, theta;
 
   radius = 1.0 / start_state->kappa;
-  if (direction == AstarPathGear::drive) {
+  if (direction == AstarPathGear::DRIVE) {
     theta = start_state->theta + length * start_state->kappa;
   } else {
     theta = start_state->theta - length * start_state->kappa;
@@ -276,7 +276,7 @@ int RSPathInterpolator::UpdateGearSwitchNum(
     }
   }
 
-  if (initial_pose_dir != AstarPathGear::none && kappa_list->size > 0) {
+  if (initial_pose_dir != AstarPathGear::NONE && kappa_list->size > 0) {
     curr_kappa = &kappa_list->path_kappa[0];
     cur_dir = get_signed_segment_dir(curr_kappa->length);
 
@@ -617,12 +617,12 @@ int RSPathInterpolator::InterpolateByArcOffset(RSPoint *pose,
 
   // left turn
   if (veh_circle->radius > 0.0) {
-    if (veh_circle->gear == AstarPathGear::reverse) {
+    if (veh_circle->gear == AstarPathGear::REVERSE) {
       delta_theta = -delta_theta;
     }
   } else {
     // right turn, gear is d
-    if (veh_circle->gear == AstarPathGear::drive) {
+    if (veh_circle->gear == AstarPathGear::DRIVE) {
       delta_theta = -delta_theta;
     }
   }
