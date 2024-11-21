@@ -178,8 +178,7 @@ int HybridAStarInterface::UpdateOutput() {
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
 
   hybrid_astar_->Clear();
-
-  DebugAstarRequestString(request_);
+  hybrid_astar_->UpdateConfig(request_);
 
   // vertical parking center ref line
   ref_line_.Init(request_.real_goal,
@@ -349,8 +348,7 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     return 0;
   }
   request_ = request;
-
-  DebugAstarRequestString(request);
+  hybrid_astar_->UpdateConfig(request);
 
   // range
   UpdateSearchBoundary();
@@ -371,6 +369,13 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   goal_state_.y = end[1];
   goal_state_.theta = end[2];
 
+  // swap start and goal
+  if (request.swap_start_goal) {
+    Pose2D tmp = initial_state_;
+    initial_state_ = goal_state_;
+    goal_state_ = tmp;
+  }
+
   if (hybrid_astar_ == nullptr) {
     ILOG_ERROR << "hybrid_astar_ is nullptr";
 
@@ -386,6 +391,22 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   ref_line_.Init(request_.real_goal,
                  Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
                         request_.real_goal.theta));
+
+  if (request_.space_type == ParkSpaceType::PARALLEL) {
+    double lat_buffer = 0.1;
+    double lon_buffer = 0.2;
+    edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
+                          static_cast<float>(lon_buffer),
+                          static_cast<float>(lat_buffer));
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
+  } else {
+    double lat_buffer = 0.2;
+    double lon_buffer = 0.4;
+    edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
+                          static_cast<float>(lon_buffer),
+                          static_cast<float>(lat_buffer));
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
+  }
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(initial_state_, goal_state_, map_bounds_,

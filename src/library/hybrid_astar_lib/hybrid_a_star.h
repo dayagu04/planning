@@ -51,6 +51,8 @@ class HybridAStar {
 
   int UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf);
 
+  void UpdateConfig(const AstarRequest& request);
+
   /**
    * start: astar start
    * end: astar end, maybe different from real goal in slot.

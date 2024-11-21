@@ -44,7 +44,7 @@ using namespace planning;
 using namespace pnc::geometry_lib;
 
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
-static planning::apa_planner::ApaPlanInterface*parking_interface = nullptr;
+static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
 
 std::vector<Eigen::Vector3d> global_path_;
 std::vector<double> global_path_s_;
@@ -550,7 +550,8 @@ int GenerateObstacleByJupyter(
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
     std::vector<Eigen::Vector2d> global_park_space_points,
-    std::vector<double> obs_params, const bool trigger_plan) {
+    std::vector<double> obs_params, const bool trigger_plan,
+    const bool swap_start_goal) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;
@@ -730,6 +731,7 @@ std::vector<Eigen::Vector3d> Update(
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
     request.history_gear = AstarPathGear::drive;
+    request.swap_start_goal = swap_start_goal;
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);

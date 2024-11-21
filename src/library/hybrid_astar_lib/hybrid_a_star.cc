@@ -26,7 +26,7 @@ namespace planning {
 
 #define PLOT_RS_COST_PATH (0)
 #define PLOT_RS_EXNTEND_TO_END (0)
-#define PLOT_CHILD_NODE (0)
+#define PLOT_CHILD_NODE (1)
 #define PLOT_SEARCH_SEQUENCE (0)
 #define RS_H_COST_MAX_NUM (32)
 
@@ -1684,8 +1684,8 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
 
   // take above motion primitive to generate a curve driving the car to a
   // different grid
-  // double arc = std::sqrt(2) * xy_grid_resolution_;
-  double arc = config_.node_step;
+  // double node_step = std::sqrt(2) * xy_grid_resolution_;
+  double node_step = config_.node_step;
 
   NodePath path;
   path.point_size = 1;
@@ -1697,13 +1697,13 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
 
   // generate path by circle
   // if (std::fabs(front_wheel_angle) > 0.0001) {
-  //   GetPathByCircle(&path, arc, radius, is_forward);
+  //   GetPathByCircle(&path, node_step, radius, is_forward);
   // } else {
-  //   GetPathByLine(&path, arc, is_forward);
+  //   GetPathByLine(&path, node_step, is_forward);
   // }
 
   // generate path by bycicle model
-  GetPathByBicycleModel(&path, arc, radius, is_forward);
+  GetPathByBicycleModel(&path, node_step, radius, is_forward);
 
   // check if the vehicle runs outside of XY boundary
   const Pose2D& end_point = path.GetEndPoint();
@@ -2543,7 +2543,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
 
   const Pose2D start = request.start_;
   Pose2D end = request.real_goal;
-  end.x += config_.dp_search_goal_adjust_dist;
+  end.x += config_.single_shot_path_end_straight_dist;
 
   if (start.GetX() < 1.0) {
     ILOG_INFO << "start.GetX() =" << start.GetX();
@@ -4384,6 +4384,16 @@ size_t HybridAStar::GetPathCollisionIDByEDT(
   }
 
   return collision_index;
+}
+
+void HybridAStar::UpdateConfig(const AstarRequest& request) {
+  if (request.space_type == ParkSpaceType::PARALLEL) {
+    config_.node_step = config_.parallel_slot_node_step;
+  } else {
+    config_.node_step = config_.perpendicular_slot_node_step;
+  }
+
+  return;
 }
 
 }  // namespace planning
