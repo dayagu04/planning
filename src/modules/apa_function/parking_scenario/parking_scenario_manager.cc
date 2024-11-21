@@ -75,7 +75,7 @@ ParkingScenarioStatus ParkingScenarioManager::Excute(
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
         if (apa_data->apa_parking_direction ==
-            ApaParkingDirection::FRONT_END_PARKING_DIRECTION) {
+            ApaParkingDirection::HEAD_IN_PARKING) {
           apa_data->scenario_type =
               ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
 

@@ -124,8 +124,8 @@ enum class ApaPlannerType : uint8_t {
 
 enum class ApaParkingDirection{
   PARKING_DIRECTION_INVALID,
-  BACK_END_PARKING_DIRECTION,    // 车尾泊入
-  FRONT_END_PARKING_DIRECTION,   // 车头泊入
+  TAIL_IN_PARKING,    // 车尾泊入
+  HEAD_IN_PARKING,   // 车头泊入
 };
 
 enum class ApaStateMachine : uint8_t {
