@@ -167,9 +167,9 @@ callback = CustomJS(args=dict(source=source, line_source=line_source, text_sourc
 fig1.js_on_event(Tap, callback)
 
 # start drawing debug info
-# fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible = False)
+fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible = False)
 # fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = False)
-# fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'Car Path', visible = True)
+fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'Car Path', visible = True)
 
 # target slot
 # fig1.patch('x_vec', 'y_vec', source = data_slot, fill_color='blue', line_color='grey', fill_alpha=0.3, line_width = 0.3, legend_label = 'Target slot')
