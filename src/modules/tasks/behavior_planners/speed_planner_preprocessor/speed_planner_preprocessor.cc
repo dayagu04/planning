@@ -68,18 +68,23 @@ void SpeedPlannerPreProcessor::UpdateLonRefPath() {
     // 1.update t_list
     lon_behav_output_.t_list[i] = t;
     // 2.update s_refs
-    lon_behav_output_.s_refs[i] = {target_maker_->s_target(t),
-                                   weight_maker_->s_weight(t)};
+    lon_behav_output_.s_refs[i] = {target_maker_->s_target(t), 1.0};  // hack
+    // lon_behav_output_.s_refs[i] = {target_maker_->s_target(t),
+    //                                weight_maker_->s_weight(t)};
+
     // 3.update ds_refs
-    lon_behav_output_.ds_refs[i] = {target_maker_->v_target(t),
-                                    weight_maker_->v_weight(t)};
+    lon_behav_output_.ds_refs[i] = {target_maker_->v_target(t), 1.0};  // hack
+    // lon_behav_output_.ds_refs[i] = {target_maker_->v_target(t),
+    //                                 weight_maker_->v_weight(t)};
 
     // 4.update s bounds & weights
     // binwang33: 需要关注后续soft bound形式，采用target
     // marker后，sref更合理的话，只留hard bound也是没问题的
     WeightedBound s_hard_bound;
-    s_hard_bound.lower = bound_maker_->s_lower_bound(t);
-    s_hard_bound.upper = bound_maker_->s_upper_bound(t);
+    s_hard_bound.lower = 0.0; // hack
+    s_hard_bound.upper = 150.0; // hack
+    // s_hard_bound.lower = bound_maker_->s_lower_bound(t);
+    // s_hard_bound.upper = bound_maker_->s_upper_bound(t);
     s_hard_bound.weight = 10;
     s_hard_bound.bound_info.id = -1;  // hack: 后续在bound_maker_中查询
     s_hard_bound.bound_info.type = BoundType::AGENT;  // hack: 后续需要区分属性
@@ -89,19 +94,22 @@ void SpeedPlannerPreProcessor::UpdateLonRefPath() {
     // lon_behav_output_.lead_bounds[i].emplace_back(s_lead_bound);
 
     // 5.update v bounds & weights
-    Bound lon_v_bound{bound_maker_->v_lower_bound(t),
-                      bound_maker_->v_upper_bound(t)};
+    Bound lon_v_bound{0.0, 40.0};  // hack
+    // Bound lon_v_bound{bound_maker_->v_lower_bound(t),
+    //                   bound_maker_->v_upper_bound(t)};
     lon_behav_output_.lon_bound_v[i] = lon_v_bound;
 
     // TBD: 缺少一个s-v bound，用于实现精准限速
 
     // 6.update a bounds & weights
-    Bound lon_a_bound{bound_maker_.a_lower_bound(t),
-                      bound_maker_.a_upper_bound(t)};
+    Bound lon_a_bound{-2.0, 2.0};  // hack
+    // Bound lon_a_bound{bound_maker_.a_lower_bound(t),
+    //                   bound_maker_.a_upper_bound(t)};
     lon_behav_output_.lon_bound_a[i] = lon_a_bound;
     // 8.update jerk bounds & weights
-    Bound lon_j_bound{bound_maker_.jerk_lower_bound(t),
-                      bound_maker_.jerk_upper_bound(t)};
+    Bound lon_j_bound{-6.0, 6.0};  // hack
+    // Bound lon_j_bound{bound_maker_.jerk_lower_bound(t),
+    //                   bound_maker_.jerk_upper_bound(t)};
     lon_behav_output_.lon_bound_jerk[i] = lon_j_bound;
   }
 
