@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
 #include "debug_info_log.h"
@@ -26,6 +25,7 @@
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "math_lib.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -1339,14 +1339,6 @@ const bool ParallelPathGenerator::GenAlignedPreparingLine(
     return true;
   }
 
-  const double rac_tlane_bound =
-      input_.tlane.obs_pt_inside.y() +
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width);
-
-  const double rac_channel_bound =
-      input_.tlane.channel_y -
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width);
-
   std::vector<uint8_t> ref_gear_vec = {pnc::geometry_lib::SEG_GEAR_REVERSE,
                                        pnc::geometry_lib::SEG_GEAR_DRIVE};
 
@@ -1363,12 +1355,6 @@ const bool ParallelPathGenerator::GenAlignedPreparingLine(
     }
 
     const auto& aligned_pos = aligned_path_seg_vec.front().GetEndPos();
-
-    // if (!pnc::mathlib::IsInBound(aligned_pos.y(), rac_tlane_bound,
-    //                              rac_channel_bound)) {
-    //   // DEBUG_PRINT("aligned_y = " << aligned_y << ", over bound!");
-    //   continue;
-    // }
 
     // if (CheckPathSegVecCollided(aligned_path_seg_vec, 0.2)) {
     //   DEBUG_PRINT("aligned plan collided!");
@@ -4593,7 +4579,8 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   }
 }
 
-void ParallelPathGenerator::ExtendCurrentFollowLastPath(double extend_distance) {
+void ParallelPathGenerator::ExtendCurrentFollowLastPath(
+    double extend_distance) {
   if (pnc::mathlib::IsDoubleEqual(extend_distance, 0.0)) {
     return;
   }

@@ -1463,14 +1463,14 @@ const bool ParallelParkInScenario::CheckReplan() {
 const bool ParallelParkInScenario::CheckFinished() {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
-  const Eigen::Vector2d rear_bumper_center =
-      ego_slot_info.ego_pos_slot - apa_param.GetParam().rear_overhanging *
-                                       ego_slot_info.ego_heading_slot_vec;
+  // const Eigen::Vector2d rear_bumper_center =
+  //     ego_slot_info.ego_pos_slot - apa_param.GetParam().rear_overhanging *
+  //                                      ego_slot_info.ego_heading_slot_vec;
 
-  const Eigen::Vector2d front_bumper_center =
-      ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
-                                    apa_param.GetParam().front_overhanging) *
-                                       ego_slot_info.ego_heading_slot_vec;
+  // const Eigen::Vector2d front_bumper_center =
+  //     ego_slot_info.ego_pos_slot + (apa_param.GetParam().wheel_base +
+  //                                   apa_param.GetParam().front_overhanging) *
+  //                                      ego_slot_info.ego_heading_slot_vec;
 
   const bool lon_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.x()) <
                                apa_param.GetParam().finish_parallel_lon_err;
