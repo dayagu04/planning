@@ -564,16 +564,16 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       origin_relative_id_zero_nums_);
 
   // 6.生成导航变道的任务
-  const double cancel_mlc_dis_threshold_to_route_end = 400;
-  if (is_ego_on_expressway_) {
-    const bool is_inhibitory_noa_task =
-        (is_exist_toll_station_ &&
-         distance_to_toll_station_ < cancel_mlc_dis_threshold_to_route_end) ||
-        distance_to_route_end_ < cancel_mlc_dis_threshold_to_route_end;
-    if (!is_inhibitory_noa_task) {
-      GenerateLaneChangeTasksForNOA();
-    }
-  }
+  // const double cancel_mlc_dis_threshold_to_route_end = 400;
+  // if (is_ego_on_expressway_) {
+  //   const bool is_inhibitory_noa_task =
+  //       (is_exist_toll_station_ &&
+  //        distance_to_toll_station_ < cancel_mlc_dis_threshold_to_route_end) ||
+  //       distance_to_route_end_ < cancel_mlc_dis_threshold_to_route_end;
+  //   if (!is_inhibitory_noa_task) {
+  //     GenerateLaneChangeTasksForNOA();
+  //   }
+  // }
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
@@ -618,6 +618,18 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
             is_on_road_select_ramp_situation);
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
+
+  // 6.生成导航变道的任务
+  const double cancel_mlc_dis_threshold_to_route_end = 400;
+  if (is_ego_on_expressway_) {
+    const bool is_inhibitory_noa_task =
+        (is_exist_toll_station_ &&
+         distance_to_toll_station_ < cancel_mlc_dis_threshold_to_route_end) ||
+        distance_to_route_end_ < cancel_mlc_dis_threshold_to_route_end;
+    if (!is_inhibitory_noa_task) {
+      GenerateLaneChangeTasksForNOA();
+    }
+  }
 
   // 9.计算自车到停止线的距离
   UpdateEgoDistanceToStopline();
@@ -1384,6 +1396,7 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     return;
   } else {
     is_in_sdmaproad_ = true;
+    current_segment_ = current_segment;
   }
 
   if (current_segment->shape_points_size() > 0) {
@@ -2466,12 +2479,47 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
     is_ego_on_split_region = true;
   }
   //(7)、判断当前是否需要在下匝道的分流区域继续生成下匝道的变道请求；
+  //TODO:目前仅靠猜测车道数，后续需要根据感知给出的总车道数、当前所处的车道，做更加准确的地图导航变道决策
+  //TODO:由于目前仅有左、中、右三条车道，所以暂时只考虑匝道上仅有1条或者2条车道的情况。
   bool is_exit_lane_on_last_ramp_dir = 
       last_split_seg_dir_ == RAMP_NONE ? false : 
       (last_split_seg_dir_ == RAMP_ON_LEFT ? !is_ego_on_leftest_lane : !is_ego_on_rightest_lane);
-  bool is_need_continue_lc_on_off_ramp_region = 
-      is_exit_lane_on_last_ramp_dir &&
-      is_ego_on_split_region;
+  const int cur_seg_forward_lane_num = current_segment_->forward_lane_num();
+
+  bool is_need_continue_lc_on_off_ramp_region = false;
+  if (is_exit_lane_on_last_ramp_dir &&
+        is_ego_on_split_region &&
+        is_on_ramp_) {
+    if (cur_seg_forward_lane_num == 1) {
+      is_need_continue_lc_on_off_ramp_region = true;
+    } else if (cur_seg_forward_lane_num == 2) {
+      //TODO:通过判断右边的车道边界线的虚、实，猜测在右边是否还有更多的车道
+      if (last_split_seg_dir_ == RAMP_ON_RIGHT &&
+          right_lane_) {
+        const auto& right_lane_left_boundary = right_lane_->get_left_lane_boundary();
+        const auto& right_lane_left_boundary_path = MakeBoundaryPath(right_lane_left_boundary);
+        const auto& right_lane_right_boundary = right_lane_->get_right_lane_boundary();
+        const auto& right_lane_right_boundary_path = MakeBoundaryPath(right_lane_right_boundary);
+        bool right_lane_left_boundary_is_dash_line = right_lane_->is_dash_line(*session_, LEFT_CHANGE, right_lane_left_boundary_path);
+        bool right_lane_right_boundary_is_dash_line = right_lane_->is_dash_line(*session_, RIGHT_CHANGE, right_lane_right_boundary_path);
+        const auto& current_lane_right_boundary = current_lane_->get_right_lane_boundary();
+        const auto& current_lane_right_boundary_path = MakeBoundaryPath(current_lane_right_boundary);
+        bool current_lane_right_boundary_is_dash_line = current_lane_->is_dash_line(*session_, RIGHT_CHANGE, current_lane_right_boundary_path);
+        if (current_lane_right_boundary_is_dash_line &&
+            right_lane_left_boundary_is_dash_line &&
+            right_lane_right_boundary_is_dash_line) {
+          is_need_continue_lc_on_off_ramp_region = true;
+        }
+      }
+    } 
+  }
+  // bool is_need_continue_lc_on_off_ramp_region = 
+  //     is_exit_lane_on_last_ramp_dir &&
+  //     is_ego_on_split_region &&
+  //     is_on_ramp_;
+  //注：该处是为了处理下匝道的场景，自车经过ramp的起点后，就会进入到ramp上；
+  //增加is_on_ramp_判断，防止在主路上生成变道请求。
+
   int need_continue_lc_num_on_off_ramp_region = 0;
   if (is_need_continue_lc_on_off_ramp_region) {
     need_continue_lc_num_on_off_ramp_region = 

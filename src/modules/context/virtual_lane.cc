@@ -1,4 +1,5 @@
 #include "virtual_lane.h"
+#include "config/basic_type.h"
 #include "environmental_model.h"
 
 #include <cassert>
@@ -274,19 +275,28 @@ double VirtualLane::max_width() const {
   }
 }
 
-bool VirtualLane::is_solid_line(int side) const {
-  assert(side == 0 || side == 1);
-  if (side == 0) {
-    if (left_lane_boundary_.type_segments_size > 0 &&
-        left_lane_boundary_.type_segments[0].type ==
-            iflyauto::LaneBoundaryType_MARKING_SOLID) {
-      return true;
+bool VirtualLane::is_dash_line(const planning::framework::Session& session, const RequestType request_type, const std::shared_ptr<planning_math::KDPath> target_boundary_path) const {
+  const auto &ego_state =
+      session.environmental_model().get_ego_state_manager();
+  double lane_line_length = 0.0;
+  const auto &plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  double ego_s = 0.0, ego_l = 0.0;
+  iflyauto::LaneBoundary target_lane_boundary = 
+      request_type == LEFT_CHANGE ? left_lane_boundary_ : right_lane_boundary_;
+  if (target_boundary_path != nullptr) {
+    if (!target_boundary_path->XYToSL(ego_x, ego_y, &ego_s, &ego_l)) {
+      return false;
     }
-  } else if (side == 1) {
-    if (right_lane_boundary_.type_segments_size > 0 &&
-        right_lane_boundary_.type_segments[0].type ==
-            iflyauto::LaneBoundaryType_MARKING_SOLID) {
-      return true;
+  } else {
+    return false;
+  }
+  for (int i = 0; i < target_lane_boundary.type_segments_size; i++) {
+    lane_line_length += target_lane_boundary.type_segments[i].length;
+    if (lane_line_length > ego_s) {
+      return target_lane_boundary.type_segments[i].type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+             target_lane_boundary.type_segments[i].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
     }
   }
   return false;

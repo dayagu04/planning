@@ -137,11 +137,6 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
 
   auto olane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
-  std::cout << "lc_map_decision: " << lc_map_decision
-            << " current_lane->is_solid_line(1): "
-            << current_lane->is_solid_line(1)
-            << " current_lane->is_solid_line(0): "
-            << current_lane->is_solid_line(0) << std::endl;
   bool is_valid_ego_blinker = ego_blinker == 1 || ego_blinker == 2;
   bool is_cancel_mlc_for_ego_blinker = is_valid_ego_blinker && 
                                        lc_status <= kLaneChangeExecution &&

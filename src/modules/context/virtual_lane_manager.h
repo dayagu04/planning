@@ -375,6 +375,7 @@ class VirtualLaneManager {
   int split_next_seg_forward_lane_nums_ = 0;
   int lc_nums_for_split_ = 0;
   RampDirection last_split_seg_dir_ = RAMP_NONE;
+  const SdMapSwtx::Segment* current_segment_ = nullptr;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;
