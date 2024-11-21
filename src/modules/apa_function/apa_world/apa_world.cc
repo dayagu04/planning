@@ -49,7 +49,8 @@ void ApaWorld::Preprocess() {
   apa_data_ptr_->fusion_occupancy_objects_info_ptr =
       &local_view_ptr_->fusion_occupancy_objects_info;
   apa_data_ptr_->local_view_ptr_ = local_view_ptr_;
-
+  apa_data_ptr_->apa_parking_direction = static_cast<ApaParkingDirection>(
+      apa_data_ptr_->func_state_ptr->parking_req.apa_parking_direction);
   UpdateEgoState();
 
   UpdateStateMachine();
@@ -381,7 +382,6 @@ const bool ApaWorld::Update() {
             << static_cast<int>(apa_data_ptr_->func_state_ptr->current_state);
 
   PrintApaStateMachine(apa_data_ptr_->cur_state);
-
 
   PrintApaParkingOutDirection(apa_data_ptr_->park_out_direction);
 
