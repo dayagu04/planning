@@ -1396,7 +1396,6 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.height());
   }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
-  std::cout << "forward_lane_num:" << current_segment->forward_lane_num() << std::endl;
   JSON_DEBUG_VALUE("forward_lane_num", current_segment->forward_lane_num());
   if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
       current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
@@ -2241,7 +2240,7 @@ SplitSegInfo VirtualLaneManager::MakesureSplitDirection(
                              ? out_link[1]
                              : out_link[0];
     split_seg_info.split_seg_forward_lane_nums = split_segment.forward_lane_num();
-    split_seg_info.split_next_seg_forward_lane_nums = other_segment.forward_lane_num();
+    split_seg_info.split_next_seg_forward_lane_nums = split_next_segment->forward_lane_num();
     // const auto other_segment = sd_map.GetRoadSegmentById(other_segment_id);
     const auto& split_next_segment_enu_point = split_next_segment->enu_points();
     const auto& other_segment_enu_point = other_segment.enu_points();
