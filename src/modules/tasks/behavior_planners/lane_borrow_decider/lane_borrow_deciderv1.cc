@@ -23,6 +23,7 @@ constexpr double kMinDisToSolidLane = 50.0;// 编译求值
 constexpr double kMinDisToStopLine = 50.0;
 constexpr double kMinDisToCrossWalk = 50.0;
 // constexpr double kMaxConcernObsDistance = 50.0; in config
+constexpr double kSafeBackDistance = 3.0; // add in config
 constexpr double kDefaultStopLineAreaDistance = 5.0;
 constexpr double kFilterStopObsDistance = 25.0;
 constexpr double kObsSpeedLimit = 3.0;
@@ -30,7 +31,7 @@ constexpr double kLatPassableBuffer =
     0.8;  // todo: same with lat decider and lon decider
 constexpr double kObsLatBuffer = 0.3;
 // constexpr int kObserveFrames = 15; in config
-constexpr double kBackwardSafeDistance = 50.0;
+constexpr double kBackwardSafeDistance = 50.0;//# abort
 constexpr double kObsSpeedRatio = 3.5;
 constexpr double kForwardOtherObsDistance = 20.0;
 constexpr double kObsSpeedBuffer = 1.0;
@@ -199,7 +200,7 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving() {//
         if (frenet_obstacle_sl.l_end + kLatPassableBuffer < -right_width) {// 在车道以外不是 静止的 但是足够远离 不影响借道结束
           continue;
         }
-        if (frenet_obstacle_sl.s_end + obs_v * kObsSpeedRatio <// 观测速度 * 3.5   仍然在车后方
+        if (frenet_obstacle_sl.s_end + obs_v * kObsSpeedRatio <// added 观测速度 * 3.5   仍然在车后方
           ego_frenet_boundary_.s_start) {
           continue;
         }
@@ -235,7 +236,7 @@ bool LaneBorrowDecider::CheckIfLaneBorrowBackOriginLaneToNoBorrow() {//从借道
       current_lane_ptr_->width(ego_frenet_boundary_.s_start) * 0.5;//后方位置处的宽度为准
 
   if (ego_frenet_boundary_.l_end < left_width &&
-      ego_frenet_boundary_.l_start > -right_width) {//车身边界进入车道内了 逻辑上比较直接
+      ego_frenet_boundary_.l_start > -right_width) {//车身边界进入车道内
     ClearLaneBorrowStatus();
     return true;
   } else {
@@ -286,7 +287,7 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
   double xx = config_.kMaxConcernObsDistance;// debug
 
   const double forward_obs_s =
-      std::fmin(current_reference_path_ptr_->get_frenet_coord()->Length(),
+      std::fmin(current_reference_path_ptr_->get_frenet_coord()->Length(),// 有问题吗？
                 ego_frenet_boundary_.s_end + config_.kMaxConcernObsDistance);
   double left_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
@@ -300,37 +301,37 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
 
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   static_blocked_obj_vec_.clear();
-  for (const auto& obstacle : obstacles) {
-    int idx = obstacle->obstacle()->id();// debug
+  for (const auto& obstacle : obstacles) {// 遍历 构造静态区域
+    int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
     const auto& obs_type = obstacle->obstacle()->type();
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
     if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
-      continue;
+      continue;//去除行人
     }
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }//非行人 纯视觉障碍物
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
-    if (frenet_obstacle_sl.s_start > forward_obs_s || //障碍物 尾部 在前s以外
-        frenet_obstacle_sl.s_end + kObsLonDisBuffer <// 障碍物头部落后自车尾部超过两米
+    if (frenet_obstacle_sl.s_start > forward_obs_s || //障碍物 超过前方静态区域的最大距离
+        frenet_obstacle_sl.s_end + kObsLonDisBuffer <// 障碍物头部落后自车尾部超过两米 忽略
             ego_frenet_boundary_.s_start) {  // lon concern area
       continue;
     }
     if (frenet_obstacle_sl.l_start > left_width ||
         frenet_obstacle_sl.l_end < -right_width) {
-      // obstacle is absolutly out ego current lane 车道外的不考虑
+      // obstacle is absolutly out ego current lane 障碍物全身在车道外的不考虑
       continue;
     }
     // TODO: concern more scene
-    if (frenet_obstacle_sl.l_end < left_width &&
+    if (frenet_obstacle_sl.l_end < left_width &&// 整个都在该车道的障碍物：//有较大速度的不考虑
         frenet_obstacle_sl.l_start > -right_width) {
       if (obstacle->obstacle()->velocity() > config_.kObsStaticVelThold) {
-        continue;//有速度的不考虑
+        continue;
       }
-    } else {
+    } else {//部分在该车道的障碍物：
       if (!obstacle->obstacle()->is_static()) {//非静态不考虑
         continue;
       }
@@ -634,17 +635,17 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
 
-  for (const auto& obstacle : obstacles) {
+  for (const auto& obstacle : obstacles) {// 筛选 障碍物 是否结束借道 开始返回原车道
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
-    if (lane_borrow_decider_output_.borrow_direction == 1) {
-      if (frenet_obstacle_sl.l_end > ego_frenet_boundary_.l_start &&
+    if (lane_borrow_decider_output_.borrow_direction == 1) {//左借道状态
+      if (frenet_obstacle_sl.l_end > ego_frenet_boundary_.l_start && // 障碍物在原车道左边外 并且？
           frenet_obstacle_sl.l_start > left_width) {
         continue;
       }
-      if (frenet_obstacle_sl.l_end < -right_width) {
+      if (frenet_obstacle_sl.l_end < -right_width) { // 障碍物在原车道右边外
         continue;
       }
-    } else {
+    } else {// 右借道
       if (frenet_obstacle_sl.l_start < ego_frenet_boundary_.l_end &&
           frenet_obstacle_sl.l_end < -right_width) {
         continue;
@@ -655,29 +656,29 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
     }
 
     if (frenet_obstacle_sl.s_start - ego_frenet_boundary_.s_end >
-        kForwardOtherObsDistance) {
+        kForwardOtherObsDistance) {// 自车前方20m以外不影响返回
       continue;
     }
 
     const double obs_v = obstacle->obstacle()->velocity();
-    if (frenet_obstacle_sl.s_start - ego_frenet_boundary_.s_end >
-            kBackwardSafeDistance &&
-        obs_v > ego_speed_ + kObsSpeedBuffer) {
+    if (frenet_obstacle_sl.s_start - ego_frenet_boundary_.s_end > //在自车前方 比较近 但是速度很快
+            kSafeBackDistance &&// [fixed]
+        obs_v > ego_speed_ + kObsSpeedBuffer) { // 速度高于自车
       continue;
     }
 
     if (frenet_obstacle_sl.s_end >
-        ego_frenet_boundary_.s_start - kSafeDistance) {
+        ego_frenet_boundary_.s_start - kSafeBackDistance) { // 障碍物在自车后方
       return false;
-    }
+    }// ：大后方
 
-    if (ego_speed_ - obs_v > kObsSpeedBuffer) {
+    if (ego_speed_ - obs_v > kObsSpeedBuffer) {// 自车速度更高直接忽略
       continue;
     }
     if (frenet_obstacle_sl.l_start > ego_frenet_boundary_.l_end ||
-        frenet_obstacle_sl.l_end < ego_frenet_boundary_.l_start) {
+        frenet_obstacle_sl.l_end < ego_frenet_boundary_.l_start) { // 不在自车正后方
       const double dist =
-          std::max(kBackwardSafeDistance, obs_v * kObsSpeedRatio);
+          std::max(kSafeBackDistance, obs_v * kObsSpeedRatio);//[fixed]
       if (frenet_obstacle_sl.s_end + dist > ego_frenet_boundary_.s_start) {
         return false;  // fast come near ego car
       }
@@ -791,7 +792,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         }
       }
 
-      double dist = std::max(kBackwardSafeDistance,
+      double dist = std::max(kSafeBackDistance,
                              obstacle->obstacle()->velocity() * kObsSpeedRatio);
       if (frenet_obstacle_sl.s_end + dist > ego_frenet_boundary_.s_start) {// 后
         lane_borrow_decider_output_.lane_borrow_failed_reason =
@@ -905,7 +906,7 @@ bool LaneBorrowDecider::IsSafeForPath2(const double& left_bounds_l, const double
         }
       }
 
-      double dist = std::max(kBackwardSafeDistance,
+      double dist = std::max(kSafeBackDistance,
                              obstacle->obstacle()->velocity() * kObsSpeedRatio);
       if (frenet_obstacle_sl.s_end + dist > ego_frenet_boundary_.s_start) {// 后
         lane_borrow_decider_output_.lane_borrow_failed_reason =

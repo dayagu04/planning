@@ -34,6 +34,7 @@ bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-02-38.bag_2024-11-1
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag'
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732091459.close-loop.plan'
 bag_path ='/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732159470.close-loop.plan'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241121/20241121-09-40-59/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2024-11-21-09-40-59_no_camera.bag.1732186779.open-loop.plan'
 # -
 
 html_file = bag_path +".vo_lat_behavior.html"
