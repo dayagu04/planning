@@ -2,7 +2,6 @@
   "car_type": "cherry_e0x",
 
   "comment_0": "heading in params",
-  "is_heading_in": false,
   "headin_fix_slot_occupied_ratio": 0.608,
   "headin_multi_plan_min_heading_err": 38.86,
   "headin_multi_plan_min_lat_err": 0.8,
@@ -277,8 +276,6 @@
   "is_parallel_advanced_method": true,
   "vertical_slot_target_adjust_dist": 1.5,
   "use_a_cubic_polynomial_for_adjustment" :true,
-  "perpendicular_parking_out_right": true,
-  "perpendicular_parking_out_state": false,
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,

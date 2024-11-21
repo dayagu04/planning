@@ -54,6 +54,8 @@ void ApaWorld::Preprocess() {
 
   UpdateStateMachine();
 
+  UpdateParkOutDirection();
+
   UpdateSlots();
 
   UpdateObstacles();
@@ -176,13 +178,13 @@ void ApaWorld::UpdateStateMachine() {
   }
 
   if (state == iflyauto::FunctionalState_PARK_IN_SEARCHING) {
-    if (apa_param.GetParam().perpendicular_parking_out_state) {
-      cur_state = ApaStateMachine::SEARCH_OUT;
-      apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
-    } else {
-      cur_state = ApaStateMachine::SEARCH_IN;
-      apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
-    }
+    cur_state = ApaStateMachine::SEARCH_IN;
+    apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
+  }
+
+  if (state == iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
+    cur_state = ApaStateMachine::SEARCH_OUT;
+    apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
   }
 
   if (state == iflyauto::FunctionalState_PARK_GUIDANCE) {
@@ -196,6 +198,31 @@ void ApaWorld::UpdateStateMachine() {
   if (state == iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
     cur_state = ApaStateMachine::SEARCH_OUT;
     apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
+  }
+}
+
+void ApaWorld::UpdateParkOutDirection() {
+  const iflyauto::ApaParkOutDirection park_out_direction =
+      apa_data_ptr_->func_state_ptr->parking_req.apa_park_out_direction;
+
+  ApaParkingOutDirection& out_dir = apa_data_ptr_->park_out_direction;
+
+  if (park_out_direction == iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS ||
+      park_out_direction == iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL) {
+    out_dir = ApaParkingOutDirection::LEFT_FRONT;
+  } else if (park_out_direction == iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS ||
+             park_out_direction == iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL) {
+    out_dir = ApaParkingOutDirection::RIGHT_FRONT;
+  } else if (park_out_direction == iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS) {
+    out_dir = ApaParkingOutDirection::LEFT_REAR;
+  } else if (park_out_direction == iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS) {
+    out_dir = ApaParkingOutDirection::RIGHT_REAR;
+  } else if (park_out_direction == iflyauto::PRK_OUT_TO_FRONT_OUT) {
+    out_dir = ApaParkingOutDirection::FRONT;
+  } else if (park_out_direction == iflyauto::PRK_OUT_TO_BACK_OUT) {
+    out_dir = ApaParkingOutDirection::REAR;
+  } else {
+    out_dir = ApaParkingOutDirection::INVALID;
   }
 }
 
@@ -354,6 +381,9 @@ const bool ApaWorld::Update() {
             << static_cast<int>(apa_data_ptr_->func_state_ptr->current_state);
 
   PrintApaStateMachine(apa_data_ptr_->cur_state);
+
+
+  PrintApaParkingOutDirection(apa_data_ptr_->park_out_direction);
 
   apa_data_ptr_->scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
 

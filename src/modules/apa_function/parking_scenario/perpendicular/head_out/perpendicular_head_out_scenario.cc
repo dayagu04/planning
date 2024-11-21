@@ -318,10 +318,12 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     frame_.car_already_move_dist = 0.0;
 
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    if (apa_param.GetParam().perpendicular_parking_out_right) {
+    if (apa_world_ptr_->GetApaDataPtr()->park_out_direction ==
+        ApaParkingOutDirection::RIGHT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
-    } else if (!apa_param.GetParam().perpendicular_parking_out_right) {
+    } else if (apa_world_ptr_->GetApaDataPtr()->park_out_direction ==
+               ApaParkingOutDirection::LEFT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
     }

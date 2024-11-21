@@ -1007,7 +1007,7 @@ bool SlotManager::UpdateSlotsInParking() {
 
   size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
 
-  if (apa_param.GetParam().perpendicular_parking_out_state) {
+  if (frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
     if (frame_.park_out_select_id == 0) {
       double dist = std::numeric_limits<double>::infinity();
       for (auto &pair : frame_.slot_info_window_map) {

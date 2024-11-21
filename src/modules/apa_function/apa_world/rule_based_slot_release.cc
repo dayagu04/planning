@@ -104,7 +104,7 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
         slot->is_release() &&
         config_->path_generator_type ==
             apa_planner::ParkPathGenerationType::GEOMETRY_BASED &&
-        !config_->perpendicular_parking_out_state) {
+        frame_->apa_state != ApaStateMachine::ACTIVE_OUT) {
       if (IflyTime::Now_ms() - time_start >
           config_->prepare_single_max_allow_time) {
         slot->set_is_release(false);
