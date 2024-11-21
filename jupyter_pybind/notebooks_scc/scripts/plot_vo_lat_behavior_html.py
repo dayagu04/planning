@@ -33,6 +33,7 @@ bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-1
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-02-38.bag_2024-11-18-09-41-27.1732082881.close-loop.plan'
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag'
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732091459.close-loop.plan'
+bag_path ='/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732159470.close-loop.plan'
 # -
 
 html_file = bag_path +".vo_lat_behavior.html"

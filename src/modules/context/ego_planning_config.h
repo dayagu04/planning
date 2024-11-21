@@ -347,6 +347,25 @@ struct SpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double min_dec_filter_speed_in_deceleration_scene = 30.0;
 };
 
+struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    kMaxConcernObsDistance = read_json_keys<double>(
+    json, std::vector<std::string>{"lane_borrow",
+                                    "kMaxConcernObsDistance"});
+    kObsStaticVelThold = read_json_keys<double>(
+    json, std::vector<std::string>{"lane_borrow",
+                                    "kObsStaticVelThold"});
+    kObserveFrames = read_json_keys<int>(
+    json, std::vector<std::string>{"lane_borrow",
+                                    "kObserveFrames"});
+  }
+  double kMaxConcernObsDistance =  40.0;
+  double kObsStaticVelThold =  0.1;
+  int kObserveFrames =  30;
+};
+
 struct ActRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

@@ -22,14 +22,14 @@ namespace {
 constexpr double kMinDisToSolidLane = 50.0;// 编译求值
 constexpr double kMinDisToStopLine = 50.0;
 constexpr double kMinDisToCrossWalk = 50.0;
-constexpr double kMaxConcernObsDistance = 40.0;
+// constexpr double kMaxConcernObsDistance = 50.0; in config
 constexpr double kDefaultStopLineAreaDistance = 5.0;
 constexpr double kFilterStopObsDistance = 25.0;
 constexpr double kObsSpeedLimit = 3.0;
 constexpr double kLatPassableBuffer =
     0.8;  // todo: same with lat decider and lon decider
 constexpr double kObsLatBuffer = 0.3;
-constexpr int kObserveFrames = 15;
+// constexpr int kObserveFrames = 15; in config
 constexpr double kBackwardSafeDistance = 50.0;
 constexpr double kObsSpeedRatio = 3.5;
 constexpr double kForwardOtherObsDistance = 20.0;
@@ -37,7 +37,7 @@ constexpr double kObsSpeedBuffer = 1.0;
 constexpr double kObsLatExpendBuffer = 0.4;
 constexpr double kObsLonDisBuffer = 2.0;
 constexpr double kObsFilterVel = 2.5;
-constexpr double kObsStaticVelThold = 0.2;
+// constexpr double kObsStaticVelThold=0.2; in config
 };  // namespace
 
 namespace planning {
@@ -261,7 +261,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {//借道触发判断条件
 
 
   observe_frame_num_++;
-  if (observe_frame_num_ < kObserveFrames) {
+  if (observe_frame_num_ < config_.kObserveFrames) {
     lane_borrow_decider_output_.lane_borrow_failed_reason =
         OBSERVE_TIME_CHECK_FAILED;
     return false;
@@ -279,9 +279,11 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {//借道触发判断条件
 }
 
 bool LaneBorrowDecider::SelectStaticBlockingArea() {
+  double xx = config_.kMaxConcernObsDistance;// debug
+
   const double forward_obs_s =
       std::fmin(current_reference_path_ptr_->get_frenet_coord()->Length(),
-                ego_frenet_boundary_.s_end + kMaxConcernObsDistance);
+                ego_frenet_boundary_.s_end + config_.kMaxConcernObsDistance);
   double left_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   double right_width =
@@ -321,7 +323,7 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
     // TODO: concern more scene
     if (frenet_obstacle_sl.l_end < left_width &&
         frenet_obstacle_sl.l_start > -right_width) {
-      if (obstacle->obstacle()->velocity() > kObsStaticVelThold) {
+      if (obstacle->obstacle()->velocity() > config_.kObsStaticVelThold) {
         continue;//有速度的不考虑
       }
     } else {

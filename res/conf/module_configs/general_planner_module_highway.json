@@ -628,8 +628,12 @@
         23.0, 20.0, 15.0, 10.0,
         7.0]
     }
+},
 
-  }
-
+"lane_borrow":{
+  "kMaxConcernObsDistance":  50.0,
+  "kObsStaticVelThold": 0.2,
+  "kObserveFrames": 15
+}
 }
 

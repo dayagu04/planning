@@ -21,8 +21,8 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDecider(const EgoPlanningConfigBuilder* config_builder,
                     framework::Session* session)
       : Task(config_builder, session) {
-    vehicle_param_ =
-        VehicleConfigurationContext::Instance()->get_vehicle_param();
+      vehicle_param_ = VehicleConfigurationContext::Instance()->get_vehicle_param();
+      config_ = config_builder->cast<LaneBorrowDeciderConfig>();
   };
   virtual ~LaneBorrowDecider() = default;
 
@@ -89,6 +89,7 @@ class LaneBorrowDecider : public Task {
   std::shared_ptr<VirtualLane> current_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
+  LaneBorrowDeciderConfig config_;
 };
 
 }  // namespace planning
