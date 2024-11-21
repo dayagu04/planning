@@ -29,8 +29,10 @@ from lib.local_view_lib import *
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732018741.close-loop.plan'# jump one
 
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732074900.close-loop.plan'#good 
-bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46.1732082318.close-loop.plan'
-# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46.1732082581.open-loop.plan'
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46.1732082318.close-loop.plan'# no traj
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-02-38.bag_2024-11-18-09-41-27.1732082881.close-loop.plan'
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag'
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732091459.close-loop.plan'
 # -
 
 html_file = bag_path +".vo_lat_behavior.html"

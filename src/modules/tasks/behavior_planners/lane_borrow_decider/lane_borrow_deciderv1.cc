@@ -29,7 +29,7 @@ constexpr double kObsSpeedLimit = 3.0;
 constexpr double kLatPassableBuffer =
     0.8;  // todo: same with lat decider and lon decider
 constexpr double kObsLatBuffer = 0.3;
-constexpr int kObserveFrames = 30;
+constexpr int kObserveFrames = 15;
 constexpr double kBackwardSafeDistance = 50.0;
 constexpr double kObsSpeedRatio = 3.5;
 constexpr double kForwardOtherObsDistance = 20.0;
@@ -37,7 +37,7 @@ constexpr double kObsSpeedBuffer = 1.0;
 constexpr double kObsLatExpendBuffer = 0.4;
 constexpr double kObsLonDisBuffer = 2.0;
 constexpr double kObsFilterVel = 2.5;
-constexpr double kObsStaticVelThold=0.1;
+constexpr double kObsStaticVelThold = 0.2;
 };  // namespace
 
 namespace planning {
@@ -108,7 +108,7 @@ void LaneBorrowDecider::Update() {//1
         lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;//切换到征程
       } else if (CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving()) {
         lane_borrow_status_ = LaneBorrowStatus::kLaneBorrowDriving;//切换到借道
-      }// else ？
+      }// else
       break;
     }
   }
@@ -295,32 +295,29 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   static_blocked_obj_vec_.clear();
   for (const auto& obstacle : obstacles) {
+    int idx = obstacle->obstacle()->id();// debug
     const auto& id = obstacle->obstacle()->id();
     const auto& obs_type = obstacle->obstacle()->type();
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
-
     if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
       continue;
     }
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }//非行人 纯视觉障碍物
-
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start > forward_obs_s || //障碍物 尾部 在前s以外
         frenet_obstacle_sl.s_end + kObsLonDisBuffer <// 障碍物头部落后自车尾部超过两米
             ego_frenet_boundary_.s_start) {  // lon concern area
       continue;
     }
-
     if (frenet_obstacle_sl.l_start > left_width ||
         frenet_obstacle_sl.l_end < -right_width) {
       // obstacle is absolutly out ego current lane 车道外的不考虑
       continue;
     }
-
     // TODO: concern more scene
     if (frenet_obstacle_sl.l_end < left_width &&
         frenet_obstacle_sl.l_start > -right_width) {
