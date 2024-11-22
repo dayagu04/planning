@@ -634,7 +634,11 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
   double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
-
+  // overtake static area
+  if(ego_frenet_boundary_.s_start - obs_end_s_ < kSafeBackDistance )
+  {
+    return false;
+  }
   for (const auto& obstacle : obstacles) {// 筛选 障碍物 是否结束借道 开始返回原车道
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (lane_borrow_decider_output_.borrow_direction == 1) {//左借道状态
