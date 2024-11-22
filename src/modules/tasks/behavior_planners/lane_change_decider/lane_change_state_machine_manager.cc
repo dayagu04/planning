@@ -515,7 +515,12 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   const double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
-  if (dis_to_ramp < 1000.) lc_valid_thre = 1;
+  if (dis_to_ramp < 1000.||
+      transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
+      transition_info_.lane_change_type == CONE_REQUEST ||
+      transition_info_.lane_change_type == MERGE_REQUEST) {
+    lc_valid_thre = 1;
+  }
   // can lc if more than continue 4 frame gap_insertable
   if (lane_change_stage_info_.gap_insertable) {
     lc_valid_cnt_ += 1;

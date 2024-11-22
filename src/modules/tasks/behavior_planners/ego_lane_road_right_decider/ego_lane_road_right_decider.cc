@@ -1,5 +1,6 @@
 #include "ego_lane_road_right_decider.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iterator>
 #include <limits>
@@ -714,9 +715,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
         far_pt_sum_l += pt_l;
       }
     }
-    if (near_pt_count == 0 || far_pt_count == 0) {
-      return;
-    }
+    near_pt_count = std::max(near_pt_count, 1);
+    far_pt_count = std::max(far_pt_count, 1);
 
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
@@ -765,9 +765,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
         far_pt_sum_l += pt_l;
       }
     }
-    if (near_pt_count == 0 || far_pt_count == 0) {
-      return;
-    }
+    near_pt_count = std::max(near_pt_count, 1);
+    far_pt_count = std::max(far_pt_count, 1);
 
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
@@ -778,6 +777,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
       return;
     }
   }
+  return;
 }
 
 void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {

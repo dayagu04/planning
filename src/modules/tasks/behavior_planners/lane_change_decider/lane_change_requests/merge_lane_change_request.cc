@@ -89,10 +89,10 @@ void MergeRequest::Update(int lc_status) {
   } else {
     origin_lane_virtual_id_ = current_lane_virtual_id;
   }
-  is_merge_lane_change_situation_ = false;
+  // is_merge_lane_change_situation_ = false;
   both_lane_line_exist_virtual_or_not_ = false;
-  is_exist_left_merge_direction_ = false;
-  is_exist_right_merge_direction_ = false;
+  // is_exist_left_merge_direction_ = false;
+  // is_exist_right_merge_direction_ = false;
 
   MakesureLaneMergeDirection(origin_lane_virtual_id_);
   LOG_DEBUG("MergeRequest::Update: both_lane_line_exist_virtual_or_not_ %d",
@@ -536,6 +536,8 @@ void MergeRequest::Reset() {
   is_merge_lane_change_situation_ = false;
   merge_alc_trigger_counter_ = 0;
   merge_lane_change_direction_ = NO_CHANGE;
+  is_exist_left_merge_direction_ = false;
+  is_exist_right_merge_direction_ = false;
 }
 
 }  // namespace planning
