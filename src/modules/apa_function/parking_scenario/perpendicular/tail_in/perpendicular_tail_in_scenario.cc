@@ -1199,6 +1199,10 @@ void PerpendicularTailInScenario::GenObstacles() {
     obstacle_t_lane_ = slot_t_lane_;
   }
 
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
+      CollisionDetector::Paramters(
+          apa_param.GetParam().car_lat_inflation_normal));
+
   // add tlane obstacle
   //  B is always outside
   int slot_side = 1;
@@ -1513,8 +1517,6 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     return plan_result;
   }
 
-  // retired
-  // perpendicular_path_planner_.SetLineSegmentHeading();
   perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
       apa_param.GetParam().path_extend_distance);
 
@@ -1883,12 +1885,9 @@ const uint8_t PerpendicularTailInScenario::NewPathPlanOnce() {
       heading_vec.emplace_back(global_point.heading);
       lat_buffer_vec.emplace_back(
           planner_output.all_gear_path_point_vec[i].lat_buffer);
-      DEBUG_PRINT("pt lat_buffer = " << lat_buffer_vec.back());
     }
   }
-  DEBUG_PRINT("all_gear_path_point_vec.size() = "
-              << planner_output.all_gear_path_point_vec.size()
-              << "  x_vec size = " << x_vec.size());
+
   JSON_DEBUG_VECTOR("plan_traj_x", x_vec, 3)
   JSON_DEBUG_VECTOR("plan_traj_y", y_vec, 3)
   JSON_DEBUG_VECTOR("plan_traj_heading", heading_vec, 3)

@@ -1106,9 +1106,6 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
     return plan_result;
   }
 
-  // retired
-  // perpendicular_path_planner_.SetLineSegmentHeading();
-
   // perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
   //     apa_param.GetParam().path_extend_distance);
 

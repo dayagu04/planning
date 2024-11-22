@@ -332,8 +332,8 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
   }
 
   if (IsDoubleEqual(GetCrossFromTwoVec2d(AB, CD), 0.0)) {
-    std::cout
-        << "two lines are parallel or overlapping, which must be ruled out\n";
+    // std::cout
+    //     << "two lines are parallel or overlapping, which must be ruled out\n";
     return LogErr(__func__, 1);
   }
 
@@ -1829,7 +1829,7 @@ const bool CalCommonTangentCircleOfTwoLine(
       tangent_ptss.emplace_back(tang_pts);
     }
   } else {
-    std::cout << "two lines have no intersection, no common tangent circle\n";
+    // std::cout << "two lines have no intersection, no common tangent circle\n";
     return LogErr(__func__, 1);
   }
 
@@ -2464,8 +2464,8 @@ const bool LogErr(const std::string &func_name, uint8_t index,
     err_type = " fail ";
   }
 
-  std::cout << func_name + err_type + " err " + std::to_string(index)
-            << std::endl;
+  // std::cout << func_name + err_type + " err " + std::to_string(index)
+  //           << std::endl;
 
   return false;
 }

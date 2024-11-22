@@ -87,11 +87,9 @@ bool SlotManager::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
 
 void SlotManager::AddObstacles() {
   frame_.obs_pt_vec.clear();
+  AddFusionObjects();
+  AddGroundLineObstacles();
   if (apa_param.GetParam().use_uss_pt_clound) {
-    AddUssPerceptObstacles();
-  } else {
-    AddFusionObjects();
-    AddGroundLineObstacles();
     AddUssPerceptObstacles();
   }
   frame_.fus_obj_valid_flag = true;
@@ -611,8 +609,7 @@ void SlotManager::ModifySlot2Rectangle(common::SlotInfo &slot_info) {
   }
 }
 
-bool SlotManager::IsValidParkingSlot(
-    const common::SlotInfo &slot_info) const {
+bool SlotManager::IsValidParkingSlot(const common::SlotInfo &slot_info) const {
   if (slot_info.slot_type() ==
       Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
     return true;
@@ -724,7 +721,7 @@ bool SlotManager::CorrectSlotPointsOrder(common::SlotInfo &slot_info) const {
 }
 
 bool SlotManager::IfUpdateSlot(const common::SlotInfo &new_slot_info,
-                                  const size_t fusion_slot_source_type) {
+                               const size_t fusion_slot_source_type) {
   if ((fusion_slot_source_type ==
        iflyauto::SlotSourceType::SLOT_SOURCE_TYPE_ONLY_USS) ||
       (fusion_slot_source_type ==
@@ -933,8 +930,7 @@ bool SlotManager::LonDifUpdateCondition(
   return true || lon_dif_update_condition;
 }
 
-bool SlotManager::AngleUpdateCondition(
-    const common::SlotInfo &new_slot_info) {
+bool SlotManager::AngleUpdateCondition(const common::SlotInfo &new_slot_info) {
   const Eigen::Vector2d mirror_center_pos =
       (frame_.measurement_data_ptr->left_mirror_pos +
        frame_.measurement_data_ptr->right_mirror_pos) *
@@ -1748,7 +1744,7 @@ void SlotManager::UpdateReleaseSlotIdVec() {
 }
 
 const bool SlotManager::GetSelectedSlot(common::SlotInfo &slot_info,
-                                           const int selected_id) {
+                                        const int selected_id) {
   if (frame_.slot_info_window_map.count(selected_id) == 0) {
     return false;
   } else {
@@ -1852,8 +1848,8 @@ void SlotManager::CopySlotReleaseInfo() {
   return;
 }
 
-void SlotManager::SlotReleaseByScenarioTry(
-    const bool release, const SlotReleaseMethod method) {
+void SlotManager::SlotReleaseByScenarioTry(const bool release,
+                                           const SlotReleaseMethod method) {
   for (int i = 0; i < frame_.slot_management_info.slot_info_vec_size(); i++) {
     common::SlotInfo *slot_info =
         frame_.slot_management_info.mutable_slot_info_vec(i);

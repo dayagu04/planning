@@ -119,33 +119,6 @@ const bool GeometryPathGenerator::SetCurrentPathSegIndex() {
   return true;
 }
 
-void GeometryPathGenerator::SetLineSegmentHeading() {
-  const size_t N = output_.path_segment_vec.size();
-  if (N < 1) {
-    return;
-  }
-
-  // if first path is line segment, use car heading
-  // line segment do not change heading, use car heading or arc segment
-  // heading
-  double current_heading = 0.0;
-  for (size_t i = 0; i < N; ++i) {
-    auto& current_path_seg = output_.path_segment_vec[i];
-    auto last_path_seg = output_.path_segment_vec[i];
-    if (i > 0) {
-      last_path_seg = output_.path_segment_vec[i - 1];
-    }
-    if (i == 0) {
-      current_heading = input_.ego_pose.heading;
-    } else if (last_path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-      current_heading = last_path_seg.arc_seg.headingB;
-    }
-    if (current_path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-      current_path_seg.line_seg.heading = current_heading;
-    }
-  }
-}
-
 const bool GeometryPathGenerator::CheckCurrentGearLength() {
   if (output_.path_segment_vec.size() < 1) {
     return false;
@@ -177,10 +150,12 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
   output_.path_point_vec.clear();
   output_.path_point_vec.reserve(PLANNING_TRAJ_POINTS_NUM);
 
+  std::vector<pnc::geometry_lib::PathSegment> cur_gear_path_segment_vec;
   double length = 0.0;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
     length += output_.path_segment_vec[i].Getlength();
+    cur_gear_path_segment_vec.emplace_back(output_.path_segment_vec[i]);
   }
   size_t N = std::ceil(length / input_.sample_ds);
   double sample_ds = input_.sample_ds;
@@ -207,10 +182,8 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
   output_.all_gear_path_point_vec =
       pnc::geometry_lib::SamplePathSegVec(output_.path_segment_vec, sample_ds);
 
-  std::vector<pnc::geometry_lib::PathSegment> cur_gear_path_segment_vec;
   for (size_t i = output_.path_seg_index.first;
        i <= output_.path_seg_index.second; ++i) {
-    cur_gear_path_segment_vec.emplace_back(output_.path_segment_vec[i]);
   }
   output_.path_point_vec =
       pnc::geometry_lib::SamplePathSegVec(cur_gear_path_segment_vec, sample_ds);

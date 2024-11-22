@@ -13,7 +13,7 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization, ControlOutput
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241121/20241121-16-03-00/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-21-16-03-01_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241121/20241121-16-01-32/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-21-16-01-33_no_camera.bag'
 
 
 

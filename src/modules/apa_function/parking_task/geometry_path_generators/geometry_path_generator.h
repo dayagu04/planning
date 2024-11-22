@@ -141,7 +141,6 @@ class GeometryPathGenerator : public ParkingTask {
   virtual const bool Update(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
   virtual const bool SetCurrentPathSegIndex();
-  virtual void SetLineSegmentHeading();
   virtual const bool CheckCurrentGearLength();
   virtual const bool SampleCurrentPathSeg();
 
