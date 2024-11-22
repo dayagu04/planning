@@ -4456,6 +4456,7 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
       std::fabs(current_path_end.pos.x() - calc_params_.target_pose.pos.x()) <
           1e-2 &&
       std::fabs(current_path_end.heading * kRad2Deg) < 1.0;
+  DEBUG_PRINT("is_last_path = " << is_last_path);
 
   if (is_last_path &&
       current_path_len >= apa_param.GetParam().min_path_length) {
@@ -4490,8 +4491,8 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
         extend_distance = std::max(
             0.1, 0.1 + 2.0 * apa_param.GetParam().min_path_length - path_len);
       } else {
-        extend_distance =
-            std::max(0.1, apa_param.GetParam().min_path_length - path_len);
+        extend_distance = std::max(
+            extend_distance, apa_param.GetParam().min_path_length - path_len);
       }
     }
 
@@ -4552,10 +4553,11 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
 
       output_.path_seg_index.second += 1;
 
-      std::cout << "inset line segment successful\n";
+      DEBUG_PRINT("inset line segment successful, extending length = "
+                  << extend_distance);
 
     } else {
-      std::cout << "safe_remain_dist < 0.0, can not inset line segment\n";
+      DEBUG_PRINT("safe_remain_dist < 0.0, can not inset line segment");
     }
   }
 

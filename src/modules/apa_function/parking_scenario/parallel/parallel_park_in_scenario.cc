@@ -1237,7 +1237,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             .path_segment_vec[path_planner_output.path_seg_index.second]
             .GetEndPose();
 
-    // pnc::geometry_lib::PrintPose("current path end pose", end_pose);
+    pnc::geometry_lib::PrintPose("current path end pose", end_pose);
 
     const double extend_lenth = kExtendLengthOutsideSlot;
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
