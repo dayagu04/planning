@@ -26,6 +26,15 @@ s3_url = data["s3_url"]
 s3_access_key = data["s3_access_key"]
 s3_secret_key = data["s3_secret_key"]
 
+# 默认 CHERY_E0X
+car_type = "CHERY_E0X"
+if "CHERY_E0Y" in file_name:
+    car_type = "CHERY_E0X"
+elif "S811" in file_name:
+    car_type = "JAC_S811"
+elif "CHERY_TIGGO9" in file_name:
+    car_type = "CHERY_T26"
+
 # 定义S3 client
 object_prefix = f"{task_time}/{task_id}/{scene_lib_id}/{case_id}"
 client = boto3.client(
@@ -107,7 +116,7 @@ with open(result_path, 'r', encoding='utf-8') as file:
     result_data = json.load(file)
 scene_type = result_data["scene_type"]
 if (scene_type == "apa"):
-    json_path = f"/root/common_tools/checker/task/checker_task.json"
+    json_path = f"/root/common_tools/checker_apa/task/checker_task.json"
 else:
     json_path = f"/root/common_tools/checker_scc/task/scc_checker_task.json"
 # 修改JSON文件
@@ -127,7 +136,15 @@ print(f"Update json 耗时：{end_time - start_time}秒")
 
 start_time = time.time()
 if (scene_type == "apa"):
-    pass
+    os.chdir('/root/common_tools/checker_apa/task')
+    sys.path.append('/root/common_tools/checker_apa/task')
+    import checker_task_for_simu
+    try:
+        t1 = Process(target=checker_task_for_simu.main, args=("checker_task.json",))
+        t1.start()
+    except Exception as e:
+        print(f"Runing checker error: {e}")
+        sys.exit(1)
 else:
     os.chdir('/root/common_tools/checker_scc/task')
     sys.path.append('/root/common_tools/checker_scc/task')
@@ -159,7 +176,22 @@ def upload_and_remove_file(suffix, result_data, key):
 start_time = time.time()
 
 if (scene_type == "apa"):
-    pass
+    script_path = "/root/common_tools/jupyter/notebooks_apa/scripts/"
+    command_proto = f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py"
+    command = f"cd {script_path} && /root/miniconda3/bin/python plot_apa_html.py {PP_bag} {car_type}"
+    try:
+        result0 = subprocess.run(command_proto, shell=True, text=True, check=True)
+        result1 = subprocess.run(command, shell=True, text=True, check=True)
+        html_start_time = time.time()
+        upload_and_remove_file('.apa.html', result_data, "apa_html_url")
+        html_end_time = time.time()
+        print(f"Upload html file 耗时：{html_end_time - html_start_time}秒")
+    except Exception as e:
+        print(f"Creating html error: {e}")
+        sys.exit(1)
+    if (result0.returncode != 0 or result1.returncode != 0):
+        print(f"Creating html error")
+        sys.exit(1)
 else:
     script_path = "/root/common_tools/jupyter/notebooks_scc/scripts/"
     command_proto = f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py"
