@@ -353,11 +353,11 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
             end_time - current_time);
   JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
-  std::string status_msg;
-  if (!InputReady(current_time, status_msg)) {
-    LOG_ERROR("InputReady is failed !!!! \n");
-    // return false;
-  }
+  // std::string status_msg;
+  // if (!InputReady(current_time, status_msg)) {
+  //   LOG_ERROR("InputReady is failed !!!! \n");
+  //   // return false;
+  // }
 
   return true;
 }
