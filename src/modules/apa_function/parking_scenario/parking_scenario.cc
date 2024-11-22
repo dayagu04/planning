@@ -79,13 +79,12 @@ const bool ParkingScenario::CheckPaused() const {
 }
 
 const bool ParkingScenario::CheckPlanSkip() const {
-  if (frame_.plan_stm.planning_status == PARKING_FINISHED ||
-      frame_.plan_stm.planning_status == PARKING_FAILED) {
+  if ((frame_.plan_stm.planning_status == PARKING_FINISHED ||
+       frame_.plan_stm.planning_status == PARKING_FAILED) &&
+      !apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
     ILOG_INFO << "plan has been finished or failed, need reset";
 
-    if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
-      apa_world_ptr_->GetSlotManagerPtr()->Reset();
-    }
+    apa_world_ptr_->GetSlotManagerPtr()->Reset();
 
     return true;
   } else {
@@ -187,7 +186,8 @@ void ParkingScenario::GenPlanningPath() {
   const double vel_limit = pnc::mathlib::Interp1(
       ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
 
-  planning_output_.trajectory.target_reference.target_velocity = vel_limit;
+  planning_output_.trajectory.target_reference.target_velocity =
+      frame_.vel_target;
 
   // send uss remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
@@ -209,7 +209,7 @@ void ParkingScenario::GenPlanningPath() {
                            iflyauto::PARKING_SLOT_TYPE_SLANTING)
                           ? 1.0
                           : 0.0;
-  planning_output_.trajectory.trajectory_points[3].distance = flag;
+  planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
   planning_output_.trajectory.trajectory_points[4].distance =
       frame_.remain_dist_col_det;
@@ -282,9 +282,14 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  const double obs_pt_remain_dist =
+  double obs_pt_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
       safe_dist;
+
+  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    remain_dist -= 0.068;
+    obs_pt_remain_dist -= 0.068;
+  }
 
   ILOG_INFO << "origin_uss remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
@@ -293,6 +298,8 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
   ILOG_INFO << "origin_obs_pt remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
             << "  obs_pt remain dist = " << obs_pt_remain_dist;
+
+  frame_.vel_target = uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target;
 
   if (apa_param.GetParam().enable_corner_uss_process) {
     return remain_dist;

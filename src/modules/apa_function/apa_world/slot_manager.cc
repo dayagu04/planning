@@ -80,7 +80,7 @@ bool SlotManager::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
 
   CopySlotReleaseInfo();
 
-  Log();
+  // Log();
 
   return update_slot_in_searching_flag || update_slot_in_parking_flag;
 }
@@ -92,6 +92,7 @@ void SlotManager::AddObstacles() {
   } else {
     AddFusionObjects();
     AddGroundLineObstacles();
+    AddUssPerceptObstacles();
   }
   frame_.fus_obj_valid_flag = true;
 }
@@ -213,13 +214,21 @@ void SlotManager::AddUssPerceptObstacles() {
     ILOG_INFO << "uss obs is empty";
     return;
   }
-
+  const size_t N_begin = frame_.obs_pt_vec.size();
   frame_.obs_pt_vec.reserve(frame_.obs_pt_vec.size() + uss_pt_num);
   Eigen::Vector2d uss_pt;
   for (uint32 i = 0; i < uss_pt_num; ++i) {
     uss_pt << obj_info_desample.obj_pt_global[i].x,
         obj_info_desample.obj_pt_global[i].y;
     frame_.obs_pt_vec.emplace_back(uss_pt);
+  }
+
+  const size_t N_end = frame_.obs_pt_vec.size();
+  if (N_end == N_begin) {
+    ILOG_INFO << "ground line is empty";
+    return;
+  } else {
+    ILOG_INFO << "ground line size = " << N_end - N_begin;
   }
 }
 

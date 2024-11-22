@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "apa_data.h"
 #include "geometry_math.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_path_generator.h"
@@ -22,6 +23,14 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
 
   const ParkingScenarioStatus ScenarioTry() override;
 
+  enum class SlotObsType : uint8_t {
+    INSIDE_OBS,
+    OUTSIDE_OBS,
+    IN_OBS,
+    OTHER_OBS,
+    DISCARD_OBS,
+  };
+
  private:
   // virtual func
   virtual const uint8_t PathPlanOnce() override;
@@ -33,6 +42,15 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual void Log() const override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
+
+  void PlanCore(ApaSlot& apa_slot);
+  void PlanCoreSearching(ApaSlot& apa_slot);
+  void PlanCoreParking(ApaSlot& apa_slot);
+  void UpdateEgoSlotInfo(ApaSlot& apa_slot);
+  void GenTLane(ApaSlot& apa_slot);
+  void GenObstacles(ApaSlot& apa_slot);
+
+  const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
 
   virtual const bool PostProcessPathAccordingLimiter() override;
   virtual const bool PostProcessPathAccordingObs(

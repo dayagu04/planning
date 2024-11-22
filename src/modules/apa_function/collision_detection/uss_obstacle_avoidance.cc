@@ -400,9 +400,13 @@ const bool UssObstacleAvoidance::Preprocess() {
   // 添加障碍物 世界坐标即可  暂时只添加超声波点云障碍物,
   // 后续应该放在一个地方统一计算所有真实的障碍物，考虑高度
   col_det.ClearObstacles();
-  if (apa_data_ptr_->apa_obs_map.count(ParkObstacleType::USS) != 0) {
-    col_det.AddObstacles(apa_data_ptr_->apa_obs_map[ParkObstacleType::USS],
+  if (apa_data_ptr_->apa_obs_map.count(ObstacleType::USS) != 0) {
+    col_det.AddObstacles(apa_data_ptr_->apa_obs_map[ObstacleType::USS],
                          CollisionDetector::ObsType::USS_OBS);
+  }
+  if (apa_data_ptr_->apa_obs_map.count(ObstacleType::FUSION) != 0) {
+    col_det.AddObstacles(apa_data_ptr_->apa_obs_map[ObstacleType::FUSION],
+                         CollisionDetector::ObsType::FUSION_OBS);
   }
 
   car_motion_info_.steer_angle =
@@ -602,7 +606,7 @@ void UssObstacleAvoidance::Update(
 
     GenCarArc();
 
-    const uint8_t steer = (front_wheel_angle > 0.0)
+    const uint8_t steer = (car_motion_info_.steer_angle > 0.0)
                               ? pnc::geometry_lib::SEG_STEER_LEFT
                               : pnc::geometry_lib::SEG_STEER_RIGHT;
 
@@ -628,8 +632,40 @@ void UssObstacleAvoidance::Update(
   }
 
   CollisionDetector::CollisionResult result =
-      col_det.UpdateByObsMap(path_seg, param_.lat_inflation, 0.0);
-  remain_dist_info_.obs_pt_remain_dist = result.remain_dist;
+      col_det.UpdateByObsMap(apa_data_ptr_->car_predict_traj.car_predict_pt_vec,
+                             param_.lat_inflation, 0.0);
+
+  const double dist = col_det.CalClosestDistFromObsToCar(
+      pnc::geometry_lib::PathPoint(apa_data_ptr_->measurement_data.pos,
+                                   apa_data_ptr_->measurement_data.heading));
+  double vel_target = 1.168;
+  if (dist + param_.lat_inflation < 0.268 &&
+      !apa_param.GetParam().enable_corner_uss_process) {
+    // limit vel
+    vel_target =
+        std::max(0.368, apa_data_ptr_->measurement_data.vel - 0.28 * 0.1);
+  }
+  ILOG_INFO << "vel_target = " << vel_target;
+  remain_dist_info_.vel_target = vel_target;
+
+  std::vector<double> car_predict_x_vec;
+  std::vector<double> car_predict_y_vec;
+  std::vector<double> car_predict_heading_vec;
+  const auto &car_predict_pt_vec =
+      apa_data_ptr_->car_predict_traj.car_predict_pt_vec;
+  car_predict_x_vec.reserve(car_predict_pt_vec.size());
+  car_predict_y_vec.reserve(car_predict_pt_vec.size());
+  car_predict_heading_vec.reserve(car_predict_pt_vec.size());
+  for (const auto &pt : car_predict_pt_vec) {
+    car_predict_x_vec.emplace_back(pt.pos.x());
+    car_predict_y_vec.emplace_back(pt.pos.y());
+    car_predict_heading_vec.emplace_back(pt.heading);
+  }
+
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", param_.lat_inflation)
+  JSON_DEBUG_VECTOR("car_predict_x_vec", car_predict_x_vec, 3)
+  JSON_DEBUG_VECTOR("car_predict_y_vec", car_predict_y_vec, 3)
+  JSON_DEBUG_VECTOR("car_predict_heading_vec", car_predict_heading_vec, 3)
 }
 
 const bool UssObstacleAvoidance::CheckIsDirectlyBehindUss() {

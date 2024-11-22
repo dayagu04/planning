@@ -10,7 +10,7 @@ sys.path.append('../../../')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
-from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization
+from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization, ControlOutput
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240903/20240903-10-44-33/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-03-10-44-34_no_camera.bag'
@@ -113,15 +113,20 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   else:
     vs_msg = VehicleServiceOutputInfo()
 
+  if bag_loader.ctrl_msg['enable'] == True:
+    control_msg = bag_loader.ctrl_msg['data'][index_map['ctrl_msg_idx']]
+  else:
+    control_msg = ControlOutput()
+
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
   else:
     soc_state_msg = FuncStateMachine()
 
   if bag_loader.loc_msg['enable'] == True:
-    loc_msg = bag_loader.loc_msg['data'][index_map['loc_msg_idx']]
+    loc_msg = copy.deepcopy(bag_loader.loc_msg['data'][index_map['loc_msg_idx']])
   else:
-    loc_msg = LocalizationEstimate()
+    loc_msg = copy.deepcopy(IFLYLocalization())
 
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_perception_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
@@ -196,7 +201,6 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   soc_state_msg_buff = BytesIO()
   soc_state_msg.serialize(soc_state_msg_buff)
   soc_state_msg_bytes = soc_state_msg_buff.getvalue()
-  current_state = soc_state_msg.current_state
 
   fus_parking_msg_buff = BytesIO()
   fus_parking_msg.serialize(fus_parking_msg_buff)
@@ -209,7 +213,10 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   vs_msg_buff = BytesIO()
   vs_msg.serialize(vs_msg_buff)
   vs_msg_bytes = vs_msg_buff.getvalue()
-  steering_wheel_angle = vs_msg.steering_wheel_angle
+
+  control_msg_buff = BytesIO()
+  control_msg.serialize(control_msg_buff)
+  control_msg_bytes = control_msg_buff.getvalue()
 
   wave_msg_buff = BytesIO()
   wave_msg.serialize(wave_msg_buff)
@@ -222,38 +229,14 @@ for bag_time in np.arange(0.0, max_time, 0.1):
   ground_line_perception_msg_buff = BytesIO()
   gl_msg.serialize(ground_line_perception_msg_buff)
   ground_line_perception_msg_bytes = ground_line_perception_msg_buff.getvalue()
-  gl_coord = []
-  for i in range(gl_msg.ground_lines_size):
-    num = gl_msg.ground_lines[i].points_3d_size
-    polygon_points = gl_msg.ground_lines[i].points_3d
-    single_gl_coord = []
-    for j in range(num):
-      single_gl_coord.append([polygon_points[j].x, polygon_points[j].y])
-    gl_coord.append(single_gl_coord)
 
   fus_obj_msg_buff = BytesIO()
   fus_obj_msg.serialize(fus_obj_msg_buff)
   fus_obj_msg_bytes = fus_obj_msg_buff.getvalue()
-  fus_obj_coord = []
-  for i in range(fus_obj_msg.fusion_object_size):
-    num = fus_obj_msg.fusion_object[i].additional_info.polygon_points_size
-    polygon_points = fus_obj_msg.fusion_object[i].additional_info.polygon_points
-    single_fus_obj_coord = []
-    for j in range(num):
-      single_fus_obj_coord.append([polygon_points[j].x, polygon_points[j].y])
-    fus_obj_coord.append(single_fus_obj_coord)
 
   fus_occ_obj_msg_buff = BytesIO()
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
-  fus_occ_obj_coord = []
-  for i in range(fus_occ_obj_msg.fusion_object_size):
-    num = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points_size
-    polygon_points = fus_occ_obj_msg.fusion_object[i].additional_occupancy_info.polygon_points
-    single_fus_occ_obj_coord = []
-    for j in range(num):
-      single_fus_occ_obj_coord.append([polygon_points[j].x, polygon_points[j].y])
-    fus_occ_obj_coord.append(single_fus_occ_obj_coord)
 
   res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg_bytes,
                                     fus_parking_msg_bytes,
@@ -264,13 +247,13 @@ for bag_time in np.arange(0.0, max_time, 0.1):
                                     ground_line_perception_msg_bytes,
                                     fus_obj_msg_bytes,
                                     fus_occ_obj_msg_bytes,
+                                    control_msg_bytes,
                                     select_id, force_plan, is_path_optimization,
                                     is_cilqr_enable, is_reset, is_complete_path,
                                     sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
-                                    obs_x_vec, obs_y_vec,
-                                    gl_coord, fus_obj_coord, fus_occ_obj_coord, current_state, steering_wheel_angle)
+                                    obs_x_vec, obs_y_vec)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

@@ -93,7 +93,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
 
   // run apa world, always run when enter apa
   ILOG_INFO << "---- apa_world: Update() ---";
-  (void)apa_world_ptr_->Update(local_view_ptr);
+  (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // todo:move this to scenario manager
   if (apa_world_ptr_->GetApaDataPtr()->cur_state == ApaStateMachine::INVALID) {
@@ -162,27 +162,26 @@ void ApaPlanInterface ::UpdateDebugInfo() {
   planning_debug_info_ = *planning_debug_data;
 }
 
-void ApaPlanInterface ::RecordNodeReceiveTime(const LocalView *local_view_ptr){
-    JSON_DEBUG_VALUE("statemachine_timestamp",
-                     local_view_ptr->function_state_machine_info_recv_time)
-        JSON_DEBUG_VALUE("fusion_slot_timestamp",
-                         local_view_ptr->parking_fusion_info_recv_time)
-            JSON_DEBUG_VALUE("localiztion_timestamp",
-                             local_view_ptr->localization_recv_time)
-                JSON_DEBUG_VALUE("uss_wave_timestamp",
-                                 local_view_ptr->uss_wave_info_recv_time)
-                    JSON_DEBUG_VALUE("uss_per_timestamp",
-                                     local_view_ptr->uss_percept_info_recv_time)
-                        JSON_DEBUG_VALUE(
-                            "ground_line_timestamp",
-                            local_view_ptr->ground_line_perception_recv_time)
-                            JSON_DEBUG_VALUE(
-                                "fusion_objects_timestamp",
-                                local_view_ptr->fusion_objects_info_recv_time)
-                                JSON_DEBUG_VALUE(
-                                    "fusion_occupancy_objects_timestamp",
-                                    local_view_ptr
-                                        ->fusion_occupancy_objects_info_recv_time)}
+void ApaPlanInterface ::RecordNodeReceiveTime(const LocalView *local_view_ptr) {
+  JSON_DEBUG_VALUE("statemachine_timestamp",
+                   local_view_ptr->function_state_machine_info_recv_time);
+  JSON_DEBUG_VALUE("fusion_slot_timestamp",
+                   local_view_ptr->parking_fusion_info_recv_time);
+  JSON_DEBUG_VALUE("localiztion_timestamp",
+                   local_view_ptr->localization_recv_time);
+  JSON_DEBUG_VALUE("uss_wave_timestamp",
+                   local_view_ptr->uss_wave_info_recv_time);
+  JSON_DEBUG_VALUE("uss_per_timestamp",
+                   local_view_ptr->uss_percept_info_recv_time);
+  JSON_DEBUG_VALUE("ground_line_timestamp",
+                   local_view_ptr->ground_line_perception_recv_time);
+  JSON_DEBUG_VALUE("fusion_objects_timestamp",
+                   local_view_ptr->fusion_objects_info_recv_time);
+  JSON_DEBUG_VALUE("fusion_occupancy_objects_timestamp",
+                   local_view_ptr->fusion_occupancy_objects_info_recv_time);
+  JSON_DEBUG_VALUE("control_output_timestamp",
+                   local_view_ptr->control_output_recv_time);
+}
 
 std::shared_ptr<ParkingScenario> ApaPlanInterface ::GetPlannerByType(
     const ParkingScenarioType type) {

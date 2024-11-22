@@ -18,6 +18,11 @@ void PerpendicularHeadOutScenario::Reset() {
   current_path_point_global_vec_.clear();
   current_plan_path_vec_.clear();
 
+  // reset planning output
+  memset(&planning_output_, 0, sizeof(planning_output_));
+
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+
   pt_center_replan_.setZero();
   pt_center_heading_replan_ = 0.0;
   pt_center_replan_jump_dist_ = 0.0;

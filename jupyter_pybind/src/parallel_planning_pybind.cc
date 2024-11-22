@@ -25,7 +25,7 @@ namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathGenerator *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface*pApaPlanInterface= nullptr;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface= nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
 static planning::apa_planner::ParallelParkInScenario parallel_park_planner;
@@ -384,27 +384,25 @@ void SampleAllDebugPaths() {
   debug_paths_y.clear();
 
   for (const auto &path : pBase->GetDebugInfo().debug_all_path_vec) {
-    std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
-    if (pBase->SamplePathSeg(path_point_vec, path.path_segment_vec)) {
-      std::vector<double> path_point_vec_x;
-      std::vector<double> path_point_vec_y;
-      for (const auto &path_point : path_point_vec) {
-        path_point_vec_x.emplace_back(path_point.pos.x());
-        path_point_vec_y.emplace_back(path_point.pos.y());
-        debug_paths_x.emplace_back(path_point_vec_x);
-        debug_paths_y.emplace_back(path_point_vec_y);
-      }
+    std::vector<pnc::geometry_lib::PathPoint> path_point_vec =
+        pnc::geometry_lib::SamplePathSegVec(path.path_segment_vec, 0.02);
+    std::vector<double> path_point_vec_x;
+    std::vector<double> path_point_vec_y;
+    for (const auto &path_point : path_point_vec) {
+      path_point_vec_x.emplace_back(path_point.pos.x());
+      path_point_vec_y.emplace_back(path_point.pos.y());
     }
+    debug_paths_x.emplace_back(path_point_vec_x);
+    debug_paths_y.emplace_back(path_point_vec_y);
   }
 }
 
 std::vector<std::vector<double>> GetTraSearchOutPath() {
   std::vector<double> path_x_vec;
   std::vector<double> path_y_vec;
-  std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
-
-  pBase->SamplePathSeg(path_point_vec,
-                       pBase->GetDebugInfo().tra_search_out_res);
+  std::vector<pnc::geometry_lib::PathPoint> path_point_vec =
+      pnc::geometry_lib::SamplePathSegVec(
+          pBase->GetDebugInfo().tra_search_out_res, 0.02);
   for (const auto point : path_point_vec) {
     path_x_vec.emplace_back(point.pos.x());
     path_y_vec.emplace_back(point.pos.y());

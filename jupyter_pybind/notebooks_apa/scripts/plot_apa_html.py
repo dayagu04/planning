@@ -25,11 +25,11 @@ from lib.local_view_lib import *
 from lib.load_local_view_parking import LoadCyberbag
 from lib.load_local_view_parking import apa_draw_local_view, apa_draw_local_view_parking_ctrl
 
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240724/20240724-10-49-02/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-07-24-10-49-03_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241121/20241121-16-03-00/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-21-16-03-01_no_camera.bag'
 html_file = bag_path +".apa.html"
 plot_ctrl_flag = True
 fig1_time_step = 0.1
-fig_other_time_step = 0.1
+fig_other_time_step = 0.02
 slider_time_step = 0.1
 
 # bokeh创建的html在jupyter中显示

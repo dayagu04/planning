@@ -37,6 +37,11 @@ void NarrowSpaceScenario::Reset() {
   frame_.Reset();
   current_path_point_global_vec_.clear();
 
+  // reset planning output
+  memset(&planning_output_, 0, sizeof(planning_output_));
+
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+
   const ApaParameters& params = apa_param.GetParam();
   if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
     // init thread first

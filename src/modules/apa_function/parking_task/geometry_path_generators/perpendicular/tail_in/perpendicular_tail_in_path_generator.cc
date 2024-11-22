@@ -1162,9 +1162,10 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
             geometry_lib::CalArcFromPt(gear, steer, arc_length,
                                        calc_params_.turn_radius, end_pose,
                                        arc_seg);
+            geometry_lib::GeometryPath temp_path =
+                geometry_lib::GeometryPath(arc_seg);
             if (!IsGeometryPathSafe(
-                    geometry_lib::GeometryPath(arc_seg),
-                    apa_param.GetParam().car_lat_inflation_strict,
+                    temp_path, apa_param.GetParam().car_lat_inflation_strict,
                     apa_param.GetParam().col_obs_safe_dist_strict)) {
               cost += one_step_col_cost;
             }
@@ -1398,8 +1399,9 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
                                    calc_params_.turn_radius,
                                    inner_inner_tang_pose_vec[0], arc_seg);
         // check 1r is safe
-        if (IsGeometryPathSafe(geometry_lib::GeometryPath(arc_seg),
-                               calc_params_.strict_car_lat_inflation,
+        geometry_lib::GeometryPath temp_path =
+            geometry_lib::GeometryPath(arc_seg);
+        if (IsGeometryPathSafe(temp_path, calc_params_.strict_car_lat_inflation,
                                calc_params_.strict_col_lon_safe_dist)) {
           reverse_1arc_safe = true;
         } else {
@@ -1601,9 +1603,12 @@ const bool PerpendicularTailInPathGenerator::IsPathSafe(
 }
 
 const bool PerpendicularTailInPathGenerator::IsGeometryPathSafe(
-    const geometry_lib::GeometryPath& geometry_path, const double lat_inflation,
+    geometry_lib::GeometryPath& geometry_path, const double lat_inflation,
     const double lon_safe_dist) {
   const double time = IflyTime::Now_ms();
+  for (auto& path_seg : geometry_path.path_segment_vec) {
+    path_seg.lat_buffer = lat_inflation;
+  }
   const bool col_flag =
       collision_detector_ptr_
           ->UpdateByEDT(geometry_path, lat_inflation, lon_safe_dist)

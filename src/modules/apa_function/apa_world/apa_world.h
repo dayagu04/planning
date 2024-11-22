@@ -31,14 +31,13 @@ class ApaWorld {
 
   void Init();
   void Reset();
-  const bool Update(const LocalView* const local_view);
+  const bool Update(const LocalView* const local_view,
+                    const iflyauto::PlanningOutput& planning_output);
   const bool Update();
 
   std::shared_ptr<ApaData> GetApaDataPtr() { return apa_data_ptr_; }
 
-  std::shared_ptr<SlotManager> GetSlotManagerPtr() {
-    return slot_manager_ptr_;
-  }
+  std::shared_ptr<SlotManager> GetSlotManagerPtr() { return slot_manager_ptr_; }
 
   std::shared_ptr<UssObstacleAvoidance> GetUssObstacleAvoidancePtr() {
     return uss_obstacle_avoider_ptr_;
@@ -67,6 +66,8 @@ class ApaWorld {
   void UpdateFuisonObs();
   void UpdateGroundLineObs();
   void UpdateUssObs();
+
+  void UpdateCarPredictTraj();
 
   std::shared_ptr<ApaData> apa_data_ptr_;
 

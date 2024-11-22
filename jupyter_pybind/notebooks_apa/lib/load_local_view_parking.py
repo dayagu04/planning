@@ -64,7 +64,7 @@ load_uss_wave_from_uss_percept_msg = True
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
-read_fus_obj_msg = False
+read_fus_obj_msg = not load_fusion_object_from_occupancy
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
@@ -146,9 +146,11 @@ class LoadCyberbag:
 
       loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in loc_msg_dict.items():
-        self.loc_msg['t'].append(t)
-        self.loc_msg['abs_t'].append(t)
-        self.loc_msg['data'].append(msg)
+        if t > 1e-3:
+          self.loc_msg['t'].append(t)
+          self.loc_msg['abs_t'].append(t)
+          self.loc_msg['data'].append(msg)
+      print("local init t:", self.loc_msg['t'][0])
       t0 = self.loc_msg['t'][0]
       smallest_abs_t = max(smallest_abs_t, self.loc_msg['t'][0])
       self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
@@ -169,9 +171,10 @@ class LoadCyberbag:
         vs_msg_dict[msg.msg_header.stamp / 1e6] = msg
       vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vs_msg_dict.items():
-        self.vs_msg['t'].append(t)
-        self.vs_msg['abs_t'].append(t)
-        self.vs_msg['data'].append(msg)
+        if t > 1e-3:
+          self.vs_msg['t'].append(t)
+          self.vs_msg['abs_t'].append(t)
+          self.vs_msg['data'].append(msg)
       # print("self.vs_msg['t'][0]:", self.vs_msg['t'][0])
       smallest_abs_t = min(smallest_abs_t, self.vs_msg['t'][0])
       self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
@@ -193,10 +196,11 @@ class LoadCyberbag:
         plan_msg_dict[msg.msg_header.stamp / 1e6] = msg
       plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_msg_dict.items():
-        self.plan_msg['t'].append(t)
-        self.plan_msg['abs_t'].append(t)
-        self.plan_msg['data'].append(msg)
-      # print("self.plan_msg['t'][0]:", self.plan_msg['t'][0])
+        if t > 1e-3:
+          self.plan_msg['t'].append(t)
+          self.plan_msg['abs_t'].append(t)
+          self.plan_msg['data'].append(msg)
+      print("plan init t:", self.plan_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.plan_msg['t'][0])
       t0_plan = self.plan_msg['t'][0]
@@ -215,7 +219,7 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "slot_side",
-                         "terminal_error_x", "terminal_error_y", "terminal_error_heading",
+                         "terminal_error_x", "terminal_error_y", "terminal_error_heading", "car_real_time_col_lat_buffer",
                          "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason", "plan_fail_reason",
                          "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_uss", "stuck_time", "replan_consume_time", "total_plan_consume_time",
                          "car_static_timer_by_pos_strict", "car_static_timer_by_pos_normal", "car_static_timer_by_vel_strict", "car_static_timer_by_vel_normal", "static_flag", "ego_heading_slot",
@@ -230,11 +234,11 @@ class LoadCyberbag:
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading",
                          "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan",
-                         "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp"]
+                         "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
-                          "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y",
-                          "limiter_corner_X", "limiter_corner_Y", "obstacles_x_slot", "obstacles_y_slot", "col_det_path_x", "col_det_path_y", "col_det_path_phi",
+                          "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "plan_traj_x", "plan_traj_y", "plan_traj_heading", "plan_traj_lat_buffer",
+                          "limiter_corner_X", "limiter_corner_Y", "obstacles_x_slot", "obstacles_y_slot", "col_det_path_x", "col_det_path_y", "col_det_path_phi", "car_predict_x_vec", "car_predict_y_vec", "car_predict_heading_vec",
                           "tlane_front_que_x","tlane_front_que_y", "tlane_rear_que_x", "tlane_rear_que_y",
                           "para_tlane_obs_pt_before_uss"]
 
@@ -245,9 +249,10 @@ class LoadCyberbag:
         plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
       plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_debug_msg_dict.items():
-        self.plan_debug_msg['t'].append(t)
-        self.plan_debug_msg['abs_t'].append(t)
-        self.plan_debug_msg['data'].append(msg)
+        if t > 1e-3:
+          self.plan_debug_msg['t'].append(t)
+          self.plan_debug_msg['abs_t'].append(t)
+          self.plan_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -293,9 +298,10 @@ class LoadCyberbag:
         ctrl_msg_dict[msg.msg_header.stamp / 1e6] = msg
       ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_msg_dict.items():
-        self.ctrl_msg['t'].append(t)
-        self.ctrl_msg['abs_t'].append(t)
-        self.ctrl_msg['data'].append(msg)
+        if t > 1e-3:
+          self.ctrl_msg['t'].append(t)
+          self.ctrl_msg['abs_t'].append(t)
+          self.ctrl_msg['data'].append(msg)
       # print("self.ctrl_msg['t'][0]:", self.ctrl_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.ctrl_msg['t'][0])
@@ -330,9 +336,10 @@ class LoadCyberbag:
         ctrl_debug_msg_dict[ctrl_debug_output.timestamp / 1e6] = ctrl_debug_output
       ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in ctrl_debug_msg_dict.items():
-        self.ctrl_debug_msg['t'].append(t)
-        self.ctrl_debug_msg['abs_t'].append(t)
-        self.ctrl_debug_msg['data'].append(msg)
+        if t > 1e-3:
+          self.ctrl_debug_msg['t'].append(t)
+          self.ctrl_debug_msg['abs_t'].append(t)
+          self.ctrl_debug_msg['data'].append(msg)
         try:
           json_struct = json.loads(msg.extra_json, strict = False)
           json_data = {}
@@ -363,9 +370,10 @@ class LoadCyberbag:
         fus_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
       fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_parking_msg_dict.items():
-        self.fus_parking_msg['t'].append(t)
-        self.fus_parking_msg['abs_t'].append(t)
-        self.fus_parking_msg['data'].append(msg)
+        if t > 1e-3:
+          self.fus_parking_msg['t'].append(t)
+          self.fus_parking_msg['abs_t'].append(t)
+          self.fus_parking_msg['data'].append(msg)
       # print("self.fus_parking_msg['t'][0]:", self.fus_parking_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.fus_parking_msg['t'][0])
@@ -391,9 +399,10 @@ class LoadCyberbag:
 
       fusion_ground_line_msg_dict = {key: val for key, val in sorted(fusion_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fusion_ground_line_msg_dict.items():
-        self.fus_ground_line_msg['t'].append(t)
-        self.fus_ground_line_msg['abs_t'].append(t)
-        self.fus_ground_line_msg['data'].append(msg)
+        if t > 1e-3:
+          self.fus_ground_line_msg['t'].append(t)
+          self.fus_ground_line_msg['abs_t'].append(t)
+          self.fus_ground_line_msg['data'].append(msg)
       # print("self.fus_ground_line_msg['t'][0]:", self.fus_ground_line_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.fus_ground_line_msg['t'][0])
@@ -421,9 +430,10 @@ class LoadCyberbag:
 
         fus_objects_msg_dict = {key: val for key, val in sorted(fus_objects_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in fus_objects_msg_dict.items():
-          self.fus_objects_msg['t'].append(t)
-          self.fus_objects_msg['abs_t'].append(t)
-          self.fus_objects_msg['data'].append(msg)
+          if t > 1e-3:
+            self.fus_objects_msg['t'].append(t)
+            self.fus_objects_msg['abs_t'].append(t)
+            self.fus_objects_msg['data'].append(msg)
         # print("self.fus_objects_msg['t'][0]:", self.fus_objects_msg['t'][0])
 
         smallest_abs_t = min(smallest_abs_t, self.fus_objects_msg['t'][0])
@@ -440,7 +450,7 @@ class LoadCyberbag:
       print('no read /iflytek/fusion/objects !!!')
 
 
-    # load fusion objects msg
+    # load fusion occ objects msg
     try:
       fus_occupancy_objects_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
@@ -448,7 +458,7 @@ class LoadCyberbag:
 
       fus_occupancy_objects_msg_dict = {key: val for key, val in sorted(fus_occupancy_objects_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in fus_occupancy_objects_msg_dict.items():
-        if (t != 0.0):
+        if t > 1e-3:
           self.fus_occupancy_objects_msg['t'].append(t)
           self.fus_occupancy_objects_msg['abs_t'].append(t)
           self.fus_occupancy_objects_msg['data'].append(msg)
@@ -476,9 +486,10 @@ class LoadCyberbag:
         vis_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
       vis_parking_msg_dict = {key: val for key, val in sorted(vis_parking_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in vis_parking_msg_dict.items():
-        self.vis_parking_msg['t'].append(t)
-        self.vis_parking_msg['abs_t'].append(t)
-        self.vis_parking_msg['data'].append(msg)
+        if t > 1e-3:
+          self.vis_parking_msg['t'].append(t)
+          self.vis_parking_msg['abs_t'].append(t)
+          self.vis_parking_msg['data'].append(msg)
       # print("self.vis_parking_msg['t'][0]:", self.vis_parking_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.vis_parking_msg['t'][0])
@@ -508,9 +519,10 @@ class LoadCyberbag:
       enter_parking_time = 0.0
       first_enter_apa = False
       for t, msg in soc_state_msg_dict.items():
-        self.soc_state_msg['t'].append(t)
-        self.soc_state_msg['abs_t'].append(t)
-        self.soc_state_msg['data'].append(msg)
+        if t > 1e-3:
+          self.soc_state_msg['t'].append(t)
+          self.soc_state_msg['abs_t'].append(t)
+          self.soc_state_msg['data'].append(msg)
         # record the start time of fusi_parking_msg
         if first_enter_apa == False and msg.current_state >= 23:
           enter_parking_time = t - self.soc_state_msg['t'][0]
@@ -585,9 +597,10 @@ class LoadCyberbag:
         wave_msg_dict[msg.msg_header.stamp / 1e6] = msg
       wave_msg_dict = {key: val for key, val in sorted(wave_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_msg_dict.items():
-        self.wave_msg['t'].append(t)
-        self.wave_msg['abs_t'].append(t)
-        self.wave_msg['data'].append(msg)
+        if t > 1e-3:
+          self.wave_msg['t'].append(t)
+          self.wave_msg['abs_t'].append(t)
+          self.wave_msg['data'].append(msg)
       # print("self.wave_msg['t'][0]:", self.wave_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.wave_msg['t'][0])
@@ -609,9 +622,10 @@ class LoadCyberbag:
         adas_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
       adas_debug_msg_dict = {key: val for key, val in sorted(adas_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in adas_debug_msg_dict.items():
-        self.adas_debug_msg['t'].append(t)
-        self.adas_debug_msg['abs_t'].append(t)
-        self.adas_debug_msg['data'].append(msg)
+        if t > 1e-3:
+          self.adas_debug_msg['t'].append(t)
+          self.adas_debug_msg['abs_t'].append(t)
+          self.adas_debug_msg['data'].append(msg)
       # print("self.adas_debug_msg['t'][0]:", self.adas_debug_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.adas_debug_msg['t'][0])
@@ -634,9 +648,10 @@ class LoadCyberbag:
         wave_debug_msg_dict[msg.msg_header.stamp / 1e6] = msg
       wave_debug_msg_dict = {key: val for key, val in sorted(wave_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in wave_debug_msg_dict.items():
-        self.wave_debug_msg['t'].append(t)
-        self.wave_debug_msg['abs_t'].append(t)
-        self.wave_debug_msg['data'].append(msg)
+        if t > 1e-3:
+          self.wave_debug_msg['t'].append(t)
+          self.wave_debug_msg['abs_t'].append(t)
+          self.wave_debug_msg['data'].append(msg)
       # print("self.wave_debug_msg['t'][0]:", self.wave_debug_msg['t'][0])
 
       smallest_abs_t = min(smallest_abs_t, self.wave_debug_msg['t'][0])
@@ -660,9 +675,10 @@ class LoadCyberbag:
           uss_percept_msg_dict[msg.msg_header.stamp / 1e6] = msg
         uss_percept_msg_dict = {key: val for key, val in sorted(uss_percept_msg_dict.items(), key = lambda ele: ele[0])}
         for t, msg in uss_percept_msg_dict.items():
-          self.uss_percept_msg['t'].append(t)
-          self.uss_percept_msg['abs_t'].append(t)
-          self.uss_percept_msg['data'].append(msg)
+          if t > 0.0:
+            self.uss_percept_msg['t'].append(t)
+            self.uss_percept_msg['abs_t'].append(t)
+            self.uss_percept_msg['data'].append(msg)
         t0 = self.uss_percept_msg['t'][0]
         # print("self.uss_percept_msg['t'][0]:", self.uss_percept_msg['t'][0])
 
@@ -682,7 +698,7 @@ class LoadCyberbag:
       self.uss_percept_msg['enable'] = False
       print("no read /iflytek/uss/uss_perception_info !!!")
 
-
+    smallest_abs_t = self.loc_msg['abs_t'][0]
     time_array = time.localtime(smallest_abs_t)
     time_string = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
     print("time = ", time_string)
@@ -995,7 +1011,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     # })
     abs_t_string = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(abs_t))
     local_view_data['data_text'].data.update({
-      'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, selected_slot_id = {:d}, state = {:d}, time = {:s}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1),selected_slot_id, current_state, abs_t_string)],
+      'vel_ego_text': ['v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, selected_slot_id = {:d}, state = {:d}, time = {:s}, abs_t = {:} s'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), selected_slot_id, current_state, abs_t_string, round(abs_t, 1))],
     })
 
   ### step 3: loading planning traj information
@@ -1080,16 +1096,34 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       'x' : front_line_xn,
       'y' : front_line_yn,
     })
-    for i in range(len(plan_x)):
-      car_xn = []
-      car_yn = []
-      for j in range(len(car_xb)):
-        tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_x[i], plan_y[i], plan_heading[i])
-        car_xn.append(tmp_x)
-        car_yn.append(tmp_y)
-      if (i%10==0):
-        car_box_x_vec.append(car_xn)
-        car_box_y_vec.append(car_yn)
+
+    plan_traj_x_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_x"]
+    plan_traj_y_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_y"]
+    plan_traj_heading_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_heading"]
+    plan_traj_lat_buffert_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]["plan_traj_lat_buffer"]
+    if len(plan_traj_x_vec) < 21:
+      for i in range(len(plan_x)):
+        car_xn = []
+        car_yn = []
+        for j in range(len(car_xb)):
+          tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_x[i], plan_y[i], plan_heading[i])
+          car_xn.append(tmp_x)
+          car_yn.append(tmp_y)
+        if (i%5==0):
+          car_box_x_vec.append(car_xn)
+          car_box_y_vec.append(car_yn)
+    else:
+      for i in range(len(plan_traj_x_vec)):
+        car_xn = []
+        car_yn = []
+        car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_traj_lat_buffert_vec[i])
+        for j in range(len(car_xb_temp)):
+          tmp_x, tmp_y = local2global(car_xb_temp[j], car_yb_temp[j], plan_traj_x_vec[i], plan_traj_y_vec[i], plan_traj_heading_vec[i])
+          car_xn.append(tmp_x)
+          car_yn.append(tmp_y)
+        if (i % 5 == 0 or i == len(plan_traj_x_vec) - 1):
+          car_box_x_vec.append(car_xn)
+          car_box_y_vec.append(car_yn)
     local_view_data['data_car_box'].data.update({
       'x_vec': car_box_x_vec,
       'y_vec': car_box_y_vec,
@@ -1398,6 +1432,31 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_col_det_path'].data.update({
       'x': bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['col_det_path_x'],
       'y': bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['col_det_path_y'],
+    })
+
+    car_predict_x_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_predict_x_vec']
+    car_predict_y_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_predict_y_vec']
+    car_predict_heading_vec = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_predict_heading_vec']
+    local_view_data['data_car_prediction_traj'].data.update({
+      'x': car_predict_x_vec,
+      'y': car_predict_y_vec,
+    })
+
+    temp_car_xb, temp_car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_real_time_col_lat_buffer'])
+    car_box_x_vec = []
+    car_box_y_vec = []
+    for k in range(len(car_predict_x_vec)):
+      car_xn = []
+      car_yn = []
+      for i in range(len(temp_car_xb)):
+          tmp_x, tmp_y = local2global(temp_car_xb[i], temp_car_yb[i], car_predict_x_vec[k], car_predict_y_vec[k], car_predict_heading_vec[k])
+          car_xn.append(tmp_x)
+          car_yn.append(tmp_y)
+      car_box_x_vec.append(car_xn)
+      car_box_y_vec.append(car_yn)
+    local_view_data['data_car_prediction_traj_box'].data.update({
+      'x_vec': car_box_x_vec,
+      'y_vec': car_box_y_vec,
     })
 
     local_view_data['data_origin_pose'].data.update({
@@ -1782,6 +1841,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
       names.append("fusion_occupancy_objects_timestamp")
       datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['fusion_occupancy_objects_timestamp']))
+
+      names.append("control_output_timestamp")
+      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['control_output_timestamp']))
     # load func_state
     if bag_loader.soc_state_msg['enable'] == True:
       names.append("current_state")
@@ -1826,8 +1888,6 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_uss'])
       names.append("remain_s_ctrl")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['remain_s_ctrl'])
-      names.append("vel_ref_gain")
-      datas.append(ctrl_json_data[ctrl_debug_msg_idx]['vel_ref_gain'])
       names.append("acc_vel")
       datas.append(ctrl_json_data[ctrl_debug_msg_idx]['acc_vel'])
       names.append("slope_acc")
@@ -1900,8 +1960,8 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     if len(bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots) != 0:
       for parking_slot in bag_loader.uss_percept_msg['data'][uss_percept_msg_idx].uss_slots:
         for corner_index in [0,3,2,1]:
-          parking_slot_x.append(parking_slot.globle_corner_point[corner_index].x)
-          parking_slot_y.append(parking_slot.globle_corner_point[corner_index].y)
+          parking_slot_x.append(parking_slot.global_corner_point[corner_index].x)
+          parking_slot_y.append(parking_slot.global_corner_point[corner_index].y)
     local_view_data['data_spatial_parking_slot'].data.update({
       'corner_point_x': [parking_slot_x],
       'corner_point_y': [parking_slot_y],
@@ -2086,7 +2146,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
   if bag_loader.fus_ground_line_msg['enable'] == True:
     pos_x, pos_y = [], []
-    print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size)
+    #print("ground_lines_size = ", bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size)
     for i in range(bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines_size):
       ground_line = bag_loader.fus_ground_line_msg['data'][fus_ground_line_msg_idx].ground_lines[i]
       points_3d = ground_line.points_3d
@@ -2153,6 +2213,10 @@ def load_local_view_figure_parking():
 
   data_ground_line_obj = ColumnDataSource(data = {'yn':[], 'xn':[]})
 
+  data_car_prediction_traj = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_car_prediction_traj_box = ColumnDataSource(data = {'y_vec':[], 'x_vec':[]})
+
+
   ctrl_debug_data = ColumnDataSource({
     'name':[],
     'data':[]
@@ -2182,7 +2246,7 @@ def load_local_view_figure_parking():
   local_view_data = {'data_car':data_car, \
                      'data_current_pos': data_current_pos, \
                      'data_current_line':data_current_line, \
-                      'data_current_front_line':data_current_front_line, \
+                     'data_current_front_line':data_current_front_line, \
                      'data_car_target':data_car_target, \
                      'data_target_pos':data_target_pos, \
                      'data_car_target_line':data_car_target_line,\
@@ -2192,6 +2256,8 @@ def load_local_view_figure_parking():
                      'data_ego':data_ego, \
                      'data_obs':data_obs, \
                      'data_col_det_path': data_col_det_path, \
+                     'data_car_prediction_traj': data_car_prediction_traj, \
+                     'data_car_prediction_traj_box': data_car_prediction_traj_box, \
                      'data_text':data_text, \
                      'data_planning':data_planning,\
                      'data_control':data_control,\
@@ -2247,7 +2313,7 @@ def load_local_view_figure_parking():
   fig1.text(0.0, -2.0, text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'text')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 2.5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   # fig1.circle('y', 'x', source = data_col_det_path, size=4, color='red', legend_label = 'col_det_path')
-  fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path')
+  fig1.line('y', 'x', source = data_col_det_path, line_width = 6, line_color = 'grey', line_dash = 'solid', line_alpha = 0.5, legend_label = 'col_det_path', visible = False)
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 3.0, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'mpc', visible = False)
   # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_ref_mpc_vec, line_width = 3.0, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_mpc_vec')
   # fig1.line('dy_ref_vec', 'dx_ref_vec', source = data_ref_vec, line_width = 3.0, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'data_ref_vec')
@@ -2289,6 +2355,12 @@ def load_local_view_figure_parking():
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
 
+  # car prediction traj
+  fig1.circle('y', 'x', source = data_car_prediction_traj, size=4, color='orange', legend_label = 'car_prediction_traj', visible = False)
+  fig1.line('y', 'x', source = data_car_prediction_traj, line_width = 6, line_color = 'orange', line_dash = 'dashed', line_alpha = 0.5, legend_label = 'car_prediction_traj', visible = False)
+  fig1.patches('y_vec', 'x_vec', source = data_car_prediction_traj_box, fill_color = "#89FB89", fill_alpha = 0.0, line_color = "orange", line_width = 1, legend_label = 'car_prediction_traj', visible = False)
+
+
   # toolbar
   fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
 
@@ -2296,7 +2368,7 @@ def load_local_view_figure_parking():
   fig1.legend.click_policy = 'hide'
   return fig1, local_view_data
 
-def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
+def load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, dt=0.02):
 
   columns = [
     TableColumn(field="name", title="name",),
@@ -2314,6 +2386,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   'gear_plan': [],
 
   'vel_cmd_plan': [],
+  'vel_plan_target': [],
   'vel_cmd_pos': [],
   'vel_measure': [],
 
@@ -2343,6 +2416,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   gear_plan = []
 
   vel_cmd_plan = []
+  vel_plan_target = []
   vel_cmd_pos = []
   vel_measure = []
 
@@ -2363,43 +2437,45 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   lat_err = []
   phi_err = []
 
-  t = 0.0
+  bag_time = 0.0
+  while bag_time <= max_time + dt / 2:
+      ctrl_debug_msg_idx = 0
+      abs_t = bag_time + smallest_abs_t
+      while bag_loader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= abs_t and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['abs_t'])-1):
+          ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
+      ctrl_debug_json = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
+      t_debug.append(bag_time)
+      controller_status.append(ctrl_debug_json['controller_status'])
+      lon_enable.append(ctrl_debug_json['lon_enable'])
+      lat_enable.append(ctrl_debug_json['lat_enable'])
+      gear_plan.append(ctrl_debug_json['gear_plan'])
 
-  ctrl_json_data = bag_loader.ctrl_debug_msg['json']
+      vel_cmd_plan.append(ctrl_debug_json['vel_ref'])
+      vel_plan_target.append(ctrl_debug_json['vel_ref_gain'])
+      vel_cmd_pos.append(ctrl_debug_json['vel_cmd'])
+      vel_measure.append(ctrl_debug_json['vel_ego'])
 
-  for i in range(len(ctrl_json_data)):
-    t_debug.append(t)
+      path_length_plan.append(ctrl_debug_json['path_length_plan'])
+      remain_s_plan.append(ctrl_debug_json['remain_s_plan'])
+      remain_s_prebreak.append(ctrl_debug_json['remain_s_prebreak'])
+      remain_s_uss.append(ctrl_debug_json['remain_s_uss'])
+      remain_s_ctrl.append(ctrl_debug_json['remain_s_ctrl'])
+      acc_cmd.append(ctrl_debug_json['vel_out'])
+      vel_kp_term.append(ctrl_debug_json['vel_KP_term'])
+      vel_ki_term.append(ctrl_debug_json['vel_KI_term'])
+      tmp_throttle_brake = ctrl_debug_json['throttle_brake']
+      if tmp_throttle_brake > 0.0:
+        tmp_throttle_brake = tmp_throttle_brake / 1000
+      throttle_brake.append(tmp_throttle_brake)
+      acc_vel.append(ctrl_debug_json['acc_vel'])
+      steer_angle_cmd.append(ctrl_debug_json['steer_angle_cmd'] * 57.3)
+      steer_angle_measure.append(ctrl_debug_json['steer_angle'] * 57.3)
+      driver_hand_torque.append(ctrl_debug_json['driver_hand_torque'])
 
-    controller_status.append(ctrl_json_data[i]['controller_status'])
-    lon_enable.append(ctrl_json_data[i]['lon_enable'])
-    lat_enable.append(ctrl_json_data[i]['lat_enable'])
-    gear_plan.append(ctrl_json_data[i]['gear_plan'])
+      lat_err.append(ctrl_debug_json['lat_err'] * 100)
+      phi_err.append(ctrl_debug_json['phi_err'] * 57.3)
 
-    vel_cmd_plan.append(ctrl_json_data[i]['vel_ref'])
-    vel_cmd_pos.append(ctrl_json_data[i]['vel_cmd'])
-    vel_measure.append(ctrl_json_data[i]['vel_ego'])
-
-    path_length_plan.append(ctrl_json_data[i]['path_length_plan'])
-    remain_s_plan.append(ctrl_json_data[i]['remain_s_plan'])
-    remain_s_prebreak.append(ctrl_json_data[i]['remain_s_prebreak'])
-    remain_s_uss.append(ctrl_json_data[i]['remain_s_uss'])
-    remain_s_ctrl.append(ctrl_json_data[i]['remain_s_ctrl'])
-    acc_cmd.append(ctrl_json_data[i]['vel_out'])
-    vel_kp_term.append(ctrl_json_data[i]['vel_KP_term'])
-    vel_ki_term.append(ctrl_json_data[i]['vel_KI_term'])
-    tmp_throttle_brake = ctrl_json_data[i]['throttle_brake']
-    if tmp_throttle_brake > 0.0:
-      tmp_throttle_brake = tmp_throttle_brake / 1000
-    throttle_brake.append(tmp_throttle_brake)
-    acc_vel.append(ctrl_json_data[i]['acc_vel'])
-    steer_angle_cmd.append(ctrl_json_data[i]['steer_angle_cmd'] * 57.3)
-    steer_angle_measure.append(ctrl_json_data[i]['steer_angle'] * 57.3)
-    driver_hand_torque.append(ctrl_json_data[i]['driver_hand_torque'])
-
-    lat_err.append(ctrl_json_data[i]['lat_err'] * 100)
-    phi_err.append(ctrl_json_data[i]['phi_err'] * 57.3)
-
-    t = t + 0.02
+      bag_time += dt
 
   data_control_global.data.update({
     'time': t_debug,
@@ -2410,6 +2486,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
     'gear_plan': gear_plan,
 
     'vel_cmd_plan': vel_cmd_plan,
+    'vel_plan_target': vel_plan_target,
     'vel_cmd_pos': vel_cmd_pos,
     'vel_measure': vel_measure,
 
@@ -2445,6 +2522,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   fig2.line('time', 'gear_plan', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'gear_plan')
 
   f3 = fig3.line('time', 'vel_cmd_plan', source = data_control_global, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'vel_cmd_plan')
+  fig3.line('time', 'vel_plan_target', source = data_control_global, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'vel_plan_target')
   fig3.line('time', 'vel_cmd_pos', source = data_control_global, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'vel_cmd_pos')
   fig3.line('time', 'vel_measure', source = data_control_global, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'vel_measure')
 
@@ -2470,7 +2548,7 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data):
   hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time'), ('controller_status', '@controller_status'), ('lon_enable', '@lon_enable'), ('lat_enable', '@lat_enable'),
                                               ('gear_plan', '@gear_plan')], mode='vline')
 
-  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('vel_cmd_plan', '@vel_cmd_plan'), ('vel_cmd_pos', '@vel_cmd_pos'),
+  hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time'), ('vel_cmd_plan', '@vel_cmd_plan'), ('vel_plan_target', '@vel_plan_target'), ('vel_cmd_pos', '@vel_cmd_pos'),
                                               ('vel_measure', '@vel_measure')], mode='vline')
 
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time'), ('path_length_plan', '@path_length_plan'), ('remain_s_plan', '@remain_s_plan'),('remain_s_ctrl','@remain_s_ctrl'), ('remain_s_uss','@remain_s_uss'), ('remain_s_prebreak', '@remain_s_prebreak')], mode='vline')
@@ -2766,7 +2844,7 @@ tlane_params = {
 }
 
 col_det_path_params = {
-  'line_width' : 6.0, 'line_color' : 'grey', 'line_dash' : 'solid', 'line_alpha' : 0.5, 'legend_label' : 'col_det_path'
+  'line_width' : 6.0, 'line_color' : 'grey', 'line_dash' : 'solid', 'line_alpha' : 0.5, 'legend_label' : 'col_det_path', "visible" : False
 }
 
 table_params={
@@ -2800,6 +2878,31 @@ fus_objects_params={
   "color" : 'blue',
   "legend_label" : 'fusion_objects',
   "visible" : True
+}
+
+car_predict_traj_path_params1 = {
+  'line_width' : 6,
+  'line_color' : 'orange',
+  'line_dash' : 'dashed',
+  'line_alpha' : 0.5,
+  'legend_label' : 'car_predict_traj_path',
+  "visible" : False
+}
+
+car_predict_traj_path_params2={
+  "size" : 4,
+  "color" : 'orange',
+  "legend_label" : 'car_predict_traj_path',
+  "visible" : False
+}
+
+car_predict_traj_path_params3={
+  'fill_color' : "#89FB89",
+  'fill_alpha' : 0.0,
+  'line_color' : "orange",
+  'line_width' : 1,
+  'legend_label' : 'car_predict_traj_path',
+  'visible' : False
 }
 
 def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_type, plot_ctrl_flag=False):
@@ -3081,7 +3184,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           remain_s_ctrl = -1
 
         abs_t_string = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(localization_timestamp))
-        text = 'v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}, time = {:s}'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state, abs_t_string)
+        text = 'v = {:.2f} m/s, remain_s_ctrl = {:.1f} cm, steer = {:.1f} deg, state = {:d}, time = {:s}, abs_t = {:} s'.format(round(vel_ego, 2), round(remain_s_ctrl, 1), round(steer_deg, 1), current_state, abs_t_string, round(localization_timestamp, 1))
         vel_text.append(text)
         vel_x.append(-2)
         vel_y.append(0)
@@ -3110,6 +3213,10 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     all_managed_limiter_generate = CommonGenerator()
     tlane_generate = CommonGenerator()
     col_det_path_generate = CommonGenerator()
+    car_predict_traj_path1_generate = CommonGenerator()
+    car_predict_traj_path2_generate = CommonGenerator()
+    car_predict_traj_path3_generate = CommonGenerator()
+
     for slot_i, slot_timestamp in enumerate(fusion_slot_timestamps):
         flag, fusion_slot_msg = findt(dataLoader.fus_parking_msg, slot_timestamp)
         if not flag:
@@ -3323,6 +3430,23 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
               limiter_x_vec.append(limiter.x)
               limiter_y_vec.append(limiter.y)
 
+            car_predict_traj_x = plan_json['car_predict_x_vec']
+            car_predict_traj_y = plan_json['car_predict_y_vec']
+            car_predict_traj_heading = plan_json['car_predict_heading_vec']
+            car_real_time_col_lat_buffer =  plan_json['car_real_time_col_lat_buffer']
+            temp_car_xb, temp_car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_real_time_col_lat_buffer)
+            car_box_x_vec = []
+            car_box_y_vec = []
+            for k in range(len(car_predict_traj_x)):
+              car_xn = []
+              car_yn = []
+              for i in range(len(temp_car_xb)):
+                  tmp_x, tmp_y = local2global(temp_car_xb[i], temp_car_yb[i], car_predict_traj_x[k], car_predict_traj_y[k], car_predict_traj_heading[k])
+                  car_xn.append(tmp_x)
+                  car_yn.append(tmp_y)
+              car_box_x_vec.append(car_xn)
+              car_box_y_vec.append(car_yn)
+
             obstacle_x = plan_json['obstaclesX']
             obstacle_y = plan_json['obstaclesY']
             col_det_path_x = plan_json['col_det_path_x']
@@ -3363,6 +3487,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           all_managed_limiter_generate.xys.append((limiter_y_vec, limiter_x_vec))
           tlane_generate.xys.append((obstacle_y, obstacle_x))
           col_det_path_generate.xys.append((col_det_path_y, col_det_path_x))
+          car_predict_traj_path1_generate.xys.append((car_predict_traj_y, car_predict_traj_x))
+          car_predict_traj_path2_generate.xys.append((car_predict_traj_y, car_predict_traj_x))
+          car_predict_traj_path3_generate.xys.append((car_box_y_vec, car_box_x_vec))
 
   # load planning traj
     plan_generator = CommonGenerator()
@@ -3370,8 +3497,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
     target_pos_generator = CommonGenerator()
     target_pt_generator = CommonGenerator()
     car_box_generator = CommonGenerator()
-    for plan_timestamp in plan_output_timestamps:
+    for plan_i, plan_timestamp in enumerate(plan_output_timestamps):
       flag, plan_msg = findt(dataLoader.plan_msg, plan_timestamp)
+      flag, plan_json = findt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
       if not flag:
         print('find plan error')
         plan_traj_x, plan_traj_y, plan_heading = [], [], []
@@ -3413,16 +3541,33 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           target_pt_x = [last_x]
           target_pt_y = [last_y]
 
-          for i in range(len(plan_traj_x)):
-            car_xn = []
-            car_yn = []
-            for j in range(len(car_xb)):
-              tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_heading[i])
-              car_xn.append(tmp_x)
-              car_yn.append(tmp_y)
-            if (i%10==0):
-              car_box_x_vec.append(car_xn)
-              car_box_y_vec.append(car_yn)
+          plan_traj_x_vec = plan_json["plan_traj_x"]
+          plan_traj_y_vec = plan_json["plan_traj_y"]
+          plan_traj_heading_vec = plan_json["plan_traj_heading"]
+          plan_traj_lat_buffer_vec = plan_json["plan_traj_lat_buffer"]
+          if len(plan_traj_x_vec) < 21:
+            for i in range(len(plan_traj_x)):
+              car_xn = []
+              car_yn = []
+              for j in range(len(car_xb)):
+                tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_heading[i])
+                car_xn.append(tmp_x)
+                car_yn.append(tmp_y)
+              if (i % 5 == 0):
+                car_box_x_vec.append(car_xn)
+                car_box_y_vec.append(car_yn)
+          else:
+            for i in range(len(plan_traj_x_vec)):
+              car_xn = []
+              car_yn = []
+              car_xb_temp, car_yb_temp, wheel_base_temp = load_car_params_patch_parking(vehicle_type, plan_traj_lat_buffer_vec[i])
+              for j in range(len(car_xb_temp)):
+                tmp_x, tmp_y = local2global(car_xb_temp[j], car_yb_temp[j], plan_traj_x_vec[i], plan_traj_y_vec[i], plan_traj_heading_vec[i])
+                car_xn.append(tmp_x)
+                car_yn.append(tmp_y)
+              if (i % 5 == 0 or i == len(plan_traj_x_vec) - 1):
+                car_box_x_vec.append(car_xn)
+                car_box_y_vec.append(car_yn)
 
       plan_generator.xys.append((plan_traj_y, plan_traj_x))
       target_line_generator.xys.append((target_line_yn,target_line_xn))
@@ -3507,7 +3652,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       if not flag:
         print('find ground line error')
       else:
-        print("ground_lines_size = ",fus_ground_line_msg.ground_lines_size)
+        #print("ground_lines_size = ",fus_ground_line_msg.ground_lines_size)
         for i in range(fus_ground_line_msg.ground_lines_size):
           ground_line = fus_ground_line_msg.ground_lines[i]
           points_3d = ground_line.points_3d
@@ -3786,6 +3931,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       all_managed_limiter_generate.ts = np.array(ctrl_debug_ts)
       tlane_generate.ts = np.array(ctrl_debug_ts)
       col_det_path_generate.ts = np.array(ctrl_debug_ts)
+      car_predict_traj_path1_generate.ts = np.array(ctrl_debug_ts)
+      car_predict_traj_path2_generate.ts = np.array(ctrl_debug_ts)
+      car_predict_traj_path3_generate.ts = np.array(ctrl_debug_ts)
       target_slot_layer = MultiCurveLayer(fig_local_view ,target_slot_params_apa)
       target_slot_line_layer = CurveLayer(fig_local_view ,target_slot_line_params_apa)
       origin_pose_layer = DotLayer(fig_local_view, origin_pose_params_apa)
@@ -3798,6 +3946,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       all_managed_limiter_layer = CurveLayer(fig_local_view, all_managed_limiter_params_apa)
       tlane_layer = DotLayer(fig_local_view, tlane_params)
       col_det_path_layer = CurveLayer(fig_local_view, col_det_path_params)
+      car_predict_traj_path1_layer = CurveLayer(fig_local_view, car_predict_traj_path_params1)
+      car_predict_traj_path2_layer = DotLayer(fig_local_view, car_predict_traj_path_params2)
+      car_predict_traj_path3_layer = PatchLayer(fig_local_view, car_predict_traj_path_params3)
 
       layer_manager.AddLayer(target_slot_layer, 'target_slot_layer',target_slot_generate,'target_slot_generate',2)
       layer_manager.AddLayer(target_slot_line_layer, 'target_slot_line_layer',target_slot_line_generate,'target_slot_line_generate',2)
@@ -3811,6 +3962,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
       layer_manager.AddLayer(all_managed_limiter_layer, 'all_managed_limiter_layer',all_managed_limiter_generate,'all_managed_limiter_generate',2)
       layer_manager.AddLayer(tlane_layer, 'tlane_layer',tlane_generate,'tlane_generate',2)
       layer_manager.AddLayer(col_det_path_layer, 'col_det_path_layer',col_det_path_generate,'col_det_path_generate',2)
+      layer_manager.AddLayer(car_predict_traj_path1_layer, 'car_predict_traj_path1_layer',car_predict_traj_path1_generate,'car_predict_traj_path1_generate',2)
+      layer_manager.AddLayer(car_predict_traj_path2_layer, 'car_predict_traj_path2_layer',car_predict_traj_path2_generate,'car_predict_traj_path2_generate',2)
+      layer_manager.AddLayer(car_predict_traj_path3_layer, 'car_predict_traj_path3_layer',car_predict_traj_path3_generate,'car_predict_traj_path3_generate',2)
 
     # planning traj
     if dataLoader.plan_msg['enable'] == True:
@@ -4044,6 +4198,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("fusion_occupancy_objects_timestamp")
             datas.append(str(plan_json['fusion_occupancy_objects_timestamp']))
+
+            names.append("control_output_timestamp")
+            datas.append(str(plan_json['control_output_timestamp']))
         else:
           print('find plan or plan_debug error')
 
@@ -4099,8 +4256,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             datas.append(ctrl_debug_msg['remain_s_uss'])
             names.append("remain_s_ctrl")
             datas.append(ctrl_debug_msg['remain_s_ctrl'])
-            names.append("vel_ref_gain")
-            datas.append(ctrl_debug_msg['vel_ref_gain'])
             names.append("acc_vel")
             datas.append(ctrl_debug_msg['acc_vel'])
             names.append("slope_acc")
@@ -4167,7 +4322,7 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time, time_s
     #   t = t + time_step
 
     json_value_list = ["controller_status", "lat_enable", "lon_enable", "gear_plan",
-                        "vel_ref", "vel_cmd", "vel_ego",
+                        "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego",
                         "path_length_plan", "remain_s_plan", "remain_s_prebreak", "remain_s_uss", "remain_s_ctrl",
                         "vel_out", "vel_KP_term", "vel_KI_term", "throttle_brake", 'acc_vel',
                         "steer_angle_cmd", "steer_angle", "driver_hand_torque",
@@ -4196,7 +4351,7 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time, time_s
                  ScalarGeneratorFromJson(json_value_xys_dict, "gear_plan"), "gear_plan", last_line = True)
 
     # fig3: vel status
-    # "vel_ref", "vel_cmd", "vel_ego"
+    # "vel_ref", "vel_ref_gain", "vel_cmd", "vel_ego"
     fig3 = FigureLayerHover(bkp.figure(x_axis_label='time',
                                   y_axis_label='vel',
                                   x_range = fig2.fig.x_range,
@@ -4207,6 +4362,8 @@ def apa_draw_local_view_parking_ctrl(dataLoader, layer_manager, max_time, time_s
                                   ))
     fig3.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "vel_ref"), "vel_cmd_plan")
+    fig3.AddCurv(layer_manager,
+                 ScalarGeneratorFromJson(json_value_xys_dict, "vel_ref_gain"), "vel_plan_target")
     fig3.AddCurv(layer_manager,
                  ScalarGeneratorFromJson(json_value_xys_dict, "vel_cmd"), "vel_cmd_pos")
     fig3.AddCurv(layer_manager,

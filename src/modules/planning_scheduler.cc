@@ -122,8 +122,6 @@ bool PlanningScheduler::RunOnce(
 
   auto scene_type = planning::common::SceneType::HIGHWAY;
   const auto &state_machine = local_view_->function_state_machine_info;
-  ILOG_INFO << "state_machine.current_state = "
-            << static_cast<int>(state_machine.current_state);
 
   if (IsUndefinedScene(state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;
@@ -134,7 +132,6 @@ bool PlanningScheduler::RunOnce(
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
-  ILOG_INFO << "init scene_type = " << static_cast<int>(scene_type);
 
   session_.set_scene_type(scene_type);
 
@@ -142,7 +139,6 @@ bool PlanningScheduler::RunOnce(
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
 
-  ILOG_INFO << "scene_type " << scene_type;
   bool planning_success = false;
   if (scene_type == common::PARKING_APA) {
     // 泊车规划部分

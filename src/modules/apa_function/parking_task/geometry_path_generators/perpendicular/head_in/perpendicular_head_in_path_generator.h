@@ -115,7 +115,6 @@ class PerpendicularPathHeadingInPlanner : public PerpendicularPathGenerator {
   const bool Update(const std::shared_ptr<CollisionDetector>
                         &collision_detector_ptr) override;
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
-  void PrintOutputSegmentsInfo() const override;
   // simulation
   void PreprocessForSimu();
   const bool PreparePlanPybind();
