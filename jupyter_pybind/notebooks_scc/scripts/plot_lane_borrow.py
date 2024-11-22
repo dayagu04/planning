@@ -34,6 +34,15 @@ bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-02-38.bag_2024-11-1
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag'
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732091459.close-loop.plan'
 bag_path ='/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732159470.close-loop.plan'
+bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732244811.close-loop.plan'
+bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732246749.close-loop.plan'# 后方有车没有取消
+bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732253718.close-loop.plan'
+bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732255971.close-loop.plan'
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-21-17-15-16.bag_2024-11-22-15-04-13.1732259876.open-loop.plan'
+bag_path = "/root/clzhao/lane_borrow_data/data_2024-11-21-17-15-16.bag_2024-11-22-15-04-13.1732261929.close-loop.plan"
+bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-21-17-15-16.bag_2024-11-22-15-04-13.1732262051.open-loop.plan'
+bag_path ="/root/clzhao/lane_borrow_data/data_2024-11-21-17-15-16.bag_2024-11-22-15-04-13.1732266558.close-loop.plan"
+bag_path = '/root/clzhao/lane_borrow_data/2024-11-21-17-17-09.bag_2024-11-22-17-39-06.1732268494.close-loop.plan'
 # -
 
 html_file = bag_path +".vo_lat_behavior.html"

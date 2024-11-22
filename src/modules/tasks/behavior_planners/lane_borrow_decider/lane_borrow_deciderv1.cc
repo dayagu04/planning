@@ -271,8 +271,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {//借道触发判断条件
         OBSERVE_TIME_CHECK_FAILED;
     return false;
   }
-  if (lane_borrow_status_ == LaneBorrowStatus::kNoLaneBorrow)
-  {
+  if(lane_borrow_status_ == LaneBorrowStatus::kNoLaneBorrow){
     if (!IsSafeForLaneBorrow2()) {// 更新方向
       return false;
     }
@@ -590,7 +589,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
     return false;
   }
-  else if(safe_to_left_lane_borrow&&safe_to_right_lane_borrow)// 都安全
+  else if(safe_to_left_lane_borrow&&safe_to_right_lane_borrow)// 都安全更新方向
   {
     if(abs(target_left_l) < abs(target_right_l))//左侧
     {
@@ -634,8 +633,8 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
   double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
-  // overtake static area
-  if(ego_frenet_boundary_.s_start - obs_end_s_ < kSafeBackDistance )
+  //  going to overtake static area [the area is updating ]
+  if(obs_start_s_ - ego_frenet_boundary_.s_end >  kSafeBackDistance )
   {
     return false;
   }
