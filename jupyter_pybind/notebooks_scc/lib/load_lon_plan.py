@@ -779,6 +779,12 @@ def load_lon_global_figure(bag_loader):
 
   fig_fsm_state = bkp.figure(x_axis_label='time', y_axis_label='fsm state',x_range = x_range, width=600, height=300)
   f_fsm_state = fig_fsm_state.line('time', 'fsm_cur_state', source = fsm_state_command, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fsm_cur_state')
+  fig_fsm_state.text(x=x_value, y=24, text=['MANUAL:0'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=22, text=['ERROR:1'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=20, text=['MRC:2'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=18, text=['DRIVING_PASSIVE(行车抑制):3'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=16, text=['ACC_OVERRIDE:6'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
+  fig_fsm_state.text(x=x_value, y=14, text=['ACC_STANDBY:4'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black') 
   fig_fsm_state.text(x=x_value, y=12, text=['ACC_ACTIVE:5'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=8, text=['SCC_STANDBY:7'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
   fig_fsm_state.text(x=x_value, y=10, text=['SCC_ACTIVE:8'], text_align='left', text_baseline='middle', text_font_size='9pt', text_color='black')
