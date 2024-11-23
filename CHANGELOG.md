@@ -11,6 +11,7 @@ Bug
 2. 修复车头泊入适配新interface
 3. 修复A星编译问题
 4. 删除多余continue
+5. 暂时关闭InputReady校验，后续重构
 # planning2.7.1
 ###  修改说明
 Feature
