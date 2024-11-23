@@ -2516,10 +2516,6 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       }
     } 
   }
-  // bool is_need_continue_lc_on_off_ramp_region = 
-  //     is_exit_lane_on_last_ramp_dir &&
-  //     is_ego_on_split_region &&
-  //     is_on_ramp_;
   //注：该处是为了处理下匝道的场景，自车经过ramp的起点后，就会进入到ramp上；
   //增加is_on_ramp_判断，防止在主路上生成变道请求。
 

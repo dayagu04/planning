@@ -365,7 +365,7 @@ void EgoLaneTrackManger::Update(
   is_ego_on_expressway_ = is_ego_on_expressway;
   is_on_ramp_ = is_on_ramp;
   dis_to_ramp_ = dis_to_ramp;
-  is_leaving_ramp_ = is_leaving_ramp;
+  is_leaving_ramp_ = false;
   first_split_dir_dis_info_.first = first_split_dir_dis_info.first;
   first_split_dir_dis_info_.second = first_split_dir_dis_info.second;
   distance_to_first_road_merge_ = distance_to_first_road_merge;

@@ -221,6 +221,13 @@ class EnvironmentalModel {
     dynamic_world_ = dynamic_world;
   }
 
+  void set_route_info (const std::shared_ptr<RouteInfo> route_info) {
+    route_info_ = route_info;
+  }
+
+  const std::shared_ptr<RouteInfo> &get_route_info() const { 
+      return route_info_; }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -321,6 +328,7 @@ class EnvironmentalModel {
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_ = nullptr;
   std::vector<GroundLinePoint> ground_line_point_info_;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
+  std::shared_ptr<RouteInfo> route_info_ = nullptr;
   bool hdmap_valid_{false};
   bool sdmap_valid_{false};
   bool location_valid_{true};

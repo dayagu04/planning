@@ -18,6 +18,7 @@
 #include "sdmap/sdmap.h"
 #include "session.h"
 #include "virtual_lane.h"
+#include "route_info.h"
 
 namespace planning {
 
@@ -31,13 +32,6 @@ enum LaneChangeStatus {
   ON_LEFT_LANE = 1,
   ON_RIGHT_LANE = 2,
 };
-
-struct SplitSegInfo {
-  RampDirection split_direction;
-  int split_seg_forward_lane_nums;
-  int split_next_seg_forward_lane_nums;
-};
-
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
