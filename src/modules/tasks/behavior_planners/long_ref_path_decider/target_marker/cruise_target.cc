@@ -5,8 +5,8 @@
 #include <limits>
 #include <memory>
 
+#include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
-#include "behavior_planners/speed_planner_preprocessor/target_marker/target.h"
 #include "common/st_graph/st_graph_utils.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -169,7 +169,8 @@ bool CruiseTarget::MakeSpeedLimitKinematicTable(
     speed_limit_kinematics_bound_table_[type] = kinematic_bound;
     if (config_.enable_always_cruise) {
       speed_limit_kinematics_bound_table_.clear();
-      speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE] = kinematic_bound;
+      speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE] =
+          kinematic_bound;
     }
   }
   return true;

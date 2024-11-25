@@ -24,9 +24,9 @@
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
+#include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
-#include "tasks/behavior_planners/speed_planner_preprocessor/speed_planner_preprocessor.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
@@ -71,7 +71,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<AgentHeadwayDecider> agent_headway_decider_;
   std::unique_ptr<LongitudinalDecisionDecider> longitudinal_decision_decider_;
   std::unique_ptr<SpeedLimitDecider> speed_limit_decider_;
-  std::unique_ptr<SpeedPlannerPreProcessor> speed_planner_preprocessor_;
+  std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成
   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;

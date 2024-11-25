@@ -1,7 +1,7 @@
 #include "target_maker.h"
 
-#include "follow_target.h"
 #include "cruise_target.h"
+#include "follow_target.h"
 
 namespace planning {
 
@@ -10,7 +10,7 @@ TargetMaker::TargetMaker(const SpeedPlannerConfig& speed_planning_config,
     : session_(session), speed_planning_config_(speed_planning_config) {}
 
 common::Status TargetMaker::Run() {
-  LOG_DEBUG("=======SpeedPlannerPreProcessor: TargetMaker======= \n");
+  LOG_DEBUG("=======LongRefPathDecider: TargetMaker======= \n");
   dt_ = speed_planning_config_.dt;
   plan_time_ = speed_planning_config_.planning_time;
   plan_points_num_ = static_cast<int32_t>(plan_time_ / dt_) + 1;

@@ -12,7 +12,7 @@ WeightMaker::WeightMaker(const SpeedPlannerConfig &speed_planning_config,
 }
 
 common::Status WeightMaker::Run() {
-  LOG_DEBUG("=======SpeedPlannerPreProcessor: WeightMaker======= \n");
+  LOG_DEBUG("=======LongRefPathDecider: WeightMaker======= \n");
   // MakeSWeight(target_maker);
   // MakeVWeight(target_maker);
   // MakeAccWeight();

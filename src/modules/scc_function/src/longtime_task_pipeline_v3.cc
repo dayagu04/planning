@@ -51,8 +51,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LongitudinalDecisionDecider>(config_builder, session);
   speed_limit_decider_ =
       std::make_unique<SpeedLimitDecider>(config_builder, session);
-  speed_planner_preprocessor_ =
-      std::make_unique<SpeedPlannerPreProcessor>(config_builder, session);
+  long_ref_path_decider_ =
+      std::make_unique<LongRefPathDecider>(config_builder, session);
   scc_lon_behavior_planner_ =
       std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
@@ -215,9 +215,9 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  ok = speed_planner_preprocessor_->Execute();
+  ok = long_ref_path_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(speed_planner_preprocessor_->Name());
+    AddErrorInfo(long_ref_path_decider_->Name());
     return false;
   }
   // --↑↑↑↑↑↑--long behavior--↑↑↑↑↑↑--

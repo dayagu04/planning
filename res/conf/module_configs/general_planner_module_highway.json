@@ -2,7 +2,7 @@
   "trajectory_time_length": 5.0,
   "planning_dt": 0.2,
   "enable_raw_ego_prediction": false,
-  "planner_type": 2,
+  "planner_type": 1,
   "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
@@ -583,7 +583,7 @@
     },
     "normal_kappa_speed_limit_table": {
       "kappa_table": [
-        0.0005, 0.00074, 0.00142, 0.00167, 
+        0.0005, 0.00074, 0.00142, 0.00167,
         0.0018, 0.002, 0.0025, 0.0033,
         0.005, 0.01, 0.02, 0.0333,
         0.04, 0.069, 0.15, 0.2],
@@ -595,7 +595,7 @@
     },
     "lane_change_kappa_speed_limit_table": {
        "kappa_table": [
-        0.0005, 0.00074, 0.00142, 0.00167, 
+        0.0005, 0.00074, 0.00142, 0.00167,
         0.0018, 0.002, 0.0025, 0.0033,
         0.005, 0.01, 0.0167, 0.02,
         0.0333, 0.04, 0.069, 0.15,
@@ -609,6 +609,6 @@
     }
 
   }
-  
+
 }
 

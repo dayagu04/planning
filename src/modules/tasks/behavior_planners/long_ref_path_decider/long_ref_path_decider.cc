@@ -1,4 +1,4 @@
-#include "speed_planner_preprocessor.h"
+#include "long_ref_path_decider.h"
 
 #include <cstdint>
 
@@ -6,10 +6,10 @@
 #include "src/modules/context/planning_context.h"
 
 namespace planning {
-SpeedPlannerPreProcessor::SpeedPlannerPreProcessor(
+LongRefPathDecider::LongRefPathDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
-  name_ = "SpeedPlannerPreProcessor";
+  name_ = "LongRefPathDecider";
   speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
   target_maker_ =
       std::make_unique<TargetMaker>(speed_planning_config_, session);
@@ -22,8 +22,8 @@ SpeedPlannerPreProcessor::SpeedPlannerPreProcessor(
   plan_points_num_ = static_cast<int32_t>(plan_time_ / dt_) + 1;
 }
 
-bool SpeedPlannerPreProcessor::Execute() {
-  LOG_DEBUG("=======SpeedPlannerPreProcessor======= \n");
+bool LongRefPathDecider::Execute() {
+  LOG_DEBUG("=======LongRefPathDecider======= \n");
   const auto start_timestamp = IflyTime::Now_ms();
 
   if (!PreCheck()) {
@@ -40,13 +40,13 @@ bool SpeedPlannerPreProcessor::Execute() {
   UpdateLonRefPath();
 
   const auto end_timestamp = IflyTime::Now_ms();
-  LOG_DEBUG("SpeedPlannerPreProcessor time cost: [%f]ms \n",
+  LOG_DEBUG("LongRefPathDecider time cost: [%f]ms \n",
             end_timestamp - start_timestamp);
 
   return true;
 }
 
-void SpeedPlannerPreProcessor::UpdateLonRefPath() {
+void LongRefPathDecider::UpdateLonRefPath() {
   WeightedBounds s_hard_bounds;
   WeightedBounds s_soft_bounds;
   // LonLeadBounds s_lead_bounds;
@@ -81,8 +81,8 @@ void SpeedPlannerPreProcessor::UpdateLonRefPath() {
     // binwang33: 需要关注后续soft bound形式，采用target
     // marker后，sref更合理的话，只留hard bound也是没问题的
     WeightedBound s_hard_bound;
-    s_hard_bound.lower = 0.0; // hack
-    s_hard_bound.upper = 150.0; // hack
+    s_hard_bound.lower = 0.0;    // hack
+    s_hard_bound.upper = 150.0;  // hack
     // s_hard_bound.lower = bound_maker_->s_lower_bound(t);
     // s_hard_bound.upper = bound_maker_->s_upper_bound(t);
     s_hard_bound.weight = 10;

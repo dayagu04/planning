@@ -1,18 +1,18 @@
 #pragma once
 
-#include "tasks/behavior_planners/speed_planner_preprocessor/bound_maker/bound_maker.h"
-#include "tasks/behavior_planners/speed_planner_preprocessor/target_marker/target_maker.h"
-#include "tasks/behavior_planners/speed_planner_preprocessor/weight_maker/weight_maker.h"
+#include "tasks/behavior_planners/long_ref_path_decider/bound_maker/bound_maker.h"
+#include "tasks/behavior_planners/long_ref_path_decider/target_marker/target_maker.h"
+#include "tasks/behavior_planners/long_ref_path_decider/weight_maker/weight_maker.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/longitudinal_decider_output.h"
 
 namespace planning {
 
-class SpeedPlannerPreProcessor : public Task {
+class LongRefPathDecider : public Task {
  public:
-  SpeedPlannerPreProcessor(const EgoPlanningConfigBuilder *config_builder,
-                           framework::Session *session);
-  ~SpeedPlannerPreProcessor() = default;
+  LongRefPathDecider(const EgoPlanningConfigBuilder *config_builder,
+                     framework::Session *session);
+  ~LongRefPathDecider() = default;
 
   bool Execute() override;
 

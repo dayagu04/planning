@@ -11,7 +11,7 @@ BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
 }
 
 common::Status BoundMaker::Run() {
-  LOG_DEBUG("=======SpeedPlannerPreProcessor: BoundMaker======= \n");
+  LOG_DEBUG("=======LongRefPathDecider: BoundMaker======= \n");
   // 1. s bound
   // MakeAccBound();
 

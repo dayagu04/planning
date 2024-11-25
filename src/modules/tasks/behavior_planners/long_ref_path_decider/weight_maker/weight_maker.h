@@ -2,7 +2,7 @@
 #include "ego_planning_config.h"
 #include "session.h"
 #include "src/modules/common/status/status.h"
-#include "tasks/behavior_planners/speed_planner_preprocessor/target_marker/target_maker.h"
+#include "tasks/behavior_planners/long_ref_path_decider/target_marker/target_maker.h"
 
 namespace planning {
 
