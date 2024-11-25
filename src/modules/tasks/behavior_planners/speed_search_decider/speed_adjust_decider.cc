@@ -480,7 +480,13 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     slot_point_info_.emplace_back(std::move(slot));
   }
 
-  return slot_point_info_.size() > 0;
+  // check the veh obs flow vel
+  bool filter_by_objs_flow = false;
+  if (std::fabs(target_lane_objs_flow_vel_ - init_va_.first) > kSlotFilterVel) {
+    filter_by_objs_flow = true;
+  }
+
+  return slot_point_info_.size() > 0 && !filter_by_objs_flow;
 }
 
 void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
@@ -545,6 +551,7 @@ bool SpeedAdjustDecider::Execute() {
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
     speed_decider_pb_info->set_st_search_status(false);
+    speed_decider_pb_info->set_target_objs_flow_vel(target_lane_objs_flow_vel_);
     return true;
   }
 
@@ -625,7 +632,7 @@ bool SpeedAdjustDecider::Execute() {
   speed_decider_pb_info->set_ego_v(init_va_.first);
   speed_decider_pb_info->set_ego_a(init_va_.second);
   speed_decider_pb_info->set_ego_v_cruise(v_cruise_);
-  speed_decider_pb_info->set_target_objs_flow_vel(target_objs_flow_vel_);
+  speed_decider_pb_info->set_target_objs_flow_vel(target_lane_objs_flow_vel_);
   speed_decider_pb_info->set_slot_changed(slot_changed_);
   return true;
 }
@@ -743,28 +750,29 @@ void SpeedAdjustDecider::GenerateAdjustTraj(int best_slot_id,
 }
 
 void SpeedAdjustDecider::CalcTargetObjsFlowVel() {
-  if (lane_change_veh_info_.size() < 2) {
-    target_objs_flow_vel_ = v_cruise_;
+  if (lane_change_veh_info_.empty()) {
+    target_lane_objs_flow_vel_ = init_va_.first;
     return;
   }
 
-  double d_norm = 0.0;
-  for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    if (lane_change_veh_info_[i].id < 0) {
+  double dis_weight = 0.0;
+  double vel_sum = 0.0;
+
+  for (const auto& veh_info : lane_change_veh_info_) {
+    if (veh_info.id < 0) {
       continue;
     }
-    d_norm += std::fabs(lane_change_veh_info_[i].center_s);
+
+    double veh_dis_weight = 1.0 / (std::fabs(veh_info.center_s) + 1e-6);
+    dis_weight += veh_dis_weight;
+    vel_sum += veh_dis_weight * veh_info.v;
   }
 
-  double d_norm_inverse = 1 / d_norm;
-  double temp_sum = 0.0;
-  for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    if (lane_change_veh_info_[i].id < 0) {
-      continue;
-    }
-    temp_sum += std::fabs(lane_change_veh_info_[i].center_s) * d_norm_inverse *
-                lane_change_veh_info_[i].v;
+  if (dis_weight < 1e-6) {
+    target_lane_objs_flow_vel_ = init_va_.first;
+  } else {
+    target_lane_objs_flow_vel_ = vel_sum / dis_weight;
   }
-  target_objs_flow_vel_ = temp_sum;
+  return;
 }
 }  // namespace planning
