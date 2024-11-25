@@ -49,7 +49,7 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   }
   const double kTmpRampLength = 100.;
   const double kResponseOffset = 300.;
-  const double kDefaultMapDelay = 2.;
+  const double kDefaultMapDelay = 3.;
   double lc_end_dis;
   if (virtual_lane_mgr_->is_on_ramp() ||
       virtual_lane_mgr_->get_lc_nums_for_split() != 0) {
@@ -123,6 +123,9 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
   int lc_map_decision = current_lane != nullptr
                             ? virtual_lane_mgr_->lc_map_decision(current_lane)
                             : 0;
+  int ego_blinker = session_->mutable_environmental_model()
+                            ->get_ego_state_manager()
+                            ->ego_blinker();
   JSON_DEBUG_VALUE("lc_map_decision", lc_map_decision);
 
   bool allow_cancel =
@@ -134,81 +137,71 @@ void MapRequest::update(int lc_status, double lc_map_tfinish) {
 
   auto olane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
-  std::cout << "lc_map_decision: " << lc_map_decision
-            << " current_lane->is_solid_line(1): "
-            << current_lane->is_solid_line(1)
-            << " current_lane->is_solid_line(0): "
-            << current_lane->is_solid_line(0) << std::endl;
-
-  if (current_lane != nullptr && (lc_map_decision > 0 || lc_map_decision < 0)) {
+  bool is_valid_ego_blinker = ego_blinker == 1 || ego_blinker == 2;
+  bool is_cancel_mlc_for_ego_blinker = is_valid_ego_blinker && 
+                                       lc_status <= kLaneChangeExecution &&
+                                       request_type_ != NO_CHANGE;
+  bool is_can_generate_mlc = 
+      current_lane != nullptr &&
+      (lc_map_decision > 0 || lc_map_decision < 0) &&
+      !is_valid_ego_blinker &&
+      check_mlc_enable(lc_map_tfinish) &&
+      allow_generate;
+  if (is_can_generate_mlc) {
     LOG_DEBUG("!!!!!!!!!!! lc_map_decision is %d", lc_map_decision);
-    if (check_mlc_enable(lc_map_tfinish) == true && allow_generate == true) {
-      if (lc_map_decision < 0) {
-        std::cout << "request_type_:" << request_type_ << std::endl;
-        if (request_type_ != LEFT_CHANGE) {
-          target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
-          auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
-              target_lane_virtual_id_tmp);
-          if (tlane != nullptr) {
-            GenerateRequest(LEFT_CHANGE);
-            set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-            LOG_DEBUG(
-                "[MapRequest::update] Ask for map changing lane to left\n");
-          } else {
-            LOG_WARNING(
-                "[MapRequest::update] Ask for map changing lane to left "
-                "but left lane is null \n");
-          }
-        }
-
-        if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE,
-                                           origin_lane_virtual_id_)) {
-          Finish();
-          set_target_lane_virtual_id(current_lane_virtual_id);
+    if (lc_map_decision < 0) {
+      std::cout << "request_type_:" << request_type_ << std::endl;
+      if (request_type_ != LEFT_CHANGE) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+        auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+            target_lane_virtual_id_tmp);
+        if (tlane != nullptr) {
+          GenerateRequest(LEFT_CHANGE);
+          set_target_lane_virtual_id(target_lane_virtual_id_tmp);
           LOG_DEBUG(
-              "[MapRequest::update] : mlc finish request, dashed not enough");
-        }
-      } else {
-        if (request_type_ != RIGHT_CHANGE) {
-          target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
-          auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
-              target_lane_virtual_id_tmp);
-          if (tlane != nullptr) {
-            // auto tlane_c_poly = tlane->c_poly();
-            // if (virtual_lane_mgr_->dis_to_ramp() > 500. &&
-            //     tlane_c_poly[0] > -2.8) {
-            //   LOG_WARNING(
-            //       "[MapRequest::update] Ask for map changing lane to right "
-            //       "but split canceled \n");
-            // } else {
-            //   GenerateRequest(RIGHT_CHANGE);
-            //   set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-            //   LOG_DEBUG(
-            //       "[MapRequest::update] Ask for map changing lane to right\n");
-            // }
-            GenerateRequest(RIGHT_CHANGE);
-            set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-            LOG_DEBUG(
-                "[MapRequest::update] Ask for map changing lane to right\n");
-          } else {
-            LOG_WARNING(
-                "[MapRequest::update] Ask for map changing lane to right "
-                "but left lane is null \n");
-          }
-        }
-
-        if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE,
-                                           origin_lane_virtual_id_)) {
-          Finish();
-          set_target_lane_virtual_id(current_lane_virtual_id);
-          LOG_DEBUG("[MapRequest::update] : finish request, dashed not enough");
+              "[MapRequest::update] Ask for map changing lane to left\n");
+        } else {
+          LOG_WARNING(
+              "[MapRequest::update] Ask for map changing lane to left "
+              "but left lane is null \n");
         }
       }
+
+      if (!IsDashEnoughForRepeatSegments(LEFT_CHANGE,
+                                          origin_lane_virtual_id_)) {
+        Finish();
+        set_target_lane_virtual_id(current_lane_virtual_id);
+        LOG_DEBUG(
+            "[MapRequest::update] : mlc finish request, dashed not enough");
+      }
+    } else {
+      if (request_type_ != RIGHT_CHANGE) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+        auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+            target_lane_virtual_id_tmp);
+        if (tlane != nullptr) {
+          GenerateRequest(RIGHT_CHANGE);
+          set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+          LOG_DEBUG(
+              "[MapRequest::update] Ask for map changing lane to right\n");
+        } else {
+          LOG_WARNING(
+              "[MapRequest::update] Ask for map changing lane to right "
+              "but left lane is null \n");
+        }
+      }
+
+      if (!IsDashEnoughForRepeatSegments(RIGHT_CHANGE,
+                                          origin_lane_virtual_id_)) {
+        Finish();
+        set_target_lane_virtual_id(current_lane_virtual_id);
+        LOG_DEBUG("[MapRequest::update] : finish request, dashed not enough");
+      }
     }
-  } else if (allow_cancel) {
+  } else if (allow_cancel || is_cancel_mlc_for_ego_blinker) {
     if (request_type_ != NO_CHANGE) {
       Finish();
-      set_target_lane_virtual_id(current_lane_virtual_id);
+      set_target_lane_virtual_id(origin_lane_virtual_id_);
       LOG_DEBUG("[MapRequest::update] cancel map request as allow cancel");
     }
   }

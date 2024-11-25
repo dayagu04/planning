@@ -53,6 +53,8 @@ struct GeneralTaskMapInfo {
   int split_seg_forward_lane_nums;
   int split_next_seg_forward_lane_nums;
   int lc_nums_for_split;
+  bool is_ego_on_split_region;
+  int need_continue_lc_num_on_off_ramp_region;
 };
 
 // hack :clren
@@ -167,7 +169,7 @@ class VirtualLane {
   }
 
   // side: 0-left, 1-right
-  bool is_solid_line(int side) const;
+  bool is_dash_line(const planning::framework::Session& session, const RequestType request_type, const std::shared_ptr<planning_math::KDPath> target_boundary_path) const;
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }

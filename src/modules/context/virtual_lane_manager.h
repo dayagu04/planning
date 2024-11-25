@@ -374,6 +374,8 @@ class VirtualLaneManager {
   int split_seg_forward_lane_nums_ = 0;
   int split_next_seg_forward_lane_nums_ = 0;
   int lc_nums_for_split_ = 0;
+  RampDirection last_split_seg_dir_ = RAMP_NONE;
+  const SdMapSwtx::Segment* current_segment_ = nullptr;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;
@@ -386,7 +388,7 @@ class VirtualLaneManager {
   bool is_accumulate_dis_to_last_merge_point_more_than_threshold_ = false;
   double sum_dis_to_last_merge_point_ = NL_NMAX;
   double sum_dis_to_last_split_point_ = NL_NMAX;
-  double sum_dis_to_last_split_point_on_ramp_ = NL_NMAX;
+  double accumulate_dis_ego_to_last_split_point_ = NL_NMAX;
   bool is_in_sdmaproad_ = false;
   bool is_ego_on_expressway_ = false;
   bool is_ego_on_expressway_hmi_ = false;
