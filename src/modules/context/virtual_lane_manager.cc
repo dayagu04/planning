@@ -2500,11 +2500,14 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
         const auto& right_lane_left_boundary_path = MakeBoundaryPath(right_lane_left_boundary);
         const auto& right_lane_right_boundary = right_lane_->get_right_lane_boundary();
         const auto& right_lane_right_boundary_path = MakeBoundaryPath(right_lane_right_boundary);
-        bool right_lane_left_boundary_is_dash_line = right_lane_->is_dash_line(*session_, LEFT_CHANGE, right_lane_left_boundary_path);
-        bool right_lane_right_boundary_is_dash_line = right_lane_->is_dash_line(*session_, RIGHT_CHANGE, right_lane_right_boundary_path);
+        bool right_lane_left_boundary_is_dash_line = right_lane_->is_dash_line(*session_, 
+            LEFT_CHANGE, right_lane_left_boundary_path);
+        bool right_lane_right_boundary_is_dash_line = right_lane_->is_dash_line(*session_, 
+            RIGHT_CHANGE, right_lane_right_boundary_path);
         const auto& current_lane_right_boundary = current_lane_->get_right_lane_boundary();
         const auto& current_lane_right_boundary_path = MakeBoundaryPath(current_lane_right_boundary);
-        bool current_lane_right_boundary_is_dash_line = current_lane_->is_dash_line(*session_, RIGHT_CHANGE, current_lane_right_boundary_path);
+        bool current_lane_right_boundary_is_dash_line = current_lane_->is_dash_line(*session_, 
+            RIGHT_CHANGE, current_lane_right_boundary_path);
         if (current_lane_right_boundary_is_dash_line &&
             right_lane_left_boundary_is_dash_line &&
             right_lane_right_boundary_is_dash_line) {

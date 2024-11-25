@@ -275,7 +275,9 @@ double VirtualLane::max_width() const {
   }
 }
 
-bool VirtualLane::is_dash_line(const planning::framework::Session& session, const RequestType request_type, const std::shared_ptr<planning_math::KDPath> target_boundary_path) const {
+bool VirtualLane::is_dash_line(const planning::framework::Session& session, 
+    const RequestType request_type, 
+    const std::shared_ptr<planning_math::KDPath> target_boundary_path) const {
   const auto &ego_state =
       session.environmental_model().get_ego_state_manager();
   double lane_line_length = 0.0;
