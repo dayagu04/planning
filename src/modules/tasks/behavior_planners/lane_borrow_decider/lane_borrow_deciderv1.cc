@@ -102,7 +102,7 @@ void LaneBorrowDecider::Update() {  // 1
       break;
     }
     case LaneBorrowStatus::kLaneBorrowDriving: {
-      if (!CheckLaneBorrowCondition()) {  // 切换到借道
+      if (!CheckLaneBorrowCondition()) {
         lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
       } else if (CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane()) {
         lane_borrow_status_ =
@@ -299,10 +299,9 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {  // 借道触发判断条�
         OBSERVE_TIME_CHECK_FAILED;
     return false;
   }
-  if (lane_borrow_status_ == LaneBorrowStatus::kNoLaneBorrow) {
-    if (!IsSafeForLaneBorrow2()) {  // 更新方向
-      return false;
-    }
+
+  if (!IsSafeForLaneBorrow2()) {  // 判断安全性和更新方向应该分开才对
+    return false;
   }
 
   last_ego_center_position_.first = ego_pose_.first;
@@ -558,6 +557,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
 }
 // select direction according to delta L
 bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
+  //
   double right_bounds_l = 0.0;
   double left_bounds_l = 0.0;
   // 左侧通行bound
@@ -634,7 +634,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   } else if (safe_to_left_lane_borrow &&
              safe_to_right_lane_borrow)  // 都安全更新方向
   {
-    if (abs(target_left_l) < abs(target_right_l))  // 左侧
+    if (abs(target_left_l) + 0.5 < abs(target_right_l))  // 左侧
     {
       lane_borrow_decider_output_.target_l = target_left_l;
       lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
@@ -658,6 +658,13 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
     lane_borrow_decider_output_.borrow_direction = 2;
   }
 
+  double  target_borrow_left = target_left_l;
+  double  target_borrow_right = target_right_l;
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
+  lane_borrow_pb_info->set_target_left_l(target_borrow_left);
+  lane_borrow_pb_info->set_target_right_l(target_borrow_right);
   front_pass_sl_point_.first = obs_start_s_;
   front_pass_sl_point_.second = 0.0;
   Point2D frenet_front_pass_point{obs_start_s_, 0.0};
@@ -856,13 +863,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   }
   return true;
 }
-bool LaneBorrowDecider::IsSafeForPath2(const double& left_bounds_l,
-                                       const double& right_bounds_l) {
-  // 输入左右通行信号时候的初始bound[基于车道线和静态区域] 然后开始遍历障碍物
-  // 输出综合的是否安全(左or右)
-
-  // 输入 左右通行信号 遍历障碍物
-  // 输出 左右所需移动横向距离
+bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
+                                      const double& right_bounds_l) {
   if (left_bounds_l - right_bounds_l <
       vehicle_param_.width + kObsLatExpendBuffer) {  // 不会发生？
     lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
@@ -872,10 +874,10 @@ bool LaneBorrowDecider::IsSafeForPath2(const double& left_bounds_l,
   double left_l = left_bounds_l;
   double right_l = right_bounds_l;
 
-  if (left_borrow_) {
+  if (lane_borrow_decider_output_.borrow_direction == 1) {// 已经得到结论 左
     left_l =
         std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
-  } else {
+  } else {// 右
     right_l =
         std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
   }
@@ -946,7 +948,7 @@ bool LaneBorrowDecider::IsSafeForPath2(const double& left_bounds_l,
       }
     } else {  // 后方障碍物
       if (frenet_obstacle_sl.l_start < left_l ||
-          frenet_obstacle_sl.l_end > right_l) {
+          frenet_obstacle_sl.l_end > right_l) { // 只会判断原车道的后方障碍物
         continue;
       }
 

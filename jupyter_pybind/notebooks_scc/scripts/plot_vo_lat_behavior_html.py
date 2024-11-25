@@ -22,13 +22,14 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
+<<<<<<< HEAD
 # bag_path = "/root/clzhao/lane_borrow_data/data_11-16-11.bag.1731912596.close-loop.plan"
 # bag_path = "/root/clzhao/lane_borrow_data/2024-11-16-11-08-15.bag_2024-11-18-09-43-39.1732007043.open-loop.plan"
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732007748.open-loop.plan'# jump
 
 # bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732018741.close-loop.plan'# jump one
 
-# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732074900.close-loop.plan'#good 
+# bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37.1732074900.close-loop.plan'#good
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46.1732082318.close-loop.plan'# no traj
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-02-38.bag_2024-11-18-09-41-27.1732082881.close-loop.plan'
 bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag'
@@ -36,6 +37,9 @@ bag_path = '/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag'
 bag_path ='/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag.1732159470.close-loop.plan'
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20241121/20241121-09-40-59/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2024-11-21-09-40-59_no_camera.bag.1732186779.open-loop.plan'
 # -
+=======
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241107/20241107-11-30-38/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-11-07-11-30-38_no_camera.bag"
+>>>>>>> lane_borrow_decider_v1
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -

@@ -18,4 +18,6 @@ message LaneBorrowDeciderInfo {
   optional int32 lane_borrow_decider_status =2;
   repeated int32 static_blocked_obj_vec=3;
   optional int32 lane_borrow_failed_reason =4;
+  optional double target_left_l = 5;
+  optional double target_right_l = 6;
 };
