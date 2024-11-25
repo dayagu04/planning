@@ -132,6 +132,7 @@ void LaneBorrowDecider::Update() {  // 1
     static_blocked_obj_vec_.clear();  // 清空？
     lane_borrow_decider_output_.blocked_obs_id =
         static_blocked_obj_vec_;  // None
+    lane_borrow_decider_output_.borrow_direction = 0;
   }
 
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
@@ -574,6 +575,10 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   double neighbor_left_width = 1.75;  // defualt init
   double neighbor_right_width = 1.75;
 
+    auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
+
   const double current_left_lane_width = current_lane_ptr_->width() * 0.5;
   const double current_right_lane_width = current_lane_ptr_->width() * 0.5;
 
@@ -606,8 +611,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   // if (!safe_to_left_lane_borrow && right_borrow_) {//
 
   if (right_borrow_) {
-    left_borrow_ =
-        false;  // 现在这个标志只是假设作用 为了复用原来的 IsSafeForPath 逻辑
+    left_borrow_ = false;  // 现在这个标志只是假设作用 为了复用原来的 IsSafeForPath 逻辑
     right_left_bounds_l = obs_right_l_;
     if (right_lane_ptr_ == nullptr) {
       std::cout << "right lane is nullptr!" << std::endl;
@@ -629,42 +633,80 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   }
 
   // 如果都是不安全
+  // if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
+  //   return false;
+  // } else if (safe_to_left_lane_borrow &&
+  //            safe_to_right_lane_borrow)  // 都安全更新方向
+  // {
+  //   if (abs(target_left_l) + 0.5 < abs(target_right_l))  // 左侧
+  //   {
+  //     lane_borrow_decider_output_.target_l = target_left_l;
+  //     lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
+  //     lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
+  //     lane_borrow_decider_output_.borrow_direction = 1;
+  //   } else {
+  //     lane_borrow_decider_output_.target_l = target_right_l;
+  //     lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
+  //     lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
+  //     lane_borrow_decider_output_.borrow_direction = 2;
+  //   }
+  // } else if (safe_to_left_lane_borrow) {
+  //   lane_borrow_decider_output_.target_l = target_left_l;
+  //   lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
+  //   lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
+  //   lane_borrow_decider_output_.borrow_direction = 1;
+  // } else {
+  //   lane_borrow_decider_output_.target_l = target_right_l;
+  //   lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
+  //   lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
+  //   lane_borrow_decider_output_.borrow_direction = 2;
+  // }
+     // 如果都是不安全
+  double  target_borrow_left = target_left_l;
+  double  target_borrow_right = target_right_l;
+  lane_borrow_pb_info->set_target_left_l(target_borrow_left);
+  lane_borrow_pb_info->set_target_right_l(target_borrow_right);
+  lane_borrow_pb_info->set_safe_left_borrow(safe_to_left_lane_borrow);
+   lane_borrow_pb_info->set_safe_right_borrow(safe_to_right_lane_borrow);
+
   if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
     return false;
-  } else if (safe_to_left_lane_borrow &&
-             safe_to_right_lane_borrow)  // 都安全更新方向
-  {
-    if (abs(target_left_l) + 0.5 < abs(target_right_l))  // 左侧
-    {
-      lane_borrow_decider_output_.target_l = target_left_l;
-      lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
-      lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
-      lane_borrow_decider_output_.borrow_direction = 1;
-    } else {
-      lane_borrow_decider_output_.target_l = target_right_l;
-      lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
-      lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
-      lane_borrow_decider_output_.borrow_direction = 2;
     }
-  } else if (safe_to_left_lane_borrow) {
+  else if(safe_to_left_lane_borrow && !safe_to_right_lane_borrow){// 只有左侧
     lane_borrow_decider_output_.target_l = target_left_l;
     lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
     lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
     lane_borrow_decider_output_.borrow_direction = 1;
-  } else {
+    }
+  else if (!safe_to_left_lane_borrow && safe_to_right_lane_borrow) {//只有右侧
     lane_borrow_decider_output_.target_l = target_right_l;
     lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
     lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
     lane_borrow_decider_output_.borrow_direction = 2;
   }
+  else{//左右都可以
+       //无方向 首次 可以改变方向
+    if(lane_borrow_decider_output_.borrow_direction == 0)// 对比横向移动
+    {
+        if (abs(target_left_l) < abs(target_right_l))  // 左侧
+      {
+        lane_borrow_decider_output_.target_l = target_left_l;
+        lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
+        lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
+        lane_borrow_decider_output_.borrow_direction = 1;
+      } else {
+        lane_borrow_decider_output_.target_l = target_right_l;
+        lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
+        lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
+        lane_borrow_decider_output_.borrow_direction = 2;
+      }
+    }
+    // else:不改变
+  }
 
-  double  target_borrow_left = target_left_l;
-  double  target_borrow_right = target_right_l;
-  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
-                                 .GetDebugInfoPb()
-                                 ->mutable_lane_borrow_decider_info();
-  lane_borrow_pb_info->set_target_left_l(target_borrow_left);
-  lane_borrow_pb_info->set_target_right_l(target_borrow_right);
+
+
+
   front_pass_sl_point_.first = obs_start_s_;
   front_pass_sl_point_.second = 0.0;
   Point2D frenet_front_pass_point{obs_start_s_, 0.0};
@@ -837,18 +879,18 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         continue;
       }
 
-      // const double l_buffer = 0.5;
-      // if (left_borrow_) {
-      //   if (frenet_obstacle_sl.l_start >
-      //       ego_frenet_boundary_.l_end + l_buffer) {
-      //     continue;
-      //   }
-      // } else {
-      //   if (frenet_obstacle_sl.l_end <
-      //       ego_frenet_boundary_.l_start - l_buffer) {// fixed
-      //     continue;
-      //   }
-      // }
+      const double l_buffer = 0.5; // 是否保留待定吧 不保留有点保守了
+      if (left_borrow_) {
+        if (frenet_obstacle_sl.l_start >
+            ego_frenet_boundary_.l_end + l_buffer) {
+          continue;
+        }
+      } else {
+        if (frenet_obstacle_sl.l_end <
+            ego_frenet_boundary_.l_start - l_buffer) {// fixed
+          continue;
+        }
+      }
 
       double dist = std::max(kSafeBackDistance,
                              obstacle->obstacle()->velocity() * kObsSpeedRatio);

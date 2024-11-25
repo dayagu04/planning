@@ -20,4 +20,6 @@ message LaneBorrowDeciderInfo {
   optional int32 lane_borrow_failed_reason =4;
   optional double target_left_l = 5;
   optional double target_right_l = 6;
+  optional bool safe_left_borrow = 7;
+  optional bool safe_right_borrow = 8;
 };

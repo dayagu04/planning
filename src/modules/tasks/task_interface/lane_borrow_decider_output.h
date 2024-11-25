@@ -26,7 +26,7 @@ struct LaneBorrowDeciderOutput {
   double target_l;    //目标l？
   double left_bounds_l;
   double right_bounds_l;
-  int borrow_direction;  // 0--None, 1--left, 2--right
+  int borrow_direction = 0;  // 0--None, 1--left, 2--right
   bool is_in_lane_borrow_status = false;
   std::vector<int> blocked_obs_id;  // block objs and failed？
 };

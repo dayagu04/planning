@@ -45,6 +45,7 @@
                 // "/root/clzhao/lane_borrow_data/2024-11-21-17-18-04.bag_2024-11-22-17-26-15",//  same
                 // "/root/clzhao/lane_borrow_data/2024-11-21-17-17-09.bag_2024-11-22-17-39-06",
                 "/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20",// collision
+                // "/root/clzhao/lane_borrow_data/data_2024-11-25-17-12-03.bag_2024-11-25-19-39-33",//
                  "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留
