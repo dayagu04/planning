@@ -120,7 +120,11 @@ void EulerDistanceTransform::CVMatrixToArray(cv::Mat *edt_matrix) {
 }
 
 const float EulerDistanceTransform::GetDistanceByIndex(const OgmIndex &id) {
-  return data_.dist[id.x][id.y];
+  if (IsIndexValid(id)) {
+    return data_.dist[id.x][id.y];
+  }
+
+  return 10000.0;
 }
 
 void EulerDistanceTransform::CopyEDT(const EDTData &data) {
