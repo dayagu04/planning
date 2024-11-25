@@ -604,7 +604,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   }
   bool safe_to_right_lane_borrow = false;
   // if (!safe_to_left_lane_borrow && right_borrow_) {//
-  // 如果左侧不安全并且右侧车道可变道才会考虑右侧
+
   if (right_borrow_) {
     left_borrow_ =
         false;  // 现在这个标志只是假设作用 为了复用原来的 IsSafeForPath 逻辑
@@ -832,23 +832,23 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         }
       }
     } else {  // 后方障碍物
-      if (frenet_obstacle_sl.l_start < left_l ||
-          frenet_obstacle_sl.l_end > right_l) {
+      if (frenet_obstacle_sl.l_start > left_l ||
+          frenet_obstacle_sl.l_end < right_l) { // fixed bug
         continue;
       }
 
-      const double l_buffer = 0.5;
-      if (left_borrow_) {
-        if (frenet_obstacle_sl.l_start <
-            ego_frenet_boundary_.l_end - l_buffer) {
-          continue;
-        }
-      } else {
-        if (frenet_obstacle_sl.l_end <
-            ego_frenet_boundary_.l_start + l_buffer) {
-          continue;
-        }
-      }
+      // const double l_buffer = 0.5;
+      // if (left_borrow_) {
+      //   if (frenet_obstacle_sl.l_start >
+      //       ego_frenet_boundary_.l_end + l_buffer) {
+      //     continue;
+      //   }
+      // } else {
+      //   if (frenet_obstacle_sl.l_end <
+      //       ego_frenet_boundary_.l_start - l_buffer) {// fixed
+      //     continue;
+      //   }
+      // }
 
       double dist = std::max(kSafeBackDistance,
                              obstacle->obstacle()->velocity() * kObsSpeedRatio);
