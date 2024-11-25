@@ -44,6 +44,8 @@ constexpr double kAlignedDistanceBuffer = 2.5;
 constexpr double kDistanceToMapRequestPoint = 120.0;
 constexpr double kSlotFilterVel = 3.5;
 constexpr double kSlotFilterCenterS = 35.0;
+constexpr double kObjLinearInferTime = 5.0;
+constexpr double kEgoLowSpeed = 35.0 / 3.6;
 }  // namespace
 
 namespace planning {
@@ -359,6 +361,22 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     }
   };
 
+  auto filter_rear_slot_in_ego_low_speed = [](const SlotInfo& slot,
+                                              const double ego_init_s,
+                                              const double ego_init_v) -> bool {
+    if (slot.aligned_s() < ego_init_s && ego_init_v < kEgoLowSpeed) {
+      return true;
+    }
+    return false;
+  };
+
+  auto calc_slot_length = [](const SlotInfo& slot,
+                             const double pred_t) -> double {
+    return slot.front_veh_info().center_s + slot.front_veh_info().v * pred_t -
+           slot.front_veh_info().half_length - slot.back_veh_info().center_s -
+           slot.back_veh_info().v * pred_t - slot.back_veh_info().half_length;
+  };
+
   for (auto idx = 1; idx < lane_change_veh_info_.size(); ++idx) {
     SlotInfo slot(lane_change_veh_info_[idx], lane_change_veh_info_[idx - 1]);
     // safety gap distance
@@ -366,9 +384,8 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
         init_va_.first * init_va_.first * 0.02 + vehicle_param_.length * 0.5,
         6.0);
     // 1. filter too tight gap
-    if (slot.front_veh_info().center_s - slot.front_veh_info().half_length -
-            slot.back_veh_info().center_s - slot.back_veh_info().half_length <=
-        2 * safety_distance) {
+    if (calc_slot_length(slot, 0.0) <= 2 * safety_distance ||
+        calc_slot_length(slot, kObjLinearInferTime) <= 2 * safety_distance) {
       std::cout << "The slot front id: " << slot.front_veh_info().id
                 << ", slot rear id: " << slot.back_veh_info().id
                 << " has been filtered!" << std::endl;
@@ -454,6 +471,10 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
                     slot.back_veh_info().half_length) > kSlotFilterCenterS) {
         continue;
       }
+      if (filter_rear_slot_in_ego_low_speed(slot, init_sl_.first,
+                                            init_va_.first)) {
+        continue;
+      }
     }
 
     // lower aligned v limit
@@ -480,7 +501,13 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     slot_point_info_.emplace_back(std::move(slot));
   }
 
-  return slot_point_info_.size() > 0;
+  // check the veh obs flow vel
+  bool filter_by_objs_flow = false;
+  if (std::fabs(target_lane_objs_flow_vel_ - init_va_.first) > kSlotFilterVel) {
+    filter_by_objs_flow = true;
+  }
+
+  return slot_point_info_.size() > 0 && !filter_by_objs_flow;
 }
 
 void SpeedAdjustDecider::GenerateTimeOptimalAdjustProfile() {
@@ -545,6 +572,7 @@ bool SpeedAdjustDecider::Execute() {
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
     speed_decider_pb_info->set_st_search_status(false);
+    speed_decider_pb_info->set_target_objs_flow_vel(target_lane_objs_flow_vel_);
     return true;
   }
 
@@ -625,7 +653,7 @@ bool SpeedAdjustDecider::Execute() {
   speed_decider_pb_info->set_ego_v(init_va_.first);
   speed_decider_pb_info->set_ego_a(init_va_.second);
   speed_decider_pb_info->set_ego_v_cruise(v_cruise_);
-  speed_decider_pb_info->set_target_objs_flow_vel(target_objs_flow_vel_);
+  speed_decider_pb_info->set_target_objs_flow_vel(target_lane_objs_flow_vel_);
   speed_decider_pb_info->set_slot_changed(slot_changed_);
   return true;
 }
@@ -743,28 +771,29 @@ void SpeedAdjustDecider::GenerateAdjustTraj(int best_slot_id,
 }
 
 void SpeedAdjustDecider::CalcTargetObjsFlowVel() {
-  if (lane_change_veh_info_.size() < 2) {
-    target_objs_flow_vel_ = v_cruise_;
+  if (lane_change_veh_info_.empty()) {
+    target_lane_objs_flow_vel_ = init_va_.first;
     return;
   }
 
-  double d_norm = 0.0;
-  for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    if (lane_change_veh_info_[i].id < 0) {
+  double dis_weight = 0.0;
+  double vel_sum = 0.0;
+
+  for (const auto& veh_info : lane_change_veh_info_) {
+    if (veh_info.id < 0) {
       continue;
     }
-    d_norm += std::fabs(lane_change_veh_info_[i].center_s);
+
+    double veh_dis_weight = 1.0 / (std::fabs(veh_info.center_s) + 1e-6);
+    dis_weight += veh_dis_weight;
+    vel_sum += veh_dis_weight * veh_info.v;
   }
 
-  double d_norm_inverse = 1 / d_norm;
-  double temp_sum = 0.0;
-  for (size_t i = 0; i < lane_change_veh_info_.size(); i++) {
-    if (lane_change_veh_info_[i].id < 0) {
-      continue;
-    }
-    temp_sum += std::fabs(lane_change_veh_info_[i].center_s) * d_norm_inverse *
-                lane_change_veh_info_[i].v;
+  if (dis_weight < 1e-6) {
+    target_lane_objs_flow_vel_ = init_va_.first;
+  } else {
+    target_lane_objs_flow_vel_ = vel_sum / dis_weight;
   }
-  target_objs_flow_vel_ = temp_sum;
+  return;
 }
 }  // namespace planning
