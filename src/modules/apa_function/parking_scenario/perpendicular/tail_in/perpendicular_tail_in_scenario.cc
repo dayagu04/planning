@@ -924,12 +924,14 @@ void PerpendicularTailInScenario::GenTlane() {
   if (left_pq_for_x.empty()) {
     ILOG_INFO << "left space is empty";
     left_empty = true;
+    frame_.is_left_empty = true;
     left_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     left_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_left_y));
   }
   if (right_pq_for_x.empty()) {
     ILOG_INFO << "right space is empty";
     right_empty = true;
+    frame_.is_right_empty = true;
     right_pq_for_x.emplace(Eigen::Vector2d(virtual_x, 0.0));
     right_pq_for_y.emplace(Eigen::Vector2d(0.0, virtual_right_y));
   }
@@ -1945,13 +1947,17 @@ const bool PerpendicularTailInScenario::CheckColDetStucked() {
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
+  double heading_err = apa_param.GetParam().max_heading_err_3;
+  if (frame_.is_left_empty && frame_.is_right_empty) {
+    heading_err = apa_param.GetParam().pose_heading_err;
+  }
   const bool dynamic_update_flag =
       frame_.ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().pose_slot_occupied_ratio &&
       frame_.ego_slot_info.slot_occupied_ratio <
           apa_param.GetParam().pose_slot_occupied_ratio_3 &&
       std::fabs(frame_.ego_slot_info.terminal_err.heading) <
-          apa_param.GetParam().max_heading_err_3 * kDeg2Rad &&
+          heading_err * kDeg2Rad &&
       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
       !apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
 
