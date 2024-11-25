@@ -131,13 +131,19 @@ void OccupancyGridMap::AddSlotCoordinatePointCloud(
 void OccupancyGridMap::TransformToMatrix(cv::Mat *mat) const {
   int row_num = mat->rows;
   int column_num = mat->cols;
+  OgmIndex index;
 
   for (int32_t i = 0; i < row_num; i++) {
     uchar *data = mat->ptr<uchar>(i);
 
     for (int32_t j = 0; j < column_num; j++) {
-      if (ogm[i][j]) {
-        data[j] = 0;
+
+      index.x = i;
+      index.y = j;
+      if (IsIndexValid(index)) {
+        if (ogm[i][j]) {
+          data[j] = 0;
+        }
       }
     }
   }
