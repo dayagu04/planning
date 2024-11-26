@@ -280,6 +280,7 @@
 
   "comment_16": "slot managent params",
   "release_slot_by_prepare": true,
+  "lock_parallel_slot": false,
   "slot_update_in_or_out_occupied_ratio": 0.088,
   "slot_update_out_heading_max": 66.8,
   "slot_update_out_heading_min": 0.68,

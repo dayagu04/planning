@@ -341,6 +341,7 @@ struct ApaParameters {
   double min_opt_path_length = 0.7;
   // slot managent params
   bool release_slot_by_prepare = false;
+  bool lock_parallel_slot = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
   // slot update

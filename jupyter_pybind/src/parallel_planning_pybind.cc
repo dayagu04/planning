@@ -281,7 +281,7 @@ std::vector<std::vector<double>> GenTraTBoundary(double slot_length) {
     }
 
     bool is_front_tb = mathlib::IsInBound(pt.x(), slot_length - 0.3, 20.0) &&
-                       mathlib::IsInBound(pt.y(), 0.0, 2.2);
+                       mathlib::IsInBound(pt.y(), 0.0, 3.2);
     if (is_front_tb) {
       front_min_x = std::min(front_min_x, pt.x());
       front_max_y = std::max(front_max_y, pt.y());

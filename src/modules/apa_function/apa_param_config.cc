@@ -752,6 +752,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
                   "release_slot_by_prepare");
 
+  JSON_READ_VALUE(apa_param.SetPram().lock_parallel_slot, bool,
+                  "lock_parallel_slot");
+
   JSON_READ_VALUE(apa_param.SetPram().max_slot_window_size, int,
                   "max_slot_window_size");
 
