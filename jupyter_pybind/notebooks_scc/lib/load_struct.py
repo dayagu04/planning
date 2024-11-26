@@ -853,8 +853,8 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
       lane = lane_line[i]
       lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
 
-      local_points = lane.lane_points_set
-      point_num = lane.lane_points_set_size
+      lane_points_attr_set = lane.lane_points_attr_set
+      point_num = lane.lane_points_attr_set_size
       if g_is_display_enu:
         if loc_msg != None: # 长时轨迹
           coord_tf = coord_transformer()
@@ -862,12 +862,12 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
           cur_pos_yn = loc_msg.position.position_boot.y
           cur_yaw = loc_msg.orientation.euler_boot.yaw
           coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        line_x = [local_points[j].x for j in range(point_num)]
-        line_y = [local_points[j].y for j in range(point_num)]
+        line_x = [lane_points_attr_set[j].lane_point_coordinate.x for j in range(point_num)]
+        line_y = [lane_points_attr_set[j].lane_point_coordinate.y for j in range(point_num)]
         line_x, line_y = coord_tf.local_to_global(line_x, line_y)
       else:
-        line_x = [local_points[j].x for j in range(point_num)]
-        line_y = [local_points[j].y for j in range(point_num)]
+        line_x = [lane_points_attr_set[j].lane_point_coordinate.x for j in range(point_num)]
+        line_y = [lane_points_attr_set[j].lane_point_coordinate.y for j in range(point_num)]
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
