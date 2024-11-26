@@ -948,15 +948,12 @@ bool VisionLongitudinalBehaviorPlanner::calc_speed_for_ramp(double v_ego) {
   // config
   double dece_to_ramp = config_.dece_to_ramp;  // -1.0
   v_limit_ramp_ = config_.v_limit_ramp;        // 60km/h
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+  double dis_to_ramp = route_info_output.dis_to_ramp;
+  is_on_ramp_ = route_info_output.is_on_ramp;
 
-  double dis_to_ramp =
-      session_->environmental_model().get_virtual_lane_manager()->dis_to_ramp();
-  is_on_ramp_ =
-      session_->environmental_model().get_virtual_lane_manager()->is_on_ramp();
-
-  double dis_to_merge = session_->environmental_model()
-                            .get_virtual_lane_manager()
-                            ->distance_to_first_road_merge();
+  double dis_to_merge = route_info_output.distance_to_first_road_merge;
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp_) {
     if (dis_to_merge > 50) {

@@ -364,6 +364,8 @@ void GeneralLateralDecider::UnitTest() {
 
 bool GeneralLateralDecider::CalCruiseVelByCurvature(
     const double ego_v, const std::vector<double> &d_poly, double &cruise_v) {
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
   if (session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_is_exist_ramp_on_road() ||
@@ -372,9 +374,7 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
           ->get_is_exist_split_on_ramp()) {
     return false;
   }
-  if ((config_.ramp_limit_v_valid) && (session_->environmental_model()
-                                           .get_virtual_lane_manager()
-                                           ->is_on_ramp())) {
+  if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
     cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
   }
   const double preview_length = 20.0;

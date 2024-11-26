@@ -2629,9 +2629,10 @@ bool VisionLateralMotionPlanner::update_planner_output() {
   } else {
     lateral_output.lc_end_dis = 10000;
   }
-
-  if (virtual_lane_manager_->dis_to_ramp() != DBL_MAX) {  // attention !
-    lateral_output.dis_to_ramp = virtual_lane_manager_->dis_to_ramp();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+  if (route_info_output.dis_to_ramp != DBL_MAX) {  // attention !
+    lateral_output.dis_to_ramp = route_info_output.dis_to_ramp;
   } else {
     lateral_output.dis_to_ramp = 10000;
   }

@@ -17,6 +17,8 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   int lc_map_decision = current_lane != nullptr
                             ? virtual_lane_mgr_->lc_map_decision(current_lane)
                             : 0;
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
   // TODO(fengwang31):目前自车在最左侧车道上时，无法确认到最右边有几条车道，因此hack一下，判断自车在左侧，提前产生变道任务
   bool is_current_lane_on_leftmost = false;
   auto right_lane = virtual_lane_mgr_->get_right_lane();
@@ -51,11 +53,11 @@ bool MapRequest::check_mlc_enable(double lc_map_tfinish) {
   const double kResponseOffset = 300.;
   const double kDefaultMapDelay = 3.;
   double lc_end_dis;
-  if (virtual_lane_mgr_->is_on_ramp() ||
-      virtual_lane_mgr_->get_lc_nums_for_split() != 0) {
-    lc_end_dis = virtual_lane_mgr_->distance_to_first_road_split() - kTmpRampLength;
+  if (route_info_output.is_on_ramp ||
+      route_info_output.lc_nums_for_split != 0) {
+    lc_end_dis = route_info_output.distance_to_first_road_split - kTmpRampLength;
   } else {
-    lc_end_dis = virtual_lane_mgr_->dis_to_ramp() - kTmpRampLength;
+    lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
   }
   double delay_map = 0;
   double v_limit =

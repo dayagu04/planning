@@ -1279,7 +1279,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 
   bool res = true;
   const auto &input_list =
-      session_->environmental_model().get_hdmap_valid()
+      session_->environmental_model().get_route_info()->get_hdmap_valid()
           ? (session_->environmental_model().location_valid()
                  ? input_longtime_with_hdmap
                  : input_realtime_with_hdmap)

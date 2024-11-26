@@ -15,12 +15,6 @@
 
 namespace planning {
 
-enum SplitRelativeDirection {
-  None = 0,
-  ON_LEFT = 1,
-  ON_RIGHT = 2,
-};
-
 class EgoLaneTrackManger {
  public:
   explicit EgoLaneTrackManger(planning::framework::Session *session);

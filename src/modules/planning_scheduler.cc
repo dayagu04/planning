@@ -554,6 +554,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // HMI for ad_info
   const auto &virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
+  const auto& route_info_output = 
+      session_.environmental_model().get_route_info()->get_route_info_output();
   planning_hmi_info->ad_info.lane_change_direction =
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
 
@@ -647,8 +649,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
     planning_hmi_info->ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
-    if (virtual_lane_manager->dis_to_ramp() <
-        virtual_lane_manager->distance_to_first_road_merge()) {
+    if (route_info_output.dis_to_ramp <
+        route_info_output.distance_to_first_road_merge) {
       planning_hmi_info->ad_info.lane_change_reason =
           iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     } else {
@@ -670,27 +672,27 @@ void PlanningScheduler::FillPlanningHmiInfo(
       static_cast<iflyauto::AvoidObstacleDirection>(
           lat_offset_decider_output.avoid_direction);
 
-  if (!virtual_lane_manager->is_on_ramp()) {
+  if (!route_info_output.is_on_ramp) {
     planning_hmi_info->ad_info.distance_to_ramp =
-        virtual_lane_manager->dis_to_ramp();
+        route_info_output.dis_to_ramp;
   } else {
     planning_hmi_info->ad_info.distance_to_ramp = NL_NMAX;
   }
   planning_hmi_info->ad_info.distance_to_split =
-      virtual_lane_manager->distance_to_first_road_split();
-  if (virtual_lane_manager->is_ramp_merge_to_road_on_expressway()) {
+      route_info_output.distance_to_first_road_split;
+  if (route_info_output.is_ramp_merge_to_road_on_expressway) {
     planning_hmi_info->ad_info.distance_to_merge =
-        virtual_lane_manager->distance_to_first_road_merge();
+        route_info_output.distance_to_first_road_merge;
   } else {
     planning_hmi_info->ad_info.distance_to_merge = NL_NMAX;
   }
   planning_hmi_info->ad_info.distance_to_toll_station =
-      virtual_lane_manager->get_distance_to_toll_station();
+      route_info_output.distance_to_toll_station;
   planning_hmi_info->ad_info.noa_exit_warning_level_distance =
-      virtual_lane_manager->get_distance_to_route_end();
+      route_info_output.distance_to_route_end;
   // planning_hmi_info->ad_info.distance_to_tunnel = ;  // 义龙填写
   // planning_hmi_info->ad_info.is_within_hdmap = ;     // 义龙填写
-  const int ramp_direction = virtual_lane_manager->ramp_direction();
+  const int ramp_direction = route_info_output.ramp_direction;
   planning_hmi_info->ad_info.ramp_direction =
       (iflyauto::RampDirection)ramp_direction;
   // planning_hmi_info->ad_info.ramp_pass_sts = ;       // 义龙填写
@@ -704,11 +706,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
   }
 
   planning_hmi_info->ad_info.is_in_sdmaproad =
-      virtual_lane_manager->is_in_sdmaproad();
-  if (virtual_lane_manager->is_ego_on_expressway_hmi()) {
+      route_info_output.is_in_sdmaproad;
+  if (route_info_output.is_ego_on_expressway_hmi) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
-  } else if (virtual_lane_manager->is_ego_on_city_expressway_hmi()) {
+  } else if (route_info_output.is_ego_on_city_expressway_hmi) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
   } else {
@@ -767,14 +769,14 @@ void PlanningScheduler::FillPlanningHmiInfo(
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
-  hpp_info->is_avaliable = virtual_lane_manager->is_on_hpp_lane();
+  hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
   hpp_info->distance_to_parking_space =
-      virtual_lane_manager->GetDistanceToDestination();
-  hpp_info->is_on_hpp_lane = virtual_lane_manager->is_on_hpp_lane();
+      route_info_output.distance_to_target_slot;
+  hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
   hpp_info->is_reached_hpp_trace_start =
-      virtual_lane_manager->is_reached_hpp_start_point();
+      route_info_output.is_reached_hpp_start_point;
   hpp_info->accumulated_driving_distance =
-      virtual_lane_manager->sum_distance_driving();
+      route_info_output.sum_distance_driving;
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;
@@ -843,7 +845,9 @@ void PlanningScheduler::PrepareForApa() {
 
   auto gear_command = &(planning_output.gear_command);
   double distance_to_destination = std::numeric_limits<double>::max();
-  distance_to_destination = virtual_lane_manager->GetDistanceToDestination();
+  const auto& route_info_output = session_.
+      environmental_model().get_route_info()->get_route_info_output();
+  distance_to_destination = route_info_output.distance_to_target_slot;
   bool entering_parking_area = distance_to_destination < kDistanceToDestination;
   double ego_v = ego_state->ego_v();
   auto fsm_state = session_.environmental_model()
