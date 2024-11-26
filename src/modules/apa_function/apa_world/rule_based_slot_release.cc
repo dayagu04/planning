@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstddef>
 
+#include "apa_state_machine_manager.h"
 #include "ego_planning_config.h"
 #include "ifly_time.h"
 #include "log_glog.h"
@@ -15,17 +16,18 @@ namespace planning {
 namespace apa_planner {
 void RuleBasedSlotRelease::Process(
     const LocalView *local_view, const MeasurementData *measures_ptr,
+    const std::shared_ptr<ApaStateMachineManager> state_machine_manger_ptr,
     std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map,
     apa_planner::SlotManager::Frame &frame) {
   frame_ = &frame;
   config_ = &apa_param.GetParam();
   local_view_ = local_view;
   measures_ptr_ = measures_ptr;
+  state_machine_manger_ptr_ = state_machine_manger_ptr;
 
   // assemble slot_management_info
   frame_->slot_management_info.mutable_slot_info_vec()->Clear();
-  if (frame_->apa_state == ApaStateMachine::SEARCH_IN ||
-      frame_->apa_state == ApaStateMachine::SEARCH_OUT) {
+  if (state_machine_manger_ptr_->IsSeachingStatus()) {
     ParkingLotCruiseProcess(fusion_slot_map);
   } else {
     ParkingActivateProcess(fusion_slot_map);
@@ -104,7 +106,10 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
         slot->is_release() &&
         config_->path_generator_type ==
             apa_planner::ParkPathGenerationType::GEOMETRY_BASED &&
-        frame_->apa_state != ApaStateMachine::ACTIVE_OUT) {
+        (state_machine_manger_ptr_->GetStateMachine() ==
+             ApaStateMachineT::ACTIVE_IN_CAR_FRONT ||
+         state_machine_manger_ptr_->GetStateMachine() ==
+             ApaStateMachineT::ACTIVE_IN_CAR_REAR)) {
       if (IflyTime::Now_ms() - time_start >
           config_->prepare_single_max_allow_time) {
         slot->set_is_release(false);
@@ -1437,10 +1442,8 @@ const bool RuleBasedSlotRelease::IsEgoCloseToObs(
 const bool RuleBasedSlotRelease::IsSlotOccupied(const common::SlotInfo *slot) {
   const auto slot_pts = slot->corner_points().corner_point();
 
-  Eigen::Vector2d pt_0 =
-      Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
-  Eigen::Vector2d pt_1 =
-      Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
+  Eigen::Vector2d pt_0 = Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
+  Eigen::Vector2d pt_1 = Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
 
   const Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
   Eigen::Vector2d pt_01_vec_n(pt_01_vec.y(), -pt_01_vec.x());
@@ -1469,10 +1472,8 @@ bool RuleBasedSlotRelease::IsPassageAreaEnough(const common::SlotInfo *slot) {
   // 未来可以使用最大子矩阵和算法，来判定一个通道的大小.
   const auto slot_pts = slot->corner_points().corner_point();
 
-  Eigen::Vector2d pt_0 =
-      Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
-  Eigen::Vector2d pt_1 =
-      Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
+  Eigen::Vector2d pt_0 = Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
+  Eigen::Vector2d pt_1 = Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
 
   const Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
   Eigen::Vector2d pt_01_vec_n(pt_01_vec.y(), -pt_01_vec.x());
@@ -1501,8 +1502,7 @@ bool RuleBasedSlotRelease::IsPassageAreaEnough(const common::SlotInfo *slot) {
   PathSafeChecker safe_check;
 
   safe_check.SetObstacle(&obs_list_);
-  bool collision =
-      safe_check.IsPolygonCollision(&polygon);
+  bool collision = safe_check.IsPolygonCollision(&polygon);
 
   return collision ? false : true;
 }

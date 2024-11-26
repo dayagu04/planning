@@ -46,6 +46,10 @@ class ApaStateMachineManager final {
     return out_direction_;
   }
 
+  const bool IsParkingStatus() const;
+
+  const bool IsSeachingStatus() const;
+
   void Reset() {
     state_machine_ = ApaStateMachineT::INVALID;
     out_direction_ = ApaParkOutDirection::INVALID;

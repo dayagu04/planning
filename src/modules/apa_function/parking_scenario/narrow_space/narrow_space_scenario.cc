@@ -1239,8 +1239,8 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -1251,8 +1251,8 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1630,12 +1630,12 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
 
   // note: slot points' order is corrected in slot management
   Pose2D vec02;
-  vec02.x =  pt[2].x()-pt[0].x();
-  vec02.y =  pt[2].y()-pt[0].y();
+  vec02.x = pt[2].x() - pt[0].x();
+  vec02.y = pt[2].y() - pt[0].y();
 
   Pose2D ego_vector;
-  ego_vector.x  = std::cos(measures_ptr->heading);
-  ego_vector.y  = std::sin(measures_ptr->heading);
+  ego_vector.x = std::cos(measures_ptr->heading);
+  ego_vector.y = std::sin(measures_ptr->heading);
 
   slot_side_ = SlotRelativePosition::NONE;
   double cross = CrossProduct(ego_vector, vec02);
@@ -1644,8 +1644,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   } else if (cross < 0) {
     slot_side_ = SlotRelativePosition::RIGHT;
   } else {
-
-    ILOG_ERROR <<"ego is vertical";
+    ILOG_ERROR << "ego is vertical";
     return false;
   }
 
@@ -1715,8 +1714,8 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -1725,8 +1724,8 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1739,7 +1738,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
     frame_.pause_time = 0.0;
   }
 
-  ego_slot_info.slot_type  = 1;
+  ego_slot_info.slot_type = 1;
 
   return true;
 }

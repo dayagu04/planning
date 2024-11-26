@@ -3,6 +3,7 @@
 
 #include "apa_data.h"
 #include "apa_param_config.h"
+#include "apa_state_machine_manager.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "log_glog.h"
@@ -12,24 +13,7 @@
 namespace planning {
 namespace apa_planner {
 
-void PerpendicularTailInScenario::PlanCore(ApaSlot& apa_slot) {
-  // if (apa_world_ptr_->GetApaDataPtr()->cur_state ==
-  //     ApaStateMachine::SEARCH_IN_NO_SELECTED) {
-  //   Reset();
-  //   PlanCoreSearching(apa_slot);
-  // }
-
-  // if (apa_world_ptr_->GetApaDataPtr()->cur_state ==
-  //     ApaStateMachine::SEARCH_IN_SELECTED) {
-  //   Reset();
-  //   PlanCoreParking(apa_slot);
-  // }
-
-  // if (apa_world_ptr_->GetApaDataPtr()->cur_state ==
-  //     ApaStateMachine::ACTIVE_IN_CAR_REAR) {
-  //   PlanCoreParking(apa_slot);
-  // }
-}
+void PerpendicularTailInScenario::PlanCore(ApaSlot& apa_slot) {}
 
 void PerpendicularTailInScenario::PlanCoreSearching(ApaSlot& apa_slot) {}
 
@@ -150,8 +134,8 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
       apa_param.GetParam().terminal_target_y;
 
   if (measures_data.static_flag && !measures_data.brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     // 重规划成功会清0
     if (frame_.plan_stm.planning_status == PARKING_RUNNING) {
       frame_.stuck_uss_time += apa_param.GetParam().plan_time;

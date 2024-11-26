@@ -97,12 +97,10 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // todo:move this to scenario manager
-  if (apa_world_ptr_->GetApaDataPtr()->cur_state == ApaStateMachine::INVALID) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachineT::INVALID) {
     Reset();
-  } else if (apa_world_ptr_->GetApaDataPtr()->cur_state ==
-                 ApaStateMachine::SEARCH_IN ||
-             apa_world_ptr_->GetApaDataPtr()->cur_state ==
-                 ApaStateMachine::SEARCH_OUT) {
+  } else if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
     ResetForSearching();
   }
 

@@ -16,6 +16,7 @@
 #include "Eigen/Core"
 #include "apa_data.h"
 #include "apa_param_config.h"
+#include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
 #include "camera_preception_groundline_c.h"
 #include "common.h"
@@ -32,8 +33,8 @@
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "math_lib.h"
-#include "slot_management_info.pb.h"
 #include "rule_based_slot_release.h"
+#include "slot_management_info.pb.h"
 #include "transform_lib.h"
 
 namespace planning {
@@ -43,7 +44,9 @@ namespace {
 constexpr double kPie = 3.141592653589793;
 }  // namespace
 
-bool SlotManager::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
+bool SlotManager::Update(
+    const std::shared_ptr<ApaData> apa_data_ptr,
+    const std::shared_ptr<ApaStateMachineManager> state_machine_manager) {
   ILOG_INFO << "---------- slot management --------------------";
   // set input
   frame_.apa_state = apa_data_ptr->cur_state;
@@ -58,6 +61,8 @@ bool SlotManager::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
   frame_.fusion_occupancy_objects_info_ptr =
       apa_data_ptr->fusion_occupancy_objects_info_ptr;
 
+  state_machine_manager_ = state_machine_manager;
+
   // update obs
   // todo: move to obstacle manager
   AddObstacles();
@@ -65,18 +70,27 @@ bool SlotManager::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
   bool update_slot_in_searching_flag = false;
   bool update_slot_in_parking_flag = false;
   // update_slot_in_searching_flag is always false, only update slot
-  if (frame_.apa_state == ApaStateMachine::SEARCH_IN ||
-      frame_.apa_state == ApaStateMachine::SEARCH_OUT) {
+  if (state_machine_manager_->IsSeachingStatus()) {
     update_slot_in_searching_flag = UpdateSlotsInSearching(apa_data_ptr);
-  } else if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-             frame_.apa_state == ApaStateMachine::ACTIVE_IN ||
-             frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_OUT ||
-             frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
+  } else if (state_machine_manager_->IsParkingStatus()) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
-  } else if (frame_.apa_state == ApaStateMachine::SUSPEND) {
+  } else if (state_machine_manager_->GetStateMachine() ==
+             ApaStateMachineT::SUSPEND) {
   } else {
     Reset();
   }
+  // if (frame_.apa_state == ApaStateMachine::SEARCH_IN ||
+  //     frame_.apa_state == ApaStateMachine::SEARCH_OUT) {
+  //   update_slot_in_searching_flag = UpdateSlotsInSearching(apa_data_ptr);
+  // } else if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+  //            frame_.apa_state == ApaStateMachine::ACTIVE_IN ||
+  //            frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_OUT ||
+  //            frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
+  //   update_slot_in_parking_flag = UpdateSlotsInParking();
+  // } else if (frame_.apa_state == ApaStateMachine::SUSPEND) {
+  // } else {
+  //   Reset();
+  // }
 
   CopySlotReleaseInfo();
 
@@ -298,9 +312,9 @@ bool SlotManager::UpdateSlotsInSearching(
   // todo: move to task list.
   // 没有选择的车位，根据规则决定是否释放.
   RuleBasedSlotRelease rule_based_release_decider;
-  rule_based_release_decider.Process(apa_data_ptr->local_view_ptr_,
-                                     frame_.measurement_data_ptr,
-                                     fusion_slot_map, frame_);
+  rule_based_release_decider.Process(
+      apa_data_ptr->local_view_ptr_, frame_.measurement_data_ptr,
+      state_machine_manager_, fusion_slot_map, frame_);
 
   // 点击了车位,更新车位基本信息
   if (!frame_.slot_info_window_map.empty() &&
@@ -520,13 +534,24 @@ common::SlotInfo SlotManager::SlotInfoTransfer(
 
   slot_info.set_id(fusion_slot.id);
 
-  if (frame_.apa_state == ApaStateMachine::SEARCH_IN) {
+  // if (frame_.apa_state == ApaStateMachine::SEARCH_IN) {
+  //   slot_info.set_is_release((fusion_slot.allow_parking == 1));
+  //   slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
+  // }
+
+  // if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+  //     frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
+  //   // the selected slot in parking state is forced to release
+  //   slot_info.set_is_release(true);
+  //   slot_info.set_is_occupied(false);
+  // }
+
+  if (state_machine_manager_->IsSeachingStatus()) {
     slot_info.set_is_release((fusion_slot.allow_parking == 1));
     slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
   }
 
-  if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-      frame_.apa_state == ApaStateMachine::ACTIVE_IN) {
+  if (state_machine_manager_->IsParkingStatus()) {
     // the selected slot in parking state is forced to release
     slot_info.set_is_release(true);
     slot_info.set_is_occupied(false);
@@ -563,16 +588,27 @@ const bool SlotManager::SlotInfoTransfer(
 
   slot_info.set_id(fusion_slot.id);
 
-  if (frame_.apa_state == ApaStateMachine::SEARCH_IN ||
-      frame_.apa_state == ApaStateMachine::SEARCH_OUT) {
+  // if (frame_.apa_state == ApaStateMachine::SEARCH_IN ||
+  //     frame_.apa_state == ApaStateMachine::SEARCH_OUT) {
+  //   slot_info.set_is_release((fusion_slot.allow_parking == 1));
+  //   slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
+  // }
+
+  // if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+  //     frame_.apa_state == ApaStateMachine::ACTIVE_IN ||
+  //     frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_OUT ||
+  //     frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
+  //   // the selected slot in parking state is forced to release
+  //   slot_info.set_is_release(true);
+  //   slot_info.set_is_occupied(false);
+  // }
+
+  if (state_machine_manager_->IsSeachingStatus()) {
     slot_info.set_is_release((fusion_slot.allow_parking == 1));
     slot_info.set_is_occupied((fusion_slot.allow_parking == 0));
   }
 
-  if (frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-      frame_.apa_state == ApaStateMachine::ACTIVE_IN ||
-      frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_OUT ||
-      frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
+  if (state_machine_manager_->IsParkingStatus()) {
     // the selected slot in parking state is forced to release
     slot_info.set_is_release(true);
     slot_info.set_is_occupied(false);
@@ -1031,7 +1067,28 @@ bool SlotManager::UpdateSlotsInParking() {
 
   size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
 
-  if (frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
+  // if (frame_.apa_state == ApaStateMachine::ACTIVE_OUT) {
+  //   if (frame_.park_out_select_id == 0) {
+  //     double dist = std::numeric_limits<double>::infinity();
+  //     for (auto &pair : frame_.slot_info_window_map) {
+  //       const auto &slot_center_pt = pair.second.GetFusedInfo().center();
+  //       const Eigen::Vector2d slot_center(slot_center_pt.x(),
+  //                                         slot_center_pt.y());
+  //       const double temp_dist =
+  //           (frame_.measurement_data_ptr->pos - slot_center).norm();
+  //       if (temp_dist < dist) {
+  //         dist = temp_dist;
+  //         frame_.park_out_select_id = pair.first;
+  //       }
+  //     }
+  //   }
+  //   select_slot_id = frame_.park_out_select_id;
+  // }
+
+  if (state_machine_manager_->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_OUT_CAR_FRONT ||
+      state_machine_manager_->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_OUT_CAR_REAR) {
     if (frame_.park_out_select_id == 0) {
       double dist = std::numeric_limits<double>::infinity();
       for (auto &pair : frame_.slot_info_window_map) {
@@ -1746,13 +1803,19 @@ void SlotManager::UpdateReleaseSlotIdVec() {
       frame_.release_slot_id_vec.emplace_back(static_cast<int>(slot_info.id()));
     } else {
       // if in parking, force set the slot release and send to hmi
-      if ((frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-           frame_.apa_state == ApaStateMachine::ACTIVE_IN) &&
+      if ((state_machine_manager_->IsParkingStatus()) &&
           (static_cast<int>(slot_info.id()) ==
            static_cast<int>(frame_.ego_slot_info.select_slot_id))) {
         frame_.release_slot_id_vec.emplace_back(
             static_cast<int>(slot_info.id()));
       }
+      // if ((frame_.apa_state == ApaStateMachine::ACTIVE_WAIT_IN ||
+      //      frame_.apa_state == ApaStateMachine::ACTIVE_IN) &&
+      //     (static_cast<int>(slot_info.id()) ==
+      //      static_cast<int>(frame_.ego_slot_info.select_slot_id))) {
+      //   frame_.release_slot_id_vec.emplace_back(
+      //       static_cast<int>(slot_info.id()));
+      // }
     }
   }
 }

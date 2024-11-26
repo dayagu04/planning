@@ -6,6 +6,7 @@
 
 #include "apa_data.h"
 #include "apa_param_config.h"
+#include "apa_state_machine_manager.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
@@ -19,7 +20,7 @@ namespace planning {
 namespace apa_planner {
 void ApaWorld::Init() {
   apa_data_ptr_ = std::make_shared<ApaData>();
-  state_machine_manager_ptr = std::make_shared<ApaStateMachineManager>();
+  state_machine_manager_ptr_ = std::make_shared<ApaStateMachineManager>();
   slot_manager_ptr_ = std::make_shared<SlotManager>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
@@ -28,7 +29,7 @@ void ApaWorld::Init() {
 
 void ApaWorld::Reset() {
   apa_data_ptr_->Reset();
-  state_machine_manager_ptr->Reset();
+  state_machine_manager_ptr_->Reset();
   slot_manager_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
@@ -57,7 +58,7 @@ void ApaWorld::Preprocess() {
 
   UpdateEgoState();
 
-  state_machine_manager_ptr->Update(local_view_ptr_);
+  state_machine_manager_ptr_->Update(local_view_ptr_);
 
   UpdateStateMachine();
 
@@ -729,9 +730,8 @@ const bool ApaWorld::Update() {
 
   apa_data_ptr_->scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
 
-  // only for hack if outter machine no reset
-  if (apa_data_ptr_->cur_state == ApaStateMachine::SEARCH_IN ||
-      apa_data_ptr_->cur_state == ApaStateMachine::SEARCH_OUT) {
+  // only for hack if outter machine no reset, need delete
+  if (state_machine_manager_ptr_->IsSeachingStatus()) {
     apa_data_ptr_->is_slot_type_fixed = false;
     apa_data_ptr_->slot_id = 0;
     apa_data_ptr_->slot_type = Common::PARKING_SLOT_TYPE_INVALID;
@@ -739,7 +739,6 @@ const bool ApaWorld::Update() {
 
   // run slot manager
   // currently path planning starts once id is selected in searching state
-
   ILOG_INFO << "-- apa_world: run slot_management ---";
   if (!slot_manager_ptr_->Update(apa_data_ptr_)) {
     ILOG_INFO << "shouldn't have entered the parking function at that time";
