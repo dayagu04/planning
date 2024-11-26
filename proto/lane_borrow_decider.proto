@@ -22,4 +22,7 @@ message LaneBorrowDeciderInfo {
   optional double target_right_l = 6;
   optional bool safe_left_borrow = 7;
   optional bool safe_right_borrow = 8;
+  optional double start_solid_lane_dis =9;
+  optional double end_solid_lane_dis = 10;
+  optional bool intersection_state = 11;
 };

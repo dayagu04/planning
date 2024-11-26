@@ -55,7 +55,7 @@
 //   double junction_start_s_{1000.0};
 //   double junction_end_s_{1500.0};
 
-//   double forward_solid_start_s_{1000.0};
+//   double forward_solid_start_dis_{1000.0};
 //   double forward_solid_end_s_{1500.0};
 
 //   double distance_to_stop_line_{1000.0};

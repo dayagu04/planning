@@ -80,6 +80,12 @@ bool LaneBorrowDecider::ProcessEnvInfos() {  // 1-1
     return false;
   }
 
+  intersection_state_ = virtual_lane_manager->GetIntersectionState();
+  if (intersection_state_ !=
+      planning::common::IntersectionState::NO_INTERSECTION) {
+    return false;
+  }
+
   distance_to_stop_line_ = virtual_lane_manager->GetEgoDistanceToStopline();
   distance_to_cross_walk_ = virtual_lane_manager->GetEgoDistanceToCrosswalk();
 
@@ -276,7 +282,8 @@ bool LaneBorrowDecider::
 bool LaneBorrowDecider::CheckLaneBorrowCondition() {  // 借道触发判断条件
   UpdateJunctionInfo();
 
-  if (forward_solid_start_s_ < kMinDisToSolidLane ||
+  if ((forward_solid_start_dis_ < kMinDisToSolidLane &&
+       forward_solid_start_dis_ > 0) ||
       (distance_to_cross_walk_ < kMinDisToCrossWalk &&
        distance_to_cross_walk_ > 0.0) ||
       (distance_to_stop_line_ < kMinDisToStopLine &&
@@ -450,45 +457,49 @@ bool LaneBorrowDecider::UpdateLaneBorrowDirection() {  // 借道方向
   return true;
 }
 
+bool LaneBorrowDecider::IsLaneTypeDashedOrMixed(
+    const iflyauto::LaneBoundaryType& type) {
+  return type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+         type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+         type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED;
+}
+
 void LaneBorrowDecider::UpdateJunctionInfo() {
-  forward_solid_start_s_ = std::numeric_limits<double>::infinity();
-  forward_solid_end_s_ = std::numeric_limits<double>::infinity();
+  forward_solid_start_dis_ = std::numeric_limits<double>::max();
+  forward_solid_end_s_ = std::numeric_limits<double>::max();
 
-  double distance_from_lane_start_to_solid = 0.0;
-  const int num_type_segements =
-      std::min(current_lane_ptr_->get_left_lane_boundary().type_segments_size,
-               current_lane_ptr_->get_right_lane_boundary().type_segments_size);
+  if (current_lane_ptr_->lane_points().empty()) {
+    return;
+  }
 
-  for (size_t i = 0; i < num_type_segements; i++) {
-    const auto& left_type_segment =
-        current_lane_ptr_->get_left_lane_boundary().type_segments[i];
-    const auto& right_type_segment =
-        current_lane_ptr_->get_right_lane_boundary().type_segments[i];
-    if (left_type_segment.begin <= 0 || right_type_segment.begin <= 0) {
-      continue;
-    }
-    if (left_type_segment.type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-        left_type_segment.type !=
-            iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
-        left_type_segment.type !=
-            iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED &&
-        right_type_segment.type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-        right_type_segment.type !=
-            iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
-      forward_solid_start_s_ =
-          std::fmin(forward_solid_start_s_, left_type_segment.begin);
-      forward_solid_end_s_ =
-          std::fmin(left_type_segment.end, right_type_segment.end);
+  const auto& current_lane_points = current_lane_ptr_->lane_points();
+  bool found_start = false;
+
+  for (size_t i = 0; i < current_lane_points.size(); ++i) {
+    const auto& lane_point = current_lane_points[i];
+    if (!found_start &&
+        !IsLaneTypeDashedOrMixed(lane_point.left_lane_border_type) &&
+        !IsLaneTypeDashedOrMixed(lane_point.right_lane_border_type) &&
+        lane_point.s > ego_frenet_boundary_.s_start) {
+      forward_solid_start_dis_ = lane_point.s - ego_frenet_boundary_.s_start;
+      found_start = true;
     }
 
-    if (forward_solid_end_s_ >
-        current_reference_path_ptr_->get_frenet_coord()->Length()) {
+    if (found_start &&
+        (IsLaneTypeDashedOrMixed(lane_point.left_lane_border_type) ||
+         IsLaneTypeDashedOrMixed(lane_point.right_lane_border_type)) &&
+        lane_point.s > ego_frenet_boundary_.s_start) {
+      forward_solid_end_s_ = lane_point.s - ego_frenet_boundary_.s_start;
       break;
     }
   }
-  return;
-}
 
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+                                 .GetDebugInfoPb()
+                                 ->mutable_lane_borrow_decider_info();
+  lane_borrow_pb_info->set_start_solid_lane_dis(forward_solid_start_dis_);
+  lane_borrow_pb_info->set_end_solid_lane_dis(forward_solid_end_s_);
+}
 bool LaneBorrowDecider::IsSafeForLaneBorrow() {
   double right_bounds_l = 0.0;
   double left_bounds_l = 0.0;
@@ -575,7 +586,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   double neighbor_left_width = 1.75;  // defualt init
   double neighbor_right_width = 1.75;
 
-    auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
+  auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
                                  ->mutable_lane_borrow_decider_info();
 
@@ -611,7 +622,8 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   // if (!safe_to_left_lane_borrow && right_borrow_) {//
 
   if (right_borrow_) {
-    left_borrow_ = false;  // 现在这个标志只是假设作用 为了复用原来的 IsSafeForPath 逻辑
+    left_borrow_ =
+        false;  // 现在这个标志只是假设作用 为了复用原来的 IsSafeForPath 逻辑
     right_left_bounds_l = obs_right_l_;
     if (right_lane_ptr_ == nullptr) {
       std::cout << "right lane is nullptr!" << std::endl;
@@ -661,36 +673,35 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   //   lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
   //   lane_borrow_decider_output_.borrow_direction = 2;
   // }
-     // 如果都是不安全
-  double  target_borrow_left = target_left_l;
-  double  target_borrow_right = target_right_l;
+  // 如果都是不安全
+  double target_borrow_left = target_left_l;
+  double target_borrow_right = target_right_l;
   lane_borrow_pb_info->set_target_left_l(target_borrow_left);
   lane_borrow_pb_info->set_target_right_l(target_borrow_right);
   lane_borrow_pb_info->set_safe_left_borrow(safe_to_left_lane_borrow);
-   lane_borrow_pb_info->set_safe_right_borrow(safe_to_right_lane_borrow);
+  lane_borrow_pb_info->set_safe_right_borrow(safe_to_right_lane_borrow);
 
   if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
     lane_borrow_decider_output_.target_l = 0;
     lane_borrow_decider_output_.borrow_direction = 0;
     return false;
-    }
-  else if(safe_to_left_lane_borrow && !safe_to_right_lane_borrow){// 只有左侧
+  } else if (safe_to_left_lane_borrow &&
+             !safe_to_right_lane_borrow) {  // 只有左侧
     lane_borrow_decider_output_.target_l = target_left_l;
     lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
     lane_borrow_decider_output_.right_bounds_l = left_right_bounds_l;
     lane_borrow_decider_output_.borrow_direction = 1;
-    }
-  else if (!safe_to_left_lane_borrow && safe_to_right_lane_borrow) {//只有右侧
+  } else if (!safe_to_left_lane_borrow &&
+             safe_to_right_lane_borrow) {  // 只有右侧
     lane_borrow_decider_output_.target_l = target_right_l;
     lane_borrow_decider_output_.left_bounds_l = right_left_bounds_l;
     lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
     lane_borrow_decider_output_.borrow_direction = 2;
-  }
-  else{//左右都可以
-       //无方向 首次 可以改变方向
-    if(lane_borrow_decider_output_.borrow_direction == 0)// 对比横向移动
+  } else {  // 左右都可以
+            // 无方向 首次 可以改变方向
+    if (lane_borrow_decider_output_.borrow_direction == 0)  // 对比横向移动
     {
-        if (abs(target_left_l) < abs(target_right_l))  // 左侧
+      if (abs(target_left_l) < abs(target_right_l))  // 左侧
       {
         lane_borrow_decider_output_.target_l = target_left_l;
         lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
@@ -705,9 +716,6 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
     }
     // else:不改变
   }
-
-
-
 
   front_pass_sl_point_.first = obs_start_s_;
   front_pass_sl_point_.second = 0.0;
@@ -834,7 +842,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
       if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
-      if (frenet_obstacle_sl.s_start > obs_end_s_) {// area前方以外的障碍
+      if (frenet_obstacle_sl.s_start > obs_end_s_) {  // area前方以外的障碍
         continue;
       }
       if (left_borrow_) {
@@ -877,11 +885,11 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
       }
     } else {  // 后方障碍物
       if (frenet_obstacle_sl.l_start > left_l ||
-          frenet_obstacle_sl.l_end < right_l) { // fixed bug
+          frenet_obstacle_sl.l_end < right_l) {  // fixed bug
         continue;
       }
 
-      const double l_buffer = 0.5; // 是否保留待定吧 不保留有点保守了
+      const double l_buffer = 0.5;  // 是否保留待定吧 不保留有点保守了
       if (left_borrow_) {
         if (frenet_obstacle_sl.l_start >
             ego_frenet_boundary_.l_end + l_buffer) {
@@ -889,7 +897,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         }
       } else {
         if (frenet_obstacle_sl.l_end <
-            ego_frenet_boundary_.l_start - l_buffer) {// fixed
+            ego_frenet_boundary_.l_start - l_buffer) {  // fixed
           continue;
         }
       }
@@ -908,7 +916,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   return true;
 }
 bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
-                                      const double& right_bounds_l) {
+                                           const double& right_bounds_l) {
   if (left_bounds_l - right_bounds_l <
       vehicle_param_.width + kObsLatExpendBuffer) {  // 不会发生？
     lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
@@ -918,10 +926,10 @@ bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
   double left_l = left_bounds_l;
   double right_l = right_bounds_l;
 
-  if (lane_borrow_decider_output_.borrow_direction == 1) {// 已经得到结论 左
+  if (lane_borrow_decider_output_.borrow_direction == 1) {  // 已经得到结论 左
     left_l =
         std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
-  } else {// 右
+  } else {  // 右
     right_l =
         std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
   }
@@ -992,7 +1000,7 @@ bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
       }
     } else {  // 后方障碍物
       if (frenet_obstacle_sl.l_start < left_l ||
-          frenet_obstacle_sl.l_end > right_l) { // 只会判断原车道的后方障碍物
+          frenet_obstacle_sl.l_end > right_l) {  // 只会判断原车道的后方障碍物
         continue;
       }
 
@@ -1083,6 +1091,8 @@ void LaneBorrowDecider::LogDebugInfo() {
   for (auto static_obs_id : static_blocked_obj_vec_) {
     lane_borrow_pb_info->mutable_static_blocked_obj_vec()->Add(static_obs_id);
   }
+
+  lane_borrow_pb_info->set_intersection_state(intersection_state_);
 }
 
 }  // namespace planning

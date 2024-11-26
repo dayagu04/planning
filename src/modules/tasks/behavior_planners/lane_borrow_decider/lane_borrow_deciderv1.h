@@ -21,8 +21,9 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDecider(const EgoPlanningConfigBuilder* config_builder,
                     framework::Session* session)
       : Task(config_builder, session) {
-      vehicle_param_ = VehicleConfigurationContext::Instance()->get_vehicle_param();
-      config_ = config_builder->cast<LaneBorrowDeciderConfig>();
+    vehicle_param_ =
+        VehicleConfigurationContext::Instance()->get_vehicle_param();
+    config_ = config_builder->cast<LaneBorrowDeciderConfig>();
   };
   virtual ~LaneBorrowDecider() = default;
 
@@ -37,6 +38,7 @@ class LaneBorrowDecider : public Task {
   bool CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane();
   bool CheckIfLaneBorrowBackOriginLaneToNoBorrow();
   void UpdateJunctionInfo();
+  bool IsLaneTypeDashedOrMixed(const iflyauto::LaneBoundaryType& type);
 
   void ClearLaneBorrowStatus();
   bool CheckLaneBorrowCondition();
@@ -47,13 +49,15 @@ class LaneBorrowDecider : public Task {
   bool IsSafeForLaneBorrow();
   bool IsSafeForLaneBorrow2();
   bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
-  bool IsSafeForBorrowing(const double& left_bounds_l, const double& right_bounds_l);
+  bool IsSafeForBorrowing(const double& left_bounds_l,
+                          const double& right_bounds_l);
+
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double junction_start_s_{1000.0};
   double junction_end_s_{1500.0};
 
-  double forward_solid_start_s_{1000.0};
+  double forward_solid_start_dis_{1000.0};
   double forward_solid_end_s_{1500.0};
 
   double distance_to_stop_line_{1000.0};
@@ -66,6 +70,8 @@ class LaneBorrowDecider : public Task {
 
   bool left_borrow_{false};
   bool right_borrow_{false};
+  planning::common::IntersectionState intersection_state_ =
+      planning::common::NO_INTERSECTION;
 
   std::pair<double, double> ego_sl_;  // s, l
   double ego_speed_;

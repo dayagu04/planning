@@ -4,7 +4,8 @@
 // #include <cmath>
 // #include <limits>
 
-// #include "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
+// #include
+// "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 // #include "common_c.h"
 // #include "config/basic_type.h"
 // #include "define/geometry.h"
@@ -43,7 +44,8 @@
 //                              .get_reference_path_manager()
 //                              ->get_reference_path_by_current_lane()
 //                              ->get_ego_frenet_boundary();
-//   ego_speed_ = session_->environmental_model().get_ego_state_manager()->ego_v();
+//   ego_speed_ =
+//   session_->environmental_model().get_ego_state_manager()->ego_v();
 
 //   if (!RunLaneBorrowStateMachine()) {
 //     std::cout << "lane borrow state machine run failed!" << std::endl;
@@ -61,8 +63,8 @@
 //     ClearLaneBorrowStatus();
 //     lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
 //     lane_borrow_decider_output_.is_in_lane_borrow_status = false;
-//     lane_borrow_decider_output_.lane_borrow_failed_reason = LANE_CHANGE_STATE;
-//     static_blocked_obj_vec_.clear();
+//     lane_borrow_decider_output_.lane_borrow_failed_reason =
+//     LANE_CHANGE_STATE; static_blocked_obj_vec_.clear();
 //     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
 //     LogDebugInfo();
 //     return true;
@@ -96,15 +98,17 @@
 
 //   if (lane_borrow_status_ != LaneBorrowStatus::kNoLaneBorrow) {
 //     lane_borrow_decider_output_.is_in_lane_borrow_status = true;
-//     lane_borrow_decider_output_.lane_borrow_failed_reason = NONE_FAILED_REASON;
-//     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
+//     lane_borrow_decider_output_.lane_borrow_failed_reason =
+//     NONE_FAILED_REASON; lane_borrow_decider_output_.blocked_obs_id =
+//     static_blocked_obj_vec_;
 //   } else {
 //     lane_borrow_decider_output_.is_in_lane_borrow_status = false;
 //     static_blocked_obj_vec_.clear();
 //     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_vec_;
 //   }
 
-//   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
+//   session_->mutable_planning_context()->mutable_lane_borrow_decider_output()
+//   =
 //       lane_borrow_decider_output_;
 
 //   LogDebugInfo();
@@ -241,19 +245,20 @@
 
 //   CalcDistanceToSolidLane();
 //   distance_to_stop_line_ = virtual_lane_manager->GetEgoDistanceToStopline();
-//   distance_to_cross_walk_ = virtual_lane_manager->GetEgoDistanceToCrosswalk();
+//   distance_to_cross_walk_ =
+//   virtual_lane_manager->GetEgoDistanceToCrosswalk();
 
-//   if (forward_solid_start_s_ < kMinDisToSolidLane ||
+//   if (forward_solid_start_dis_ < kMinDisToSolidLane ||
 //       distance_to_cross_walk_ < kMinDisToCrossWalk ||
 //       distance_to_stop_line_ < kMinDisToStopLine) {
-//     std::cout << "Ego car dis to solid start_s: " << forward_solid_start_s_
+//     std::cout << "Ego car dis to solid start_s: " << forward_solid_start_dis_
 //               << std::endl;
 //     std::cout << "Ego car dis to cross walk: " << distance_to_cross_walk_
 //               << std::endl;
 //     std::cout << "Ego car dis to stop line " << distance_to_stop_line_
 //               << std::endl;
-//     lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
-//     return false;
+//     lane_borrow_decider_output_.lane_borrow_failed_reason =
+//     CLOSE_TO_JUNCTION; return false;
 //   }
 
 //   if (!HasBlockingObstacle()) {
@@ -323,8 +328,9 @@
 //     target_l = std::min(
 //         left_bounds_l - kLatPassableBuffer - vehicle_param_.width * 0.5,
 //         right_bounds_l + kLatPassableBuffer + vehicle_param_.width * 0.5);
-//     target_l = std::max(target_l, right_bounds_l + vehicle_param_.width * 0.5);
-//     target_l = std::min(target_l, left_bounds_l - vehicle_param_.width * 0.5);
+//     target_l = std::max(target_l, right_bounds_l + vehicle_param_.width *
+//     0.5); target_l = std::min(target_l, left_bounds_l - vehicle_param_.width
+//     * 0.5);
 //   }
 //   if (!clear_to_lane_borrow && right_borrow_) {
 //     left_borrow_ = false;
@@ -339,13 +345,15 @@
 //             vehicle_param_
 //                 .front_edge_to_rear_axle);  // use ego front bump width
 //     right_bounds_l =
-//         -current_right_lane_width - neighbor_left_width - neighbor_right_width;
+//         -current_right_lane_width - neighbor_left_width -
+//         neighbor_right_width;
 //     clear_to_lane_borrow =
 //         ClearForLaneBorrow(ego_speed_, left_bounds_l, right_bounds_l);
 //     target_l = std::max(
 //         right_bounds_l + kLatPassableBuffer + vehicle_param_.width * 0.5,
 //         left_bounds_l - kLatPassableBuffer - vehicle_param_.width * 0.5);
-//     target_l = std::min(target_l, left_bounds_l - vehicle_param_.width * 0.5);
+//     target_l = std::min(target_l, left_bounds_l - vehicle_param_.width *
+//     0.5);
 //   }
 //   if (!clear_to_lane_borrow) {
 //     return false;
@@ -361,7 +369,8 @@
 //   Point2D frenet_front_pass_point{obs_start_s_, 0.0};
 
 //   current_reference_path->get_frenet_coord()->SLToXY(
-//       obs_start_s_, 0.0, &front_pass_point_.first, &front_pass_point_.second);
+//       obs_start_s_, 0.0, &front_pass_point_.first,
+//       &front_pass_point_.second);
 //   return true;
 // };
 
@@ -373,7 +382,7 @@
 //   auto current_reference_path = session_->environmental_model()
 //                                     .get_reference_path_manager()
 //                                     ->get_reference_path_by_current_lane();
-//   forward_solid_start_s_ = std::numeric_limits<double>::infinity();
+//   forward_solid_start_dis_ = std::numeric_limits<double>::infinity();
 //   forward_solid_end_s_ = std::numeric_limits<double>::infinity();
 //   double route_s = 0.0;
 
@@ -395,16 +404,17 @@
 //       continue;
 //     }
 
-//     if (left_type_segment.type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+//     if (left_type_segment.type != iflyauto::LaneBoundaryType_MARKING_DASHED
+//     &&
 //         left_type_segment.type !=
 //             iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID &&
 //         left_type_segment.type !=
 //             iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED &&
-//         right_type_segment.type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-//         right_type_segment.type !=
+//         right_type_segment.type != iflyauto::LaneBoundaryType_MARKING_DASHED
+//         && right_type_segment.type !=
 //             iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
-//       forward_solid_start_s_ =
-//           std::fmin(forward_solid_start_s_, left_type_segment.begin);
+//       forward_solid_start_dis_ =
+//           std::fmin(forward_solid_start_dis_, left_type_segment.begin);
 //       forward_solid_end_s_ =
 //           std::fmin(left_type_segment.end, right_type_segment.end);
 //     }
@@ -458,7 +468,8 @@
 //           OBSTACLE_SOURCE_CAMERA)) {
 //       continue;
 //     }
-//     const auto frenet_obstacle_sl = frenet_obstacle->frenet_obstacle_boundary();
+//     const auto frenet_obstacle_sl =
+//     frenet_obstacle->frenet_obstacle_boundary();
 
 //     if (frenet_obstacle_sl.s_start > forward_obs_s ||
 //         frenet_obstacle_sl.s_end + kObsLonDisBuffer <
@@ -490,11 +501,12 @@
 //         continue;
 //       }
 //     } else if (frenet_obstacle_sl.s_end >
-//                    forward_solid_start_s_ - vehicle_length * 2.0 &&
+//                    forward_solid_start_dis_ - vehicle_length * 2.0 &&
 //                frenet_obstacle_sl.s_start > forward_solid_end_s_) {
 //       // the obstacle is parellel to solid lane and in center line
 //       if (frenet_obstacle->obstacle()->is_static() &&
-//           frenet_obstacle_sl.l_start < 0.0 && frenet_obstacle_sl.l_end > 0.0) {
+//           frenet_obstacle_sl.l_start < 0.0 && frenet_obstacle_sl.l_end > 0.0)
+//           {
 //         lane_borrow_decider_output_.lane_borrow_failed_reason =
 //             SOLID_LINE_BORROW_DISABLED;
 //         lane_borrow_decider_output_.failed_obs_id =
@@ -581,7 +593,8 @@
 //   }
 
 //   // todo: if left lane is reverse, then left_boorow is false
-//   if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+//   if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED
+//   &&
 //       right_lane_boundary_type !=
 //           iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
 //     right_borrow_ = false;
@@ -599,8 +612,8 @@
 //                                              const double& left_bounds_l,
 //                                              const double& right_bounds_l) {
 //   if (left_bounds_l - right_bounds_l < vehicle_param_.width) {
-//     lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
-//     return false;
+//     lane_borrow_decider_output_.lane_borrow_failed_reason =
+//     BOUNDS_TOO_NARROW; return false;
 //   }
 
 //   double left_l = left_bounds_l;
@@ -608,10 +621,12 @@
 
 //   if (left_borrow_) {
 //     left_l =
-//         std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
+//         std::min(left_l, right_l + vehicle_param_.width +
+//         kObsLatExpendBuffer);
 //   } else {
 //     right_l =
-//         std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
+//         std::max(right_l, left_l - vehicle_param_.width -
+//         kObsLatExpendBuffer);
 //   }
 
 //   auto virtual_lane_manager =
@@ -637,7 +652,8 @@
 //       continue;
 //     }
 
-//     const auto frenet_obstacle_sl = frenet_obstacle->frenet_obstacle_boundary();
+//     const auto frenet_obstacle_sl =
+//     frenet_obstacle->frenet_obstacle_boundary();
 
 //     if (frenet_obstacle_sl.s_start >
 //         ego_frenet_boundary_.s_end) {  // obs in front of ego
@@ -720,7 +736,8 @@
 //   return true;
 // }
 
-// bool LaneBorrowDeciderV0::CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane() {
+// bool
+// LaneBorrowDeciderV0::CheckIfLaneBorrowDrivingToLaneBorrowBackOriginLane() {
 //   if (!IsSafeForBack()) {
 //     return false;
 //   }
@@ -815,17 +832,21 @@
 //                                     .get_reference_path_manager()
 //                                     ->get_reference_path_by_current_lane();
 
-//   const auto& current_frenet_coord = current_reference_path->get_frenet_coord();
+//   const auto& current_frenet_coord =
+//   current_reference_path->get_frenet_coord();
 
 //   Point2D front_left_corner, front_right_corner, back_right_corner,
 //       back_left_corner;
 //   current_frenet_coord->SLToXY(obs_end_s_, obs_left_l_, &front_left_corner.x,
 //                                &front_left_corner.y);
-//   current_frenet_coord->SLToXY(obs_end_s_, obs_right_l_, &front_right_corner.x,
+//   current_frenet_coord->SLToXY(obs_end_s_, obs_right_l_,
+//   &front_right_corner.x,
 //                                &front_right_corner.y);
-//   current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_, &back_right_corner.x,
+//   current_frenet_coord->SLToXY(obs_start_s_, obs_right_l_,
+//   &back_right_corner.x,
 //                                &back_right_corner.y);
-//   current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_, &back_left_corner.x,
+//   current_frenet_coord->SLToXY(obs_start_s_, obs_left_l_,
+//   &back_left_corner.x,
 //                                &back_left_corner.y);
 //   lane_borrow_pb_info->mutable_block_obs_area()
 //       ->mutable_front_left_corner()
