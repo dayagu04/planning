@@ -670,6 +670,8 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
    lane_borrow_pb_info->set_safe_right_borrow(safe_to_right_lane_borrow);
 
   if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
+    lane_borrow_decider_output_.target_l = 0;
+    lane_borrow_decider_output_.borrow_direction = 0;
     return false;
     }
   else if(safe_to_left_lane_borrow && !safe_to_right_lane_borrow){// 只有左侧
@@ -832,7 +834,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
       if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
-      if (frenet_obstacle_sl.s_start > obs_end_s_) {
+      if (frenet_obstacle_sl.s_start > obs_end_s_) {// area前方以外的障碍
         continue;
       }
       if (left_borrow_) {
