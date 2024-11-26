@@ -22,7 +22,9 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-bag_path = "/root/code/bags/lane_borrow/lane_borrow_intersection.bag.1732606979.close-loop.scc.plan"
+
+bag_path = "/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732610911.close-loop.scc.plan"
+
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
@@ -490,7 +492,7 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
     t = dataLoader.plan_debug_msg["t"][i]
     plan_debug_ts.append(t)
     lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
-    vars = ['lane_borrow_decider_status', 'target_left_l','target_right_l','safe_left_borrow', 'start_solid_lane_dis', 'end_solid_lane_dis', 'safe_right_borrow', 'static_blocked_obj_vec', 'intersection_state', 'lane_borrow_failed_reason']
+    vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l', 'start_solid_lane_dis', 'end_solid_lane_dis','safe_left_borrow', 'safe_right_borrow', 'static_blocked_obj_vec', 'intersection_state', 'lane_borrow_failed_reason']
     names  = []
     datas = []
     for name in vars:

@@ -680,7 +680,8 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   lane_borrow_pb_info->set_target_right_l(target_borrow_right);
   lane_borrow_pb_info->set_safe_left_borrow(safe_to_left_lane_borrow);
   lane_borrow_pb_info->set_safe_right_borrow(safe_to_right_lane_borrow);
-
+  double ego_state_l = (ego_frenet_boundary_.l_end + ego_frenet_boundary_.l_start) * 0.5;
+  lane_borrow_pb_info->set_ego_l(ego_state_l);
   if (!safe_to_left_lane_borrow && !safe_to_right_lane_borrow) {
     lane_borrow_decider_output_.target_l = 0;
     lane_borrow_decider_output_.borrow_direction = 0;
@@ -701,7 +702,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
             // 无方向 首次 可以改变方向
     if (lane_borrow_decider_output_.borrow_direction == 0)  // 对比横向移动
     {
-      if (abs(target_left_l) < abs(target_right_l))  // 左侧
+        if (abs(target_left_l - ego_state_l) < abs(target_right_l -  ego_state_l))  // 左侧
       {
         lane_borrow_decider_output_.target_l = target_left_l;
         lane_borrow_decider_output_.left_bounds_l = left_left_bounds_l;
