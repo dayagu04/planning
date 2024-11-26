@@ -22,7 +22,7 @@ add_subdirectory(hpp_function EXCLUDE_FROM_ALL)
 add_subdirectory(scc_function EXCLUDE_FROM_ALL)
 add_subdirectory(noa_function EXCLUDE_FROM_ALL)
 
-file(GLOB_RECURSE SRC_FILES
+file(GLOB SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
@@ -31,6 +31,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_context
   modules_apa_function
   modules_adas_function
+  modules_noa_function
+  modules_scc_function
+  modules_hpp_function
   planning_proto
 )
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
