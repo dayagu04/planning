@@ -1,4 +1,5 @@
 #include "parking_scenario.h"
+
 #include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
@@ -317,9 +318,11 @@ const bool ParkingScenario::PostProcessPath() {
 
   std::vector<double> x_vec;
   std::vector<double> y_vec;
+  std::vector<double> heading_vec;
   std::vector<double> s_vec;
   x_vec.reserve(origin_trajectory_size + 1);
   y_vec.reserve(origin_trajectory_size + 1);
+  heading_vec.reserve(origin_trajectory_size + 1);
   s_vec.reserve(origin_trajectory_size + 1);
   double s = 0.0;
   double ds = 0.0;
@@ -335,6 +338,7 @@ const bool ParkingScenario::PostProcessPath() {
     }
     x_vec.emplace_back(pt.pos.x());
     y_vec.emplace_back(pt.pos.y());
+    heading_vec.emplace_back(pt.heading);
     s_vec.emplace_back(s);
   }
 
@@ -346,10 +350,20 @@ const bool ParkingScenario::PostProcessPath() {
     return false;
   }
 
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.resize(x_vec_size);
+  pnc::geometry_lib::PathPoint point;
+  for (size_t i = 0; i < x_vec_size; ++i) {
+    point.pos << x_vec[i], y_vec[i];
+    point.heading = heading_vec[i];
+    current_path_point_global_vec_[i] = point;
+  }
+
   frame_.current_path_length = s;
 
   // calculate the extended point and insert
-  const Eigen::Vector2d start_point(x_vec[x_vec_size - 2], y_vec[x_vec_size - 2]);
+  const Eigen::Vector2d start_point(x_vec[x_vec_size - 2],
+                                    y_vec[x_vec_size - 2]);
 
   const Eigen::Vector2d end_point(x_vec[x_vec_size - 1], y_vec[x_vec_size - 1]);
 
