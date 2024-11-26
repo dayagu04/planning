@@ -2,6 +2,7 @@
 
 #include "ego_planning_config.h"
 #include "environmental_model.h"
+#include "math/acc_curve_maker/acc_curve_maker.h"
 #include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
 
@@ -90,6 +91,34 @@ std::unique_ptr<Trajectory1d> Target::MakeMaxSpeedLimitCurve() {
   init_state.a = init_lon_state_[2];
   return std::make_unique<SecondOrderTimeOptimalTrajectory>(init_state,
                                                             state_limit);
+}
+
+std::unique_ptr<TargetFollowCurve> Target::MakeTargetFollowCurve() {
+  if (cipv_info_.agent_id == -1) {
+    return nullptr;
+  }
+  double cipv_s = cipv_info_.upper_bound_s;
+  double cipv_vel = cipv_info_.vel;
+  // acc curve maker for help judge
+  AccCurveMaker acc_curve_maker(init_lon_state_, cipv_s, cipv_vel);
+  acc_curve_maker.Run();
+
+  double ego_dv = acc_curve_maker.ego_dv();
+  double dv_safe = acc_curve_maker.dv_safe();
+  double dv_comfortable = acc_curve_maker.dv_comfortalble();
+
+  constexpr double kMinVelBuffer = 1.0;
+  constexpr double kStopDist = 4.0;
+  constexpr double kSetHW = 1.2;
+  if ((ego_dv - dv_comfortable > kMinVelBuffer && ego_dv < dv_safe) ||
+      (ego_dv > dv_safe)) {
+    double set_dist = cipv_vel * kSetHW + kStopDist;
+    double set_v = cipv_vel;
+    DvPoint target_point{set_dist, set_v};
+    return std::make_unique<TargetFollowCurve>(target_point, 0.0, cipv_s,
+                                               cipv_vel);
+  }
+  return nullptr;
 }
 
 bool Target::has_target(const double t) const {

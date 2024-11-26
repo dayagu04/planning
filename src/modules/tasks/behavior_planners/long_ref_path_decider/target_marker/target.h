@@ -1,6 +1,8 @@
 #pragma once
+
 #include "agent/agent.h"
 #include "ego_planning_config.h"
+#include "math/acc_curve_maker/target_follow_curve.h"
 #include "session.h"
 
 namespace planning {
@@ -107,7 +109,7 @@ class Target {
     }
   }
 
-  // std::unique_ptr<TargetFollowCurve> MakeTargetFollowCurve();
+  std::unique_ptr<TargetFollowCurve> MakeTargetFollowCurve();
 
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve();
 
@@ -127,7 +129,7 @@ class Target {
   std::unique_ptr<Trajectory1d> max_speed_limit_curve_;
 
   // for target follow curve
-  // std::unique_ptr<TargetFollowCurve> target_follow_curve_;
+  std::unique_ptr<TargetFollowCurve> target_follow_curve_;
   bool has_follow_target_curve_ = false;
   CipvInfo cipv_info_;
 };

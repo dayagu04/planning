@@ -340,7 +340,7 @@ bool StGraphSearcher::SearchStPath(
     //   LOG_DEBUG("time out, time used: %.4f", time_used);
     //   break;
     // }
-    if (count > 30) {
+    if (count > 100) {
       break;
     }
 

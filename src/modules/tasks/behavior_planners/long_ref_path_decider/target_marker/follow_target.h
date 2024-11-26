@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ego_planning_config.h"
+#include "lon_target_maker.pb.h"
 #include "session.h"
 #include "target.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
@@ -29,6 +30,7 @@ class FollowTarget : public Target {
 
   void MakeMinFollowDistance();
 
+  // generate stable curve
   std::unique_ptr<VariableCoordinateTimeOptimalTrajectory>
   GenerateStableFollowSlowCurve(const double matched_desired_headway) const;
 
@@ -50,11 +52,22 @@ class FollowTarget : public Target {
       const int64_t st_boundary_id, const double follow_time_gap,
       CoordinateParam* const relative_coordinate_param) const;
 
+  bool MakeSValueWithTargetFollowCurve(const int32_t index,
+                                       const bool has_valid_s_value,
+                                       double* const target_s_value) const;
+
+  double MakeSlowerFollowSTarget(const double speed, const double upper_bound_s,
+                                 const double time_gap) const;
+
+  bool JudgeFarSlowCar() const;
+
+  void AddFollowTargetDataToProto();
+
  private:
-  framework::Session* session_;
-  SpeedPlannerConfig config_;
   std::vector<UpperBoundInfo> upper_bound_infos_;
+  planning::common::FollowTarget follow_target_pb_;
   bool enable_target_follow_curve_ = false;
   double min_follow_distance_m_ = 3.0;
 };
+
 }  // namespace planning

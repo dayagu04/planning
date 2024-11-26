@@ -30,6 +30,7 @@ double AccCurveMaker::dv_comfortalble() const { return dv_curve_; }
 
 double AccCurveMaker::MakeDvSafe() {
   const double ego_vel = ego_state_[1];
+  // TODO: 按照现在执行器能够响应的减速度修改标定值
   double ax_min_limit = interpolation(ego_vel, A_MIN_SPEED_PT, A_MIN_VALUE_PT);
   return smooth_sqrt(2.0 * std::fabs(ax_min_limit) * (cipv_s_));
 }

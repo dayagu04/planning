@@ -38,6 +38,7 @@ constexpr double kKphToMps = 1.0 / 3.6;
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
                            framework::Session* session)
     : Target(config, session) {
+  cruise_target_pb_.Clear();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& speed_limit_decider_output =
@@ -289,7 +290,7 @@ double CruiseTarget::MatchSpeedWithKappaSpeedLimitTable(
 void CruiseTarget::AddCruiseTargetDataToProto() {
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_cruise_target_data =
-      debug_info_pb->mutable_lon_cruise_target_s_ref();
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_cruise_target();
   if (!target_values_.empty()) {
     for (const auto& value : target_values_) {
       auto* ptr = cruise_target_pb_.add_cruise_target_s_ref();

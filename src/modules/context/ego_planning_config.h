@@ -2974,6 +2974,15 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double stop_jerk_upper_bound = 0.8;
   double stop_jerk_lower_bound = -0.8;
 
+  // follow target
+  double lower_speed_min_follow_distance_gap = 3.0;
+  double high_speed_min_follow_distance_gap = 4.5;
+  double low_speed_threshold_kmph = 18;
+  double high_speed_threshold_kmph = 30;
+  double large_vehicle_min_follow_distance_gap = 4.5;
+  double cone_min_follow_distance_gap = 4.5;
+  double traffic_light_min_follow_distance_gap = 2.0;
+
   // cruise target relevance
   double lane_change_upper_speed_limit_kph = 150.0;
   struct KinematicParam {

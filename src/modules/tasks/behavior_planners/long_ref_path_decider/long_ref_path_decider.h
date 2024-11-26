@@ -19,6 +19,8 @@ class LongRefPathDecider : public Task {
  public:
   void UpdateLonRefPath();
 
+  void Reset();
+
  private:
   SpeedPlannerConfig speed_planning_config_;
   std::unique_ptr<TargetMaker> target_maker_;

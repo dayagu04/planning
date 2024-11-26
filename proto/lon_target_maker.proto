@@ -7,6 +7,20 @@ message TargetPoint2D {
   optional double t = 2;
 }
 
+message TargetMaker {
+  optional FinalTarget final_target = 1;
+  optional CruiseTarget cruise_target = 2;
+  optional FollowTarget follow_target = 3;
+}
+
+message FinalTarget {
+  repeated TargetPoint2D final_target_s_ref = 1;
+}
+
 message CruiseTarget {
   repeated TargetPoint2D cruise_target_s_ref = 1;
+}
+
+message FollowTarget {
+  repeated TargetPoint2D follow_target_s_ref = 1;
 }

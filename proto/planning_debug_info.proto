@@ -119,5 +119,5 @@ message PlanningDebugInfo {
   optional StSearchDeciderInfo st_search_decider_info = 30;
   optional StGraphData st_graph_data = 31;
   optional StGraphSearcher st_graph_searcher = 32;
-  optional CruiseTarget lon_cruise_target_s_ref = 33;
+  optional TargetMaker lon_target_s_ref = 33;
 }

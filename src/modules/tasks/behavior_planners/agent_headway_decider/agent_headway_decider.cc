@@ -30,7 +30,7 @@ bool AgentHeadwayDecider::Execute() {
   LOG_DEBUG("=======AgentHeadwayDecider======= \n");
   auto res = UpdateAgentsHeadwayInfos();
 
-  auto mutable_output = session_->mutable_planning_context()
+  auto& mutable_output = session_->mutable_planning_context()
                             ->mutable_agent_headway_decider_output();
 
   mutable_output.set_agents_headway_Info(agents_headway_map_);

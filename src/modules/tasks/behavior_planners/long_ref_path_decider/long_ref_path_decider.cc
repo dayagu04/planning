@@ -30,6 +30,8 @@ bool LongRefPathDecider::Execute() {
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+  // 0. reset
+  Reset();
   // 1. calculate s_ref
   target_maker_->Run();
   // 2. calculate bound
@@ -119,4 +121,11 @@ void LongRefPathDecider::UpdateLonRefPath() {
 
   lon_ref_path = lon_behav_output_;
 }
+
+void LongRefPathDecider::Reset() {
+  target_maker_->Reset();
+  // bound_maker_->Reset();
+  // weight_maker_->Reset();
+}
+
 }  // namespace planning

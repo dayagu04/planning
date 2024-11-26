@@ -1,5 +1,6 @@
 #pragma once
 #include "ego_planning_config.h"
+#include "lon_target_maker.pb.h"
 #include "session.h"
 #include "src/modules/common/status/status.h"
 #include "target.h"
@@ -13,6 +14,10 @@ class TargetMaker {
   ~TargetMaker() = default;
 
   common::Status Run();
+
+  void Reset();
+
+  void AddFinalTargetDataToProto();
 
   double s_target(const double t) const;
 
@@ -28,6 +33,7 @@ class TargetMaker {
   int32_t plan_points_num_ = 0.0;
 
   std::vector<TargetValue> target_values_;
+  planning::common::FinalTarget final_target_pb_;
 };
 
 }  // namespace planning

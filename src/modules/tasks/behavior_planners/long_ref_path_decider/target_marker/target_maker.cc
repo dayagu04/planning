@@ -2,6 +2,7 @@
 
 #include "cruise_target.h"
 #include "follow_target.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -34,7 +35,7 @@ common::Status TargetMaker::Run() {
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
-    // TargetValue follow_target_value = follow_target.target_value(relative_t);
+    TargetValue follow_target_value = follow_target.target_value(relative_t);
     // TargetValue overtake_target_value =
     // overtake_target.target_value(relative_t); TargetValue
     // neighbor_target_value = neighbor_target.target_value(relative_t);
@@ -48,23 +49,23 @@ common::Status TargetMaker::Run() {
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
     // 1. update lower and upper value by follow target and overtake target
-    // if (follow_target_value.has_target() &&
-    //     follow_target_value.s_target_val() <
-    //         upper_target_value.s_target_val()) {
-    // TBD: 国朋合入overtake
-    //   if (overtake_target_value.has_target()) {
-    //     if (overtake_target_value.s_target_val() >
-    //         follow_target_value.s_target_val()) {
-    //       // final_target_value = overtake_target_value;
-    //       target_values_.push_back(std::move(overtake_target_value));
-    //       continue;
-    //     } else {
-    //       upper_target_value = follow_target_value;
-    //       lower_target_value = overtake_target_value;
-    //     }
-    //   } else {
-    // upper_target_value = follow_target_value;
-    //   }
+    if (follow_target_value.has_target() &&
+        follow_target_value.s_target_val() <
+            upper_target_value.s_target_val()) {
+      // TBD: 国朋合入overtake
+      // if (overtake_target_value.has_target()) {
+      //   if (overtake_target_value.s_target_val() >
+      //       follow_target_value.s_target_val()) {
+      //     // final_target_value = overtake_target_value;
+      //     target_values_.push_back(std::move(overtake_target_value));
+      //     continue;
+      //   } else {
+      //     upper_target_value = follow_target_value;
+      //     lower_target_value = overtake_target_value;
+      //   }
+      // } else {
+      upper_target_value = follow_target_value;
+      // }
     // } else if (overtake_target_value.has_target() &&
     //            overtake_target_value.s_target_val() >
     //                lower_target_value.s_target_val()) {
@@ -76,7 +77,7 @@ common::Status TargetMaker::Run() {
     // if (caution_target_value.has_target()) {
     //   upper_target_value =
     //       Target::TargetMin(caution_target_value, upper_target_value);
-    // }
+    }
 
     // TBD: 建伟合入neighbor
     // 3.update lower and upper value by neighbor target
@@ -109,15 +110,15 @@ common::Status TargetMaker::Run() {
     // }
 
     // hack: 先用默认值
-    auto final_lower_bound_value = lower_target_value;
-    final_lower_bound_value = cruise_target_value;
-    // auto final_lower_bound_value =
-    //     Target::TargetMax(lower_target_value, cruise_target_value);
+    // auto final_lower_bound_value = lower_target_value;
+    // final_lower_bound_value = cruise_target_value;
+    auto final_lower_bound_value =
+        Target::TargetMax(lower_target_value, cruise_target_value);
     auto final_target_value =
         Target::TargetMin(final_lower_bound_value, upper_target_value);
     target_values_.push_back(std::move(final_target_value));
   }
-
+  AddFinalTargetDataToProto();
   return common::Status::OK();
 }
 
@@ -135,6 +136,25 @@ double TargetMaker::v_target(const double t) const {
 const TargetValue& TargetMaker::target_value(const double t) const {
   size_t index = static_cast<size_t>(std::round(t / dt_));
   return target_values_.at(index);
+}
+
+void TargetMaker::Reset() {
+  target_values_.clear();
+  final_target_pb_.Clear();
+}
+
+void TargetMaker::AddFinalTargetDataToProto() {
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_final_target_data =
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_final_target();
+  if (!target_values_.empty()) {
+    for (const auto& value : target_values_) {
+      auto* ptr = final_target_pb_.add_final_target_s_ref();
+      ptr->set_s(value.s_target_val());
+      ptr->set_t(value.relative_t());
+    }
+  }
+  mutable_final_target_data->CopyFrom(final_target_pb_);
 }
 
 }  // namespace planning

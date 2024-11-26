@@ -5,50 +5,42 @@
 #include <vector>
 
 #include "trajectory1d.h"
+#include "constant_jerk_trajectory1d.h"
 
 namespace planning {
 
-/**
- * This is constant acceleration longitudinal Trajectory1d trajectory.
- **/
-class PiecewiseJerkAccelerationTrajectory1d : public Trajectory1d {
- public:
-  PiecewiseJerkAccelerationTrajectory1d(const double start_s,
-                                        const double start_v);
+class PiecewiseJerkTrajectory1d : public Trajectory1d {
+public:
+  // TODO(all): remove the parameter init_param after the reference_curve_generator related code is
+  // removed.
+  PiecewiseJerkTrajectory1d(const double p, const double v, const double a,
+                            const double init_param = 0);
 
-  PiecewiseJerkAccelerationTrajectory1d(const double start_s,
-                                        const double start_v,
-                                        const double start_a);
+  PiecewiseJerkTrajectory1d(const PiecewiseJerkTrajectory1d& other);
 
-  virtual ~PiecewiseJerkAccelerationTrajectory1d() = default;
-
-  void AppendSegment(const double a, const double t_duration);
-
-  double ParamLength() const override;
+  virtual ~PiecewiseJerkTrajectory1d() = default;
 
   double Evaluate(const int32_t order, const double param) const override;
 
-  std::array<double, 4> Evaluate(const double t) const;
+  double ParamLength() const override;
 
- private:
-  double Evaluate_s(const double t) const;
+  void AppendSegment(const double jerk, const double param);
 
-  double Evaluate_v(const double t) const;
+  // TODO(all): this is a temp. solution to reduce accumulated numerical error.
+  void AppendSegment(const double p, const double v, const double a, const double param);
 
-  double Evaluate_a(const double t) const;
+private:
+  std::vector<ConstantJerkTrajectory1d> segments_;
 
-  double Evaluate_j(const double t) const;
+  double last_p_ = 0.0;
 
- private:
-  // accumulated s
-  std::vector<double> s_;
+  double last_v_ = 0.0;
 
-  std::vector<double> v_;
+  double last_a_ = 0.0;
 
-  // accumulated t
-  std::vector<double> t_;
+  std::vector<double> param_;
 
-  std::vector<double> a_;
+  double init_param_ = 0.0;
 };
 
-}  // namespace planning
+} // namespace planning
