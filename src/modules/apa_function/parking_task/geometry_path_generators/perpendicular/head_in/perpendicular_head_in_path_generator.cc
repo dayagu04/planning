@@ -3339,47 +3339,6 @@ const double PerpendicularPathHeadingInPlanner::CalOccupiedRatio(
   return slot_occupied_ratio;
 }
 
-void PerpendicularPathHeadingInPlanner::PrintOutputSegmentsInfo() const {
-  ILOG_INFO << "-------------- OutputSegmentsInfo --------------";
-  const size_t N = std::min(2, int(output_.path_segment_vec.size()));
-  for (size_t i = 0; i < N; i++) {
-    const auto& current_seg = output_.path_segment_vec[i];
-
-    if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-      const auto& line_seg = current_seg.line_seg;
-
-      ILOG_INFO << "Segment [" << i << "] "
-                << " LINE_SEGMENT "
-                << " length= " << line_seg.length;
-
-      ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
-
-      ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
-
-      ILOG_INFO << "start_pos: " << line_seg.pA.transpose();
-      ILOG_INFO << "start_heading: " << line_seg.heading * kRad2Deg;
-      ILOG_INFO << "end_pos: " << line_seg.pB.transpose() << "";
-    } else {
-      const auto& arc_seg = current_seg.arc_seg;
-
-      ILOG_INFO << "Segment [" << i << "] "
-                << "ARC_SEGMENT "
-                << "length= " << arc_seg.length;
-
-      ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
-
-      ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
-
-      ILOG_INFO << "start_pos: " << arc_seg.pA.transpose();
-      ILOG_INFO << "start_heading: " << arc_seg.headingA * kRad2Deg;
-      ILOG_INFO << "end_pos: " << arc_seg.pB.transpose();
-      ILOG_INFO << "end_heading: " << arc_seg.headingB * kRad2Deg;
-      ILOG_INFO << "center: " << arc_seg.circle_info.center.transpose()
-                << "  radius = " << arc_seg.circle_info.radius << "";
-    }
-  }
-}
-
 // for simulation
 const bool PerpendicularPathHeadingInPlanner::PreparePlanPybind() {
   return PreparePlan();

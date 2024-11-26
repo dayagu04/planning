@@ -424,7 +424,6 @@ void PlanningAdapter::Proc() {
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   LOG_WARNING("The cost time of proc() is: [%f] ms\n", planning_cost_time);
-  ILOG_INFO << "planning loop time(ms): " << planning_cost_time;
 }
 
 void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {

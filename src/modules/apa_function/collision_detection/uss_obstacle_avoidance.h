@@ -32,19 +32,21 @@ class UssObstacleAvoidance {
         apa_param.GetParam().arc_line_shift_steer_angle_deg;
     double c1 = apa_param.GetParam().c1;
     double detection_distance = apa_param.GetParam().detection_distance;
-    double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
+    double lat_inflation = apa_param.GetParam().lat_inflation;
   };
 
   struct RemainDistInfo {
-    double remain_dist = 2.5;
-    double obs_pt_remain_dist = 2.5;
+    double remain_dist = 3.0;
+    double obs_pt_remain_dist = 3.0;
+    double vel_target = 2.0;
     size_t car_index = 0;
     int uss_index = 0;
     bool is_available = false;
 
     void Reset() {
-      remain_dist = 2.5;
-      obs_pt_remain_dist = 2.5;
+      remain_dist = 3.0;
+      obs_pt_remain_dist = 3.0;
+      vel_target = 2.0;
       car_index = 0;
       uss_index = 0;
       is_available = false;

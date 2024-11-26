@@ -57,7 +57,7 @@ inline T BytesToProto(py::bytes &bytes) {
 
 static PerpendicularTailInPathGenerator::DebugInfo debuginfo;
 static std::vector<double> res;
-std::vector<Eigen::Vector3d> current_path_point_global_vec_;
+std::vector<Eigen::Vector4d> current_path_point_global_vec_;
 Eigen::Vector3d global_target_pose_;
 Eigen::Vector3d safe_circle_tang_pose_;
 Eigen::Vector2d pt_inside_pose_;
@@ -65,7 +65,7 @@ std::vector<Eigen::Vector2d> pt_;
 
 std::vector<Eigen::Vector2d> obs_pts_;
 
-std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
+std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
                                     std::vector<Eigen::Vector2d> raw_pt,
                                     double ds, bool is_complete_path,
                                     bool is_itervative_solu, bool is_astar,
@@ -486,9 +486,9 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     for (const auto &path_point : planner_output.path_point_vec) {
       global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
                        ego_slot_info.l2g_tf.GetHeading(path_point.heading));
-
-      current_path_point_global_vec_.emplace_back(Eigen::Vector3d(
-          global_point.pos.x(), global_point.pos.y(), global_point.heading));
+      current_path_point_global_vec_.emplace_back(
+          Eigen::Vector4d(global_point.pos.x(), global_point.pos.y(),
+                          global_point.heading, path_point.lat_buffer));
     }
   }
 

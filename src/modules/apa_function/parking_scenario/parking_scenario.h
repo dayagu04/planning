@@ -68,10 +68,6 @@ class ParkingScenario {
     Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
     double target_ego_heading_slot = 0.0;
 
-    // for parking out
-    Eigen::Vector2d limiter_min_point_slot = Eigen::Vector2d::Zero();
-    double limiter_vertical_heanding_slot  = 0.0;
-
     std::vector<Eigen::Vector2d> slot_corner;
     double last_move_slot_dist = 0.0;
     double move_slot_dist = 0.0;
@@ -192,6 +188,7 @@ class ParkingScenario {
       remain_dist = 5.01;
       remain_dist_uss = 5.01;
       remain_dist_col_det = 5.01;
+      vel_target = 1.168;
       car_already_move_dist = 0.0;
       spline_success = false;
       current_path_length = 0.0;
@@ -213,6 +210,8 @@ class ParkingScenario {
 
       is_left_empty = false;
       is_right_empty = false;
+
+      ego_car_info_slot.Reset();
     }
     bool is_left_empty = false;
     bool is_right_empty = false;
@@ -236,6 +235,7 @@ class ParkingScenario {
     double current_path_length = 0.0;
     double headin_current_path_length = 0.0;
     double path_extended_dist = 1.0;
+    double vel_target = 1.168;
     double stuck_time = 0.0;
     double stuck_uss_time = 0.0;
     double pause_time = 0.0;
@@ -262,6 +262,8 @@ class ParkingScenario {
     bool dynamic_plan_fail_flag = false;
 
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
+
+    EgoCarInfoUnderSlot ego_car_info_slot;
   };
 
   enum ParkingStatus {

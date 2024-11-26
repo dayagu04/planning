@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "apa_data.h"
+#include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "collision_detection/uss_obstacle_avoidance.h"
 #include "common.pb.h"
@@ -31,14 +32,13 @@ class ApaWorld {
 
   void Init();
   void Reset();
-  const bool Update(const LocalView* const local_view);
+  const bool Update(const LocalView* const local_view,
+                    const iflyauto::PlanningOutput& planning_output);
   const bool Update();
 
   std::shared_ptr<ApaData> GetApaDataPtr() { return apa_data_ptr_; }
 
-  std::shared_ptr<SlotManager> GetSlotManagerPtr() {
-    return slot_manager_ptr_;
-  }
+  std::shared_ptr<SlotManager> GetSlotManagerPtr() { return slot_manager_ptr_; }
 
   std::shared_ptr<UssObstacleAvoidance> GetUssObstacleAvoidancePtr() {
     return uss_obstacle_avoider_ptr_;
@@ -68,8 +68,10 @@ class ApaWorld {
   void UpdateGroundLineObs();
   void UpdateUssObs();
 
-  std::shared_ptr<ApaData> apa_data_ptr_;
+  void UpdateCarPredictTraj();
 
+  std::shared_ptr<ApaData> apa_data_ptr_;
+  std::shared_ptr<ApaStateMachineManager> state_machine_manager_ptr;
   std::shared_ptr<SlotManager> slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;

@@ -9,8 +9,8 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240826-15-44-44/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-26-15-44-44_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240912/20240912-22-26-56/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-09-12-22-26-57_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241029/20241029-16-06-29/park_in_data_collection_CHERY_E0Y_14520_ALL_FILTER_2024-10-29-16-06-30_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241106/20241106-15-30-38/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-11-06-15-30-38_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241125/20241125-18-26-02/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-25-18-26-02_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
@@ -83,7 +83,7 @@ callback = CustomJS(args=dict(source=source, line_source=line_source, text_sourc
 fig1.js_on_event(Tap, callback)
 
 if plot_ctrl_flag:
-  fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table = load_local_view_figure_parking_ctrl(bag_loader, local_view_data)
+  fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table = load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, 0.02)
 
 ### sliders config
 class LocalViewSlider:
@@ -136,6 +136,7 @@ def slider_callback(bag_time, vehicle_type, car_inflation):
 
   if bag_loader.fus_parking_msg['enable'] == True:
     fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
+    print("selected slot id = ", fus_parking_msg.select_slot_id)
     # for i in range(len(fus_parking_msg.parking_fusion_slot_lists)):
     #   slot_info = fus_parking_msg.parking_fusion_slot_lists[i]
     #   print("slot_id = ", slot_info.id, "  slot_type = ", slot_info.type,

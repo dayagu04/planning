@@ -104,22 +104,22 @@ void PrintApaParkingOutDirection(
     const ApaParkingOutDirection apa_park_out_direction) {
   switch (apa_park_out_direction) {
     case ApaParkingOutDirection::RIGHT_FRONT:
-      DEBUG_PRINT("apa_park_out_direction = RIGHT_FRONT");
+      ILOG_INFO << "apa_park_out_direction = RIGHT_FRONT";
       break;
     case ApaParkingOutDirection::RIGHT_REAR:
-      DEBUG_PRINT("apa_park_out_direction = RIGHT_REAR");
+      ILOG_INFO << "apa_park_out_direction = RIGHT_REAR";
       break;
     case ApaParkingOutDirection::LEFT_FRONT:
-      DEBUG_PRINT("apa_park_out_direction = ACTILEFT_FRONTVE_OUT");
+      ILOG_INFO << "apa_park_out_direction = LEFT_FRONT";
       break;
     case ApaParkingOutDirection::LEFT_REAR:
-      DEBUG_PRINT("apa_park_out_direction = LEFT_REAR");
+      ILOG_INFO << "apa_park_out_direction = LEFT_REAR";
       break;
     case ApaParkingOutDirection::FRONT:
-      DEBUG_PRINT("apa_park_out_direction = FRONT");
+      ILOG_INFO << "apa_park_out_direction = FRONT";
       break;
     case ApaParkingOutDirection::REAR:
-      DEBUG_PRINT("apa_park_out_direction = REAR");
+      ILOG_INFO << "apa_park_out_direction = REAR";
       break;
     case ApaParkingOutDirection::INVALID:
       break;

@@ -122,7 +122,8 @@ ParkingScenarioStatus ParkingScenarioManager::Excute(
   }
 
   if (apa_data->cur_state == ApaStateMachine::ACTIVE_WAIT_IN ||
-      apa_data->cur_state == ApaStateMachine::ACTIVE_IN) {
+      apa_data->cur_state == ApaStateMachine::ACTIVE_IN ||
+      apa_data->cur_state == ApaStateMachine::ACTIVE_OUT) {
     scenario_status = ParkingScenarioStatus::STATUS_RUNNING;
   } else if (apa_data->cur_state == ApaStateMachine::SEARCH_IN &&
              apa_data->slot_type !=

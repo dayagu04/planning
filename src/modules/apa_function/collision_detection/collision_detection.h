@@ -127,6 +127,10 @@ class CollisionDetector {
                                const double heading_start);
 
   const CollisionResult UpdateByObsMap(
+      const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
+      const double lat_buffer, const double lon_buffer);
+
+  const CollisionResult UpdateByObsMap(
       const pnc::geometry_lib::PathSegment &path_seg, const double lat_buffer,
       const double lon_buffer);
 
@@ -225,6 +229,9 @@ class CollisionDetector {
   const bool IsObstacleInCar(const Eigen::Vector2d &obs_pos,
                              const pnc::geometry_lib::PathPoint &ego_pose,
                              double safe_dist);
+
+  const double CalClosestDistFromObsToCar(
+      const pnc::geometry_lib::PathPoint &ego_pose);
 
   const bool CalTrajBound(std::vector<Eigen::Vector2d> &traj_bound,
                           const pnc::geometry_lib::PathPoint &start_pose,

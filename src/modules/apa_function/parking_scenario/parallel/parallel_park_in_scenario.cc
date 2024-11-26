@@ -57,6 +57,11 @@ void ParallelParkInScenario::Reset() {
   t_lane_.Reset();
   parallel_path_planner_.Reset();
 
+  // reset planning output
+  memset(&planning_output_, 0, sizeof(planning_output_));
+
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+
   ParkingScenario::Reset();
 }
 

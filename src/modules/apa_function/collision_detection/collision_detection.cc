@@ -47,9 +47,9 @@ void CollisionDetector::Init() {
             std::fabs(inflated_car_local_vertex_y_vec[i]), max_y_abs)) {
       continue;
     }
-    inflated_car_local_vertex_y_vec[i] += inflated_car_local_vertex_y_vec[i] > 0
-                                              ? param_.left_lat_inflation
-                                              : -param_.right_lat_inflation;
+    inflated_car_local_vertex_y_vec[i] +=
+        inflated_car_local_vertex_y_vec[i] > 0.0 ? param_.left_lat_inflation
+                                                 : -param_.right_lat_inflation;
 
     origin_car_local_vertex_vec_[i] << apa_param.GetParam().car_vertex_x_vec[i],
         apa_param.GetParam().car_vertex_y_vec[i];
@@ -322,6 +322,54 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
   result.col_pt_obs_global = obs_pt_global_vec_[i];
 
   return result;
+}
+
+const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
+    const std::vector<pnc::geometry_lib::PathPoint> &pt_vec,
+    const double lat_buffer, const double lon_buffer) {
+  CollisionResult col_res;
+  if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
+    param_.lat_inflation = lat_buffer;
+    param_.left_lat_inflation = lat_buffer;
+    param_.right_lat_inflation = lat_buffer;
+    SetParam(param_);
+  }
+
+  if (pt_vec.empty()) {
+    return col_res;
+  }
+
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  std::vector<Eigen::Vector2d> car_polygon(car_line_local_vec_.size());
+  bool col_flag = false;
+  double safe_dist = 0.0;
+  size_t i = 0;
+  for (i = 0; i < pt_vec.size() && !col_flag; ++i) {
+    const auto &pt = pt_vec[i];
+    l2g_tf.Init(pt.pos, pnc::geometry_lib::NormalizeAngle(pt.heading));
+    for (size_t h = 0; h < car_line_local_vec_.size(); ++h) {
+      const auto &car_line_local = car_line_local_vec_[h];
+      car_polygon[h] = l2g_tf.GetPos(car_line_local.pA);
+    }
+    for (auto it = obs_pt_global_map_.begin();
+         it != obs_pt_global_map_.end() && !col_flag; ++it) {
+      for (size_t i = 0; i < it->second.size() && !col_flag; ++i) {
+        if (pnc::geometry_lib::IsPointInPolygon(car_polygon, it->second[i])) {
+          col_flag = true;
+          break;
+        }
+      }
+    }
+  }
+
+  col_res.remain_car_dist = pt_vec.back().s;
+  if (i == 0) {
+    col_res.remain_dist = 0.0;
+  } else {
+    col_res.remain_dist = pt_vec[i - 1].s;
+  }
+
+  return col_res;
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
@@ -1601,5 +1649,44 @@ const CollisionDetector::ObsSlotType CollisionDetector::GetObsSlotType(
 
   return ObsSlotType::OBS_INVALID;
 }
+
+const double CollisionDetector::CalClosestDistFromObsToCar(
+    const pnc::geometry_lib::PathPoint &ego_pose) {
+  // car line segment
+  std::vector<pnc::geometry_lib::LineSegment> car_line_global_vec;
+  car_line_global_vec.clear();
+  car_line_global_vec.reserve(car_line_local_vec_.size());
+  pnc::geometry_lib::LineSegment car_line_global;
+  pnc::geometry_lib::LocalToGlobalTf l2g_tf;
+  l2g_tf.Init(ego_pose.pos, ego_pose.heading);
+  std::vector<Eigen::Vector2d> car_polygon;
+  car_polygon.clear();
+  car_polygon.reserve(apa_param.GetParam().car_vertex_x_vec.size());
+  for (const auto &car_line_local : car_line_local_vec_) {
+    car_line_global.pA = l2g_tf.GetPos(car_line_local.pA);
+    car_line_global.pB = l2g_tf.GetPos(car_line_local.pB);
+    car_line_global_vec.emplace_back(car_line_global);
+    car_polygon.emplace_back(car_line_global.pA);
+  }
+
+  double min_dist = 166.6;
+  for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    for (const Eigen::Vector2d &obs_pt_global : obs_pt_pair.second) {
+      if (pnc::geometry_lib::IsPointInPolygon(car_polygon, obs_pt_global)) {
+        return 0.0;
+      }
+      for (const auto &car_line_global : car_line_global_vec) {
+        min_dist = std::min(min_dist, pnc::geometry_lib::CalPoint2LineSegDist(
+                                          obs_pt_global, car_line_global));
+      }
+      if (min_dist < 0.0168) {
+        return min_dist;
+      }
+    }
+  }
+
+  return min_dist;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

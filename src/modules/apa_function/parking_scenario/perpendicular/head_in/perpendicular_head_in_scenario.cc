@@ -49,6 +49,11 @@ void PerpendicularHeadInScenario::Reset() {
   pt_center_replan_jump_dist_ = 0.0;
   pt_center_replan_jump_heading_ = 0.0;
 
+  // reset planning output
+  memset(&planning_output_, 0, sizeof(planning_output_));
+
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
+
   max_target_velocity_ = 0.0;
 
   ParkingScenario::Reset();
@@ -1244,8 +1249,6 @@ const uint8_t PerpendicularHeadInScenario::PathPlanOnce() {
     return plan_result;
   }
 
-  // retired
-  // perpendicular_path_planner_.SetLineSegmentHeading();
   // perpendicular_path_planner_.PrintOutputSegmentsInfo();
 
   perpendicular_path_planner_.InsertLineSegAfterCurrentFollowLastPath(
@@ -1878,8 +1881,7 @@ const bool PerpendicularHeadInScenario::PostProcessPath() {
   return true;
 }
 
-const bool
-PerpendicularHeadInScenario::PostProcessPathAccordingLimiter() {
+const bool PerpendicularHeadInScenario::PostProcessPathAccordingLimiter() {
   size_t origin_traj_size = current_path_point_global_vec_.size();
 
   if (origin_traj_size < 2) {
@@ -2088,42 +2090,6 @@ PerpendicularHeadInScenario::PostProcessPathAccordingLimiter() {
   return true;
 }
 
-void PerpendicularHeadInScenario::GenPlanningOutput() {
-  pnc::geometry_lib::PathPoint current_ego_pose(
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.heading);
-
-  ILOG_INFO << "frame_.plan_stm.planning_status = "
-            << static_cast<int>(frame_.plan_stm.planning_status)
-            << "  plan path pt size = "
-            << current_path_point_global_vec_.size();
-
-  if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
-    SetFinishedPlanningOutput(planning_output_, current_ego_pose);
-  } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
-    SetFailedPlanningOutput(planning_output_, current_ego_pose);
-  } else if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
-             frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
-             frame_.plan_stm.planning_status == PARKING_RUNNING ||
-             frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    GenPlanningPath();
-  } else if (frame_.plan_stm.planning_status == PARKING_IDLE) {
-    SetIdlePlanningOutput(planning_output_, current_ego_pose);
-  }
-
-  if (frame_.plan_stm.planning_status == PARKING_IDLE ||
-      frame_.plan_stm.planning_status == PARKING_FAILED ||
-      frame_.plan_stm.planning_status == PARKING_FINISHED) {
-    frame_.replan_flag = false;
-    frame_.correct_path_for_limiter = false;
-    frame_.ego_slot_info.Reset();
-    apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
-  }
-
-  // ILOG_INFO << "planning_output:" << planning_output_.DebugString()
-  //          );
-}
-
 void PerpendicularHeadInScenario::Log() const {
   const EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
   const auto& l2g_tf = ego_slot_info.l2g_tf;
@@ -2311,76 +2277,6 @@ void PerpendicularHeadInScenario::Log() const {
   } else {
     JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
     JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
-  }
-}
-
-void PerpendicularHeadInScenario::GenPlanningPath() {
-  // planning_output_.Clear();
-  memset(&planning_output_, 0, sizeof(planning_output_));
-  planning_output_.planning_status.apa_planning_status =
-      iflyauto::APA_IN_PROGRESS;
-
-  auto trajectory = &(planning_output_.trajectory);
-  trajectory->available = true;
-
-  trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
-
-  size_t N = current_path_point_global_vec_.size();
-  if (N > PLANNING_TRAJ_POINTS_NUM - 1) {
-    std::cout << "sample ds is possible err\n";
-    N = PLANNING_TRAJ_POINTS_NUM - 1;
-  }
-  trajectory->trajectory_points_size = N;
-
-  for (size_t i = 0; i < N; ++i) {
-    const auto& global_point = current_path_point_global_vec_[i];
-    trajectory->trajectory_points[i].x = global_point.pos.x();
-    trajectory->trajectory_points[i].y = global_point.pos.y();
-    trajectory->trajectory_points[i].heading_yaw = global_point.heading;
-    trajectory->trajectory_points[i].v = 0.5;
-  }
-
-  // set target velocity to control as a limit
-  const std::vector<double> ratio_tab = {0.0, 0.4, 0.8, 1.0};
-  const std::vector<double> vel_limit_tab = {apa_param.GetParam().max_velocity,
-                                             apa_param.GetParam().max_velocity,
-                                             0.45, 0.35};
-  const double vel_limit = pnc::mathlib::Interp1(
-      ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
-
-  planning_output_.trajectory.target_reference.target_velocity =
-      std::min(vel_limit, max_target_velocity_);
-
-  // send uss remain dist to control
-  planning_output_.trajectory.trajectory_points[0].distance =
-      frame_.remain_dist_uss;
-
-  // send slot occupation ratio to control
-  planning_output_.trajectory.trajectory_points[1].distance =
-      frame_.ego_slot_info.slot_occupied_ratio;
-
-  // send slot type to control
-  planning_output_.trajectory.trajectory_points[2].distance =
-      static_cast<double>(iflyauto::PARKING_SLOT_TYPE_VERTICAL);
-
-  // send remain dist col det to uss
-  // only set a flag let control can use it
-  planning_output_.trajectory.trajectory_points[3].distance =
-      static_cast<double>(1.0);
-  planning_output_.trajectory.trajectory_points[4].distance =
-      frame_.remain_dist_col_det;
-
-  // send heading in path planner and set 1 , otherwise set 0
-  planning_output_.trajectory.trajectory_points[5].distance = 1.0;
-
-  // set plan gear cmd
-  auto gear_command = &(planning_output_.gear_command);
-  gear_command->available = true;
-
-  if (gear_command_ == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-  } else {
-    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
   }
 }
 

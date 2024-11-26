@@ -332,8 +332,8 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
   }
 
   if (IsDoubleEqual(GetCrossFromTwoVec2d(AB, CD), 0.0)) {
-    std::cout
-        << "two lines are parallel or overlapping, which must be ruled out\n";
+    // std::cout
+    //     << "two lines are parallel or overlapping, which must be ruled out\n";
     return LogErr(__func__, 1);
   }
 
@@ -1281,7 +1281,8 @@ const bool SamplePointSetInPathSeg(std::vector<Eigen::Vector2d> &point_set,
 }
 
 const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
-                                   const LineSegment &line, const double ds) {
+                                   const LineSegment &line, const double ds,
+                                   const double lat_buffer) {
   // if (!IsDoublePositive(line.length) || !IsDoublePositive(ds)) {
   //   return LogErr(__func__, 0);
   // }
@@ -1292,23 +1293,30 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
   PathPoint pn;
   // get first point
   pn.Set(line.pA, NormalizeAngle(line.heading));
+  pn.s = 0.0;
+  pn.lat_buffer = lat_buffer;
   point_set.emplace_back(pn);
   const Eigen::Vector2d unit_line_vec = (line.pB - line.pA).normalized();
   double s = ds;
   while (s < line.length) {
     pn.pos = line.pA + s * unit_line_vec;
     pn.heading = line.heading;
-    point_set.emplace_back(pn);
     s += ds;
+    pn.s = ds;
+    pn.lat_buffer = lat_buffer;
+    point_set.emplace_back(pn);
   }
   // get last point
   pn.Set(line.pB, NormalizeAngle(line.heading));
+  pn.s = line.length;
+  pn.lat_buffer = lat_buffer;
   point_set.emplace_back(pn);
   return true;
 }
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
-                               const Arc &arc, const double ds) {
+                               const Arc &arc, const double ds,
+                               const double lat_buffer) {
   // if (!IsDoublePositive(arc.length) || !IsDoublePositive(ds) ||
   //     !IsDoublePositive(arc.circle_info.radius)) {
   //   return LogErr(__func__, 0);
@@ -1319,6 +1327,8 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
   PathPoint pn;
   // get first point
   pn.Set(arc.pA, NormalizeAngle(arc.headingA));
+  pn.s = 0.0;
+  pn.lat_buffer = lat_buffer;
   point_set.emplace_back(pn);
 
   const auto &pO = arc.circle_info.center;
@@ -1337,11 +1347,15 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
     pn.pos = pO + v_n;
     heading += dheading;
     pn.heading = NormalizeAngle(heading);
-    point_set.emplace_back(pn);
     s += ds;
+    pn.s = ds;
+    pn.lat_buffer = lat_buffer;
+    point_set.emplace_back(pn);
   }
   // get last point
   pn.Set(arc.pB, NormalizeAngle(arc.headingB));
+  pn.s = arc.length;
+  pn.lat_buffer = lat_buffer;
   point_set.emplace_back(pn);
 
   return true;
@@ -1351,9 +1365,11 @@ const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
                                    const PathSegment &path_seg,
                                    const double ds) {
   if (path_seg.seg_type == SEG_TYPE_LINE) {
-    return SamplePointSetInLineSeg(point_set, path_seg.line_seg, ds);
+    return SamplePointSetInLineSeg(point_set, path_seg.line_seg, ds,
+                                   path_seg.lat_buffer);
   } else if (path_seg.seg_type == SEG_TYPE_ARC) {
-    return SamplePointSetInArc(point_set, path_seg.arc_seg, ds);
+    return SamplePointSetInArc(point_set, path_seg.arc_seg, ds,
+                               path_seg.lat_buffer);
   } else {
     return false;
   }
@@ -1813,7 +1829,7 @@ const bool CalCommonTangentCircleOfTwoLine(
       tangent_ptss.emplace_back(tang_pts);
     }
   } else {
-    std::cout << "two lines have no intersection, no common tangent circle\n";
+    // std::cout << "two lines have no intersection, no common tangent circle\n";
     return LogErr(__func__, 1);
   }
 
@@ -2448,8 +2464,8 @@ const bool LogErr(const std::string &func_name, uint8_t index,
     err_type = " fail ";
   }
 
-  std::cout << func_name + err_type + " err " + std::to_string(index)
-            << std::endl;
+  // std::cout << func_name + err_type + " err " + std::to_string(index)
+  //           << std::endl;
 
   return false;
 }
@@ -2935,6 +2951,177 @@ const bool IsTwoNumerEqual(const double a, const double b, const double err) {
     return true;
   }
   return false;
+}
+
+void GeometryPath::PrintInfo(const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "path_count = " << static_cast<int>(path_count)
+                           << "  gear_change_count = "
+                           << static_cast<int>(gear_change_count)
+                           << "  steer_change_count = "
+                           << static_cast<int>(steer_change_count)
+                           << "  total_length = " << total_length
+                           << "  cur_gear_length = " << cur_gear_length
+                           << "  cur_gear = " << GetGearString(cur_gear)
+                           << "  cur_steer = " << GetGearString(cur_steer)
+                           << "  col_flag = " << collide_flag;
+
+  for (size_t i = 0; i < path_segment_vec.size(); i++) {
+    ILOG_INFO_IF(enable_log) << "Segment [" << i << "]";
+    path_segment_vec[i].PrintInfo(enable_log);
+  }
+}
+
+void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
+  Reset();
+  if (!_path_segment_vec.empty()) {
+    path_segment_vec = _path_segment_vec;
+    path_count = path_segment_vec.size();
+    cur_gear = path_segment_vec.front().seg_gear;
+    cur_steer = path_segment_vec.front().seg_steer;
+    last_gear = path_segment_vec.back().seg_gear;
+    last_steer = path_segment_vec.back().seg_steer;
+    start_pose = path_segment_vec.front().GetStartPose();
+    end_pose = path_segment_vec.back().GetEndPose();
+    gear_cmd_vec.reserve(path_count);
+    steer_cmd_vec.reserve(path_count);
+    for (const PathSegment &path_seg : path_segment_vec) {
+      gear_cmd_vec.emplace_back(path_seg.seg_gear);
+      steer_cmd_vec.emplace_back(path_seg.seg_steer);
+      total_length += path_seg.Getlength();
+      if (path_seg.collision_flag) {
+        collide_flag = true;
+      }
+    }
+
+    for (int i = 0; i < path_count; ++i) {
+      if (gear_cmd_vec[i] == cur_gear) {
+        cur_gear_length += path_segment_vec[i].Getlength();
+      } else {
+        break;
+      }
+    }
+
+    for (int i = 0; i < path_count - 1; ++i) {
+      if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
+        gear_change_count++;
+        continue;
+      }
+
+      // 直线到转弯
+      if (steer_cmd_vec[i] == SEG_STEER_STRAIGHT &&
+          (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
+           steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
+        steer_change_count++;
+      }
+
+      // 左转到右转 或 右转到左转
+      if ((steer_cmd_vec[i] == SEG_STEER_LEFT &&
+           steer_cmd_vec[i + 1] == SEG_STEER_RIGHT) ||
+          (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
+           steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
+        steer_change_count +=
+            2 * static_cast<uint8_t>(
+                    5.5 / path_segment_vec[i].arc_seg.circle_info.radius);
+      }
+
+      // 转弯到直线  后续看是否可以不考虑 因为直线更容易跟踪
+      if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
+           steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
+          steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
+        steer_change_count++;
+      }
+    }
+
+    CalcCost();
+  }
+}
+
+void GeometryPath::CalcCost() {
+  gear_change_cost = 30.0 * gear_change_count;
+  length_cost = 1.0 * total_length;
+  steer_change_cost = 3.0 * steer_change_count;
+
+  cost = gear_change_cost + length_cost + steer_change_cost;
+}
+
+void PathSegment::PrintInfo(const bool enable_log) const {
+  ILOG_INFO_IF(enable_log) << "seg type = " << GetSegTypeString(seg_type)
+                           << "  steer = " << GetSteerString(seg_steer)
+                           << "  gear = " << GetGearString(seg_gear)
+                           << "  col_flag = " << collision_flag
+                           << "  lat_buffer = " << lat_buffer;
+  if (seg_type == SEG_TYPE_LINE) {
+    line_seg.PrintInfo(enable_log);
+  } else {
+    arc_seg.PrintInfo(enable_log);
+  }
+}
+
+const std::string GetSegTypeString(const uint8_t seg_type) {
+  std::string seg_type_str;
+  switch (seg_type) {
+    case SEG_TYPE_LINE:
+      seg_type_str = std::string("line");
+      break;
+    case SEG_TYPE_ARC:
+      seg_type_str = std::string("arc");
+      break;
+    default:
+      seg_type_str = std::string("invalid");
+      break;
+  }
+  return seg_type_str;
+}
+
+const std::string GetGearString(const uint8_t gear) {
+  std::string seg_gear_str;
+  switch (gear) {
+    case SEG_GEAR_DRIVE:
+      seg_gear_str = std::string("drive");
+      break;
+    case SEG_GEAR_REVERSE:
+      seg_gear_str = std::string("reverse");
+      break;
+    default:
+      seg_gear_str = std::string("invalid");
+      break;
+  }
+  return seg_gear_str;
+}
+
+const std::string GetSteerString(const uint8_t steer) {
+  std::string seg_steer_str;
+  switch (steer) {
+    case SEG_STEER_STRAIGHT:
+      seg_steer_str = std::string("straight");
+      break;
+    case SEG_STEER_LEFT:
+      seg_steer_str = std::string("left");
+      break;
+    case SEG_STEER_RIGHT:
+      seg_steer_str = std::string("right");
+      break;
+    default:
+      seg_steer_str = std::string("invalid");
+      break;
+  }
+  return seg_steer_str;
+}
+
+const std::string GetSlotSideString(const uint8_t slot_side) {
+  std::string slot_side_str;
+  switch (slot_side) {
+    case SLOT_SIDE_LEFT:
+      slot_side_str = std::string("left");
+      break;
+    case SLOT_SIDE_RIGHT:
+      slot_side_str = std::string("right");
+      break;
+    default:
+      slot_side_str = std::string("invalid");
+      break;
+  }
+  return slot_side_str;
 }
 
 }  // namespace geometry_lib

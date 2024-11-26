@@ -22,8 +22,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   void GenTlane() override;
   void GenObstacles() override;
   virtual void Log() const override;
-  virtual void GenPlanningOutput() override;
-  virtual void GenPlanningPath() override;
   const bool UpdateEgoSlotInfo() override;
   const uint8_t PathPlanOnce() override;
   void RealTimeDynamicColDet(const EgoSlotInfo& ego_slot_info);

@@ -92,6 +92,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
     double turn_radius = 5.5;
 
+    double radius_gain = 1.0;
+
     size_t adjust_fail_count = 0;
 
     pnc::geometry_lib::LineSegment target_line;
@@ -126,6 +128,7 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       rough_plan_time = 0.0;
 
       turn_radius = 5.5;
+      radius_gain = 1.0;
 
       adjust_fail_count = 0;
 
@@ -227,9 +230,9 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   const bool IsPathSafe(const pnc::geometry_lib::PathSegment &path_seg,
                         const double lat_inflation, const double lon_safe_dist);
 
-  const bool IsGeometryPathSafe(
-      const pnc::geometry_lib::GeometryPath &geometry_path,
-      const double lat_inflation, const double lon_safe_dist);
+  const bool IsGeometryPathSafe(pnc::geometry_lib::GeometryPath &geometry_path,
+                                const double lat_inflation,
+                                const double lon_safe_dist);
 
   const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,
@@ -336,6 +339,12 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                    const double lon_buffer,
                                    geometry_lib::GeometryPath &geometry_path,
                                    const bool enable_log = true);
+
+  const bool DubinsPathPlan(const geometry_lib::PathPoint &pose,
+                            const uint8_t ref_gear, const double lat_buffer,
+                            const double lon_buffer,
+                            geometry_lib::GeometryPath &geometry_path,
+                            const bool enable_log = true);
 
   const bool OneLinePathPlan(const geometry_lib::PathPoint &pose,
                              const uint8_t gear, const double lat_buffer,

@@ -59,6 +59,8 @@ void PerpendicularTailInPathGenerator::Preprocess() {
   calc_params_.strict_col_lon_safe_dist =
       apa_param.GetParam().col_obs_safe_dist_strict + 0.068;
 
+  calc_params_.radius_gain = 1.068;
+
   // calc slot side by Tlane
   if (input_.tlane.pt_inside.y() > input_.tlane.pt_outside.y()) {
     calc_params_.is_left_side = true;
@@ -1162,9 +1164,10 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
             geometry_lib::CalArcFromPt(gear, steer, arc_length,
                                        calc_params_.turn_radius, end_pose,
                                        arc_seg);
+            geometry_lib::GeometryPath temp_path =
+                geometry_lib::GeometryPath(arc_seg);
             if (!IsGeometryPathSafe(
-                    geometry_lib::GeometryPath(arc_seg),
-                    apa_param.GetParam().car_lat_inflation_strict,
+                    temp_path, apa_param.GetParam().car_lat_inflation_strict,
                     apa_param.GetParam().col_obs_safe_dist_strict)) {
               cost += one_step_col_cost;
             }
@@ -1398,8 +1401,9 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
                                    calc_params_.turn_radius,
                                    inner_inner_tang_pose_vec[0], arc_seg);
         // check 1r is safe
-        if (IsGeometryPathSafe(geometry_lib::GeometryPath(arc_seg),
-                               calc_params_.strict_car_lat_inflation,
+        geometry_lib::GeometryPath temp_path =
+            geometry_lib::GeometryPath(arc_seg);
+        if (IsGeometryPathSafe(temp_path, calc_params_.strict_car_lat_inflation,
                                calc_params_.strict_col_lon_safe_dist)) {
           reverse_1arc_safe = true;
         } else {
@@ -1601,9 +1605,12 @@ const bool PerpendicularTailInPathGenerator::IsPathSafe(
 }
 
 const bool PerpendicularTailInPathGenerator::IsGeometryPathSafe(
-    const geometry_lib::GeometryPath& geometry_path, const double lat_inflation,
+    geometry_lib::GeometryPath& geometry_path, const double lat_inflation,
     const double lon_safe_dist) {
   const double time = IflyTime::Now_ms();
+  for (auto& path_seg : geometry_path.path_segment_vec) {
+    path_seg.lat_buffer = lat_inflation;
+  }
   const bool col_flag =
       collision_detector_ptr_
           ->UpdateByEDT(geometry_path, lat_inflation, lon_safe_dist)
@@ -1658,11 +1665,14 @@ const bool PerpendicularTailInPathGenerator::PreparePlanSecond() {
 }
 
 void PerpendicularTailInPathGenerator::CalMonoSafeCircle() {
+  const double mono_radius =
+      calc_params_.turn_radius * calc_params_.radius_gain;
+
   calc_params_.mono_safe_circle.center.y() =
       calc_params_.target_line.pA.y() +
-      calc_params_.turn_radius * calc_params_.slot_side_sgn;
+      mono_radius * calc_params_.slot_side_sgn;
 
-  calc_params_.mono_safe_circle.radius = calc_params_.turn_radius;
+  calc_params_.mono_safe_circle.radius = mono_radius;
 
   Eigen::Vector2d pt_inside = input_.tlane.pt_inside;
 
@@ -1671,10 +1681,9 @@ void PerpendicularTailInPathGenerator::CalMonoSafeCircle() {
                                apa_param.GetParam().max_pt_inside_drop_dx_mono);
 
   const double deta_x = std::sqrt(
-      std::pow(
-          (calc_params_.turn_radius - apa_param.GetParam().car_width * 0.5 -
-           apa_param.GetParam().car_lat_inflation_strict),
-          2) -
+      std::pow((mono_radius - apa_param.GetParam().car_width * 0.5 -
+                apa_param.GetParam().car_lat_inflation_strict),
+               2) -
       std::pow((calc_params_.mono_safe_circle.center.y() - pt_inside.y()), 2));
 
   calc_params_.mono_safe_circle.center.x() = pt_inside.x() - deta_x;
@@ -1731,16 +1740,17 @@ bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
       pt_inside.x(), input_.tlane.corner_inside_slot.x() -
                          apa_param.GetParam().max_pt_inside_drop_dx_multi);
 
+  const double multi_radius =
+      calc_params_.turn_radius * calc_params_.radius_gain;
+
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = pt_inside;
-  circle_p1.radius = calc_params_.turn_radius -
-                     0.5 * apa_param.GetParam().car_width -
+  circle_p1.radius = multi_radius - 0.5 * apa_param.GetParam().car_width -
                      apa_param.GetParam().car_lat_inflation_strict;
 
   // move down the start line
-  const Eigen::Vector2d pt_s =
-      calc_params_.prepare_line.pA +
-      calc_params_.pre_line_normal_vec * calc_params_.turn_radius;
+  const Eigen::Vector2d pt_s = calc_params_.prepare_line.pA +
+                               calc_params_.pre_line_normal_vec * multi_radius;
 
   pnc::geometry_lib::LineSegment line_sa(
       pt_s, pt_s + calc_params_.pre_line_tangent_vec);
@@ -1764,7 +1774,7 @@ bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
     multi_safe_circle.center = cross_points[1];
   }
 
-  multi_safe_circle.radius = calc_params_.turn_radius;
+  multi_safe_circle.radius = multi_radius;
 
   // ILOG_INFO << "multi safa circle info: center = " <<
   // multi_safe_circle.center
@@ -3985,7 +3995,8 @@ PerpendicularTailInPathGenerator::TrimPathByCollisionDetection(
 }
 // collision detect end
 
-const std::vector<double> PerpendicularTailInPathGenerator::GetMinSafeCircle() const {
+const std::vector<double> PerpendicularTailInPathGenerator::GetMinSafeCircle()
+    const {
   return std::vector<double>{calc_params_.mono_safe_circle.center.x(),
                              calc_params_.mono_safe_circle.center.y(),
                              calc_params_.mono_safe_circle.radius};
@@ -4122,7 +4133,9 @@ const double PerpendicularTailInPathGenerator::CalOccupiedRatio(
 }
 
 // for simulation
-const bool PerpendicularTailInPathGenerator::PreparePlanPb() { return PreparePlan(); }
+const bool PerpendicularTailInPathGenerator::PreparePlanPb() {
+  return PreparePlan();
+}
 
 const bool PerpendicularTailInPathGenerator::PreparePlanSecondPb() {
   return PreparePlanSecond();
@@ -4134,9 +4147,13 @@ const bool PerpendicularTailInPathGenerator::GenPathOutputByDubinsPb() {
   return GenPathOutputByDubins();
 }
 
-const bool PerpendicularTailInPathGenerator::MultiPlanPb() { return MultiPlan(); }
+const bool PerpendicularTailInPathGenerator::MultiPlanPb() {
+  return MultiPlan();
+}
 
-const bool PerpendicularTailInPathGenerator::AdjustPlanPb() { return AdjustPlan(); }
+const bool PerpendicularTailInPathGenerator::AdjustPlanPb() {
+  return AdjustPlan();
+}
 
 const PerpendicularTailInPathGenerator::PlannerParams&
 PerpendicularTailInPathGenerator::GetCalcParams() {

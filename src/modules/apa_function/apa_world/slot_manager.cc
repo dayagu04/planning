@@ -80,18 +80,17 @@ bool SlotManager::Update(const std::shared_ptr<ApaData> apa_data_ptr) {
 
   CopySlotReleaseInfo();
 
-  Log();
+  // Log();
 
   return update_slot_in_searching_flag || update_slot_in_parking_flag;
 }
 
 void SlotManager::AddObstacles() {
   frame_.obs_pt_vec.clear();
+  AddFusionObjects();
+  AddGroundLineObstacles();
   if (apa_param.GetParam().use_uss_pt_clound) {
     AddUssPerceptObstacles();
-  } else {
-    AddFusionObjects();
-    AddGroundLineObstacles();
   }
   frame_.fus_obj_valid_flag = true;
 }
@@ -127,11 +126,18 @@ void SlotManager::AddFusionObjects() {
   Eigen::Vector2d fs_pt;
   if (use_fus_occ_obj) {
     iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
-    for (uint8 i = 0; i < fusion_object_num; ++i) {
+    for (uint8 i = 0;
+         i < std::min(fusion_object_num,
+                      static_cast<uint8>(FUSION_OCCUPANCY_OBJECT_MAX_NUM));
+         ++i) {
       fusion_occupancy_object =
           frame_.fusion_occupancy_objects_info_ptr->fusion_object[i]
               .additional_occupancy_info;
-      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_size; ++j) {
+      for (uint32 j = 0;
+           j < std::min(fusion_occupancy_object.polygon_points_size,
+                        static_cast<uint32>(
+                            FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_NUM));
+           ++j) {
         fs_pt << fusion_occupancy_object.polygon_points[j].x,
             fusion_occupancy_object.polygon_points[j].y;
         frame_.obs_pt_vec.emplace_back(fs_pt);
@@ -139,10 +145,16 @@ void SlotManager::AddFusionObjects() {
     }
   } else {
     iflyauto::FusionObjectsAdditional fusion_object;
-    for (uint8 i = 0; i < fusion_object_num; ++i) {
+    for (uint8 i = 0; i < std::min(fusion_object_num,
+                                   static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
+         ++i) {
       fusion_object =
           frame_.fusion_objects_info_ptr->fusion_object[i].additional_info;
-      for (uint32 j = 0; j < fusion_object.polygon_points_size; ++j) {
+      for (uint32 j = 0;
+           j <
+           std::min(fusion_object.polygon_points_size,
+                    static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_NUM));
+           ++j) {
         fs_pt << fusion_object.polygon_points[j].x,
             fusion_object.polygon_points[j].y;
         frame_.obs_pt_vec.emplace_back(fs_pt);
@@ -179,9 +191,13 @@ void SlotManager::AddGroundLineObstacles() {
 
   Eigen::Vector2d gl_pt;
   iflyauto::GroundLine gl;
-  for (uint8_t i = 0; i < ground_lines_size; ++i) {
+  for (uint8_t i = 0;
+       i < std::min(ground_lines_size, static_cast<uint8>(GROUND_LINES_NUM));
+       ++i) {
     gl = frame_.ground_line_perception_info_ptr->ground_lines[i];
-    for (uint8 j = 0; j < gl.points_3d_size; ++j) {
+    for (uint8 j = 0; j < std::min(gl.points_3d_size,
+                                   static_cast<uint8>(GROUND_LINE_POINTS_NUM));
+         ++j) {
       gl_pt << gl.points_3d[j].x, gl.points_3d[j].y;
       frame_.obs_pt_vec.emplace_back(gl_pt);
     }
@@ -213,13 +229,23 @@ void SlotManager::AddUssPerceptObstacles() {
     ILOG_INFO << "uss obs is empty";
     return;
   }
-
+  const size_t N_begin = frame_.obs_pt_vec.size();
   frame_.obs_pt_vec.reserve(frame_.obs_pt_vec.size() + uss_pt_num);
   Eigen::Vector2d uss_pt;
-  for (uint32 i = 0; i < uss_pt_num; ++i) {
+  for (uint32 i = 0;
+       i < std::min(uss_pt_num, static_cast<uint32>(NUM_OF_APA_SLOT_OBJ));
+       ++i) {
     uss_pt << obj_info_desample.obj_pt_global[i].x,
         obj_info_desample.obj_pt_global[i].y;
     frame_.obs_pt_vec.emplace_back(uss_pt);
+  }
+
+  const size_t N_end = frame_.obs_pt_vec.size();
+  if (N_end == N_begin) {
+    ILOG_INFO << "ground line is empty";
+    return;
+  } else {
+    ILOG_INFO << "ground line size = " << N_end - N_begin;
   }
 }
 
@@ -602,8 +628,7 @@ void SlotManager::ModifySlot2Rectangle(common::SlotInfo &slot_info) {
   }
 }
 
-bool SlotManager::IsValidParkingSlot(
-    const common::SlotInfo &slot_info) const {
+bool SlotManager::IsValidParkingSlot(const common::SlotInfo &slot_info) const {
   if (slot_info.slot_type() ==
       Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
     return true;
@@ -715,7 +740,7 @@ bool SlotManager::CorrectSlotPointsOrder(common::SlotInfo &slot_info) const {
 }
 
 bool SlotManager::IfUpdateSlot(const common::SlotInfo &new_slot_info,
-                                  const size_t fusion_slot_source_type) {
+                               const size_t fusion_slot_source_type) {
   if ((fusion_slot_source_type ==
        iflyauto::SlotSourceType::SLOT_SOURCE_TYPE_ONLY_USS) ||
       (fusion_slot_source_type ==
@@ -924,8 +949,7 @@ bool SlotManager::LonDifUpdateCondition(
   return true || lon_dif_update_condition;
 }
 
-bool SlotManager::AngleUpdateCondition(
-    const common::SlotInfo &new_slot_info) {
+bool SlotManager::AngleUpdateCondition(const common::SlotInfo &new_slot_info) {
   const Eigen::Vector2d mirror_center_pos =
       (frame_.measurement_data_ptr->left_mirror_pos +
        frame_.measurement_data_ptr->right_mirror_pos) *
@@ -1739,7 +1763,7 @@ void SlotManager::UpdateReleaseSlotIdVec() {
 }
 
 const bool SlotManager::GetSelectedSlot(common::SlotInfo &slot_info,
-                                           const int selected_id) {
+                                        const int selected_id) {
   if (frame_.slot_info_window_map.count(selected_id) == 0) {
     return false;
   } else {
@@ -1843,8 +1867,8 @@ void SlotManager::CopySlotReleaseInfo() {
   return;
 }
 
-void SlotManager::SlotReleaseByScenarioTry(
-    const bool release, const SlotReleaseMethod method) {
+void SlotManager::SlotReleaseByScenarioTry(const bool release,
+                                           const SlotReleaseMethod method) {
   for (int i = 0; i < frame_.slot_management_info.slot_info_vec_size(); i++) {
     common::SlotInfo *slot_info =
         frame_.slot_management_info.mutable_slot_info_vec(i);
