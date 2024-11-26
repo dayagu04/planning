@@ -647,6 +647,7 @@ void UssObstacleAvoidance::Update(
   }
   ILOG_INFO << "vel_target = " << vel_target;
   remain_dist_info_.vel_target = vel_target;
+  remain_dist_info_.obs_pt_remain_dist = result.remain_dist;
 
   std::vector<double> car_predict_x_vec;
   std::vector<double> car_predict_y_vec;

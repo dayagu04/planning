@@ -259,7 +259,7 @@
   "perpendicular_park_out_min_target_heading": 85,
   "path_extend_distance": 0.3,
   "mono_plan_enable": true,
-  "conservative_mono_enable": true,
+  "conservative_mono_enable": false,
   "multi_plan_min_lat_err": 0.668,
   "multi_plan_min_heading_err": 8.68,
   "multi_plan_max_occupied_ratio": 0.8,

@@ -698,7 +698,7 @@ class LoadCyberbag:
       self.uss_percept_msg['enable'] = False
       print("no read /iflytek/uss/uss_perception_info !!!")
 
-    smallest_abs_t = self.loc_msg['abs_t'][0]
+    print("smallest_abs_t = ", smallest_abs_t)
     time_array = time.localtime(smallest_abs_t)
     time_string = time.strftime("%Y-%m-%d %H:%M:%S", time_array)
     print("time = ", time_string)
@@ -1932,7 +1932,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
         obj_count = single_out_line_dataori.obj_pt_cnt
       else:
         obj_count = NUM_OF_APA_SLOT_OBJ
-
+      obj_count = min(NUM_OF_APA_SLOT_OBJ, obj_count)
       for j in range(obj_count):
         if version_245:
           x = single_out_line_dataori.obj_pt_global[j].x
@@ -3623,7 +3623,7 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             obj_count = single_out_line_dataori.obj_pt_cnt
           else:
             obj_count = NUM_OF_APA_SLOT_OBJ
-
+          obj_count = min(NUM_OF_APA_SLOT_OBJ, obj_count)
           for j in range(obj_count):
             if version_245:
               x = single_out_line_dataori.obj_pt_global[j].x

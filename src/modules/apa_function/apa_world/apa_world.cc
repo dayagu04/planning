@@ -19,6 +19,7 @@ namespace planning {
 namespace apa_planner {
 void ApaWorld::Init() {
   apa_data_ptr_ = std::make_shared<ApaData>();
+  state_machine_manager_ptr = std::make_shared<ApaStateMachineManager>();
   slot_manager_ptr_ = std::make_shared<SlotManager>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
@@ -27,6 +28,7 @@ void ApaWorld::Init() {
 
 void ApaWorld::Reset() {
   apa_data_ptr_->Reset();
+  state_machine_manager_ptr->Reset();
   slot_manager_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
@@ -54,6 +56,8 @@ void ApaWorld::Preprocess() {
   apa_data_ptr_->control_output_ptr = &local_view_ptr_->control_output;
 
   UpdateEgoState();
+
+  state_machine_manager_ptr->Update(local_view_ptr_);
 
   UpdateStateMachine();
 
@@ -443,11 +447,18 @@ void ApaWorld::UpdateFuisonObs() {
   Eigen::Vector2d fs_pt;
   if (use_fus_occ_obj) {
     iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
-    for (uint8 i = 0; i < fusion_object_num; ++i) {
+    for (uint8 i = 0;
+         i < std::min(fusion_object_num,
+                      static_cast<uint8>(FUSION_OCCUPANCY_OBJECT_MAX_NUM));
+         ++i) {
       fusion_occupancy_object =
           apa_data_ptr_->fusion_occupancy_objects_info_ptr->fusion_object[i]
               .additional_occupancy_info;
-      for (uint32 j = 0; j < fusion_occupancy_object.polygon_points_size; ++j) {
+      for (uint32 j = 0;
+           j < std::min(fusion_occupancy_object.polygon_points_size,
+                        static_cast<uint32>(
+                            FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_NUM));
+           ++j) {
         fs_pt << fusion_occupancy_object.polygon_points[j].x,
             fusion_occupancy_object.polygon_points[j].y;
         obs_pt_vec.emplace_back(fs_pt);
@@ -455,10 +466,16 @@ void ApaWorld::UpdateFuisonObs() {
     }
   } else {
     iflyauto::FusionObjectsAdditional fusion_object;
-    for (uint8 i = 0; i < fusion_object_num; ++i) {
+    for (uint8 i = 0; i < std::min(fusion_object_num,
+                                   static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
+         ++i) {
       fusion_object = apa_data_ptr_->fusion_objects_info_ptr->fusion_object[i]
                           .additional_info;
-      for (uint32 j = 0; j < fusion_object.polygon_points_size; ++j) {
+      for (uint32 j = 0;
+           j <
+           std::min(fusion_object.polygon_points_size,
+                    static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_NUM));
+           ++j) {
         fs_pt << fusion_object.polygon_points[j].x,
             fusion_object.polygon_points[j].y;
         obs_pt_vec.emplace_back(fs_pt);
@@ -493,9 +510,13 @@ void ApaWorld::UpdateGroundLineObs() {
 
   Eigen::Vector2d gl_pt;
   iflyauto::GroundLine gl;
-  for (uint8_t i = 0; i < ground_lines_size; ++i) {
+  for (uint8_t i = 0;
+       i < std::min(ground_lines_size, static_cast<uint8>(GROUND_LINES_NUM));
+       ++i) {
     gl = apa_data_ptr_->ground_line_perception_info_ptr->ground_lines[i];
-    for (uint8 j = 0; j < gl.points_3d_size; ++j) {
+    for (uint8 j = 0; j < std::min(gl.points_3d_size,
+                                   static_cast<uint8>(GROUND_LINE_POINTS_NUM));
+         ++j) {
       gl_pt << gl.points_3d[j].x, gl.points_3d[j].y;
       obs_pt_vec.emplace_back(gl_pt);
     }
@@ -530,7 +551,9 @@ void ApaWorld::UpdateUssObs() {
   obs_pt_vec.reserve(uss_pt_num);
 
   Eigen::Vector2d uss_pt;
-  for (uint32 i = 0; i < uss_pt_num; ++i) {
+  for (uint32 i = 0;
+       i < std::min(uss_pt_num, static_cast<uint32>(NUM_OF_APA_SLOT_OBJ));
+       ++i) {
     uss_pt << obj_info_desample.obj_pt_global[i].x,
         obj_info_desample.obj_pt_global[i].y;
     obs_pt_vec.emplace_back(uss_pt);
