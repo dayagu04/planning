@@ -23,7 +23,8 @@ from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
 
-bag_path = "/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732610911.close-loop.scc.plan"
+bag_path = "/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732672608.close-loop.scc.plan"# danger left
+# bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732671696.close-loop.scc.plan'
 
 
 html_file = bag_path +".vo_lat_behavior.html"

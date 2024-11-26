@@ -673,9 +673,9 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow2() {
   //   lane_borrow_decider_output_.right_bounds_l = right_right_bounds_l;
   //   lane_borrow_decider_output_.borrow_direction = 2;
   // }
-  // 如果都是不安全
-  double target_borrow_left = target_left_l;
-  double target_borrow_right = target_right_l;
+     // 如果都是不安全
+  double  target_borrow_left = target_left_l;// if 之前输出日志 车道可行就会有数值
+  double  target_borrow_right = target_right_l;
   lane_borrow_pb_info->set_target_left_l(target_borrow_left);
   lane_borrow_pb_info->set_target_right_l(target_borrow_right);
   lane_borrow_pb_info->set_safe_left_borrow(safe_to_left_lane_borrow);
@@ -765,10 +765,10 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
     }
 
     const double obs_v = obstacle->obstacle()->velocity();
-    if (frenet_obstacle_sl.s_start -
+    if ((frenet_obstacle_sl.s_start -
                 ego_frenet_boundary_.s_end >  // 在自车前方 比较近 但是速度很快
-            kSafeBackDistance &&                 // [fixed]
-        obs_v > ego_speed_ + kObsSpeedBuffer) {  // 速度高于自车
+            kSafeBackDistance) &&                 // [fixed]
+        (obs_v > ego_speed_ + kObsSpeedBuffer)) {  // 速度高于自车
       continue;
     }
 
@@ -826,6 +826,21 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
 
+//    too close to area but no borrow enough
+  if(left_borrow_){// with longit in 2m still l dir collision
+    if(obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
+      &&ego_frenet_boundary_.l_start < obs_left_l_)
+    {
+      return false; // TODO add specific fail reason
+    }
+  }
+  else {
+    if(obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
+      &&ego_frenet_boundary_.l_end > obs_right_l_)
+    {
+      return false; // TODO add specific fail reason
+    }
+  }
   const auto& obstacles =
       current_reference_path_ptr_->get_obstacles();  // 遍历障碍物
   for (const auto& obstacle : obstacles) {
@@ -839,7 +854,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start >
-        ego_frenet_boundary_.s_start) {  // 前方障碍物
+        ego_frenet_boundary_.s_start) {  // 前方障碍物[车尾为准]
       if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
@@ -890,18 +905,18 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         continue;
       }
 
-      const double l_buffer = 0.5;  // 是否保留待定吧 不保留有点保守了
-      if (left_borrow_) {
-        if (frenet_obstacle_sl.l_start >
-            ego_frenet_boundary_.l_end + l_buffer) {
-          continue;
-        }
-      } else {
-        if (frenet_obstacle_sl.l_end <
-            ego_frenet_boundary_.l_start - l_buffer) {  // fixed
-          continue;
-        }
-      }
+      // const double l_buffer = 0.5; //
+      // if (left_borrow_) {
+      //   if (frenet_obstacle_sl.l_start >
+      //       ego_frenet_boundary_.l_end + l_buffer) {
+      //     continue;
+      //   }
+      // } else {
+      //   if (frenet_obstacle_sl.l_end <
+      //       ego_frenet_boundary_.l_start - l_buffer) {// fixed
+      //     continue;
+      //   }
+      // }
 
       double dist = std::max(kSafeBackDistance,
                              obstacle->obstacle()->velocity() * kObsSpeedRatio);
