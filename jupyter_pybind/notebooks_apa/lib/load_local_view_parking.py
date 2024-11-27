@@ -233,7 +233,7 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading",
-                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan",
+                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan", "geometry_path_release",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
@@ -1679,6 +1679,13 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       status_dict = {0: 'NONE', 1: 'IN_PROGRESS', 2: 'FINISHED', 3: 'FAILED'}
       status = status_dict.get(apa_planning_status, 'UNKNOWN')
       datas.append(str(apa_planning_status) + ": " + str(status))
+
+      names.append("apa_planning_method")
+      geometry_path_release =  bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['geometry_path_release']
+      if geometry_path_release:
+        datas.append(str("geometry_plan"))
+      else:
+        datas.append(str("astar_plan"))
 
       names.append("planning_stm")
       planning_status = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['planning_status']
@@ -4039,6 +4046,13 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             status_dict = {0: 'NONE', 1: 'IN_PROGRESS', 2: 'FINISHED', 3: 'FAILED'}
             status = status_dict.get(apa_planning_status, 'UNKNOWN')
             datas.append(str(apa_planning_status) + ": " + str(status))
+
+            names.append("apa_planning_method")
+            geometry_path_release = plan_json['geometry_path_release']
+            if geometry_path_release:
+              datas.append(str("geometry_plan"))
+            else:
+              datas.append(str("astar_plan"))
 
             names.append("planning_stm")
             planning_status = plan_json['planning_status']

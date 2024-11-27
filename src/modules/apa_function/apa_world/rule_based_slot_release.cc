@@ -88,7 +88,7 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
     }
 
     // distance is big
-    if (pair.first > 13.68) {
+    if (pair.first > 16.8) {
       slot->set_is_release(false);
       slot->set_is_occupied(true);
       ILOG_INFO << "distance is big";

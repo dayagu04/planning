@@ -1303,6 +1303,11 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
     }
   }
 
+  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
+
   JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 

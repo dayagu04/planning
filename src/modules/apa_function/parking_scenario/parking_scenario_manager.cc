@@ -10,6 +10,7 @@
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
+#include "debug_info_log.h"
 #include "log_glog.h"
 #include "narrow_space/narrow_space_scenario.h"
 #include "narrow_space_decider.h"
@@ -226,6 +227,9 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
       apa_world_->GetSlotManagerPtr()
           ->GetEgoSlotInfo()
           .release_info.release_state[GEOMETRY_PLANNING_RELEASE];
+
+  JSON_DEBUG_VALUE("geometry_path_release",
+                   geometry_path_release == SlotReleaseState::RELEASE)
 
   if (geometry_path_release == SlotReleaseState::NOT_RELEASE &&
       astar_path_release == SlotReleaseState::RELEASE) {
