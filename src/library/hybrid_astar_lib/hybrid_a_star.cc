@@ -839,9 +839,8 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
 
   AstarPathGear gear = reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
-  if (request_.parking_task == ParkingTask::TAIL_PARKING_IN &&
-      request_.space_type == ParkSpaceType::VERTICAL &&
-      request_.head_request == ParkingVehDirectionRequest::tail_in_first &&
+  if (request_.space_type == ParkSpaceType::VERTICAL &&
+      request_.direction_request == ParkingVehDirection::TAIL_IN &&
       request_.rs_request == RSPathRequestType::last_path_forbid_forward) {
     if (gear == AstarPathGear::drive) {
       // ILOG_INFO << " rs path last seg len is drive gear ";
@@ -864,8 +863,7 @@ bool HybridAStar::IsRSPathSingleShot(const RSPath* reeds_shepp_to_end) {
   for (int i = 0; i < rs_path_seg_size; i++) {
     gear = reeds_shepp_to_end->paths[i].gear;
 
-    if (request_.parking_task == ParkingTask::TAIL_PARKING_IN &&
-        request_.space_type == ParkSpaceType::VERTICAL) {
+    if (request_.space_type == ParkSpaceType::VERTICAL) {
       if (request_.rs_request == RSPathRequestType::all_path_forbid_forward &&
           gear == AstarPathGear::drive) {
         // ILOG_INFO << " rs path seg need single shot by reverse gear ";
@@ -2543,11 +2541,6 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
     return;
   }
 
-  if (request.parking_task != ParkingTask::TAIL_PARKING_IN) {
-    ILOG_INFO << "parking_in";
-    return;
-  }
-
   const Pose2D start = request.start_;
   Pose2D end = request.real_goal;
   end.x += config_.dp_search_goal_adjust_dist;
@@ -3217,6 +3210,12 @@ bool HybridAStar::AstarSearch(
       }
 
       if (rs_path_success_num > 5) {
+        break;
+      }
+
+      // in try searching, no need optimal path.
+      if (request_.path_generate_method ==
+          AstarPathGenerateType::TRY_SEARCHING) {
         break;
       }
     }

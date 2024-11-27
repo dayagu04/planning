@@ -7,7 +7,8 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
-// #include <fastdds/dds/log/Log.hpp>
+#include <fastdds/dds/log/Log.hpp>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <vector>
@@ -18,6 +19,7 @@
 #include "behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
+#include "config_context.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
 #include "dynamic_world/dynamic_agent_node.h"
@@ -25,6 +27,7 @@
 #include "log.h"
 #include "math/box2d.h"
 #include "math/linear_interpolation.h"
+#include "mjson/reader.hpp"
 #include "planning_context.h"
 #include "refline.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_lane_manager.h"
@@ -32,6 +35,7 @@
 #include "task_basic_types.h"
 #include "task_basic_types.pb.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
+#include "utils/file.h"
 #include "utils/kd_path.h"
 #include "utils_math.h"
 #include "vec2d.h"
@@ -340,7 +344,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   double desired_distance_filtered = 0.0;
   double lead_two_desired_distance_filtered = 0.0;
   std::pair<double, double> acc_target = {-0.5, 0.5};
-
+  const auto ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
   // 纵向只使用融合成功障碍物
   bool lead_fusion_enable = (lead_one.fusion_source() & OBSTACLE_SOURCE_CAMERA);
   const auto &agent_manager =
@@ -364,13 +369,35 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
 
     lead_one_a_processed = ProcessObstacleAcc(lead_one.a_lead_k());
     safe_distance = CalcSafeDistance(lead_one.v_lead(), v_ego);
-    lead_one_desired_distance =
-        CalcDesiredDistance(lead_one, v_ego, lc_request);
+
+    const auto time_headway_level =
+        ego_state_manager->time_headway_level();
+    // auto engine_config =
+    //     common::ConfigurationContext::Instance()->engine_config();
+    // std::string config_file = common::util::ReadFile(
+    //     engine_config.module_cfg_dir +
+    //     "/general_planner_module_highway.json");
+    // auto json_reader = mjson::Reader(config_file);
+    // int following_distance_level =
+    //     json_reader.get<int>("following_distance_level");
+    // bool hack_lead_one_to_big_vehi =
+    //     json_reader.get<bool>("hack_lead_one_to_big_vehi");
+    // if (9 == following_distance_level) {
+    //   following_distance_level = following_distance_level_to_big_vehicle;
+    // }
+
+    lead_one_desired_distance = CalcDesiredDistance(
+        lead_one, v_ego, lc_request, time_headway_level);
+    JSON_DEBUG_VALUE("time_headway_level",
+                     time_headway_level);
+    JSON_DEBUG_VALUE("desired_distance", lead_one_desired_distance);
+
     lead_one_desired_velocity = CalcDesiredVelocity(
         lead_one.d_rel(), lead_one_desired_distance, lead_one.v_lead());
 
     desired_distance_filtered = DesiredDistanceFilter(
         lead_one, v_ego, safe_distance, lead_one_desired_distance);
+    JSON_DEBUG_VALUE("desired_distance_filtered", desired_distance_filtered);
 
     // HACK: 解决问题的时间太短，先粗略快速判断cross agent后更新st info
     // lead的信息太少，缺少s,l信息
@@ -1338,14 +1365,15 @@ double StGraphGenerator::ProcessObstacleAcc(const double a_lead) {
 
 double StGraphGenerator::CalcDesiredDistance(
     const planning::common::TrackedObjectInfo &lead_obstacle,
-    const double v_ego, const std::string &lc_request) {
+    const double v_ego, const std::string &lc_request,
+    size_t time_headway_level) {
   LOG_DEBUG("-----CalcDesiredDistance \n");
   double desired_distance = 50.0;  // default value
 
   // 跟车距离两种方式：RSS和标定
   double desired_distance_rss = GetRSSDistance(lead_obstacle.v_lead(), v_ego);
   double desired_distance_calibrate = GetCalibratedDistance(
-      lead_obstacle.v_lead(), v_ego, lc_request,
+      lead_obstacle.v_lead(), v_ego, lc_request, time_headway_level,
       lead_obstacle.is_accident_car(), lead_obstacle.is_temp_lead(),
       lead_obstacle.is_lead());
   JSON_DEBUG_VALUE("RealTime_desired_distance_rss", desired_distance_rss);
@@ -1384,12 +1412,22 @@ double StGraphGenerator::GetRSSDistance(const double obstacle_velocity,
 
 double StGraphGenerator::GetCalibratedDistance(
     const double v_lead, const double v_ego, const std::string &lc_request,
-    const bool is_accident_car, const bool is_temp_lead, const bool is_lead) {
+    size_t time_headway_level, const bool is_accident_car,
+    const bool is_temp_lead, const bool is_lead) {
   LOG_DEBUG("-----calc_desired_distance \n");
   // 受限感知性能，取非负
   double v_lead_clip = std::max(v_lead, 0.0);
   // 这里查表、魔数都要优化
-  double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
+  size_t time_headway_level_clip;
+  if (time_headway_level < 1) {
+    time_headway_level = 1;
+  } else if (time_headway_level > 5) {
+    time_headway_level = 5;
+  } else {
+    time_headway_level = time_headway_level;
+  }
+  double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V) +
+                 _HEADWAY_BP[time_headway_level - 1];
   // if (lc_request != "none") {
   //   t_gap = t_gap * (0.6 + v_ego * 0.01);
   // }
@@ -3335,7 +3373,8 @@ bool StGraphGenerator::FilterEgoNearByAgentsWhenMerge(
   const auto ego_lane_width = ego_lane->width();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  // const auto ego_rear_edge_to_rear_axle =
+  // vehicle_param.rear_edge_to_rear_axle;
   Point2D agent_current_xy(agent->x(), agent->y());
   Point2D agent_current_sl_to_ego_lane{0.0, 0.0};
   const auto status_agent = ego_lane->get_lane_frenet_coord()->XYPointToSLPoint(
@@ -3533,7 +3572,8 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
       lane_manager->get_current_lane()->get_lane_frenet_coord();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  // const auto ego_rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+  // const auto ego_rear_edge_to_rear_axle =
+  // vehicle_param.rear_edge_to_rear_axle;
   const auto ego_front_edge_to_rear_axle =
       vehicle_param.front_edge_to_rear_axle;
 

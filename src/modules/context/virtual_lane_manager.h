@@ -32,6 +32,12 @@ enum LaneChangeStatus {
   ON_RIGHT_LANE = 2,
 };
 
+struct SplitSegInfo {
+  RampDirection split_direction;
+  int split_seg_forward_lane_nums;
+  int split_next_seg_forward_lane_nums;
+};
+
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
@@ -203,6 +209,8 @@ class VirtualLaneManager {
 
   bool is_on_ramp() const { return is_on_ramp_; }
 
+  const int get_lc_nums_for_split() const { return lc_nums_for_split_; }
+
   const bool is_on_highway() const { return is_on_highway_; }
 
   const double sum_dis_to_last_merge_point() const {
@@ -298,7 +306,7 @@ class VirtualLaneManager {
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
   void CalculateDistanceToRampSplitMergeWithSdMap(
       planning::framework::Session *session);
-  RampDirection MakesureSplitDirection(
+  SplitSegInfo MakesureSplitDirection(
       const ::SdMapSwtx::Segment &split_segment,
       const ad_common::sdmap::SDMap &sd_map);
   RampDirection MakesureMergeDirection(
@@ -363,6 +371,9 @@ class VirtualLaneManager {
   iflyauto::ReferenceLineMsg intersection_lane_generated_;
   double nearest_s_ = 0.0;
   int lane_num_except_emergency_ = 0;
+  int split_seg_forward_lane_nums_ = 0;
+  int split_next_seg_forward_lane_nums_ = 0;
+  int lc_nums_for_split_ = 0;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;

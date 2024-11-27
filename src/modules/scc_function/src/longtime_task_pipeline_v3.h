@@ -71,6 +71,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<LongitudinalDecisionDecider> longitudinal_decision_decider_;
   std::unique_ptr<SpeedLimitDecider> speed_limit_decider_;
 
+  // V3后续要取消这个,单独s ref生成
   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
 
   // Motion Planners

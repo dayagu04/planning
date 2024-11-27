@@ -13,6 +13,16 @@ struct Position2D {
   Position2D(const double x_, const double y_) : x(x_), y(y_) {}
 };
 
+struct Position3D {
+  double x;
+  double y;
+  double z;
+
+  Position3D() = default;
+  Position3D(const double x_, const double y_, const double z_)
+      : x(x_), y(y_), z(z_) {}
+};
+
 struct Pose2D {
   double x = 0.0;
   double y = 0.0;

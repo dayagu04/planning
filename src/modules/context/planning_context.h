@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
+#include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
@@ -266,6 +267,16 @@ class PlanningContext {
     return cipv_decider_output_;
   }
 
+  const LongitudinalDecisionDeciderOutput &
+  longitudinal_decision_decider_output() const {
+    return longitudinal_decision_decider_output_;
+  }
+
+  LongitudinalDecisionDeciderOutput *
+  mutable_longitudinal_decision_decider_output() {
+    return &longitudinal_decision_decider_output_;
+  }
+
   const std::shared_ptr<AdaptiveCruiseControl> &
   adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
@@ -399,6 +410,7 @@ class PlanningContext {
   MotionPlannerOutput motion_planner_output_;  // TODO: 拆分到独立的Task里面
   CipvLostProhibitAccelerationDeciderOutput
       cipv_lost_prohibit_acceleration_decider_output_;
+  LongitudinalDecisionDeciderOutput longitudinal_decision_decider_output_;
   TrafficLightDeciderOutput traffic_light_decider_output_;
 
   // TODO(xjli32)：将adas功能的输出暂时保持不变

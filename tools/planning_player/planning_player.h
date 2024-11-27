@@ -41,6 +41,7 @@ class PlanningPlayer {
     double heading = 0.0;
     double static_time = 0.0;
     bool static_flag = false;
+    double s_proj = 0.0;
 
     void Reset() {
       vel = 0.0;
@@ -51,13 +52,14 @@ class PlanningPlayer {
   PlanningPlayer() = default;
   ~PlanningPlayer() = default;
 
-  void Init(bool is_close_loop, double auto_time_sec,
-            const std::string &scene_type, bool no_debug,
-            const std::string &car);
+  bool Init(bool is_close_loop, double auto_time_sec, bool no_debug,
+            const std::string &car, std::string &out_bag);
+  bool FindSceneType(const std::string &scene_type, const std::string &bag_path,
+                     std::string &out_bag);
   void Clear();
-  bool LoadRosBag(const std::string &bag_path, const std::string &out_bag,
-                  bool is_close_loop, bool no_debug, bool interface_check);
-  void StoreRosBag(const std::string &bag_path);
+  bool LoadRosBag(const std::string &bag_path, bool is_close_loop,
+                  bool no_debug, bool interface_check);
+  void StoreRosBag();
   void GenMileage(const std::string &mileage_path);
   void NoDebugInfoMode(bool is_close_loop);
   void PlayOneFrame(int frame_num,
@@ -72,12 +74,7 @@ class PlanningPlayer {
   void PerfectControlEgoPose(
       uint64_t delta_t,
       struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
-  void PerfectControlAPA(
-      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
-      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
-  void PerfectControlAPANewLocalization(
-      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
-      struct_msgs::IFLYLocalization::Ptr loc_msg);
+
   void UpdateVehicleService(
       uint64_t delta_t,
       struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
@@ -85,6 +82,20 @@ class PlanningPlayer {
   void getCommitHash(const std::string &directory, const int num,
                      std::string &outVersion);
   void VersinCheck(const std::string &bag_path);
+  // apa planning player module
+  void UpdateVehicleServiceAPA(
+      uint64_t delta_t,
+      struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
+
+  void UpdateVehicleServiceDataAPA();
+
+  void PerfectControlAPA(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
+
+  void PerfectControlAPANewLocalization(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs::IFLYLocalization::Ptr loc_msg);
 
  private:
   DynamicState state_;
@@ -102,8 +113,6 @@ class PlanningPlayer {
   std::map<std::string, std::string> proto_desc_map_{};
   ros::Time planning_msg_time_s_;
   uint64_t planning_header_time_us_ = 0;
-  ros::Time planning_hmi_msg_time_ns_;
-  uint64_t planning_hmi_header_time_us_ = 0;
   int frame_num_ = 0;
   ros::Time planning_dubug_info_msg_time_s_;
   uint64_t planning_dubug_info_header_time_us_ = 0;
@@ -119,7 +128,7 @@ class PlanningPlayer {
   uint64_t planning_dubug_info_frame_num_ = 0;
   uint64_t local_time_ = 0;
   int frame_num_before_enter_auto_ = 0;
-  std::string scene_type_ = "acc";
+  std::string scene_type_ = "";
   uint8_t last_functional_state = iflyauto::FunctionalState_MANUAL;
   pnc::mathlib::spline x_t_spline_;
   pnc::mathlib::spline y_t_spline_;
@@ -134,6 +143,19 @@ class PlanningPlayer {
   std::string bag_planning_version_;
   std::string bag_interface_version_;
   std::string car_;
+  uint64_t auto_timestamp_ = 0;
+  std::string out_bag_;
+  // apa planning player module
+  bool early_stop_ = false;
+  ros::Time early_stop_time_ = ros::TIME_MIN;
+  bool update_spline_ = false;
+  std::vector<double> path_s_vec_;
+  std::vector<double> path_x_vec_;
+  std::vector<double> path_y_vec_;
+  std::vector<double> path_heading_vec_;
+  pnc::mathlib::spline x_s_spline_;
+  pnc::mathlib::spline y_s_spline_;
+  pnc::mathlib::spline heading_s_spline_;
 
   template <class T>
   void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);
@@ -295,7 +317,11 @@ void PlanningPlayer::write_ros_msg(
     const std::string &topic_name, rosbag::Bag &bag) {
   for (const auto &i : write_msg) {
     auto msg = boost::any_cast<T>(i.second);
-    bag.write(topic_name, i.first, msg);
+    if (early_stop_time_ == ros::TIME_MIN || i.first <= early_stop_time_) {
+      bag.write(topic_name, i.first, msg);
+    } else {
+      continue;
+    }
   }
 }
 

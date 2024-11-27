@@ -3,6 +3,7 @@
 
 #include <cstdio>
 
+#include "log_glog.h"
 #include "park_reference_line.h"
 #include "transform2d.h"
 
@@ -165,6 +166,8 @@ void HybridAStarThreadSolver::GetThreadState(RequestResponseState* state) {
 
   *state = request_response_state_.load();
 
+  ILOG_INFO << "thread " << static_cast<int>(request_response_state_.load());
+
   return;
 }
 
@@ -313,6 +316,8 @@ int HybridAStarThreadSolver::Process() {
 
 void HybridAStarThreadSolver::Clear() {
   request_response_state_.store(RequestResponseState::NONE);
+
+  ILOG_INFO << "thread clear";
   return;
 }
 

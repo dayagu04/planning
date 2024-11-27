@@ -1385,7 +1385,19 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
   } else {
     is_in_sdmaproad_ = true;
   }
+
+  if (current_segment->shape_points_size() > 0) {
+      const auto& temp_point_LLH = current_segment->shape_points(0);
+      std::cout << "lat:" << temp_point_LLH.lat() << 
+      ",lon:" << temp_point_LLH.lon() <<
+      ",height:" << temp_point_LLH.height() << std::endl;
+    JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lat());
+    JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lon());
+    JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.height());
+  }
   JSON_DEBUG_VALUE("current_segment_id", current_segment->id());
+  std::cout << "forward_lane_num:" << current_segment->forward_lane_num() << std::endl;
+  JSON_DEBUG_VALUE("forward_lane_num", current_segment->forward_lane_num());
   if (current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY ||
       current_segment->priority() == SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
     is_ego_on_expressway_ = true;
@@ -1410,7 +1422,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
     const auto previous_seg =
         sd_map.GetPreviousRoadSegment(ramp_info.first->id());
     if (previous_seg) {
-      ramp_direction_ = MakesureSplitDirection(*previous_seg, sd_map);
+      SplitSegInfo split_seg_info;
+      split_seg_info = MakesureSplitDirection(*previous_seg, sd_map);
+      ramp_direction_ = split_seg_info.split_direction;
     } else {
       std::cout << "previous_seg is nullprt!!!!!" << std::endl;
       ramp_direction_ = RAMP_NONE;
@@ -1498,22 +1512,21 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
       if (split_segment && split_info[i].second > 0) {
         if (!is_find_first_split_info) {
           distance_to_first_road_split_ = split_info[i].second;
-          first_split_direction_ =
-              MakesureSplitDirection(*split_segment, sd_map);
+          SplitSegInfo split_seg_info;
+          split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
+          first_split_direction_ = split_seg_info.split_direction;
+          split_seg_forward_lane_nums_ = split_seg_info.split_seg_forward_lane_nums;
+          split_next_seg_forward_lane_nums_ = split_seg_info.split_next_seg_forward_lane_nums;
           is_find_first_split_info = true;
           traverse_num++;
           first_split_dir_dis_info_ = std::make_pair(
               static_cast<SplitRelativeDirection>(first_split_direction_),
               distance_to_first_road_split_);
-          if (is_on_ramp_ &&
-              distance_to_first_road_split_ < distance_to_first_road_merge_) {
-            ramp_direction_ = first_split_direction_;
-            dis_to_ramp_ = distance_to_first_road_split_;
-          }
         } else if (is_find_first_split_info) {
           distance_to_second_road_split_ = split_info[i].second;
-          second_split_direction_ =
-              MakesureSplitDirection(*split_segment, sd_map);
+          SplitSegInfo split_seg_info;
+          split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
+          second_split_direction_ = split_seg_info.split_direction;
           traverse_num++;
         }
         if (traverse_num >= 2) {
@@ -1537,7 +1550,9 @@ void VirtualLaneManager::CalculateDistanceToRampSplitMergeWithSdMap(
         std::pair<SplitRelativeDirection, double> split_dir_dis_info;
         if (split_info[i].second > 0 && split_segment) {
           distance_to_road_split = split_info[i].second;
-          split_direction = MakesureSplitDirection(*split_segment, sd_map);
+          SplitSegInfo split_seg_info;
+          split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
+          split_direction = split_seg_info.split_direction;
         } else {
           distance_to_road_split = NL_NMAX;
           split_direction = RAMP_NONE;
@@ -2190,13 +2205,19 @@ void VirtualLaneManager::ResetForRampInfo() {
   other_lane_merge_dir = RampDirection::RAMP_NONE;
   is_nearing_other_lane_merge_to_road_point_ = false;
   is_on_highway_ = false;
+  split_seg_forward_lane_nums_ = 0;
+  split_next_seg_forward_lane_nums_ = 0;
+  lc_nums_for_split_ = 0;
 }
 
-RampDirection VirtualLaneManager::MakesureSplitDirection(
+SplitSegInfo VirtualLaneManager::MakesureSplitDirection(
     const ::SdMapSwtx::Segment& split_segment,
     const ad_common::sdmap::SDMap& sd_map) {
   const auto out_link_size = split_segment.out_link_size();
-  RampDirection ramp_direction = RAMP_NONE;
+  SplitSegInfo split_seg_info;
+  split_seg_info.split_direction = RAMP_NONE;
+  split_seg_info.split_next_seg_forward_lane_nums = 0;
+  split_seg_info.split_seg_forward_lane_nums = 0;
   const auto& out_link = split_segment.out_link();
   // fengwang31(TODO):暂时假设在匝道上的分叉口只有两个方向
   if (out_link_size == 2) {
@@ -2204,7 +2225,7 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
         sd_map.GetNextRoadSegment(split_segment.id());
     if (!split_next_segment) {
       std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
-      return ramp_direction;
+      return split_seg_info;
     }
     ad_common::math::Vec2d segment_in_route_dir_vec;
     ad_common::math::Vec2d segment_not_in_route_dir_vec;
@@ -2215,6 +2236,8 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
     auto other_segment = out_link[0].id() == split_next_segment->id()
                              ? out_link[1]
                              : out_link[0];
+    split_seg_info.split_seg_forward_lane_nums = split_segment.forward_lane_num();
+    split_seg_info.split_next_seg_forward_lane_nums = other_segment.forward_lane_num();
     // const auto other_segment = sd_map.GetRoadSegmentById(other_segment_id);
     const auto& split_next_segment_enu_point = split_next_segment->enu_points();
     const auto& other_segment_enu_point = other_segment.enu_points();
@@ -2230,9 +2253,9 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
                                          anchor_point_of_cur_seg_to_next_seg.y);
       if (segment_in_route_dir_vec.CrossProd(segment_not_in_route_dir_vec) >
           0.0) {
-        ramp_direction = RampDirection::RAMP_ON_RIGHT;
+        split_seg_info.split_direction = RampDirection::RAMP_ON_RIGHT;
       } else {
-        ramp_direction = RampDirection::RAMP_ON_LEFT;
+        split_seg_info.split_direction = RampDirection::RAMP_ON_LEFT;
       }
     } else {
       std::cout << "enu points error!!!!!!!!!!" << std::endl;
@@ -2240,7 +2263,7 @@ RampDirection VirtualLaneManager::MakesureSplitDirection(
   } else {
     std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
   }
-  return ramp_direction;
+  return split_seg_info;
 }
 
 RampDirection VirtualLaneManager::MakesureMergeDirection(
@@ -2338,10 +2361,13 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
 void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
   // 判断ego是否在最右边车道上
   bool is_ego_on_rightest_lane = true;
+  bool is_ego_on_leftest_lane = true;
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() > 0) {
       is_ego_on_rightest_lane = false;
-      break;
+    }
+    if (relative_id_lane->get_relative_id() < 0) {
+      is_ego_on_leftest_lane = false;
     }
   }
   // 为了临时hack处理在匝道延长车道上的case，使得自车能在匝道延长车道上也能变道至lane上。
@@ -2388,6 +2414,32 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
     is_nearing_ramp_ = false;
   }
 
+  //(4)、判断是否接近split区域
+  bool is_nearing_split = false;
+  double err_buffer = 10;
+  double nearing_split_dis_threshold = 2000;
+  if (is_nearing_ramp_ &&
+      distance_to_first_road_split_ < dis_to_ramp_ - err_buffer) {
+    is_nearing_split = true;
+  } else if (is_nearing_other_lane_merge_to_road_point_ &&
+       distance_to_first_road_split_ < distance_to_first_road_merge_) {
+     is_nearing_split = true;
+  } else if (distance_to_first_road_split_ < nearing_split_dis_threshold) {
+    is_nearing_split = true;
+  }
+  //(5)、判断是否需要生成split的变道任务
+  if (is_nearing_split) {
+    //后面的车道数比当前车道数少一条的sceneray，意味着可能有一条车道从当前分流出去
+    if ((split_seg_forward_lane_nums_ - split_next_seg_forward_lane_nums_) >= 0) {
+      if (first_split_direction_ == RAMP_ON_LEFT &&
+          is_ego_on_rightest_lane) {
+        lc_nums_for_split_ = -1;
+      } else if (first_split_direction_ == RAMP_ON_RIGHT &&
+          is_ego_on_leftest_lane) {
+        lc_nums_for_split_ = 1;
+      }
+    }
+  }
   JSON_DEBUG_VALUE("is_leaving_ramp", is_leaving_ramp_);
   JSON_DEBUG_VALUE("is_nearing_ramp", is_nearing_ramp_);
   JSON_DEBUG_VALUE("distance_to_ramp", dis_to_ramp_);
@@ -2422,6 +2474,9 @@ void VirtualLaneManager::GenerateLaneChangeTasksForNOA() {
       distance_to_second_road_split_;
   general_task_map_info.sum_dis_to_last_split_point_on_ramp =
       sum_dis_to_last_split_point_on_ramp_;
+  general_task_map_info.split_seg_forward_lane_nums = split_seg_forward_lane_nums_;
+  general_task_map_info.split_next_seg_forward_lane_nums = split_next_seg_forward_lane_nums_;
+  general_task_map_info.lc_nums_for_split = lc_nums_for_split_;
 
   //(3)、对每一条lane，根据超视距信息，更新每一条lane的变道次数。
   for (const auto& relative_id_lane : relative_id_lanes_) {

@@ -103,8 +103,8 @@ bool EulerDistanceTransform::Excute(const OccupancyGridMap &map,
 }
 
 void EulerDistanceTransform::CVMatrixToArray(cv::Mat *edt_matrix) {
-  const int row_num = edt_matrix->rows;
-  const int column_num = edt_matrix->cols;
+  const int row_num = std::min(edt_matrix->rows, ogm_grid_x_max);
+  const int column_num = std::min(edt_matrix->cols, ogm_grid_y_max);
 
   // ILOG_INFO << "r " << row_num << " max x " << ogm_grid_x_max;
   // ILOG_INFO << "c " << column_num << " max y " << ogm_grid_y_max;

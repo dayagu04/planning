@@ -146,14 +146,13 @@ void PathSafeChecker::Excute(
   return;
 }
 
-void PathSafeChecker::GenerateVehBox(const pnc::geometry_lib::PathSegGear gear,
-                                     const double lateral_safe_buffer,
+void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
                                      const double lon_safe_buffer) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   GetUpLeftCoordinatePolygonByParam(
-      &polygon_foot_print_.body, config.rear_overhanging,
-      config.wheel_base + config.front_overhanging,
+      &polygon_foot_print_.body, config.rear_overhanging + lon_safe_buffer,
+      config.wheel_base + config.front_overhanging + lon_safe_buffer,
       config.car_width / 2.0 + lateral_safe_buffer);
 
   // left mirror
@@ -171,9 +170,17 @@ void PathSafeChecker::GenerateVehBox(const pnc::geometry_lib::PathSegGear gear,
                         center);
 
   GetUpLeftCoordinatePolygonByParam(
-      &polygon_foot_print_.max_polygon, config.rear_overhanging,
-      config.wheel_base + config.front_overhanging,
+      &polygon_foot_print_.max_polygon,
+      config.rear_overhanging + lon_safe_buffer,
+      config.wheel_base + config.front_overhanging + lon_safe_buffer,
       config.max_car_width / 2.0 + lateral_safe_buffer);
+
+  return;
+}
+
+void PathSafeChecker::GeneratePathEndPolygon(const double lateral_safe_buffer,
+                                             const double lon_safe_buffer) {
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   // if path point is end, add extra lon buffer for safe check.
   GetUpLeftCoordinatePolygonByParam(
@@ -199,7 +206,8 @@ void PathSafeChecker::GenerateVehCompactPolygon(
 
   if (config.car_vertex_x_vec.size() != 20) {
     ILOG_ERROR << "config invalid";
-    GenerateVehBox(gear, lateral_safe_buffer, lon_safe_buffer);
+    GenerateVehBox(lateral_safe_buffer, lon_safe_buffer);
+    GeneratePathEndPolygon(lateral_safe_buffer, lon_safe_buffer);
     return;
   }
 
@@ -396,9 +404,9 @@ int PathSafeChecker::GenerateMirrorPolygon(Polygon2D* box,
   return 0;
 }
 
-int PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
-                                                 const double lat_buffer,
-                                                 const double lon_buffer) {
+void PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
+                                                  const double lat_buffer,
+                                                  const double lon_buffer) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   box->vertexes[0].x = config.car_vertex_x_vec[2] + lon_buffer;
@@ -432,7 +440,7 @@ int PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
 
   box->min_tangent_radius = config.car_width / 2 + lat_buffer;
 
-  return 0;
+  return;
 }
 
 const bool PathSafeChecker::IsFootPrintPolygonCollision(
@@ -475,6 +483,37 @@ const bool PathSafeChecker::IsFootPrintPolygonCollision(
 
   *collision_info = VehCollisionPosition::NONE;
   return false;
+}
+
+bool PathSafeChecker::CalcEgoCollision(const ParkObstacleList* obs,
+                                       const Pose2D& ego_pose,
+                                       const double lat_buffer,
+                                       const double lon_buffer) {
+  obs_ = obs;
+  is_path_collision_ = false;
+  is_ego_collision_ = false;
+
+  if (obs_ == nullptr) {
+    return false;
+  }
+
+  if (obs_->point_cloud_list.empty()) {
+    return false;
+  }
+
+  bool is_collision = false;
+  Transform2d tf;
+  tf.SetBasePose(ego_pose);
+
+  VehCollisionPosition collision_component = VehCollisionPosition::NONE;
+
+  // generate veh local polygon
+  GenerateVehBox(lat_buffer, lon_buffer);
+
+  is_collision = IsFootPrintPolygonCollision(tf, &polygon_foot_print_,
+                                             &collision_component);
+
+  return is_collision;
 }
 
 }  // namespace planning

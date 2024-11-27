@@ -7,14 +7,14 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "apa_plan_interface.h"
-#include "collision_detection.h"
+#include "collision_detection/collision_detection.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "math_lib.h"
-#include "perpendicular_path_heading_in_planner.h"
-#include "perpendicular_path_in_planner.h"
+#include "perpendicular_head_in_path_generator.h"
+#include "perpendicular_head_in_scenario.h"
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
@@ -39,7 +39,7 @@ inline T BytesToProto(py::bytes &bytes) {
   return input;
 }
 
-static PerpendicularPathInPlanner::DebugInfo debuginfo;
+static PerpendicularTailInPathGenerator::DebugInfo debuginfo;
 static std::vector<double> res;
 std::vector<Eigen::Vector3d> current_path_point_global_vec_;
 Eigen::Vector3d global_target_pose_;
@@ -62,7 +62,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
     return current_path_point_global_vec_;
   }
 
-  planning::apa_planner::ApaPlannerBase::Frame frame;
+  planning::apa_planner::ParkingScenario::Frame frame;
   // 1. Ego Slot Info
   auto &ego_slot_info = frame.ego_slot_info;
   pt_.clear();
@@ -168,7 +168,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       pnc::geometry_lib::GetCrossFromTwoVec2d(
           heading_ego_vec, ego_slot_info.slot_origin_heading_vec);
 
-  planning::apa_planner::PerpendicularPathPlanner::Tlane slot_t_lane;
+  planning::apa_planner::PerpendicularPathGenerator::Tlane slot_t_lane;
 
   frame.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
   if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
@@ -377,7 +377,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                                        planning::apa_planner::CollisionDetector::TLANE_OBS);
 
   // assemble input
-  planning::apa_planner::PerpendicularPathPlanner::Input input;
+  planning::apa_planner::PerpendicularPathGenerator::Input input;
   input.pt_0 = ego_slot_info.pt_0;
   input.pt_1 = ego_slot_info.pt_1;
 

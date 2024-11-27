@@ -9,7 +9,7 @@
 #include "fusion_occupancy_objects_c.h"
 #include "planning_debug_info.pb.h"
 #include "serialize_utils.h"
-#include "slot_management.h"
+#include "slot_manager.h"
 #include "struct_convert/camera_preception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
@@ -35,10 +35,10 @@
 namespace py = pybind11;
 using namespace planning;
 using namespace planning::apa_planner;
-static SlotManagement *pBase = nullptr;
+static SlotManager *pBase = nullptr;
 
 int Init() {
-  pBase = new SlotManagement();
+  pBase = new SlotManager();
   pBase->Reset();
   return 0;
 }
@@ -142,7 +142,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
                     struct_msgs::FusionOccupancyObjectsInfo>(
           fusion_occupancy_objects_info_bytes);
 
-  SlotManagement::Param param;
+  SlotManager::Param param;
   param.force_apa_on = force_apa_on;
   param.force_clear = force_clear;
   param.max_slots_update_angle_dis_limit_deg =

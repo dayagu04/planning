@@ -353,11 +353,11 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
             end_time - current_time);
   JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
-  std::string status_msg;
-  if (!InputReady(current_time, status_msg)) {
-    LOG_ERROR("InputReady is failed !!!! \n");
-    // return false;
-  }
+  // std::string status_msg;
+  // if (!InputReady(current_time, status_msg)) {
+  //   LOG_ERROR("InputReady is failed !!!! \n");
+  //   // return false;
+  // }
 
   return true;
 }
@@ -553,6 +553,9 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   } else {
     vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
         function_state_machine_info.pilot_req.acc_curise_real_spd);
+    vehicle_status.mutable_time_headway_level()
+        ->set_value_num(
+            function_state_machine_info.pilot_req.acc_curise_time_interval);
   }
 
   if (vehicle_service_output_info.yaw_rate_available) {

@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "apa_function/src/apa_world/lateral_path_optimizer/src/lateral_path_optimizer_problem.h"
+#include "apa_function/parking_task/optimizers/lateral_path_optimizer/src/lateral_path_optimizer_problem.h"
 #include "geometry_math.h"
 #include "lateral_path_optimizer.pb.h"
 #include "math_lib.h"

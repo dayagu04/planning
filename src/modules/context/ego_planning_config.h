@@ -130,6 +130,9 @@ struct Config {
 /***************************************************************************************/
 struct EgoPlanningConfig : public Config {
   void init(const Json &json) override {
+    trajectory_time_length =
+        read_json_key<double>(json, "trajectory_time_length");
+    planning_dt = read_json_key<double>(json, "planning_dt");
     enable_raw_ego_prediction =
         read_json_key<bool>(json, "enable_raw_ego_prediction");
     enable_dagger = read_json_key<bool>(json, "enable_dagger");
@@ -158,6 +161,8 @@ struct EgoPlanningConfig : public Config {
     enable_use_merge_change_request =
         read_json_key<bool>(json, "enable_use_merge_change_request");
   }
+  double trajectory_time_length = 5.0;
+  double planning_dt = 0.2;
   bool enable_raw_ego_prediction = false;
   bool enable_dagger = false;
   bool use_ego_prediction_model_in_planning = false;
@@ -2427,29 +2432,6 @@ struct EgoPlanningTaskPipelineHppConfig : public EgoPlanningTaskPipelineConfig {
     /* read config from json */
     pipeline_version =
         read_json_key<std::string>(json, "pipeline_version_hpp", "v1");
-  }
-
-  std::string pipeline_version = "v1";
-};
-
-struct EgoPlanningTaskPipelineVisionOnlyConfig
-    : public EgoPlanningTaskPipelineConfig {
-  void init(const Json &json) override {
-    EgoPlanningTaskPipelineConfig::init(json);
-    /* read config from json */
-    pipeline_version =
-        read_json_key<std::string>(json, "pipeline_version_vision_only", "v1");
-  }
-
-  std::string pipeline_version = "v1";
-};
-
-struct EgoPlanningTaskPipelineSccConfig : public EgoPlanningTaskPipelineConfig {
-  void init(const Json &json) override {
-    EgoPlanningTaskPipelineConfig::init(json);
-    /* read config from json */
-    pipeline_version =
-        read_json_key<std::string>(json, "pipeline_version_scc", "v1");
   }
 
   std::string pipeline_version = "v1";

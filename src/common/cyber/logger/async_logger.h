@@ -125,6 +125,11 @@ class AsyncLogger : public google::base::Logger {
    */
   std::thread* LogThread() { return &log_thread_; }
 
+  void CreateNewFile() {
+    create_new_file.store(true);
+    return;
+  }
+
  private:
   // A buffered message.
   //
@@ -190,6 +195,8 @@ class AsyncLogger : public google::base::Logger {
   std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
   std::unordered_map<std::string, std::unique_ptr<LogFileObject>>
       module_logger_map_;
+
+  std::atomic<bool> create_new_file = {false};
 
   IFLY_DISALLOW_COPY_AND_ASSIGN(AsyncLogger);
 };

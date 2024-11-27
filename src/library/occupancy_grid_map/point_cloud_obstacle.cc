@@ -1,12 +1,11 @@
 
 #include "point_cloud_obstacle.h"
 
-#include "./../../modules/apa_function/src/apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "log_glog.h"
 #include "polygon_base.h"
 #include "pose2d.h"
-#include "virtual_wall_decider.h"
 
 namespace planning {
 
@@ -21,12 +20,6 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
     const SlotRelativePosition slot_side) {
   Transform2d slot_tf;
   slot_tf.SetBasePose(slot_base_pose);
-
-  // obs
-  VirtualWallDecider wall_decider;
-  wall_decider.Process(obs_list.virtual_obs, 40.0, 15.0, slot_width,
-                       slot_length, ego_start, ego_final_goal, slot_type,
-                       slot_side);
 
   // hack: delete obstacle around ego and slot. In the future, it will be
   // retired.
@@ -91,7 +84,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
             .additional_occupancy_info;
 
     obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = ParkObstacleType::FUSION_OBJ;
+    obs->obs_type = ParkObstacleType::FUSION_OBJECT_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -187,7 +180,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   // limiters
   obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-  obs->obs_type = ParkObstacleType::LIMITER;
+  obs->obs_type = ParkObstacleType::SLOT_LIMITER;
   obs->points.clear();
   cdl::AABB box;
   std::vector<Position2D> limiter_points;
@@ -262,7 +255,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
 void PointCloudObstacleTransform::GenerateGlobalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
-    const ParkSpaceType slot_type) {
+    const bool enable_limiter_obs) {
   // generate local obs
   if (local_view == nullptr) {
     ILOG_ERROR << "local view is null";
@@ -299,7 +292,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
             .additional_occupancy_info;
 
     obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = ParkObstacleType::FUSION_OBJ;
+    obs->obs_type = ParkObstacleType::FUSION_OBJECT_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -350,44 +343,47 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
   }
 
   // limiters
-  obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-  obs->obs_type = ParkObstacleType::LIMITER;
-  obs->points.clear();
-  cdl::AABB box;
-  std::vector<Position2D> limiter_points;
+  if (enable_limiter_obs) {
+    obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
+    obs->obs_type = ParkObstacleType::SLOT_LIMITER;
+    obs->points.clear();
+    cdl::AABB box;
+    std::vector<Position2D> limiter_points;
 
-  const iflyauto::ParkingFusionInfo* slot_list =
-      &local_view->parking_fusion_info;
-  for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
-    const iflyauto::ParkingFusionSlot* slot =
-        &slot_list->parking_fusion_slot_lists[i];
+    const iflyauto::ParkingFusionInfo* slot_list =
+        &local_view->parking_fusion_info;
+    for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
+      const iflyauto::ParkingFusionSlot* slot =
+          &slot_list->parking_fusion_slot_lists[i];
 
-    if (slot_list->select_slot_id == slot->id) {
-      continue;
-    }
+      if (slot_list->select_slot_id == slot->id) {
+        continue;
+      }
 
-    for (uint8 j = 0; j < slot->limiters_size; j++) {
-      const iflyauto::ParkingFusionLimiter* limiter = &slot->limiters[j];
+      for (uint8 j = 0; j < slot->limiters_size; j++) {
+        const iflyauto::ParkingFusionLimiter* limiter = &slot->limiters[j];
 
-      SampleInLineSegment(
-          Eigen::Vector2d(limiter->end_points[0].x, limiter->end_points[0].y),
-          Eigen::Vector2d(limiter->end_points[1].x, limiter->end_points[1].y),
-          &limiter_points);
+        SampleInLineSegment(
+            Eigen::Vector2d(limiter->end_points[0].x, limiter->end_points[0].y),
+            Eigen::Vector2d(limiter->end_points[1].x, limiter->end_points[1].y),
+            &limiter_points);
 
-      for (size_t point_id = 0; point_id < limiter_points.size(); point_id++) {
-        global_point.x = limiter_points[point_id].x;
-        global_point.y = limiter_points[point_id].y;
+        for (size_t point_id = 0; point_id < limiter_points.size();
+             point_id++) {
+          global_point.x = limiter_points[point_id].x;
+          global_point.y = limiter_points[point_id].y;
 
-        box.MergePoint(cdl::Vector2r(global_point.x, global_point.y));
-        obs->points.emplace_back(Position2D(global_point.x, global_point.y));
+          box.MergePoint(cdl::Vector2r(global_point.x, global_point.y));
+          obs->points.emplace_back(Position2D(global_point.x, global_point.y));
+        }
       }
     }
-  }
 
-  // use box to generate polygon for future safe check
-  if (obs->points.size() > 0) {
-    GeneratePolygonByAABB(&obs->envelop_polygon, box);
-    obs->box = box;
+    // use box to generate polygon for future safe check
+    if (obs->points.size() > 0) {
+      GeneratePolygonByAABB(&obs->envelop_polygon, box);
+      obs->box = box;
+    }
   }
 
   ILOG_INFO << "fusion obs, size= " << obs_list.point_cloud_list.size()

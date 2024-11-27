@@ -1,5 +1,4 @@
-#ifndef ZNQC_MODULES_CONTEXT_PARKING_SLOT_MANAGER_H_
-#define ZNQC_MODULES_CONTEXT_PARKING_SLOT_MANAGER_H_
+#pragma  once
 
 #include <vector>
 
@@ -10,6 +9,7 @@
 namespace planning {
 using ParkingSlotPoints = std::vector<planning_math::Vec2d>;
 
+// todo: delete it
 class ParkingSlotManager {
  public:
   ParkingSlotManager(planning::framework::Session *session);
@@ -24,4 +24,3 @@ class ParkingSlotManager {
   std::vector<ParkingSlotPoints> points_;
 };
 }  // namespace planning
-#endif

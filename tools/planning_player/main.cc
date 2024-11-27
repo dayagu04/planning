@@ -7,7 +7,7 @@
 // #include "modules_register.h"
 #include "planning_player.h"
 
-int run_planning_player(const std::string &bag_path, const std::string &out_bag,
+int run_planning_player(const std::string &bag_path, std::string &out_bag,
                         bool is_close_loop, double auto_time_sec,
                         const std::string &scene_type,
                         const std::string mileage_path, bool no_debug,
@@ -18,18 +18,22 @@ int run_planning_player(const std::string &bag_path, const std::string &out_bag,
   if (!no_version_check) {
     player.VersinCheck(bag_path);
   }
-  if (!player.LoadRosBag(bag_path, out_bag, is_close_loop, no_debug,
-                         interface_check)) {
+  if (!player.FindSceneType(scene_type, bag_path, out_bag)) {
     return -1;
   }
-  player.Init(is_close_loop, auto_time_sec, scene_type, no_debug, car);
+  if (!player.LoadRosBag(bag_path, is_close_loop, no_debug, interface_check)) {
+    return -1;
+  }
+  if (!player.Init(is_close_loop, auto_time_sec, no_debug, car, out_bag)) {
+    return -1;
+  }
   if (no_debug) {
     player.NoDebugInfoMode(is_close_loop);
   } else {
     player.PlayAllFrames(is_close_loop);
   }
   player.GenMileage(mileage_path);
-  player.StoreRosBag(out_bag);
+  player.StoreRosBag();
   return 0;
 }
 
@@ -78,7 +82,7 @@ int main(int argc, char **argv) {
                   << std::endl;
         std::cout << "--auto-time        time when enter auto, default 1.5"
                   << std::endl;
-        std::cout << "--scene-type       acc/apa" << std::endl;
+        std::cout << "--scene-type       acc/apa, 程序会自动判断" << std::endl;
         std::cout << "--no-debug         play without planning debug info"
                   << std::endl;
         std::cout
@@ -134,6 +138,8 @@ int main(int argc, char **argv) {
   if (out_bag.empty()) {
     if (is_close_loop) {
       out_bag = bag_path + "." + std::to_string(tp) + ".close-loop.plan";
+    } else if (no_debug) {
+      out_bag = bag_path + "." + std::to_string(tp) + ".no-debug.plan";
     } else {
       out_bag = bag_path + "." + std::to_string(tp) + ".open-loop.plan";
     }

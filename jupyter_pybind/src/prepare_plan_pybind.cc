@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-#include "apa_param_setting.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "geometry_math.h"
 
 namespace py = pybind11;

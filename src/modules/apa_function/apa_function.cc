@@ -28,7 +28,6 @@ void ApaFunction::Init() {
 bool ApaFunction::Reset() {
   // reset apa planner and sync param
   apa_plan_interface_->Reset();
-  apa_plan_interface_->SyncParameters();
   return true;
 }
 

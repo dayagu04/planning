@@ -8,7 +8,7 @@
 
 #include "Eigen/Core"
 #include "apa_plan_interface.h"
-#include "collision_detection.h"
+#include "collision_detection/collision_detection.h"
 #include "config_context.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
@@ -25,7 +25,7 @@ typedef Eigen::Matrix<double, 5, 1> Vector5d;
 static CollisionDetector* pBaseColDetAir = nullptr;
 static CollisionDetector::CollisionResult collision_result;
 static std::vector<Eigen::Vector3d> pt_vec;
-static planning::apa_planner::ApaPlanInterface* pApaPlanInterface = nullptr;
+static planning::apa_planner::ApaPlanInterface* pApaPlanInterface= nullptr;
 static bool is_obs_in_car = false;
 static bool is_line_intersect_arc = false;
 static pnc::geometry_lib::LineSegment gl_line_seg;
@@ -41,7 +41,7 @@ int Init() {
   // InitGlog(FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
 
-  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init(true);
   pBaseColDetAir = new CollisionDetector();

@@ -120,28 +120,27 @@ class IndexedList {
   std::unordered_map<I, T> object_dict_;
 };
 
-// TODO(shike): replace boost with std
-// template <typename I, typename T>
-// class ThreadSafeIndexedList : public IndexedList<I, T> {
-// public:
-//  T *Add(const I id, const T &object) {
-//    boost::unique_lock<boost::shared_mutex> writer_lock(mutex_);
-//    return IndexedList<I, T>::Add(id, object);
-//  }
-//
-//  T *Find(const I id) {
-//    boost::shared_lock<boost::shared_mutex> reader_lock(mutex_);
-//    return IndexedList<I, T>::Find(id);
-//  }
-//
-//  std::vector<const T *> Items() const {
-//    boost::shared_lock<boost::shared_mutex> reader_lock(mutex_);
-//    return IndexedList<I, T>::Items();
-//  }
-//
-// private:
-//  mutable boost::shared_mutex mutex_;
-//};
+template <typename I, typename T>
+class ThreadSafeIndexedList : public IndexedList<I, T> {
+public:
+ T *Add(const I id, const T &object) {
+   std::lock_guard<std::mutex> lock(mutex_);
+   return IndexedList<I, T>::Add(id, object);
+ }
+
+ T *Find(const I id) {
+   std::lock_guard<std::mutex> lock(mutex_);
+   return IndexedList<I, T>::Find(id);
+ }
+
+ std::vector<const T *> Items() {
+   std::lock_guard<std::mutex> lock(mutex_);
+   return IndexedList<I, T>::Items();
+ }
+
+private:
+ std::mutex mutex_;
+};
 
 }  // namespace planning
 
