@@ -21,7 +21,7 @@ class SccLonBehaviorPlanner : public Task {
   explicit SccLonBehaviorPlanner(const EgoPlanningConfigBuilder *config_builder,
                                  framework::Session *session);
 
-  virtual ~SccLonBehaviorPlanner() = default;
+  ~SccLonBehaviorPlanner() = default;
 
   bool Execute();
 

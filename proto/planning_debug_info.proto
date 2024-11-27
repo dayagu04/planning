@@ -27,6 +27,7 @@ import "lateral_offset_decider_info.proto";
 import "st_search_decider.proto";
 import "st_graph.proto";
 import "st_graph_searcher.proto";
+import "lon_target_maker.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -118,4 +119,5 @@ message PlanningDebugInfo {
   optional StSearchDeciderInfo st_search_decider_info = 30;
   optional StGraphData st_graph_data = 31;
   optional StGraphSearcher st_graph_searcher = 32;
+  optional TargetMaker lon_target_s_ref = 33;
 }

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iostream>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "general_planning_context.h"
@@ -272,8 +273,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     lc_finish_heading_deg_thr =
         read_json_key<double>(json, "lc_finish_heading_deg_thr");
     read_json_vec<double>(json, "lc_finished_dist_thr", lc_finished_dist_thr);
-    min_ego_v_cruise =
-        read_json_key<double>(json, "min_ego_v_cruise");
+    min_ego_v_cruise = read_json_key<double>(json, "min_ego_v_cruise");
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
@@ -688,11 +688,10 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                              std::vector<std::string>{"general_lateral_decider",
                                                       "ramp_limit_v_valid"},
                              ramp_limit_v_valid);
-    min_v_cruise =
-        read_json_keys<double>(json,
-                             std::vector<std::string>{"general_lateral_decider",
-                                                      "min_v_cruise"},
-                             min_v_cruise);
+    min_v_cruise = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider", "min_v_cruise"},
+        min_v_cruise);
     lc_second_dist_thr = read_json_keys<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -2585,5 +2584,439 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double rear_agent_max_start_yield_time_s = 4.0;
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
+};
+
+struct AgentHeadwayConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+  }
+  double plan_time = 5.0;
+  double dt = 0.2;
+  double cutin_headway_threshold = 1.0;
+  double smallest_headway_threshold = 1.2;
+  double headway_step = 0.025;
+  std::vector<std::pair<int32_t, double>> normal_headway_table = {
+      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+  std::vector<std::pair<int32_t, double>> aggressive_headway_table = {
+      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+  std::vector<std::pair<int32_t, double>> conservative_headway_table = {
+      {0, 1.2}, {1, 1.5}, {2, 2.0}, {3, 2.5}, {4, 3.0}};
+  std::vector<std::pair<int32_t, double>> aggressive_acc_max_table = {
+      {5.0, 2.5}, {10.0, 1.9}, {20.0, 1.5}, {25.0, 1.3}, {35.0, 0.9}};
+  std::vector<std::pair<int32_t, double>> normal_acc_max_table = {
+      {5.0, 1.7}, {10.0, 1.4}, {20.0, 1.0}, {25.0, 0.8}, {35.0, 0.6}};
+  std::vector<std::pair<int32_t, double>> conservative_acc_max_table = {
+      {5.0, 1.2}, {10.0, 1.0}, {20.0, 0.7}, {25.0, 0.6}, {35.0, 0.4}};
+  std::vector<std::pair<int32_t, double>> normal_cut_in_headway_table = {
+      {0, 1.0}, {1, 1.25}, {2, 1.67}, {3, 2.08}, {4, 2.5}};
+  double cut_in_velocity_upper_bound = 4.16;
+  double cut_in_headway_lower_bound = 0.0;
+  double cut_in_velocity_lower_bound = 3.33;
+  double cut_in_headway_upper_bound = 0.2;
+  // follow_distance_gap
+  double lower_speed_min_follow_distance_gap = 3.0;
+  double high_speed_min_follow_distance_gap = 4.5;
+  double low_speed_threshold_kmph = 18;
+  double high_speed_threshold_kmph = 30;
+  double large_vehicle_min_follow_distance_gap = 4.5;
+  double cone_min_follow_distance_gap = 4.5;
+  double traffic_light_min_follow_distance_gap = 2.0;
+};
+
+struct SpeedPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    // comfort_kinematic_param
+    {
+      comfort_kinematic_param.acc_positive_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "acc_positive_upper",
+                                 },
+                                 comfort_kinematic_param.acc_positive_upper);
+      comfort_kinematic_param.acc_positive_speed_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "comfort_kinematic_param",
+              "acc_positive_speed_lower",
+          },
+          comfort_kinematic_param.acc_positive_speed_lower);
+
+      comfort_kinematic_param.acc_positive_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "acc_positive_lower",
+                                 },
+                                 comfort_kinematic_param.acc_positive_lower);
+
+      comfort_kinematic_param.acc_positive_speed_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "comfort_kinematic_param",
+              "acc_positive_speed_upper",
+          },
+          comfort_kinematic_param.acc_positive_speed_upper);
+
+      comfort_kinematic_param.acc_negative_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "acc_negative_lower",
+                                 },
+                                 comfort_kinematic_param.acc_negative_lower);
+
+      comfort_kinematic_param.acc_negative_speed_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "comfort_kinematic_param",
+              "acc_negative_speed_lower",
+          },
+          comfort_kinematic_param.acc_negative_speed_lower);
+
+      comfort_kinematic_param.acc_negative_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "acc_negative_upper",
+                                 },
+                                 comfort_kinematic_param.acc_negative_upper);
+
+      comfort_kinematic_param.acc_negative_speed_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "comfort_kinematic_param",
+              "acc_negative_speed_upper",
+          },
+          comfort_kinematic_param.acc_negative_speed_upper);
+
+      comfort_kinematic_param.jerk_positive_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "jerk_positive_upper",
+                                 },
+                                 comfort_kinematic_param.jerk_positive_upper);
+
+      comfort_kinematic_param.jerk_positive_speed_lower =
+          read_json_keys<double>(
+              json,
+              std::vector<std::string>{
+                  "speed_planning",
+                  "comfort_kinematic_param",
+                  "jerk_positive_speed_lower",
+              },
+              comfort_kinematic_param.jerk_positive_speed_lower);
+
+      comfort_kinematic_param.jerk_positive_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "jerk_positive_lower",
+                                 },
+                                 comfort_kinematic_param.jerk_positive_lower);
+
+      comfort_kinematic_param.jerk_positive_speed_upper =
+          read_json_keys<double>(
+              json,
+              std::vector<std::string>{
+                  "speed_planning",
+                  "comfort_kinematic_param",
+                  "jerk_positive_speed_upper",
+              },
+              comfort_kinematic_param.jerk_positive_speed_upper);
+
+      comfort_kinematic_param.jerk_negative_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "jerk_negative_lower",
+                                 },
+                                 comfort_kinematic_param.jerk_negative_lower);
+
+      comfort_kinematic_param.jerk_negative_speed_lower =
+          read_json_keys<double>(
+              json,
+              std::vector<std::string>{
+                  "speed_planning",
+                  "comfort_kinematic_param",
+                  "jerk_negative_speed_lower",
+              },
+              comfort_kinematic_param.jerk_negative_speed_lower);
+
+      comfort_kinematic_param.jerk_negative_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "comfort_kinematic_param",
+                                     "jerk_negative_upper",
+                                 },
+                                 comfort_kinematic_param.jerk_negative_upper);
+
+      comfort_kinematic_param.jerk_negative_speed_upper =
+          read_json_keys<double>(
+              json,
+              std::vector<std::string>{
+                  "speed_planning",
+                  "comfort_kinematic_param",
+                  "jerk_negative_speed_upper",
+              },
+              comfort_kinematic_param.jerk_negative_speed_upper);
+    }
+
+    // kappa_kinematic_param
+    {
+      kappa_kinematic_param.acc_positive_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "acc_positive_upper",
+                                 },
+                                 kappa_kinematic_param.acc_positive_upper);
+      kappa_kinematic_param.acc_positive_speed_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "acc_positive_speed_lower",
+          },
+          kappa_kinematic_param.acc_positive_speed_lower);
+
+      kappa_kinematic_param.acc_positive_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "acc_positive_lower",
+                                 },
+                                 kappa_kinematic_param.acc_positive_lower);
+
+      kappa_kinematic_param.acc_positive_speed_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "acc_positive_speed_upper",
+          },
+          kappa_kinematic_param.acc_positive_speed_upper);
+
+      kappa_kinematic_param.acc_negative_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "acc_negative_lower",
+                                 },
+                                 kappa_kinematic_param.acc_negative_lower);
+
+      kappa_kinematic_param.acc_negative_speed_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "acc_negative_speed_lower",
+          },
+          kappa_kinematic_param.acc_negative_speed_lower);
+
+      kappa_kinematic_param.acc_negative_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "acc_negative_upper",
+                                 },
+                                 kappa_kinematic_param.acc_negative_upper);
+
+      kappa_kinematic_param.acc_negative_speed_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "acc_negative_speed_upper",
+          },
+          kappa_kinematic_param.acc_negative_speed_upper);
+
+      kappa_kinematic_param.jerk_positive_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "jerk_positive_upper",
+                                 },
+                                 kappa_kinematic_param.jerk_positive_upper);
+
+      kappa_kinematic_param.jerk_positive_speed_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "jerk_positive_speed_lower",
+          },
+          kappa_kinematic_param.jerk_positive_speed_lower);
+
+      kappa_kinematic_param.jerk_positive_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "jerk_positive_lower",
+                                 },
+                                 kappa_kinematic_param.jerk_positive_lower);
+
+      kappa_kinematic_param.jerk_positive_speed_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "jerk_positive_speed_upper",
+          },
+          kappa_kinematic_param.jerk_positive_speed_upper);
+
+      kappa_kinematic_param.jerk_negative_lower =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "jerk_negative_lower",
+                                 },
+                                 kappa_kinematic_param.jerk_negative_lower);
+
+      kappa_kinematic_param.jerk_negative_speed_lower = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "jerk_negative_speed_lower",
+          },
+          kappa_kinematic_param.jerk_negative_speed_lower);
+
+      kappa_kinematic_param.jerk_negative_upper =
+          read_json_keys<double>(json,
+                                 std::vector<std::string>{
+                                     "speed_planning",
+                                     "kappa_kinematic_param",
+                                     "jerk_negative_upper",
+                                 },
+                                 kappa_kinematic_param.jerk_negative_upper);
+
+      kappa_kinematic_param.jerk_negative_speed_upper = read_json_keys<double>(
+          json,
+          std::vector<std::string>{
+              "speed_planning",
+              "kappa_kinematic_param",
+              "jerk_negative_speed_upper",
+          },
+          kappa_kinematic_param.jerk_negative_speed_upper);
+    }
+
+    //  kappa_speed_limit_table
+    {
+      read_json_vec(json,
+                    std::vector<std::string>{"normal_kappa_speed_limit_table",
+                                             "kappa_table"},
+                    normal_kappa_speed_limit_table.kappa_table);
+      read_json_vec(json,
+                    std::vector<std::string>{"normal_kappa_speed_limit_table",
+                                             "speed_table"},
+                    normal_kappa_speed_limit_table.speed_table);
+      read_json_vec(json,
+                    std::vector<std::string>{
+                        "lane_change_kappa_speed_limit_table", "kappa_table"},
+                    lane_change_kappa_speed_limit_table.kappa_table);
+      read_json_vec(json,
+                    std::vector<std::string>{
+                        "lane_change_kappa_speed_limit_table", "speed_table"},
+                    lane_change_kappa_speed_limit_table.speed_table);
+    }
+    lane_change_upper_speed_limit_kph = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning",
+                                 "lane_change_upper_speed_limit_kph"},
+        lane_change_upper_speed_limit_kph);
+    enable_always_cruise = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"speed_planning", "debug_switch",
+                                 "enable_always_cruise"},
+        enable_always_cruise);
+  }
+  // debug switch - cruise target maker
+  bool enable_always_cruise = false;
+
+  double planning_time = 5.0;
+  double dt = 0.2;
+  double zero_acc_jerk_max = 0.5;
+  double zero_acc_jerk_min = -1.0;
+  double max_speed_limit_curve_acc_upper_bound = 2.4;
+  double max_speed_limit_curve_acc_lower_bound = -1.0;
+  double max_speed_limit_curve_jerk_upper_bound = 10.0;
+  double max_speed_limit_curve_jerk_lower_bound = -1.0;
+  double max_speed_limit_curve_velocity_upper_bound = 37.5;
+  double curr_vel_thres = 0.2;
+  double max_v_thres = 0.9;
+  double mean_a_thres = 0.15;
+  double stop_acc_upper_bound = 0.1;
+  double stop_acc_lower_bound = -0.3;
+  double stop_jerk_upper_bound = 0.8;
+  double stop_jerk_lower_bound = -0.8;
+
+  // follow target
+  double lower_speed_min_follow_distance_gap = 3.0;
+  double high_speed_min_follow_distance_gap = 4.5;
+  double low_speed_threshold_kmph = 18;
+  double high_speed_threshold_kmph = 30;
+  double large_vehicle_min_follow_distance_gap = 4.5;
+  double cone_min_follow_distance_gap = 4.5;
+  double traffic_light_min_follow_distance_gap = 2.0;
+
+  // cruise target relevance
+  double lane_change_upper_speed_limit_kph = 150.0;
+  struct KinematicParam {
+    double acc_positive_upper = 1.35;
+    double acc_positive_speed_lower = 4.2;
+    double acc_positive_lower = 0.5;
+    double acc_positive_speed_upper = 12.0;
+    double acc_negative_lower = -2.5;
+    double acc_negative_speed_lower = 5.0;
+    double acc_negative_upper = -2.0;
+    double acc_negative_speed_upper = 20.0;
+    double jerk_positive_upper = 4.0;
+    double jerk_positive_speed_lower = 5.0;
+    double jerk_positive_lower = 2.0;
+    double jerk_positive_speed_upper = 25.0;
+    double jerk_negative_lower = -6.0;
+    double jerk_negative_speed_lower = 1.0;
+    double jerk_negative_upper = -5.0;
+    double jerk_negative_speed_upper = 25.0;
+  };
+
+  struct KappaSpeedLimitTable {
+    std::vector<double> kappa_table{
+        0.0005, 0.00074, 0.00142, 0.00167, 0.0018, 0.002, 0.0025, 0.0033,
+        0.005,  0.01,    0.02,    0.0333,  0.04,   0.069, 0.15,   0.2};
+    std::vector<double> speed_table{150.0, 130.0, 105.0, 95.0, 90.0, 85.0,
+                                    80.0,  70.0,  55.0,  47.0, 27.0, 23.0,
+                                    20.0,  15.0,  10.0,  7.0};
+  };
+
+  KinematicParam comfort_kinematic_param;
+  KinematicParam kappa_kinematic_param;
+
+  KappaSpeedLimitTable normal_kappa_speed_limit_table;
+  KappaSpeedLimitTable lane_change_kappa_speed_limit_table;
 };
 }  // namespace planning

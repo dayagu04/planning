@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "../tasks/behavior_planners/agent_headway_decider/agent_headway_decider_output.h"
 #include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
@@ -17,6 +18,7 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -107,6 +109,17 @@ class PlanningContext {
   }
   StGraphSearcherOutput *mutable_st_graph_searcher_output() {
     return &st_graph_searcher_output_;
+  }
+
+  const AgentHeadwayDeciderOutput &agent_headway_decider_output() const {
+    return agent_headway_decider_output_;
+  }
+  AgentHeadwayDeciderOutput &mutable_agent_headway_decider_output() {
+    return agent_headway_decider_output_;
+  }
+
+  const SpeedLimitDeciderOutput& speed_limit_decider_output() const {
+    return speed_limit_decider_output_;
   }
 
   const VisionLateralBehaviorPlannerOutput &
@@ -433,6 +446,10 @@ class PlanningContext {
 
   // longitudinal deciders output
   ClosestInPathVehicleDeciderOutput cipv_decider_output_;
+  SpeedLimitDeciderOutput speed_limit_decider_output_;
+
+  // AgentHeadwayDecider
+  AgentHeadwayDeciderOutput agent_headway_decider_output_;
 };
 
 }  // namespace planning

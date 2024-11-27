@@ -185,6 +185,10 @@ class StGraphUtils {
 
   static bool IsBoundaryAboveRearTargetBoundary(const STBoundary& st_boundary,
                                                 const STBoundary*);
+
+  static planning_math::Box2d MakeEgoBox(
+      const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
+      const double s);
 };
 
 }  // namespace speed
