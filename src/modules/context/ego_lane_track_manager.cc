@@ -175,7 +175,8 @@ void EgoLaneTrackManger::TrackEgoLane(
         }
       }
 
-      SelectEgoLaneWithPlan(relative_id_lanes, order_ids_of_same_zero_relative_id,
+      SelectEgoLaneWithPlan(relative_id_lanes,
+                            order_ids_of_same_zero_relative_id,
                             virtual_id_mapped_lane);
     } else {
       SelectEgoLaneWithoutPlan(relative_id_lanes);

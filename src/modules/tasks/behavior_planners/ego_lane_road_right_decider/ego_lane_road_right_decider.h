@@ -18,7 +18,7 @@ enum RelativeDirection {
 class EgoLaneRoadRightDecider : public Task {
  public:
   EgoLaneRoadRightDecider(const EgoPlanningConfigBuilder* config_builder,
-                    framework::Session* session);
+                          framework::Session* session);
 
   void Init();
 
@@ -43,7 +43,8 @@ class EgoLaneRoadRightDecider : public Task {
 
   const double CalculateEgoFrontLineLength();
 
-  void CalculateMergePoint(std::vector<Point2D> &merge_point_list, int *calculate_nums);
+  void CalculateMergePoint(std::vector<Point2D>& merge_point_list,
+                           int* calculate_nums);
 
   const double CalculateAverageKappa(
       const std::shared_ptr<planning_math::KDPath> cur_kd_path);

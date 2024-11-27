@@ -370,8 +370,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     lead_one_a_processed = ProcessObstacleAcc(lead_one.a_lead_k());
     safe_distance = CalcSafeDistance(lead_one.v_lead(), v_ego);
 
-    const auto time_headway_level =
-        ego_state_manager->time_headway_level();
+    const auto time_headway_level = ego_state_manager->time_headway_level();
     // auto engine_config =
     //     common::ConfigurationContext::Instance()->engine_config();
     // std::string config_file = common::util::ReadFile(
@@ -386,10 +385,9 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     //   following_distance_level = following_distance_level_to_big_vehicle;
     // }
 
-    lead_one_desired_distance = CalcDesiredDistance(
-        lead_one, v_ego, lc_request, time_headway_level);
-    JSON_DEBUG_VALUE("time_headway_level",
-                     time_headway_level);
+    lead_one_desired_distance =
+        CalcDesiredDistance(lead_one, v_ego, lc_request, time_headway_level);
+    JSON_DEBUG_VALUE("time_headway_level", time_headway_level);
     JSON_DEBUG_VALUE("desired_distance", lead_one_desired_distance);
 
     lead_one_desired_velocity = CalcDesiredVelocity(
@@ -874,8 +872,8 @@ void StGraphGenerator::UpdateSTGraphs(
       if (st.a_lead() < 0) {
         // s_step += CalcDeceleratedObstacleST();
         s_step_bound += std::max(st_obs_v * t + 0.5 * st_obs_a * t_square +
-                                          1.0 / 6 * st_obs_j * t_cube,
-                                      0.0);
+                                     1.0 / 6 * st_obs_j * t_cube,
+                                 0.0);
         st_obs_v =
             std::max(st_obs_v + st_obs_a * t + 0.5 * st_obs_j * t_square, 0.0);
         st_obs_a = std::min(st_obs_a + st_obs_j * t, 0.0);
@@ -900,8 +898,8 @@ void StGraphGenerator::UpdateSTGraphs(
           */
           s_ref = st.start_s() - st.desired_distance() + s_step_bound;
           // hard bound使用安全距离
-          hard_bound.upper = std::max(
-              st.start_s() - st.safe_distance() + s_step_bound, 0.1);
+          hard_bound.upper =
+              std::max(st.start_s() - st.safe_distance() + s_step_bound, 0.1);
           hard_bound.lower = 0.0;  // 应该至少使用自车s-10
           hard_bound.vel = st.v_lead();
           hard_bound.acc = st.a_lead();
@@ -911,8 +909,8 @@ void StGraphGenerator::UpdateSTGraphs(
               hard_bound.upper, std::min(sref_update[i], std::max(s_ref, 0.0)));
           soft_bound.upper =
               std::min(0.5 * (hard_bound.upper + s_ref_update),
-                       std::max(st.start_s() - st.desired_distance() + s_step_bound +
-                                    static_soft_bound_buffer,
+                       std::max(st.start_s() - st.desired_distance() +
+                                    s_step_bound + static_soft_bound_buffer,
                                 0.0));
           soft_bound.lower = 0.0;  // 应该至少使用自车s-10
           soft_bound.vel = st.v_lead();
@@ -924,8 +922,8 @@ void StGraphGenerator::UpdateSTGraphs(
           s_ref = st.start_s() + st.desired_distance() + s_step_bound;
           // hard bound使用安全距离
           hard_bound.upper = s_upper_bound;
-          hard_bound.lower = std::max(
-              st.start_s() + st.safe_distance() + s_step_bound, 0.0);
+          hard_bound.lower =
+              std::max(st.start_s() + st.safe_distance() + s_step_bound, 0.0);
           hard_bound.vel = st.v_lead();
           hard_bound.acc = st.a_lead();
           hard_bound.id = st.id();
@@ -2931,8 +2929,9 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
     merge_split_points_.Reset();
   }
   // from plan
-  is_merge_region_ =
-      session_->planning_context().ego_lane_road_right_decider_output().is_merge_region;
+  is_merge_region_ = session_->planning_context()
+                         .ego_lane_road_right_decider_output()
+                         .is_merge_region;
   merge_lane_virtual_id_ = session_->planning_context()
                                .ego_lane_road_right_decider_output()
                                .merge_lane_virtual_id;

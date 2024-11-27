@@ -20,6 +20,7 @@
 #include "tracked_object.h"
 #include "utils/pose2d_utils.h"
 #include "vehicle_config_context.h"
+#include "vehicle_status.pb.h"
 
 namespace planning {
 
@@ -34,15 +35,13 @@ constexpr double kDefaultIntersectionSpeedLimit = 19.5;
 }  // namespace
 
 EgoLaneRoadRightDecider::EgoLaneRoadRightDecider(
-    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
-    : Task(config_builder, session),
-    session_(session) {
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
+    : Task(config_builder, session), session_(session) {
   name_ = "EgoLaneRoadRightDecider";
   config_ = config_builder->cast<ScenarioStateMachineConfig>();
   virtual_lane_mgr_ =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  ref_path_mgr_ = 
-      session_->environmental_model().get_reference_path_manager();
+  ref_path_mgr_ = session_->environmental_model().get_reference_path_manager();
 
   Init();
 }
@@ -60,10 +59,10 @@ bool EgoLaneRoadRightDecider::Execute() {
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   const int current_lc_status =
       session_->planning_context().lane_change_decider_output().curr_state;
-  const auto &ego_state =
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   Point2D ego_point = {ego_state->planning_init_point().x,
-                        ego_state->planning_init_point().y};
+                       ego_state->planning_init_point().y};
   is_merge_region_ = false;
   is_split_region_ = false;
   cur_lane_is_continue_ = true;
@@ -77,10 +76,10 @@ bool EgoLaneRoadRightDecider::Execute() {
   JSON_DEBUG_VALUE("is_merge_region", is_merge_region_);
   JSON_DEBUG_VALUE("is_split_region", is_split_region_);
   JSON_DEBUG_VALUE("merge_lane_virtual_id", merge_lane_virtual_id_);
-  JSON_DEBUG_VALUE("ego_lane_boundary_exist_virtual_line", 
-                    ego_lane_boundary_exist_virtual_line_);
-  JSON_DEBUG_VALUE("target_lane_boundary_exist_virtual_line", 
-                    target_lane_boundary_exist_virtual_line_);
+  JSON_DEBUG_VALUE("ego_lane_boundary_exist_virtual_line",
+                   ego_lane_boundary_exist_virtual_line_);
+  JSON_DEBUG_VALUE("target_lane_boundary_exist_virtual_line",
+                   target_lane_boundary_exist_virtual_line_);
 
   if (is_merge_region_) {
     std::vector<Point2D> merge_point_list;
@@ -98,23 +97,16 @@ bool EgoLaneRoadRightDecider::Execute() {
     cur_lane_is_continue_ = true;
     boundary_merge_point_valid_ = false;
   }
-  JSON_DEBUG_VALUE("macroeconomic_decider_merge_point_x",
-                   merge_point_.x);
-  JSON_DEBUG_VALUE("macroeconomic_decider_merge_point_y",
-                   merge_point_.y);
-  JSON_DEBUG_VALUE("boundary_line_merge_point_x",
-                   boundary_merge_point_.x);
-  JSON_DEBUG_VALUE("boundary_line_merge_point_y",
-                   boundary_merge_point_.y);
-  JSON_DEBUG_VALUE("cur_lane_is_continue",
-                   cur_lane_is_continue_);
-  JSON_DEBUG_VALUE("is_left_merge_direction",
-                   is_left_merge_direction_);
-  JSON_DEBUG_VALUE("is_right_merge_direction",
-                   is_right_merge_direction_);
-                   
-  auto &road_right_decider = 
-      session_->mutable_planning_context()->mutable_ego_lane_road_right_decider_output();
+  JSON_DEBUG_VALUE("macroeconomic_decider_merge_point_x", merge_point_.x);
+  JSON_DEBUG_VALUE("macroeconomic_decider_merge_point_y", merge_point_.y);
+  JSON_DEBUG_VALUE("boundary_line_merge_point_x", boundary_merge_point_.x);
+  JSON_DEBUG_VALUE("boundary_line_merge_point_y", boundary_merge_point_.y);
+  JSON_DEBUG_VALUE("cur_lane_is_continue", cur_lane_is_continue_);
+  JSON_DEBUG_VALUE("is_left_merge_direction", is_left_merge_direction_);
+  JSON_DEBUG_VALUE("is_right_merge_direction", is_right_merge_direction_);
+
+  auto& road_right_decider = session_->mutable_planning_context()
+                                 ->mutable_ego_lane_road_right_decider_output();
   road_right_decider.cur_lane_is_continue = cur_lane_is_continue_;
   road_right_decider.merge_lane_virtual_id = merge_lane_virtual_id_;
   road_right_decider.boundary_merge_point_valid = boundary_merge_point_valid_;
@@ -126,8 +118,8 @@ bool EgoLaneRoadRightDecider::Execute() {
 }
 
 void EgoLaneRoadRightDecider::ComputeIsMergeRegion() {
-  const auto &function_info = session_->environmental_model().function_info();
-  const auto &ego_state =
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   double ego_vel = ego_state->ego_v();
   const auto& left_lane = virtual_lane_mgr_->get_left_lane();
@@ -139,16 +131,18 @@ void EgoLaneRoadRightDecider::ComputeIsMergeRegion() {
 
   //判断与左车道是否merge
   if (left_lane != nullptr) {
-    left_reference_path = ref_path_mgr_->get_reference_path_by_lane(
-        left_lane->get_virtual_id());
+    left_reference_path =
+        ref_path_mgr_->get_reference_path_by_lane(left_lane->get_virtual_id());
   }
   if (left_reference_path != nullptr) {
-    if (ego_vel > kDefaultIntersectionSpeedLimit && 
+    if (ego_vel > kDefaultIntersectionSpeedLimit &&
         function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
       CheckIfMergeWithLeftLane();
-      if (((ego_lane_boundary_exist_virtual_line_ && !target_lane_boundary_exist_virtual_line_) ||
-            (!ego_lane_boundary_exist_virtual_line_ && target_lane_boundary_exist_virtual_line_)) &&
-              !is_split_region_) {
+      if (((ego_lane_boundary_exist_virtual_line_ &&
+            !target_lane_boundary_exist_virtual_line_) ||
+           (!ego_lane_boundary_exist_virtual_line_ &&
+            target_lane_boundary_exist_virtual_line_)) &&
+          !is_split_region_) {
         merge_lane_virtual_id_ = left_lane->get_virtual_id();
         is_merge_region_ = true;
         return;
@@ -164,15 +158,17 @@ void EgoLaneRoadRightDecider::ComputeIsMergeRegion() {
 
   //判断与右车道是否merge
   if (right_lane != nullptr) {
-    right_reference_path = ref_path_mgr_->get_reference_path_by_lane(
-        right_lane->get_virtual_id());
+    right_reference_path =
+        ref_path_mgr_->get_reference_path_by_lane(right_lane->get_virtual_id());
   }
   if (right_reference_path != nullptr) {
     // if (ego_vel > kDefaultIntersectionSpeedLimit &&
     //     function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     //   CheckIfMergeWithRightLane();
-    //   if (((ego_lane_boundary_exist_virtual_line_ && !target_lane_boundary_exist_virtual_line_) ||
-    //         (!ego_lane_boundary_exist_virtual_line_ && target_lane_boundary_exist_virtual_line_)) &&
+    //   if (((ego_lane_boundary_exist_virtual_line_ &&
+    //   !target_lane_boundary_exist_virtual_line_) ||
+    //         (!ego_lane_boundary_exist_virtual_line_ &&
+    //         target_lane_boundary_exist_virtual_line_)) &&
     //           !is_split_region_) {
     //     merge_lane_virtual_id_ = right_lane->get_virtual_id();
     //     is_merge_region_ = true;
@@ -203,6 +199,7 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   double ref_ego_s = NL_NMAX;
   double cur_ego_l = NL_NMAX;
   double cur_ego_s = NL_NMAX;
+  double boundary_point_s = NL_NMAX;
   double abs_lat_diff = 0.0;
   const auto ref_frenet_ego_state = reference_path->get_frenet_ego_state();
   ref_ego_l = ref_frenet_ego_state.l();
@@ -226,23 +223,27 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   } else {
     abs_lat_diff = std::abs(ref_ego_l - cur_ego_l);
   }
-  const auto cur_lane_coord = cur_reference_path->get_frenet_coord();
+  const auto& cur_lane_coord = cur_reference_path->get_frenet_coord();
   const auto cur_ref_path_end_point = cur_reference_path->get_points().back();
 
   //计算自车前方车道线的长度
-  if (current_lane == nullptr) {
+  if (current_lane == nullptr || cur_lane_coord == nullptr) {
     return false;
   }
-  const auto &cur_lane_left_boundary = 
-      current_lane->get_left_lane_boundary();
+  const auto& cur_lane_left_boundary = current_lane->get_left_lane_boundary();
   std::shared_ptr<planning_math::KDPath> target_boundary_path =
       virtual_lane_mgr_->MakeBoundaryPath(cur_lane_left_boundary);
-      
+
   if (target_boundary_path == nullptr) {
     return false;
   }
-  double ego_front_length = 
-      target_boundary_path->Length() - cur_ego_s;
+  Point2D frenet_boundary_point;
+  if (target_boundary_path->XYToSL(cur_ref_point, frenet_boundary_point)) {
+    boundary_point_s = frenet_boundary_point.x;
+  }
+  double ego_front_length = target_boundary_path->Length() - boundary_point_s;
+  ego_front_length = 
+      std::min(ego_front_length, cur_lane_coord->Length() - cur_ego_s);
   if (ego_front_length < kEps) {
     return false;
   }
@@ -264,15 +265,13 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
       start_abs_lat_diff = std::abs(frenet_point_start.y);
     }
   }
+
   //计算两条车道终点的lat_diff
   Point2D cur_ref_path_end_point_temp;
-  // ego_front_length =
-  //     std::min(ego_front_length,
-  //              cur_reference_path->get_frenet_coord()->Length() - cur_ego_s);
   ReferencePathPoint cur_ref_path_point_temp{};
   double target_s = cur_ego_s + ego_front_length - default_lane_buffer;
-  if (cur_reference_path->get_reference_point_by_lon(
-      target_s, cur_ref_path_point_temp)) {
+  if (cur_reference_path->get_reference_point_by_lon(target_s,
+                                                     cur_ref_path_point_temp)) {
     cur_ref_path_end_point_temp = {cur_ref_path_point_temp.path_point.x,
                                    cur_ref_path_point_temp.path_point.y};
   } else {
@@ -282,8 +281,8 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   Point2D ref_path_end_point_temp;
   ReferencePathPoint ref_path_point_temp{};
   target_s = std::min(target_s, reference_path->get_frenet_coord()->Length());
-  if (reference_path->get_reference_point_by_lon(
-          target_s, ref_path_point_temp)) {
+  if (reference_path->get_reference_point_by_lon(target_s,
+                                                 ref_path_point_temp)) {
     ref_path_end_point_temp = {ref_path_point_temp.path_point.x,
                                ref_path_point_temp.path_point.y};
   } else {
@@ -346,8 +345,8 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
 }
 
 void EgoLaneRoadRightDecider::CalculateMergePoint(
-    std::vector<Point2D> &merge_point_list, int *calculate_nums) {
-  const auto &ego_state =
+    std::vector<Point2D>& merge_point_list, int* calculate_nums) {
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   Point2D merge_point = {ego_state->planning_init_point().x,
                          ego_state->planning_init_point().y};
@@ -355,22 +354,21 @@ void EgoLaneRoadRightDecider::CalculateMergePoint(
                                        ego_state->planning_init_point().y};
   (merge_point_list)[0] = merge_point;
   (merge_point_list)[1] = boundary_line_merge_point;
-  const auto &overlap_lane =
+  const auto& overlap_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(merge_lane_virtual_id_);
   if (!overlap_lane) {
     return;
   }
-  const auto &cur_path =
-      ref_path_mgr_->get_reference_path_by_current_lane();
+  const auto& cur_path = ref_path_mgr_->get_reference_path_by_current_lane();
   if (!cur_path) {
     return;
   }
-  const auto &overlap_path =
+  const auto& overlap_path =
       ref_path_mgr_->get_reference_path_by_lane(merge_lane_virtual_id_);
   if (!overlap_path) {
     return;
   }
-  const auto &overlap_path_coordinate = overlap_path->get_frenet_coord();
+  const auto& overlap_path_coordinate = overlap_path->get_frenet_coord();
   const double ego_front_line_length = CalculateEgoFrontLineLength();
   if (ego_front_line_length < kEps) {
     return;
@@ -432,17 +430,16 @@ void EgoLaneRoadRightDecider::CalculateMergePoint(
 void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
   const auto& left_lane = virtual_lane_mgr_->get_left_lane();
   const auto& right_lane = virtual_lane_mgr_->get_right_lane();
-  const auto &overlap_lane =
+  const auto& overlap_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(merge_lane_virtual_id_);
   if (!overlap_lane) {
     return;
   }
-  const auto &cur_path =
-      ref_path_mgr_->get_reference_path_by_current_lane();
+  const auto& cur_path = ref_path_mgr_->get_reference_path_by_current_lane();
   if (!cur_path) {
     return;
   }
-  const auto &overlap_path =
+  const auto& overlap_path =
       ref_path_mgr_->get_reference_path_by_lane(merge_lane_virtual_id_);
   if (!overlap_path) {
     return;
@@ -463,7 +460,7 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
   }
 
   //针对向左侧汇流 利用曲率判断路权
-  if (left_lane != nullptr && 
+  if (left_lane != nullptr &&
       merge_lane_virtual_id_ == left_lane->get_virtual_id()) {
     const double cur_ego_s = cur_path->get_frenet_ego_state().s();
     const double overlap_ego_s = overlap_path->get_frenet_ego_state().s();
@@ -483,10 +480,10 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
       }
       auto overlap_pt =
           planning_math::PathPoint(over_ref_path_point_temp.path_point.x,
-                                    over_ref_path_point_temp.path_point.y);
+                                   over_ref_path_point_temp.path_point.y);
       auto cur_pt =
           planning_math::PathPoint(cur_ref_path_point_temp.path_point.x,
-                                    cur_ref_path_point_temp.path_point.y);
+                                   cur_ref_path_point_temp.path_point.y);
       overlap_path_points.emplace_back(overlap_pt);
       cur_path_points.emplace_back(cur_pt);
     }
@@ -510,13 +507,12 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
   return;
 }
 
-bool EgoLaneRoadRightDecider::IsVirtualLaneLine(
-    const int lane_virtual_id) {
+bool EgoLaneRoadRightDecider::IsVirtualLaneLine(const int lane_virtual_id) {
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(lane_virtual_id);
-  const auto &ego_state =
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto &plannig_init_point = ego_state->planning_init_point();
+  const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
   std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
@@ -589,29 +585,26 @@ bool EgoLaneRoadRightDecider::IsVirtualLaneLine(
 
 const double EgoLaneRoadRightDecider::CalculateEgoFrontLineLength() {
   const double default_lane_line_length = -1.0;
-  const auto &cur_lane = virtual_lane_mgr_->get_current_lane();
-  const auto &ego_state =
+  const auto& cur_lane = virtual_lane_mgr_->get_current_lane();
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto &plannig_init_point = ego_state->planning_init_point();
+  const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
   double ego_s = 0.0, ego_l = 0.0;
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
-  
-  if (llane != nullptr && 
-      merge_lane_virtual_id_ == llane->get_virtual_id()) {
-    const auto &cur_lane_left_boundary = 
-        cur_lane->get_left_lane_boundary();
+
+  if (llane != nullptr && merge_lane_virtual_id_ == llane->get_virtual_id()) {
+    const auto& cur_lane_left_boundary = cur_lane->get_left_lane_boundary();
     target_boundary_path =
         virtual_lane_mgr_->MakeBoundaryPath(cur_lane_left_boundary);
-  } else if (rlane != nullptr && 
-      merge_lane_virtual_id_ == rlane->get_virtual_id()) {
-    const auto &cur_lane_right_boundary = 
-        cur_lane->get_right_lane_boundary();
+  } else if (rlane != nullptr &&
+             merge_lane_virtual_id_ == rlane->get_virtual_id()) {
+    const auto& cur_lane_right_boundary = cur_lane->get_right_lane_boundary();
     target_boundary_path =
-        virtual_lane_mgr_->MakeBoundaryPath(cur_lane_right_boundary);  
+        virtual_lane_mgr_->MakeBoundaryPath(cur_lane_right_boundary);
   } else {
     return default_lane_line_length;
   }
@@ -644,14 +637,14 @@ const double EgoLaneRoadRightDecider::CalculateAverageKappa(
 }
 
 void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
-  const auto &ego_state =
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   double ego_vel = ego_state->ego_v();
   // if (ego_vel < kApprochingRampSpeedThd) {
   //   return;
   // }
   Point2D ego_point = {ego_state->planning_init_point().x,
-                        ego_state->planning_init_point().y};
+                       ego_state->planning_init_point().y};
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
@@ -674,7 +667,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     }
   }
 
-  if (!has_ego_lane || (!has_left_lane && !has_right_lane) || current_lane_points.size() < 3) {
+  if (!has_ego_lane || (!has_left_lane && !has_right_lane) ||
+      current_lane_points.size() < 3) {
     return;
   }
 
@@ -682,8 +676,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     const auto& left_lane_frenet_crd = llane->get_lane_frenet_coord();
     double ego_s_base_left = 0.0;
     double ego_l_base_left = 0.0;
-    left_lane_frenet_crd->XYToSL(ego_point.x, ego_point.y,
-                                  &ego_s_base_left, &ego_l_base_left);
+    left_lane_frenet_crd->XYToSL(ego_point.x, ego_point.y, &ego_s_base_left,
+                                 &ego_l_base_left);
     double near_average_l = 0.0;
     double far_average_l = 0.0;
     int32_t near_pt_count = 0;
@@ -691,15 +685,14 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     double near_pt_sum_l = 0.0;
     double far_pt_sum_l = 0.0;
     for (const auto point : current_lane_points) {
-      if (std::isnan(point.local_point.x) ||
-          std::isnan(point.local_point.y)) {
+      if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
         LOG_ERROR("update_lane_points: skip NaN point");
         continue;
       }
       double pt_s = 0.0;
       double pt_l = 0.0;
-      left_lane_frenet_crd->XYToSL(point.local_point.x,
-                                    point.local_point.y, &pt_s, &pt_l);
+      left_lane_frenet_crd->XYToSL(point.local_point.x, point.local_point.y,
+                                   &pt_s, &pt_l);
       const double pt_distance_to_ego = pt_s - ego_s_base_left;
       if (pt_l > 0.0 || pt_s > left_lane_frenet_crd->Length()) {
         continue;
@@ -722,7 +715,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
     if ((far_average_l - kExistSplitLateralDisThd > near_average_l) ||
-         near_average_l < kCenterLineLateralDisThd) {
+        near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
       return;
     }
@@ -732,8 +725,8 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     const auto& right_lane_frenet_crd = rlane->get_lane_frenet_coord();
     double ego_s_base_right = 0.0;
     double ego_l_base_right = 0.0;
-    right_lane_frenet_crd->XYToSL(ego_point.x, ego_point.y,
-                                  &ego_s_base_right, &ego_l_base_right);
+    right_lane_frenet_crd->XYToSL(ego_point.x, ego_point.y, &ego_s_base_right,
+                                  &ego_l_base_right);
     double near_average_l = 0.0;
     double far_average_l = 0.0;
     int32_t near_pt_count = 0;
@@ -741,15 +734,14 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     double near_pt_sum_l = 0.0;
     double far_pt_sum_l = 0.0;
     for (const auto point : current_lane_points) {
-      if (std::isnan(point.local_point.x) ||
-          std::isnan(point.local_point.y)) {
+      if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
         LOG_ERROR("update_lane_points: skip NaN point");
         continue;
       }
       double pt_s = 0.0;
       double pt_l = 0.0;
-      right_lane_frenet_crd->XYToSL(point.local_point.x,
-                                    point.local_point.y, &pt_s, &pt_l);
+      right_lane_frenet_crd->XYToSL(point.local_point.x, point.local_point.y,
+                                    &pt_s, &pt_l);
       const double pt_distance_to_ego = pt_s - ego_s_base_right;
       if (pt_l < 0.0 || pt_s > right_lane_frenet_crd->Length()) {
         continue;
@@ -772,7 +764,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
     if ((far_average_l - kExistSplitLateralDisThd > near_average_l) ||
-         near_average_l < kCenterLineLateralDisThd) {
+        near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
       return;
     }
@@ -781,8 +773,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
 }
 
 void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
-  const auto base_lane =
-      virtual_lane_mgr_->get_current_lane();
+  const auto base_lane = virtual_lane_mgr_->get_current_lane();
   const double default_consider_lane_marks_length = 80.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -874,12 +865,14 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
           }
         }
       }
-      if (left_boundary_exist_virtual_type && !target_right_boundary_exist_virtual_type) {
+      if (left_boundary_exist_virtual_type &&
+          !target_right_boundary_exist_virtual_type) {
         ego_lane_boundary_exist_virtual_line_ = true;
         target_lane_boundary_exist_virtual_line_ = false;
-      } else if (!left_boundary_exist_virtual_type && target_right_boundary_exist_virtual_type) {
+      } else if (!left_boundary_exist_virtual_type &&
+                 target_right_boundary_exist_virtual_type) {
         ego_lane_boundary_exist_virtual_line_ = false;
-        target_lane_boundary_exist_virtual_line_ = true;      
+        target_lane_boundary_exist_virtual_line_ = true;
       } else {
         return;
       }
@@ -888,8 +881,7 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
 }
 
 void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
-  const auto base_lane =
-      virtual_lane_mgr_->get_current_lane();
+  const auto base_lane = virtual_lane_mgr_->get_current_lane();
   const double default_consider_lane_marks_length = 80.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -981,12 +973,14 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
           }
         }
       }
-      if (right_boundary_exist_virtual_type && !target_left_boundary_exist_virtual_type) {
+      if (right_boundary_exist_virtual_type &&
+          !target_left_boundary_exist_virtual_type) {
         ego_lane_boundary_exist_virtual_line_ = true;
         target_lane_boundary_exist_virtual_line_ = false;
-      } else if (!right_boundary_exist_virtual_type && target_left_boundary_exist_virtual_type) {
+      } else if (!right_boundary_exist_virtual_type &&
+                 target_left_boundary_exist_virtual_type) {
         ego_lane_boundary_exist_virtual_line_ = false;
-        target_lane_boundary_exist_virtual_line_ = true;      
+        target_lane_boundary_exist_virtual_line_ = true;
       } else {
         return;
       }
@@ -995,8 +989,7 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
 }
 
 void EgoLaneRoadRightDecider::ComputeRoadRightFromLaneMark() {
-  const auto base_lane =
-      virtual_lane_mgr_->get_current_lane();
+  const auto base_lane = virtual_lane_mgr_->get_current_lane();
   const double default_consider_lane_marks_length = 80.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -1048,16 +1041,14 @@ void EgoLaneRoadRightDecider::ComputeRoadRightFromLaneMark() {
 
     // 根据地面标识判断是否向左汇流
     if (segment >= 0 && ego_s != 0.0) {
-      std::vector<iflyauto::LaneMarkMsg> lane_marks =
-          base_lane->lane_marks();
+      std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
 
       for (int i = segment; i < lane_marks.size(); i++) {
-        if (lane_marks[i].begin >
-            ego_s + default_consider_lane_marks_length) {
+        if (lane_marks[i].begin > ego_s + default_consider_lane_marks_length) {
           break;
         }
         if (lane_marks[i].lane_mark ==
-                iflyauto::LaneDrivableDirection_DIRECTION_LEFT_MERGE) {
+            iflyauto::LaneDrivableDirection_DIRECTION_LEFT_MERGE) {
           exist_left_direction_merge = true;
           break;
         }
@@ -1066,30 +1057,26 @@ void EgoLaneRoadRightDecider::ComputeRoadRightFromLaneMark() {
 
     //根据地面标识判断是否向右汇流
     if (segment >= 0 && ego_s != 0.0) {
-      std::vector<iflyauto::LaneMarkMsg> lane_marks =
-          base_lane->lane_marks();
+      std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
 
       for (int i = segment; i < lane_marks.size(); i++) {
-        if (lane_marks[i].begin >
-            ego_s + default_consider_lane_marks_length) {
+        if (lane_marks[i].begin > ego_s + default_consider_lane_marks_length) {
           break;
         }
         if (lane_marks[i].lane_mark ==
-                iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_MERGE) {
+            iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_MERGE) {
           exist_right_direction_merge = true;
           break;
         }
       }
     }
 
-    if (is_right_edge_side_lane &&
-        !is_split_region_) {
+    if (is_right_edge_side_lane && !is_split_region_) {
       if (exist_left_direction_merge) {
         is_left_merge_direction_ = true;
       }
     }
-    if (is_left_edge_side_lane &&
-        !is_split_region_) {
+    if (is_left_edge_side_lane && !is_split_region_) {
       if (exist_right_direction_merge) {
         is_right_merge_direction_ = true;
       }
