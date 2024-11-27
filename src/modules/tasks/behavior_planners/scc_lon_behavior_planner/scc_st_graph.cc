@@ -78,7 +78,9 @@ void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
   for (const auto &corner : all_corners) {
     double agent_s = 0.0;
     double agent_l = 0.0;
-    planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l);
+    if (!planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l)) {
+      continue;
+    }
     *ptr_min_s = std::fmin(*ptr_min_s, agent_s);
     *ptr_max_s = std::fmax(*ptr_max_s, agent_s);
     *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
@@ -515,12 +517,6 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("acc_target_low", acc_target_.first);
 
   } else {
-    // if filter lane borrow agent, give a limited vel
-    if (is_exist_lane_borrow_agent) {
-      v_target_ = std::min(std::min(v_target_, kLaneBorrowLimitedSpeed),
-                           last_v_target_);
-    }
-
     LOG_DEBUG("There is no lead \n");
     lon_behav_input_->mutable_lon_decision_info()
         ->mutable_leadone_info()
@@ -2917,7 +2913,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
     is_exist_lane_borrow_agent = true;
   }
   auto lead_two_iter =
-      std::find(blocked_obs_id.begin(), blocked_obs_id.end(), lead_one_id);
+      std::find(blocked_obs_id.begin(), blocked_obs_id.end(), lead_two_id);
   if (lead_two_iter != blocked_obs_id.end()) {
     is_exist_lane_borrow_agent = true;
   }
@@ -2942,7 +2938,9 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
   }
 
   std::vector<NarrowLead> lane_borrow_agent;
-  if (lat_path_coord_ == nullptr) {
+  const auto &lat_path_coord =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (lat_path_coord == nullptr) {
     return;
   }
 
@@ -2951,13 +2949,13 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
     double max_s_by_lat_path = std::numeric_limits<double>::lowest();
     double min_l_by_lat_path = std::numeric_limits<double>::max();
     double max_l_by_lat_path = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(lat_path_coord_, *agent,
+    CalculateAgentSLBoundary(lat_path_coord, *agent,
                              &min_s_by_lat_path, &max_s_by_lat_path,
                              &min_l_by_lat_path, &max_l_by_lat_path);
     double min_lat_l_by_lat_path = 0.0;
     double agent_s = 0.0;
     double agent_l = 0.0;
-    lat_path_coord_->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l);
+    lat_path_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l);
     if (agent_l >= 0) {
       min_lat_l_by_lat_path =
           (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;

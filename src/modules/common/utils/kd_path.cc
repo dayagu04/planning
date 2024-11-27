@@ -174,6 +174,12 @@ bool KDPath::XYToSL(const double x, const double y, double* const s,
   const auto& line_object = nearest_object->line_segment();
   double base_s = path_points_.at(nearest_object->index()).s();
   Project(*line_object, x, y, base_s, s, l);
+
+  if (*s < 0 || *s > length_) {
+    LOG_DEBUG("s is not within the valid range \n");
+    return false;
+  }
+
   return true;
 }
 
