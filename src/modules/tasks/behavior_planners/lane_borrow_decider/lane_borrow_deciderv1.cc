@@ -831,6 +831,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
     if(obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
       &&ego_frenet_boundary_.l_start < obs_left_l_)
     {
+      lane_borrow_decider_output_.lane_borrow_failed_reason =
+              STATIC_AREA_TOO_CLOSE;
       return false; // TODO add specific fail reason
     }
   }
@@ -838,6 +840,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
     if(obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
       &&ego_frenet_boundary_.l_end > obs_right_l_)
     {
+      lane_borrow_decider_output_.lane_borrow_failed_reason =
+              STATIC_AREA_TOO_CLOSE;
       return false; // TODO add specific fail reason
     }
   }
@@ -854,7 +858,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start >
-        ego_frenet_boundary_.s_start) {  // 前方障碍物[车尾为准]
+        ego_frenet_boundary_.s_end) {  // 前方障碍物
       if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
@@ -899,7 +903,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
           return false;
         }
       }
-    } else {  // 后方障碍物
+    } else if (frenet_obstacle_sl.s_end <
+        ego_frenet_boundary_.s_start) {  // 后方障碍物
       if (frenet_obstacle_sl.l_start > left_l ||
           frenet_obstacle_sl.l_end < right_l) {  // fixed bug
         continue;
@@ -927,6 +932,40 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
         return false;
       }
+    }
+    else { // within ego s_boundary strict safety check
+        if (left_borrow_) {
+          if (frenet_obstacle_sl.l_start > left_bounds_l ||
+              frenet_obstacle_sl.l_end <
+                  left_width) {  // 筛选侵入借道车道的静态障碍物
+            continue;
+          }else{
+            lane_borrow_decider_output_.lane_borrow_failed_reason = NEARBY_OBSTACLE_TOO_CLOSE;
+            lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+            return false;
+          }
+
+      } else {  // 右侧借道
+        if (frenet_obstacle_sl.l_start > -right_width ||
+            frenet_obstacle_sl.l_end < right_bounds_l) {
+          continue;
+        }else {
+          lane_borrow_decider_output_.lane_borrow_failed_reason = NEARBY_OBSTACLE_TOO_CLOSE;
+          lane_borrow_decider_output_.failed_obs_id =  obstacle->obstacle()->id();
+          return false;
+        }
+
+        if (frenet_obstacle_sl.l_end + vehicle_param_.width +
+                    kLatPassableBuffer >
+                obs_right_l_ &&
+            frenet_obstacle_sl.l_end - vehicle_param_.width -
+                    kLatPassableBuffer <
+                right_bounds_l) {
+
+        }
+      }
+
+
     }
   }
   return true;

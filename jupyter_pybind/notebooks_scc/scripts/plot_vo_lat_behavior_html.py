@@ -24,7 +24,9 @@ from lib.local_view_lib import *
 # 先手动写死bag
 
 bag_path = "/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732672608.close-loop.scc.plan"# danger left
-# bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1732671696.close-loop.scc.plan'
+bag_path = '/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732689115.close-loop.scc.plan'
+abg_path = '/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732693102.open-loop.scc.plan'
+bag_path = '/root/clzhao/lane_borrow_data/2024-11-26-15-32-32.bag_2024-11-26-19-45-49.1732694992.close-loop.scc.plan'
 
 
 html_file = bag_path +".vo_lat_behavior.html"
@@ -682,7 +684,7 @@ def plotOnce(bag_path, html_file):
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
     pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
 
-    pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info, pan_lane_borrow_info])
+    pans = Tabs(tabs=[ pan_lane_borrow_info,pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():

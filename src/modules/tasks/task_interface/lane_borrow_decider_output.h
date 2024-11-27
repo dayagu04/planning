@@ -17,7 +17,9 @@ enum LaneBorrowFailedReason {
   STATIC_OBSTACLE_BLOCKED,      //(目标车道)有阻塞障碍物？
   BACKWARD_OBSTACLE_TOO_CLOSE,  //后方车太近
   LANE_CHANGE_STATE,            //借道
-  CLOSE_TO_JUNCTION             //路口
+  CLOSE_TO_JUNCTION,             //路口
+  NEARBY_OBSTACLE_TOO_CLOSE,
+  STATIC_AREA_TOO_CLOSE
 };
 
 struct LaneBorrowDeciderOutput {
