@@ -87,6 +87,8 @@ class GeometryPathGenerator : public ParkingTask {
 
     uint8_t path_planner_state = 0;
 
+    bool is_searching_stage = false;
+
     void Set(const Tlane &tlane_in,
              const pnc::geometry_lib::PathPoint &ego_pose_in,
              bool is_complete_path_in) {

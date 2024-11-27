@@ -21,7 +21,7 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); }
 
-  const ParkingScenarioStatus ScenarioTry() override;
+  void ScenarioTry() override;
 
   enum class SlotObsType : uint8_t {
     INSIDE_OBS,

@@ -12,7 +12,7 @@
 #include "Eigen/src/Core/util/Constants.h"
 #include "apa_data.h"
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "apa_state_machine_manager.h"
 #include "apa_utils.h"
 #include "apa_world.h"
 #include "basic_types.pb.h"
@@ -33,6 +33,7 @@
 #include "perpendicular_tail_in_path_generator.h"
 #include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -1747,6 +1748,11 @@ const uint8_t PerpendicularTailInScenario::NewPathPlanOnce() {
   path_planner_input.ego_pose.Set(ego_slot_info.ego_pos_slot,
                                   ego_slot_info.ego_heading_slot);
 
+  path_planner_input.is_searching_stage = true;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+    path_planner_input.is_searching_stage = false;
+  }
+
   if (frame_.replan_reason == DYNAMIC &&
       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     ILOG_INFO << "dynamic replan, gear should be reverse";
@@ -1759,6 +1765,14 @@ const uint8_t PerpendicularTailInScenario::NewPathPlanOnce() {
   const bool path_plan_success =
       perpendicular_path_planner_.GeometryPathGenerator ::Update(
           apa_world_ptr_->GetCollisionDetectorPtr());
+
+  if (path_planner_input.is_searching_stage) {
+    if (path_plan_success) {
+      return PathPlannerResult::PLAN_UPDATE;
+    } else {
+      return PathPlannerResult::PLAN_FAILED;
+    }
+  }
 
   uint8_t plan_result = 0;
   if (!path_plan_success &&
@@ -2654,7 +2668,7 @@ void PerpendicularTailInScenario::Log() const {
   }
 }
 
-const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
+void PerpendicularTailInScenario::ScenarioTry() {
   Reset();
 
   std::shared_ptr<SlotManager> slot_manager =
@@ -2666,20 +2680,20 @@ const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
     slot_manager->SlotReleaseByScenarioTry(
         false, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
 
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   // todo: use prepare plan to replace PathPlan.
   GenTlane();
   GenObstacles();
 
-  uint8_t result = PathPlanOnce();
+  uint8_t result = NewPathPlanOnce();
   if (result != PathPlannerResult::PLAN_UPDATE) {
     slot_manager->SlotReleaseByScenarioTry(
         false, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
 
     ILOG_INFO << "geometry path fail";
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   } else {
     slot_manager->SlotReleaseByScenarioTry(
         true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
@@ -2687,7 +2701,7 @@ const ParkingScenarioStatus PerpendicularTailInScenario::ScenarioTry() {
     ILOG_INFO << "geometry path success";
   }
 
-  return ParkingScenarioStatus::STATUS_RUNNING;
+  return;
 }
 
 }  // namespace apa_planner

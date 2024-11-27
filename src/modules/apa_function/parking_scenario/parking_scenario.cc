@@ -17,19 +17,18 @@
 namespace planning {
 namespace apa_planner {
 
-ParkingScenario::ParkingScenario()
-    : scenario_status_(ParkingScenarioStatus::STATUS_UNKNOWN), name_("") {}
+ParkingScenario::ParkingScenario() {}
 
-ParkingScenario::ParkingScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr)
-    : scenario_status_(ParkingScenarioStatus::STATUS_UNKNOWN),
-      name_(""),
-      type_(ParkingScenarioType::SCENARIO_UNKNOWN) {
+ParkingScenario::ParkingScenario(
+    const std::shared_ptr<ApaWorld>& apa_world_ptr) {
   SetApaWorldPtr(apa_world_ptr);
 }
 
-std::string ParkingScenario::GetName() { return name_; }
+std::string ParkingScenario::GetName() { return ""; }
 
 void ParkingScenario::Init() { return; }
+
+void ParkingScenario::Reset() { return; }
 
 void ParkingScenario::ScenarioRunning() {
   // run plan core
@@ -42,20 +41,6 @@ void ParkingScenario::ScenarioRunning() {
 
   // log json debug
   Log();
-
-  return;
-}
-
-void ParkingScenario::Reset() {
-  scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
-
-  return;
-}
-
-void ParkingScenario::Process() {
-  if (scenario_status_ == ParkingScenarioStatus::STATUS_RUNNING) {
-    ScenarioRunning();
-  }
 
   return;
 }
@@ -394,26 +379,14 @@ const bool ParkingScenario::PostProcessPath() {
 
 void ParkingScenario::CreateTasks() { return; }
 
-void ParkingScenario::Enter(const ParkingScenarioStatus status) {
-  scenario_status_ = status;
-
-  return;
-}
-
 void ParkingScenario::ThreadClear() { return; }
 
-const ParkingScenarioStatus ParkingScenario::ScenarioTry() {
+void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
   std::shared_ptr<SlotManager> slot_manager =
       apa_world_ptr_->GetSlotManagerPtr();
   slot_manager->SlotReleaseByScenarioTry(
       true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
-
-  return ParkingScenarioStatus::STATUS_RUNNING;
-}
-
-void ParkingScenario::Exit() {
-  scenario_status_ = ParkingScenarioStatus::STATUS_DONE;
 
   return;
 }

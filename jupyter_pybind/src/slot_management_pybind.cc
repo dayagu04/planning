@@ -88,7 +88,7 @@ int UpdateBytes(py::bytes &func_statemachine_bytes,
           fusion_occupancy_objects_info_bytes);
 
   std::shared_ptr<ApaData> apa_data_ptr = std::make_shared<ApaData>();
-  pBase->Update(apa_data_ptr);
+//   pBase->Update(apa_data_ptr);
 
   return 0;
 }
@@ -154,7 +154,7 @@ int UpdateBytesByParam(py::bytes &func_statemachine_bytes,
 
   pBase->SetParam(param);
   std::shared_ptr<ApaData> apa_data_ptr = std::make_shared<ApaData>();
-  pBase->Update(apa_data_ptr);
+//   pBase->Update(apa_data_ptr);
 
   return 0;
 }

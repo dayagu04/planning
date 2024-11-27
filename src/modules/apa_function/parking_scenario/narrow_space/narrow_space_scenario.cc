@@ -1785,15 +1785,15 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
   return parking_finish;
 }
 
-const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
+void NarrowSpaceScenario::ScenarioTry() {
   if (apa_world_ptr_->GetApaDataPtr()->slot_type !=
       Common::PARKING_SLOT_TYPE_VERTICAL) {
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   if (!apa_param.GetParam()
            .astar_config.perpendicular_slot_auto_switch_to_astar) {
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   std::shared_ptr<SlotManager> slot_manager =
@@ -1804,7 +1804,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
     slot_manager->SlotReleaseByScenarioTry(
         false, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
 
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   narrow_space_decider_.Process(apa_world_ptr_->GetApaDataPtr()->slot_type);
@@ -1827,7 +1827,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
 
     ILOG_INFO << "astar path try fail";
 
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   } else if (res == PathPlannerResult::PLAN_UPDATE) {
     narrow_space_decider_.SetAstarState(AstarSearchState::SUCCESS);
     slot_manager->SlotReleaseByScenarioTry(
@@ -1835,7 +1835,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
 
     ILOG_INFO << "hybrid astar path try success";
 
-    return ParkingScenarioStatus::STATUS_RUNNING;
+    return;
   } else if (res == PathPlannerResult::WAIT_PATH) {
     SlotReleaseState astar_release_state =
         slot_manager->GetEgoSlotInfo()
@@ -1848,7 +1848,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
     }
   }
 
-  return ParkingScenarioStatus::STATUS_TRY;
+  return;
 }
 
 void NarrowSpaceScenario::ThreadClear() {

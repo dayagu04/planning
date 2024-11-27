@@ -15,10 +15,9 @@
 #include "geometry_math.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
+#include "parking_task/parking_task.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
-
-#include "parking_task/parking_task.h"
 
 namespace planning {
 namespace apa_planner {
@@ -40,7 +39,8 @@ enum PathPlannerResult {
   WAIT_PATH,
 };
 
-// 1. 对于泊车而言，不同的行为对应不同的场景，包括垂直泊入场景、垂直泊出场景,等等.
+// 1.
+// 对于泊车而言，不同的行为对应不同的场景，包括垂直泊入场景、垂直泊出场景,等等.
 // 2. 每一个场景, 都有不同的计算任务.
 // 例如计算任务包括：路径计算,速度计算,超声波处理,
 // 障碍物决策,目标点位置决策,路径优化,速度优化,等等.
@@ -294,16 +294,24 @@ class ParkingScenario {
 
   ParkingScenario();
 
-  ParkingScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr);
+  ParkingScenario(const std::shared_ptr<ApaWorld> &apa_world_ptr);
 
   virtual void Init();
+  virtual void Reset();
+  virtual std::string GetName();
 
-  // 点击泊车之后，更新speed and path
+  void SetApaWorldPtr(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
+    apa_world_ptr_ = apa_world_ptr;
+    return;
+  }
+
+  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
+
+  // 点击开始泊车之后，更新speed and path
   virtual void ScenarioRunning();
 
-  virtual void Reset();
-
-  virtual std::string GetName();
+  // 点击了车位，但还没点击开始泊车，那么调用这个函数，尝试一下看看路径生成是否成功.
+  virtual void ScenarioTry();
 
   const PlannerStateMachine &GetPlannerStates() const {
     return frame_.plan_stm;
@@ -315,42 +323,14 @@ class ParkingScenario {
 
   const iflyauto::APAHMIData &GetAPAHmi() const { return apa_hmi_; }
 
-  void SetApaWorldPtr(const std::shared_ptr<ApaWorld> &apa_world_ptr) {
-    apa_world_ptr_ = apa_world_ptr;
-  }
-
-  const std::shared_ptr<ApaWorld> GetApaWorldPtr() { return apa_world_ptr_; }
-
-  virtual void Process();
-
-  virtual void Exit();
-
-  virtual void Enter(const ParkingScenarioStatus status);
-
-  const ParkingScenarioStatus& GetStatus() const {
-    return scenario_status_;
-  }
-
-  const std::string& Name() const { return name_; }
-
-  const ParkingScenarioType ScenarioType() const { return type_; }
-
-  // 如果用户点击了车位，但是还没有点击开始泊车，那么调用这个函数，尝试一下看看路径生成是否成功.
-  virtual const ParkingScenarioStatus ScenarioTry();
-
   // clear thread related
   virtual void ThreadClear();
-
-  void SetScenerioType(const ParkingScenarioType type) {
-    type_ = type;
-    return;
-  }
 
  protected:
   virtual const bool CheckFinished() = 0;
   virtual const bool CheckReplan() = 0;
-  virtual void PlanCore() = 0;
   virtual void Log() const = 0;
+  virtual void PlanCore() = 0;
   virtual void GenTlane() = 0;
   virtual void GenObstacles() = 0;
   virtual const bool UpdateEgoSlotInfo() = 0;
@@ -388,11 +368,6 @@ class ParkingScenario {
   Frame frame_;
 
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
-
-  ParkingScenarioStatus scenario_status_;
-  ParkingScenarioType type_;
-
-  std::string name_;
 };
 
 }  // namespace apa_planner

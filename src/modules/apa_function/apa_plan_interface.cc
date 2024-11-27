@@ -105,23 +105,16 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   }
 
   // run planner
-  ParkingScenarioStatus scenario_status;
-  scenario_status = scenario_manager_.Excute(apa_world_ptr_->GetApaDataPtr());
-  std::shared_ptr<ParkingScenario> scenario_ =
-      scenario_manager_.MutableScenarioPtr();
-  if (scenario_ != nullptr &&
-      scenario_status == ParkingScenarioStatus::STATUS_RUNNING) {
-    scenario_->Process();
-
-    planning_output_ = scenario_->GetOutput();
-    apa_hmi_ = scenario_->GetAPAHmi();
-    // DEBUG_PRINT("interface planning hmi----------------");
-    // DEBUG_PRINT("remain dist in hmi = " <<
-    // apa_hmi_.distance_to_parking_space); DEBUG_PRINT(
-    //     "is_parking_pause = " <<
-    //     static_cast<int>(apa_hmi_.is_parking_pause));
-    // DEBUG_PRINT("parking_pause_reason = " << apa_hmi_.parking_pause_reason);
-  }
+  scenario_manager_.Excute();
+  scenario_manager_.Process();
+  planning_output_ = scenario_manager_.GetPlanningOutput();
+  apa_hmi_ = scenario_manager_.GetAPAHmiData();
+  // DEBUG_PRINT("interface planning hmi----------------");
+  // DEBUG_PRINT("remain dist in hmi = " <<
+  // apa_hmi_.distance_to_parking_space); DEBUG_PRINT(
+  //     "is_parking_pause = " <<
+  //     static_cast<int>(apa_hmi_.is_parking_pause));
+  // DEBUG_PRINT("parking_pause_reason = " << apa_hmi_.parking_pause_reason);
 
   AddReleasedSlotInfo(planning_output_);
 
@@ -131,8 +124,10 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   ILOG_INFO << "total time consumption = " << frame_duration << "ms";
   JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
 
-  return (scenario_status != ParkingScenarioStatus::STATUS_UNKNOWN) ? true
-                                                                    : false;
+  return (scenario_manager_.GetScenarioStatus() !=
+          ParkingScenarioStatus::STATUS_UNKNOWN)
+             ? true
+             : false;
 }
 
 void ApaPlanInterface::AddReleasedSlotInfo(

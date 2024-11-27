@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
 #include "debug_info_log.h"
@@ -26,6 +25,7 @@
 #include "ifly_time.h"
 #include "math_lib.h"
 #include "planning_plan_c.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 namespace planning {
 namespace apa_planner {
 
@@ -50,7 +50,7 @@ void PerpendicularTailInPathGenerator::Preprocess() {
   calc_params_.directly_use_ego_pose = false;
   calc_params_.turn_radius = 1.0 * apa_param.GetParam().min_turn_radius;
   calc_params_.can_insert_line = true;
-  calc_params_.is_searching_stage = false;
+  calc_params_.is_searching_stage = input_.is_searching_stage;
   calc_params_.col_det_time = 0.0;
   calc_params_.dubins_plan_time = 0.0;
   calc_params_.rough_plan_time = 0.0;
