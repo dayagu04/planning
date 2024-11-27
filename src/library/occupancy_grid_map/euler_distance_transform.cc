@@ -224,8 +224,8 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
     float *min_dist, const pnc::geometry_lib::PathPoint &pose,
     const uint8_t gear) {
   const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
-                                      ? AstarPathGear::drive
-                                      : AstarPathGear::reverse;
+                                      ? AstarPathGear::DRIVE
+                                      : AstarPathGear::REVERSE;
 
   const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
 
@@ -304,8 +304,8 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
 const bool EulerDistanceTransform::IsCollisionForPoint(
     const pnc::geometry_lib::PathPoint &pose, const uint8_t gear) {
   const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
-                                      ? AstarPathGear::drive
-                                      : AstarPathGear::reverse;
+                                      ? AstarPathGear::DRIVE
+                                      : AstarPathGear::REVERSE;
 
   const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
 

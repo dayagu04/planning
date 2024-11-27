@@ -61,7 +61,10 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   tie_breaker_ = 1e-5;
 
-  dp_search_goal_adjust_dist = 0.7;
+  // reverse gear path searching, no gear switch
+  single_shot_path_end_straight_dist = 0.7;
+  perpendicular_slot_node_step = 0.4;
+  parallel_slot_node_step = 0.3;
 
   return;
 }

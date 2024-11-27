@@ -999,7 +999,7 @@ int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2D *start_pose,
     }
   }
 
-  if (initial_pose_dir != AstarPathGear::none && initial_pose_dir != dir[0]) {
+  if (initial_pose_dir != AstarPathGear::NONE && initial_pose_dir != dir[0]) {
     (*gear_switch_num)++;
   }
 

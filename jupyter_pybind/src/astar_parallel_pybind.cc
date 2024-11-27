@@ -44,7 +44,7 @@ using namespace planning;
 using namespace pnc::geometry_lib;
 
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
-static planning::apa_planner::ApaPlanInterface*parking_interface = nullptr;
+static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
 
 std::vector<Eigen::Vector3d> global_path_;
 std::vector<double> global_path_s_;
@@ -52,7 +52,6 @@ std::vector<Eigen::Vector3d> rs_path_;
 std::vector<Eigen::Vector3d> polynomial_path_;
 // 独立的rs，验证rs
 std::vector<Eigen::Vector3d> rs_path_alone_;
-Eigen::Vector3d car_pose_by_s_;
 Eigen::Vector3d global_target_pose_;
 Eigen::Vector3d safe_circle_tang_pose_;
 // global park space
@@ -262,7 +261,7 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   const EulerDistanceTransform *edt_ =
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::reverse);
+      edt_->GetCircleFootPrint(AstarPathGear::REVERSE);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
@@ -550,7 +549,8 @@ int GenerateObstacleByJupyter(
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
     std::vector<Eigen::Vector2d> global_park_space_points,
-    std::vector<double> obs_params, const bool trigger_plan) {
+    std::vector<double> obs_params, const bool trigger_plan,
+    const bool swap_start_goal) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   auto &ego_slot_info = frame.ego_slot_info;
@@ -706,8 +706,6 @@ std::vector<Eigen::Vector3d> Update(
     ILOG_INFO << "trigger astar plan";
 
     AstarRequest request;
-    request.slot_width = ego_slot_info.slot_width;
-    request.slot_length = ego_slot_info.slot_length;
     request.first_action_request.has_request = false;
     request.path_generate_method =
         planning::AstarPathGenerateType::ASTAR_SEARCHING;
@@ -729,7 +727,8 @@ std::vector<Eigen::Vector3d> Update(
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
-    request.history_gear = AstarPathGear::drive;
+    request.history_gear = AstarPathGear::DRIVE;
+    request.swap_start_goal = swap_start_goal;
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);
@@ -798,8 +797,6 @@ Eigen::Vector3d GetTargetPose() { return global_target_pose_; }
 
 Eigen::Vector3d GetCircleTangentPose() { return safe_circle_tang_pose_; }
 
-Eigen::Vector3d GetTrajPoseByDist() { return car_pose_by_s_; }
-
 const std::vector<Eigen::Vector2d> &GetRectangleSoltPos() {
   return corrected_park_space_points_;
 }
@@ -852,7 +849,6 @@ PYBIND11_MODULE(astar_parallel_py, m) {
       .def("GetRSHeuristicPath", &GetRSHeuristicPath)
       .def("GetObsLineList", &GetObsLineList)
       .def("StopPybind", &StopPybind)
-      .def("GetTrajPoseByDist", &GetTrajPoseByDist)
       .def("GetRSLibPath", &GetRSLibPath)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetAllSearchNode", &GetAllSearchNode)

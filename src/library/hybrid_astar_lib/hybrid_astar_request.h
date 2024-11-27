@@ -55,6 +55,8 @@ struct AstarRequest {
 
   double slot_width;
   double slot_length;
+
+  bool swap_start_goal;
 };
 
 void DebugAstarRequestString(const AstarRequest &request);

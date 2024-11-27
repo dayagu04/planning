@@ -162,9 +162,9 @@ bool ReedShepp::SCS(const double x, const double y, const double phi,
   // char SLS_types[] = "SLS";
 
   AstarPathSteer SLS_types[3];
-  SLS_types[0] = AstarPathSteer::straight;
-  SLS_types[1] = AstarPathSteer::left;
-  SLS_types[2] = AstarPathSteer::straight;
+  SLS_types[0] = AstarPathSteer::STRAIGHT;
+  SLS_types[1] = AstarPathSteer::LEFT;
+  SLS_types[2] = AstarPathSteer::STRAIGHT;
 
   if (SLS_param.flag &&
       !SetRSP(3, SLS_lengths, SLS_types, all_possible_paths)) {
@@ -178,9 +178,9 @@ bool ReedShepp::SCS(const double x, const double y, const double phi,
   // char SRS_types[] = "SRS";
 
   AstarPathSteer SRS_types[3];
-  SRS_types[0] = AstarPathSteer::straight;
-  SRS_types[1] = AstarPathSteer::right;
-  SRS_types[2] = AstarPathSteer::straight;
+  SRS_types[0] = AstarPathSteer::STRAIGHT;
+  SRS_types[1] = AstarPathSteer::RIGHT;
+  SRS_types[2] = AstarPathSteer::STRAIGHT;
 
   if (SRS_param.flag &&
       !SetRSP(3, SRS_lengths, SRS_types, all_possible_paths)) {
@@ -198,9 +198,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSL1_types[] = "LSL";
 
   AstarPathSteer LSL1_types[3];
-  LSL1_types[0] = AstarPathSteer::left;
-  LSL1_types[1] = AstarPathSteer::straight;
-  LSL1_types[2] = AstarPathSteer::left;
+  LSL1_types[0] = AstarPathSteer::LEFT;
+  LSL1_types[1] = AstarPathSteer::STRAIGHT;
+  LSL1_types[2] = AstarPathSteer::LEFT;
 
   if (LSL1_param.flag &&
       !SetRSP(3, LSL1_lengths, LSL1_types, all_possible_paths)) {
@@ -214,9 +214,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSL2_types[] = "LSL";
 
   AstarPathSteer LSL2_types[3];
-  LSL2_types[0] = AstarPathSteer::left;
-  LSL2_types[1] = AstarPathSteer::straight;
-  LSL2_types[2] = AstarPathSteer::left;
+  LSL2_types[0] = AstarPathSteer::LEFT;
+  LSL2_types[1] = AstarPathSteer::STRAIGHT;
+  LSL2_types[2] = AstarPathSteer::LEFT;
 
   if (LSL2_param.flag &&
       !SetRSP(3, LSL2_lengths, LSL2_types, all_possible_paths)) {
@@ -230,9 +230,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSL3_types[] = "RSR";
 
   AstarPathSteer LSL3_types[3];
-  LSL3_types[0] = AstarPathSteer::right;
-  LSL3_types[1] = AstarPathSteer::straight;
-  LSL3_types[2] = AstarPathSteer::right;
+  LSL3_types[0] = AstarPathSteer::RIGHT;
+  LSL3_types[1] = AstarPathSteer::STRAIGHT;
+  LSL3_types[2] = AstarPathSteer::RIGHT;
 
   if (LSL3_param.flag &&
       !SetRSP(3, LSL3_lengths, LSL3_types, all_possible_paths)) {
@@ -246,9 +246,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSL4_types[] = "RSR";
 
   AstarPathSteer LSL4_types[3];
-  LSL4_types[0] = AstarPathSteer::right;
-  LSL4_types[1] = AstarPathSteer::straight;
-  LSL4_types[2] = AstarPathSteer::right;
+  LSL4_types[0] = AstarPathSteer::RIGHT;
+  LSL4_types[1] = AstarPathSteer::STRAIGHT;
+  LSL4_types[2] = AstarPathSteer::RIGHT;
 
   if (LSL4_param.flag &&
       !SetRSP(3, LSL4_lengths, LSL4_types, all_possible_paths)) {
@@ -262,9 +262,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSR1_types[] = "LSR";
 
   AstarPathSteer LSR1_types[3];
-  LSR1_types[0] = AstarPathSteer::left;
-  LSR1_types[1] = AstarPathSteer::straight;
-  LSR1_types[2] = AstarPathSteer::right;
+  LSR1_types[0] = AstarPathSteer::LEFT;
+  LSR1_types[1] = AstarPathSteer::STRAIGHT;
+  LSR1_types[2] = AstarPathSteer::RIGHT;
 
   if (LSR1_param.flag &&
       !SetRSP(3, LSR1_lengths, LSR1_types, all_possible_paths)) {
@@ -278,9 +278,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSR2_types[] = "LSR";
 
   AstarPathSteer LSR2_types[3];
-  LSR2_types[0] = AstarPathSteer::left;
-  LSR2_types[1] = AstarPathSteer::straight;
-  LSR2_types[2] = AstarPathSteer::right;
+  LSR2_types[0] = AstarPathSteer::LEFT;
+  LSR2_types[1] = AstarPathSteer::STRAIGHT;
+  LSR2_types[2] = AstarPathSteer::RIGHT;
 
   if (LSR2_param.flag &&
       !SetRSP(3, LSR2_lengths, LSR2_types, all_possible_paths)) {
@@ -294,9 +294,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSR3_types[] = "RSL";
 
   AstarPathSteer LSR3_types[3];
-  LSR3_types[0] = AstarPathSteer::right;
-  LSR3_types[1] = AstarPathSteer::straight;
-  LSR3_types[2] = AstarPathSteer::left;
+  LSR3_types[0] = AstarPathSteer::RIGHT;
+  LSR3_types[1] = AstarPathSteer::STRAIGHT;
+  LSR3_types[2] = AstarPathSteer::LEFT;
 
   if (LSR3_param.flag &&
       !SetRSP(3, LSR3_lengths, LSR3_types, all_possible_paths)) {
@@ -310,9 +310,9 @@ bool ReedShepp::CSC(const double x, const double y, const double phi,
   // char LSR4_types[] = "RSL";
 
   AstarPathSteer LSR4_types[3];
-  LSR4_types[0] = AstarPathSteer::right;
-  LSR4_types[1] = AstarPathSteer::straight;
-  LSR4_types[2] = AstarPathSteer::left;
+  LSR4_types[0] = AstarPathSteer::RIGHT;
+  LSR4_types[1] = AstarPathSteer::STRAIGHT;
+  LSR4_types[2] = AstarPathSteer::LEFT;
 
   if (LSR4_param.flag &&
       !SetRSP(3, LSR4_lengths, LSR4_types, all_possible_paths)) {
@@ -330,9 +330,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL1_types[] = "LRL";
 
   AstarPathSteer LRL1_types[3];
-  LRL1_types[0] = AstarPathSteer::left;
-  LRL1_types[1] = AstarPathSteer::right;
-  LRL1_types[2] = AstarPathSteer::left;
+  LRL1_types[0] = AstarPathSteer::LEFT;
+  LRL1_types[1] = AstarPathSteer::RIGHT;
+  LRL1_types[2] = AstarPathSteer::LEFT;
 
   if (LRL1_param.flag &&
       !SetRSP(3, LRL1_lengths, LRL1_types, all_possible_paths)) {
@@ -346,9 +346,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL2_types[] = "LRL";
 
   AstarPathSteer LRL2_types[3];
-  LRL2_types[0] = AstarPathSteer::left;
-  LRL2_types[1] = AstarPathSteer::right;
-  LRL2_types[2] = AstarPathSteer::left;
+  LRL2_types[0] = AstarPathSteer::LEFT;
+  LRL2_types[1] = AstarPathSteer::RIGHT;
+  LRL2_types[2] = AstarPathSteer::LEFT;
 
   if (LRL2_param.flag &&
       !SetRSP(3, LRL2_lengths, LRL2_types, all_possible_paths)) {
@@ -362,9 +362,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL3_types[] = "RLR";
 
   AstarPathSteer LRL3_types[3];
-  LRL3_types[0] = AstarPathSteer::right;
-  LRL3_types[1] = AstarPathSteer::left;
-  LRL3_types[2] = AstarPathSteer::right;
+  LRL3_types[0] = AstarPathSteer::RIGHT;
+  LRL3_types[1] = AstarPathSteer::LEFT;
+  LRL3_types[2] = AstarPathSteer::RIGHT;
   if (LRL3_param.flag &&
       !SetRSP(3, LRL3_lengths, LRL3_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRL3_param";
@@ -377,9 +377,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL4_types[] = "RLR";
 
   AstarPathSteer LRL4_types[3];
-  LRL4_types[0] = AstarPathSteer::right;
-  LRL4_types[1] = AstarPathSteer::left;
-  LRL4_types[2] = AstarPathSteer::right;
+  LRL4_types[0] = AstarPathSteer::RIGHT;
+  LRL4_types[1] = AstarPathSteer::LEFT;
+  LRL4_types[2] = AstarPathSteer::RIGHT;
 
   if (LRL4_param.flag &&
       !SetRSP(3, LRL4_lengths, LRL4_types, all_possible_paths)) {
@@ -397,9 +397,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL5_types[] = "LRL";
 
   AstarPathSteer LRL5_types[3];
-  LRL5_types[0] = AstarPathSteer::left;
-  LRL5_types[1] = AstarPathSteer::right;
-  LRL5_types[2] = AstarPathSteer::left;
+  LRL5_types[0] = AstarPathSteer::LEFT;
+  LRL5_types[1] = AstarPathSteer::RIGHT;
+  LRL5_types[2] = AstarPathSteer::LEFT;
 
   if (LRL5_param.flag &&
       !SetRSP(3, LRL5_lengths, LRL5_types, all_possible_paths)) {
@@ -413,9 +413,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL6_types[] = "LRL";
 
   AstarPathSteer LRL6_types[3];
-  LRL6_types[0] = AstarPathSteer::left;
-  LRL6_types[1] = AstarPathSteer::right;
-  LRL6_types[2] = AstarPathSteer::left;
+  LRL6_types[0] = AstarPathSteer::LEFT;
+  LRL6_types[1] = AstarPathSteer::RIGHT;
+  LRL6_types[2] = AstarPathSteer::LEFT;
 
   if (LRL6_param.flag &&
       !SetRSP(3, LRL6_lengths, LRL6_types, all_possible_paths)) {
@@ -429,9 +429,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL7_types[] = "RLR";
 
   AstarPathSteer LRL7_types[3];
-  LRL7_types[0] = AstarPathSteer::right;
-  LRL7_types[1] = AstarPathSteer::left;
-  LRL7_types[2] = AstarPathSteer::right;
+  LRL7_types[0] = AstarPathSteer::RIGHT;
+  LRL7_types[1] = AstarPathSteer::LEFT;
+  LRL7_types[2] = AstarPathSteer::RIGHT;
   if (LRL7_param.flag &&
       !SetRSP(3, LRL7_lengths, LRL7_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRL7_param";
@@ -444,9 +444,9 @@ bool ReedShepp::CCC(const double x, const double y, const double phi,
   // char LRL8_types[] = "RLR";
 
   AstarPathSteer LRL8_types[3];
-  LRL8_types[0] = AstarPathSteer::right;
-  LRL8_types[1] = AstarPathSteer::left;
-  LRL8_types[2] = AstarPathSteer::right;
+  LRL8_types[0] = AstarPathSteer::RIGHT;
+  LRL8_types[1] = AstarPathSteer::LEFT;
+  LRL8_types[2] = AstarPathSteer::RIGHT;
   if (LRL8_param.flag &&
       !SetRSP(3, LRL8_lengths, LRL8_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRL8_param";
@@ -464,10 +464,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRn1_types[] = "LRLR";
 
   AstarPathSteer LRLRn1_types[4];
-  LRLRn1_types[0] = AstarPathSteer::left;
-  LRLRn1_types[1] = AstarPathSteer::right;
-  LRLRn1_types[2] = AstarPathSteer::left;
-  LRLRn1_types[3] = AstarPathSteer::right;
+  LRLRn1_types[0] = AstarPathSteer::LEFT;
+  LRLRn1_types[1] = AstarPathSteer::RIGHT;
+  LRLRn1_types[2] = AstarPathSteer::LEFT;
+  LRLRn1_types[3] = AstarPathSteer::RIGHT;
 
   if (LRLRn1_param.flag &&
       !SetRSP(4, LRLRn1_lengths, LRLRn1_types, all_possible_paths)) {
@@ -482,10 +482,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRn2_types[] = "LRLR";
 
   AstarPathSteer LRLRn2_types[4];
-  LRLRn2_types[0] = AstarPathSteer::left;
-  LRLRn2_types[1] = AstarPathSteer::right;
-  LRLRn2_types[2] = AstarPathSteer::left;
-  LRLRn2_types[3] = AstarPathSteer::right;
+  LRLRn2_types[0] = AstarPathSteer::LEFT;
+  LRLRn2_types[1] = AstarPathSteer::RIGHT;
+  LRLRn2_types[2] = AstarPathSteer::LEFT;
+  LRLRn2_types[3] = AstarPathSteer::RIGHT;
 
   if (LRLRn2_param.flag &&
       !SetRSP(4, LRLRn2_lengths, LRLRn2_types, all_possible_paths)) {
@@ -500,10 +500,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRn3_types[] = "RLRL";
 
   AstarPathSteer LRLRn3_types[4];
-  LRLRn3_types[0] = AstarPathSteer::right;
-  LRLRn3_types[1] = AstarPathSteer::left;
-  LRLRn3_types[2] = AstarPathSteer::right;
-  LRLRn3_types[3] = AstarPathSteer::left;
+  LRLRn3_types[0] = AstarPathSteer::RIGHT;
+  LRLRn3_types[1] = AstarPathSteer::LEFT;
+  LRLRn3_types[2] = AstarPathSteer::RIGHT;
+  LRLRn3_types[3] = AstarPathSteer::LEFT;
 
   if (LRLRn3_param.flag &&
       !SetRSP(4, LRLRn3_lengths, LRLRn3_types, all_possible_paths)) {
@@ -518,10 +518,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRn4_types[] = "RLRL";
 
   AstarPathSteer LRLRn4_types[4];
-  LRLRn4_types[0] = AstarPathSteer::right;
-  LRLRn4_types[1] = AstarPathSteer::left;
-  LRLRn4_types[2] = AstarPathSteer::right;
-  LRLRn4_types[3] = AstarPathSteer::left;
+  LRLRn4_types[0] = AstarPathSteer::RIGHT;
+  LRLRn4_types[1] = AstarPathSteer::LEFT;
+  LRLRn4_types[2] = AstarPathSteer::RIGHT;
+  LRLRn4_types[3] = AstarPathSteer::LEFT;
 
   if (LRLRn4_param.flag &&
       !SetRSP(4, LRLRn4_lengths, LRLRn4_types, all_possible_paths)) {
@@ -536,10 +536,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRp1_types[] = "LRLR";
 
   AstarPathSteer LRLRp1_types[4];
-  LRLRp1_types[0] = AstarPathSteer::left;
-  LRLRp1_types[1] = AstarPathSteer::right;
-  LRLRp1_types[2] = AstarPathSteer::left;
-  LRLRp1_types[3] = AstarPathSteer::right;
+  LRLRp1_types[0] = AstarPathSteer::LEFT;
+  LRLRp1_types[1] = AstarPathSteer::RIGHT;
+  LRLRp1_types[2] = AstarPathSteer::LEFT;
+  LRLRp1_types[3] = AstarPathSteer::RIGHT;
   if (LRLRp1_param.flag &&
       !SetRSP(4, LRLRp1_lengths, LRLRp1_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRLRp1_param";
@@ -553,10 +553,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRp2_types[] = "LRLR";
 
   AstarPathSteer LRLRp2_types[4];
-  LRLRp2_types[0] = AstarPathSteer::left;
-  LRLRp2_types[1] = AstarPathSteer::right;
-  LRLRp2_types[2] = AstarPathSteer::left;
-  LRLRp2_types[3] = AstarPathSteer::right;
+  LRLRp2_types[0] = AstarPathSteer::LEFT;
+  LRLRp2_types[1] = AstarPathSteer::RIGHT;
+  LRLRp2_types[2] = AstarPathSteer::LEFT;
+  LRLRp2_types[3] = AstarPathSteer::RIGHT;
 
   if (LRLRp2_param.flag &&
       !SetRSP(4, LRLRp2_lengths, LRLRp2_types, all_possible_paths)) {
@@ -571,10 +571,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRp3_types[] = "RLRL";
 
   AstarPathSteer LRLRp3_types[4];
-  LRLRp3_types[0] = AstarPathSteer::right;
-  LRLRp3_types[1] = AstarPathSteer::left;
-  LRLRp3_types[2] = AstarPathSteer::right;
-  LRLRp3_types[3] = AstarPathSteer::left;
+  LRLRp3_types[0] = AstarPathSteer::RIGHT;
+  LRLRp3_types[1] = AstarPathSteer::LEFT;
+  LRLRp3_types[2] = AstarPathSteer::RIGHT;
+  LRLRp3_types[3] = AstarPathSteer::LEFT;
   if (LRLRp3_param.flag &&
       !SetRSP(4, LRLRp3_lengths, LRLRp3_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRLRp3_param";
@@ -588,10 +588,10 @@ bool ReedShepp::CCCC(const double x, const double y, const double phi,
   // char LRLRp4_types[] = "RLRL";
 
   AstarPathSteer LRLRp4_types[4];
-  LRLRp4_types[0] = AstarPathSteer::right;
-  LRLRp4_types[1] = AstarPathSteer::left;
-  LRLRp4_types[2] = AstarPathSteer::right;
-  LRLRp4_types[3] = AstarPathSteer::left;
+  LRLRp4_types[0] = AstarPathSteer::RIGHT;
+  LRLRp4_types[1] = AstarPathSteer::LEFT;
+  LRLRp4_types[2] = AstarPathSteer::RIGHT;
+  LRLRp4_types[3] = AstarPathSteer::LEFT;
   if (LRLRp4_param.flag &&
       !SetRSP(4, LRLRp4_lengths, LRLRp4_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRLRp4_param";
@@ -609,10 +609,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL1_types[] = "LRSL";
 
   AstarPathSteer LRSL1_types[4];
-  LRSL1_types[0] = AstarPathSteer::left;
-  LRSL1_types[1] = AstarPathSteer::right;
-  LRSL1_types[2] = AstarPathSteer::straight;
-  LRSL1_types[3] = AstarPathSteer::left;
+  LRSL1_types[0] = AstarPathSteer::LEFT;
+  LRSL1_types[1] = AstarPathSteer::RIGHT;
+  LRSL1_types[2] = AstarPathSteer::STRAIGHT;
+  LRSL1_types[3] = AstarPathSteer::LEFT;
 
   if (LRSL1_param.flag &&
       !SetRSP(4, LRSL1_lengths, LRSL1_types, all_possible_paths)) {
@@ -627,10 +627,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL2_types[] = "LRSL";
 
   AstarPathSteer LRSL2_types[4];
-  LRSL2_types[0] = AstarPathSteer::left;
-  LRSL2_types[1] = AstarPathSteer::right;
-  LRSL2_types[2] = AstarPathSteer::straight;
-  LRSL2_types[3] = AstarPathSteer::left;
+  LRSL2_types[0] = AstarPathSteer::LEFT;
+  LRSL2_types[1] = AstarPathSteer::RIGHT;
+  LRSL2_types[2] = AstarPathSteer::STRAIGHT;
+  LRSL2_types[3] = AstarPathSteer::LEFT;
 
   if (LRSL2_param.flag &&
       !SetRSP(4, LRSL2_lengths, LRSL2_types, all_possible_paths)) {
@@ -645,10 +645,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL3_types[] = "RLSR";
 
   AstarPathSteer LRSL3_types[4];
-  LRSL3_types[0] = AstarPathSteer::right;
-  LRSL3_types[1] = AstarPathSteer::left;
-  LRSL3_types[2] = AstarPathSteer::straight;
-  LRSL3_types[3] = AstarPathSteer::right;
+  LRSL3_types[0] = AstarPathSteer::RIGHT;
+  LRSL3_types[1] = AstarPathSteer::LEFT;
+  LRSL3_types[2] = AstarPathSteer::STRAIGHT;
+  LRSL3_types[3] = AstarPathSteer::RIGHT;
 
   if (LRSL3_param.flag &&
       !SetRSP(4, LRSL3_lengths, LRSL3_types, all_possible_paths)) {
@@ -662,10 +662,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
                              -LRSL4_param.v};
   // char LRSL4_types[] = "RLSR";
   AstarPathSteer LRSL4_types[4];
-  LRSL4_types[0] = AstarPathSteer::right;
-  LRSL4_types[1] = AstarPathSteer::left;
-  LRSL4_types[2] = AstarPathSteer::straight;
-  LRSL4_types[3] = AstarPathSteer::right;
+  LRSL4_types[0] = AstarPathSteer::RIGHT;
+  LRSL4_types[1] = AstarPathSteer::LEFT;
+  LRSL4_types[2] = AstarPathSteer::STRAIGHT;
+  LRSL4_types[3] = AstarPathSteer::RIGHT;
 
   if (LRSL4_param.flag &&
       !SetRSP(4, LRSL4_lengths, LRSL4_types, all_possible_paths)) {
@@ -680,10 +680,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR1_types[] = "LRSR";
 
   AstarPathSteer LRSR1_types[4];
-  LRSR1_types[0] = AstarPathSteer::left;
-  LRSR1_types[1] = AstarPathSteer::right;
-  LRSR1_types[2] = AstarPathSteer::straight;
-  LRSR1_types[3] = AstarPathSteer::right;
+  LRSR1_types[0] = AstarPathSteer::LEFT;
+  LRSR1_types[1] = AstarPathSteer::RIGHT;
+  LRSR1_types[2] = AstarPathSteer::STRAIGHT;
+  LRSR1_types[3] = AstarPathSteer::RIGHT;
   if (LRSR1_param.flag &&
       !SetRSP(4, LRSR1_lengths, LRSR1_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRSR1_param";
@@ -697,10 +697,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR2_types[] = "LRSR";
 
   AstarPathSteer LRSR2_types[4];
-  LRSR2_types[0] = AstarPathSteer::left;
-  LRSR2_types[1] = AstarPathSteer::right;
-  LRSR2_types[2] = AstarPathSteer::straight;
-  LRSR2_types[3] = AstarPathSteer::right;
+  LRSR2_types[0] = AstarPathSteer::LEFT;
+  LRSR2_types[1] = AstarPathSteer::RIGHT;
+  LRSR2_types[2] = AstarPathSteer::STRAIGHT;
+  LRSR2_types[3] = AstarPathSteer::RIGHT;
   if (LRSR2_param.flag &&
       !SetRSP(4, LRSR2_lengths, LRSR2_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRSR2_param";
@@ -713,10 +713,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
                              LRSR3_param.v};
   // char LRSR3_types[] = "RLSL";
   AstarPathSteer LRSR3_types[4];
-  LRSR3_types[0] = AstarPathSteer::right;
-  LRSR3_types[1] = AstarPathSteer::left;
-  LRSR3_types[2] = AstarPathSteer::straight;
-  LRSR3_types[3] = AstarPathSteer::left;
+  LRSR3_types[0] = AstarPathSteer::RIGHT;
+  LRSR3_types[1] = AstarPathSteer::LEFT;
+  LRSR3_types[2] = AstarPathSteer::STRAIGHT;
+  LRSR3_types[3] = AstarPathSteer::LEFT;
 
   if (LRSR3_param.flag &&
       !SetRSP(4, LRSR3_lengths, LRSR3_types, all_possible_paths)) {
@@ -731,10 +731,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR4_types[] = "RLSL";
 
   AstarPathSteer LRSR4_types[4];
-  LRSR4_types[0] = AstarPathSteer::right;
-  LRSR4_types[1] = AstarPathSteer::left;
-  LRSR4_types[2] = AstarPathSteer::straight;
-  LRSR4_types[3] = AstarPathSteer::left;
+  LRSR4_types[0] = AstarPathSteer::RIGHT;
+  LRSR4_types[1] = AstarPathSteer::LEFT;
+  LRSR4_types[2] = AstarPathSteer::STRAIGHT;
+  LRSR4_types[3] = AstarPathSteer::LEFT;
 
   if (LRSR4_param.flag &&
       !SetRSP(4, LRSR4_lengths, LRSR4_types, all_possible_paths)) {
@@ -753,10 +753,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL5_types[] = "LSRL";
 
   AstarPathSteer LRSL5_types[4];
-  LRSL5_types[0] = AstarPathSteer::left;
-  LRSL5_types[1] = AstarPathSteer::straight;
-  LRSL5_types[2] = AstarPathSteer::right;
-  LRSL5_types[3] = AstarPathSteer::left;
+  LRSL5_types[0] = AstarPathSteer::LEFT;
+  LRSL5_types[1] = AstarPathSteer::STRAIGHT;
+  LRSL5_types[2] = AstarPathSteer::RIGHT;
+  LRSL5_types[3] = AstarPathSteer::LEFT;
   if (LRSL5_param.flag &&
       !SetRSP(4, LRSL5_lengths, LRSL5_types, all_possible_paths)) {
     ILOG_DEBUG << "Fail at SetRSP with LRLRn_param";
@@ -770,10 +770,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL6_types[] = "LSRL";
 
   AstarPathSteer LRSL6_types[4];
-  LRSL6_types[0] = AstarPathSteer::left;
-  LRSL6_types[1] = AstarPathSteer::straight;
-  LRSL6_types[2] = AstarPathSteer::right;
-  LRSL6_types[3] = AstarPathSteer::left;
+  LRSL6_types[0] = AstarPathSteer::LEFT;
+  LRSL6_types[1] = AstarPathSteer::STRAIGHT;
+  LRSL6_types[2] = AstarPathSteer::RIGHT;
+  LRSL6_types[3] = AstarPathSteer::LEFT;
 
   if (LRSL6_param.flag &&
       !SetRSP(4, LRSL6_lengths, LRSL6_types, all_possible_paths)) {
@@ -788,10 +788,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL7_types[] = "RSLR";
 
   AstarPathSteer LRSL7_types[4];
-  LRSL7_types[0] = AstarPathSteer::right;
-  LRSL7_types[1] = AstarPathSteer::straight;
-  LRSL7_types[2] = AstarPathSteer::left;
-  LRSL7_types[3] = AstarPathSteer::right;
+  LRSL7_types[0] = AstarPathSteer::RIGHT;
+  LRSL7_types[1] = AstarPathSteer::STRAIGHT;
+  LRSL7_types[2] = AstarPathSteer::LEFT;
+  LRSL7_types[3] = AstarPathSteer::RIGHT;
 
   if (LRSL7_param.flag &&
       !SetRSP(4, LRSL7_lengths, LRSL7_types, all_possible_paths)) {
@@ -806,10 +806,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSL8_types[] = "RSLR";
 
   AstarPathSteer LRSL8_types[4];
-  LRSL8_types[0] = AstarPathSteer::right;
-  LRSL8_types[1] = AstarPathSteer::straight;
-  LRSL8_types[2] = AstarPathSteer::left;
-  LRSL8_types[3] = AstarPathSteer::right;
+  LRSL8_types[0] = AstarPathSteer::RIGHT;
+  LRSL8_types[1] = AstarPathSteer::STRAIGHT;
+  LRSL8_types[2] = AstarPathSteer::LEFT;
+  LRSL8_types[3] = AstarPathSteer::RIGHT;
 
   if (LRSL8_param.flag &&
       !SetRSP(4, LRSL8_lengths, LRSL8_types, all_possible_paths)) {
@@ -824,10 +824,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR5_types[] = "RSRL";
 
   AstarPathSteer LRSR5_types[4];
-  LRSR5_types[0] = AstarPathSteer::right;
-  LRSR5_types[1] = AstarPathSteer::straight;
-  LRSR5_types[2] = AstarPathSteer::right;
-  LRSR5_types[3] = AstarPathSteer::left;
+  LRSR5_types[0] = AstarPathSteer::RIGHT;
+  LRSR5_types[1] = AstarPathSteer::STRAIGHT;
+  LRSR5_types[2] = AstarPathSteer::RIGHT;
+  LRSR5_types[3] = AstarPathSteer::LEFT;
 
   if (LRSR5_param.flag &&
       !SetRSP(4, LRSR5_lengths, LRSR5_types, all_possible_paths)) {
@@ -842,10 +842,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR6_types[] = "RSRL";
 
   AstarPathSteer LRSR6_types[4];
-  LRSR6_types[0] = AstarPathSteer::right;
-  LRSR6_types[1] = AstarPathSteer::straight;
-  LRSR6_types[2] = AstarPathSteer::right;
-  LRSR6_types[3] = AstarPathSteer::left;
+  LRSR6_types[0] = AstarPathSteer::RIGHT;
+  LRSR6_types[1] = AstarPathSteer::STRAIGHT;
+  LRSR6_types[2] = AstarPathSteer::RIGHT;
+  LRSR6_types[3] = AstarPathSteer::LEFT;
 
   if (LRSR6_param.flag &&
       !SetRSP(4, LRSR6_lengths, LRSR6_types, all_possible_paths)) {
@@ -860,10 +860,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR7_types[] = "LSLR";
 
   AstarPathSteer LRSR7_types[4];
-  LRSR7_types[0] = AstarPathSteer::left;
-  LRSR7_types[1] = AstarPathSteer::straight;
-  LRSR7_types[2] = AstarPathSteer::left;
-  LRSR7_types[3] = AstarPathSteer::right;
+  LRSR7_types[0] = AstarPathSteer::LEFT;
+  LRSR7_types[1] = AstarPathSteer::STRAIGHT;
+  LRSR7_types[2] = AstarPathSteer::LEFT;
+  LRSR7_types[3] = AstarPathSteer::RIGHT;
 
   if (LRSR7_param.flag &&
       !SetRSP(4, LRSR7_lengths, LRSR7_types, all_possible_paths)) {
@@ -878,10 +878,10 @@ bool ReedShepp::CCSC(const double x, const double y, const double phi,
   // char LRSR8_types[] = "LSLR";
 
   AstarPathSteer LRSR8_types[4];
-  LRSR8_types[0] = AstarPathSteer::left;
-  LRSR8_types[1] = AstarPathSteer::straight;
-  LRSR8_types[2] = AstarPathSteer::left;
-  LRSR8_types[3] = AstarPathSteer::right;
+  LRSR8_types[0] = AstarPathSteer::LEFT;
+  LRSR8_types[1] = AstarPathSteer::STRAIGHT;
+  LRSR8_types[2] = AstarPathSteer::LEFT;
+  LRSR8_types[3] = AstarPathSteer::RIGHT;
 
   if (LRSR8_param.flag &&
       !SetRSP(4, LRSR8_lengths, LRSR8_types, all_possible_paths)) {
@@ -900,11 +900,11 @@ bool ReedShepp::CCSCC(const double x, const double y, const double phi,
   // char LRSLR1_types[] = "LRSLR";
 
   AstarPathSteer LRSLR1_types[5];
-  LRSLR1_types[0] = AstarPathSteer::left;
-  LRSLR1_types[1] = AstarPathSteer::right;
-  LRSLR1_types[2] = AstarPathSteer::straight;
-  LRSLR1_types[3] = AstarPathSteer::left;
-  LRSLR1_types[4] = AstarPathSteer::right;
+  LRSLR1_types[0] = AstarPathSteer::LEFT;
+  LRSLR1_types[1] = AstarPathSteer::RIGHT;
+  LRSLR1_types[2] = AstarPathSteer::STRAIGHT;
+  LRSLR1_types[3] = AstarPathSteer::LEFT;
+  LRSLR1_types[4] = AstarPathSteer::RIGHT;
 
   if (LRSLR1_param.flag &&
       !SetRSP(5, LRSLR1_lengths, LRSLR1_types, all_possible_paths)) {
@@ -919,11 +919,11 @@ bool ReedShepp::CCSCC(const double x, const double y, const double phi,
   // char LRSLR2_types[] = "LRSLR";
 
   AstarPathSteer LRSLR2_types[5];
-  LRSLR2_types[0] = AstarPathSteer::left;
-  LRSLR2_types[1] = AstarPathSteer::right;
-  LRSLR2_types[2] = AstarPathSteer::straight;
-  LRSLR2_types[3] = AstarPathSteer::left;
-  LRSLR2_types[4] = AstarPathSteer::right;
+  LRSLR2_types[0] = AstarPathSteer::LEFT;
+  LRSLR2_types[1] = AstarPathSteer::RIGHT;
+  LRSLR2_types[2] = AstarPathSteer::STRAIGHT;
+  LRSLR2_types[3] = AstarPathSteer::LEFT;
+  LRSLR2_types[4] = AstarPathSteer::RIGHT;
 
   if (LRSLR2_param.flag &&
       !SetRSP(5, LRSLR2_lengths, LRSLR2_types, all_possible_paths)) {
@@ -938,11 +938,11 @@ bool ReedShepp::CCSCC(const double x, const double y, const double phi,
   // char LRSLR3_types[] = "RLSRL";
 
   AstarPathSteer LRSLR3_types[5];
-  LRSLR3_types[0] = AstarPathSteer::right;
-  LRSLR3_types[1] = AstarPathSteer::left;
-  LRSLR3_types[2] = AstarPathSteer::straight;
-  LRSLR3_types[3] = AstarPathSteer::right;
-  LRSLR3_types[4] = AstarPathSteer::left;
+  LRSLR3_types[0] = AstarPathSteer::RIGHT;
+  LRSLR3_types[1] = AstarPathSteer::LEFT;
+  LRSLR3_types[2] = AstarPathSteer::STRAIGHT;
+  LRSLR3_types[3] = AstarPathSteer::RIGHT;
+  LRSLR3_types[4] = AstarPathSteer::LEFT;
 
   if (LRSLR3_param.flag &&
       !SetRSP(5, LRSLR3_lengths, LRSLR3_types, all_possible_paths)) {
@@ -957,11 +957,11 @@ bool ReedShepp::CCSCC(const double x, const double y, const double phi,
   // char LRSLR4_types[] = "RLSRL";
 
   AstarPathSteer LRSLR4_types[5];
-  LRSLR4_types[0] = AstarPathSteer::right;
-  LRSLR4_types[1] = AstarPathSteer::left;
-  LRSLR4_types[2] = AstarPathSteer::straight;
-  LRSLR4_types[3] = AstarPathSteer::right;
-  LRSLR4_types[4] = AstarPathSteer::left;
+  LRSLR4_types[0] = AstarPathSteer::RIGHT;
+  LRSLR4_types[1] = AstarPathSteer::LEFT;
+  LRSLR4_types[2] = AstarPathSteer::STRAIGHT;
+  LRSLR4_types[3] = AstarPathSteer::RIGHT;
+  LRSLR4_types[4] = AstarPathSteer::LEFT;
 
   if (LRSLR4_param.flag &&
       !SetRSP(5, LRSLR4_lengths, LRSLR4_types, all_possible_paths)) {
@@ -1331,7 +1331,7 @@ void ReedShepp::Interpolation(const int index, const double path_dist,
   // 半径为1
   double rotate_theta = path_dist;
 
-  if (steer == AstarPathSteer::straight) {
+  if (steer == AstarPathSteer::STRAIGHT) {
     rs_path[index].x =
         base_pose.x + path_dist * std::cos(base_pose.theta) * min_radius_;
     rs_path[index].y =
@@ -1340,9 +1340,9 @@ void ReedShepp::Interpolation(const int index, const double path_dist,
   } else {
     local.x = std::sin(rotate_theta) * min_radius_;
 
-    if (steer == AstarPathSteer::left) {
+    if (steer == AstarPathSteer::LEFT) {
       local.y = (1.0 - std::cos(rotate_theta)) * min_radius_;
-    } else if (steer == AstarPathSteer::right) {
+    } else if (steer == AstarPathSteer::RIGHT) {
       local.y = -(1.0 - std::cos(rotate_theta)) * min_radius_;
     }
 
@@ -1357,14 +1357,14 @@ void ReedShepp::Interpolation(const int index, const double path_dist,
   }
 
   if (interval_dist > 0.0) {
-    rs_path[index].gear = AstarPathGear::drive;
+    rs_path[index].gear = AstarPathGear::DRIVE;
   } else {
-    rs_path[index].gear = AstarPathGear::reverse;
+    rs_path[index].gear = AstarPathGear::REVERSE;
   }
 
-  if (steer == AstarPathSteer::left) {
+  if (steer == AstarPathSteer::LEFT) {
     rs_path[index].theta = base_pose.theta + rotate_theta;
-  } else if (steer == AstarPathSteer::right) {
+  } else if (steer == AstarPathSteer::RIGHT) {
     rs_path[index].theta = base_pose.theta - rotate_theta;
   }
 }

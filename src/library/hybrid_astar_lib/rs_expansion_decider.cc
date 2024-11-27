@@ -90,9 +90,9 @@ void RSExpansionDecider::UpdateRSPathRequest(
     const AstarPathGear single_shot_gear, const Pose2D &ego_pose,
     const double slot_width) {
   if (is_single_shot) {
-    if (single_shot_gear == AstarPathGear::reverse) {
+    if (single_shot_gear == AstarPathGear::REVERSE) {
       *rs_request = RSPathRequestType::all_path_forbid_forward;
-    } else if (single_shot_gear == AstarPathGear::drive) {
+    } else if (single_shot_gear == AstarPathGear::DRIVE) {
       *rs_request = RSPathRequestType::all_path_forbid_reverse;
     }
   } else {
@@ -120,7 +120,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
 
   // check node steering angle
   double check_heading_buffer = M_PI_2;
-  if (node->GetGearType() == AstarPathGear::drive) {
+  if (node->GetGearType() == AstarPathGear::DRIVE) {
     // need turn right
     if (heading > check_heading_buffer && node->GetSteer() > 0.0) {
       return false;
@@ -128,7 +128,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
       // need turn left
       return false;
     }
-  } else if (node->GetGearType() == AstarPathGear::reverse) {
+  } else if (node->GetGearType() == AstarPathGear::REVERSE) {
     // need turn left
     if (heading > check_heading_buffer && node->GetSteer() < 0.0) {
       return false;

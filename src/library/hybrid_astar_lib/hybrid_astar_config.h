@@ -28,6 +28,8 @@ struct PlannerOpenSpaceConfig {
   // for now, front and back sampling node number both are 5.
   int next_node_num = 10;
   double node_step = 0.2;
+  double perpendicular_slot_node_step;
+  double parallel_slot_node_step;
 
   double xy_grid_resolution_inv;
   double phi_grid_resolution_inv;
@@ -69,7 +71,7 @@ struct PlannerOpenSpaceConfig {
 
   double tie_breaker_;
 
-  double dp_search_goal_adjust_dist;
+  double single_shot_path_end_straight_dist;
 
   void InitConfig();
 };

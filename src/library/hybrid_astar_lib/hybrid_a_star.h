@@ -51,6 +51,8 @@ class HybridAStar {
 
   int UpdateConfig(const PlannerOpenSpaceConfig& open_space_conf);
 
+  void UpdateConfig(const AstarRequest& request);
+
   /**
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
@@ -116,7 +118,8 @@ class HybridAStar {
 
   void CopyFallbackPath(HybridAStarResult* path);
 
-  // search single gear path by dynamic programming
+  // search single gear path by gear reverse searching.
+  // todo: gear drive searching.
   void SingleShotPathAttempt(const MapBound& XYbounds,
                              const ParkObstacleList& obstacles,
                              const AstarRequest& request,
@@ -299,6 +302,8 @@ class HybridAStar {
   void DebugPolynomialPath(const std::vector<AStarPathPoint>& poly_path);
 
   size_t GetPathCollisionIDByEDT(const std::vector<AStarPathPoint>& poly_path);
+
+  void ReversePathBySwapStartGoal(HybridAStarResult* result);
 
  private:
   PlannerOpenSpaceConfig config_;

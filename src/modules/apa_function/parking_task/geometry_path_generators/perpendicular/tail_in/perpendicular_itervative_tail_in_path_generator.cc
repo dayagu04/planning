@@ -897,7 +897,7 @@ PerpendicularTailInPathGenerator::RSPathPlan(
   std::vector<geometry_lib::PathSegment> path_seg_vec;
   for (size_t i = 0; i < path.size; ++i) {
     RSPathSegment rs_path_seg = path.paths[i];
-    const uint8_t gear = (rs_path_seg.gear == AstarPathGear::drive)
+    const uint8_t gear = (rs_path_seg.gear == AstarPathGear::DRIVE)
                              ? geometry_lib::SEG_GEAR_DRIVE
                              : geometry_lib::SEG_GEAR_REVERSE;
     uint8_t steer = 0;
