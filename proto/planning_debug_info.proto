@@ -18,6 +18,7 @@ import "lat_behavior_common.proto";
 import "scene_type_config.proto";
 import "slot_management_info.proto";
 import "real_time_lon_behavior_planner.proto";
+import "lon_behavior_planner.proto";
 import "lateral_behavior_planner.proto";
 import "lateral_path_optimizer.proto";
 import "gap_selector.proto";

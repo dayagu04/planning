@@ -138,35 +138,3 @@ message RealTimeLonBehaviorInput {
   optional IntersectionState intersection_state = 18;
   optional bool sdmap_has_curv = 19;
 }
-
-// The output of real time lon behavior
-message SVBound {
-  optional double s = 1;
-  optional Bound v_bound = 2;
-}
-
-message SVBoundary {
-  enum SVBoundaryType {
-    DEFAULT = 0;
-    ROAD = 1;
-    CURVATURE = 2;
-    STOP = 3;
-  }
-  optional SVBoundaryType boundary_type = 1;
-  repeated SVBound sv_bounds = 2;
-}
-
-message LonRefPath {
-  repeated double t_list = 1;
-  repeated DoublePair s_refs = 2;  // <offset, weight>
-  repeated DoublePair ds_refs = 3;
-
-  repeated WeightedBounds bounds = 4;
-  repeated WeightedBounds soft_bounds = 5;
-  repeated WeightedLonLeadBounds lon_lead_bounds = 6;
-  optional SVBoundary lon_sv_boundary = 7;
-
-  optional Bounds lon_bound_v = 8;
-  optional Bounds lon_bound_a = 9;
-  optional Bounds lon_bound_jerk = 10;
-}
