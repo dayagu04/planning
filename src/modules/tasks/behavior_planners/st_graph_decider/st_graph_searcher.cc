@@ -412,7 +412,7 @@ bool StGraphSearcher::SearchStPath(
       return false;
     } else {
       current_node = best_node;
-      // std::cout << "st search fail, but use best node to reconstruct path\n";
+      LOG_DEBUG("st search fail, but use best node to reconstruct path\n");
     }
   }
 
@@ -723,18 +723,18 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
 
   succ_node->set_cost(edge_cost);
 
-  // // print cost result
-  // std::cout << "\t\t\tcompute node cost: " << std::endl;
-  // std::cout << "\t\t\t\tcost_yield:      " << cost_yield << std::endl;
-  // std::cout << "\t\t\t\tcost_overtake:   " << cost_overtake << std::endl;
-  // std::cout << "\t\t\t\tcost_vel:        " << cost_vel << std::endl;
-  // std::cout << "\t\t\t\tcost_accel:      " << cost_accel << std::endl;
-  // std::cout << "\t\t\t\tcost_accel_sign: " << cost_accel_sign_changed <<
-  // std::endl; std::cout << "\t\t\t\tcost_jerk:       " << cost_jerk <<
-  // std::endl; std::cout << "\t\t\t\tcost_length:     " << cost_length <<
-  // std::endl; std::cout << "\t\t\t\tcost_virtual_yield:     " <<
-  // cost_virtual_yield << std::endl; std::cout << "\t\t\t\tedge_cost:       "
-  // << edge_cost << std::endl;
+  // print cost result
+  // std::cout << "\tcompute node id: " << succ_node->id() << std::endl;
+  // std::cout << "\tcompute node cost: " << std::endl;
+  // std::cout << "\t\tcost_yield:      " << cost_yield << std::endl;
+  // std::cout << "\t\tcost_overtake:   " << cost_overtake << std::endl;
+  // std::cout << "\t\tcost_vel:        " << cost_vel << std::endl;
+  // std::cout << "\t\tcost_accel:      " << cost_accel << std::endl;
+  // std::cout << "\t\tcost_accel_sign: " << cost_accel_sign_changed <<
+  // std::endl; std::cout << "\t\tcost_jerk:       " << cost_jerk << std::endl;
+  // std::cout << "\t\tcost_length:     " << cost_length << std::endl;
+  // std::cout << "\t\tcost_virtual_yield:     " << std::endl;
+  // std::cout << "\t\tedge_cost:       " << edge_cost << std::endl;
 
   double cost_h = ComputeHeuristicCost(input_info, *succ_node);
   succ_node->set_h_cost(cost_h);
