@@ -65,14 +65,14 @@ constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
 constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
 
-void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
+bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
   if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
       nullptr == ptr_max_l) {
-    return;
+    return false;
   }
   const auto &all_corners = agent_box.GetAllCorners();
   for (const auto &corner : all_corners) {
@@ -86,16 +86,22 @@ void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
     *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
     *ptr_max_l = std::fmax(*ptr_max_l, agent_l);
   }
+  if (*ptr_min_s > 200.0 || *ptr_max_s < -200.0 || *ptr_min_l > 50.0 ||
+      *ptr_max_l < -50.0) {
+    return false;
+  }
+  return true;
 }
 
-void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
+bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const agent::Agent &agent,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
   const auto &agent_box = agent.box();
-  CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s, ptr_max_s,
-                           ptr_min_l, ptr_max_l);
+  bool is_success = CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s,
+                                             ptr_max_s, ptr_min_l, ptr_max_l);
+  return is_success;
 }
 }  // namespace
 
@@ -2773,8 +2779,11 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double max_s = std::numeric_limits<double>::lowest();
     double min_l = std::numeric_limits<double>::max();
     double max_l = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(current_lane_frenet_coord, *agent, &min_s, &max_s,
-                             &min_l, &max_l);
+    bool is_success = CalculateAgentSLBoundary(
+        current_lane_frenet_coord, *agent, &min_s, &max_s, &min_l, &max_l);
+    if (!is_success) {
+      continue;
+    }
     double min_lat_l = 0.0;
     if (agent_l >= 0) {
       min_lat_l = (agent_l * min_l) > 0 ? min_l : 0;
@@ -2799,9 +2808,12 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double max_s_by_lat_path = std::numeric_limits<double>::lowest();
     double min_l_by_lat_path = std::numeric_limits<double>::max();
     double max_l_by_lat_path = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(lat_path_coord_, *agent, &min_s_by_lat_path,
-                             &max_s_by_lat_path, &min_l_by_lat_path,
-                             &max_l_by_lat_path);
+    is_success = CalculateAgentSLBoundary(
+        lat_path_coord_, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        &min_l_by_lat_path, &max_l_by_lat_path);
+    if (!is_success) {
+      continue;
+    }
     double min_lat_l_by_lat_path = 0.0;
     if (agent_l >= 0) {
       min_lat_l_by_lat_path =
@@ -2903,6 +2915,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const auto blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  const auto borrow_direction = lane_borrow_output.borrow_direction;
 
   // judge leadone/leadtwo is lane borrow agent?
   const auto lead_one_id = lateral_obstacles.lead_one().track_id();
@@ -2949,24 +2962,26 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
     double max_s_by_lat_path = std::numeric_limits<double>::lowest();
     double min_l_by_lat_path = std::numeric_limits<double>::max();
     double max_l_by_lat_path = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(lat_path_coord, *agent,
-                             &min_s_by_lat_path, &max_s_by_lat_path,
-                             &min_l_by_lat_path, &max_l_by_lat_path);
+    bool is_success = CalculateAgentSLBoundary(
+        lat_path_coord, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        &min_l_by_lat_path, &max_l_by_lat_path);
+    if (!is_success) {
+      continue;
+    }
     double min_lat_l_by_lat_path = 0.0;
-    double agent_s = 0.0;
-    double agent_l = 0.0;
-    lat_path_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l);
-    if (agent_l >= 0) {
-      min_lat_l_by_lat_path =
-          (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    if (borrow_direction == 1) {
+      min_lat_l_by_lat_path = max_l_by_lat_path;
+      // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    } else if(borrow_direction == 2) {
+      min_lat_l_by_lat_path = min_l_by_lat_path;
+      // (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
     } else {
-      min_lat_l_by_lat_path =
-          (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
+      continue;
     }
 
     // lateral collision check
     double agent_half_length = 0.5 * agent->length();
-    double start_s = agent_s - agent_half_length;
+    double start_s = min_s_by_lat_path;
     double end_s = start_s + kHalfEgoLength * 2 + 0.5 * agent->length();
     bool is_collision =
         LateralCollisionCheck(start_s, end_s, min_lat_l_by_lat_path);
