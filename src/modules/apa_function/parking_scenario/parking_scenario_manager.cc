@@ -62,6 +62,10 @@ void ParkingScenarioManager::Excute() {
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
+  if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    Reset();
+  }
+
   const auto &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
@@ -96,8 +100,7 @@ void ParkingScenarioManager::Excute() {
              cur_state == ApaStateMachineT::ACTIVE_IN_CAR_FRONT) {
     if (apa_world_->GetApaDataPtr()->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
-      apa_world_->GetApaDataPtr()->scenario_type =
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
+      scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
     }
   } else if (cur_state == ApaStateMachineT::SEARCH_OUT_NO_SELECTED ||
              cur_state == ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_FRONT ||

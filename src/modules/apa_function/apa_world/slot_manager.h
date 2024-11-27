@@ -382,7 +382,6 @@ class SlotManager {
   };
 
   struct Frame {
-    ApaStateMachine apa_state;
     const MeasurementData* measurement_data_ptr;
     const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;

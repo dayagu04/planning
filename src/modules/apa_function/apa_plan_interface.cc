@@ -57,18 +57,7 @@ void ApaPlanInterface::Reset() {
   return;
 }
 
-void ApaPlanInterface::ResetForSearching() {
-  // reset planning output
-  memset(&planning_output_, 0, sizeof(planning_output_));
-
-  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
-
-  scenario_manager_.Reset();
-
-  return;
-}
-
-const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
+const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
   ILOG_INFO << "\n------------------------ apa_interface: Update() "
                "------------------------";
   if (local_view_ptr == nullptr) {
@@ -79,42 +68,16 @@ const bool ApaPlanInterface::Update(const LocalView *local_view_ptr) {
   RecordNodeReceiveTime(local_view_ptr);
 
   const double start_timestamp_ms = IflyTime::Now_ms();
-  const uint8_t last_state = apa_world_ptr_->GetApaDataPtr()->current_state;
-
-  // todo:move this to scenario manager
-  const uint8_t current_state =
-      local_view_ptr->function_state_machine_info.current_state;
-
-  // just used for pybind simulation to clear previous state varible
-  if ((last_state == iflyauto::FunctionalState_PARK_STANDBY) &&
-      (current_state >= iflyauto::FunctionalState_PARK_IN_SEARCHING &&
-       current_state <= iflyauto::FunctionalState_PARK_OUT_SEARCHING)) {
-    Reset();
-  }
 
   // run apa world, always run when enter apa
   ILOG_INFO << "---- apa_world: Update() ---";
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
-
-  // todo:move this to scenario manager
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachineT::INVALID) {
-    Reset();
-  } else if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
-    ResetForSearching();
-  }
 
   // run planner
   scenario_manager_.Excute();
   scenario_manager_.Process();
   planning_output_ = scenario_manager_.GetPlanningOutput();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
-  // DEBUG_PRINT("interface planning hmi----------------");
-  // DEBUG_PRINT("remain dist in hmi = " <<
-  // apa_hmi_.distance_to_parking_space); DEBUG_PRINT(
-  //     "is_parking_pause = " <<
-  //     static_cast<int>(apa_hmi_.is_parking_pause));
-  // DEBUG_PRINT("parking_pause_reason = " << apa_hmi_.parking_pause_reason);
 
   AddReleasedSlotInfo(planning_output_);
 

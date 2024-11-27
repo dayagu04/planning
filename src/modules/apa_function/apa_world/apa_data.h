@@ -113,23 +113,6 @@ struct MeasurementData {
   }
 };
 
-enum class ApaFunction : uint8_t {
-  PARK_IN,
-  PARK_OUT,
-  COUNT,
-  INVALID,
-};
-
-enum class ApaParkingOutDirection : uint8_t {
-  LEFT_FRONT,
-  RIGHT_FRONT,
-  FRONT,
-  LEFT_REAR,
-  RIGHT_REAR,
-  REAR,
-  INVALID,
-};
-
 enum class ApaPlannerType : uint8_t {
   PERPENDICULAR_PARK_IN_PLANNER,
   PERPENDICULAR_PARK_HEADING_IN_PLANNER,
@@ -143,26 +126,6 @@ enum class ApaPlannerType : uint8_t {
   HYBRID_ASTAR_PLANNER,
   COUNT_PLANNER,
   INVALID_PLANNER,
-};
-
-enum class ApaParkingDirection : uint8_t {
-  PARKING_DIRECTION_INVALID,
-  TAIL_IN_PARKING,  // 车尾泊入
-  HEAD_IN_PARKING,  // 车头泊入
-};
-
-enum class ApaStateMachine : uint8_t {
-  SEARCH_IN,
-  ACTIVE_WAIT_IN,
-  ACTIVE_IN,
-  SEARCH_OUT,
-  ACTIVE_WAIT_OUT,
-  ACTIVE_OUT,
-  SUSPEND,
-  SECURE,
-  COMPLETE,
-  COUNT,
-  INVALID,
 };
 
 struct Limiter {
@@ -385,13 +348,6 @@ struct ApaData {
   const iflyauto::ControlOutput* control_output_ptr;
   const iflyauto::PlanningOutput* plan_output_ptr;
 
-  ApaStateMachine cur_state = ApaStateMachine::INVALID;
-  ParkingScenarioType scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
-  ApaFunction apa_function = ApaFunction::INVALID;
-  ApaParkingDirection apa_parking_direction =
-      ApaParkingDirection::PARKING_DIRECTION_INVALID;
-  ApaParkingOutDirection park_out_direction = ApaParkingOutDirection::INVALID;
-
   CarPredictTraj car_predict_traj;
 
   MeasurementData measurement_data;
@@ -406,7 +362,6 @@ struct ApaData {
 
   SimulationParam simu_param;
 
-  uint8_t current_state = iflyauto::FunctionalState_PARK_STANDBY;
   // If not select any slot, this is null.
   uint8_t slot_type = Common::PARKING_SLOT_TYPE_INVALID;
   uint8_t slot_id = 0;
@@ -415,18 +370,12 @@ struct ApaData {
   const LocalView* local_view_ptr_ = nullptr;
 
   void Reset() {
-    cur_state = ApaStateMachine::INVALID;
-    scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
-    apa_function = ApaFunction::INVALID;
-    park_out_direction = ApaParkingOutDirection::INVALID;
-
     car_predict_traj.Reset();
     measurement_data.Reset();
     apa_slots.Reset();
     uss_dis.Reset();
     apa_obs_map.clear();
 
-    current_state = iflyauto::FunctionalState_PARK_STANDBY;
     slot_type = Common::PARKING_SLOT_TYPE_INVALID;
     slot_id = 0;
     is_slot_type_fixed = false;
@@ -436,13 +385,6 @@ struct ApaData {
 void PrintApaPlannerType(const ApaPlannerType planner_type);
 
 const std::string GetApaPlannerTypeString(const ApaPlannerType planner_type);
-
-void PrintApaStateMachine(const ApaStateMachine apa_state);
-
-void PrintApaParkingOutDirection(
-    const ApaParkingOutDirection apa_park_out_direction);
-
-const std::string GetApaStateMachine(const ApaStateMachine apa_state);
 
 }  // namespace apa_planner
 }  // namespace planning

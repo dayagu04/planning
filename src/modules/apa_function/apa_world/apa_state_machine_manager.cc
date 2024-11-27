@@ -23,6 +23,9 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   const iflyauto::ParkingFusionInfo& parking_fusion_info =
       local_view_ptr->parking_fusion_info;
 
+  ILOG_INFO << "fun_state_machine_info.current_state = "
+            << static_cast<int>(fun_state_machine_info.current_state);
+
   switch (fun_state_machine_info.current_state) {
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
       if (parking_fusion_info.select_slot_id == 0) {
@@ -158,79 +161,94 @@ const bool ApaStateMachineManager::IsParkingStatus() const {
   return false;
 }
 
-void ApaStateMachineManager::PrintApaStateMachineT(
+std::string ApaStateMachineManager::GetApaStateMachineTString(
     const ApaStateMachineT state_machine) {
+  std::string state = "INVALID";
   switch (state_machine) {
     case ApaStateMachineT::SEARCH_IN_NO_SELECTED:
-      ILOG_INFO << "apa_state = SEARCH_IN_NO_SELECTED";
+      state = "SEARCH_IN_NO_SELECTED";
       break;
     case ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR:
-      ILOG_INFO << "apa_state = SEARCH_IN_SELECTED_CAR_REAR";
+      state = "SEARCH_IN_SELECTED_CAR_REAR";
       break;
     case ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT:
-      ILOG_INFO << "apa_state = SEARCH_IN_SELECTED_CAR_FRONT";
+      state = "SEARCH_IN_SELECTED_CAR_FRONT";
       break;
     case ApaStateMachineT::SEARCH_OUT_NO_SELECTED:
-      ILOG_INFO << "apa_state = SEARCH_OUT_NO_SELECTED";
+      state = "SEARCH_OUT_NO_SELECTED";
       break;
     case ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_REAR:
-      ILOG_INFO << "apa_state = SEARCH_OUT_SELECTED_CAR_REAR";
+      state = "SEARCH_OUT_SELECTED_CAR_REAR";
       break;
     case ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_FRONT:
-      ILOG_INFO << "apa_state = SEARCH_OUT_SELECTED_CAR_FRONT";
+      state = "SEARCH_OUT_SELECTED_CAR_FRONT";
       break;
     case ApaStateMachineT::ACTIVE_IN_CAR_FRONT:
-      ILOG_INFO << "apa_state = ACTIVE_IN_CAR_FRONT";
+      state = "ACTIVE_IN_CAR_FRONT";
       break;
     case ApaStateMachineT::ACTIVE_IN_CAR_REAR:
-      ILOG_INFO << "apa_state = ACTIVE_IN_CAR_REAR";
+      state = "ACTIVE_IN_CAR_REAR";
       break;
     case ApaStateMachineT::ACTIVE_OUT_CAR_FRONT:
-      ILOG_INFO << "apa_state = ACTIVE_OUT_CAR_FRONT";
+      state = "ACTIVE_OUT_CAR_FRONT";
       break;
     case ApaStateMachineT::ACTIVE_OUT_CAR_REAR:
-      ILOG_INFO << "apa_state = ACTIVE_OUT_CAR_REAR";
+      state = "ACTIVE_OUT_CAR_REAR";
       break;
     case ApaStateMachineT::SECURE:
-      ILOG_INFO << "apa_state = SECURE";
+      state = "SECURE";
       break;
     case ApaStateMachineT::SUSPEND:
-      ILOG_INFO << "apa_state = SUSPEND";
+      state = "SUSPEND";
       break;
     case ApaStateMachineT::COMPLETE:
-      ILOG_INFO << "apa_state = COMPLETE";
+      state = "COMPLETE";
       break;
     default:
-      ILOG_INFO << "apa_state = INVALID";
+      state = "INVALID";
       break;
   }
+  return state;
+}
+
+void ApaStateMachineManager::PrintApaStateMachineT(
+    const ApaStateMachineT state_machine) {
+  ILOG_INFO << "apa_state = " << GetApaStateMachineTString(state_machine);
+}
+
+std::string ApaStateMachineManager::GetApaParkOutDirectionString(
+    const ApaParkOutDirection out_direction) {
+  std::string out_dir = "INVALID";
+  switch (out_direction) {
+    case ApaParkOutDirection::LEFT_FRONT:
+      out_dir = "LEFT_FRONT";
+      break;
+    case ApaParkOutDirection::RIGHT_FRONT:
+      out_dir = "RIGHT_FRONT";
+      break;
+    case ApaParkOutDirection::LEFT_REAR:
+      out_dir = "LEFT_REAR";
+      break;
+    case ApaParkOutDirection::RIGHT_REAR:
+      out_dir = "RIGHT_REAR";
+      break;
+    case ApaParkOutDirection::REAR:
+      out_dir = "REAR";
+      break;
+    case ApaParkOutDirection::FRONT:
+      out_dir = "FRONT";
+      break;
+    default:
+      out_dir = "INVALID";
+      break;
+  }
+  return out_dir;
 }
 
 void ApaStateMachineManager::PrintApaParkOutDirection(
     const ApaParkOutDirection out_direction) {
-  switch (out_direction) {
-    case ApaParkOutDirection::LEFT_FRONT:
-      ILOG_INFO << "out_direction = LEFT_FRONT";
-      break;
-    case ApaParkOutDirection::RIGHT_FRONT:
-      ILOG_INFO << "out_direction = RIGHT_FRONT";
-      break;
-    case ApaParkOutDirection::LEFT_REAR:
-      ILOG_INFO << "out_direction = LEFT_REAR";
-      break;
-    case ApaParkOutDirection::RIGHT_REAR:
-      ILOG_INFO << "out_direction = RIGHT_REAR";
-      break;
-    case ApaParkOutDirection::REAR:
-      ILOG_INFO << "out_direction = REAR";
-      break;
-    case ApaParkOutDirection::FRONT:
-      ILOG_INFO << "out_direction = FRONT";
-      break;
-    default:
-      ILOG_INFO << "out_direction = INVALID";
-      break;
-  }
+  ILOG_INFO << "out_direction = "
+            << GetApaParkOutDirectionString(out_direction);
 }
 
 }  // namespace apa_planner

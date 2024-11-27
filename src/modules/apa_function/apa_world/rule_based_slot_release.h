@@ -39,26 +39,7 @@ class RuleBasedSlotRelease {
 
   const bool IsSlotOccupied(const common::SlotInfo *slot);
 
-  const bool AddUssPerceptObstacles(const common::SlotInfo &slot_info);
-
   const double CalLonDistSlot2Car(const common::SlotInfo &new_slot_info) const;
-
-  // todo: remove this code
-  const bool UpdateEgoSlotInfo(
-      apa_planner::SlotManager::EgoSlotInfo &ego_slot_info,
-      const common::SlotInfo *slot_info);
-
-  // todo: remove this code
-  const bool GenTLane(
-      apa_planner::SlotManager::EgoSlotInfo &ego_slot_info,
-      apa_planner::PerpendicularTailInPathGenerator::Tlane &slot_tlane,
-      apa_planner::PerpendicularTailInPathGenerator::Tlane &obs_tlane);
-
-  // todo: remove this code
-  const bool GenObstacles(
-      const apa_planner::PerpendicularTailInPathGenerator::Tlane &slot_tlane,
-      apa_planner::PerpendicularTailInPathGenerator::Tlane &obs_tlane,
-      const apa_planner::SlotManager::EgoSlotInfo &ego_slot_info);
 
   const bool UpdateEgoParallelSlotInfoInSearching(
       apa_planner::SlotManager::EgoSlotInfo &ego_slot_info,
@@ -68,10 +49,6 @@ class RuleBasedSlotRelease {
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
 
   const bool IsParallelSlotCoarseRelease(
-      common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
-
-  // todo: remove this code
-  const bool GeometryPathForTailInScenario(
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
 
  private:

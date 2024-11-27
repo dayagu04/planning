@@ -61,8 +61,6 @@ class ApaWorld {
  private:
   void Preprocess();
   void UpdateEgoState();
-  void UpdateStateMachine();
-  void UpdateParkOutDirection();
   void UpdateSlots();
   void UpdateUssDistance();
 
