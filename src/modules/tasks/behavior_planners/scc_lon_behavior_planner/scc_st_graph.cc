@@ -2659,7 +2659,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   }
   // 1) 构造横向KDPath
   std::vector<planning_math::PathPoint> lat_path_points;
-  lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size());
+  lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size() +
+                          1);
   const auto &spline_x_vec = lon_behav_input_->lat_output().spline_x_vec();
   const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
   for (int i = 1; i <= config_.lon_num_step; ++i) {
@@ -2681,6 +2682,18 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   if (lat_path_points.size() <= 2) {
     return;
   }
+  // 根据参考线的最后一个点延长横向path
+  const auto current_ref_path = current_lane->get_reference_path();
+  if (current_ref_path == nullptr) {
+    return;
+  }
+  const auto current_lane_frenet_coord = current_ref_path->get_frenet_coord();
+  if (current_lane_frenet_coord == nullptr) {
+    return;
+  }
+  const auto &last_path_point_in_fusion_lane =
+      current_lane_frenet_coord->path_points().back();
+  lat_path_points.emplace_back(last_path_point_in_fusion_lane);
   lat_path_coord_ = std::make_shared<KDPath>(std::move(lat_path_points));
 
   // 2) 获取障碍物
@@ -2739,14 +2752,6 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     // 3.1 check intrude into ego lane (using current lane reference path)
     double agent_s = 0.0;
     double agent_l = 0.0;
-    const auto current_ref_path = current_lane->get_reference_path();
-    if (current_ref_path == nullptr) {
-      continue;
-    }
-    const auto current_lane_frenet_coord = current_ref_path->get_frenet_coord();
-    if (current_lane_frenet_coord == nullptr) {
-      continue;
-    }
     if (!(current_lane_frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s,
                                             &agent_l))) {
       continue;
@@ -2951,9 +2956,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
   }
 
   std::vector<NarrowLead> lane_borrow_agent;
-  const auto &lat_path_coord =
-      session_->planning_context().motion_planner_output().lateral_path_coord;
-  if (lat_path_coord == nullptr) {
+  if (lat_path_coord_ == nullptr) {
     return;
   }
 
@@ -2963,7 +2966,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
     double min_l_by_lat_path = std::numeric_limits<double>::max();
     double max_l_by_lat_path = std::numeric_limits<double>::lowest();
     bool is_success = CalculateAgentSLBoundary(
-        lat_path_coord, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        lat_path_coord_, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
         &min_l_by_lat_path, &max_l_by_lat_path);
     if (!is_success) {
       continue;
