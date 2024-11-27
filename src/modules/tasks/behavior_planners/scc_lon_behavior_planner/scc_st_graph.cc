@@ -2932,12 +2932,12 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   }
   // from plan
   is_merge_region_ =
-      session_->planning_context().lane_change_decider_output().is_merge_region;
+      session_->planning_context().ego_lane_road_right_decider_output().is_merge_region;
   merge_lane_virtual_id_ = session_->planning_context()
-                               .lane_change_decider_output()
+                               .ego_lane_road_right_decider_output()
                                .merge_lane_virtual_id;
   current_lane_is_continue_ = session_->planning_context()
-                                  .lane_change_decider_output()
+                                  .ego_lane_road_right_decider_output()
                                   .cur_lane_is_continue;
   const auto lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -2958,7 +2958,7 @@ void StGraphGenerator::MergeSplitStaitcInfoProcess(
   // merge_direction_ = MergeSplitPoints::LEFT;
   // is_merge_region_ = true;
   merge_point_plan_ = session_->planning_context()
-                          .lane_change_decider_output()
+                          .ego_lane_road_right_decider_output()
                           .boundary_merge_point;
   JSON_DEBUG_VALUE("is_merge_region_plan", is_merge_region_)
   JSON_DEBUG_VALUE("merge_direction_plan", static_cast<int>(merge_direction_))

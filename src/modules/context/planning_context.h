@@ -11,6 +11,7 @@
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
 #include "../tasks/task_interface/lane_change_decider_output.h"
+#include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/lateral_motion_planner_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
@@ -72,6 +73,14 @@ class PlanningContext {
   const bool last_planning_success() const { return last_planning_success_; }
 
   bool &mutable_last_planning_success() { return last_planning_success_; }
+
+  const EgoLaneRoadRightDeciderOutput &ego_lane_road_right_decider_output() const {
+    return ego_lane_road_right_decider_output_;
+  }
+
+  EgoLaneRoadRightDeciderOutput &mutable_ego_lane_road_right_decider_output() {
+    return ego_lane_road_right_decider_output_;
+  }
 
   const LaneChangeDeciderOutput &lane_change_decider_output() const {
     return lane_change_decider_output_;
@@ -403,6 +412,7 @@ class PlanningContext {
 
   // NOTE:注意Task成员变量的清空
   // lane change task pipeline
+  EgoLaneRoadRightDeciderOutput ego_lane_road_right_decider_output_;
   LaneChangeDeciderOutput lane_change_decider_output_;
   GapSelectorDeciderOutput gap_selector_decider_output_;
 

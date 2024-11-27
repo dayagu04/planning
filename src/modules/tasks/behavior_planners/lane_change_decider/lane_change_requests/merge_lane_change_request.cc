@@ -149,9 +149,9 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
     is_merge_lane_change_situation_ = false;
     return;
   }
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
-  const bool is_merge_region = lane_change_decider_output.is_merge_region;
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region = ego_lane_road_right_decider_output.is_merge_region;
   const int lane_nums = virtual_lane_mgr_->get_lane_num();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
   const int current_lane_order_id = current_lane->get_order_id();
@@ -253,16 +253,18 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const double default_consider_lane_marks_length = 70.0;
+  const double default_consider_lane_marks_length = 80.0;
   const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
-  const bool is_merge_region = lane_change_decider_output.is_merge_region;
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region = ego_lane_road_right_decider_output.is_merge_region;
   const auto& function_info = session_->environmental_model().function_info();
+  const bool is_split_region = ego_lane_road_right_decider_output.is_split_region;
+  const bool cur_lane_is_continue = ego_lane_road_right_decider_output.cur_lane_is_continue;
 
   merge_lane_change_direction_ = NO_CHANGE;
   bool left_boundary_exist_virtual_type = false;
@@ -388,8 +390,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
           break;
         }
         if (lane_marks[i].lane_mark ==
-                iflyauto::LaneDrivableDirection_DIRECTION_LEFT ||
-            lane_marks[i].lane_mark ==
                 iflyauto::LaneDrivableDirection_DIRECTION_LEFT_MERGE) {
           exist_left_direction_merge = true;
           break;
@@ -475,8 +475,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
           break;
         }
         if (lane_marks[i].lane_mark ==
-                iflyauto::LaneDrivableDirection_DIRECTION_RIGHT ||
-            lane_marks[i].lane_mark ==
                 iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_MERGE) {
           exist_right_direction_merge = true;
           break;
@@ -484,24 +482,25 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       }
     }
 
-    // if (left_boundary_exist_virtual_type &&
-    //     !target_right_boundary_exist_virtual_type &&
-    //     is_right_edge_side_lane) {
-    //   if (exist_left_direction_merge) {
-    //     is_exist_left_merge_direction_ = true;
-    //     merge_lane_change_direction_ = LEFT_CHANGE;
-    //     return;
-    //   }
-    // }
-    // if (right_boundary_exist_virtual_type &&
-    //     !target_left_boundary_exist_virtual_type &&
-    //     is_left_edge_side_lane) {
-    //   if (exist_right_direction_merge) {
-    //     is_exist_right_merge_direction_ = true;
-    //     merge_lane_change_direction_ = RIGHT_CHANGE;
-    //     return;
-    //   }
-    // }
+    if (is_right_edge_side_lane &&
+        !is_split_region &&
+        function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+      if (exist_left_direction_merge) {
+        is_exist_left_merge_direction_ = true;
+        merge_lane_change_direction_ = LEFT_CHANGE;
+        return;
+      }
+    }
+    if (!cur_lane_is_continue &&
+        is_left_edge_side_lane &&
+        !is_split_region &&
+        function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+      if (exist_right_direction_merge) {
+        is_exist_right_merge_direction_ = true;
+        merge_lane_change_direction_ = RIGHT_CHANGE;
+        return;
+      }
+    }
   } else {
     return;
   }
@@ -511,13 +510,11 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = NO_CHANGE;
     both_lane_line_exist_virtual_or_not_ = true;
-  } else if (left_boundary_exist_virtual_type &&
-             !target_right_boundary_exist_virtual_type &&
+  } else if (!cur_lane_is_continue &&
              is_right_edge_side_lane &&
              is_merge_region) {
     merge_lane_change_direction_ = LEFT_CHANGE;
-  } else if (right_boundary_exist_virtual_type &&
-             !target_left_boundary_exist_virtual_type &&
+  } else if (!cur_lane_is_continue &&
              is_left_edge_side_lane &&
              is_merge_region) {
     merge_lane_change_direction_ = RIGHT_CHANGE;

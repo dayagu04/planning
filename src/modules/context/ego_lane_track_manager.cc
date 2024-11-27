@@ -508,7 +508,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
       order_ids.size() < 2) {
-    lateral_distance_cost_weight = 0.5;
+    lateral_distance_cost_weight = 0.28;
   }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
@@ -1520,7 +1520,12 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
                       LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT &&
               lane_marks[i].lane_mark !=
                   iflyauto::
-                      LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT) {
+                      LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::
+                      LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN) {
             exist_straight_direction = false;
             break;
           }
@@ -1581,11 +1586,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
                 lane_marks[i].lane_mark ==
                     iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
                 lane_marks[i].lane_mark ==
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT ||
+                    iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN ||
                 lane_marks[i].lane_mark ==
                     iflyauto::LaneDrivableDirection_DIRECTION_LEFT_RIGHT ||
                 lane_marks[i].lane_mark ==

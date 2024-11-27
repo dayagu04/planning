@@ -108,16 +108,9 @@ struct LaneChangeDeciderOutput {
   std::vector<double> st_search_vec;
 
   CoarsePlanningInfo coarse_planning_info;
-  bool is_merge_region = false;
-  MergeDirection merge_direction = NONE_LANE_MERGE;
-  int merge_lane_virtual_id;
   RampDirection dir_turn_signal_road_to_ramp = RAMP_NONE;
   IntCancelReasonType int_request_cancel_reason = NO_CANCEL;
   RequestType ilc_virtual_req = NO_CHANGE;
-  Point2D merge_point;
-  Point2D boundary_merge_point;
-  bool cur_lane_is_continue;
-  bool boundary_merge_point_valid = false;
 };
 
 }  // namespace planning

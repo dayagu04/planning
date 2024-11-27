@@ -495,42 +495,43 @@ void VirtualLane::ProcessEgoOnRampMLC(
   } else if (is_ramp_merge_to_ramp_on_expressway &&
              !is_ego_on_split_region &&
              dis_to_first_merge < dis_to_first_merge_threshold) {
-    RampDirection next_lc_dir = RAMP_NONE;
-    if (dis_to_second_merge < dis_to_first_split) {
-      //下下一个场景还是merge场景
-      next_lc_dir = second_merge_direction;
-      if (first_merge_direction == RAMP_ON_RIGHT &&
-          next_lc_dir == RAMP_ON_RIGHT) {
-        for (int i = order_id_; i > 0; i--) {
-          current_tasks_.emplace_back(-1);
-        }
-      }
-      //fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
-      // } else if (first_merge_direction == RAMP_ON_LEFT &&
-      //            next_lc_dir == RAMP_ON_LEFT) {
-      //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-      //     current_tasks_.emplace_back(1);
-      //   }
-      // }
-    } else if (dis_to_second_merge >= dis_to_first_split) {
-      //下下一个是split的场景
-      next_lc_dir = first_split_direction;
-      if (first_merge_direction == RAMP_ON_RIGHT &&
-          next_lc_dir == RAMP_ON_LEFT) {
-        for (int i = order_id_; i > 0; i--) {
-          current_tasks_.emplace_back(-1);
-        }
-      } 
-      //fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
-      // else if (first_merge_direction == RAMP_ON_LEFT &&
-      //            next_lc_dir == RAMP_ON_RIGHT) {
-      //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
-      //     current_tasks_.emplace_back(1);
-      //   }
-      // }
-    }
-  }
+  //   RampDirection next_lc_dir = RAMP_NONE;
+  //   if (dis_to_second_merge < dis_to_first_split) {
+  //     // 下下一个场景还是merge场景
+  //     next_lc_dir = second_merge_direction;
+  //     if (first_merge_direction == RAMP_ON_RIGHT &&
+  //         next_lc_dir == RAMP_ON_RIGHT) {
+  //       for (int i = order_id_; i > 0; i--) {
+  //         current_tasks_.emplace_back(-1);
+  //       }
+  //     }
+  //     //fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
+  //     // } else if (first_merge_direction == RAMP_ON_LEFT &&
+  //     //            next_lc_dir == RAMP_ON_LEFT) {
+  //     //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+  //     //     current_tasks_.emplace_back(1);
+  //     //   }
+  //     // }
+  //   } else if (dis_to_second_merge >= dis_to_first_split) {
+  //     // 下下一个是split的场景
+  //     next_lc_dir = first_split_direction;
+  //     if (first_merge_direction == RAMP_ON_RIGHT &&
+  //         next_lc_dir == RAMP_ON_LEFT) {
+  //       for (int i = order_id_; i > 0; i--) {
+  //         current_tasks_.emplace_back(-1);
+  //       }
+  //     } 
+  //     //fengwang31:由于目前大部分匝道汇入匝道的场景中，都是右边汇入的车道收窄，因此这里暂时不考虑左边的情况。
+  //     // else if (first_merge_direction == RAMP_ON_LEFT &&
+  //     //            next_lc_dir == RAMP_ON_RIGHT) {
+  //     //   for (int i = 0; i + order_id_ + 1 < lane_num; i++) {
+  //     //     current_tasks_.emplace_back(1);
+  //     //   }
+  //     // }
+  //   }
+  // }
   // TODO（fengwang31）：匝道汇入匝道的scean
+  }
 }
 void VirtualLane::save_context(VirtualLaneContext &context) const {
   // todo: clren

@@ -8,6 +8,8 @@ namespace planning {
 LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
+  ego_lane_road_right_decider_ =
+      std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);  
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
   speed_adjust_decider_ =
@@ -66,6 +68,12 @@ bool LongTimeTaskPipelineV3::Run() {
   bool ok = traffic_light_decider_->Execute();
   if (!ok) {
     AddErrorInfo(traffic_light_decider_->Name());
+    return false;
+  }
+
+  ok = ego_lane_road_right_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(ego_lane_road_right_decider_->Name());
     return false;
   }
 
