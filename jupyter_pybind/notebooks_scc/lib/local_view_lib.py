@@ -1350,16 +1350,16 @@ def draw_local_view(dataLoader, layer_manager):
               cur_pos_yn = loc_msg.position.position_boot.y
               cur_yaw = loc_msg.orientation.euler_boot.yaw
               coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-            local_points = lane.lane_points_set
-            point_num = lane.lane_points_set_size
-            line_x = [local_points[j].x for j in range(point_num)]
-            line_y = [local_points[j].y for j in range(point_num)]
+            local_points = lane.lane_points_attr_set
+            point_num = lane.lane_points_attr_set_size
+            line_x = [local_points[j].lane_point_coordinate.x for j in range(point_num)]
+            line_y = [local_points[j].lane_point_coordinate.y for j in range(point_num)]
             line_x, line_y = coord_tf.local_to_global(line_x, line_y)
           else:
-            local_points = lane.lane_points_set
-            point_num = lane.lane_points_set_size
-            line_x = [local_points[j].x for j in range(point_num)]
-            line_y = [local_points[j].y for j in range(point_num)]
+            local_points = lane.lane_points_attr_set
+            point_num = lane.lane_points_attr_set_size
+            line_x = [local_points[j].lane_point_coordinate.x for j in range(point_num)]
+            line_y = [local_points[j].lane_point_coordinate.y for j in range(point_num)]
 
           rdg_lane_info['line_x_vec'] = line_x
           rdg_lane_info['line_y_vec'] = line_y

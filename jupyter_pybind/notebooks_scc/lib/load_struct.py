@@ -672,12 +672,12 @@ def load_lane_topo_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g
     lane_info = {'line_x_topo':[], 'line_y_topo':[],'type':[]}
     if i< line_topo_msg_size:
       lane_line = line_topo_msg[i]
-      lane_line_topo_refline_points = lane_line.lane_points_set
-      lane_line_topo_refline_points_size = lane_line.lane_points_set_size
+      lane_line_topo_refline_points = lane_line.lane_points_attr_set
+      lane_line_topo_refline_points_size = lane_line.lane_points_attr_set_size
       line_x = []
       line_y = []
-      line_x = [lane_line_topo_refline_points[j].x for j in range(lane_line_topo_refline_points_size)]
-      line_y = [lane_line_topo_refline_points[j].y for j in range(lane_line_topo_refline_points_size)]
+      line_x = [lane_line_topo_refline_points[j].lane_point_coordinate.x for j in range(lane_line_topo_refline_points_size)]
+      line_y = [lane_line_topo_refline_points[j].lane_point_coordinate.y for j in range(lane_line_topo_refline_points_size)]
 
       lane_info['line_x_topo'] = line_x
       lane_info['line_y_topo'] = line_y
@@ -823,12 +823,12 @@ def load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = 
     lane_info = {'center_line_x_topo':[], 'center_line_y_topo':[]}
     if i< lane_topo_size:
       lane = lane_topo_msg_msg[i]
-      center_lane_topo_refline_points = lane.central_line.lane_points_set
-      center_lane_topo_refline_points_size = lane.central_line.lane_points_set_size
+      center_lane_topo_refline_points = lane.central_line.lane_points_attr_set
+      center_lane_topo_refline_points_size = lane.central_line.lane_points_attr_set_size
       line_x = []
       line_y = []
-      line_x = [center_lane_topo_refline_points[j].x for j in range(center_lane_topo_refline_points_size)]
-      line_y = [center_lane_topo_refline_points[j].y for j in range(center_lane_topo_refline_points_size)]
+      line_x = [center_lane_topo_refline_points[j].lane_point_coordinate.x for j in range(center_lane_topo_refline_points_size)]
+      line_y = [center_lane_topo_refline_points[j].lane_point_coordinate.y for j in range(center_lane_topo_refline_points_size)]
 
       lane_info['center_line_x_topo'] = line_x
       lane_info['center_line_y_topo'] = line_y
@@ -901,12 +901,12 @@ def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g
     lane_info = {'stop_line_x':[], 'stop_line_y':[]}
     if i< stop_line_msg_size:
       stop_line = stop_line_msg[i]
-      stop_line_points = stop_line.lane_points_set
-      stop_line_points_size = stop_line.lane_points_set_size
+      stop_line_points = stop_line.lane_points_attr_set
+      stop_line_points_size = stop_line.lane_points_attr_set_size
       line_x = []
       line_y = []
-      line_x = [stop_line_points[j].x for j in range(stop_line_points_size)]
-      line_y = [stop_line_points[j].y for j in range(stop_line_points_size)]
+      line_x = [stop_line_points[j].lane_point_coordinate.x for j in range(stop_line_points_size)]
+      line_y = [stop_line_points[j].lane_point_coordinate.y for j in range(stop_line_points_size)]
 
       lane_info['stop_line_x'] = line_x
       lane_info['stop_line_y'] = line_y
