@@ -251,8 +251,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   print("expanded_nodes_t_vec_size: ", len(expanded_nodes_t_vec))
   print("expanded_nodes_s_vec_size: ", len(expanded_nodes_s_vec))
-  print("history_cur_nodes_t: ", history_cur_nodes_t_vec)
-  print("history_cur_nodes_s: ", history_cur_nodes_s_vec)
+  print("history_cur_nodes_t_size: ", len(history_cur_nodes_t_vec))
+  print("history_cur_nodes_s_size: ", len(history_cur_nodes_s_vec))
 
   lon_plan_data['data_st_searcher'].data.update({
     't_search': t_search_vec,
@@ -791,6 +791,8 @@ def load_lon_global_figure(bag_loader):
   # 各阶段耗时
   cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
                   y_axis_label='time cost/(ms)',width=600,height=300)
+  
+  plan_debug_Astar = ColumnDataSource(data ={'t_plan_debug': [],'st_graph_searcher_cost': []})
 
   lead_one_dis_vec = []
   lead_two_dis_vec = []
@@ -806,6 +808,7 @@ def load_lon_global_figure(bag_loader):
   EnvironmentalModelManagerCost_vec = []
   GeneralPlannerModuleCostTime_vec = []
   DynamicWorldAverageCostTime_vec = []
+  st_graph_searcher_cost_vec = []
 
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_dis'], 2))
@@ -822,6 +825,8 @@ def load_lon_global_figure(bag_loader):
     EnvironmentalModelManagerCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['EnvironmentalModelManagerCost'], 2))
     GeneralPlannerModuleCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralPlannerModuleCostTime'], 2))
     DynamicWorldAverageCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['dynamic_world_cost'], 2))
+    st_graph_searcher_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['st_graph_searcher_cost'], 2))
+
 
   lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
   lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
@@ -832,12 +837,26 @@ def load_lon_global_figure(bag_loader):
   lead_fig.line(t_plan_vec, soft_brake_distance_lead_vec, line_width=2, legend_label='soft_brake_distance', color="black")
   lead_fig.legend.click_policy = 'hide'
 
+  t_plan_debug = bag_loader.plan_debug_msg['t']
+  plan_debug_Astar.data.update({
+  't_plan_debug': t_plan_debug,
+  'st_graph_searcher_cost': st_graph_searcher_cost_vec,
+  })
+
+  cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
+                  y_axis_label='time cost/(ms)', x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600,height=300)
   cost_time_fig.line(t_plan_vec, SccLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
   cost_time_fig.line(t_plan_vec, SccLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime_vec', color="blue")
   cost_time_fig.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime_vec', color="orange")
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime_vec', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+  f_cost_time = cost_time_fig.line("t_plan_debug", "st_graph_searcher_cost", source = plan_debug_Astar, line_width=1.6, legend_label='st_graph_searcher_cost', color="green")
   cost_time_fig.legend.click_policy = 'hide'
+
+  hover_cost_time = HoverTool(renderers=[f_cost_time], tooltips=[('t_plan_debug','@t_plan_debug'),('st_graph_searcher_cost', '@st_graph_searcher_cost')], mode='vline')
+  cost_time_fig.add_tools(hover_cost_time)
+  cost_time_fig.toolbar.active_scroll = cost_time_fig.select_one(WheelZoomTool)
+ 
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
 
