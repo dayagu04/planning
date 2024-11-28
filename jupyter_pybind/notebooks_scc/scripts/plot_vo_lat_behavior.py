@@ -83,7 +83,7 @@ columns = [
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=350, height=600)
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=100)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=900)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=1000)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=500)
 data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=200)
 data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=200)
@@ -209,6 +209,8 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_ego_on_expressway','current_lane_order_id','current_lane_virtual_id','current_lane_relative_id',
              'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
              'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',"cur_lane_is_continue",
+             'is_split_region', 'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line',
+             'is_left_merge_direction', 'is_right_merge_direction',
              'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'virtual_lane_relative_id_switch_flag',
              'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split',

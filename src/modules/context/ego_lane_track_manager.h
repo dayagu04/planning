@@ -78,7 +78,7 @@ class EgoLaneTrackManger {
 
   void SelectEgoLaneWithPlan(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-      int zero_relative_id_nums,
+      const std::vector<int> &order_ids,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
           &virtual_id_mapped_lane);
 

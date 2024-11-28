@@ -769,7 +769,11 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
         for i in range(10):
           if i < virtual_lane_marks_size:
             for j in range(virtual_lane_refline_points_size):
-              if line_s[j] > lane_mark_s_vec[i]:
+              if i == virtual_lane_marks_size - 1:
+                lane_mark_point_x.append(line_x[-1])
+                lane_mark_point_y.append(line_y[-1])
+                break
+              if line_s[j] >= lane_mark_s_vec[i]:
                 lane_mark_point_x.append(line_x[j])
                 lane_mark_point_y.append(line_y[j])
                 break
@@ -782,7 +786,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
         for i in range(10):
           if i < virtual_lane_marks_size:
             for j in range(virtual_lane_refline_points_size):
-              if line_s[j] > (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
+              if line_s[j] >= (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
                 lane_mark_loc_x.append(line_x[j])
                 lane_mark_loc_y.append(line_y[j])
                 break

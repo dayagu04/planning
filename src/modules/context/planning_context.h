@@ -5,8 +5,10 @@
 #include "../tasks/behavior_planners/agent_headway_decider/agent_headway_decider_output.h"
 #include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
+#include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
+#include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
 #include "../tasks/task_interface/hpp_general_lateral_decider_output.h"
@@ -18,7 +20,6 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
-#include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -73,6 +74,15 @@ class PlanningContext {
 
   bool &mutable_last_planning_success() { return last_planning_success_; }
 
+  const EgoLaneRoadRightDeciderOutput &ego_lane_road_right_decider_output()
+      const {
+    return ego_lane_road_right_decider_output_;
+  }
+
+  EgoLaneRoadRightDeciderOutput &mutable_ego_lane_road_right_decider_output() {
+    return ego_lane_road_right_decider_output_;
+  }
+
   const LaneChangeDeciderOutput &lane_change_decider_output() const {
     return lane_change_decider_output_;
   }
@@ -118,7 +128,7 @@ class PlanningContext {
     return agent_headway_decider_output_;
   }
 
-  const SpeedLimitDeciderOutput& speed_limit_decider_output() const {
+  const SpeedLimitDeciderOutput &speed_limit_decider_output() const {
     return speed_limit_decider_output_;
   }
 
@@ -290,8 +300,8 @@ class PlanningContext {
     return &longitudinal_decision_decider_output_;
   }
 
-  const std::shared_ptr<AdaptiveCruiseControl> &
-  adaptive_cruise_control_function() {
+  const std::shared_ptr<AdaptiveCruiseControl>
+      &adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(
@@ -322,8 +332,8 @@ class PlanningContext {
     lane_keep_assit_ptr_ = lane_keep_assit;
   }
 
-  const std::shared_ptr<class IntelligentHeadlightControl> &
-  intelligent_headlight_control_function() {
+  const std::shared_ptr<class IntelligentHeadlightControl>
+      &intelligent_headlight_control_function() {
     return intelligent_headlight_control_;
   }
   void set_intelligent_headlight_control_function(
@@ -332,8 +342,8 @@ class PlanningContext {
     intelligent_headlight_control_ = intelligent_headlight_control;
   }
 
-  const std::shared_ptr<TrafficSignRecognition> &
-  traffic_sign_recognition_function() {
+  const std::shared_ptr<TrafficSignRecognition>
+      &traffic_sign_recognition_function() {
     return traffic_sign_recognition_;
   }
   void set_traffic_sign_recognition_function(
@@ -403,6 +413,7 @@ class PlanningContext {
 
   // NOTE:注意Task成员变量的清空
   // lane change task pipeline
+  EgoLaneRoadRightDeciderOutput ego_lane_road_right_decider_output_;
   LaneChangeDeciderOutput lane_change_decider_output_;
   GapSelectorDeciderOutput gap_selector_decider_output_;
 

@@ -169,7 +169,10 @@ class VirtualLane {
   }
 
   // side: 0-left, 1-right
-  bool is_dash_line(const planning::framework::Session& session, const RequestType request_type, const std::shared_ptr<planning_math::KDPath> target_boundary_path) const;
+  bool is_dash_line(
+      const planning::framework::Session &session,
+      const RequestType request_type,
+      const std::shared_ptr<planning_math::KDPath> target_boundary_path) const;
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }

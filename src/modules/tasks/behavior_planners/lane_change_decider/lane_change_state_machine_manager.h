@@ -17,10 +17,6 @@ struct StateTransitionInfo {
   }
 };
 
-enum RelativeDirection {
-  LEFT_DIRECTION = 0,
-  RIGHT_DIRECTION = 1,
-};
 struct LaneChangeTimer {
   bool propose_time_count_ = false;
   double propose_at_time_ = 0.0;
@@ -182,20 +178,7 @@ class LaneChangeStateMachineManager {
   void CalculateLatOffsetOfOverlappedLanes(
       double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
   bool IsOffTurnLight(const RampDirection ramp_direction);
-  bool IsMergeRegion(int* merge_lane_virtual_id);
-  bool IsOverlapWithOtherLaneOnEndRegion(
-      const std::shared_ptr<ReferencePath> reference_path,
-      const RelativeDirection rel_dir);
   const double CalculateEgoFrontLineLength();
-  void CalculateMergePoint(const int merge_lane_virtual_id,
-                           std::vector<Point2D>* merge_point,
-                           int* calculate_nums);
-
-  const double CalculateAverageKappa(
-      const std::shared_ptr<planning_math::KDPath> cur_kd_path);
-  void CalculateRoadRight(const int calculate_nums,
-                          const int merge_lane_virtual_id, bool* is_continue);
-  bool IsVirtualLaneLine(const int lane_virtual_id);
 
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request) const;
@@ -224,7 +207,6 @@ class LaneChangeStateMachineManager {
   bool must_change_lane_ = false;
   int scenario_ = SCENARIO_CRUISE;
   RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
-  bool is_front_merge_region_ = false;
   double overlap_lane_virtual_id_ = 0;
 };
 }  // namespace planning

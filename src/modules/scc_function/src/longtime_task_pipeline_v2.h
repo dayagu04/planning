@@ -13,6 +13,7 @@
 #include "session.h"
 #include "tasks/behavior_planners/agent_longitudinal_decider/agent_longitudinal_decider.h"
 #include "tasks/behavior_planners/cipv_lost_prohibit_acceleration_decider/cipv_lost_prohibit_acceleration_decider.h"
+#include "tasks/behavior_planners/ego_lane_road_right_decider/ego_lane_road_right_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
@@ -37,6 +38,7 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   bool Run() override;
 
  private:
+  std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;

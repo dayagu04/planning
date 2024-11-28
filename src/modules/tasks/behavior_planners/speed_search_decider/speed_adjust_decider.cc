@@ -117,7 +117,7 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
                                       .lane_change_decider_output()
                                       .lc_request_source;
   const auto& is_merge_region = session_->mutable_planning_context()
-                                    ->mutable_lane_change_decider_output()
+                                    ->ego_lane_road_right_decider_output()
                                     .is_merge_region;
 
   if (coarse_planning_info.target_state != kLaneChangePropose) {
@@ -139,11 +139,11 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
 
   // judge the lane change source and scene
   boundary_merge_point_valid_ = session_->planning_context()
-                                    .lane_change_decider_output()
+                                    .ego_lane_road_right_decider_output()
                                     .boundary_merge_point_valid;
   if (boundary_merge_point_valid_ && lc_request_source == MERGE_REQUEST) {
     const auto& boundary_merge_point = session_->planning_context()
-                                           .lane_change_decider_output()
+                                           .ego_lane_road_right_decider_output()
                                            .boundary_merge_point;
     deceleration_priority_scene_ = true;
     merge_emegency_distance_ = std::hypot(ego_point.x - boundary_merge_point.x,

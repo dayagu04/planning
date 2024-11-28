@@ -87,7 +87,6 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
-  is_emergency_avoidance_situation_ = false;
 
   UpdateEmergencyAvoidanceSituation(lc_status);
   LOG_DEBUG(
@@ -169,9 +168,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to left "
             "\n");
       }
-      if (left_boundary_type ==
-              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
-          curr_direct_exist && request_type_ != NO_CHANGE &&
+      if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&
@@ -196,9 +193,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to right "
             "\n");
       }
-      if (right_boundary_type ==
-              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
-          curr_direct_exist && request_type_ != NO_CHANGE &&
+      if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&

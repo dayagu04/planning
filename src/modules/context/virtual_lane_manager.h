@@ -141,8 +141,8 @@ class VirtualLaneManager {
   double get_distance_to_toll_station() const {
     return distance_to_toll_station_;
   }
-  std::shared_ptr<VirtualLane> GetNearestLane(
-    Point2D point, double* nearest_s, double* nearest_l);
+  std::shared_ptr<VirtualLane> GetNearestLane(Point2D point, double *nearest_s,
+                                              double *nearest_l);
 
   void set_is_exist_split_on_ramp(const bool is_exist_split_on_ramp) {
     is_exist_split_on_ramp_ = is_exist_split_on_ramp;
@@ -156,11 +156,14 @@ class VirtualLaneManager {
 
   bool get_is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
 
-  void set_is_exist_split_on_expressway(const bool is_exist_split_on_expressway) {
+  void set_is_exist_split_on_expressway(
+      const bool is_exist_split_on_expressway) {
     is_exist_split_on_expressway_ = is_exist_split_on_expressway;
   }
 
-  bool get_is_exist_split_on_expressway() const { return is_exist_split_on_expressway_; };
+  bool get_is_exist_split_on_expressway() const {
+    return is_exist_split_on_expressway_;
+  };
 
   void set_is_exist_intersection_split(const bool is_exist_intersection_split) {
     is_exist_intersection_split_ = is_exist_intersection_split;
@@ -306,9 +309,8 @@ class VirtualLaneManager {
   void CalculateDistanceToRampSplitMerge(planning::framework::Session *session);
   void CalculateDistanceToRampSplitMergeWithSdMap(
       planning::framework::Session *session);
-  SplitSegInfo MakesureSplitDirection(
-      const ::SdMapSwtx::Segment &split_segment,
-      const ad_common::sdmap::SDMap &sd_map);
+  SplitSegInfo MakesureSplitDirection(const ::SdMapSwtx::Segment &split_segment,
+                                      const ad_common::sdmap::SDMap &sd_map);
   RampDirection MakesureMergeDirection(
       const ::SdMapSwtx::Segment &merge_segment,
       const ad_common::sdmap::SDMap &sd_map);
@@ -375,7 +377,7 @@ class VirtualLaneManager {
   int split_next_seg_forward_lane_nums_ = 0;
   int lc_nums_for_split_ = 0;
   RampDirection last_split_seg_dir_ = RAMP_NONE;
-  const SdMapSwtx::Segment* current_segment_ = nullptr;
+  const SdMapSwtx::Segment *current_segment_ = nullptr;
   // HPP
   bool is_on_hpp_lane_ = false;
   bool is_reached_hpp_start_point_ = false;
