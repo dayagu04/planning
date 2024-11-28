@@ -92,8 +92,11 @@ bool LaneChangeRequest::IsDashedLineEnough(
   std::cout << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
             << "origin_lane_order_id_: " << origin_lane_virtual_id_
             << std::endl;
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+        
   // HACK RUI
-  if (virtual_lane_mgr->dis_to_ramp() < 500.) return true;
+  if (route_info_output.dis_to_ramp < 500.) return true;
   if (direction == LEFT_CHANGE && left_dash_line_len > 0.) {
     if (left_dash_line_len > ego_vel * kNeedLaneChangeTime) {
       return true;
@@ -451,6 +454,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   std::shared_ptr<planning_math::KDPath> target_boundary_path;
   const std::shared_ptr<VirtualLane> current_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
 
   const auto &plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
@@ -540,7 +545,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       all_lane_boundary_types_are_dashed || dash_length > lc_response_dist) {
     return true;
   }
-  if (virtual_lane_mgr_->dis_to_ramp() < 100) {
+  if (route_info_output.dis_to_ramp < 100) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);

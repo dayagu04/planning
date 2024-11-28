@@ -40,9 +40,9 @@ bool ObjectSelector::in_alc_range() {
   // 350)) {
   //   return false;
   // }
-
-  bool is_on_ramp =
-      session_->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+  bool is_on_ramp = route_info_output.is_on_ramp;
   if (is_on_ramp) return false;
 
   return true;
@@ -201,6 +201,8 @@ bool ObjectSelector::update(int status, double start_move_distolane,
       session_->environmental_model().get_virtual_lane_manager();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
   auto &ego_state = session_->environmental_model().get_ego_state_manager();
   auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
@@ -281,9 +283,9 @@ bool ObjectSelector::update(int status, double start_move_distolane,
   auto dist_to_last_intsect = intersection_info.dist_to_last_intsect();
   auto dist_to_intsect = intersection_info.dist_to_intsect();
   bool is_in_intersection = intersection_info.is_in_intersection();
-  double dis_to_ramp = virtual_lane_mgr->dis_to_ramp();
+  double dis_to_ramp = route_info_output.dis_to_ramp;
   double distance_to_first_road_split =
-      virtual_lane_mgr->distance_to_first_road_split();
+      route_info_output.distance_to_first_road_split;
   double intersect_length = intersection_info.intsect_length();
   bool is_on_ramp = false;  // hack map_info.is_on_ramp()
   double lc_end_dis = virtual_lane_mgr->lc_map_decision_offset(clane);

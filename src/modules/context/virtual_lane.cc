@@ -379,32 +379,30 @@ void VirtualLane::update_speed_limit(double ego_vel,
   v_cruise_ = std::min(current_lane_speed_limit_, speed_change_point_.speed);
 }
 
-void VirtualLane::update_lane_tasks(
-    const GeneralTaskMapInfo &general_task_map_info) {
+void VirtualLane::update_lane_tasks(const RouteInfoOutput &route_info_output) {
   current_tasks_.clear();
-  bool ego_on_ramp = general_task_map_info.is_on_ramp;
+  bool ego_on_ramp = route_info_output.is_on_ramp;
   if (ego_on_ramp) {
-    ProcessEgoOnRampMLC(general_task_map_info);
+    ProcessEgoOnRampMLC(route_info_output);
   } else {
-    ProcessEgoOnRoadMLC(general_task_map_info);
+    ProcessEgoOnRoadMLC(route_info_output);
   }
 }
 void VirtualLane::ProcessEgoOnRoadMLC(
-    const GeneralTaskMapInfo &general_task_map_info) {
+    const RouteInfoOutput &route_info_output) {
   bool is_nearing_other_lane_merge_to_road_point =
-      general_task_map_info.is_nearing_other_lane_merge_to_road_point;
-  RampDirection first_merge_direction =
-      general_task_map_info.first_merge_direction;
-  RampDirection ramp_direction = general_task_map_info.ramp_direction;
-  bool is_nearing_ramp = general_task_map_info.is_nearing_ramp;
-  bool is_on_ramp = general_task_map_info.is_on_ramp;
-  const int lane_num = general_task_map_info.lane_num_except_emergency;
-  bool is_trigger_ego_not_on_side = general_task_map_info.is_leaving_ramp &&
-                                    !general_task_map_info.is_on_ramp;
-  int lc_nums_for_split = general_task_map_info.lc_nums_for_split;
-  bool is_ego_on_split_region = general_task_map_info.is_ego_on_split_region;
+      route_info_output.is_nearing_other_lane_merge_to_road_point;
+  RampDirection first_merge_direction = route_info_output.first_merge_direction;
+  RampDirection ramp_direction = route_info_output.ramp_direction;
+  bool is_nearing_ramp = route_info_output.is_nearing_ramp;
+  bool is_on_ramp = route_info_output.is_on_ramp;
+  const int lane_num = route_info_output.lane_num_except_emergency;
+  bool is_trigger_ego_not_on_side =
+      route_info_output.is_leaving_ramp && !route_info_output.is_on_ramp;
+  int lc_nums_for_split = route_info_output.lc_nums_for_split;
+  bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
   int need_continue_lc_num_on_off_ramp_region =
-      general_task_map_info.need_continue_lc_num_on_off_ramp_region;
+      route_info_output.need_continue_lc_num_on_off_ramp_region;
   //生成各个场景的变道任务
   if (need_continue_lc_num_on_off_ramp_region !=
       0) {  //处理在下匝道的split区域继续生成1个下匝道的任务
@@ -448,33 +446,33 @@ void VirtualLane::ProcessEgoOnRoadMLC(
   }
 }
 void VirtualLane::ProcessEgoOnRampMLC(
-    const GeneralTaskMapInfo &general_task_map_info) {
+    const RouteInfoOutput &route_info_output) {
   const double dis_to_first_merge =
-      general_task_map_info.distance_to_first_road_merge;
+      route_info_output.distance_to_first_road_merge;
   const double dis_to_first_split =
-      general_task_map_info.distance_to_first_road_split;
+      route_info_output.distance_to_first_road_split;
   const RampDirection first_merge_direction =
-      general_task_map_info.first_merge_direction;
+      route_info_output.first_merge_direction;
   const RampDirection first_split_direction =
-      general_task_map_info.first_split_direction;
-  const int lane_num = general_task_map_info.lane_num_except_emergency;
+      route_info_output.first_split_direction;
+  const int lane_num = route_info_output.lane_num_except_emergency;
   const bool is_ramp_merge_to_road_on_expressway =
-      general_task_map_info.is_ramp_merge_to_road_on_expressway;
+      route_info_output.is_ramp_merge_to_road_on_expressway;
   const bool is_ramp_merge_to_ramp_on_expressway =
-      general_task_map_info.is_ramp_merge_to_ramp_on_expressway;
-  const bool is_leaving_ramp = general_task_map_info.is_leaving_ramp;
+      route_info_output.is_ramp_merge_to_ramp_on_expressway;
+  const bool is_leaving_ramp = route_info_output.is_leaving_ramp;
   const double dis_to_second_merge =
-      general_task_map_info.distance_to_second_road_merge;
+      route_info_output.distance_to_second_road_merge;
   const double sum_dis_to_last_split_point_on_ramp =
-      general_task_map_info.sum_dis_to_last_split_point_on_ramp;
+      route_info_output.sum_dis_to_last_split_point_on_ramp;
   const RampDirection second_merge_direction =
-      general_task_map_info.second_merge_direction;
-  const bool is_ego_on_split_region =
-      general_task_map_info.is_ego_on_split_region;
-  //在匝道汇入匝道时，距离merge的距离在200m范围内时，再生成地图变道任务，避免前面有1分2场景的不合理变道
+      route_info_output.second_merge_direction;
+  const bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
+  //在匝道汇入匝道时，距离merge的距离在100m范围内时，
+  //再生成地图变道任务，避免前面有1分2场景的不合理变道
   const double dis_to_first_merge_threshold = 100;
   int need_continue_lc_num_on_off_ramp_region =
-      general_task_map_info.need_continue_lc_num_on_off_ramp_region;
+      route_info_output.need_continue_lc_num_on_off_ramp_region;
   //生成各个场景的变道任务
   if (need_continue_lc_num_on_off_ramp_region !=
       0) {  //处理在下匝道的split区域继续生成1个下匝道的任务
@@ -501,7 +499,8 @@ void VirtualLane::ProcessEgoOnRampMLC(
         current_tasks_.emplace_back(1);
       }
     }
-  } else if (is_ramp_merge_to_ramp_on_expressway && !is_ego_on_split_region &&
+  } else if (is_ramp_merge_to_ramp_on_expressway &&  //匝道汇入匝道的scean
+             !is_ego_on_split_region &&
              dis_to_first_merge < dis_to_first_merge_threshold) {
     RampDirection next_lc_dir = RAMP_NONE;
     if (dis_to_second_merge < dis_to_first_split) {
@@ -538,7 +537,6 @@ void VirtualLane::ProcessEgoOnRampMLC(
       // }
     }
   }
-  // TODO（fengwang31）：匝道汇入匝道的scean
 }
 void VirtualLane::save_context(VirtualLaneContext &context) const {
   // todo: clren

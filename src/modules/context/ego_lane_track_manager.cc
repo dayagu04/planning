@@ -365,7 +365,7 @@ void EgoLaneTrackManger::Update(
   is_ego_on_expressway_ = is_ego_on_expressway;
   is_on_ramp_ = is_on_ramp;
   dis_to_ramp_ = dis_to_ramp;
-  is_leaving_ramp_ = is_leaving_ramp;
+  is_leaving_ramp_ = false;
   first_split_dir_dis_info_.first = first_split_dir_dis_info.first;
   first_split_dir_dis_info_.second = first_split_dir_dis_info.second;
   distance_to_first_road_merge_ = distance_to_first_road_merge;
@@ -1953,7 +1953,7 @@ double EgoLaneTrackManger::ComputeAverageHeadingDiff(
 bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
-  if (!session_->environmental_model().get_sdmap_valid()) {
+  if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     LOG_DEBUG("CheckIfInRampSelectSplit::sd_map is invalid!!!");
     return false;
   }
@@ -1974,7 +1974,8 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
 
-  const auto& sd_map = session_->environmental_model().get_sd_map();
+  const auto& sd_map = 
+      session_->environmental_model().get_route_info()->get_sd_map();
 
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
@@ -2029,7 +2030,7 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
 bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
-  if (!session_->environmental_model().get_sdmap_valid()) {
+  if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     LOG_DEBUG("CheckIfInRoadSelectRamp::sd_map is invalid!!!");
     return false;
   }
@@ -2050,7 +2051,8 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
 
-  const auto& sd_map = session_->environmental_model().get_sd_map();
+  const auto& sd_map = 
+      session_->environmental_model().get_route_info()->get_sd_map();
 
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {

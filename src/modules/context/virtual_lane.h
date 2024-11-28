@@ -25,38 +25,6 @@ struct SpeedChangePoint {
   double speed;
 };
 
-enum RampDirection {
-  RAMP_NONE = 0,
-  RAMP_ON_LEFT = 1,
-  RAMP_ON_RIGHT = 2,
-};
-
-struct GeneralTaskMapInfo {
-  double distance_to_ramp;
-  double distance_to_first_road_merge;
-  double distance_to_first_road_split;
-  double distance_to_second_road_merge;
-  double distance_to_second_road_split;
-  double sum_dis_to_last_split_point_on_ramp;
-  int lane_num_except_emergency;
-  bool is_nearing_ramp;
-  bool is_leaving_ramp;
-  bool is_on_ramp;
-  bool is_nearing_other_lane_merge_to_road_point;
-  bool is_ramp_merge_to_ramp_on_expressway;
-  bool is_ramp_merge_to_road_on_expressway;
-  RampDirection ramp_direction;
-  RampDirection first_split_direction;
-  RampDirection first_merge_direction;
-  RampDirection second_split_direction;
-  RampDirection second_merge_direction;
-  int split_seg_forward_lane_nums;
-  int split_next_seg_forward_lane_nums;
-  int lc_nums_for_split;
-  bool is_ego_on_split_region;
-  int need_continue_lc_num_on_off_ramp_region;
-};
-
 // hack :clren
 // struct VirtualLaneMember {
 //   int order_id_ = -1;
@@ -177,7 +145,7 @@ class VirtualLane {
   double max_width() const;
   bool hack() const { return hack_; }
 
-  void update_lane_tasks(const GeneralTaskMapInfo &general_task_map_info);
+  void update_lane_tasks(const RouteInfoOutput &route_info_output);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
@@ -188,8 +156,8 @@ class VirtualLane {
   void set_is_in_merge_area(bool is_in_merge_area) {
     is_in_merge_area_ = is_in_merge_area;
   }
-  void ProcessEgoOnRoadMLC(const GeneralTaskMapInfo &general_task_map_info);
-  void ProcessEgoOnRampMLC(const GeneralTaskMapInfo &general_task_map_info);
+  void ProcessEgoOnRoadMLC(const RouteInfoOutput &route_info_output);
+  void ProcessEgoOnRampMLC(const RouteInfoOutput &route_info_output);
 
  private:
   planning::framework::Session *session_ = nullptr;

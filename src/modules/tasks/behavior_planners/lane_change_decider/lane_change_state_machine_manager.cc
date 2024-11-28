@@ -514,7 +514,9 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
   int lc_valid_thre = 4;
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+  const double dis_to_ramp = route_info_output.dis_to_ramp;
   if (dis_to_ramp < 1000.||
       transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST ||
@@ -1577,6 +1579,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
   // 5、当前还在主路上，即不在匝道上。
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
   if (virtual_lane_manager == nullptr) {
     road_to_ramp_turn_signal_ = RAMP_NONE;
     return;
@@ -1589,7 +1593,7 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
   }
   int origin_relative_id_zero_nums =
       virtual_lane_manager->origin_relative_id_zero_nums();
-  bool is_on_highway = virtual_lane_manager->is_on_highway();
+  bool is_on_highway = route_info_output.is_on_highway;
   JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
                    origin_relative_id_zero_nums);
   // overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
@@ -1616,9 +1620,9 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
     }
   }
   const auto distance_to_toll_station =
-      virtual_lane_manager->get_distance_to_toll_station();
+      route_info_output.distance_to_toll_station;
   const auto distance_to_route_end =
-      virtual_lane_manager->get_distance_to_route_end();
+      route_info_output.distance_to_route_end;
   //接近收费站或者终点时，抑制分流点的判断
   if (distance_to_toll_station < 400 || distance_to_route_end < 400) {
     road_to_ramp_turn_signal_ = RAMP_NONE;
@@ -1703,6 +1707,8 @@ bool LaneChangeStateMachineManager::IsSplitRegion(
 
 void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
     double *lat_diff, const std::shared_ptr<ReferencePath> reference_path) {
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
   const auto current_reference_path =
       session_->environmental_model()
           .get_reference_path_manager()
@@ -1724,8 +1730,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
   Point2D projection_point = {cur_ref_path_finally_point.x,
                               cur_ref_path_finally_point.y};
   const double front_line_distance = CalculateEgoFrontLineLength();
-  bool is_on_ramp =
-      session_->environmental_model().get_virtual_lane_manager()->is_on_ramp();
+  bool is_on_ramp = route_info_output.is_on_ramp;
   if (is_on_ramp) {
     ReferencePathPoint refpoint = {};
     if (current_reference_path->get_reference_point_by_lon(

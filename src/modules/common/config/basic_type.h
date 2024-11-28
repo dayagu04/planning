@@ -24,6 +24,125 @@ enum RequestType { NO_CHANGE, LEFT_CHANGE, RIGHT_CHANGE };
 
 enum LooseBoundType { NONE_SIDE, LEFT_SIDE, RIGHT_SIDE, BOTH_SIDE };
 
+//匝道的方向
+enum RampDirection {
+  RAMP_NONE = 0,
+  RAMP_ON_LEFT = 1,
+  RAMP_ON_RIGHT = 2,
+};
+
+//分流的相对方向
+enum SplitRelativeDirection {
+  None = 0,
+  ON_LEFT = 1,
+  ON_RIGHT = 2,
+};
+
+struct RouteInfoOutput {
+  //for NOA output 
+  int split_seg_forward_lane_nums = 0;
+  int split_next_seg_forward_lane_nums = 0;
+  int lc_nums_for_split = 0;
+  int cur_seg_forward_lane_num = 0;
+  int need_continue_lc_num_on_off_ramp_region = 0;
+  int lane_num_except_emergency = 0;
+  bool is_update_segment_success = false;
+  bool is_on_ramp = false;
+  bool is_in_sdmaproad = false;
+  bool is_ego_on_expressway = false;
+  bool is_leaving_ramp = false;
+  bool is_ego_on_city_expressway_hmi = false;
+  bool is_ego_on_expressway_hmi = false;
+  bool is_exist_toll_station = false;
+  bool is_ramp_merge_to_road_on_expressway = false;
+  bool is_road_merged_by_other_lane = false;
+  bool is_ramp_merge_to_ramp_on_expressway = false;
+  bool is_nearing_other_lane_merge_to_road_point = false;
+  bool is_on_highway = false;
+  bool is_continuous_ramp = false;//for jwliu23
+  bool is_nearing_ramp = false;
+  bool is_ego_on_split_region = false;
+  double dis_to_ramp = NL_NMAX;
+  double distance_to_first_road_merge = NL_NMAX;
+  double distance_to_first_road_split = NL_NMAX;
+  double distance_to_second_road_merge = NL_NMAX;
+  double distance_to_second_road_split = NL_NMAX;
+  double distance_to_route_end = NL_NMAX;
+  double sum_dis_to_last_merge_point = NL_NMAX;
+  double sum_dis_to_last_split_point = NL_NMAX;
+  double accumulate_dis_ego_to_last_split_point = NL_NMAX;
+  double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
+  double distance_to_toll_station = NL_NMAX;
+  double current_segment_passed_distance = 0.0;//for xykuai
+  std::pair<SplitRelativeDirection, double> first_split_dir_dis_info;//for xykuai
+  std::vector<std::pair<SplitRelativeDirection, double>>
+      split_dir_dis_info_list;//for xykuai
+  RampDirection ramp_direction = RampDirection::RAMP_NONE;
+  RampDirection first_split_direction = RampDirection::RAMP_NONE;
+  RampDirection first_merge_direction = RampDirection::RAMP_NONE;
+  RampDirection second_split_direction = RampDirection::RAMP_NONE;
+  RampDirection second_merge_direction = RampDirection::RAMP_NONE;
+  RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
+  RampDirection last_split_seg_dir = RAMP_NONE;
+
+  //for hpp output
+  bool is_on_hpp_lane = false;
+  bool is_reached_hpp_start_point = false;
+  double sum_distance_driving = -1;
+  double distance_to_target_slot = NL_NMAX;
+  double distance_to_next_speed_bump = NL_NMAX;
+  void reset() {
+    is_update_segment_success = false;
+    is_on_ramp = false;
+    dis_to_ramp = NL_NMAX;
+    ramp_direction = RampDirection::RAMP_NONE;
+    distance_to_first_road_merge = NL_NMAX;
+    distance_to_first_road_split = NL_NMAX;
+    distance_to_second_road_merge = NL_NMAX;
+    distance_to_second_road_split = NL_NMAX;
+    distance_to_route_end = NL_NMAX;
+    is_in_sdmaproad = false;
+    is_ego_on_expressway = false;
+    first_split_direction = RampDirection::RAMP_NONE;
+    first_merge_direction = RampDirection::RAMP_NONE;
+    second_split_direction = RampDirection::RAMP_NONE;
+    second_merge_direction = RampDirection::RAMP_NONE;
+    is_leaving_ramp = false;
+    sum_dis_to_last_merge_point = NL_NMAX;
+    sum_dis_to_last_split_point = NL_NMAX;
+    accumulate_dis_ego_to_last_split_point = NL_NMAX;
+    sum_dis_to_last_split_point_on_ramp = NL_NMAX;
+    distance_to_toll_station = NL_NMAX;
+    is_ego_on_city_expressway_hmi = false;
+    is_ego_on_expressway_hmi = false;
+    is_exist_toll_station = false;
+    is_ramp_merge_to_road_on_expressway = false;
+    is_road_merged_by_other_lane = false;
+    is_ramp_merge_to_ramp_on_expressway = false;
+    other_lane_merge_dir = RampDirection::RAMP_NONE;
+    is_nearing_other_lane_merge_to_road_point = false;
+    is_on_highway = false;
+    split_seg_forward_lane_nums = 0;
+    split_next_seg_forward_lane_nums = 0;
+    lc_nums_for_split = 0;
+    last_split_seg_dir = RAMP_NONE;
+    is_continuous_ramp = false;
+    first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
+    current_segment_passed_distance = 0.0;
+    is_nearing_ramp = false;
+    cur_seg_forward_lane_num = 0;
+    is_ego_on_split_region = false;
+    need_continue_lc_num_on_off_ramp_region = 0;
+    lane_num_except_emergency = 0;
+    //for hpp
+    is_on_hpp_lane = false;
+    is_reached_hpp_start_point = false;
+    sum_distance_driving = -1;
+    distance_to_target_slot = NL_NMAX;
+    distance_to_next_speed_bump = NL_NMAX;
+  }
+};
+
 // 转向灯拨杆
 enum LeverStatus {
   LEVER_STATE_OFF,

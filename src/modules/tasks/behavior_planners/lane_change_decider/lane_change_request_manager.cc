@@ -52,6 +52,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   LOG_DEBUG("LaneChangeRequestManager.Update() \n");
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
   // TBD： 后续考虑json形式进行数据存储
+  const auto& route_info_output = session_->environmental_model().
+      get_route_info()->get_route_info_output();
   auto mrc_condition = session_->mutable_planning_context()->mrc_condition();
   const bool location_valid = session_->environmental_model().location_valid();
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
@@ -70,7 +72,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const double max_pass_merge_distance_to_surpress_overtake_lane_change =
       virtual_lane_mgr_->dis_threshold_to_last_merge_point();
   double sum_dis_to_last_merge_point =
-      virtual_lane_mgr_->sum_dis_to_last_merge_point();
+      route_info_output.sum_dis_to_last_merge_point;
   const double odd_route_distance_threshold = 500.0;
   const bool enable_use_emergency_avoidence_lc_request =
       config_.enable_use_emergency_avoidence_lane_change_request;
@@ -82,7 +84,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const double dis_threshold_to_merged_point =
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const double dis_to_first_merge =
-      virtual_lane_mgr_->distance_to_first_road_merge();
+      route_info_output.distance_to_first_road_merge;
   const int origin_relative_id_zero_nums =
       virtual_lane_mgr_->origin_relative_id_zero_nums();
 
@@ -120,8 +122,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->is_on_ramp() ||
-          virtual_lane_mgr_->dis_to_ramp() <=
+      if (route_info_output.is_on_ramp ||
+          route_info_output.dis_to_ramp <=
               minimum_distance_nearby_ramp_to_surpress_overtake_lane_change ||
           sum_dis_to_last_merge_point <
               max_pass_merge_distance_to_surpress_overtake_lane_change ||
@@ -133,7 +135,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
-      if (virtual_lane_mgr_->get_distance_to_route_end() <
+      if (route_info_output.distance_to_route_end <
           odd_route_distance_threshold) {
         overtake_request_.Reset();
         LOG_DEBUG("cann't generate overtake lane change nearby odd boundary");

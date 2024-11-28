@@ -32,6 +32,7 @@
 #include "planning_context.h"
 #include "planning_gflags.h"
 #include "reference_path_manager.h"
+#include "route_info.h"
 #include "scene_type_config.pb.h"
 #include "src/modules/common/config/basic_type.h"
 #include "traffic_light_decision_manager.h"
@@ -149,6 +150,10 @@ void EnvironmentalModelManager::InitContext() {
   dynamic_world_ = std::make_shared<planning_data::DynamicWorld>(
       *agent_manager_ptr_, session_);
   session_->mutable_environmental_model()->set_dynamic_world(dynamic_world_);
+  
+  route_info_ptr_ = 
+      std::make_shared<planning::RouteInfo>(config_builder, session_);
+  session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
 }
 
 bool EnvironmentalModelManager::Run() {
@@ -245,11 +250,12 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("ego_state_update cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("ego_state_update_cost", time_end - time_start)
 
-  // // Step 3) update static map info
-  // environmental_model->UpdateStaticMap(local_view);
-
-  //  Step 3) update static map info
-  environmental_model->UpdateSdMap(local_view);
+  // Step 3) update route info
+  time_start = IflyTime::Now_ms();
+  route_info_ptr_->Update();
+  time_end = IflyTime::Now_ms();
+  LOG_DEBUG("update route_info cost:%f\n", time_end - time_start);
+  JSON_DEBUG_VALUE("update route_info cost", time_end - time_start)
 
   // Step 4) update virtual_lane
   time_start = IflyTime::Now_ms();
@@ -307,7 +313,7 @@ bool EnvironmentalModelManager::Run() {
   LOG_DEBUG("agent manager cost:%f\n", time_end - time_start);
   JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
 
-  // Step 5) update reference path
+  // Step 6) update reference path
   time_start = IflyTime::Now_ms();
   if (!reference_path_manager_ptr_->update()) {
     LOG_ERROR("reference_path_manager update fail\n");
@@ -1273,7 +1279,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 
   bool res = true;
   const auto &input_list =
-      session_->environmental_model().get_hdmap_valid()
+      session_->environmental_model().get_route_info()->get_hdmap_valid()
           ? (session_->environmental_model().location_valid()
                  ? input_longtime_with_hdmap
                  : input_realtime_with_hdmap)

@@ -1840,9 +1840,9 @@ bool GeneralLongitudinalDecider::check_obstacle_both_sides(
 double GeneralLongitudinalDecider::get_distance_to_destination() {
   // WB: 暂无地图，终点距离无穷大
   double distance_to_destination = 2000.0;
-  distance_to_destination = session_->environmental_model()
-                                .get_virtual_lane_manager()
-                                ->GetDistanceToDestination();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+  distance_to_destination = route_info_output.distance_to_target_slot;
   // auto distance_to_destination = std::numeric_limits<double>::max();
   // if (dest.isValid()) {
   //   distance_to_destination = dest.hasLanePathOffset()
