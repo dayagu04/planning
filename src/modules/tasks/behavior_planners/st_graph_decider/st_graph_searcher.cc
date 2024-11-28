@@ -329,7 +329,8 @@ bool StGraphSearcher::SearchStPath(
   auto current_node = start_node;
   auto best_node = current_node;
   best_node.set_h_cost(std::numeric_limits<double>::max());
-
+  std::vector<double> expanded_nodes_s_vec{};
+  std::vector<double> expanded_nodes_t_vec{};
   // start A* search loop
   while (!open_set.IsEmpty()) {
     // const double current_time = IflyTime::Now_ms();
@@ -387,10 +388,13 @@ bool StGraphSearcher::SearchStPath(
         child_node.set_parent_id(current_node.id());
         open_set.Push(child_node.id(), child_node.TotalCost());
         nodes[child_node.id()] = child_node;
+        expanded_nodes_s_vec.emplace_back(child_node.s());
+        expanded_nodes_t_vec.emplace_back(child_node.t());
       }
     }
   }
-
+  JSON_DEBUG_VECTOR("expanded_nodes_s_vec", expanded_nodes_s_vec, 3)
+  JSON_DEBUG_VECTOR("expanded_nodes_t_vec", expanded_nodes_t_vec, 3)
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
     LOG_DEBUG("st search fail, goal not reached \n");

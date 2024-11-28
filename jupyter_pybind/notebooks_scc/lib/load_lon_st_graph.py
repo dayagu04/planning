@@ -235,15 +235,27 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   t_search_vec = []
   s_search_vec = []
+  expanded_nodes_s_vec = []
+  expanded_nodes_t_vec = []
 
   for item in (plan_debug_info.st_graph_searcher.st_search_path):
     t_search_vec.append(item.t)
   for item in (plan_debug_info.st_graph_searcher.st_search_path):
     s_search_vec.append(item.s)
+  expanded_nodes_t_vec = plan_debug_json_info['expanded_nodes_t_vec']
+  expanded_nodes_s_vec = plan_debug_json_info['expanded_nodes_s_vec']
+
+  print("expanded_nodes_t_vec_size: ", len(expanded_nodes_t_vec))
+  print("expanded_nodes_s_vec_size: ", len(expanded_nodes_s_vec))
 
   lon_plan_data['data_st_searcher'].data.update({
     't_search': t_search_vec,
     's_search': s_search_vec,
+  })
+
+  lon_plan_data['data_st_search_nodes'].data.update({
+    'expanded_nodes_t': expanded_nodes_t_vec,
+    'expanded_nodes_s': expanded_nodes_s_vec,
   })
 
   # provide visual tools to target maker
@@ -994,6 +1006,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[]})
+  data_st_search_nodes = ColumnDataSource(data = {'expanded_nodes_t':[], 'expanded_nodes_s':[]})
   data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 't_cruise_target':[], 's_cruise_target':[], 't_follow_target':[], 's_follow_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
@@ -1034,6 +1047,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_lon_motion_plan': data_lon_motion_plan, \
                    'data_planning':data_planning, \
                    'data_st_searcher':data_st_searcher, \
+                   'data_st_search_nodes' : data_st_search_nodes, \
                    'data_target': data_target, \
   }
 
@@ -1150,6 +1164,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
 
   fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
+  fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='orange', legend_label='expanded_nodes')
   fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3.0, line_color = 'blue', line_dash = 'solid', legend_label = 's_final_target')
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=5, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')

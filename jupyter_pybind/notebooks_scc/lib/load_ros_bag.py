@@ -637,7 +637,8 @@ class LoadRosbag:
                          "ego_left_front_agent_traj_x_vec","ego_left_front_agent_traj_y_vec","ego_left_front_agent_traj_theta_vec",
                          "ego_right_front_agent_traj_x_vec","ego_right_front_agent_traj_y_vec","ego_right_front_agent_traj_theta_vec",
                          "ego_left_rear_agent_traj_x_vec","ego_left_rear_agent_traj_y_vec","ego_left_rear_agent_traj_theta_vec",
-                         "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",]
+                         "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",
+                         "expanded_nodes_t_vec", "expanded_nodes_s_vec"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
