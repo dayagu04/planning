@@ -691,6 +691,13 @@ void TrackletMaintainer::calc(
                                  .fix_lane_virtual_id;
 
   std::vector<double> avd_car_id;
+  auto config_builder =
+      session_->environmental_model().highway_config_builder();
+  PotentialAvoidDeciderConfig config =
+      config_builder->cast<PotentialAvoidDeciderConfig>();
+  double expand_vel = 
+      interp(ego_state_->ego_v(), config.expand_ego_vel,
+             config.expand_obs_rel_vel);
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
@@ -701,6 +708,25 @@ void TrackletMaintainer::calc(
       tr->ncar_count_in = false;
       continue;
     }
+
+    // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
+    double expend_length = 0.0;
+    if (tr->side_car && tr->rear_car && tr->v_rel < expand_vel) {
+      expend_length = 1.5;
+    }
+    if (tr->d_rel > expend_length) {
+      tr->front_car = true;
+      tr->side_car = false;
+      tr->rear_car = false;
+    } else if (tr->d_rel >= -vehicle_param.length &&
+               tr->d_rel <= expend_length) {
+      tr->side_car = true;
+    } else {
+      tr->front_car = false;
+      tr->side_car = false;
+      tr->rear_car = true;
+    }
+
     if (tr->d_rel <= 0) {
       tr->is_avd_car = false;
       if (tr->d_rel <= -1 * (tr->length + vehicle_param.length)) {
