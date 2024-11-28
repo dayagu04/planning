@@ -37,7 +37,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool IsPathCollision() const { return is_path_collision_; }
 
-  const ParkingScenarioStatus ScenarioTry() override;
+  void ScenarioTry() override;
 
  private:
   virtual const bool CheckReplan() override;

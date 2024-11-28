@@ -323,12 +323,12 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     frame_.car_already_move_dist = 0.0;
 
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    if (apa_world_ptr_->GetApaDataPtr()->park_out_direction ==
-        ApaParkingOutDirection::RIGHT_FRONT) {
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
+        ApaParkOutDirection::RIGHT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
-    } else if (apa_world_ptr_->GetApaDataPtr()->park_out_direction ==
-               ApaParkingOutDirection::LEFT_FRONT) {
+    } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                   ->GetParkOutDirection() == ApaParkOutDirection::LEFT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
     }
@@ -341,8 +341,8 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
   // update stuck by uss time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_OUT) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -352,8 +352,8 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->static_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_OUT) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1302,6 +1302,11 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
       current_path_point_global_vec_.emplace_back(global_point);
     }
   }
+
+  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
 
   JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);

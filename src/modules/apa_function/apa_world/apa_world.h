@@ -52,13 +52,15 @@ class ApaWorld {
     return lateral_path_optimizer_ptr_;
   }
 
+  std::shared_ptr<ApaStateMachineManager> GetStateMachineManagerPtr() {
+    return state_machine_manager_ptr_;
+  }
+
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
 
  private:
   void Preprocess();
   void UpdateEgoState();
-  void UpdateStateMachine();
-  void UpdateParkOutDirection();
   void UpdateSlots();
   void UpdateUssDistance();
 
@@ -71,7 +73,7 @@ class ApaWorld {
   void UpdateCarPredictTraj();
 
   std::shared_ptr<ApaData> apa_data_ptr_;
-  std::shared_ptr<ApaStateMachineManager> state_machine_manager_ptr;
+  std::shared_ptr<ApaStateMachineManager> state_machine_manager_ptr_;
   std::shared_ptr<SlotManager> slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;

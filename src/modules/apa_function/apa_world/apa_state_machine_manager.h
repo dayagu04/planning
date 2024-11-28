@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "local_view.h"
 
 namespace planning {
@@ -46,12 +48,22 @@ class ApaStateMachineManager final {
     return out_direction_;
   }
 
+  const bool IsParkingStatus() const;
+
+  const bool IsSeachingStatus() const;
+
   void Reset() {
     state_machine_ = ApaStateMachineT::INVALID;
     out_direction_ = ApaParkOutDirection::INVALID;
   }
 
+  static std::string GetApaStateMachineTString(
+      const ApaStateMachineT state_machine);
+
   static void PrintApaStateMachineT(const ApaStateMachineT state_machine);
+
+  static std::string GetApaParkOutDirectionString(
+      const ApaParkOutDirection out_direction);
 
   static void PrintApaParkOutDirection(const ApaParkOutDirection out_direction);
 

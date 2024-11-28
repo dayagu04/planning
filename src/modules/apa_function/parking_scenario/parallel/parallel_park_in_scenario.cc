@@ -396,8 +396,8 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1392,6 +1392,11 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       current_path_point_global_vec_.emplace_back(global_point);
     }
   }
+
+  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
 
   JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);

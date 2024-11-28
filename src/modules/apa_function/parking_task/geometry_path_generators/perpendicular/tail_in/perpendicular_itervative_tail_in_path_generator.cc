@@ -28,7 +28,9 @@ const bool PerpendicularTailInPathGenerator::NewUpdatePathPlan() {
   // prepare plan, only for first plan
   if (input_.is_replan_first && !input_.is_replan_dynamic) {
     calc_params_.first_multi_plan = true;
-    if (!NewPreparePathPlan()) {
+    if (calc_params_.is_searching_stage) {
+      return NewPreparePathPlan();
+    } else if (!NewPreparePathPlan()) {
       return false;
     }
   }

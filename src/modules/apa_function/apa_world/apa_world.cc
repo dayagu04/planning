@@ -6,6 +6,7 @@
 
 #include "apa_data.h"
 #include "apa_param_config.h"
+#include "apa_state_machine_manager.h"
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
@@ -19,7 +20,7 @@ namespace planning {
 namespace apa_planner {
 void ApaWorld::Init() {
   apa_data_ptr_ = std::make_shared<ApaData>();
-  state_machine_manager_ptr = std::make_shared<ApaStateMachineManager>();
+  state_machine_manager_ptr_ = std::make_shared<ApaStateMachineManager>();
   slot_manager_ptr_ = std::make_shared<SlotManager>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
@@ -28,7 +29,7 @@ void ApaWorld::Init() {
 
 void ApaWorld::Reset() {
   apa_data_ptr_->Reset();
-  state_machine_manager_ptr->Reset();
+  state_machine_manager_ptr_->Reset();
   slot_manager_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
@@ -51,17 +52,11 @@ void ApaWorld::Preprocess() {
   apa_data_ptr_->fusion_occupancy_objects_info_ptr =
       &local_view_ptr_->fusion_occupancy_objects_info;
   apa_data_ptr_->local_view_ptr_ = local_view_ptr_;
-  apa_data_ptr_->apa_parking_direction = static_cast<ApaParkingDirection>(
-      apa_data_ptr_->func_state_ptr->parking_req.apa_parking_direction);
   apa_data_ptr_->control_output_ptr = &local_view_ptr_->control_output;
 
   UpdateEgoState();
 
-  state_machine_manager_ptr->Update(local_view_ptr_);
-
-  UpdateStateMachine();
-
-  UpdateParkOutDirection();
+  state_machine_manager_ptr_->Update(local_view_ptr_);
 
   UpdateSlots();
 
@@ -169,78 +164,6 @@ void ApaWorld::UpdateEgoState() {
   JSON_DEBUG_VALUE("car_static_timer_by_vel_normal",
                    measurement_data.car_static_timer_by_vel_normal)
   JSON_DEBUG_VALUE("static_flag", measurement_data.static_flag)
-}
-
-void ApaWorld::UpdateStateMachine() {
-  ApaStateMachine& cur_state = apa_data_ptr_->cur_state;
-  const uint8_t state = apa_data_ptr_->func_state_ptr->current_state;
-  apa_data_ptr_->current_state = state;
-
-  cur_state = ApaStateMachine::INVALID;
-  if (state == iflyauto::FunctionalState_PARK_STANDBY) {
-    cur_state = ApaStateMachine::INVALID;
-  }
-
-  if (state == iflyauto::FunctionalState_PARK_SUSPEND) {
-    cur_state = ApaStateMachine::SUSPEND;
-  }
-
-  if (state == iflyauto::FunctionalState_PARK_COMPLETED) {
-    cur_state = ApaStateMachine::COMPLETE;
-  }
-
-  if (state == iflyauto::FunctionalState_PARK_IN_SEARCHING) {
-    cur_state = ApaStateMachine::SEARCH_IN;
-    apa_data_ptr_->apa_function = ApaFunction::PARK_IN;
-  }
-
-  if (state == iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
-    cur_state = ApaStateMachine::SEARCH_OUT;
-    apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
-  }
-
-  if (state == iflyauto::FunctionalState_PARK_GUIDANCE) {
-    if (apa_data_ptr_->apa_function == ApaFunction::PARK_IN) {
-      cur_state = ApaStateMachine::ACTIVE_IN;
-    } else if (apa_data_ptr_->apa_function == ApaFunction::PARK_OUT) {
-      cur_state = ApaStateMachine::ACTIVE_OUT;
-    }
-  }
-
-  if (state == iflyauto::FunctionalState_PARK_OUT_SEARCHING) {
-    cur_state = ApaStateMachine::SEARCH_OUT;
-    apa_data_ptr_->apa_function = ApaFunction::PARK_OUT;
-  }
-}
-
-void ApaWorld::UpdateParkOutDirection() {
-  const iflyauto::ApaParkOutDirection park_out_direction =
-      apa_data_ptr_->func_state_ptr->parking_req.apa_park_out_direction;
-
-  ApaParkingOutDirection& out_dir = apa_data_ptr_->park_out_direction;
-
-  if (apa_data_ptr_->cur_state != ApaStateMachine::ACTIVE_OUT) {
-    out_dir = ApaParkingOutDirection::INVALID;
-    return;
-  }
-
-  if (park_out_direction == iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS ||
-      park_out_direction == iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL) {
-    out_dir = ApaParkingOutDirection::LEFT_FRONT;
-  } else if (park_out_direction == iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS ||
-             park_out_direction == iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL) {
-    out_dir = ApaParkingOutDirection::RIGHT_FRONT;
-  } else if (park_out_direction == iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS) {
-    out_dir = ApaParkingOutDirection::LEFT_REAR;
-  } else if (park_out_direction == iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS) {
-    out_dir = ApaParkingOutDirection::RIGHT_REAR;
-  } else if (park_out_direction == iflyauto::PRK_OUT_TO_FRONT_OUT) {
-    out_dir = ApaParkingOutDirection::FRONT;
-  } else if (park_out_direction == iflyauto::PRK_OUT_TO_BACK_OUT) {
-    out_dir = ApaParkingOutDirection::REAR;
-  } else {
-    out_dir = ApaParkingOutDirection::INVALID;
-  }
 }
 
 void ApaWorld::UpdateSlots() {
@@ -723,15 +646,8 @@ const bool ApaWorld::Update() {
   ILOG_INFO << "func_state = "
             << static_cast<int>(apa_data_ptr_->func_state_ptr->current_state);
 
-  PrintApaStateMachine(apa_data_ptr_->cur_state);
-
-  PrintApaParkingOutDirection(apa_data_ptr_->park_out_direction);
-
-  apa_data_ptr_->scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
-
-  // only for hack if outter machine no reset
-  if (apa_data_ptr_->cur_state == ApaStateMachine::SEARCH_IN ||
-      apa_data_ptr_->cur_state == ApaStateMachine::SEARCH_OUT) {
+  // only for hack if outter machine no reset, need delete
+  if (state_machine_manager_ptr_->IsSeachingStatus()) {
     apa_data_ptr_->is_slot_type_fixed = false;
     apa_data_ptr_->slot_id = 0;
     apa_data_ptr_->slot_type = Common::PARKING_SLOT_TYPE_INVALID;
@@ -739,9 +655,8 @@ const bool ApaWorld::Update() {
 
   // run slot manager
   // currently path planning starts once id is selected in searching state
-
   ILOG_INFO << "-- apa_world: run slot_management ---";
-  if (!slot_manager_ptr_->Update(apa_data_ptr_)) {
+  if (!slot_manager_ptr_->Update(apa_data_ptr_, state_machine_manager_ptr_)) {
     ILOG_INFO << "shouldn't have entered the parking function at that time";
   }
 
