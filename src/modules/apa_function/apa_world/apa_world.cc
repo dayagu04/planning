@@ -20,7 +20,8 @@ namespace planning {
 namespace apa_planner {
 void ApaWorld::Init() {
   apa_data_ptr_ = std::make_shared<ApaData>();
-  state_machine_manager_ptr_ = std::make_shared<ApaStateMachineManager>();
+  measure_data_ptr_ = std::make_shared<ApaMeasureDataManager>();
+  state_machine_ptr_ = std::make_shared<ApaStateMachineManager>();
   slot_manager_ptr_ = std::make_shared<SlotManager>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
   collision_detector_ptr_ = std::make_shared<CollisionDetector>();
@@ -29,7 +30,7 @@ void ApaWorld::Init() {
 
 void ApaWorld::Reset() {
   apa_data_ptr_->Reset();
-  state_machine_manager_ptr_->Reset();
+  state_machine_ptr_->Reset();
   slot_manager_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
@@ -54,9 +55,9 @@ void ApaWorld::Preprocess() {
   apa_data_ptr_->local_view_ptr_ = local_view_ptr_;
   apa_data_ptr_->control_output_ptr = &local_view_ptr_->control_output;
 
-  UpdateEgoState();
+  measure_data_ptr_->Update(local_view_ptr_);
 
-  state_machine_manager_ptr_->Update(local_view_ptr_);
+  state_machine_ptr_->Update(local_view_ptr_);
 
   UpdateSlots();
 
@@ -67,103 +68,6 @@ void ApaWorld::Preprocess() {
   UpdateCarPredictTraj();
 
   UpdateSlots();
-}
-
-void ApaWorld::UpdateEgoState() {
-  MeasurementData& measurement_data = apa_data_ptr_->measurement_data;
-
-  // rad
-  measurement_data.steer_wheel_angle =
-      apa_data_ptr_->vehicle_service_info_ptr->steering_wheel_angle;
-
-  if (apa_data_ptr_->vehicle_service_info_ptr->brake_pedal_pressed_available &&
-      apa_data_ptr_->vehicle_service_info_ptr->brake_pedal_pressed) {
-    measurement_data.brake_flag = true;
-  } else {
-    measurement_data.brake_flag = false;
-  }
-
-  const auto& pose = apa_data_ptr_->localization_ptr->position.position_boot;
-
-  const Eigen::Vector2d current_pos(pose.x, pose.y);
-
-  const ApaParameters& param = apa_param.GetParam();
-  // calculate standstill time by pos
-  const double local_move_dist = (measurement_data.pos - current_pos).norm();
-
-  if (local_move_dist < param.car_static_pos_err_strict) {
-    measurement_data.car_static_timer_by_pos_strict += param.plan_time;
-  } else {
-    measurement_data.car_static_timer_by_pos_strict = 0.0;
-  }
-  if (local_move_dist < param.car_static_pos_err_normal) {
-    measurement_data.car_static_timer_by_pos_normal += param.plan_time;
-  } else {
-    measurement_data.car_static_timer_by_pos_normal = 0.0;
-  }
-
-  measurement_data.pos = current_pos;
-  measurement_data.heading =
-      apa_data_ptr_->localization_ptr->orientation.euler_boot.yaw;
-  measurement_data.heading_vec << std::cos(measurement_data.heading),
-      std::sin(measurement_data.heading);
-
-  const Eigen::Vector2d heading_vec_turn_right(
-      measurement_data.heading_vec.y(), -measurement_data.heading_vec.x());
-
-  const Eigen::Vector2d heading_vec_turn_left(-measurement_data.heading_vec.y(),
-                                              measurement_data.heading_vec.x());
-
-  measurement_data.right_mirror_pos =
-      measurement_data.pos +
-      param.lon_dist_mirror_to_rear_axle * measurement_data.heading_vec +
-      param.lat_dist_mirror_to_center * heading_vec_turn_right;
-
-  measurement_data.left_mirror_pos =
-      measurement_data.pos +
-      param.lon_dist_mirror_to_rear_axle * measurement_data.heading_vec +
-      param.lat_dist_mirror_to_center * heading_vec_turn_left;
-
-  // measurement_data.vel_ego =
-  //     local_view_ptr_->vehicle_service_output_info.vehicle_speed();
-
-  measurement_data.vel =
-      apa_data_ptr_->localization_ptr->velocity.velocity_body.vx;
-
-  // calculate standstill time by velocity
-  if (std::fabs(measurement_data.vel) < param.car_static_velocity_strict) {
-    measurement_data.car_static_timer_by_vel_strict += param.plan_time;
-  } else {
-    measurement_data.car_static_timer_by_vel_strict = 0.0;
-  }
-  if (std::fabs(measurement_data.vel) < param.car_static_velocity_normal) {
-    measurement_data.car_static_timer_by_vel_normal += param.plan_time;
-  } else {
-    measurement_data.car_static_timer_by_vel_normal = 0.0;
-  }
-
-  // static flag
-  measurement_data.static_flag =
-      (measurement_data.car_static_timer_by_pos_strict >
-           param.car_static_keep_time_by_pos_strict ||
-       measurement_data.car_static_timer_by_pos_normal >
-           param.car_static_keep_time_by_pos_normal) &&
-      (measurement_data.car_static_timer_by_vel_strict >
-           param.car_static_keep_time_by_vel_strict ||
-       measurement_data.car_static_timer_by_vel_normal >
-           param.car_static_keep_time_by_vel_normal);
-
-  JSON_DEBUG_VALUE("local_move_dist", local_move_dist)
-  JSON_DEBUG_VALUE("local_vel", measurement_data.vel)
-  JSON_DEBUG_VALUE("car_static_timer_by_pos_strict",
-                   measurement_data.car_static_timer_by_pos_strict)
-  JSON_DEBUG_VALUE("car_static_timer_by_pos_normal",
-                   measurement_data.car_static_timer_by_pos_normal)
-  JSON_DEBUG_VALUE("car_static_timer_by_vel_strict",
-                   measurement_data.car_static_timer_by_vel_strict)
-  JSON_DEBUG_VALUE("car_static_timer_by_vel_normal",
-                   measurement_data.car_static_timer_by_vel_normal)
-  JSON_DEBUG_VALUE("static_flag", measurement_data.static_flag)
 }
 
 void ApaWorld::UpdateSlots() {
@@ -515,12 +419,10 @@ void ApaWorld::UpdateCarPredictTraj() {
   }
 
   if (!use_steer_angle_flag) {
-    car_predict_pt_vec.emplace_back(
-        pnc::geometry_lib::PathPoint(apa_data_ptr_->measurement_data.pos,
-                                     apa_data_ptr_->measurement_data.heading));
+    car_predict_pt_vec.emplace_back(pnc::geometry_lib::PathPoint(
+        measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading()));
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
-    l2g_tf.Init(apa_data_ptr_->measurement_data.pos,
-                apa_data_ptr_->measurement_data.heading);
+    l2g_tf.Init(measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading());
     const size_t control_result_points_size =
         apa_data_ptr_->control_output_ptr->control_trajectory
             .control_result_points_size;
@@ -601,8 +503,7 @@ void ApaWorld::UpdateCarPredictTraj() {
 
   if (car_predict_pt_vec.size() < 2) {
     car_predict_traj.Reset();
-    const double steer_angle =
-        apa_data_ptr_->measurement_data.steer_wheel_angle;
+    const double steer_angle = measure_data_ptr_->GetSteerWheelAngle();
     const uint8_t gear =
         (apa_data_ptr_->plan_output_ptr->gear_command.gear_command_value ==
          iflyauto::GEAR_COMMAND_VALUE_DRIVE)
@@ -612,12 +513,12 @@ void ApaWorld::UpdateCarPredictTraj() {
     if (std::fabs(steer_angle) < 2.68 * kDeg2Rad) {
       pnc::geometry_lib::CalLineFromPt(
           gear, predict_distance,
-          pnc::geometry_lib::PathPoint(apa_data_ptr_->measurement_data.pos,
-                                       apa_data_ptr_->measurement_data.heading),
+          pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
+                                       measure_data_ptr_->GetHeading()),
           path_seg);
     } else {
       const auto& front_wheel_angle =
-          std::fabs(steer_angle / apa_param.GetParam().steer_ratio);
+          std::fabs(measure_data_ptr_->GetFrontWheelAngle());
       const double rear_axle_center_turn_radius =
           1.0 / (apa_param.GetParam().c1 * std::tan(front_wheel_angle));
       const uint8_t steer = (steer_angle > 0.0)
@@ -625,8 +526,8 @@ void ApaWorld::UpdateCarPredictTraj() {
                                 : pnc::geometry_lib::SEG_STEER_RIGHT;
       pnc::geometry_lib::CalArcFromPt(
           gear, steer, predict_distance, rear_axle_center_turn_radius,
-          pnc::geometry_lib::PathPoint(apa_data_ptr_->measurement_data.pos,
-                                       apa_data_ptr_->measurement_data.heading),
+          pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
+                                       measure_data_ptr_->GetHeading()),
           path_seg);
     }
 
@@ -647,7 +548,7 @@ const bool ApaWorld::Update() {
             << static_cast<int>(apa_data_ptr_->func_state_ptr->current_state);
 
   // only for hack if outter machine no reset, need delete
-  if (state_machine_manager_ptr_->IsSeachingStatus()) {
+  if (state_machine_ptr_->IsSeachingStatus()) {
     apa_data_ptr_->is_slot_type_fixed = false;
     apa_data_ptr_->slot_id = 0;
     apa_data_ptr_->slot_type = Common::PARKING_SLOT_TYPE_INVALID;
@@ -656,7 +557,8 @@ const bool ApaWorld::Update() {
   // run slot manager
   // currently path planning starts once id is selected in searching state
   ILOG_INFO << "-- apa_world: run slot_management ---";
-  if (!slot_manager_ptr_->Update(apa_data_ptr_, state_machine_manager_ptr_)) {
+  if (!slot_manager_ptr_->Update(apa_data_ptr_, state_machine_ptr_,
+                                 measure_data_ptr_)) {
     ILOG_INFO << "shouldn't have entered the parking function at that time";
   }
 

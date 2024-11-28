@@ -1,3 +1,4 @@
+#pragma once
 #include "Eigen/Core"
 #include "local_view.h"
 
@@ -26,6 +27,11 @@ class ApaMeasureDataManager final {
   }
 
   const double GetVel() const { return vel_; }
+  void SetPose(const Eigen::Vector2d pos, const double heading) {
+    pos_ = pos;
+    heading_ = heading;
+    heading_vec_ << std::cos(heading), std::sin(heading);
+  }
   const Eigen::Vector2d GetPos() const { return pos_; }
   const double GetHeading() const { return heading_; }
   const Eigen::Vector2d GetHeadingVec() const { return heading_vec_; }

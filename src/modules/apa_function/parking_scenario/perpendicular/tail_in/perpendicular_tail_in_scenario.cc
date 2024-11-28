@@ -217,7 +217,7 @@ void PerpendicularTailInScenario::PlanCore() {
 }
 
 const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
-  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
 
   frame_.correct_path_for_limiter = false;
@@ -330,10 +330,11 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     }
   }
 
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
 
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
@@ -422,15 +423,16 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     const auto pM23 =
         0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
     Eigen::Vector2d ego_to_slot_center_vec =
-        0.5 * (pM01 + pM23) - measures_ptr->pos;
+        0.5 * (pM01 + pM23) - measures_ptr->GetPos();
 
     const double cross_ego_to_slot_center =
-        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->heading_vec,
+        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
                                                 ego_to_slot_center_vec);
 
     const double cross_ego_to_slot_heading =
         pnc::geometry_lib::GetCrossFromTwoVec2d(
-            measures_ptr->heading_vec, ego_slot_info.slot_origin_heading_vec);
+            measures_ptr->GetHeadingVec(),
+            ego_slot_info.slot_origin_heading_vec);
 
     // judge slot side via slot center and heading
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
@@ -561,9 +563,9 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       phi_vec.emplace_back(pt.heading);
     }
 
-    JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 8)
-    JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 8)
-    JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 8)
+    JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 3)
+    JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 3)
+    JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 3)
 
     // the dist that car can move
     double car_safe_move_dist = 0.0;
@@ -671,7 +673,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   // update stuck by uss time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
@@ -682,7 +684,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   // update stuck time
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
@@ -700,7 +702,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   // fix slot
   if (ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().fix_slot_occupied_ratio &&
-      !frame_.is_fix_slot && measures_ptr->static_flag) {
+      !frame_.is_fix_slot && measures_ptr->GetStaticFlag()) {
     frame_.is_fix_slot = true;
     ego_slot_info.fix_limiter = true;
   }
@@ -711,9 +713,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   ILOG_INFO << "frame_.current_arc_steer = "
             << static_cast<int>(frame_.current_arc_steer);
 
-  ILOG_INFO << "ego_pos = " << measures_ptr->pos.transpose()
-            << "  ego_heading = " << measures_ptr->heading * kRad2Deg
-            << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
+  ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
             << "  ego_heading_slot = "
             << ego_slot_info.ego_heading_slot * kRad2Deg;
 
@@ -734,9 +734,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   ILOG_INFO << "slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio;
 
-  ILOG_INFO << "vel_ego = " << measures_ptr->vel;
   ILOG_INFO << "stuck_time = " << frame_.stuck_time << " s";
-  ILOG_INFO << "static_flag = " << measures_ptr->static_flag;
 
   return true;
 }
@@ -1919,7 +1917,7 @@ const bool PerpendicularTailInScenario::CheckSegCompleted() {
   bool is_seg_complete = false;
   if (frame_.spline_success) {
     if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
       ILOG_INFO << "close to target, need wait a certain time!";
       if (frame_.stuck_uss_time > 0.068) {
         ILOG_INFO << "wait a certain time, start plan";
@@ -1933,7 +1931,7 @@ const bool PerpendicularTailInScenario::CheckSegCompleted() {
 
 const bool PerpendicularTailInScenario::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
     if (frame_.stuck_uss_time >
         apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1949,7 +1947,7 @@ const bool PerpendicularTailInScenario::CheckUssStucked() {
 const bool PerpendicularTailInScenario::CheckColDetStucked() {
   if (frame_.remain_dist_col_det <
           apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by col det!, need wait a certain time!";
     if (frame_.stuck_uss_time >
         apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1973,7 +1971,7 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
       std::fabs(frame_.ego_slot_info.terminal_err.heading) <
           heading_err * kDeg2Rad &&
       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-      !apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   if (dynamic_update_flag) {
     frame_.dynamic_plan_time += apa_param.GetParam().plan_time;
@@ -1988,76 +1986,6 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
   }
 
   return frame_.is_replan_dynamic;
-
-  bool update_flag = false;
-  // first update, conditions are relatively relaxed
-  if (frame_.dynamic_replan_count == 0) {
-    bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) <
-                           apa_param.GetParam().pose_y_err &&
-                       std::fabs(frame_.ego_slot_info.terminal_err.heading) <
-                           apa_param.GetParam().pose_heading_err * kDeg2Rad;
-
-    bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
-                       apa_param.GetParam().pose_slot_occupied_ratio;
-
-    if (condition_1 && condition_2) {
-      frame_.dynamic_replan_count++;
-      update_flag = true;
-    }
-  }
-
-  // second update
-  if (frame_.dynamic_replan_count == 1) {
-    bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) >
-                           apa_param.GetParam().max_y_err_2 ||
-                       std::fabs(frame_.ego_slot_info.terminal_err.heading) >
-                           apa_param.GetParam().max_heading_err_2 * kDeg2Rad;
-
-    bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
-                       apa_param.GetParam().pose_slot_occupied_ratio_2;
-
-    bool condition_3 =
-        frame_.remain_dist > apa_param.GetParam().pose_min_remain_dis;
-
-    if (condition_1 && condition_2 && condition_3) {
-      frame_.dynamic_replan_count++;
-      update_flag = true;
-    }
-  }
-
-  // third update
-  if (frame_.dynamic_replan_count == 2) {
-    bool condition_1 = std::fabs(frame_.ego_slot_info.terminal_err.pos.y()) >
-                           apa_param.GetParam().max_y_err_3 ||
-                       std::fabs(frame_.ego_slot_info.terminal_err.heading) >
-                           apa_param.GetParam().max_heading_err_3 * kDeg2Rad;
-
-    bool condition_2 = frame_.ego_slot_info.slot_occupied_ratio >
-                       apa_param.GetParam().pose_slot_occupied_ratio_3;
-
-    bool condition_3 =
-        frame_.remain_dist > apa_param.GetParam().pose_min_remain_dis;
-
-    if (condition_1 && condition_2 && condition_3) {
-      frame_.dynamic_replan_count++;
-      update_flag = true;
-    }
-  }
-
-  ILOG_INFO << "dynamic_replan_count = "
-            << static_cast<int>(frame_.dynamic_replan_count);
-
-  update_flag =
-      (update_flag &&
-       frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
-       !apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) &&
-      pt_center_replan_jump_dist_ < apa_param.GetParam().max_slot_jump_dist &&
-      pt_center_replan_jump_heading_ <
-          apa_param.GetParam().max_slot_jump_heading;
-
-  frame_.is_replan_dynamic = update_flag;
-
-  return update_flag;
 }
 
 const bool PerpendicularTailInScenario::CheckReplan() {
@@ -2155,7 +2083,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
                              (lat_condition_2 && heading_condition_2);
 
   const bool static_condition =
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;

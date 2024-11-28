@@ -18,8 +18,9 @@ class RuleBasedSlotRelease {
   RuleBasedSlotRelease() = default;
 
   void Process(
-      const LocalView *local_view, const MeasurementData *measures_ptr,
-      const std::shared_ptr<ApaStateMachineManager> state_machine_manger_ptr,
+      const LocalView *local_view,
+      const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+      const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
       std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map,
       apa_planner::SlotManager::Frame &frame);
 
@@ -32,8 +33,7 @@ class RuleBasedSlotRelease {
   void ParkingActivateProcess(
       std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map);
 
-  const bool IsEgoCloseToObs(const LocalView *local_view,
-                             const MeasurementData *measures_ptr);
+  const bool IsEgoCloseToObs(const LocalView *local_view);
 
   bool IsPassageAreaEnough(const common::SlotInfo *slot);
 
@@ -59,9 +59,10 @@ class RuleBasedSlotRelease {
   const ApaParameters *config_;
 
   const LocalView *local_view_;
-  const MeasurementData *measures_ptr_;
 
-  std::shared_ptr<ApaStateMachineManager> state_machine_manger_ptr_;
+  std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
+
+  std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
 
   // todo: move to collision detection
   ParkObstacleList obs_list_;

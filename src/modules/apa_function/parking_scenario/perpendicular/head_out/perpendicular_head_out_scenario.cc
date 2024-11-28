@@ -2,10 +2,10 @@
 
 #include <queue>
 
-#include "src/modules/apa_function/apa_param_config.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 namespace apa_planner {
@@ -153,7 +153,7 @@ void PerpendicularHeadOutScenario::PlanCore() {
 }
 
 const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
-  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
 
   frame_.correct_path_for_limiter = false;
@@ -268,10 +268,11 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     }
   }
 
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
 
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
@@ -340,7 +341,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
 
   // update stuck by uss time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag &&
+      measures_ptr->GetStaticFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
@@ -351,7 +352,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
   // update stuck time
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      measures_ptr->static_flag &&
+      measures_ptr->GetStaticFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
@@ -369,7 +370,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
   // fix slot
   if (ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().fix_slot_occupied_ratio &&
-      !frame_.is_fix_slot && measures_ptr->static_flag) {
+      !frame_.is_fix_slot && measures_ptr->GetStaticFlag()) {
     frame_.is_fix_slot = true;
   }
 
@@ -1321,7 +1322,7 @@ const bool PerpendicularHeadOutScenario::CheckSegCompleted() {
   bool is_seg_complete = false;
   if (frame_.spline_success) {
     if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
       ILOG_INFO << "close to target, need wait a certain time!";
       if (frame_.stuck_uss_time > 0.068) {
         ILOG_INFO << "wait a certain time, start plan";
@@ -1335,7 +1336,7 @@ const bool PerpendicularHeadOutScenario::CheckSegCompleted() {
 
 const bool PerpendicularHeadOutScenario::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
     if (frame_.stuck_uss_time >
         apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1351,7 +1352,7 @@ const bool PerpendicularHeadOutScenario::CheckUssStucked() {
 const bool PerpendicularHeadOutScenario::CheckColDetStucked() {
   if (frame_.remain_dist_col_det <
           apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by col det!, need wait a certain time!";
     if (frame_.stuck_uss_time >
         apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1431,7 +1432,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   const bool lat_condition = heading_condition_1 && heading_condition_2;
 
   const bool static_condition =
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;

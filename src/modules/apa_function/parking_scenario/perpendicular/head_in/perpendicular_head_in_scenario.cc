@@ -9,8 +9,6 @@
 #include <iostream>
 #include <queue>
 
-#include "src/modules/apa_function/apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_utils.h"
 #include "apa_world.h"
 #include "basic_types.pb.h"
@@ -31,6 +29,8 @@
 #include "perpendicular_head_in_path_generator.h"
 #include "planning_plan_c.h"
 #include "slot_management_info.pb.h"
+#include "src/modules/apa_function/apa_param_config.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -70,8 +70,8 @@ const double PerpendicularHeadInScenario::CalRemainDistFromPath() {
     double s_proj = 0.0;
     bool success = pnc::geometry_lib::CalProjFromSplineByBisection(
         0.0, frame_.current_path_length, s_proj,
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
-        frame_.x_s_spline, frame_.y_s_spline);
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(), frame_.x_s_spline,
+        frame_.y_s_spline);
 
     if (success == true) {
       remain_dist = frame_.current_path_length - s_proj;
@@ -211,8 +211,8 @@ void PerpendicularHeadInScenario::PlanCore() {
 }
 
 const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
-  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
-  const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
 
   frame_.correct_path_for_limiter = false;
   frame_.replan_flag = false;
@@ -222,7 +222,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
   // update target slot info
   if (!frame_.is_fix_slot) {
     ego_slot_info.target_managed_slot =
-        slot_manager_ptr_->GetEgoSlotInfo().select_slot_filter;
+        slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
 
     const auto& slot_points =
         ego_slot_info.target_managed_slot.corner_points().corner_point();
@@ -274,9 +274,10 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
     ego_slot_info.origin_pt_0_heading = 0.0;
   }
   // update ego slot info
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
@@ -284,14 +285,14 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
 
   // update fusion obj info
   ego_slot_info.fus_obj_valid_flag =
-      slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
+      slot_manager_ptr->GetEgoSlotInfo().fus_obj_valid_flag;
 
   ego_slot_info.obs_pt_vec_slot.clear();
   ego_slot_info.obs_pt_vec_slot.reserve(
-      slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot.size());
+      slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot.size());
 
   for (const Eigen::Vector2d& obs_pt :
-       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot) {
+       slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot) {
     const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
     ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
   }
@@ -299,7 +300,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
   // update limiter info
   // ILOG_INFO << " fix limiter = " << ego_slot_info.fix_limiter);
   if (!ego_slot_info.fix_limiter) {
-    ego_slot_info.limiter = slot_manager_ptr_->GetEgoSlotInfo().limiter;
+    ego_slot_info.limiter = slot_manager_ptr->GetEgoSlotInfo().limiter;
   }
 
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
@@ -373,15 +374,16 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
     const auto pM23 =
         0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
     Eigen::Vector2d ego_to_slot_center_vec =
-        0.5 * (pM01 + pM23) - measures_ptr->pos;
+        0.5 * (pM01 + pM23) - measures_ptr->GetPos();
 
     const double cross_ego_to_slot_center =
-        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->heading_vec,
+        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
                                                 ego_to_slot_center_vec);
 
     const double cross_ego_to_slot_heading =
         pnc::geometry_lib::GetCrossFromTwoVec2d(
-            measures_ptr->heading_vec, ego_slot_info.slot_origin_heading_vec);
+            measures_ptr->GetHeadingVec(),
+            ego_slot_info.slot_origin_heading_vec);
 
     // judge slot side via slot center and heading
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
@@ -436,7 +438,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
 
   // update stuck by uss time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag &&
+      measures_ptr->GetStaticFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_IN_CAR_FRONT) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
@@ -447,7 +449,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
   // update stuck time
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      measures_ptr->static_flag &&
+      measures_ptr->GetStaticFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_IN_CAR_FRONT) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
@@ -465,7 +467,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
   // fix slot
   if (ego_slot_info.terminal_err.heading <
           apa_param.GetParam().headin_multi_plan_min_heading_err &&
-      !frame_.is_fix_slot && measures_ptr->static_flag) {
+      !frame_.is_fix_slot && measures_ptr->GetStaticFlag()) {
     frame_.is_fix_slot = true;
     ego_slot_info.fix_limiter = true;
   }
@@ -483,9 +485,7 @@ const bool PerpendicularHeadInScenario::UpdateEgoSlotInfo() {
 
   ILOG_INFO << "slot_occupied_ratio = " << ego_slot_info.slot_occupied_ratio;
 
-  ILOG_INFO << "vel_ego = " << measures_ptr->vel;
   ILOG_INFO << "stuck_time = " << frame_.stuck_time << " s";
-  ILOG_INFO << "static_flag = " << measures_ptr->static_flag;
   return true;
 }
 
@@ -1551,7 +1551,7 @@ const bool PerpendicularHeadInScenario::CheckFinished() {
                              (lat_condition_2 && heading_condition_2);
 
   const bool static_condition =
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
@@ -1596,7 +1596,7 @@ const bool PerpendicularHeadInScenario::CheckSegCompleted() {
   bool is_seg_complete = false;
   if (frame_.spline_success) {
     if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
       ILOG_INFO << "close to target, need wait a certain time!";
       if (frame_.stuck_uss_time > 0.068) {
         ILOG_INFO << "wait a certain time, start plan";
@@ -1610,7 +1610,7 @@ const bool PerpendicularHeadInScenario::CheckSegCompleted() {
 
 const bool PerpendicularHeadInScenario::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by uss!, need wait a certain time!";
     if (frame_.stuck_uss_time >
         apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1626,7 +1626,7 @@ const bool PerpendicularHeadInScenario::CheckUssStucked() {
 const bool PerpendicularHeadInScenario::CheckColDetStucked() {
   if (frame_.remain_dist_col_det <
           apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle by col det!, need wait a certain time!";
     if (frame_.stuck_uss_time >
         apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1700,7 +1700,7 @@ const bool PerpendicularHeadInScenario::CheckDynamicUpdate() {
   //           << std::endl;
   update_flag =
       (update_flag && gear_command_ == pnc::geometry_lib::SEG_GEAR_DRIVE &&
-       !apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) &&
+       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) &&
       pt_center_replan_jump_dist_ > apa_param.GetParam().max_slot_jump_dist &&
       pt_center_replan_jump_heading_ >
           apa_param.GetParam().max_slot_jump_heading;
@@ -2388,9 +2388,9 @@ void PerpendicularHeadInScenario::RealTimeDynamicColDet(
       phi_vec.emplace_back(pt.heading);
     }
 
-    JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 8)
-    JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 8)
-    JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 8)
+    JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 3)
+    JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 3)
+    JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 3)
 
     // the dist that car can move
     double car_safe_move_dist = 0.0;

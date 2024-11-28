@@ -91,8 +91,8 @@ void ParkingScenario::SetParkingStatus(uint8_t status) {
 
 void ParkingScenario::GenPlanningOutput() {
   pnc::geometry_lib::PathPoint current_ego_pose(
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.heading);
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetHeading());
 
   ILOG_INFO << "frame_.plan_stm.planning_status = "
             << static_cast<int>(frame_.plan_stm.planning_status)
@@ -237,8 +237,8 @@ const double ParkingScenario::CalRemainDistFromPath() {
     double s_proj = 0.0;
     bool success = pnc::geometry_lib::CalProjFromSplineByBisection(
         0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
-        frame_.x_s_spline, frame_.y_s_spline);
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(), frame_.x_s_spline,
+        frame_.y_s_spline);
 
     if (success == true) {
       remain_dist = frame_.current_path_length - s_proj;
@@ -262,7 +262,8 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
   uss_obstacle_avoider_ptr->Update(&planning_output_,
-                                   apa_world_ptr_->GetApaDataPtr());
+                                   apa_world_ptr_->GetApaDataPtr(),
+                                   apa_world_ptr_->GetMeasureDataManagerPtr());
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
@@ -278,7 +279,9 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
 
   ILOG_INFO << "origin_uss remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-            << "  uss remain dist = " << remain_dist;
+            << "  uss remain dist = " << remain_dist
+            << "  enable_corner_uss_process = "
+            << apa_param.GetParam().enable_corner_uss_process;
 
   ILOG_INFO << "origin_obs_pt remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
