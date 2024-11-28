@@ -2137,7 +2137,7 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
 void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
     std::shared_ptr<VirtualLane> last_track_ego_lane,
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-    const std::vector<int>& order_ids, int zero_relative_id_order_id_index) {
+    const std::vector<int>& order_ids, int& zero_relative_id_order_id_index) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& plannig_init_point = ego_state->planning_init_point();
