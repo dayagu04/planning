@@ -382,8 +382,8 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
         obstacle->obstacle()->id());  // 加入这些障碍物id int
   }
 
-  obs_start_s_ = std::max(ego_frenet_boundary_.s_end,
-                          obs_start_s_);  // 障碍物的尾部 自车的头部 靠前的
+  // obs_start_s_ = std::max(ego_frenet_boundary_.s_end,
+  //                         obs_start_s_);  // 障碍物的尾部 自车的头部 靠前的 1128
   if (obs_left_l_ <= obs_right_l_) {  // inti -10 left 10 right
     lane_borrow_decider_output_.lane_borrow_failed_reason =
         NO_PASSABLE_OBSTACLE;
@@ -734,8 +734,8 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   //  going to overtake static area [the area is updating ]
-  if (obs_start_s_ - ego_frenet_boundary_.s_end > kSafeBackDistance) {
-    return false;
+  if (obs_end_s_ - ego_frenet_boundary_.s_end > kSafeBackDistance) {
+    return false;//
   }
   for (const auto& obstacle :
        obstacles) {  // 筛选 障碍物 是否结束借道 开始返回原车道
@@ -772,10 +772,14 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
       continue;
     }
 
+    // if (frenet_obstacle_sl.s_end >
+    //     ego_frenet_boundary_.s_start - kSafeBackDistance) {  // 障碍物在自车后方
+    //   return false;
+    // }  // ：大后方
     if (frenet_obstacle_sl.s_end >
-        ego_frenet_boundary_.s_start - kSafeBackDistance) {  // 障碍物在自车后方
+        ego_frenet_boundary_.s_start ) {//1128
       return false;
-    }  // ：大后方
+    }
 
     if (ego_speed_ - obs_v > kObsSpeedBuffer) {  // 自车速度更高直接忽略
       continue;
