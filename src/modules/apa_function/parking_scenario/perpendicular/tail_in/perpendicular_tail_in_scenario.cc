@@ -454,8 +454,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   // real time dynamic col det
   frame_.remain_dist_col_det = 3.0;
-  if (apa_param.GetParam().dynamic_col_det_enable &&
-      !apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
+  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
       !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
 
@@ -635,10 +634,12 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       }
     }
 
-    frame_.remain_dist_col_det = car_safe_move_dist;
+    if (apa_param.GetParam().dynamic_col_det_enable) {
+      frame_.remain_dist_col_det = car_safe_move_dist;
 
-    frame_.remain_dist_col_det =
-        std::min(frame_.remain_dist_col_det, frame_.remain_dist);
+      frame_.remain_dist_col_det =
+          std::min(frame_.remain_dist_col_det, frame_.remain_dist);
+    }
 
     params.Reset();
     apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(params);
@@ -1135,7 +1136,7 @@ void PerpendicularTailInScenario::GenTlane() {
   slot_t_lane_.pt_lower_boundry_pos.x() =
       slot_t_lane_.pt_lower_boundry_pos.x() -
       apa_param.GetParam().rear_overhanging -
-      apa_param.GetParam().col_obs_safe_dist_normal - 0.05;
+      apa_param.GetParam().col_obs_safe_dist_normal - 0.168;
 
   // construct obstacle_t_lane_
   // for onstacle_t_lane    right is inside, left is outside
@@ -1535,33 +1536,31 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   const auto& planner_output = perpendicular_path_planner_.GetOutput();
   current_plan_path_vec_.clear();
   current_plan_path_vec_.reserve(5);
-  if (apa_param.GetParam().dynamic_col_det_enable) {
-    for (size_t i = planner_output.path_seg_index.first;
-         i <= planner_output.path_seg_index.second; ++i) {
-      const auto& path_seg_local = planner_output.path_segment_vec[i];
-      pnc::geometry_lib::PathSegment path_seg_global = path_seg_local;
-      if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-        path_seg_global.line_seg.pA =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pA);
-        path_seg_global.line_seg.pB =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pB);
-        path_seg_global.line_seg.heading = ego_slot_info.l2g_tf.GetHeading(
-            path_seg_local.GetLineSeg().heading);
-      } else if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-        path_seg_global.arc_seg.pA =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pA);
-        path_seg_global.arc_seg.pB =
-            ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pB);
-        path_seg_global.arc_seg.circle_info.center =
-            ego_slot_info.l2g_tf.GetPos(
-                path_seg_local.GetArcSeg().circle_info.center);
-        path_seg_global.arc_seg.headingA = ego_slot_info.l2g_tf.GetHeading(
-            path_seg_local.GetArcSeg().headingA);
-        path_seg_global.arc_seg.headingB = ego_slot_info.l2g_tf.GetHeading(
-            path_seg_local.GetArcSeg().headingB);
-      }
-      current_plan_path_vec_.emplace_back(std::move(path_seg_global));
+
+  for (size_t i = planner_output.path_seg_index.first;
+       i <= planner_output.path_seg_index.second; ++i) {
+    const auto& path_seg_local = planner_output.path_segment_vec[i];
+    pnc::geometry_lib::PathSegment path_seg_global = path_seg_local;
+    if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
+      path_seg_global.line_seg.pA =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pA);
+      path_seg_global.line_seg.pB =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetLineSeg().pB);
+      path_seg_global.line_seg.heading =
+          ego_slot_info.l2g_tf.GetHeading(path_seg_local.GetLineSeg().heading);
+    } else if (path_seg_local.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+      path_seg_global.arc_seg.pA =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pA);
+      path_seg_global.arc_seg.pB =
+          ego_slot_info.l2g_tf.GetPos(path_seg_local.GetArcSeg().pB);
+      path_seg_global.arc_seg.circle_info.center = ego_slot_info.l2g_tf.GetPos(
+          path_seg_local.GetArcSeg().circle_info.center);
+      path_seg_global.arc_seg.headingA =
+          ego_slot_info.l2g_tf.GetHeading(path_seg_local.GetArcSeg().headingA);
+      path_seg_global.arc_seg.headingB =
+          ego_slot_info.l2g_tf.GetHeading(path_seg_local.GetArcSeg().headingB);
     }
+    current_plan_path_vec_.emplace_back(std::move(path_seg_global));
   }
 
   const bool gear_steer_shift =

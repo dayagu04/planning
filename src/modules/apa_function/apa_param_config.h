@@ -295,6 +295,7 @@ struct ApaParameters {
   int prepare_max_try_count = 2;
   double third_prepare_heading_threshold = 26.68;
   double min_turn_radius = 5.5;
+  double safe_circle_radius = 5.8;
   double max_one_step_arc_radius = 8.5;
   double max_radius_in_slot = 12.66;
   double min_radius_out_slot = 7.8;

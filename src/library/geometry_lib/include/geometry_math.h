@@ -917,7 +917,7 @@ struct GeometryPath {
     }
   }
 
-  void PrintInfo(const bool enable_log = true);
+  void PrintInfo(const bool enable_log = true) const;
 
   void CalcCost();
 };
