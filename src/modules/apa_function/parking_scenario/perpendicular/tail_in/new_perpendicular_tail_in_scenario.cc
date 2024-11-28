@@ -21,7 +21,7 @@ void PerpendicularTailInScenario::PlanCoreParking(ApaSlot& apa_slot) {}
 
 void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
   // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
-  const auto& measures_data = apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto measures_data = apa_world_ptr_->GetMeasureDataManagerPtr();
   const Eigen::Vector2d pM01 =
       0.5 * (apa_slot.processed_corner_coord_global.pt_0 +
              apa_slot.processed_corner_coord_global.pt_1);
@@ -93,11 +93,12 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
   if (frame_.is_replan_first) {
     // 计算车位方向
     const Eigen::Vector2d ego_to_slot_center_vec =
-        apa_slot.origin_corner_coord_global.pt_center - measures_data.pos;
+        apa_slot.origin_corner_coord_global.pt_center - measures_data->GetPos();
     const double cross_ego_to_slot_center = geometry_lib::GetCrossFromTwoVec2d(
-        measures_data.heading_vec, ego_to_slot_center_vec);
+        measures_data->GetHeadingVec(), ego_to_slot_center_vec);
     const double cross_ego_to_slot_heading = geometry_lib::GetCrossFromTwoVec2d(
-        measures_data.heading_vec, apa_slot.origin_pose_global.heading_vec);
+        measures_data->GetHeadingVec(),
+        apa_slot.origin_pose_global.heading_vec);
     // judge slot side via slot center and heading
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
       ego_car_info_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
@@ -109,8 +110,8 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
     }
   }
 
-  ego_car_info_slot.cur_pose = apa_slot.g2l_tf.GetPose(
-      geometry_lib::PathPoint(measures_data.pos, measures_data.heading));
+  ego_car_info_slot.cur_pose = apa_slot.g2l_tf.GetPose(geometry_lib::PathPoint(
+      measures_data->GetPos(), measures_data->GetHeading()));
 
   // 初步根据车位或限位器计算终点位置
   if (!apa_slot.limiter.valid) {
@@ -133,7 +134,7 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
   ego_car_info_slot.target_pose.pos.y() =
       apa_param.GetParam().terminal_target_y;
 
-  if (measures_data.static_flag && !measures_data.brake_flag &&
+  if (measures_data->GetStaticFlag() && !measures_data->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     // 重规划成功会清0

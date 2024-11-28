@@ -8,7 +8,6 @@
 #include <iostream>
 #include <vector>
 
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
 #include "config_context.h"
@@ -18,14 +17,15 @@
 #include "math_lib.h"
 #include "parallel_park_in_scenario.h"
 #include "parallel_path_generator.h"
-#include "slot_manager.h"
 #include "slot_management_info.pb.h"
+#include "slot_manager.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathGenerator *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface *pApaPlanInterface= nullptr;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
 static planning::apa_planner::ParallelParkInScenario parallel_park_planner;
@@ -35,7 +35,7 @@ int Init() {
   pBase = new ParallelPathGenerator();
   pBase->Reset();
 
-  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
   SyncParkingParameters(true);
   return 0;
 }
@@ -151,10 +151,8 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_world_ptr->GetApaDataPtr()->simu_param.sample_ds = path_ds;
   apa_world_ptr->GetApaDataPtr()->simu_param.is_complete_path = true;
 
-  apa_world_ptr->GetApaDataPtr()->measurement_data.pos << ego_x, ego_y;
-  apa_world_ptr->GetApaDataPtr()->measurement_data.heading = ego_heading;
-  apa_world_ptr->GetApaDataPtr()->measurement_data.heading_vec =
-      geometry_lib::GetUnitTangVecByHeading(ego_heading);
+  apa_world_ptr->GetMeasureDataManagerPtr()->SetPose(
+      Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
   DEBUG_PRINT("1");
   planning::common::SlotInfo select_slot_filter;

@@ -2953,7 +2953,7 @@ const bool IsTwoNumerEqual(const double a, const double b, const double err) {
   return false;
 }
 
-void GeometryPath::PrintInfo(const bool enable_log) {
+void GeometryPath::PrintInfo(const bool enable_log) const {
   ILOG_INFO_IF(enable_log) << "path_count = " << static_cast<int>(path_count)
                            << "  gear_change_count = "
                            << static_cast<int>(gear_change_count)

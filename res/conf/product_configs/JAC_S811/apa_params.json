@@ -227,6 +227,7 @@
   "comment_15": "path planner params",
   "new_itervative_solution": false,
   "min_turn_radius": 5.43086,
+  "safe_circle_radius": 5.98,
   "max_radius_in_slot": 12.66,
   "min_radius_out_slot": 7.8,
   "max_one_step_arc_radius": 8.5,

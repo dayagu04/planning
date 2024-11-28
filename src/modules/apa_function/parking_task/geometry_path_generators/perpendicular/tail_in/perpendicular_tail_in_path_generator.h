@@ -92,8 +92,6 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
 
     double turn_radius = 5.5;
 
-    double radius_gain = 1.0;
-
     size_t adjust_fail_count = 0;
 
     pnc::geometry_lib::LineSegment target_line;
@@ -128,7 +126,6 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
       rough_plan_time = 0.0;
 
       turn_radius = 5.5;
-      radius_gain = 1.0;
 
       adjust_fail_count = 0;
 

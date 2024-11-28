@@ -179,6 +179,7 @@ const bool PerpendicularTailInPathGenerator::NewPreparePathPlan() {
       ILOG_INFO << "use ego pose to multi_adjust plan";
       optimal_rough_geometry_path.PrintInfo();
       calc_params_.pre_plan_case = PrePlanCase::EGO_POSE;
+      calc_params_.first_path_gear = optimal_rough_geometry_path.cur_gear;
       return true;
     } else {
       ILOG_INFO << "use mid point to multi_adjust plan";
@@ -238,7 +239,9 @@ const bool PerpendicularTailInPathGenerator::NewPreparePathPlan() {
                 << calc_params_.safe_circle_tang_pt.pos.transpose()
                 << " heading = "
                 << calc_params_.safe_circle_tang_pt.heading * kRad2Deg
-                << "  path length = " << output_.length;
+                << "  path length = " << output_.length
+                << "  first_path_gear = "
+                << geometry_lib::GetGearString(calc_params_.first_path_gear);
 
       return true;
     }
@@ -1457,8 +1460,12 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     // channel, it is difficult to plan the initial position to the target
     // line. If the previous trajectory is cleared, then continue to try a
     // reverse gear straight line
-    if (calc_params_.first_multi_plan &&
-        calc_params_.pre_plan_case != PrePlanCase::EGO_POSE && i == 0 &&
+    const bool try_compensate_line =
+        (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) ||
+        (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE &&
+         calc_params_.first_path_gear == geometry_lib::SEG_GEAR_DRIVE);
+
+    if (calc_params_.first_multi_plan && try_compensate_line && i == 0 &&
         success_geometry_path_vec.size() < 1) {
       for (const geometry_lib::GeometryPath& geometry_path :
            geometry_path_vec) {
@@ -1474,6 +1481,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
                 std::fabs(geometry_path.end_pose.pos.y()) &&
             std::fabs(geometry_path.end_pose.heading * kRad2Deg) > 6.8 &&
             compensate_line_try_count < max_compensate_line_try_count) {
+          ILOG_INFO << "try use a reverse gear straight line to cast off "
+                       "inside stuck";
           i = -1;
           geometry_path_vec.clear();
           success_geometry_path_vec.clear();
@@ -1622,7 +1631,7 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
   } else if (plan_request == PlanRequest::OPTIMAL_PATH) {
     // 只要是第一次进入multi_adjust plan 都尝试用两种挡位进行规划 判断优劣
     // 后续则尽量固定挡位
-    if (calc_params_.first_multi_plan) {
+    if (calc_params_.first_multi_plan && input_.is_replan_first) {
       geometry_lib::GeometryPath geometry_path_r;
       geometry_lib::GeometryPath geometry_path_d;
       OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_REVERSE,
@@ -2287,7 +2296,10 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
   arc_s_2.headingB = target_line.heading;
 
   const double radius = calc_params_.turn_radius;
-  std::vector<double> radius_vec;
+  std::vector<double> radius_vec{2.5 * radius,  2.25 * radius, 2.0 * radius,
+                                 1.75 * radius, 1.5 * radius,  1.25 * radius,
+                                 1.0 * radius};
+
   std::vector<geometry_lib::PathPoint> virtual_target_pose_vec;
 
   if (CalOccupiedRatio(geometry_lib::PathPoint(arc_s_1.pA, arc_s_1.headingA)) >
@@ -2295,29 +2307,29 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
       ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
     const double dy = (arc_s_1.pA.y() > target_line.pA.y()) ? 0.01 : -0.01;
 
-    for (size_t i = 0;
-         std::fabs(i * dy) < apa_param.GetParam().target_pos_err * 0.5; ++i) {
+    const double max_lat_err = (input_.is_replan_dynamic)
+                                   ? apa_param.GetParam().target_pos_err
+                                   : apa_param.GetParam().target_pos_err * 0.5;
+
+    for (size_t i = 0; std::fabs(i * dy) < max_lat_err; ++i) {
       virtual_target_pose_vec.emplace_back(geometry_lib::PathPoint(
           Eigen::Vector2d(target_line.pA.x(), target_line.pA.y() + i * dy),
           target_line.heading));
     }
-    radius_vec = std::vector<double>{1.5 * radius, 1.75 * radius, 2.0 * radius,
-                                     2.25 * radius, 2.5 * radius};
 
     ILOG_INFO_IF(enable_log) << "try use different target pos";
   } else {
     virtual_target_pose_vec.emplace_back(
         geometry_lib::PathPoint(target_line.pA, target_line.heading));
-    radius_vec = std::vector<double>{
-        1.0 * radius, 1.25 * radius, 1.5 * radius, 1.75 * radius,
-        2.0 * radius, 2.25 * radius, 2.5 * radius};
   }
 
-  std::reverse(radius_vec.begin(), radius_vec.end());
   bool find_res = false;
   for (const geometry_lib::PathPoint& virtual_target_pose :
        virtual_target_pose_vec) {
     for (const double radius : radius_vec) {
+      ILOG_INFO_IF(enable_log)
+          << "radius = " << radius
+          << "  dy = " << virtual_target_pose.pos.y() - target_line.pA.y();
       arc_s_1.SetRadius(radius);
       arc_s_2.SetRadius(radius);
       arc_s_2.pB = virtual_target_pose.pos;
@@ -2575,12 +2587,13 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
                                 ? geometry_lib::SEG_GEAR_REVERSE
                                 : geometry_lib::SEG_GEAR_DRIVE;
 
-  const double lat_err = (line_gear == geometry_lib::SEG_GEAR_DRIVE)
-                             ? apa_param.GetParam().target_pos_err
-                             : apa_param.GetParam().target_pos_err * 0.5;
+  const double lat_err =
+      (line_gear == geometry_lib::SEG_GEAR_DRIVE || input_.is_replan_dynamic)
+          ? apa_param.GetParam().target_pos_err
+          : apa_param.GetParam().target_pos_err * 0.5;
 
   const double heading_err =
-      (line_gear == geometry_lib::SEG_GEAR_DRIVE)
+      (line_gear == geometry_lib::SEG_GEAR_DRIVE || input_.is_replan_dynamic)
           ? apa_param.GetParam().target_heading_err * kDeg2Rad
           : apa_param.GetParam().target_heading_err * kDeg2Rad * 0.5;
 

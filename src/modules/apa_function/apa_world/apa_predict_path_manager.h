@@ -1,3 +1,4 @@
+#pragma once
 #include "geometry_math.h"
 #include "local_view.h"
 

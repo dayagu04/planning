@@ -12,7 +12,6 @@
 
 #include "apa_data.h"
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_utils.h"
 #include "apa_world.h"
 #include "common_c.h"
@@ -26,6 +25,7 @@
 #include "math_lib.h"
 #include "obstacle.h"
 #include "parallel_path_generator.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -162,7 +162,7 @@ void ParallelParkInScenario::PlanCore() {
 }
 
 const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
-  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
 
   const auto& select_slot_slm =
@@ -263,10 +263,11 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
                             ego_slot_info.slot_origin_heading);
 
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
 
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
@@ -306,7 +307,6 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 
   std::cout << "slot_side = " << static_cast<int>(t_lane_.slot_side)
             << std::endl;
-  std::cout << "vel_ego = " << measures_ptr->vel << std::endl;
 
   // calc slot occupied ratio
 
@@ -395,7 +395,7 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
           ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
@@ -1416,7 +1416,7 @@ const bool ParallelParkInScenario::CheckSegCompleted() {
         std::min(frame_.remain_dist_uss, frame_.remain_dist);
 
     if (min_remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
       frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
 
       if (!frame_.is_replan_by_uss) {
@@ -1550,7 +1550,7 @@ const bool ParallelParkInScenario::CheckFinished() {
   }
 
   const bool static_condition =
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   DEBUG_PRINT("static_condition = " << static_condition);
 

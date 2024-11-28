@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 #include "Eigen/Core"
 #include "apa_obstacle.h"
 #include "apa_slot.h"
@@ -350,7 +351,6 @@ struct ApaData {
 
   CarPredictTraj car_predict_traj;
 
-  MeasurementData measurement_data;
   ApaSlots apa_slots;
   UssDistance uss_dis;
 
@@ -371,7 +371,6 @@ struct ApaData {
 
   void Reset() {
     car_predict_traj.Reset();
-    measurement_data.Reset();
     apa_slots.Reset();
     uss_dis.Reset();
     apa_obs_map.clear();

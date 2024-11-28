@@ -8,17 +8,17 @@
 #include <memory>
 
 #include "apa_data.h"
+#include "apa_measure_data_manager.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "collision_detection/uss_obstacle_avoidance.h"
 #include "common.pb.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
-#include "slot_manager.h"
 #include "slot_management_info.pb.h"
+#include "slot_manager.h"
 #include "spline.h"
 #include "spline_projection.h"
-#include "collision_detection/uss_obstacle_avoidance.h"
 
 #define APA_COMPARE_PLANNING_TRAJ_POINTS_NUM 26
 
@@ -52,8 +52,12 @@ class ApaWorld {
     return lateral_path_optimizer_ptr_;
   }
 
+  std::shared_ptr<ApaMeasureDataManager> GetMeasureDataManagerPtr() {
+    return measure_data_ptr_;
+  }
+
   std::shared_ptr<ApaStateMachineManager> GetStateMachineManagerPtr() {
-    return state_machine_manager_ptr_;
+    return state_machine_ptr_;
   }
 
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
@@ -73,7 +77,8 @@ class ApaWorld {
   void UpdateCarPredictTraj();
 
   std::shared_ptr<ApaData> apa_data_ptr_;
-  std::shared_ptr<ApaStateMachineManager> state_machine_manager_ptr_;
+  std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
+  std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<SlotManager> slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;

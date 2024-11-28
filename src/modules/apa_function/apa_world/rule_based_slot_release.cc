@@ -15,19 +15,20 @@
 namespace planning {
 namespace apa_planner {
 void RuleBasedSlotRelease::Process(
-    const LocalView *local_view, const MeasurementData *measures_ptr,
-    const std::shared_ptr<ApaStateMachineManager> state_machine_manger_ptr,
+    const LocalView *local_view,
+    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+    const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
     std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map,
     apa_planner::SlotManager::Frame &frame) {
   frame_ = &frame;
   config_ = &apa_param.GetParam();
   local_view_ = local_view;
-  measures_ptr_ = measures_ptr;
-  state_machine_manger_ptr_ = state_machine_manger_ptr;
+  state_machine_ptr_ = state_machine_ptr;
+  measure_data_ptr_ = measure_data_ptr;
 
   // assemble slot_management_info
   frame_->slot_management_info.mutable_slot_info_vec()->Clear();
-  if (state_machine_manger_ptr_->IsSeachingStatus()) {
+  if (state_machine_ptr_->IsSeachingStatus()) {
     ParkingLotCruiseProcess(fusion_slot_map);
   } else {
     ParkingActivateProcess(fusion_slot_map);
@@ -48,9 +49,9 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
   std::map<double, apa_planner::SlotInfoWindow *> slot_map;
   for (auto &pair : frame_->slot_info_window_map) {
     const auto &slot = pair.second.GetFusedInfo();
-    Eigen::Vector2d car_mirror = frame_->measurement_data_ptr->pos +
-                                 frame_->measurement_data_ptr->heading_vec *
-                                     config_->lon_dist_mirror_to_rear_axle;
+    Eigen::Vector2d car_mirror =
+        measure_data_ptr_->GetPos() + measure_data_ptr_->GetHeadingVec() *
+                                          config_->lon_dist_mirror_to_rear_axle;
 
     const double dist =
         (car_mirror - Eigen::Vector2d(slot.center().x(), slot.center().y()))
@@ -58,7 +59,7 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
     slot_map[dist] = &pair.second;
   }
 
-  bool is_ego_collision = IsEgoCloseToObs(local_view_, measures_ptr_);
+  bool is_ego_collision = IsEgoCloseToObs(local_view_);
   if (is_ego_collision) {
     ILOG_INFO << "ego is collision";
   }
@@ -134,11 +135,9 @@ const double RuleBasedSlotRelease::CalLonDistSlot2Car(
   }
 
   const Eigen::Vector2d ego_pos_to_pt0_vec =
-      origin_pt_0 - frame_->measurement_data_ptr->pos;
+      origin_pt_0 - measure_data_ptr_->GetPos();
 
-  const Eigen::Vector2d ego_unit_heading =
-      pnc::geometry_lib::GetUnitTangVecByHeading(
-          frame_->measurement_data_ptr->heading);
+  const Eigen::Vector2d ego_unit_heading = measure_data_ptr_->GetHeadingVec();
 
   const double cross_product = pnc::geometry_lib::GetCrossFromTwoVec2d(
       ego_unit_heading, ego_pos_to_pt0_vec);
@@ -146,10 +145,10 @@ const double RuleBasedSlotRelease::CalLonDistSlot2Car(
   Eigen::Vector2d mirror_pos;
   if (cross_product < -1e-5) {
     // right side slot
-    mirror_pos = frame_->measurement_data_ptr->right_mirror_pos;
+    mirror_pos = measure_data_ptr_->GetRightMirrorPos();
   } else if (cross_product > 1e-5) {
     // left side slot
-    mirror_pos = frame_->measurement_data_ptr->left_mirror_pos;
+    mirror_pos = measure_data_ptr_->GetLeftMirrorPos();
   }
 
   const Eigen::Vector2d origin_pt_01_vec = origin_pt_1 - origin_pt_0;
@@ -213,7 +212,7 @@ const bool RuleBasedSlotRelease::UpdateEgoParallelSlotInfoInSearching(
           .normalized();
 
   const double dot_ego_to_v10 =
-      frame_->measurement_data_ptr->heading_vec.dot(v_10_unit);
+      measure_data_ptr_->GetHeadingVec().dot(v_10_unit);
   // ILOG_INFO <<"dot ego to v10 = " << dot_ego_to_v10);
 
   // judge slot side via slot pt3
@@ -282,10 +281,10 @@ const bool RuleBasedSlotRelease::UpdateEgoParallelSlotInfoInSearching(
                             ego_slot_info.slot_origin_heading);
 
   ego_slot_info.ego_pos_slot =
-      ego_slot_info.g2l_tf.GetPos(frame_->measurement_data_ptr->pos);
+      ego_slot_info.g2l_tf.GetPos(measure_data_ptr_->GetPos());
 
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(frame_->measurement_data_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measure_data_ptr_->GetHeading());
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
@@ -465,8 +464,7 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotCoarseRelease(
   return true;
 }
 
-const bool RuleBasedSlotRelease::IsEgoCloseToObs(
-    const LocalView *local_view, const MeasurementData *measures_ptr) {
+const bool RuleBasedSlotRelease::IsEgoCloseToObs(const LocalView *local_view) {
   // move all obstacle related code to one place.
   PointCloudObstacleTransform transform;
 
@@ -475,7 +473,8 @@ const bool RuleBasedSlotRelease::IsEgoCloseToObs(
 
   PathSafeChecker safe_check;
   Pose2D ego =
-      Pose2D(measures_ptr->pos[0], measures_ptr->pos[1], measures_ptr->heading);
+      Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
+             measure_data_ptr_->GetHeading());
   bool collision = safe_check.CalcEgoCollision(&obs_list_, ego, 0.1, 0.1);
 
   return collision;
@@ -550,7 +549,7 @@ bool RuleBasedSlotRelease::IsPassageAreaEnough(const common::SlotInfo *slot) {
 }
 
 const bool RuleBasedSlotRelease::NeedCheckSlotReleaseByFSM() const {
-  auto fsm = state_machine_manger_ptr_->GetStateMachine();
+  auto fsm = state_machine_ptr_->GetStateMachine();
   if (fsm == ApaStateMachineT::SEARCH_IN_NO_SELECTED ||
       fsm == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR ||
       fsm == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT ||

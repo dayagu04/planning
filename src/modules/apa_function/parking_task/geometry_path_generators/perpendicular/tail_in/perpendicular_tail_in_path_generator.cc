@@ -59,8 +59,6 @@ void PerpendicularTailInPathGenerator::Preprocess() {
   calc_params_.strict_col_lon_safe_dist =
       apa_param.GetParam().col_obs_safe_dist_strict + 0.068;
 
-  calc_params_.radius_gain = 1.068;
-
   // calc slot side by Tlane
   if (input_.tlane.pt_inside.y() > input_.tlane.pt_outside.y()) {
     calc_params_.is_left_side = true;
@@ -1665,8 +1663,7 @@ const bool PerpendicularTailInPathGenerator::PreparePlanSecond() {
 }
 
 void PerpendicularTailInPathGenerator::CalMonoSafeCircle() {
-  const double mono_radius =
-      calc_params_.turn_radius * calc_params_.radius_gain;
+  const double mono_radius = apa_param.GetParam().safe_circle_radius;
 
   calc_params_.mono_safe_circle.center.y() =
       calc_params_.target_line.pA.y() +
@@ -1740,8 +1737,7 @@ bool PerpendicularTailInPathGenerator::CalMultiSafeCircle() {
       pt_inside.x(), input_.tlane.corner_inside_slot.x() -
                          apa_param.GetParam().max_pt_inside_drop_dx_multi);
 
-  const double multi_radius =
-      calc_params_.turn_radius * calc_params_.radius_gain;
+  const double multi_radius = apa_param.GetParam().safe_circle_radius;
 
   pnc::geometry_lib::Circle circle_p1;
   circle_p1.center = pt_inside;
