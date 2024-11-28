@@ -21,7 +21,7 @@ constexpr double kVehicleInverseCrossingSpeedThd = 30 / 3.6;
 constexpr int32_t kVirtualVRUObstacleBaseId = 10000;
 constexpr double kVirtualVRUObstacleLength = 5.0;
 constexpr double kVirtualVRUObstacleWidth = 2.0;
-const int32_t kNumNots = 50;
+const int32_t kNumNots = 25;
 const double kStepTime = 0.1;
 } // namespace
 
@@ -501,6 +501,7 @@ bool CrossingAgentDecider::ConstructVirtualAgentByCrossing(const agent::Agent* c
   virtual_agent.set_speed(0.0);
   virtual_agent.set_theta(obs_point.theta());
   virtual_agent.set_accel(0.0);
+  virtual_agent.set_fusion_source(1);//camera avoiding filtered in st
 
   planning_math::Box2d box(planning_math::Vec2d(virtual_agent.x(), virtual_agent.y()),
                              virtual_agent.theta(), virtual_agent.length(), virtual_agent.width());
