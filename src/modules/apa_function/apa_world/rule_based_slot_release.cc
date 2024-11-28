@@ -92,6 +92,8 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
       slot->set_is_release(false);
       slot->set_is_occupied(true);
       ILOG_INFO << "distance is big";
+
+      continue;
     }
 
     if (slot->corner_points().corner_point_size() != 4) {
@@ -104,18 +106,11 @@ void RuleBasedSlotRelease::ParkingLotCruiseProcess(
              Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
          slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) &&
-        slot->is_release() &&
-        config_->path_generator_type ==
-            apa_planner::ParkPathGenerationType::GEOMETRY_BASED &&
-        (state_machine_manger_ptr_->GetStateMachine() ==
-             ApaStateMachineT::ACTIVE_IN_CAR_FRONT ||
-         state_machine_manger_ptr_->GetStateMachine() ==
-             ApaStateMachineT::ACTIVE_IN_CAR_REAR)) {
+        NeedCheckSlotReleaseByFSM()) {
       IsPerpendicularSlotCoarseRelease(slot, pair.second);
 
     } else if (slot->slot_type() ==
-                   Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
-               slot->is_release()) {
+               Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
       IsParallelSlotCoarseRelease(slot, pair.second);
     }
   }
@@ -552,6 +547,19 @@ bool RuleBasedSlotRelease::IsPassageAreaEnough(const common::SlotInfo *slot) {
   bool collision = safe_check.IsPolygonCollision(&polygon);
 
   return collision ? false : true;
+}
+
+const bool RuleBasedSlotRelease::NeedCheckSlotReleaseByFSM() const {
+  auto fsm = state_machine_manger_ptr_->GetStateMachine();
+  if (fsm == ApaStateMachineT::SEARCH_IN_NO_SELECTED ||
+      fsm == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR ||
+      fsm == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT ||
+      fsm == ApaStateMachineT::ACTIVE_IN_CAR_REAR ||
+      fsm == ApaStateMachineT::ACTIVE_IN_CAR_FRONT) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace apa_planner
