@@ -360,10 +360,14 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
     kObserveFrames = read_json_keys<int>(
     json, std::vector<std::string>{"lane_borrow",
                                     "kObserveFrames"});
+    static_obs_buffer =
+    read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
+
   }
   double kMaxConcernObsDistance =  40.0;
   double kObsStaticVelThold =  0.1;
   int kObserveFrames =  30;
+  double static_obs_buffer = 0.5;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {

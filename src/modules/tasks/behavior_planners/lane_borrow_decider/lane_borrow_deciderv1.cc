@@ -334,6 +334,9 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
   obs_end_s_ = 0.0;
 
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
+  // const auto &lat_obstacle_decision = session_->environmental_model()
+  //                                   .get_lateral_obstacle()
+  //                                   ->lat_obstacle_decision();
   static_blocked_obj_vec_.clear();
   for (const auto& obstacle : obstacles) {  // 遍历 构造静态区域
     int idx = obstacle->obstacle()->id();
@@ -356,11 +359,21 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
             ego_frenet_boundary_.s_start) {  // lon concern area
       continue;
     }
-    if (frenet_obstacle_sl.l_start > left_width ||
-        frenet_obstacle_sl.l_end < -right_width) {
-      // obstacle is absolutly out ego current lane 障碍物全身在车道外的不考虑
+    // if (frenet_obstacle_sl.l_start > (left_width - config_.static_obs_buffer) ||
+    //     frenet_obstacle_sl.l_end < (- right_width +  config_.static_obs_buffer)) {
+    //   // obstacle is absolutly out ego current lane 障碍物全身在车道外的不考虑
+    //   continue;
+    // }
+    if (frenet_obstacle_sl.l_start > (right_width + vehicle_param_.width + config_.static_obs_buffer) ||
+        frenet_obstacle_sl.l_end < (left_width - vehicle_param_.width - config_.static_obs_buffer)) {
       continue;
     }
+    // bool is_lateral_aviod = lat_obstacle_decision.at(obstacle->obstacle()->id()) !=
+    //               LatObstacleDecisionType::IGNORE;
+    // if(is_lateral_aviod)
+    // {
+    //   continue;
+    // }
     // TODO: concern more scene
     if (frenet_obstacle_sl.l_end <
             left_width &&  // 整个都在该车道的障碍物：//有较大速度的不考虑
