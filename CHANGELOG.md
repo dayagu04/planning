@@ -1,3 +1,29 @@
+# planning2.7.2
+###  修改说明
+Feature
+1. A星和几何算法根据预规划的结果，自动切换
+2. 加入apa pp闭环仿真模块
+3. PP省去hmi部分，使用debug info相同的时间戳
+4. pp 自动选择 scene type，无需人指定
+
+Bug
+1. acc override模式下，横纵向同时重规划
+2. 修复车头泊入适配新interface
+3. 修复A星编译问题
+4. 删除多余continue
+5. 暂时关闭InputReady校验，后续重构
+# planning2.7.1
+###  修改说明
+Feature
+1. 添加车道保持状态处理高架普通分流
+2. 添加高架noa分流场景切换时维持上一帧的选择结果
+3. 计算前、后帧车道重合率函数封装
+
+Bug
+1. 修复处理相隔较近的连续分流场景分叉选择错误
+2. 处理分流时添加相关保护 以防数组越界
+3. 调整纵向motin权重，sref生成参数
+4. 修复agent manager中历史障碍物未及时清空的BUG
 # planning2.7.0
 ###  修改说明
 Feature
