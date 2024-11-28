@@ -206,7 +206,7 @@
     "care_exceed_distance_with_blocked_obstacle":2.5,
     "extra_front_lon_buffer2blockobstacle":1.0,
     "extra_rear_lon_buffer2blockobstacle":4.0,
-    "extra_hard_buffer2blockobstacle":0.15
+    "extra_hard_buffer2blockobstacle":0.0
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
