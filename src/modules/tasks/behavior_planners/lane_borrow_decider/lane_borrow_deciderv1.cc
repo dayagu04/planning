@@ -365,7 +365,10 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
     if (frenet_obstacle_sl.l_end <
             left_width &&  // 整个都在该车道的障碍物：//有较大速度的不考虑
         frenet_obstacle_sl.l_start > -right_width) {
-      if (obstacle->obstacle()->velocity() > config_.kObsStaticVelThold) {
+      // if (obstacle->obstacle()->velocity() > config_.kObsStaticVelThold) {
+      //   continue;
+      // }
+        if (!obstacle->obstacle()->is_static()) {  // 非静态不考虑
         continue;
       }
     } else {  // 部分在该车道的障碍物：
@@ -832,7 +835,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
 
 //    too close to area but no borrow enough
   if(left_borrow_){// with longit in 2m still l dir collision
-    if(obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
+    if(obs_start_s_ - ego_frenet_boundary_.s_end >0
+    && obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
       &&ego_frenet_boundary_.l_start < obs_left_l_)
     {
       lane_borrow_decider_output_.lane_borrow_failed_reason =
@@ -841,7 +845,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
     }
   }
   else {
-    if(obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
+    if(obs_start_s_ - ego_frenet_boundary_.s_end >0
+    &&obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
       &&ego_frenet_boundary_.l_end > obs_right_l_)
     {
       lane_borrow_decider_output_.lane_borrow_failed_reason =
