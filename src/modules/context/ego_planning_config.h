@@ -2564,6 +2564,16 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_planning", "debug_switch",
                                  "enable_only_s_t_hash"},
         enable_only_s_t_hash);
+    s_step = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "s_step"},
+        s_step);
+    t_step = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "t_step"},
+        t_step);
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;

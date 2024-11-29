@@ -2,7 +2,7 @@
   "trajectory_time_length": 5.0,
   "planning_dt": 0.2,
   "enable_raw_ego_prediction": false,
-  "planner_type": 2,
+  "planner_type": 1,
   "failure_counter_thrshld": 20,
   "enable_dagger": false,
   "pipeline_version": "v1",
@@ -543,6 +543,11 @@
     "debug_switch" : {
       "enable_always_cruise": false,
       "enable_only_s_t_hash": true
+    },
+
+    "st_graph_searcher" : {
+      "s_step" : 0.5,
+      "t_step" : 0.5
     },
 
     "lane_change_upper_speed_limit_kph" : 120.0,
