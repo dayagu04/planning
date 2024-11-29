@@ -203,10 +203,11 @@ class LaneChangeStateMachineManager {
   TrackInfo lc_back_track_;
   bool behavior_suspend_ = false;  // lateral suspend
   std::vector<int> suspend_obs_;   // lateral suspend obstacles
-  double start_move_dist_lane_ = 0;
   bool must_change_lane_ = false;
   int scenario_ = SCENARIO_CRUISE;
   RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
   double overlap_lane_virtual_id_ = 0;
+  int propose_state_frame_nums_ = 0;
+  double lat_close_boundary_offset_ = 0;
 };
 }  // namespace planning

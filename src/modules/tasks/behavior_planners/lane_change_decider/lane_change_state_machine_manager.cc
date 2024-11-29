@@ -66,6 +66,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangePropose: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangePropose) {
+        const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+        propose_state_frame_nums_ ++;
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
@@ -74,11 +76,29 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
+        //当前plannning的规划周期为10hz，安全性检查连续5帧通过则视为安全。
+        //若在10帧内未通过则采取自车向目标车道靠近的策略
+        const double ego_half_width = VehicleConfigurationContext::
+            Instance()->get_vehicle_param().width / 2;
+        const double cur_lane_half_width = 
+            virtual_lane_mgr->get_current_lane()->width() / 2;
+        const double buffer = 0.2;
+        const double lat_offset_value = cur_lane_half_width - ego_half_width - buffer;
+        if (lat_offset_value > 0 &&
+            propose_state_frame_nums_ > 10) {
+          lat_close_boundary_offset_ = 
+              transition_info_.lane_change_direction == LEFT_CHANGE ? 
+                  lat_offset_value : -lat_offset_value;
+        } else {
+          lat_close_boundary_offset_ = 0;
+        }
+
         if (is_propose_to_execution) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
           lc_timer_.Reset();
+          propose_state_frame_nums_ = 0;
         } else if (is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
@@ -946,16 +966,22 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_back_track = lc_back_track_;
   lane_change_decider_output.lc_valid_cnt = lc_valid_cnt_;
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
-  lane_change_decider_output.start_move_dist_lane = start_move_dist_lane_;
 
   GenerateTurnSignalForSplitRegion();
   lane_change_decider_output.dir_turn_signal_road_to_ramp =
       road_to_ramp_turn_signal_;
   lane_change_decider_output.int_request_cancel_reason =
       lc_req_mgr_->int_request_cancel_reason();
-
   lane_change_decider_output.ilc_virtual_req =
       lc_req_mgr_->get_ilc_virtual_request();
+  if (lane_change_decider_output.curr_state == kLaneChangePropose) {
+    lane_change_decider_output.lateral_close_boundary_offset = 
+        lat_close_boundary_offset_;
+  } else {
+    lane_change_decider_output.lateral_close_boundary_offset = 0;
+  }
+  JSON_DEBUG_VALUE("lat_close_bound_offset", 
+      lane_change_decider_output.lateral_close_boundary_offset)
 }
 void LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const std::vector<TrackedObject> &vec_side_obstacles,
@@ -1468,9 +1494,9 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   near_cars_target_.clear();
   near_cars_origin_.clear();
   must_change_lane_ = false;
-  start_move_dist_lane_ = 0;
   behavior_suspend_ = false;
   suspend_obs_.clear();
+  propose_state_frame_nums_ = 0;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
