@@ -11,7 +11,8 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241121/20241121-17-33-42/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-11-21-17-33-42_no_camera.bag",
+                // "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241121/20241121-17-33-42/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-11-21-17-33-42_no_camera.bag",
+                "/root/clzhao/lane_borrow_data/2024-12-02-16-13-22.bag_2024-12-03-14-34-12"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
@@ -52,8 +53,8 @@
                 // "/root/clzhao/lane_borrow_data/2024-11-25-17-16-09.bag_2024-11-26-19-28-37",//imporve back
                 // "/root/clzhao/lane_borrow_data/2024-11-27-20-21-44.bag_2024-11-28-10-19-23",//improve back
                 // "/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-27-13-51-09",
-                "/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16",// lat buff
-                // "/root/clzhao/lane_borrow_data/2024-11-27-11-45-50.bag_2024-11-28-18-39-48",
+                // "/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16",// lat buff
+                "/root/clzhao/lane_borrow_data/2024-12-02-16-13-22.bag_2024-12-03-14-34-12",// intersection
                  "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留
