@@ -52,13 +52,12 @@ class PointCloudObstacleTransform {
  public:
   PointCloudObstacleTransform() = default;
 
-  const void GenerateLocalObstacle(
-      ParkObstacleList& obs_list, const LocalView* local_view,
-      const bool delete_obs_around_ego, const double slot_length,
-      const double slot_width, const Pose2D& slot_base_pose,
-      const Pose2D& ego_start, const Pose2D& ego_final_goal,
-      const ParkSpaceType slot_type,
-      const SlotRelativePosition slot_side);
+  const void GenerateLocalObstacle(ParkObstacleList& obs_list,
+                                   const LocalView* local_view,
+                                   const double slot_length,
+                                   const double slot_width,
+                                   const Pose2D& slot_base_pose,
+                                   const Pose2D& ego_start);
 
   void GenerateGlobalObstacle(ParkObstacleList& obs_list,
                               const LocalView* local_view,
