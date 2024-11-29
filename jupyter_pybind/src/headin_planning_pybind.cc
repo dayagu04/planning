@@ -443,14 +443,6 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
       break;
     }
 
-    if (pBase->PreparePlanSecondPybind()) {
-      std::cout << "second prepare plan success\n";
-    } else {
-      std::cout << "second prepare  plan fail\n";
-      success = false;
-      // break;
-    }
-
     if (pBase->CheckReachTargetPosePybind()) {
       std::cout << "second prepare plan to target pose\n";
       success = true;
