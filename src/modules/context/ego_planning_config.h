@@ -2558,6 +2558,12 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    //  st search config
+    enable_only_s_t_hash = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"speed_planning", "debug_switch",
+                                 "enable_only_s_t_hash"},
+        enable_only_s_t_hash);
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -2606,6 +2612,7 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double rear_agent_max_start_yield_time_s = 4.0;
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
+  bool enable_only_s_t_hash = false;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {
