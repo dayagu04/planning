@@ -676,7 +676,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -687,7 +687,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1297,6 +1297,8 @@ void PerpendicularTailInScenario::GenObstacles() {
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
 
+  const double bound_threshold = 0.68;
+
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
       apa_world_ptr_->GetApaDataPtr()->simu_param.use_obs_in_bag &&
       apa_world_ptr_->GetApaDataPtr()->simu_param.obs_x_vec.size() > 0) {
@@ -1314,6 +1316,17 @@ void PerpendicularTailInScenario::GenObstacles() {
     }
     apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
         obs_vec, CollisionDetector::RECORD_OBS);
+
+    OccupancyGridBound bound(
+        std::min(C.x(), D.x()) - bound_threshold,
+        std::min({channel_point_1.y(), channel_point_2.y(), A.y(), F.y()}) -
+            bound_threshold,
+        std::max(channel_point_1.x(), channel_point_2.x()) + bound_threshold,
+        std::max({channel_point_1.y(), channel_point_2.y(), A.y(), F.y()}) +
+            bound_threshold);
+    bound.PrintInfo();
+    apa_world_ptr_->GetCollisionDetectorPtr()->TransObsMapToOccupancyGridMap(
+        bound);
     return;
   }
 
@@ -1443,12 +1456,15 @@ void PerpendicularTailInScenario::GenObstacles() {
         fus_obs_vec, CollisionDetector::FUSION_OBS);
   }
   OccupancyGridBound bound(
-      std::min(C.x(), D.x()) - 0.0168,
+      std::min(C.x(), D.x()) - bound_threshold,
       std::min({channel_point_1.y(), channel_point_2.y(), A.y(), F.y()}) -
-          0.0168,
-      std::max(channel_point_1.x(), channel_point_2.x()) + 0.0168,
+          bound_threshold,
+      std::max(channel_point_1.x(), channel_point_2.x()) + bound_threshold,
       std::max({channel_point_1.y(), channel_point_2.y(), A.y(), F.y()}) +
-          0.0168);
+          bound_threshold);
+
+  bound.PrintInfo();
+
   apa_world_ptr_->GetCollisionDetectorPtr()->TransObsMapToOccupancyGridMap(
       bound);
 }

@@ -51,8 +51,6 @@ class RuleBasedSlotRelease {
   const bool IsParallelSlotCoarseRelease(
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
 
-  const bool NeedCheckSlotReleaseByFSM() const;
-
  private:
   apa_planner::SlotManager::Frame *frame_;
 

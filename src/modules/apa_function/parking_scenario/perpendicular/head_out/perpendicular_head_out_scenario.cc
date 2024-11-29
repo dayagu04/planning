@@ -343,7 +343,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
       measures_ptr->GetStaticFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
+          ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -354,7 +354,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
       measures_ptr->GetStaticFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
+          ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;

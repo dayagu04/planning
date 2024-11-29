@@ -7,7 +7,7 @@
 namespace planning {
 namespace apa_planner {
 
-enum class ApaStateMachineT : uint8_t {
+enum class ApaStateMachine : uint8_t {
   SEARCH_IN_NO_SELECTED,
   SEARCH_IN_SELECTED_CAR_REAR,
   SEARCH_IN_SELECTED_CAR_FRONT,
@@ -42,7 +42,7 @@ class ApaStateMachineManager final {
 
   void Update(const LocalView* local_view_ptr);
 
-  const ApaStateMachineT GetStateMachine() const { return state_machine_; }
+  const ApaStateMachine GetStateMachine() const { return state_machine_; }
 
   const ApaParkOutDirection GetParkOutDirection() const {
     return out_direction_;
@@ -52,15 +52,19 @@ class ApaStateMachineManager final {
 
   const bool IsSeachingStatus() const;
 
+  const bool IsParkOutStatus() const;
+
+  const bool IsParkInStatus() const;
+
   void Reset() {
-    state_machine_ = ApaStateMachineT::INVALID;
+    state_machine_ = ApaStateMachine::INVALID;
     out_direction_ = ApaParkOutDirection::INVALID;
   }
 
-  static std::string GetApaStateMachineTString(
-      const ApaStateMachineT state_machine);
+  static std::string GetApaStateMachineString(
+      const ApaStateMachine state_machine);
 
-  static void PrintApaStateMachineT(const ApaStateMachineT state_machine);
+  static void PrintApaStateMachine(const ApaStateMachine state_machine);
 
   static std::string GetApaParkOutDirectionString(
       const ApaParkOutDirection out_direction);
@@ -68,7 +72,7 @@ class ApaStateMachineManager final {
   static void PrintApaParkOutDirection(const ApaParkOutDirection out_direction);
 
  private:
-  ApaStateMachineT state_machine_ = ApaStateMachineT::INVALID;
+  ApaStateMachine state_machine_ = ApaStateMachine::INVALID;
 
   ApaParkOutDirection out_direction_ = ApaParkOutDirection::INVALID;
 };

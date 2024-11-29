@@ -56,7 +56,7 @@ void ParkingScenario::InitSimulation() {
 
 const bool ParkingScenario::CheckPaused() const {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-      ApaStateMachineT::SUSPEND) {
+      ApaStateMachine::SUSPEND) {
     return true;
   } else {
     return false;

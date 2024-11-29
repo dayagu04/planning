@@ -12,7 +12,7 @@ bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241106/20241106-15-30-38/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-11-06-15-30-38_no_camera.bag'
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241125/20241125-18-26-02/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-25-18-26-02_no_camera.bag'
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241127/20241127-11-07-35/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-11-27-11-07-35_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241128/20241128-14-13-11/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-28-14-13-12_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241129/20241129-11-12-22/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-29-11-12-22_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
@@ -129,6 +129,11 @@ def slider_callback(bag_time, vehicle_type, car_inflation):
     plan_msg = bag_loader.plan_msg['data'][index_map['plan_msg_idx']]
     # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
     print("plan_release_slots_id = ", plan_msg.successful_slot_info_list)
+
+  if bag_loader.soc_state_msg['enable'] == True:
+    soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
+    # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
+    # print("soc_state_msg = ", soc_state_msg.parking_req)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]

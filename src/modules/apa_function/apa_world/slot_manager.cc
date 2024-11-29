@@ -75,7 +75,7 @@ bool SlotManager::Update(
   } else if (state_machine_ptr_->IsParkingStatus()) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
   } else if (state_machine_ptr_->GetStateMachine() ==
-             ApaStateMachineT::SUSPEND) {
+             ApaStateMachine::SUSPEND) {
   } else {
     Reset();
   }
@@ -1025,9 +1025,9 @@ bool SlotManager::UpdateSlotsInParking() {
   size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
 
   if (state_machine_ptr_->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_OUT_CAR_FRONT ||
+          ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
       state_machine_ptr_->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_OUT_CAR_REAR) {
+          ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
     if (frame_.park_out_select_id == 0) {
       double dist = std::numeric_limits<double>::infinity();
       for (auto &pair : frame_.slot_info_window_map) {
