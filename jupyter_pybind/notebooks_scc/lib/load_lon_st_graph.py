@@ -791,7 +791,7 @@ def load_lon_global_figure(bag_loader):
   # 各阶段耗时
   cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
                   y_axis_label='time cost/(ms)',width=600,height=300)
-  
+
   plan_debug_Astar = ColumnDataSource(data ={'t_plan_debug': [],'st_graph_searcher_cost': []})
 
   lead_one_dis_vec = []
@@ -856,7 +856,7 @@ def load_lon_global_figure(bag_loader):
   hover_cost_time = HoverTool(renderers=[f_cost_time], tooltips=[('t_plan_debug','@t_plan_debug'),('st_graph_searcher_cost', '@st_graph_searcher_cost')], mode='vline')
   cost_time_fig.add_tools(hover_cost_time)
   cost_time_fig.toolbar.active_scroll = cost_time_fig.select_one(WheelZoomTool)
- 
+
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
 

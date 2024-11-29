@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lon_behavior_planner.pb.h"
 #include "tasks/behavior_planners/long_ref_path_decider/bound_maker/bound_maker.h"
 #include "tasks/behavior_planners/long_ref_path_decider/target_marker/target_maker.h"
 #include "tasks/behavior_planners/long_ref_path_decider/weight_maker/weight_maker.h"
@@ -17,9 +18,16 @@ class LongRefPathDecider : public Task {
   bool Execute() override;
 
  public:
+  void Reset();
+
+ private:
   void UpdateLonRefPath();
 
-  void Reset();
+  void SaveToSession();
+
+  void SaveToDebugInfo();
+
+  void ClearOutput();
 
  private:
   SpeedPlannerConfig speed_planning_config_;
@@ -30,7 +38,8 @@ class LongRefPathDecider : public Task {
   double plan_time_ = 0.0;
   int32_t plan_points_num_ = 0.0;
 
-  LongitudinalDeciderOutput lon_behav_output_;
+  LongitudinalDeciderOutput lon_behavior_output_;
+  planning::common::LonRefPath lon_behavior_output_pb_;
 };
 
 }  // namespace planning
