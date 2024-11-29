@@ -815,7 +815,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     PredictionTrajectory cur_prediction_trajectory;
     size_t traj_index = 0;
     double step_time = prediction_traj.relative_time;
-    std::vector<PredictionTrajectoryPoint> trajectory_points;
+    // std::vector<PredictionTrajectoryPoint> trajectory_points;
     // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
@@ -850,15 +850,14 @@ void EnvironmentalModelManager::truncate_prediction_info(
       // trajectory_point.relative_ego_std_dev_speed =
       // point.relative_ego_std_dev_speed();
       traj_index++;
-      trajectory_points.emplace_back(trajectory_point);
-    }
-
-    for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED; traj_index++) {
-      //auto trajectory_point =
-      //    GetPointAtTime(trajectory_points, 0.2 * traj_index);
-      auto trajectory_point = trajectory_points[traj_index];
+      // trajectory_points.emplace_back(trajectory_point);
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }
+    // for (traj_index = 0; traj_index < 41; traj_index++) {
+    //   auto trajectory_point =
+    //       GetPointAtTime(trajectory_points, 0.2 * traj_index);
+    //   cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
+    // }
 
     // cur_prediction_trajectory.prob = prediction_traj.prob;
     // cur_prediction_trajectory.intention =

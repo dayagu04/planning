@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ego_planning_config.h"
 #include "session.h"
 #include "src/modules/common/status/status.h"
@@ -9,15 +10,33 @@ namespace planning {
 class WeightMaker {
  public:
   WeightMaker(const SpeedPlannerConfig& speed_planning_config,
-              framework::Session* session, const TargetMaker& target_maker);
+              framework::Session* session);
   ~WeightMaker() = default;
 
-  common::Status Run();
+  common::Status Run(const TargetMaker &target_maker);
+
+  double s_weight(const double t) const;
+
+  double v_weight(const double t) const;
+
+  double a_weight(const double t) const;
+
+  double jerk_weight(const double t) const;
 
  private:
-  SpeedPlannerConfig speed_planning_config_;
-  framework::Session* session_;
+  void MakeSWeight(const TargetMaker& target_maker);
 
+  void MakeVWeight(const TargetMaker& target_maker);
+
+  void MakeAccWeight();
+
+  void MakeJerkWeight();
+
+  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve();
+
+  SpeedPlannerConfig speed_planning_config_;
+  std::array<double, 3> init_lon_state_;
+  framework::Session* session_;
   double dt_ = 0.0;
   double plan_time_ = 0.0;
   int32_t plan_points_num_ = 0.0;

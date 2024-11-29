@@ -15,8 +15,7 @@ LongRefPathDecider::LongRefPathDecider(
   target_maker_ =
       std::make_unique<TargetMaker>(speed_planning_config_, session);
   bound_maker_ = std::make_unique<BoundMaker>(speed_planning_config_, session);
-  weight_maker_ = std::make_unique<WeightMaker>(speed_planning_config_, session,
-                                                *target_maker_);
+  weight_maker_ = std::make_unique<WeightMaker>(speed_planning_config_, session);
 
   dt_ = speed_planning_config_.dt;
   plan_time_ = speed_planning_config_.planning_time;
@@ -38,7 +37,7 @@ bool LongRefPathDecider::Execute() {
   // 2. calculate bound
   bound_maker_->Run();
   // 3. calculate weight
-  weight_maker_->Run();
+  weight_maker_->Run(*target_maker_);
   // 4. update lon ref path
   UpdateLonRefPath();
   // 5. save long ref path
