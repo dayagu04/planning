@@ -1299,10 +1299,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
 
   const double time_start = IflyTime::Now_ms();
 
-  bool extra_try_flag = true;
-  if (input_.is_replan_dynamic || calc_params_.first_multi_plan) {
-    extra_try_flag = false;
-  }
   int i = 0;
   const int max_compensate_line_try_count = 4;
   int compensate_line_try_count = 0;
@@ -1513,17 +1509,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     }
 
     if (geometry_path_vec.empty()) {
-      if (i == 0 && extra_try_flag && success_geometry_path_vec.empty()) {
-        // try use reverse gear to plan, it is not good, only try
-        i = -1;
-        extra_try_flag = false;
-        single_ref_gear = geometry_lib::ReverseGear(single_ref_gear);
-        ILOG_INFO << "the ref gear canot plan any path, use reverse gear to "
-                     "try plan";
-        continue;
-      } else {
-        break;
-      }
+      break;
     }
 
     cur_pose_vec.clear();
@@ -1629,43 +1615,61 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
   } else if (plan_request == PlanRequest::ONE_STEP_PATH) {
     OneStepMultiAdjustPathPlan(pose, ref_gear, geometry_path);
   } else if (plan_request == PlanRequest::OPTIMAL_PATH) {
-    // 只要是第一次进入multi_adjust plan 都尝试用两种挡位进行规划 判断优劣
-    // 后续则尽量固定挡位
-    if (calc_params_.first_multi_plan && input_.is_replan_first) {
+    if (input_.is_replan_dynamic) {
+      OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_REVERSE,
+                                 geometry_path);
+    } else {
       geometry_lib::GeometryPath geometry_path_r;
-      geometry_lib::GeometryPath geometry_path_d;
       OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_REVERSE,
                                  geometry_path_r);
+
+      geometry_lib::GeometryPath geometry_path_d;
       OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_DRIVE,
                                  geometry_path_d);
+
       if (geometry_path_r.path_count > 0 && geometry_path_d.path_count < 1) {
         geometry_path = geometry_path_r;
       } else if (geometry_path_r.path_count < 1 &&
                  geometry_path_d.path_count > 0) {
         geometry_path = geometry_path_d;
-      } else {
+      } else if (geometry_path_r.path_count > 0 &&
+                 geometry_path_d.path_count > 0) {
         geometry_lib::GeometryPath temp_path_r(output_.path_segment_vec);
         temp_path_r.AddPath(geometry_path_r);
         geometry_lib::GeometryPath temp_path_d(output_.path_segment_vec);
         temp_path_d.AddPath(geometry_path_d);
-        double cost_r = temp_path_r.gear_change_count * 30.0;
-        double cost_d = temp_path_d.gear_change_count * 30.0;
-        if (!apa_param.GetParam().actual_mono_plan_enable) {
-          if (geometry_path_r.gear_change_count < 1) {
-            cost_r += 100.0;
-          }
-          if (geometry_path_d.gear_change_count < 2) {
-            cost_d += 100.0;
+
+        if (input_.is_replan_first) {
+          if (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) {
+            temp_path_d.cost += 100.0;
+          } else if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
+            const auto& pose =
+                temp_path_r.path_segment_vec.front().GetEndPose();
+            if (CalOccupiedRatio(pose) < 0.16 ||
+                std::fabs(pose.pos.y()) > 0.968 ||
+                std::fabs(pose.heading) * kRad2Deg > 45.68) {
+              ILOG_INFO << "ego pose plan, should add some cost to "
+                           "use safe circle "
+                           "more possible";
+              temp_path_r.cost += 100.0;
+            }
           }
         }
-        if (cost_d < cost_r) {
-          geometry_path = geometry_path_d;
-        } else {
+
+        if (geometry_path_r.cur_gear != ref_gear) {
+          temp_path_r.cost += 100.0;
+        }
+
+        if (geometry_path_d.cur_gear != ref_gear) {
+          temp_path_d.cost += 100.0;
+        }
+
+        if (temp_path_r.cost < temp_path_d.cost) {
           geometry_path = geometry_path_r;
+        } else {
+          geometry_path = geometry_path_d;
         }
       }
-    } else {
-      OptimalMultiAdjustPathPlan(pose, ref_gear, geometry_path);
     }
   } else {
     return false;
@@ -1936,9 +1940,9 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
         ILOG_INFO_IF(enable_log) << "same gear, line col, quit";
         continue;
       } else {
-        ILOG_INFO_IF(enable_log)
-            << "same gear, line is safe and then check arc col, add line "
-               "to path";
+        ILOG_INFO_IF(enable_log) << "same gear, line is safe and "
+                                    "then check arc col, add line "
+                                    "to path";
       }
 
       std::vector<geometry_lib::PathSegment> path_seg_vec{line_seg};
@@ -1998,8 +2002,8 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
         }
 
         if (col_res2 == PathColDetRes::INVALID) {
-          ILOG_INFO_IF(enable_log)
-              << "arc col is invalid, then construct line to sure safe";
+          ILOG_INFO_IF(enable_log) << "arc col is invalid, then "
+                                      "construct line to sure safe";
           if (ConstructReverseVaildPathSeg(line_seg, arc_seg, lat_buffer,
                                            lon_buffer, enable_log)) {
             ILOG_INFO_IF(enable_log)
@@ -2014,9 +2018,9 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
       if (col_res1 == PathColDetRes::SHORTEN) {
         ILOG_INFO_IF(enable_log) << "opposite gear, the line can not shorten";
         continue;
-        ILOG_INFO_IF(enable_log)
-            << "opposite gear, line shorten, then construct line to "
-               "sure safe";
+        ILOG_INFO_IF(enable_log) << "opposite gear, line shorten, "
+                                    "then construct line to "
+                                    "sure safe";
         if (ConstructReverseVaildPathSeg(line_seg, arc_seg, lat_buffer,
                                          lon_buffer, enable_log)) {
           ILOG_INFO_IF(enable_log)
@@ -2114,9 +2118,9 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
         ILOG_INFO_IF(enable_log) << "same gear, arc1 col, quit\n";
         continue;
       } else {
-        ILOG_INFO_IF(enable_log)
-            << "same gear, arc1 is safe and then check arc col, add arc1 "
-               "to path";
+        ILOG_INFO_IF(enable_log) << "same gear, arc1 is safe and "
+                                    "then check arc col, add arc1 "
+                                    "to path";
       }
       std::vector<geometry_lib::PathSegment> path_seg_vec{arc1_seg};
 
@@ -2169,8 +2173,8 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
         }
 
         if (col_res2 == PathColDetRes::INVALID) {
-          ILOG_INFO_IF(enable_log)
-              << "arc2 col is invalid, then construct arc1 to sure safe";
+          ILOG_INFO_IF(enable_log) << "arc2 col is invalid, then "
+                                      "construct arc1 to sure safe";
           if (ConstructReverseVaildPathSeg(arc1_seg, arc2_seg, lat_buffer,
                                            lon_buffer, enable_log)) {
             ILOG_INFO_IF(enable_log)
@@ -2183,8 +2187,8 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
       }
 
       if (col_res1 == PathColDetRes::SHORTEN) {
-        ILOG_INFO_IF(enable_log)
-            << "arc1 col is shorten then construct arc1 to sure safe";
+        ILOG_INFO_IF(enable_log) << "arc1 col is shorten then "
+                                    "construct arc1 to sure safe";
         if (ConstructReverseVaildPathSeg(arc1_seg, arc2_seg, lat_buffer,
                                          lon_buffer, enable_log)) {
           ILOG_INFO_IF(enable_log)
@@ -2365,7 +2369,8 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
                  PathColDetRes::NORMAL);
 
       if (success && ref_gear == geometry_lib::SEG_GEAR_REVERSE) {
-        // ensure that there is a straight line connecting the end pose
+        // ensure that there is a straight line connecting the end
+        // pose
         success =
             arc_seg2.GetEndPos().x() > calc_params_.target_line.pA.x() + 0.268;
       }
@@ -2423,8 +2428,10 @@ const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(
 
       if (last_try_success) {
         ILOG_INFO_IF(enable_log)
-            << "AlignAndSTurnPathPlan last try success, use line to go out "
-               "slot, and then use reverse line to eliminate lat err";
+            << "AlignAndSTurnPathPlan last try success, use line "
+               "to go out "
+               "slot, and then use reverse line to eliminate lat "
+               "err";
         geometry_path.PrintInfo(enable_log);
         success = true;
       } else {
