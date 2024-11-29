@@ -328,16 +328,15 @@ void PlanningAdapter::Proc() {
       start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
 
   // update general context
-  auto &state_machine_g = g_context.MutableStatemachine();
+  auto &state_machine_g = GENERAL_PLANNING_CONTEXT.MutableStatemachine();
 
   const auto &current_state =
       local_view_ptr_->function_state_machine_info.current_state;
 
-  const auto &last_state = g_context.GetStatemachine().current_state;
+  iflyauto::FunctionalState last_state =
+      GENERAL_PLANNING_CONTEXT.GetStatemachine().current_state;
 
-  if (!IsValidParkingState(
-          static_cast<iflyauto::FunctionalState>(last_state)) &&
-      IsValidParkingState(current_state)) {
+  if (!IsValidParkingState(last_state) && IsValidParkingState(current_state)) {
     state_machine_g.apa_reset_flag = true;
   } else {
     state_machine_g.apa_reset_flag = false;
