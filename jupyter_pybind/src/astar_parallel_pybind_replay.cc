@@ -838,9 +838,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                          start, real_end, slot_type, slot_side);
 
     obstacle_generator.GenerateLocalObstacle(
-        hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
-        slot_side);
+        hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
+        ego_slot_info.slot_width, slot_base_pose, start);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 

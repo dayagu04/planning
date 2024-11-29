@@ -13,11 +13,8 @@ namespace planning {
 
 const void PointCloudObstacleTransform::GenerateLocalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
-    const bool delete_obs_around_ego, const double slot_length,
-    const double slot_width, const Pose2D& slot_base_pose,
-    const Pose2D& ego_start, const Pose2D& ego_final_goal,
-    const ParkSpaceType slot_type,
-    const SlotRelativePosition slot_side) {
+    const double slot_length, const double slot_width,
+    const Pose2D& slot_base_pose, const Pose2D& ego_start) {
   Transform2d slot_tf;
   slot_tf.SetBasePose(slot_base_pose);
 
@@ -42,12 +39,6 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
     return;
   }
-
-  ILOG_INFO << "fusion_object_num = "
-            << (size_t)(local_view->fusion_objects_info.fusion_object_size)
-            << ", ground_lines_size = "
-            << static_cast<size_t>(
-                   local_view->ground_line_perception.ground_lines_size);
 
   size_t number =
       static_cast<size_t>(
@@ -94,7 +85,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 
-      if (config.astar_config.enable_delete_fusion_obj_in_slot) {
+      if (config.astar_config.enable_delete_occ_in_slot) {
         is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
         if (is_collision) {
@@ -105,7 +96,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
       }
 
       // delete by ego
-      if (delete_obs_around_ego) {
+      if (config.astar_config.enable_delete_occ_in_ego) {
         gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                         Position2D(local.x, local.y));
 
@@ -145,7 +136,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 
-      if (config.astar_config.enable_delete_fusion_obj_in_slot) {
+      if (config.astar_config.enable_delete_occ_in_slot) {
         is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
         if (is_collision) {
@@ -156,7 +147,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
       }
 
       // delete by ego
-      if (delete_obs_around_ego) {
+      if (config.astar_config.enable_delete_occ_in_ego) {
         gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                         Position2D(local.x, local.y));
 
@@ -210,7 +201,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         global.y = limiter_points[point_id].y;
         slot_tf.GlobalPointToULFLocal(&local, global);
 
-        if (config.astar_config.enable_delete_fusion_obj_in_slot) {
+        if (config.astar_config.enable_delete_occ_in_slot) {
           is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
           if (is_collision) {
@@ -221,7 +212,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         }
 
         // delete by ego
-        if (delete_obs_around_ego) {
+        if (config.astar_config.enable_delete_occ_in_ego) {
           gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                           Position2D(local.x, local.y));
 
