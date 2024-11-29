@@ -136,7 +136,7 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
 
   if (measures_data->GetStaticFlag() && !measures_data->GetBrakeFlag() &&
       apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     // 重规划成功会清0
     if (frame_.plan_stm.planning_status == PARKING_RUNNING) {
       frame_.stuck_uss_time += apa_param.GetParam().plan_time;

@@ -21,6 +21,7 @@
 #include "perpendicular_head_out_scenario.h"
 #include "perpendicular_park_scenario.h"
 #include "perpendicular_tail_in_scenario.h"
+#include "planning_plan_c.h"
 
 namespace planning {
 namespace apa_planner {
@@ -70,8 +71,8 @@ void ParkingScenarioManager::Excute() {
   const auto &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
-  if (cur_state == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR ||
-      cur_state == ApaStateMachineT::ACTIVE_IN_CAR_REAR) {
+  if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
+      cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     if (apa_world_->GetApaDataPtr()->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       if (apa_param.GetParam().path_generator_type ==
@@ -97,15 +98,15 @@ void ParkingScenarioManager::Excute() {
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
     }
-  } else if (cur_state == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT ||
-             cur_state == ApaStateMachineT::ACTIVE_IN_CAR_FRONT) {
+  } else if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
+             cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
     if (apa_world_->GetApaDataPtr()->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
     }
-  } else if (cur_state == ApaStateMachineT::SEARCH_OUT_NO_SELECTED ||
-             cur_state == ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_FRONT ||
-             cur_state == ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
+  } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
+             cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
+             cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     if (apa_world_->GetApaDataPtr()->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
@@ -176,7 +177,7 @@ void ParkingScenarioManager::ScenarioTry() {
   const auto &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
-  if (cur_state == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR) {
+  if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     // 车尾泊入功能
     if (apa_world_->GetApaDataPtr()->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
@@ -228,8 +229,11 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
           ->GetEgoSlotInfo()
           .release_info.release_state[GEOMETRY_PLANNING_RELEASE];
 
-  JSON_DEBUG_VALUE("geometry_path_release",
-                   geometry_path_release == SlotReleaseState::RELEASE)
+  if (planning_output_.planning_status.apa_planning_status ==
+      iflyauto::APA_IN_PROGRESS) {
+    JSON_DEBUG_VALUE("geometry_path_release",
+                     geometry_path_release == SlotReleaseState::RELEASE)
+  }
 
   if (geometry_path_release == SlotReleaseState::NOT_RELEASE &&
       astar_path_release == SlotReleaseState::RELEASE) {

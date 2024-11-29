@@ -11,7 +11,7 @@ namespace apa_planner {
 
 void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
   if (local_view_ptr == nullptr) {
-    ILOG_ERROR << "Update ApaStateMachineTManager, local_view_ptr is nullptr";
+    ILOG_ERROR << "Update ApaMeasureDataManager, local_view_ptr is nullptr";
     return;
   }
 

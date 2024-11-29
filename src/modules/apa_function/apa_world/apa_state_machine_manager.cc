@@ -13,7 +13,7 @@ namespace apa_planner {
 
 void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   if (local_view_ptr == nullptr) {
-    ILOG_ERROR << "Update ApaStateMachineTManager, local_view_ptr is nullptr";
+    ILOG_ERROR << "Update ApaStateMachineManager, local_view_ptr is nullptr";
     return;
   }
 
@@ -29,21 +29,21 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   switch (fun_state_machine_info.current_state) {
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
       if (parking_fusion_info.select_slot_id == 0) {
-        state_machine_ = ApaStateMachineT::SEARCH_IN_NO_SELECTED;
+        state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
       } else {
         if (fun_state_machine_info.parking_req.apa_parking_direction ==
             iflyauto::BACK_END_PARKING_DIRECTION) {
-          state_machine_ = ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR;
+          state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
         } else if (fun_state_machine_info.parking_req.apa_parking_direction ==
                    iflyauto::FRONT_END_PARKING_DIRECTION) {
-          state_machine_ = ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT;
+          state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
         }
       }
       break;
     case iflyauto::FunctionalState_PARK_OUT_SEARCHING:
       if (fun_state_machine_info.parking_req.apa_park_out_direction ==
           iflyauto::PRK_OUT_DIRECTION_INVALID) {
-        state_machine_ = ApaStateMachineT::SEARCH_OUT_NO_SELECTED;
+        state_machine_ = ApaStateMachine::SEARCH_OUT_NO_SELECTED;
       } else {
         switch (fun_state_machine_info.parking_req.apa_park_out_direction) {
           case iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS:
@@ -51,12 +51,12 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
           case iflyauto::PRK_OUT_TO_FRONT_OUT:
           case iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS:
           case iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL:
-            state_machine_ = ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_FRONT;
+            state_machine_ = ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT;
             break;
           case iflyauto::PRK_OUT_TO_BACK_OUT:
           case iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS:
           case iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS:
-            state_machine_ = ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_REAR;
+            state_machine_ = ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR;
             break;
           default:
             break;
@@ -69,10 +69,10 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
           iflyauto::APA_WORK_MODE_PARKING_IN) {
         if (fun_state_machine_info.parking_req.apa_parking_direction ==
             iflyauto::BACK_END_PARKING_DIRECTION) {
-          state_machine_ = ApaStateMachineT::ACTIVE_IN_CAR_REAR;
+          state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
         } else if (fun_state_machine_info.parking_req.apa_parking_direction ==
                    iflyauto::FRONT_END_PARKING_DIRECTION) {
-          state_machine_ = ApaStateMachineT::ACTIVE_IN_CAR_FRONT;
+          state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
         }
       } else if (fun_state_machine_info.parking_req.apa_work_mode ==
                  iflyauto::APA_WORK_MODE_PARKING_OUT) {
@@ -82,12 +82,12 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
           case iflyauto::PRK_OUT_TO_FRONT_OUT:
           case iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS:
           case iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL:
-            state_machine_ = ApaStateMachineT::ACTIVE_OUT_CAR_FRONT;
+            state_machine_ = ApaStateMachine::ACTIVE_OUT_CAR_FRONT;
             break;
           case iflyauto::PRK_OUT_TO_BACK_OUT:
           case iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS:
           case iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS:
-            state_machine_ = ApaStateMachineT::ACTIVE_OUT_CAR_REAR;
+            state_machine_ = ApaStateMachine::ACTIVE_OUT_CAR_REAR;
             break;
           default:
             break;
@@ -95,10 +95,10 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       }
       break;
     case iflyauto::FunctionalState_PARK_SUSPEND:
-      state_machine_ = ApaStateMachineT::SUSPEND;
+      state_machine_ = ApaStateMachine::SUSPEND;
       break;
     case iflyauto::FunctionalState_PARK_COMPLETED:
-      state_machine_ = ApaStateMachineT::COMPLETE;
+      state_machine_ = ApaStateMachine::COMPLETE;
       break;
     default:
       break;
@@ -129,7 +129,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       break;
   }
 
-  PrintApaStateMachineT(state_machine_);
+  PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
 
   JSON_DEBUG_VALUE("apa_state_machine", static_cast<int>(state_machine_))
@@ -138,12 +138,12 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   return;
 }
 const bool ApaStateMachineManager::IsSeachingStatus() const {
-  if (state_machine_ == ApaStateMachineT::SEARCH_IN_NO_SELECTED ||
-      state_machine_ == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR ||
-      state_machine_ == ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT ||
-      state_machine_ == ApaStateMachineT::SEARCH_OUT_NO_SELECTED ||
-      state_machine_ == ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_REAR ||
-      state_machine_ == ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_FRONT) {
+  if (state_machine_ == ApaStateMachine::SEARCH_IN_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT) {
     return true;
   }
 
@@ -151,57 +151,81 @@ const bool ApaStateMachineManager::IsSeachingStatus() const {
 }
 
 const bool ApaStateMachineManager::IsParkingStatus() const {
-  if (state_machine_ == ApaStateMachineT::ACTIVE_IN_CAR_FRONT ||
-      state_machine_ == ApaStateMachineT::ACTIVE_IN_CAR_REAR ||
-      state_machine_ == ApaStateMachineT::ACTIVE_OUT_CAR_FRONT ||
-      state_machine_ == ApaStateMachineT::ACTIVE_OUT_CAR_FRONT) {
+  if (state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     return true;
   }
 
   return false;
 }
 
-std::string ApaStateMachineManager::GetApaStateMachineTString(
-    const ApaStateMachineT state_machine) {
+const bool ApaStateMachineManager::IsParkOutStatus() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ApaStateMachineManager::IsParkInStatus() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_IN_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+    return true;
+  }
+
+  return false;
+}
+
+std::string ApaStateMachineManager::GetApaStateMachineString(
+    const ApaStateMachine state_machine) {
   std::string state = "INVALID";
   switch (state_machine) {
-    case ApaStateMachineT::SEARCH_IN_NO_SELECTED:
+    case ApaStateMachine::SEARCH_IN_NO_SELECTED:
       state = "SEARCH_IN_NO_SELECTED";
       break;
-    case ApaStateMachineT::SEARCH_IN_SELECTED_CAR_REAR:
+    case ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR:
       state = "SEARCH_IN_SELECTED_CAR_REAR";
       break;
-    case ApaStateMachineT::SEARCH_IN_SELECTED_CAR_FRONT:
+    case ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT:
       state = "SEARCH_IN_SELECTED_CAR_FRONT";
       break;
-    case ApaStateMachineT::SEARCH_OUT_NO_SELECTED:
+    case ApaStateMachine::SEARCH_OUT_NO_SELECTED:
       state = "SEARCH_OUT_NO_SELECTED";
       break;
-    case ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_REAR:
+    case ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR:
       state = "SEARCH_OUT_SELECTED_CAR_REAR";
       break;
-    case ApaStateMachineT::SEARCH_OUT_SELECTED_CAR_FRONT:
+    case ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT:
       state = "SEARCH_OUT_SELECTED_CAR_FRONT";
       break;
-    case ApaStateMachineT::ACTIVE_IN_CAR_FRONT:
+    case ApaStateMachine::ACTIVE_IN_CAR_FRONT:
       state = "ACTIVE_IN_CAR_FRONT";
       break;
-    case ApaStateMachineT::ACTIVE_IN_CAR_REAR:
+    case ApaStateMachine::ACTIVE_IN_CAR_REAR:
       state = "ACTIVE_IN_CAR_REAR";
       break;
-    case ApaStateMachineT::ACTIVE_OUT_CAR_FRONT:
+    case ApaStateMachine::ACTIVE_OUT_CAR_FRONT:
       state = "ACTIVE_OUT_CAR_FRONT";
       break;
-    case ApaStateMachineT::ACTIVE_OUT_CAR_REAR:
+    case ApaStateMachine::ACTIVE_OUT_CAR_REAR:
       state = "ACTIVE_OUT_CAR_REAR";
       break;
-    case ApaStateMachineT::SECURE:
+    case ApaStateMachine::SECURE:
       state = "SECURE";
       break;
-    case ApaStateMachineT::SUSPEND:
+    case ApaStateMachine::SUSPEND:
       state = "SUSPEND";
       break;
-    case ApaStateMachineT::COMPLETE:
+    case ApaStateMachine::COMPLETE:
       state = "COMPLETE";
       break;
     default:
@@ -211,9 +235,9 @@ std::string ApaStateMachineManager::GetApaStateMachineTString(
   return state;
 }
 
-void ApaStateMachineManager::PrintApaStateMachineT(
-    const ApaStateMachineT state_machine) {
-  ILOG_INFO << "apa_state = " << GetApaStateMachineTString(state_machine);
+void ApaStateMachineManager::PrintApaStateMachine(
+    const ApaStateMachine state_machine) {
+  ILOG_INFO << "apa_state = " << GetApaStateMachineString(state_machine);
 }
 
 std::string ApaStateMachineManager::GetApaParkOutDirectionString(
