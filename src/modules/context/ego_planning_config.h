@@ -2281,6 +2281,28 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
   double stopline_tfl_dis_thred = 50;
 };
 
+struct CrossingAgentDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    enable_crossing_decider = read_json_keys<bool>(
+        json, std::vector<std::string>{"crossing_agent_decider",
+                                       "enable_crossing_decider"});
+    /*                                   
+    virtual_dis_before_stopline = read_json_keys<double>(
+        json, std::vector<std::string>{"traffic_light_decider",
+                                       "virtual_dis_before_stopline"});
+    stopline_tfl_dis_thred = read_json_keys<double>(
+        json, std::vector<std::string>{"traffic_light_decider",
+                                       "stopline_tfl_dis_thred"});
+    */
+  }
+
+  bool enable_crossing_decider = false;
+
+};
+
+
 struct MapRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
