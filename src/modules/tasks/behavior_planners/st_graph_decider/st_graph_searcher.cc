@@ -404,6 +404,8 @@ bool StGraphSearcher::SearchStPath(
   JSON_DEBUG_VECTOR("history_cur_nodes_s_vec", history_cur_nodes_s_vec, 3)
   JSON_DEBUG_VECTOR("history_cur_nodes_t_vec", history_cur_nodes_t_vec, 3)
   JSON_DEBUG_VALUE("search_succeed", is_goal_reached)
+  JSON_DEBUG_VALUE("expanded_nodes_size", expanded_nodes_s_vec.size())
+  JSON_DEBUG_VALUE("history_cur_nodes_size", history_cur_nodes_s_vec.size())
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
     LOG_DEBUG("st search fail, goal not reached \n");
