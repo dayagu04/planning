@@ -32,9 +32,11 @@ class BoundMaker {
  private:
   void MakeAccBound();
 
-  void MakeJerkBound();
+  void MakeSBound();
 
   void MakeVBound();
+
+  void MakeJerkBound();
 
  private:
   SpeedPlannerConfig speed_planning_config_;
