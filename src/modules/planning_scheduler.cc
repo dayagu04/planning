@@ -1,4 +1,5 @@
 #include "planning_scheduler.h"
+
 #include <common/config/basic_type.h>
 
 #include <algorithm>
@@ -106,7 +107,8 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   auto config = mjson::Reader(config_file);
 
   // all parameters can be changed here
-  JSON_READ_VALUE(g_context.MutablePram().planner_type, int, "planner_type");
+  JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
+                  "planner_type");
 }
 
 bool PlanningScheduler::RunOnce(
@@ -142,7 +144,9 @@ bool PlanningScheduler::RunOnce(
   bool planning_success = false;
   if (scene_type == common::PARKING_APA) {
     // 泊车规划部分
-    if (g_context.GetStatemachine().apa_reset_flag) {
+    if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
+        state_machine.current_state !=
+            iflyauto::FunctionalState_PARK_GUIDANCE) {
       apa_function_->Reset();
       ILOG_INFO << "reset parking";
 
@@ -163,12 +167,12 @@ bool PlanningScheduler::RunOnce(
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
-  if ((scene_type != g_context.GetStatemachine().scene_type ||
-       (dbw_status != g_context.GetStatemachine().dbw_status))) {
+  if ((scene_type != GENERAL_PLANNING_CONTEXT.GetStatemachine().scene_type ||
+       (dbw_status != GENERAL_PLANNING_CONTEXT.GetStatemachine().dbw_status))) {
     SyncParameters(scene_type);
   }
-  g_context.MutableStatemachine().dbw_status = dbw_status;
-  g_context.MutableStatemachine().scene_type = scene_type;
+  GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
+  GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = scene_type;
 
   // update environment model
   if (!environmental_model_manager_.Run()) {
@@ -554,7 +558,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // HMI for ad_info
   const auto &virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  const auto& route_info_output = 
+  const auto &route_info_output =
       session_.environmental_model().get_route_info()->get_route_info_output();
   planning_hmi_info->ad_info.lane_change_direction =
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
@@ -609,9 +613,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
       lane_change_decider_output.lc_request_source == INT_REQUEST) {
     planning_hmi_info->ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
-    //暂时为了满足实线变道时打灯合planing_hmi的提示需求
-    //在此更新变道状态和变道方向的值！！！！！！！
-    // TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
+    // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
+    // 在此更新变道状态和变道方向的值！！！！！！！
+    //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
     planning_hmi_info->ad_info.lane_change_direction =
         (iflyauto::LaneChangeDirection)
             lane_change_decider_output.ilc_virtual_req;
@@ -673,8 +677,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
           lat_offset_decider_output.avoid_direction);
 
   if (!route_info_output.is_on_ramp) {
-    planning_hmi_info->ad_info.distance_to_ramp =
-        route_info_output.dis_to_ramp;
+    planning_hmi_info->ad_info.distance_to_ramp = route_info_output.dis_to_ramp;
   } else {
     planning_hmi_info->ad_info.distance_to_ramp = NL_NMAX;
   }
@@ -845,8 +848,8 @@ void PlanningScheduler::PrepareForApa() {
 
   auto gear_command = &(planning_output.gear_command);
   double distance_to_destination = std::numeric_limits<double>::max();
-  const auto& route_info_output = session_.
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto &route_info_output =
+      session_.environmental_model().get_route_info()->get_route_info_output();
   distance_to_destination = route_info_output.distance_to_target_slot;
   bool entering_parking_area = distance_to_destination < kDistanceToDestination;
   double ego_v = ego_state->ego_v();

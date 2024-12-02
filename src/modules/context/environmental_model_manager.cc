@@ -152,8 +152,8 @@ void EnvironmentalModelManager::InitContext() {
   dynamic_world_ = std::make_shared<planning_data::DynamicWorld>(
       *agent_manager_ptr_, session_);
   session_->mutable_environmental_model()->set_dynamic_world(dynamic_world_);
-  
-  route_info_ptr_ = 
+
+  route_info_ptr_ =
       std::make_shared<planning::RouteInfo>(config_builder, session_);
   session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
 }
@@ -180,13 +180,13 @@ bool EnvironmentalModelManager::Run() {
   bool fusion_localization_valid =
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
-  bool planner_valid = g_context.GetParam().planner_type ==
+  bool planner_valid = GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
                            planning::context::PlannerType::SCC_PLANNER_V2 ||
-                       g_context.GetParam().planner_type ==
+                       GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
                            planning::context::PlannerType::SCC_PLANNER_V3 ||
-                       g_context.GetParam().planner_type ==
+                       GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
-  printf("planner_type:%d\n", g_context.GetParam().planner_type);
+  printf("planner_type:%d\n", GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
   auto location_valid = (msf_valid || localization_valid) &&
                         fusion_localization_valid && planner_valid;
 
