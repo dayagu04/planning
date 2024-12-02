@@ -387,6 +387,8 @@ bool StGraphSearcher::SearchStPath(
           old_child.set_parent_id(current_node.id());
           open_set.Update(old_child.id(), old_child.TotalCost());
         }
+        expanded_nodes_s_vec.emplace_back(child_node.s());
+        expanded_nodes_t_vec.emplace_back(child_node.t());
       } else {
         child_node.set_g_cost(child_total_g_cost);
         child_node.set_parent_id(current_node.id());
