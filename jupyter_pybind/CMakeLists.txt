@@ -99,6 +99,15 @@ target_link_libraries(slant_planning_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
+pybind11_add_module(perpendicular_parking_out_py MODULE src/perpendicular_park_out_pybind.cc)
+target_link_libraries(perpendicular_parking_out_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)
+
 pybind11_add_module(vertical_planning_py MODULE src/vertical_planning_pybind.cc)
 target_link_libraries(vertical_planning_py PRIVATE
   autoplt
