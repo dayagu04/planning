@@ -250,11 +250,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   history_cur_nodes_t_vec = plan_debug_json_info['history_cur_nodes_t_vec']
   history_cur_nodes_s_vec = plan_debug_json_info['history_cur_nodes_s_vec']
 
-  print("expanded_nodes_t_vec_size: ", len(expanded_nodes_t_vec))
-  print("expanded_nodes_s_vec_size: ", len(expanded_nodes_s_vec))
-  print("history_cur_nodes_t_size: ", len(history_cur_nodes_t_vec))
-  print("history_cur_nodes_s_size: ", len(history_cur_nodes_s_vec))
-
   lon_plan_data['data_st_searcher'].data.update({
     't_search': t_search_vec,
     's_search': s_search_vec,
@@ -553,10 +548,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     planning_json = local_view_data['data_msg']['plan_debug_json_msg']
 
     print("dbw_status = ", planning_json['dbw_status'])
-    print("replan_status = ", planning_json['replan_status'])
     print("lat_err = ", planning_json['lat_err'])
     print("theta_err = ", planning_json['theta_err'])
-    print("lon_err = ", planning_json['lon_err'])
     print("dist_err = ", planning_json['dist_err'])
 
     try:
