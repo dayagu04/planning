@@ -503,7 +503,7 @@ const bool RuleBasedSlotRelease::IsSlotOccupied(const common::SlotInfo *slot) {
 
   PathSafeChecker safe_check;
   bool collision =
-      safe_check.CalcEgoCollision(&obs_list_, target_pose, 0.05, 0.1);
+      safe_check.CalcEgoCollision(&obs_list_, target_pose, -0.2, -0.1);
 
   return collision ? true : false;
 }
@@ -516,21 +516,27 @@ bool RuleBasedSlotRelease::IsPassageAreaEnough(const common::SlotInfo *slot) {
   Eigen::Vector2d pt_0 = Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
   Eigen::Vector2d pt_1 = Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
 
-  const Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
+  Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
+  pt_01_vec.normalize();
+
   Eigen::Vector2d pt_01_vec_n(pt_01_vec.y(), -pt_01_vec.x());
   pt_01_vec_n.normalize();
 
   const Eigen::Vector2d pt_01_mid = (pt_0 + pt_1) * 0.5;
 
+  // move pt0, pt1
+  pt_0 = pt_01_mid - pt_01_vec * (config_->max_car_width / 2 - 0.3);
+  pt_1 = pt_01_mid + pt_01_vec * (config_->max_car_width / 2 - 0.3);
+
   // check length
   Polygon2D polygon;
   polygon.vertexes[0].x = (pt_0)[0];
   polygon.vertexes[0].y = (pt_0)[1];
-  polygon.vertexes[1].x = (pt_0 + pt_01_vec_n * 3.0)[0];
-  polygon.vertexes[1].y = (pt_0 + pt_01_vec_n * 3.0)[1];
+  polygon.vertexes[1].x = (pt_0 + pt_01_vec_n * 2.0)[0];
+  polygon.vertexes[1].y = (pt_0 + pt_01_vec_n * 2.0)[1];
 
-  polygon.vertexes[2].x = (pt_1 + pt_01_vec_n * 3.0)[0];
-  polygon.vertexes[2].y = (pt_1 + pt_01_vec_n * 3.0)[1];
+  polygon.vertexes[2].x = (pt_1 + pt_01_vec_n * 2.0)[0];
+  polygon.vertexes[2].y = (pt_1 + pt_01_vec_n * 2.0)[1];
   polygon.vertexes[3].x = (pt_1)[0];
   polygon.vertexes[3].y = (pt_1)[1];
 
