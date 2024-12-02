@@ -548,9 +548,13 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         double target_ego_s = 0.0;
         double target_ego_l = 0.0;
         Point2D ego_cart_target_frenet;
-        if (!track_lane_frenet_coord->XYToSL(ego_cart_point,
+        auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
+        if (cur_lane_frenet_coord == nullptr) {
+          continue;
+        }
+        if (!cur_lane_frenet_coord->XYToSL(ego_cart_point,
                                              ego_cart_target_frenet)) {
-          return;
+          continue;
         } else {
           target_ego_s = ego_cart_target_frenet.x;
           target_ego_l = ego_cart_target_frenet.y;
@@ -2152,19 +2156,8 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
   }
   auto last_track_ego_lane_frenet_coord =
       last_track_ego_lane->get_lane_frenet_coord();
-  double target_ego_s = 0.0;
-  double target_ego_l = 0.0;
-  Point2D ego_cart_target_frenet;
   if (last_track_ego_lane_frenet_coord == nullptr) {
     return;
-  } else {
-    if (!last_track_ego_lane_frenet_coord->XYToSL(ego_cart_point,
-                                                  ego_cart_target_frenet)) {
-      return;
-    } else {
-      target_ego_s = ego_cart_target_frenet.x;
-      target_ego_l = ego_cart_target_frenet.y;
-    }
   }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
@@ -2173,9 +2166,22 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
       std::shared_ptr<VirtualLane> relative_id_lane =
           relative_id_lanes[order_ids[i]];
       const auto& lane_points = relative_id_lane->lane_points();
-
       if (lane_points.size() <= 2) {
         continue;
+      }
+      auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
+      if (cur_lane_frenet_coord == nullptr) {
+        continue;
+      }
+      double target_ego_s = 0.0;
+      double target_ego_l = 0.0;
+      Point2D ego_cart_target_frenet;
+      if (!cur_lane_frenet_coord->XYToSL(ego_cart_point,
+                                                    ego_cart_target_frenet)) {
+        continue;
+      } else {
+        target_ego_s = ego_cart_target_frenet.x;
+        target_ego_l = ego_cart_target_frenet.y;
       }
       int point_nums = 0;
       double total_lateral_offset = 0.0;
