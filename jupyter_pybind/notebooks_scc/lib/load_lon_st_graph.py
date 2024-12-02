@@ -191,6 +191,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
+  st_search_value_list = ['st_graph_searcher_cost', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size', ]
   new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
@@ -248,11 +249,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   expanded_nodes_s_vec = plan_debug_json_info['expanded_nodes_s_vec']
   history_cur_nodes_t_vec = plan_debug_json_info['history_cur_nodes_t_vec']
   history_cur_nodes_s_vec = plan_debug_json_info['history_cur_nodes_s_vec']
-
-  print("expanded_nodes_t_vec_size: ", len(expanded_nodes_t_vec))
-  print("expanded_nodes_s_vec_size: ", len(expanded_nodes_s_vec))
-  print("history_cur_nodes_t_size: ", len(history_cur_nodes_t_vec))
-  print("history_cur_nodes_s_size: ", len(history_cur_nodes_s_vec))
 
   lon_plan_data['data_st_searcher'].data.update({
     't_search': t_search_vec,
@@ -414,6 +410,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(planning_json_value_list)):
      vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
 
+  st_search_attr_vec = []
+  for ind in range(len(st_search_value_list)):
+    st_search_attr_vec.append(plan_debug_json_info[st_search_value_list[ind]])
+
   cutin_attr_vec = []
   for ind in range(len(new_cutin_list)):
      cutin_attr_vec.append(plan_debug_json_info[new_cutin_list[ind]])
@@ -483,6 +483,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'VisionLonVal': vision_lon_attr_vec
   })
 
+  lon_plan_data['data_st_search_text'].data.update({
+    'StSearchAttr': st_search_value_list,
+    'StSearchVal': st_search_attr_vec,
+  })
+
   lon_plan_data['data_cutin'].data.update({
     'cutinAttr': new_cutin_list,
     'cutinVal': cutin_attr_vec
@@ -543,10 +548,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     planning_json = local_view_data['data_msg']['plan_debug_json_msg']
 
     print("dbw_status = ", planning_json['dbw_status'])
-    print("replan_status = ", planning_json['replan_status'])
     print("lat_err = ", planning_json['lat_err'])
     print("theta_err = ", planning_json['theta_err'])
-    print("lon_err = ", planning_json['lon_err'])
     print("dist_err = ", planning_json['dist_err'])
 
     try:
@@ -1034,6 +1037,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
+  data_st_search_text = ColumnDataSource(data = {'StSearchAttr':[], 'StSearchVal': []})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[]})
   data_st_search_nodes = ColumnDataSource(data = {'expanded_nodes_t':[], 'expanded_nodes_s':[]})
@@ -1081,6 +1085,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_st_search_nodes' : data_st_search_nodes, \
                    'data_st_search_history_cur_nodes' : data_st_search_history_cur_nodes, \
                    'data_target': data_target, \
+                   'data_st_search_text' : data_st_search_text, \
   }
 
   for i in range(20):
@@ -1114,6 +1119,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
         TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
         TableColumn(field="VisionLonVal", title="VisionLonVal"),
     ]
+  st_search_columns = [
+        TableColumn(field="StSearchAttr", title="StSearchAttr"),
+        TableColumn(field="StSearchVal", title="StSearchVal"),
+  ]
   cutin_colums = [
       TableColumn(field="cutinAttr", title="cutinAttr"),
       TableColumn(field="cutinVal", title="cutinVal")
@@ -1197,7 +1206,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
   fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes')
-  fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=8, color='orange', alpha=0.4, legend_label='history_cur_nodes')
+  fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes')
   fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3.0, line_color = 'blue', line_dash = 'solid', legend_label = 's_final_target')
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=5, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
@@ -1264,7 +1273,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
   fig7.legend.click_policy = 'hide'
 
-  pan1 = Panel(child=row(column(fig2, fig3), column(fig4, fig5, fig6, fig7)), title="Longtime")
+  tab_st_search = DataTable(source=data_st_search_text, columns=st_search_columns, width=500, height=600)
+   
+  pan1 = Panel(child=row(column(fig2, fig3, tab_st_search), column(fig4, fig5, fig6, fig7)), title="Longtime")
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
 

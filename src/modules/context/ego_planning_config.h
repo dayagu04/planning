@@ -2558,6 +2558,62 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    //  st search config
+    enable_only_s_t_hash = read_json_keys<bool>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "enable_only_s_t_hash"},
+        enable_only_s_t_hash);
+    upper_collision_dist = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "upper_collision_dist"},
+        upper_collision_dist);
+    lower_collision_dist = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "lower_collision_dist"},
+        lower_collision_dist);
+    max_accel_limit = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "max_accel_limit"},
+        max_accel_limit);
+    min_accel_limit = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "min_accel_limit"},
+        min_accel_limit);
+    max_jerk_limit = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "max_jerk_limit"},
+        max_jerk_limit);
+    min_jerk_limit = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "min_jerk_limit"},
+        min_jerk_limit);
+    accel_sample_num = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "accel_sample_num"},
+        accel_sample_num);
+    s_step = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "s_step"},
+        s_step);
+    t_step = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "t_step"},
+        t_step);
+    vel_step = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph_searcher",
+                                 "vel_step"},
+        vel_step);
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -2606,6 +2662,7 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double rear_agent_max_start_yield_time_s = 4.0;
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
+  bool enable_only_s_t_hash = false;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {
