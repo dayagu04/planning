@@ -10,6 +10,7 @@ namespace planning {
 namespace apa_planner {
 
 void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
+  Reset();
   if (local_view_ptr == nullptr) {
     ILOG_ERROR << "Update ApaMeasureDataManager, local_view_ptr is nullptr";
     return;

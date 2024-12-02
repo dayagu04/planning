@@ -4,6 +4,7 @@
 #include "src/modules/apa_function/apa_param_config.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "log_glog.h"
+#include "modules/apa_function/apa_world/apa_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 
@@ -75,7 +76,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
             .additional_occupancy_info;
 
     obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = ParkObstacleType::FUSION_OBJECT_POINT_CLOUD;
+    obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -126,7 +127,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         local_view->ground_line_perception.ground_lines[i];
 
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
-    obs->obs_type = ParkObstacleType::GROUND_LINE;
+    obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -171,7 +172,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   // limiters
   obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-  obs->obs_type = ParkObstacleType::SLOT_LIMITER;
+  obs->obs_type = apa_planner::ApaObsAttributeType::SLOT_LIMITER;
   obs->points.clear();
   cdl::AABB box;
   std::vector<Position2D> limiter_points;
@@ -283,7 +284,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
             .additional_occupancy_info;
 
     obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = ParkObstacleType::FUSION_OBJECT_POINT_CLOUD;
+    obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -314,7 +315,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
         local_view->ground_line_perception.ground_lines[i];
 
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
-    obs->obs_type = ParkObstacleType::GROUND_LINE;
+    obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -336,7 +337,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
   // limiters
   if (enable_limiter_obs) {
     obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-    obs->obs_type = ParkObstacleType::SLOT_LIMITER;
+    obs->obs_type = apa_planner::ApaObsAttributeType::SLOT_LIMITER;
     obs->points.clear();
     cdl::AABB box;
     std::vector<Position2D> limiter_points;

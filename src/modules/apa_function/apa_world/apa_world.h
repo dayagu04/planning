@@ -9,6 +9,7 @@
 
 #include "apa_data.h"
 #include "apa_measure_data_manager.h"
+#include "apa_obstacle_manager.h"
 #include "apa_predict_path_manager.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
@@ -65,6 +66,10 @@ class ApaWorld {
     return predict_path_ptr_;
   }
 
+  std::shared_ptr<ApaObstacleManager> GetObstacleManagerPtr() {
+    return obstacle_manager_ptr_;
+  }
+
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
 
  private:
@@ -73,17 +78,15 @@ class ApaWorld {
   void UpdateSlots();
   void UpdateUssDistance();
 
-  // todo: obstacle update can move to parking obstacle manager
-  void UpdateObstacles();
   void UpdateFuisonObs();
   void UpdateGroundLineObs();
   void UpdateUssObs();
-
 
   std::shared_ptr<ApaData> apa_data_ptr_;
   std::shared_ptr<ApaPredictPathManager> predict_path_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
   std::shared_ptr<SlotManager> slot_manager_ptr_;
   std::shared_ptr<UssObstacleAvoidance> uss_obstacle_avoider_ptr_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;

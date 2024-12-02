@@ -285,7 +285,8 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
 
   uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetApaDataPtr(),
                                    apa_world_ptr_->GetMeasureDataManagerPtr(),
-                                   apa_world_ptr_->GetPredictPathManagerPtr());
+                                   apa_world_ptr_->GetPredictPathManagerPtr(),
+                                   apa_world_ptr_->GetObstacleManagerPtr());
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;

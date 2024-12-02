@@ -12,6 +12,7 @@ namespace planning {
 namespace apa_planner {
 
 void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
+  Reset();
   if (local_view_ptr == nullptr) {
     ILOG_ERROR << "Update ApaStateMachineManager, local_view_ptr is nullptr";
     return;
