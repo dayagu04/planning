@@ -52,7 +52,6 @@ bool SlotManager::Update(
   // set input
   frame_.func_state_ptr = apa_data_ptr->func_state_ptr;
   frame_.parking_slot_ptr = apa_data_ptr->parking_slot_ptr;
-  frame_.localization_ptr = apa_data_ptr->localization_ptr;
   frame_.uss_percept_info_ptr = apa_data_ptr->uss_percept_info_ptr;
   frame_.ground_line_perception_info_ptr =
       apa_data_ptr->ground_line_perception_info_ptr;

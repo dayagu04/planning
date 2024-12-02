@@ -1,43 +1,85 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "pose2d.h"
+
 #include "ad_common/math/box2d.h"
 #include "config/message_type.h"
-#include "utils/index_list.h"
-#include "src/library/collision_detection/polygon_base.h"
+#include "geometry_math.h"
+#include "pose2d.h"
 #include "src/library/collision_detection/aabb2d.h"
-
+#include "src/library/collision_detection/polygon_base.h"
+#include "utils/index_list.h"
 
 namespace planning {
 namespace apa_planner {
 
-// 障碍物高度类型：高于后视镜 低于后视镜 低于底盘
-enum class ApaObsHeightType: uint8_t {
-
+// 障碍物高度类型：高于后视镜 低于后视镜 低于底盘, 默认高于后视镜
+enum class ApaObsHeightType : uint8_t {
+  // unknown obstacles are treated as HIGH obstacle
+  UNKNOWN = 0,
+  MAY_RUN_OVER = 1,
+  LOW = 2,
+  MID = 3,
+  HIGH = 4,
+  COUNT,
 };
 
 // 障碍物属性类型：
-enum class ApaObsAttributeType: uint8_t {
-
+enum class ApaObsAttributeType : uint8_t {
+  UNKNOWN,
+  FUSION_POINT_CLOUD,
+  FUSION_POLYGON,
+  GROUND_LINE_POINT_CLOUD,
+  USS_POINT_CLOUD,
+  VIRTUAL_POINT_CLOUD,
+  MAP_BOUND,
+  SLOT_LINE,
+  SLOT_LIMITER,
+  HOLE,
+  COUNT,
 };
 
 // 障碍物运动类型：
-enum class ApaObsMovementType: uint8_t {
-
+enum class ApaObsMovementType : uint8_t {
+  STATIC,
+  MOTION,
+  COUNT,
 };
-
-
-
 
 class ApaObstacleT final {
   ApaObstacleT() {}
   ~ApaObstacleT() {}
+
+ private:
+  ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
+  ApaObsAttributeType obs_attribute_type_{ApaObsAttributeType::UNKNOWN};
+  ApaObsMovementType obs_movement_type_{ApaObsMovementType::STATIC};
+
+  double obs_vel_{0.};
+  double obs_acc_{0.};
+  pnc::geometry_lib::PathPoint obs_pose;
+
+  double height_{0.};
+
+  std::vector<pnc::geometry_lib::PathPoint> obs_predict_traj;
+
+  cdl::AABB box_;
+  Polygon2D polygon_;
+
+  std::vector<Eigen::Vector2d> pt_clout_2d_;
+  size_t pt_clout_2d_size_{0};
+
+  std::vector<Eigen::Vector3d> pt_clout_3d_;
+  size_t pt_clout_3d_size_{0};
+
+  size_t obs_id_{0};
+
 };
 }  // namespace apa_planner
 

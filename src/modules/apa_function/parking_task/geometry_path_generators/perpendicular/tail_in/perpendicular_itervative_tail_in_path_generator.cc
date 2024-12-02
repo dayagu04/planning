@@ -1654,14 +1654,14 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
               temp_path_r.cost += 100.0;
             }
           }
-        }
+        } else {
+          if (geometry_path_r.cur_gear != ref_gear) {
+            temp_path_r.cost += 100.0;
+          }
 
-        if (geometry_path_r.cur_gear != ref_gear) {
-          temp_path_r.cost += 100.0;
-        }
-
-        if (geometry_path_d.cur_gear != ref_gear) {
-          temp_path_d.cost += 100.0;
+          if (geometry_path_d.cur_gear != ref_gear) {
+            temp_path_d.cost += 100.0;
+          }
         }
 
         if (temp_path_r.cost < temp_path_d.cost) {

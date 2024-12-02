@@ -329,27 +329,15 @@ struct ApaObstacle {
   ObstacleType obs_type = ObstacleType::INVALID;
 };
 
-struct CarPredictTraj {
-  std::vector<pnc::geometry_lib::PathPoint> car_predict_pt_vec;
-
-  void Reset() { car_predict_pt_vec.clear(); }
-};
-
 struct ApaData {
   // 这些指针只准在apa_world里的preprocess使用 其他代码后续应当不能访问
   const iflyauto::FuncStateMachine* func_state_ptr;
   const iflyauto::ParkingFusionInfo* parking_slot_ptr;
-  const iflyauto::IFLYLocalization* localization_ptr;
-  const iflyauto::VehicleServiceOutputInfo* vehicle_service_info_ptr;
   const iflyauto::UssWaveInfo* uss_wave_info_ptr;
   const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
   const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
   const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
   const iflyauto::FusionOccupancyObjectsInfo* fusion_occupancy_objects_info_ptr;
-  const iflyauto::ControlOutput* control_output_ptr;
-  const iflyauto::PlanningOutput* plan_output_ptr;
-
-  CarPredictTraj car_predict_traj;
 
   ApaSlots apa_slots;
   UssDistance uss_dis;
@@ -370,7 +358,6 @@ struct ApaData {
   const LocalView* local_view_ptr_ = nullptr;
 
   void Reset() {
-    car_predict_traj.Reset();
     apa_slots.Reset();
     uss_dis.Reset();
     apa_obs_map.clear();
