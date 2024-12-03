@@ -50,10 +50,13 @@ void PerpendicularHeadOutScenario::PlanCore() {
     return;
   }
 
+  // const double safe_uss_remain_dist =
+  //     (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+  //         ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+  //         : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+
   const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+      apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
 
@@ -181,7 +184,12 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
             apa_world_ptr_->GetApaDataPtr()
                 ->simu_param.target_managed_slot_y_vec[i];
       } else {
-        pt[i] << slot_points[i].x(), slot_points[i].y();
+        if (slot_points.size() > 0) {
+          pt[i] << slot_points[i].x(), slot_points[i].y();
+        } else {
+          ILOG_INFO << "ego slot points size is 0";
+          return false;
+        }
       }
     }
     const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
@@ -332,6 +340,10 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
                    ->GetParkOutDirection() == ApaParkOutDirection::LEFT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+    } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                   ->GetParkOutDirection() == ApaParkOutDirection::FRONT) {
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
+      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     }
 
     ILOG_INFO << "Now default to turn right at first";
@@ -1421,6 +1433,7 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
 }
 
 const bool PerpendicularHeadOutScenario::CheckFinished() {
+  bool parking_finish = false;
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const bool heading_condition_1 =
@@ -1437,7 +1450,11 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   const bool remain_s_condition =
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
 
-  bool parking_finish = lat_condition && static_condition && remain_s_condition;
+  if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
+    parking_finish = remain_s_condition;
+  } else {
+    parking_finish = lat_condition && static_condition && remain_s_condition;
+  }
 
   if (parking_finish) {
     return true;
