@@ -9,6 +9,7 @@
 
 #include "apa_data.h"
 #include "apa_measure_data_manager.h"
+#include "apa_predict_path_manager.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "collision_detection/uss_obstacle_avoidance.h"
@@ -60,6 +61,10 @@ class ApaWorld {
     return state_machine_ptr_;
   }
 
+  std::shared_ptr<ApaPredictPathManager> GetPredictPathManagerPtr() {
+    return predict_path_ptr_;
+  }
+
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
 
  private:
@@ -74,9 +79,9 @@ class ApaWorld {
   void UpdateGroundLineObs();
   void UpdateUssObs();
 
-  void UpdateCarPredictTraj();
 
   std::shared_ptr<ApaData> apa_data_ptr_;
+  std::shared_ptr<ApaPredictPathManager> predict_path_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<SlotManager> slot_manager_ptr_;
@@ -85,6 +90,7 @@ class ApaWorld {
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
 
   const LocalView* local_view_ptr_ = nullptr;
+  const iflyauto::PlanningOutput* planning_output_ptr_ = nullptr;
 };
 
 }  // namespace apa_planner

@@ -6,6 +6,7 @@
 
 #include "apa_data.h"
 #include "apa_param_config.h"
+#include "apa_predict_path_manager.h"
 #include "apa_state_machine_manager.h"
 #include "common.pb.h"
 #include "common_c.h"
@@ -21,6 +22,7 @@ namespace apa_planner {
 void ApaWorld::Init() {
   apa_data_ptr_ = std::make_shared<ApaData>();
   measure_data_ptr_ = std::make_shared<ApaMeasureDataManager>();
+  predict_path_ptr_ = std::make_shared<ApaPredictPathManager>();
   state_machine_ptr_ = std::make_shared<ApaStateMachineManager>();
   slot_manager_ptr_ = std::make_shared<SlotManager>();
   uss_obstacle_avoider_ptr_ = std::make_shared<UssObstacleAvoidance>();
@@ -31,6 +33,8 @@ void ApaWorld::Init() {
 void ApaWorld::Reset() {
   apa_data_ptr_->Reset();
   state_machine_ptr_->Reset();
+  measure_data_ptr_->Reset();
+  predict_path_ptr_->Reset();
   slot_manager_ptr_->Reset();
   uss_obstacle_avoider_ptr_->Reset();
   collision_detector_ptr_->Reset();
@@ -41,9 +45,6 @@ void ApaWorld::Reset() {
 void ApaWorld::Preprocess() {
   apa_data_ptr_->uss_wave_info_ptr = &local_view_ptr_->uss_wave_info;
   apa_data_ptr_->uss_percept_info_ptr = &local_view_ptr_->uss_percept_info;
-  apa_data_ptr_->localization_ptr = &local_view_ptr_->localization;
-  apa_data_ptr_->vehicle_service_info_ptr =
-      &local_view_ptr_->vehicle_service_output_info;
   apa_data_ptr_->parking_slot_ptr = &local_view_ptr_->parking_fusion_info;
   apa_data_ptr_->func_state_ptr = &local_view_ptr_->function_state_machine_info;
   apa_data_ptr_->ground_line_perception_info_ptr =
@@ -53,19 +54,19 @@ void ApaWorld::Preprocess() {
   apa_data_ptr_->fusion_occupancy_objects_info_ptr =
       &local_view_ptr_->fusion_occupancy_objects_info;
   apa_data_ptr_->local_view_ptr_ = local_view_ptr_;
-  apa_data_ptr_->control_output_ptr = &local_view_ptr_->control_output;
 
   measure_data_ptr_->Update(local_view_ptr_);
 
   state_machine_ptr_->Update(local_view_ptr_);
+
+  predict_path_ptr_->Update(local_view_ptr_, planning_output_ptr_,
+                            measure_data_ptr_);
 
   UpdateSlots();
 
   UpdateObstacles();
 
   UpdateUssDistance();
-
-  UpdateCarPredictTraj();
 
   UpdateSlots();
 }
@@ -393,149 +394,6 @@ void ApaWorld::UpdateUssObs() {
   return;
 }
 
-void ApaWorld::UpdateCarPredictTraj() {
-  // 填充车辆基于自车方向盘转角或者控制MPC的预测轨迹，
-  // 用于后续的碰撞检测和速度规划
-  const double predict_distance = 3.0;
-
-  bool use_steer_angle_flag = false;
-
-  CarPredictTraj& car_predict_traj = apa_data_ptr_->car_predict_traj;
-  car_predict_traj.Reset();
-  std::vector<pnc::geometry_lib::PathPoint>& car_predict_pt_vec =
-      car_predict_traj.car_predict_pt_vec;
-  // 如果没有planning_output 那么没有预测轨迹
-  if (apa_data_ptr_->plan_output_ptr == nullptr) {
-    return;
-  }
-  if (apa_data_ptr_->plan_output_ptr->planning_status.apa_planning_status !=
-      iflyauto::APA_IN_PROGRESS) {
-    return;
-  }
-  if (apa_data_ptr_->control_output_ptr == nullptr ||
-      apa_data_ptr_->control_output_ptr->control_trajectory
-              .control_result_points_size < 1) {
-    use_steer_angle_flag = true;
-  }
-
-  if (!use_steer_angle_flag) {
-    car_predict_pt_vec.emplace_back(pnc::geometry_lib::PathPoint(
-        measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading()));
-    pnc::geometry_lib::LocalToGlobalTf l2g_tf;
-    l2g_tf.Init(measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading());
-    const size_t control_result_points_size =
-        apa_data_ptr_->control_output_ptr->control_trajectory
-            .control_result_points_size;
-    const auto control_result_points =
-        apa_data_ptr_->control_output_ptr->control_trajectory
-            .control_result_points;
-    for (size_t i = 0; i < control_result_points_size; ++i) {
-      const auto& pt = control_result_points[i];
-      pnc::geometry_lib::PathPoint car_predict_pt;
-      car_predict_pt.pos = l2g_tf.GetPos(Eigen::Vector2d(pt.x, pt.y));
-      car_predict_pt.heading =
-          pnc::geometry_lib::NormalizeAngle(l2g_tf.GetHeading(pt.z));
-
-      const double ds = std::hypot(
-          car_predict_pt.pos.x() - car_predict_pt_vec.back().pos.x(),
-          car_predict_pt.pos.y() - car_predict_pt_vec.back().pos.y());
-
-      const double dphi = pnc::geometry_lib::NormalizeAngle(
-          car_predict_pt.heading - car_predict_pt_vec.back().heading);
-
-      if (ds > 0.5 || dphi * kRad2Deg > 5.1) {
-        ILOG_INFO << "control output is err";
-        car_predict_pt_vec.clear();
-        break;
-      }
-
-      if (ds < 1e-2) {
-        continue;
-      }
-
-      car_predict_pt.s = ds + car_predict_pt_vec.back().s;
-      car_predict_pt_vec.emplace_back(std::move(car_predict_pt));
-    }
-
-    if (car_predict_pt_vec.back().s < predict_distance) {
-      const pnc::geometry_lib::PathPoint& last_car_predict_pt =
-          car_predict_pt_vec.back();
-      double min_dist = std::numeric_limits<double>::infinity();
-      int min_index = -1;
-      for (int i = 0;
-           i <
-           apa_data_ptr_->plan_output_ptr->trajectory.trajectory_points_size;
-           ++i) {
-        const iflyauto::TrajectoryPoint& planning_pt =
-            apa_data_ptr_->plan_output_ptr->trajectory.trajectory_points[i];
-        const double dist =
-            std::hypot(planning_pt.x - last_car_predict_pt.pos.x(),
-                       planning_pt.y - last_car_predict_pt.pos.y());
-        if (dist < min_dist) {
-          min_index = i;
-          min_dist = dist;
-        }
-      }
-
-      for (int i = min_index + 1;
-           i < apa_data_ptr_->plan_output_ptr->trajectory
-                   .trajectory_points_size &&
-           car_predict_pt_vec.back().s < predict_distance;
-           ++i) {
-        pnc::geometry_lib::PathPoint car_predict_pt;
-        car_predict_pt.pos.x() =
-            apa_data_ptr_->plan_output_ptr->trajectory.trajectory_points[i].x;
-        car_predict_pt.pos.y() =
-            apa_data_ptr_->plan_output_ptr->trajectory.trajectory_points[i].y;
-        car_predict_pt.heading =
-            apa_data_ptr_->plan_output_ptr->trajectory.trajectory_points[i]
-                .heading_yaw;
-
-        const double ds = std::hypot(
-            car_predict_pt.pos.x() - car_predict_pt_vec.back().pos.x(),
-            car_predict_pt.pos.y() - car_predict_pt_vec.back().pos.y());
-
-        car_predict_pt.s = ds + car_predict_pt_vec.back().s;
-        car_predict_pt_vec.emplace_back(std::move(car_predict_pt));
-      }
-    }
-  }
-
-  if (car_predict_pt_vec.size() < 2) {
-    car_predict_traj.Reset();
-    const double steer_angle = measure_data_ptr_->GetSteerWheelAngle();
-    const uint8_t gear =
-        (apa_data_ptr_->plan_output_ptr->gear_command.gear_command_value ==
-         iflyauto::GEAR_COMMAND_VALUE_DRIVE)
-            ? pnc::geometry_lib::SEG_GEAR_DRIVE
-            : pnc::geometry_lib::SEG_GEAR_REVERSE;
-    pnc::geometry_lib::PathSegment path_seg;
-    if (std::fabs(steer_angle) < 2.68 * kDeg2Rad) {
-      pnc::geometry_lib::CalLineFromPt(
-          gear, predict_distance,
-          pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
-                                       measure_data_ptr_->GetHeading()),
-          path_seg);
-    } else {
-      const auto& front_wheel_angle =
-          std::fabs(measure_data_ptr_->GetFrontWheelAngle());
-      const double rear_axle_center_turn_radius =
-          1.0 / (apa_param.GetParam().c1 * std::tan(front_wheel_angle));
-      const uint8_t steer = (steer_angle > 0.0)
-                                ? pnc::geometry_lib::SEG_STEER_LEFT
-                                : pnc::geometry_lib::SEG_STEER_RIGHT;
-      pnc::geometry_lib::CalArcFromPt(
-          gear, steer, predict_distance, rear_axle_center_turn_radius,
-          pnc::geometry_lib::PathPoint(measure_data_ptr_->GetPos(),
-                                       measure_data_ptr_->GetHeading()),
-          path_seg);
-    }
-
-    pnc::geometry_lib::SamplePointSetInPathSeg(car_predict_pt_vec, path_seg,
-                                               0.4);
-  }
-}
-
 const bool ApaWorld::Update() {
   if (local_view_ptr_ == nullptr) {
     ILOG_INFO << "-- apa_world: local view ptr is nullptr, err ---";
@@ -563,9 +421,11 @@ const bool ApaWorld::Update() {
   }
 
   if (!apa_data_ptr_->is_slot_type_fixed) {
-    // TODO: selected slot (slot_type) should be obtained in slot management
     apa_data_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
     apa_data_ptr_->slot_id = slot_manager_ptr_->GetEgoSlotInfo().select_slot_id;
+  }
+
+  if (state_machine_ptr_->IsParkingStatus()) {
     apa_data_ptr_->is_slot_type_fixed = true;
   }
 
@@ -580,7 +440,7 @@ const bool ApaWorld::Update() {
 const bool ApaWorld::Update(const LocalView* local_view,
                             const iflyauto::PlanningOutput& planning_output) {
   local_view_ptr_ = local_view;
-  apa_data_ptr_->plan_output_ptr = &planning_output;
+  planning_output_ptr_ = &planning_output;
   return Update();
 }
 

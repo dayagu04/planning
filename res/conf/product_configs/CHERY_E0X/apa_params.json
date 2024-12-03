@@ -206,7 +206,7 @@
   "max_y_err_2": 0.06,
   "max_heading_err_2": 0.88,
   "max_y_err_3": 0.06,
-  "max_heading_err_3": 6.8,
+  "max_heading_err_3": 3.68,
   "pose_slot_occupied_ratio": 0.268,
   "pose_slot_occupied_ratio_2": 0.568,
   "pose_slot_occupied_ratio_3": 0.768,
