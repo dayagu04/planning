@@ -265,31 +265,26 @@ bool LongitudinalDecisionDecider::IsMaxAccCurvSafeInStGraph() const {
   const auto &planning_init_point = ego_state_mgr->planning_init_point();
   const double ego_vel = planning_init_point.v;
 
-  // 依赖agents_headway_Info
-  // const auto &agents_headway_map = planning_data->decision_output()
-  //                                      .agent_headway_decider_output()
-  //                                      .agents_headway_Info();
-
-  // acc:[-1.0, 2.0]  jerk:[-2.0, 4.0]
+  const auto &agents_headway_map =
+      planning_context.agent_headway_decider_output().agents_headway_Info();
   auto max_deceleration_curve =
       GenerateMaxDecelerationCurve(planning_init_point);
   for (size_t i = 0; i < plan_points_num_; ++i) {
     const double t = i * dt_;
-    // const auto &upper_bound = st_graph->GetPassCorridorUpperBound(t);
-    // if (upper_bound.agent_id() != speed::kNoAgentId) {
-    //     auto iter = agents_headway_map.find(upper_bound.agent_id());
-    // double follow_time_gap = kFollowTimeGap;
-    //     if (iter != agents_headway_map.end()) {
-    //       follow_time_gap = iter->second.current_headway;
-    //     }
-    //   const double target_s_disatnce = std::max(
-    //       ego_vel * follow_time_gap + kMinFollowDistance,
-    //       kMinFollowDistance);
-    //   const double max_curve_s = max_deceleration_curve.Evaluate(0, t);
-    //   if (max_curve_s + target_s_disatnce > upper_bound.s()) {
-    //     return false;
-    //   }
-    // }
+    const auto &upper_bound = st_graph->GetPassCorridorUpperBound(t);
+    if (upper_bound.agent_id() != speed::kNoAgentId) {
+      auto iter = agents_headway_map.find(upper_bound.agent_id());
+      double follow_time_gap = kFollowTimeGap;
+      if (iter != agents_headway_map.end()) {
+        follow_time_gap = iter->second.current_headway;
+      }
+      const double target_s_disatnce = std::max(
+          ego_vel * follow_time_gap + kMinFollowDistance, kMinFollowDistance);
+      const double max_curve_s = max_deceleration_curve.Evaluate(0, t);
+      if (max_curve_s + target_s_disatnce > upper_bound.s()) {
+        return false;
+      }
+    }
   }
 
   return true;
@@ -304,7 +299,7 @@ LongitudinalDecisionDecider::GenerateMaxDecelerationCurve(
   init_state.a = init_point.lon_init_state.a();
 
   StateLimit state_limit;
-
+  // acc:[-1.0, 2.0]  jerk:[-2.0, 4.0]
   const double acc_upper_bound = 2.0;
   const double acc_lower_bound = -1.0;
   const double jerk_upper_bound = 4.0;
@@ -321,7 +316,8 @@ LongitudinalDecisionDecider::GenerateMaxDecelerationCurve(
 }
 
 void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
-  LOG_DEBUG("=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
+  LOG_DEBUG(
+      "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
 
   const auto &environmental_model = session_->environmental_model();
   const auto &mutable_planning_context = session_->mutable_planning_context();
