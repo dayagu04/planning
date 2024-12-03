@@ -34,9 +34,9 @@ bool LateralOffsetCalculator::Process(
   const auto &lane_change_decider_output =
       planning_context.lane_change_decider_output();
   const auto &status = lane_change_decider_output.curr_state;
-  const auto &accident_ahead = lane_change_decider_output.accident_ahead;
+  const bool accident_ahead = false;
   const auto &should_premove = lane_change_decider_output.should_premove;
-  const auto &should_suspend = lane_change_decider_output.should_suspend;
+  const bool should_suspend = false;
 
   // init info
   flane_ = session_->environmental_model()
@@ -2458,21 +2458,21 @@ bool LateralOffsetCalculator::update_planner_output() {
   int turn_light = lane_change_decider_output.turn_light;
   int map_turn_light = lane_change_decider_output.map_turn_light;  //
   //   取值范围，对应的含义？
-  bool accident_ahead = lane_change_decider_output.accident_ahead;
+  bool accident_ahead = false;
 
-  bool accident_back = lane_change_decider_output.accident_back;
+  bool accident_back = false;
 
-  bool close_to_accident = lane_change_decider_output.close_to_accident;
+  bool close_to_accident = false;
 
-  bool lc_pause = lane_change_decider_output.lc_pause;
-  int lc_pause_id = lane_change_decider_output.lc_pause_id;  // id
+  bool lc_pause = false;
+  int lc_pause_id = -1;  // id
   //   //                          //
   //   //
   //   是指车辆id还是路线id，以及id命名顺序是从左到右还是从右到左？
-  double tr_pause_l = lane_change_decider_output.tr_pause_l;  //
+  double tr_pause_l = 0;  //
   //   为啥是double 类型？
   //   //       表示的含义是？
-  double tr_pause_s = lane_change_decider_output.tr_pause_s;
+  double tr_pause_s = 0;
 
   bool isRedLightStop = false;  // hack!
 
@@ -2484,12 +2484,12 @@ bool LateralOffsetCalculator::update_planner_output() {
   lateral_output.v_limit = 40.0 / 3.6;
   lateral_output.isRedLightStop = isRedLightStop;
 
-  lateral_output.disable_l = lane_change_decider_output.disable_l;
-  lateral_output.disable_r = lane_change_decider_output.disable_r;
-  lateral_output.enable_l = lane_change_decider_output.enable_l;  // disabled
-  //       ,enable的区别是啥？代表啥意思
-  lateral_output.enable_r = lane_change_decider_output.enable_r;
-  lateral_output.enable_id = lane_change_decider_output.enable_id;  //
+  // lateral_output.disable_l = lane_change_decider_output.disable_l;
+  // lateral_output.disable_r = lane_change_decider_output.disable_r;
+  // lateral_output.enable_l = lane_change_decider_output.enable_l;  // disabled
+  // //       ,enable的区别是啥？代表啥意思
+  // lateral_output.enable_r = lane_change_decider_output.enable_r;
+  // lateral_output.enable_id = lane_change_decider_output.enable_id;  //
   //   enable车的id？ 车道线的id?
 
   lateral_output.lat_offset = lat_offset_;
@@ -2511,7 +2511,7 @@ bool LateralOffsetCalculator::update_planner_output() {
     lateral_output.which_lane = "current_line";
   }
 
-  int lb_request = lane_change_decider_output.lb_request;
+  int lb_request = 0;
 
   if (lb_request == NO_CHANGE) {
     lateral_output.lb_request = "none";
@@ -2687,12 +2687,11 @@ bool LateralOffsetCalculator::update_planner_output() {
   lateral_output.must_change_lane = lane_change_decider_output.must_change_lane;
   lateral_output.close_to_accident = close_to_accident;
   lateral_output.angle_steers_limit = 0.0;  // attention!
-  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
+  lateral_output.left_faster = false;
 
-  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
-  lateral_output.premove = (lane_change_decider_output.premovel ||
-                            lane_change_decider_output.premover);
-  lateral_output.premove_dist = lane_change_decider_output.premove_dist;
+  lateral_output.right_faster = false;
+  lateral_output.premove = false;
+  lateral_output.premove_dist = 0;
   lateral_output.isFasterStaticAvd =
       (left_direct_exist && lateral_output.left_faster) ||
       (right_direct_exist && lateral_output.right_faster) ||
@@ -2753,8 +2752,6 @@ bool LateralOffsetCalculator::update_planner_output() {
     lateral_output.turn_light_source = "map_turn_light";
   } else if (lane_change_decider_output.lc_turn_light > 0) {
     lateral_output.turn_light_source = "lc_turn_light";
-  } else if (lane_change_decider_output.lb_turn_light > 0) {
-    lateral_output.turn_light_source = "lb_turn_light";
   } else {
     lateral_output.turn_light_source = "none";
   }
@@ -2784,12 +2781,11 @@ bool LateralOffsetCalculator::update_planner_output() {
 
   lateral_output.r_poly = r_poly_;
 
-  lateral_output.behavior_suspension =
-      lane_change_decider_output.behavior_suspend;  //
+  lateral_output.behavior_suspension = false;  //
                                                     //   lateral suspend
-  lateral_output.suspension_obs.assign(
-      lane_change_decider_output.suspend_obs.begin(),
-      lane_change_decider_output.suspend_obs.end());  //
+  // lateral_output.suspension_obs.assign(
+  //     lane_change_decider_output.suspend_obs.begin(),
+  //     lane_change_decider_output.suspend_obs.end());  //
   //   lateral suspend
   //   //       obstacles
   if (!update_lateral_info()) {  // 这里进入

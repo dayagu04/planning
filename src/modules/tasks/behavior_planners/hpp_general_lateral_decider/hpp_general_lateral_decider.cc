@@ -234,8 +234,7 @@ void HppGeneralLateralDecider::HandleLaneChangeScene(
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
 
-  const auto &timer =
-      session_->planning_context().lane_change_decider_output().lc_timer;
+  const auto &timer = 0;
   bool lane_change_flag{false};
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -1443,8 +1442,8 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
   }
   // scenario, left_faster, right_is_faster
   lateral_output.scenario = lane_change_decider_output.scenario;
-  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
-  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
+  lateral_output.left_faster = false;
+  lateral_output.right_faster = false;
   // lc info
   int lc_request = lane_change_decider_output.lc_request;
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <unordered_map>
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "define/geometry.h"
@@ -57,53 +58,17 @@ struct LaneChangeTimer {
 };
 
 struct LaneChangeStageInfo {
-  std::pair<int, int> gap;
-  bool gap_valid{false};
-  bool gap_approached{false};
   bool gap_insertable{false};
-  bool side_approach{false};
-  bool should_suspend{false};
-
   // lc valid related
-  bool lc_pause{false};
-  int lc_pause_id{-1000};
   bool should_premove{false};
   std::string lc_invalid_reason{"none"};
-
-  // lc back related
-  double tr_pause_dv{0.0};
-  double tr_pause_l{0.0};
-  double tr_pause_s{-100.0};
-  bool accident_back{false};
-
-  // clear lc related
-  bool need_clear_lb_car{false};
-
-  // not related but needed
-  bool accident_ahead{false};
-  bool close_to_accident{false};
-
   // back to state machine only for debug
   bool lc_should_back{false};
   bool lc_valid{false};
   std::string lc_back_reason{"none"};
   void Reset() {
-    gap_valid = false;
-    gap_approached = false;
-    gap_insertable = false;
-    side_approach = false;
-    should_suspend = false;
-    lc_pause = false;
-    lc_pause_id = -1000;
     should_premove = false;
     lc_invalid_reason = "none";
-    tr_pause_dv = 0.0;
-    tr_pause_l = 0.0;
-    tr_pause_s = -100.0;
-    accident_back = false;
-    need_clear_lb_car = false;
-    accident_ahead = false;
-    close_to_accident = false;
     lc_should_back = false;
     lc_valid = false;
     lc_back_reason = "none";
@@ -157,18 +122,10 @@ class LaneChangeStateMachineManager {
   void MakeFixLane();
   void UpdateStateMachine();
   void GenerateStateMachineOutput();
-  void CalculateSideGapFeasible(
-      const std::vector<TrackedObject>& vec_side_obstacle,
-      LaneChangeStageInfo* const lc_state_info);
-  void CalculateFrontGapFeasible(
-      const std::vector<TrackedObject>& vec_side_obstacle,
-      LaneChangeStageInfo* const lc_state_info);
-  void CalculateSideAreaIfNeedBack(
-      const std::vector<TrackedObject>& vec_side_obstacle,
-      const RequestType& direction, LaneChangeStageInfo* const lc_state_info);
-  void CalculateFrontAreaIfNeedBack(
-      const std::vector<TrackedObject>& vec_side_obstacle,
-      const RequestType& direction, LaneChangeStageInfo* const lc_state_info);
+  void CalculateSideGapFeasible(LaneChangeStageInfo* const lc_state_info);
+  void CalculateFrontGapFeasible(LaneChangeStageInfo* const lc_state_info);
+  void CalculateSideAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
+  void CalculateFrontAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
                const double& threshold);
   void UpdateCoarsePlanningInfo();
@@ -182,6 +139,10 @@ class LaneChangeStateMachineManager {
 
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request) const;
+
+  void PreProcess();
+  bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
+
 
  private:
   ScenarioStateMachineConfig config_;
@@ -208,6 +169,12 @@ class LaneChangeStateMachineManager {
   RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
   double overlap_lane_virtual_id_ = 0;
   int propose_state_frame_nums_ = 0;
+  int execution_state_frame_nums_ = 0;
   double lat_close_boundary_offset_ = 0;
+  const planning_data::DynamicAgentNode* target_lane_front_node_ = nullptr;
+  const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
+  const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
+  const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
+  bool is_large_car_in_side_ = false;
 };
 }  // namespace planning

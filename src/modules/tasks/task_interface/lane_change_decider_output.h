@@ -38,60 +38,15 @@ struct LaneChangeDeciderOutput {
 
   int turn_light;
   int map_turn_light;
-  bool accident_back;
-  bool accident_ahead;
-  bool close_to_accident;
   bool should_premove;
-  bool should_suspend;
   bool must_change_lane;
-  bool behavior_suspend;         // lateral suspend
-  std::vector<int> suspend_obs;  // lateral suspend
-
-  bool lc_pause;
-  int lc_pause_id;
-  double lc_timer;
-  double tr_pause_l;
-  double tr_pause_s;
-
-  bool disable_l;
-  bool disable_r;
-  bool enable_l;
-  bool enable_r;
-
-  bool need_clear_lb_car;
-  std::unordered_map<int, int> front_tracks_slow_cnt;
-  std::unordered_map<int, int> avd_track_cnt;
-  bool enable_lb;
-  int enable_id;
 
   int lc_request;
   int lc_request_source;
   int lc_turn_light;
   std::string act_request_source;
-  int lb_request;
-  int lb_turn_light;
+  double lat_premove_dist;
 
-  bool premovel;
-  bool premover;
-  double premove_dist;
-
-  bool left_is_faster;
-  bool right_is_faster;
-
-  bool neg_left_lb_car;
-  bool neg_right_lb_car;
-  bool neg_left_alc_car;
-  bool neg_right_alc_car;
-
-  std::vector<int> left_lb_car;
-  std::vector<int> left_alc_car;
-  std::vector<int> right_lb_car;
-  std::vector<int> right_alc_car;
-
-  bool enable_alc_car_protection{false};
-  std::vector<int> alc_cars_;
-  std::vector<TrackInfo> near_cars_target;
-  std::vector<TrackInfo> near_cars_origin;
   TrackInfo lc_invalid_track;
   TrackInfo lc_back_track;
 

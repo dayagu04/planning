@@ -2311,8 +2311,8 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   }
   // scenario, left_faster, right_is_faster
   lateral_output.scenario = lane_change_decider_output.scenario;
-  lateral_output.left_faster = lane_change_decider_output.left_is_faster;
-  lateral_output.right_faster = lane_change_decider_output.right_is_faster;
+  lateral_output.left_faster = false;
+  lateral_output.right_faster = false;
   // lc info
   int lc_request = lane_change_decider_output.lc_request;
 

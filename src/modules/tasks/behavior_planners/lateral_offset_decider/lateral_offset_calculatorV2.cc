@@ -67,9 +67,9 @@ bool LateralOffsetCalculatorV2::Process(
   const auto &lane_change_decider_output =
       planning_context.lane_change_decider_output();
   const auto &status = lane_change_decider_output.curr_state;
-  const auto &accident_ahead = lane_change_decider_output.accident_ahead;
+  const auto &accident_ahead = false;
   const auto &should_premove = lane_change_decider_output.should_premove;
-  const auto &should_suspend = lane_change_decider_output.should_suspend;
+  const auto &should_suspend = false;
 
   // init info
   flane_ = session_->environmental_model()
