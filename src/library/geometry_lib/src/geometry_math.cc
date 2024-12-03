@@ -39,6 +39,18 @@ const double NormalizeAnglePI(const double angle) {
   return std::fabs(a);
 }
 
+const double AngleSubtraction(const double angle1, const double angle2) {
+  return NormalizeAngle(angle1 - angle2);
+}
+
+const bool IsSTrunPath(const PathSegment &path_seg1,
+                       const PathSegment &path_seg2) {
+  if (path_seg1.seg_gear != path_seg2.seg_gear) {
+    return false;
+  }
+  return IsOppositeSteer(path_seg1.seg_steer, path_seg2.seg_steer);
+}
+
 const bool IsHeadingEqual(const double heading_1, const double heading_2) {
   const double heading_tmp = NormalizeAnglePI(heading_1 - heading_2);
   if (heading_tmp <= kEqualHeadingEps) {
@@ -333,7 +345,8 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
 
   if (IsDoubleEqual(GetCrossFromTwoVec2d(AB, CD), 0.0)) {
     // std::cout
-    //     << "two lines are parallel or overlapping, which must be ruled out\n";
+    //     << "two lines are parallel or overlapping, which must be ruled
+    //     out\n";
     return LogErr(__func__, 1);
   }
 
@@ -1829,7 +1842,8 @@ const bool CalCommonTangentCircleOfTwoLine(
       tangent_ptss.emplace_back(tang_pts);
     }
   } else {
-    // std::cout << "two lines have no intersection, no common tangent circle\n";
+    // std::cout << "two lines have no intersection, no common tangent
+    // circle\n";
     return LogErr(__func__, 1);
   }
 
@@ -3042,6 +3056,38 @@ void GeometryPath::CalcCost() {
   steer_change_cost = 3.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
+}
+
+void GeometryPath::GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+  for (auto &path_seg : path_segment_vec) {
+    path_seg.GlobalToLocal(g2l_tf);
+  }
+  start_pose.GlobalToLocal(g2l_tf);
+  end_pose.GlobalToLocal(g2l_tf);
+  for (auto &pt : path_pt_vec) {
+    pt.GlobalToLocal(g2l_tf);
+  }
+}
+
+void GeometryPath::LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+  for (auto &path_seg : path_segment_vec) {
+    path_seg.LocalToGlobal(l2g_tf);
+  }
+  start_pose.LocalToGlobal(l2g_tf);
+  end_pose.LocalToGlobal(l2g_tf);
+  for (auto &pt : path_pt_vec) {
+    pt.LocalToGlobal(l2g_tf);
+  }
+}
+
+const bool GeometryPath::IsHasSTurnPath() const {
+  // 同挡位里有左转右转来回切换称为S弯路径
+  for (size_t i = 0; i < path_count - 1; ++i) {
+    if (IsSTrunPath(path_segment_vec[i], path_segment_vec[i + 1])) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void PathSegment::PrintInfo(const bool enable_log) const {

@@ -1776,7 +1776,7 @@ const bool PerpendicularTailInPathGenerator::OneArcPathPlan(
       geometry_lib::IsSameGear(gear, ref_gear) &&
       arc.circle_info.radius >
           calc_params_.turn_radius - apa_param.GetParam().target_radius_err &&
-      arc.circle_info.radius < apa_param.GetParam().max_one_step_arc_radius;
+      arc.circle_info.radius < 15.68;
 
   success = geometry_lib::IsSameGear(gear, ref_gear);
 

@@ -68,11 +68,104 @@ enum class RotateDirection {
 };
 
 const double NormalizeAngle(const double angle);
+const double NormalizeAnglePI(const double angle);
+const double AngleSubtraction(const double angle1, const double angle2);
+
+struct TangentOutput {
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_a;
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_b;
+  Eigen::Vector2d cross_point;
+};
+
+struct Compare {
+  size_t type = 0;
+  Compare(const size_t _type) : type(_type) {}
+
+  const bool operator()(const Eigen::Vector2d &a,
+                        const Eigen::Vector2d &b) const {
+    if (type == 0) {
+      return a.x() < b.x();  // big -> small
+    } else if (type == 1) {
+      return a.x() > b.x();  // small -> big
+    } else if (type == 2) {
+      return a.y() < b.y();  // big -> small
+    } else {
+      return a.y() > b.y();  // small -> big
+    }
+  }
+};
 
 struct PlanSegState {
   uint8_t cur_seg_type = SEG_TYPE_LINE;
   uint8_t cur_seg_steer = SEG_STEER_STRAIGHT;
   uint8_t cur_seg_gear = SEG_GEAR_DRIVE;
+};
+
+struct GlobalToLocalTf {
+  Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
+  Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
+  double heading_ori = 0.0;
+
+  GlobalToLocalTf() {}
+
+  GlobalToLocalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    Init(p_n_ori, theta_ori);
+  }
+
+  void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    pos_n_ori = p_n_ori;
+    heading_ori = theta_ori;
+    const double cos_theta = std::cos(theta_ori);
+    const double sin_theta = std::sin(theta_ori);
+    rot_m << cos_theta, sin_theta, -sin_theta, cos_theta;
+  }
+
+  const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
+    return rot_m * (p_n - pos_n_ori);
+  }
+
+  const double GetHeading(const double heading) const {
+    return NormalizeAngle(heading - heading_ori);
+  }
+
+  void Reset() {
+    pos_n_ori.setZero();
+    rot_m.setIdentity();
+    heading_ori = 0.0;
+  }
+};
+struct LocalToGlobalTf {
+  Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
+  Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
+  double heading_ori = 0.0;
+
+  LocalToGlobalTf() = default;
+
+  LocalToGlobalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    Init(p_n_ori, theta_ori);
+  }
+
+  void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    pos_n_ori = p_n_ori;
+    heading_ori = theta_ori;
+    const double cos_theta = std::cos(theta_ori);
+    const double sin_theta = std::sin(theta_ori);
+    rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
+  }
+
+  const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
+    return (rot_m * p_n + pos_n_ori);
+  }
+
+  const double GetHeading(const double heading) const {
+    return NormalizeAngle(heading + heading_ori);
+  }
+
+  void Reset() {
+    pos_n_ori.setZero();
+    rot_m.setIdentity();
+    heading_ori = 0.0;
+  }
 };
 
 struct PathPoint {
@@ -120,6 +213,18 @@ struct PathPoint {
     lat_buffer = 0.0;
     col_flag = false;
   }
+
+  void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+    pos = g2l_tf.GetPos(pos);
+    heading = g2l_tf.GetHeading(heading);
+    heading_vec << std::cos(heading), std::sin(heading);
+  }
+
+  void LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+    pos = l2g_tf.GetPos(pos);
+    heading = l2g_tf.GetHeading(heading);
+    heading_vec << std::cos(heading), std::sin(heading);
+  }
 };
 
 struct LineSegment {
@@ -162,6 +267,20 @@ struct LineSegment {
         << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
         << "  headingA = " << heading * kRad2Deg << "  length = " << length;
   }
+
+  void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+    pA = g2l_tf.GetPos(pA);
+    pB = g2l_tf.GetPos(pB);
+    heading = g2l_tf.GetHeading(heading);
+    heading_vec << std::cos(heading), std::sin(heading);
+  }
+
+  void LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+    pA = l2g_tf.GetPos(pA);
+    pB = l2g_tf.GetPos(pB);
+    heading = l2g_tf.GetHeading(heading);
+    heading_vec << std::cos(heading), std::sin(heading);
+  }
 };
 
 struct Circle {
@@ -176,6 +295,14 @@ struct Circle {
   void Reset() {
     center.setZero();
     radius = 0.0;
+  }
+
+  void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+    center = g2l_tf.GetPos(center);
+  }
+
+  void LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+    center = l2g_tf.GetPos(center);
   }
 };
 
@@ -218,6 +345,22 @@ struct Arc {
         << "  radius = " << circle_info.radius
         << "  is_anti_clockwise = " << is_anti_clockwise
         << "  is_ignored = " << is_ignored;
+  }
+
+  void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+    circle_info.GlobalToLocal(g2l_tf);
+    pA = g2l_tf.GetPos(pA);
+    pB = g2l_tf.GetPos(pB);
+    headingA = g2l_tf.GetHeading(headingA);
+    headingB = g2l_tf.GetHeading(headingB);
+  }
+
+  void LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+    circle_info.LocalToGlobal(l2g_tf);
+    pA = l2g_tf.GetPos(pA);
+    pB = l2g_tf.GetPos(pB);
+    headingA = l2g_tf.GetHeading(headingA);
+    headingB = l2g_tf.GetHeading(headingB);
   }
 };
 
@@ -376,109 +519,27 @@ struct PathSegment {
   const LineSegment &GetLineSeg() const { return line_seg; }
   const Arc &GetArcSeg() const { return arc_seg; }
 
+  void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+    if (seg_type == SEG_TYPE_LINE) {
+      line_seg.GlobalToLocal(g2l_tf);
+    } else if (seg_type == SEG_TYPE_ARC) {
+      arc_seg.GlobalToLocal(g2l_tf);
+    }
+  }
+
+  void LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+    if (seg_type == SEG_TYPE_LINE) {
+      line_seg.LocalToGlobal(l2g_tf);
+    } else if (seg_type == SEG_TYPE_ARC) {
+      arc_seg.LocalToGlobal(l2g_tf);
+    }
+  }
+
   void PrintInfo(const bool enable_log = true) const;
 };
 
-struct TangentOutput {
-  std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_a;
-  std::pair<Eigen::Vector2d, Eigen::Vector2d> tagent_points_b;
-  Eigen::Vector2d cross_point;
-};
-
-const double NormalizeAngle(const double angle);
-const double NormalizeAnglePI(const double angle);
-struct GlobalToLocalTf {
-  Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
-  Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
-  double heading_ori = 0.0;
-
-  GlobalToLocalTf() {}
-
-  GlobalToLocalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
-    Init(p_n_ori, theta_ori);
-  }
-
-  void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
-    pos_n_ori = p_n_ori;
-    heading_ori = theta_ori;
-    const double cos_theta = std::cos(theta_ori);
-    const double sin_theta = std::sin(theta_ori);
-    rot_m << cos_theta, sin_theta, -sin_theta, cos_theta;
-  }
-
-  const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
-    return rot_m * (p_n - pos_n_ori);
-  }
-
-  const double GetHeading(const double heading) const {
-    return NormalizeAngle(heading - heading_ori);
-  }
-
-  const PathPoint GetPose(const PathPoint &pose) const {
-    return PathPoint(GetPos(pose.pos), GetHeading(pose.heading));
-  }
-
-  void Reset() {
-    pos_n_ori.setZero();
-    rot_m.setIdentity();
-    heading_ori = 0.0;
-  }
-};
-struct LocalToGlobalTf {
-  Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
-  Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
-  double heading_ori = 0.0;
-
-  LocalToGlobalTf() = default;
-
-  LocalToGlobalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
-    Init(p_n_ori, theta_ori);
-  }
-
-  void Init(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
-    pos_n_ori = p_n_ori;
-    heading_ori = theta_ori;
-    const double cos_theta = std::cos(theta_ori);
-    const double sin_theta = std::sin(theta_ori);
-    rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
-  }
-
-  const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
-    return (rot_m * p_n + pos_n_ori);
-  }
-
-  const double GetHeading(const double heading) const {
-    return NormalizeAngle(heading + heading_ori);
-  }
-
-  const PathPoint GetPose(const PathPoint &pose) const {
-    return PathPoint(GetPos(pose.pos), GetHeading(pose.heading));
-  }
-
-  void Reset() {
-    pos_n_ori.setZero();
-    rot_m.setIdentity();
-    heading_ori = 0.0;
-  }
-};
-
-struct Compare {
-  size_t type = 0;
-  Compare(const size_t _type) : type(_type) {}
-
-  const bool operator()(const Eigen::Vector2d &a,
-                        const Eigen::Vector2d &b) const {
-    if (type == 0) {
-      return a.x() < b.x();  // big -> small
-    } else if (type == 1) {
-      return a.x() > b.x();  // small -> big
-    } else if (type == 2) {
-      return a.y() < b.y();  // big -> small
-    } else {
-      return a.y() > b.y();  // small -> big
-    }
-  }
-};
+const bool IsSTrunPath(const PathSegment &path_seg1,
+                       const PathSegment &path_seg2);
 
 const bool IsHeadingEqual(const double heading_1, const double heading_2);
 const Eigen::Vector2d GenHeadingVec(const double heading);
@@ -879,6 +940,8 @@ struct GeometryPath {
     SetPath(__path_segment_vec);
   }
 
+  const bool IsHasSTurnPath() const;
+
   void Reset() {
     path_segment_vec.clear();
     gear_change_count = 0;
@@ -920,6 +983,10 @@ struct GeometryPath {
   void PrintInfo(const bool enable_log = true) const;
 
   void CalcCost();
+
+  void GlobalToLocal(const GlobalToLocalTf &g2l_tf);
+
+  void LocalToGlobal(const LocalToGlobalTf &l2g_tf);
 };
 
 const std::vector<PathPoint> SamplePathSegVec(
