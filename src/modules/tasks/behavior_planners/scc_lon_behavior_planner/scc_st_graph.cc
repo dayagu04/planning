@@ -424,8 +424,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     // lead的信息太少，缺少s,l信息
     double end_time = 5.0;
     double default_lane_width = 3.5;
-    bool is_fast_cross_agent =
-        FastCrossAgentChecker(lead_one.v_lat(), end_time, default_lane_width);
+    bool is_fast_cross_agent = FastCrossAgentChecker(
+        lead_one.d_rel(), lead_one.v_lat(), end_time, default_lane_width);
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -477,8 +477,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       lead_two_desired_distance_filtered = LeadtwoDesiredDistanceFilter(
           lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
-      bool is_lead_two_fast_cross_agent =
-          FastCrossAgentChecker(lead_two.v_lat(), end_time, default_lane_width);
+      bool is_lead_two_fast_cross_agent = FastCrossAgentChecker(
+          lead_two.d_rel(), lead_two.v_lat(), end_time, default_lane_width);
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
       lead_two_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -4387,16 +4387,20 @@ void StGraphGenerator::SetConfig(
   config_.distance_start = tuned_params.distance_start();
 }
 
-bool StGraphGenerator::FastCrossAgentChecker(double lead_v_lat,
-                                             double &end_time,
-                                             double lane_width) {
+bool StGraphGenerator::FastCrossAgentChecker(const double lead_one_drel,
+                             const double lead_v_lat, double &end_time,
+                             const double width) {
   // 横穿障碍物从lead中获取信息太少，粗暴给一个2.0
   double agent_width = 2.0;
   // 计算 end_time
   end_time = std::min(
-      5.0, (lane_width + agent_width) / std::max(0.01, std::fabs(lead_v_lat)));
+      5.0, (width + agent_width) / std::max(0.01, std::fabs(lead_v_lat)));
   // 根据 end_time 判断是否为快速cross
   bool is_fast_cross_agent = end_time < 2.0;
+  // 即使是快速cutin，若距离较近，也需要限速
+  if (lead_one_drel < 20.0) {
+    return false;
+  }
   return is_fast_cross_agent;
 }
 void StGraphGenerator::DebugAgentsPredictionTraj(
