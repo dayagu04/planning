@@ -3052,6 +3052,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double dt = 0.2;
   double zero_acc_jerk_max = 0.5;
   double zero_acc_jerk_min = -1.0;
+  double slow_jerk_upper_bound = 6.0;
   double max_speed_limit_curve_acc_upper_bound = 2.4;
   double max_speed_limit_curve_acc_lower_bound = -1.0;
   double max_speed_limit_curve_jerk_upper_bound = 10.0;
@@ -3095,6 +3096,18 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double jerk_negative_speed_upper = 25.0;
   };
 
+  struct SpeedPlanningBound {
+    double low_speed_acc_upper_bound = 1.8;
+    double high_speed_acc_upper_bound = 1.2;
+    double lane_change_low_speed_acc_upper_bound = 2.4;
+    double lane_change_high_speed_acc_upper_bound = 1.6;
+    double low_speed_threshold_with_acc_upper_bound = 5.5;
+    double high_speed_threshold_with_acc_upper_bound = 16.67;
+    double acc_lower_bound = -5.0;
+    double jerk_lower_bound = -5.0;
+    double jerk_upper_bound = 10.0;
+  };
+  
   struct KappaSpeedLimitTable {
     std::vector<double> kappa_table{
         0.0005, 0.00074, 0.00142, 0.00167, 0.0018, 0.002, 0.0025, 0.0033,
@@ -3106,6 +3119,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   KinematicParam comfort_kinematic_param;
   KinematicParam kappa_kinematic_param;
+
+  SpeedPlanningBound speed_planning_bound;
 
   KappaSpeedLimitTable normal_kappa_speed_limit_table;
   KappaSpeedLimitTable lane_change_kappa_speed_limit_table;
