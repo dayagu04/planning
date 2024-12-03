@@ -90,6 +90,7 @@ constexpr int kSearchObsNumInCheckLaneChangeSafety = 1;
 constexpr double kLateralBufferInCheckLaneChangeSafety = 0.7;
 constexpr double kLowestSpeedInCheckLaneChangeSafety = 13.889;  // 50km/h
 constexpr double kHighestSpeedInCheckLaneChangeSafety = 33.333;
+constexpr double kDefaultLeadOneConsiderRange = 120.0;
 
 }  // namespace
 // class: OvertakeRequest
@@ -230,12 +231,11 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   TrackedObject* lead_one = lateral_obstacle_->leadone();
-  const double default_lead_one_consider_range = 120.0;
 
   // 无效的track_id暂时赋值为-1
   if ((lead_one != nullptr && lead_one->track_id == -1) ||
       lead_one == nullptr ||
-      lead_one->d_rel > default_lead_one_consider_range) {
+      lead_one->d_rel > kDefaultLeadOneConsiderRange) {
     LOG_DEBUG("not exist stable leading vehicle");
     overtake_count_ = 0;
     Finish();
@@ -573,11 +573,17 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       if (!(tr.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
         continue;
       }
+      if (tr.d_rel > kDefaultLeadOneConsiderRange) {
+        continue;
+      }
       side_front_obstacle_array.push_back(tr);
     }
   } else {
     for (auto& tr : front_tracks_r) {
       if (!(tr.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+        continue;
+      }
+      if (tr.d_rel > kDefaultLeadOneConsiderRange) {
         continue;
       }
       side_front_obstacle_array.push_back(tr);
