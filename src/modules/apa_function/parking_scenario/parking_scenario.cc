@@ -67,9 +67,9 @@ const bool ParkingScenario::CheckPlanSkip() const {
   if ((frame_.plan_stm.planning_status == PARKING_FINISHED ||
        frame_.plan_stm.planning_status == PARKING_FAILED) &&
       !apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
-    ILOG_INFO << "plan has been finished or failed, need reset";
+    ILOG_INFO << "plan has been finished or failed, should skip";
 
-    apa_world_ptr_->GetSlotManagerPtr()->Reset();
+    // apa_world_ptr_->GetSlotManagerPtr()->Reset();
 
     return true;
   } else {
