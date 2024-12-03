@@ -502,35 +502,44 @@ const bool RuleBasedSlotRelease::IsSlotOccupied(const common::SlotInfo *slot) {
   target_pose.theta = std::atan2(pt_01_vec_n[1], pt_01_vec_n[0]);
 
   PathSafeChecker safe_check;
-  bool collision =
-      safe_check.CalcEgoCollision(&obs_list_, target_pose, 0.05, 0.1);
+  // 车位释放很激进，buffer是负值
+  double lateral_buffer = -0.2;
+  double lon_buffer = -0.1;
+  bool collision = safe_check.CalcEgoCollision(&obs_list_, target_pose,
+                                               lateral_buffer, lon_buffer);
 
   return collision ? true : false;
 }
 
 bool RuleBasedSlotRelease::IsPassageAreaEnough(const common::SlotInfo *slot) {
-  // 暂时使用库口3米内没有障碍物判断.
+  // 暂时使用库口2米内没有障碍物判断.
   // 未来可以使用最大子矩阵和算法，来判定一个通道的大小.
   const auto slot_pts = slot->corner_points().corner_point();
 
   Eigen::Vector2d pt_0 = Eigen::Vector2d(slot_pts[0].x(), slot_pts[0].y());
   Eigen::Vector2d pt_1 = Eigen::Vector2d(slot_pts[1].x(), slot_pts[1].y());
 
-  const Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
+  Eigen::Vector2d pt_01_vec = pt_1 - pt_0;
+  pt_01_vec.normalize();
+
   Eigen::Vector2d pt_01_vec_n(pt_01_vec.y(), -pt_01_vec.x());
   pt_01_vec_n.normalize();
 
   const Eigen::Vector2d pt_01_mid = (pt_0 + pt_1) * 0.5;
 
+  // move pt0, pt1
+  pt_0 = pt_01_mid - pt_01_vec * (config_->max_car_width / 2 - 0.3);
+  pt_1 = pt_01_mid + pt_01_vec * (config_->max_car_width / 2 - 0.3);
+
   // check length
   Polygon2D polygon;
   polygon.vertexes[0].x = (pt_0)[0];
   polygon.vertexes[0].y = (pt_0)[1];
-  polygon.vertexes[1].x = (pt_0 + pt_01_vec_n * 3.0)[0];
-  polygon.vertexes[1].y = (pt_0 + pt_01_vec_n * 3.0)[1];
+  polygon.vertexes[1].x = (pt_0 + pt_01_vec_n * 2.0)[0];
+  polygon.vertexes[1].y = (pt_0 + pt_01_vec_n * 2.0)[1];
 
-  polygon.vertexes[2].x = (pt_1 + pt_01_vec_n * 3.0)[0];
-  polygon.vertexes[2].y = (pt_1 + pt_01_vec_n * 3.0)[1];
+  polygon.vertexes[2].x = (pt_1 + pt_01_vec_n * 2.0)[0];
+  polygon.vertexes[2].y = (pt_1 + pt_01_vec_n * 2.0)[1];
   polygon.vertexes[3].x = (pt_1)[0];
   polygon.vertexes[3].y = (pt_1)[1];
 
