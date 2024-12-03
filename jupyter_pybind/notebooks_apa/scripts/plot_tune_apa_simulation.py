@@ -139,6 +139,15 @@ class LocalViewSlider:
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
 
+    self.q_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_ref_xy", min=0.0, max=20000.0, value=100.0, step=10)
+    self.q_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_ref_theta", min=0.0, max=100000.0, value=100.0, step=10)
+    self.q_terminal_xy = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_terminal_xy", min=0.0, max=100000.0, value=5000.0, step=100)
+    self.q_terminal_theta = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_terminal_theta", min=0.0, max=200000.0, value=168000.0, step=100)
+    self.q_k_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description="q_k", min=0.0, max=200.0, value=10.0, step=1)
+    self.q_u_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_u", min=0.0, max=200.0, value=10.0, step=1)
+    self.q_k_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description="q_k_bound", min=0.0, max=2000.0, value=360.0, step=10)
+    self.q_u_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout( width='50%'), description="q_u_bound", min=0.0, max=2000.0, value=360.0, step=10)
+
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
                         vehicle_type = self.vehicle_type_slider,
@@ -155,10 +164,18 @@ class LocalViewSlider:
                         sample_ds = self.sample_ds_slider,
                         lon_pos_dif = self.lon_pos_dif_slider,
                         lat_pos_dif = self.lat_pos_dif_slider,
-                        heading_dif = self.heading_dif_slider)
+                        heading_dif = self.heading_dif_slider,
+                        q_ref_xy=self.q_ref_xy_slider,
+                        q_ref_theta=self.q_ref_theta_slider,
+                        q_terminal_theta=self.q_terminal_theta,
+                        q_terminal_xy=self.q_terminal_xy,
+                        q_k=self.q_k_slider,
+                        q_u=self.q_u_slider,
+                        q_k_bound=self.q_k_bound,
+                        q_u_bound=self.q_u_bound,)
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif):
+def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_obs_in_bag, select_id, force_plan, car_inflation, is_path_optimization, is_cilqr_enable, is_reset, is_complete_path, sample_ds, lon_pos_dif, lat_pos_dif, heading_dif, q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -326,6 +343,8 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
   fus_occ_obj_msg.serialize(fus_occ_obj_msg_buff)
   fus_occ_obj_msg_bytes = fus_occ_obj_msg_buff.getvalue()
 
+  lat_path_optimizier_params = [q_ref_xy, q_ref_theta, q_terminal_xy, q_terminal_theta, q_k, q_u, q_k_bound, q_u_bound]
+
   res = apa_simulation_py.InterfaceUpdateParam(soc_state_msg_bytes,
                                     fus_parking_msg_bytes,
                                     loc_msg_bytes,
@@ -341,7 +360,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
                                     sim_to_target, use_slot_in_bag, use_obs_in_bag, sample_ds,
                                     target_managed_slot_x_vec, target_managed_slot_y_vec,
                                     target_managed_limiter_x_vec, target_managed_limiter_y_vec,
-                                    obs_x_vec, obs_y_vec)
+                                    obs_x_vec, obs_y_vec, lat_path_optimizier_params)
 
   data_planning_tune.data = {'plan_path_x': [],
                              'plan_path_y': [],

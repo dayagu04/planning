@@ -36,6 +36,8 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const uint8_t PathPlanOnce() override;
   const uint8_t NewPathPlanOnce();
   const bool CheckDynamicPlanPathOptimal();
+  const bool LateralPathOptimize(
+      std::vector<geometry_lib::PathPoint>& optimal_path_vec);
   virtual const bool UpdateEgoSlotInfo() override;
   virtual void GenTlane() override;
   virtual void GenObstacles() override;
