@@ -73,15 +73,15 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // 1.update t_list
     lon_behavior_output_.t_list[i] = t;
     // 2.update s_refs
-    lon_behavior_output_.s_refs[i] = {target_maker_->s_target(t), 1.0};  // hack
-    // lon_behavior_output_.s_refs[i] = {target_maker_->s_target(t),
-    //                                weight_maker_->s_weight(t)};
+    // lon_behavior_output_.s_refs[i] = {target_maker_->s_target(t), 1.0};
+    lon_behavior_output_.s_refs[i] = {target_maker_->s_target(t),
+                                   weight_maker_->s_weight(t)};
 
     // 3.update ds_refs
-    lon_behavior_output_.ds_refs[i] = {target_maker_->v_target(t),
-                                       1.0};  // hack
     // lon_behavior_output_.ds_refs[i] = {target_maker_->v_target(t),
-    //                                 weight_maker_->v_weight(t)};
+    //                                    1.0};
+    lon_behavior_output_.ds_refs[i] = {target_maker_->v_target(t),
+                                    weight_maker_->v_weight(t)};
 
     // 4.update s bounds & weights
     // binwang33: 需要关注后续soft bound形式，采用target
@@ -129,7 +129,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
 void LongRefPathDecider::Reset() {
   target_maker_->Reset();
   // bound_maker_->Reset();
-  // weight_maker_->Reset();
+  weight_maker_->Reset();
   ClearOutput();
 }
 

@@ -15,6 +15,8 @@ class WeightMaker {
 
   common::Status Run(const TargetMaker &target_maker);
 
+  void Reset();
+
   double s_weight(const double t) const;
 
   double v_weight(const double t) const;
@@ -44,6 +46,7 @@ class WeightMaker {
   std::vector<double> v_weight_;
   std::vector<double> acc_weight_;
   std::vector<double> jerk_weight_;
+  bool is_urgent_ = false;
 };
 
 }  // namespace planning
