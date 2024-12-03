@@ -61,7 +61,7 @@ class LaneBorrowDecider : public Task {
 
   double distance_to_stop_line_{1000.0};
   double distance_to_cross_walk_{1000.0};
-
+ double dis_to_tfl_{10000.0};
   double obs_left_l_{-10.0};
   double obs_right_l_{10.0};
   double obs_start_s_{10.0};

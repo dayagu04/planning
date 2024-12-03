@@ -17,11 +17,13 @@
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tracked_object.h"
+#include "behavior_planners/traffic_light_decider/traffic_light_decider.h"
 
 namespace {
 constexpr double kMinDisToSolidLane = 50.0;
 constexpr double kMinDisToStopLine = 50.0;
 constexpr double kMinDisToCrossWalk = 50.0;
+constexpr double kMinDisToTrafficLight = 120.0;
 constexpr double kSafeBackDistance = 3.0;
 constexpr double kDefaultStopLineAreaDistance = 5.0;
 constexpr double kFilterStopObsDistance = 25.0;
@@ -55,6 +57,15 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   left_lane_ptr_ = virtual_lane_manager->get_left_lane();
   right_lane_ptr_ = virtual_lane_manager->get_right_lane();
 
+  const auto tfl_manager =
+      session_->environmental_model().get_traffic_light_decision_manager();
+  const auto all_tfls = tfl_manager->GetTrafficLightsInfo();
+  for (int i = 0; i < all_tfls.size(); i++) {
+    if (all_tfls[i].traffic_light_x > 0 &&
+        all_tfls[i].traffic_light_x < dis_to_tfl_) {
+      dis_to_tfl_ = all_tfls[i].traffic_light_x;
+    }
+  }
   if (current_lane_ptr_ == nullptr || current_reference_path_ptr_ == nullptr) {
     LOG_ERROR("No current_lane_ptr_ or current_reference_path_ptr!");
     return false;
@@ -274,7 +285,9 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
       (distance_to_cross_walk_ < kMinDisToCrossWalk &&
        distance_to_cross_walk_ > 0.0) ||
       (distance_to_stop_line_ < kMinDisToStopLine &&
-       distance_to_stop_line_ > 0.0)) {
+       distance_to_stop_line_ > 0.0)||
+       (dis_to_tfl_ < kMinDisToTrafficLight &&
+       dis_to_tfl_ > 0.0)) {
     LOG_DEBUG("Ego car is near junction");
     lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
     return false;
@@ -841,19 +854,19 @@ bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
   if (lane_borrow_decider_output_.borrow_direction == 1) {
     left_l =
         std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
-  } else {  // 右
+  } else {
     right_l =
         std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
   }
 
   const double left_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) *
-      0.5;  // 当前车道绑定不会发生变化
+      0.5;
   const double right_width =
       current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
 
   const auto& obstacles =
-      current_reference_path_ptr_->get_obstacles();  // 遍历障碍物
+      current_reference_path_ptr_->get_obstacles();
   for (const auto& obstacle : obstacles) {
     const auto& id = obstacle->obstacle()->id();
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
@@ -865,7 +878,7 @@ bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
 
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start >
-        ego_frenet_boundary_.s_start) {  // 前方障碍物
+        ego_frenet_boundary_.s_start) {
       if (obstacle->obstacle()->velocity() > kObsFilterVel) {
         continue;
       }
@@ -942,7 +955,6 @@ bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
   return true;
 }
 void LaneBorrowDecider::LogDebugInfo() {
-  // debug info
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
                                  ->mutable_lane_borrow_decider_info();
