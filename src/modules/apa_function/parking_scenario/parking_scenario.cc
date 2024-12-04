@@ -174,6 +174,17 @@ void ParkingScenario::GenPlanningPath() {
   planning_output_.trajectory.target_reference.target_velocity =
       frame_.vel_target;
 
+  // reset obs remain dist when gear shift
+  if ((frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+       planning_output_.gear_command.gear_command_value ==
+           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE) ||
+      (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+       planning_output_.gear_command.gear_command_value ==
+           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE)) {
+    frame_.remain_dist_uss = 2.68;
+    frame_.remain_dist_col_det = 2.68;
+  }
+
   // send uss remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
       frame_.remain_dist_uss;
