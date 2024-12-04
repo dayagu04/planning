@@ -326,26 +326,27 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   std::cout << "ego_slot_info.slot_occupied_ratio = "
             << ego_slot_info.slot_occupied_ratio << std::endl;
 
-  ego_slot_info.obs_pt_vec_slot.clear();
   const pnc::geometry_lib::PathPoint ego_pose(ego_slot_info.ego_pos_slot,
                                               ego_slot_info.ego_heading_slot);
 
-  DEBUG_PRINT("parallel slot_manager_ptr->GetRealTimeObsPtVec() = "
-              << slot_manager_ptr->GetRealTimeObsPtVec().size())
   // size_t dist_fail_cnt = 0;
   // size_t total_box_x_fail_cnt = 0;
   // size_t total_box_y_fail_cnt = 0;
   // size_t front_box_fail_cnt = 0;
   // size_t rear_box_fail_cnt = 0;
   // size_t in_ego_cnt = 0;
+  UpdateObstacleLocal();
+  const std::vector<Eigen::Vector2d> temp_obs_vec =
+      ego_slot_info.obs_pt_vec_slot;
+  ego_slot_info.obs_pt_vec_slot.clear();
 
-  for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
-    if ((obs_pt_global - slot_center).norm() > 20.0) {
+  for (const auto& obs_pt_local : temp_obs_vec) {
+    if ((frame_.ego_slot_info.l2g_tf.GetPos(obs_pt_local) - slot_center)
+            .norm() > 20.0) {
       // dist_fail_cnt++;
       continue;
     }
 
-    const auto obs_pt_local = frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global);
     // outof total box range
     if (!pnc::mathlib::IsInBound(obs_pt_local.x(), -5.0,
                                  apa_param.GetParam().parallel_channel_x_mag)) {

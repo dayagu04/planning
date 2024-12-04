@@ -294,32 +294,8 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
 
   ego_slot_info.fus_obj_valid_flag =
       slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
-  ego_slot_info.obs_pt_vec_slot.clear();
-  ego_slot_info.obs_pt_vec_slot.reserve(
-      slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot.size());
 
-  uint8_t obs_in_slot_count = 0;
-  const uint8_t max_obs_in_slot_count = 5;
-
-  for (const Eigen::Vector2d& obs_pt :
-       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot) {
-    const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-    if (ego_slot_info.fus_obj_valid_flag) {
-      if (std::fabs(obs_pt_slot.y()) < 0.6 &&
-          obs_pt_slot.x() > ego_slot_info.pt_0.x() -
-                                apa_param.GetParam().car_length + 0.168 &&
-          obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
-        obs_in_slot_count++;
-      }
-    }
-
-    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-  }
-
-  if (obs_in_slot_count > max_obs_in_slot_count) {
-    ILOG_INFO << "obs_in_slot_count > max_obs_in_slot_count";
-    return false;
-  }
+  UpdateObstacleLocal();
 
   //**************************
   // limiter,cal target pos,cal terminal error,cal slot occupied ratio

@@ -1141,15 +1141,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
   ego_slot_info.fus_obj_valid_flag =
       slot_manager_ptr->GetEgoSlotInfo().fus_obj_valid_flag;
-  ego_slot_info.obs_pt_vec_slot.clear();
-  ego_slot_info.obs_pt_vec_slot.reserve(
-      slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot.size());
-
-  for (const Eigen::Vector2d& obs_pt :
-       slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot) {
-    const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-  }
 
   ego_slot_info.limiter = slot_manager_ptr->GetEgoSlotInfo().limiter;
 

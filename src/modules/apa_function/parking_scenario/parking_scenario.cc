@@ -10,6 +10,7 @@
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "geometry_math.h"
 #include "log_glog.h"
 #include "parking_task/deciders/narrow_space_decider.h"
 #include "parking_task/parking_task.h"
@@ -236,6 +237,51 @@ void ParkingScenario::GenPlanningPath() {
 
 const bool ParkingScenario::CheckStuckFailed() {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
+}
+
+const bool ParkingScenario::UpdateObstacleLocal() {
+  auto& ego_slot_info = frame_.ego_slot_info;
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      pnc::geometry_lib::PathPoint(ego_slot_info.slot_origin_pos,
+                                   ego_slot_info.slot_origin_heading));
+  const auto obstacle_manager_ptr = apa_world_ptr_->GetObstacleManagerPtr();
+  std::vector<ApaObstacle*> obs_vec;
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  ego_slot_info.obs_pt_vec_slot.clear();
+
+  if (apa_param.GetParam().use_uss_pt_clound) {
+    // 获取超声波点云
+    if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                          obs_vec)) {
+      for (const auto& obs : obs_vec) {
+        ego_slot_info.obs_pt_vec_slot.insert(
+            ego_slot_info.obs_pt_vec_slot.end(),
+            obs->GetPtClout2dLocal().begin(), obs->GetPtClout2dLocal().end());
+      }
+    }
+  }
+
+  // 获取OCC点云
+  if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::FUSION_POINT_CLOUD,
+                                        obs_vec)) {
+    for (const auto& obs : obs_vec) {
+      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
+                                           obs->GetPtClout2dLocal().begin(),
+                                           obs->GetPtClout2dLocal().end());
+    }
+  }
+
+  // 获取接地线点云
+  if (obstacle_manager_ptr->GetObstacle(
+          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
+    for (const auto& obs : obs_vec) {
+      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
+                                           obs->GetPtClout2dLocal().begin(),
+                                           obs->GetPtClout2dLocal().end());
+    }
+  }
+
+  return true;
 }
 
 void ParkingScenario::UpdateRemainDist(const double uss_safe_dist) {
