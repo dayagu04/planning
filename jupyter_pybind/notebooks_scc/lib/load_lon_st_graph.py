@@ -261,7 +261,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   expanded_nodes_s_vec = plan_debug_json_info['expanded_nodes_s_vec']
   history_cur_nodes_t_vec = plan_debug_json_info['history_cur_nodes_t_vec']
   history_cur_nodes_s_vec = plan_debug_json_info['history_cur_nodes_s_vec']
-  
+
   st_path_final_nodes_time_vec = plan_debug_json_info['st_path_final_nodes_time_vec']
   st_path_final_nodes_cost_yield_vec = plan_debug_json_info['st_path_final_nodes_cost_yield_vec']
   st_path_final_nodes_cost_overtake_vec = plan_debug_json_info['st_path_final_nodes_cost_overtake_vec']
@@ -1027,6 +1027,7 @@ def load_lon_global_figure(bag_loader):
 
   fusion_object_latency=[]
   fusion_road_latency=[]
+  prediction_latency = []
   vehicle_service_latency=[]
   control_output_latency=[]
   hmi_latency=[]
@@ -1036,6 +1037,7 @@ def load_lon_global_figure(bag_loader):
 
   for ind in range(len(bag_loader.plan_debug_msg['data'])):
     fusion_object_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_object, 2))
+    prediction_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.prediction, 2))
     fusion_road_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.fusion_road, 2))
     vehicle_service_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.vehicle_service, 2))
     control_output_latency.append(round(bag_loader.plan_debug_msg['data'][ind].input_topic_latency.control_output, 2))
@@ -1048,6 +1050,8 @@ def load_lon_global_figure(bag_loader):
                               legend_label='fusion_object', color="green")
   topic_latency_fig.line(t_plan_vec, fusion_road_latency, line_width=1,
                                 legend_label='fusion_road',color="blue")
+  topic_latency_fig.line(t_plan_vec, prediction_latency, line_width=1, line_dash = 'dashed',
+                              legend_label='prediction', color="blue")
   topic_latency_fig.line(t_plan_vec, vehicle_service_latency, line_width=1,
                              legend_label='vehicle_service', color="red")
   topic_latency_fig.line(t_plan_vec, control_output_latency, line_width=1,
@@ -1262,7 +1266,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=5, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
-  
+
   # fig8 bar chart
   fig8 = bkp.figure(x_axis_label='time', y_axis_label='cost', width=600, height=400, title="Cost Over Time")
 
@@ -1277,13 +1281,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_g_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="magenta", legend_label="G Cost")
   fig8.vbar(x='st_path_final_nodes_time', top='st_path_final_nodes_h_cost', source=data_st_search_path_final_nodes_cost, width=0.2, alpha = 0.5, color="grey", legend_label="H Cost")
 
-  hover8 = HoverTool(tooltips=[('time', '@st_path_final_nodes_time'), 
-                               ('Cost Yield', '@st_path_final_nodes_cost_yield'), 
-                               ('Cost Overtake', '@st_path_final_nodes_cost_overtake'), 
-                               ('Cost Velocity', '@st_path_final_nodes_cost_vel'), 
-                               ('Cost Acceleration', '@st_path_final_nodes_cost_accel'), 
-                               ('Cost Accel Sign Change', '@st_path_final_nodes_cost_accel_sign_changed'), 
-                               ('Cost Jerk', '@st_path_final_nodes_cost_jerk'), 
+  hover8 = HoverTool(tooltips=[('time', '@st_path_final_nodes_time'),
+                               ('Cost Yield', '@st_path_final_nodes_cost_yield'),
+                               ('Cost Overtake', '@st_path_final_nodes_cost_overtake'),
+                               ('Cost Velocity', '@st_path_final_nodes_cost_vel'),
+                               ('Cost Acceleration', '@st_path_final_nodes_cost_accel'),
+                               ('Cost Accel Sign Change', '@st_path_final_nodes_cost_accel_sign_changed'),
+                               ('Cost Jerk', '@st_path_final_nodes_cost_jerk'),
                                ('Cost Length', '@st_path_final_nodes_cost_length'),
                                ('Total Cost', '@st_path_final_nodes_total_cost'),
                                ('G Cost', '@st_path_final_nodes_g_cost'),
@@ -1292,7 +1296,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
   fig8.legend.click_policy = 'hide'
-  
+
   # pos
   f4 = fig4.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   fig4.line('time_vec', 'ref_pos_vec_origin', source = data_lon_motion_plan, line_width = 2, line_color = 'green', line_dash = 'dashed', legend_label = 'origin s_ref')
@@ -1355,7 +1359,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig7.legend.click_policy = 'hide'
 
   tab_st_search = DataTable(source=data_st_search_text, columns=st_search_columns, width=500, height=600)
-   
+
   pan1 = Panel(child=row(column(fig2, fig3, tab_st_search), column(fig4, fig5, fig6, fig7, fig8)), title="Longtime")
 
   tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
