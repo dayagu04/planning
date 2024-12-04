@@ -220,42 +220,44 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
        (coarse_planning_info.target_state == kLaneChangeComplete) ||
        (coarse_planning_info.target_state == kLaneChangeCancel));
   if (is_lc_change && (lc_state != kLaneKeeping)) {
-    for (const auto& relative_id_lane : relative_id_lanes) {
-      if (relative_id_lane != nullptr) {
-        current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
-            target_lane_vitrual_id, relative_id_lane, relative_id_lanes,
-            virtual_id_mapped_lane);
-        if (current_relative_id_lane_mapping_cost <
-            target_lane_maping_diff_total) {
-          target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
-          target_lane_order_id = relative_id_lane->get_order_id();
-        }
-      } else {
-        continue;
-      }
-    }
-    LOG_DEBUG("target_lane_maping_diff_total: %f \n",
-              target_lane_maping_diff_total);
-
-    if (target_lane_maping_diff_total <
-        lane_point_match_lateral_dis_threshold) {
-      target_lane_order_and_virtual_diff =
-          target_lane_vitrual_id - target_lane_order_id;
-      virtual_id_mapped_lane.clear();
-      for (auto& lane : relative_id_lanes) {
-        if (lane != nullptr) {
-          auto lane_virtual_id =
-              lane->get_order_id() + target_lane_order_and_virtual_diff;
-          virtual_id_mapped_lane[lane_virtual_id] = lane;
-          lane->set_virtual_id(lane_virtual_id);
-          if (lane->get_relative_id() == 0) {
-            current_lane_virtual_id_ = lane_virtual_id;
+    if (lane_change_decider_output.lc_request_source != INT_REQUEST) {
+      for (const auto& relative_id_lane : relative_id_lanes) {
+        if (relative_id_lane != nullptr) {
+          current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
+              target_lane_vitrual_id, relative_id_lane, relative_id_lanes,
+              virtual_id_mapped_lane);
+          if (current_relative_id_lane_mapping_cost <
+              target_lane_maping_diff_total) {
+            target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
+            target_lane_order_id = relative_id_lane->get_order_id();
           }
         } else {
           continue;
         }
       }
-      return;
+      LOG_DEBUG("target_lane_maping_diff_total: %f \n",
+                target_lane_maping_diff_total);
+
+      if (target_lane_maping_diff_total <
+          lane_point_match_lateral_dis_threshold) {
+        target_lane_order_and_virtual_diff =
+            target_lane_vitrual_id - target_lane_order_id;
+        virtual_id_mapped_lane.clear();
+        for (auto& lane : relative_id_lanes) {
+          if (lane != nullptr) {
+            auto lane_virtual_id =
+                lane->get_order_id() + target_lane_order_and_virtual_diff;
+            virtual_id_mapped_lane[lane_virtual_id] = lane;
+            lane->set_virtual_id(lane_virtual_id);
+            if (lane->get_relative_id() == 0) {
+              current_lane_virtual_id_ = lane_virtual_id;
+            }
+          } else {
+            continue;
+          }
+        }
+        return;
+      }
     }
 
     // 换道过程中目标车道匹配不成功 则匹配原车道
