@@ -355,7 +355,7 @@ bool LaneBorrowDecider::SelectStaticBlockingArea() {
       continue;
     }
 
-    if (frenet_obstacle_sl.l_start > (right_width + vehicle_param_.width + config_.static_obs_buffer) ||
+    if (frenet_obstacle_sl.l_start > ( - right_width + vehicle_param_.width + config_.static_obs_buffer) ||
         frenet_obstacle_sl.l_end < (left_width - vehicle_param_.width - config_.static_obs_buffer)) {
       continue;
     }
@@ -840,120 +840,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   }
   return true;
 }
-bool LaneBorrowDecider::IsSafeForBorrowing(const double& left_bounds_l,
-                                           const double& right_bounds_l) {
-  if (left_bounds_l - right_bounds_l <
-      vehicle_param_.width + kObsLatExpendBuffer) {
-    lane_borrow_decider_output_.lane_borrow_failed_reason = BOUNDS_TOO_NARROW;
-    return false;
-  }
 
-  double left_l = left_bounds_l;
-  double right_l = right_bounds_l;
-
-  if (lane_borrow_decider_output_.borrow_direction == 1) {
-    left_l =
-        std::min(left_l, right_l + vehicle_param_.width + kObsLatExpendBuffer);
-  } else {
-    right_l =
-        std::max(right_l, left_l - vehicle_param_.width - kObsLatExpendBuffer);
-  }
-
-  const double left_width =
-      current_lane_ptr_->width(ego_frenet_boundary_.s_end) *
-      0.5;
-  const double right_width =
-      current_lane_ptr_->width(ego_frenet_boundary_.s_end) * 0.5;
-
-  const auto& obstacles =
-      current_reference_path_ptr_->get_obstacles();
-  for (const auto& obstacle : obstacles) {
-    const auto& id = obstacle->obstacle()->id();
-    if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
-      continue;
-    }
-    if (!obstacle->b_frenet_valid()) {
-      continue;
-    }
-
-    const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
-    if (frenet_obstacle_sl.s_start >
-        ego_frenet_boundary_.s_start) {
-      if (obstacle->obstacle()->velocity() > kObsFilterVel) {
-        continue;
-      }
-      if (frenet_obstacle_sl.s_start > obs_end_s_) {
-        continue;
-      }
-      if (left_borrow_) {
-        if (frenet_obstacle_sl.l_start > left_bounds_l ||
-            frenet_obstacle_sl.l_end <
-                left_width) {
-          continue;
-        }
-        if (frenet_obstacle_sl.l_end + vehicle_param_.width +
-                    kLatPassableBuffer >
-                left_bounds_l &&
-            frenet_obstacle_sl.l_start - vehicle_param_.width -
-                    kLatPassableBuffer <
-                obs_left_l_) {
-          lane_borrow_decider_output_.lane_borrow_failed_reason =
-              STATIC_OBSTACLE_BLOCKED;
-          lane_borrow_decider_output_.failed_obs_id =
-              obstacle->obstacle()->id();
-          return false;
-        }
-      } else {
-        if (frenet_obstacle_sl.l_start > -right_width ||
-            frenet_obstacle_sl.l_end < right_bounds_l) {
-          continue;
-        }
-
-        if (frenet_obstacle_sl.l_end + vehicle_param_.width +
-                    kLatPassableBuffer >
-                obs_right_l_ &&
-            frenet_obstacle_sl.l_end - vehicle_param_.width -
-                    kLatPassableBuffer <
-                right_bounds_l) {
-          lane_borrow_decider_output_.lane_borrow_failed_reason =
-              STATIC_OBSTACLE_BLOCKED;
-          lane_borrow_decider_output_.failed_obs_id =
-              obstacle->obstacle()->id();
-          return false;
-        }
-      }
-    } else {
-      if (frenet_obstacle_sl.l_start < left_l ||
-          frenet_obstacle_sl.l_end > right_l) {
-        continue;
-      }
-
-      const double l_buffer = 0.5;
-      if (left_borrow_) {
-        if (frenet_obstacle_sl.l_start <
-            ego_frenet_boundary_.l_end - l_buffer) {
-          continue;
-        }
-      } else {
-        if (frenet_obstacle_sl.l_end <
-            ego_frenet_boundary_.l_start + l_buffer) {
-          continue;
-        }
-      }
-
-      double dist = std::max(kSafeBackDistance,
-                             obstacle->obstacle()->velocity() * kObsSpeedRatio);
-      if (frenet_obstacle_sl.s_end + dist >
-          ego_frenet_boundary_.s_start) {
-        lane_borrow_decider_output_.lane_borrow_failed_reason =
-            BACKWARD_OBSTACLE_TOO_CLOSE;
-        lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
-        return false;
-      }
-    }
-  }
-  return true;
-}
 void LaneBorrowDecider::LogDebugInfo() {
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
