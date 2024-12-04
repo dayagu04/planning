@@ -110,8 +110,8 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
     }
   }
 
-  ego_car_info_slot.cur_pose = apa_slot.g2l_tf.GetPose(geometry_lib::PathPoint(
-      measures_data->GetPos(), measures_data->GetHeading()));
+  // ego_car_info_slot.cur_pose = apa_slot.g2l_tf.GetPose(geometry_lib::PathPoint(
+  //     measures_data->GetPos(), measures_data->GetHeading()));
 
   // 初步根据车位或限位器计算终点位置
   if (!apa_slot.limiter.valid) {

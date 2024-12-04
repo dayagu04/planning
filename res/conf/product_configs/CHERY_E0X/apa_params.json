@@ -213,7 +213,7 @@
   "pose_min_remain_dis": 0.688,
   "max_slot_jump_dist": 0.088,
   "max_slot_jump_heading": 0.48,
-  "dynamic_plan_interval_time": 0.4,
+  "dynamic_plan_interval_time": 0.8,
 
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.868,
