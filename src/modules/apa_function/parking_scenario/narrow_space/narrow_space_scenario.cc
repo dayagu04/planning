@@ -89,6 +89,7 @@ void NarrowSpaceScenario::Init() {
 
 const bool NarrowSpaceScenario::CheckSegCompleted() {
   bool is_seg_complete = false;
+
   if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
       frame_.current_path_length > 1e-2) {
@@ -605,8 +606,13 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
         apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     slot_type = ParkSpaceType::SLANTING;
   } else {
-    end_straight_len =
-        apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+        ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+      end_straight_len =
+          apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+    } else {
+      end_straight_len = 0.5;
+    }
     slot_type = ParkSpaceType::VERTICAL;
   }
   end.x = real_end.x + end_straight_len;
@@ -642,7 +648,14 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.first_action_request.has_request = true;
   cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   cur_request.space_type = slot_type;
-  cur_request.direction_request = ParkingVehDirection::TAIL_IN;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+    cur_request.direction_request = ParkingVehDirection::HEAD_IN;
+  } else if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+             ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+    cur_request.direction_request = ParkingVehDirection::TAIL_IN;
+  }
+
   cur_request.rs_request = RSPathRequestType::none;
   cur_request.timestamp_ms = astar_start_time;
   cur_request.slot_id = ego_slot_info.selected_slot_id;
@@ -1052,15 +1065,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   pt[3] = pt[1] - real_slot_length * n;
 
   ego_slot_info.slot_corner = pt;
-
   ego_slot_info.slot_center = (pt[0] + pt[1] + pt[2] + pt[3]) * 0.25;
-
-  // const double virtual_slot_length =
-  //     apa_param.GetParam().car_length +
-  //     apa_param.GetParam().slot_compare_to_car_length;
-
-  // const double use_slot_length =
-  //     std::min(real_slot_length, virtual_slot_length);
 
   const double use_slot_length = real_slot_length;
 
@@ -1145,8 +1150,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
     const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
     ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
   }
-  // ego_slot_info.obs_pt_vec_slot =
-  //     slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot;
 
   ego_slot_info.limiter = slot_manager_ptr->GetEgoSlotInfo().limiter;
 
@@ -1176,12 +1179,25 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   ego_slot_info.limiter_corner.emplace_back(ego_slot_info.limiter.second);
 
   // cal target pos
-  ego_slot_info.target_ego_pos_slot
-      << (ego_slot_info.limiter.first.x() + ego_slot_info.limiter.second.x()) /
-             2.0,
-      apa_param.GetParam().terminal_target_y;
-  ego_slot_info.target_ego_heading_slot =
-      apa_param.GetParam().terminal_target_heading;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+    ego_slot_info.target_ego_pos_slot << (ego_slot_info.limiter.first.x() +
+                                          ego_slot_info.limiter.second.x()) /
+                                             2.0,
+        apa_param.GetParam().terminal_target_y;
+
+    ego_slot_info.target_ego_pos_slot[0] += apa_param.GetParam().wheel_base;
+
+    ego_slot_info.target_ego_heading_slot =
+        apa_param.GetParam().terminal_target_heading + M_PI;
+  } else {
+    ego_slot_info.target_ego_pos_slot << (ego_slot_info.limiter.first.x() +
+                                          ego_slot_info.limiter.second.x()) /
+                                             2.0,
+        apa_param.GetParam().terminal_target_y;
+    ego_slot_info.target_ego_heading_slot =
+        apa_param.GetParam().terminal_target_heading;
+  }
 
   ILOG_INFO << "limiter x=" << ego_slot_info.target_ego_pos_slot[0]
             << ",y=" << ego_slot_info.target_ego_pos_slot[1];
@@ -1243,9 +1259,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // update stuck by uss time
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag()) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -1255,9 +1269,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // 车静止不动，这个值一直在更新
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag()) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1339,6 +1351,11 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
 }
 
 void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+    return;
+  }
+
   if (current_gear_ != AstarPathGear::REVERSE) {
     return;
   }
@@ -1441,7 +1458,11 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
 
 const bool NarrowSpaceScenario::IsEgoNeedDriveForwardInSlot(
     const Pose2D& ego_pose, const double slot_width, const double slot_len) {
-  ILOG_INFO << "cur gear " << static_cast<int>(current_gear_);
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+    return false;
+  }
+
   if (current_gear_ != AstarPathGear::REVERSE) {
     return false;
   }
@@ -1718,9 +1739,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   // update stuck by uss time
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag()) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -1728,9 +1747,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag()) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;

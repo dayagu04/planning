@@ -9,7 +9,7 @@ class ParkReferenceLine {
  public:
   ParkReferenceLine() = default;
 
-  void Init(const Pose2D &start, const Pose2D &end);
+  void Process(const Pose2D &start, const Pose2D &end);
 
   const ad_common::math::Vec2d &GetStartPoint() const {
     return ref_line_.start();

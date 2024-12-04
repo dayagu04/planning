@@ -15,7 +15,8 @@ class RSExpansionDecider : public AstarDecider {
   void Process(const double min_radius, const double slot_width,
                const double slot_length, const Pose2D &ego_pose,
                const Pose2D &astar_end, const double veh_width,
-               const ParkSpaceType slot_type);
+               const ParkSpaceType slot_type,
+               const ParkingVehDirection park_dir);
 
   void Process(const Pose2D &start, const Pose2D &end) override;
 
