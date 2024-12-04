@@ -233,7 +233,8 @@ class LoadCyberbag:
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
                          "slot_replan_jump_dist", "slot_replan_jump_heading",
-                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan", "geometry_path_release"]
+                         "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan", "geometry_path_release",
+                         "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "assembled_delta", "assembled_omega", "traj_x_vec", "traj_y_vec",
                           "slm_selected_obs_x", "slm_selected_obs_y", "obstaclesX", "obstaclesY", "slot_corner_X", "slot_corner_Y", "plan_traj_x", "plan_traj_y", "plan_traj_heading", "plan_traj_lat_buffer",
@@ -1836,31 +1837,31 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
 
       names.append("statemachine_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.function_state_machine / 10e5, 1)))
+      datas.append(str(plan_json['statemachine_timestamp']))
 
       names.append("fusion_slot_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.parking_fusion / 10e5, 1)))
+      datas.append(str(plan_json['fusion_slot_timestamp']))
 
       names.append("localiztion_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.localization / 10e5, 1)))
+      datas.append(str(plan_json['localiztion_timestamp']))
 
       names.append("uss_wave_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.uss_wave / 10e5, 1)))
+      datas.append(str(plan_json['uss_wave_timestamp']))
 
       names.append("uss_per_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.uss_perception / 10e5, 1)))
+      datas.append(str(plan_json['uss_per_timestamp']))
 
       names.append("ground_line_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.ground_line / 10e5, 1)))
+      datas.append(str(plan_json['ground_line_timestamp']))
 
       names.append("fusion_objects_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.fusion_object / 10e5, 1)))
+      datas.append(str(plan_json['fusion_objects_timestamp']))
 
       names.append("fusion_occupancy_objects_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.fusion_occupancy_object / 10e5, 1)))
+      datas.append(str(plan_json['fusion_occupancy_objects_timestamp']))
 
       names.append("control_output_timestamp")
-      datas.append(str(round(plan_data.input_topic_timestamp.control_output / 10e5, 1)))
+      datas.append(str(plan_json['control_output_timestamp']))
 
     # load vsg
     if bag_loader.vs_msg['enable'] == True:
@@ -4222,31 +4223,31 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
 
             names.append("statemachine_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.function_state_machine / 10e5, 1)))
+            datas.append(str(plan_json['statemachine_timestamp']))
 
             names.append("fusion_slot_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.parking_fusion / 10e5, 1)))
+            datas.append(str(plan_json['fusion_slot_timestamp']))
 
             names.append("localiztion_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.localization / 10e5, 1)))
+            datas.append(str(plan_json['localiztion_timestamp']))
 
             names.append("uss_wave_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.uss_wave / 10e5, 1)))
+            datas.append(str(plan_json['uss_wave_timestamp']))
 
             names.append("uss_per_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.uss_perception / 10e5, 1)))
+            datas.append(str(plan_json['uss_per_timestamp']))
 
             names.append("ground_line_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.ground_line / 10e5, 1)))
+            datas.append(str(plan_json['ground_line_timestamp']))
 
             names.append("fusion_objects_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.fusion_object / 10e5, 1)))
+            datas.append(str(plan_json['fusion_objects_timestamp']))
 
             names.append("fusion_occupancy_objects_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.fusion_occupancy_object / 10e5, 1)))
+            datas.append(str(plan_json['fusion_occupancy_objects_timestamp']))
 
             names.append("control_output_timestamp")
-            datas.append(str(round(plan_data.input_topic_timestamp.control_output / 10e5, 1)))
+            datas.append(str(plan_json['control_output_timestamp']))
         else:
           print('find plan or plan_debug error')
 
