@@ -47,7 +47,8 @@ constexpr double kPie = 3.141592653589793;
 bool SlotManager::Update(
     const std::shared_ptr<ApaData> apa_data_ptr,
     const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr) {
+    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
   ILOG_INFO << "---------- slot management --------------------";
   // set input
   frame_.func_state_ptr = apa_data_ptr->func_state_ptr;
@@ -61,6 +62,7 @@ bool SlotManager::Update(
 
   state_machine_ptr_ = state_machine_ptr;
   measure_data_ptr_ = measure_data_ptr;
+  obstacle_manager_ptr_ = obstacle_manager_ptr;
 
   // update obs
   // todo: move to obstacle manager
@@ -300,7 +302,7 @@ bool SlotManager::UpdateSlotsInSearching(
   // 没有选择的车位，根据规则决定是否释放.
   RuleBasedSlotRelease rule_based_release_decider;
   rule_based_release_decider.Process(apa_data_ptr->local_view_ptr_,
-                                     measure_data_ptr_, state_machine_ptr_,
+                                     measure_data_ptr_, state_machine_ptr_, obstacle_manager_ptr_,
                                      fusion_slot_map, frame_);
 
   // 点击了车位,更新车位基本信息

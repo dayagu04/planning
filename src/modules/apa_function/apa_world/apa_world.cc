@@ -261,7 +261,7 @@ const bool ApaWorld::Update() {
   // currently path planning starts once id is selected in searching state
   ILOG_INFO << "-- apa_world: run slot_management ---";
   if (!slot_manager_ptr_->Update(apa_data_ptr_, state_machine_ptr_,
-                                 measure_data_ptr_)) {
+                                 measure_data_ptr_, obstacle_manager_ptr_)) {
     ILOG_INFO << "shouldn't have entered the parking function at that time";
   }
 

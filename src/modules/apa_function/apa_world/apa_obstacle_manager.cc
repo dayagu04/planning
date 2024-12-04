@@ -19,10 +19,6 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     return;
   }
 
-  obs_list_.point_cloud_list.reserve(FUSION_OCCUPANCY_OBJECT_MAX_NUM +
-                                     GROUND_LINES_NUM + NUM_OF_OUTLINE_DATAORI +
-                                     6);
-
   // 读取通用障碍物点云
   if (apa_param.GetParam().use_fus_occ_obj) {
     const uint8 fusion_obs_size =
@@ -40,26 +36,23 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       }
       std::vector<Eigen::Vector2d> fusion_pt_clout_2d;
       fusion_pt_clout_2d.reserve(polygon_points_size);
-      planning::PointCloudObstacle obs;
-      obs.points.reserve(polygon_points_size);
+      Polygon2D polygon;
+      cdl::AABB box;
       for (uint32 j = 0; j < polygon_points_size; ++j) {
         const Eigen::Vector2d fusion_pt(
             fusion_occupancy_object.polygon_points[j].x,
             fusion_occupancy_object.polygon_points[j].y);
-        obs.box.MergePoint(cdl::Vector2r(fusion_pt.x(), fusion_pt.y()));
-        obs.points.emplace_back(Position2D(fusion_pt.x(), fusion_pt.y()));
+        box.MergePoint(cdl::Vector2r(fusion_pt.x(), fusion_pt.y()));
         fusion_pt_clout_2d.emplace_back(std::move(fusion_pt));
       }
 
-      GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
-      obs.obs_type = ApaObsAttributeType::FUSION_POINT_CLOUD;
-      obs_list_.point_cloud_list.emplace_back(obs);
+      GeneratePolygonByAABB(&polygon, box);
 
       ApaObstacle apa_obs;
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
-      apa_obs.SetBoxGlobal(obs.box);
-      apa_obs.SetPolygonGlobal(obs.envelop_polygon);
+      apa_obs.SetBoxGlobal(box);
+      apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
@@ -79,25 +72,22 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       }
       std::vector<Eigen::Vector2d> fusion_pt_clout_2d;
       fusion_pt_clout_2d.reserve(polygon_points_size);
-      planning::PointCloudObstacle obs;
-      obs.points.reserve(polygon_points_size);
+      Polygon2D polygon;
+      cdl::AABB box;
       for (uint8 j = 0; j < polygon_points_size; ++j) {
         const Eigen::Vector2d fusion_pt(fusion_object.polygon_points[j].x,
                                         fusion_object.polygon_points[j].y);
-        obs.box.MergePoint(cdl::Vector2r(fusion_pt.x(), fusion_pt.y()));
-        obs.points.emplace_back(Position2D(fusion_pt.x(), fusion_pt.y()));
+        box.MergePoint(cdl::Vector2r(fusion_pt.x(), fusion_pt.y()));
         fusion_pt_clout_2d.emplace_back(std::move(fusion_pt));
       }
 
-      GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
-      obs.obs_type = ApaObsAttributeType::FUSION_POINT_CLOUD;
-      obs_list_.point_cloud_list.emplace_back(obs);
+      GeneratePolygonByAABB(&polygon, box);
 
       ApaObstacle apa_obs;
       apa_obs.SetPtClout2dGlobal(fusion_pt_clout_2d);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
-      apa_obs.SetBoxGlobal(obs.box);
-      apa_obs.SetPolygonGlobal(obs.envelop_polygon);
+      apa_obs.SetBoxGlobal(box);
+      apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
@@ -118,23 +108,21 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     }
     std::vector<Eigen::Vector2d> gl_pt_clout_2d;
     gl_pt_clout_2d.reserve(points_3d_size);
-    planning::PointCloudObstacle obs;
-    obs.points.reserve(points_3d_size);
+    Polygon2D polygon;
+    cdl::AABB box;
     for (uint8 j = 0; j < points_3d_size; ++j) {
       const Eigen::Vector2d gl_pt(gl.points_3d[j].x, gl.points_3d[j].y);
-      obs.box.MergePoint(cdl::Vector2r(gl_pt.x(), gl_pt.y()));
-      obs.points.emplace_back(Position2D(gl_pt.x(), gl_pt.y()));
+      box.MergePoint(cdl::Vector2r(gl_pt.x(), gl_pt.y()));
       gl_pt_clout_2d.emplace_back(std::move(gl_pt));
     }
-    GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
-    obs.obs_type = ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
-    obs_list_.point_cloud_list.emplace_back(obs);
+
+    GeneratePolygonByAABB(&polygon, box);
 
     ApaObstacle apa_obs;
     apa_obs.SetPtClout2dGlobal(gl_pt_clout_2d);
     apa_obs.SetObsAttributeType(ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
-    apa_obs.SetBoxGlobal(obs.box);
-    apa_obs.SetPolygonGlobal(obs.envelop_polygon);
+    apa_obs.SetBoxGlobal(box);
+    apa_obs.SetPolygonGlobal(polygon);
     apa_obs.SetId(obs_id_generate_);
     obstacles_[obs_id_generate_] = apa_obs;
     obs_id_generate_++;
@@ -152,24 +140,22 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     }
     std::vector<Eigen::Vector2d> uss_pt_clout_2d;
     uss_pt_clout_2d.reserve(pt_cloud_size);
-    planning::PointCloudObstacle obs;
-    obs.points.reserve(pt_cloud_size);
+    Polygon2D polygon;
+    cdl::AABB box;
     for (uint8 j = 0; j < pt_cloud_size; ++j) {
       const Eigen::Vector2d uss_pt(obj_info.obj_pt_global[j].x,
                                    obj_info.obj_pt_global[j].y);
-      obs.box.MergePoint(cdl::Vector2r(uss_pt.x(), uss_pt.y()));
-      obs.points.emplace_back(Position2D(uss_pt.x(), uss_pt.y()));
+      box.MergePoint(cdl::Vector2r(uss_pt.x(), uss_pt.y()));
       uss_pt_clout_2d.emplace_back(std::move(uss_pt));
     }
-    obs.obs_type = ApaObsAttributeType::USS_POINT_CLOUD;
-    GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
-    obs_list_.point_cloud_list.emplace_back(obs);
+
+    GeneratePolygonByAABB(&polygon, box);
 
     ApaObstacle apa_obs;
     apa_obs.SetPtClout2dGlobal(uss_pt_clout_2d);
     apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
-    apa_obs.SetBoxGlobal(obs.box);
-    apa_obs.SetPolygonGlobal(obs.envelop_polygon);
+    apa_obs.SetBoxGlobal(box);
+    apa_obs.SetPolygonGlobal(polygon);
     apa_obs.SetId(obs_id_generate_);
     obstacles_[obs_id_generate_] = apa_obs;
     obs_id_generate_++;

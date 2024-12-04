@@ -14,6 +14,7 @@
 #include "Eigen/Core"
 #include "apa_data.h"
 #include "apa_measure_data_manager.h"
+#include "apa_obstacle_manager.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -470,7 +471,8 @@ class SlotManager {
 
   bool Update(const std::shared_ptr<ApaData> apa_data_ptr,
               const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr);
+              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
 
   void AddUssPerceptObstacles();
 
@@ -526,6 +528,7 @@ class SlotManager {
 
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
 
   void AddObstacles();
 

@@ -1,5 +1,6 @@
 
 #include <memory>
+#include <unordered_map>
 
 #include "apa_state_machine_manager.h"
 #include "slot_manager.h"
@@ -21,6 +22,7 @@ class RuleBasedSlotRelease {
       const LocalView *local_view,
       const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
       const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
+      const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
       std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map,
       apa_planner::SlotManager::Frame &frame);
 
@@ -34,6 +36,13 @@ class RuleBasedSlotRelease {
       std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map);
 
   const bool IsEgoCloseToObs(const LocalView *local_view);
+
+  void GenerateParkObstacleList();
+
+  const bool IsEgoCloseToObs();
+
+  const bool IsPerpendicularSlotAndPassageAreaOccupied(
+      const common::SlotInfo *slot);
 
   bool IsPassageAreaEnough(const common::SlotInfo *slot);
 
@@ -62,8 +71,12 @@ class RuleBasedSlotRelease {
 
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
 
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
+
   // todo: move to collision detection
   ParkObstacleList obs_list_;
+
+  std::unordered_map<uint8_t, uint8_t> slot_release_voter_;
 };
 
 }  // namespace apa_planner

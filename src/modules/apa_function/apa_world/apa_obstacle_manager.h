@@ -26,7 +26,6 @@ class ApaObstacleManager final {
   void Reset() {
     obs_id_generate_ = 0;
     obstacles_.clear();
-    obs_list_.Clear();
   }
 
   const std::unordered_map<size_t, ApaObstacle> &GetObstacles() const {
@@ -48,7 +47,6 @@ class ApaObstacleManager final {
  private:
   size_t obs_id_generate_{0};
   std::unordered_map<size_t, ApaObstacle> obstacles_;
-  ParkObstacleList obs_list_;
 };
 
 typedef IndexedList<int, ApaObstacle> IndexedParkObstacles;
