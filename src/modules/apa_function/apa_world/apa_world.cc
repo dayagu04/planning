@@ -563,9 +563,11 @@ const bool ApaWorld::Update() {
   }
 
   if (!apa_data_ptr_->is_slot_type_fixed) {
-    // TODO: selected slot (slot_type) should be obtained in slot management
     apa_data_ptr_->slot_type = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
     apa_data_ptr_->slot_id = slot_manager_ptr_->GetEgoSlotInfo().select_slot_id;
+  }
+
+  if (state_machine_ptr_->IsParkingStatus()) {
     apa_data_ptr_->is_slot_type_fixed = true;
   }
 

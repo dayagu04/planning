@@ -1031,14 +1031,16 @@ bool SlotManager::UpdateSlotsInParking() {
     if (frame_.park_out_select_id == 0) {
       double dist = std::numeric_limits<double>::infinity();
       for (auto &pair : frame_.slot_info_window_map) {
-        const auto &slot_center_pt = pair.second.GetFusedInfo().center();
-        const Eigen::Vector2d slot_center(slot_center_pt.x(),
-                                          slot_center_pt.y());
-        const double temp_dist =
-            (measure_data_ptr_->GetPos() - slot_center).norm();
-        if (temp_dist < dist) {
-          dist = temp_dist;
-          frame_.park_out_select_id = pair.first;
+        if (pair.first != 0) {
+          const auto &slot_center_pt = pair.second.GetFusedInfo().center();
+          const Eigen::Vector2d slot_center(slot_center_pt.x(),
+                                            slot_center_pt.y());
+          const double temp_dist =
+              (measure_data_ptr_->GetPos() - slot_center).norm();
+          if (temp_dist < dist) {
+            dist = temp_dist;
+            frame_.park_out_select_id = pair.first;
+          }
         }
       }
     }
