@@ -156,10 +156,15 @@ class EgoLaneTrackManger {
                                    const double ego_heading_angle);
 
   void ComputeZeroRelativeIdOrderIdIndex(
-      std::shared_ptr<VirtualLane> last_track_ego_lane,
+      const std::shared_ptr<VirtualLane> last_track_ego_lane,
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids, int& zero_relative_id_order_id_index);
 
+  bool MakesureVirtualLaneExistStraightDirecton(
+      const std::shared_ptr<VirtualLane> base_lane);
+      
+  bool MakesureVirtualLaneExistOtherDirecton(
+      const std::shared_ptr<VirtualLane> base_lane);
  private:
   planning::framework::Session *session_ = nullptr;
   // int last_fix_lane_virtual_id_ = 0;

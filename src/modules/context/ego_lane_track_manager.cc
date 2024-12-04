@@ -53,6 +53,8 @@ constexpr int32_t kDefaultPointNums = 33;
 constexpr int32_t kLeastDefaultPointNums = 3;
 constexpr double kConsiderLaneStraightFrontEgo = 30.0;
 constexpr double kDefaultMappingConsiderLaneLength = 70.0;
+constexpr double kDefaultConsiderLaneMarksLength = 80.0;
+
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(planning::framework::Session* session) {
@@ -1381,7 +1383,6 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     const std::vector<int>& order_ids) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const double default_consider_lane_marks_length = 80.0;
   const auto& plannig_init_point = ego_state->planning_init_point();
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
@@ -1398,11 +1399,28 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   // 根据感知所检出的分流场景（一分二或者一分多） 选择符合预期分叉
   // 优先判断上一帧选择的车道结果是否为直行车道
   if (last_zero_relative_id_order_id_index_ != -1) {
-    if (order_ids.size() == 2 &&
-        last_zero_relative_id_nums_ == order_ids.size() &&
-        zero_relative_id_order_id_index < order_ids.size()) {
+    ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
+                                      order_ids,
+                                      zero_relative_id_order_id_index);
+
+    if (zero_relative_id_order_id_index < order_ids.size() &&
+        relative_id_lanes.size() >
+            order_ids[zero_relative_id_order_id_index]) {
+      std::shared_ptr<VirtualLane> base_lane = 
+          relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+      bool is_exist_strgight_direction = 
+          MakesureVirtualLaneExistStraightDirecton(base_lane);
+      if (!is_exist_strgight_direction) {
+        enable_using_last_frame_track_ego_lane = false;
+      }
+    } else {
+      enable_using_last_frame_track_ego_lane = false;
+    }
+
+    if (enable_using_last_frame_track_ego_lane) {
       last_track_ego_lane_ =
           relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+      last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
       for (auto& lane : relative_id_lanes) {
         int lane_order_id = lane->get_order_id();
         int lane_relative_id =
@@ -1411,76 +1429,6 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
       }
       is_exist_split_on_intersection_ = true;
       return;
-    } else {
-      ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
-                                        order_ids,
-                                        zero_relative_id_order_id_index);
-
-      if (zero_relative_id_order_id_index < order_ids.size() &&
-          relative_id_lanes.size() >
-              order_ids[zero_relative_id_order_id_index]) {
-        std::shared_ptr<VirtualLane> base_lane =
-            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-        std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
-        std::shared_ptr<KDPath> base_lane_frenet_crd =
-            base_lane->get_lane_frenet_coord();
-        if (base_lane_frenet_crd == nullptr) {
-          enable_using_last_frame_track_ego_lane = false;
-        }
-
-        Point2D ego_cart_frenet_point;
-        double ego_s = 0.0;
-        if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
-                                          ego_cart_frenet_point)) {
-          enable_using_last_frame_track_ego_lane = false;
-        } else {
-          ego_s = ego_cart_frenet_point.x;
-        }
-        int segment = CalcTargetLaneLineSegment(base_lane, ego_cart_point);
-
-        if (segment >= 0) {
-          for (int i = segment; i < lane_marks.size(); i++) {
-            if (lane_marks[i].begin >
-                ego_s + default_consider_lane_marks_length) {
-              break;
-            }
-            if (lane_marks[i].lane_mark !=
-                    iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT &&
-                lane_marks[i].lane_mark !=
-                    iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT &&
-                lane_marks[i].lane_mark !=
-                    iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT &&
-                lane_marks[i].lane_mark !=
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT_RIGHT &&
-                lane_marks[i].lane_mark !=
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT &&
-                lane_marks[i].lane_mark !=
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT) {
-              enable_using_last_frame_track_ego_lane = false;
-              break;
-            }
-          }
-        }
-      } else {
-        enable_using_last_frame_track_ego_lane = false;
-      }
-
-      if (enable_using_last_frame_track_ego_lane) {
-        last_track_ego_lane_ =
-            relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
-        last_zero_relative_id_order_id_index_ = zero_relative_id_order_id_index;
-        for (auto& lane : relative_id_lanes) {
-          int lane_order_id = lane->get_order_id();
-          int lane_relative_id =
-              lane_order_id - order_ids[zero_relative_id_order_id_index];
-          lane->set_relative_id(lane_relative_id);
-        }
-        is_exist_split_on_intersection_ = true;
-        return;
-      }
     }
   }
 
@@ -1493,60 +1441,8 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
-      if (base_lane == nullptr) {
-        continue;
-      }
-      std::shared_ptr<KDPath> base_lane_frenet_crd =
-          base_lane->get_lane_frenet_coord();
-      if (base_lane_frenet_crd == nullptr) {
-        continue;
-      }
-
-      std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
-      Point2D ego_cart_frenet_point;
-      bool exist_straight_direction = true;
-      double ego_s = 0.0;
-      if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
-                                        ego_cart_frenet_point)) {
-        continue;
-      } else {
-        ego_s = ego_cart_frenet_point.x;
-      }
-
-      int segment = CalcTargetLaneLineSegment(base_lane, ego_cart_point);
-      if (segment >= 0) {
-        for (int i = segment; i < lane_marks.size(); i++) {
-          if (lane_marks[i].begin >
-              ego_s + default_consider_lane_marks_length) {
-            break;
-          }
-          if (lane_marks[i].lane_mark !=
-                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::
-                      LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT_RIGHT &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::
-                      LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::
-                      LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::
-                      LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE &&
-              lane_marks[i].lane_mark !=
-                  iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN) {
-            exist_straight_direction = false;
-            break;
-          }
-        }
-      } else {
-        return;
-      }
+      bool exist_straight_direction = 
+          MakesureVirtualLaneExistStraightDirecton(base_lane);
       if (!exist_straight_direction) {
         both_exist_straight_direction = false;
         break;
@@ -1570,50 +1466,8 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
 
         // bool only_exist_straight_direction = true;
         bool exist_only_left_or_right_direction = false;
-        std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
-        Point2D ego_cart_frenet_point;
-        double ego_s = 0.0;
-        if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
-                                          ego_cart_frenet_point)) {
-          continue;
-        } else {
-          ego_s = ego_cart_frenet_point.x;
-        }
-
-        int segment = CalcTargetLaneLineSegment(base_lane, ego_cart_point);
-        if (segment >= 0) {
-          for (int i = segment; i < lane_marks.size(); i++) {
-            if (lane_marks[i].begin >
-                ego_s + default_consider_lane_marks_length) {
-              break;
-            }
-            if (lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_LEFT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_RIGHT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_UTURN_LEFT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_UTURN_RIGHT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_LEFT_UTURN ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_LEFT_RIGHT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_LEFT_MERGE ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_MERGE) {
-              exist_only_left_or_right_direction = true;
-              break;
-            }
-          }
-        } else {
-          return;
-        }
+        exist_only_left_or_right_direction = 
+            MakesureVirtualLaneExistOtherDirecton(base_lane);
         if (exist_only_left_or_right_direction) {
           continue;
         } else {
@@ -1647,15 +1501,27 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
       is_exist_split_on_intersection_ = false;
       return;
     } else if (is_on_left_side_lane) {
-      relative_id_lanes[order_ids[1]]->set_relative_id(0);
-      origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
-      last_zero_relative_id_order_id_index_ = 1;
-      last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
+      if (MakesureVirtualLaneExistStraightDirecton(
+            relative_id_lanes[order_ids[1]])) {
+        relative_id_lanes[order_ids[1]]->set_relative_id(0);
+        origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
+        last_zero_relative_id_order_id_index_ = 1;
+        last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
+      } else {
+        is_exist_split_on_intersection_ = false;
+        return;
+      }
     } else if (is_on_right_side_lane) {
-      relative_id_lanes[order_ids[0]]->set_relative_id(0);
-      origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
-      last_zero_relative_id_order_id_index_ = 0;
-      last_track_ego_lane_ = relative_id_lanes[order_ids[0]];
+      if (MakesureVirtualLaneExistStraightDirecton(
+            relative_id_lanes[order_ids[0]])) {
+        relative_id_lanes[order_ids[0]]->set_relative_id(0);
+        origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
+        last_zero_relative_id_order_id_index_ = 0;
+        last_track_ego_lane_ = relative_id_lanes[order_ids[0]];      
+      } else {
+        is_exist_split_on_intersection_ = false;
+        return;
+      }
     } else {
       is_exist_split_on_intersection_ = false;
       return;
@@ -2150,7 +2016,7 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
 }
 
 void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
-    std::shared_ptr<VirtualLane> last_track_ego_lane,
+    const std::shared_ptr<VirtualLane> last_track_ego_lane,
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids, int& zero_relative_id_order_id_index) {
   const auto& ego_state =
@@ -2233,6 +2099,131 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
     }
   }
   return;
+}
+
+bool EgoLaneTrackManger::MakesureVirtualLaneExistStraightDirecton(
+    const std::shared_ptr<VirtualLane> base_lane) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
+                         plannig_init_point.lat_init_state.y()};
+  if (base_lane == nullptr) {
+    return false;
+  }
+  std::shared_ptr<KDPath> base_lane_frenet_crd =
+      base_lane->get_lane_frenet_coord();
+  if (base_lane_frenet_crd == nullptr) {
+    return false;
+  }
+
+  std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+  Point2D ego_cart_frenet_point;
+  bool exist_straight_direction = true;
+  double ego_s = 0.0;
+  if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                    ego_cart_frenet_point)) {
+    return false;
+  } else {
+    ego_s = ego_cart_frenet_point.x;
+  }
+
+  int segment = CalcTargetLaneLineSegment(base_lane, ego_cart_point);
+  if (segment >= 0) {
+    for (int i = segment; i < lane_marks.size(); i++) {
+      if (lane_marks[i].begin >
+          ego_s + kDefaultConsiderLaneMarksLength) {
+        break;
+      }
+      if (lane_marks[i].lane_mark !=
+              iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT &&
+          lane_marks[i].lane_mark !=
+              iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT &&
+          lane_marks[i].lane_mark !=
+              iflyauto::LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT &&
+          lane_marks[i].lane_mark !=
+              iflyauto::
+                  LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT_RIGHT &&
+          lane_marks[i].lane_mark !=
+              iflyauto::
+                  LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT &&
+          lane_marks[i].lane_mark !=
+              iflyauto::
+                  LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT &&
+          lane_marks[i].lane_mark !=
+              iflyauto::
+                  LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE &&
+          lane_marks[i].lane_mark !=
+              iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN) {
+        return false;
+      }
+    }
+  } else {
+    return false;
+  }
+  return true;
+}
+
+bool EgoLaneTrackManger::MakesureVirtualLaneExistOtherDirecton(
+    const std::shared_ptr<VirtualLane> base_lane) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
+                         plannig_init_point.lat_init_state.y()};
+  if (base_lane == nullptr) {
+    return true;
+  }
+  std::shared_ptr<KDPath> base_lane_frenet_crd =
+      base_lane->get_lane_frenet_coord();
+  if (base_lane_frenet_crd == nullptr) {
+    return true;
+  }
+
+  std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+  Point2D ego_cart_frenet_point;
+  double ego_s = 0.0;
+  if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                    ego_cart_frenet_point)) {
+    return true;
+  } else {
+    ego_s = ego_cart_frenet_point.x;
+  }
+
+  int segment = CalcTargetLaneLineSegment(base_lane, ego_cart_point);
+  if (segment >= 0) {
+    for (int i = segment; i < lane_marks.size(); i++) {
+      if (lane_marks[i].begin >
+          ego_s + kDefaultConsiderLaneMarksLength) {
+        break;
+      }
+      if (lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_LEFT ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_RIGHT ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_UTURN_LEFT ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_UTURN_RIGHT ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_LEFT_UTURN ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_LEFT_RIGHT ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_LEFT_MERGE ||
+          lane_marks[i].lane_mark ==
+              iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_MERGE) {
+        return true;
+      }
+    }
+  } else {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace planning
