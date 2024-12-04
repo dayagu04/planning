@@ -1185,8 +1185,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
     upper_t = f'upper_points_{i}_t_vec'
     upper_s = f'upper_points_{i}_s_vec'
 
-    fig3.line(lower_t, lower_s, source=source, line_width=2, line_color='red', line_dash='solid', legend_label='st_boundary')
-    fig3.line(upper_t, upper_s, source=source, line_width=2, line_color='red', line_dash='solid', legend_label='st_boundary')
+    fig3.line(lower_t, lower_s, source=source, line_width=2, line_color='grey', line_dash='solid', legend_label='st_boundary')
+    fig3.circle(lower_t, lower_s, source=source, size=3, color='grey', legend_label='st_boundary')
+    fig3.line(upper_t, upper_s, source=source, line_width=2, line_color='grey', line_dash='solid', legend_label='st_boundary')
+    fig3.circle(upper_t, upper_s, source=source, size=3, color='grey', legend_label='st_boundary')
 
   for i, source in enumerate(st_points):
     left_t = f'left_point_{i}_t'
@@ -1194,8 +1196,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
     right_t = f'right_point_{i}_t'
     right_s = f'right_point_{i}_s'
 
-    fig3.line(left_t, left_s, source=source, line_width=2, line_color='red', line_dash='solid', legend_label='st_boundary')
-    fig3.line(right_t, right_s, source=source, line_width=2, line_color='red', line_dash='solid', legend_label='st_boundary')
+    fig3.line(left_t, left_s, source=source, line_width=2, line_color='grey', line_dash='solid', legend_label='st_boundary')
+    fig3.line(right_t, right_s, source=source, line_width=2, line_color='grey', line_dash='solid', legend_label='st_boundary')
 
   for i, source in enumerate(st_labels):
     center_point_s = f'center_point_{i}_s'
