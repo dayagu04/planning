@@ -217,7 +217,7 @@ double CruiseTarget::CalculateAccelerationWithinBound(
     const KinematicsBound& kinematics_bound) const {
   double acc_next = a_next;
   acc_next = std::min(acc_next, kinematics_bound.acc_positive_mps2);
-  acc_next = std::max(acc_next, kinematics_bound.acc_positive_mps2);
+  acc_next = std::max(acc_next, kinematics_bound.acc_negative_mps2);
   acc_next = std::min(
       acc_next, a_t + kinematics_bound.jerk_positive_mps3 * t_step_length);
   acc_next = std::max(
