@@ -76,15 +76,15 @@ bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
   }
   const auto &all_corners = agent_box.GetAllCorners();
   for (const auto &corner : all_corners) {
-    double agent_s = 0.0;
-    double agent_l = 0.0;
-    if (!planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l)) {
+    Point2D agent_sl{0.0, 0.0};
+    Point2D corner_sl{corner.x(), corner.y()};
+    if (!planned_path->XYToSL(corner_sl, agent_sl)) {
       continue;
     }
-    *ptr_min_s = std::fmin(*ptr_min_s, agent_s);
-    *ptr_max_s = std::fmax(*ptr_max_s, agent_s);
-    *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
-    *ptr_max_l = std::fmax(*ptr_max_l, agent_l);
+    *ptr_min_s = std::fmin(*ptr_min_s, agent_sl.x);
+    *ptr_max_s = std::fmax(*ptr_max_s, agent_sl.x);
+    *ptr_min_l = std::fmin(*ptr_min_l, agent_sl.y);
+    *ptr_max_l = std::fmax(*ptr_max_l, agent_sl.y);
   }
   if (*ptr_min_s > 200.0 || *ptr_max_s < -200.0 || *ptr_min_l > 50.0 ||
       *ptr_max_l < -50.0) {
