@@ -24,7 +24,7 @@ constexpr double kEpsilon = 1e-10;
 constexpr double kUpsamplingStep = 0.1;
 // constexpr double kMilliSecondToSecond = 0.001;
 constexpr double kBestNodeMinT = 4.5;
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 constexpr double kMaxNodeSpeedLimit = 100.0;
 
 trajectory::TrajectoryPoint PlanningInitPointToTrajectoryPoint(

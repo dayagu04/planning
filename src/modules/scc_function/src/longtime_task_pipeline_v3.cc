@@ -58,8 +58,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   scc_lon_behavior_planner_ =
       std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
-      std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
-
+      std::make_unique<SccLongitudinalMotionPlannerV3>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
 }

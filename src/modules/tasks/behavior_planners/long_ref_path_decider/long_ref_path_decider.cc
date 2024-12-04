@@ -154,7 +154,7 @@ void LongRefPathDecider::SaveToDebugInfo() {
   for (const auto &s_ref : lon_behavior_output_.s_refs) {
     auto add_s_ref = lon_behavior_output_pb_.add_s_refs();
     add_s_ref->set_first(s_ref.first);   // offset
-    add_s_ref->set_second(s_ref.first);  // weight
+    add_s_ref->set_second(s_ref.second);  // weight
   }
   // 3.update ds_refs
   lon_behavior_output_pb_.mutable_ds_refs()->Reserve(
@@ -162,7 +162,7 @@ void LongRefPathDecider::SaveToDebugInfo() {
   for (const auto &ds_ref : lon_behavior_output_.ds_refs) {
     auto add_ds_ref = lon_behavior_output_pb_.add_ds_refs();
     add_ds_ref->set_first(ds_ref.first);   // offset
-    add_ds_ref->set_second(ds_ref.first);  // weight
+    add_ds_ref->set_second(ds_ref.second);  // weight
   }
 
   // 4.update hard bounds
