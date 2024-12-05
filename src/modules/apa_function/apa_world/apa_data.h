@@ -317,18 +317,6 @@ struct UssDistance {
   }
 };
 
-struct ApaObstacle {
-  size_t id = 0;
-  double vel = 0.0;
-  Eigen::Vector2d center_2d = Eigen::Vector2d(0.0, 0.0);
-  Eigen::Vector3d center_3d = Eigen::Vector3d(0.0, 0.0, 0.0);
-  std::vector<Eigen::Vector2d> obs2d_pt_vec;
-  std::vector<Eigen::Vector3d> obs3d_pt_vec;
-  size_t obs2d_pt_size = 0;
-  size_t obs3d_pt_size = 0;
-  ObstacleType obs_type = ObstacleType::INVALID;
-};
-
 struct ApaData {
   // 这些指针只准在apa_world里的preprocess使用 其他代码后续应当不能访问
   const iflyauto::FuncStateMachine* func_state_ptr;
@@ -342,12 +330,6 @@ struct ApaData {
   ApaSlots apa_slots;
   UssDistance uss_dis;
 
-  // 暂时用这个 无需改变太多之前代码
-  std::unordered_map<ObstacleType, std::vector<Eigen::Vector2d>> apa_obs_map;
-
-  // 后面需要用这个
-  // std::unordered_map<ObstacleType, std::vector<ApaObstacle>> apa_obs_map;
-
   SimulationParam simu_param;
 
   // If not select any slot, this is null.
@@ -360,7 +342,6 @@ struct ApaData {
   void Reset() {
     apa_slots.Reset();
     uss_dis.Reset();
-    apa_obs_map.clear();
 
     slot_type = Common::PARKING_SLOT_TYPE_INVALID;
     slot_id = 0;

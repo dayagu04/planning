@@ -23,7 +23,7 @@ struct PointCloudObstacle {
 
   Polygon2D envelop_polygon;
   cdl::AABB box;
-  ParkObstacleType obs_type;
+  apa_planner::ApaObsAttributeType obs_type;
 };
 
 // todo: use ParkObstacle to replace PointCloudObstacle. And delete

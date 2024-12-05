@@ -27,6 +27,7 @@ class CollisionDetector {
     TLANE_BOUNDARY_OBS,
     LINEARC_OBS,
     FUSION_OBS,
+    GROUND_LINE_OBS,
     RECORD_OBS,
     VIRTUAL_OBS,
     USS_OBS,

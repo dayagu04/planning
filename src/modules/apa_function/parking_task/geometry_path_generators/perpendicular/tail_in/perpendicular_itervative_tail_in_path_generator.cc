@@ -128,6 +128,14 @@ const bool PerpendicularTailInPathGenerator::NewPreparePathPlan() {
         }
       }
 
+      if (complete_path.path_count > 0) {
+        if (complete_path.path_segment_vec.back().seg_type !=
+                geometry_lib::SEG_TYPE_LINE ||
+            complete_path.path_segment_vec.back().Getlength() < 0.68) {
+          cost += 38.0;
+        }
+      }
+
       if (dubins_path.gear_change_count > 0 &&
           dubins_path.last_gear == geometry_lib::SEG_GEAR_DRIVE) {
         ILOG_INFO << "dubins gear rrd is not suggested";
@@ -1589,6 +1597,14 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       cost += 100.0;
     }
 
+    if (complete_path.path_count > 0) {
+      if (complete_path.path_segment_vec.back().seg_type !=
+              geometry_lib::SEG_TYPE_LINE ||
+          complete_path.path_segment_vec.back().Getlength() < 0.68) {
+        cost += 38.0;
+      }
+    }
+
     ILOG_INFO << "gear_change_count = "
               << static_cast<int>(
                      success_geometry_path_vec[k].gear_change_count)
@@ -2212,7 +2228,8 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
     }
   }
 
-  if (geometry_path.path_count > 0) {
+  if (geometry_path.path_count > 0 &&
+      geometry_path.end_pose.pos.x() > calc_params_.target_line.pA.x() + 0.68) {
     ILOG_INFO_IF(enable_log) << "two arc plan has path";
     geometry_path.PrintInfo(enable_log);
     return true;

@@ -97,12 +97,12 @@ void ApaPredictPathManager::Update(
         }
       }
 
+      pnc::geometry_lib::PathPoint car_predict_pt;
       for (int i = min_index + 1;
            i < std::min(planning_output->trajectory.trajectory_points_size,
                         static_cast<uint8>(PLANNING_TRAJ_POINTS_NUM)) &&
            predict_pt_vec_.back().s < predict_distance;
            ++i) {
-        pnc::geometry_lib::PathPoint car_predict_pt;
         car_predict_pt.pos
             << planning_output->trajectory.trajectory_points[i].x,
             planning_output->trajectory.trajectory_points[i].y;
@@ -114,7 +114,20 @@ void ApaPredictPathManager::Update(
                        car_predict_pt.pos.y() - predict_pt_vec_.back().pos.y());
 
         car_predict_pt.s = ds + predict_pt_vec_.back().s;
-        predict_pt_vec_.emplace_back(std::move(car_predict_pt));
+        predict_pt_vec_.emplace_back(car_predict_pt);
+      }
+
+      // 延长避免压速
+      const size_t pt_size = predict_pt_vec_.size();
+      Eigen::Vector2d extended_point;
+      if (pt_size > 1 &&
+          pnc::geometry_lib::CalExtendedPointByTwoPoints(
+              predict_pt_vec_[pt_size - 2].pos,
+              predict_pt_vec_[pt_size - 1].pos, extended_point, 0.86)) {
+        car_predict_pt.pos = extended_point;
+        car_predict_pt.heading = predict_pt_vec_.back().heading;
+        car_predict_pt.s = predict_pt_vec_.back().s + 0.86;
+        predict_pt_vec_.emplace_back(car_predict_pt);
       }
     }
   }

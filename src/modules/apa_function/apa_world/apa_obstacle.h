@@ -52,9 +52,89 @@ enum class ApaObsMovementType : uint8_t {
   COUNT,
 };
 
-class ApaObstacleT final {
-  ApaObstacleT() {}
-  ~ApaObstacleT() {}
+class ApaObstacle final {
+ public:
+  ApaObstacle() {}
+  ~ApaObstacle() {}
+
+  void SetId(const size_t id) { obs_id_ = id; }
+
+  void SetPtClout2dGlobal(const std::vector<Eigen::Vector2d>& pt_clout_2d) {
+    pt_clout_2d_global_ = pt_clout_2d;
+  }
+
+  void SetPtClout3dGlobal(const std::vector<Eigen::Vector3d>& pt_clout_3d) {
+    pt_clout_3d_global_ = pt_clout_3d;
+  }
+
+  void SetPtClout2dLocal(const std::vector<Eigen::Vector2d>& pt_clout_2d) {
+    pt_clout_2d_local_ = pt_clout_2d;
+  }
+
+  void SetPtClout3dLocal(const std::vector<Eigen::Vector3d>& pt_clout_3d) {
+    pt_clout_3d_local_ = pt_clout_3d;
+  }
+
+  void SetObsAttributeType(const ApaObsAttributeType type) {
+    obs_attribute_type_ = type;
+  }
+
+  void SetBoxGlobal(const cdl::AABB& box) { box_global_ = box; }
+  void SetBoxLocal(const cdl::AABB& box) { box_local_ = box; }
+
+  void SetPolygonGlobal(const Polygon2D& polygon) { polygon_global_ = polygon; }
+  void SetPolygonLocal(const Polygon2D& polygon) { polygon_local_ = polygon; }
+
+  void TransformCoordFromGlobalToLocal(
+      const pnc::geometry_lib::GlobalToLocalTf& g2l_tf);
+
+  void TransformPtClout2dFromGlobalToLocal(
+      const pnc::geometry_lib::GlobalToLocalTf& g2l_tf);
+
+  void TransformPtClout3dFromGlobalToLocal(
+      const pnc::geometry_lib::GlobalToLocalTf& g2l_tf);
+
+  void TransformBoxFromGlobalToLocal(
+      const pnc::geometry_lib::GlobalToLocalTf& g2l_tf);
+
+  void TransformPolygonFromGlobalToLocal(
+      const pnc::geometry_lib::GlobalToLocalTf& g2l_tf);
+
+  const std::vector<Eigen::Vector2d>& GetPtClout2dGlobal() const {
+    return pt_clout_2d_global_;
+  }
+
+  const std::vector<Eigen::Vector2d>& GetPtClout2dLocal() const {
+    return pt_clout_2d_local_;
+  }
+
+  const std::vector<Eigen::Vector3d>& GetPtClout3dGlobal() const {
+    return pt_clout_3d_global_;
+  }
+
+  const std::vector<Eigen::Vector3d>& GetPtClout3dLocal() const {
+    return pt_clout_3d_local_;
+  }
+
+  const ApaObsHeightType GetObsHeightType() const { return obs_height_type_; }
+
+  const ApaObsAttributeType GetObsAttributeType() const {
+    return obs_attribute_type_;
+  }
+
+  const ApaObsMovementType GetObsMovementType() const {
+    return obs_movement_type_;
+  }
+
+  const cdl::AABB& GetBoxGlobal() const { return box_global_; }
+
+  const cdl::AABB& GetBoxLocal() const { return box_local_; }
+
+  const Polygon2D& GetPolygon2DGlobal() const { return polygon_global_; }
+
+  const Polygon2D& GetPolygon2DLocal() const { return polygon_local_; }
+
+  void Reset();
 
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
@@ -63,138 +143,28 @@ class ApaObstacleT final {
 
   double obs_vel_{0.};
   double obs_acc_{0.};
-  pnc::geometry_lib::PathPoint obs_pose;
+  pnc::geometry_lib::PathPoint obs_pose_global_;
+  pnc::geometry_lib::PathPoint obs_pose_local_;
 
   double height_{0.};
 
-  std::vector<pnc::geometry_lib::PathPoint> obs_predict_traj;
+  std::vector<pnc::geometry_lib::PathPoint> obs_predict_traj_global_;
+  std::vector<pnc::geometry_lib::PathPoint> obs_predict_traj_local_;
 
-  cdl::AABB box_;
-  Polygon2D polygon_;
+  cdl::AABB box_local_;
+  cdl::AABB box_global_;
+  Polygon2D polygon_local_;
+  Polygon2D polygon_global_;
 
-  std::vector<Eigen::Vector2d> pt_clout_2d_;
+  std::vector<Eigen::Vector2d> pt_clout_2d_global_;
+  std::vector<Eigen::Vector2d> pt_clout_2d_local_;
   size_t pt_clout_2d_size_{0};
 
-  std::vector<Eigen::Vector3d> pt_clout_3d_;
+  std::vector<Eigen::Vector3d> pt_clout_3d_global_;
+  std::vector<Eigen::Vector3d> pt_clout_3d_local_;
   size_t pt_clout_3d_size_{0};
 
   size_t obs_id_{0};
-
 };
 }  // namespace apa_planner
-
-}  // namespace planning
-
-namespace planning {
-
-enum class ParkObstacleType {
-  FUSION_OBJECT_POINT_CLOUD,
-  FUSION_OBJECT_POLYGON,
-  GROUND_LINE,
-  USS,
-  VIRTUAL,
-  MAP_BOUND,
-  SLOT_LIMITER,
-  SLOT_LINE,
-  HOLE,
-  COUNT,
-  INVALID,
-};
-
-/**
- * @class Obstacle
- * @brief This is the class that associates an Obstacle with its path
- * properties. An obstacle's path properties relative to a path.
- * The `s` and `l` values are examples of path properties.
- * The decision of an obstacle is also associated with a path.
- *
- * The decisions have two categories: lateral decision and longitudinal
- * decision.
- * Lateral decision includes: nudge, ignore.
- * Lateral decision safety priority: nudge > ignore.
- * Longitudinal decision includes: stop, yield, follow, overtake, ignore.
- * Decision safety priorities order: stop > yield >= follow > overtake > ignore
- *
- * Ignore decision belongs to both lateral decision and longitudinal decision,
- * and it has the lowest priority.
- */
-class ParkObstacle {
- public:
-  ParkObstacle() = default;
-
-  void Init();
-
-  double speed() const { return speed_; }
-
-  int PerceptionId() const { return perception_id_; }
-
-  void SetId(const int id) {
-    id_ = id;
-    return;
-  }
-
-  int Id() const { return id_; }
-
-  bool IsStatic() const { return is_static_; }
-
-  bool IsVirtual() const { return is_virtual_; }
-
-  const cdl::AABB& PerceptionBoundingBox() const { return perception_box_; }
-
-  void SetPerceptionBox(const cdl::AABB& box) {
-    perception_box_ = box;
-
-    return;
-  }
-
-  const Polygon2D& PerceptionPolygon() const { return perception_polygon_; }
-
-  const std::vector<PncTrajectoryPoint>& Trajectory() const {
-    return prediction_traj_;
-  }
-
-  bool HasTrajectory() const { return !(prediction_traj_.empty()); }
-
-  std::string DebugString() const { return "none"; };
-
-  void SetPerceptionSourceType(const ParkObstacleType type) {
-    perception_source_type_ = type;
-
-    return;
-  }
-
-  void SetPoints(const std::vector<Position3D>& points) {
-    perception_points_ = points;
-
-    return;
-  }
-
- private:
-  int id_ = 0;
-  int perception_id_ = 0;
-  bool is_static_ = false;
-  bool is_virtual_ = false;
-
-  double speed_ = 0.0;
-  double acc_;
-
-  double height_top_;
-  double height_bottom_;
-  Pose2D pose_;
-
-  ParkObstacleType perception_source_type_;
-  ObjectType semantic_type_;
-
-  std::vector<PncTrajectoryPoint> prediction_traj_;
-
-  cdl::AABB perception_box_;
-  Polygon2D perception_polygon_;
-  Polygon2D obs_slot_polygon_;
-
-  std::vector<Position3D> perception_points_;
-};
-
-typedef IndexedList<int, ParkObstacle> IndexedParkObstacles;
-typedef ThreadSafeIndexedList<int, ParkObstacle> ThreadSafeParkObstacles;
-
 }  // namespace planning
