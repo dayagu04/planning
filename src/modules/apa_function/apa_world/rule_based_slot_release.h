@@ -17,6 +17,7 @@ namespace apa_planner {
 class RuleBasedSlotRelease {
  public:
   RuleBasedSlotRelease() = default;
+  ~RuleBasedSlotRelease() = default;
 
   void Process(
       const LocalView *local_view,
@@ -25,6 +26,8 @@ class RuleBasedSlotRelease {
       const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
       std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map,
       apa_planner::SlotManager::Frame &frame);
+
+  void Reset();
 
  private:
   //  泊车巡航场景，更新车位释放决策
@@ -44,15 +47,13 @@ class RuleBasedSlotRelease {
   const bool IsPerpendicularSlotAndPassageAreaOccupied(
       const common::SlotInfo *slot);
 
+  const bool IsParallelSlotAndPassageAreaOccupied(const common::SlotInfo *slot);
+
   bool IsPassageAreaEnough(const common::SlotInfo *slot);
 
   const bool IsSlotOccupied(const common::SlotInfo *slot);
 
-  const double CalLonDistSlot2Car(const common::SlotInfo &new_slot_info) const;
-
-  const bool UpdateEgoParallelSlotInfoInSearching(
-      apa_planner::SlotManager::EgoSlotInfo &ego_slot_info,
-      const common::SlotInfo *slot_info);
+  const bool IsSlotCoarseRelease(common::SlotInfo *slot);
 
   const bool IsPerpendicularSlotCoarseRelease(
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
@@ -75,8 +76,6 @@ class RuleBasedSlotRelease {
 
   // todo: move to collision detection
   ParkObstacleList obs_list_;
-
-  std::unordered_map<uint8_t, uint8_t> slot_release_voter_;
 };
 
 }  // namespace apa_planner

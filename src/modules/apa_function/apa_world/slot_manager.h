@@ -386,16 +386,13 @@ class SlotManager {
   struct Frame {
     const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
-    // slot state check by uss
-    const iflyauto::UssWaveInfo* uss_wave_info_ptr;
     const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
     const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
     const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
     const iflyauto::FusionOccupancyObjectsInfo*
         fusion_occupancy_objects_info_ptr;
 
-    std::shared_ptr<CollisionDetector> collision_detector_ptr =
-        std::make_shared<CollisionDetector>();
+    std::unordered_map<uint8_t, uint8_t> slot_release_voter;
 
     // clear in per frame
     std::vector<int> release_slot_id_vec;
@@ -465,7 +462,7 @@ class SlotManager {
 
       park_out_select_id = 0;
 
-      collision_detector_ptr->Reset();
+      slot_release_voter.clear();
     }
   };
 
