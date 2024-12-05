@@ -171,20 +171,13 @@ def load_st_polygen_lower_upper_point(st_graph_data):
   return st_info
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  planning_json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                              "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                              "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", 'construct_st_graph_cost', 'st_graph_searcher_cost', \
+  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+                              'construct_st_graph_cost', 'st_graph_searcher_cost', \
+                              'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
-                              'lead_one_id','cipv_id_st', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
-                              'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
-                              'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
-                              'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                              'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                              'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
-                              'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', \
-                              "dis_to_ramp", "v_target_ramp", "narrow_agent_id", "narrow_agent_v_limit",\
-                              'gap_v_limit_lc', \
-                              "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                              'cipv_id_st', \
+                              'new_cutin_id', 'new_cutin_id_count', \
+                              "agents_headway_id", "agents_headway_value", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
@@ -777,25 +770,25 @@ def load_lon_global_figure(bag_loader):
   t_plan_vec = bag_loader.plan_debug_msg['t']
   t_loc_vec = bag_loader.loc_msg['t']
   t_vehicle_service_vec = bag_loader.vs_msg['t']
-  for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
+  # for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    # target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
     # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
-    leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
-    leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
+    # leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
+    # leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
 
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_velocity_vec.append(round(bag_loader.vs_msg['data'][ind].vehicle_speed, 2))
 
-  velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
-                              legend_label='target_velocity', color="green")
+  # velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+  #                             legend_label='target_velocity', color="green")
   # velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
   #                             legend_label='ref_velocity', color="gray")
   velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
                                 legend_label='ego_velocity',color="blue")
-  velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
-                              legend_label='leadone_velocity', color="red")
-  velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
-                                legend_label='leadtwo_velocity',color="orange")
+  # velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
+  #                             legend_label='leadone_velocity', color="red")
+  # velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
+  #                               legend_label='leadtwo_velocity',color="orange")
   velocity_fig.legend.click_policy = 'hide'
 
 
@@ -808,25 +801,23 @@ def load_lon_global_figure(bag_loader):
   lead_one_acc = []
 
   t_vs_vec = bag_loader.vs_msg['t']
-  for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
-    acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-    lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+  # for ind in range(len(bag_loader.plan_debug_msg['json'])):
+  #   acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
+  #   acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
+  #   lead_one_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
-  acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
-                              legend_label='acc_min', color="brown")
+  # acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
+  #                             legend_label='acc_min', color="brown")
   acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
                                 legend_label='ego_acc',color="blue")
-  acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
-                              legend_label='acc_max', color="red")
-  acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
-                              legend_label='lead_one_acc', color="green")
+  # acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
+  #                             legend_label='acc_max', color="red")
+  # acc_fig.line(t_plan_vec, lead_one_acc, line_width=2,
+  #                             legend_label='lead_one_acc', color="green")
   acc_fig.legend.click_policy = 'hide'
 
-  lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
-                y_axis_label='distance/(m)',width=600,height=300)
   # 各阶段耗时
   cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
                   y_axis_label='time cost/(ms)',width=600,height=300)
@@ -866,14 +857,15 @@ def load_lon_global_figure(bag_loader):
     DynamicWorldAverageCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['dynamic_world_cost'], 2))
     st_graph_searcher_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['st_graph_searcher_cost'], 2))
 
-
-  lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
-  lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
-  lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
-  lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
-  lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
-  lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
-  lead_fig.line(t_plan_vec, soft_brake_distance_lead_vec, line_width=2, legend_label='soft_brake_distance', color="black")
+  lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
+                y_axis_label='distance/(m)',width=600,height=300)
+  # lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
+  # lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
+  # lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
+  # lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
+  # lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
+  # lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
+  # lead_fig.line(t_plan_vec, soft_brake_distance_lead_vec, line_width=2, legend_label='soft_brake_distance', color="black")
   lead_fig.legend.click_policy = 'hide'
 
   t_plan_debug = bag_loader.plan_debug_msg['t']
@@ -899,34 +891,34 @@ def load_lon_global_figure(bag_loader):
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
 
-  limit_cutin_vel_vec = []
-  potential_cutin_speed_vec = []
+  # limit_cutin_vel_vec = []
+  # potential_cutin_speed_vec = []
 
-  for ind in range(len(bag_loader.plan_debug_msg['json'])):
-    limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
-    potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potential_cutin'], 2))
+  # for ind in range(len(bag_loader.plan_debug_msg['json'])):
+  #   limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
+  #   potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potential_cutin'], 2))
 
-  cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
-                                  legend_label='Pre-deceleration cutin',color="blue")
-  cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
-                                legend_label='Speed regulation cutin', color="red")
-  cutin_fig.legend.click_policy = 'hide'
+  # cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
+  #                                 legend_label='Pre-deceleration cutin',color="blue")
+  # cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
+  #                               legend_label='Speed regulation cutin', color="red")
+  # cutin_fig.legend.click_policy = 'hide'
   # cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
   #                               legend_label='cutin_status', color="black")
 
-  LonBahaviorAverageCostTime = sum(SccLonBehaviorCostTime_vec) / len(t_plan_vec)
+  # LonBahaviorAverageCostTime = sum(SccLonBehaviorCostTime_vec) / len(t_plan_vec)
   LonMotionAverageCostTime = sum(SccLonMotionCostTime_vec) / len(t_plan_vec)
-  LateralBahaviorAverageCostTime = sum(SccLateralBehaviorCostTime_vec) / len(t_plan_vec)
+  # LateralBahaviorAverageCostTime = sum(SccLateralBehaviorCostTime_vec) / len(t_plan_vec)
   LateralMotionAverageCostTime = sum(SccLateralMotionCostTime_vec) / len(t_plan_vec)
   EnvironmentalAverageCostTime = sum(EnvironmentalModelManagerCost_vec) / len(t_plan_vec)
-  GeneralPlannerAverageCostTime = sum(GeneralPlannerModuleCostTime_vec) / len(t_plan_vec)
+  # GeneralPlannerAverageCostTime = sum(GeneralPlannerModuleCostTime_vec) / len(t_plan_vec)
   DynamicWorldAverageCostTime = sum(DynamicWorldAverageCostTime_vec) / len(t_plan_vec)
-  print('lat_bahavior_average_cost', LateralBahaviorAverageCostTime)
+  # print('lat_bahavior_average_cost', LateralBahaviorAverageCostTime)
   print('lat_motion_average_cost', LateralMotionAverageCostTime)
-  print('lon_bahavior_average_cost', LonBahaviorAverageCostTime)
+  # print('lon_bahavior_average_cost', LonBahaviorAverageCostTime)
   print('lon_motion_average_cost', LonMotionAverageCostTime)
   print('Environmental_average_cost', EnvironmentalAverageCostTime)
-  print('GeneralPlanner_average_cost', GeneralPlannerAverageCostTime)
+  # print('GeneralPlanner_average_cost', GeneralPlannerAverageCostTime)
   print('dynamic_world_average_cost', DynamicWorldAverageCostTime)
 
   #get longtime obstacle id list in st-graph

@@ -581,72 +581,72 @@ class LoadRosbag:
       self.prediction_msg['enable'] = False
       print("missing /iflytek/prediction/prediction_result !!!")
 
-
-    json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
-                        "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
-                        "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
-                        'acc_target_high', 'acc_target_low', 'acc_cipv', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
-                        "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                        "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost', \
-                        'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \
-                        'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
-                        'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
-                        'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
-                        'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                        'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                        'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
-                        'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
-                        "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
-                        'virtual_lane_relative_id_switch_flag', \
-                        'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
-                        'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', \
-                        'select_ego_lane_without_plan', 'select_ego_lane_with_plan', \
-                        'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
-                        "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
-                        "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                        'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
-                        "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","left_boundary_type","right_boundary_type", \
-                        "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
-                        "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
-                        "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_", \
-                        "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
-                        'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                        "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
-                        "front_node_id", "rear_node_id","prohibit_acc_", \
-                        "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
-                        "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
-                        "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", \
-                        "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
-                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
-                        "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
-                        "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region', 'is_split_region', 'merge_lane_virtual_id', \
-                        'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
-                        'sdmap_min_curv_radius',"is_static_avoid_scene", \
-                        "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
-                        'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
-                        'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
-                        'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y',
-                        'boundary_line_merge_point_x','boundary_line_merge_point_y','cur_lane_is_continue','forward_lane_num',
-                        'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-                        'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size','open_set_empty', 'lat_close_bound_offset']
-
-    json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
-                        "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
-                        "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
-                        "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",
-                        "ego_right_agent_traj_x_vec","ego_right_agent_traj_y_vec","ego_right_agent_traj_theta_vec",
-                        "ego_left_front_agent_traj_x_vec","ego_left_front_agent_traj_y_vec","ego_left_front_agent_traj_theta_vec",
-                        "ego_right_front_agent_traj_x_vec","ego_right_front_agent_traj_y_vec","ego_right_front_agent_traj_theta_vec",
-                        "ego_left_rear_agent_traj_x_vec","ego_left_rear_agent_traj_y_vec","ego_left_rear_agent_traj_theta_vec",
-                        "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",
-                        "expanded_nodes_t_vec", "expanded_nodes_s_vec", "history_cur_nodes_t_vec", "history_cur_nodes_s_vec",
-                        "st_path_final_nodes_total_cost_vec","st_path_final_nodes_g_cost_vec","st_path_final_nodes_h_cost_vec",
-                        "st_path_final_nodes_cost_yield_vec","st_path_final_nodes_cost_overtake_vec","st_path_final_nodes_cost_vel_vec",
-                        "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
-                        "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",]
-
     # load planning debug msg
     try:
+      json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+                         "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
+                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
+                         'acc_target_high', 'acc_target_low', 'acc_cipv', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
+                         "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost', \
+                         'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \
+                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
+                         'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
+                         'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
+                         'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
+                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                         'new_cutin_id', 'new_cutin_id_count', "CIPV_id",\
+                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
+                         "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
+                         'virtual_lane_relative_id_switch_flag', \
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
+                         'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', \
+                         'select_ego_lane_without_plan', 'select_ego_lane_with_plan', \
+                         'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
+                         "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                         "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                         'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', \
+                         "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","left_boundary_type","right_boundary_type", \
+                         "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
+                         "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
+                         "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_", \
+                         "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
+                         'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
+                         "front_node_id", "rear_node_id","prohibit_acc_", \
+                         "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
+                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
+                         "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", \
+                         "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                         "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
+                         "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region', 'is_split_region', 'merge_lane_virtual_id', \
+                          'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
+                         'sdmap_min_curv_radius',"is_static_avoid_scene", \
+                         "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
+                         'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
+                         'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
+                         'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y',
+                         'boundary_line_merge_point_x','boundary_line_merge_point_y','cur_lane_is_continue','forward_lane_num',
+                         'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
+                         'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size','open_set_empty',
+                         "agents_headway_id", "agents_headway_value"]
+
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
+                         "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
+                         "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
+                         "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",
+                         "ego_right_agent_traj_x_vec","ego_right_agent_traj_y_vec","ego_right_agent_traj_theta_vec",
+                         "ego_left_front_agent_traj_x_vec","ego_left_front_agent_traj_y_vec","ego_left_front_agent_traj_theta_vec",
+                         "ego_right_front_agent_traj_x_vec","ego_right_front_agent_traj_y_vec","ego_right_front_agent_traj_theta_vec",
+                         "ego_left_rear_agent_traj_x_vec","ego_left_rear_agent_traj_y_vec","ego_left_rear_agent_traj_theta_vec",
+                         "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",
+                         "expanded_nodes_t_vec", "expanded_nodes_s_vec", "history_cur_nodes_t_vec", "history_cur_nodes_s_vec",
+                         "st_path_final_nodes_total_cost_vec","st_path_final_nodes_g_cost_vec","st_path_final_nodes_h_cost_vec",
+                         "st_path_final_nodes_cost_yield_vec","st_path_final_nodes_cost_overtake_vec","st_path_final_nodes_cost_vel_vec",
+                         "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec",
+                         "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec",]
+
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         planning_debug_output = PlanningDebugInfo()

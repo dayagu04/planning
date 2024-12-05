@@ -1,5 +1,6 @@
 #include "agent_headway_decider.h"
 
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "log.h"
 #include "planning_context.h"
@@ -173,6 +174,16 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       agents_headway_map_.erase(iter++);
     }
   }
+
+  // json debug
+  std::vector<double> agent_id;
+  std::vector<double> agent_headway;
+  for (const auto agent : agents_headway_map_) {
+    agent_id.emplace_back(agent.first);
+    agent_headway.emplace_back(agent.second.current_headway);
+  }
+  JSON_DEBUG_VECTOR("agents_headway_id", agent_id, 0)
+  JSON_DEBUG_VECTOR("agents_headway_value", agent_headway, 3)
   return true;
 }
 
