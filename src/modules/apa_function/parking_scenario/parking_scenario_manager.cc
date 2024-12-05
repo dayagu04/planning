@@ -103,6 +103,11 @@ void ParkingScenarioManager::Excute() {
     if (apa_world_->GetApaDataPtr()->slot_type ==
         Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
+
+      if (apa_param.GetParam().path_generator_type ==
+          ParkPathGenerationType::SEARCH_BASED) {
+        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      }
     }
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||

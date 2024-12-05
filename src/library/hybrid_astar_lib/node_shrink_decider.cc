@@ -15,6 +15,18 @@ void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end) {
   return;
 }
 
+void NodeShrinkDecider::Process(const Pose2D &start, const Pose2D &end,
+                                const ParkingVehDirection park_dir) {
+  AstarDecider::Process(start, end);
+
+  heading_shrink_.limit_search_heading_ = false;
+  if (park_dir == ParkingVehDirection::TAIL_IN) {
+    ShrinkChildrenByHeading();
+  }
+
+  return;
+}
+
 bool NodeShrinkDecider::IsLegalForHeading(const double heading) {
   if (!heading_shrink_.limit_search_heading_) {
     return true;
@@ -31,8 +43,6 @@ bool NodeShrinkDecider::IsLegalForHeading(const double heading) {
 }
 
 void NodeShrinkDecider::ShrinkChildrenByHeading() {
-  heading_shrink_.limit_search_heading_ = false;
-
   // heading shrink
   double theta_diff = start_.theta - end_.theta;
   theta_diff = IflyUnifyTheta(theta_diff, M_PI);

@@ -3,7 +3,7 @@
 
 namespace planning {
 
-void ParkReferenceLine::Init(const Pose2D &start, const Pose2D &end) {
+void ParkReferenceLine::Process(const Pose2D &start, const Pose2D &end) {
   ad_common::math::Vec2d line_start = ad_common::math::Vec2d(start.x, start.y);
   ad_common::math::Vec2d line_end = ad_common::math::Vec2d(end.x, end.y);
 

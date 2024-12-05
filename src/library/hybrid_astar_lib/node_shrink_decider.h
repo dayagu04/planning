@@ -21,6 +21,9 @@ class NodeShrinkDecider : public AstarDecider {
 
   void Process(const Pose2D &start, const Pose2D &end) override;
 
+  void Process(const Pose2D &start, const Pose2D &end,
+               const ParkingVehDirection park_dir);
+
   bool IsLegalForHeading(const double heading);
 
   bool IsShrinkByParent(const Node3d *parent, const Node3d *child_node);

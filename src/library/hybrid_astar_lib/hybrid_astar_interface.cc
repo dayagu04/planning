@@ -187,9 +187,15 @@ int HybridAStarInterface::UpdateOutput() {
   hybrid_astar_->UpdateConfig(request_);
 
   // vertical parking center ref line
-  ref_line_.Init(request_.real_goal,
-                 Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
-                        request_.real_goal.theta));
+  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    ref_line_.Process(request_.real_goal,
+                      Pose2D(request_.real_goal.x - 10.0, request_.real_goal.y,
+                             request_.real_goal.theta));
+  } else {
+    ref_line_.Process(request_.real_goal,
+                      Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
+                             request_.real_goal.theta));
+  }
 
   // update future path decider
   FuturePathDecider future_path_decider;
@@ -395,9 +401,15 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   UpdateEDTByObs(obs_list);
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_list);
   // vertical parking center ref line
-  ref_line_.Init(request_.real_goal,
-                 Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
-                        request_.real_goal.theta));
+  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    ref_line_.Process(request_.real_goal,
+                      Pose2D(request_.real_goal.x - 10.0, request_.real_goal.y,
+                             request_.real_goal.theta));
+  } else {
+    ref_line_.Process(request_.real_goal,
+                      Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
+                             request_.real_goal.theta));
+  }
 
   if (request_.space_type == ParkSpaceType::PARALLEL) {
     double lat_buffer = 0.1;
@@ -495,19 +507,25 @@ int HybridAStarInterface::ExtendPathToRealParkSpacePoint(
 
   double extend_dist = real_end.DistanceTo(
       Pose2D(astar_end_point[0], astar_end_point[1], result->phi.back()));
+  if (extend_dist < 0.1) {
+    return 0;
+  }
 
   double phi = result->phi.back();
   AstarPathGear gear = result->gear.back();
   double astar_end_s = result->accumulated_s.back();
   AstarPathType path_type = AstarPathType::LINE_SEGMENT;
 
-  const Eigen::Vector2d unit_line_vec = Eigen::Vector2d(1.0, 0.0);
+  Eigen::Vector2d unit_line_vec = Eigen::Vector2d(
+      real_end.x - astar_end_point[0], real_end.y - astar_end_point[1]);
+  unit_line_vec.normalize();
+
   double s = 0.1;
   double ds = 0.1;
 
   Eigen::Vector2d point;
   while (s < extend_dist) {
-    point = astar_end_point - s * unit_line_vec;
+    point = astar_end_point + s * unit_line_vec;
     result->x.emplace_back(point[0]);
     result->y.emplace_back(point[1]);
     result->phi.emplace_back(phi);
