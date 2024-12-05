@@ -31,7 +31,7 @@ bag_path= '/root/clzhao/lane_borrow_data/2024-11-27-20-21-44.bag_2024-11-28-10-1
 bag_path = '/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-27-13-51-09.1732789149.close-loop.scc.plan'
 bag_path = '/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16.1732789949.close-loop.scc.plan'
 bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1733277505.close-loop.scc.plan'
-bag_path= '/root/clzhao/lane_borrow_data/2024-11-16-11-12-56.bag_2024-11-18-09-50-53.1733367276.close-loop.scc.plan'#checker
+bag_path= '/root/clzhao/lane_borrow_data/2024-11-21-17-11-45.bag_2024-11-22-10-16-21.1733378603.close-loop.scc.plan'#checker
 
 
 html_file = bag_path +".vo_lat_behavior.html"

@@ -56,7 +56,7 @@
                 // "/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16",// lat buff
                 // "/root/clzhao/lane_borrow_data/2024-12-02-15-46-36.bag_2024-12-03-13-36-54",// intersection
                 // "/root/clzhao/lane_borrow_data/2024-11-16-11-02-38.bag_2024-11-18-09-41-27",//checker
-                "/root/clzhao/lane_borrow_data/2024-11-16-11-12-56.bag_2024-11-18-09-50-53",//heading
+                "/root/clzhao/lane_borrow_data/2024-11-21-17-11-45.bag_2024-11-22-10-16-21",//heading
                  "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留

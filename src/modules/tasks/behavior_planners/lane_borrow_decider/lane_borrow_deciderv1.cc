@@ -825,7 +825,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
         if (left_borrow_) {
           if (frenet_obstacle_sl.l_start > left_bounds_l ||
               frenet_obstacle_sl.l_end <
-                  left_width) {
+                  right_l) {
             continue;
           }else{
             lane_borrow_decider_output_.lane_borrow_failed_reason = NEARBY_OBSTACLE_TOO_CLOSE;
@@ -834,7 +834,7 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
           }
 
       } else {
-        if (frenet_obstacle_sl.l_start > -right_width ||
+        if (frenet_obstacle_sl.l_start > left_l ||
             frenet_obstacle_sl.l_end < right_bounds_l) {
           continue;
         }else {
