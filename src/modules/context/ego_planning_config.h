@@ -351,22 +351,22 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
 
-    kMaxConcernObsDistance = read_json_keys<double>(
+    max_concern_obs_distance = read_json_keys<double>(
     json, std::vector<std::string>{"lane_borrow",
-                                    "kMaxConcernObsDistance"});
-    kObsStaticVelThold = read_json_keys<double>(
+                                    "max_concern_obs_distance"});
+    obs_static_vel_thold = read_json_keys<double>(
     json, std::vector<std::string>{"lane_borrow",
-                                    "kObsStaticVelThold"});
-    kObserveFrames = read_json_keys<int>(
+                                    "obs_static_vel_thold"});
+    observe_frames = read_json_keys<int>(
     json, std::vector<std::string>{"lane_borrow",
-                                    "kObserveFrames"});
-    static_obs_buffer =
-    read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
+                                    "observe_frames"});
+    static_obs_buffer =read_json_key<double>
+    (json, "static_obs_buffer", static_obs_buffer);
 
   }
-  double kMaxConcernObsDistance =  40.0;
-  double kObsStaticVelThold =  0.1;
-  int kObserveFrames =  30;
+  double max_concern_obs_distance =  40.0;
+  double obs_static_vel_thold =  0.1;
+  int observe_frames =  30;
   double static_obs_buffer = 0.5;
 };
 
@@ -2304,7 +2304,7 @@ struct CrossingAgentDeciderConfig : public EgoPlanningConfig {
     enable_crossing_decider = read_json_keys<bool>(
         json, std::vector<std::string>{"crossing_agent_decider",
                                        "enable_crossing_decider"});
-    /*                                   
+    /*
     virtual_dis_before_stopline = read_json_keys<double>(
         json, std::vector<std::string>{"traffic_light_decider",
                                        "virtual_dis_before_stopline"});
@@ -3109,7 +3109,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
     double jerk_lower_bound = -5.0;
     double jerk_upper_bound = 10.0;
   };
-  
+
   struct KappaSpeedLimitTable {
     std::vector<double> kappa_table{
         0.0005, 0.00074, 0.00142, 0.00167, 0.0018, 0.002, 0.0025, 0.0033,

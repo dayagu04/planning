@@ -31,7 +31,7 @@ bag_path= '/root/clzhao/lane_borrow_data/2024-11-27-20-21-44.bag_2024-11-28-10-1
 bag_path = '/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-27-13-51-09.1732789149.close-loop.scc.plan'
 bag_path = '/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16.1732789949.close-loop.scc.plan'
 bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1733277505.close-loop.scc.plan'
-bag_path= '/root/clzhao/lane_borrow_data/2024-11-26-19-27-57.bag_2024-12-05-17-43-14.1733391925.close-loop.scc.plan'#checker
+bag_path= '/root/clzhao/lane_borrow_data/non_centirc_2024-12-07-11-14-58.bag_2024-12-09-11-27-33.1733729023.close-loop.scc.plan'#checker
 
 
 html_file = bag_path +".vo_lat_behavior.html"
@@ -500,7 +500,9 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
     t = dataLoader.plan_debug_msg["t"][i]
     plan_debug_ts.append(t)
     lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
-    vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l', 'start_solid_lane_dis', 'end_solid_lane_dis','safe_left_borrow', 'safe_right_borrow', 'static_blocked_obj_vec', 'intersection_state', 'lane_borrow_failed_reason']
+    vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
+            'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_tfls','safe_left_borrow',
+              'safe_right_borrow', 'static_blocked_obj_vec', 'intersection_state', 'lane_borrow_failed_reason']
     names  = []
     datas = []
     for name in vars:

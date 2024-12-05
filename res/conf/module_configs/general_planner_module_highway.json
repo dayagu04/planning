@@ -631,9 +631,9 @@
 },
 
 "lane_borrow":{
-  "kMaxConcernObsDistance":  50.0,
-  "kObsStaticVelThold": 0.2,
-  "kObserveFrames": 15
+  "max_concern_obs_distance":  50.0,
+  "obs_static_vel_thold": 0.2,
+  "observe_frames": 15
 }
 }
 

@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "camera_perception_lane_lines_c.h"
-#include "common_c.h"
 #include "config/basic_type.h"
 #include "fusion_road_c.h"
 #include "lane_reference_path.h"
@@ -85,14 +84,6 @@ class VirtualLane {
   const std::vector<iflyauto::LaneTypeMsg> &get_lane_types() {
     return lane_types_;
   }
-
-  void get_lane_type_by_s_from_lane_points(
-      const double s, iflyauto::LaneBoundaryType *const left_lane_boundary_type,
-      iflyauto::LaneBoundaryType *const right_lane_boundary_type);
-
-  void get_lane_type_by_s_from_type_segments(
-      const double s, iflyauto::LaneBoundaryType *const left_lane_boundary_type,
-      iflyauto::LaneBoundaryType *const right_lane_boundary_type);
 
   void update_reference_path(
       std::shared_ptr<LaneReferencePath> reference_path) {

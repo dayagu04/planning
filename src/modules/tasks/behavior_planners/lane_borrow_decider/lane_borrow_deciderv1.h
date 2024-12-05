@@ -45,6 +45,7 @@ class LaneBorrowDecider : public Task {
   bool IsSafeForBackOriginLane();
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
+  int GetBypassDirection(const FrenetObstacleBoundary& frenet_obstacle_sl);
   bool UpdateLaneBorrowDirection();
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
