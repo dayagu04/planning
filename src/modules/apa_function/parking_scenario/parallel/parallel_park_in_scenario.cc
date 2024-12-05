@@ -1318,7 +1318,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
-  if (parallel_optimization_enable && is_use_optimizer) {
+  if (false && parallel_optimization_enable && is_use_optimizer) {
     std::cout << "------------------------ lateral path optimization "
                  "------------------------"
               << std::endl;

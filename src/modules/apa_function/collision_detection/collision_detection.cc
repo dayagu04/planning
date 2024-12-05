@@ -42,14 +42,17 @@ void CollisionDetector::Init() {
   for (size_t i = 0; i < apa_param.GetParam().car_vertex_y_vec.size(); ++i) {
     inflated_car_local_vertex_y_vec[i] =
         apa_param.GetParam().car_vertex_y_vec[i];
+    const double side_sgn =
+        inflated_car_local_vertex_y_vec[i] > 0.0 ? 1.0 : -1.0;
+
     if (!param_.is_side_mirror_expand &&
         pnc::mathlib::IsDoubleEqual(
             std::fabs(inflated_car_local_vertex_y_vec[i]), max_y_abs)) {
+      inflated_car_local_vertex_y_vec[i] += -side_sgn * 0.09;
       continue;
     }
-    inflated_car_local_vertex_y_vec[i] +=
-        inflated_car_local_vertex_y_vec[i] > 0.0 ? param_.left_lat_inflation
-                                                 : -param_.right_lat_inflation;
+
+    inflated_car_local_vertex_y_vec[i] += side_sgn * param_.lat_inflation;
 
     origin_car_local_vertex_vec_[i] << apa_param.GetParam().car_vertex_x_vec[i],
         apa_param.GetParam().car_vertex_y_vec[i];
@@ -330,8 +333,6 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   CollisionResult col_res;
   if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
     param_.lat_inflation = lat_buffer;
-    param_.left_lat_inflation = lat_buffer;
-    param_.right_lat_inflation = lat_buffer;
     SetParam(param_);
   }
 
@@ -378,8 +379,6 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   CollisionResult col_res;
   if (!pnc::geometry_lib::IsTwoNumerEqual(param_.lat_inflation, lat_buffer)) {
     param_.lat_inflation = lat_buffer;
-    param_.left_lat_inflation = lat_buffer;
-    param_.right_lat_inflation = lat_buffer;
     SetParam(param_);
   }
   if (path_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {

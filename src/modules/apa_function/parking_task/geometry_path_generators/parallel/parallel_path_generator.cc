@@ -1191,9 +1191,11 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   ego_to_prepare_seg_vec.reserve(6);
   // search min dist of ego corner to obs, which is used the minimal value with
   // 0.36 as buffer
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(
-      calc_params_.lat_outside_slot_buffer_vec[0],
-      calc_params_.lat_outside_slot_buffer_vec[1], false));
+  const double min_lat_buffer =
+      std::min(calc_params_.lat_outside_slot_buffer_vec[0],
+               calc_params_.lat_outside_slot_buffer_vec[1]);
+  collision_detector_ptr_->SetParam(
+      CollisionDetector::Paramters(min_lat_buffer, false));
 
   pnc::geometry_lib::PathSegment line_seg;
   if (OneLinePlan(line_seg, ego_pose, prepare_line)) {
@@ -3102,27 +3104,31 @@ const bool ParallelPathGenerator::MultiAlignBody() {
 
   // check pose and slot_occupied_ratio, if error is small, multi isn't
   // suitable
-  if (std::fabs(current_pose.heading * kRad2Deg) <=
-      apa_param.GetParam().finish_parallel_heading_err) {
-    DEBUG_PRINT("body already aligned!");
-    return false;
-  }
+  // if (std::fabs(current_pose.heading * kRad2Deg) <=
+  //     apa_param.GetParam().finish_parallel_heading_err) {
+  //   DEBUG_PRINT("body already aligned!");
+  //   return false;
+  // }
 
   std::vector<pnc::geometry_lib::PathSegment> single_aligned_path;
   std::vector<pnc::geometry_lib::PathSegment> path_res;
+  path_res.clear();
   path_res.reserve(kMaxMultiStepNums);
 
   bool success = false;
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0));
-  while (std::fabs(current_pose.heading * kRad2Deg) >
-         apa_param.GetParam().finish_parallel_heading_err) {
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
+
+  size_t i = 0;
+
+  while (std::fabs(current_pose.heading * kRad2Deg) > 1.0) {
+    DEBUG_PRINT("-------No. " << i++);
     single_aligned_path.clear();
     single_aligned_path.reserve(1);
 
     if (AlignBodyPlan(single_aligned_path, current_pose,
                       calc_params_.target_pose.heading, current_gear)) {
       auto col_res =
-          TrimPathByCollisionDetection(single_aligned_path.back(), 0.2);
+          TrimPathByCollisionDetection(single_aligned_path.back(), 0.15);
 
       if (col_res == PATH_COL_SHORTEN) {
         success = true;
@@ -3159,11 +3165,11 @@ const bool ParallelPathGenerator::MultiAlignBody() {
   }
 
   if (success) {
-    pnc::geometry_lib::LineSegment last_line;
     const Eigen::Vector2d last_pt_start = path_res.back().GetEndPos();
-    const Eigen::Vector2d last_pt_end(input_.tlane.pt_terminal_pos.x(),
+    const Eigen::Vector2d last_pt_end(calc_params_.target_pose.pos.x(),
                                       last_pt_start.y());
-    last_line.SetPoints(last_pt_start, last_pt_end);
+    const pnc::geometry_lib::LineSegment last_line(
+        last_pt_start, last_pt_end, calc_params_.target_pose.heading);
     const pnc::geometry_lib::PathSegment last_line_path(
         pnc::geometry_lib::CalLineSegGear(last_line), last_line);
     if ((last_line_path.seg_gear == path_res.back().seg_gear) ||
@@ -4195,10 +4201,6 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
   const double remain_obs_dist = col_res.remain_obstacle_dist;
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - buffer);
-
-  // std::cout << "  remain_car_dist = " << remain_car_dist
-  //           << "  remain_obs_dist = " << remain_obs_dist
-  //           << "  safe_remain_dist = " << safe_remain_dist << std::endl;
 
   if (safe_remain_dist < 0.0) {
     // std::cout << "the distance between obstacle and ego is smaller than "
