@@ -137,6 +137,8 @@
   "emegency_cutin_ttc_lower": 1.5,
   "emegency_cutin_ttc_upper": 3,
   "emegency_cutin_front_area": 5,
+  "expand_ego_vel": [0, 10],
+  "expand_obs_rel_vel": [0, 1],
   "base_nudge_distance": 1.0,
   "nudge_value_way": false,
   "curv_threshold": 0.1,

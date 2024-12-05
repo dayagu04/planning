@@ -513,6 +513,10 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         json, "emegency_cutin_ttc_upper", emegency_cutin_ttc_upper);
     emegency_cutin_front_area = read_json_key<double>(
         json, "emegency_cutin_front_area", emegency_cutin_front_area);
+    read_json_vec<double>(json, "expand_ego_vel",
+                          expand_ego_vel);
+    read_json_vec<double>(json, "expand_obs_rel_vel",
+                          expand_obs_rel_vel);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -532,6 +536,8 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
   double emegency_cutin_ttc_lower = 1.5;
   double emegency_cutin_ttc_upper = 3;
   double emegency_cutin_front_area = 5;
+  std::vector<double> expand_ego_vel{0, 10};
+  std::vector<double> expand_obs_rel_vel{0, 1};
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
