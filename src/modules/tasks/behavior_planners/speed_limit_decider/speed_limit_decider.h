@@ -13,6 +13,17 @@ class SpeedLimitDecider : public Task {
   bool Execute() override;
 
  private:
+  void CalculateMapSpeedLimit();
+
+  void CalculateCurveSpeedLimit();
+
+  void CalculateStaticAgentLimit();
+
+  void CalculateIntersectionSpeedLimit();
+
+  void CalculatePerceptVisibSpeedLimit();
+
+  void CalculatePOISpeedLimit();
 };
 
 }  // namespace planning
