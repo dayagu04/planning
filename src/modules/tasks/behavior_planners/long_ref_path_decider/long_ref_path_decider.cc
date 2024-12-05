@@ -88,12 +88,12 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // binwang33: 需要关注后续soft bound形式，采用target
     // marker后，sref更合理的话，只留hard bound也是没问题的
     WeightedBound s_hard_bound;
-    s_hard_bound.lower = 0.0;    // hack
-    s_hard_bound.upper = 150.0;  // hack
+    s_hard_bound.lower = bound_maker_->s_lower_bound(t);
+    s_hard_bound.upper = bound_maker_->s_upper_bound(t);
     // s_hard_bound.lower = bound_maker_->s_lower_bound(t);
     // s_hard_bound.upper = bound_maker_->s_upper_bound(t);
     s_hard_bound.weight = 10;
-    s_hard_bound.bound_info.id = -1;  // hack: 后续在bound_maker_中查询
+    s_hard_bound.bound_info.id = -1;
     s_hard_bound.bound_info.type = BoundType::AGENT;  // hack: 后续需要区分属性
     // binwang33: hard_bounds不需要再采用vector形式
     lon_behavior_output_.hard_bounds[i].emplace_back(s_hard_bound);
@@ -101,7 +101,9 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // lon_behavior_output_.lead_bounds[i].emplace_back(s_lead_bound);
 
     // 5.update v bounds & weights
-    Bound lon_v_bound{0.0, 40.0};  // hack
+    Bound lon_v_bound;
+    lon_v_bound.lower = bound_maker_->v_lower_bound(t);
+    lon_v_bound.upper = bound_maker_->v_upper_bound(t);
     // Bound lon_v_bound{bound_maker_->v_lower_bound(t),
     //                   bound_maker_->v_upper_bound(t)};
     lon_behavior_output_.lon_bound_v[i] = lon_v_bound;
@@ -109,12 +111,16 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // TBD: 缺少一个s-v bound，用于实现精准限速
 
     // 6.update a bounds & weights
-    Bound lon_a_bound{-2.0, 2.0};  // hack
+    Bound lon_a_bound;
+    lon_a_bound.lower = bound_maker_->a_lower_bound(t);
+    lon_a_bound.upper = bound_maker_->a_upper_bound(t);
     // Bound lon_a_bound{bound_maker_.a_lower_bound(t),
     //                   bound_maker_.a_upper_bound(t)};
     lon_behavior_output_.lon_bound_a[i] = lon_a_bound;
     // 8.update jerk bounds & weights
-    Bound lon_j_bound{-6.0, 6.0};  // hack
+    Bound lon_j_bound;
+    lon_j_bound.lower = bound_maker_->jerk_lower_bound(t);
+    lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
     // Bound lon_j_bound{bound_maker_.jerk_lower_bound(t),
     //                   bound_maker_.jerk_upper_bound(t)};
     lon_behavior_output_.lon_bound_jerk[i] = lon_j_bound;
