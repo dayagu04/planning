@@ -76,6 +76,7 @@ class LaneBorrowDecider : public Task {
   FrenetBoundary ego_frenet_boundary_;
   VehicleParam vehicle_param_;
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
+  double heading_angle_{0.0};
 
   int observe_frame_num_{0};
   int lane_change_state_{0};

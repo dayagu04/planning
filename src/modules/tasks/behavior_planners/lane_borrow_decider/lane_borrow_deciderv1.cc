@@ -36,6 +36,7 @@ constexpr double kObsSpeedBuffer = 1.0;
 constexpr double kObsLatExpendBuffer = 0.4;
 constexpr double kObsLonDisBuffer = 2.0;
 constexpr double kObsFilterVel = 2.5;
+constexpr double kBlockHeading = 0.17;
 };
 
 namespace planning {
@@ -76,6 +77,10 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
                              .get_reference_path_manager()
                              ->get_reference_path_by_current_lane()
                              ->get_ego_frenet_boundary();
+  heading_angle_ = session_->environmental_model()
+                             .get_reference_path_manager()
+                             ->get_reference_path_by_current_lane()
+                             ->get_frenet_ego_state().heading_angle();
   lane_change_state_ =
       session_->planning_context()
           .lane_change_decider_output()
@@ -715,7 +720,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   if(left_borrow_){
     if(obs_start_s_ - ego_frenet_boundary_.s_end >0
     && obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
-      &&ego_frenet_boundary_.l_start < obs_left_l_)
+      &&ego_frenet_boundary_.l_start < (obs_right_l_ + obs_left_l_)* 0.5
+      &&abs(heading_angle_) < kBlockHeading)
     {
       lane_borrow_decider_output_.lane_borrow_failed_reason =
               STATIC_AREA_TOO_CLOSE;
@@ -725,7 +731,8 @@ bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
   else {
     if(obs_start_s_ - ego_frenet_boundary_.s_end >0
     &&obs_start_s_ - ego_frenet_boundary_.s_end < kObsLonDisBuffer
-      &&ego_frenet_boundary_.l_end > obs_right_l_)
+      &&ego_frenet_boundary_.l_end > (obs_right_l_ + obs_left_l_)* 0.5
+      && abs(heading_angle_) < kBlockHeading)
     {
       lane_borrow_decider_output_.lane_borrow_failed_reason =
               STATIC_AREA_TOO_CLOSE;
