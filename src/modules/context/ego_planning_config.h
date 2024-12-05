@@ -931,13 +931,18 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"lat_motion_ilqr", "q_acc_bound"});
     q_jerk_bound = read_json_keys<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "q_jerk_bound"});
-    q_soft_corridor = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_soft_corridor"});
-    q_soft_corridor_intersection = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr",
-                                       "q_soft_corridor_intersection"});
-    q_hard_corridor = read_json_keys<double>(
-        json, std::vector<std::string>{"lat_motion_ilqr", "q_hard_corridor"});
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qsoft_bound"},
+        map_qsoft_bound);
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_qhard_bound"},
+        map_qhard_bound);
+    emergence_avoid_factor = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "emergence_avoid_factor"});
+    intersection_avoid_factor = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"lat_motion_ilqr", "intersection_avoid_factor"});
     jerk_bound_intersection = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_intersection"});
@@ -1191,9 +1196,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 200.0;
   double q_jerk_bound = 5000.0;
 
-  double q_soft_corridor = 200.0;
-  double q_hard_corridor = 0.0;
-  double q_soft_corridor_intersection = 200.0;
+  std::vector<double> map_qsoft_bound{1000.0, 3000.0, 4000.0, 5000.0};
+  std::vector<double> map_qhard_bound{3000.0, 5000.0, 6000.0, 7000.0};
+  double emergence_avoid_factor = 2.0;
+  double intersection_avoid_factor = 2.0;
 
   double q_ref_x = 20.0;
   double q_ref_y = 20.0;

@@ -136,7 +136,7 @@ bool GeneralLateralDecider::ExecuteTest(bool pipeline_test) {
 }
 
 void GeneralLateralDecider::UnitTest() {
-  for (int i = 1; i < 10; i++) {
+  for (int i = 1; i < 12; i++) {
     std::vector<WeightedBound> bounds_input;
     std::pair<double, double> bound_output{-10., 10.};
     std::pair<BoundInfo, BoundInfo> bound_info;
@@ -147,9 +147,10 @@ void GeneralLateralDecider::UnitTest() {
         //           type
         //           upper     10    2
         //           lower               -1   -10
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        // result                    2   -1
+        // bounds_input.emplace_back(
+        //     WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+        //                   BoundInfo{-100, BoundType::ROAD_BORDER}});
         bounds_input.emplace_back(
             WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
                           BoundInfo{-100, BoundType::AGENT}});
@@ -159,13 +160,14 @@ void GeneralLateralDecider::UnitTest() {
         init_l = 0;
       } break;
       case 2: {
-        // case 1:
+        // case 2:
         //           type
         //           upper     10      -1
         //           lower          3       -10
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
+        // result                     1
+        // bounds_input.emplace_back(
+        //     WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
+        //                   BoundInfo{-100, BoundType::ROAD_BORDER}});
         bounds_input.emplace_back(
             WeightedBound{-10, -1, config_.kPhysicalBoundWeight,
                           BoundInfo{-100, BoundType::AGENT}});
@@ -176,6 +178,21 @@ void GeneralLateralDecider::UnitTest() {
       } break;
       case 3: {
         // case 3:
+        //           type          J   J
+        //           upper         -1
+        //           lower            -3
+        // init                   0
+        // result                 0   -3
+        bounds_input.emplace_back(
+            WeightedBound{-3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, -1, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        init_l = 0;
+      } break;
+      case 4: {
+        // case 4:
         //           type           J        A      A
         //           upper     10
         //           lower          3        2      1  -10
@@ -195,8 +212,8 @@ void GeneralLateralDecider::UnitTest() {
                           BoundInfo{-100, BoundType::AGENT}});
         init_l = 2.5;
       } break;
-      case 4: {
-        // case 4:
+      case 5: {
+        // case 5:
         //           type           J    A      A        A
         //           upper     10
         //           lower          3    2      1       -2    -10
@@ -219,8 +236,8 @@ void GeneralLateralDecider::UnitTest() {
                           BoundInfo{-100, BoundType::AGENT}});
         init_l = 1.5;
       } break;
-      case 5: {
-        // case 4:
+      case 6: {
+        // case 6:
         //           type           A    J      A        A
         //           upper     10
         //           lower          3    2      1       -2    -10
@@ -244,8 +261,8 @@ void GeneralLateralDecider::UnitTest() {
         init_l = 1.5;
       } break;
 
-      case 6: {
-        // case 4:
+      case 7: {
+        // case 7:
         //           type           J   A    A    A   A     A
         //           upper     10      2.5        0
         //           lower          3        1       -1   -2    -10
@@ -274,8 +291,8 @@ void GeneralLateralDecider::UnitTest() {
                           BoundInfo{-100, BoundType::AGENT}});
         init_l = 2;
       } break;
-      case 7: {
-        // case 4:
+      case 8: {
+        // case 8:
         //           type           J   A      A  A   A
         //           upper     10      2.5        0
         //           lower          3         0.5     -1   -10
@@ -302,8 +319,8 @@ void GeneralLateralDecider::UnitTest() {
         init_l = 1;
       } break;
 
-      case 8: {
-        // case 4:
+      case 9: {
+        // case 9:
         //           type           J   A      A   A
         //           upper     10      2.5         0
         //           lower          3  2.5        -1   -10
@@ -329,8 +346,8 @@ void GeneralLateralDecider::UnitTest() {
                           BoundInfo{-100, BoundType::AGENT}});
         init_l = 0.75;
       } break;
-      case 9: {
-        // case 4:
+      case 10: {
+        // case 10:
         //           type           J   A      A   J
         //           upper     10      2.5         0
         //           lower          3          1      -1   -10
@@ -354,6 +371,21 @@ void GeneralLateralDecider::UnitTest() {
         bounds_input.emplace_back(
             WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
                           BoundInfo{-100, BoundType::AGENT}});
+        init_l = 1;
+      } break;
+      case 11: {
+        // case 11:
+        //           type           J   J
+        //           upper              0
+        //           lower          3
+        // init                        1
+        // result                      *
+        bounds_input.emplace_back(
+            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(
+            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
+                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
         init_l = 1;
       } break;
     }
@@ -1773,10 +1805,12 @@ void GeneralLateralDecider::PostProcessBound(
     const std::vector<WeightedBound> &bounds_input,
     std::pair<double, double> &bound_output,
     std::pair<BoundInfo, BoundInfo> &bound_info) {
+  // empty
   const size_t bounds_size = bounds_input.size();
   if (bounds_size == 0) {
     return;
   }
+  // copy and sort
   auto compare_bound_upper = [&](WeightedBound bound1, WeightedBound bound2) {
     return bound1.upper < bound2.upper;
   };
@@ -1791,124 +1825,106 @@ void GeneralLateralDecider::PostProcessBound(
   std::copy(bounds_input.begin(), bounds_input.end(), lower_bounds.begin());
   std::sort(upper_bounds.begin(), upper_bounds.end(), compare_bound_upper);
   std::sort(lower_bounds.begin(), lower_bounds.end(), compare_bound_lower);
-  double min_lower = std::max(lower_bounds.back().lower, bound_output.first);
-  double max_upper = std::min(upper_bounds.back().upper, bound_output.second);
-  BoundInfo lower_bound_info;
-  BoundInfo upper_bound_info;
-  lower_bound_info = lower_bounds.begin()->bound_info;
-  upper_bound_info = upper_bounds.begin()->bound_info;
+  // final bound & info
+  double lower_bound = std::max(lower_bounds.back().lower, bound_output.first);
+  double upper_bound = std::min(upper_bounds.back().upper, bound_output.second);
+  BoundInfo lower_bound_info = lower_bounds.back().bound_info;
+  BoundInfo upper_bound_info = upper_bounds.back().bound_info;
+  // init
   size_t lower_index = 0;
   size_t upper_index = 0;
-  double lower_bound = min_lower;
-  double upper_bound = max_upper;
   bool use_lower_init_protect = false;
   bool use_upper_init_protect = false;
+  // end conditin: 1.index >= size;
   while ((lower_index < bounds_size) && (upper_index < bounds_size)) {
+    BoundInfo lower_info = lower_bounds[lower_index].bound_info;
+    BoundInfo upper_info = upper_bounds[upper_index].bound_info;
+    BoundType lower_type = lower_info.type;
+    BoundType upper_type = upper_info.type;
     // hack: only road border and agent in hard bounds
     if ((upper_bounds[upper_index].weight < 0.0) &&
-        ((upper_bounds[upper_index].bound_info.type !=
-          BoundType::ROAD_BORDER) &&
-         (upper_bounds[upper_index].bound_info.type != BoundType::AGENT))) {
+        ((upper_type != BoundType::ROAD_BORDER) &&
+         (upper_type != BoundType::AGENT))) {
       upper_index += 1;
       continue;
     }
     if ((lower_bounds[lower_index].weight < 0.0) &&
-        ((lower_bounds[lower_index].bound_info.type !=
-          BoundType::ROAD_BORDER) &&
-         (lower_bounds[lower_index].bound_info.type != BoundType::AGENT))) {
+        ((lower_type != BoundType::ROAD_BORDER) &&
+         (lower_type != BoundType::AGENT))) {
       lower_index += 1;
       continue;
     }
     double lower = lower_bounds[lower_index].lower;
     double upper = upper_bounds[upper_index].upper;
-    // const int last_lower_priority =
-    //     general_lateral_decider_utils::GetBoundTypePriority(
-    //         lower_bound_info.type);
-    // const int last_upper_priority =
-    //     general_lateral_decider_utils::GetBoundTypePriority(
-    //         upper_bound_info.type);
     const int lower_priority =
         general_lateral_decider_utils::GetBoundTypePriority(
-            lower_bounds[lower_index].bound_info.type);
+            lower_type);
     const int upper_priority =
         general_lateral_decider_utils::GetBoundTypePriority(
-            upper_bounds[upper_index].bound_info.type);
+            upper_type);
     const double lower_weight = general_lateral_decider_utils::GetBoundWeight(
-        lower_bounds[lower_index].bound_info.type, config_.map_bound_weight);
+        lower_type, config_.map_bound_weight);
     const double upper_weight = general_lateral_decider_utils::GetBoundWeight(
-        upper_bounds[upper_index].bound_info.type, config_.map_bound_weight);
+        upper_type, config_.map_bound_weight);
+    // start compare
+    if (upper >= lower) {  // <==> (upper_bound >= lower_bound)
+      // end condition 2.upper > upper bound >= lower boud > lower
+      if ((upper > upper_bound) && (lower < lower_bound)) {
+        break;
+      }
 
-    if (upper >= lower) {
-      if (upper_bound == lower_bound) {
+      // upper_bound
+      if (upper < upper_bound) {
+        upper_bound_info = upper_info;
         if (use_upper_init_protect) {
           upper_bound = std::min(upper, planning_init_point_l);
         } else {
           upper_bound = upper;
         }
+        if (upper_type == BoundType::ADJACENT_AGENT) {
+          if (upper_bound < planning_init_point_l) {
+            upper_bound = planning_init_point_l;
+            use_upper_init_protect = true;
+          }
+        }
+      } else if (upper == upper_bound) {
+        if ((upper_type == BoundType::ADJACENT_AGENT) && (upper_index == 0)) {
+          if (upper_bound < planning_init_point_l) {
+            upper_bound_info = upper_info;
+            upper_bound = planning_init_point_l;
+            use_upper_init_protect = true;
+          }
+        }
+      }
+      // lower_bound
+      if (lower > lower_bound) {
+        lower_bound_info = lower_info;
         if (use_lower_init_protect) {
           lower_bound = std::max(lower, planning_init_point_l);
         } else {
           lower_bound = lower;
         }
-        upper_bound_info = upper_bounds[upper_index].bound_info;
-        lower_bound_info = lower_bounds[lower_index].bound_info;
-        auto &upper_type = upper_bound_info.type;
-        auto &lower_type = lower_bound_info.type;
-        if (upper_type == BoundType::ADJACENT_AGENT) {
-          if (upper_bound < planning_init_point_l) {
-            upper_bound = planning_init_point_l;
-            upper_index += 1;
-            use_upper_init_protect = true;
-            continue;
-          }
-        }
         if (lower_type == BoundType::ADJACENT_AGENT) {
           if (lower_bound > planning_init_point_l) {
             lower_bound = planning_init_point_l;
-            lower_index += 1;
             use_lower_init_protect = true;
-            continue;
           }
         }
-        break;
-      } else {
-        if (upper < upper_bound) {
-          if (use_upper_init_protect) {
-            upper_bound = std::min(upper, planning_init_point_l);
-          } else {
-            upper_bound = upper;
-          }
-          upper_bound_info = upper_bounds[upper_index].bound_info;
-          auto &upper_type = upper_bound_info.type;
-          if (upper_type == BoundType::ADJACENT_AGENT) {
-            if (upper_bound < planning_init_point_l) {
-              upper_bound = planning_init_point_l;
-              upper_index += 1;
-              use_upper_init_protect = true;
-              continue;
-            }
+      } else if (lower == lower_bound) {
+        if ((lower_type == BoundType::ADJACENT_AGENT) && (lower_index == 0)) {
+          if (lower_bound > planning_init_point_l) {
+            lower_bound_info = lower_info;
+            lower_bound = planning_init_point_l;
+            use_lower_init_protect = true;
           }
         }
-        if (lower > lower_bound) {
-          if (use_lower_init_protect) {
-            lower_bound = std::max(lower, planning_init_point_l);
-          } else {
-            lower_bound = lower;
-          }
-          lower_bound_info = lower_bounds[lower_index].bound_info;
-          auto &lower_type = lower_bound_info.type;
-          if (lower_type == BoundType::ADJACENT_AGENT) {
-            if (lower_bound > planning_init_point_l) {
-              lower_bound = planning_init_point_l;
-              lower_index += 1;
-              use_lower_init_protect = true;
-              continue;
-            }
-          }
-        }
-        break;
       }
+      // continue upper & lower
+      upper_index += 1;
+      lower_index += 1;
     } else {
+      upper_bound_info = upper_info;
+      lower_bound_info = lower_info;
       if (upper_priority > lower_priority) {
         if (use_upper_init_protect) {
           upper_bound = std::min(upper, planning_init_point_l);
@@ -1918,19 +1934,16 @@ void GeneralLateralDecider::PostProcessBound(
         if (use_lower_init_protect) {
           lower_bound = std::max(lower, planning_init_point_l);
         } else {
-          lower_bound = lower;
+          lower_bound = upper;
         }
-        upper_bound_info = upper_bounds[upper_index].bound_info;
-        lower_bound_info = lower_bounds[lower_index].bound_info;
-        lower_index += 1;
-        auto &upper_type = upper_bound_info.type;
-        auto &lower_type = lower_bound_info.type;
         if (upper_type == BoundType::ADJACENT_AGENT) {
           if (upper_bound < planning_init_point_l) {
             upper_bound = planning_init_point_l;
             lower_bound =
                 std::min(planning_init_point_l, std::max(lower, lower_bound));
             use_upper_init_protect = true;
+            // continue upper
+            upper_index += 1;
           }
         }
         if (lower_type == BoundType::ADJACENT_AGENT) {
@@ -1939,28 +1952,27 @@ void GeneralLateralDecider::PostProcessBound(
             use_lower_init_protect = true;
           }
         }
+        // continue lower
+        lower_index += 1;
       } else if (upper_priority < lower_priority) {
         if (use_upper_init_protect) {
           upper_bound = std::min(upper, planning_init_point_l);
         } else {
-          upper_bound = upper;
+          upper_bound = lower;
         }
         if (use_lower_init_protect) {
           lower_bound = std::max(lower, planning_init_point_l);
         } else {
           lower_bound = lower;
         }
-        upper_bound_info = upper_bounds[upper_index].bound_info;
-        lower_bound_info = lower_bounds[lower_index].bound_info;
-        upper_index += 1;
-        auto &upper_type = upper_bound_info.type;
-        auto &lower_type = lower_bound_info.type;
         if (lower_type == BoundType::ADJACENT_AGENT) {
           if (lower_bound > planning_init_point_l) {
+            lower_bound = planning_init_point_l;
             upper_bound =
                 std::max(planning_init_point_l, std::min(upper, upper_bound));
-            lower_bound = planning_init_point_l;
             use_lower_init_protect = true;
+            // continue lower
+            lower_index += 1;
           }
         }
         if (upper_type == BoundType::ADJACENT_AGENT) {
@@ -1969,20 +1981,15 @@ void GeneralLateralDecider::PostProcessBound(
             use_upper_init_protect = true;
           }
         }
+        // continue upper
+        upper_index += 1;
       } else {
-        // if ((lower_index == 0 && upper_index == 0) || (upper_priority >
-        // last_upper_priority) || (lower_priority > last_lower_priority)) {
-        //   double mid_bound = std::min(std::max(upper + (std::max(lower -
-        //   upper, 0.0) * (lower_weight / (upper_weight + lower_weight))),
-        //   min_lower), max_upper); upper_bound = mid_bound; lower_bound =
-        //   mid_bound; upper_bound_info = upper_bounds[upper_index].bound_info;
-        //   lower_bound_info = lower_bounds[lower_index].bound_info;
-        // }
-        double mid_bound = std::min(
-            std::max(upper + (std::max(lower - upper, 0.0) *
-                              (lower_weight / (upper_weight + lower_weight))),
-                     min_lower),
-            max_upper);
+        // double mid_bound = std::min(
+        //     std::max(upper + (std::max(lower - upper, 0.0) *
+        //                       (lower_weight / (upper_weight + lower_weight))),
+        //              lower_bound), upper_bound);
+        double mid_bound = upper + (std::max(lower - upper, 0.0) *
+                              (lower_weight / (upper_weight + lower_weight)));
         if (use_upper_init_protect) {
           mid_bound = std::min(mid_bound, planning_init_point_l);
         }
@@ -1991,29 +1998,30 @@ void GeneralLateralDecider::PostProcessBound(
         }
         upper_bound = mid_bound;
         lower_bound = mid_bound;
-        upper_bound_info = upper_bounds[upper_index].bound_info;
-        lower_bound_info = lower_bounds[lower_index].bound_info;
-        auto &upper_type = upper_bound_info.type;
-        auto &lower_type = lower_bound_info.type;
-        if (upper_type == BoundType::ADJACENT_AGENT) {
-          if (upper_bound < planning_init_point_l) {
+        if (mid_bound < planning_init_point_l) {
+          if (upper_type == BoundType::ADJACENT_AGENT) {
             upper_bound = planning_init_point_l;
-            lower_bound = planning_init_point_l;
-            upper_index += 1;
+            lower_bound = std::min(lower, planning_init_point_l);
             use_upper_init_protect = true;
-            continue;
+            upper_index += 1;
+          } else {
+            // end condition 3.not ADJACENT_AGENT
+            break;
           }
-        }
-        if (lower_type == BoundType::ADJACENT_AGENT) {
-          if (lower_bound > planning_init_point_l) {
-            upper_bound = planning_init_point_l;
+        } else if (mid_bound > planning_init_point_l) {
+          if (lower_type == BoundType::ADJACENT_AGENT) {
+            upper_bound = std::max(upper, planning_init_point_l);
             lower_bound = planning_init_point_l;
-            lower_index += 1;
             use_lower_init_protect = true;
-            continue;
+            lower_index += 1;
+          } else {
+            // end condition 3.not ADJACENT_AGENT
+            break;
           }
+        } else {
+          // end condition 4.not across init point
+          break;
         }
-        break;
       }
     }
   }
