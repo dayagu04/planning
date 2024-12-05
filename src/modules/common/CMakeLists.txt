@@ -10,8 +10,8 @@ add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
   common
   modules_context
-  c_interface
-  legacy_c_interface
+  algo_interface
+  # legacy_c_interface
   planning_proto
   mjson
   framework
