@@ -270,7 +270,7 @@ class StGraphGenerator {
   void SetDefaultDebugValues(std::vector<string> names);
 
   // HACK: cross障碍物判断
-  bool FastCrossAgentChecker(const double lead_one_drel,
+  bool FastCrossAgentChecker(const double lead_one_drel, const double v_ego,
                              const double lead_one_v_lat, double &end_time,
                              const double kwidth);
 
