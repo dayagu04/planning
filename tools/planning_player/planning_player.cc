@@ -238,11 +238,10 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
     return false;
   }
 
-  planning_adapter_->RegisterOutputWriter(
+  planning_adapter_->RegWriter_IflytekPlanningPlan(
       [this, is_close_loop, no_debug, ros_start_time](
-          const std::shared_ptr<iflyauto::StructContainer>& planning_output) {
-        auto& planning_output_struct =
-            *iflyauto::struct_cast<iflyauto::PlanningOutput>(planning_output);
+          const iflyauto::PlanningOutput& planning_output) {
+        auto planning_output_struct = planning_output;
         if (planning_output_struct.planning_status.apa_planning_status >
             iflyauto::ApaPlanningStatus::APA_IN_PROGRESS) {
           early_stop_ = true;
@@ -268,14 +267,14 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
         }
       });
 
-  planning_adapter_->RegisterDebugInfoWriter(
+  planning_adapter_->RegWriter_IflytekPlanningDebugInfo(
       [this, no_debug,
-       ros_start_time](const std::shared_ptr<iflyauto::StructContainer>&
+       ros_start_time](const iflyauto::StructContainer&
                            planning_debug_info) {
         ros::Time ros_time;
         planning::common::PlanningDebugInfo planning_debug_info_proto;
         planning_debug_info_proto.ParseFromString(
-            planning_debug_info->payload());
+            planning_debug_info.payload());
         if (no_debug) {
           planning_debug_info_proto.set_timestamp(local_time_);
           planning_debug_info_proto.mutable_frame_info()->set_frame_num(
@@ -299,13 +298,11 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
             debug_info_msg;
       });
 
-  planning_adapter_->RegisterHMIOutputInfoWriter(
+  planning_adapter_->RegWriter_IflytekPlanningHmi(
       [this, no_debug,
-       ros_start_time](const std::shared_ptr<iflyauto::StructContainer>&
+       ros_start_time](const iflyauto::PlanningHMIOutputInfoStr&
                            planning_hmi_ouput_info) {
-        auto& planning_hmi_ouput_info_struct =
-            *iflyauto::struct_cast<iflyauto::PlanningHMIOutputInfoStr>(
-                planning_hmi_ouput_info);
+        auto planning_hmi_ouput_info_struct = planning_hmi_ouput_info;
         ros::Time ros_time;
         if (no_debug) {
           planning_hmi_ouput_info_struct.msg_header.stamp = local_time_;
@@ -660,7 +657,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::FusionObjectsInfo fusion_object_msg{};
     convert(fusion_object_msg, *fusion_object_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedFusionObjects(fusion_object_msg);
+    planning_adapter_->Feed_IflytekFusionObjects(fusion_object_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
@@ -673,7 +670,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::FusionOccupancyObjectsInfo fusion_occ_object_msg{};
     convert(fusion_occ_object_msg, *fusion_occ_object_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedFusionOccupancyObjects(fusion_occ_object_msg);
+    planning_adapter_->Feed_IflytekFusionOccupancyObjects(fusion_occ_object_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/occupancy/objects" << std::endl;
@@ -689,7 +686,7 @@ void PlanningPlayer::PlayOneFrame(
       iflyauto::RoadInfo fusion_road_msg{};
       convert(fusion_road_msg, *fusion_road_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedFusionRoad(fusion_road_msg);
+      planning_adapter_->Feed_IflytekFusionRoadFusion(fusion_road_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
@@ -723,7 +720,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::IFLYLocalization localization_msg{};
     convert(localization_msg, *localization_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedLocalizationOutput(localization_msg);
+    planning_adapter_->Feed_IflytekLocalizationEgomotion(localization_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/localization/egomotion" << std::endl;
@@ -735,7 +732,7 @@ void PlanningPlayer::PlayOneFrame(
   if (prediction_ros_msg) {
     iflyauto::PredictionResult prediction_msg{};
     convert(prediction_msg, *prediction_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedPredictionResult(prediction_msg);
+    planning_adapter_->Feed_IflytekPredictionPredictionResult(prediction_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/prediction/prediction_result" <<
@@ -749,7 +746,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::VehicleServiceOutputInfo vehicle_service_msg{};
     convert(vehicle_service_msg, *vehicle_service_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedVehicleService(vehicle_service_msg);
+    planning_adapter_->Feed_IflytekVehicleService(vehicle_service_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/vehicle_service" << std::endl;
@@ -762,7 +759,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::ControlOutput control_output_msg{};
     convert(control_output_msg, *control_output_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedControlCommand(control_output_msg);
+    planning_adapter_->Feed_IflytekControlControlCommand(control_output_msg);
   } else {
     // std::cerr << "missing /iflytek/control/control_command" << std::endl;
   }
@@ -785,7 +782,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::ParkingFusionInfo parking_fusion_msg{};
     convert(parking_fusion_msg, *parking_fusion_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedParkingFusion(parking_fusion_msg);
+    planning_adapter_->Feed_IflytekFusionParkingSlot(parking_fusion_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/fusion/parking_slot" << std::endl;
@@ -798,7 +795,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::CameraPerceptionTsrInfo perception_tsr_msg{};
     convert(perception_tsr_msg, *perception_tsr_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedPerceptionTsrInfo(perception_tsr_msg);
+    planning_adapter_->Feed_IflytekCameraPerceptionTrafficSignRecognition(perception_tsr_msg);
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/camera_perception/traffic_sign_recognition"
@@ -811,7 +808,7 @@ void PlanningPlayer::PlayOneFrame(
   if (uss_wave_ros_msg) {
     iflyauto::UssWaveInfo uss_wave_msg{};
     convert(uss_wave_msg, *uss_wave_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedUssWaveInfo(uss_wave_msg);
+    planning_adapter_->Feed_IflytekUssUsswaveInfo(uss_wave_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_ << " missing
     // /iflytek/uss/wave_info"
@@ -824,7 +821,7 @@ void PlanningPlayer::PlayOneFrame(
   if (uss_percept_ros_msg) {
     iflyauto::UssPerceptInfo uss_percept_msg{};
     convert(uss_percept_msg, *uss_percept_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedUssPerceptInfo(uss_percept_msg);
+    planning_adapter_->Feed_IflytekUssUssPerceptionInfo(uss_percept_msg);
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/uss/uss_perception_info" << std::endl;
@@ -859,7 +856,7 @@ void PlanningPlayer::PlayOneFrame(
       auto sd_map = std::make_shared<SdMapSwtx::SdMap>();
       sd_map->ParseFromString(sd_map_str);
       if (sd_map->header().timestamp() == input_time_list_map_) {
-        planning_adapter_->FeedSdMap(sd_map);
+        planning_adapter_->Feed_IflytekEhrSdmapInfo(*sd_map);
         break;
       }
     }
@@ -969,7 +966,7 @@ void PlanningPlayer::PlayOneFrame(
     iflyauto::FuncStateMachine func_state_machine_msg{};
     convert(func_state_machine_msg, func_state_machine_ros_msg,
             ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+    planning_adapter_->Feed_IflytekFsmSocState(func_state_machine_msg);
   } else {
     std::cerr << "Error !!!!! missing FUNC_STATE_MACHINE" << std::endl;
     return;
@@ -1761,7 +1758,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::FusionObjectsInfo fusion_object_msg{};
       convert(fusion_object_msg, *fusion_object_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedFusionObjects(fusion_object_msg);
+      planning_adapter_->Feed_IflytekFusionObjects(fusion_object_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/objects" << std::endl;
@@ -1774,7 +1771,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::FusionOccupancyObjectsInfo fusion_occ_object_msg{};
       convert(fusion_occ_object_msg, *fusion_occ_object_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedFusionOccupancyObjects(fusion_occ_object_msg);
+      planning_adapter_->Feed_IflytekFusionOccupancyObjects(fusion_occ_object_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/occupancy/objects" << std::endl;
@@ -1787,7 +1784,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::RoadInfo fusion_road_msg{};
       convert(fusion_road_msg, *fusion_road_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedFusionRoad(fusion_road_msg);
+      planning_adapter_->Feed_IflytekFusionRoadFusion(fusion_road_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
@@ -1817,7 +1814,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::IFLYLocalization localization_msg{};
       convert(localization_msg, *localization_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedLocalizationOutput(localization_msg);
+      planning_adapter_->Feed_IflytekLocalizationEgomotion(localization_msg);
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing /iflytek/localization/egomotion" << std::endl;
@@ -1828,7 +1825,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     if (prediction_ros_msg) {
       iflyauto::PredictionResult prediction_msg{};
       convert(prediction_msg, *prediction_ros_msg, ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedPredictionResult(prediction_msg);
+      planning_adapter_->Feed_IflytekPredictionPredictionResult(prediction_msg);
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing /iflytek/prediction/prediction_result" <<
@@ -1842,7 +1839,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::VehicleServiceOutputInfo vehicle_service_msg{};
       convert(vehicle_service_msg, *vehicle_service_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedVehicleService(vehicle_service_msg);
+      planning_adapter_->Feed_IflytekVehicleService(vehicle_service_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/vehicle_service" << std::endl;
@@ -1855,7 +1852,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::ControlOutput control_output_msg{};
       convert(control_output_msg, *control_output_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedControlCommand(control_output_msg);
+      planning_adapter_->Feed_IflytekControlControlCommand(control_output_msg);
     } else {
       // std::cerr << "missing /iflytek/control/control_command" << std::endl;
     }
@@ -1877,7 +1874,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::ParkingFusionInfo parking_fusion_msg{};
       convert(parking_fusion_msg, *parking_fusion_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedParkingFusion(parking_fusion_msg);
+      planning_adapter_->Feed_IflytekFusionParkingSlot(parking_fusion_msg);
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing /iflytek/fusion/parking_slot" << std::endl;
@@ -1890,7 +1887,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
     if (uss_wave_ros_msg) {
       iflyauto::UssWaveInfo uss_wave_msg{};
       convert(uss_wave_msg, *uss_wave_ros_msg, ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedUssWaveInfo(uss_wave_msg);
+      planning_adapter_->Feed_IflytekUssUsswaveInfo(uss_wave_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/uss/wave_info" << std::endl;
@@ -1903,7 +1900,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::UssPerceptInfo uss_percept_msg{};
       convert(uss_percept_msg, *uss_percept_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedUssPerceptInfo(uss_percept_msg);
+      planning_adapter_->Feed_IflytekUssUssPerceptionInfo(uss_percept_msg);
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/uss/uss_perception_info" << std::endl;
@@ -2027,7 +2024,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::FuncStateMachine func_state_machine_msg{};
       convert(func_state_machine_msg, func_state_machine_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedFuncStateMachine(func_state_machine_msg);
+      planning_adapter_->Feed_IflytekFsmSocState(func_state_machine_msg);
     } else {
       std::cerr << "Error !!!!! missing FUNC_STATE_MACHINE" << std::endl;
       return;
