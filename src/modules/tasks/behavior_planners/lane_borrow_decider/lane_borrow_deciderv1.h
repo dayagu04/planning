@@ -13,7 +13,7 @@
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tasks/task.h"
 #include "virtual_lane.h"
-
+#include "frenet_obstacle.h"
 namespace planning {
 
 class LaneBorrowDecider : public Task {
@@ -43,7 +43,8 @@ class LaneBorrowDecider : public Task {
   void ClearLaneBorrowStatus();
   bool CheckLaneBorrowCondition();
   bool IsSafeForBackOriginLane();
-  bool SelectStaticBlockingArea();
+  bool SelectStaticBlockingObstcales();
+  bool ObstacleDecision();
   bool UpdateLaneBorrowDirection();
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
@@ -59,7 +60,7 @@ class LaneBorrowDecider : public Task {
 
   double distance_to_stop_line_{1000.0};
   double distance_to_cross_walk_{1000.0};
- double dis_to_tfl_{10000.0};
+  double dis_to_tfl_{10000.0};
   double obs_left_l_{-10.0};
   double obs_right_l_{10.0};
   double obs_start_s_{10.0};
@@ -67,6 +68,7 @@ class LaneBorrowDecider : public Task {
 
   bool left_borrow_{false};
   bool right_borrow_{false};
+  int bypass_direction_{0};
   planning::common::IntersectionState intersection_state_ =
       planning::common::NO_INTERSECTION;
 
@@ -83,6 +85,7 @@ class LaneBorrowDecider : public Task {
   double current_left_lane_width_{1.75};
   double current_right_lane_width_{1.75};
   std::vector<int> static_blocked_obj_vec_;
+  std::vector<std::shared_ptr<FrenetObstacle>> static_blocked_obstacles_;
 
   std::pair<double, double> front_pass_point_;  // static obs area,
   std::pair<double, double> front_pass_sl_point_;

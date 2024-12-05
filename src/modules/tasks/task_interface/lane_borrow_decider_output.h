@@ -19,7 +19,8 @@ enum LaneBorrowFailedReason {
   LANE_CHANGE_STATE,
   CLOSE_TO_JUNCTION,
   NEARBY_OBSTACLE_TOO_CLOSE,
-  STATIC_AREA_TOO_CLOSE
+  STATIC_AREA_TOO_CLOSE,
+  CENTER_OBSTACLE
 };
 
 struct LaneBorrowDeciderOutput {
