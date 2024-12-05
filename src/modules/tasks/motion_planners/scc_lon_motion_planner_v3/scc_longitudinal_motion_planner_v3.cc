@@ -296,8 +296,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   } else {
     planning_input_.set_q_ref_pos(config_.q_ref_pos);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
-    planning_input_.set_q_acc(50.0);
-    planning_input_.set_q_jerk(50.0);
+    planning_input_.set_q_acc(config_.q_acc);
+    planning_input_.set_q_jerk(config_.q_jerk);
     planning_input_.set_q_stop_s(config_.q_stop_s);
 
     planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);

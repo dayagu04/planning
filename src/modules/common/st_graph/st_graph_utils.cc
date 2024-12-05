@@ -23,7 +23,7 @@ constexpr double kCautioYieldSlowSpeedThreshold = 25.0;
 constexpr double kCautionYieldHeadingThres = 0.785;
 constexpr double kCutInHeadingthres = 4.0 / 180.0 * 3.14;
 constexpr double kLowSpeedIgnreAgentSpeedThrMps = 0.8;
-constexpr double kStaticAgentSpeedThrMps = 0.1;
+constexpr double kStaticAgentSpeedThrMps = 0.5;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
