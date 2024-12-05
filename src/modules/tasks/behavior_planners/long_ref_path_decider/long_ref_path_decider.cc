@@ -88,12 +88,12 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // binwang33: 需要关注后续soft bound形式，采用target
     // marker后，sref更合理的话，只留hard bound也是没问题的
     WeightedBound s_hard_bound;
-    s_hard_bound.lower = bound_maker_->s_lower_bound(t);    // hack
-    s_hard_bound.upper = bound_maker_->s_upper_bound(t);;  // hack
+    s_hard_bound.lower = bound_maker_->s_lower_bound(t);
+    s_hard_bound.upper = bound_maker_->s_upper_bound(t);
     // s_hard_bound.lower = bound_maker_->s_lower_bound(t);
     // s_hard_bound.upper = bound_maker_->s_upper_bound(t);
     s_hard_bound.weight = 10;
-    s_hard_bound.bound_info.id = -1;  // hack: 后续在bound_maker_中查询
+    s_hard_bound.bound_info.id = -1;
     s_hard_bound.bound_info.type = BoundType::AGENT;  // hack: 后续需要区分属性
     // binwang33: hard_bounds不需要再采用vector形式
     lon_behavior_output_.hard_bounds[i].emplace_back(s_hard_bound);
