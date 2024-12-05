@@ -32,6 +32,7 @@ constexpr double kExistSplitLateralDisThd = 1.5;
 constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kNearPreviewDistanceThd = 20.0;
 constexpr double kDefaultIntersectionSpeedLimit = 19.5;
+constexpr double kDefaultFrontEgoLaneBoundaryLength = 80.0;
 }  // namespace
 
 EgoLaneRoadRightDecider::EgoLaneRoadRightDecider(
@@ -135,19 +136,19 @@ void EgoLaneRoadRightDecider::ComputeIsMergeRegion() {
         ref_path_mgr_->get_reference_path_by_lane(left_lane->get_virtual_id());
   }
   if (left_reference_path != nullptr) {
-    if (ego_vel > kDefaultIntersectionSpeedLimit &&
-        function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-      CheckIfMergeWithLeftLane();
-      if (((ego_lane_boundary_exist_virtual_line_ &&
-            !target_lane_boundary_exist_virtual_line_) ||
-           (!ego_lane_boundary_exist_virtual_line_ &&
-            target_lane_boundary_exist_virtual_line_)) &&
-          !is_split_region_) {
-        merge_lane_virtual_id_ = left_lane->get_virtual_id();
-        is_merge_region_ = true;
-        return;
-      }
-    }
+    // if (ego_vel > kDefaultIntersectionSpeedLimit &&
+    //     function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    //   CheckIfMergeWithLeftLane();
+    //   if (((ego_lane_boundary_exist_virtual_line_ &&
+    //         !target_lane_boundary_exist_virtual_line_) ||
+    //        (!ego_lane_boundary_exist_virtual_line_ &&
+    //         target_lane_boundary_exist_virtual_line_)) &&
+    //       !is_split_region_) {
+    //     merge_lane_virtual_id_ = left_lane->get_virtual_id();
+    //     is_merge_region_ = true;
+    //     return;
+    //   }
+    // }
     if (IsOverlapWithOtherLaneOnEndRegion(left_reference_path,
                                           LEFT_DIRECTION)) {
       merge_lane_virtual_id_ = left_lane->get_virtual_id();
@@ -817,7 +818,7 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
     }
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
       left_lane_line_length += left_lane_boundarys.type_segments[i].length;
-      if (left_lane_line_length > left_ego_s) {
+      if (left_lane_line_length > left_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
         left_current_segment_count = i;
         break;
       }
@@ -849,7 +850,7 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
         for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
           target_right_lane_line_length +=
               right_lane_boundarys.type_segments[i].length;
-          if (target_right_lane_line_length > right_ego_s) {
+          if (target_right_lane_line_length > right_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
             target_right_current_segment_count = i;
             break;
           }
@@ -924,7 +925,7 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
     }
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
       right_lane_line_length += right_lane_boundarys.type_segments[i].length;
-      if (right_lane_line_length > right_ego_s) {
+      if (right_lane_line_length > right_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
         right_current_segment_count = i;
         break;
       }
@@ -957,7 +958,7 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
         for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
           target_left_lane_line_length +=
               left_lane_boundarys.type_segments[i].length;
-          if (target_left_lane_line_length > left_ego_s) {
+          if (target_left_lane_line_length > left_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
             target_left_current_segment_count = i;
             break;
           }
