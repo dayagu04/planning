@@ -162,9 +162,17 @@ class EgoLaneTrackManger {
 
   bool MakesureVirtualLaneExistStraightDirecton(
       const std::shared_ptr<VirtualLane> base_lane);
+
+  bool MakesureLastEgoLaneExistStraightDirecton(
+    const std::shared_ptr<VirtualLane> base_lane);
       
   bool MakesureVirtualLaneExistOtherDirecton(
       const std::shared_ptr<VirtualLane> base_lane);
+
+  void MakesureVirtualLaneIsVirtual(
+    const std::shared_ptr<VirtualLane> base_lane,
+    bool &virtual_lane_exist_virtual);
+
  private:
   planning::framework::Session *session_ = nullptr;
   // int last_fix_lane_virtual_id_ = 0;
