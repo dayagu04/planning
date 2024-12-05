@@ -269,7 +269,7 @@ TEST(test_reeds_shepp, test_GetRSPathGearSwitchNum) {
   goal_pose.x = 1.0;
   goal_pose.y = 3.0;
   goal_pose.theta = M_PI / 2.0;
-  initial_pose_dir = AstarPathGear::reverse;
+  initial_pose_dir = AstarPathGear::REVERSE;
   min_radius = 3.179429;
 
   ret = GetRSPathGearSwitchNum(NULL, &start_pose, &goal_pose, min_radius,
@@ -303,7 +303,7 @@ TEST(test_reeds_shepp, test_GetRSPathGearSwitchNum) {
   goal_pose.x = 1.0;
   goal_pose.y = 3.0;
   goal_pose.theta = M_PI / 2.0;
-  initial_pose_dir = AstarPathGear::none;
+  initial_pose_dir = AstarPathGear::NONE;
   ret = GetRSPathGearSwitchNum(&gear_switch_num, &start_pose, &goal_pose,
                                min_radius, initial_pose_dir);
   EXPECT_EQ(ret, 0);
@@ -312,7 +312,7 @@ TEST(test_reeds_shepp, test_GetRSPathGearSwitchNum) {
   goal_pose.x = 1.0;
   goal_pose.y = 2.0;
   goal_pose.theta = M_PI / 2.0;
-  initial_pose_dir = AstarPathGear::reverse;
+  initial_pose_dir = AstarPathGear::REVERSE;
   min_radius = 3.179429;
 
   ret = GetRSPathGearSwitchNum(&gear_switch_num, &start_pose, &goal_pose,

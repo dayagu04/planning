@@ -175,7 +175,8 @@ void EgoLaneTrackManger::TrackEgoLane(
         }
       }
 
-      SelectEgoLaneWithPlan(relative_id_lanes, zero_relative_id_nums,
+      SelectEgoLaneWithPlan(relative_id_lanes,
+                            order_ids_of_same_zero_relative_id,
                             virtual_id_mapped_lane);
     } else {
       SelectEgoLaneWithoutPlan(relative_id_lanes);
@@ -364,7 +365,7 @@ void EgoLaneTrackManger::Update(
   is_ego_on_expressway_ = is_ego_on_expressway;
   is_on_ramp_ = is_on_ramp;
   dis_to_ramp_ = dis_to_ramp;
-  is_leaving_ramp_ = is_leaving_ramp;
+  is_leaving_ramp_ = false;
   first_split_dir_dis_info_.first = first_split_dir_dis_info.first;
   first_split_dir_dis_info_.second = first_split_dir_dis_info.second;
   distance_to_first_road_merge_ = distance_to_first_road_merge;
@@ -457,7 +458,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
 
 void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-    int zero_relative_id_nums,
+    const std::vector<int>& order_ids,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
   const auto& ego_state =
@@ -507,8 +508,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
-      zero_relative_id_nums < 2) {
-    lateral_distance_cost_weight = 0.5;
+      order_ids.size() < 2) {
+    lateral_distance_cost_weight = 0.28;
   }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
@@ -655,8 +656,17 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     lane->set_relative_id(lane_relative_id);
   }
 
-  if (zero_relative_id_nums == 1 && current_order_id != origin_order_id) {
+  if (order_ids.size() == 1 && current_order_id != origin_order_id) {
     virtual_lane_relative_id_switch_flag_ = true;
+  }
+  if (order_ids.size() > 1) {
+    for (int i = 0; i < order_ids.size(); i++) {
+      if (current_order_id == order_ids[i]) {
+        last_zero_relative_id_order_id_index_ = i;
+      } else {
+        continue;
+      }
+    }
   }
   return;
 }
@@ -1511,7 +1521,12 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
                       LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT &&
               lane_marks[i].lane_mark !=
                   iflyauto::
-                      LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT) {
+                      LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::
+                      LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE &&
+              lane_marks[i].lane_mark !=
+                  iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN) {
             exist_straight_direction = false;
             break;
           }
@@ -1572,11 +1587,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
                 lane_marks[i].lane_mark ==
                     iflyauto::LaneDrivableDirection_DIRECTION_RIGHT_UTURN ||
                 lane_marks[i].lane_mark ==
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT ||
-                lane_marks[i].lane_mark ==
-                    iflyauto::
-                        LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT ||
+                    iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN ||
                 lane_marks[i].lane_mark ==
                     iflyauto::LaneDrivableDirection_DIRECTION_LEFT_RIGHT ||
                 lane_marks[i].lane_mark ==
@@ -1604,7 +1615,7 @@ void EgoLaneTrackManger::PreprocessIntersectionSplit(
     }
   }
 
-  if (!is_exist_split_on_intersection_) {
+  if (!is_exist_split_on_intersection_ && order_ids.size() == 2) {
     bool is_on_right_side_lane = false;
     bool is_on_left_side_lane = false;
     for (size_t i = 0; i < order_ids.size(); i++) {
@@ -1942,7 +1953,7 @@ double EgoLaneTrackManger::ComputeAverageHeadingDiff(
 bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
-  if (!session_->environmental_model().get_sdmap_valid()) {
+  if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     LOG_DEBUG("CheckIfInRampSelectSplit::sd_map is invalid!!!");
     return false;
   }
@@ -1963,7 +1974,8 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
 
-  const auto& sd_map = session_->environmental_model().get_sd_map();
+  const auto& sd_map = 
+      session_->environmental_model().get_route_info()->get_sd_map();
 
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
@@ -2018,7 +2030,7 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
 bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
-  if (!session_->environmental_model().get_sdmap_valid()) {
+  if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     LOG_DEBUG("CheckIfInRoadSelectRamp::sd_map is invalid!!!");
     return false;
   }
@@ -2039,7 +2051,8 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
 
-  const auto& sd_map = session_->environmental_model().get_sd_map();
+  const auto& sd_map = 
+      session_->environmental_model().get_route_info()->get_sd_map();
 
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
@@ -2126,7 +2139,7 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
 void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
     std::shared_ptr<VirtualLane> last_track_ego_lane,
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-    const std::vector<int>& order_ids, int zero_relative_id_order_id_index) {
+    const std::vector<int>& order_ids, int& zero_relative_id_order_id_index) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& plannig_init_point = ego_state->planning_init_point();

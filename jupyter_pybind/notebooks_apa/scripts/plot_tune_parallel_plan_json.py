@@ -13,6 +13,8 @@ from bokeh.models import Range1d
 from bokeh.io import export_svgs
 from jupyter_pybind import parallel_planning_py
 from bokeh.models import SingleIntervalTicker
+from scipy.spatial import ConvexHull
+from shapely.geometry import Polygon
 import os
 import sys
 import cairosvg
@@ -63,19 +65,20 @@ data_debug_arc = ColumnDataSource(data = {'cx_vec':[],
                                         'pBy_vec':[],
                                         'pCx_vec':[],
                                         'pCy_vec':[]})
-
-
+data_extra_region = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
+data_obs_car_polygon = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 
 # fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=700, height=600, match_aspect = True, aspect_scale=1)
 
-fig1 = bkp.figure(width=1000, height=500, match_aspect = True, aspect_scale=1)
+fig1 = bkp.figure(width=1200, height=800, match_aspect = True, aspect_scale=1)
+# fig1.background_fill_color = "#E0E0E0"  # 你也可以用 '#D3D3D3'
 fig1.x_range.flipped = False
 
 fig1.outline_line_color = "black"
 fig1.outline_line_width = 1.0  # 可以调整边框线条的宽度
 
-fig1.x_range = Range1d(start = -6.0, end = 16.0)
-fig1.y_range = Range1d(start = -3.0, end = 12.0)
+fig1.x_range = Range1d(start = -6.0, end = 14.0)
+fig1.y_range = Range1d(start = -3.0, end = 9.0)
 
 fig1.xaxis.axis_label_text_font_size = '18pt'
 fig1.xaxis.axis_label_text_font = 'Times New Roman'
@@ -108,13 +111,13 @@ fig1.ygrid.grid_line_color = None
 aspect_ratio = (fig1.x_range.end - fig1.x_range.start) / (fig1.y_range.end - fig1.y_range.start)
 fig1.plot_height = int(fig1.plot_width / aspect_ratio)
 
+# measure tool
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
 line_source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
 text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
 fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
-
 # Define the JavaScript callback code
 callback_code = """
     var x = cb_obj.x;
@@ -158,39 +161,47 @@ callback_code = """
     }
     text_source.change.emit();
 """
-
 # Create a CustomJS callback with the defined code
 callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
 # Attach the callback to the Tap event on the plot
 fig1.js_on_event(Tap, callback)
-fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible =False)
-fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path')
-fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'Car Path')
 
+# start drawing debug info
+fig1.line('x_vec','y_vec',source =data_tra_search_out_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'tra_search_out', visible = False)
+# fig1.multi_line('x_vec', 'y_vec', source = data_all_debug_path, line_width = 1, line_color = 'orange', line_dash = 'solid',legend_label = 'all debug path', visible = False)
+fig1.line('x_vec','y_vec',source =data_path,  line_width = 3.0, line_color = 'green', line_dash = 'solid',legend_label = 'Car Path', visible = True)
 
 # target slot
-fig1.patch('x_vec', 'y_vec', source = data_slot, fill_color='blue', line_color='grey', fill_alpha=0.3, line_width = 0.3, legend_label = 'Target slot')
+# fig1.patch('x_vec', 'y_vec', source = data_slot, fill_color='blue', line_color='grey', fill_alpha=0.3, line_width = 0.3, legend_label = 'Target slot')
+fig1.line('x_vec','y_vec',source =data_slot,  line_width = 2.0, line_color = 'black', line_dash = 'solid',legend_label = 'slot', visible = True)
+
 # nearby slots
-fig1.patches('x_vec', 'y_vec', source = data_other_slot, fill_color='grey', line_color='grey', fill_alpha=0.2, line_width = 0.3, legend_label = 'Nearby slots')
+# fig1.patches('x_vec', 'y_vec', source = data_other_slot, fill_color='grey', line_color='grey', fill_alpha=0.2, line_width = 0.3, legend_label = 'Nearby slots')
+fig1.multi_line('x_vec','y_vec',source =data_other_slot,  line_width = 2.0, line_color = 'black', line_dash = 'solid',legend_label = 'slot', visible = True)
 
-fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 0.2, legend_label = 'Envelope')
-# car box at start pose
-fig1.circle('x', 'y', source = data_start_pos, size=8, color='palegreen', legend_label = 'Start pose')
-fig1.patch( 'car_xn', 'car_yn', source = data_start_car, fill_color = "palegreen", fill_alpha = 0.2, line_color = "black", line_width = 0.5, legend_label = 'Start pose')
-
-# target pose
-fig1.circle('x', 'y', source = data_target_pos, size=8, color='red', legend_label = 'Target pose')
-fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = "red", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'Target pose')
+fig1.patches("x_vec", "y_vec", source=data_extra_region, color='green', fill_alpha=0.6, line_color=None, legend_label='Extra available space')
+fig1.patches("x_vec", "y_vec", source=data_obs_car_polygon, color='white', fill_alpha=1, line_color=None, legend_label='obs obstacles')
 
 # obstacles
 fig1.scatter("x_vec", "y_vec", source=data_fus_obs, size=3, color='grey',legend_label = 'External obstacles')
 fig1.scatter("x_vec", "y_vec", source=data_obs_pt, size=3, color='red',legend_label = 'Internal obstacles')
 
-fig1.line('x_vec', 'y_vec', source = data_tra_tb_pt, line_width=1, line_color = 'blue', line_dash = 'solid', legend_label='Traditional boundary')
+# fig1.line('x_vec', 'y_vec', source = data_tra_tb_pt, line_width=1, line_color = 'blue', line_dash = 'solid', legend_label='Traditional boundary')
+fig1.patch('x_vec', 'y_vec', source = data_tra_tb_pt, fill_color='skyblue', fill_alpha=0.2, line_color=None)
 
-fig1.scatter("x_vec", "y_vec", source=data_virtual_obs_pt, size=8, color='red', marker='star', legend_label = 'virtual obstacles')
-fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_debug_arc, line_alpha = 1, line_width = 2, line_color = "red",
-            fill_alpha=0, legend_label = 'data_debug_arc', visible = False)
+fig1.patches('x_vec', 'y_vec', source = data_car_box, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 0.2, legend_label = 'Envelope')
+# car box at start pose
+fig1.circle('x', 'y', source = data_start_pos, size=8, color='black', legend_label = 'Start pose')
+fig1.patch( 'car_xn', 'car_yn', source = data_start_car, fill_color = "red", fill_alpha = 0.2, line_color = "black", line_width = 0.5, legend_label = 'Start pose')
+
+# target pose
+fig1.circle('x', 'y', source = data_target_pos, size=8, color='black', legend_label = 'Target pose')
+fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = "red", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'Target pose')
+
+
+
+fig1.scatter("x_vec", "y_vec", source=data_virtual_obs_pt, size=8, color='red', marker='star', legend_label = 'virtual obstacles', visible = False)
+fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_debug_arc, line_alpha = 1, line_width = 2, line_color = "red", fill_alpha=0, legend_label = 'data_debug_arc', visible = False)
 
 
 # fig1.line('x_vec','y_vec',source =data_preparing_step_path,  line_width = 3.0, line_color = 'red', line_dash = 'solid',legend_label = 'Preparing step')
@@ -206,7 +217,7 @@ fig1.legend.location = 'top_left'
 # fig1.legend.visible = False
 
 fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
-# fig1.legend.click_policy = 'hide'
+fig1.legend.click_policy = 'hide'
 parallel_planning_py.Init()
 
 ### sliders config
@@ -231,7 +242,7 @@ class LocalViewSlider:
     self.front_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "front obs heading",min=-180.0, max=180.0, value=9.0, step=0.1)
 
     self.rear_car_y_offset_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs y",min=-2.0, max=4.0, value=0.0, step=0.01)
-    self.rear_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs heading",min=-180.0, max=180.0, value=-2.0, step=0.1)
+    self.rear_car_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "rear obs heading",min=-180.0, max=180.0, value=0.0, step=0.1)
 
     self.ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "path ds",min=0.025, max=1.0, value=0.2, step=0.025)
     self.obs_ds_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "obs ds",min=0.025, max=1.0, value=0.38, step=0.025)
@@ -302,7 +313,10 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
      'y_vec': slot_y_vec})
 
   other_slot_x_vec1 = [x-slot_length for x in slot_x_vec]
+  other_slot_x_vec1.append(other_slot_x_vec1[0])
   other_slot_x_vec2 = [x+slot_length for x in slot_x_vec]
+  other_slot_x_vec2.append(other_slot_x_vec2[0])
+  slot_y_vec.append(slot_y_vec[0])
 
   data_other_slot.data.update({
      'x_vec': [other_slot_x_vec1, other_slot_x_vec2],
@@ -553,6 +567,91 @@ def slider_callback(is_front_occupied, is_rear_occupied, is_all_path, ego_x, ego
   'y_vec':tra_tb_y_vec
   })
 
+  extra_x_vec = []
+  extra_y_vec = []
+  x_min = tra_tb_x_vec[0]
+  x_max = tra_tb_x_vec[len(tra_tb_x_vec) - 3]
+  channel_y_min = tra_tb_y_vec[len(tra_tb_x_vec) - 3]
+  y_max = 7.9
+  Polygon_channel = Polygon([(x_min, channel_y_min), (x_max, channel_y_min), (x_max, y_max), (x_min, y_max)])
+  tmp_x, tmp_y = map(list, Polygon_channel.exterior.xy)
+  extra_x_vec.append(tmp_x)
+  extra_y_vec.append(tmp_y)
+
+  if is_rear_occupied and len(obs_in_tboundary) > 0:
+    planner_obs_x_vec = obs_in_tboundary[0]
+    planner_obs_y_vec = obs_in_tboundary[1]
+    rear_box_min_y = 10.0
+    for i in range(len(planner_obs_x_vec)):
+      if planner_obs_x_vec[i] > -2.0 and planner_obs_x_vec[i] < -0.8 and planner_obs_y_vec[i] > 0.0:
+        rear_box_min_y = min(rear_box_min_y, planner_obs_y_vec[i])
+    Polygon_rear_box = Polygon([(x_min, tra_tb_y_vec[0]), (tra_tb_x_vec[1], tra_tb_y_vec[1]), (tra_tb_x_vec[1], rear_box_min_y), (x_min, rear_box_min_y)])
+    tmp_x, tmp_y = map(list, Polygon_rear_box.exterior.xy)
+    extra_x_vec.append(tmp_x)
+    extra_y_vec.append(tmp_y)
+
+  if is_front_occupied and len(obs_in_tboundary) > 0:
+      planner_obs_x_vec = obs_in_tboundary[0]
+      planner_obs_y_vec = obs_in_tboundary[1]
+      front_box_min_y = 10.0
+      for i in range(len(planner_obs_x_vec)):
+        if planner_obs_x_vec[i] > 10.0 and planner_obs_x_vec[i] < 20.0 and planner_obs_y_vec[i] > 0.0:
+          front_box_min_y = min(front_box_min_y, planner_obs_y_vec[i])
+      Polygon_rear_box = Polygon([(tra_tb_x_vec[4], tra_tb_y_vec[4]), (tra_tb_x_vec[5], tra_tb_y_vec[5]), (tra_tb_x_vec[5], front_box_min_y), (tra_tb_x_vec[4], front_box_min_y)])
+      tmp_x, tmp_y = map(list, Polygon_rear_box.exterior.xy)
+      extra_x_vec.append(tmp_x)
+      extra_y_vec.append(tmp_y)
+
+
+  data_extra_region.data.update({
+  'x_vec':extra_x_vec,
+  'y_vec':extra_y_vec
+  })
+
+  obs_car_polygon_x_vec = []
+  obs_car_polygon_y_vec = []
+
+  channel_car_size = int(len(json_data["channel_matrix"]) / 2)
+  for i in range(channel_car_size):
+    channel_vec = [json_data["channel_matrix"][2 * i], json_data["channel_matrix"][2 * i + 1]]
+    points = np.column_stack((channel_vec[0], channel_vec[1]))
+    hull = ConvexHull(points)
+    polygon = Polygon(points[hull.vertices])
+    if polygon.geom_type == 'Polygon':
+      tmp_x, tmp_y = polygon.exterior.xy
+      obs_car_polygon_x_vec.append(list(tmp_x))
+      obs_car_polygon_y_vec.append(list(tmp_y))
+
+  rear_obs_car_matrix = json_data["rear_obs_car_matrix"]
+  print("rear_obs_car_matrix size = ", len(rear_obs_car_matrix))
+
+  if len(rear_obs_car_matrix) > 0:
+    print("rear_obs_car_ obs size = ", len(rear_obs_car_matrix[0]))
+    points = np.column_stack((rear_obs_car_matrix[0], rear_obs_car_matrix[1]))
+    hull = ConvexHull(points)
+    polygon = Polygon(points[hull.vertices])
+    if polygon.geom_type == 'Polygon':
+      tmp_x, tmp_y = polygon.exterior.xy
+      obs_car_polygon_x_vec.append(list(tmp_x))
+      obs_car_polygon_y_vec.append(list(tmp_y))
+
+  front_obs_car_matrix = json_data["front_obs_car_matrix"]
+  print("front_obs_car_matrix size = ", len(front_obs_car_matrix))
+
+  if len(front_obs_car_matrix) > 0:
+    print("front_obs_car obs size = ", len(front_obs_car_matrix[0]))
+    points = np.column_stack((front_obs_car_matrix[0], front_obs_car_matrix[1]))
+    hull = ConvexHull(points)
+    polygon = Polygon(points[hull.vertices])
+    if polygon.geom_type == 'Polygon':
+      tmp_x, tmp_y = polygon.exterior.xy
+      obs_car_polygon_x_vec.append(list(tmp_x))
+      obs_car_polygon_y_vec.append(list(tmp_y))
+
+  data_obs_car_polygon.data.update({
+  'x_vec': obs_car_polygon_x_vec,
+  'y_vec': obs_car_polygon_y_vec
+  })
 
   push_notebook()
 

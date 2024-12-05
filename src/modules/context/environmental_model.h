@@ -221,6 +221,13 @@ class EnvironmentalModel {
     dynamic_world_ = dynamic_world;
   }
 
+  void set_route_info (const std::shared_ptr<RouteInfo> route_info) {
+    route_info_ = route_info;
+  }
+
+  const std::shared_ptr<RouteInfo> &get_route_info() const { 
+      return route_info_; }
+
   const std::string &get_module_config_file_dir() const {
     return config_file_dir_;
   }
@@ -272,12 +279,7 @@ class EnvironmentalModel {
 
   void set_location_valid(bool flag) { location_valid_ = flag; }
   bool location_valid() const { return location_valid_; }
-  const ad_common::hdmap::HDMap &get_hd_map() const { return hd_map_; }
-  const ad_common::sdmap::SDMap &get_sd_map() const { return sd_map_; }
   const LocalView &get_local_view() const { return *local_view_; }
-
-  bool get_hdmap_valid() const { return hdmap_valid_; }
-  bool get_sdmap_valid() const { return sdmap_valid_; }
   bool is_on_highway() const { return true; }  // hack
   const iflyauto::HmiInner &get_hmi_info() const {
     return local_view_->hmi_inner_info;
@@ -294,16 +296,8 @@ class EnvironmentalModel {
     return function_info_;
   }
 
-  void UpdateStaticMap(const LocalView &local_view);
-
-  void UpdateSdMap(const LocalView &local_view);
-
  private:
   const LocalView *local_view_ = nullptr;
-  uint64_t static_map_info_updated_timestamp_ = 0;
-  ad_common::hdmap::HDMap hd_map_;
-  uint64_t sd_map_info_updated_timestamp_ = 0;
-  ad_common::sdmap::SDMap sd_map_;
   bool vehicle_dbw_status_{false};
   std::shared_ptr<EgoStateManager> ego_state_manager_ = nullptr;
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
@@ -321,8 +315,7 @@ class EnvironmentalModel {
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_ = nullptr;
   std::vector<GroundLinePoint> ground_line_point_info_;
   std::shared_ptr<ParkingSlotManager> parking_slot_manager_ = nullptr;
-  bool hdmap_valid_{false};
-  bool sdmap_valid_{false};
+  std::shared_ptr<RouteInfo> route_info_ = nullptr;
   bool location_valid_{true};
   // planning::VehicleParam vehicle_param_;
   std::string config_file_dir_;

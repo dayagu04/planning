@@ -147,12 +147,12 @@ class RSPathInterpolator {
 
   AstarPathGear GetGearBySignLen(const double signed_length) {
     if (signed_length > 0.0) {
-      return AstarPathGear::drive;
+      return AstarPathGear::DRIVE;
     } else if (signed_length < 0.0) {
-      return AstarPathGear::reverse;
+      return AstarPathGear::REVERSE;
     }
 
-    return AstarPathGear::none;
+    return AstarPathGear::NONE;
   }
 
   int GetVehCircleByPose(VehicleCircle *veh_circle, const RSPoint *pose,

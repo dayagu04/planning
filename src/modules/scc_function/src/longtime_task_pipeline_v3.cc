@@ -8,6 +8,8 @@ namespace planning {
 LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : BaseTaskPipeline(config_builder, session) {
+  ego_lane_road_right_decider_ =
+      std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
   speed_adjust_decider_ =
@@ -51,6 +53,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<LongitudinalDecisionDecider>(config_builder, session);
   speed_limit_decider_ =
       std::make_unique<SpeedLimitDecider>(config_builder, session);
+  long_ref_path_decider_ =
+      std::make_unique<LongRefPathDecider>(config_builder, session);
   scc_lon_behavior_planner_ =
       std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =
@@ -64,6 +68,12 @@ bool LongTimeTaskPipelineV3::Run() {
   bool ok = traffic_light_decider_->Execute();
   if (!ok) {
     AddErrorInfo(traffic_light_decider_->Name());
+    return false;
+  }
+
+  ok = ego_lane_road_right_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(ego_lane_road_right_decider_->Name());
     return false;
   }
 
@@ -145,11 +155,10 @@ bool LongTimeTaskPipelineV3::Run() {
   planning_context->set_st_graph_helper(st_graph_helper_);
   double time_end = IflyTime::Now_ms();
   if (!ok) {
-    LOG_ERROR("st graph init error" );
+    LOG_ERROR("st graph init error");
     return false;
   }
   JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);
-
 
   ok = expand_st_boundaries_decider_->Execute();
   if (!ok) {
@@ -214,12 +223,11 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  ok = scc_lon_behavior_planner_->Execute();
+  ok = long_ref_path_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(scc_lon_behavior_planner_->Name());
+    AddErrorInfo(long_ref_path_decider_->Name());
     return false;
   }
-
   // --↑↑↑↑↑↑--long behavior--↑↑↑↑↑↑--
 
   // ------ long motion planner ------

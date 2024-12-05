@@ -22,7 +22,7 @@ add_subdirectory(hpp_function EXCLUDE_FROM_ALL)
 add_subdirectory(scc_function EXCLUDE_FROM_ALL)
 add_subdirectory(noa_function EXCLUDE_FROM_ALL)
 
-file(GLOB_RECURSE SRC_FILES
+file(GLOB SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/*.cc
 )
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
@@ -31,12 +31,15 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_context
   modules_apa_function
   modules_adas_function
+  modules_noa_function
+  modules_scc_function
+  modules_hpp_function
   planning_proto
 )
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 set(ci_dir ${SYSTEM_INTEGRATION_PROJECT_CI_DIR})
-if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
+if(PP_ENABLE OR PYBIND_TOOL_ENABLE OR THIRDPARTY_ENABLE OR INTERFACE_ENABLE OR AD_ENABLE)
   set(ci_dir ${CMAKE_CURRENT_LIST_DIR}/../../.ci)
 endif()
 include(${ci_dir}/version.cmake)

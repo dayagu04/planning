@@ -8,15 +8,15 @@
 namespace planning {
 
 enum class AstarFailType {
-  none,
-  start_collision,
-  goal_collision,
-  out_of_bound,
-  time_out,
-  success,
-  allocate_node_fail,
-  search_too_much_node,
-  dp_cost_fail,
+  NONE,
+  START_COLLISION,
+  GOAL_COLLISION,
+  OUT_OF_BOUND,
+  TIME_OUT,
+  SUCCESS,
+  ALLOCATE_NODE_FAIL,
+  SEARCH_TOO_MUCH_NODE,
+  DP_COST_FAIL,
 };
 
 enum class AstarSearchState {
@@ -70,13 +70,14 @@ enum class ParkingVehDirection {
 };
 
 enum class NodeCollisionType {
-  none = 0,
-  map_bound,
-  slot_line,
-  virtual_wall,
-  ground_line,
-  obs,
-  max_num
+  NONE = 0,
+  MAP_BOUND,
+  SLOT_LINE,
+  VIRTUAL_WALL,
+  GROUND_LINE,
+  FUSION_OCC_OBS,
+  SLOT_LIMITER,
+  MAX_NUM
 };
 
 enum class AstarPathType {
@@ -105,27 +106,27 @@ enum class PlanningReason {
 };
 
 enum class AstarPathSteer {
-  none = 0,
-  left = 1,
-  right = 2,
-  straight = 3,
-  max_num
+  NONE = 0,
+  LEFT = 1,
+  RIGHT = 2,
+  STRAIGHT = 3,
+  MAX_NUM
 };
 
 enum class AstarPathGear {
-  none = 0,
-  drive = 1,
-  reverse,
-  normal,
-  parking,
-  max_num
+  NONE = 0,
+  DRIVE = 1,
+  REVERSE,
+  NORMAL,
+  PARKING,
+  MAX_NUM
 };
 
 enum class AstarNodeVisitedType {
-  not_visited = 0,
-  in_open = 1,
-  in_close,
-  max_num
+  NOT_VISITED = 0,
+  IN_OPEN = 1,
+  IN_CLOSE,
+  MAX_NUM
 };
 
 enum class PolynomialPathErrorCode {
@@ -237,7 +238,7 @@ struct HybridAStarResult {
     type.clear();
     kappa.clear();
     time_ms = 0;
-    fail_type = AstarFailType::none;
+    fail_type = AstarFailType::NONE;
     gear_change_num = 0;
 
     return;

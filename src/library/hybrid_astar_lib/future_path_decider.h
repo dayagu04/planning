@@ -54,7 +54,7 @@ class FuturePathDecider : public AstarDecider {
   void Process(const HybridAStarResult *history_path,
                const PlanningReason plan_reason, const Pose2D &ego_pose,
                EulerDistanceTransform *edt, const ParkReferenceLine *ref_line,
-               double min_turn_radius,
+               const double min_turn_radius, const bool swap_start_goal,
                ParkFirstActionRequest *future_path_request);
 
   void Process(const Pose2D &start, const Pose2D &end);
@@ -99,6 +99,7 @@ class FuturePathDecider : public AstarDecider {
                                   EulerDistanceTransform *edt,
                                   const ParkReferenceLine *ref_line);
 
+ private:
   // use history path info as an heuristic info
   HistoryPathDriveInfo history_path_info_;
 
@@ -106,6 +107,8 @@ class FuturePathDecider : public AstarDecider {
   InferenceDriveDist future_drive_dist_info_;
 
   double min_turn_radius_;
+
+  bool swap_start_goal_;
 };
 
 }  // namespace planning

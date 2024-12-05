@@ -19,11 +19,13 @@
 #include "tasks/behavior_planners/cipv_lost_prohibit_acceleration_decider/cipv_lost_prohibit_acceleration_decider.h"
 #include "tasks/behavior_planners/cipv_lost_prohibit_start_decider/cipv_lost_prohibit_start_decider.h"
 #include "tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider.h"
+#include "tasks/behavior_planners/ego_lane_road_right_decider/ego_lane_road_right_decider.h"
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
+#include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
@@ -48,6 +50,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   bool Run() override;
 
  private:
+  std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
@@ -70,6 +73,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<AgentHeadwayDecider> agent_headway_decider_;
   std::unique_ptr<LongitudinalDecisionDecider> longitudinal_decision_decider_;
   std::unique_ptr<SpeedLimitDecider> speed_limit_decider_;
+  std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成
   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;

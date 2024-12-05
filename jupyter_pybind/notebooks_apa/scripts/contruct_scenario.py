@@ -34,10 +34,8 @@ def construct_scenario(
   y_offset_vec = [-0.3, 0.3, 0.6, 0.2, 0.4]
   heading_offset_vec = [0.0, 0.0, 0.0, 6.0 /57.3, 70 / 57.3]
 
-  obs_car_file_name = '/asw/data/parallel_obs_car_0p1.json'
   curb_file_name = '/asw/data/curb.json'
-  channel_file_name = '/asw/data/channel.json'
-
+  obs_car_file_name = '/asw/data/parallel_obs_car_0p1.json'
   # display(HTML("<style>.container { width:95% !important;  }</style>"))
   # output_notebook()
 
@@ -48,35 +46,42 @@ def construct_scenario(
   obs_x_vec = []
   obs_y_vec = []
   obs_to_slot_line = dx * 0.5
+  front_obs_car_matrix = []
+
   if is_front_occupied:
       new_obs_car_x_vec = []
       new_obs_car_y_vec = []
       for i in range(len(obs_car['obs_x'])):
-        tmp_x, tmp_y = rotate(obs_car['obs_x'][i],obs_car['obs_y'][i],front_car_heading)
+        tmp_x, tmp_y = rotate(obs_car['obs_x'][i],obs_car['obs_y'][i], front_car_heading)
         tmp_y += front_car_y_offset
         new_obs_car_x_vec.append(tmp_x)
         new_obs_car_y_vec.append(tmp_y)
-      min_x = min(new_obs_car_x_vec)
-      new_obs_car_x_vec = [x - min_x for x in new_obs_car_x_vec]
-      for i in range(len(new_obs_car_x_vec)):
-        obs_x_vec.append(new_obs_car_x_vec[i] + slot_length + obs_to_slot_line)
-        obs_y_vec.append(new_obs_car_y_vec[i])
 
+      min_x = min(new_obs_car_x_vec)
+      for i in range(len(new_obs_car_x_vec)):
+         new_obs_car_x_vec[i] += - min_x + slot_length + obs_to_slot_line
+
+      obs_x_vec += new_obs_car_x_vec
+      obs_y_vec += new_obs_car_y_vec
+
+      front_obs_car_matrix.append(new_obs_car_x_vec)
+      front_obs_car_matrix.append(new_obs_car_y_vec)
+
+  rear_obs_car_matrix = []
   if is_rear_occupied:
       new_obs_car_x_vec = []
       new_obs_car_y_vec = []
-
       for i in range(len(obs_car['obs_x'])):
         tmp_x, tmp_y = rotate(obs_car['obs_x'][i],obs_car['obs_y'][i],rear_car_heading)
         tmp_y += rear_car_y_offset
         new_obs_car_x_vec.append(tmp_x)
         new_obs_car_y_vec.append(tmp_y)
       max_x = max(new_obs_car_x_vec)
-      new_obs_car_x_vec = [x - max_x for x in new_obs_car_x_vec]
-
-      for i in range(len(new_obs_car_x_vec)):
-        obs_x_vec.append(new_obs_car_x_vec[i] - obs_to_slot_line)
-        obs_y_vec.append(new_obs_car_y_vec[i])
+      new_obs_car_x_vec = [x - max_x - obs_to_slot_line for x in new_obs_car_x_vec]
+      obs_x_vec+= new_obs_car_x_vec
+      obs_y_vec+= new_obs_car_y_vec
+      rear_obs_car_matrix.append(new_obs_car_x_vec)
+      rear_obs_car_matrix.append(new_obs_car_y_vec)
 
   half_slot_width = 0.5 * slot_width
   target_corner_x_vec = [slot_length, 0.0, 0.0, slot_length]
@@ -86,12 +91,9 @@ def construct_scenario(
   rear_corner_x_vec = [x - slot_length for x in target_corner_x_vec]
 
   ## channel
-  with open(channel_file_name, 'r') as file:
-      obs_channel = json.load(file)
-
-  channel_x_vec = obs_channel["obs_x"]
-  channel_y_vec = [y + half_slot_width + channel_width for y in obs_channel["obs_y"]]
-
+  channel_x_vec = []
+  channel_y_vec = []
+  channel_matrix = []
   # # car in channel
   for i in range(len(x_offset_vec)):
     channel_car_x_vec = []
@@ -100,12 +102,16 @@ def construct_scenario(
       tmp_x, tmp_y = rotate(obs_car['obs_x'][j],obs_car['obs_y'][j],-pi/2 + heading_offset_vec[i])
       channel_car_x_vec.append(tmp_x)
       channel_car_y_vec.append(tmp_y)
+
     min_x = min(channel_car_x_vec)
     min_y = min(channel_car_y_vec)
     channel_car_x_vec = [x - min_x + x_offset_vec[i] for x in channel_car_x_vec]
     channel_car_y_vec = [y - min_y + y_offset_vec[i] + half_slot_width + channel_width for y in channel_car_y_vec]
+
     channel_x_vec += channel_car_x_vec
     channel_y_vec += channel_car_y_vec
+    channel_matrix.append(channel_car_x_vec)
+    channel_matrix.append(channel_car_y_vec)
 
   # curb
   with open(curb_file_name, 'r') as file:
@@ -121,7 +127,10 @@ def construct_scenario(
     "obs_x": obs_x_vec,
     "obs_y": obs_y_vec,
     "target_corner_x": target_corner_x_vec,
-    "target_corner_y": target_corner_y_vec
+    "target_corner_y": target_corner_y_vec,
+    "channel_matrix" : channel_matrix,
+    "front_obs_car_matrix": front_obs_car_matrix,
+    "rear_obs_car_matrix": rear_obs_car_matrix,
   }
 
   output_file_name = "{}{}_{}{}".format("/asw/data/",
@@ -135,65 +144,65 @@ def construct_scenario(
       json.dump(data, file, indent=4)
 
 
-  # ## for debug json data
+  # # ## for debug json data
   # fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=600, height=600, match_aspect = True, aspect_scale=1)
 
-  # # source = ColumnDataSource(data=dict(x=[], y=[]))
-  # # fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
-  # # line_source = ColumnDataSource(data=dict(x=[], y=[]))
-  # # fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
-  # # text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
-  # # fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
+  # source = ColumnDataSource(data=dict(x=[], y=[]))
+  # fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
+  # line_source = ColumnDataSource(data=dict(x=[], y=[]))
+  # fig1.line('x', 'y', source=source, line_width=3, line_color = 'pink', line_dash = 'solid', legend_label='measure tool')
+  # text_source = ColumnDataSource(data=dict(x=[], y=[], text=[]))
+  # fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='center', text_font_size='15pt', legend_label='measure tool')
 
-  # # # Define the JavaScript callback code
-  # # callback_code = """
-  # #     var x = cb_obj.x;
-  # #     var y = cb_obj.y;
+  # # Define the JavaScript callback code
+  # callback_code = """
+  #     var x = cb_obj.x;
+  #     var y = cb_obj.y;
 
-  # #     source.data['x'].push(x);
-  # #     source.data['y'].push(y);
+  #     source.data['x'].push(x);
+  #     source.data['y'].push(y);
 
-  # #     if (source.data['x'].length > 2) {
-  # #         source.data['x'].shift();
-  # #         source.data['y'].shift();
-  # #         source.data['x'].shift();
-  # #         source.data['y'].shift();
-  # #     }
-  # #     source.change.emit();
+  #     if (source.data['x'].length > 2) {
+  #         source.data['x'].shift();
+  #         source.data['y'].shift();
+  #         source.data['x'].shift();
+  #         source.data['y'].shift();
+  #     }
+  #     source.change.emit();
 
-  # #     if (source.data['x'].length >= 2) {
-  # #         var x1 = source.data['x'][source.data['x'].length - 2];
-  # #         var y1 = source.data['y'][source.data['y'].length - 2];
-  # #         var x2 = x;
-  # #         var y2 = y;
-  # #         var x3 = (x1 + x2) / 2;
-  # #         var y3 = (y1 + y2) / 2;
+  #     if (source.data['x'].length >= 2) {
+  #         var x1 = source.data['x'][source.data['x'].length - 2];
+  #         var y1 = source.data['y'][source.data['y'].length - 2];
+  #         var x2 = x;
+  #         var y2 = y;
+  #         var x3 = (x1 + x2) / 2;
+  #         var y3 = (y1 + y2) / 2;
 
-  # #         var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+  #         var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 
-  # #         console.log("Distance between the last two points: " + distance);
+  #         console.log("Distance between the last two points: " + distance);
 
-  # #         distance = distance.toFixed(4);
-  # #         text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
-  # #         text_source.change.emit();
+  #         distance = distance.toFixed(4);
+  #         text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+  #         text_source.change.emit();
 
-  # #         line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
-  # #         line_source.change.emit();
-  # #     }
+  #         line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+  #         line_source.change.emit();
+  #     }
 
-  # #     if (source.data['x'].length == 1) {
-  # #         text_source.data['x'].shift();
-  # #         text_source.data['y'].shift();
-  # #         text_source.data['text'].shift();
-  # #     }
-  # #     text_source.change.emit();
-  # # """
+  #     if (source.data['x'].length == 1) {
+  #         text_source.data['x'].shift();
+  #         text_source.data['y'].shift();
+  #         text_source.data['text'].shift();
+  #     }
+  #     text_source.change.emit();
+  # """
 
-  # # # Create a CustomJS callback with the defined code
-  # # callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
+  # # Create a CustomJS callback with the defined code
+  # callback = CustomJS(args=dict(source=source, line_source=line_source, text_source=text_source), code=callback_code)
 
-  # # # Attach the callback to the Tap event on the plot
-  # # fig1.js_on_event(Tap, callback)
+  # # Attach the callback to the Tap event on the plot
+  # fig1.js_on_event(Tap, callback)
 
   # fig1.circle(obs_x_vec, obs_y_vec, size=3, color="green", alpha=0.5)
   # fig1.circle(curb_x_vec, curb_y_vec, size=3, color="green", alpha=0.5)

@@ -32,7 +32,7 @@ constexpr double kLatPassThre = 0.5;
 constexpr double kLatPassThreBuffer = 0.2;
 constexpr uint32_t kConeAlcCountThre = 3;
 constexpr int kConeAlcCountLowerThre = 0;
-constexpr double kLongClusterTimeGap = 5.0;
+constexpr double kLongClusterTimeGap = 4.0;
 constexpr double kDefaultLaneWidth = 3.75;
 constexpr double kMinDefaultLaneWidth = 3.0;
 constexpr uint32_t kConeDirecSize = 5;
@@ -89,7 +89,6 @@ void ConeRequest::Update(int lc_status) {
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
-  is_cone_lane_change_situation_ = false;
 
   UpdateConeSituation(lc_status);
   LOG_DEBUG("ConeRequest::Update: is_cone_lane_change_situation %d",
@@ -604,18 +603,6 @@ void ConeRequest::ConeDir() {
   }
 
   if (left_change_available && right_change_available) {
-    if (current_right_boundary_type !=
-        iflyauto::LaneBoundaryType_MARKING_SOLID) {
-      LOG_DEBUG("cone alc right!!!\n");
-      cone_lane_change_direction_ = RIGHT_CHANGE;
-      return;
-    }
-    if (current_left_boundary_type !=
-        iflyauto::LaneBoundaryType_MARKING_SOLID) {
-      LOG_DEBUG("cone alc left!!!\n");
-      cone_lane_change_direction_ = LEFT_CHANGE;
-      return;
-    }
     LOG_DEBUG("cone alc right!!!\n");
     cone_lane_change_direction_ = RIGHT_CHANGE;
     return;
@@ -917,6 +904,7 @@ double ConeRequest::QueryLaneWidth(
 void ConeRequest::Reset() {
   cone_alc_trigger_counter_ = 0;
   is_cone_lane_change_situation_ = false;
+  cone_lane_change_direction_ = NO_CHANGE;
   cone_cluster_size_.clear();
   cone_cluster_.clear();
   cone_points_.clear();

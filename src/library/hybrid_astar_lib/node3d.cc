@@ -18,7 +18,7 @@ Node3d::Node3d(const double x, const double y, const double phi) {
   double theta = IflyUnifyTheta(phi, M_PI);
   path_.points[0] = Pose2D(x, y, theta);
 
-  visited_type_ = AstarNodeVisitedType::not_visited;
+  visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
   is_start_node_ = false;
 
@@ -46,7 +46,7 @@ Node3d::Node3d(double x, double y, double phi, const MapBound& XYbounds,
   path_.points[0].y = y;
   path_.points[0].theta = theta;
 
-  visited_type_ = AstarNodeVisitedType::not_visited;
+  visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
   is_start_node_ = false;
 
@@ -70,7 +70,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
-  visited_type_ = AstarNodeVisitedType::not_visited;
+  visited_type_ = AstarNodeVisitedType::NOT_VISITED;
   is_start_node_ = false;
   dist_to_start_ = 0.0;
 
@@ -99,7 +99,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
-  visited_type_ = AstarNodeVisitedType::not_visited;
+  visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
   ResetCost();
 
@@ -115,7 +115,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
     path_.Clear();
   }
 
-  collision_type_ = NodeCollisionType::none;
+  collision_type_ = NodeCollisionType::NONE;
   gear_switch_num_ = 0;
 
   radius_ = 100000.0;
@@ -252,11 +252,11 @@ void Node3d::CopyNode(const Node3d* node) {
 }
 
 bool Node3d::IsPathGearChange(const AstarPathGear type) {
-  if (gear_type_ == AstarPathGear::drive && type == AstarPathGear::reverse) {
+  if (gear_type_ == AstarPathGear::DRIVE && type == AstarPathGear::REVERSE) {
     return true;
   }
 
-  if (gear_type_ == AstarPathGear::reverse && type == AstarPathGear::drive) {
+  if (gear_type_ == AstarPathGear::REVERSE && type == AstarPathGear::DRIVE) {
     return true;
   }
 
@@ -312,7 +312,7 @@ void Node3d::Clear() {
 
   is_start_node_ = false;
 
-  visited_type_ = AstarNodeVisitedType::not_visited;
+  visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
   path_type_ = AstarPathType::NONE;
   global_id_ = 0;

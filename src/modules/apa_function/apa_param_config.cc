@@ -581,6 +581,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().min_turn_radius, double,
                   "min_turn_radius");
 
+  JSON_READ_VALUE(apa_param.SetPram().safe_circle_radius, double,
+                  "safe_circle_radius");
+
   JSON_READ_VALUE(apa_param.SetPram().max_radius_in_slot, double,
                   "max_radius_in_slot");
 
@@ -751,6 +754,9 @@ void SyncParkingParameters(const bool is_simulation) {
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
                   "release_slot_by_prepare");
+
+  JSON_READ_VALUE(apa_param.SetPram().lock_parallel_slot, bool,
+                  "lock_parallel_slot");
 
   JSON_READ_VALUE(apa_param.SetPram().max_slot_window_size, int,
                   "max_slot_window_size");

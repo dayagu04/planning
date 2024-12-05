@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <list>
 #include <memory>
 #include <string>
@@ -11,6 +12,36 @@
 #include "utils/index_list.h"
 #include "src/library/collision_detection/polygon_base.h"
 #include "src/library/collision_detection/aabb2d.h"
+
+
+namespace planning {
+namespace apa_planner {
+
+// 障碍物高度类型：高于后视镜 低于后视镜 低于底盘
+enum class ApaObsHeightType: uint8_t {
+
+};
+
+// 障碍物属性类型：
+enum class ApaObsAttributeType: uint8_t {
+
+};
+
+// 障碍物运动类型：
+enum class ApaObsMovementType: uint8_t {
+
+};
+
+
+
+
+class ApaObstacleT final {
+  ApaObstacleT() {}
+  ~ApaObstacleT() {}
+};
+}  // namespace apa_planner
+
+}  // namespace planning
 
 namespace planning {
 
@@ -66,27 +97,21 @@ class ParkObstacle {
 
   bool IsVirtual() const { return is_virtual_; }
 
-  const cdl::AABB& PerceptionBoundingBox() const {
-    return perception_box_;
-  }
+  const cdl::AABB& PerceptionBoundingBox() const { return perception_box_; }
 
-  void SetPerceptionBox(const cdl::AABB &box)  {
+  void SetPerceptionBox(const cdl::AABB& box) {
     perception_box_ = box;
 
     return;
   }
 
-  const Polygon2D& PerceptionPolygon() const {
-    return perception_polygon_;
-  }
+  const Polygon2D& PerceptionPolygon() const { return perception_polygon_; }
 
   const std::vector<PncTrajectoryPoint>& Trajectory() const {
     return prediction_traj_;
   }
 
-  bool HasTrajectory() const {
-    return !(prediction_traj_.empty());
-  }
+  bool HasTrajectory() const { return !(prediction_traj_.empty()); }
 
   std::string DebugString() const { return "none"; };
 

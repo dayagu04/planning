@@ -125,7 +125,7 @@ class SpeedAdjustDecider : public Task {
   std::pair<double, double> init_sl_;
   std::pair<double, double> init_va_;
   double v_cruise_{25.0};
-  double target_objs_flow_vel_{25.0};
+  double target_lane_objs_flow_vel_{25.0};
   bool slot_changed_{false};
 
   SpeedAdjustStatusBuffer speed_adjust_status_buffer_{false, false, false};

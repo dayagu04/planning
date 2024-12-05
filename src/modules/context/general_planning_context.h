@@ -3,9 +3,10 @@
 
 #include <cstdint>
 #include <memory>
+#include "func_state_machine_c.h"
 
-#ifndef g_context
-#define g_context planning::context::GeneralPlanningContext::GetInstance()
+#ifndef GENERAL_PLANNING_CONTEXT
+#define GENERAL_PLANNING_CONTEXT planning::context::GeneralPlanningContext::GetInstance()
 #endif
 
 namespace planning {
@@ -26,7 +27,7 @@ struct PlanningStatemachine {
   bool dbw_status = false;
   bool apa_reset_flag = false;
   uint8_t scene_type = 0;
-  uint8_t current_state = 0;
+  iflyauto::FunctionalState current_state = iflyauto::FunctionalState_MANUAL;
 };
 
 class GeneralPlanningContext {

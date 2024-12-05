@@ -80,6 +80,7 @@ struct PathPoint {
   PathPoint(const Eigen::Vector2d &pos_in, const double heading_in) {
     pos = pos_in;
     heading = heading_in;
+    heading_vec << std::cos(heading_in), std::sin(heading_in);
   }
 
   PathPoint(const Eigen::Vector2d &pos_in, const double heading_in,
@@ -87,10 +88,13 @@ struct PathPoint {
     pos = pos_in;
     heading = heading_in;
     kappa = kappa_in;
+    heading_vec << std::cos(heading_in), std::sin(heading_in);
   }
 
   void Set(const Eigen::Vector2d &pos_in, const double heading_in) {
-    pos = pos_in, heading = heading_in;
+    pos = pos_in;
+    heading = heading_in;
+    heading_vec << std::cos(heading_in), std::sin(heading_in);
   }
 
   Eigen::Vector2d pos = Eigen::Vector2d::Zero();
@@ -98,13 +102,22 @@ struct PathPoint {
   // todo: path point related codes is too much, unify them.
   double kappa = 0.0;
   double s = 0.0;
+  double lat_buffer = 0.0;
   bool col_flag = false;
+  Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log)
+        << "pos = " << pos.transpose() << "  headingA = " << heading * kRad2Deg;
+  }
 
   void Reset() {
     pos.setZero();
+    heading_vec.setZero();
     heading = 0.0;
     kappa = 0.0;
     s = 0.0;
+    lat_buffer = 0.0;
     col_flag = false;
   }
 };
@@ -144,7 +157,7 @@ struct LineSegment {
     is_ignored = false;
   }
 
-  void PrintInfo(const bool enable_log = true) {
+  void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
         << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
         << "  headingA = " << heading * kRad2Deg << "  length = " << length;
@@ -196,7 +209,7 @@ struct Arc {
     circle_info.center = center;
   }
 
-  void PrintInfo(const bool enable_log = true) {
+  void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
         << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
         << "  headingA = " << headingA * kRad2Deg
@@ -215,6 +228,8 @@ struct PathSegment {
   uint8_t plan_type = PLAN_TYPE_INVALID;
 
   bool collision_flag = false;
+
+  double lat_buffer = 0.0;
 
   LineSegment line_seg;
   Arc arc_seg;
@@ -360,6 +375,8 @@ struct PathSegment {
 
   const LineSegment &GetLineSeg() const { return line_seg; }
   const Arc &GetArcSeg() const { return arc_seg; }
+
+  void PrintInfo(const bool enable_log = true) const;
 };
 
 struct TangentOutput {
@@ -396,6 +413,16 @@ struct GlobalToLocalTf {
   const double GetHeading(const double heading) const {
     return NormalizeAngle(heading - heading_ori);
   }
+
+  const PathPoint GetPose(const PathPoint &pose) const {
+    return PathPoint(GetPos(pose.pos), GetHeading(pose.heading));
+  }
+
+  void Reset() {
+    pos_n_ori.setZero();
+    rot_m.setIdentity();
+    heading_ori = 0.0;
+  }
 };
 struct LocalToGlobalTf {
   Eigen::Vector2d pos_n_ori = Eigen::Vector2d::Zero();
@@ -422,6 +449,16 @@ struct LocalToGlobalTf {
 
   const double GetHeading(const double heading) const {
     return NormalizeAngle(heading + heading_ori);
+  }
+
+  const PathPoint GetPose(const PathPoint &pose) const {
+    return PathPoint(GetPos(pose.pos), GetHeading(pose.heading));
+  }
+
+  void Reset() {
+    pos_n_ori.setZero();
+    rot_m.setIdentity();
+    heading_ori = 0.0;
   }
 };
 
@@ -596,10 +633,12 @@ const bool SamplePointSetInPathSeg(std::vector<Eigen::Vector2d> &point_set,
                                    const double ds);
 
 const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
-                                   const LineSegment &line, const double ds);
+                                   const LineSegment &line, const double ds,
+                                   const double lat_buffer = 0.0);
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
-                               const Arc &arc, const double ds);
+                               const Arc &arc, const double ds,
+                               const double lat_buffer = 0.0);
 
 const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
                                    const PathSegment &path_seg,
@@ -608,8 +647,8 @@ const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
 const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
                             const Eigen::Vector2d &point);
 
-// The eigenvalues of the symmetry matrix must be real numbers ; so there is no
-// need to use bool
+// The eigenvalues of the symmetry matrix must be real numbers ; so there is
+// no need to use bool
 const bool MinimumBoundingBox(
     std::vector<Eigen::Vector2d> &target_boundingbox,
     const std::vector<Eigen::Vector2d> &original_vertices);
@@ -790,6 +829,9 @@ struct GeometryPath {
   double cur_gear_length = 0.0;
   uint8_t path_count = 0;
   double cost = 0.0;
+  double gear_change_cost = 0.0;
+  double length_cost = 0.0;
+  double steer_change_cost = 0.0;
   PathPoint start_pose;
   PathPoint end_pose;
   uint8_t cur_gear = SEG_GEAR_INVALID;
@@ -813,65 +855,7 @@ struct GeometryPath {
     SetPath(std::vector<PathSegment>{_path_segment});
   }
 
-  void SetPath(const std::vector<PathSegment> &_path_segment_vec) {
-    Reset();
-    if (!_path_segment_vec.empty()) {
-      path_segment_vec = _path_segment_vec;
-      path_count = path_segment_vec.size();
-      cur_gear = path_segment_vec.front().seg_gear;
-      cur_steer = path_segment_vec.front().seg_steer;
-      last_gear = path_segment_vec.back().seg_gear;
-      last_steer = path_segment_vec.back().seg_steer;
-      start_pose = path_segment_vec.front().GetStartPose();
-      end_pose = path_segment_vec.back().GetEndPose();
-      gear_cmd_vec.reserve(path_count);
-      steer_cmd_vec.reserve(path_count);
-      for (const PathSegment &path_seg : path_segment_vec) {
-        gear_cmd_vec.emplace_back(path_seg.seg_gear);
-        steer_cmd_vec.emplace_back(path_seg.seg_steer);
-        total_length += path_seg.Getlength();
-        if (path_seg.collision_flag) {
-          collide_flag = true;
-        }
-      }
-
-      for (int i = 0; i < path_count; ++i) {
-        if (gear_cmd_vec[i] == cur_gear) {
-          cur_gear_length += path_segment_vec[i].Getlength();
-        } else {
-          break;
-        }
-      }
-
-      for (int i = 0; i < path_count - 1; ++i) {
-        if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
-          gear_change_count++;
-        }
-
-        // 直线到转弯
-        if (steer_cmd_vec[i] == SEG_STEER_STRAIGHT &&
-            (steer_cmd_vec[i + 1] == SEG_STEER_LEFT ||
-             steer_cmd_vec[i + 1] == SEG_STEER_RIGHT)) {
-          steer_change_count++;
-        }
-
-        // 左转到右转 或 右转到左转
-        if ((steer_cmd_vec[i] == SEG_STEER_LEFT &&
-             steer_cmd_vec[i + 1] == SEG_STEER_RIGHT) ||
-            (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
-             steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
-          steer_change_count += 2;
-        }
-
-        // 转弯到直线  后续看是否可以不考虑 因为直线更容易跟踪
-        if ((steer_cmd_vec[i] == SEG_STEER_LEFT ||
-             steer_cmd_vec[i] == SEG_STEER_RIGHT) &&
-            steer_cmd_vec[i + 1] == SEG_STEER_STRAIGHT) {
-          steer_change_count++;
-        }
-      }
-    }
-  }
+  void SetPath(const std::vector<PathSegment> &_path_segment_vec);
 
   void AddPath(const PathSegment &_path_segment) {
     std::vector<PathSegment> _path_segment_vec = path_segment_vec;
@@ -898,8 +882,13 @@ struct GeometryPath {
   void Reset() {
     path_segment_vec.clear();
     gear_change_count = 0;
+    steer_change_count = 0;
     total_length = 0.0;
+    cur_gear_length = 0.0;
     cost = 0.0;
+    gear_change_cost = 0.0;
+    length_cost = 0.0;
+    steer_change_cost = 0.0;
     path_count = 0;
     start_pose.Reset();
     end_pose.Reset();
@@ -928,52 +917,9 @@ struct GeometryPath {
     }
   }
 
-  void PrintInfo(const bool enable_log = true) const {
-    for (size_t i = 0; i < path_segment_vec.size(); i++) {
-      const auto &current_seg = path_segment_vec[i];
-      ILOG_INFO_IF(enable_log) << "col flag = " << current_seg.collision_flag;
-      if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-        const auto &line_seg = current_seg.line_seg;
+  void PrintInfo(const bool enable_log = true) const;
 
-        ILOG_INFO_IF(enable_log) << "Segment [" << i << "] "
-                                 << " LINE_SEGMENT "
-                                 << " length= " << line_seg.length;
-
-        ILOG_INFO_IF(enable_log)
-            << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
-
-        ILOG_INFO_IF(enable_log)
-            << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
-
-        ILOG_INFO_IF(enable_log) << "start_pos: " << line_seg.pA.transpose();
-        ILOG_INFO_IF(enable_log)
-            << "start_heading deg: " << line_seg.heading * kRad2Deg;
-        ILOG_INFO_IF(enable_log) << "end_pos: " << line_seg.pB.transpose();
-      } else {
-        const auto &arc_seg = current_seg.arc_seg;
-
-        ILOG_INFO_IF(enable_log) << "Segment [" << i << "] "
-                                 << "ARC_SEGMENT "
-                                 << "length= " << arc_seg.length;
-
-        ILOG_INFO_IF(enable_log)
-            << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
-
-        ILOG_INFO_IF(enable_log)
-            << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
-
-        ILOG_INFO_IF(enable_log) << "start_pos: " << arc_seg.pA.transpose();
-        ILOG_INFO_IF(enable_log)
-            << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
-        ILOG_INFO_IF(enable_log) << "end_pos: " << arc_seg.pB.transpose();
-        ILOG_INFO_IF(enable_log)
-            << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
-        ILOG_INFO_IF(enable_log)
-            << "center: " << arc_seg.circle_info.center.transpose()
-            << " radius = " << arc_seg.circle_info.radius;
-      }
-    }
-  }
+  void CalcCost();
 };
 
 const std::vector<PathPoint> SamplePathSegVec(
@@ -981,6 +927,14 @@ const std::vector<PathPoint> SamplePathSegVec(
 
 const bool IsTwoNumerEqual(const double a, const double b,
                            const double err = 1e-3);
+
+const std::string GetSegTypeString(const uint8_t seg_type);
+
+const std::string GetGearString(const uint8_t gear);
+
+const std::string GetSteerString(const uint8_t steer);
+
+const std::string GetSlotSideString(const uint8_t slot_side);
 
 }  // namespace geometry_lib
 }  // namespace pnc

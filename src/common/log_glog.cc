@@ -59,8 +59,16 @@ void InitGlog(const char *file) {
 
 #ifdef IFLY_LOG_PATH
   path_dir = "/asw/planning/glog";
+  bool create_path = CreateLogDirectory(path_dir);
 #else
   path_dir = "/opt/usr/iflytek/cluster_b/gea/log/planning_glog";
+  bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");
+  if (create_path) {
+    printf("create /opt/usr/iflytek/cluster_b/gea/log success\n");
+    create_path = CreateLogDirectory(path_dir);
+  } else {
+    printf("create log path fail\n");
+  }
 #endif
 
   FLAGS_log_dir = path_dir;
@@ -69,14 +77,6 @@ void InitGlog(const char *file) {
   // FLAGS_minloglevel = 0;
   //  50 Mb
   FLAGS_max_log_size = 50;
-
-  bool create_path = CreateLogDirectory("/opt/usr/iflytek/cluster_b/gea/log");
-  if (create_path) {
-    printf("create /opt/usr/iflytek/cluster_b/gea/log success\n");
-    create_path = CreateLogDirectory(path_dir);
-  } else {
-    printf("create log path fail\n");
-  }
 
   // Init glog
   if (glog_flag_.is_init == false) {

@@ -8,7 +8,6 @@
 #include <iostream>
 #include <vector>
 
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
 #include "config_context.h"
@@ -18,14 +17,15 @@
 #include "math_lib.h"
 #include "parallel_park_in_scenario.h"
 #include "parallel_path_generator.h"
-#include "slot_manager.h"
 #include "slot_management_info.pb.h"
+#include "slot_manager.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::ParallelPathGenerator *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface*pApaPlanInterface= nullptr;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
 static planning::apa_planner::ParallelParkInScenario parallel_park_planner;
@@ -35,7 +35,7 @@ int Init() {
   pBase = new ParallelPathGenerator();
   pBase->Reset();
 
-  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
   SyncParkingParameters(true);
   return 0;
 }
@@ -151,10 +151,8 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_world_ptr->GetApaDataPtr()->simu_param.sample_ds = path_ds;
   apa_world_ptr->GetApaDataPtr()->simu_param.is_complete_path = true;
 
-  apa_world_ptr->GetApaDataPtr()->measurement_data.pos << ego_x, ego_y;
-  apa_world_ptr->GetApaDataPtr()->measurement_data.heading = ego_heading;
-  apa_world_ptr->GetApaDataPtr()->measurement_data.heading_vec =
-      geometry_lib::GetUnitTangVecByHeading(ego_heading);
+  apa_world_ptr->GetMeasureDataManagerPtr()->SetPose(
+      Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
   DEBUG_PRINT("1");
   planning::common::SlotInfo select_slot_filter;
@@ -281,7 +279,7 @@ std::vector<std::vector<double>> GenTraTBoundary(double slot_length) {
     }
 
     bool is_front_tb = mathlib::IsInBound(pt.x(), slot_length - 0.3, 20.0) &&
-                       mathlib::IsInBound(pt.y(), 0.0, 2.2);
+                       mathlib::IsInBound(pt.y(), 0.0, 3.2);
     if (is_front_tb) {
       front_min_x = std::min(front_min_x, pt.x());
       front_max_y = std::max(front_max_y, pt.y());
@@ -384,27 +382,25 @@ void SampleAllDebugPaths() {
   debug_paths_y.clear();
 
   for (const auto &path : pBase->GetDebugInfo().debug_all_path_vec) {
-    std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
-    if (pBase->SamplePathSeg(path_point_vec, path.path_segment_vec)) {
-      std::vector<double> path_point_vec_x;
-      std::vector<double> path_point_vec_y;
-      for (const auto &path_point : path_point_vec) {
-        path_point_vec_x.emplace_back(path_point.pos.x());
-        path_point_vec_y.emplace_back(path_point.pos.y());
-        debug_paths_x.emplace_back(path_point_vec_x);
-        debug_paths_y.emplace_back(path_point_vec_y);
-      }
+    std::vector<pnc::geometry_lib::PathPoint> path_point_vec =
+        pnc::geometry_lib::SamplePathSegVec(path.path_segment_vec, 0.02);
+    std::vector<double> path_point_vec_x;
+    std::vector<double> path_point_vec_y;
+    for (const auto &path_point : path_point_vec) {
+      path_point_vec_x.emplace_back(path_point.pos.x());
+      path_point_vec_y.emplace_back(path_point.pos.y());
     }
+    debug_paths_x.emplace_back(path_point_vec_x);
+    debug_paths_y.emplace_back(path_point_vec_y);
   }
 }
 
 std::vector<std::vector<double>> GetTraSearchOutPath() {
   std::vector<double> path_x_vec;
   std::vector<double> path_y_vec;
-  std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
-
-  pBase->SamplePathSeg(path_point_vec,
-                       pBase->GetDebugInfo().tra_search_out_res);
+  std::vector<pnc::geometry_lib::PathPoint> path_point_vec =
+      pnc::geometry_lib::SamplePathSegVec(
+          pBase->GetDebugInfo().tra_search_out_res, 0.02);
   for (const auto point : path_point_vec) {
     path_x_vec.emplace_back(point.pos.x());
     path_y_vec.emplace_back(point.pos.y());

@@ -672,12 +672,12 @@ def load_lane_topo_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g
     lane_info = {'line_x_topo':[], 'line_y_topo':[],'type':[]}
     if i< line_topo_msg_size:
       lane_line = line_topo_msg[i]
-      lane_line_topo_refline_points = lane_line.lane_points_set
-      lane_line_topo_refline_points_size = lane_line.lane_points_set_size
+      lane_line_topo_refline_points = lane_line.lane_points_attr_set
+      lane_line_topo_refline_points_size = lane_line.lane_points_attr_set_size
       line_x = []
       line_y = []
-      line_x = [lane_line_topo_refline_points[j].x for j in range(lane_line_topo_refline_points_size)]
-      line_y = [lane_line_topo_refline_points[j].y for j in range(lane_line_topo_refline_points_size)]
+      line_x = [lane_line_topo_refline_points[j].lane_point_coordinate.x for j in range(lane_line_topo_refline_points_size)]
+      line_y = [lane_line_topo_refline_points[j].lane_point_coordinate.y for j in range(lane_line_topo_refline_points_size)]
 
       lane_info['line_x_topo'] = line_x
       lane_info['line_y_topo'] = line_y
@@ -769,7 +769,11 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
         for i in range(10):
           if i < virtual_lane_marks_size:
             for j in range(virtual_lane_refline_points_size):
-              if line_s[j] > lane_mark_s_vec[i]:
+              if i == virtual_lane_marks_size - 1:
+                lane_mark_point_x.append(line_x[-1])
+                lane_mark_point_y.append(line_y[-1])
+                break
+              if line_s[j] >= lane_mark_s_vec[i]:
                 lane_mark_point_x.append(line_x[j])
                 lane_mark_point_y.append(line_y[j])
                 break
@@ -782,7 +786,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
         for i in range(10):
           if i < virtual_lane_marks_size:
             for j in range(virtual_lane_refline_points_size):
-              if line_s[j] > (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
+              if line_s[j] >= (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
                 lane_mark_loc_x.append(line_x[j])
                 lane_mark_loc_y.append(line_y[j])
                 break
@@ -823,12 +827,12 @@ def load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = 
     lane_info = {'center_line_x_topo':[], 'center_line_y_topo':[]}
     if i< lane_topo_size:
       lane = lane_topo_msg_msg[i]
-      center_lane_topo_refline_points = lane.central_line.lane_points_set
-      center_lane_topo_refline_points_size = lane.central_line.lane_points_set_size
+      center_lane_topo_refline_points = lane.central_line.lane_points_attr_set
+      center_lane_topo_refline_points_size = lane.central_line.lane_points_attr_set_size
       line_x = []
       line_y = []
-      line_x = [center_lane_topo_refline_points[j].x for j in range(center_lane_topo_refline_points_size)]
-      line_y = [center_lane_topo_refline_points[j].y for j in range(center_lane_topo_refline_points_size)]
+      line_x = [center_lane_topo_refline_points[j].lane_point_coordinate.x for j in range(center_lane_topo_refline_points_size)]
+      line_y = [center_lane_topo_refline_points[j].lane_point_coordinate.y for j in range(center_lane_topo_refline_points_size)]
 
       lane_info['center_line_x_topo'] = line_x
       lane_info['center_line_y_topo'] = line_y
@@ -853,8 +857,8 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
       lane = lane_line[i]
       lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
 
-      local_points = lane.lane_points_set
-      point_num = lane.lane_points_set_size
+      lane_points_attr_set = lane.lane_points_attr_set
+      point_num = lane.lane_points_attr_set_size
       if g_is_display_enu:
         if loc_msg != None: # 长时轨迹
           coord_tf = coord_transformer()
@@ -862,12 +866,12 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
           cur_pos_yn = loc_msg.position.position_boot.y
           cur_yaw = loc_msg.orientation.euler_boot.yaw
           coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
-        line_x = [local_points[j].x for j in range(point_num)]
-        line_y = [local_points[j].y for j in range(point_num)]
+        line_x = [lane_points_attr_set[j].lane_point_coordinate.x for j in range(point_num)]
+        line_y = [lane_points_attr_set[j].lane_point_coordinate.y for j in range(point_num)]
         line_x, line_y = coord_tf.local_to_global(line_x, line_y)
       else:
-        line_x = [local_points[j].x for j in range(point_num)]
-        line_y = [local_points[j].y for j in range(point_num)]
+        line_x = [lane_points_attr_set[j].lane_point_coordinate.x for j in range(point_num)]
+        line_y = [lane_points_attr_set[j].lane_point_coordinate.y for j in range(point_num)]
 
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
@@ -901,12 +905,12 @@ def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g
     lane_info = {'stop_line_x':[], 'stop_line_y':[]}
     if i< stop_line_msg_size:
       stop_line = stop_line_msg[i]
-      stop_line_points = stop_line.lane_points_set
-      stop_line_points_size = stop_line.lane_points_set_size
+      stop_line_points = stop_line.lane_points_attr_set
+      stop_line_points_size = stop_line.lane_points_attr_set_size
       line_x = []
       line_y = []
-      line_x = [stop_line_points[j].x for j in range(stop_line_points_size)]
-      line_y = [stop_line_points[j].y for j in range(stop_line_points_size)]
+      line_x = [stop_line_points[j].lane_point_coordinate.x for j in range(stop_line_points_size)]
+      line_y = [stop_line_points[j].lane_point_coordinate.y for j in range(stop_line_points_size)]
 
       lane_info['stop_line_x'] = line_x
       lane_info['stop_line_y'] = line_y

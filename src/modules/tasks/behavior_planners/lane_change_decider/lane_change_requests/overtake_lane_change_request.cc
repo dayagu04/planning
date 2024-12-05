@@ -364,8 +364,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 #ifdef X86
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
-  const bool is_trigger_left = 
-      (is_left_overtake && is_left_lane_change_safe_);
+  const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
   static int counter_left = 0;
   if (!is_trigger_left) {
     counter_left = 0;
@@ -374,10 +373,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
   if (counter_left >= 5) {
     trigger_left_overtake = true;
-  } 
+  }
 
-  const bool is_trigger_right = 
-       (is_right_overtake && is_right_lane_change_safe_);
+  const bool is_trigger_right =
+      (is_right_overtake && is_right_lane_change_safe_);
   static int counter_right = 0;
   if (!is_trigger_right) {
     counter_right = 0;
@@ -386,7 +385,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
   if (counter_right >= 5) {
     trigger_right_overtake = true;
-  } 
+  }
 #else
   const bool trigger_left_overtake = checkOvertakeTrigger(
       current_time, is_left_overtake && is_left_lane_change_safe_,
@@ -618,18 +617,20 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   bool ramp_on_left = false;
   bool ramp_on_Right = false;
   bool is_on_highway = session_->environmental_model().is_on_highway();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
   if (is_on_highway) {
     ramp_on_left =
-        virtual_lane_mgr_->ramp_direction() == RampDirection::RAMP_ON_LEFT
+        route_info_output.ramp_direction == RampDirection::RAMP_ON_LEFT
             ? true
             : false;
     ramp_on_Right =
-        virtual_lane_mgr_->ramp_direction() == RampDirection::RAMP_ON_RIGHT
+        route_info_output.ramp_direction == RampDirection::RAMP_ON_RIGHT
             ? true
             : false;
-    const double distance_to_next_ramp = virtual_lane_mgr_->dis_to_ramp();
+    const double distance_to_next_ramp = route_info_output.dis_to_ramp;
     const double distance_to_next_split =
-        virtual_lane_mgr_->distance_to_first_road_split();
+        route_info_output.distance_to_first_road_split;
     double dis_between_first_road_split_and_ramp =
         distance_to_next_split - distance_to_next_ramp;
     if (distance_to_next_ramp < kSplitTriggleDistance &&

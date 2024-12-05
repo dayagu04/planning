@@ -22,8 +22,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   void GenTlane() override;
   void GenObstacles() override;
   virtual void Log() const override;
-  virtual void GenPlanningOutput() override;
-  virtual void GenPlanningPath() override;
   const bool UpdateEgoSlotInfo() override;
   const uint8_t PathPlanOnce() override;
   void RealTimeDynamicColDet(const EgoSlotInfo& ego_slot_info);
@@ -47,8 +45,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   planning::apa_planner::PerpendicularPathGenerator::Tlane obstacle_t_lane_;
   PerpendicularPathHeadingInPlanner perpendicular_path_planner_;
 
-  uint8_t gear_command_ = 0;
-  std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
 
   Eigen::Vector2d pt_center_replan_;
@@ -56,7 +52,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   double pt_center_replan_jump_dist_ = 0.0;
   double pt_center_replan_jump_heading_ = 0.0;
 
-  double max_target_velocity_ = 0.0;
 };
 
 }  // namespace apa_planner

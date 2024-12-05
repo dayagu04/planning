@@ -295,6 +295,7 @@ struct ApaParameters {
   int prepare_max_try_count = 2;
   double third_prepare_heading_threshold = 26.68;
   double min_turn_radius = 5.5;
+  double safe_circle_radius = 5.8;
   double max_one_step_arc_radius = 8.5;
   double max_radius_in_slot = 12.66;
   double min_radius_out_slot = 7.8;
@@ -341,6 +342,7 @@ struct ApaParameters {
   double min_opt_path_length = 0.7;
   // slot managent params
   bool release_slot_by_prepare = false;
+  bool lock_parallel_slot = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
   // slot update

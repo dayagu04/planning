@@ -118,7 +118,7 @@ bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
   if (!config_.enable_sdmap_curv_v_adjust) {
     return true;
   }
-  if (!session_->environmental_model().get_sdmap_valid()) {
+  if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     std::cout << "sd_map is invalid!!!" << std::endl;
     return true;
   }
@@ -130,7 +130,8 @@ bool SccLonBehaviorPlanner::JudgeCurvBySDMap() {
             << "ego_pose_y_:" << pose.position.y << std::endl;
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
-  const auto &sd_map = session_->environmental_model().get_sd_map();
+  const auto &sd_map = 
+      session_->environmental_model().get_route_info()->get_sd_map();
   double nearest_s = 0;
   double nearest_l = 0;
   // const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
@@ -514,10 +515,11 @@ void SccLonBehaviorPlanner::ConstructLonBehavInput() {
   // 6. set function_info
   auto function_info_input = lon_behav_plan_input_->mutable_function_info();
   function_info_input->CopyFrom(function_info);
-
-  double dis_to_ramp = virtual_lane_manager->dis_to_ramp();
-  double dis_to_merge = virtual_lane_manager->distance_to_first_road_merge();
-  bool is_on_ramp = virtual_lane_manager->is_on_ramp();
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
+  double dis_to_ramp = route_info_output.dis_to_ramp;
+  double dis_to_merge = route_info_output.distance_to_first_road_merge;
+  bool is_on_ramp = route_info_output.is_on_ramp;
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
   double dis_to_stopline = virtual_lane_manager->GetEgoDistanceToStopline();
   double dis_to_crosswalk = virtual_lane_manager->GetEgoDistanceToCrosswalk();

@@ -15,6 +15,7 @@
 #include "math/vec2d.h"
 #include "math_utils.h"
 #include "narrow_space_decider.h"
+#include "parking_scenario.h"
 #include "path_safe_checker.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
@@ -22,7 +23,6 @@
 #include "transform2d.h"
 #include "utils_math.h"
 #include "virtual_wall_decider.h"
-#include "parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -36,6 +36,11 @@ NarrowSpaceScenario::NarrowSpaceScenario(
 void NarrowSpaceScenario::Reset() {
   frame_.Reset();
   current_path_point_global_vec_.clear();
+
+  // reset planning output
+  memset(&planning_output_, 0, sizeof(planning_output_));
+
+  memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   const ApaParameters& params = apa_param.GetParam();
   if (params.path_generator_type == ParkPathGenerationType::SEARCH_BASED) {
@@ -51,7 +56,7 @@ void NarrowSpaceScenario::Reset() {
     }
   }
 
-  current_gear_ = AstarPathGear::parking;
+  current_gear_ = AstarPathGear::PARKING;
   in_slot_car_adjust_count_ = 0;
   is_path_single_shot_to_goal_ = false;
 
@@ -69,7 +74,7 @@ void NarrowSpaceScenario::Init() {
   // data structure.
   ILOG_INFO << "init astar thread";
 
-  current_gear_ = AstarPathGear::parking;
+  current_gear_ = AstarPathGear::PARKING;
   in_slot_car_adjust_count_ = 0;
   is_path_single_shot_to_goal_ = false;
 
@@ -85,7 +90,7 @@ void NarrowSpaceScenario::Init() {
 const bool NarrowSpaceScenario::CheckSegCompleted() {
   bool is_seg_complete = false;
   if (frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
       frame_.current_path_length > 1e-2) {
     if (frame_.stuck_uss_time > 0.068) {
       is_seg_complete = true;
@@ -97,7 +102,7 @@ const bool NarrowSpaceScenario::CheckSegCompleted() {
 
 const bool NarrowSpaceScenario::CheckUssStucked() {
   if (frame_.remain_dist_uss < apa_param.GetParam().max_replan_remain_dist &&
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     if (frame_.stuck_uss_time >
         apa_param.GetParam().astar_config.deadend_uss_stuck_replan_wait_time) {
       frame_.is_replan_by_uss = true;
@@ -184,7 +189,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
       (ego_head_lat_condition && heading_condition_2);
 
   const bool static_condition =
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
@@ -499,10 +504,9 @@ void NarrowSpaceScenario::ShrinkPathByFusionObj() {
   ParkObstacleList obs;
   PointCloudObstacleTransform obstacle_generator;
   const LocalView* local_view = apa_world_ptr_->GetLocalViewPtr();
-  const MeasurementData* measures_ptr =
-      &(apa_world_ptr_->GetApaDataPtr()->measurement_data);
-  Pose2D ego_pose(measures_ptr->pos[0], measures_ptr->pos[1],
-                  measures_ptr->heading);
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  Pose2D ego_pose(measures_ptr->GetPos()[0], measures_ptr->GetPos()[1],
+                  measures_ptr->GetHeading());
 
   ParkSpaceType slot_type;
   if (apa_world_ptr_->GetApaDataPtr()->slot_type ==
@@ -637,7 +641,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.path_generate_method =
       planning::AstarPathGenerateType::ASTAR_SEARCHING;
   cur_request.first_action_request.has_request = true;
-  cur_request.first_action_request.gear_request = AstarPathGear::none;
+  cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   cur_request.space_type = slot_type;
   cur_request.direction_request = ParkingVehDirection::TAIL_IN;
   cur_request.rs_request = RSPathRequestType::none;
@@ -698,12 +702,12 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     // gear need be different with history in next replanning
     if (frame_.replan_reason != 1) {
       switch (current_gear_) {
-        case AstarPathGear::reverse:
-          cur_request.first_action_request.gear_request = AstarPathGear::drive;
+        case AstarPathGear::REVERSE:
+          cur_request.first_action_request.gear_request = AstarPathGear::DRIVE;
           break;
-        case AstarPathGear::drive:
+        case AstarPathGear::DRIVE:
           cur_request.first_action_request.gear_request =
-              AstarPathGear::reverse;
+              AstarPathGear::REVERSE;
           break;
         default:
           break;
@@ -716,6 +720,17 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try) {
     cur_request.path_generate_method =
         planning::AstarPathGenerateType::TRY_SEARCHING;
+  }
+
+  // 目前,平行车位入库使用混合A星搜索，交换起点终点
+  cur_request.swap_start_goal = false;
+  if (cur_request.space_type == ParkSpaceType::PARALLEL) {
+    if (cur_request.path_generate_method ==
+            planning::AstarPathGenerateType::ASTAR_SEARCHING ||
+        cur_request.path_generate_method ==
+            planning::AstarPathGenerateType::TRY_SEARCHING) {
+      cur_request.swap_start_goal = true;
+    }
   }
 
   // search state
@@ -798,7 +813,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     // update gear
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (response.first_seg_path.size() > 0) {
-      if (response.first_seg_path[0].gear == AstarPathGear::drive) {
+      if (response.first_seg_path[0].gear == AstarPathGear::DRIVE) {
         frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
       }
       current_gear_ = response.first_seg_path[0].gear;
@@ -821,7 +836,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     ILOG_INFO << "set input";
 
     frame_.total_plan_count++;
-    if (current_gear_ == AstarPathGear::reverse &&
+    if (current_gear_ == AstarPathGear::REVERSE &&
         frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
       in_slot_car_adjust_count_++;
     }
@@ -964,6 +979,11 @@ const int NarrowSpaceScenario::LocalPathToGlobal(
     current_path_point_global_vec_.emplace_back(global_point);
   }
 
+  JSON_DEBUG_VECTOR("plan_traj_x", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_y", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_heading", std::vector<double>{0.0}, 3)
+  JSON_DEBUG_VECTOR("plan_traj_lat_buffer", std::vector<double>{0.0}, 3)
+
   return 0;
 }
 
@@ -994,8 +1014,8 @@ const bool NarrowSpaceScenario::UpdateEgoSlotInfo() {
 }
 
 const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
-  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
-  const auto slot_manager_ptr_ = apa_world_ptr_->GetSlotManagerPtr();
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
 
   frame_.correct_path_for_limiter = false;
   frame_.replan_flag = false;
@@ -1003,7 +1023,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
 
   ego_slot_info.target_managed_slot =
-      slot_manager_ptr_->GetEgoSlotInfo().select_slot_filter;
+      slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
 
   const auto& slot_points =
       ego_slot_info.target_managed_slot.corner_points().corner_point();
@@ -1060,18 +1080,18 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   if (ego_slot_info.target_managed_slot.slot_type() ==
       Common::PARKING_SLOT_TYPE_SLANTING) {
     const Eigen::Vector2d origin_pt_0 =
-        Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
+        Eigen::Vector2d(slot_manager_ptr->GetEgoSlotInfo()
                             .select_fusion_slot.corner_points[0]
                             .x,
-                        slot_manager_ptr_->GetEgoSlotInfo()
+                        slot_manager_ptr->GetEgoSlotInfo()
                             .select_fusion_slot.corner_points[0]
                             .y);
 
     const Eigen::Vector2d origin_pt_1 =
-        Eigen::Vector2d(slot_manager_ptr_->GetEgoSlotInfo()
+        Eigen::Vector2d(slot_manager_ptr->GetEgoSlotInfo()
                             .select_fusion_slot.corner_points[1]
                             .x,
-                        slot_manager_ptr_->GetEgoSlotInfo()
+                        slot_manager_ptr->GetEgoSlotInfo()
                             .select_fusion_slot.corner_points[1]
                             .y);
 
@@ -1105,30 +1125,31 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
     ego_slot_info.origin_pt_0_heading = 0.0;
   }
 
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
 
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
 
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
       std::sin(ego_slot_info.ego_heading_slot);
 
   ego_slot_info.fus_obj_valid_flag =
-      slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
+      slot_manager_ptr->GetEgoSlotInfo().fus_obj_valid_flag;
   ego_slot_info.obs_pt_vec_slot.clear();
   ego_slot_info.obs_pt_vec_slot.reserve(
-      slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot.size());
+      slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot.size());
 
   for (const Eigen::Vector2d& obs_pt :
-       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot) {
+       slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot) {
     const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
     ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
   }
   // ego_slot_info.obs_pt_vec_slot =
-  //     slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot;
+  //     slot_manager_ptr->GetEgoSlotInfo().obs_pt_vec_slot;
 
-  ego_slot_info.limiter = slot_manager_ptr_->GetEgoSlotInfo().limiter;
+  ego_slot_info.limiter = slot_manager_ptr->GetEgoSlotInfo().limiter;
 
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
       apa_world_ptr_->GetApaDataPtr()
@@ -1196,15 +1217,16 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
     const auto pM23 =
         0.5 * (ego_slot_info.slot_corner[2] + ego_slot_info.slot_corner[3]);
     Eigen::Vector2d ego_to_slot_center_vec =
-        0.5 * (pM01 + pM23) - measures_ptr->pos;
+        0.5 * (pM01 + pM23) - measures_ptr->GetPos();
 
     const double cross_ego_to_slot_center =
-        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->heading_vec,
+        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
                                                 ego_to_slot_center_vec);
 
     const double cross_ego_to_slot_heading =
         pnc::geometry_lib::GetCrossFromTwoVec2d(
-            measures_ptr->heading_vec, ego_slot_info.slot_origin_heading_vec);
+            measures_ptr->GetHeadingVec(),
+            ego_slot_info.slot_origin_heading_vec);
 
     // judge slot side via slot center and heading
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
@@ -1222,9 +1244,9 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // update stuck by uss time
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -1234,9 +1256,9 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // 车静止不动，这个值一直在更新
   if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
        frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1252,7 +1274,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // fix slot
   if (ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().fix_slot_occupied_ratio &&
-      !frame_.is_fix_slot && measures_ptr->static_flag) {
+      !frame_.is_fix_slot && measures_ptr->GetStaticFlag()) {
     frame_.is_fix_slot = true;
     ego_slot_info.fix_limiter = true;
   }
@@ -1269,7 +1291,7 @@ const bool NarrowSpaceScenario::CheckStuckFailed() {
 }
 
 void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
-  if (current_gear_ != AstarPathGear::reverse) {
+  if (current_gear_ != AstarPathGear::REVERSE) {
     return;
   }
 
@@ -1318,7 +1340,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
 }
 
 void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
-  if (current_gear_ != AstarPathGear::reverse) {
+  if (current_gear_ != AstarPathGear::REVERSE) {
     return;
   }
 
@@ -1408,7 +1430,7 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
   }
 
   // check plan number in slot
-  if (is_replan && current_gear_ == AstarPathGear::reverse &&
+  if (is_replan && current_gear_ == AstarPathGear::REVERSE &&
       frame_.ego_slot_info.slot_occupied_ratio > 0.2) {
     if (in_slot_car_adjust_count_ >= 3) {
       return false;
@@ -1420,7 +1442,8 @@ const bool NarrowSpaceScenario::CheckEgoReplanNumber(const bool is_replan) {
 
 const bool NarrowSpaceScenario::IsEgoNeedDriveForwardInSlot(
     const Pose2D& ego_pose, const double slot_width, const double slot_len) {
-  if (current_gear_ != AstarPathGear::reverse) {
+  ILOG_INFO << "cur gear " << static_cast<int>(current_gear_);
+  if (current_gear_ != AstarPathGear::REVERSE) {
     return false;
   }
 
@@ -1440,8 +1463,9 @@ const bool NarrowSpaceScenario::IsEgoNeedDriveForwardInSlot(
     }
   }
 
-  ILOG_INFO << "dist = " << ego_lat_offset
-            << ",theta = " << ifly_rad2deg(ego_pose.theta);
+  ILOG_INFO << "lateral dist = " << ego_lat_offset
+            << ",theta = " << ifly_rad2deg(ego_pose.theta)
+            << ",need_drive_forward = " << need_drive_forward;
 
   return need_drive_forward;
 }
@@ -1455,10 +1479,9 @@ const double NarrowSpaceScenario::CalRemainDistFromPath() {
     return 0.0;
   }
 
-  const MeasurementData* measures_ptr =
-      &(apa_world_ptr_->GetApaDataPtr()->measurement_data);
-  Pose2D ego_pose(measures_ptr->pos[0], measures_ptr->pos[1],
-                  measures_ptr->heading);
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  Pose2D ego_pose(measures_ptr->GetPos()[0], measures_ptr->GetPos()[1],
+                  measures_ptr->GetHeading());
 
   size_t nearest_point_id = 100000;
   nearest_point_id =
@@ -1491,7 +1514,7 @@ const double NarrowSpaceScenario::CalRemainDistFromPath() {
   if (base_vector.LengthSquare() > 1e-4) {
     base_vector.Normalize();
   } else {
-    if (current_gear_ == AstarPathGear::drive) {
+    if (current_gear_ == AstarPathGear::DRIVE) {
       base_vector.set_x(std::cos(base_point->heading));
       base_vector.set_y(std::sin(base_point->heading));
     } else {
@@ -1572,7 +1595,7 @@ void NarrowSpaceScenario::DebugPathString(
 }
 
 const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
-  const auto* measures_ptr = &apa_world_ptr_->GetApaDataPtr()->measurement_data;
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
 
   const auto& select_slot_filter =
@@ -1612,12 +1635,12 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
 
   // note: slot points' order is corrected in slot management
   Pose2D vec02;
-  vec02.x =  pt[2].x()-pt[0].x();
-  vec02.y =  pt[2].y()-pt[0].y();
+  vec02.x = pt[2].x() - pt[0].x();
+  vec02.y = pt[2].y() - pt[0].y();
 
   Pose2D ego_vector;
-  ego_vector.x  = std::cos(measures_ptr->heading);
-  ego_vector.y  = std::sin(measures_ptr->heading);
+  ego_vector.x = std::cos(measures_ptr->GetHeading());
+  ego_vector.y = std::sin(measures_ptr->GetHeading());
 
   slot_side_ = SlotRelativePosition::NONE;
   double cross = CrossProduct(ego_vector, vec02);
@@ -1626,8 +1649,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   } else if (cross < 0) {
     slot_side_ = SlotRelativePosition::RIGHT;
   } else {
-
-    ILOG_ERROR <<"ego is vertical";
+    ILOG_ERROR << "ego is vertical";
     return false;
   }
 
@@ -1658,9 +1680,10 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
                             ego_slot_info.slot_origin_heading);
 
-  ego_slot_info.ego_pos_slot = ego_slot_info.g2l_tf.GetPos(measures_ptr->pos);
+  ego_slot_info.ego_pos_slot =
+      ego_slot_info.g2l_tf.GetPos(measures_ptr->GetPos());
   ego_slot_info.ego_heading_slot =
-      ego_slot_info.g2l_tf.GetHeading(measures_ptr->heading);
+      ego_slot_info.g2l_tf.GetHeading(measures_ptr->GetHeading());
   ego_slot_info.ego_heading_slot_vec
       << std::cos(ego_slot_info.ego_heading_slot),
       std::sin(ego_slot_info.ego_heading_slot);
@@ -1696,9 +1719,9 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
   // update stuck by uss time
   // 只要车静止不动，这个值一直在更新，需要检查超声波的距离？
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_uss_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_uss_time = 0.0;
@@ -1706,9 +1729,9 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
 
   // update stuck time
   if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->static_flag && !measures_ptr->brake_flag &&
-      apa_world_ptr_->GetApaDataPtr()->cur_state ==
-          ApaStateMachine::ACTIVE_IN) {
+      measures_ptr->GetStaticFlag() && !measures_ptr->GetBrakeFlag() &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     frame_.stuck_time += apa_param.GetParam().plan_time;
   } else {
     frame_.stuck_time = 0.0;
@@ -1721,7 +1744,7 @@ const bool NarrowSpaceScenario::UpdateParallelSlotInfo() {
     frame_.pause_time = 0.0;
   }
 
-  ego_slot_info.slot_type  = 1;
+  ego_slot_info.slot_type = 1;
 
   return true;
 }
@@ -1757,7 +1780,7 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
       ego_center_lat_condition && ego_head_lat_condition && heading_condition;
 
   const bool static_condition =
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.static_flag;
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   const bool remain_s_condition =
       frame_.remain_dist < config.max_replan_remain_dist;
@@ -1768,15 +1791,15 @@ const bool NarrowSpaceScenario::CheckParallelSlotFinished() {
   return parking_finish;
 }
 
-const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
+void NarrowSpaceScenario::ScenarioTry() {
   if (apa_world_ptr_->GetApaDataPtr()->slot_type !=
       Common::PARKING_SLOT_TYPE_VERTICAL) {
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   if (!apa_param.GetParam()
            .astar_config.perpendicular_slot_auto_switch_to_astar) {
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   std::shared_ptr<SlotManager> slot_manager =
@@ -1787,7 +1810,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
     slot_manager->SlotReleaseByScenarioTry(
         false, SlotReleaseMethod::ASTAR_PLANNING_RELEASE);
 
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   }
 
   narrow_space_decider_.Process(apa_world_ptr_->GetApaDataPtr()->slot_type);
@@ -1810,7 +1833,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
 
     ILOG_INFO << "astar path try fail";
 
-    return ParkingScenarioStatus::STATUS_FAIL;
+    return;
   } else if (res == PathPlannerResult::PLAN_UPDATE) {
     narrow_space_decider_.SetAstarState(AstarSearchState::SUCCESS);
     slot_manager->SlotReleaseByScenarioTry(
@@ -1818,7 +1841,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
 
     ILOG_INFO << "hybrid astar path try success";
 
-    return ParkingScenarioStatus::STATUS_RUNNING;
+    return;
   } else if (res == PathPlannerResult::WAIT_PATH) {
     SlotReleaseState astar_release_state =
         slot_manager->GetEgoSlotInfo()
@@ -1831,7 +1854,7 @@ const ParkingScenarioStatus NarrowSpaceScenario::ScenarioTry() {
     }
   }
 
-  return ParkingScenarioStatus::STATUS_TRY;
+  return;
 }
 
 void NarrowSpaceScenario::ThreadClear() {

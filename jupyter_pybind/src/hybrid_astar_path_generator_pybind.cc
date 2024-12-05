@@ -332,7 +332,7 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   const EulerDistanceTransform *edt_ =
       hybrid_astar_interface_->GetEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::reverse);
+      edt_->GetCircleFootPrint(AstarPathGear::REVERSE);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 
@@ -885,7 +885,7 @@ std::vector<Eigen::Vector3d> Update(
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
-    request.history_gear = AstarPathGear::drive;
+    request.history_gear = AstarPathGear::DRIVE;
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);

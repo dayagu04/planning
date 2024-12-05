@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
 #include "debug_info_log.h"
@@ -26,6 +25,7 @@
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "math_lib.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace planning {
 namespace apa_planner {
@@ -1339,14 +1339,6 @@ const bool ParallelPathGenerator::GenAlignedPreparingLine(
     return true;
   }
 
-  const double rac_tlane_bound =
-      input_.tlane.obs_pt_inside.y() +
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width);
-
-  const double rac_channel_bound =
-      input_.tlane.channel_y -
-      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width);
-
   std::vector<uint8_t> ref_gear_vec = {pnc::geometry_lib::SEG_GEAR_REVERSE,
                                        pnc::geometry_lib::SEG_GEAR_DRIVE};
 
@@ -1363,12 +1355,6 @@ const bool ParallelPathGenerator::GenAlignedPreparingLine(
     }
 
     const auto& aligned_pos = aligned_path_seg_vec.front().GetEndPos();
-
-    // if (!pnc::mathlib::IsInBound(aligned_pos.y(), rac_tlane_bound,
-    //                              rac_channel_bound)) {
-    //   // DEBUG_PRINT("aligned_y = " << aligned_y << ", over bound!");
-    //   continue;
-    // }
 
     // if (CheckPathSegVecCollided(aligned_path_seg_vec, 0.2)) {
     //   DEBUG_PRINT("aligned plan collided!");
@@ -4451,14 +4437,36 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   if (pnc::mathlib::IsDoubleEqual(extend_distance, 0.0)) {
     return;
   }
-  // if (output_.is_last_path == true) {
-  //   std::cout << "is last path, not extend path\n";
-  //   return;
-  // }
 
   if (output_.path_segment_vec.size() < 1) {
     return;
   }
+
+  double current_path_len = 0.0;
+  for (size_t i = output_.path_seg_index.first;
+       i < output_.path_seg_index.second; i++) {
+    current_path_len += output_.path_segment_vec[i].Getlength();
+  }
+
+  const pnc::geometry_lib::PathPoint current_path_end =
+      output_.path_segment_vec[output_.path_seg_index.second].GetEndPose();
+  pnc::geometry_lib::PrintPose("end pose = ", current_path_end);
+
+  const bool is_last_path =
+      std::fabs(current_path_end.pos.x() - calc_params_.target_pose.pos.x()) <
+          1e-2 &&
+      std::fabs(current_path_end.heading * kRad2Deg) < 1.0;
+  DEBUG_PRINT("is_last_path = " << is_last_path);
+
+  if (is_last_path &&
+      current_path_len >= apa_param.GetParam().min_path_length) {
+    return;
+  }
+
+  // if (output_.is_last_path == true) {
+  //   std::cout << "is last path, not extend path\n";
+  //   return;
+  // }
 
   auto& path_seg = output_.path_segment_vec[output_.path_seg_index.second];
 
@@ -4479,7 +4487,13 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
     new_line.seg_type = pnc::geometry_lib::SEG_TYPE_LINE;
 
     if (path_len < apa_param.GetParam().min_path_length) {
-      extend_distance = apa_param.GetParam().min_path_length;
+      if (is_last_path) {
+        extend_distance = std::max(
+            0.1, 0.1 + 2.0 * apa_param.GetParam().min_path_length - path_len);
+      } else {
+        extend_distance = std::max(
+            extend_distance, apa_param.GetParam().min_path_length - path_len);
+      }
     }
 
     new_line.line_seg.length = extend_distance;
@@ -4539,10 +4553,11 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
 
       output_.path_seg_index.second += 1;
 
-      std::cout << "inset line segment successful\n";
+      DEBUG_PRINT("inset line segment successful, extending length = "
+                  << extend_distance);
 
     } else {
-      std::cout << "safe_remain_dist < 0.0, can not inset line segment\n";
+      DEBUG_PRINT("safe_remain_dist < 0.0, can not inset line segment");
     }
   }
 
@@ -4566,7 +4581,8 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
   }
 }
 
-void ParallelPathGenerator::ExtendCurrentFollowLastPath(double extend_distance) {
+void ParallelPathGenerator::ExtendCurrentFollowLastPath(
+    double extend_distance) {
   if (pnc::mathlib::IsDoubleEqual(extend_distance, 0.0)) {
     return;
   }

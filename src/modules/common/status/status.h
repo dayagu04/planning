@@ -4,6 +4,7 @@
 #include <string>
 
 namespace planning {
+namespace common {
 
 enum class StatusCode {
   OK,
@@ -16,23 +17,22 @@ enum class StatusCode {
   TRAFFIC_LIGHT_DECIDER_ERROR
 };
 
-class SpeedStatus : public std::exception {
+class Status : public std::exception {
  public:
-  SpeedStatus() = default;
+  Status();
 
-  SpeedStatus(const StatusCode& code, const std::string& msg)
-      : code_(code), msg_(msg) {}
+  Status(const StatusCode& code, const std::string& msg);
 
-  virtual ~SpeedStatus() = default;
+  virtual ~Status() = default;
 
-  static SpeedStatus OK();
+  static Status OK();
 
   bool ok() const;
 
   StatusCode code() const;
-  bool operator==(const SpeedStatus& rh) const;
+  bool operator==(const Status& rh) const;
 
-  bool operator!=(const SpeedStatus& rh) const;
+  bool operator!=(const Status& rh) const;
 
   std::string error_message() const;
 
@@ -44,5 +44,5 @@ class SpeedStatus : public std::exception {
   StatusCode code_ = StatusCode::OK;
   std::string msg_ = "OK";
 };
-
+}  // namespace common
 }  // namespace planning

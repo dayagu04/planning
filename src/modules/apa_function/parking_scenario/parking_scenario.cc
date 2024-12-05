@@ -1,4 +1,5 @@
 #include "parking_scenario.h"
+
 #include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
@@ -16,21 +17,18 @@
 namespace planning {
 namespace apa_planner {
 
-ParkingScenario::ParkingScenario()
-    : scenario_status_(ParkingScenarioStatus::STATUS_UNKNOWN), name_("") {}
+ParkingScenario::ParkingScenario() {}
 
-ParkingScenario::ParkingScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr)
-    : scenario_status_(ParkingScenarioStatus::STATUS_UNKNOWN),
-      name_(""),
-      type_(ParkingScenarioType::SCENARIO_UNKNOWN) {
+ParkingScenario::ParkingScenario(
+    const std::shared_ptr<ApaWorld>& apa_world_ptr) {
   SetApaWorldPtr(apa_world_ptr);
 }
 
-std::string ParkingScenario::GetName() { return name_; }
+std::string ParkingScenario::GetName() { return ""; }
 
-void ParkingScenario::Init() {
-  return;
-}
+void ParkingScenario::Init() { return; }
+
+void ParkingScenario::Reset() { return; }
 
 void ParkingScenario::ScenarioRunning() {
   // run plan core
@@ -47,20 +45,6 @@ void ParkingScenario::ScenarioRunning() {
   return;
 }
 
-void ParkingScenario::Reset() {
-  scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
-
-  return;
-}
-
-void ParkingScenario::Process() {
-  if (scenario_status_ == ParkingScenarioStatus::STATUS_RUNNING) {
-    ScenarioRunning();
-  }
-
-  return;
-}
-
 void ParkingScenario::InitSimulation() {
   if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
       apa_world_ptr_->GetApaDataPtr()->simu_param.is_reset) {
@@ -71,7 +55,8 @@ void ParkingScenario::InitSimulation() {
 }
 
 const bool ParkingScenario::CheckPaused() const {
-  if (apa_world_ptr_->GetApaDataPtr()->cur_state == ApaStateMachine::SUSPEND) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+      ApaStateMachine::SUSPEND) {
     return true;
   } else {
     return false;
@@ -79,13 +64,12 @@ const bool ParkingScenario::CheckPaused() const {
 }
 
 const bool ParkingScenario::CheckPlanSkip() const {
-  if (frame_.plan_stm.planning_status == PARKING_FINISHED ||
-      frame_.plan_stm.planning_status == PARKING_FAILED) {
+  if ((frame_.plan_stm.planning_status == PARKING_FINISHED ||
+       frame_.plan_stm.planning_status == PARKING_FAILED) &&
+      !apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
     ILOG_INFO << "plan has been finished or failed, need reset";
 
-    if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
-      apa_world_ptr_->GetSlotManagerPtr()->Reset();
-    }
+    apa_world_ptr_->GetSlotManagerPtr()->Reset();
 
     return true;
   } else {
@@ -107,8 +91,8 @@ void ParkingScenario::SetParkingStatus(uint8_t status) {
 
 void ParkingScenario::GenPlanningOutput() {
   pnc::geometry_lib::PathPoint current_ego_pose(
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
-      apa_world_ptr_->GetApaDataPtr()->measurement_data.heading);
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(),
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetHeading());
 
   ILOG_INFO << "frame_.plan_stm.planning_status = "
             << static_cast<int>(frame_.plan_stm.planning_status)
@@ -187,7 +171,8 @@ void ParkingScenario::GenPlanningPath() {
   const double vel_limit = pnc::mathlib::Interp1(
       ratio_tab, vel_limit_tab, frame_.ego_slot_info.slot_occupied_ratio);
 
-  planning_output_.trajectory.target_reference.target_velocity = vel_limit;
+  planning_output_.trajectory.target_reference.target_velocity =
+      frame_.vel_target;
 
   // send uss remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
@@ -209,7 +194,7 @@ void ParkingScenario::GenPlanningPath() {
                            iflyauto::PARKING_SLOT_TYPE_SLANTING)
                           ? 1.0
                           : 0.0;
-  planning_output_.trajectory.trajectory_points[3].distance = flag;
+  planning_output_.trajectory.trajectory_points[3].distance = 0.0;
 
   planning_output_.trajectory.trajectory_points[4].distance =
       frame_.remain_dist_col_det;
@@ -252,8 +237,8 @@ const double ParkingScenario::CalRemainDistFromPath() {
     double s_proj = 0.0;
     bool success = pnc::geometry_lib::CalProjFromSplineByBisection(
         0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
-        apa_world_ptr_->GetApaDataPtr()->measurement_data.pos,
-        frame_.x_s_spline, frame_.y_s_spline);
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(), frame_.x_s_spline,
+        frame_.y_s_spline);
 
     if (success == true) {
       remain_dist = frame_.current_path_length - s_proj;
@@ -277,22 +262,32 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
   uss_obstacle_avoider_ptr->Update(&planning_output_,
-                                   apa_world_ptr_->GetApaDataPtr());
+                                   apa_world_ptr_->GetApaDataPtr(),
+                                   apa_world_ptr_->GetMeasureDataManagerPtr());
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;
 
-  const double obs_pt_remain_dist =
+  double obs_pt_remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist -
       safe_dist;
 
+  if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    remain_dist -= 0.068;
+    obs_pt_remain_dist -= 0.068;
+  }
+
   ILOG_INFO << "origin_uss remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist
-            << "  uss remain dist = " << remain_dist;
+            << "  uss remain dist = " << remain_dist
+            << "  enable_corner_uss_process = "
+            << apa_param.GetParam().enable_corner_uss_process;
 
   ILOG_INFO << "origin_obs_pt remain dist = "
             << uss_obstacle_avoider_ptr->GetRemainDistInfo().obs_pt_remain_dist
             << "  obs_pt remain dist = " << obs_pt_remain_dist;
+
+  frame_.vel_target = uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target;
 
   if (apa_param.GetParam().enable_corner_uss_process) {
     return remain_dist;
@@ -302,7 +297,7 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
 }
 
 const bool ParkingScenario::PostProcessPath() {
-  size_t origin_trajectory_size = current_path_point_global_vec_.size();
+  const size_t origin_trajectory_size = current_path_point_global_vec_.size();
   if (origin_trajectory_size < 2) {
     frame_.spline_success = false;
     ILOG_INFO << "error: origin_trajectory_size = " << origin_trajectory_size;
@@ -310,41 +305,56 @@ const bool ParkingScenario::PostProcessPath() {
     return false;
   }
 
-  const size_t trajectory_size = origin_trajectory_size + 1;
-
   std::vector<double> x_vec;
   std::vector<double> y_vec;
+  std::vector<double> heading_vec;
   std::vector<double> s_vec;
-  x_vec.clear();
-  y_vec.clear();
-  s_vec.clear();
-
-  x_vec.resize(trajectory_size);
-  y_vec.resize(trajectory_size);
-  s_vec.resize(trajectory_size);
-
+  x_vec.reserve(origin_trajectory_size + 1);
+  y_vec.reserve(origin_trajectory_size + 1);
+  heading_vec.reserve(origin_trajectory_size + 1);
+  s_vec.reserve(origin_trajectory_size + 1);
   double s = 0.0;
   double ds = 0.0;
   for (size_t i = 0; i < origin_trajectory_size; ++i) {
-    x_vec[i] = current_path_point_global_vec_[i].pos.x();
-    y_vec[i] = current_path_point_global_vec_[i].pos.y();
-    if (i == 0) {
-      s_vec[i] = s;
-    } else {
-      ds = std::hypot(x_vec[i] - x_vec[i - 1], y_vec[i] - y_vec[i - 1]);
-      s += std::max(ds, 1e-3);
-      s_vec[i] = s;
+    pnc::geometry_lib::PathPoint pt = current_path_point_global_vec_[i];
+    if (i > 0) {
+      pnc::geometry_lib::PathPoint pt_ = current_path_point_global_vec_[i - 1];
+      ds = std::hypot(pt.pos.x() - pt_.pos.x(), pt.pos.y() - pt_.pos.y());
+      if (ds < 1e-3) {
+        continue;
+      }
+      s += ds;
     }
+    x_vec.emplace_back(pt.pos.x());
+    y_vec.emplace_back(pt.pos.y());
+    heading_vec.emplace_back(pt.heading);
+    s_vec.emplace_back(s);
+  }
+
+  const size_t x_vec_size = x_vec.size();
+  if (x_vec_size < 2) {
+    frame_.spline_success = false;
+    ILOG_INFO << "error: x_vec_size = " << x_vec.size();
+    frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
+    return false;
+  }
+
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.resize(x_vec_size);
+  pnc::geometry_lib::PathPoint point;
+  for (size_t i = 0; i < x_vec_size; ++i) {
+    point.pos << x_vec[i], y_vec[i];
+    point.heading = heading_vec[i];
+    current_path_point_global_vec_[i] = point;
   }
 
   frame_.current_path_length = s;
 
   // calculate the extended point and insert
-  Eigen::Vector2d start_point(x_vec[origin_trajectory_size - 2],
-                              y_vec[origin_trajectory_size - 2]);
+  const Eigen::Vector2d start_point(x_vec[x_vec_size - 2],
+                                    y_vec[x_vec_size - 2]);
 
-  Eigen::Vector2d end_point(x_vec[origin_trajectory_size - 1],
-                            y_vec[origin_trajectory_size - 1]);
+  const Eigen::Vector2d end_point(x_vec[x_vec_size - 1], y_vec[x_vec_size - 1]);
 
   Eigen::Vector2d extended_point;
 
@@ -358,11 +368,9 @@ const bool ParkingScenario::PostProcessPath() {
     return false;
   }
 
-  x_vec[origin_trajectory_size] = extended_point.x();
-  y_vec[origin_trajectory_size] = extended_point.y();
-
-  s_vec[origin_trajectory_size] =
-      s_vec[origin_trajectory_size - 1] + frame_.path_extended_dist;
+  x_vec.emplace_back(extended_point.x());
+  y_vec.emplace_back(extended_point.y());
+  s_vec.emplace_back(s_vec.back() + frame_.path_extended_dist);
 
   frame_.x_s_spline.set_points(s_vec, x_vec);
   frame_.y_s_spline.set_points(s_vec, y_vec);
@@ -372,32 +380,16 @@ const bool ParkingScenario::PostProcessPath() {
   return true;
 }
 
-void ParkingScenario::CreateTasks() {
-
-  return;
-}
-
-void ParkingScenario::Enter(const ParkingScenarioStatus status) {
-  scenario_status_ = status;
-
-  return;
-}
+void ParkingScenario::CreateTasks() { return; }
 
 void ParkingScenario::ThreadClear() { return; }
 
-const ParkingScenarioStatus ParkingScenario::ScenarioTry() {
-
+void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
   std::shared_ptr<SlotManager> slot_manager =
       apa_world_ptr_->GetSlotManagerPtr();
   slot_manager->SlotReleaseByScenarioTry(
       true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
-
-  return ParkingScenarioStatus::STATUS_RUNNING;
-}
-
-void ParkingScenario::Exit() {
-  scenario_status_ = ParkingScenarioStatus::STATUS_DONE;
 
   return;
 }

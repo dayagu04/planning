@@ -15,12 +15,6 @@
 
 namespace planning {
 
-enum SplitRelativeDirection {
-  None = 0,
-  ON_LEFT = 1,
-  ON_RIGHT = 2,
-};
-
 class EgoLaneTrackManger {
  public:
   explicit EgoLaneTrackManger(planning::framework::Session *session);
@@ -78,7 +72,7 @@ class EgoLaneTrackManger {
 
   void SelectEgoLaneWithPlan(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-      int zero_relative_id_nums,
+      const std::vector<int> &order_ids,
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
           &virtual_id_mapped_lane);
 
@@ -164,7 +158,7 @@ class EgoLaneTrackManger {
   void ComputeZeroRelativeIdOrderIdIndex(
       std::shared_ptr<VirtualLane> last_track_ego_lane,
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-      const std::vector<int> &order_ids, int zero_relative_id_order_id_index);
+      const std::vector<int> &order_ids, int& zero_relative_id_order_id_index);
 
  private:
   planning::framework::Session *session_ = nullptr;

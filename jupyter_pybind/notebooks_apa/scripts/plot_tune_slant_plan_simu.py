@@ -334,11 +334,13 @@ def slider_callback(vehicle_type, car_inflation, ego_x, ego_y, ego_heading, is_l
   plan_path_x = []
   plan_path_y = []
   plan_path_heading = []
+  plan_path_lat_buffer = []
 
   for i in range(len(current_path_point_global_vec_)):
      plan_path_x.append(current_path_point_global_vec_[i][0])
      plan_path_y.append(current_path_point_global_vec_[i][1])
      plan_path_heading.append(current_path_point_global_vec_[i][2])
+     plan_path_lat_buffer.append(current_path_point_global_vec_[i][3])
 
   data_planning_tune.data.update({
     'plan_path_x': plan_path_x,
@@ -387,8 +389,9 @@ def slider_callback(vehicle_type, car_inflation, ego_x, ego_y, ego_heading, is_l
   for k in range(len(plan_path_x)):
     car_xn = []
     car_yn = []
-    for i in range(len(car_xb)):
-        tmp_x, tmp_y = local2global(car_xb[i], car_yb[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
+    car_xb_temp, car_yb_temp, wheel_base = load_car_params_patch_parking(vehicle_type, plan_path_lat_buffer[k])
+    for i in range(len(car_xb_temp)):
+        tmp_x, tmp_y = local2global(car_xb_temp[i], car_yb_temp[i], plan_path_x[k], plan_path_y[k], plan_path_heading[k])
         car_xn.append(tmp_x)
         car_yn.append(tmp_y)
     car_box_x_vec.append(car_xn)

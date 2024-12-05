@@ -24,8 +24,6 @@ class ApaPlanInterface {
 
   void Reset();
 
-  void ResetForSearching();
-
   const bool Update(const LocalView* local_view_ptr);
 
   // only for simulation

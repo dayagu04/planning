@@ -87,7 +87,8 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   const auto& clane = virtual_lane_mgr_->get_current_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
-  is_emergency_avoidance_situation_ = false;
+  const auto& route_info_output = session_->
+      environmental_model().get_route_info()->get_route_info_output();
 
   UpdateEmergencyAvoidanceSituation(lc_status);
   LOG_DEBUG(
@@ -136,13 +137,13 @@ void EmergenceAvoidRequest::Update(int lc_status) {
 
   if (is_left_lane_change_safe && is_right_lane_change_safe) {
     bool ramp_on_Right = false;
-    bool is_on_highway = virtual_lane_mgr_->is_ego_on_expressway();
+    bool is_on_highway = route_info_output.is_ego_on_expressway;
     if (is_on_highway) {
       ramp_on_Right =
-          virtual_lane_mgr_->ramp_direction() == RampDirection::RAMP_ON_RIGHT
+          route_info_output.ramp_direction == RampDirection::RAMP_ON_RIGHT
               ? true
               : false;
-      const double distance_to_next_ramp = virtual_lane_mgr_->dis_to_ramp();
+      const double distance_to_next_ramp = route_info_output.dis_to_ramp;
       if (distance_to_next_ramp < kSplitTriggleDistance) {
         lane_change_to_left = ramp_on_Right ? false : true;
       } else {
@@ -169,9 +170,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to left "
             "\n");
       }
-      if (left_boundary_type ==
-              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
-          curr_direct_exist && request_type_ != NO_CHANGE &&
+      if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&
@@ -196,9 +195,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             "changing lane to right "
             "\n");
       }
-      if (right_boundary_type ==
-              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
-          curr_direct_exist && request_type_ != NO_CHANGE &&
+      if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
            (lc_status == kLaneChangeCancel &&
             (lane_change_lane_mgr_->has_origin_lane() &&

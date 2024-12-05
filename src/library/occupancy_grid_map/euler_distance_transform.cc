@@ -120,7 +120,11 @@ void EulerDistanceTransform::CVMatrixToArray(cv::Mat *edt_matrix) {
 }
 
 const float EulerDistanceTransform::GetDistanceByIndex(const OgmIndex &id) {
-  return data_.dist[id.x][id.y];
+  if (IsIndexValid(id)) {
+    return data_.dist[id.x][id.y];
+  }
+
+  return 10000.0;
 }
 
 void EulerDistanceTransform::CopyEDT(const EDTData &data) {
@@ -220,8 +224,8 @@ const bool EulerDistanceTransform::DistanceCheckForPoint(
     float *min_dist, const pnc::geometry_lib::PathPoint &pose,
     const uint8_t gear) {
   const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
-                                      ? AstarPathGear::drive
-                                      : AstarPathGear::reverse;
+                                      ? AstarPathGear::DRIVE
+                                      : AstarPathGear::REVERSE;
 
   const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
 
@@ -300,8 +304,8 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
 const bool EulerDistanceTransform::IsCollisionForPoint(
     const pnc::geometry_lib::PathPoint &pose, const uint8_t gear) {
   const AstarPathGear path_gear = (gear == pnc::geometry_lib::SEG_GEAR_DRIVE)
-                                      ? AstarPathGear::drive
-                                      : AstarPathGear::reverse;
+                                      ? AstarPathGear::DRIVE
+                                      : AstarPathGear::REVERSE;
 
   const Pose2D pose_2d(pose.pos.x(), pose.pos.y(), pose.heading);
 

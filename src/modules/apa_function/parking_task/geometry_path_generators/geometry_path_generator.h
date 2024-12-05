@@ -87,6 +87,8 @@ class GeometryPathGenerator : public ParkingTask {
 
     uint8_t path_planner_state = 0;
 
+    bool is_searching_stage = false;
+
     void Set(const Tlane &tlane_in,
              const pnc::geometry_lib::PathPoint &ego_pose_in,
              bool is_complete_path_in) {
@@ -112,6 +114,7 @@ class GeometryPathGenerator : public ParkingTask {
     std::vector<uint8_t> steer_vec;
     std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
     std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
+    std::vector<pnc::geometry_lib::PathPoint> all_gear_path_point_vec;
 
     void Reset() {
       path_available = false;
@@ -127,6 +130,7 @@ class GeometryPathGenerator : public ParkingTask {
       steer_vec.clear();
       path_segment_vec.clear();
       path_point_vec.clear();
+      all_gear_path_point_vec.clear();
       current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
     }
@@ -139,13 +143,8 @@ class GeometryPathGenerator : public ParkingTask {
   virtual const bool Update(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
   virtual const bool SetCurrentPathSegIndex();
-  virtual void SetLineSegmentHeading();
   virtual const bool CheckCurrentGearLength();
   virtual const bool SampleCurrentPathSeg();
-
-  const bool SamplePathSeg(
-      std::vector<pnc::geometry_lib::PathPoint> &path_point_vec,
-      const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);
 
   virtual void PrintOutputSegmentsInfo() const;
 
@@ -160,20 +159,6 @@ class GeometryPathGenerator : public ParkingTask {
 
  protected:
   virtual void Preprocess() = 0;
-
-  void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) const;
-
-  void SampleLineSegment(const pnc::geometry_lib::LineSegment &cur_line_seg,
-                         const double ds);
-  void SampleLineSegment(
-      std::vector<pnc::geometry_lib::PathPoint> &path_point_vec,
-      const pnc::geometry_lib::LineSegment &cur_line_seg, const double ds);
-
-  void SampleArcSegment(const pnc::geometry_lib::Arc &cur_arc_seg,
-                        const double ds);
-  void SampleArcSegment(
-      std::vector<pnc::geometry_lib::PathPoint> &path_point_vec,
-      const pnc::geometry_lib::Arc &cur_arc_seg, const double ds);
 
   Input input_;
   Output output_;

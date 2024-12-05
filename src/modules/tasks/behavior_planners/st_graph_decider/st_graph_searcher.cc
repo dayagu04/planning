@@ -329,7 +329,10 @@ bool StGraphSearcher::SearchStPath(
   auto current_node = start_node;
   auto best_node = current_node;
   best_node.set_h_cost(std::numeric_limits<double>::max());
-
+  std::vector<double> expanded_nodes_s_vec{};
+  std::vector<double> expanded_nodes_t_vec{};
+  std::vector<double> history_cur_nodes_s_vec{};
+  std::vector<double> history_cur_nodes_t_vec{};
   // start A* search loop
   while (!open_set.IsEmpty()) {
     // const double current_time = IflyTime::Now_ms();
@@ -340,13 +343,14 @@ bool StGraphSearcher::SearchStPath(
     //   LOG_DEBUG("time out, time used: %.4f", time_used);
     //   break;
     // }
-    if (count > 30) {
+    if (count > 100) {
       break;
     }
 
     count++;
     current_node = nodes.at(open_set.Top().first);
-
+    history_cur_nodes_s_vec.emplace_back(current_node.s());
+    history_cur_nodes_t_vec.emplace_back(current_node.t());
     // update best node
     if (current_node.t() > kBestNodeMinT - kEpsilon &&
         current_node.h_cost() < best_node.h_cost()) {
@@ -387,23 +391,28 @@ bool StGraphSearcher::SearchStPath(
         child_node.set_parent_id(current_node.id());
         open_set.Push(child_node.id(), child_node.TotalCost());
         nodes[child_node.id()] = child_node;
+        expanded_nodes_s_vec.emplace_back(child_node.s());
+        expanded_nodes_t_vec.emplace_back(child_node.t());
       }
     }
   }
-
+  JSON_DEBUG_VECTOR("expanded_nodes_s_vec", expanded_nodes_s_vec, 3)
+  JSON_DEBUG_VECTOR("expanded_nodes_t_vec", expanded_nodes_t_vec, 3)
+  JSON_DEBUG_VECTOR("history_cur_nodes_s_vec", history_cur_nodes_s_vec, 3)
+  JSON_DEBUG_VECTOR("history_cur_nodes_t_vec", history_cur_nodes_t_vec, 3)
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
-    LOG_DEBUG("st search fail, goal not reached");
+    LOG_DEBUG("st search fail, goal not reached \n");
     bool is_visualize_all_vertexes = config_.is_visualize_st_search_process;
     if (is_visualize_all_vertexes) {
       // VisualizeStSearchVertexes(nodes);
     }
     if (best_node.h_cost() == std::numeric_limits<double>::max()) {
-      LOG_DEBUG("st search fail, goal not reached");
+      LOG_DEBUG("st search fail, goal not reached \n");
       return false;
     } else {
       current_node = best_node;
-      // std::cout << "st search fail, but use best node to reconstruct path\n";
+      LOG_DEBUG("st search fail, but use best node to reconstruct path\n");
     }
   }
 
@@ -714,18 +723,18 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
 
   succ_node->set_cost(edge_cost);
 
-  // // print cost result
-  // std::cout << "\t\t\tcompute node cost: " << std::endl;
-  // std::cout << "\t\t\t\tcost_yield:      " << cost_yield << std::endl;
-  // std::cout << "\t\t\t\tcost_overtake:   " << cost_overtake << std::endl;
-  // std::cout << "\t\t\t\tcost_vel:        " << cost_vel << std::endl;
-  // std::cout << "\t\t\t\tcost_accel:      " << cost_accel << std::endl;
-  // std::cout << "\t\t\t\tcost_accel_sign: " << cost_accel_sign_changed <<
-  // std::endl; std::cout << "\t\t\t\tcost_jerk:       " << cost_jerk <<
-  // std::endl; std::cout << "\t\t\t\tcost_length:     " << cost_length <<
-  // std::endl; std::cout << "\t\t\t\tcost_virtual_yield:     " <<
-  // cost_virtual_yield << std::endl; std::cout << "\t\t\t\tedge_cost:       "
-  // << edge_cost << std::endl;
+  // print cost result
+  // std::cout << "\tcompute node id: " << succ_node->id() << std::endl;
+  // std::cout << "\tcompute node cost: " << std::endl;
+  // std::cout << "\t\tcost_yield:      " << cost_yield << std::endl;
+  // std::cout << "\t\tcost_overtake:   " << cost_overtake << std::endl;
+  // std::cout << "\t\tcost_vel:        " << cost_vel << std::endl;
+  // std::cout << "\t\tcost_accel:      " << cost_accel << std::endl;
+  // std::cout << "\t\tcost_accel_sign: " << cost_accel_sign_changed <<
+  // std::endl; std::cout << "\t\tcost_jerk:       " << cost_jerk << std::endl;
+  // std::cout << "\t\tcost_length:     " << cost_length << std::endl;
+  // std::cout << "\t\tcost_virtual_yield:     " << std::endl;
+  // std::cout << "\t\tedge_cost:       " << edge_cost << std::endl;
 
   double cost_h = ComputeHeuristicCost(input_info, *succ_node);
   succ_node->set_h_cost(cost_h);

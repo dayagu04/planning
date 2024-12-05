@@ -140,7 +140,7 @@ void HybridAStarInterface::AdjustGoalBySafeCheck(Pose2D* adjust_goal,
   *adjust_goal = request_goal;
   tf.SetBasePose(*adjust_goal, sin_theta, cos_theta);
 
-  AstarPathGear gear = AstarPathGear::reverse;
+  AstarPathGear gear = AstarPathGear::REVERSE;
 
   for (size_t i = 0; i < 20; i++) {
     if (edt_.IsCollisionForPoint(&tf, gear)) {
@@ -172,14 +172,19 @@ int HybridAStarInterface::UpdateOutput() {
   search_state_ = AstarSearchState::SEARCHING;
 
   UpdateSearchBoundary();
+  hybrid_astar_->UpdateConfig(request_);
+  // swap start and goal
+  if (request_.swap_start_goal) {
+    SwapStartGoal();
+    UpdateReqeustBySwapStartGoal();
+  }
 
   UpdateEDT();
   // update clear zone. This zone not contain any obstacle.
   clear_zone_.GenerateBoundingBox(request_.start_, &obs_);
 
   hybrid_astar_->Clear();
-
-  DebugAstarRequestString(request_);
+  hybrid_astar_->UpdateConfig(request_);
 
   // vertical parking center ref line
   ref_line_.Init(request_.real_goal,
@@ -192,6 +197,7 @@ int HybridAStarInterface::UpdateOutput() {
   edt_.UpdateSafeBuffer(0.2, 0.4, 0.2);
   future_path_decider.Process(&coarse_traj_, request_.plan_reason, ego_pose_,
                               &edt_, &ref_line_, vehicle_param_.min_turn_radius,
+                              request_.swap_start_goal,
                               &request_.first_action_request);
   no_gear_switch = future_path_decider.IsNextPathNoGearSwitchByHistory();
 
@@ -262,7 +268,8 @@ int HybridAStarInterface::UpdateOutput() {
                                request_, &clear_zone_, &coarse_traj_, &edt_,
                                &ref_line_);
 
-  } else {
+  } else if (request_.path_generate_method ==
+             AstarPathGenerateType::CUBIC_POLYNOMIAL_SAMPLING) {
     double dist_to_slot_up_edge =
         request_.slot_length - initial_state_.DistanceToOrigin();
     double lon_min_sampling_length;
@@ -349,8 +356,7 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     return 0;
   }
   request_ = request;
-
-  DebugAstarRequestString(request);
+  hybrid_astar_->UpdateConfig(request);
 
   // range
   UpdateSearchBoundary();
@@ -371,6 +377,12 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   goal_state_.y = end[1];
   goal_state_.theta = end[2];
 
+  // swap start and goal
+  if (request.swap_start_goal) {
+    SwapStartGoal();
+    UpdateReqeustBySwapStartGoal();
+  }
+
   if (hybrid_astar_ == nullptr) {
     ILOG_ERROR << "hybrid_astar_ is nullptr";
 
@@ -386,6 +398,22 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   ref_line_.Init(request_.real_goal,
                  Pose2D(request_.real_goal.x + 10.0, request_.real_goal.y,
                         request_.real_goal.theta));
+
+  if (request_.space_type == ParkSpaceType::PARALLEL) {
+    double lat_buffer = 0.1;
+    double lon_buffer = 0.2;
+    edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
+                          static_cast<float>(lon_buffer),
+                          static_cast<float>(lat_buffer));
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
+  } else {
+    double lat_buffer = 0.2;
+    double lon_buffer = 0.4;
+    edt_.UpdateSafeBuffer(static_cast<float>(lat_buffer),
+                          static_cast<float>(lon_buffer),
+                          static_cast<float>(lat_buffer));
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lon_buffer);
+  }
 
   if (request.path_generate_method == AstarPathGenerateType::ASTAR_SEARCHING) {
     hybrid_astar_->AstarSearch(initial_state_, goal_state_, map_bounds_,
@@ -410,7 +438,8 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
     search_state_ = AstarSearchState::SEARCHING;
 
-    double dist_to_slot_up_edge = request.slot_length - initial_state_.DistanceToOrigin();
+    double dist_to_slot_up_edge =
+        request.slot_length - initial_state_.DistanceToOrigin();
     double lon_min_sampling_dist;
     if (request_.space_type == ParkSpaceType::VERTICAL ||
         request_.space_type == ParkSpaceType::SLANTING) {
@@ -558,7 +587,7 @@ const int HybridAStarInterface::GetFallBackPath(
   AStarPathPoint point;
 
   point = AStarPathPoint(initial_state_.x, initial_state_.y,
-                         initial_state_.theta, AstarPathGear::parking, 0.0,
+                         initial_state_.theta, AstarPathGear::PARKING, 0.0,
                          AstarPathType::START_NODE, 0.0);
 
   result.emplace_back(point);
@@ -572,7 +601,7 @@ const int HybridAStarInterface::GetFallBackPath(HybridAStarResult* result) {
   result->x.emplace_back(initial_state_.x);
   result->y.emplace_back(initial_state_.y);
   result->phi.emplace_back(initial_state_.theta);
-  result->gear.emplace_back(AstarPathGear::parking);
+  result->gear.emplace_back(AstarPathGear::PARKING);
   result->type.emplace_back(AstarPathType::START_NODE);
   result->accumulated_s.emplace_back(0.0);
   result->kappa.emplace_back(0.0);
@@ -682,7 +711,7 @@ const AstarSearchState HybridAStarInterface::TransformFirstSegmentPath(
     AStarPathPoint point;
 
     point =
-        AStarPathPoint(start.x, start.y, start.theta, AstarPathGear::parking,
+        AStarPathPoint(start.x, start.y, start.theta, AstarPathGear::PARKING,
                        0.0, AstarPathType::START_NODE, 0.0);
 
     result.emplace_back(point);
@@ -831,6 +860,13 @@ void HybridAStarInterface::UpdateEDTBasePose(Pose2D& ogm_base_pose) {
     ogm_base_pose.theta = 0.0;
   }
 
+  return;
+}
+
+void HybridAStarInterface::UpdateReqeustBySwapStartGoal() {
+  request_.first_action_request.has_request = false;
+  request_.first_action_request.dist_request = 0.0;
+  request_.first_action_request.gear_request = AstarPathGear::NONE;
   return;
 }
 

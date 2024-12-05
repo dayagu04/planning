@@ -859,10 +859,10 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     AstarRequest request;
     request.first_action_request.has_request = true;
-    if (history_gear_request_ == AstarPathGear::drive) {
-      request.first_action_request.gear_request = AstarPathGear::reverse;
+    if (history_gear_request_ == AstarPathGear::DRIVE) {
+      request.first_action_request.gear_request = AstarPathGear::REVERSE;
     } else {
-      request.first_action_request.gear_request = AstarPathGear::drive;
+      request.first_action_request.gear_request = AstarPathGear::DRIVE;
     }
     request.path_generate_method =
         planning::AstarPathGenerateType::ASTAR_SEARCHING;

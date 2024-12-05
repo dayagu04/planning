@@ -13,7 +13,10 @@
 
 #include "Eigen/Core"
 #include "apa_data.h"
+#include "apa_measure_data_manager.h"
 #include "apa_param_config.h"
+#include "apa_slot.h"
+#include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
 #include "camera_preception_parking_slot_c.h"
 #include "collision_detection/collision_detection.h"
@@ -31,7 +34,6 @@
 #include "task_basic_types.pb.h"
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
-#include "apa_slot.h"
 
 static const size_t slot_corner_pt_nums = 4;
 
@@ -381,8 +383,6 @@ class SlotManager {
   };
 
   struct Frame {
-    ApaStateMachine apa_state;
-    const MeasurementData* measurement_data_ptr;
     const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
     const iflyauto::IFLYLocalization* localization_ptr;
@@ -469,7 +469,9 @@ class SlotManager {
     }
   };
 
-  bool Update(const std::shared_ptr<ApaData> apa_data_ptr);
+  bool Update(const std::shared_ptr<ApaData> apa_data_ptr,
+              const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
+              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr);
 
   void AddUssPerceptObstacles();
 
@@ -522,6 +524,9 @@ class SlotManager {
 
  private:
   Frame frame_;
+
+  std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
+  std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
 
   void AddObstacles();
 
