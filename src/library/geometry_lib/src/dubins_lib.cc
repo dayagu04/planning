@@ -1080,7 +1080,6 @@ const bool DubinsLibrary::OneStepDubinsUpdateByVer(const double min_length) {
 }
 
 const std::vector<DubinsLibrary::Output> DubinsLibrary::Update() {
-  bool solve_success = false;
   const double dist = dist_tol;
   dist_tol = 0.016;
 
