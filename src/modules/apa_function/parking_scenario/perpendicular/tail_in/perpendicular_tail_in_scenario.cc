@@ -443,15 +443,15 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     }
   }
 
+  // construct real time obs
+  GenTlane();
+  GenObstacles();
+
   // real time dynamic col det
   frame_.remain_dist_col_det = 3.0;
   if (!apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
       !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
-
-    // construct real time obs
-    GenTlane();
-    GenObstacles();
 
     const double car_already_move_dist =
         frame_.current_path_length - frame_.remain_dist;
@@ -894,18 +894,6 @@ void PerpendicularTailInScenario::GenTlane() {
 
   double right_x = right_pq_for_x.top().x();
   double real_right_x = right_x;
-
-  // temp hack, when use uss obs, obs lat y is set virtual value
-  if (apa_param.GetParam().tmp_no_consider_obs_dy &&
-      !ego_slot_info.fus_obj_valid_flag) {
-    if (!left_empty) {
-      left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
-    }
-    if (!right_empty) {
-      right_y =
-          -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
-    }
-  }
 
   // set t lane area
   const double threshold = 0.6868;
