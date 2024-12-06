@@ -77,8 +77,14 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
-        // iflyauto::LaneBoundaryType boundary_type =
-        // MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
+
+        iflyauto::LaneBoundaryType boundary_type =
+            MakesureCurrentBoundaryType(transition_info_.lane_change_direction);
+        const bool is_dashed_line =
+            (boundary_type ==
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+            boundary_type ==
+                iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
 
         bool is_propose_to_cancel =
             CheckIfProposeToCancel(transition_info_.lane_change_direction,
@@ -87,40 +93,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         //在propose阶段计算靠近车道线的横向偏移量
         // CalculateLatCloseValue();
 
-        //当前plannning的规划周期为10hz，安全性检查连续5帧通过则视为安全。
-        //若在10帧内未通过则采取自车向目标车道靠近的策略
-        const double ego_half_width = VehicleConfigurationContext::
-            Instance()->get_vehicle_param().width / 2;
-        const double cur_lane_half_width = 
-            virtual_lane_mgr->get_current_lane()->width() / 2;
-        const double buffer = 0.35;
-        const double lat_offset_value = cur_lane_half_width - ego_half_width - buffer;
-        const double v_ego =
-            session_->environmental_model().get_ego_state_manager()->ego_v();
-        double obj_a = 0.0;
-        if (target_lane_rear_node_) {
-          obj_a = target_lane_rear_node_->node_accel();
-        }
-        //假设后车加速度大于0.7m/s2,则认为后车没有减速的意图
-        bool is_no_brake_attention_side_car = obj_a > 0.7;
-        bool is_lat_offset_when_neirghbor_car = 
-            !target_lane_middle_node_ ||
-            (target_lane_middle_node_ && lat_close_boundary_offset_ > kEps );
-        //lat_close_boundary_offset_ > kEps表示已经在靠近车道边界线的过程中了
-
-        if (lat_offset_value > 0 &&
-            propose_state_frame_nums_ > 10 &&
-            is_lat_offset_when_neirghbor_car &&
-            !is_large_car_in_side_ &&
-            !is_no_brake_attention_side_car) {
-          lat_close_boundary_offset_ = 
-              transition_info_.lane_change_direction == LEFT_CHANGE ? 
-                  lat_offset_value : -lat_offset_value;
-        } else {
-          lat_close_boundary_offset_ = 0;
-        }
-
-        if (is_propose_to_execution) {
+        if (is_propose_to_execution &&
+            is_dashed_line) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeExecution;
           lc_lane_mgr_->set_fix_lane_to_target();
@@ -322,11 +296,13 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
       reference_path_manager->get_reference_path_by_lane(
           target_lane_virtual_id);
   const double ego_l_target = target_reference_path->get_frenet_ego_state().l();
-  const double width_by_target =
-      virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id)
-          ->width();
-  if (std::abs(ego_l_target) < std::abs(width_by_target) / 2) {
-    return true;
+  const auto target_lane = virtual_lane_manager->get_lane_with_virtual_id(
+      target_lane_virtual_id);
+  if (target_lane != nullptr) {
+    const double width_by_target = target_lane->width();
+    if (std::abs(ego_l_target) < std::abs(width_by_target) / 2) {
+      return true;
+    }
   }
 
   const auto &reference_path_ego_state =
@@ -580,7 +556,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   LaneChangeStageInfo lc_state_info;
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const auto &target_lane = virtual_lane_manager->get_lane_with_virtual_id(
+  const auto target_lane = virtual_lane_manager->get_lane_with_virtual_id(
       lc_req_mgr_->target_lane_virtual_id());
   if (target_lane == nullptr) {
     return lc_state_info;
@@ -633,7 +609,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   LaneChangeStageInfo lc_state_info;
   const auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const auto &target_lane = virtual_lane_manager->get_lane_with_virtual_id(
+  const auto target_lane = virtual_lane_manager->get_lane_with_virtual_id(
       lc_req_mgr_->target_lane_virtual_id());
   if (target_lane == nullptr) {
     return lc_state_info;
@@ -1510,5 +1486,41 @@ return agent::AgentType::BUS == agent->type() ||
       agent::AgentType::TRUCK == agent->type() ||
       agent::AgentType::TRAILER == agent->type() ||
       agent->node_length() > kLargeAgentLengthM;
+}
+
+void LaneChangeStateMachineManager::CalculateLatCloseValue () {
+    //当前plannning的规划周期为10hz，安全性检查连续5帧通过则视为安全。
+    //若在10帧内未通过则采取自车向目标车道靠近的策略
+    const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+    const double ego_half_width = VehicleConfigurationContext::
+        Instance()->get_vehicle_param().width / 2;
+    const double cur_lane_half_width = 
+        virtual_lane_mgr->get_current_lane()->width() / 2;
+    const double buffer = 0.35;
+    const double lat_offset_value = cur_lane_half_width - ego_half_width - buffer;
+    const double v_ego =
+        session_->environmental_model().get_ego_state_manager()->ego_v();
+    double obj_a = 0.0;
+    if (target_lane_rear_node_) {
+      obj_a = target_lane_rear_node_->node_accel();
+    }
+    //假设后车加速度大于0.7m/s2,则认为后车没有减速的意图
+    bool is_no_brake_attention_side_car = obj_a > 0.7;
+    bool is_lat_offset_when_neirghbor_car = 
+        !target_lane_middle_node_ ||
+        (target_lane_middle_node_ && lat_close_boundary_offset_ > kEps );
+    //lat_close_boundary_offset_ > kEps表示已经在靠近车道边界线的过程中了
+
+    if (lat_offset_value > 0 &&
+        propose_state_frame_nums_ > 10 &&
+        is_lat_offset_when_neirghbor_car &&
+        !is_large_car_in_side_ &&
+        !is_no_brake_attention_side_car) {
+      lat_close_boundary_offset_ = 
+          transition_info_.lane_change_direction == LEFT_CHANGE ? 
+              lat_offset_value : -lat_offset_value;
+    } else {
+      lat_close_boundary_offset_ = 0;
+    }
 }
 }  // namespace planning
