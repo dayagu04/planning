@@ -426,7 +426,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
             ego_slot_info.slot_origin_heading_vec);
 
     // judge slot side via slot center and heading
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+    // frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;

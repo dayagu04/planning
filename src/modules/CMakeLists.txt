@@ -39,7 +39,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 set(ci_dir ${SYSTEM_INTEGRATION_PROJECT_CI_DIR})
-if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
+if(PP_ENABLE OR PYBIND_TOOL_ENABLE OR THIRDPARTY_ENABLE OR INTERFACE_ENABLE OR AD_ENABLE)
   set(ci_dir ${CMAKE_CURRENT_LIST_DIR}/../../.ci)
 endif()
 include(${ci_dir}/version.cmake)
