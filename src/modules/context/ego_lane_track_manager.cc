@@ -220,42 +220,44 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
        (coarse_planning_info.target_state == kLaneChangeComplete) ||
        (coarse_planning_info.target_state == kLaneChangeCancel));
   if (is_lc_change && (lc_state != kLaneKeeping)) {
-    for (const auto& relative_id_lane : relative_id_lanes) {
-      if (relative_id_lane != nullptr) {
-        current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
-            target_lane_vitrual_id, relative_id_lane, relative_id_lanes,
-            virtual_id_mapped_lane);
-        if (current_relative_id_lane_mapping_cost <
-            target_lane_maping_diff_total) {
-          target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
-          target_lane_order_id = relative_id_lane->get_order_id();
-        }
-      } else {
-        continue;
-      }
-    }
-    LOG_DEBUG("target_lane_maping_diff_total: %f \n",
-              target_lane_maping_diff_total);
-
-    if (target_lane_maping_diff_total <
-        lane_point_match_lateral_dis_threshold) {
-      target_lane_order_and_virtual_diff =
-          target_lane_vitrual_id - target_lane_order_id;
-      virtual_id_mapped_lane.clear();
-      for (auto& lane : relative_id_lanes) {
-        if (lane != nullptr) {
-          auto lane_virtual_id =
-              lane->get_order_id() + target_lane_order_and_virtual_diff;
-          virtual_id_mapped_lane[lane_virtual_id] = lane;
-          lane->set_virtual_id(lane_virtual_id);
-          if (lane->get_relative_id() == 0) {
-            current_lane_virtual_id_ = lane_virtual_id;
+    if (lane_change_decider_output.lc_request_source != INT_REQUEST) {
+      for (const auto& relative_id_lane : relative_id_lanes) {
+        if (relative_id_lane != nullptr) {
+          current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
+              target_lane_vitrual_id, relative_id_lane, relative_id_lanes,
+              virtual_id_mapped_lane);
+          if (current_relative_id_lane_mapping_cost <
+              target_lane_maping_diff_total) {
+            target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
+            target_lane_order_id = relative_id_lane->get_order_id();
           }
         } else {
           continue;
         }
       }
-      return;
+      LOG_DEBUG("target_lane_maping_diff_total: %f \n",
+                target_lane_maping_diff_total);
+
+      if (target_lane_maping_diff_total <
+          lane_point_match_lateral_dis_threshold) {
+        target_lane_order_and_virtual_diff =
+            target_lane_vitrual_id - target_lane_order_id;
+        virtual_id_mapped_lane.clear();
+        for (auto& lane : relative_id_lanes) {
+          if (lane != nullptr) {
+            auto lane_virtual_id =
+                lane->get_order_id() + target_lane_order_and_virtual_diff;
+            virtual_id_mapped_lane[lane_virtual_id] = lane;
+            lane->set_virtual_id(lane_virtual_id);
+            if (lane->get_relative_id() == 0) {
+              current_lane_virtual_id_ = lane_virtual_id;
+            }
+          } else {
+            continue;
+          }
+        }
+        return;
+      }
     }
 
     // 换道过程中目标车道匹配不成功 则匹配原车道
@@ -548,9 +550,13 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         double target_ego_s = 0.0;
         double target_ego_l = 0.0;
         Point2D ego_cart_target_frenet;
-        if (!track_lane_frenet_coord->XYToSL(ego_cart_point,
+        auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
+        if (cur_lane_frenet_coord == nullptr) {
+          continue;
+        }
+        if (!cur_lane_frenet_coord->XYToSL(ego_cart_point,
                                              ego_cart_target_frenet)) {
-          return;
+          continue;
         } else {
           target_ego_s = ego_cart_target_frenet.x;
           target_ego_l = ego_cart_target_frenet.y;
@@ -2152,19 +2158,8 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
   }
   auto last_track_ego_lane_frenet_coord =
       last_track_ego_lane->get_lane_frenet_coord();
-  double target_ego_s = 0.0;
-  double target_ego_l = 0.0;
-  Point2D ego_cart_target_frenet;
   if (last_track_ego_lane_frenet_coord == nullptr) {
     return;
-  } else {
-    if (!last_track_ego_lane_frenet_coord->XYToSL(ego_cart_point,
-                                                  ego_cart_target_frenet)) {
-      return;
-    } else {
-      target_ego_s = ego_cart_target_frenet.x;
-      target_ego_l = ego_cart_target_frenet.y;
-    }
   }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
@@ -2173,9 +2168,22 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
       std::shared_ptr<VirtualLane> relative_id_lane =
           relative_id_lanes[order_ids[i]];
       const auto& lane_points = relative_id_lane->lane_points();
-
       if (lane_points.size() <= 2) {
         continue;
+      }
+      auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
+      if (cur_lane_frenet_coord == nullptr) {
+        continue;
+      }
+      double target_ego_s = 0.0;
+      double target_ego_l = 0.0;
+      Point2D ego_cart_target_frenet;
+      if (!cur_lane_frenet_coord->XYToSL(ego_cart_point,
+                                                    ego_cart_target_frenet)) {
+        continue;
+      } else {
+        target_ego_s = ego_cart_target_frenet.x;
+        target_ego_l = ego_cart_target_frenet.y;
       }
       int point_nums = 0;
       double total_lateral_offset = 0.0;
