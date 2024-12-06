@@ -1,3 +1,18 @@
+# planning2.7.4
+###  修改说明
+Feature
+1. 尽快结束对cut in车的避让，位置递推补偿
+2. 避让从侧方超车的车辆
+3. 基于车速设置横向bound权重
+4. scc 纵向v3 pipeline 添加boundmaker ，不影响当前v2实车效果
+
+Bug
+1. 修复横向bound后处理bug
+2. 超车变道保守 调整目标车道所关注的障碍物范围
+3. 修复追踪自车当前车道过程中前后帧车道中心线长度跳变导致当前帧virtual_lane构建的kd_tree计算ego_s发生错误的问题
+4. 针对拨杆变道目标车道存在于路沿侧可变车道导致连续变两车道的问题 优先更新origin_lane的virtual_id
+5. 暂时关闭利用虚拟车道判断前方存在汇流
+
 # planning2.7.3
 ###  修改说明
 Feature
