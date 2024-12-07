@@ -92,10 +92,20 @@ struct SlotReleaseInfo {
 struct SlotObstacleInfo {
   bool is_occupied_by_obs;
 
-  double left_line_obs_dist;
-  double right_line_obs_dist;
-  double top_line_obs_dist;
-  double bottom_line_obs_dist;
+  double left_side_obs_dist;
+  double right_side_obs_dist;
+  double top_side_obs_dist;
+  double bottom_side_obs_dist;
+
+  void Clear() {
+    is_occupied_by_obs = false;
+
+    left_side_obs_dist = 0;
+    right_side_obs_dist = 0;
+    top_side_obs_dist = 0;
+    bottom_side_obs_dist = 0;
+    return;
+  }
 };
 
 enum class SlotMaterialType : uint8_t {
@@ -112,7 +122,7 @@ enum class SlotMaterialType : uint8_t {
 // SlotInfoWindow. 可以统一成一种类型.
 class ApaSlot {
  public:
-  ApaSlot() = default;
+  ApaSlot();
 
   void Init();
 
@@ -126,7 +136,7 @@ class ApaSlot {
   const int Id() const { return id_; }
 
  private:
-  //  perception related
+  //  perception related：客观属性
   std::vector<Eigen::Vector2d> perception_corners_;
   SlotType slot_type = SlotType::INVALID;
   SlotSide slot_side = SlotSide::INVALID;
@@ -138,28 +148,27 @@ class ApaSlot {
   iflyauto::SlotSourceType perception_source_type_;
   bool is_perception_release_;
   SlotMaterialType slot_material_type_;
+  bool is_selected_slot_;
 
-  // planning related
+  // planning related: 客观属性
   // construct lot from 4 corners
-  //  corner should be ordered counter-clockwise
-  //  and corners[0] and corners[3] is the open edge
-  std::vector<Eigen::Vector2d> ccw_corners_;
+  std::vector<Eigen::Vector2d> corners_;
   Limiter limiters_;
   double heading_;
   Eigen::Vector2d heading_vec_;
   int id_ = 0;
+  double ego_occupied_ratio_;
+  ad_common::math::LineSegment2d center_line_;
+  SlotObstacleInfo obs_info_;
+
+  // planning related: 决策属性
   bool is_planning_release_;
   SlotReleaseInfo release_info_;
   bool is_suggested_slot_;
+  // todo: add advised parking directory: left/middle/right out, head/tail in
 
   // 后轴中心的停车点，该值由决策器生成
   Pose2D stop_pose_;
-
-  double ego_occupied_ratio_;
-
-  ad_common::math::LineSegment2d center_line_;
-
-  SlotObstacleInfo obs_info_;
 };
 
 struct ApaSlotList {
