@@ -48,8 +48,8 @@ static const size_t kMaxParallelShiftNums = 6;
 
 static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
-static const double kMaxHeadingFirstStepForwardLine = 5.0;
-static const double kMaxFirstStepForwardInclinedLineLength = 1.36;
+static const double kMaxHeadingFirstStepForwardLine = 30.0;
+static const double kMaxFirstStepForwardInclinedLineLength = 1.56;
 static const double kVirtualObsDetaXMag = 0.1;
 static const double kVirtualObsDetaYMag = 0.2;
 static const double kMinTlaneAddedLength = 0.8;
@@ -320,34 +320,29 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     const pnc::geometry_lib::PathPoint& start_pose) {
   // ILOG_INFO <<"------PlanFromTargetToLine-------");
+  using namespace pnc::mathlib;
+  using namespace pnc::geometry_lib;
 
-  auto ego_line_unit =
-      pnc::geometry_lib::BuildLineSegByPose(start_pose.pos, start_pose.heading);
-  auto ego_line = ego_line_unit;
+  Arc arc_1;
+  Arc arc_2;
   bool success = false;
-  pnc::geometry_lib::Arc arc_1;
-  pnc::geometry_lib::Arc arc_2;
+  auto ego_line_unit = BuildLineSegByPose(start_pose.pos, start_pose.heading);
+  auto ego_line = ego_line_unit;
+
   arc_1.circle_info.radius = apa_param.GetParam().min_turn_radius;
   const uint8_t arc_1_steer =
-      (calc_params_.is_left_side ? pnc::geometry_lib::SEG_STEER_RIGHT
-                                 : pnc::geometry_lib::SEG_STEER_LEFT);
-
-  // ILOG_INFO <<
-  //     "valid_target_pt_vec size = " <<
-  //     calc_params_.valid_target_pt_vec.size());
+      (calc_params_.is_left_side ? SEG_STEER_RIGHT : SEG_STEER_LEFT);
 
   bool is_narrow_channel_activated = false;
-  std::vector<pnc::geometry_lib::PathSegment> narrow_path_seg_vec;
+  std::vector<PathSegment> narrow_path_seg_vec;
   for (const auto& target_pose : calc_params_.valid_target_pt_vec) {
-    // pnc::geometry_lib::PrintPose("current target", target_pose);
     arc_1.pA = target_pose.pos;
     arc_1.headingA = target_pose.heading;
     arc_1.circle_info.center = CalEgoTurningCenter(
         target_pose, apa_param.GetParam().min_turn_radius, arc_1_steer);
 
-    if (!pnc::geometry_lib::CalTwoSameGearArcWithLine(
-            arc_1, arc_2, ego_line_unit, pnc::geometry_lib::SEG_GEAR_DRIVE)) {
-      // ILOG_INFO <<"CalTwoArcWithLine fail!");
+    if (!CalTwoSameGearArcWithLine(arc_1, arc_2, ego_line_unit,
+                                   SEG_GEAR_DRIVE)) {
       continue;
     }
 
@@ -356,21 +351,19 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     //   continue;
     // }
 
-    // last line step length is more than min_leng during dirve gear in mono
-    // step
+    // last line step length should be more than min_leng with dirve gear
     if (calc_params_.valid_target_pt_vec.size() > 1) {
       const pnc::geometry_lib::PathPoint last_pA(arc_1.pA, arc_1.headingA);
 
       const pnc::geometry_lib::PathPoint last_pB(
           input_.tlane.pt_terminal_pos, calc_params_.target_line.heading);
 
-      const pnc::geometry_lib::LineSegment last_line_seg(
-          last_pA.pos, last_pB.pos, last_pA.heading);
-      const uint8_t last_line_gear =
-          pnc::geometry_lib::CalLineSegGear(last_line_seg);
+      const LineSegment last_line_seg(last_pA.pos, last_pB.pos,
+                                      last_pA.heading);
+      const uint8_t last_line_gear = CalLineSegGear(last_line_seg);
 
       if (!CheckSamePose(last_pA, last_pB) &&
-          last_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+          last_line_gear == SEG_GEAR_DRIVE &&
           last_line_seg.length < apa_param.GetParam().min_line_length) {
         continue;
       }
@@ -378,54 +371,27 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
     ego_line.heading = start_pose.heading;
     ego_line.SetPoints(start_pose.pos, arc_2.pB);
-    const auto ego_line_gear = pnc::geometry_lib::CalLineSegGear(ego_line);
-    if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-      // prolong the path during preparation, or will not calc success
-      // during normal backward step if ego stops early
-      const auto v_ego = pnc::geometry_lib::GenHeadingVec(ego_line.heading);
-      ego_line.SetPoints(
-          start_pose.pos,
-          start_pose.pos + (ego_line.length + k1dExtendLength) * v_ego);
-
-      // make sure first line step length are more than min_leng during dirve
-      // gear but not too long
-      if (input_.is_replan_first) {
-        const double heading_mag_deg = std::fabs(start_pose.heading) * kRad2Deg;
-        if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
-            ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
-          continue;
-        }
+    const auto ego_line_gear = CalLineSegGear(ego_line);
+    if (ego_line_gear == SEG_GEAR_DRIVE) {
+      const double heading_mag_deg = std::fabs(start_pose.heading) * kRad2Deg;
+      if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
+          ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+        continue;
       }
     }
 
-    double left_buf = 0.0;
-    double right_buf = 0.0;
-    if (input_.tlane.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-      left_buf = kColSmallLatBufferOutSlot;
-      right_buf = 0.0;
-    } else {
-      left_buf = 0.0;
-      right_buf = kColSmallLatBufferOutSlot;
-    }
     collision_detector_ptr_->SetParam(
-        CollisionDetector::Paramters(left_buf, right_buf));
+        CollisionDetector::Paramters(kColSmallLatBufferOutSlot, false));
 
     auto col_res =
         collision_detector_ptr_->UpdateByObsMap(ego_line, ego_line.heading);
     if (col_res.collision_flag ||
         col_res.remain_car_dist >
             col_res.remain_obstacle_dist - kColBufferOutSlot) {
-      // ILOG_INFO <<"ego line collided!");
+      ILOG_INFO << "ego line collided!";
       continue;
     }
 
-    col_res = collision_detector_ptr_->Update(arc_1, arc_1.headingA);
-    if (col_res.collision_flag ||
-        col_res.remain_car_dist >
-            col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
-      // ILOG_INFO <<"arc 1 collided!");
-      continue;
-    }
     // if (!CheckParkOutCornerSafeWithObsPin(arc_1)) {
     //   ILOG_INFO <<"arc1 collided!");
     //   continue;
@@ -439,12 +405,8 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       is_narrow_channel_activated = true;
       if (!PlanFromTargetToLineInNarrowChannel(narrow_path_seg_vec, arc_1,
                                                arc_2)) {
-        // ILOG_INFO <<"narrow channel plan failed");
+        ILOG_INFO << "narrow channel plan failed";
         continue;
-      } else {
-        // ILOG_INFO <<"narrow channel plan success!");
-        // ILOG_INFO <<
-        //     "narrow_path_seg_vec.size() = " << narrow_path_seg_vec.size());
       }
     }
     success = true;
@@ -456,100 +418,51 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     return false;
   }
 
-  if (!is_narrow_channel_activated) {
-    pnc::geometry_lib::PathSegment arc_seg_1(pnc::geometry_lib::SEG_STEER_LEFT,
-                                             pnc::geometry_lib::SEG_GEAR_DRIVE,
-                                             arc_1);
+  if (is_narrow_channel_activated) {
+    ego_line.heading = start_pose.heading;
+    ego_line.SetPoints(start_pose.pos, narrow_path_seg_vec.back().GetEndPos());
+  }
 
-    pnc::geometry_lib::PathSegment arc_seg_2(pnc::geometry_lib::SEG_STEER_RIGHT,
-                                             pnc::geometry_lib::SEG_GEAR_DRIVE,
-                                             arc_2);
+  const double ego_length = ego_line.length;
+  const auto ego_gear = CalLineSegGear(ego_line);
+  const bool is_ego_line_reserved =
+      (ego_gear == SEG_GEAR_DRIVE && ego_length > 0.12) ||
+      (ego_gear == SEG_GEAR_REVERSE && ego_length > 0.01);
 
-    pnc::geometry_lib::ReverseArcSegInfo(arc_seg_1);
-    pnc::geometry_lib::ReverseArcSegInfo(arc_seg_2);
+  if (is_ego_line_reserved) {
+    path_seg_vec.emplace_back(PathSegment(ego_gear, ego_line));
+  }
 
-    if (!pnc::mathlib::IsDoubleEqual(ego_line.length, 0.0)) {
-      path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
-          pnc::geometry_lib::CalLineSegGear(ego_line), ego_line));
+  if (is_narrow_channel_activated &&
+      ReversePathSegVecInfo(narrow_path_seg_vec)) {
+    for (const auto& path_seg : narrow_path_seg_vec) {
+      path_seg_vec.emplace_back(path_seg);
     }
-    pnc::geometry_lib::LineSegment tmp_line(
-        ego_line.pB, arc_seg_2.GetStartPos(), ego_line.heading);
 
-    path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
-        pnc::geometry_lib::SEG_GEAR_REVERSE, tmp_line));
+  } else {
+    PathSegment arc_seg_1(SEG_STEER_LEFT, SEG_GEAR_DRIVE, arc_1);
+    PathSegment arc_seg_2(SEG_STEER_RIGHT, SEG_GEAR_DRIVE, arc_2);
+    ReverseArcSegInfo(arc_seg_1);
+    ReverseArcSegInfo(arc_seg_2);
 
     path_seg_vec.emplace_back(arc_seg_2);
     path_seg_vec.emplace_back(arc_seg_1);
-  } else {
-    pnc::geometry_lib::LineSegment ego_line_in_channel;
-    ego_line_in_channel.heading = start_pose.heading;
-    ego_line_in_channel.SetPoints(start_pose.pos,
-                                  narrow_path_seg_vec.back().GetEndPos());
-    // ILOG_INFO <<"narrow_path_seg_vec.back().GetEndPos() = "
-    //             << narrow_path_seg_vec.back().GetEndPos());
-
-    if (!pnc::mathlib::IsDoubleEqual(ego_line.length, 0.0)) {
-      // ILOG_INFO <<"ego line len not == 0.0");
-      const auto ego_line_gear =
-          pnc::geometry_lib::CalLineSegGear(ego_line_in_channel);
-      // ILOG_INFO <<"ego_line_gear = " << static_cast<int>(ego_line_gear));
-
-      if (ego_line_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
-        const auto v_extend =
-            (ego_line_in_channel.pB - ego_line_in_channel.pA).normalized();
-
-        ego_line_in_channel.SetPoints(
-            ego_line_in_channel.pA,
-            ego_line_in_channel.pB + k1dExtendLength * v_extend);
-      }
-      path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
-          pnc::geometry_lib::CalLineSegGear(ego_line_in_channel),
-          ego_line_in_channel));
-
-      const pnc::geometry_lib::PathPoint extended_pose(
-          ego_line_in_channel.pB, ego_line_in_channel.heading);
-
-      if (!CheckSamePose(extended_pose,
-                         narrow_path_seg_vec.back().GetEndPose())) {
-        const pnc::geometry_lib::LineSegment back_line(
-            extended_pose.pos, narrow_path_seg_vec.back().GetEndPose().pos,
-            extended_pose.heading);
-
-        const pnc::geometry_lib::PathSegment back_line_seg(
-            pnc::geometry_lib::SEG_GEAR_REVERSE, back_line);
-
-        path_seg_vec.emplace_back(std::move(back_line_seg));
-      }
-
-      for (auto& narrow_path_seg : narrow_path_seg_vec) {
-        if (!pnc::geometry_lib::ReversePathSegInfo(narrow_path_seg)) {
-          ILOG_INFO << "reverse single path seg failed!";
-        }
-      }
-
-      std::reverse(narrow_path_seg_vec.begin(), narrow_path_seg_vec.end());
-
-      for (const auto& path_seg : narrow_path_seg_vec) {
-        path_seg_vec.emplace_back(path_seg);
-      }
-    }
-
-    if (pnc::mathlib::IsDoubleEqual(path_seg_vec.back().GetEndHeading(),
-                                    calc_params_.target_pose.heading) &&
-        !pnc::mathlib::IsDoubleEqual(path_seg_vec.back().GetEndPos().x(),
-                                     input_.tlane.pt_terminal_pos.x())) {
-      const Eigen::Vector2d fixed_target_pos(
-          input_.tlane.pt_terminal_pos.x(),
-          path_seg_vec.back().GetEndPos().y());
-
-      const pnc::geometry_lib::LineSegment last_line(
-          path_seg_vec.back().GetEndPos(), fixed_target_pos,
-          path_seg_vec.back().GetEndHeading());
-
-      path_seg_vec.emplace_back(pnc::geometry_lib::PathSegment(
-          pnc::geometry_lib::CalLineSegGear(last_line), last_line));
-    }
   }
+
+  const auto path_end_pose = path_seg_vec.back().GetEndPose();
+
+  if (IsDoubleEqual(path_end_pose.heading, calc_params_.target_pose.heading) &&
+      !IsDoubleEqual(path_end_pose.pos.x(), input_.tlane.pt_terminal_pos.x())) {
+    const Eigen::Vector2d fixed_target_pos(input_.tlane.pt_terminal_pos.x(),
+                                           path_end_pose.pos.y());
+
+    const LineSegment last_line(path_end_pose.pos, fixed_target_pos,
+                                path_end_pose.heading);
+
+    path_seg_vec.emplace_back(
+        PathSegment(CalLineSegGear(last_line), last_line));
+  }
+
   return success;
 }
 
@@ -1383,8 +1296,8 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
                 0.5 * calc_params_.slot_side_sgn;
 
   const double rac_tlane_bound =
-      tlane_outer_y + calc_params_.slot_side_sgn *
-                          (0.5 * apa_param.GetParam().car_width + 0.35);
+      tlane_outer_y +
+      calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
 
   const double rac_channel_bound =
       input_.tlane.channel_y -
@@ -1404,7 +1317,7 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
   }
   dy = y_bound / nums;
 
-  const double start_y = rac_tlane_bound + 0.2 * calc_params_.slot_side_sgn;
+  const double start_y = rac_tlane_bound + 0.4 * calc_params_.slot_side_sgn;
   double end_y = rac_channel_bound;
 
   pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, 0.0);
