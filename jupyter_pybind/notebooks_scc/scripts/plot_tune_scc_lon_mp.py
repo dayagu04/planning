@@ -12,7 +12,7 @@ from jupyter_pybind import scc_lon_motion_planning_v3_py
 
 # bag path and frame dt
 #bag_path = "/mnt/s811_1_0907/motion_14.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241202/20241202-19-45-56/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-12-02-19-45-56_no_camera.bag.30.0-46.5.split.1733311365.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241206/20241206-15-34-05/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-12-06-15-34-05_no_camera.bag.1733746230.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -89,6 +89,20 @@ def slider_callback(bag_time, q_ref_pos, q_ref_vel, q_acc, q_jerk, q_soft_pos_bo
     'jerk_vec_t' : planning_output.jerk_vec,
   })
 
+  # print("lon_motion_plan_output:=", lon_motion_plan_output)
+  motion_solver_info = planning_output.solver_info
+  iter_count = motion_solver_info.iter_count
+  cost_size = motion_solver_info.cost_size
+  cost_vec = motion_solver_info.cost_vec
+  lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
+  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", "LonSVBoundCost", \
+               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "LonStopPointCost", "NonNegativeVelCost"]
+  print(cost_list)
+  for i, sub_list in enumerate(lists):
+    if i == 0:
+      print(f"Cost init: {sub_list}")
+    else:
+      print(f"Cost {i}: {sub_list}")
 
   push_notebook()
 

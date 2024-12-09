@@ -174,10 +174,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
-                              'v_limit_road', 'v_limit_in_turns','v_target', 'v_ego', \
+                              'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'cipv_id_st', \
                               'new_cutin_id', 'new_cutin_id_count', \
                               "agents_headway_id", "agents_headway_value", \
+                              "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
@@ -549,7 +550,20 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   acc_vec = lon_motion_plan_output.acc_vec
   jerk_vec = lon_motion_plan_output.jerk_vec
 
-#   print("lon_motion_plan_output:=", lon_motion_plan_output)
+  # print("lon_motion_plan_output:=", lon_motion_plan_output)
+  motion_solver_info = lon_motion_plan_output.solver_info
+  iter_count = motion_solver_info.iter_count
+  cost_size = motion_solver_info.cost_size
+  cost_vec = motion_solver_info.cost_vec
+  lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
+  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", "LonSVBoundCost", \
+               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "LonStopPointCost", "NonNegativeVelCost"]
+  print(cost_list)
+  for i, sub_list in enumerate(lists):
+    if i == 0:
+      print(f"Cost init: {sub_list}")
+    else:
+      print(f"Cost {i}: {sub_list}")
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,
@@ -859,7 +873,7 @@ def load_lon_global_figure(bag_loader):
 
   lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
                 y_axis_label='distance/(m)',width=600,height=300)
-  # lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
+  lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
   # lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
   # lead_fig.line(t_plan_vec, temp_lead_one_dis_vec, line_width=1, legend_label='temp_lead_one_dis', color="blue")
   # lead_fig.line(t_plan_vec, temp_lead_two_dis_vec, line_width=1, legend_label='temp_lead_two_dis', color="purple")
@@ -891,18 +905,18 @@ def load_lon_global_figure(bag_loader):
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)
 
-  # limit_cutin_vel_vec = []
-  # potential_cutin_speed_vec = []
+  limit_cutin_vel_vec = []
+  potential_cutin_speed_vec = []
 
-  # for ind in range(len(bag_loader.plan_debug_msg['json'])):
-  #   limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
-  #   potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potential_cutin'], 2))
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    limit_cutin_vel_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_cutin'], 2))
+    potential_cutin_speed_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_potential_cutin'], 2))
 
-  # cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
-  #                                 legend_label='Pre-deceleration cutin',color="blue")
-  # cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
-  #                               legend_label='Speed regulation cutin', color="red")
-  # cutin_fig.legend.click_policy = 'hide'
+  cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
+                                  legend_label='Pre-deceleration cutin',color="blue")
+  cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
+                                legend_label='Speed regulation cutin', color="red")
+  cutin_fig.legend.click_policy = 'hide'
   # cutin_fig.line(t_plan_vec, cutin_status_vec, line_width=1,
   #                               legend_label='cutin_status', color="black")
 

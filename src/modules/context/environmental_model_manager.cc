@@ -893,11 +893,11 @@ void EnvironmentalModelManager::truncate_prediction_info(
     PredictionTrajectory cur_prediction_trajectory;
     size_t traj_index = 0;
     double step_time = prediction_traj.relative_time;
-    // std::vector<PredictionTrajectoryPoint> trajectory_points;
+    std::vector<PredictionTrajectoryPoint> trajectory_points;
     // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
-    for (int i = 0; i < PREDICTION_TRAJ_POINT_NUM; i++) {
+    for (int i = 0; i < TRAJ_POINT_NUM_USED; i++) {
       const auto &point = prediction_traj.trajectory_point[i];
       PredictionTrajectoryPoint trajectory_point;
       double point_relative_time =
@@ -937,14 +937,14 @@ void EnvironmentalModelManager::truncate_prediction_info(
                        cur_predicion_obj.relative_speed_y);
       }
       traj_index++;
-      // trajectory_points.emplace_back(trajectory_point);
+      trajectory_points.emplace_back(trajectory_point);
+      // cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
+    }
+    for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
+      auto trajectory_point =
+          GetPointAtTime(trajectory_points, 0.2 * traj_index);
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }
-    // for (traj_index = 0; traj_index < 41; traj_index++) {
-    //   auto trajectory_point =
-    //       GetPointAtTime(trajectory_points, 0.2 * traj_index);
-    //   cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
-    // }
 
     // cur_prediction_trajectory.prob = prediction_traj.prob;
     // cur_prediction_trajectory.intention =

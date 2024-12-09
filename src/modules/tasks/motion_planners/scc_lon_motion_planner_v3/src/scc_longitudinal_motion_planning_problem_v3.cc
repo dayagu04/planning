@@ -191,6 +191,42 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     planning_output_.mutable_jerk_vec()->Set(i, j);
   }
 
+  // load solver and iteration info
+  planning_output_.clear_solver_info();
+
+  const auto &solver_info_ptr = ilqr_core_ptr_->GetSolverInfoPtr();
+
+  planning_output_.mutable_solver_info()->set_solver_condition(
+      solver_info_ptr->solver_condition);
+  planning_output_.mutable_solver_info()->set_cost_size(
+      solver_info_ptr->cost_size);
+  planning_output_.mutable_solver_info()->set_iter_count(
+      solver_info_ptr->iter_count);
+  planning_output_.mutable_solver_info()->set_init_cost(
+      solver_info_ptr->init_cost);
+
+  for (size_t i = 0; i < solver_info_ptr->iter_count; ++i) {
+    const auto &iter_info =
+        planning_output_.mutable_solver_info()->add_iter_info();
+    // const auto &iter_cost =
+    //     planning_output_.mutable_solver_info()->add_cost_vec();
+
+    iter_info->set_linesearch_success(
+        solver_info_ptr->iteration_info_vec[i].linesearch_success);
+    iter_info->set_backward_pass_count(
+        solver_info_ptr->iteration_info_vec[i].backward_pass_count);
+    iter_info->set_lambda(solver_info_ptr->iteration_info_vec[i].lambda);
+    iter_info->set_cost(solver_info_ptr->iteration_info_vec[i].cost);
+    iter_info->set_dcost(solver_info_ptr->iteration_info_vec[i].dcost);
+    iter_info->set_expect(solver_info_ptr->iteration_info_vec[i].expect);
+    iter_info->set_du_norm(solver_info_ptr->iteration_info_vec[i].du_norm);
+    for (size_t j = 0; j < solver_info_ptr->cost_size; ++j) {
+      //   iter_cost->set_cost_vec(solver_info_ptr->cost_iter_vec[i].at(j));
+      planning_output_.mutable_solver_info()->add_cost_vec(
+          solver_info_ptr->cost_iter_vec[i].at(j));
+    }
+  }
+
   return true;
 }
 

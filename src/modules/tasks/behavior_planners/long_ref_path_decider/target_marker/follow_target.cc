@@ -1,6 +1,7 @@
 #include "follow_target.h"
 
 #include "config/basic_type.h"
+#include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "planning_context.h"
@@ -160,6 +161,11 @@ void FollowTarget::GenerateFollowTarget() {
       GenerateFarFollowSlowCurve(matched_desired_headway);
   bool has_far_slow_follow_target = (far_slow_follow_trajectory != nullptr);
 
+  // JSON DEBUG
+  JSON_DEBUG_VALUE("has_target_follow_curve", 0)
+  JSON_DEBUG_VALUE("has_stable_follow_target", 0)
+  JSON_DEBUG_VALUE("has_farslow_follow_target", 0)
+
   for (int32_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
     auto& target_value = target_values_[i];
@@ -188,7 +194,7 @@ void FollowTarget::GenerateFollowTarget() {
     double upper_bound_s = std::max(
         upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
     double target_s =
-        std::max(upper_bound_infos_[i].s - target_s_disatnce + vel * t, 0.0);
+        std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
     const double s_target_value = std::min(upper_bound_s, target_s);
 
     target_value.set_s_target_val(s_target_value);
@@ -198,18 +204,21 @@ void FollowTarget::GenerateFollowTarget() {
     if (has_stable_follow_target) {
       target_value.set_s_target_val(stable_follow_trajectory->Evaluate(0, t));
       target_value.set_target_type(upper_bound_infos_[i].target_type);
+      JSON_DEBUG_VALUE("has_stable_follow_target", 1.0)
     }
 
     if (has_far_slow_follow_target) {
       s_value = std::fmin(far_slow_follow_trajectory->Evaluate(0, t), s_value);
       target_value.set_s_target_val(s_value);
       target_value.set_target_type(upper_bound_infos_[i].target_type);
+      JSON_DEBUG_VALUE("has_farslow_follow_target", 1.0)
     }
 
     if (MakeSValueWithTargetFollowCurve(i, true, &s_value)) {
       target_value.set_has_target(true);
       target_value.set_s_target_val(s_value);
       target_value.set_target_type(TargetType::kFollow);
+      JSON_DEBUG_VALUE("has_target_follow_curve", 1.0)
     }
   }
 }

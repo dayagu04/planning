@@ -629,8 +629,8 @@ class LoadRosbag:
                          'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y',
                          'boundary_line_merge_point_x','boundary_line_merge_point_y','cur_lane_is_continue','forward_lane_num',
                          'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-                         'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size','open_set_empty',
-                         "agents_headway_id", "agents_headway_value"]
+                         'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
+                         "agents_headway_id", "agents_headway_value", "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec", "assembled_x", "assembled_y", "assembled_theta", "assembled_delta", "assembled_omega", "traj_s_vec", "traj_x_vec", "traj_y_vec", "limit_v_type",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
