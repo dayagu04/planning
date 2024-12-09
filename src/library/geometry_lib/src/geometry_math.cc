@@ -1,5 +1,6 @@
 #include "geometry_math.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -2376,6 +2377,21 @@ const bool ReverseLineSegInfo(PathSegment &path_seg) {
   path_seg.seg_gear = ReverseGear(path_seg.seg_gear);
   path_seg.line_seg.pA.swap(path_seg.line_seg.pB);
   return true;
+}
+
+const bool ReversePathSegVecInfo(std::vector<PathSegment> &path_seg_vec) {
+  bool success = true;
+  for (auto &path_seg : path_seg_vec) {
+    if (!ReversePathSegInfo(path_seg)) {
+      success = false;
+      break;
+    }
+  }
+
+  if (success) {
+    std::reverse(path_seg_vec.begin(), path_seg_vec.end());
+  }
+  return success;
 }
 
 const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,

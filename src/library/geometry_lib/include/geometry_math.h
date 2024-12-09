@@ -817,6 +817,8 @@ const bool ReverseArcSegInfo(PathSegment &path_seg);
 
 const bool ReverseLineSegInfo(PathSegment &path_seg);
 
+const bool ReversePathSegVecInfo(std::vector<PathSegment> &path_seg_vec);
+
 const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
                                     const uint8_t current_seg_gear);
 
