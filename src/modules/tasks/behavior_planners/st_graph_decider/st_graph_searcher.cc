@@ -436,6 +436,8 @@ bool StGraphSearcher::SearchStPath(
     searched_path->emplace_back(current_node);
   }
   std::reverse(searched_path->begin(), searched_path->end());
+
+  AddAStarSearchCostDebugInfo(searched_path);
   if (searched_path->size() < 2) {
     LOG_DEBUG("st_search path size < 2");
     return false;
@@ -658,9 +660,9 @@ std::vector<StSearchNode> StGraphSearcher::GenerateSuccessorNodes(
     }
 
     // generate succ node
-    StSearchNode succ_node =
-        StSearchNode(s_succ, t_succ, vel_succ, input_info.s_step(),
-                     input_info.t_step(), input_info.vel_step(), config_.enable_only_s_t_hash);
+    StSearchNode succ_node = StSearchNode(
+        s_succ, t_succ, vel_succ, input_info.s_step(), input_info.t_step(),
+        input_info.vel_step(), config_.enable_only_s_t_hash);
 
     succ_node.set_parent_id(current_node.id());
     succ_node.set_upper_bound(upper_bound);
@@ -726,7 +728,19 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
       cost_vel * weight_vel + cost_accel * weight_accel +
       cost_accel_sign_changed * weight_accel_sign + cost_jerk * weight_jerk +
       cost_length /* + cost_virtual_yield * weight_virtual_yield8 */;
+  StSearchNode::EdgeSubCost edge_sub_cost{
+      .fathernode_to_childnode_cost_yield = cost_yield * weight_yield,
+      .fathernode_to_childnode_edge_cost_overtake =
+          cost_overtake * weight_overtake,
+      .fathernode_to_childnode_edge_cost_vel = cost_vel * weight_vel,
+      .fathernode_to_childnode_edge_cost_accel = cost_accel * weight_accel,
+      .fathernode_to_childnode_edge_cost_accel_sign_changed =
+          cost_accel_sign_changed * weight_accel_sign,
+      .fathernode_to_childnode_edge_cost_jerk = cost_jerk * weight_jerk,
+      .fathernode_to_childnode_edge_cost_length = cost_length};
 
+  succ_node->set_edge_sub_cost(edge_sub_cost);
+  succ_node->NodeSubCostAccumulate(current_node);
   succ_node->set_cost(edge_cost);
 
   // print cost result
@@ -1140,6 +1154,64 @@ void StGraphSearcher::AddStGraphSearcherDataToProto(
     }
   }
   mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
+}
+
+void StGraphSearcher::AddAStarSearchCostDebugInfo(
+    std::vector<StSearchNode>* const searched_path) const {
+  std::vector<double> st_path_final_nodes_total_cost_vec{};
+  std::vector<double> st_path_final_nodes_g_cost_vec{};
+  std::vector<double> st_path_final_nodes_h_cost_vec{};
+  std::vector<double> st_path_final_nodes_cost_yield_vec{};
+  std::vector<double> st_path_final_nodes_cost_overtake_vec{};
+  std::vector<double> st_path_final_nodes_cost_vel_vec{};
+  std::vector<double> st_path_final_nodes_cost_accel_vec{};
+  std::vector<double> st_path_final_nodes_cost_accel_sign_changed_vec{};
+  std::vector<double> st_path_final_nodes_cost_jerk_vec{};
+  std::vector<double> st_path_final_nodes_cost_length_vec{};
+  std::vector<double> st_path_final_nodes_time_vec{};
+  for (const auto& final_node : *searched_path) {
+    st_path_final_nodes_total_cost_vec.emplace_back(final_node.TotalCost());
+    st_path_final_nodes_g_cost_vec.emplace_back(final_node.g_cost());
+    st_path_final_nodes_h_cost_vec.emplace_back(final_node.h_cost());
+    st_path_final_nodes_cost_yield_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_yield_accumulated);
+    st_path_final_nodes_cost_overtake_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_overtake_accumulated);
+    st_path_final_nodes_cost_vel_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_vel_accumulated);
+    st_path_final_nodes_cost_accel_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_accel_accumulated);
+    st_path_final_nodes_cost_accel_sign_changed_vec.emplace_back(
+        final_node.node_sub_cost()
+            .current_node_cost_accel_sign_changed_accumulated);
+    st_path_final_nodes_cost_jerk_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_jerk_accumulated);
+    st_path_final_nodes_cost_length_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_length_accumulated);
+    st_path_final_nodes_time_vec.emplace_back(final_node.t());
+  }
+  JSON_DEBUG_VECTOR("st_path_final_nodes_total_cost_vec",
+                    st_path_final_nodes_total_cost_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_g_cost_vec",
+                    st_path_final_nodes_g_cost_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_h_cost_vec",
+                    st_path_final_nodes_h_cost_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_yield_vec",
+                    st_path_final_nodes_cost_yield_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_overtake_vec",
+                    st_path_final_nodes_cost_overtake_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_vel_vec",
+                    st_path_final_nodes_cost_vel_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_accel_vec",
+                    st_path_final_nodes_cost_accel_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_accel_sign_changed_vec",
+                    st_path_final_nodes_cost_accel_sign_changed_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_jerk_vec",
+                    st_path_final_nodes_cost_jerk_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_length_vec",
+                    st_path_final_nodes_cost_length_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_time_vec",
+                    st_path_final_nodes_time_vec, 4)
 }
 
 }  // namespace planning

@@ -1,9 +1,11 @@
 #pragma once
 
+#include <limits>
+#include <unordered_map>
+
 #include "st_graph/st_boundary.h"
 #include "st_graph/st_point.h"
 #include "vec2d.h"
-#include <unordered_map>
 
 namespace planning {
 
@@ -13,6 +15,28 @@ class StSearchNode {
   StSearchNode(double s, double t, double vel, double s_step, double t_step,
                double vel_step, bool only_s_t_hash = false);
   ~StSearchNode() = default;
+
+  struct EdgeSubCost {
+    double fathernode_to_childnode_cost_yield = 0.0;
+    double fathernode_to_childnode_edge_cost_overtake = 0.0;
+    double fathernode_to_childnode_edge_cost_vel = 0.0;
+    double fathernode_to_childnode_edge_cost_accel = 0.0;
+    double fathernode_to_childnode_edge_cost_accel_sign_changed = 0.0;
+    double fathernode_to_childnode_edge_cost_jerk = 0.0;
+    double fathernode_to_childnode_edge_cost_length = 0.0;
+  };
+
+  struct NodeSubCost {
+    double current_node_cost_yield_accumulated = 0.0;
+    double current_node_cost_overtake_accumulated = 0.0;
+    double current_node_cost_vel_accumulated = 0.0;
+    double current_node_cost_accel_accumulated = 0.0;
+    double current_node_cost_accel_sign_changed_accumulated = 0.0;
+    double current_node_cost_jerk_accumulated = 0.0;
+    double current_node_cost_length_accumulated = 0.0;
+  };
+
+  void NodeSubCostAccumulate(const StSearchNode& father_node);
 
   int64_t id() const { return id_; }
   void set_id(int64_t id) { id_ = id; }
@@ -40,6 +64,13 @@ class StSearchNode {
 
   double cost() const { return cost_; }
   void set_cost(double cost) { cost_ = cost; }
+
+  const EdgeSubCost edge_sub_cost() const { return edge_sub_cost_; }
+  void set_edge_sub_cost(const EdgeSubCost& edge_sub_cost) {
+    edge_sub_cost_ = edge_sub_cost;
+  }
+
+  const NodeSubCost node_sub_cost() const { return node_sub_cost_; }
 
   double g_cost() const { return g_cost_; }
   void set_g_cost(double g_cost) { g_cost_ = g_cost; }
@@ -81,7 +112,8 @@ class StSearchNode {
  private:
   // make a hash id by step
   int64_t ComputeId(double s, double t, double vel, double s_step,
-                    double t_step, double vel_step, bool only_s_t_hash = false) const;
+                    double t_step, double vel_step,
+                    bool only_s_t_hash = false) const;
 
  private:
   int64_t id_ = -1;
@@ -96,6 +128,8 @@ class StSearchNode {
   double cost_ = 0.0;  // edge cost from parent
   double g_cost_ = 0.0;
   double h_cost_ = 0.0;
+  EdgeSubCost edge_sub_cost_;
+  NodeSubCost node_sub_cost_;
   // <STBoundary_id, decision>
   std::unordered_map<int64_t, speed::STBoundary::DecisionType> decision_table_;
   std::unordered_map<int64_t, speed::STBoundary::DecisionType>
