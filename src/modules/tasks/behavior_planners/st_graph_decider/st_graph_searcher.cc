@@ -437,59 +437,7 @@ bool StGraphSearcher::SearchStPath(
   }
   std::reverse(searched_path->begin(), searched_path->end());
 
-  std::vector<double> st_path_final_nodes_total_cost_vec{};
-  std::vector<double> st_path_final_nodes_g_cost_vec{};
-  std::vector<double> st_path_final_nodes_h_cost_vec{};
-  std::vector<double> st_path_final_nodes_cost_yield_vec{};
-  std::vector<double> st_path_final_nodes_cost_overtake_vec{};
-  std::vector<double> st_path_final_nodes_cost_vel_vec{};
-  std::vector<double> st_path_final_nodes_cost_accel_vec{};
-  std::vector<double> st_path_final_nodes_cost_accel_sign_changed_vec{};
-  std::vector<double> st_path_final_nodes_cost_jerk_vec{};
-  std::vector<double> st_path_final_nodes_cost_length_vec{};
-  std::vector<double> st_path_final_nodes_time_vec{};
-  for (const auto& final_node : *searched_path) {
-    st_path_final_nodes_total_cost_vec.emplace_back(final_node.TotalCost());
-    st_path_final_nodes_g_cost_vec.emplace_back(final_node.g_cost());
-    st_path_final_nodes_h_cost_vec.emplace_back(final_node.h_cost());
-    st_path_final_nodes_cost_yield_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_yield_accumulated);
-    st_path_final_nodes_cost_overtake_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_overtake_accumulated);
-    st_path_final_nodes_cost_vel_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_vel_accumulated);
-    st_path_final_nodes_cost_accel_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_accel_accumulated);
-    st_path_final_nodes_cost_accel_sign_changed_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_accel_sign_changed_accumulated);
-    st_path_final_nodes_cost_jerk_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_jerk_accumulated);
-    st_path_final_nodes_cost_length_vec.emplace_back(
-        final_node.node_sub_cost().current_node_cost_length_accumulated);
-    st_path_final_nodes_time_vec.emplace_back(final_node.t());
-  }
-  JSON_DEBUG_VECTOR("st_path_final_nodes_total_cost_vec",
-                    st_path_final_nodes_total_cost_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_g_cost_vec",
-                    st_path_final_nodes_g_cost_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_h_cost_vec",
-                    st_path_final_nodes_h_cost_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_yield_vec",
-                    st_path_final_nodes_cost_yield_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_overtake_vec",
-                    st_path_final_nodes_cost_overtake_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_vel_vec",
-                    st_path_final_nodes_cost_vel_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_accel_vec",
-                    st_path_final_nodes_cost_accel_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_accel_sign_changed_vec",
-                    st_path_final_nodes_cost_accel_sign_changed_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_jerk_vec",
-                    st_path_final_nodes_cost_jerk_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_length_vec",
-                    st_path_final_nodes_cost_length_vec, 4)
-  JSON_DEBUG_VECTOR("st_path_final_nodes_time_vec",
-                    st_path_final_nodes_time_vec, 4)
+  AddAStarSearchCostDebugInfo(searched_path);
   if (searched_path->size() < 2) {
     LOG_DEBUG("st_search path size < 2");
     return false;
@@ -1206,6 +1154,64 @@ void StGraphSearcher::AddStGraphSearcherDataToProto(
     }
   }
   mutable_st_graph_searcher_data->CopyFrom(st_graph_searcher_pb_);
+}
+
+void StGraphSearcher::AddAStarSearchCostDebugInfo(
+    std::vector<StSearchNode>* const searched_path) const {
+  std::vector<double> st_path_final_nodes_total_cost_vec{};
+  std::vector<double> st_path_final_nodes_g_cost_vec{};
+  std::vector<double> st_path_final_nodes_h_cost_vec{};
+  std::vector<double> st_path_final_nodes_cost_yield_vec{};
+  std::vector<double> st_path_final_nodes_cost_overtake_vec{};
+  std::vector<double> st_path_final_nodes_cost_vel_vec{};
+  std::vector<double> st_path_final_nodes_cost_accel_vec{};
+  std::vector<double> st_path_final_nodes_cost_accel_sign_changed_vec{};
+  std::vector<double> st_path_final_nodes_cost_jerk_vec{};
+  std::vector<double> st_path_final_nodes_cost_length_vec{};
+  std::vector<double> st_path_final_nodes_time_vec{};
+  for (const auto& final_node : *searched_path) {
+    st_path_final_nodes_total_cost_vec.emplace_back(final_node.TotalCost());
+    st_path_final_nodes_g_cost_vec.emplace_back(final_node.g_cost());
+    st_path_final_nodes_h_cost_vec.emplace_back(final_node.h_cost());
+    st_path_final_nodes_cost_yield_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_yield_accumulated);
+    st_path_final_nodes_cost_overtake_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_overtake_accumulated);
+    st_path_final_nodes_cost_vel_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_vel_accumulated);
+    st_path_final_nodes_cost_accel_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_accel_accumulated);
+    st_path_final_nodes_cost_accel_sign_changed_vec.emplace_back(
+        final_node.node_sub_cost()
+            .current_node_cost_accel_sign_changed_accumulated);
+    st_path_final_nodes_cost_jerk_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_jerk_accumulated);
+    st_path_final_nodes_cost_length_vec.emplace_back(
+        final_node.node_sub_cost().current_node_cost_length_accumulated);
+    st_path_final_nodes_time_vec.emplace_back(final_node.t());
+  }
+  JSON_DEBUG_VECTOR("st_path_final_nodes_total_cost_vec",
+                    st_path_final_nodes_total_cost_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_g_cost_vec",
+                    st_path_final_nodes_g_cost_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_h_cost_vec",
+                    st_path_final_nodes_h_cost_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_yield_vec",
+                    st_path_final_nodes_cost_yield_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_overtake_vec",
+                    st_path_final_nodes_cost_overtake_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_vel_vec",
+                    st_path_final_nodes_cost_vel_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_accel_vec",
+                    st_path_final_nodes_cost_accel_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_accel_sign_changed_vec",
+                    st_path_final_nodes_cost_accel_sign_changed_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_jerk_vec",
+                    st_path_final_nodes_cost_jerk_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_cost_length_vec",
+                    st_path_final_nodes_cost_length_vec, 4)
+  JSON_DEBUG_VECTOR("st_path_final_nodes_time_vec",
+                    st_path_final_nodes_time_vec, 4)
 }
 
 }  // namespace planning

@@ -85,6 +85,9 @@ class StGraphSearcher : public Task {
   double ComputeHeuristicCost(const StSearchInput& input_info,
                               const StSearchNode& node) const;
 
+  void AddAStarSearchCostDebugInfo(
+      std::vector<StSearchNode>* const searched_path) const;
+
   StGraphSearcherConfig config_;
   planning::common::StGraphSearcher st_graph_searcher_pb_;
   std::shared_ptr<YieldFrontVehicleSafeFunction>
