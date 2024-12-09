@@ -10,9 +10,9 @@ void PerpendicularParkScenario::ExcutePathPlanningTask() {}
 
 const bool PerpendicularParkScenario::UpdateEgoSlotInfo() { return false; }
 
-void PerpendicularParkScenario::GenTlane() {}
+const bool PerpendicularParkScenario::GenTlane() {return true;}
 
-void PerpendicularParkScenario::GenObstacles() {}
+const bool PerpendicularParkScenario::GenObstacles() {return true;}
 
 const uint8_t PerpendicularParkScenario::PathPlanOnce() {
   return PathPlannerResult::PLAN_FAILED;
@@ -31,11 +31,6 @@ const bool PerpendicularParkScenario::CheckReplan() { return false; }
 const bool PerpendicularParkScenario::CheckFinished() { return false; }
 
 const bool PerpendicularParkScenario::PostProcessPathAccordingLimiter() {
-  return false;
-}
-
-const bool PerpendicularParkScenario::PostProcessPathAccordingObs(
-    const double car_remain_dist) {
   return false;
 }
 

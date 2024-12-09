@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apa_data.h"
+
 #include "parking_scenario/parking_scenario.h"
 #include "apa_world.h"
 #include "local_view.h"
@@ -48,7 +48,7 @@ class ApaPlanInterface {
   const iflyauto::APAHMIData& GetAPAHmi() const { return apa_hmi_; }
 
   void SetSimuParam(const SimulationParam& param) {
-    apa_world_ptr_->GetApaDataPtr()->simu_param = param;
+    apa_world_ptr_->SetSimuParam(param);
   }
 
   std::shared_ptr<ParkingScenario> GetPlannerByType(

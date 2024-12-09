@@ -1306,6 +1306,7 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
   pn.Set(line.pA, NormalizeAngle(line.heading));
   pn.s = 0.0;
   pn.lat_buffer = lat_buffer;
+  pn.kappa = 0.0;
   point_set.emplace_back(pn);
   const Eigen::Vector2d unit_line_vec = (line.pB - line.pA).normalized();
   double s = ds;
@@ -1315,19 +1316,21 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
     s += ds;
     pn.s = ds;
     pn.lat_buffer = lat_buffer;
+    pn.kappa = 0.0;
     point_set.emplace_back(pn);
   }
   // get last point
   pn.Set(line.pB, NormalizeAngle(line.heading));
   pn.s = line.length;
   pn.lat_buffer = lat_buffer;
+  pn.kappa = 0.0;
   point_set.emplace_back(pn);
   return true;
 }
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
                                const Arc &arc, const double ds,
-                               const double lat_buffer) {
+                               const double lat_buffer, const uint8_t steer) {
   // if (!IsDoublePositive(arc.length) || !IsDoublePositive(ds) ||
   //     !IsDoublePositive(arc.circle_info.radius)) {
   //   return LogErr(__func__, 0);
@@ -1335,10 +1338,13 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
   point_set.clear();
   point_set.reserve(50);
 
+  const double sign = (steer == SEG_STEER_LEFT) ? 1.0 : -1.0;
+
   PathPoint pn;
   // get first point
   pn.Set(arc.pA, NormalizeAngle(arc.headingA));
   pn.s = 0.0;
+  pn.kappa = sign / arc.circle_info.radius;
   pn.lat_buffer = lat_buffer;
   point_set.emplace_back(pn);
 
@@ -1361,12 +1367,14 @@ const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
     s += ds;
     pn.s = ds;
     pn.lat_buffer = lat_buffer;
+    pn.kappa = sign / arc.circle_info.radius;
     point_set.emplace_back(pn);
   }
   // get last point
   pn.Set(arc.pB, NormalizeAngle(arc.headingB));
   pn.s = arc.length;
   pn.lat_buffer = lat_buffer;
+  pn.kappa = sign / arc.circle_info.radius;
   point_set.emplace_back(pn);
 
   return true;
@@ -1380,7 +1388,7 @@ const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
                                    path_seg.lat_buffer);
   } else if (path_seg.seg_type == SEG_TYPE_ARC) {
     return SamplePointSetInArc(point_set, path_seg.arc_seg, ds,
-                               path_seg.lat_buffer);
+                               path_seg.lat_buffer, path_seg.seg_steer);
   } else {
     return false;
   }

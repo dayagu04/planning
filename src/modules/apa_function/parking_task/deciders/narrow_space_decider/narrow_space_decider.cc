@@ -1,19 +1,19 @@
 #include "narrow_space_decider.h"
-#include "apa_data.h"
+
 #include "log_glog.h"
 #include "parking_scenario.h"
 
 namespace planning {
 
-void NarrowScenarioDecider::Process(const uint8_t slot_type) {
+void NarrowScenarioDecider::Process(const apa_planner::SlotType slot_type) {
   switch (slot_type) {
-    case Common::PARKING_SLOT_TYPE_VERTICAL:
+    case apa_planner::SlotType::PERPENDICULAR:
       slot_type_ = ParkSpaceType::VERTICAL;
       break;
-    case Common::PARKING_SLOT_TYPE_HORIZONTAL:
+    case apa_planner::SlotType::PARALLEL:
       slot_type_ = ParkSpaceType::PARALLEL;
       break;
-    case Common::PARKING_SLOT_TYPE_SLANTING:
+    case apa_planner::SlotType::SLANT:
       slot_type_ = ParkSpaceType::SLANTING;
       break;
     default:
@@ -62,9 +62,7 @@ const bool NarrowScenarioDecider::IsNarrowSpaceScenario() const {
   return is_narrow_space_;
 }
 
-const bool NarrowScenarioDecider::IsNeedAstar() const {
-  return is_need_astar_;
-}
+const bool NarrowScenarioDecider::IsNeedAstar() const { return is_need_astar_; }
 
 void NarrowScenarioDecider::SetAstarState(const AstarSearchState state) {
   astar_search_state_ = state;

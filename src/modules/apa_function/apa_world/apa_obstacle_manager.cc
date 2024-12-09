@@ -9,6 +9,7 @@
 #include "common_platform_type_soc.h"
 #include "environmental_model.h"
 #include "local_view.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace apa_planner {
@@ -17,6 +18,46 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
   if (local_view == nullptr) {
     ILOG_ERROR << "Update ApaObstacleManager, local_view_ptr is nullptr";
     return;
+  }
+
+  ILOG_INFO << "Update ApaObstacleManager";
+
+  // 读取超声波扇形距离
+  const double min_uss_dist = apa_param.GetParam().min_uss_origin_dist;
+  if (apa_param.GetParam().is_uss_dist_from_perception) {
+    const auto& uss_dis_info_buf =
+        local_view->uss_percept_info.dis_from_car_to_obj;
+
+    //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
+    //  upa, fr apa
+    for (const auto& front_uss_idx :
+         apa_param.GetParam().uss_wdis_index_front) {
+      uss_dis_vec_.emplace_back(
+          std::max(min_uss_dist, 0.001 * uss_dis_info_buf[front_uss_idx]));
+    }
+
+    // rear uss: uss dis need to be transfered from mm to m. order: rr apa, 4
+    // upa, rl apa
+    for (const auto& rear_uss_idx : apa_param.GetParam().uss_wdis_index_back) {
+      uss_dis_vec_.emplace_back(
+          std::max(min_uss_dist, 0.001 * uss_dis_info_buf[rear_uss_idx]));
+    }
+  } else {
+    // load uss dist from uss wave, m id f
+    const auto& upa_dis_info_buf = local_view->uss_wave_info.upa_dis_info_buf;
+
+    const std::vector<int> front_wids_idx_vec = {0, 9, 6, 3, 1, 11};
+    const std::vector<int> rear_wids_idx_vec = {0, 1, 3, 6, 9, 11};
+
+    const std::vector<std::vector<int>> wids_idx_vec = {front_wids_idx_vec,
+                                                        rear_wids_idx_vec};
+    for (size_t i = 0; i < wids_idx_vec.size(); i++) {
+      for (size_t j = 0; j < wids_idx_vec[i].size(); j++) {
+        const auto idx = wids_idx_vec[i][j];
+        uss_dis_vec_.emplace_back(std::max(
+            min_uss_dist, 1.0 * upa_dis_info_buf[i].wdis[idx].wdis_value[0]));
+      }
+    }
   }
 
   // 读取通用障碍物点云
@@ -190,9 +231,7 @@ const bool ApaObstacleManager::GetObstacle(const ApaObsAttributeType type,
 }
 
 void ApaObstacleManager::TransformCoordFromGlobalToLocal(
-    const pnc::geometry_lib::PathPoint& origin_pose) {
-  pnc::geometry_lib::GlobalToLocalTf g2l_tf;
-  g2l_tf.Init(origin_pose.pos, origin_pose.heading);
+    const pnc::geometry_lib::GlobalToLocalTf& g2l_tf) {
   for (auto& pair : obstacles_) {
     if (pair.second.GetObsAttributeType() !=
         ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {

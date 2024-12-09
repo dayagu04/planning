@@ -20,15 +20,13 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   // virtual func
   virtual const uint8_t PathPlanOnce() override;
   virtual const bool UpdateEgoSlotInfo() override;
-  virtual void GenTlane() override;
-  virtual void GenObstacles() override;
+  virtual const bool GenTlane() override;
+  virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
-  virtual const bool PostProcessPathAccordingObs(
-      const double car_remain_dist) override;
   virtual const bool CheckSegCompleted() override;
   virtual const bool CheckUssStucked() override;
   virtual const bool CheckColDetStucked() override;

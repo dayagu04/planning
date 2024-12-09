@@ -7,10 +7,11 @@
 #include <cstdint>
 #include <memory>
 
-#include "apa_data.h"
+
 #include "apa_measure_data_manager.h"
 #include "apa_obstacle_manager.h"
 #include "apa_predict_path_manager.h"
+#include "apa_slot_manager.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "collision_detection/uss_obstacle_avoidance.h"
@@ -27,6 +28,34 @@
 namespace planning {
 namespace apa_planner {
 
+struct SimulationParam {
+  bool is_simulation = false;
+  bool is_complete_path = false;
+  bool force_plan = false;
+  bool sim_to_target = false;
+  bool use_slot_in_bag = true;
+  bool use_obs_in_bag = true;
+  bool is_path_optimization = false;
+  bool is_cilqr_optimization = false;
+  bool is_reset = false;
+  double sample_ds = 0.02;
+  std::vector<double> target_managed_slot_x_vec;
+  std::vector<double> target_managed_slot_y_vec;
+  std::vector<double> target_managed_limiter_x_vec;
+  std::vector<double> target_managed_limiter_y_vec;
+  std::vector<double> obs_x_vec;
+  std::vector<double> obs_y_vec;
+
+  double q_ref_xy = 100.0;
+  double q_ref_theta = 100.0;
+  double q_terminal_xy = 1000.0;
+  double q_terminal_theta = 9000.0;
+  double q_k = 10.0;
+  double q_u = 10.0;
+  double q_k_bound = 100.0;
+  double q_u_bound = 50.0;
+};
+
 class ApaWorld {
  public:
   ApaWorld() { Init(); }
@@ -37,8 +66,6 @@ class ApaWorld {
   const bool Update(const LocalView* const local_view,
                     const iflyauto::PlanningOutput& planning_output);
   const bool Update();
-
-  std::shared_ptr<ApaData> GetApaDataPtr() { return apa_data_ptr_; }
 
   std::shared_ptr<SlotManager> GetSlotManagerPtr() { return slot_manager_ptr_; }
 
@@ -70,19 +97,24 @@ class ApaWorld {
     return obstacle_manager_ptr_;
   }
 
+  std::shared_ptr<ApaSlotManager> GetNewSlotManagerPtr() {
+    return new_slot_manager_ptr_;
+  }
+
   const LocalView* GetLocalViewPtr() { return local_view_ptr_; }
 
+  const SimulationParam& GetSimuParam() { return simu_param_; }
+  void SetSimuParam(const SimulationParam& simu_param) {
+    simu_param_ = simu_param;
+  }
+
+  // need delete when no use old slot_manager, temp public varible
+  uint8_t slot_type_ = Common::PARKING_SLOT_TYPE_INVALID;
+  uint8_t slot_id_ = 0;
+  bool is_slot_type_fixed_ = false;
+
  private:
-  void Preprocess();
-  void UpdateEgoState();
-  void UpdateSlots();
-  void UpdateUssDistance();
-
-  void UpdateFuisonObs();
-  void UpdateGroundLineObs();
-  void UpdateUssObs();
-
-  std::shared_ptr<ApaData> apa_data_ptr_;
+  std::shared_ptr<ApaSlotManager> new_slot_manager_ptr_;
   std::shared_ptr<ApaPredictPathManager> predict_path_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
@@ -92,6 +124,7 @@ class ApaWorld {
   std::shared_ptr<CollisionDetector> collision_detector_ptr_;
   std::shared_ptr<LateralPathOptimizer> lateral_path_optimizer_ptr_;
 
+  SimulationParam simu_param_;
   const LocalView* local_view_ptr_ = nullptr;
   const iflyauto::PlanningOutput* planning_output_ptr_ = nullptr;
 };

@@ -18,6 +18,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     return;
   }
 
+  ILOG_INFO << "Update ApaStateMachineManager";
+
   const iflyauto::FuncStateMachine& fun_state_machine_info =
       local_view_ptr->function_state_machine_info;
 
