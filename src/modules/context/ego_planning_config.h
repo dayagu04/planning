@@ -2116,6 +2116,59 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double jerk_lower_in_large_curv = -2.0;
 };
 
+struct SpeedLimitConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    preview_x = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "preview_x"});
+    t_curv = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_limit_decider", "t_curv"});
+    dis_curv = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "dis_curv"});
+    pre_accelerate_distance_for_merge = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "pre_accelerate_distance_for_merge"});
+    straight_ramp_v_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "straight_ramp_v_limit"});
+    v_limit_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "v_limit_ramp"});
+    v_limit_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "v_limit_near_ramp_zone"});
+    dis_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "dis_near_ramp_zone"});
+    brake_dis_near_ramp_zone = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "brake_dis_near_ramp_zone"});
+    acc_to_ramp = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "acc_to_ramp"});
+    v_intersection_min_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"speed_limit_decider",
+                                       "v_intersection_min_limit"});
+  }
+  int lon_num_step = 25;
+  double delta_time = 0.2;
+  double preview_x = 80.0;
+  double t_curv = 2.0;
+  double dis_curv = 30.0;
+  double pre_accelerate_distance_for_merge = 80.0;
+  double straight_ramp_v_limit = 22.22;
+  double v_limit_ramp = 16.67;
+  double v_limit_near_ramp_zone = 25.0;
+  double dis_near_ramp_zone = 1200.0;
+  double brake_dis_near_ramp_zone = 700.0;
+  double acc_to_ramp = -0.7;
+  double v_intersection_min_limit = 11.11;
+};
+
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

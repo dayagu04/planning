@@ -4,19 +4,29 @@ namespace planning {
 
 bool SpeedLimitDeciderOutput::GetSpeedLimit(
     double* const limited_speed, SpeedLimitType* const speed_limit_type) const {
-  if (speed_limit_map_.empty()) {
-    *speed_limit_type = SpeedLimitType::NONE;
-    return false;
-  }
-  auto speed_limit_result = speed_limit_map_.begin();
-  (*limited_speed) = speed_limit_result->first;
-  (*speed_limit_type) = speed_limit_result->second;
+  (*speed_limit_type) = speed_limit_type_final_.first;
+  (*limited_speed) = speed_limit_type_final_.second;
   // std::cout << "print speed map: " << std::endl;
   // for (const auto &entry : speed_limit_map_) {
   //   std::cout << "value: " << entry.first << " type: " << (int)(entry.second)
   //             << std::endl;
   // }
   return true;
+}
+
+void SpeedLimitDeciderOutput::SetSpeedLimit(const double limited_speed,
+                     const SpeedLimitType& speed_limit_type) {
+  speed_limit_type_final_.first = speed_limit_type;
+  speed_limit_type_final_.second = limited_speed;
+}
+
+void SpeedLimitDeciderOutput::SetSpeedLimitIntoMap(const double limited_speed,
+                     const SpeedLimitType& speed_limit_type) {
+  if (speed_limit_map_.find(speed_limit_type) == speed_limit_map_.end()) {
+    speed_limit_map_.insert(std::make_pair(speed_limit_type, limited_speed));
+  } else {
+    speed_limit_map_[speed_limit_type] = limited_speed;
+  }
 }
 
 std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
@@ -42,6 +52,12 @@ std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     ret.append("VRU_ROUND");
   } else if (SpeedLimitType::MERGE_ALC == type) {
     ret.append("MERGE_ALC");
+  } else if (SpeedLimitType::MAP_NEAR_RAMP == type) {
+    ret.append("MAP_NEAR_RAMP");
+  } else if (SpeedLimitType::MAP_ON_RAMP == type) {
+    ret.append("MAP_ON_RAMP");
+  } else if (SpeedLimitType::INTERSECTION == type) {
+    ret.append("INTERSECTION");
   } else {
     ret.append("type error");
   }

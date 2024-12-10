@@ -134,6 +134,9 @@ class PlanningContext {
   const SpeedLimitDeciderOutput &speed_limit_decider_output() const {
     return speed_limit_decider_output_;
   }
+  SpeedLimitDeciderOutput &mutable_speed_limit_decider_output() {
+    return speed_limit_decider_output_;
+  }
 
   const VisionLateralBehaviorPlannerOutput &
   vision_lateral_behavior_planner_output() const {

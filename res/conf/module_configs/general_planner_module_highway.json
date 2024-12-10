@@ -500,6 +500,21 @@
     "acc_lower_bound_in_large_curv": -2.0,
     "jerk_lower_in_large_curv": -2.0
   },
+
+  "speed_limit_decider": {
+    "preview_x": 80.0,
+    "t_curv": 2.0,
+    "dis_curv": 30.0,
+    "v_limit_near_ramp_zone": 25.0,
+    "dis_near_ramp_zone": 1200.0,
+    "brake_dis_near_ramp_zone": 700.0,
+    "v_limit_ramp": 16.67,
+    "acc_to_ramp": -0.7,
+    "pre_accelerate_distance_for_merge": 150.0,
+    "straight_ramp_v_limit": 19.44,
+    "v_intersection_min_limit": 11.11
+  },
+
   "result_trajectory_generator": {
     "enable_lat_traj": false
   },
