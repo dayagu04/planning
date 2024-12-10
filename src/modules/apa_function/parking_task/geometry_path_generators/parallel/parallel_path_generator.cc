@@ -93,7 +93,7 @@ void ParallelPathGenerator::Preprocess() {
   calc_params_.target_line = pnc::geometry_lib::BuildLineSegByPose(
       input_.tlane.pt_terminal_pos, target_heading);
 
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
 
   ExpandPInObstacles();
   MoveChannelObstacles();
@@ -200,9 +200,6 @@ const bool ParallelPathGenerator::Update() {
     ILOG_INFO << "ego is out of slot";
     AddPInVirtualObstacles();
 
-    // if (MonoStepPlanWithShift()) {
-    //   ILOG_INFO <<"MonoStepPlanWithShift success");
-    // } else
     if (CalMinSafeCircle()) {
       ILOG_INFO << "CalMinSafeCircle success!";
     } else {
@@ -333,7 +330,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
   const uint8_t arc_1_steer =
       (calc_params_.is_left_side ? SEG_STEER_RIGHT : SEG_STEER_LEFT);
 
-  bool is_narrow_channel_activated = false;
+  bool is_narrow_channel = false;
   std::vector<PathSegment> narrow_path_seg_vec;
   for (const auto& target_pose : calc_params_.valid_target_pt_vec) {
     arc_1.pA = target_pose.pos;
@@ -402,7 +399,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
         col_res.remain_car_dist >
             col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
       // ILOG_INFO <<"arc 2 collided!");
-      is_narrow_channel_activated = true;
+      is_narrow_channel = true;
       if (!PlanFromTargetToLineInNarrowChannel(narrow_path_seg_vec, arc_1,
                                                arc_2)) {
         ILOG_INFO << "narrow channel plan failed";
@@ -418,7 +415,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     return false;
   }
 
-  if (is_narrow_channel_activated) {
+  if (is_narrow_channel) {
     ego_line.heading = start_pose.heading;
     ego_line.SetPoints(start_pose.pos, narrow_path_seg_vec.back().GetEndPos());
   }
@@ -433,8 +430,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
     path_seg_vec.emplace_back(PathSegment(ego_gear, ego_line));
   }
 
-  if (is_narrow_channel_activated &&
-      ReversePathSegVecInfo(narrow_path_seg_vec)) {
+  if (is_narrow_channel && ReversePathSegVecInfo(narrow_path_seg_vec)) {
     for (const auto& path_seg : narrow_path_seg_vec) {
       path_seg_vec.emplace_back(path_seg);
     }
@@ -471,7 +467,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
     const pnc::geometry_lib::Arc& arc1, const pnc::geometry_lib::Arc& arc_2) {
   path_seg_vec.clear();
   path_seg_vec.reserve(10);
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
 
   // ILOG_INFO <<
   //     "------------------------  PlanFromTargetToLineInNarrowChannel "
@@ -743,118 +739,6 @@ const bool ParallelPathGenerator::CalSinglePathInNarrowChannel(
   return success;
 }
 
-const bool ParallelPathGenerator::MonoStepPlanWithShift() {
-  std::vector<double> target_y_vec;
-  target_y_vec.clear();
-  target_y_vec.reserve(10);
-  target_y_vec.emplace_back(input_.tlane.pt_terminal_pos.y());
-
-  bool success = false;
-  bool is_dirve_out_safe = false;
-  pnc::geometry_lib::PathPoint tmp_pose(input_.tlane.pt_terminal_pos,
-                                        calc_params_.target_line.heading);
-
-  size_t safe_y_cnt = 0;
-  for (const auto& target_y : target_y_vec) {
-    tmp_pose.pos.y() = target_y;
-    if (MonoStepPlanOnceWithShift(is_dirve_out_safe, tmp_pose)) {
-      if (is_dirve_out_safe) {
-        success = true;
-        safe_y_cnt++;
-        ILOG_INFO << "successful target_y =" << target_y;
-        if (safe_y_cnt == 2) {
-          calc_params_.safe_circle_root_pose = tmp_pose;
-        }
-      }
-    }
-  }
-
-  return success;
-}
-
-const bool ParallelPathGenerator::MonoStepPlanOnceWithShift(
-    bool& is_drive_out_safe, const pnc::geometry_lib::PathPoint& target_pose) {
-  // calc backward limit
-  pnc::geometry_lib::LineSegment backward_line;
-  backward_line.pA = target_pose.pos;
-  backward_line.heading = target_pose.heading;
-
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.15));
-
-  if (!CalcLineStepLimitPose(backward_line, pnc::geometry_lib::SEG_GEAR_REVERSE,
-                             0.4)) {
-    ILOG_INFO << "CalcLineStepLimitPose error!";
-    return false;
-  }
-
-  // check if ego is able to park out at backward limit pose
-  pnc::geometry_lib::Arc forward_arc;
-  forward_arc.pA = backward_line.pB;
-  forward_arc.headingA = backward_line.heading;
-  forward_arc.circle_info.radius = apa_param.GetParam().min_turn_radius;
-
-  const auto forward_steer = calc_params_.slot_side_sgn
-                                 ? pnc::geometry_lib::SEG_STEER_LEFT
-                                 : pnc::geometry_lib::SEG_STEER_RIGHT;
-
-  if (!CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
-                            forward_steer, kColBufferInSlot)) {
-    ILOG_INFO << "calc forward arc limit error!";
-    return false;
-  }
-
-  if (!CheckParkOutCornerSafeWithObsPin(forward_arc)) {
-    ILOG_INFO << "park out failed in backward line limit!";
-    return false;
-  }
-
-  pnc::geometry_lib::PathSegment forward_seg(
-      forward_steer, pnc::geometry_lib::SEG_GEAR_DRIVE, forward_arc);
-  calc_params_.park_out_path_in_slot.clear();
-  calc_params_.park_out_path_in_slot.emplace_back(std::move(forward_seg));
-
-  calc_params_.valid_target_pt_vec.clear();
-  calc_params_.valid_target_pt_vec.emplace_back(
-      pnc::geometry_lib::PathPoint(forward_arc.pA, forward_arc.headingA));
-
-  // find all pt which can park out along the y_offset line
-  const double length = std::fabs(target_pose.pos.x() - forward_arc.pA.x());
-  const double step = length / 3.0;
-  const auto back_line_limit = forward_arc.pA;
-
-  for (double x_offset = step; x_offset < length + 0.3; x_offset += step) {
-    forward_arc.pA.x() = back_line_limit.x() + x_offset;
-    if (!CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
-                              forward_steer, kColBufferInSlot)) {
-      ILOG_INFO << "calc forward arc limit error!";
-      break;
-    }
-    if (!CheckParkOutCornerSafeWithObsPin(forward_arc)) {
-      break;
-    }
-    calc_params_.valid_target_pt_vec.emplace_back(
-        pnc::geometry_lib::PathPoint(forward_arc.pA, forward_arc.headingA));
-  }
-
-  auto compare = [](const pnc::geometry_lib::PathPoint& pose1,
-                    const pnc::geometry_lib::PathPoint& pose2) {
-    return pose1.pos.x() > pose2.pos.x();
-  };
-
-  if (calc_params_.valid_target_pt_vec.size() > 1) {
-    std::sort(calc_params_.valid_target_pt_vec.begin(),
-              calc_params_.valid_target_pt_vec.end(), compare);
-    ILOG_INFO << "target pt vec: ";
-
-    for (const auto& pt : calc_params_.valid_target_pt_vec) {
-      ILOG_INFO << pt.pos.x() << ", ";
-    }
-    ILOG_INFO;
-  }
-
-  return true;
-}
-
 const bool ParallelPathGenerator::BackwardNormalPlan() {
   std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
   path_seg_vec.reserve(10);
@@ -1034,8 +918,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       continue;
     }
 
-    while (inversed_park_out_path.front().seg_type ==
-           pnc::geometry_lib::SEG_TYPE_LINE) {
+    if (inversed_park_out_path.front().seg_type ==
+        pnc::geometry_lib::SEG_TYPE_LINE) {
       inversed_park_out_path.erase(inversed_park_out_path.begin());
     }
 

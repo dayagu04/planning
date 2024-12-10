@@ -582,28 +582,24 @@ void ParallelParkInScenario::GenTlane() {
   }
 
   ILOG_INFO << "para_tlane_front_min_x_before_clamp = " << front_min_x;
-  JSON_DEBUG_VALUE("para_tlane_front_min_x_before_clamp", front_min_x)
 
   front_min_x = pnc::mathlib::Clamp(
       front_min_x, slot_length - kRearDetaXMagWhenFrontVacant,
       slot_length + kFrontDetaXMagWhenFrontVacant);
 
   ILOG_INFO << "para_tlane_front_min_x_after_clamp =" << front_min_x;
-  JSON_DEBUG_VALUE("para_tlane_front_min_x_after_clamp", front_min_x)
-
-  JSON_DEBUG_VECTOR("tlane_front_que_x", front_que_x, 2)
-  JSON_DEBUG_VECTOR("tlane_front_que_y", front_que_y, 2)
 
   const double front_y_limit = front_parallel_line_y_limit;
   ILOG_INFO << "front parallel line y =" << front_y_limit;
-  JSON_DEBUG_VALUE("para_tlane_front_y", front_y_limit)
 
   ILOG_INFO << "para_tlane_rear_max_x_before_clamp = " << rear_max_x;
-  JSON_DEBUG_VALUE("para_tlane_rear_max_x_before_clamp", rear_max_x)
-
   rear_max_x =
       pnc::mathlib::Clamp(rear_max_x, -kRearDetaXMagWhenFrontOccupiedRearVacant,
                           kRearMaxDetaXMagWhenRearOccupied);
+  if (rear_vacant &&
+      ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    rear_max_x = std::min(rear_max_x, ego_slot_info.ego_pos_slot.x() - 1.4);
+  }
 
   ILOG_INFO << "para_tlane_rear_max_x_after_clamp = " << rear_max_x;
   JSON_DEBUG_VALUE("para_tlane_rear_max_x_after_clamp", rear_max_x)
@@ -1212,7 +1208,6 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   const auto path_planner_output = parallel_path_planner_.GetOutput();
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
-
 
   // enter slot
   if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {

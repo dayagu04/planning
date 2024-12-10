@@ -1565,29 +1565,9 @@ void SlotManager::UpdateParallelSlotInfoInParking() {
   auto &select_slot_window =
       frame_.slot_info_window_map[ego_slot_info.select_slot_id];
 
-  if (ego_slot_info.slot_occupied_ratio < 1e-5 ||
-      !apa_param.GetParam().lock_parallel_slot) {
-    select_slot_window.Reset();
-    select_slot_window.Add(ego_slot_info.select_slot);
-    ego_slot_info.select_slot_filter = select_slot_window.GetFusedInfo();
-    return;
-  }
-
-  if (apa_param.GetParam().lock_parallel_slot) {
-    // update once in slot
-    if ((frame_.ego_slot_info.slot_occupied_ratio > 0.55) &&
-        (std::fabs(measure_data_ptr_->GetVel()) <
-         apa_param.GetParam().car_static_velocity_strict) &&
-        (!frame_.parallel_slot_reseted_once)) {
-      ILOG_INFO << "reset parallel slot once!";
-
-      select_slot_window.Reset();
-      select_slot_window.Add(ego_slot_info.select_slot);
-      ego_slot_info.select_slot_filter = select_slot_window.GetFusedInfo();
-
-      frame_.parallel_slot_reseted_once = true;
-    }
-  }
+  select_slot_window.Reset();
+  select_slot_window.Add(ego_slot_info.select_slot);
+  ego_slot_info.select_slot_filter = select_slot_window.GetFusedInfo();
 }
 
 void SlotManager::UpdateLimiterInfoInParking() {
