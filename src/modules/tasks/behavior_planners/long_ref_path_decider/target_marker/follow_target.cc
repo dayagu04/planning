@@ -1,4 +1,5 @@
 #include "follow_target.h"
+#include <cstdint>
 
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -578,6 +579,7 @@ void FollowTarget::AddFollowTargetDataToProto() {
       auto* ptr = follow_target_pb_.add_follow_target_s_ref();
       ptr->set_s(value.s_target_val());
       ptr->set_t(value.relative_t());
+      ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
   mutable_follow_target_data->CopyFrom(follow_target_pb_);

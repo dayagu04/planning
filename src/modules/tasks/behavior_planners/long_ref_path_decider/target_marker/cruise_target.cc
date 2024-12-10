@@ -294,6 +294,7 @@ void CruiseTarget::AddCruiseTargetDataToProto() {
       auto* ptr = cruise_target_pb_.add_cruise_target_s_ref();
       ptr->set_s(value.s_target_val());
       ptr->set_t(value.relative_t());
+      ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
   mutable_cruise_target_data->CopyFrom(cruise_target_pb_);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ego_planning_config.h"
+#include "lon_target_maker.pb.h"
 #include "session.h"
 #include "src/modules/common/status/status.h"
 #include "tasks/behavior_planners/long_ref_path_decider/target_marker/target_maker.h"
@@ -36,6 +37,8 @@ class WeightMaker {
 
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve();
 
+  void CollectDataToProto(const TargetMaker& target_maker);
+
   SpeedPlannerConfig speed_planning_config_;
   std::array<double, 3> init_lon_state_;
   framework::Session* session_;
@@ -47,6 +50,7 @@ class WeightMaker {
   std::vector<double> acc_weight_;
   std::vector<double> jerk_weight_;
   bool is_urgent_ = false;
+  planning::common::WeightMakerReplayInfo weight_maker_replay_info_;
 };
 
 }  // namespace planning

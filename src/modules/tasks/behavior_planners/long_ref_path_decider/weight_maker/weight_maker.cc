@@ -43,6 +43,8 @@ common::Status WeightMaker::Run(const TargetMaker& target_maker) {
 
   MakeJerkWeight();
 
+  CollectDataToProto(target_maker);
+
   return common::Status::OK();
 }
 
@@ -257,6 +259,22 @@ void WeightMaker::Reset() {
   v_weight_.clear();
   acc_weight_.clear();
   jerk_weight_.clear();
+}
+
+void WeightMaker::CollectDataToProto(const TargetMaker& target_maker) {
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_weight_data =
+      debug_info_pb->mutable_weight_maker()->mutable_weight_maker_replay_info();
+  mutable_weight_data->set_is_urgent(is_urgent_);
+  for (size_t i = 0; i < plan_points_num_; ++i) {
+    double relative_t = i * dt_;
+    auto target_value = target_maker.target_value(relative_t);
+    auto* ptr = weight_maker_replay_info_.add_target_point();
+    ptr->set_s(target_value.s_target_val());
+    ptr->set_t(target_value.relative_t());
+    ptr->set_target_type(static_cast<int32_t>(target_value.target_type()));
+  }
+  mutable_weight_data->CopyFrom(weight_maker_replay_info_);
 }
 
 }  // namespace planning

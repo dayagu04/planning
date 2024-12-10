@@ -897,6 +897,11 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
+    // binwang33 hack: 在轨迹有效size加入后，取消此逻辑
+    bool traj_enable =
+        (cur_predicion_obj.is_VRU || prediction_traj.relative_time < 0.1)
+            ? false
+            : true;
     for (int i = 0; i < TRAJ_POINT_NUM_USED; i++) {
       const auto &point = prediction_traj.trajectory_point[i];
       PredictionTrajectoryPoint trajectory_point;
@@ -922,8 +927,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
       // binwang33 hack: 当前预测没有VRU轨迹
       cur_predicion_obj.yaw =
           prediction_object.fusion_obstacle.common_info.heading_angle;
-      if (cur_predicion_obj.is_VRU) {
-        trajectory_point.relative_time = point_relative_time;
+      if (traj_enable == false) {
+        trajectory_point.relative_time = 0.2 * traj_index;
         trajectory_point.x = cur_predicion_obj.position_x;
         trajectory_point.y = cur_predicion_obj.position_y;
         trajectory_point.yaw = cur_predicion_obj.yaw;
@@ -935,11 +940,13 @@ void EnvironmentalModelManager::truncate_prediction_info(
         trajectory_point.relative_ego_speed =
             std::hypot(cur_predicion_obj.relative_speed_x,
                        cur_predicion_obj.relative_speed_y);
+        LOG_DEBUG("The cur_predicion_obj  [%d] 's trajectory is empty! \n",
+                  cur_predicion_obj.id);
       }
       traj_index++;
       trajectory_points.emplace_back(trajectory_point);
-      // cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }
+    // synchronize time
     for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
       auto trajectory_point =
           GetPointAtTime(trajectory_points, 0.2 * traj_index);
