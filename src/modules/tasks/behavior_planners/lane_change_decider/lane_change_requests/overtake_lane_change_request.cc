@@ -234,8 +234,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   // 无效的track_id暂时赋值为-1
   if ((lead_one != nullptr && lead_one->track_id == -1) ||
-      lead_one == nullptr ||
-      lead_one->d_rel > kDefaultLeadOneConsiderRange) {
+      lead_one == nullptr || lead_one->d_rel > kDefaultLeadOneConsiderRange) {
     LOG_DEBUG("not exist stable leading vehicle");
     overtake_count_ = 0;
     Finish();
@@ -623,13 +622,12 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   bool ramp_on_left = false;
   bool ramp_on_Right = false;
   bool is_on_highway = session_->environmental_model().is_on_highway();
-  const auto& route_info_output = session_->
-      environmental_model().get_route_info()->get_route_info_output();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   if (is_on_highway) {
     ramp_on_left =
-        route_info_output.ramp_direction == RampDirection::RAMP_ON_LEFT
-            ? true
-            : false;
+        route_info_output.ramp_direction == RampDirection::RAMP_ON_LEFT ? true
+                                                                        : false;
     ramp_on_Right =
         route_info_output.ramp_direction == RampDirection::RAMP_ON_RIGHT
             ? true

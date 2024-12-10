@@ -405,10 +405,6 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   const auto &virtual_lane_mgr =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   const auto &clane_virtual_id = virtual_lane_mgr->current_lane_virtual_id();
-  const int origin_relative_id_zero_nums =
-      virtual_lane_mgr->origin_relative_id_zero_nums();
-  bool perfect_in_diversion_lane = false;
-
   const double v_ego =
       session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
   std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
@@ -464,13 +460,6 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
   perfect_in_lane =
       ((std::fabs(frenet_ego_state.l()) < dist_threshold) &&
        (std::fabs(frenet_ego_state.heading_angle()) < angle_threshold));
-
-  if (origin_relative_id_zero_nums > 1) {
-    perfect_in_diversion_lane =
-        (std::fabs(frenet_ego_state.l()) < dist_threshold);
-  }
-  perfect_in_lane = perfect_in_lane || perfect_in_diversion_lane;
-
   return perfect_in_lane;
 }
 
