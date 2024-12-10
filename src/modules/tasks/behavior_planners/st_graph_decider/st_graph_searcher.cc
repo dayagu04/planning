@@ -406,6 +406,7 @@ bool StGraphSearcher::SearchStPath(
   JSON_DEBUG_VALUE("search_succeed", is_goal_reached)
   JSON_DEBUG_VALUE("expanded_nodes_size", expanded_nodes_s_vec.size())
   JSON_DEBUG_VALUE("history_cur_nodes_size", history_cur_nodes_s_vec.size())
+  JSON_DEBUG_VALUE("open_set_empty", open_set.IsEmpty())
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
     LOG_DEBUG("st search fail, goal not reached \n");
