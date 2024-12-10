@@ -105,9 +105,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
       session_->planning_context().longitudinal_decider_output();
   const auto &s_refs = longitudinal_decider_output.s_refs;
   const auto &v_refs = longitudinal_decider_output.ds_refs;
-  const auto &s_bounds = longitudinal_decider_output.hard_bounds;
-  const auto &s_soft_bounds = longitudinal_decider_output.soft_bounds;
-  // const auto &s_lead_bounds = longitudinal_decider_output.lon_lead_bounds;
+  const auto &s_bounds = longitudinal_decider_output.hard_bounds_v3;
   const auto &sv_bounds = longitudinal_decider_output.lon_sv_boundary.sv_bounds;
   const auto &v_bounds = longitudinal_decider_output.lon_bound_v;
   const auto &a_bounds = longitudinal_decider_output.lon_bound_a;
@@ -138,49 +136,12 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   // 2. set bounds
   // 2.1. set hard bound: s bounds
   for (size_t i = 0; i < s_bounds.size(); ++i) {
-    Bound tmp_bound{-1.0e4, 1.0e4};
-    for (auto &bound : s_bounds[i]) {
-      tmp_bound.lower = std::max(bound.lower, tmp_bound.lower);
-      tmp_bound.upper = std::min(bound.upper, tmp_bound.upper);
-    }
-
-    s_limit_.lower =
-        tmp_bound.lower > s_limit_.lower ? tmp_bound.lower : s_limit_.lower;
-    s_limit_.upper =
-        tmp_bound.upper < s_limit_.upper ? tmp_bound.upper : s_limit_.upper;
-
-    planning_input_.mutable_hard_pos_max_vec()->Set(i, tmp_bound.upper);
-    planning_input_.mutable_hard_pos_min_vec()->Set(i, tmp_bound.lower);
+    auto s_bound = s_bounds[i];
+    planning_input_.mutable_hard_pos_max_vec()->Set(i, s_bound.upper);
+    planning_input_.mutable_hard_pos_min_vec()->Set(i, s_bound.lower);
   }
 
-  // 2.2. set soft bound: s_soft_bounds
-  // attention: s_lead_bounds size < s_bounds size
-  for (size_t i = 0; i < s_soft_bounds.size(); i++) {
-    Bound tmp_bound{-1.0e4, 1.0e4};
-    Bound tmp_soft_bound{-1.0e4, 1.0e4};
-    Bound cal_bound{-1.0e4, 1.0e4};
-    // get minimum s lead bound
-    for (auto &soft_bound : s_soft_bounds[i]) {
-      tmp_soft_bound.lower = std::max(soft_bound.lower, tmp_soft_bound.lower);
-      tmp_soft_bound.upper = std::min(soft_bound.upper, tmp_soft_bound.upper);
-    }
-    // get minimum s bound
-    for (auto &bound : s_bounds[i]) {
-      tmp_bound.lower = std::max(bound.lower, tmp_bound.lower);
-      tmp_bound.upper = std::min(bound.upper, tmp_bound.upper);
-    }
-    // get final bound
-    cal_bound.lower = std::max(tmp_soft_bound.lower, tmp_bound.lower);
-    cal_bound.upper = std::min(tmp_soft_bound.upper, tmp_bound.upper);
-
-    s_limit_.lower =
-        cal_bound.lower > s_limit_.lower ? cal_bound.lower : s_limit_.lower;
-    s_limit_.upper =
-        cal_bound.upper < s_limit_.upper ? cal_bound.upper : s_limit_.upper;
-
-    planning_input_.mutable_soft_pos_max_vec()->Set(i, cal_bound.upper);
-    planning_input_.mutable_soft_pos_min_vec()->Set(i, cal_bound.lower);
-  }
+  // 2.2. cancle soft bound in V3
 
   // 2.3. set s-v bounds 离散点降采样
   const int sample_step = sv_bounds.size() / 5;
