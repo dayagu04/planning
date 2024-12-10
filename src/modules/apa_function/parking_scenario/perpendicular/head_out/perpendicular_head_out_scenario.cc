@@ -1413,10 +1413,10 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const bool heading_condition_1 =
-      std::fabs(ego_slot_info.ego_heading_slot) <= 110.0 / 57.3;  // TODU::
+      std::fabs(ego_slot_info.ego_heading_slot) <= 100.0 * kDeg2Rad;  // TODU::
 
   const bool heading_condition_2 =
-      std::fabs(ego_slot_info.ego_heading_slot) >= 80.0 / 57.3;
+      std::fabs(ego_slot_info.ego_heading_slot) >= 80.0 * kDeg2Rad;
 
   const bool lat_condition = heading_condition_1 && heading_condition_2;
 
@@ -1427,7 +1427,7 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
 
   if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
-    parking_finish = remain_s_condition;
+    parking_finish = remain_s_condition && static_condition;
   } else {
     parking_finish = lat_condition && static_condition && remain_s_condition;
   }
