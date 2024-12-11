@@ -259,6 +259,7 @@ void WeightMaker::Reset() {
   v_weight_.clear();
   acc_weight_.clear();
   jerk_weight_.clear();
+  weight_maker_replay_info_.Clear();
 }
 
 void WeightMaker::CollectDataToProto(const TargetMaker& target_maker) {

@@ -538,14 +538,14 @@ def load_lon_global_figure(bag_loader):
    ego_velocity_vec = []
    target_velocity_vec = []
    ref_velocity_vec = []
-   leadone_velocity_vec = []
-   leadtwo_velocity_vec = []
+   # leadone_velocity_vec = []
+   # leadtwo_velocity_vec = []
    t_plan_vec = bag_loader.plan_debug_msg['t']
    t_loc_vec = bag_loader.loc_msg['t']
    for ind in range(len(bag_loader.plan_debug_msg['json'])):
       target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
-      leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
-      leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
+      # leadone_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_vel'], 2))
+      # leadtwo_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_vel'], 2))
 
    for ind in range(len(bag_loader.loc_msg['data'])):
       loc_msg = bag_loader.loc_msg['data'][ind]
@@ -560,33 +560,33 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ref_velocity', color="gray")
    velocity_fig.line(t_loc_vec, ego_velocity_vec, line_width=1,
                                   legend_label='ego_velocity',color="blue")
-   velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
-                                legend_label='leadone_velocity', color="red")
-   velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
-                                  legend_label='leadtwo_velocity',color="orange")
+   # velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
+   #                              legend_label='leadone_velocity', color="red")
+   # velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
+   #                                legend_label='leadtwo_velocity',color="orange")
 
    acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
                   y_axis_label='acc/(m/s2)',width=600,height=400)
 
    ego_acc_vec = []
-   acc_min_vec = []
-   acc_max_vec = []
-   acc_leadone_vec = []
+  #  acc_min_vec = []
+  #  acc_max_vec = []
+  #  acc_leadone_vec = []
 
    t_vs_vec = bag_loader.vs_msg['t']
-   for ind in range(len(bag_loader.plan_debug_msg['json'])):
-      acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
-      acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
-      acc_leadone_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
+  #  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+  #     acc_min_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_low'], 2))
+  #     acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
+  #     acc_leadone_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_cipv'], 2))
    for ind in range(len(bag_loader.vs_msg['data'])):
       ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
-   acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
-                                legend_label='acc_min', color="brown")
+  #  acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
+  #                               legend_label='acc_min', color="brown")
    acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
                                   legend_label='ego_acc',color="blue")
-   acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
-                                legend_label='acc_max', color="red")
+  #  acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
+  #                               legend_label='acc_max', color="red")
    return velocity_fig, acc_fig
 
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig):

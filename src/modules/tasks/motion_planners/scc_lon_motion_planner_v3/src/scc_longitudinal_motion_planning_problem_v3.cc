@@ -40,14 +40,14 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
       std::make_shared<LonAccCostTerm>());  // longitudinal acc cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonJerkCostTerm>());  // longitudinal jerk cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LonSoftPosBoundCostTerm>());  // longitudinal soft pos
-                                                     // bound cost
+//   ilqr_core_ptr_->AddCost(
+//       std::make_shared<LonSoftPosBoundCostTerm>());  // longitudinal soft pos
+//                                                      //  bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonHardPosBoundCostTerm>());  // longitudinal hard pos
                                                      // bound cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LonSVBoundCost>());  // longitudinal
-                                                                // sv bound cost
+//   ilqr_core_ptr_->AddCost(std::make_shared<LonSVBoundCost>());  // longitudinal
+//                                                                 // sv bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonVelBoundCostTerm>());  // longitudinal vel bound cost
   ilqr_core_ptr_->AddCost(
@@ -87,8 +87,8 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[S_STOP] = planning_input.s_stop();
 
     // bounds
-    cost_config_vec.at(i)[SOFT_POS_MAX] = planning_input.soft_pos_max_vec(i);
-    cost_config_vec.at(i)[SOFT_POS_MIN] = planning_input.soft_pos_min_vec(i);
+    // cost_config_vec.at(i)[SOFT_POS_MAX] = planning_input.soft_pos_max_vec(i);
+    // cost_config_vec.at(i)[SOFT_POS_MIN] = planning_input.soft_pos_min_vec(i);
     cost_config_vec.at(i)[HARD_POS_MAX] = planning_input.hard_pos_max_vec(i);
     cost_config_vec.at(i)[HARD_POS_MIN] = planning_input.hard_pos_min_vec(i);
     cost_config_vec.at(i)[VEL_MAX] = planning_input.vel_max_vec(i);
@@ -99,18 +99,18 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[JERK_MIN] = planning_input.jerk_min_vec(i);
 
     // bounds: s-v bounds
-    cost_config_vec.at(i)[SV_BOUND_S_0] = planning_input.sv_bound_s_0(i);
-    cost_config_vec.at(i)[SV_BOUND_S_1] = planning_input.sv_bound_s_1(i);
-    cost_config_vec.at(i)[SV_BOUND_S_2] = planning_input.sv_bound_s_2(i);
-    cost_config_vec.at(i)[SV_BOUND_S_3] = planning_input.sv_bound_s_3(i);
-    cost_config_vec.at(i)[SV_BOUND_S_4] = planning_input.sv_bound_s_4(i);
-    cost_config_vec.at(i)[SV_BOUND_S_5] = planning_input.sv_bound_s_5(i);
-    cost_config_vec.at(i)[SV_BOUND_V_MAX_0] = planning_input.sv_bound_v_0(i);
-    cost_config_vec.at(i)[SV_BOUND_V_MAX_1] = planning_input.sv_bound_v_1(i);
-    cost_config_vec.at(i)[SV_BOUND_V_MAX_2] = planning_input.sv_bound_v_2(i);
-    cost_config_vec.at(i)[SV_BOUND_V_MAX_3] = planning_input.sv_bound_v_3(i);
-    cost_config_vec.at(i)[SV_BOUND_V_MAX_4] = planning_input.sv_bound_v_4(i);
-    cost_config_vec.at(i)[SV_BOUND_V_MAX_5] = planning_input.sv_bound_v_5(i);
+    // cost_config_vec.at(i)[SV_BOUND_S_0] = planning_input.sv_bound_s_0(i);
+    // cost_config_vec.at(i)[SV_BOUND_S_1] = planning_input.sv_bound_s_1(i);
+    // cost_config_vec.at(i)[SV_BOUND_S_2] = planning_input.sv_bound_s_2(i);
+    // cost_config_vec.at(i)[SV_BOUND_S_3] = planning_input.sv_bound_s_3(i);
+    // cost_config_vec.at(i)[SV_BOUND_S_4] = planning_input.sv_bound_s_4(i);
+    // cost_config_vec.at(i)[SV_BOUND_S_5] = planning_input.sv_bound_s_5(i);
+    // cost_config_vec.at(i)[SV_BOUND_V_MAX_0] = planning_input.sv_bound_v_0(i);
+    // cost_config_vec.at(i)[SV_BOUND_V_MAX_1] = planning_input.sv_bound_v_1(i);
+    // cost_config_vec.at(i)[SV_BOUND_V_MAX_2] = planning_input.sv_bound_v_2(i);
+    // cost_config_vec.at(i)[SV_BOUND_V_MAX_3] = planning_input.sv_bound_v_3(i);
+    // cost_config_vec.at(i)[SV_BOUND_V_MAX_4] = planning_input.sv_bound_v_4(i);
+    // cost_config_vec.at(i)[SV_BOUND_V_MAX_5] = planning_input.sv_bound_v_5(i);
 
     // weights
     cost_config_vec.at(i)[W_REF_POS] = planning_input.s_weights(i);

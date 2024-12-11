@@ -12,7 +12,7 @@ from jupyter_pybind import scc_lon_motion_planning_v3_py
 
 # bag path and frame dt
 #bag_path = "/mnt/s811_1_0907/motion_14.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241206/20241206-15-34-05/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-12-06-15-34-05_no_camera.bag.1733817324.close-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241206/20241206-15-48-40/data_collection_CHERY_E0Y_14520_EVENT_MANUAL_2024-12-06-15-48-40_no_camera.bag.1733887758.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -36,14 +36,14 @@ lon_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].longitudinal_moti
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.1, max=max_time, value=0.1, step=frame_dt)
-    self.q_default_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_default",min=0.0, max=100.0, value=5.0, step=0.1)
-    self.q_follow_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_follow",min=0.0, max=100.0, value=5.0, step=0.1)
-    self.q_overtake_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_overtake",min=0.0, max=100.0, value=5.0, step=0.1)
-    self.q_neighbor_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_neighbor",min=0.0, max=100.0, value=5.0, step=0.1)
+    self.q_default_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_default",min=0.0, max=100.0, value=3.0, step=0.1)
+    self.q_follow_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_follow",min=0.0, max=100.0, value=3.0, step=0.1)
+    self.q_overtake_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_overtake",min=0.0, max=100.0, value=3.0, step=0.1)
+    self.q_neighbor_s_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "s_ref_neighbor",min=0.0, max=100.0, value=3.0, step=0.1)
     self.q_default_v_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "v_ref_default",min=0.0, max=100.0, value=0.0, step=0.5)
     self.q_cruise_v_weight_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "v_ref_cruise",min=0.0, max=100.0, value=40.0, step=0.5)
-    self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.0, max=100.0, value=lon_motion_plan_input0.q_acc, step=frame_dt)
-    self.q_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk",min=0.0, max=100.0, value=lon_motion_plan_input0.q_jerk, step=frame_dt)
+    self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.0, max=300.0, value=lon_motion_plan_input0.q_acc, step=frame_dt)
+    self.q_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk",min=0.0, max=300.0, value=lon_motion_plan_input0.q_jerk, step=frame_dt)
     self.q_hard_pos_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_pos_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_hard_pos_bound, step=1.0)
     self.q_vel_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_vel_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_vel_bound, step=1.0)
     self.q_acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_acc_bound, step=1.0)
@@ -110,7 +110,7 @@ def slider_callback(bag_time, q_default_s_weight, q_follow_s_weight, q_overtake_
   cost_size = motion_solver_info.cost_size
   cost_vec = motion_solver_info.cost_vec
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
-  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", "LonSVBoundCost", \
+  cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonHardPosBoundCost", \
                "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "LonStopPointCost", "NonNegativeVelCost"]
   print(cost_list)
   for i, sub_list in enumerate(lists):

@@ -3099,8 +3099,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   };
 
   struct SpeedPlanningBound {
-    double low_speed_acc_upper_bound = 1.8;
-    double high_speed_acc_upper_bound = 1.2;
+    double low_speed_acc_upper_bound = 1.2;
+    double high_speed_acc_upper_bound = 0.8;
     double lane_change_low_speed_acc_upper_bound = 2.4;
     double lane_change_high_speed_acc_upper_bound = 1.6;
     double low_speed_threshold_with_acc_upper_bound = 5.5;
@@ -3129,14 +3129,14 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   // weight maker
   struct WeightConfig {
-    double s_weight = 5.0;
+    double s_weight = 3.0;
     double v_weight = 0.0;
     double a_weight = 10.0;
     double jerk_weight = 100.0;
     double cruise_v_weight = 40.0;
-    double follow_s_weight = 5.0;
-    double overtake_s_weight = 5.0;
-    double neighbor_s_weight = 5.0;
+    double follow_s_weight = 3.0;
+    double overtake_s_weight = 3.0;
+    double neighbor_s_weight = 3.0;
     double end_s_weight = 40.0;
     double max_s_weight_time = 3.0;
     double front_lower_weight = 0.5;
