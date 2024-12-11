@@ -375,7 +375,7 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
   bool is_exist_lane_borrow_agent = false;
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
-  const auto blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
   auto lead_one_iter = std::find(blocked_obs_id.begin(), blocked_obs_id.end(),
                                  lead_one.track_id());
   if (lead_one_iter != blocked_obs_id.end()) {
@@ -2919,7 +2919,7 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
   bool is_exist_lane_borrow_agent = false;
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
-  const auto blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
   const auto borrow_direction = lane_borrow_output.borrow_direction;
 
   // judge leadone/leadtwo is lane borrow agent?
