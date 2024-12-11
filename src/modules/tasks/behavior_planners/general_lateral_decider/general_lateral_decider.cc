@@ -1081,8 +1081,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
                                           .get_lateral_obstacle()
                                           ->lat_obstacle_decision();
   const auto &lane_borrow_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lane_borrow_decider_output();
+      session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
 
   // Step 1) configs
@@ -1352,8 +1351,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
                              ->GetIntersectionState() ==
                          common::IntersectionState::IN_INTERSECTION;
   const auto &lane_borrow_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lane_borrow_decider_output();
+      session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow_status = lane_borrow_decider_output.is_in_lane_borrow_status;
 
   // Step 1) configs
@@ -2523,8 +2521,7 @@ bool GeneralLateralDecider::IsRearObstacle(
 bool GeneralLateralDecider::IsBlockObstacleInLaneBorrow(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   const auto &lane_borrow_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lane_borrow_decider_output();
+      session_->planning_context().lane_borrow_decider_output();
   const auto &otype = obstacle->type();
   const auto ofusion_source = obstacle->obstacle()->fusion_source();
   if ((ofusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {

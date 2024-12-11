@@ -22,18 +22,7 @@ from lib.basic_layers import *
 from lib.load_ros_bag import *
 from lib.local_view_lib import *
 # 先手动写死bag
-
-bag_path = "/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732672608.close-loop.scc.plan"# danger left
-bag_path = '/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732689115.close-loop.scc.plan'
-abg_path = '/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732693102.open-loop.scc.plan'
-bag_path = '/root/clzhao/lane_borrow_data/2024-11-26-15-32-32.bag_2024-11-26-19-45-49.1732694992.close-loop.scc.plan'
-bag_path= '/root/clzhao/lane_borrow_data/2024-11-27-20-21-44.bag_2024-11-28-10-19-23.1732777296.close-loop.scc.plan'
-bag_path = '/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-27-13-51-09.1732789149.close-loop.scc.plan'
-bag_path = '/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16.1732789949.close-loop.scc.plan'
-bag_path = '/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20.1733277505.close-loop.scc.plan'
-bag_path =  '/root/clzhao/lane_borrow_data/non_centirc_2024-12-07-11-23-35.bag_2024-12-09-13-39-10.1733798605.close-loop.scc.plan'
-bag_path = '/root/clzhao/lane_borrow_data/non_centirc_2024-12-07-11-23-35.bag_2024-12-09-13-39-10.1733799726.close-loop.scc.plan'
-
+bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20241017/20241017-15-20-43/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-10-17-15-20-43_no_camera.bag.1729168548.open-loop.plan"
 
 html_file = bag_path +".vo_lat_behavior.html"
 # -
@@ -502,14 +491,14 @@ def load_lane_borrow_tab_info(dataLoader, layer_manager):
     plan_debug_ts.append(t)
     lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
     vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
-            'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_tfls','safe_left_borrow',
-              'safe_right_borrow', 'static_blocked_obj_vec', 'intersection_state', 'lane_borrow_failed_reason']
+            'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
+              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason']
     names  = []
     datas = []
     for name in vars:
       try:
         value = getattr(lane_borrow_decider_info, name)
-        if name == 'static_blocked_obj_vec':
+        if name == 'static_blocked_obj_id_vec':
           data_i = []
           for value_i in value:
             data_i.append(value_i)

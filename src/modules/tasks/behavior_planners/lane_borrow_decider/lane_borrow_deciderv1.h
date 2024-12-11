@@ -5,15 +5,17 @@
 #include <vector>
 
 #include "config/vehicle_param.h"
+#include "define/geometry.h"
 #include "dynamic_world/dynamic_world.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
+#include "frenet_obstacle.h"
+#include "pose2d.h"
 #include "reference_path.h"
 #include "session.h"
 #include "task_interface/lane_borrow_decider_output.h"
 #include "tasks/task.h"
 #include "virtual_lane.h"
-#include "frenet_obstacle.h"
 namespace planning {
 
 class LaneBorrowDecider : public Task {
@@ -21,8 +23,6 @@ class LaneBorrowDecider : public Task {
   LaneBorrowDecider(const EgoPlanningConfigBuilder* config_builder,
                     framework::Session* session)
       : Task(config_builder, session) {
-    vehicle_param_ =
-        VehicleConfigurationContext::Instance()->get_vehicle_param();
     config_ = config_builder->cast<LaneBorrowDeciderConfig>();
   };
   virtual ~LaneBorrowDecider() = default;
@@ -45,7 +45,8 @@ class LaneBorrowDecider : public Task {
   bool IsSafeForBackOriginLane();
   bool SelectStaticBlockingObstcales();
   bool ObstacleDecision();
-  int GetBypassDirection(const FrenetObstacleBoundary& frenet_obstacle_sl);
+  BorrowDirection GetBypassDirection(
+      const FrenetObstacleBoundary& frenet_obstacle_sl);
   bool UpdateLaneBorrowDirection();
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
@@ -61,7 +62,7 @@ class LaneBorrowDecider : public Task {
 
   double distance_to_stop_line_{1000.0};
   double distance_to_cross_walk_{1000.0};
-  double dis_to_tfl_{10000.0};
+  double dis_to_traffic_lights_{10000.0};
   double obs_left_l_{-10.0};
   double obs_right_l_{10.0};
   double obs_start_s_{10.0};
@@ -69,7 +70,7 @@ class LaneBorrowDecider : public Task {
 
   bool left_borrow_{false};
   bool right_borrow_{false};
-  int bypass_direction_{0};
+  BorrowDirection bypass_direction_{NO_BORROW};
   planning::common::IntersectionState intersection_state_ =
       planning::common::NO_INTERSECTION;
 
@@ -77,7 +78,6 @@ class LaneBorrowDecider : public Task {
   double ego_speed_;
 
   FrenetBoundary ego_frenet_boundary_;
-  VehicleParam vehicle_param_;
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
   double heading_angle_{0.0};
 
@@ -85,20 +85,13 @@ class LaneBorrowDecider : public Task {
   int lane_change_state_{0};
   double current_left_lane_width_{1.75};
   double current_right_lane_width_{1.75};
-  std::vector<int> static_blocked_obj_vec_;
+  std::vector<int> static_blocked_obj_id_vec_;
   std::vector<std::shared_ptr<FrenetObstacle>> static_blocked_obstacles_;
-
-  std::pair<double, double> front_pass_point_;  // static obs area,
-  std::pair<double, double> front_pass_sl_point_;
-  std::pair<double, double> last_ego_center_position_;
-  std::pair<double, double> ego_pose_;  // x, y
-
   std::shared_ptr<ReferencePath> current_reference_path_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> current_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> left_lane_ptr_ = nullptr;
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
   LaneBorrowDeciderConfig config_;
-
 };
 
 }  // namespace planning

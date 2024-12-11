@@ -71,7 +71,7 @@ void EgoLaneTrackManger::TrackEgoLane(
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const bool is_in_lane_borrow_status =
-      session_->mutable_planning_context()->mutable_lane_borrow_decider_output().is_in_lane_borrow_status;
+      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const bool lane_keep_status = lane_change_status == kLaneKeeping;
 
@@ -468,7 +468,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const bool is_in_lane_borrow_status =
-      session_->mutable_planning_context()->lane_borrow_decider_output().is_in_lane_borrow_status;
+      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;

@@ -2972,10 +2972,10 @@ void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
       continue;
     }
     double min_lat_l_by_lat_path = 0.0;
-    if (borrow_direction == 1) {
+    if (borrow_direction == LEFT_BORROW) {
       min_lat_l_by_lat_path = max_l_by_lat_path;
       // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
-    } else if(borrow_direction == 2) {
+    } else if(borrow_direction == RIGHT_BORROW) {
       min_lat_l_by_lat_path = min_l_by_lat_path;
       // (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
     } else {

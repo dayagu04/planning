@@ -11,8 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                // "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241121/20241121-17-33-42/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-11-21-17-33-42_no_camera.bag",
-                "/root/clzhao/lane_borrow_data/2024-12-02-15-46-36.bag_2024-12-03-13-36-54",
+                "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241121/20241121-17-33-42/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-11-21-17-33-42_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
@@ -36,32 +35,8 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                // "/data_cold/abu_zone/cailiu2/lane_borrow_test3.bag",
-                // "/root/clzhao/lane_borrow_data/2024-11-16-11-08-15.bag_2024-11-18-09-43-39",//卡buffer
-                // "/root/clzhao/lane_borrow_data/data_2024-11-16-11-01-05.bag_2024-11-18-09-39-37",// jump
-                // "/root/clzhao/lane_borrow_data/data_2024-11-16-10-58-06.bag_2024-11-18-09-37-46",
-                // "/root/clzhao/lane_borrow_data/data_2024-11-16-11-11-11.bag",
-                // "/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20",// test add overtake
-                // "/root/clzhao/lane_borrow_data/data_2024-11-21-17-15-16.bag_2024-11-22-15-04-13",//  test left borrow no back
-                // "/root/clzhao/lane_borrow_data/2024-11-21-17-18-04.bag_2024-11-22-17-26-15",//  same
-                // "/root/clzhao/lane_borrow_data/2024-11-21-17-17-09.bag_2024-11-22-17-39-06",
-                // "/root/clzhao/lane_borrow_data/adata_2024-11-21-17-14-32.bag_2024-11-21-21-26-20",// collision
-                // "/root/clzhao/lane_borrow_data/data_2024-11-25-17-12-03.bag_2024-11-25-19-39-33",// left cars
-                // "/root/clzhao/lane_borrow_data/2024-11-25-17-17-26.bag_2024-11-25-19-44-48",
-                // "/root/clzhao/lane_borrow_data/2024-11-26-15-32-32.bag_2024-11-26-19-45-49",// taxis
-                // "/root/clzhao/lane_borrow_data/2024-11-26-15-32-53.bag_2024-11-26-20-07-40.1732689990.close-loop.scc.plan",//danger left
-                // "/root/clzhao/lane_borrow_data/2024-11-25-17-16-09.bag_2024-11-26-19-28-37",//imporve back
-                // "/root/clzhao/lane_borrow_data/2024-11-27-20-21-44.bag_2024-11-28-10-19-23",//improve back
-                // "/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-27-13-51-09",
-                // "/root/clzhao/lane_borrow_data/2024-11-27-11-44-13.bag_2024-11-28-18-31-16",// lat buff
-                // "/root/clzhao/lane_borrow_data/2024-12-02-15-46-36.bag_2024-12-03-13-36-54",// intersection
-                // "/root/clzhao/lane_borrow_data/2024-11-16-11-02-38.bag_2024-11-18-09-41-27",//checker
-                // "/root/clzhao/lane_borrow_data/2024-11-26-19-27-57.bag_2024-12-05-17-43-14",
-                // "/root/clzhao/lane_borrow_data/non_centric_2024-12-07-11-20-14.bag_2024-12-09-11-31-21",// two left
-                // "/root/clzhao/lane_borrow_data/non_centric_2024-12-07-11-14-58.bag_2024-12-09-11-27-33",//two right
-                // "/root/clzhao/lane_borrow_data/non_centric_2024-12-07-11-27-09.bag_2024-12-09-13-42-45",// left right
-                "/root/clzhao/lane_borrow_data/non_centirc_2024-12-07-11-23-35.bag_2024-12-09-13-39-10",
-                 "--close-loop"
+                "/data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20241121/20241121-17-33-42/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2024-11-21-17-33-42_no_camera.bag",
+                "--close-loop"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
@@ -85,7 +60,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/cailiu2/lane_borrow_test1.bag",
+                "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240606/20240606-15-01-45/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-06-15-01-45_no_camera.bag",
                 "--no-debug"
             ],
             "stopAtEntry": false, // 不在调试入口停留
