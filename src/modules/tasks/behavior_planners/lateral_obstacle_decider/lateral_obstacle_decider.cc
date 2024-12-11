@@ -117,7 +117,7 @@ bool LateralObstacleDecider::Execute() {
 
     // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
     double expand_length = 0.0;
-    if (history.side_car && history.rear_car &&
+    if (history.side_car &&
         frenet_obs->frenet_relative_velocity_s() < expand_vel) {
       expand_length = 1.5;
     }
@@ -155,7 +155,7 @@ bool LateralObstacleDecider::Execute() {
     }
 
     double expand_length = 0.0;
-    if (history.side_car && history.rear_car &&
+    if (history.side_car &&
         frenet_obs->frenet_relative_velocity_s() < expand_vel) {
       expand_length = 1.5;
     }
