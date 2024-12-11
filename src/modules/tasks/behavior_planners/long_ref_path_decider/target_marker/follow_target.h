@@ -23,6 +23,9 @@ class FollowTarget : public Target {
   FollowTarget(const SpeedPlannerConfig config, framework::Session* session);
   ~FollowTarget() = default;
 
+  double MakeSlowerFollowSTarget(const double speed, const double upper_bound_s,
+                                 const double time_gap) const;
+
  private:
   void GenerateUpperBoundInfo();
 
@@ -55,9 +58,6 @@ class FollowTarget : public Target {
   bool MakeSValueWithTargetFollowCurve(const int32_t index,
                                        const bool has_valid_s_value,
                                        double* const target_s_value) const;
-
-  double MakeSlowerFollowSTarget(const double speed, const double upper_bound_s,
-                                 const double time_gap) const;
 
   bool JudgeFarSlowCar() const;
 

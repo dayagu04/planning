@@ -1,8 +1,9 @@
 #include "target_maker.h"
 
 #include "cruise_target.h"
-#include "debug_info_log.h"
 #include "follow_target.h"
+#include "overtake_target.h"
+#include "debug_info_log.h"
 
 namespace planning {
 
@@ -23,7 +24,7 @@ common::Status TargetMaker::Run() {
   FollowTarget follow_target(speed_planning_config_, session_);
 
   // 3. overtake target @国朋
-  // OvertakeTarget overtake_target(config_, session_);
+  OvertakeTarget overtake_target(speed_planning_config_, session_, follow_target);
 
   // 4. neighbor target @建伟
   // NeighborTarget neighbor_target(config_, session_);
@@ -36,9 +37,8 @@ common::Status TargetMaker::Run() {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
     TargetValue follow_target_value = follow_target.target_value(relative_t);
-    // TargetValue overtake_target_value =
-    // overtake_target.target_value(relative_t); TargetValue
-    // neighbor_target_value = neighbor_target.target_value(relative_t);
+    TargetValue overtake_target_value = overtake_target.target_value(relative_t); 
+    //TargetValue neighbor_target_value = neighbor_target.target_value(relative_t);
     // TargetValue caution_target_value =
     // caution_target.target_value(relative_t);
 
@@ -52,32 +52,32 @@ common::Status TargetMaker::Run() {
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
             upper_target_value.s_target_val()) {
-      // TBD: 国朋合入overtake
-      // if (overtake_target_value.has_target()) {
-      //   if (overtake_target_value.s_target_val() >
-      //       follow_target_value.s_target_val()) {
-      //     // final_target_value = overtake_target_value;
-      //     target_values_.push_back(std::move(overtake_target_value));
-      //     continue;
-      //   } else {
-      //     upper_target_value = follow_target_value;
-      //     lower_target_value = overtake_target_value;
-      //   }
-      // } else {
-      upper_target_value = follow_target_value;
-      // }
-      // } else if (overtake_target_value.has_target() &&
-      //            overtake_target_value.s_target_val() >
-      //                lower_target_value.s_target_val()) {
-      //   lower_target_value = overtake_target_value;
-      // }
-
-      // TBD: 国朋合入caution
-      // 2.update upper value by caution yield target
-      // if (caution_target_value.has_target()) {
-      //   upper_target_value =
-      //       Target::TargetMin(caution_target_value, upper_target_value);
+      //overtake
+      if (overtake_target_value.has_target()) {
+         if (overtake_target_value.s_target_val() >
+             follow_target_value.s_target_val()) {
+               //final_target_value = overtake_target_value;
+               target_values_.push_back(std::move(overtake_target_value));
+               continue;
+         } else {
+           upper_target_value = follow_target_value;
+           lower_target_value = overtake_target_value;
+         }
+      } else {
+        upper_target_value = follow_target_value;
+      }
+    } else if (overtake_target_value.has_target() &&
+                overtake_target_value.s_target_val() >
+                    lower_target_value.s_target_val()) {
+       lower_target_value = overtake_target_value;
     }
+
+    // TBD: 国朋合入caution
+    // 2.update upper value by caution yield target
+    // if (caution_target_value.has_target()) {
+    //   upper_target_value =
+    //       Target::TargetMin(caution_target_value, upper_target_value);
+    //}
 
     // TBD: 建伟合入neighbor
     // 3.update lower and upper value by neighbor target
