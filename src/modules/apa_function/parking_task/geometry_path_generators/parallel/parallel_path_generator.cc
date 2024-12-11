@@ -247,9 +247,8 @@ const bool ParallelPathGenerator::Update() {
 
   } else {
     ILOG_INFO << "ego is in slot";
-    CollisionDetector::Paramters param;
-    param.lat_inflation = 0.0;
-    collision_detector_ptr_->SetParam(param);
+
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
     // ego is in slot, search from ego pose to target pose, or just
     // correct heading
     if (MultiPlan()) {
@@ -4009,10 +4008,15 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
   if (safe_remain_dist < 0.0) {
-    // ILOG_INFO << "the distance between obstacle and ego is smaller than "
-    //    "min_safe_distance, collided! "
-    // ;
-    ILOG_INFO << col_res.col_pt_ego_global.transpose();
+    ILOG_INFO << "the distance between obstacle and ego is smaller than "
+                 "min_safe_distance, collided! ";
+    ILOG_INFO << "remain_car_dist = " << remain_car_dist;
+    ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
+    ILOG_INFO << "buffer = " << buffer;
+
+    ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
+    ILOG_INFO << "col_pt_obs in slot = "
+              << col_res.col_pt_obs_global.transpose();
     return PATH_COL_INVALID;
   }
 
