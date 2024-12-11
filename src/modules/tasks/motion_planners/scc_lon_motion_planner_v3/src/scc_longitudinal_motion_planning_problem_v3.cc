@@ -113,7 +113,8 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     // cost_config_vec.at(i)[SV_BOUND_V_MAX_5] = planning_input.sv_bound_v_5(i);
 
     // weights
-    cost_config_vec.at(i)[W_REF_POS] = planning_input.s_weights(i);
+    // cost_config_vec.at(i)[W_REF_POS] = planning_input.s_weights(i); // dynamic weight
+    cost_config_vec.at(i)[W_REF_POS] = planning_input.q_ref_pos(); // fixed weight
     cost_config_vec.at(i)[W_REF_VEL] = planning_input.v_weights(i);
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();

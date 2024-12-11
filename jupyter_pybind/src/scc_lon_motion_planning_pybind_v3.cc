@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <iostream>
 #include <vector>
 
 #include "longitudinal_motion_planner.pb.h"
@@ -129,7 +130,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
                    double overtake_s_weight, double neighbor_s_weight,
                    std::vector<int32_t> target_type_vec, bool is_urgent,
                    double lon_state_v, double urgent_scale,
-                   double default_v_weight, double cruise_v_weight) {
+                   double default_v_weight, double cruise_v_weight, double const_s) {
   planning::common::LongitudinalPlanningInput planning_input =
       BytesToProto<planning::common::LongitudinalPlanningInput>(
           planning_input_bytes);
@@ -149,7 +150,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
       MakeVWeight(default_v_weight, cruise_v_weight, target_type_vec);
 
   for (size_t i = 0; i < s_weights.size(); ++i) {
-    planning_input.mutable_s_weights()->Set(i, s_weights[i]);
+    planning_input.mutable_s_weights()->Set(i, const_s);
     planning_input.mutable_v_weights()->Set(i, v_weights[i]);
   }
 

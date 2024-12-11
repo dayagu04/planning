@@ -50,7 +50,7 @@ class LocalViewSlider:
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_jerk_bound, step=1.0)
     self.q_sv_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_sv_bound",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_sv_bound, step=1.0)
     self.q_stop_s_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_stop_s",min=0.0, max=3000.0, value=lon_motion_plan_input0.q_stop_s, step=1.0)
-
+    self.q_const_s_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_const_s",min=0.0, max=100.0, value=10.0, step=0.1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          q_default_s_weight = self.q_default_s_weight_slider,
                                          q_follow_s_weight = self.q_follow_s_weight_slider,
@@ -64,11 +64,12 @@ class LocalViewSlider:
                                          q_vel_bound = self.q_vel_bound_slider,
                                          q_acc_bound = self.q_acc_bound_slider,
                                          q_jerk_bound = self.q_jerk_bound_slider,
-                                         q_stop_s = self.q_stop_s_slider)
+                                         q_stop_s = self.q_stop_s_slider,
+                                         q_const_s = self.q_const_s_slider)
 
 ### sliders callback
 def slider_callback(bag_time, q_default_s_weight, q_follow_s_weight, q_overtake_s_weight, q_neighbor_s_weight, q_default_v_weight,
-                    q_cruise_v_weight, q_acc, q_jerk, q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s):
+                    q_cruise_v_weight, q_acc, q_jerk, q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s, q_const_s):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data)
@@ -89,7 +90,7 @@ def slider_callback(bag_time, q_default_s_weight, q_follow_s_weight, q_overtake_
   input_string = lon_motion_plan_input.SerializeToString()
   scc_lon_motion_planning_v3_py.UpdateByParams(input_string, q_acc,q_jerk, q_hard_pos_bound, q_vel_bound, q_acc_bound, q_jerk_bound, q_stop_s,
                                                q_default_s_weight, q_follow_s_weight, q_overtake_s_weight, q_neighbor_s_weight, target_type_vec,
-                                               is_urgent, lon_state_v, urgent_scale, q_default_v_weight, q_cruise_v_weight)
+                                               is_urgent, lon_state_v, urgent_scale, q_default_v_weight, q_cruise_v_weight, q_const_s)
 
   planning_output = longitudinal_motion_planner_pb2.LongitudinalPlanningOutput()
   output_string_tmp = scc_lon_motion_planning_v3_py.GetOutputBytes()

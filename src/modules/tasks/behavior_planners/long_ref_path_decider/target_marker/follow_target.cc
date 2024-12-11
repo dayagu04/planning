@@ -14,11 +14,11 @@ namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
 constexpr double min_follow_distance_gap_cut_in = 1.0;
-constexpr int32_t check_time_idx = 15;
+constexpr int32_t check_time_idx = 8;
 
 // stable jlt
 constexpr double stable_vehicle_max_acc = 0.3;
-constexpr double stable_vehicle_min_acc = 0.8;
+constexpr double stable_vehicle_min_acc = -0.8;
 constexpr double v_min = -0.1;
 constexpr double v_max = 40.0;
 constexpr double a_min = -1.0;
@@ -33,7 +33,7 @@ constexpr double kMinFarTimeGap = 1.8;
 constexpr double min_far_distance_threshold = 15.0;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 1.0;
+constexpr double kSpeedBuffer = 5.0;
 constexpr double kFarDistFollowTimeGap = 1.8;
 constexpr double kNearDistFollowTimeGap = 1.2;
 constexpr double kFarDistanceThreshold = 20.0;
@@ -376,7 +376,7 @@ FollowTarget::GenerateFarFollowSlowCurve(
   }
 
   // 3.check init_v
-  constexpr double kEgoSpeedThreshold = 35.0 / 3.6;
+  constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
   if (init_lon_state_[1] < kEgoSpeedThreshold) {
     return nullptr;
   }
