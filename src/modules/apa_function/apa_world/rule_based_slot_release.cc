@@ -158,9 +158,11 @@ const bool RuleBasedSlotRelease::IsSlotCoarseRelease(common::SlotInfo *slot) {
            Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING)) {
     is_obs_in_slot_passage_area =
         IsPerpendicularSlotAndPassageAreaOccupied(slot);
+    ILOG_INFO << "check perpendicular or slant slot is has obs";
   } else if (slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
     is_obs_in_slot_passage_area = IsParallelSlotAndPassageAreaOccupied(slot);
+    ILOG_INFO << "check parallel slot is has obs";
   }
 
   if (is_obs_in_slot_passage_area) {
@@ -238,6 +240,7 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
     const common::SlotInfo *slot) {
   const auto &slot_points = slot->corner_points().corner_point();
   if (slot_points.size() != 4) {
+    ILOG_INFO << "slot_points.size = " << slot_points.size();
     return true;
   }
   std::vector<Eigen::Vector2d> pt;

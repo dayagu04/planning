@@ -64,7 +64,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     for (uint8 i = 0; i < fusion_obs_size; ++i) {
       const iflyauto::FusionObjectsAdditional& fusion_object =
           local_view->fusion_objects_info.fusion_object[i].additional_info;
-      const uint32 polygon_points_size =
+      const uint8 polygon_points_size =
           std::min(fusion_object.polygon_points_size,
                    static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_NUM));
       if (polygon_points_size < 1) {
@@ -133,7 +133,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
   for (uint8 i = 0; i < uss_obs_size; ++i) {
     const iflyauto::ApaSlotOutlineCoordinateDataType& obj_info =
         local_view->uss_percept_info.out_line_dataori[i];
-    const uint8 pt_cloud_size =
+    const uint32 pt_cloud_size =
         std::min(obj_info.obj_pt_cnt, static_cast<uint32>(NUM_OF_APA_SLOT_OBJ));
     if (pt_cloud_size < 1) {
       continue;
@@ -142,7 +142,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     uss_pt_clout_2d.reserve(pt_cloud_size);
     Polygon2D polygon;
     cdl::AABB box;
-    for (uint8 j = 0; j < pt_cloud_size; ++j) {
+    for (uint32 j = 0; j < pt_cloud_size; ++j) {
       const Eigen::Vector2d uss_pt(obj_info.obj_pt_global[j].x,
                                    obj_info.obj_pt_global[j].y);
       box.MergePoint(cdl::Vector2r(uss_pt.x(), uss_pt.y()));

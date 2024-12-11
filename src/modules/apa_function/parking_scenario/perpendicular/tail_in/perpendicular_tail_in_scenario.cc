@@ -1900,14 +1900,14 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
     param.q_k_bound = simu_param.q_k_bound;
     param.q_u_bound = simu_param.q_u_bound;
   } else {
-    param.q_ref_xy = 100.0;
-    param.q_ref_theta = 100.0;
+    param.q_ref_xy = 50.0;
+    param.q_ref_theta = 50.0;
     param.q_terminal_xy = 5000.0;
     param.q_terminal_theta = 168000.0;
-    param.q_k = 10.0;
-    param.q_u = 10.0;
-    param.q_k_bound = 360;
-    param.q_u_bound = 360;
+    param.q_k = 5.0;
+    param.q_u = 5.0;
+    param.q_k_bound = 100.0;
+    param.q_u_bound = 100.0;
   }
 
   const double start_time = IflyTime::Now_ms();
