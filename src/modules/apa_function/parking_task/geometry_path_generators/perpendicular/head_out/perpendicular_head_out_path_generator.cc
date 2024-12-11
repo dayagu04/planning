@@ -286,13 +286,13 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
   }
 
   // param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.15));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1));
 
   bool prepare_success = true;
   // collision detect
   for (pnc::geometry_lib::PathSegment& tmp_path_seg : tmp_path_seg_vec) {
     const PathColDetRes path_col_det_res =
-        TrimPathByCollisionDetection(tmp_path_seg);
+        TrimPathByCollisionDetection(tmp_path_seg, 0.1);
     // path_seg_vec.emplace_back(tmp_path_seg);
     if (path_col_det_res == PathColDetRes::NORMAL) {
       path_seg_vec.emplace_back(tmp_path_seg);
@@ -300,11 +300,11 @@ const bool PerpendicularPathOutPlanner::PreparePlanOnce(
       path_seg_vec.emplace_back(tmp_path_seg);
     } else if (path_col_det_res == PathColDetRes::INVALID) {
       prepare_success = false;
-
+      ILOG_INFO << " Path Col Det Res::INVALID ";
       break;
     } else if (path_col_det_res == PathColDetRes::INSIDE_STUCK) {
       prepare_success = false;
-
+      ILOG_INFO << " Path Col Det Res::INSIDE_STUCK ";
       break;
     }
   }
