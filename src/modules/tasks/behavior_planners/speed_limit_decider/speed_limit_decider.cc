@@ -33,7 +33,7 @@ bool SpeedLimitDecider::Execute() {
   CalculatePOISpeedLimit();
 
   auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output.SetSpeedLimit(v_target_, v_target_type_);
+  speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
   return true;
 }
 
@@ -101,7 +101,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
   auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output.SetSpeedLimitIntoMap(v_limit_in_turns, SpeedLimitType::CURVATURE);
+  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns, SpeedLimitType::CURVATURE);
 
 }
 
@@ -137,7 +137,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
     JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
     auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-    speed_limit_output.SetSpeedLimitIntoMap(v_target_ramp, SpeedLimitType::MAP_ON_RAMP);
+    speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp, SpeedLimitType::MAP_ON_RAMP);
     return;
   }
   if (dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) {
@@ -163,7 +163,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output.SetSpeedLimitIntoMap(v_target_ramp, SpeedLimitType::MAP_NEAR_RAMP);
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp, SpeedLimitType::MAP_NEAR_RAMP);
 }
 
 void SpeedLimitDecider::CalculateStaticAgentLimit() {}
@@ -197,7 +197,7 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
   JSON_DEBUG_VALUE("last_intersection_state", int(last_intersection_state_));
   last_intersection_state_ = current_intersection_state_;
   auto speed_limit_output = session_->mutable_planning_context()->mutable_speed_limit_decider_output();
-  speed_limit_output.SetSpeedLimitIntoMap(v_target_intersection, SpeedLimitType::INTERSECTION);
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_intersection, SpeedLimitType::INTERSECTION);
 }
 
 void SpeedLimitDecider::CalculatePerceptVisibSpeedLimit() {}

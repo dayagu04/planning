@@ -905,7 +905,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
         (cur_predicion_obj.is_VRU || trajectory_point_size < 1)
             ? false
             : true;
-    for (int i = 0; i < trajectory_point_size; i++) {
+    for (int i = 0; i < TRAJ_POINT_NUM_USED + 1; i++) {
       const auto &point = prediction_traj.trajectory_point[i];
       PredictionTrajectoryPoint trajectory_point;
       double point_relative_time =
@@ -950,7 +950,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
       trajectory_points.emplace_back(trajectory_point);
     }
     // synchronize time
-    for (traj_index = 0; traj_index < trajectory_point_size; traj_index++) {
+    for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
       auto trajectory_point =
           GetPointAtTime(trajectory_points, 0.2 * traj_index);
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
