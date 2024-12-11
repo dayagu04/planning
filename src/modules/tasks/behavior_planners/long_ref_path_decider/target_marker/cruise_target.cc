@@ -47,14 +47,11 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
   if (speed_limit_kinematics_bound_table_.count(SpeedLimitType::CRUISE) > 0) {
     auto& kinematic_bound =
         speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
-    // const double determined_cruise_acc_bound =
-    // planning_data.decision_output()
-    //                                                .longitudinal_decision_decider_output()
-    //                                                .determined_cruise_bound()
-    //                                                .acc_positive_mps2;
-
-    // TODO: hack
-    const double determined_cruise_acc_bound = 2.5;
+    const double determined_cruise_acc_bound =
+        session_->planning_context()
+            .longitudinal_decision_decider_output()
+            .determined_cruise_bound()
+            .acc_positive_mps2;
     kinematic_bound.acc_positive_mps2 =
         kinematic_bound.acc_positive_mps2 < determined_cruise_acc_bound
             ? determined_cruise_acc_bound
@@ -70,25 +67,26 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
 
   //   MakeObstacleDistanceSpeedLimitTables();
   const double cruise_speed = ego_state_manager->ego_v_cruise();
-  double speed_limit = cruise_speed;
+  double speed_limit_normal = cruise_speed;
   const double speed_limit_from_lane_change =
       is_in_lane_change_execution
           ? config_.lane_change_upper_speed_limit_kph / 3.6
           : std::numeric_limits<double>::max();
-  speed_limit = std::fmin(speed_limit, speed_limit_from_lane_change);
-  double speed_limit_decider_result = kNoSpeedLimit;
-  auto speed_limit_decider_type = SpeedLimitType::NONE;
-  speed_limit_decider_output.GetSpeedLimit(&speed_limit_decider_result,
-                                           &speed_limit_decider_type);
-  auto ref_speed_limit_type = SpeedLimitType::CRUISE;
-  if (speed_limit_decider_type != SpeedLimitType::CRUISE &&
-      speed_limit_decider_result < speed_limit) {
-    speed_limit = speed_limit_decider_result;
-    ref_speed_limit_type = speed_limit_decider_type;
-    // DeterminRoundaboutAccLowerBound();
-  }
+  speed_limit_normal = std::fmin(speed_limit_normal, speed_limit_from_lane_change);
+  double speed_limit_ref = kNoSpeedLimit;
+  auto speed_limit_type_ref = SpeedLimitType::NONE;
+  speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
+                                           &speed_limit_type_ref);
+  // auto ref_speed_limit_type = SpeedLimitType::CRUISE;
+  // if (speed_limit_decider_type != SpeedLimitType::CRUISE &&
+  //     speed_limit_decider_result < speed_limit) {
+  //   speed_limit = speed_limit_decider_result;
+  //   ref_speed_limit_type = speed_limit_decider_type;
+  //   // DeterminRoundaboutAccLowerBound();
+  // }
+  speed_limit_ref = std::fmin(speed_limit_normal, speed_limit_ref);
   auto acceleration_trajectory1d =
-      MakeTarget(speed_limit, ref_speed_limit_type);
+      MakeTarget(speed_limit_ref, speed_limit_type_ref);
   size_t count = 0;
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const double relative_t = i * dt_;
@@ -110,12 +108,12 @@ bool CruiseTarget::MakeKinematicsBound(
   auto kinematic_param = config_.comfort_kinematic_param;
   switch (speed_limit_type) {
     case SpeedLimitType::NORMAL_KAPPA:
+    case SpeedLimitType::CURVATURE:
       kinematic_param = config_.kappa_kinematic_param;
       break;
     case SpeedLimitType::CRUISE:
       break;
     case SpeedLimitType::NONE:
-    case SpeedLimitType::CURVATURE:
     case SpeedLimitType::MERGE:
     case SpeedLimitType::CONE_BUCKET:
     case SpeedLimitType::CIPV_LOST:
@@ -123,6 +121,9 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT:
     case SpeedLimitType::VRU_ROUND:
     case SpeedLimitType::MERGE_ALC:
+    case SpeedLimitType::MAP_NEAR_RAMP:
+    case SpeedLimitType::MAP_ON_RAMP:
+    case SpeedLimitType::INTERSECTION:
       break;
     default:
       break;
@@ -166,11 +167,6 @@ bool CruiseTarget::MakeSpeedLimitKinematicTable(
     KinematicsBound kinematic_bound;
     MakeKinematicsBound(ego_speed, type, &kinematic_bound);
     speed_limit_kinematics_bound_table_[type] = kinematic_bound;
-    if (config_.enable_always_cruise) {
-      speed_limit_kinematics_bound_table_.clear();
-      speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE] =
-          kinematic_bound;
-    }
   }
   return true;
 }
@@ -189,20 +185,23 @@ std::unique_ptr<PiecewiseJerkAccelerationTrajectory1d> CruiseTarget::MakeTarget(
     const double v = ptr_lon_traj->Evaluate(1, t_protection);
     const double a = ptr_lon_traj->Evaluate(2, t_protection);
     // calculate speed upper bound with path curvature
-    const double path_curvature_speed_limit =
-        MakeSpeedUpperBound(s, t_protection, &speed_limit_bound_info);
+    // const double path_curvature_speed_limit =
+    //     MakeSpeedUpperBound(s, t_protection, &speed_limit_bound_info);
+    // KinematicsBound kinematic_bound =
+    //     speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
+    // if (ref_speed < path_curvature_speed_limit) {
+    //   kinematic_bound =
+    //       speed_limit_kinematics_bound_table_[ref_speed_limit_type];
+    // } else {
+    //   kinematic_bound =
+    //       speed_limit_kinematics_bound_table_[SpeedLimitType::NORMAL_KAPPA];
+    // }
+    // const double objective_speed =
+    //     std::fmin(ref_speed, path_curvature_speed_limit);
+    // double a_next = (objective_speed - v) / t_step;
+    double a_next = (ref_speed - v) / t_step;
     KinematicsBound kinematic_bound =
-        speed_limit_kinematics_bound_table_[SpeedLimitType::CRUISE];
-    if (ref_speed < path_curvature_speed_limit) {
-      kinematic_bound =
-          speed_limit_kinematics_bound_table_[ref_speed_limit_type];
-    } else {
-      kinematic_bound =
-          speed_limit_kinematics_bound_table_[SpeedLimitType::NORMAL_KAPPA];
-    }
-    const double objective_speed =
-        std::fmin(ref_speed, path_curvature_speed_limit);
-    double a_next = (objective_speed - v) / t_step;
+        speed_limit_kinematics_bound_table_[ref_speed_limit_type];
     a_next =
         CalculateAccelerationWithinBound(a_next, a, t_step, kinematic_bound);
     ptr_lon_traj->AppendSegment(a_next, t_step);
