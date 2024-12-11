@@ -513,10 +513,8 @@ struct PotentialAvoidDeciderConfig : public EgoPlanningConfig {
         json, "emegency_cutin_ttc_upper", emegency_cutin_ttc_upper);
     emegency_cutin_front_area = read_json_key<double>(
         json, "emegency_cutin_front_area", emegency_cutin_front_area);
-    read_json_vec<double>(json, "expand_ego_vel",
-                          expand_ego_vel);
-    read_json_vec<double>(json, "expand_obs_rel_vel",
-                          expand_obs_rel_vel);
+    read_json_vec<double>(json, "expand_ego_vel", expand_ego_vel);
+    read_json_vec<double>(json, "expand_obs_rel_vel", expand_obs_rel_vel);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -941,8 +939,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
         json,
         std::vector<std::string>{"lat_motion_ilqr", "emergence_avoid_factor"});
     intersection_avoid_factor = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"lat_motion_ilqr", "intersection_avoid_factor"});
+        json, std::vector<std::string>{"lat_motion_ilqr",
+                                       "intersection_avoid_factor"});
     jerk_bound_intersection = read_json_keys<double>(
         json,
         std::vector<std::string>{"lat_motion_ilqr", "jerk_bound_intersection"});
@@ -1832,47 +1830,6 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double soft_bound_corridor_t = 0.3;
 };
 
-struct RealTimeLonMotionPlannerConfig : public EgoPlanningConfig {
-  void init(const Json &json) override {
-    EgoPlanningConfig::init(json);
-    /* read config from json */
-    q_ref_pos = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_pos"});
-    q_ref_vel = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_ref_vel"});
-    q_acc = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_acc"});
-    q_jerk = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk"});
-    q_soft_pos_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_soft_pos_bound"});
-    q_hard_pos_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_hard_pos_bound"});
-    q_sv_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_sv_bound"});
-    q_vel_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_vel_bound"});
-    q_acc_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_acc_bound"});
-    q_jerk_bound = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_jerk_bound"});
-    q_stop_s = read_json_keys<double>(
-        json, std::vector<std::string>{"long_motion_ilqr", "q_stop_s"});
-  }
-  double q_ref_pos = 1.0;
-  double q_ref_vel = 0.05;
-  double q_acc = 10.0;
-  double q_jerk = 5.0;
-
-  double q_soft_pos_bound = 5.0;
-  double q_hard_pos_bound = 1000.0;
-  double q_sv_bound = 1000.0;
-  double q_vel_bound = 400.0;
-  double q_acc_bound = 400.0;
-  double q_jerk_bound = 100.0;
-  double q_stop_s = 2000.0;
-};
-
 struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -2311,9 +2268,7 @@ struct CrossingAgentDeciderConfig : public EgoPlanningConfig {
   }
 
   bool enable_crossing_decider = false;
-
 };
-
 
 struct MapRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {

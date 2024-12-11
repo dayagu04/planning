@@ -49,10 +49,8 @@ enum class BoundType {
   EGO_POSITION,
   GROUNDLINE,
   PARKING_SPACE,
-
   TRAFFIC_LIGHT,
   DESTINATION,
-
 };
 
 struct BoundInfo {
