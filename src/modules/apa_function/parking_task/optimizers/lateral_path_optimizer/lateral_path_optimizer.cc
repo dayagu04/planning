@@ -226,11 +226,19 @@ void LateralPathOptimizer::PostProcessOutput() {
   s_vec.reserve(N);
 
   // double s_sum = 0.0;
+  pnc::geometry_lib::PathPoint pt;
+  origin_output_path_vec_.clear();
+  origin_output_path_vec_.reserve(planning_output.x_vec().size());
   for (size_t i = 0; i < N; i++) {
     x_vec.emplace_back(planning_output.x_vec(i));
     y_vec.emplace_back(planning_output.y_vec(i));
     theta_vec.emplace_back(planning_output.theta_vec(i));
     s_vec.emplace_back(planning_output.s_vec(i));
+    pt.pos << planning_output.x_vec(i), planning_output.y_vec(i);
+    pt.heading =
+        pnc::geometry_lib::NormalizeAngle(planning_output.theta_vec(i));
+    pt.s = planning_output.s_vec(i);
+    origin_output_path_vec_.emplace_back(pt);
   }
 
   size_t resampled_point_num = std::ceil(s_vec.back() / param_.sample_ds);
@@ -258,6 +266,7 @@ void LateralPathOptimizer::PostProcessOutput() {
     point << x_s_spline(resampled_ds), y_s_spline(resampled_ds);
     heading = pnc::geometry_lib::NormalizeAngle(theta_s_spline(resampled_ds));
     tmp_output.Set(point, heading);
+    tmp_output.s = resampled_ds;
     output_path_vec_.emplace_back(tmp_output);
     resampled_ds += adjust_sample_ds;
   }

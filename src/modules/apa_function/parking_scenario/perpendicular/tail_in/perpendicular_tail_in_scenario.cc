@@ -443,15 +443,15 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     }
   }
 
+  // construct real time obs
+  GenTlane();
+  GenObstacles();
+
   // real time dynamic col det
   frame_.remain_dist_col_det = 3.0;
   if (!apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
       !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
-
-    // construct real time obs
-    GenTlane();
-    GenObstacles();
 
     const double car_already_move_dist =
         frame_.current_path_length - frame_.remain_dist;
@@ -894,18 +894,6 @@ void PerpendicularTailInScenario::GenTlane() {
 
   double right_x = right_pq_for_x.top().x();
   double real_right_x = right_x;
-
-  // temp hack, when use uss obs, obs lat y is set virtual value
-  if (apa_param.GetParam().tmp_no_consider_obs_dy &&
-      !ego_slot_info.fus_obj_valid_flag) {
-    if (!left_empty) {
-      left_y = real_slot_width * 0.5 + apa_param.GetParam().tmp_virtual_obs_dy;
-    }
-    if (!right_empty) {
-      right_y =
-          -real_slot_width * 0.5 - apa_param.GetParam().tmp_virtual_obs_dy;
-    }
-  }
 
   // set t lane area
   const double threshold = 0.6868;
@@ -1807,10 +1795,19 @@ const uint8_t PerpendicularTailInScenario::NewPathPlanOnce() {
   frame_.gear_command = planner_output.current_gear;
 
   current_path_point_global_vec_.clear();
-  current_path_point_global_vec_.reserve(planner_output.path_point_vec.size());
+  current_path_point_global_vec_.reserve(planner_output.path_point_vec.size() +
+                                         18);
+
+  std::vector<pnc::geometry_lib::PathPoint> path_pt_vec;
+  if (!LateralPathOptimize(path_pt_vec)) {
+    path_pt_vec = planner_output.path_point_vec;
+    JSON_DEBUG_VALUE("is_path_lateral_optimized", false);
+  } else {
+    JSON_DEBUG_VALUE("is_path_lateral_optimized", true);
+  }
 
   pnc::geometry_lib::PathPoint global_point;
-  for (const auto& path_point : planner_output.path_point_vec) {
+  for (const auto& path_point : path_pt_vec) {
     global_point.Set(ego_slot_info.l2g_tf.GetPos(path_point.pos),
                      ego_slot_info.l2g_tf.GetHeading(path_point.heading));
 
@@ -1858,6 +1855,180 @@ const uint8_t PerpendicularTailInScenario::NewPathPlanOnce() {
             << current_path_point_global_vec_.size();
 
   return plan_result;
+}
+
+const bool PerpendicularTailInScenario::LateralPathOptimize(
+    std::vector<geometry_lib::PathPoint>& optimal_path_vec) {
+  const GeometryPathGenerator::Output& path_plan_output =
+      perpendicular_path_planner_.GetOutput();
+  const double sample_ds = path_plan_output.actual_ds;
+  const std::vector<pnc::geometry_lib::PathPoint>& pt_vec =
+      path_plan_output.path_point_vec;
+  const double cur_gear_length = path_plan_output.cur_gear_length;
+  const SimulationParam& simu_param =
+      apa_world_ptr_->GetApaDataPtr()->simu_param;
+  if (pt_vec.size() < 3 ||
+      cur_gear_length < apa_param.GetParam().min_opt_path_length) {
+    return false;
+  }
+  bool cilqr_optimization_enable = true;
+  bool perpendicular_optimization_enable = true;
+  if (!simu_param.is_simulation) {
+    perpendicular_optimization_enable =
+        apa_param.GetParam().perpendicular_lat_opt_enable;
+
+    cilqr_optimization_enable =
+        apa_param.GetParam().cilqr_path_optimization_enable;
+  } else {
+    perpendicular_optimization_enable = simu_param.is_path_optimization;
+    cilqr_optimization_enable = simu_param.is_cilqr_optimization;
+  }
+
+  if (!perpendicular_optimization_enable) {
+    return false;
+  }
+
+  LateralPathOptimizer::Parameter param;
+  param.sample_ds = 0.01;
+  if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
+    param.q_ref_xy = simu_param.q_ref_xy;
+    param.q_ref_theta = simu_param.q_ref_theta;
+    param.q_terminal_xy = simu_param.q_terminal_xy;
+    param.q_terminal_theta = simu_param.q_terminal_theta;
+    param.q_k = simu_param.q_k;
+    param.q_u = simu_param.q_u;
+    param.q_k_bound = simu_param.q_k_bound;
+    param.q_u_bound = simu_param.q_u_bound;
+  } else {
+    param.q_ref_xy = 50.0;
+    param.q_ref_theta = 50.0;
+    param.q_terminal_xy = 5000.0;
+    param.q_terminal_theta = 168000.0;
+    param.q_k = 5.0;
+    param.q_u = 5.0;
+    param.q_k_bound = 100.0;
+    param.q_u_bound = 100.0;
+  }
+
+  const double start_time = IflyTime::Now_ms();
+
+  apa_world_ptr_->GetLateralPathOptimizerPtr()->Init(cilqr_optimization_enable);
+  apa_world_ptr_->GetLateralPathOptimizerPtr()->SetParam(param);
+  apa_world_ptr_->GetLateralPathOptimizerPtr()->Update(pt_vec,
+                                                       frame_.gear_command);
+
+  ILOG_INFO << "lat_path_opt_cost_time_ms = " << IflyTime::Now_ms() - start_time
+            << " ms";
+
+  const std::vector<pnc::geometry_lib::PathPoint>& origin_optimized_path_vec =
+      apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOriginOutputPathVec();
+
+  if (origin_optimized_path_vec.size() < 3) {
+    ILOG_INFO << "origin_optimized_path_vec.size() < 3";
+    return false;
+  }
+
+  const size_t max_pt_number =
+      PLANNING_TRAJ_POINTS_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_NUM;
+  optimal_path_vec.clear();
+  optimal_path_vec.reserve(max_pt_number + 2);
+  if (origin_optimized_path_vec.size() <= max_pt_number) {
+    optimal_path_vec = origin_optimized_path_vec;
+  } else {
+    const double length = origin_optimized_path_vec.back().s;
+    const double resampled_ds = length / max_pt_number;
+    std::vector<double> x_vec;
+    std::vector<double> y_vec;
+    std::vector<double> s_vec;
+    std::vector<double> heading_vec;
+    x_vec.reserve(origin_optimized_path_vec.size());
+    y_vec.reserve(origin_optimized_path_vec.size());
+    s_vec.reserve(origin_optimized_path_vec.size());
+    heading_vec.reserve(origin_optimized_path_vec.size());
+    for (const auto& pt : origin_optimized_path_vec) {
+      x_vec.emplace_back(pt.pos.x());
+      y_vec.emplace_back(pt.pos.y());
+      s_vec.emplace_back(pt.s);
+      heading_vec.emplace_back(pt.heading);
+    }
+    mathlib::spline x_s_spline;
+    mathlib::spline y_s_spline;
+    mathlib::spline heading_s_spline;
+    x_s_spline.set_points(s_vec, x_vec);
+    y_s_spline.set_points(s_vec, y_vec);
+    heading_s_spline.set_points(s_vec, heading_vec);
+    geometry_lib::PathPoint tmp_pt;
+    double ds = 0.0;
+    for (size_t i = 1; i < max_pt_number; ++i) {
+      tmp_pt.pos << x_s_spline(ds), y_s_spline(ds);
+      tmp_pt.heading = heading_s_spline(ds);
+      tmp_pt.s = ds;
+      ds += resampled_ds;
+      if (optimal_path_vec.size() > 0) {
+        const double dist_err =
+            (tmp_pt.pos - optimal_path_vec.back().pos).norm();
+        const double heading_err =
+            geometry_lib::NormalizeAngle(tmp_pt.heading -
+                                         optimal_path_vec.back().heading) *
+            kRad2Deg;
+        if (dist_err < 0.01 || std::fabs(heading_err) > 36.8) {
+          continue;
+        }
+      }
+      optimal_path_vec.emplace_back(tmp_pt);
+    }
+
+    // 可能没采样到终点
+    if (optimal_path_vec.size() > 0) {
+      tmp_pt = optimal_path_vec.back();
+      if (s_vec.back() - optimal_path_vec.back().s > 1e-2) {
+        tmp_pt.pos << x_s_spline(s_vec.back()), y_s_spline(s_vec.back());
+        tmp_pt.heading = heading_s_spline(s_vec.back());
+        tmp_pt.s = s_vec.back();
+        optimal_path_vec.emplace_back(tmp_pt);
+      }
+    }
+  }
+
+  if (optimal_path_vec.size() < 3) {
+    ILOG_INFO << "optimized_path_vec.size() < 3";
+    return false;
+  }
+
+  // 检查路径长度是否有较大变化
+  if (std::fabs(cur_gear_length - optimal_path_vec.back().s) > 5e-2) {
+    ILOG_INFO << "length is not the same, cur_gear_length = " << cur_gear_length
+              << "  optimized_path length = " << optimal_path_vec.back().s;
+    return false;
+  }
+
+  // 检查起点终点是否一致
+  if (!pnc::geometry_lib::CheckTwoPoseIsSame(
+          optimal_path_vec.front(), pt_vec.front(), 0.02, 0.3 / 57.3) ||
+      !pnc::geometry_lib::CheckTwoPoseIsSame(optimal_path_vec.back(),
+                                             pt_vec.back(), 0.02, 0.3 / 57.3)) {
+    ILOG_INFO << "start or end pose is not same";
+    return false;
+  }
+
+  // 检查优化后的路径是否很奇怪
+
+  // 检查是否碰撞
+  const auto col_res =
+      apa_world_ptr_->GetCollisionDetectorPtr()->UpdateByObsMap(
+          optimal_path_vec, 0.08, 0.0);
+  if (col_res.remain_dist < optimal_path_vec.back().s - 2e-2) {
+    ILOG_INFO << "the optimal path is col";
+    return false;
+  }
+
+  ILOG_INFO << "optimal path success, pos_err = "
+            << (pt_vec.back().pos - optimal_path_vec.back().pos).norm()
+            << "  heading_err = "
+            << (pt_vec.back().heading - optimal_path_vec.back().heading) *
+                   kRad2Deg;
+
+  return true;
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {

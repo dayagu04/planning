@@ -2081,162 +2081,172 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
                            << " arc path plan----";
   geometry_path.Reset();
 
-  std::vector<std::pair<geometry_lib::Arc, geometry_lib::Arc>> arc_pair_vec;
-  bool success = geometry_lib::CalTwoArcWithLine(
-      pose, calc_params_.target_line, calc_params_.turn_radius,
-      calc_params_.turn_radius, arc_pair_vec);
+  const double temp_radius = calc_params_.turn_radius;
+  const std::vector<double> radius_vec{2.0 * temp_radius, 1.75 * temp_radius,
+                                       1.5 * temp_radius, 1.25 * temp_radius,
+                                       1.0 * temp_radius};
 
-  if (!success) {
-    ILOG_INFO_IF(enable_log) << "Cal two arc plan has no path";
-    return false;
-  }
-
-  for (const auto& arc_pair : arc_pair_vec) {
-    geometry_lib::Arc arc1 = arc_pair.first;
-    geometry_lib::Arc arc2 = arc_pair.second;
-
-    if (std::fabs(geometry_lib::NormalizeAngle(
-            arc2.headingB - calc_params_.target_line.heading)) *
-            kRad2Deg >
-        0.168) {
+  for (const double radius : radius_vec) {
+    std::vector<std::pair<geometry_lib::Arc, geometry_lib::Arc>> arc_pair_vec;
+    if (!geometry_lib::CalTwoArcWithLine(pose, calc_params_.target_line, radius,
+                                         radius, arc_pair_vec)) {
       continue;
     }
+    for (const auto& arc_pair : arc_pair_vec) {
+      geometry_lib::Arc arc1 = arc_pair.first;
+      geometry_lib::Arc arc2 = arc_pair.second;
 
-    if (arc1.length < kMinArcLength || arc1.length > kMaxArcLength) {
-      continue;
-    }
-
-    if (arc2.length < kMinArcLength || arc2.length > kMaxArcLength) {
-      continue;
-    }
-
-    const uint8_t arc1_gear = geometry_lib::CalArcGear(arc1);
-    const uint8_t arc1_steer = geometry_lib::CalArcSteer(arc1);
-
-    if (!geometry_lib::IsSameGear(arc1_gear, ref_gear)) {
-      continue;
-    }
-
-    const uint8_t arc2_gear = geometry_lib::CalArcGear(arc2);
-    const uint8_t arc2_steer = geometry_lib::CalArcSteer(arc2);
-
-    if (same_gear) {
-      if (!geometry_lib::IsSameGear(ref_gear, arc2_gear)) {
+      if (std::fabs(geometry_lib::NormalizeAngle(
+              arc2.headingB - calc_params_.target_line.heading)) *
+              kRad2Deg >
+          0.168) {
         continue;
       }
-    } else {
-      if (!geometry_lib::IsOppositeGear(ref_gear, arc2_gear)) {
+
+      if (arc1.length < kMinArcLength || arc1.length > kMaxArcLength) {
         continue;
       }
-    }
 
-    if (!geometry_lib::IsOppositeSteer(arc1_steer, arc2_steer)) {
-      continue;
-    }
-
-    geometry_lib::PathSegment arc1_seg(arc1_steer, arc1_gear, arc1);
-
-    geometry_lib::PathSegment arc2_seg(arc2_steer, arc2_gear, arc2);
-
-    PathColDetRes col_res1 =
-        TrimPathByObs(arc1_seg, lat_buffer, lon_buffer, enable_log);
-
-    if (same_gear) {
-      if (col_res1 != PathColDetRes::NORMAL) {
-        ILOG_INFO_IF(enable_log) << "same gear, arc1 col, quit\n";
+      if (arc2.length < kMinArcLength || arc2.length > kMaxArcLength) {
         continue;
+      }
+
+      const uint8_t arc1_gear = geometry_lib::CalArcGear(arc1);
+      const uint8_t arc1_steer = geometry_lib::CalArcSteer(arc1);
+
+      if (!geometry_lib::IsSameGear(arc1_gear, ref_gear)) {
+        continue;
+      }
+
+      const uint8_t arc2_gear = geometry_lib::CalArcGear(arc2);
+      const uint8_t arc2_steer = geometry_lib::CalArcSteer(arc2);
+
+      if (same_gear) {
+        if (!geometry_lib::IsSameGear(ref_gear, arc2_gear)) {
+          continue;
+        }
       } else {
-        ILOG_INFO_IF(enable_log) << "same gear, arc1 is safe and "
-                                    "then check arc col, add arc1 "
-                                    "to path";
+        if (!geometry_lib::IsOppositeGear(ref_gear, arc2_gear)) {
+          continue;
+        }
       }
-      std::vector<geometry_lib::PathSegment> path_seg_vec{arc1_seg};
 
-      PathColDetRes col_res2 =
-          TrimPathByObs(arc2_seg, lat_buffer, lon_buffer, enable_log);
-
-      if (col_res2 == PathColDetRes::INVALID) {
-        ILOG_INFO_IF(enable_log) << "same gear, arc2 invalid, quit\n";
+      if (!geometry_lib::IsOppositeSteer(arc1_steer, arc2_steer)) {
         continue;
       }
 
-      if (col_res2 == PathColDetRes::NORMAL) {
-        ILOG_INFO_IF(enable_log) << "same gear, arc2 normal, add arc2 to path";
-      }
+      geometry_lib::PathSegment arc1_seg(arc1_steer, arc1_gear, arc1);
 
-      if (col_res2 == PathColDetRes::SHORTEN) {
-        ILOG_INFO_IF(enable_log) << "same gear, arc2 shorten, add arc2 to path";
-      }
+      geometry_lib::PathSegment arc2_seg(arc2_steer, arc2_gear, arc2);
 
-      path_seg_vec.emplace_back(arc2_seg);
-      geometry_path.SetPath(path_seg_vec);
+      PathColDetRes col_res1 =
+          TrimPathByObs(arc1_seg, lat_buffer, lon_buffer, enable_log);
 
-      if (col_res2 == PathColDetRes::SHORTEN) {
-        geometry_path.collide_flag = true;
-      }
+      if (same_gear) {
+        if (col_res1 != PathColDetRes::NORMAL) {
+          ILOG_INFO_IF(enable_log) << "same gear, arc1 col, quit\n";
+          continue;
+        } else {
+          ILOG_INFO_IF(enable_log) << "same gear, arc1 is safe and "
+                                      "then check arc col, add arc1 "
+                                      "to path";
+        }
+        std::vector<geometry_lib::PathSegment> path_seg_vec{arc1_seg};
 
-      break;
-    }
-
-    else {
-      if (col_res1 == PathColDetRes::INVALID) {
-        ILOG_INFO_IF(enable_log) << "opposite gear, arc1 invalid, quit\n";
-        continue;
-      }
-
-      if (col_res1 == PathColDetRes::NORMAL) {
-        ILOG_INFO_IF(enable_log)
-            << "opposite gear, arc1 normal, then check arc2 col\n";
         PathColDetRes col_res2 =
             TrimPathByObs(arc2_seg, lat_buffer, lon_buffer, enable_log);
-        if (col_res2 == PathColDetRes::NORMAL ||
-            col_res2 == PathColDetRes::SHORTEN) {
-          ILOG_INFO_IF(enable_log)
-              << "arc2 col is normal or shorten, add arc1 to path";
-          std::vector<geometry_lib::PathSegment> path_seg_vec{arc1_seg,
-                                                              arc2_seg};
-          // geometry_path.SetPath(path_seg_vec);
-          geometry_path.SetPath(arc1_seg);
-          break;
-        }
 
         if (col_res2 == PathColDetRes::INVALID) {
-          ILOG_INFO_IF(enable_log) << "arc2 col is invalid, then "
+          ILOG_INFO_IF(enable_log) << "same gear, arc2 invalid, quit\n";
+          continue;
+        }
+
+        if (col_res2 == PathColDetRes::NORMAL) {
+          ILOG_INFO_IF(enable_log)
+              << "same gear, arc2 normal, add arc2 to path";
+        }
+
+        if (col_res2 == PathColDetRes::SHORTEN) {
+          if (radius > radius_vec.back() + 0.168) {
+            ILOG_INFO_IF(enable_log)
+                << "same gear, radius is bigger, abort this arc";
+            continue;
+          }
+          ILOG_INFO_IF(enable_log)
+              << "same gear, radius is small, arc2 shorten, add arc2 to path";
+        }
+
+        path_seg_vec.emplace_back(arc2_seg);
+        geometry_path.SetPath(path_seg_vec);
+
+        if (col_res2 == PathColDetRes::SHORTEN) {
+          geometry_path.collide_flag = true;
+        }
+
+        break;
+      }
+
+      else {
+        if (col_res1 == PathColDetRes::INVALID) {
+          ILOG_INFO_IF(enable_log) << "opposite gear, arc1 invalid, quit\n";
+          continue;
+        }
+
+        if (col_res1 == PathColDetRes::NORMAL) {
+          ILOG_INFO_IF(enable_log)
+              << "opposite gear, arc1 normal, then check arc2 col\n";
+          PathColDetRes col_res2 =
+              TrimPathByObs(arc2_seg, lat_buffer, lon_buffer, enable_log);
+          if (col_res2 == PathColDetRes::NORMAL ||
+              col_res2 == PathColDetRes::SHORTEN) {
+            ILOG_INFO_IF(enable_log)
+                << "arc2 col is normal or shorten, add arc1 to path";
+            geometry_path.SetPath(arc1_seg);
+            break;
+          }
+
+          if (col_res2 == PathColDetRes::INVALID) {
+            ILOG_INFO_IF(enable_log) << "arc2 col is invalid, then "
+                                        "construct arc1 to sure safe";
+            if (ConstructReverseVaildPathSeg(arc1_seg, arc2_seg, lat_buffer,
+                                             lon_buffer, enable_log)) {
+              ILOG_INFO_IF(enable_log)
+                  << "construct arc1 success, add arc1 to path";
+              geometry_path.SetPath(arc1_seg);
+              geometry_path.collide_flag = true;
+              break;
+            }
+          }
+        }
+
+        if (col_res1 == PathColDetRes::SHORTEN) {
+          ILOG_INFO_IF(enable_log) << "arc1 col is shorten then "
                                       "construct arc1 to sure safe";
           if (ConstructReverseVaildPathSeg(arc1_seg, arc2_seg, lat_buffer,
                                            lon_buffer, enable_log)) {
             ILOG_INFO_IF(enable_log)
                 << "construct arc1 success, add arc1 to path";
             geometry_path.SetPath(arc1_seg);
-            geometry_path.collide_flag = true;
             break;
           }
         }
       }
+    }
 
-      if (col_res1 == PathColDetRes::SHORTEN) {
-        ILOG_INFO_IF(enable_log) << "arc1 col is shorten then "
-                                    "construct arc1 to sure safe";
-        if (ConstructReverseVaildPathSeg(arc1_seg, arc2_seg, lat_buffer,
-                                         lon_buffer, enable_log)) {
-          ILOG_INFO_IF(enable_log)
-              << "construct arc1 success, add arc1 to path";
-          geometry_path.SetPath(arc1_seg);
-          break;
-        }
-      }
+    if (geometry_path.path_count > 0 &&
+        geometry_path.end_pose.pos.x() >
+            calc_params_.target_line.pA.x() + 0.68) {
+      ILOG_INFO_IF(enable_log) << "two arc plan has path radius = " << radius;
+      geometry_path.PrintInfo(enable_log);
+      return true;
+    } else {
+      geometry_path.Reset();
+      ILOG_INFO_IF(enable_log)
+          << "two arc plan has no path radius = " << radius;
     }
   }
 
-  if (geometry_path.path_count > 0 &&
-      geometry_path.end_pose.pos.x() > calc_params_.target_line.pA.x() + 0.68) {
-    ILOG_INFO_IF(enable_log) << "two arc plan has path";
-    geometry_path.PrintInfo(enable_log);
-    return true;
-  } else {
-    ILOG_INFO_IF(enable_log) << "two arc plan has no path";
-    return false;
-  }
+  return false;
 }
 
 const bool PerpendicularTailInPathGenerator::AlignAndSTurnPathPlan(

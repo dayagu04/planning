@@ -158,9 +158,11 @@ const bool RuleBasedSlotRelease::IsSlotCoarseRelease(common::SlotInfo *slot) {
            Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING)) {
     is_obs_in_slot_passage_area =
         IsPerpendicularSlotAndPassageAreaOccupied(slot);
+    ILOG_INFO << "check perpendicular or slant slot is has obs";
   } else if (slot->slot_type() ==
              Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
     is_obs_in_slot_passage_area = IsParallelSlotAndPassageAreaOccupied(slot);
+    ILOG_INFO << "check parallel slot is has obs";
   }
 
   if (is_obs_in_slot_passage_area) {
@@ -238,6 +240,7 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
     const common::SlotInfo *slot) {
   const auto &slot_points = slot->corner_points().corner_point();
   if (slot_points.size() != 4) {
+    ILOG_INFO << "slot_points.size = " << slot_points.size();
     return true;
   }
   std::vector<Eigen::Vector2d> pt;
@@ -274,11 +277,12 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   }
 
   if (is_slot_occupied) {
+    ILOG_INFO << "slot is occupied";
     return true;
   }
 
-  Eigen::Vector2d pt_0(pt[0].x(), -config_->max_car_width * 0.5 - lat_buffer);
-  Eigen::Vector2d pt_1(pt[1].x(), -config_->max_car_width * 0.5 + lat_buffer);
+  Eigen::Vector2d pt_0 = pM01 - t * (config_->max_car_width * 0.5 + lat_buffer);
+  Eigen::Vector2d pt_1 = pM01 + t * (config_->max_car_width * 0.5 + lat_buffer);
 
   pt_0 = pt_0 + move_slot_dist * t;
   pt_1 = pt_1 + move_slot_dist * t;
@@ -288,11 +292,11 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   polygon.vertexes[0].x = pt_0.x();
   polygon.vertexes[0].y = pt_0.y();
 
-  polygon.vertexes[1].x = (pt_0 - channel_width * n).x();
-  polygon.vertexes[1].y = (pt_0 - channel_width * n).y();
+  polygon.vertexes[1].x = (pt_0 + channel_width * n).x();
+  polygon.vertexes[1].y = (pt_0 + channel_width * n).y();
 
-  polygon.vertexes[1].x = (pt_1 - channel_width * n).x();
-  polygon.vertexes[1].y = (pt_1 - channel_width * n).y();
+  polygon.vertexes[1].x = (pt_1 + channel_width * n).x();
+  polygon.vertexes[1].y = (pt_1 + channel_width * n).y();
 
   polygon.vertexes[2].x = pt_1.x();
   polygon.vertexes[2].y = pt_1.y();
@@ -304,7 +308,12 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   polygon.min_tangent_radius = 0.6;
 
   safe_check.SetObstacle(&obs_list_);
-  return safe_check.IsPolygonCollision(&polygon);
+  if (safe_check.IsPolygonCollision(&polygon)) {
+    ILOG_INFO << "passage is occupied";
+    return true;
+  }
+
+  return false;
 }
 
 const bool RuleBasedSlotRelease::IsParallelSlotAndPassageAreaOccupied(

@@ -173,13 +173,21 @@ const bool InterfaceUpdateParam(
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec,
-    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec) {
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec, std::vector<double> lat_path_optimizier_params) {
   SimulationParam param;
   param.is_simulation = true;
   param.is_complete_path = is_complete_path;
   param.force_plan = force_plan;
   param.is_path_optimization = is_path_optimization;
   param.is_cilqr_optimization = is_cilqr_optimization;
+  param.q_ref_xy = lat_path_optimizier_params[0];
+  param.q_ref_theta = lat_path_optimizier_params[1];
+  param.q_terminal_xy = lat_path_optimizier_params[2];
+  param.q_terminal_theta = lat_path_optimizier_params[3];
+  param.q_k = lat_path_optimizier_params[4];
+  param.q_u = lat_path_optimizier_params[5];
+  param.q_k_bound = lat_path_optimizier_params[6];
+  param.q_u_bound = lat_path_optimizier_params[7];
   param.sample_ds = sample_ds;
   param.is_reset = is_reset;
   param.sim_to_target = sim_to_target;

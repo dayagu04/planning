@@ -60,7 +60,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = False
+load_uss_wave_from_uss_percept_msg = True
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
@@ -232,7 +232,7 @@ class LoadCyberbag:
                          "para_tlane_is_front_vacant", "para_tlane_is_rear_vacant", "para_tlane_side_sgn",
                          "para_tlane_front_min_x_before_clamp", "para_tlane_front_min_x_after_clamp", "para_tlane_front_y",
                          "para_tlane_rear_max_x_before_clamp", "para_tlane_rear_max_x_after_clamp", "para_tlane_rear_y",
-                         "slot_replan_jump_dist", "slot_replan_jump_heading",
+                         "slot_replan_jump_dist", "slot_replan_jump_heading", "is_path_lateral_optimized",
                          "current_gear_length", "current_gear_pt_size", "sample_ds", "move_slot_dist", "replan_count", "mono_plan", "multi_plan", "geometry_path_release",
                          "statemachine_timestamp", "fusion_slot_timestamp", "localiztion_timestamp", "uss_wave_timestamp", "uss_per_timestamp", "ground_line_timestamp", "fusion_objects_timestamp", "fusion_occupancy_objects_timestamp", "control_output_timestamp"]
 
@@ -1736,6 +1736,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       pathplan_result_dict = {0: 'PLAN_FAILED', 1: 'PLAN_HOLD', 2: 'PLAN_UPDATE'}
       result = pathplan_result_dict.get(pathplan_result, 'UNKNOWN')
       datas.append(str(pathplan_result) + ": " + str(result))
+
+      names.append("is_path_lateral_optimized")
+      datas.append(str(plan_json['is_path_lateral_optimized']))
 
       names.append("terminal_error_x")
       datas.append(str(plan_json['terminal_error_x']))
@@ -4122,6 +4125,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             pathplan_result_dict = {0: 'PLAN_FAILED', 1: 'PLAN_HOLD', 2: 'PLAN_UPDATE'}
             result = pathplan_result_dict.get(pathplan_result, 'UNKNOWN')
             datas.append(str(pathplan_result) + ": " + str(result))
+
+            names.append("is_path_lateral_optimized")
+            datas.append(str(plan_json['is_path_lateral_optimized']))
 
             names.append("terminal_error_x")
             datas.append(str(plan_json['terminal_error_x']))

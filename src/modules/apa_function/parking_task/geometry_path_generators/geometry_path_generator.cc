@@ -91,31 +91,6 @@ const bool GeometryPathGenerator::SetCurrentPathSegIndex() {
     output_.is_last_path = true;
   }
 
-  // DEBUG_PRINT("before insert");
-  // DEBUG_PRINT("output_.segment_type_vec = [  ";
-  // for (size_t i = 0; i < output_.path_segment_vec.size(); ++i) {
-  //   DEBUG_PRINT(static_cast<int>(output_.path_segment_vec[i].seg_type) <<
-  //   "
-  //   ";
-  // }
-  // DEBUG_PRINT("]\noutput_.steer_cmd_vec = [  ";
-  // for (size_t i = 0; i < output_.steer_vec.size(); ++i) {
-  //   DEBUG_PRINT(static_cast<int>(output_.steer_vec[i]) << "  ";
-  // }
-  // DEBUG_PRINT("]\noutput_.gear_cmd_vec = [  ";
-  // for (size_t i = 0; i < output_.gear_cmd_vec.size(); ++i) {
-  //   DEBUG_PRINT(static_cast<int>(output_.gear_cmd_vec[i]) << "  ";
-  // }
-  // DEBUG_PRINT("]\n current_gear = " <<
-  // static_cast<int>(output_.current_gear)
-  //           << "   current_arc_steer = "
-  //           << static_cast<int>(output_.current_arc_steer));
-  // DEBUG_PRINT("current send path: first index = "
-  //           << static_cast<int>(output_.path_seg_index.first)
-  //           << "   second index = "
-  //           << static_cast<int>(output_.path_seg_index.second) <<
-  //           std::endl;
-
   return true;
 }
 
@@ -164,6 +139,8 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
     N = PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count;
     sample_ds = length / static_cast<double>(N);
   }
+  output_.actual_ds = sample_ds;
+  output_.cur_gear_length = length;
 
   // for (size_t i = output_.path_seg_index.first;
   //      i <= output_.path_seg_index.second; ++i) {

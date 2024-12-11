@@ -410,6 +410,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
                         obs->GetPtClout2dGlobal().end());
     }
+    ILOG_INFO << "uss pt size = " << obs_pt_vec.size();
     col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
   }
 
@@ -421,6 +422,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
                         obs->GetPtClout2dGlobal().end());
     }
+    ILOG_INFO << "occ pt size = " << obs_pt_vec.size();
     col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
   }
 
@@ -432,6 +434,7 @@ const bool UssObstacleAvoidance::Preprocess() {
       obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
                         obs->GetPtClout2dGlobal().end());
     }
+    ILOG_INFO << "gl pt size = " << obs_pt_vec.size();
     col_det.AddObstacles(obs_pt_vec,
                          CollisionDetector::ObsType::GROUND_LINE_OBS);
   }
@@ -656,10 +659,13 @@ void UssObstacleAvoidance::Update(
       col_det.CalClosestDistFromObsToCar(pnc::geometry_lib::PathPoint(
           measure_data_ptr_->GetPos(), measure_data_ptr_->GetHeading()));
   double vel_target = 1.168;
-  if (dist + param_.lat_inflation < 0.268 &&
-      !apa_param.GetParam().enable_corner_uss_process) {
+  if (!apa_param.GetParam().enable_corner_uss_process) {
     // limit vel
-    vel_target = std::max(0.368, measure_data_ptr_->GetVel() - 0.28 * 0.1);
+    if (dist + param_.lat_inflation < 0.268) {
+      vel_target = std::max(0.368, measure_data_ptr_->GetVel() - 0.28 * 0.1);
+    } else {
+      vel_target = std::max(1.168, measure_data_ptr_->GetVel() + 0.28 * 0.1);
+    }
   }
   ILOG_INFO << "vel_target = " << vel_target;
   remain_dist_info_.vel_target = vel_target;

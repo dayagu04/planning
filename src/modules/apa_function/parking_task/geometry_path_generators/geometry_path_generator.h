@@ -115,6 +115,8 @@ class GeometryPathGenerator : public ParkingTask {
     std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
     std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
     std::vector<pnc::geometry_lib::PathPoint> all_gear_path_point_vec;
+    double actual_ds = 0.02;
+    double cur_gear_length = 0.0;
 
     void Reset() {
       path_available = false;
@@ -133,6 +135,8 @@ class GeometryPathGenerator : public ParkingTask {
       all_gear_path_point_vec.clear();
       current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
       current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+      actual_ds = 0.02;
+      cur_gear_length = 0.0;
     }
   };
 
