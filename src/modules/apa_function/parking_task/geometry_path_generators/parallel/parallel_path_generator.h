@@ -224,9 +224,6 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const pnc::geometry_lib::PathPoint &target_pose, const uint8_t gear,
       const uint8_t steer);
 
-  const bool MonoStepPlanWithShift();
-  const bool MonoStepPlanOnceWithShift(
-      bool &is_drive_out_safe, const pnc::geometry_lib::PathPoint &target_pose);
   const bool BackwardNormalPlan();
 
   const bool BackwardNormalPlan(
