@@ -24,6 +24,7 @@
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "math_lib.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
@@ -246,9 +247,8 @@ const bool ParallelPathGenerator::Update() {
 
   } else {
     ILOG_INFO << "ego is in slot";
-    CollisionDetector::Paramters param;
-    param.lat_inflation = 0.0;
-    collision_detector_ptr_->SetParam(param);
+
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
     // ego is in slot, search from ego pose to target pose, or just
     // correct heading
     if (MultiPlan()) {
@@ -861,6 +861,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   ILOG_INFO << "---------------------------------- outside slot plan "
                "----------------------------------";
 
+  output_.Reset();
   std::vector<GeometryPath> geo_path_vec;
   debug_info_.debug_all_path_vec.clear();
 
@@ -973,9 +974,9 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     ILOG_INFO << "SelectBestPathOutsideSlot failed!";
     return false;
   }
+  ILOG_INFO << "best_path_idx = " << best_path_idx;
   AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
-  debug_info_.debug_all_path_vec = std::move(geo_path_vec);
-
+  debug_info_.debug_all_path_vec = geo_path_vec;
   return true;
 }
 
@@ -993,6 +994,10 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
                calc_params_.lat_outside_slot_buffer_vec[1]);
   collision_detector_ptr_->SetParam(
       CollisionDetector::Paramters(min_lat_buffer, false));
+
+  // ILOG_INFO << "---------------------------------PlanToPreparingLine "
+  //              "---------------------------------";
+  // pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
 
   pnc::geometry_lib::PathSegment line_seg;
   if (OneLinePlan(line_seg, ego_pose, prepare_line)) {
@@ -1369,6 +1374,13 @@ const bool ParallelPathGenerator::DubinsPlan(
     const double buffer) {
   path_vec.clear();
   bool success = false;
+
+  pnc::dubins_lib::DubinsLibrary::Input dubins_input;
+  dubins_input.radius = radius;
+  dubins_input.Set(start_pose.pos, target_pose.pos, start_pose.heading,
+                   target_pose.heading);
+  dubins_planner_.SetInput(dubins_input);
+
   // try dubins method
   for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::CASE_COUNT; ++i) {
     for (size_t j = 0; j < pnc::dubins_lib::DubinsLibrary::DUBINS_TYPE_COUNT;
@@ -3996,10 +4008,15 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
   if (safe_remain_dist < 0.0) {
-    // ILOG_INFO << "the distance between obstacle and ego is smaller than "
-    //    "min_safe_distance, collided! "
-    // ;
-    ILOG_INFO << col_res.col_pt_ego_global.transpose();
+    ILOG_INFO << "the distance between obstacle and ego is smaller than "
+                 "min_safe_distance, collided! ";
+    ILOG_INFO << "remain_car_dist = " << remain_car_dist;
+    ILOG_INFO << "remain_obs_dist = " << remain_obs_dist;
+    ILOG_INFO << "buffer = " << buffer;
+
+    ILOG_INFO << "ego local col pt = " << col_res.col_pt_ego_local.transpose();
+    ILOG_INFO << "col_pt_obs in slot = "
+              << col_res.col_pt_obs_global.transpose();
     return PATH_COL_INVALID;
   }
 

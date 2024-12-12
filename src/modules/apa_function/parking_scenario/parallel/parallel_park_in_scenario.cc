@@ -492,19 +492,16 @@ void ParallelParkInScenario::GenTlane() {
     }
 
     const bool curb_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
-                                kRearDetaXMagWhenFrontVacant,
-                                slot_length - kRearDetaXMagWhenFrontVacant) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 1.0,
+                                slot_length - 1.0) &&
         (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
 
     if (curb_condition) {
       curb_count++;
       if (side_sgn > 0.0) {
         curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::min(curb_y_limit, -half_slot_width);
       } else {
         curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::max(curb_y_limit, half_slot_width);
       }
 
       // ILOG_INFO <<"curb condition!");
@@ -616,7 +613,8 @@ void ParallelParkInScenario::GenTlane() {
 
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
-      -side_sgn * half_slot_width);
+      -side_sgn * (half_slot_width - kCurbInitialOffset));
+
   if (ego_slot_info.slot_occupied_ratio < 0.01) {
     curb_y_limit += side_sgn * apa_param.GetParam().mov_curb_out_dist;
   }
@@ -641,12 +639,13 @@ void ParallelParkInScenario::GenTlane() {
   tlane_obs_pt_vec.emplace_back(t_lane_.obs_pt_outside.x());
   JSON_DEBUG_VECTOR("para_tlane_obs_pt_before_uss", tlane_obs_pt_vec, 2)
 
-  // update tlane using USS dist
-  if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
-      (frame_.in_slot_plan_count == 0 ||
-       std::fabs(frame_.ego_slot_info.terminal_err.heading) <= 15.0 / 57.3)) {
-    UpdateTlaneOnceInSlot();
-  }
+  // // update tlane using USS dist
+  // if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
+  //     (frame_.in_slot_plan_count == 0 ||
+  //      std::fabs(frame_.ego_slot_info.terminal_err.heading) <= 15.0 / 57.3))
+  //      {
+  //   UpdateTlaneOnceInSlot();
+  // }
 
   // if curb exist, combine curb and slot center line to decide target y
   // if (curb_count > 1) {
@@ -1310,7 +1309,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
-  if (false && parallel_optimization_enable && is_use_optimizer) {
+  if (parallel_optimization_enable && is_use_optimizer) {
     ILOG_INFO << "------------------------ lateral path optimization "
                  "------------------------";
 
