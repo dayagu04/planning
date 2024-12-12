@@ -30,9 +30,9 @@ class VirtualWallDecider : public ParkingTask {
                                const Pose2D& end);
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
-                                   const double slot_width,
-                                   const double slot_length,
-                                   const Pose2D& ego_pose, const Pose2D& end);
+                                    const double slot_width,
+                                    const double slot_length,
+                                    const Pose2D& ego_pose, const Pose2D& end);
 
   void LeftSideParallelVirtualWall(std::vector<Position2D>& points,
                                    const double slot_width,

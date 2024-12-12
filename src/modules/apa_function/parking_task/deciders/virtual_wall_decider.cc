@@ -376,8 +376,8 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
                      veh_y_buffer;
 
   // channel up bound
-  Eigen::Vector2d channel_up_bound_left = Eigen::Vector2d(
-      slot_length + channel_length_buffer, slot_width / 2.0);
+  Eigen::Vector2d channel_up_bound_left =
+      Eigen::Vector2d(slot_length + channel_length_buffer, slot_width / 2.0);
   Eigen::Vector2d channel_up_bound_right = Eigen::Vector2d(
       slot_length + channel_length_buffer, -slot_width / 2.0 - channel_width);
 
@@ -393,8 +393,8 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
 
   // channel bottom bound
   double channel_bottom_buffer = 6.0;
-  Eigen::Vector2d channel_bottom_bound_left = Eigen::Vector2d(
-      -slot_length - channel_bottom_buffer, slot_width / 2.0);
+  Eigen::Vector2d channel_bottom_bound_left =
+      Eigen::Vector2d(-slot_length - channel_bottom_buffer, slot_width / 2.0);
   Eigen::Vector2d channel_bottom_bound_right = Eigen::Vector2d(
       -slot_length - channel_bottom_buffer, -slot_width / 2.0 - channel_width);
 

@@ -9,7 +9,6 @@
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
-#include "math/math_utils.h"
 #include "st_point.h"
 
 namespace planning {
@@ -22,10 +21,11 @@ enum class StBoundaryType {
 };
 
 class STBoundary : public planning_math::Polygon2d {
-public:
+ public:
   STBoundary() = default;
 
-  explicit STBoundary(const std::vector<std::pair<STPoint, STPoint>>& st_point_pairs);
+  explicit STBoundary(
+      const std::vector<std::pair<STPoint, STPoint>>& st_point_pairs);
 
   explicit STBoundary(const planning_math::Box2d& box) = delete;
 
@@ -106,21 +106,25 @@ public:
 
   void set_bottom_right_point(const STPoint& st_point);
 
-  void InsertInvalidTimeSection(const std::pair<double, double>& invalid_time_section);
+  void InsertInvalidTimeSection(
+      const std::pair<double, double>& invalid_time_section);
 
   double max_delta_s() const;
 
-private:
-  bool IsValid(const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const;
+ private:
+  bool IsValid(
+      const std::vector<std::pair<STPoint, STPoint>>& point_pairs) const;
 
   bool IsPointNearToLinesegment(const planning_math::LineSegment2d& seg,
-                                const planning_math::Vec2d& point, const double max_dist);
+                                const planning_math::Vec2d& point,
+                                const double max_dist);
 
-  bool GetIndexRange(const double t, size_t* const left, size_t* const right) const;
+  bool GetIndexRange(const double t, size_t* const left,
+                     size_t* const right) const;
 
   bool IsTimeInvalid(const double t) const;
 
-private:
+ private:
   DecisionType decision_type_ = DecisionType::UNKNOWN;
 
   std::vector<STPoint> upper_points_;
@@ -143,5 +147,5 @@ private:
   double max_delta_s_ = std::numeric_limits<double>::lowest();
 };
 
-} // namespace speed
-} // namespace planning
+}  // namespace speed
+}  // namespace planning

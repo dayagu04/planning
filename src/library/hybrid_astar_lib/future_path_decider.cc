@@ -153,7 +153,6 @@ void FuturePathDecider::CalcDriveDistByLineModel(
 void FuturePathDecider::CalcDriveDistByCircleModel(
     const Pose2D &ego_pose, EulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line) {
-
   // update gear drive safe dist
   Pose2D global_pose;
   Transform2d tf;
@@ -387,7 +386,7 @@ void FuturePathDecider::UpdateFuturePathRequest(
   }
 
   if (future_path_request->dist_request > 2.5) {
-    future_path_request->dist_request -=0.4;
+    future_path_request->dist_request -= 0.4;
   }
 
   return;
@@ -436,8 +435,8 @@ void FuturePathDecider::GetPathByCircle(const Pose2D *start_point_pose,
   for (int i = 0; i < path_point_num; ++i) {
     acc_s += 0.1;
 
-    InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s,
-                           inv_radius, &next_pose);
+    InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s, inv_radius,
+                           &next_pose);
 
     path->push_back(next_pose);
   }

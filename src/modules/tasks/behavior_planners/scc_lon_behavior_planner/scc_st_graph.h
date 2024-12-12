@@ -208,6 +208,11 @@ class StGraphGenerator {
       std::shared_ptr<VirtualLane> current_lane,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
 
+  void CalculateLaneBorrowLimitSpeed(
+      const planning::common::LatObsInfo &lateral_obstacles,
+      std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+      std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info);
+
   void CalculateMergeSpeedLimit(
       std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
       std::vector<planning::common::RealTimeLonObstacleSTInfo> &merge_st_info,

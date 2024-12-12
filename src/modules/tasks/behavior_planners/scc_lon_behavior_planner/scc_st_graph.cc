@@ -63,36 +63,45 @@ constexpr double kMinNarrowConeSpeed = 10.0;
 constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
+constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
 
-void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
+bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
   if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
       nullptr == ptr_max_l) {
-    return;
+    return false;
   }
   const auto &all_corners = agent_box.GetAllCorners();
   for (const auto &corner : all_corners) {
-    double agent_s = 0.0;
-    double agent_l = 0.0;
-    planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l);
-    *ptr_min_s = std::fmin(*ptr_min_s, agent_s);
-    *ptr_max_s = std::fmax(*ptr_max_s, agent_s);
-    *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
-    *ptr_max_l = std::fmax(*ptr_max_l, agent_l);
+    Point2D agent_sl{0.0, 0.0};
+    Point2D corner_sl{corner.x(), corner.y()};
+    if (!planned_path->XYToSL(corner_sl, agent_sl)) {
+      continue;
+    }
+    *ptr_min_s = std::fmin(*ptr_min_s, agent_sl.x);
+    *ptr_max_s = std::fmax(*ptr_max_s, agent_sl.x);
+    *ptr_min_l = std::fmin(*ptr_min_l, agent_sl.y);
+    *ptr_max_l = std::fmax(*ptr_max_l, agent_sl.y);
   }
+  if (*ptr_min_s > 200.0 || *ptr_max_s < -200.0 || *ptr_min_l > 50.0 ||
+      *ptr_max_l < -50.0) {
+    return false;
+  }
+  return true;
 }
 
-void CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
+bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const agent::Agent &agent,
                               double *const ptr_min_s, double *const ptr_max_s,
                               double *const ptr_min_l,
                               double *const ptr_max_l) {
   const auto &agent_box = agent.box();
-  CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s, ptr_max_s,
-                           ptr_min_l, ptr_max_l);
+  bool is_success = CalculateAgentSLBoundary(planned_path, agent_box, ptr_min_s,
+                                             ptr_max_s, ptr_min_l, ptr_max_l);
+  return is_success;
 }
 }  // namespace
 
@@ -222,6 +231,8 @@ void StGraphGenerator::Update(
                         leads_st_info);
   CalculateNarrowLimitSpeed(lon_behav_input_->lat_obs_info(), dynamic_world,
                             current_lane, leads_st_info);
+  CalculateLaneBorrowLimitSpeed(lon_behav_input_->lat_obs_info(), dynamic_world,
+                                leads_st_info);
 
   // 2.2 计算temp lead one, 选择性使用lead two
   std::vector<planning::common::RealTimeLonObstacleSTInfo> temp_leads_st_info;
@@ -359,11 +370,23 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
       is_far_obs_in_large_curv = agent->is_far_in_large_curv();
     }
   }
+
+  // filter lane borrow agent
+  bool is_exist_lane_borrow_agent = false;
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  auto lead_one_iter = std::find(blocked_obs_id.begin(), blocked_obs_id.end(),
+                                 lead_one.track_id());
+  if (lead_one_iter != blocked_obs_id.end()) {
+    is_exist_lane_borrow_agent = true;
+  }
+
   LOG_DEBUG("----compute_speed_with_leads--- \n");
   if (lead_one.track_id() != 0 &&
       lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
       lead_fusion_enable && !is_reverse_obs_in_large_curv &&
-      !is_far_obs_in_large_curv) {
+      !is_far_obs_in_large_curv && !is_exist_lane_borrow_agent) {
     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
               lead_one.track_id(), lead_one.d_rel(), lead_one.v_lead());
 
@@ -428,9 +451,15 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     JSON_DEBUG_VALUE("desired_distance_lead_one", desired_distance_filtered);
 
     // 对lead two进行类似的计算
+    auto lead_two_iter = std::find(blocked_obs_id.begin(), blocked_obs_id.end(),
+                                   lead_two.track_id());
+    if (lead_two_iter != blocked_obs_id.end()) {
+      is_exist_lane_borrow_agent = true;
+    }
     if (config_.enable_lead_two && lead_two.track_id() != 0 &&
         lead_two.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
         !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
+        !is_exist_lane_borrow_agent &&
         start_stop_info_.state() != common::StartStopInfo::START) {
       LOG_DEBUG(
           "target_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
@@ -2630,7 +2659,8 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   }
   // 1) 构造横向KDPath
   std::vector<planning_math::PathPoint> lat_path_points;
-  lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size());
+  lat_path_points.reserve(lon_behav_input_->lat_output().spline_x_vec_size() +
+                          1);
   const auto &spline_x_vec = lon_behav_input_->lat_output().spline_x_vec();
   const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
   for (int i = 1; i <= config_.lon_num_step; ++i) {
@@ -2652,6 +2682,18 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   if (lat_path_points.size() <= 2) {
     return;
   }
+  // 根据参考线的最后一个点延长横向path
+  const auto current_ref_path = current_lane->get_reference_path();
+  if (current_ref_path == nullptr) {
+    return;
+  }
+  const auto current_lane_frenet_coord = current_ref_path->get_frenet_coord();
+  if (current_lane_frenet_coord == nullptr) {
+    return;
+  }
+  const auto &last_path_point_in_fusion_lane =
+      current_lane_frenet_coord->path_points().back();
+  lat_path_points.emplace_back(last_path_point_in_fusion_lane);
   lat_path_coord_ = std::make_shared<KDPath>(std::move(lat_path_points));
 
   // 2) 获取障碍物
@@ -2710,14 +2752,6 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     // 3.1 check intrude into ego lane (using current lane reference path)
     double agent_s = 0.0;
     double agent_l = 0.0;
-    const auto current_ref_path = current_lane->get_reference_path();
-    if (current_ref_path == nullptr) {
-      continue;
-    }
-    const auto current_lane_frenet_coord = current_ref_path->get_frenet_coord();
-    if (current_lane_frenet_coord == nullptr) {
-      continue;
-    }
     if (!(current_lane_frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s,
                                             &agent_l))) {
       continue;
@@ -2750,8 +2784,11 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double max_s = std::numeric_limits<double>::lowest();
     double min_l = std::numeric_limits<double>::max();
     double max_l = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(current_lane_frenet_coord, *agent, &min_s, &max_s,
-                             &min_l, &max_l);
+    bool is_success = CalculateAgentSLBoundary(
+        current_lane_frenet_coord, *agent, &min_s, &max_s, &min_l, &max_l);
+    if (!is_success) {
+      continue;
+    }
     double min_lat_l = 0.0;
     if (agent_l >= 0) {
       min_lat_l = (agent_l * min_l) > 0 ? min_l : 0;
@@ -2776,9 +2813,12 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
     double max_s_by_lat_path = std::numeric_limits<double>::lowest();
     double min_l_by_lat_path = std::numeric_limits<double>::max();
     double max_l_by_lat_path = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(lat_path_coord_, *agent, &min_s_by_lat_path,
-                             &max_s_by_lat_path, &min_l_by_lat_path,
-                             &max_l_by_lat_path);
+    is_success = CalculateAgentSLBoundary(
+        lat_path_coord_, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        &min_l_by_lat_path, &max_l_by_lat_path);
+    if (!is_success) {
+      continue;
+    }
     double min_lat_l_by_lat_path = 0.0;
     if (agent_l >= 0) {
       min_lat_l_by_lat_path =
@@ -2867,6 +2907,144 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
       v_target_ = std::min(v_target_, it->v_limit);
       JSON_DEBUG_VALUE("narrow_agent_id", it->id)
       JSON_DEBUG_VALUE("narrow_agent_v_limit", v_target_)
+    }
+  }
+}
+
+void StGraphGenerator::CalculateLaneBorrowLimitSpeed(
+    const planning::common::LatObsInfo &lateral_obstacles,
+    std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world,
+    std::vector<planning::common::RealTimeLonObstacleSTInfo> &leads_st_info) {
+  // get lane borrow agent
+  bool is_exist_lane_borrow_agent = false;
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
+  const auto borrow_direction = lane_borrow_output.borrow_direction;
+
+  // judge leadone/leadtwo is lane borrow agent?
+  const auto lead_one_id = lateral_obstacles.lead_one().track_id();
+  const auto lead_two_id = lateral_obstacles.lead_two().track_id();
+  auto lead_one_iter =
+      std::find(blocked_obs_id.begin(), blocked_obs_id.end(), lead_one_id);
+  if (lead_one_iter != blocked_obs_id.end()) {
+    is_exist_lane_borrow_agent = true;
+  }
+  auto lead_two_iter =
+      std::find(blocked_obs_id.begin(), blocked_obs_id.end(), lead_two_id);
+  if (lead_two_iter != blocked_obs_id.end()) {
+    is_exist_lane_borrow_agent = true;
+  }
+
+  // calculate lane borrow limited speed
+  if (!is_exist_lane_borrow_agent) {
+    return;
+  }
+
+  const auto &agent_manager = dynamic_world->agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+  const auto* lead_one_agent = agent_manager->GetAgent(lead_one_id);
+  const auto* lead_two_agent = agent_manager->GetAgent(lead_two_id);
+  std::vector<const agent::Agent*> lead_agent;
+  if (lead_one_agent != nullptr) {
+    lead_agent.emplace_back(lead_one_agent);
+  }
+  if (lead_two_agent != nullptr) {
+    lead_agent.emplace_back(lead_two_agent);
+  }
+
+  std::vector<NarrowLead> lane_borrow_agent;
+  if (lat_path_coord_ == nullptr) {
+    return;
+  }
+
+  for (auto agent : lead_agent) {
+    double min_s_by_lat_path = std::numeric_limits<double>::max();
+    double max_s_by_lat_path = std::numeric_limits<double>::lowest();
+    double min_l_by_lat_path = std::numeric_limits<double>::max();
+    double max_l_by_lat_path = std::numeric_limits<double>::lowest();
+    bool is_success = CalculateAgentSLBoundary(
+        lat_path_coord_, *agent, &min_s_by_lat_path, &max_s_by_lat_path,
+        &min_l_by_lat_path, &max_l_by_lat_path);
+    if (!is_success) {
+      continue;
+    }
+    double min_lat_l_by_lat_path = 0.0;
+    if (borrow_direction == LEFT_BORROW) {
+      min_lat_l_by_lat_path = max_l_by_lat_path;
+      // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
+    } else if(borrow_direction == RIGHT_BORROW) {
+      min_lat_l_by_lat_path = min_l_by_lat_path;
+      // (agent_l * max_l_by_lat_path) > 0 ? max_l_by_lat_path : 0;
+    } else {
+      continue;
+    }
+
+    // lateral collision check
+    double agent_half_length = 0.5 * agent->length();
+    double start_s = min_s_by_lat_path;
+    double end_s = start_s + kHalfEgoLength * 2 + 0.5 * agent->length();
+    bool is_collision =
+        LateralCollisionCheck(start_s, end_s, min_lat_l_by_lat_path);
+
+    double v_ego = lon_behav_input_->ego_info().ego_v();
+    double s_target = GetCalibratedDistance(
+        agent->speed(), v_ego, lon_behav_input_->lat_output().lc_request(),
+        false, false, false);
+    double s_safe = CalcSafeDistance(agent->speed(), v_ego);
+    double v_target = CalcDesiredVelocity(start_s, s_target, agent->speed());
+    std::array<double, 2> xp2{kStaticAgentPosThr, 1.8};
+    std::array<double, 2> fp2{v_target, v_ego};
+    double v_limit = interp(fabs(min_lat_l_by_lat_path), xp2, fp2);
+    v_limit = std::max(v_limit, kLaneBorrowLimitedSpeed);
+
+    NarrowLead lane_borrow_lead;
+    lane_borrow_lead.id = agent->agent_id();
+    lane_borrow_lead.desire_distance = s_target;
+    lane_borrow_lead.min_s = start_s;
+    lane_borrow_lead.safe_distance = s_safe;
+    lane_borrow_lead.v_limit = v_limit;
+    lane_borrow_lead.is_collison = is_collision;
+
+    lane_borrow_agent.emplace_back(lane_borrow_lead);
+
+    // sort
+    auto comp = [](const NarrowLead &a, const NarrowLead &b) {
+      return a.min_s < b.min_s;
+    };
+    std::sort(lane_borrow_agent.begin(), lane_borrow_agent.end(), comp);
+  }
+
+  if (lane_borrow_agent.empty()) {
+    return;
+  }
+
+  auto it = lane_borrow_agent.begin();
+  if (it != lane_borrow_agent.end()) {
+    if (it->is_collison) {
+      // if have collison, update lead one st
+      common::RealTimeLonObstacleSTInfo lead_one_st_info;
+      lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
+      lead_one_st_info.set_id(it->id);
+      lead_one_st_info.set_a_lead(0.0);
+      lead_one_st_info.set_v_lead(0.0);
+      lead_one_st_info.set_s_lead(it->min_s);
+      lead_one_st_info.set_desired_distance(it->desire_distance);
+      lead_one_st_info.set_desired_velocity(it->v_limit);
+      lead_one_st_info.set_safe_distance(it->safe_distance);
+      lead_one_st_info.set_start_time(0.0);  // TBD:使用可配置参数
+      lead_one_st_info.set_end_time(5.0);    // TBD:使用可配置参数
+      lead_one_st_info.set_start_s(it->min_s);
+      leads_st_info.emplace_back(lead_one_st_info);
+      v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("lane_borrow_agent_id", it->id)
+      JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", v_target_)
+    } else {
+      v_target_ = std::min(v_target_, it->v_limit);
+      JSON_DEBUG_VALUE("lane_borrow_agent_id", it->id)
+      JSON_DEBUG_VALUE("lane_borrow_agent_v_limit", v_target_)
     }
   }
 }

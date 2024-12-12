@@ -10,7 +10,6 @@
 #include "pose2d.h"
 #include "rs_path_interpolate.h"
 
-
 namespace planning {
 
 enum class PathGearSwitchNumber {

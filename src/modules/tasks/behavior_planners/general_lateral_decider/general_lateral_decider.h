@@ -150,6 +150,8 @@ class GeneralLateralDecider : public Task {
   bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsRearObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
+  bool IsBlockObstacleInLaneBorrow(
+      const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFilterForStaticObstacle(
       const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFilterForDynamicObstacle(

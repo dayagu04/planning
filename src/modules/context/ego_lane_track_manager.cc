@@ -70,6 +70,8 @@ void EgoLaneTrackManger::TrackEgoLane(
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const bool is_in_lane_borrow_status =
+      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
   const auto& lane_change_status = lane_change_decider_output.curr_state;
   const bool lane_keep_status = lane_change_status == kLaneKeeping;
 
@@ -108,7 +110,7 @@ void EgoLaneTrackManger::TrackEgoLane(
         return;
       }
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2) {
+        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2 && !is_in_lane_borrow_status) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -163,7 +165,7 @@ void EgoLaneTrackManger::TrackEgoLane(
         }
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
-        if (zero_relative_id_nums > 1 && lane_keep_status) {
+        if (zero_relative_id_nums > 1 && lane_keep_status && !is_in_lane_borrow_status) {
           PreprocessIntersectionSplit(relative_id_lanes,
                                       order_ids_of_same_zero_relative_id);
           LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
@@ -465,6 +467,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         virtual_id_mapped_lane) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const bool is_in_lane_borrow_status =
+      session_->planning_context().lane_borrow_decider_output().is_in_lane_borrow_status;
   int origin_order_id = 0;
   int current_order_id = 0;
   const double default_lane_mapping_cost = 10.0;
@@ -504,7 +508,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_lc_back = coarse_planning_info.target_state == kLaneChangeCancel;
   bool is_lane_change = (is_lc_change || is_lc_back);
-  const double k_init_pos_cost_weight =
+  double k_init_pos_cost_weight =
       is_lane_change ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
                      : kInitPosCostWeight;
   double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
@@ -512,6 +516,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
       order_ids.size() < 2) {
     lateral_distance_cost_weight = 0.28;
+  }
+  if (is_in_lane_borrow_status) {
+    k_init_pos_cost_weight = 0.0;
   }
 
   double clane_min_diff_total = std::numeric_limits<double>::max();
@@ -1980,7 +1987,7 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
 
-  const auto& sd_map = 
+  const auto& sd_map =
       session_->environmental_model().get_route_info()->get_sd_map();
 
   for (size_t i = 0; i < order_ids.size(); i++) {
@@ -2057,7 +2064,7 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
   Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
                          plannig_init_point.lat_init_state.y()};
 
-  const auto& sd_map = 
+  const auto& sd_map =
       session_->environmental_model().get_route_info()->get_sd_map();
 
   for (size_t i = 0; i < order_ids.size(); i++) {

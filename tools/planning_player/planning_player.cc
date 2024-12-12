@@ -336,9 +336,8 @@ void PlanningPlayer::Clear() {
 
 void PlanningPlayer::getCommitHash(const std::string& directory, const int num,
                                    std::string& outVersion) {
-  const std::string command =
-      "cd " + directory + " && git rev-parse --short=" + std::to_string(num) +
-      " HEAD";
+  const std::string command = "cd " + directory + " && git rev-parse --short=" +
+                              std::to_string(num) + " HEAD";
   FILE* pipe = popen(command.c_str(), "r");
   if (!pipe) {
     std::cerr << "Failed to run command: " << command << std::endl;

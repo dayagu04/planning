@@ -2,8 +2,10 @@
 #include "config/basic_type.h"
 #include "environmental_model.h"
 
+#include <algorithm>
 #include <cassert>
 
+#include "environmental_model.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "virtual_lane.h"
@@ -437,7 +439,7 @@ void VirtualLane::ProcessEgoOnRoadMLC(
       }
     }
   } else if (
-      is_trigger_ego_not_on_side) {  //在主路上，触发自车不在最右侧车道上的变道
+      is_trigger_ego_not_on_side) {  // 在主路上，触发自车不在最右侧车道上的变道
     // TODO（fengwang31）：需要考虑上一次汇入的方向。目前默认匝道都是从右边汇入主路的
     if (order_id_ + 1 == lane_num) {
       current_tasks_.emplace_back(-1);
@@ -489,7 +491,7 @@ void VirtualLane::ProcessEgoOnRampMLC(
       }
     }
   } else if (is_ramp_merge_to_road_on_expressway &&
-             is_leaving_ramp) {  //处理匝道汇入主路的场景
+             is_leaving_ramp) {  // 处理匝道汇入主路的场景
     if (first_merge_direction == RAMP_ON_RIGHT) {
       for (int i = order_id_; i > 0; i--) {
         current_tasks_.emplace_back(-1);

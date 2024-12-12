@@ -8,6 +8,7 @@ from bokeh.io import output_notebook, push_notebook, output_file, export_png
 from bokeh.layouts import layout, column, row
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
 
+# +
 import numpy as np
 from IPython.core.display import display, HTML
 from plot_local_view_html import *
@@ -80,6 +81,15 @@ speed_search_j_params = {
     'line_dash': 'dashed',
     'legend_label': 'j_search'
 }
+
+lane_borrow_obstacle_params = {
+  'line_color' : "red",
+  'line_width' : 2.0,
+  # 'fill_alpha' : 0.3,
+  'line_dash': 'dashed',
+  'legend_label': 'lane_borrow_static_area'
+}
+
 def isINJupyter():
     try:
         __file__
@@ -112,7 +122,6 @@ def draw_speed_adjust_decider(dataLoader, layer_manager):
   layer_manager.AddLayer(
       tab_speed_adjust_decider_table_layer1, 'speed_adjust_decider1', speed_adjust_decider_table, 'speed_adjust_decider_table1', 3)
   return tab_speed_adjust_decider_table_layer1.plot
-
 
 def draw_vo_lat_behavior(dataLoader, layer_manager):
   lat_behavior_table1 = TextGenerator()
@@ -189,7 +198,7 @@ def draw_vo_lat_behavior(dataLoader, layer_manager):
 
   # 2. 可视化障碍物数据debug信息
   obj_vars = ['id','type','s','l','s_to_ego','max_l_to_ref','min_l_to_ref','nearest_l_to_desire_path', \
-          'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
+            'nearest_l_to_ego', 'vs_lat_relative','vs_lon_relative','vs_lon',
             'nearest_y_to_desired_path','is_accident_car','is_accident_cnt','is_avoid_car','is_lane_lead_obstacle',
             'current_lead_obstacle_to_ego','cutin_p']
   # 'vs_lat_relative','vs_lon_relative'
@@ -421,6 +430,94 @@ def draw_v_a_j_fig():
     fig_jt.legend.click_policy = "hide"
     return fig_vt, fig_at, fig_jt
 
+def load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view):
+  loc_msg = dataLoader.loc_msg
+  ts = []
+  xys = []
+  coord_tf = coord_transformer()
+  for i, debug_info in enumerate(dataLoader.plan_debug_msg["data"]):
+    input_topic_timestamp = debug_info.input_topic_timestamp
+    if lib.load_ros_bag.is_new_loc:
+      if 0 != input_topic_timestamp.localization:
+        localization_timestamp = input_topic_timestamp.localization
+      else :
+        localization_timestamp = input_topic_timestamp.localization_estimate
+    else :
+      if is_bag_main:
+        localization_timestamp = input_topic_timestamp.localization_estimate #main分支录制的包
+      else:
+        localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
+    match_loc_msg = find(loc_msg, localization_timestamp)
+    if match_loc_msg != None: # 长时轨迹
+      cur_pos_xn = match_loc_msg.position.position_boot.x
+      cur_pos_yn = match_loc_msg.position.position_boot.y
+      cur_yaw = match_loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+
+    ts.append(dataLoader.plan_debug_msg["t"][i])
+    corner_point_x = []
+    corner_point_y = []
+    rel_front_left_corner_x, rel_front_left_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.front_left_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.front_left_corner.y)
+    rel_front_right_corner_x, rel_front_right_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.front_right_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.front_right_corner.y)
+    rel_back_right_corner_x, rel_back_right_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.back_right_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.back_right_corner.y)
+    rel_back_left_corner_x, rel_back_left_corner_y = coord_tf.global_to_local(debug_info.lane_borrow_decider_info.block_obs_area.back_left_corner.x,\
+                                                                                debug_info.lane_borrow_decider_info.block_obs_area.back_left_corner.y)
+    corner_point_x.append(rel_front_left_corner_x)
+    corner_point_x.append(rel_front_right_corner_x)
+    corner_point_x.append(rel_back_right_corner_x)
+    corner_point_x.append(rel_back_left_corner_x)
+    corner_point_x.append(rel_front_left_corner_x)
+
+    corner_point_y.append(rel_front_left_corner_y)
+    corner_point_y.append(rel_front_right_corner_y)
+    corner_point_y.append(rel_back_right_corner_y)
+    corner_point_y.append(rel_back_left_corner_y)
+    corner_point_y.append(rel_front_left_corner_y)
+    xys.append((corner_point_y, corner_point_x))
+  lane_borrow_base_static_obs_area_generator = CommonGenerator()
+  lane_borrow_base_static_obs_area_generator.xys = xys
+  lane_borrow_base_static_obs_area_generator.ts = ts
+  lane_borrow_base_static_obs_area_layer = CurveLayer(fig_local_view, lane_borrow_obstacle_params)
+  layer_manager.AddLayer(lane_borrow_base_static_obs_area_layer, 'lane_borrow_base_static_obs_area_layer', lane_borrow_base_static_obs_area_generator, 'lane_borrow_base_static_obs_area_generator', 2)
+
+def load_lane_borrow_tab_info(dataLoader, layer_manager):
+  lane_borrow_decider_table = TextGenerator()
+  plan_debug_ts = []
+  for i, plan_debug in enumerate(dataLoader.plan_debug_msg['data']):
+    t = dataLoader.plan_debug_msg["t"][i]
+    plan_debug_ts.append(t)
+    lane_borrow_decider_info = plan_debug.lane_borrow_decider_info
+    vars = ['lane_borrow_decider_status', 'ego_l','target_left_l','target_right_l',
+            'start_solid_lane_dis', 'end_solid_lane_dis','dis_to_traffic_lights','safe_left_borrow',
+              'safe_right_borrow', 'static_blocked_obj_id_vec', 'intersection_state', 'lane_borrow_failed_reason']
+    names  = []
+    datas = []
+    for name in vars:
+      try:
+        value = getattr(lane_borrow_decider_info, name)
+        if name == 'static_blocked_obj_id_vec':
+          data_i = []
+          for value_i in value:
+            data_i.append(value_i)
+          datas.append(data_i)
+        else:
+          datas.append(value)
+
+        names.append(name)
+      except:
+        pass
+    lane_borrow_decider_table.xys.append((names, datas, [None] * len(names)))
+  lane_borrow_decider_table.ts = plan_debug_ts
+  tab_attr_list = ['Attr', 'Val']
+
+  lane_borrow_decider_table_layer = TableLayerV2(None, tab_attr_list, table_params)
+  layer_manager.AddLayer(
+      lane_borrow_decider_table_layer, 'lane_borrow_decider1', lane_borrow_decider_table, 'lane_borrow_decider_table1', 3)
+  return lane_borrow_decider_table_layer.plot
+
 def plotOnce(bag_path, html_file):
     # 加载bag
     try:
@@ -443,6 +540,8 @@ def plotOnce(bag_path, html_file):
 
     tab_speed_adjust_decider = draw_speed_adjust_decider(dataLoader, layer_manager)
 
+    load_lane_borrow_fig_info(dataLoader, layer_manager, fig_local_view)
+    tab_lane_borrow_decider = load_lane_borrow_tab_info(dataLoader, layer_manager)
     plan_debug_msg = dataLoader.plan_debug_msg
     speed_search_base_s, speed_search_base_v, speed_search_base_a, speed_search_base_j = get_speed_search_st(plan_debug_msg)
     fig_st = draw_lon_st(plan_debug_msg, layer_manager)
@@ -580,7 +679,9 @@ def plotOnce(bag_path, html_file):
 
     pan_general_info = Panel(child = row(column(tab_lat_rt_obstacle, overtake_lc_info_view), tab_rt1, column(tab_rt2, mlc_info_view, noa_info_view)), title="GeneralInfo")
     pan_speed_search_info = Panel(child = row(column(fig_st, fig_vt, tab_speed_adjust_decider), column(fig_at, fig_jt)), title="SpeedSearchInfo")
-    pans = Tabs(tabs=[ pan_general_info, pan_speed_search_info])
+    pan_lane_borrow_info = Panel(child = row(column(tab_lane_borrow_decider)), title="LaneBorrowDeciderInfo")
+
+    pans = Tabs(tabs=[ pan_lane_borrow_info,pan_general_info, pan_speed_search_info])
     bkp.show(layout(car_slider, row(column(fig_local_view, obstacle_selector), pans)))
 
 def printHelp():
