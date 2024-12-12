@@ -2553,19 +2553,19 @@ bool GeneralLateralDecider::IsBlockObstacleInLaneBorrow(
 
 bool GeneralLateralDecider::IsFilterForStaticObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
-  const auto &otype = obstacle->type();
-  const auto ofusion_source = obstacle->obstacle()->fusion_source();
-  if ((ofusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
+  const auto &obs_type = obstacle->type();
+  const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
+  if ((obs_fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
     return false;
   }
 
-  if (otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
+  if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
                                                              // obstacle type
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_VAN or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
     // add logs;
     return false;
   }
@@ -2589,19 +2589,19 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
 
 bool GeneralLateralDecider::IsFilterForDynamicObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
-  const auto &otype = obstacle->type();
-  const auto ofusion_source = obstacle->obstacle()->fusion_source();
-  if ((ofusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
+  const auto &obs_type = obstacle->type();
+  const auto obs_fusion_source = obstacle->obstacle()->fusion_source();
+  if ((obs_fusion_source & OBSTACLE_SOURCE_CAMERA) == 0) {
     return false;
   }
 
-  if (otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
+  if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
                                                              // obstacle type
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_VAN or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
-      otype == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
+      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
     // add logs;
     return false;
   }
