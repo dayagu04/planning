@@ -501,10 +501,8 @@ void ParallelParkInScenario::GenTlane() {
       curb_count++;
       if (side_sgn > 0.0) {
         curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::min(curb_y_limit, -half_slot_width);
       } else {
         curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::max(curb_y_limit, half_slot_width);
       }
 
       // ILOG_INFO <<"curb condition!");
@@ -616,7 +614,8 @@ void ParallelParkInScenario::GenTlane() {
 
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
-      -side_sgn * half_slot_width);
+      -side_sgn * (half_slot_width - kCurbInitialOffset));
+
   if (ego_slot_info.slot_occupied_ratio < 0.01) {
     curb_y_limit += side_sgn * apa_param.GetParam().mov_curb_out_dist;
   }
