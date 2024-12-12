@@ -24,6 +24,7 @@
 #include "dubins_lib.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "math_lib.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
@@ -861,6 +862,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   ILOG_INFO << "---------------------------------- outside slot plan "
                "----------------------------------";
 
+  output_.Reset();
   std::vector<GeometryPath> geo_path_vec;
   debug_info_.debug_all_path_vec.clear();
 
@@ -973,9 +975,9 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     ILOG_INFO << "SelectBestPathOutsideSlot failed!";
     return false;
   }
+  ILOG_INFO << "best_path_idx = " << best_path_idx;
   AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
-  debug_info_.debug_all_path_vec = std::move(geo_path_vec);
-
+  debug_info_.debug_all_path_vec = geo_path_vec;
   return true;
 }
 
@@ -993,6 +995,10 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
                calc_params_.lat_outside_slot_buffer_vec[1]);
   collision_detector_ptr_->SetParam(
       CollisionDetector::Paramters(min_lat_buffer, false));
+
+  // ILOG_INFO << "---------------------------------PlanToPreparingLine "
+  //              "---------------------------------";
+  // pnc::geometry_lib::PrintPose("ego_pose", ego_pose);
 
   pnc::geometry_lib::PathSegment line_seg;
   if (OneLinePlan(line_seg, ego_pose, prepare_line)) {
@@ -1369,6 +1375,13 @@ const bool ParallelPathGenerator::DubinsPlan(
     const double buffer) {
   path_vec.clear();
   bool success = false;
+
+  pnc::dubins_lib::DubinsLibrary::Input dubins_input;
+  dubins_input.radius = radius;
+  dubins_input.Set(start_pose.pos, target_pose.pos, start_pose.heading,
+                   target_pose.heading);
+  dubins_planner_.SetInput(dubins_input);
+
   // try dubins method
   for (size_t i = 0; i < pnc::dubins_lib::DubinsLibrary::CASE_COUNT; ++i) {
     for (size_t j = 0; j < pnc::dubins_lib::DubinsLibrary::DUBINS_TYPE_COUNT;
