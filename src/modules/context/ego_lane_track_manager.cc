@@ -252,8 +252,8 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
         }
       }
 
-      auto compare_lane_mapping_cost = [&](std::pair<int, double> pair1,
-                                           std::pair<int, double> pair2) {
+      auto compare_lane_mapping_cost = [&](std::pair<int, double> &pair1,
+                                           std::pair<int, double> &pair2) {
         return pair1.second < pair2.second;
       };
       std::sort(target_lane_mapping_cost.begin(),
@@ -1864,7 +1864,7 @@ int EgoLaneTrackManger::CalcTargetLaneLineSegment(
     ego_s = ego_cart_frenet_point.x;
   }
 
-  std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+  const auto& lane_marks = base_lane->lane_marks();
   double lane_line_length = 0.0;
   for (int i = 0; i < lane_marks.size(); i++) {
     lane_line_length = lane_marks[i].end;
@@ -1979,7 +1979,7 @@ bool EgoLaneTrackManger::MakesureVirtualLaneExistStraightDirecton(
     return false;
   }
 
-  std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+  const auto& lane_marks = base_lane->lane_marks();
   Point2D ego_cart_frenet_point;
   bool exist_straight_direction = true;
   double ego_s = 0.0;
@@ -2036,7 +2036,7 @@ bool EgoLaneTrackManger::MakesureLastEgoLaneExistStraightDirecton(
     return false;
   }
 
-  std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+  const auto& lane_marks = base_lane->lane_marks();
   Point2D ego_cart_frenet_point;
   bool exist_straight_direction = true;
   double ego_s = 0.0;
@@ -2091,7 +2091,7 @@ bool EgoLaneTrackManger::MakesureVirtualLaneExistOtherDirecton(
     return true;
   }
 
-  std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
+  const auto& lane_marks = base_lane->lane_marks();
   Point2D ego_cart_frenet_point;
   double ego_s = 0.0;
   if (!base_lane_frenet_crd->XYToSL(ego_cart_point, ego_cart_frenet_point)) {
@@ -2151,7 +2151,7 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
   int left_current_segment_count = 0;
   double left_ego_s = 0.0, left_ego_l = 0.0;
   // 判断左侧车道线类型
-  auto left_lane_boundarys = base_lane->get_left_lane_boundary();
+  const auto& left_lane_boundarys = base_lane->get_left_lane_boundary();
   std::shared_ptr<planning_math::KDPath> left_base_boundary_path =
       MakeBoundaryPath(left_lane_boundarys);
   if (left_base_boundary_path != nullptr) {
@@ -2185,7 +2185,7 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
   double right_lane_line_length = 0.0;
   int right_current_segment_count = 0;
   double right_ego_s = 0.0, right_ego_l = 0.0;
-  auto right_lane_boundarys = base_lane->get_right_lane_boundary();
+  const auto& right_lane_boundarys = base_lane->get_right_lane_boundary();
   std::shared_ptr<planning_math::KDPath> right_base_boundary_path =
       MakeBoundaryPath(right_lane_boundarys);
   if (right_base_boundary_path != nullptr) {
