@@ -58,6 +58,8 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   left_lane_ptr_ = virtual_lane_manager->get_left_lane();
   right_lane_ptr_ = virtual_lane_manager->get_right_lane();
 
+  lane_borrow_decider_output_.lane_borrow_failed_reason =
+      planning::LaneBorrowFailedReason::NONE_FAILED_REASON;
   const auto traffic_light_manager =
       session_->environmental_model().get_traffic_light_decision_manager();
   const auto all_traffic_lights = traffic_light_manager->GetTrafficLightsInfo();
@@ -889,8 +891,7 @@ void LaneBorrowDecider::LogDebugInfo() {
                                  .GetDebugInfoPb()
                                  ->mutable_lane_borrow_decider_info();
   lane_borrow_pb_info->set_lane_borrow_failed_reason(
-      planning::common::LaneBorrowDeciderInfo::LaneBorrowFailedReason(
-          lane_borrow_decider_output_.lane_borrow_failed_reason));
+      static_cast<int>(lane_borrow_decider_output_.lane_borrow_failed_reason));
   auto current_reference_path = session_->environmental_model()
                                     .get_reference_path_manager()
                                     ->get_reference_path_by_current_lane();
@@ -940,8 +941,7 @@ void LaneBorrowDecider::LogDebugInfo() {
   lane_borrow_pb_info->mutable_block_obs_area()->set_obs_end_s(obs_end_s_);
 
   lane_borrow_pb_info->set_lane_borrow_decider_status(
-      planning::common::LaneBorrowDeciderInfo::LaneBorrowDeciderStatus(
-          lane_borrow_status_));
+      static_cast<int>(lane_borrow_status_));
 
   lane_borrow_pb_info->mutable_static_blocked_obj_id_vec()->Clear();
   for (auto static_obs_id : static_blocked_obj_id_vec_) {

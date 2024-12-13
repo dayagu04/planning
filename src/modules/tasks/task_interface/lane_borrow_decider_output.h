@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+
 #include "lane_borrow_decider.pb.h"
 namespace planning {
 
@@ -28,7 +29,7 @@ enum LaneBorrowFailedReason {
 enum BorrowDirection { NO_BORROW = 0, LEFT_BORROW, RIGHT_BORROW };
 
 struct LaneBorrowDeciderOutput {
-  LaneBorrowFailedReason lane_borrow_failed_reason;
+  LaneBorrowFailedReason lane_borrow_failed_reason = NONE_FAILED_REASON;
   int failed_obs_id;  // failed obs
   double target_l;
   double left_bounds_l;
