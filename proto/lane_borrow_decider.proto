@@ -14,31 +14,10 @@ message BlockedObsArea {
 };
 
 message LaneBorrowDeciderInfo {
-  enum LaneBorrowDeciderStatus {
-    kNoLaneBorrow = 0;
-    kLaneBorrowDriving = 1;
-    kLaneBorrowBackOriginLane = 2;
-  };
-  enum LaneBorrowFailedReason {
-    NONE_FAILED_REASON = 0;
-    SOLID_LINE_BORROW_DISABLED = 1;
-    NO_PASSABLE_OBSTACLE = 2;
-    SELF_LANE_ENOUGH = 3;
-    LANE_TYPE_CHECK_FAILED = 4;
-    OBSERVE_TIME_CHECK_FAILED = 5;
-    BOUNDS_TOO_NARROW = 6;
-    STATIC_OBSTACLE_BLOCKED = 7;
-    BACKWARD_OBSTACLE_TOO_CLOSE = 8;
-    LANE_CHANGE_STATE = 9;
-    CLOSE_TO_JUNCTION = 10;
-    NEARBY_OBSTACLE_TOO_CLOSE = 11;
-    STATIC_AREA_TOO_CLOSE = 12;
-    CENTER_OBSTACLE = 13;
-  };
   optional BlockedObsArea block_obs_area = 1;
-  optional LaneBorrowDeciderStatus lane_borrow_decider_status = 2;
+  optional int32 lane_borrow_decider_status = 2;
   repeated int32 static_blocked_obj_id_vec = 3;
-  optional LaneBorrowFailedReason lane_borrow_failed_reason = 4;
+  optional int32 lane_borrow_failed_reason = 4;
   optional double target_left_l = 5;
   optional double target_right_l = 6;
   optional bool safe_left_borrow = 7;
