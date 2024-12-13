@@ -39,6 +39,7 @@
 #include "utils/kd_path.h"
 #include "utils_math.h"
 #include "vec2d.h"
+#include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
 
 namespace {
@@ -64,6 +65,7 @@ constexpr double kMinNarrowVehicleSpeed = 5.56;  // 20kph
 constexpr double kHighVel = 100 / 3.6;
 constexpr double kRearAgentEntrySTTimeThrd = 1.8;
 constexpr double kLaneBorrowLimitedSpeed = 5.56;  // 20kph
+constexpr double kSafetyFollowTime = 2.0;
 
 bool CalculateAgentSLBoundary(const std::shared_ptr<KDPath> &planned_path,
                               const planning_math::Box2d &agent_box,
@@ -425,7 +427,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
     double end_time = 5.0;
     double default_lane_width = 3.5;
     bool is_fast_cross_agent =
-        FastCrossAgentChecker(lead_one.v_lat(), end_time, default_lane_width);
+        FastCrossAgentChecker(lead_one.d_rel(), v_ego, lead_one.v_lat(),
+                              end_time, default_lane_width);
     // update lead one st
     common::RealTimeLonObstacleSTInfo lead_one_st_info;
     lead_one_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -478,7 +481,8 @@ bool StGraphGenerator::CalcSpeedInfoWithLead(
           lead_two, v_ego, safe_distance, lead_two_desired_distance);
 
       bool is_lead_two_fast_cross_agent =
-          FastCrossAgentChecker(lead_two.v_lat(), end_time, default_lane_width);
+          FastCrossAgentChecker(lead_two.d_rel(), v_ego, lead_two.v_lat(),
+                                end_time, default_lane_width);
       // update lead two st
       planning::common::RealTimeLonObstacleSTInfo lead_two_st_info;
       lead_two_st_info.set_st_type(common::RealTimeLonObstacleSTInfo::LEADS);
@@ -1634,10 +1638,11 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
   // 2-linear to regain distance
   // 3-linear to shorten distance
   // 4-parabolic (constant decel)
+  double v_lead_clip = std::max(v_lead, 0.0);
   const double max_runaway_speed = -2.;  // no slower than 2m/s over the lead
   //  interpolate the lookups to find the slopes for a give lead speed
-  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
-  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
+  double l_slope = interp(v_lead_clip, _L_SLOPE_BP, _L_SLOPE_V);
+  double p_slope = interp(v_lead_clip, _P_SLOPE_BP, _P_SLOPE_V);
   // this is where parabola && linear curves are tangents
   double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
   // parabola offset to have the parabola being tangent to the linear curve
@@ -1648,7 +1653,7 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
             x_linear_to_parabola, x_parabola_offset);
 
   double v_ego = lon_behav_input_->ego_info().ego_v();
-  double v_rel = v_ego - v_lead;
+  double v_rel = v_ego - v_lead_clip;
   double v_rel_des = 0.0;
   double soft_brake_distance = 0.0;
   if (d_rel < d_des) {
@@ -1671,7 +1676,7 @@ double StGraphGenerator::CalcDesiredVelocity(const double d_rel,
         std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
   }
   // compute desired speed
-  double v_target = v_rel_des + v_lead;
+  double v_target = v_rel_des + v_lead_clip;
   LOG_DEBUG("v_rel_des : [%f], v_target : [%f] \n", v_rel_des, v_target);
   JSON_DEBUG_VALUE("soft_brake_distance_lead",
                    clip(soft_brake_distance, 250.0, 0.0));
@@ -4387,18 +4392,28 @@ void StGraphGenerator::SetConfig(
   config_.distance_start = tuned_params.distance_start();
 }
 
-bool StGraphGenerator::FastCrossAgentChecker(double lead_v_lat,
+bool StGraphGenerator::FastCrossAgentChecker(const double lead_one_drel,
+                                             const double v_ego,
+                                             const double lead_v_lat,
                                              double &end_time,
-                                             double lane_width) {
-  // 横穿障碍物从lead中获取信息太少，粗暴给一个2.0
-  double agent_width = 2.0;
+                                             const double width) {
+  // 横穿障碍物从lead中获取信息太少，用车长更保守
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double agent_length = vehicle_param.length;
   // 计算 end_time
   end_time = std::min(
-      5.0, (lane_width + agent_width) / std::max(0.01, std::fabs(lead_v_lat)));
+      5.0, (width + agent_length) / std::max(0.01, std::fabs(lead_v_lat)));
   // 根据 end_time 判断是否为快速cross
   bool is_fast_cross_agent = end_time < 2.0;
+  // 即使是快速cutin，若距离较近，也需要限速
+  double safe_distance = std::max(v_ego * kSafetyFollowTime + 3.0, 20.0);
+  if (lead_one_drel < safe_distance) {
+    return false;
+  }
   return is_fast_cross_agent;
 }
+
 void StGraphGenerator::DebugAgentsPredictionTraj(
     std::shared_ptr<planning::planning_data::DynamicWorld> dynamic_world) {
   const auto ego_left_rear_node_id = dynamic_world->ego_left_rear_node_id();

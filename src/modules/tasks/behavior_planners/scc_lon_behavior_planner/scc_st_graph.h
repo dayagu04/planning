@@ -132,7 +132,7 @@ class StGraphGenerator {
                                const bool is_accident_car = false,
                                const bool is_temp_lead = false,
                                const bool is_lead = false);
-                               
+
   // compute safe distance
   double CalcSafeDistance(const double obstacle_velocity, const double v_ego);
 
@@ -270,7 +270,8 @@ class StGraphGenerator {
   void SetDefaultDebugValues(std::vector<string> names);
 
   // HACK: cross障碍物判断
-  bool FastCrossAgentChecker(const double lead_one_v_lat, double &end_time,
+  bool FastCrossAgentChecker(const double lead_one_drel, const double v_ego,
+                             const double lead_one_v_lat, double &end_time,
                              const double kwidth);
 
   void GenerateSrefByVrefJLT(std::vector<double> &s_refs);

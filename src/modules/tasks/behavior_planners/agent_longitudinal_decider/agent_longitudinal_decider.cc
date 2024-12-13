@@ -34,6 +34,7 @@ constexpr double kLargeAgentLengthM = 8.0;
 // Param for cut-in check
 constexpr double kFtpCutInDeactivationSpeedMps = 100.0 * kKphToMps;
 constexpr double kCutInLateralTtcThresholdS = 2.0;
+constexpr double kLargeCutInLateralTtcThresholdS = 3.0;
 constexpr double kCutInHeadwayRangeS = 3.6;
 constexpr double kMinCutInDistanceM = 30;
 constexpr double kMaxCutInDistanceM = 60;
@@ -43,7 +44,7 @@ constexpr double kLargeYawLateralSpeedThresholdMps = 0.17;
 constexpr double kCutInLateralSpeedThresholdMps = 0.1;
 constexpr double kCutInSpeedLimitMps = 0.5;
 constexpr double kEgoStopSpeedThresholdMps = 0.5;
-constexpr double kCurrentKappaThreshold = 0.0015;
+constexpr double kCurrentKappaThreshold = 0.0025;
 constexpr double kCurrentKappaThresholdForLargeAgent = 0.003;
 constexpr int32_t kRuleBasedCutInCount = 3;
 constexpr int32_t kPredBasedCutInCount = 3;
@@ -288,6 +289,12 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
       &small_lateral_distance, &small_lateral_distance_with_ego_l,
       &large_lateral_distance);
 
+  // drel
+  std::array<double, 5> xp{0, 30, 60};
+  std::array<double, 5> fp{1, 2, kRuleBasedCutInCount};
+  double min_dis_to_front_bump = std::max(min_s - ego_s - ego_half_length, 0.0);
+  double rule_base_cut_in_count = interp(min_dis_to_front_bump, xp, fp);
+
   // current kappa
   const double current_kappa = ego_lane_coord->GetPathPointByS(max_s).kappa();
 
@@ -304,6 +311,10 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   const double current_kappa_threshold =
       is_large_agent ? kCurrentKappaThresholdForLargeAgent
                      : kCurrentKappaThreshold;
+
+  const double cut_in_ttc_threshold = is_large_agent
+                                          ? kLargeCutInLateralTtcThresholdS
+                                          : kCutInLateralTtcThresholdS;
 
   const bool is_agent_closer_to_ego =
       object_l_speed_mps * small_lateral_distance < 0.0;
@@ -386,7 +397,7 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   pred_cut_in_agent_count_[agent_id] =
       current_cut_in_pred ? ++pred_cut_in_agent_count_[agent_id] : 0;
 
-  if (rule_based_cut_in_agent_count_[agent_id] >= kRuleBasedCutInCount ||
+  if (rule_based_cut_in_agent_count_[agent_id] >= rule_base_cut_in_count ||
       pred_cut_in_agent_count_[agent_id] >= kPredBasedCutInCount) {
     cut_in_agent_count_[agent_id] = kDefaultCutInCount;
   } else {
