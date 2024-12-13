@@ -378,8 +378,8 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
 
     try:
       speed = max(vs_msg.vehicle_speed, 2.0)
-      delta_bound = min(delta_bound, lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * speed * speed))
-      omega_bound = min(omega_bound, lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * speed * speed))
+      delta_bound = lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * speed * speed)
+      omega_bound = lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * speed * speed)
     except:
       delta_bound = 360.0 / 13.0 / 57.3
       omega_bound = 240.0 / 13.0 / 57.3

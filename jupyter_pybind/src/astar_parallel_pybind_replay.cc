@@ -51,6 +51,7 @@
 #include "struct_convert/func_state_machine_c.h"
 #include "struct_convert/fusion_objects_c.h"
 #include "struct_convert/fusion_occupancy_objects_c.h"
+#include "struct_convert/fusion_groundline_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
 #include "struct_convert/hmi_inner_c.h"
 #include "struct_convert/ifly_localization_c.h"
@@ -58,6 +59,7 @@
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
 #include "struct_convert/vehicle_service_c.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
@@ -752,8 +754,9 @@ const bool SetLocalization(py::bytes &localization_info_bytes) {
 }
 
 const bool SetGroundLine(py::bytes &line) {
-  auto ground_line = BytesToStruct<iflyauto::GroundLinePerceptionInfo,
-                                   struct_msgs::GroundLinePerceptionInfo>(line);
+  iflyauto::FusionGroundLineInfo ground_line =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(line);
 
   local_view.ground_line_perception = ground_line;
 
