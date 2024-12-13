@@ -243,7 +243,7 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
     boundary_point_s = frenet_boundary_point.x;
   }
   double ego_front_length = target_boundary_path->Length() - boundary_point_s;
-  ego_front_length = 
+  ego_front_length =
       std::min(ego_front_length, cur_lane_coord->Length() - cur_ego_s);
   if (ego_front_length < kEps) {
     return false;
@@ -818,7 +818,8 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
     }
     for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
       left_lane_line_length += left_lane_boundarys.type_segments[i].length;
-      if (left_lane_line_length > left_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
+      if (left_lane_line_length >
+          left_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
         left_current_segment_count = i;
         break;
       }
@@ -850,7 +851,8 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithLeftLane() {
         for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
           target_right_lane_line_length +=
               right_lane_boundarys.type_segments[i].length;
-          if (target_right_lane_line_length > right_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
+          if (target_right_lane_line_length >
+              right_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
             target_right_current_segment_count = i;
             break;
           }
@@ -925,7 +927,8 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
     }
     for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
       right_lane_line_length += right_lane_boundarys.type_segments[i].length;
-      if (right_lane_line_length > right_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
+      if (right_lane_line_length >
+          right_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
         right_current_segment_count = i;
         break;
       }
@@ -958,7 +961,8 @@ void EgoLaneRoadRightDecider::CheckIfMergeWithRightLane() {
         for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
           target_left_lane_line_length +=
               left_lane_boundarys.type_segments[i].length;
-          if (target_left_lane_line_length > left_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
+          if (target_left_lane_line_length >
+              left_ego_s + kDefaultFrontEgoLaneBoundaryLength) {
             target_left_current_segment_count = i;
             break;
           }
