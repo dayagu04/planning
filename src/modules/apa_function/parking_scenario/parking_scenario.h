@@ -80,7 +80,7 @@ class ParkingScenario {
     double move_slot_dist = 0.0;
     std::vector<Eigen::Vector2d> limiter_corner;
 
-    Eigen::Vector2d slot_center;
+    Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
 
     size_t selected_slot_id = 0;
     size_t slot_type = 0;
@@ -104,6 +104,7 @@ class ParkingScenario {
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
 
     bool fix_limiter = false;
+    bool is_park_out_left = true;
 
     std::vector<Eigen::Vector2d> obs_pt_vec_slot;
 
@@ -150,6 +151,7 @@ class ParkingScenario {
       slot_occupied_ratio = 0.0;
 
       fix_limiter = false;
+      is_park_out_left = true;
 
       obs_pt_vec_slot.clear();
 
@@ -322,6 +324,7 @@ class ParkingScenario {
   }
 
   const Frame &GetFrame() const { return frame_; }
+  Frame &SetFrame() { return frame_; }
 
   const iflyauto::PlanningOutput &GetOutput() const { return planning_output_; }
 

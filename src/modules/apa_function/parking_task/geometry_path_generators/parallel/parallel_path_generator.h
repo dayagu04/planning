@@ -125,9 +125,14 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   };
 
   struct DebugInfo {
-    std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
     std::vector<GeometryPath> debug_all_path_vec;
+    std::vector<pnc::geometry_lib::Arc> debug_arc_vec;
     std::vector<pnc::geometry_lib::PathSegment> tra_search_out_res;
+    void Reset() {
+      debug_arc_vec.clear();
+      debug_all_path_vec.clear();
+      tra_search_out_res.clear();
+    }
   };
 
  public:
@@ -165,7 +170,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     return obs_vec;
   }
 
- private:
+ protected:
   virtual void Preprocess() override;
 
   const bool AssempleGeometryPath(
@@ -472,6 +477,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool CheckSamePos(const Eigen::Vector2d &pos0,
                           const Eigen::Vector2d &pos1) const;
 
+ private:
   PlannerParams calc_params_;
   DebugInfo debug_info_;
 };

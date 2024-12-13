@@ -160,6 +160,9 @@ void ParkingScenarioManager::Excute() {
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
+    } else if (apa_world_->GetApaDataPtr()->slot_type ==
+               Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+      scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
     }
   }
 

@@ -865,6 +865,10 @@ void PrintPose(const std::string &str,
 void PrintPose(const Eigen::Vector2d &pos, const double heading);
 void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
                const double heading);
+
+void PrintGear(const std::string &str, const uint8_t gear);
+void PrintSteer(const std::string &str, const uint8_t steer);
+
 void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg);
 void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec);

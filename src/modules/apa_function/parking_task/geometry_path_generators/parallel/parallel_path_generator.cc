@@ -178,9 +178,8 @@ void ParallelPathGenerator::RecorverChannelObstacles() {
   collision_detector_ptr_->DeleteGivenTypeObstacles(
       CollisionDetector::CHANNEL_OBS);
 
-  collision_detector_ptr_->AddObstacles(
-      calc_params_.channel_obs_vec,
-      CollisionDetector::CollisionDetector::CHANNEL_OBS);
+  collision_detector_ptr_->AddObstacles(calc_params_.channel_obs_vec,
+                                        CollisionDetector::CHANNEL_OBS);
 }
 
 const bool ParallelPathGenerator::Update() {
@@ -300,15 +299,13 @@ const bool ParallelPathGenerator::Update(
   collision_detector_ptr_ = collision_detector_ptr;
   const bool success = Update();
   RecorverChannelObstacles();
-
-  geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
-
+  pnc::geometry_lib::PrintSegmentsVecInfo(output_.path_segment_vec);
   const auto time1 = std::chrono::high_resolution_clock::now();
   const auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(time1 - time0)
           .count();
-  ILOG_INFO << "parallel cost time(ms) = " << duration << "\n";
   JSON_DEBUG_VALUE("path_plan_time_ms", duration);
+  ILOG_INFO << "parallel cost time(ms) = " << duration;
   return success;
 }
 

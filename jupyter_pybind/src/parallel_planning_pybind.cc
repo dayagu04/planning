@@ -14,6 +14,7 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "log_glog.h"
 #include "math_lib.h"
 #include "parallel_park_in_scenario.h"
 #include "parallel_path_generator.h"
@@ -31,6 +32,8 @@ static planning::apa_planner::CollisionDetector col_det;
 static planning::apa_planner::ParallelParkInScenario parallel_park_planner;
 
 int Init() {
+  planning::FilePath::SetName("parallel_parking_in_py");
+  planning::InitGlog(planning::FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
   pBase = new ParallelPathGenerator();
   pBase->Reset();
@@ -130,7 +133,7 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
   double safe_dist = 0.08;
   if (slot_occupied_ratio < 0.018) {
     safe_dist = 0.3;
-    DEBUG_PRINT("safe dist =" << safe_dist);
+    ILOG_INFO << "safe dist =" << safe_dist;
   }
 
   for (const auto &obs_pos : tlane_obstacle_vec) {
@@ -146,7 +149,12 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
                  double slot_width, double slot_length, double ego_x,
                  double ego_y, double ego_heading, double path_ds) {
   parallel_park_planner.Reset();
-  DEBUG_PRINT("0");
+
+  ILOG_INFO << "---------------------------- start simulation in pybind "
+               "----------------------------";
+  ILOG_INFO << "obs_x_vec.size() = " << obs_x_vec.size();
+  ILOG_INFO << "obs_y_vec.size() = " << obs_y_vec.size();
+
   std::shared_ptr<ApaWorld> apa_world_ptr = std::make_shared<ApaWorld>();
   SimulationParam simu_param;
 
@@ -157,12 +165,10 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_world_ptr->GetMeasureDataManagerPtr()->SetPose(
       Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
-  DEBUG_PRINT("1");
   planning::common::SlotInfo select_slot_filter;
   const std::vector<double> slot_x_vec = {slot_length, 0.0, slot_length, 0.0};
   const std::vector<double> slot_y_vec = {0.5 * slot_width, 0.5 * slot_width,
                                           -0.5 * slot_width, -0.5 * slot_width};
-  DEBUG_PRINT("2");
   for (size_t i = 0; i < slot_x_vec.size(); i++) {
     auto corner_pt =
         select_slot_filter.mutable_corner_points()->add_corner_point();
@@ -179,20 +185,19 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   slm_frame.ego_slot_info.ego_heading_slot_vec << 1.0, 0.0;
 
   for (size_t i = 0; i < obs_x_vec.size(); i++) {
-    slm_frame.obs_pt_vec.emplace_back(
-        Eigen::Vector2d(obs_x_vec[i], obs_y_vec[i]));
+    const Eigen::Vector2d obs_pt(obs_x_vec[i], obs_y_vec[i]);
+    slm_frame.obs_pt_vec.emplace_back(obs_pt);
+    slm_frame.ego_slot_info.obs_pt_vec_slot.emplace_back(obs_pt);
   }
-  DEBUG_PRINT("3");
 
   apa_world_ptr->GetSlotManagerPtr()->SetFrame(slm_frame);
   parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
-  DEBUG_PRINT("after l_park_planner.SetApaWorldPtr(apa_wo");
-
   parallel_park_planner.UpdateEgoSlotInfo();
+  parallel_park_planner.SetFrame().ego_slot_info.obs_pt_vec_slot =
+      slm_frame.obs_pt_vec;
+
   parallel_park_planner.GenTlane();
   parallel_park_planner.GenTBoundaryObstacles();
-  DEBUG_PRINT("after GenTBoundaryObstacles");
-  parallel_park_planner.PathPlanOnce();
 
   ParallelPathGenerator::Input path_planner_input;
   path_planner_input.tlane = parallel_park_planner.GetTlane();
@@ -206,26 +211,21 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
                                   ego_slot_info.ego_heading_slot);
 
   pBase->SetInput(path_planner_input);
-
   const double path_plan_start_time = IflyTime::Now_ms();
-
   const bool path_plan_success =
       pBase->Update(apa_world_ptr->GetCollisionDetectorPtr());
-
-  DEBUG_PRINT("path planner cost time(ms) = " << IflyTime::Now_ms() -
-                                                     path_plan_start_time);
-  // const auto& path_planner_output = parallel_path_planner_.GetOutput();
-
   auto path_planner_output = pBase->GetOutput();
+
   path_planner_output.path_seg_index.first = 0;
   path_planner_output.path_seg_index.second =
       path_planner_output.path_segment_vec.size() - 1;
+
   if (path_plan_success) {
     pBase->SampleCurrentPathSeg();
   }
 
-  DEBUG_PRINT(
-      "path points size = " << pBase->GetOutput().path_point_vec.size());
+  ILOG_INFO << "path points size = "
+            << pBase->GetOutput().path_point_vec.size();
 
   return static_cast<int>(path_plan_success);
 }
