@@ -730,12 +730,14 @@ void RouteInfo::UpdateMLCInfoDecider(
       route_info_output_.distance_to_first_road_split <
           (route_info_output_.dis_to_ramp - err_buffer)) {
     is_nearing_split = true;
-  } else if (route_info_output_.is_nearing_other_lane_merge_to_road_point &&
+  } else if (route_info_output_.is_road_merged_by_other_lane &&
              route_info_output_.distance_to_first_road_split <
                  route_info_output_.distance_to_first_road_merge) {
     is_nearing_split = true;
-  } else if (route_info_output_.distance_to_first_road_split <
-             nearing_split_dis_threshold) {
+  } else if (!route_info_output_.is_nearing_ramp &&
+      !route_info_output_.is_road_merged_by_other_lane &&
+      route_info_output_.distance_to_first_road_split <
+          nearing_split_dis_threshold) {
     is_nearing_split = true;
   }
   //(5)、判断是否需要生成split的变道任务
