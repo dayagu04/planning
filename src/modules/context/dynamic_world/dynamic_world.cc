@@ -42,6 +42,7 @@ void DynamicWorld::Reset() {
   ego_right_front_node_id_ = kInvalidId;
   ego_left_rear_node_id_ = kInvalidId;
   ego_right_rear_node_id_ = kInvalidId;
+  cone_nodes_.clear();
 }
 
 bool DynamicWorld::ConstructDynamicWorld() {
