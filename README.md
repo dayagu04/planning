@@ -67,7 +67,7 @@ make pp_build BUILD_TYPE=Release
 ```
 build/tools/planning_player/pp --play <bag的路径>
 ```
-运行时会打印众多信息，可以在最后加入 "> planning.log"，将所有打印信息导入一个文件中 
+运行时会打印众多信息，可以在最后加入 "> planning.log"，将所有打印信息导入一个文件中
 以下为可选参数，放在上述命令之后
 - 可选参数，闭环仿真，不加此参数默认开环仿真
     - 开环：车辆位置与原包中一致，状态机与原包一致
@@ -90,6 +90,10 @@ build/tools/planning_player/pp --play <bag的路径>
 - 可选参数，no-debug模式，不依赖planning/debug_info这个topic，适用于没起planning模块或planning模块崩溃的情况，默认关闭
 ```
 --no-debug
+```
+- 可选参数，循环播包模式，适用于循环播包跑仿真的场景，比如问题复现或planning模块崩溃问题复现，Ctrl+C中断仿真，不加此参数代表关闭
+```
+--play-in-loop
 ```
 - 可选参数，车型，决定了使用哪个车辆配置文件。不加此项，默认车型为 CHERY_E0X
 ```

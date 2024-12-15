@@ -12,7 +12,7 @@ int run_planning_player(const std::string &bag_path, std::string &out_bag,
                         const std::string &scene_type,
                         const std::string mileage_path, bool no_debug,
                         bool interface_check, bool no_version_check,
-                        const std::string &car) {
+                        const std::string &car, bool play_in_loop) {
   planning::planning_player::PlanningPlayer player;
 
   if (!no_version_check) {
@@ -28,9 +28,9 @@ int run_planning_player(const std::string &bag_path, std::string &out_bag,
     return -1;
   }
   if (no_debug) {
-    player.NoDebugInfoMode(is_close_loop);
+    player.NoDebugInfoMode(is_close_loop, play_in_loop);
   } else {
-    player.PlayAllFrames(is_close_loop);
+    player.PlayAllFrames(is_close_loop, play_in_loop);
   }
   player.GenMileage(mileage_path);
   player.StoreRosBag();
@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
   std::string bag_path, out_bag, log_file;
   bool is_close_loop = false;
   bool no_debug = false;
+  bool play_in_loop = false;
   bool interface_check = false;
   bool no_version_check = false;
   std::string car = "CHERY_E0X";
@@ -61,7 +62,8 @@ int main(int argc, char **argv) {
       {"no-debug", no_argument, &lopt, 8},
       {"interface-check", no_argument, &lopt, 9},
       {"no-version-check", no_argument, &lopt, 10},
-      {"car", required_argument, &lopt, 11}};
+      {"car", required_argument, &lopt, 11},
+      {"play-in-loop", no_argument, &lopt, 12}};
 
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
@@ -90,6 +92,7 @@ int main(int argc, char **argv) {
             << std::endl;
         std::cout << "--no-version-check   disable version check" << std::endl;
         std::cout << "--car   car type" << std::endl;
+        std::cout << "--play-in-loop      play bag in loop" << std::endl;
         break;
       case 2:
         bag_path = std::string(optarg);
@@ -125,6 +128,9 @@ int main(int argc, char **argv) {
       case 11:
         car = std::string(optarg);
         break;
+      case 12:
+        play_in_loop = true;
+        break;
       default:
         std::cerr << "unknown option " << opt << std::endl;
         return -1;
@@ -153,5 +159,6 @@ int main(int argc, char **argv) {
 
   return run_planning_player(bag_path, out_bag, is_close_loop, auto_time_sec,
                              scene_type, mileage_path, no_debug,
-                             interface_check, no_version_check, car);
+                             interface_check, no_version_check, car,
+                             play_in_loop);
 }
