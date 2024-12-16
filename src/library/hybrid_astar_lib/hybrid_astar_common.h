@@ -157,6 +157,14 @@ struct ParkFirstActionRequest {
   double dist_request;
 
   AstarPathSteer steer_request;
+
+  void Clear() {
+    has_request = 0.0;
+    gear_request = AstarPathGear::NONE;
+    dist_request = 0.0;
+
+    return;
+  }
 };
 
 struct MapBound {
