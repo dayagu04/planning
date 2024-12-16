@@ -61,11 +61,11 @@ class PlanningPlayer {
                   bool no_debug, bool interface_check);
   void StoreRosBag();
   void GenMileage(const std::string &mileage_path);
-  void NoDebugInfoMode(bool is_close_loop);
+  void NoDebugInfoMode(bool is_close_loop, bool play_in_loop);
   void PlayOneFrame(int frame_num,
                     const planning::common::TopicTimeList &input_time_list,
                     bool is_close_loop);
-  void PlayAllFrames(bool is_close_loop);
+  void PlayAllFrames(bool is_close_loop, bool play_in_loop);
 
   void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
   void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);

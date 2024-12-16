@@ -973,7 +973,7 @@ void PlanningPlayer::PlayOneFrame(
   planning_adapter_->Proc();
 }
 
-void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
+void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
   auto it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
 
   for (size_t i = 0; i < msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 2;
@@ -1068,6 +1068,13 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop) {
     } else {
       early_stop_time_ = ros::Time(early_stop_time_tmp * 1.0e-6);
       break;
+    }
+
+    if (play_in_loop) {
+      if (i == msg_cache_[TOPIC_PLANNING_DEBUG_INFO].size() - 3) {
+        i = 0;
+        it_debug_info_msg = msg_cache_[TOPIC_PLANNING_DEBUG_INFO].begin();
+      }
     }
   }
 }
@@ -1722,7 +1729,7 @@ void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   }
 }
 
-void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
+void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
   uint64_t start_time = 0;
   uint64_t end_time = 0;
   if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
@@ -1737,6 +1744,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     return;
   }
 
+  const double init_start_time = start_time;
   while (start_time < end_time) {
     std::cout << "************************************** frame " << frame_num_
               << " **************************************" << std::endl;
@@ -2021,6 +2029,12 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop) {
     }
 
     planning_adapter_->Proc();
+
+    if (play_in_loop) {
+      if (start_time >= end_time) {
+        start_time = init_start_time;
+      }
+    }
   }
 }
 
