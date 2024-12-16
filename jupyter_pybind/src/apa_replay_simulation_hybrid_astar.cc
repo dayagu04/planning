@@ -16,42 +16,50 @@
 #include "ad_common/math/linear_interpolation.h"
 #include "apa_data.h"
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
+#include "apa_world/apa_world.h"
 #include "func_state_machine_c.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
 #include "interface/src/c/camera_preception_groundline_c.h"
+#include "interface/src/c/func_state_machine_c.h"
 #include "interface/src/c/fusion_objects_c.h"
+#include "interface/src/c/fusion_occupancy_objects_c.h"
 #include "interface/type_convert/struct_convert/camera_preception_groundline_c.h"
 #include "interface/type_convert/struct_convert/fusion_objects_c.h"
-#include "interface/src/c/fusion_occupancy_objects_c.h"
 #include "interface/type_convert/struct_convert/fusion_occupancy_objects_c.h"
-
+#include "log_glog.h"
+#include "narrow_space_scenario.h"
+#include "path_safe_checker.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
+#include "polygon_base.h"
+#include "pose2d.h"
 #include "serialize_utils.h"
 #include "slot_manager.h"
 #include "src/common/debug_info_log.h"
-#include "log_glog.h"
-#include "pose2d.h"
-#include "transform2d.h"
 #include "src/library/collision_detection/gjk2d_interface.h"
-#include "polygon_base.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
+#include "struct_convert/camera_preception_groundline_c.h"
 #include "struct_convert/common_c.h"
+#include "struct_convert/control_command_c.h"
 #include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_objects_c.h"
+#include "struct_convert/fusion_occupancy_objects_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
-#include "interface/src/c/func_state_machine_c.h"
+#include "struct_convert/hmi_inner_c.h"
 #include "struct_convert/ifly_localization_c.h"
 #include "struct_convert/planning_plan_c.h"
 #include "struct_convert/uss_perception_info_c.h"
 #include "struct_convert/uss_wave_info_c.h"
 #include "struct_convert/vehicle_service_c.h"
+#include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionObjectsInfo.h"
 #include "struct_msgs/FusionOccupancyObjectsInfo.h"
@@ -62,10 +70,7 @@
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/UssWaveInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
-#include "path_safe_checker.h"
-#include "narrow_space_scenario.h"
-#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
-#include "apa_world/apa_world.h"
+#include "transform2d.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -327,8 +332,9 @@ const void UpdateLocalView(
     std::vector<double> target_managed_slot_y_vec,
     std::vector<double> target_managed_limiter_x_vec,
     std::vector<double> target_managed_limiter_y_vec, int current_state) {
-  iflyauto::FuncStateMachine func_statemachine;
-  func_statemachine.current_state = static_cast<FunctionalState>(current_state);
+  iflyauto::FuncStateMachine func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -508,12 +514,9 @@ const bool PlanOnce(
 
   apa_interface_ptr->SetSimuParam(sim_param);
 
-  // iflyauto::FuncStateMachine func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
-  //         func_statemachine_bytes);
-
-  iflyauto::FuncStateMachine func_statemachine;
-  func_statemachine.current_state = static_cast<FunctionalState>(current_state);
+  iflyauto::FuncStateMachine func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
 
   iflyauto::ParkingFusionInfo parking_slot_info =
       BytesToStruct<iflyauto::ParkingFusionInfo,
@@ -599,11 +602,9 @@ const bool PlanOnce(
     VirtualWallDecider wall_decider;
 
     ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type ==
-        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_HORIZONTAL) {
       slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type ==
-               Common::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
       slot_type = ParkSpaceType::SLANTING;
     } else {
       slot_type = ParkSpaceType::VERTICAL;
@@ -767,11 +768,9 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     PointCloudObstacleTransform obstacle_generator;
 
     ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type ==
-        Common::PARKING_SLOT_TYPE_HORIZONTAL) {
+    if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_HORIZONTAL) {
       slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type ==
-               Common::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
       slot_type = ParkSpaceType::SLANTING;
     } else {
       slot_type = ParkSpaceType::VERTICAL;
@@ -780,7 +779,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     VirtualWallDecider wall_decider;
     wall_decider.Process(hybrid_astar_obs_.virtual_obs, 40.0, 15.0,
                          ego_slot_info.slot_width, ego_slot_info.slot_length,
-                         start, real_end, slot_type, SlotRelativePosition::NONE);
+                         start, real_end, slot_type,
+                         SlotRelativePosition::NONE);
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
@@ -919,7 +919,8 @@ const std::vector<Eigen::Vector3d> &GetAstarPath() {
 const bool SetFsm(py::bytes &func_statemachine_bytes) {
   iflyauto::FuncStateMachine func_statemachine;
   // auto func_statemachine =
-  //     BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
   //         func_statemachine_bytes);
 
   local_view.function_state_machine_info = func_statemachine;
@@ -974,7 +975,6 @@ const std::vector<Eigen::Vector2d> &GetVirtualWall() {
 }
 
 const std::vector<Eigen::Vector2d> &GetPlotRefLine() {
-
   return static_ref_line_;
 }
 
@@ -986,9 +986,7 @@ const std::vector<Eigen::Vector2d> &GetSearchSequencePath() {
   return search_sequence_path_;
 }
 
-const Eigen::Vector3d GetCoordinateSystem() {
-  return coordinate_system_;
-}
+const Eigen::Vector3d GetCoordinateSystem() { return coordinate_system_; }
 
 const std::vector<Eigen::Vector3d> &GetAllSearchNode() {
   return all_searched_node_;
