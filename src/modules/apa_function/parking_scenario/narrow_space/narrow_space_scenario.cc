@@ -607,7 +607,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     slot_type = ParkSpaceType::SLANTING;
   } else {
     if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-        ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+            ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+            ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
       end_straight_len =
           apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
     } else {
