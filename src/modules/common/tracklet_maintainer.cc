@@ -695,7 +695,7 @@ void TrackletMaintainer::calc(
       session_->environmental_model().highway_config_builder();
   PotentialAvoidDeciderConfig config =
       config_builder->cast<PotentialAvoidDeciderConfig>();
-  double expand_vel = 
+  double expand_vel =
       interp(ego_state_->ego_v(), config.expand_ego_vel,
              config.expand_obs_rel_vel);
   for (auto tr : tracked_objects) {
@@ -1649,7 +1649,8 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   const auto lc_request = session_->planning_context()
                               .lane_change_decider_output()
                               .lc_request_source;
-  if (lc_request == 7 && item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+  if (lc_request == CONE_REQUEST &&
+      item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
     lead_confidence_thrshld = 1.0;
   }
   LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
@@ -1877,7 +1878,8 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     const auto lc_request = session_->planning_context()
                                 .lane_change_decider_output()
                                 .lc_request_source;
-    if (lc_request == 7 && item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+    if (lc_request == CONE_REQUEST &&
+        item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       lead_confidence_time = 1.0;
     }
 

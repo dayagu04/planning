@@ -598,7 +598,7 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
   const auto lc_request = session_->planning_context()
                               .lane_change_decider_output()
                               .lc_request_source;
-  if (lc_request == 7 &&
+  if (lc_request == CONE_REQUEST &&
       temp_lead_one.type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
     is_in_cone_emergency_lc = true;
   }
