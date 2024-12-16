@@ -17,7 +17,7 @@
 #include "log_glog.h"
 #include "math_lib.h"
 #include "parallel_out_path_generator.h"
-#include "parallel_out_scenario.h"
+#include "parallel_park_out_scenario.h"
 #include "parallel_path_generator.h"
 #include "slot_management_info.pb.h"
 #include "slot_manager.h"
@@ -29,7 +29,7 @@ static planning::apa_planner::ParallelOutPathGenerator *pBase = nullptr;
 static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 static planning::apa_planner::CollisionDetector col_det;
 
-static planning::apa_planner::ParallelOutScenario parallel_park_planner;
+static planning::apa_planner::ParallelParkOutScenario parallel_park_planner;
 
 int Init() {
   planning::FilePath::SetName("parallel_parking_Out_py");

@@ -15,6 +15,7 @@
 #include "narrow_space_decider.h"
 #include "narrow_space_scenario.h"
 #include "parallel_park_in_scenario.h"
+#include "parallel_park_out_scenario.h"
 #include "parking_scenario.h"
 #include "perpendicular_head_in_scenario.h"
 #include "perpendicular_head_out_scenario.h"
@@ -89,6 +90,9 @@ bool ParkingScenarioManager::Init(
   scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_IN] =
       std::make_shared<ParallelParkInScenario>(apa_world);
 
+  scenario_list_[ParkingScenarioType::SCENARIO_PARALLEL_OUT] =
+      std::make_shared<ParallelParkOutScenario>(apa_world);
+
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT] =
       std::make_shared<PerpendicularHeadOutScenario>(apa_world);
 
@@ -108,6 +112,7 @@ bool ParkingScenarioManager::Init(
 }
 
 void ParkingScenarioManager::Excute() {
+  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute";
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
@@ -203,6 +208,7 @@ void ParkingScenarioManager::Reset() {
 
 std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
     const ParkingScenarioType type) {
+  ILOG_INFO << "GetScenarioByType type = " << static_cast<int>(type);
   auto it = scenario_list_.find(type);
   if (it != scenario_list_.end()) {
     return scenario_list_[type];

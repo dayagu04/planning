@@ -1,4 +1,4 @@
-#include "parallel_out_scenario.h"
+#include "parallel_park_out_scenario.h"
 
 #include <cstddef>
 
@@ -35,7 +35,7 @@ static double kTBoundarySampleDist = 0.38;
 static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
 static double kEps = 1e-5;
-void ParallelOutScenario::Reset() {
+void ParallelParkOutScenario::Reset() {
   frame_.Reset();
   tlane_.Reset();
   parallel_out_path_planner_.Reset();
@@ -46,7 +46,8 @@ void ParallelOutScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-void ParallelOutScenario::PlanCore() {
+void ParallelParkOutScenario::PlanCore() {
+  ILOG_INFO << "---------------------parallel out ---------------------------";
   // init simulation
   InitSimulation();
 
@@ -138,7 +139,7 @@ void ParallelOutScenario::PlanCore() {
               << static_cast<int>(GetPlannerStates().planning_status));
 }
 
-const bool ParallelOutScenario::UpdateEgoSlotInfo() {
+const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   using namespace pnc::geometry_lib;
 
   const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
@@ -326,12 +327,17 @@ const bool ParallelOutScenario::UpdateEgoSlotInfo() {
   return true;
 }
 
-const bool ParallelOutScenario::CheckFinished() {
+const bool ParallelParkOutScenario::CheckFinished() {
+  ILOG_INFO << "frame_.ego_slot_info.slot_occupied_ratio = "
+            << frame_.ego_slot_info.slot_occupied_ratio;
+  ILOG_INFO << "std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) = "
+            << std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg);
+
   return frame_.ego_slot_info.slot_occupied_ratio < 0.1 &&
          std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 3.0;
 }
 
-void ParallelOutScenario::GenTlane() {
+void ParallelParkOutScenario::GenTlane() {
   // Todo: generate t-lane according to nearby obstacles
   const auto& ego_slot_info = frame_.ego_slot_info;
 
@@ -561,7 +567,7 @@ void ParallelOutScenario::GenTlane() {
   JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
 }
 
-void ParallelOutScenario::GenTBoundaryObstacles() {
+void ParallelParkOutScenario::GenTBoundaryObstacles() {
   //                         c-------------------------D
   //                         |                         |
   //                         |---->x                   |
@@ -755,7 +761,7 @@ void ParallelOutScenario::GenTBoundaryObstacles() {
   }
 }
 
-const uint8_t ParallelOutScenario::PathPlanOnce() {
+const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   // construct input
   ParallelOutPathGenerator::Input path_planner_input;
   path_planner_input.tlane = tlane_;
@@ -819,7 +825,7 @@ const uint8_t ParallelOutScenario::PathPlanOnce() {
 
   parallel_out_path_planner_.SetCurrentPathSegIndex();
 
-  const auto path_planner_output = parallel_out_path_planner_.GetOutput();
+  const auto& path_planner_output = parallel_out_path_planner_.GetOutput();
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
 
@@ -861,7 +867,7 @@ const uint8_t ParallelOutScenario::PathPlanOnce() {
   return plan_result;
 }
 
-const bool ParallelOutScenario::CheckReplan() {
+const bool ParallelParkOutScenario::CheckReplan() {
   if (frame_.is_replan_first == true ||
       apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
     ILOG_INFO << "first plan";
@@ -890,7 +896,7 @@ const bool ParallelOutScenario::CheckReplan() {
   return false;
 }
 
-const bool ParallelOutScenario::CheckSegCompleted() {
+const bool ParallelParkOutScenario::CheckSegCompleted() {
   frame_.is_replan_by_uss = false;
 
   bool is_seg_complete = false;
@@ -919,7 +925,7 @@ const bool ParallelOutScenario::CheckSegCompleted() {
   return is_seg_complete;
 }
 
-void ParallelOutScenario::Log() const {
+void ParallelParkOutScenario::Log() const {
   const auto& l2g_tf = frame_.ego_slot_info.l2g_tf;
   const auto p0_g = l2g_tf.GetPos(tlane_.obs_pt_outside);
   const auto p1_g = l2g_tf.GetPos(tlane_.obs_pt_inside);
@@ -1036,7 +1042,7 @@ void ParallelOutScenario::Log() const {
   // }
 }
 
-void ParallelOutScenario::GenObstacles(){};
+void ParallelParkOutScenario::GenObstacles(){};
 
 }  // namespace apa_planner
 }  // namespace planning

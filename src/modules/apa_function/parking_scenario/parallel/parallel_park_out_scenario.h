@@ -11,10 +11,10 @@ namespace planning {
 
 namespace apa_planner {
 
-class ParallelOutScenario : public ParkingScenario {
+class ParallelParkOutScenario : public ParkingScenario {
  public:
-  ParallelOutScenario() = default;
-  ParallelOutScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
+  ParallelParkOutScenario() = default;
+  ParallelParkOutScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
   }
 
