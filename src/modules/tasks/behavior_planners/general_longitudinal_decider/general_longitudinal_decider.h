@@ -15,9 +15,11 @@
 #include "lon_behavior_planner.pb.h"
 #include "planning_context.h"
 #include "reference_path.h"
+#include "reference_path_manager.h"
 #include "task_basic_types.h"
 #include "tasks/task.h"
 #include "trajectory1d/bounded_constant_jerk_trajectory1d.h"
+#include"common/constraint_check/collision_checker.h"
 
 namespace planning {
 
@@ -129,6 +131,10 @@ class GeneralLongitudinalDecider : public Task {
    */
   void GenerateLonRefPathPB(const LongitudinalDeciderOutput &lon_ref_path);
 
+  void GetHppCollisionCheckResult(
+      const TrajectoryPoints &traj_points,
+      std::vector<planning_math::CollisionCheckStatus> &collision_results);
+
  private:
   LongitudinalDeciderV3Config config_;
   AdaptiveCruiseControlConfig config_acc_;  // 暂时不考虑acc
@@ -138,6 +144,8 @@ class GeneralLongitudinalDecider : public Task {
   // CollisionChecker lon_collision_checker_; // 主要给pnp使用，暂时不需要
 
   ObstacleDecisions obstacle_decisions_;
+  std::shared_ptr<CollisionChecker> lon_collision_checker_;
+  std::shared_ptr<ReferencePath> reference_path_ptr_;
 
   double max_curvature_ = 0.0;
 };

@@ -732,6 +732,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ego_pos_compensation_y = plan_debug_json_msg['predicted_ego_y']
       merge_point_x = plan_debug_json_msg['merge_point_x']
       merge_point_y = plan_debug_json_msg['merge_point_y']
+      lon_collision_object_position_x_vec = plan_debug_json_msg['lon_collision_object_position_x_vec']
+      lon_collision_object_position_y_vec = plan_debug_json_msg['lon_collision_object_position_y_vec']
       macroeconomic_decider_merge_point_x = plan_debug_json_msg['macroeconomic_decider_merge_point_x']
       macroeconomic_decider_merge_point_y = plan_debug_json_msg['macroeconomic_decider_merge_point_y']
       boundary_line_merge_point_x = plan_debug_json_msg['boundary_line_merge_point_x']
@@ -748,6 +750,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       ego_pos_compensation_x_ = []
       ego_pos_compensation_y_ = []
       init_pos_point_theta = []
+      lon_collision_object_position_x_vec_ = []
+      lon_collision_object_position_y_vec_ = []
       if g_is_display_enu:
         init_pos_point_x.append(init_state_x)
         init_pos_point_y.append(init_state_y)
@@ -757,8 +761,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       else:
         init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
         ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
+        lon_collision_object_position_x_vec_, lon_collision_object_position_y_vec_ = coord_tf.global_to_local(lon_collision_object_position_x_vec, lon_collision_object_position_y_vec)
         temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
         init_pos_point_theta.append(temp_theta)
+
+      print("lon_collision_object_position_x_vec: ", lon_collision_object_position_x_vec)
+      print("lon_collision_object_position_y_vec: ", lon_collision_object_position_y_vec)
 
       for i in range(len(bag_loader.plan_debug_msg['data'])):
         init_pos_xn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.x
@@ -796,6 +804,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       local_view_data['data_merge_point'].data.update({
         'merge_point_x': [merge_point_x],
         'merge_point_y': [merge_point_y]})
+      local_view_data["data_lon_collision_object_position"].data.update({
+        'lon_collision_object_position_x': lon_collision_object_position_x_vec,
+        'lon_collision_object_position_y': lon_collision_object_position_y_vec,
+      })
       macroeconomic_decider_merge_point_x, macroeconomic_decider_merge_point_y = coord_tf.global_to_local([macroeconomic_decider_merge_point_x], [macroeconomic_decider_merge_point_y])
       macroeconomic_decider_merge_point_x = macroeconomic_decider_merge_point_x[0]
       macroeconomic_decider_merge_point_y = macroeconomic_decider_merge_point_y[0]
@@ -1444,6 +1456,8 @@ def load_local_view_figure():
   data_init_line = ColumnDataSource(data = {'init_pos_line_x':[], 'init_pos_line_y':[]})
   data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
+  data_lon_collision_object_position = ColumnDataSource(data = {'lon_collision_object_position_x':[],
+                                                                'lon_collision_object_position_y':[]})
   macroeconomic_decider_data_merge_point = ColumnDataSource(data = {'macroeconomic_decider_merge_point_x':[],
                                               'macroeconomic_decider_merge_point_y':[]})
   boundary_line_merge_point = ColumnDataSource(data = {'boundary_line_merge_point_x':[],
@@ -1758,6 +1772,7 @@ def load_local_view_figure():
                      'data_init_pos_point': data_init_pos_point, \
                      'data_init_line': data_init_line, \
                      'data_merge_point': data_merge_point, \
+                     'data_lon_collision_object_position': data_lon_collision_object_position, \
                      'macroeconomic_decider_data_merge_point': macroeconomic_decider_data_merge_point, \
                      'boundary_line_merge_point': boundary_line_merge_point, \
                      'data_text':data_text, \
@@ -2054,6 +2069,7 @@ def load_local_view_figure():
 
   fig1.line('init_pos_line_y', 'init_pos_line_x', source = data_init_line, line_width = 3, line_color = 'purple', line_dash = 'solid', legend_label = 'init_point_line')
 
+  fig1.triangle_pin('lon_collision_object_position_y', 'lon_collision_object_position_x', source = data_lon_collision_object_position, size = 25, line_width = 4.5, line_alpha = 1,line_color = 'black', fill_color = "orange", fill_alpha = 1, legend_label = 'lon_collision_object_pos')
 
   if is_vis_map:
     for i in range (len(ehr_data_lanes)):

@@ -650,6 +650,7 @@ def load_lon_global_figure(bag_loader):
   ResultTrajectoryGeneratorTime_vec = []
   ParkingSwitchDeciderTime_vec = []
   ARAStarTime_vec = []
+  HppLonCollisionCheckTimeCost_vec = []
 
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_dis'], 2))
@@ -675,6 +676,7 @@ def load_lon_global_figure(bag_loader):
     ResultTrajectoryGeneratorTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ResultTrajectoryGeneratorTime'], 2))
     ParkingSwitchDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ParkingSwitchDeciderTime'], 2))
     ARAStarTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ARAStarTime'], 2))
+    HppLonCollisionCheckTimeCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['hpp_lon_collision_check_time_cost'], 2))
 
   lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
   lead_fig.line(t_plan_vec, lead_two_dis_vec, line_width=1, legend_label='lead_two_dis', color="green")
@@ -699,6 +701,7 @@ def load_lon_global_figure(bag_loader):
   # cost_time_fig.line(t_plan_vec, ResultTrajectoryGeneratorTime_vec, line_width=1, legend_label='ResultTrajectoryGeneratorTime_vec', color="gold")
   # cost_time_fig.line(t_plan_vec, ParkingSwitchDeciderTime_vec, line_width=1, legend_label='ParkingSwitchDeciderTime_vec', color="silver")
   cost_time_fig.line(t_plan_vec, ARAStarTime_vec, line_width=1, legend_label='ARAStarTime_vec', color="khaki")
+  cost_time_fig.line(t_plan_vec, HppLonCollisionCheckTimeCost_vec, line_width=1, legend_label='HppLonCollisionCheckTimeCost', color="olive")
   cost_time_fig.legend.click_policy = 'hide'
 
   cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=600,height=300)

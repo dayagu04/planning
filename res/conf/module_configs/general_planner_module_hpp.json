@@ -123,7 +123,7 @@
   "stop_distance_to_destination": 0.0,
   "lateral_optimization_weight_end_point": 500.0,
   "safe_buffer": 0.3,
-  "pnp_collision_threshold": 0.1,
+  "hpp_collision_threshold": 0.01,
   "is_valid_lateral_offset" : true,
   "near_car_thr": 0.25,
   "lat_safety_buffer": 1.0,

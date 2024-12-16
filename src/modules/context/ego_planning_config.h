@@ -1723,8 +1723,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "stop_distance_to_destination");
     velocity_limit_parking =
         read_json_key<double>(json, "velocity_limit_parking");
-    pnp_collision_threshold =
-        read_json_key<double>(json, "pnp_collision_threshold");
+    hpp_collision_threshold =
+        read_json_key<double>(json, "hpp_collision_threshold");
     lon_care_length = read_json_key<double>(json, "lon_care_length");
     lon_max_ignore_relative_time =
         read_json_key<double>(json, "lon_max_ignore_relative_time");
@@ -1758,7 +1758,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double highway_max_lat_acceleration = 2.5;
   double stop_distance_to_destination = 3.0;
   double velocity_limit_parking = 15.0;
-  double pnp_collision_threshold = 0.1;
+  double hpp_collision_threshold = 0.1;
   double narrow_space_width_stop_thrshld = -2.0;
   double narrow_space_distance_stop_thrshld = 10.0;
   double lon_care_length = 120;
