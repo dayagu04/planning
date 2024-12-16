@@ -1683,6 +1683,17 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::UNEXPECTED_GEAR;
   }
 
+  if (parent_node->IsStartNode()) {
+    if (request_.first_action_request.gear_request == AstarPathGear::DRIVE &&
+        traveled_distance < 0.0) {
+      return NodeShrinkType::UNEXPECTED_GEAR;
+    } else if (request_.first_action_request.gear_request ==
+                   AstarPathGear::REVERSE &&
+               traveled_distance > 0.0) {
+      return NodeShrinkType::UNEXPECTED_GEAR;
+    }
+  }
+
   // take above motion primitive to generate a curve driving the car to a
   // different grid
   // double node_step = std::sqrt(2) * xy_grid_resolution_;
