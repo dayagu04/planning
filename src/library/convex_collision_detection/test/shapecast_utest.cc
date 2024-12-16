@@ -4,7 +4,7 @@
 #include <string>
 
 #include "gjk2d_interface.h"
-#include "src/library/collision_detection/gjk2d_interface.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
 
 void printShapeCastResult(const cdl::ShapeCastResult &result) {
   printf("hit spot A [%.3f, %.3f] \n", result.collision_pointA(0),

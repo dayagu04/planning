@@ -87,7 +87,7 @@ const double PerpendicularHeadInScenario::CalRemainDistFromPath() {
   return remain_dist;
 }
 
-void PerpendicularHeadInScenario::PlanCore() {
+void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
   // prepare simulation
   InitSimulation();
 

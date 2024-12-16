@@ -3,6 +3,7 @@
 #include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
+#include <algorithm>
 #include <memory>
 
 #include "apa_param_config.h"
@@ -12,8 +13,11 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "log_glog.h"
-#include "parking_task/deciders/narrow_space_decider.h"
+#include "narrow_space_decider.h"
 #include "parking_task/parking_task.h"
+#include "parking_stop_decider.h"
+#include "park_speed_limit_decider.h"
+#include "pose2d.h"
 
 namespace planning {
 namespace apa_planner {
@@ -33,7 +37,9 @@ void ParkingScenario::Reset() { return; }
 
 void ParkingScenario::ScenarioRunning() {
   // run plan core
-  PlanCore();
+  ExcutePathPlanningTask();
+
+  ExcuteSpeedPlanningTask();
 
   // generate planning output
   GenPlanningOutput();
@@ -414,6 +420,7 @@ const bool ParkingScenario::PostProcessPath() {
   for (size_t i = 0; i < x_vec_size; ++i) {
     point.pos << x_vec[i], y_vec[i];
     point.heading = heading_vec[i];
+    point.s = s_vec[i];
     current_path_point_global_vec_[i] = point;
   }
 
@@ -459,6 +466,78 @@ void ParkingScenario::ScenarioTry() {
       apa_world_ptr_->GetSlotManagerPtr();
   slot_manager->SlotReleaseByScenarioTry(
       true, SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE);
+
+  return;
+}
+
+void ParkingScenario::ExcuteSpeedPlanningTask() {
+  if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
+    return;
+  }
+
+  SpeedDecisions speed_decisions;
+
+  // todo: use apa obstacle
+  ParkObstacleList obstacles;
+  const std::shared_ptr<ApaObstacleManager> obs_manager =
+      apa_world_ptr_->GetObstacleManagerPtr();
+  if (obs_manager == nullptr) {
+    return;
+  }
+
+  for (const auto& pair : obs_manager->GetObstacles()) {
+    if (!apa_param.GetParam().use_uss_pt_clound &&
+        pair.second.GetObsAttributeType() ==
+            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
+
+    planning::PointCloudObstacle obs;
+    obs.points.reserve(pair.second.GetPtClout2dGlobal().size());
+    for (const auto& pt : pair.second.GetPtClout2dGlobal()) {
+      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
+    }
+    obs.box = pair.second.GetBoxGlobal();
+    obs.envelop_polygon = pair.second.GetPolygon2DGlobal();
+    obs.obs_type = pair.second.GetObsAttributeType();
+    obstacles.point_cloud_list.emplace_back(obs);
+  }
+
+  double tracking_path_collision_dist = frame_.remain_dist_uss;
+  tracking_path_collision_dist =
+      std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
+
+  ILOG_INFO << "remain_dist_uss" << frame_.remain_dist_uss
+            << ", frame_.remain_dist_col_det" << frame_.remain_dist_col_det;
+
+  // update stop decision
+  ParkingStopDecider stop_decider = ParkingStopDecider();
+  stop_decider.Process(obstacles, apa_world_ptr_, tracking_path_collision_dist,
+                       current_path_point_global_vec_, &speed_decisions);
+
+  // update speed limit decision
+  ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
+  speed_limit_decider.Process(obstacles, current_path_point_global_vec_,
+                              &speed_decisions);
+
+  // get ego around speed limit decision
+  const SpeedLimitDecision* min_speed_decision =
+      speed_limit_decider.GetSpeedLimitDecisionBySRange(
+          &speed_decisions, stop_decider.GetEgoPathProjectS(),
+          stop_decider.GetEgoPathProjectS() + 0.6);
+
+  // todo: add uss obs dist
+  const auto& uss_obstacle_avoider_ptr =
+      apa_world_ptr_->GetUssObstacleAvoidancePtr();
+  if (min_speed_decision != nullptr) {
+    frame_.vel_target =
+        std::min(min_speed_decision->advised_speed,
+                 uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+  } else {
+    frame_.vel_target =
+        std::min(apa_param.GetParam().speed_config.default_cruise_speed,
+                 uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+  }
 
   return;
 }

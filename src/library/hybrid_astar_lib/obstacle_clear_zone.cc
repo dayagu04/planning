@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-#include "./../collision_detection/aabb2d.h"
+#include "./../convex_collision_detection/aabb2d.h"
 #include "log_glog.h"
 
 namespace planning {

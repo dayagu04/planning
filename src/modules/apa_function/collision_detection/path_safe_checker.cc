@@ -2,100 +2,156 @@
 
 #include <cstddef>
 
-#include "Eigen/src/Core/Matrix.h"
 #include "ad_common/math/vec2d.h"
 #include "log_glog.h"
-#include "modules/adas_function/display_state_types.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 
 namespace planning {
 #define DEBUG_PATH_CHECKER (0)
+#define NOT_CARE_SAFE_DIST (0.5)
 
-void PathSafeChecker::Excute(
-    const std::vector<pnc::geometry_lib::PathPoint>& path,
-    const pnc::geometry_lib::PathSegGear gear, const ParkObstacleList* obs,
-    const Pose2D& ego_pose) {
+void PathSafeChecker::Excute(const ParkObstacleList* obs,
+                             const Pose2D& ego_pose,
+                             const PathCheckRequest requst,
+                             const double lat_buffer, const double lon_buffer,
+                             std::vector<pnc::geometry_lib::PathPoint>& path) {
   obs_ = obs;
+  lat_buffer_ = lat_buffer;
+  lon_buffer_ = lon_buffer;
+  ego_project_s_ = 0;
+
+  if (requst == PathCheckRequest::COLLISION_CHECK) {
+    ExcuteCollisionCheck(path, ego_pose);
+  } else if (requst == PathCheckRequest::DISTANCE_CHECK) {
+    ExcuteDistanceCheck(ego_pose, path);
+  }
+
+  return;
+}
+
+void PathSafeChecker::ExcuteDistanceCheck(
+    const Pose2D& ego_pose, std::vector<pnc::geometry_lib::PathPoint>& path) {
+  // init
   is_path_collision_ = false;
   is_ego_collision_ = false;
 
-  if (obs_ == nullptr) {
+  for (auto& point : path) {
+    point.col_flag = false;
+    point.dist_to_obs = 20.0;
+  }
+
+  // check
+  if (obs_ == nullptr || path.size() <= 0) {
     return;
   }
 
-  if (path.size() <= 0) {
+  if (obs_->point_cloud_list.empty()) {
     return;
   }
-
-  size_t path_end_id = path.size() - 1;
-
-  if (obs_->point_cloud_list.empty() && obs_->virtual_obs.empty()) {
-    return;
-  }
-
-  hierarchy_lateral_safe_buffer_.clear();
-  // hierarchy_lateral_safe_buffer_.emplace_back(0.2);
-  // hierarchy_lateral_safe_buffer_.emplace_back(0.1);
-  hierarchy_lateral_safe_buffer_.emplace_back(0.05);
-  advised_lon_buffer_ = 0.2;
 
   // get closest point
-  size_t path_nearest_idx_ = GetNearestPathPoint(path, ego_pose);
+  path_nearest_idx_ = GetNearestPathPoint(path, ego_pose);
   Pose2D global_pose;
-
   bool is_collision = false;
   Transform2d tf;
-  PolygonFootPrint* tmp_foot_print;
 
-  // 做安全检查时，使用不同安全宽度.
-  double advised_lat_buffer = 0.2;
   global_pose = ego_pose;
   tf.SetBasePose(global_pose);
-
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
-  // use ego position to update safe width
-  size_t lat_buffer_size = hierarchy_lateral_safe_buffer_.size();
-  for (size_t i = 0; i < lat_buffer_size; i++) {
-    advised_lat_buffer = hierarchy_lateral_safe_buffer_[i];
+  // generate veh local polygon
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, 0.0);
 
-    // generate veh local polygon
-    GenerateVehCompactPolygon(gear, advised_lat_buffer, advised_lon_buffer_);
-    tmp_foot_print = &polygon_foot_print_;
-
-    is_collision =
-        IsFootPrintPolygonCollision(tf, tmp_foot_print, &collision_component);
+  // check path
+  size_t collision_index = 100000;
+  size_t path_end_id = path.size() - 1;
+  double dist = 10;
+  for (size_t i = path_nearest_idx_; i <= path_end_id; ++i) {
     if (!is_collision) {
-      break;
+      global_pose.x = path[i].pos[0];
+      global_pose.y = path[i].pos[1];
+      global_pose.theta = path[i].heading;
+      tf.SetBasePose(global_pose);
+
+      dist = GetVehicleDistance(tf, &polygon_foot_print_, &collision_component);
+
+      if (dist < 1e-3) {
+        is_collision = true;
+        collision_index = i;
+
+        if (i == path_nearest_idx_) {
+          is_ego_collision_ = true;
+        }
+      }
     }
 
-    // collision
-    if (i == lat_buffer_size - 1) {
-      is_ego_collision_ = true;
+    if (is_collision) {
+      path[i].col_flag = true;
+      path[i].dist_to_obs = 0;
+    } else {
+      path[i].col_flag = false;
+      // 这里的距离包含buffer.
+      path[i].dist_to_obs = dist;
     }
+
+#if DEBUG_PATH_CHECKER
+    ILOG_INFO << "id = " << i
+              << ", collision info = " << static_cast<int>(collision_component);
+#endif
   }
-  advised_lat_buffer_ = advised_lat_buffer;
+
+  path_collision_idx_ = std::min(collision_index, path.size());
+  is_path_collision_ = is_collision;
+
+  DebugCollisionInfo(path_end_id, collision_component, ego_pose, path);
+
+  return;
+}
+
+void PathSafeChecker::ExcuteCollisionCheck(
+    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    const Pose2D& ego_pose) {
+  is_path_collision_ = false;
+  is_ego_collision_ = false;
+
+  if (obs_ == nullptr || path.size() <= 0) {
+    return;
+  }
+
+  if (obs_->point_cloud_list.empty()) {
+    return;
+  }
+
+  // get closest point
+  path_nearest_idx_ = GetNearestPathPoint(path, ego_pose);
+  Pose2D global_pose;
+  bool is_collision = false;
+  Transform2d tf;
+
+  global_pose = ego_pose;
+  tf.SetBasePose(global_pose);
+  VehCollisionPosition collision_component = VehCollisionPosition::NONE;
+
+  // generate veh local polygon
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_);
 
   // check path
   size_t collision_index = 100000;
   cdl::AABB path_point_aabb;
-
+  size_t path_end_id = path.size() - 1;
   for (size_t i = path_nearest_idx_; i <= path_end_id; ++i) {
     global_pose.x = path[i].pos[0];
     global_pose.y = path[i].pos[1];
     global_pose.theta = path[i].heading;
     tf.SetBasePose(global_pose);
 
-    // generate vehicle polygon
-    if (i == path_end_id) {
-      tmp_foot_print = &path_end_foot_print_;
-    } else {
-      tmp_foot_print = &polygon_foot_print_;
-    }
-
     is_collision =
-        IsFootPrintPolygonCollision(tf, tmp_foot_print, &collision_component);
+        IsVehicleCollision(tf, &polygon_foot_print_, &collision_component);
+
+    if (i == path_nearest_idx_ && is_collision) {
+      is_ego_collision_ = true;
+    }
 
 #if DEBUG_PATH_CHECKER
     ILOG_INFO << "id = " << i
@@ -113,41 +169,14 @@ void PathSafeChecker::Excute(
   path_collision_idx_ = std::min(collision_index, path.size());
   is_path_collision_ = is_collision;
 
-#if DEBUG_PATH_CHECKER
-  ILOG_INFO << "path_collision_idx_= " << path_collision_idx_
-            << " ,is_path_collision_= " << is_path_collision_
-            << " ,path_nearest_idx_= " << path_nearest_idx_
-            << " ,path_end_id= " << path_end_id
-            << " , component=" << static_cast<int>(collision_component)
-            << ",lat safe buffer = " << advised_lat_buffer_;
-
-  PolygonDebugString(&polygon_foot_print_.body);
-  PolygonDebugString(&polygon_foot_print_.max_polygon);
-
-  if (tmp_foot_print != nullptr) {
-    PolygonDebugString(&tmp_foot_print->body);
-  }
-
-  ego_pose.DebugString();
-
-  ILOG_INFO << "left mirror";
-  PolygonDebugString(&polygon_foot_print_.mirror_left);
-
-  Pose2D tmp;
-  for (size_t i = 0; i < path.size(); i++) {
-    tmp = Pose2D(path[i].pos[0], path[i].pos[1], path[i].heading);
-
-    ILOG_INFO << "id = " << i;
-    tmp.DebugString();
-  }
-
-#endif
+  DebugCollisionInfo(path_end_id, collision_component, ego_pose, path);
 
   return;
 }
 
 void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
-                                     const double lon_safe_buffer) {
+                                     const double lon_safe_buffer,
+                                     const double lat_buffer_fast_check) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   GetUpLeftCoordinatePolygonByParam(
@@ -173,46 +202,24 @@ void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
       &polygon_foot_print_.max_polygon,
       config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + lateral_safe_buffer);
-
-  return;
-}
-
-void PathSafeChecker::GeneratePathEndPolygon(const double lateral_safe_buffer,
-                                             const double lon_safe_buffer) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
-
-  // if path point is end, add extra lon buffer for safe check.
-  GetUpLeftCoordinatePolygonByParam(
-      &path_end_foot_print_.body, config.rear_overhanging + lon_safe_buffer,
-      config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.car_width / 2.0 + lateral_safe_buffer);
-
-  path_end_foot_print_.mirror_left = polygon_foot_print_.mirror_left;
-  path_end_foot_print_.mirror_right = polygon_foot_print_.mirror_right;
-  GetUpLeftCoordinatePolygonByParam(
-      &path_end_foot_print_.max_polygon,
-      config.rear_overhanging + lon_safe_buffer,
-      config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + lateral_safe_buffer);
+      config.max_car_width / 2.0 + lat_buffer_fast_check);
 
   return;
 }
 
 void PathSafeChecker::GenerateVehCompactPolygon(
-    const pnc::geometry_lib::PathSegGear gear, const double lateral_safe_buffer,
-    const double lon_safe_buffer) {
+    const double lateral_safe_buffer, const double lon_safe_buffer,
+    const double lat_buffer_fast_check) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   if (config.car_vertex_x_vec.size() != 20) {
     ILOG_ERROR << "config invalid";
-    GenerateVehBox(lateral_safe_buffer, lon_safe_buffer);
-    GeneratePathEndPolygon(lateral_safe_buffer, lon_safe_buffer);
+    GenerateVehBox(lateral_safe_buffer, lon_safe_buffer, lat_buffer_fast_check);
     return;
   }
 
   GetCompactCarPolygonByParam(&polygon_foot_print_.body, lateral_safe_buffer,
-                              0.0);
+                              lon_safe_buffer);
 
   // left mirror
   Position2D center;
@@ -229,21 +236,10 @@ void PathSafeChecker::GenerateVehCompactPolygon(
                         center);
 
   GetUpLeftCoordinatePolygonByParam(
-      &polygon_foot_print_.max_polygon, config.rear_overhanging,
-      config.wheel_base + config.front_overhanging,
-      config.max_car_width / 2.0 + lateral_safe_buffer);
-
-  // if path point is end, add extra lon buffer for safe check.
-  GetCompactCarPolygonByParam(&path_end_foot_print_.body, lateral_safe_buffer,
-                              0.1);
-
-  path_end_foot_print_.mirror_left = polygon_foot_print_.mirror_left;
-  path_end_foot_print_.mirror_right = polygon_foot_print_.mirror_right;
-  GetUpLeftCoordinatePolygonByParam(
-      &path_end_foot_print_.max_polygon,
+      &polygon_foot_print_.max_polygon,
       config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + lateral_safe_buffer);
+      config.max_car_width / 2.0 + lat_buffer_fast_check);
 
 #if DEBUG_PATH_CHECKER
   PolygonDebugString(&polygon_foot_print_.max_polygon);
@@ -321,6 +317,10 @@ size_t PathSafeChecker::GetNearestPathPoint(
   Pose2D global_pose;
   size_t nearest_id = 0;
 
+  if (path.size() <= 1) {
+    return 0;
+  }
+
   for (size_t i = 0; i < path.size(); i++) {
     global_pose.x = path[i].pos[0];
     global_pose.y = path[i].pos[1];
@@ -344,6 +344,8 @@ size_t PathSafeChecker::GetNearestPathPoint(
               << " ,nearest_dist= " << nearest_dist;
 #endif
   }
+
+  GenerateEgoS(nearest_id, path, pose);
 
   return nearest_id;
 }
@@ -378,7 +380,7 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
   return false;
 }
 
-int PathSafeChecker::GenerateMirrorPolygon(Polygon2D* box,
+void PathSafeChecker::GenerateMirrorPolygon(Polygon2D* box,
                                            const double x_length,
                                            const double y_length,
                                            const Position2D& center) {
@@ -401,7 +403,7 @@ int PathSafeChecker::GenerateMirrorPolygon(Polygon2D* box,
 
   box->min_tangent_radius = std::min(y_length / 2, x_length / 2);
 
-  return 0;
+  return;
 }
 
 void PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
@@ -415,23 +417,23 @@ void PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
   box->vertexes[1].x = config.car_vertex_x_vec[0] + lon_buffer;
   box->vertexes[1].y = config.car_vertex_y_vec[0] + lat_buffer;
 
+  box->vertexes[2].x = config.car_vertex_x_vec[15] - lon_buffer;
+  box->vertexes[2].y = config.car_vertex_y_vec[15] + lat_buffer;
+
+  box->vertexes[3].x = config.car_vertex_x_vec[13] - lon_buffer;
+  box->vertexes[3].y = config.car_vertex_y_vec[13] + lat_buffer;
+
+  box->vertexes[4].x = config.car_vertex_x_vec[12] - lon_buffer;
+  box->vertexes[4].y = config.car_vertex_y_vec[12] - lat_buffer;
+
+  box->vertexes[5].x = config.car_vertex_x_vec[10] - lon_buffer;
+  box->vertexes[5].y = config.car_vertex_y_vec[10] - lat_buffer;
+
   box->vertexes[6].x = config.car_vertex_x_vec[5] + lon_buffer;
   box->vertexes[6].y = config.car_vertex_y_vec[5] - lat_buffer;
 
   box->vertexes[7].x = config.car_vertex_x_vec[3] + lon_buffer;
   box->vertexes[7].y = config.car_vertex_y_vec[3] - lat_buffer;
-
-  box->vertexes[2].x = config.car_vertex_x_vec[15] - lon_buffer - 0.15;
-  box->vertexes[2].y = config.car_vertex_y_vec[15] + lat_buffer;
-
-  box->vertexes[3].x = config.car_vertex_x_vec[13] - lon_buffer;
-  box->vertexes[3].y = config.car_vertex_y_vec[13] + lat_buffer + 0.15;
-
-  box->vertexes[4].x = config.car_vertex_x_vec[12] - lon_buffer;
-  box->vertexes[4].y = config.car_vertex_y_vec[12] - lat_buffer - 0.15;
-
-  box->vertexes[5].x = config.car_vertex_x_vec[10] - lon_buffer - 0.15;
-  box->vertexes[5].y = config.car_vertex_y_vec[10] - lat_buffer;
 
   box->vertex_num = 8;
 
@@ -443,7 +445,7 @@ void PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
   return;
 }
 
-const bool PathSafeChecker::IsFootPrintPolygonCollision(
+const bool PathSafeChecker::IsVehicleCollision(
     const Transform2d& tf, PolygonFootPrint* foot_print,
     VehCollisionPosition* collision_info) {
   Polygon2D veh_global_polygon;
@@ -508,12 +510,158 @@ bool PathSafeChecker::CalcEgoCollision(const ParkObstacleList* obs,
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehBox(lat_buffer, lon_buffer);
+  GenerateVehBox(lat_buffer, lon_buffer, lat_buffer);
 
-  is_collision = IsFootPrintPolygonCollision(tf, &polygon_foot_print_,
-                                             &collision_component);
+  is_collision =
+      IsVehicleCollision(tf, &polygon_foot_print_, &collision_component);
 
   return is_collision;
+}
+
+void PathSafeChecker::DebugCollisionInfo(
+    const size_t path_end_id, const VehCollisionPosition collision_component,
+    const Pose2D& ego_pose,
+    const std::vector<pnc::geometry_lib::PathPoint>& path) const {
+#if DEBUG_PATH_CHECKER
+  ILOG_INFO << "path_collision_idx_= " << path_collision_idx_
+            << " ,is_path_collision_= " << is_path_collision_
+            << " ,path_nearest_idx_= " << path_nearest_idx_
+            << " ,path_end_id= " << path_end_id
+            << " , component=" << static_cast<int>(collision_component)
+            << ",lat safe buffer = " << lat_buffer_;
+
+  ego_pose.DebugString();
+
+  ILOG_INFO << "body";
+  PolygonDebugString(&polygon_foot_print_.body);
+  ILOG_INFO << "max bounding box";
+  PolygonDebugString(&polygon_foot_print_.max_polygon);
+  ILOG_INFO << "left mirror";
+  PolygonDebugString(&polygon_foot_print_.mirror_left);
+
+  Pose2D tmp;
+  for (size_t i = 0; i < path.size(); i++) {
+    tmp = Pose2D(path[i].pos[0], path[i].pos[1], path[i].heading);
+
+    ILOG_INFO << "id = " << i;
+    tmp.DebugString();
+  }
+
+#endif
+  return;
+}
+
+const double PathSafeChecker::GetVehicleDistance(
+    const Transform2d& tf, PolygonFootPrint* foot_print,
+    VehCollisionPosition* collision_info) {
+  Polygon2D veh_global_polygon;
+  bool is_collision = false;
+  double min_dist = 10;
+
+  ULFLocalPolygonToGlobal(&veh_global_polygon, &foot_print->max_polygon, tf);
+  is_collision = GetPolygonDistance(&veh_global_polygon, &min_dist);
+  if (!is_collision) {
+    *collision_info = VehCollisionPosition::MAX_POLYGON_NO_COLLISION;
+
+    if (min_dist >= NOT_CARE_SAFE_DIST) {
+      return min_dist;
+    }
+  }
+
+  ULFLocalPolygonToGlobal(&veh_global_polygon, &foot_print->body, tf);
+  is_collision = GetPolygonDistance(&veh_global_polygon, &min_dist);
+  if (is_collision) {
+    *collision_info = VehCollisionPosition::BODY;
+    return 0;
+  }
+
+  // ILOG_INFO << "left mirror check";
+  ULFLocalPolygonToGlobal(&veh_global_polygon, &foot_print->mirror_left, tf);
+  is_collision = GetPolygonDistance(&veh_global_polygon, &min_dist);
+  if (is_collision) {
+    *collision_info = VehCollisionPosition::LEFT_MIRROR;
+    return 0;
+  }
+
+  ULFLocalPolygonToGlobal(&veh_global_polygon, &foot_print->mirror_right, tf);
+  is_collision = GetPolygonDistance(&veh_global_polygon, &min_dist);
+  if (is_collision) {
+    *collision_info = VehCollisionPosition::RIGHT_MIRROR;
+    return 0;
+  }
+
+  *collision_info = VehCollisionPosition::NONE;
+  return min_dist;
+}
+
+const bool PathSafeChecker::GetPolygonDistance(const Polygon2D* polygon,
+                                               double* min_dist) {
+  bool is_collision = false;
+  double dist = 10;
+
+  for (const auto& obstacle : obs_->point_cloud_list) {
+    // envelop box check
+    gjk_interface_.PolygonDistanceByThresh(&is_collision, &dist, polygon,
+                                           &obstacle.envelop_polygon, 1.0);
+
+    // distance is big, no need accurate check.
+    if (dist >= 1.0) {
+      *min_dist = std::min(*min_dist, dist);
+      continue;
+    }
+
+    // internal points
+    for (size_t j = 0; j < obstacle.points.size(); j++) {
+      gjk_interface_.PolygonDistanceByThresh(polygon, obstacle.points[j], 1.0,
+                                             &is_collision, &dist);
+
+      if (is_collision) {
+        ILOG_INFO << "size = " << obstacle.points.size() << " j =" << j;
+        return true;
+      }
+
+      *min_dist = std::min(*min_dist, dist);
+
+      // ILOG_INFO << "point no collision";
+    }
+  }
+
+  return is_collision;
+}
+
+void PathSafeChecker::GenerateEgoS(
+    const size_t nearest_id,
+    const std::vector<pnc::geometry_lib::PathPoint>& path, const Pose2D& pose) {
+  ad_common::math::Vec2d p0;
+  ad_common::math::Vec2d p1;
+  double p0_s;
+
+  if (nearest_id == path.size() - 1) {
+    p0.set_x(path[nearest_id - 1].pos[0]);
+    p0.set_y(path[nearest_id - 1].pos[1]);
+    p0_s = path[nearest_id - 1].s;
+
+    p1.set_x(path[nearest_id].pos[0]);
+    p1.set_y(path[nearest_id].pos[1]);
+  } else {
+    p0.set_x(path[nearest_id].pos[0]);
+    p0.set_y(path[nearest_id].pos[1]);
+    p0_s = path[nearest_id].s;
+
+    p1.set_x(path[nearest_id + 1].pos[0]);
+    p1.set_y(path[nearest_id + 1].pos[1]);
+  }
+  ad_common::math::Vec2d p0_p1(p1.x() - p0.x(), p1.y() - p0.y());
+  p0_p1.Normalize();
+
+  ad_common::math::Vec2d p0_ego;
+  p0_ego.set_x(pose.x - p0.x());
+  p0_ego.set_x(pose.y - p0.y());
+
+  double project_s = p0_p1.InnerProd(p0_ego);
+  ego_project_s_ = p0_s + project_s;
+
+  return;
 }
 
 }  // namespace planning

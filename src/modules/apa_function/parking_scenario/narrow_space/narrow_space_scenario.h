@@ -5,7 +5,7 @@
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
-#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
+#include "virtual_wall_decider.h"
 #include "narrow_space_decider.h"
 
 namespace planning {
@@ -48,7 +48,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckParallelSlotFinished();
 
-  virtual void PlanCore() override;
+  virtual void ExcutePathPlanningTask() override;
 
   virtual void Log() const override;
 

@@ -198,6 +198,7 @@ struct PathPoint {
   double lat_buffer = 0.0;
   bool col_flag = false;
   Eigen::Vector2d heading_vec = Eigen::Vector2d::Zero();
+  double dist_to_obs;
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
@@ -212,6 +213,7 @@ struct PathPoint {
     s = 0.0;
     lat_buffer = 0.0;
     col_flag = false;
+    dist_to_obs = 100.0;
   }
 
   void GlobalToLocal(const GlobalToLocalTf &g2l_tf) {

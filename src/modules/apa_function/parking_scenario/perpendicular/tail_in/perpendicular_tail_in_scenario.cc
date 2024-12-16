@@ -58,7 +58,7 @@ void PerpendicularTailInScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-void PerpendicularTailInScenario::PlanCore() {
+void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   // prepare simulation
   InitSimulation();
 

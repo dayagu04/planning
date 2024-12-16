@@ -76,6 +76,10 @@ struct Pose2D {
     ILOG_INFO << "x = " << x << " ,y = " << y << " ,theta = " << theta;
     return;
   }
+
+  double DistanceSquareTo(const Eigen::Vector2d &p) const {
+    return (x - p[0]) * (x - p[0]) + (y - p[1]) * (y - p[1]);
+  }
 };
 
 /* Calculate distance from two points */

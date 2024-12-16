@@ -22,7 +22,7 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   virtual const bool UpdateEgoSlotInfo() override;
   virtual void GenTlane() override;
   virtual void GenObstacles() override;
-  virtual void PlanCore() override;
+  virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;

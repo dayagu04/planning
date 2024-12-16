@@ -110,11 +110,6 @@ const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
     return false;
   }
 
-  // child == parent
-  if (new_node->GetGlobalID() == old_node->GetGlobalID()) {
-    return true;
-  }
-
   const Node3d *parent = new_node->GetPreNode();
   if (parent == nullptr) {
     return false;

@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "./../../modules/common/local_view.h"
-#include "./../collision_detection/aabb2d.h"
-#include "./../collision_detection/polygon_base.h"
+#include "./../convex_collision_detection/aabb2d.h"
+#include "./../convex_collision_detection/polygon_base.h"
 #include "library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"

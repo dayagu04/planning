@@ -42,6 +42,7 @@ namespace planning {
 
 #define DEBUG_ONE_SHOT_PATH (0)
 #define DEBUG_ONE_SHOT_PATH_MAX_NODE (10000)
+#define ENABLE_OBS_DIST_G_COST (0)
 
 // 控制可以执行的距离
 constexpr double rs_path_seg_advised_dist = 0.35;
@@ -1065,26 +1066,29 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
       continue;
     }
 
-    if (config_.enable_obs_dist_g_cost) {
-      if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
-        node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
-        node->SetDistToObs(dist);
-        // node->SetCollisionID(i);
+// for accelerate calculation, use macro
+#if ENABLE_OBS_DIST_G_COST
+    if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
+      node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
+      node->SetDistToObs(dist);
+      // node->SetCollisionID(i);
 
-        return false;
-      }
-
-      if (dist < min_dist) {
-        min_dist = dist;
-      }
-    } else {
-      if (edt_->IsCollisionForPoint(&tf, gear)) {
-        node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
-        // node->SetCollisionID(i);
-
-        return false;
-      }
+      return false;
     }
+
+    if (dist < min_dist) {
+      min_dist = dist;
+    }
+#else
+
+    if (edt_->IsCollisionForPoint(&tf, gear)) {
+      node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
+      // node->SetCollisionID(i);
+
+      return false;
+    }
+
+#endif
 
     // ILOG_INFO << "path size " << node_step_size << " ,pt id " << i
     //           << " , no collision ";
@@ -1966,11 +1970,11 @@ double HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   }
 
   // safe dist cost
+#if ENABLE_OBS_DIST_G_COST
   double safe_punish = 0.0;
-  if (config_.enable_obs_dist_g_cost) {
-    safe_punish = CalcSafeDistCost(next_node);
-  }
+  safe_punish = CalcSafeDistCost(next_node);
   piecewise_cost += safe_punish;
+#endif
 
   // ref line heading cost
   // double heading_cost =
@@ -2492,13 +2496,13 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
   return;
 }
 
-void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
-                                        const ParkObstacleList& obstacles,
-                                        const AstarRequest& request,
-                                        const ObstacleClearZone* clear_zone,
-                                        HybridAStarResult* result,
-                                        EulerDistanceTransform* edt,
-                                        ParkReferenceLine* ref_line) {
+void HybridAStar::GearRerversePathAttempt(const MapBound& XYbounds,
+                                          const ParkObstacleList& obstacles,
+                                          const AstarRequest& request,
+                                          const ObstacleClearZone* clear_zone,
+                                          HybridAStarResult* result,
+                                          EulerDistanceTransform* edt,
+                                          ParkReferenceLine* ref_line) {
   result->Clear();
 
   if (request.history_gear == AstarPathGear::REVERSE) {

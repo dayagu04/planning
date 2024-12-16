@@ -5,12 +5,12 @@
 
 namespace planning {
 
-typedef enum Raycast_Collision_Info {
+enum RaycastCollisionInfo {
   RAYCAST_SOURCE_POINT_IN_POLYGON,
   RAYCAST_HIT_POLYGON,
   RAYCAST_NO_COLLISION,
   RAYCAST_MAX_COLLISION_TYPE
-} raycast_collision_info_t;
+};
 
 class GJK2DInterface {
  public:
@@ -21,17 +21,16 @@ class GJK2DInterface {
    * \param polygon_q
    * \return int
    */
-  int PolygonCollision(bool *is_collision, const Polygon2D *polygon_p,
-                       const Polygon2D *polygon_q);
+  void PolygonCollision(bool *is_collision, const Polygon2D *polygon_p,
+                        const Polygon2D *polygon_q);
 
   /**
    * \brief Directly use gjk2d to calculate the collision and distance
    * information \param output: is_collision \param output: dist, distance of
    * polygon_p and polgyon_q \param polygon_p \param polygon_q \return int
    */
-  int PolygonDistance(bool *is_collision, double *dist,
-                      const Polygon2D *polygon_obj,
-                      const Polygon2D *polygon_veh);
+  void PolygonDistance(bool *is_collision, double *dist,
+                       const Polygon2D *polygon_p, const Polygon2D *polygon_q);
   /**
    * \brief Calculate the accurate distance if the distance between
    *  two polyogns is less than dist_thresh else return distance INF
@@ -42,10 +41,10 @@ class GJK2DInterface {
    * \param dist_thresh
    * \return int
    */
-  int PolygonDistanceByThresh(bool *is_collision, double *dist,
-                              const Polygon2D *polygon_obj,
-                              const Polygon2D *polygon_veh,
-                              const double dist_thresh);
+  void PolygonDistanceByThresh(bool *is_collision, double *dist,
+                               const Polygon2D *polygon_p,
+                               const Polygon2D *polygon_q,
+                               const double dist_thresh);
 
   /**
    * \brief Calculate the boolean collision info;
@@ -55,10 +54,10 @@ class GJK2DInterface {
    * \param[in] dist_thresh       Dist;
    * \return int
    */
-  int PolygonCollisionByCircleCheck(bool *is_collision,
-                                    const Polygon2D *polygon_obj,
-                                    const Polygon2D *polygon_veh,
-                                    const double dist_thresh);
+  void PolygonCollisionByCircleCheck(bool *is_collision,
+                                     const Polygon2D *polygon_p,
+                                     const Polygon2D *polygon_q,
+                                     const double dist_thresh);
 
   /**
    * \brief gjk2d to calculate the collision and distance information
@@ -72,10 +71,10 @@ class GJK2DInterface {
    * \param polygon_obj2
    * \return int
    */
-  int PolygonDistanceCheck(bool *is_collision, double *dist,
-                           Position2D *pos_obj1, Position2D *pos_obj2,
-                           const Polygon2D *polygon_obj1,
-                           const Polygon2D *polygon_obj2);
+  void PolygonDistanceCheck(bool *is_collision, double *dist,
+                            Position2D *pos_obj1, Position2D *pos_obj2,
+                            const Polygon2D *polygon_obj1,
+                            const Polygon2D *polygon_obj2);
 
   /**
    * \brief raycast to extract collision position
@@ -95,11 +94,11 @@ class GJK2DInterface {
    * \param[out] raycastlabel Result label.
    * \return int
    */
-  int RaycastCollisoinCheck(Position2D *source, Position2D *direction,
-                            float max_lambda, const Polygon2D *polygon_veh,
-                            bool *is_collision, Position2D *collision_point,
-                            int32_t *hit_edge_id, float *ratio,
-                            raycast_collision_info_t *raycast_label);
+  void RaycastCollisoinCheck(Position2D *source, Position2D *direction,
+                             float max_lambda, const Polygon2D *polygon_veh,
+                             bool *is_collision, Position2D *collision_point,
+                             int32_t *hit_edge_id, float *ratio,
+                             RaycastCollisionInfo *raycast_label);
 
   /**
    * \brief
@@ -138,10 +137,11 @@ class GJK2DInterface {
    * \param[in] polygonB_end
    * \return int
    */
-  int ShapeCast(bool *is_collision, double *distA, double *distB,
-                Position2D *collision_pointA, Position2D *collision_pointB,
-                const Polygon2D *polygonA_start, const Polygon2D *polygonA_end,
-                const Polygon2D *polygonB_start, const Polygon2D *polygonB_end);
+  void ShapeCast(bool *is_collision, double *distA, double *distB,
+                 Position2D *collision_pointA, Position2D *collision_pointB,
+                 const Polygon2D *polygonA_start, const Polygon2D *polygonA_end,
+                 const Polygon2D *polygonB_start,
+                 const Polygon2D *polygonB_end);
 
   /**
    * \brief
@@ -180,13 +180,13 @@ class GJK2DInterface {
    * \param[in] dirB               PolygonB moving direction;
    * \return int
    */
-  int ShapeCastByDirection(bool *is_collision, double *distA, double *distB,
-                           Position2D *collision_pointA,
-                           Position2D *collision_pointB,
-                           const Polygon2D *polygonA_start,
-                           const Position2D *dirA,
-                           const Polygon2D *polygonB_start,
-                           const Position2D *dirB);
+  void ShapeCastByDirection(bool *is_collision, double *distA, double *distB,
+                            Position2D *collision_pointA,
+                            Position2D *collision_pointB,
+                            const Polygon2D *polygonA_start,
+                            const Position2D *dirA,
+                            const Polygon2D *polygonB_start,
+                            const Position2D *dirB);
 
   /**
    * \brief raycast algorithm
@@ -210,28 +210,34 @@ class GJK2DInterface {
    *                              normalized_dir FALSE.
    * \return 0 if success or 1 if failed;
    */
-  int Raycast(raycast_collision_info_t *info, Position2D *collision_point,
-              double *collision_dist, Position2D *source, Position2D *direction,
-              double max_lambda, const Polygon2D *polygon,
-              bool get_collision_pt, bool get_collision_dist,
-              bool normalized_dir);
+  void Raycast(RaycastCollisionInfo *info, Position2D *collision_point,
+               double *collision_dist, Position2D *source,
+               Position2D *direction, double max_lambda,
+               const Polygon2D *polygon, bool get_collision_pt,
+               bool get_collision_dist, bool normalized_dir);
 
   // Notice: If you are using multi-thread, please watch out the global
   // variables.
-  int PolygonPointCollisionDetect(bool *is_collision, const Polygon2D *polygon,
-                                  const Position2D &point);
+  void PolygonPointCollisionDetect(bool *is_collision, const Polygon2D *polygon,
+                                   const Position2D &point);
+
+  void PolygonDistanceByThresh(const Polygon2D *polygon,
+                               const Position2D &point,
+                               const double dist_thresh, bool *is_collision,
+                               double *dist);
 
  private:
-  int get_cross_point_for_two_ray(cdl::Vector2r &ret,
-                                  const cdl::Vector2r &start0,
-                                  const cdl::Vector2r &dir0,
-                                  const cdl::Vector2r &start1,
-                                  const cdl::Vector2r &dir1);
+  void get_cross_point_for_two_ray(cdl::Vector2r &ret,
+                                   const cdl::Vector2r &start0,
+                                   const cdl::Vector2r &dir0,
+                                   const cdl::Vector2r &start1,
+                                   const cdl::Vector2r &dir1);
 
  private:
   cdl::GJK2D gjk_solver_;
-  cdl::ShapeProxy2D shape_p;
-  cdl::ShapeProxy2D shape_q;
+  cdl::ShapeProxy2D shape_p_;
+  cdl::ShapeProxy2D shape_q_;
+  cdl::DistResult2D gjk2d_result_;
 };
 
 }  // namespace planning

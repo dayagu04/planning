@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include "apa_debug_data.pb.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "camera_preception_groundline_c.h"
@@ -318,6 +319,59 @@ void DynamicsSwitchBuf(double x, double y, double heading) {
       PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
 }
 
+std::vector<Eigen::VectorXd> GetApaSpeedLimit() {
+  std::vector<Eigen::VectorXd> speed_limit_profile;
+  Eigen::VectorXd v(6);
+
+  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaSpeedDebug *speed_debug;
+  if (debug_->has_apa_speed_debug()) {
+    speed_debug = debug_->mutable_apa_speed_debug();
+  }
+
+  if (speed_debug == nullptr) {
+    speed_limit_profile.emplace_back(v);
+    return speed_limit_profile;
+  }
+
+  int size = 0;
+  if (speed_debug->has_speed_limit()) {
+    size = speed_debug->speed_limit().s_size();
+  }
+
+  for (int i = 0; i < size; i++) {
+    v[0] = speed_debug->speed_limit().s(i);
+
+    if (i < speed_debug->speed_limit().obs_dist_size()) {
+      v[1] = speed_debug->speed_limit().obs_dist(i);
+    }
+
+    if (i < speed_debug->speed_limit().v_upper_bound_size()) {
+      v[2] = speed_debug->speed_limit().v_upper_bound(i);
+    }
+
+    if (i < speed_debug->speed_limit().a_upper_bound_size()) {
+      v[3] = speed_debug->speed_limit().a_upper_bound(i);
+    }
+
+    if (i < speed_debug->speed_limit().a_lower_bound_size()) {
+      v[4] = speed_debug->speed_limit().a_lower_bound(i);
+    }
+
+    if (i < speed_debug->speed_limit().jerk_upper_bound_size()) {
+      v[5] = speed_debug->speed_limit().jerk_upper_bound(i);
+    }
+
+    speed_limit_profile.emplace_back(v);
+  }
+
+  if (speed_limit_profile.size() == 0) {
+    speed_limit_profile.emplace_back(v);
+  }
+
+  return speed_limit_profile;
+}
+
 PYBIND11_MODULE(apa_simulation_py, m) {
   m.doc() = "m";
 
@@ -329,5 +383,6 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
       .def("DynamicsUpdate", &DynamicsUpdate)
       .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
+      .def("GetApaSpeedLimit", &GetApaSpeedLimit)
       .def("GetDynamicState", &GetDynamicState);
 }

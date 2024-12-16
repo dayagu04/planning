@@ -37,6 +37,14 @@ struct AstarParkingConfig {
   double deadend_uss_stuck_replan_wait_time;
 };
 
+struct ParkingSpeedConfig {
+  bool enable_apa_speed_plan;
+  double default_cruise_speed;
+  double min_cruise_speed;
+  // If obs dist is smaller than this value, add speed limit.
+  double obs_dist_for_speed_limit;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -390,6 +398,7 @@ struct ApaParameters {
                                             0.18, 0.95, 0.95, 0.95, 0.95};
 
   AstarParkingConfig astar_config;
+  ParkingSpeedConfig speed_config;
 };
 
 class ApaParametersSetting {

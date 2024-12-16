@@ -6,7 +6,7 @@ void PerpendicularParkScenario::Reset() { frame_.Reset();
   ParkingScenario::Reset();
 }
 
-void PerpendicularParkScenario::PlanCore() {}
+void PerpendicularParkScenario::ExcutePathPlanningTask() {}
 
 const bool PerpendicularParkScenario::UpdateEgoSlotInfo() { return false; }
 

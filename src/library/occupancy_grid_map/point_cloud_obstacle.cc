@@ -1,8 +1,9 @@
 
 #include "point_cloud_obstacle.h"
 
+#include "aabb2d.h"
 #include "src/modules/apa_function/apa_param_config.h"
-#include "./../collision_detection/gjk2d_interface.h"
+#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "log_glog.h"
 #include "modules/apa_function/apa_world/apa_obstacle.h"
 #include "polygon_base.h"
@@ -79,7 +80,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
     obs = &obs_list.point_cloud_list[i];
     obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
     obs->points.clear();
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
 
     for (uint32 j = 0; j < points.polygon_points_size; j++) {
       global.x = points.polygon_points[j].x;
@@ -130,7 +131,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
     obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
 
     for (uint8 j = 0; j < gl.points_3d_size; j++) {
       global.x = gl.points_3d[j].x;
@@ -290,7 +291,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
     obs = &obs_list.point_cloud_list[i];
     obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
     obs->points.clear();
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
 
     for (uint32 j = 0; j < points.polygon_points_size; j++) {
       global_point.x = points.polygon_points[j].x;
@@ -321,7 +322,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
     obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
 
     for (uint8 j = 0; j < gl.points_3d_size; j++) {
       global_point.x = gl.points_3d[j].x;
@@ -343,7 +344,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
     obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
     obs->obs_type = apa_planner::ApaObsAttributeType::SLOT_LIMITER;
     obs->points.clear();
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
     std::vector<Position2D> limiter_points;
 
     const iflyauto::ParkingFusionInfo* slot_list =

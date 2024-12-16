@@ -50,7 +50,6 @@ void PlannerOpenSpaceConfig::InitConfig() {
   enable_dp_cost_for_vertical_park = true;
   enable_ref_line_h_cost_for_vertical_park = true;
   enable_rs_path_h_cost_for_vertical_park = true;
-  enable_obs_dist_g_cost = false;
   max_gear_change_num = 10;
   ref_line_heading_penalty = 0.0;
 

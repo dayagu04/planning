@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "./../collision_detection/gjk2d_interface.h"
+#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "Eigen/Core"
 #include "ad_common/math/line_segment2d.h"
