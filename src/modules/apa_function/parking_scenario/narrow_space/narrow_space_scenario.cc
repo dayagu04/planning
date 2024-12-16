@@ -734,6 +734,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try) {
     cur_request.path_generate_method =
         planning::AstarPathGenerateType::TRY_SEARCHING;
+    cur_request.first_action_request.gear_request = AstarPathGear::NONE;
   }
 
   // 目前,平行车位入库使用混合A星搜索，交换起点终点
