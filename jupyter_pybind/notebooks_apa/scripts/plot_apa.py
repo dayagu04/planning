@@ -8,11 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20240826/20240826-15-44-44/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2024-08-26-15-44-44_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241106/20241106-15-30-38/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-11-06-15-30-38_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241125/20241125-18-26-02/park_in_data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-11-25-18-26-02_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241127/20241127-11-07-35/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-11-27-11-07-35_no_camera.bag'
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241211/20241211-12-47-25/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-11-12-47-25_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241214/20241214-15-40-17/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-12-14-15-40-18_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]

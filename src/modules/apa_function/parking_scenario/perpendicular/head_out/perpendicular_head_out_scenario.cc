@@ -1598,8 +1598,8 @@ void PerpendicularHeadOutScenario::Log() const {
     }
   }
 
-  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 6)
-  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 6)
+  JSON_DEBUG_VECTOR("obstaclesX", obstaclesX, 2)
+  JSON_DEBUG_VECTOR("obstaclesY", obstaclesY, 2)
 
   std::vector<double> slot_corner_X;
   const size_t corner_size = ego_slot_info.slot_corner.size();
