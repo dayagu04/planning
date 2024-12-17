@@ -1746,7 +1746,9 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    GenerateDynamicObstacleDecision(obstacle, obstacle_decision);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, true);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, false);
+
     ExtractDynamicObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
     if (obstacle_potential_decision.extend_decisions.extended) {
@@ -1758,7 +1760,7 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
 
 void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
-    ObstacleDecision &obstacle_decision) {
+    ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1793,11 +1795,14 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
   bool is_same_side_obstacle_during_lane_change = IsSameSideObstacleDuringLaneChange(obstacle);
-  double front_lon_buf_dis =
-      general_lateral_decider_utils::CalDesireLonDistance(
-          ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(),
-          is_same_side_obstacle_during_lane_change, config_);
+  double front_lon_buf_dis = 1.0;
   double rear_lon_buf_dis = 1.0;
+  if (!is_update_hard_bound) {
+    front_lon_buf_dis =
+        general_lateral_decider_utils::CalDesireLonDistance(
+            ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(),
+            is_same_side_obstacle_during_lane_change, config_);
+  }
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
     front_lon_buf_dis += config_.lane_borrow_extra_front_lon_buffer;
     rear_lon_buf_dis += config_.lane_borrow_extra_rear_lon_buffer;
@@ -1959,6 +1964,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         limit_overlap_min_y, limit_overlap_max_y,
         pred_ts, extra_lane_type_decrease_buffer,
         is_same_side_obstacle_during_lane_change,
+        is_update_hard_bound,
         overlap_min_y, overlap_max_y);
 
     // todo: high speed vehicle
@@ -2006,7 +2012,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       }
       AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                overlap_max_y, lat_buf_dis, lat_decision,
-                               lon_decision, obstacle_decision);
+                               lon_decision, obstacle_decision,
+                               is_update_hard_bound);
     } else {
       for (int k = 0; k < 2; k++) {
         if (k == 0) {
@@ -2039,7 +2046,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         }
         AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                  overlap_max_y, lat_buf_dis, lat_decision,
-                                 lon_decision, obstacle_decision);
+                                 lon_decision, obstacle_decision, is_update_hard_bound);
       }
     }
   }
@@ -2075,6 +2082,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     double limit_overlap_min_y, double limit_overlap_max_y,
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
+    bool is_update_hard_bound,
     double &updated_overlap_min_y, double &updated_overlap_max_y) {
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
@@ -2097,7 +2105,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   double lat_buf_dis =
       general_lateral_decider_utils::CalDesireLateralDistance(
           ego_cart_state_manager_->ego_v(), pred_ts, 0, obstacle,
-          is_nudge_left, in_intersection, is_same_side_obstacle_during_lane_change, config_);
+          is_nudge_left, in_intersection, is_same_side_obstacle_during_lane_change,
+          is_update_hard_bound, config_);
   if (!is_in_lane_borrow_status) {
     lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                 extra_lane_type_decrease_buffer,
@@ -2561,13 +2570,21 @@ void GeneralLateralDecider::PostProcessBound(
     // hack: only road border and agent in hard bounds
     if ((upper_bounds[upper_index].weight < 0.0) &&
         ((upper_type != BoundType::ROAD_BORDER) &&
-         (upper_type != BoundType::AGENT))) {
+         (upper_type != BoundType::AGENT) &&
+         (upper_type != BoundType::DYNAMIC_AGENT) &&
+         (upper_type != BoundType::LOW_PRIORITY_AGENT) &&
+         (upper_type != BoundType::REAR_AGENT) &&
+         (upper_type != BoundType::ADJACENT_AGENT))) {
       upper_index += 1;
       continue;
     }
     if ((lower_bounds[lower_index].weight < 0.0) &&
         ((lower_type != BoundType::ROAD_BORDER) &&
-         (lower_type != BoundType::AGENT))) {
+         (lower_type != BoundType::AGENT) &&
+         (lower_type != BoundType::DYNAMIC_AGENT) &&
+         (lower_type != BoundType::LOW_PRIORITY_AGENT) &&
+         (lower_type != BoundType::REAR_AGENT) &&
+         (lower_type != BoundType::ADJACENT_AGENT))) {
       lower_index += 1;
       continue;
     }

@@ -74,7 +74,8 @@ class GeneralLateralDecider : public Task {
       ObstacleDecisions &obstacle_decisions);
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision);
+      ObstacleDecision &obstacle_decision,
+      bool is_update_hard_bound);
   double CalculateExtraDecreaseBuffer(
       const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
   double CalculateExtraLaneTypeDecreaseBuffer(bool is_nudge_left,
@@ -198,6 +199,7 @@ class GeneralLateralDecider : public Task {
     double limit_overlap_min_y, double limit_overlap_max_y,
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
+    bool is_update_hard_bound,
     double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);

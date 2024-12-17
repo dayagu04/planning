@@ -15,6 +15,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 bool is_same_side_obstacle_during_lane_change,
+                                bool is_update_hard_bound,
                                 GeneralLateralDeciderConfig &config) {
   double base_dis = 0.7;
   if (IsVRU(obstacle->type())) {
@@ -36,7 +37,12 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   double extra_buffer = interp(ego_vel * 3.6, config.lateral_obstacle_nudge_buffer_v_bp,
                                config.lateral_nudge_buffer);
   // return std::fmax(base_dis + 0.015 * ego_vel, 0.);
-  return std::fmax(base_dis + extra_buffer - extra_pred_ts_decrease_buffer, 0.);
+  if (is_update_hard_bound) {
+    return std::fmax(config.hard_buffer2dynamic_agent - extra_pred_ts_decrease_buffer, 0.);
+  } else {
+    base_dis = std::fmax(base_dis + extra_buffer, config.hard_buffer2dynamic_agent);
+    return std::fmax(base_dis - extra_pred_ts_decrease_buffer, 0.);
+  }
 }
 
 double CalDesireLonDistance(double ego_vel, double agent_vel,
