@@ -925,6 +925,15 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     const auto prepare_line = pnc::geometry_lib::BuildLineSegByPose(
         prepare_pose.pos, prepare_pose.heading);
 
+    // search min dist of ego corner to obs, which is used the minimal value
+    // with
+    // 0.36 as buffer
+    const double min_lat_buffer =
+        std::min(calc_params_.lat_outside_slot_buffer_vec[0],
+                 calc_params_.lat_outside_slot_buffer_vec[1]);
+    collision_detector_ptr_->SetParam(
+        CollisionDetector::Paramters(min_lat_buffer, false));
+
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
     if (!PlanToPreparingLine(prepare_seg_vec, input_.ego_pose, prepare_line)) {
       ILOG_INFO << "PlanToPreparingLine fail!";
@@ -984,13 +993,6 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
   using namespace pnc::geometry_lib;
   ego_to_prepare_seg_vec.clear();
   ego_to_prepare_seg_vec.reserve(6);
-  // search min dist of ego corner to obs, which is used the minimal value with
-  // 0.36 as buffer
-  const double min_lat_buffer =
-      std::min(calc_params_.lat_outside_slot_buffer_vec[0],
-               calc_params_.lat_outside_slot_buffer_vec[1]);
-  collision_detector_ptr_->SetParam(
-      CollisionDetector::Paramters(min_lat_buffer, false));
 
   // ILOG_INFO << "---------------------------------PlanToPreparingLine "
   //              "---------------------------------";

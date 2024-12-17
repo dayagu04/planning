@@ -70,7 +70,6 @@ const bool ParallelOutPathGenerator::Update(
 const bool ParallelOutPathGenerator::Update() {
   Preprocess();
   bool success = false;
-
   std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
   if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
     success = InverseSearchLoopInSlot(inversed_path_seg_vec, input_.ego_pose);
@@ -83,17 +82,21 @@ const bool ParallelOutPathGenerator::Update() {
     return false;
   }
 
+  success = false;
   std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
   GenParallelPreparingLineVec(preparing_pose_vec);
 
   std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
+
   for (const auto &prepare_pose : preparing_pose_vec) {
     const auto preparing_line = pnc::geometry_lib::BuildLineSegByPose(
         prepare_pose.pos, prepare_pose.heading);
 
     if (PlanToPreparingLine(park_out_path_vec, park_out_pose, preparing_line)) {
       success = true;
+      ILOG_INFO << "plan to preparing line success!";
       break;
     }
   }

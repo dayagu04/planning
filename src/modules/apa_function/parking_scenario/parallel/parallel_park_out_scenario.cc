@@ -829,6 +829,10 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
 
+  frame_.gear_command =
+      path_planner_output
+          .gear_cmd_vec[path_planner_output.path_seg_index.first];
+
   parallel_out_path_planner_.SampleCurrentPathSeg();
 
   if (frame_.is_replan_first) {
