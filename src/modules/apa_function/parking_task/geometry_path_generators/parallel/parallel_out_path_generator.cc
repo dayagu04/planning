@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstddef>
 
+#include "apa_param_config.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "log_glog.h"
@@ -73,22 +74,35 @@ const bool ParallelOutPathGenerator::Update() {
   std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
   if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
     success = InverseSearchLoopInSlot(inversed_path_seg_vec, input_.ego_pose);
+
+    const auto &start_seg = inversed_path_seg_vec.front();
+    if (start_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE &&
+        start_seg.Getlength() < apa_param.GetParam().min_path_length) {
+      ILOG_INFO << "first line is too short!";
+      inversed_path_seg_vec.clear();
+      success =
+          InversedTrialsByGivenGear(inversed_path_seg_vec, input_.ego_pose,
+                                    pnc::geometry_lib::SEG_GEAR_DRIVE);
+    }
   } else {
     success = InversedTrialsByGivenGear(inversed_path_seg_vec, input_.ego_pose,
                                         input_.ref_gear);
   }
 
   if (!success || inversed_path_seg_vec.size() == 0) {
+    ILOG_INFO << "inversed search in slot failed!";
     return false;
   }
+  ILOG_INFO << "inversed search in slot success!";
 
   success = false;
   std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
   GenParallelPreparingLineVec(preparing_pose_vec);
+  ILOG_INFO << "preparing_pose_vec size = " << preparing_pose_vec.size();
 
   std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.05, false));
 
   for (const auto &prepare_pose : preparing_pose_vec) {
     const auto preparing_line = pnc::geometry_lib::BuildLineSegByPose(
@@ -110,6 +124,8 @@ const bool ParallelOutPathGenerator::Update() {
       path_res.emplace_back(park_out_path_vec[i]);
     }
     AddPathSegVecToOutput(path_res);
+  } else {
+    ILOG_INFO << "PlanToPreparingLine failed in total loop!";
   }
   return success;
 }

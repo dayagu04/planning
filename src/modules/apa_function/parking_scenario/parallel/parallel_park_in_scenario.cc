@@ -57,6 +57,7 @@ void ParallelParkInScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
   parallel_path_planner_.Reset();
+  current_path_point_global_vec_.clear();
 
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
   memset(&planning_output_, 0, sizeof(planning_output_));
@@ -83,11 +84,15 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  // const double safe_uss_remain_dist =
+  //     (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+  //         ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+  //         : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
+
   const double safe_uss_remain_dist =
       (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
-
+          : 0.2;
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
 
