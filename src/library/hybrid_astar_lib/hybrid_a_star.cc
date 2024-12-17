@@ -3385,7 +3385,8 @@ bool HybridAStar::AstarSearch(
   ILOG_INFO << "explored node num is " << explored_node_num
             << " ,rs path size is: " << explored_rs_path_num
             << " ,h cost rs num " << h_cost_rs_path_num
-            << " ,node pool size:" << node_pool_.PoolSize();
+            << " ,node pool size:" << node_pool_.PoolSize()
+            << ",open_pq.size: " << open_pq_.size();
 
   ILOG_INFO << "heuristic time " << heuristic_time_ << " ,rs params time "
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_

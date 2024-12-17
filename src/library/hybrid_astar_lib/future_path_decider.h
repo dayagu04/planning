@@ -54,6 +54,7 @@ class FuturePathDecider : public AstarDecider {
                const PlanningReason plan_reason, const Pose2D &ego_pose,
                EulerDistanceTransform *edt, const ParkReferenceLine *ref_line,
                const double min_turn_radius, const bool swap_start_goal,
+               const AstarPathGenerateType path_generate_type,
                ParkFirstActionRequest *future_path_request);
 
   void Process(const Pose2D &start, const Pose2D &end);
@@ -108,6 +109,10 @@ class FuturePathDecider : public AstarDecider {
   double min_turn_radius_;
 
   bool swap_start_goal_;
+
+  AstarPathGenerateType path_generate_type_;
+  // todo: move to config
+  double astar_step_;
 };
 
 }  // namespace planning
