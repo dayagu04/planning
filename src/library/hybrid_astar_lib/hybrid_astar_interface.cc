@@ -198,19 +198,17 @@ int HybridAStarInterface::UpdateOutput() {
   }
 
   // update future path decider
-  FuturePathDecider future_path_decider;
-  bool no_gear_switch;
   edt_.UpdateSafeBuffer(0.2, 0.4, 0.2);
+  FuturePathDecider future_path_decider;
   future_path_decider.Process(
       &coarse_traj_, request_.plan_reason, ego_pose_, &edt_, &ref_line_,
       vehicle_param_.min_turn_radius, request_.swap_start_goal,
       request_.path_generate_method, &request_.first_action_request);
-  no_gear_switch = future_path_decider.IsNextPathNoGearSwitchByHistory();
+  bool next_path_no_gear_switch = future_path_decider.IsNextPathNoGearSwitchByHistory();
 
   RSExpansionDecider::UpdateRSPathRequest(
-      &request_.rs_request, no_gear_switch,
-      future_path_decider.GetNextPathGearByHistory(), ego_pose_,
-      request_.slot_width);
+      next_path_no_gear_switch, future_path_decider.GetNextPathGearByHistory(),
+      &request_);
 
   double lat_buffer;
   double lon_buffer;
