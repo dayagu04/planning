@@ -295,11 +295,11 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   polygon.vertexes[1].x = (pt_0 + channel_width * n).x();
   polygon.vertexes[1].y = (pt_0 + channel_width * n).y();
 
-  polygon.vertexes[1].x = (pt_1 + channel_width * n).x();
-  polygon.vertexes[1].y = (pt_1 + channel_width * n).y();
+  polygon.vertexes[2].x = (pt_1 + channel_width * n).x();
+  polygon.vertexes[2].y = (pt_1 + channel_width * n).y();
 
-  polygon.vertexes[2].x = pt_1.x();
-  polygon.vertexes[2].y = pt_1.y();
+  polygon.vertexes[3].x = pt_1.x();
+  polygon.vertexes[3].y = pt_1.y();
 
   polygon.vertex_num = 4;
   polygon.shape = PolygonShape::box;
