@@ -176,10 +176,10 @@ const bool RuleBasedSlotRelease::IsSlotCoarseRelease(common::SlotInfo *slot) {
       if (frame_->slot_release_voter[slot->id()] < kSlotReleaseVoteCount + 5) {
         frame_->slot_release_voter[slot->id()]++;
       }
-      if (frame_->slot_release_voter[slot->id()] < kSlotReleaseVoteCount) {
-        ILOG_INFO << "voter count is not enough, slot id = " << slot->id();
-        return false;
-      }
+    }
+    if (frame_->slot_release_voter[slot->id()] < kSlotReleaseVoteCount) {
+      ILOG_INFO << "voter count is not enough, slot id = " << slot->id();
+      return false;
     }
   }
 
@@ -238,6 +238,7 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
     const common::SlotInfo *slot) {
   const auto &slot_points = slot->corner_points().corner_point();
   if (slot_points.size() != 4) {
+    ILOG_INFO << "slot_points.size = " << slot_points.size();
     return true;
   }
   std::vector<Eigen::Vector2d> pt;
@@ -257,7 +258,7 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   const std::vector<double> move_slot_dist_vec{0.0,   0.05,  0.10,  0.15, 0.2,
                                                -0.05, -0.10, -0.15, -0.2};
   PathSafeChecker safe_check;
-  const double lat_buffer = 0.16;
+  double lat_buffer = 0.16;
   const double lon_buffer = 0.1;
   double move_slot_dist = 0.0;
   bool is_slot_occupied = true;
@@ -274,11 +275,14 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   }
 
   if (is_slot_occupied) {
+    ILOG_INFO << "slot is occupied";
     return true;
   }
 
-  Eigen::Vector2d pt_0(pt[0].x(), -config_->max_car_width * 0.5 - lat_buffer);
-  Eigen::Vector2d pt_1(pt[1].x(), -config_->max_car_width * 0.5 + lat_buffer);
+  lat_buffer = 0.0368;
+
+  Eigen::Vector2d pt_0 = pM01 - t * (config_->max_car_width * 0.5 + lat_buffer);
+  Eigen::Vector2d pt_1 = pM01 + t * (config_->max_car_width * 0.5 + lat_buffer);
 
   pt_0 = pt_0 + move_slot_dist * t;
   pt_1 = pt_1 + move_slot_dist * t;
@@ -288,14 +292,14 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   polygon.vertexes[0].x = pt_0.x();
   polygon.vertexes[0].y = pt_0.y();
 
-  polygon.vertexes[1].x = (pt_0 - channel_width * n).x();
-  polygon.vertexes[1].y = (pt_0 - channel_width * n).y();
+  polygon.vertexes[1].x = (pt_0 + channel_width * n).x();
+  polygon.vertexes[1].y = (pt_0 + channel_width * n).y();
 
-  polygon.vertexes[1].x = (pt_1 - channel_width * n).x();
-  polygon.vertexes[1].y = (pt_1 - channel_width * n).y();
+  polygon.vertexes[2].x = (pt_1 + channel_width * n).x();
+  polygon.vertexes[2].y = (pt_1 + channel_width * n).y();
 
-  polygon.vertexes[2].x = pt_1.x();
-  polygon.vertexes[2].y = pt_1.y();
+  polygon.vertexes[3].x = pt_1.x();
+  polygon.vertexes[3].y = pt_1.y();
 
   polygon.vertex_num = 4;
   polygon.shape = PolygonShape::box;
@@ -304,7 +308,12 @@ const bool RuleBasedSlotRelease::IsPerpendicularSlotAndPassageAreaOccupied(
   polygon.min_tangent_radius = 0.6;
 
   safe_check.SetObstacle(&obs_list_);
-  return safe_check.IsPolygonCollision(&polygon);
+  if (safe_check.IsPolygonCollision(&polygon)) {
+    ILOG_INFO << "passage is occupied";
+    return true;
+  }
+
+  return false;
 }
 
 const bool RuleBasedSlotRelease::IsParallelSlotAndPassageAreaOccupied(

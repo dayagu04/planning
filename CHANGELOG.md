@@ -5,6 +5,7 @@ Feature
 2. 避让从侧方超车的车辆
 3. 基于车速设置横向bound权重
 4. scc 纵向v3 pipeline 添加boundmaker ，不影响当前v2实车效果
+5. 泊车增加规划路径实时用OCC点云刹停
 
 Bug
 1. 修复横向bound后处理bug
@@ -15,6 +16,7 @@ Bug
 6. 平行泊车使用glog记录日志
 7. 修复路径异常问题
 8. 修复后空场景tlane生成问题
+9. 修复车位释放
 
 # planning2.7.3
 ###  修改说明

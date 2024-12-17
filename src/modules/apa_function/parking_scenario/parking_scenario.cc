@@ -206,7 +206,7 @@ void ParkingScenario::GenPlanningPath() {
                            iflyauto::PARKING_SLOT_TYPE_SLANTING)
                           ? 1.0
                           : 0.0;
-  planning_output_.trajectory.trajectory_points[3].distance = 0.0;
+  planning_output_.trajectory.trajectory_points[3].distance = flag;
 
   planning_output_.trajectory.trajectory_points[4].distance =
       frame_.remain_dist_col_det;

@@ -443,15 +443,15 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
     }
   }
 
+  // construct real time obs
+  GenTlane();
+  GenObstacles();
+
   // real time dynamic col det
   frame_.remain_dist_col_det = 3.0;
   if (!apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
       !current_plan_path_vec_.empty()) {
     const double start_time = IflyTime::Now_ms();
-
-    // construct real time obs
-    GenTlane();
-    GenObstacles();
 
     const double car_already_move_dist =
         frame_.current_path_length - frame_.remain_dist;
