@@ -816,11 +816,11 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlanOnce(
       path_seg_vec.emplace_back(tmp_path_seg);
     } else if (path_col_det_res == PathColDetRes::INVALID) {
       success = false;
-
+      ILOG_INFO << " Path Col Det Res::INVALID ";
       break;
     } else if (path_col_det_res == PathColDetRes::INSIDE_STUCK) {
       success = false;
-
+      ILOG_INFO << " Path Col Det Res::INSIDE_STUCK ";
       break;
     }
   }
@@ -960,12 +960,12 @@ PerpendicularPathOutPlanner::TrimPathByCollisionDetection(
   }
 
   if (remain_car_dist > safe_remain_dist + 1e-3) {
-    if (col_res.col_pt_ego_local.transpose().x() < 6 &&
+    if (col_res.col_pt_obs_global.transpose().x() < 6 &&
         path_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
       // ILOG_INFO << "**** collision_point = "
       //             << col_res.col_pt_ego_local.transpose()
       //             << "  obs_pt_global = "
-      //             << col_res.col_pt_ego_global.transpose())
+      //             << col_res.col_pt_ego_global.transpose();
       return PathColDetRes::INSIDE_STUCK;
     }
 
