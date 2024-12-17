@@ -11,7 +11,7 @@
 // #include "worldmodel/lane.h"
 #include "define/geometry.h"
 #include "define/lateral_behavior_planner_output.h"
-#include "path_point.h"
+#include "src/modules/common/utils/path_point.h"
 #include "utils/pose2d_utils.h"
 
 namespace planning {

@@ -77,8 +77,8 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
     }
     ref_line_points.reserve(ref_line.get_points().size());
     for (const auto& ref_line_point : ref_line.get_points()) {
-      planning_math::PathPoint path_point{ref_line_point.path_point.x,
-                                          ref_line_point.path_point.y};
+      planning_math::PathPoint path_point{ref_line_point.path_point.x(),
+                                          ref_line_point.path_point.y()};
       ref_line_points.emplace_back(path_point);
     }
     coord_ = std::make_shared<KDPath>(std::move(ref_line_points));

@@ -453,7 +453,7 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
     ReferencePathPoint preview_point;
     if (target_reference_path->get_reference_point_by_lon(
             ego_s + preview_x + preview_distance, preview_point)) {
-      sum_far_kappa += std::fabs(preview_point.path_point.kappa);
+      sum_far_kappa += std::fabs(preview_point.path_point.kappa());
     }
   }
   double aver_far_kappa =
@@ -698,9 +698,9 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
     double distance_to_first_point = kHppMaxRearDistance;
     if (point_size > 0) {
       double diff_x =
-          ref_point.at(0).path_point.x - planning_init_point.lat_init_state.x();
+          ref_point.at(0).path_point.x() - planning_init_point.lat_init_state.x();
       double diff_y =
-          ref_point.at(0).path_point.y - planning_init_point.lat_init_state.y();
+          ref_point.at(0).path_point.y() - planning_init_point.lat_init_state.y();
       distance_to_first_point = std::sqrt(diff_x * diff_x + diff_y * diff_y);
     }
 
@@ -709,17 +709,17 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
   }
 
   for (size_t i = 0; i < point_size; ++i) {
-    cart_ref_info.x_vec[i] = ref_point.at(i).path_point.x;
-    cart_ref_info.y_vec[i] = ref_point.at(i).path_point.y;
+    cart_ref_info.x_vec[i] = ref_point.at(i).path_point.x();
+    cart_ref_info.y_vec[i] = ref_point.at(i).path_point.y();
     cart_ref_info.s_vec[i] =
         i > 0 ? cart_ref_info.s_vec[i - 1] +
-                    std::hypot(ref_point.at(i).path_point.x -
-                                   ref_point.at(i - 1).path_point.x,
-                               ref_point.at(i).path_point.y -
-                                   ref_point.at(i - 1).path_point.y)
+                    std::hypot(ref_point.at(i).path_point.x() -
+                                   ref_point.at(i - 1).path_point.x(),
+                               ref_point.at(i).path_point.y() -
+                                   ref_point.at(i - 1).path_point.y())
               : 0.;
     kappa_radius_vec[i] = std::min(
-        std::max(1.0 / (ref_point.at(i).path_point.kappa + 1e-6), -10000.0),
+        std::max(1.0 / (ref_point.at(i).path_point.kappa() + 1e-6), -10000.0),
         10000.0);
     if (cart_ref_info.s_vec[i] >
         normal_care_spline_length +
@@ -1229,8 +1229,8 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
       current_reference_path->get_points().back().path_point;
   std::shared_ptr<KDPath> reference_path_frenet_coordinate =
       reference_path->get_frenet_coord();
-  Point2D projection_point = {cur_ref_path_finally_point.x,
-                              cur_ref_path_finally_point.y};
+  Point2D projection_point = {cur_ref_path_finally_point.x(),
+                              cur_ref_path_finally_point.y()};
   const double front_line_distance = CalculateEgoFrontLineLength();
   bool is_on_ramp = route_info_output.is_on_ramp;
   if (is_on_ramp) {
@@ -1238,7 +1238,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
     if (current_reference_path->get_reference_point_by_lon(
             current_reference_path->get_frenet_ego_state().s() + 50,
             refpoint)) {
-      projection_point = {refpoint.path_point.x, refpoint.path_point.y};
+      projection_point = {refpoint.path_point.x(), refpoint.path_point.y()};
     }
   } else {
     if (std::abs(length_diff_cur_lane_with_overlap_lane) >
@@ -1247,7 +1247,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
         is_cur_path_project_to_ref_path = false;
         const auto ref_path_finally_point =
             current_reference_path->get_points().back().path_point;
-        projection_point = {ref_path_finally_point.x, ref_path_finally_point.y};
+        projection_point = {ref_path_finally_point.x(), ref_path_finally_point.y()};
         reference_path_frenet_coordinate =
             current_reference_path->get_frenet_coord();
       }
@@ -1257,7 +1257,7 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
               current_reference_path->get_frenet_ego_state().s() +
                   front_line_distance,
               refpoint)) {
-        projection_point = {refpoint.path_point.x, refpoint.path_point.y};
+        projection_point = {refpoint.path_point.x(), refpoint.path_point.y()};
       }
     }
   }

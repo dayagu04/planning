@@ -974,9 +974,9 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
     for (size_t i = 1; i < ref_path_points_.size(); i++) {
       if (!is_left_overlap) {
         const auto left_road_line_segment = LineSegment2d(
-            Vec2d(ref_path_points_.at(i - 1).path_point.s,
+            Vec2d(ref_path_points_.at(i - 1).path_point.s(),
                   ref_path_points_.at(i - 1).distance_to_left_road_border),
-            Vec2d(ref_path_points_.at(i).path_point.s,
+            Vec2d(ref_path_points_.at(i).path_point.s(),
                   ref_path_points_.at(i).distance_to_left_road_border));
         if (ego_box.HasOverlap(left_road_line_segment)) {
           is_left_overlap = true;
@@ -986,9 +986,9 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
 
       if (!is_right_overlap) {
         const auto right_road_line_segment = LineSegment2d(
-            Vec2d(ref_path_points_.at(i - 1).path_point.s,
+            Vec2d(ref_path_points_.at(i - 1).path_point.s(),
                   -ref_path_points_.at(i - 1).distance_to_right_road_border),
-            Vec2d(ref_path_points_.at(i).path_point.s,
+            Vec2d(ref_path_points_.at(i).path_point.s(),
                   -ref_path_points_.at(i).distance_to_right_road_border));
         if (ego_box.HasOverlap(right_road_line_segment)) {
           is_right_overlap = true;
@@ -2419,7 +2419,7 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
       session_->environmental_model().get_virtual_lane_manager();
 
   // path points
-  std::vector<planning::PathPoint> path_points;
+  std::vector<planning_math::PathPoint> path_points;
   if (flane != nullptr && flane->get_reference_path() != nullptr) {
     auto &ref_path = flane->get_reference_path();
     for (auto &ref_point : ref_path->get_points()) {
@@ -2663,7 +2663,7 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
   }
 
   if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
+                                                                // obstacle type
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
@@ -2699,7 +2699,7 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   }
 
   if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN or  // TBD: check
-                                                             // obstacle type
+                                                                // obstacle type
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or

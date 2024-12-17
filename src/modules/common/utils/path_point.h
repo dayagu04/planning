@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "math/linear_interpolation.h"
 #include "vec2d.h"
 using namespace planning;
 using namespace planning::planning_math;

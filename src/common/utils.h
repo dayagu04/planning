@@ -18,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include "path_point.h"
 #include "vec2d.h"
 
 // The helper function "std::make_unique()" is defined since C++14.
@@ -91,81 +90,9 @@ struct PairHash {
   }
 };
 
-template <typename T>
-bool WithinBound(T start, T end, T value) {
-  return value >= start && value <= end;
-}
-
-/**
- * @brief create a SL point
- * @param s the s value
- * @param l the l value
- * @return a SLPoint instance
- */
-// SLPoint MakeSLPoint(const double s, const double l);
-
-// template <typename T>
-// common::math::Vec2d MakeVec2d(const T& t) {
-//   return common::math::Vec2d(t.x(), t.y());
-// }
-
-// PointENU MakePointENU(const double x, const double y, const double z);
-
-// PointENU operator+(const PointENU enu, const math::Vec2d& xy);
-
-// PointENU MakePointENU(const math::Vec2d& xy);
-
-// SpeedPoint MakeSpeedPoint(const double s, const double t, const double v,
-//                           const double a, const double da);
-
-PathPoint MakePathPoint(const double x, const double y, const double z,
-                        const double theta, const double kappa,
-                        const double dkappa, const double ddkappa);
-
-/**
- * uniformly slice a segment [start, end] to num + 1 pieces
- * the result sliced will contain the n + 1 points that slices the provided
- * segment. `start` and `end` will be the first and last element in `sliced`.
- */
-template <typename T>
-void uniform_slice(const T start, const T end, uint32_t num,
-                   std::vector<T>* sliced) {
-  if (!sliced || num == 0) {
-    return;
-  }
-  const T delta = (end - start) / num;
-  sliced->resize(num + 1);
-  T s = start;
-  for (uint32_t i = 0; i < num; ++i, s += delta) {
-    sliced->at(i) = s;
-  }
-  sliced->at(num) = end;
-}
-
-template <typename Container>
-typename Container::value_type MaxElement(const Container& elements) {
-  return *std::max_element(elements.begin(), elements.end());
-}
-
 template <typename Container>
 typename Container::value_type MinElement(const Container& elements) {
   return *std::min_element(elements.begin(), elements.end());
-}
-
-template <typename T>
-std::unordered_set<T> Intersection(const std::unordered_set<T>& s1,
-                                   const std::unordered_set<T>& s2) {
-  if (s1.size() < s2.size()) {
-    std::unordered_set<T> result;
-    for (const auto& v : s1) {
-      if (s2.count(v) > 0) {
-        result.insert(v);
-      }
-    }
-    return result;
-  } else {
-    return intersection(s2, s1);
-  }
 }
 
 /**

@@ -745,7 +745,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
         if (target_reference->get_reference_point_by_lon(
                 target_reference->get_frenet_ego_state().s(),
                 reference_path_point)) {
-          landing_point_theta_global = reference_path_point.path_point.theta;
+          landing_point_theta_global = reference_path_point.path_point.theta();
         }
         Eigen::Vector2d pos_n_ori(ego_pose.x, ego_pose.y);
         pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori,
@@ -792,14 +792,14 @@ void PlanningScheduler::FillPlanningHmiInfo(
     auto points = current_reference_path->get_points();
     double ego_s = frenet_ego_state.s();
     for (auto &point : points) {
-      double distance = point.path_point.s - ego_s;
+      double distance = point.path_point.s() - ego_s;
       if (distance > kEgoIsOnTurnDistance1 &&
           distance < kEgoIsOnTurnDistance2 &&
-          point.path_point.kappa > 0.08) {  // ego is on the curve
+          point.path_point.kappa() > 0.08) {  // ego is on the curve
         break;
       }
       if (distance > kEgoIsOnTurnDistance2 && distance <= kCheckTurnDistance) {
-        if (point.path_point.kappa >
+        if (point.path_point.kappa() >
             0.1) {  // 关注实际曲率的连续性，考虑多点还是单点
           // hpp_info->set_is_approaching_intersection(true);
           hpp_info->is_approaching_turn = true;

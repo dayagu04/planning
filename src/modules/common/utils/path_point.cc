@@ -1,4 +1,5 @@
 #include "utils/path_point.h"
+#include "math/linear_interpolation.h"
 
 #include <sstream>
 

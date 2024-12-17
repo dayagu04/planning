@@ -278,8 +278,8 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
   // static obstacle
   if (obstacle_ptr_->is_static() ||
       (!obstacle_ptr_->trajectory().empty() &&
-       std::fabs(obstacle_ptr_->trajectory().back().path_point.s -
-                 obstacle_ptr_->trajectory().front().path_point.s) < 1.e-2)) {
+       std::fabs(obstacle_ptr_->trajectory().back().path_point.s() -
+                 obstacle_ptr_->trajectory().front().path_point.s()) < 1.e-2)) {
     PolygonWithT polygon0, polygon1;
     polygon0.first = time_range.first;
     polygon1.first = time_range.second;
@@ -331,7 +331,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
       double t = i * time_gap + time_range.first;
       auto traj_point = obstacle_ptr_->get_point_at_time(t);
       if (i != 0 && i != time_step - 1 &&
-          traj_point.path_point.s - last_s_distance <
+          traj_point.path_point.s() - last_s_distance <
               min_obstacle_check_length) {
         continue;
       }
@@ -357,19 +357,19 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
                                 ? 1.0 / curvature
                                 : std::numeric_limits<double>::infinity();
         double euler_distance =
-            std::abs(traj_point.path_point.s - last_s_distance);
+            std::abs(traj_point.path_point.s() - last_s_distance);
         double last_frenet_l = std::max(std::abs(last_polygon.min_y()),
                                         std::abs(last_polygon.max_y()));
         if (cur_radius > std::max(kDefaultCurvatureRadius,
                                   2 * (last_frenet_l + euler_distance +
                                        obstacle_size)) &&
-            std::abs(traj_point.path_point.s - last_s_distance) <
+            std::abs(traj_point.path_point.s() - last_s_distance) <
                 kMaxHeuristicDis) {
           double theta = std::asin((euler_distance + obstacle_size) /
                                    (cur_radius - last_frenet_l));
           double search_buffer1 = theta * cur_radius;
           double search_buffer =
-              std::max(std::abs(traj_point.path_point.s - last_s_distance),
+              std::max(std::abs(traj_point.path_point.s() - last_s_distance),
                        search_buffer1);
           has_heuristics = true;
           heuristic_s_begin =
@@ -442,7 +442,7 @@ void FrenetObstacle::compute_frenet_polygon_sequence(
         invalid_time_section = {8.0, 0.0};
       }
       frenet_polygon_sequence_.push_back(p_point);
-      last_s_distance = traj_point.path_point.s;
+      last_s_distance = traj_point.path_point.s();
     }
     frenet_polygon_sequence_.set_invalid_time_sections(invalid_time_sections);
     if (frenet_polygon_sequence_.size() >= 2) {

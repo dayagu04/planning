@@ -127,18 +127,18 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
     if (is_enu_valid) {
-      ref_path_pt.path_point.x = refline_pt.local_point.x;
-      ref_path_pt.path_point.y = refline_pt.local_point.y;
-      ref_path_pt.path_point.z = refline_pt.local_point.z;
-      ref_path_pt.path_point.theta = refline_pt.enu_heading;
+      ref_path_pt.path_point.set_x(refline_pt.local_point.x);
+      ref_path_pt.path_point.set_y(refline_pt.local_point.y);
+      ref_path_pt.path_point.set_z(refline_pt.local_point.z);
+      ref_path_pt.path_point.set_theta(refline_pt.enu_heading);
 
     } else {
-      ref_path_pt.path_point.x = refline_pt.car_point.x;
-      ref_path_pt.path_point.y = refline_pt.car_point.y;
-      ref_path_pt.path_point.z = 0;
-      ref_path_pt.path_point.theta = refline_pt.car_heading;
+      ref_path_pt.path_point.set_x(refline_pt.car_point.x);
+      ref_path_pt.path_point.set_y(refline_pt.car_point.y);
+      ref_path_pt.path_point.set_z(0.0);
+      ref_path_pt.path_point.set_theta(refline_pt.car_heading);
     }
-    ref_path_pt.path_point.kappa = refline_pt.curvature;
+    ref_path_pt.path_point.set_kappa(refline_pt.curvature);
     // ref_path_pt.distance_to_left_lane_border = std::fmin(
     //     refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
     // ref_path_pt.distance_to_right_lane_border = std::fmin(
@@ -162,10 +162,10 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     // check direction
     if (not ref_path_points.empty()) {
       const auto &pre_pt = ref_path_points.back();
-      Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
-                  ref_path_pt.path_point.y - pre_pt.path_point.y};
+      Vec2d delta{ref_path_pt.path_point.x() - pre_pt.path_point.x(),
+                  ref_path_pt.path_point.y() - pre_pt.path_point.y()};
       Vec2d cur_direction =
-          Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta);
+          Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta());
       if (cur_direction.InnerProd(delta) < 0) {
         // temporaly skip direction check since input data is bad @clren
         // continue;
@@ -179,8 +179,8 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
   for (int i = 1; i < ref_path_points.size(); i++) {
     const auto &cur_point = ref_path_points[i].path_point;
     const auto &pre_point = ref_path_points[i - 1].path_point;
-    origin_reference_path_total_length +=
-        std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
+    origin_reference_path_total_length += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
   }
   origin_reference_path_length_ = origin_reference_path_total_length;
   const bool is_highway =
@@ -356,8 +356,8 @@ ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
     const ReferencePathPoint &p1, const ReferencePathPoint &p2,
     const double length) const {
   // 计算直线方向向量
-  double dx = p2.path_point.x - p1.path_point.x;
-  double dy = p2.path_point.y - p1.path_point.y;
+  double dx = p2.path_point.x() - p1.path_point.x();
+  double dy = p2.path_point.y() - p1.path_point.y();
   // 计算直线长度
   double line_length = sqrt(dx * dx + dy * dy);
   // 将方向向量归一化
@@ -365,12 +365,12 @@ ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
   dy /= line_length;
   // 计算延长后的点坐标
   ReferencePathPoint extend_point;
-  extend_point.path_point.x = p2.path_point.x + dx * length;
-  extend_point.path_point.y = p2.path_point.y + dy * length;
+  extend_point.path_point.set_x(p2.path_point.x() + dx * length);
+  extend_point.path_point.set_y(p2.path_point.y() + dy * length);
 
   const auto &last_point = p2;
-  extend_point.path_point.set_z(last_point.path_point.z);
-  extend_point.path_point.set_theta(last_point.path_point.theta);
+  extend_point.path_point.set_z(last_point.path_point.z());
+  extend_point.path_point.set_theta(last_point.path_point.theta());
   extend_point.path_point.set_kappa(1e-6);
 
   extend_point.distance_to_left_lane_border =
@@ -404,8 +404,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   // double dy = ego_pose.y - ref_path_points[0].path_point.y;
   const auto &lat_init_state =
       ego_state_mgr->planning_init_point().lat_init_state;
-  double dx = lat_init_state.x() - ref_path_points[0].path_point.x;
-  double dy = lat_init_state.y() - ref_path_points[0].path_point.y;
+  double dx = lat_init_state.x() - ref_path_points[0].path_point.x();
+  double dy = lat_init_state.y() - ref_path_points[0].path_point.y();
   const int point_nums = ref_path_points.size();
   int nearest_point_index = 0;
   double accumulate_distance_for_nearest_point = 0;
@@ -415,10 +415,10 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   for (int i = 1; i < point_nums; i++) {
     const auto &cur_point = ref_path_points[i].path_point;
     const auto &pre_point = ref_path_points[i - 1].path_point;
-    accumulate_distance_reference_path +=
-        std::hypotf(pre_point.x - cur_point.x, pre_point.y - cur_point.y);
-    dx = lat_init_state.x() - cur_point.x;
-    dy = lat_init_state.y() - cur_point.y;
+    accumulate_distance_reference_path += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
+    dx = lat_init_state.x() - cur_point.x();
+    dy = lat_init_state.y() - cur_point.y();
     double temp_min_distance_square_to_ego_point = dx * dx + dy * dy;
     if (temp_min_distance_square_to_ego_point <
         min_distance_square_to_ego_point) {
@@ -430,10 +430,10 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   }
   // calculate ego projection distance in reference path
   const auto &nearest_point = ref_path_points[nearest_point_index].path_point;
-  dx = lat_init_state.x() - nearest_point.x;
-  dy = lat_init_state.y() - nearest_point.y;
-  const double projection_length =
-      dx * std::cos(nearest_point.theta) + dy * std::sin(nearest_point.theta);
+  dx = lat_init_state.x() - nearest_point.x();
+  dy = lat_init_state.y() - nearest_point.y();
+  const double projection_length = dx * std::cos(nearest_point.theta()) +
+                                   dy * std::sin(nearest_point.theta());
   const double ego_projection_distance_in_reference_path =
       projection_length + accumulate_distance_for_nearest_point;
   return ego_projection_distance_in_reference_path;
