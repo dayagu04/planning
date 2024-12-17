@@ -46,6 +46,8 @@ void ParallelOutPathGenerator::Preprocess() {
 
   calc_params_.slot_side_sgn = (calc_params_.is_left_side ? -1.0 : 1.0);
 
+  ILOG_INFO << "calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn;
+
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, true));
 }
 

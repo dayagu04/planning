@@ -1177,6 +1177,9 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
 
+  ILOG_INFO << " calc_params_.slot_side_sgn in GenParallelPreparingLineVec= "
+            << calc_params_.slot_side_sgn;
+
   const double tlane_outer_y =
       std::fabs(input_.tlane.obs_pt_inside.y()) > half_slot_width
           ? input_.tlane.obs_pt_inside.y()
@@ -1193,6 +1196,9 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
 
   if (calc_params_.slot_side_sgn * (rac_channel_bound - rac_tlane_bound) <
       0.0) {
+    ILOG_ERROR << "rac_channel_bound - rac_tlane_bound "
+               << rac_channel_bound - rac_tlane_bound;
+    ILOG_ERROR << "SGN DIFFERENT!";
     return false;
   }
 

@@ -477,7 +477,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool CheckSamePos(const Eigen::Vector2d &pos0,
                           const Eigen::Vector2d &pos1) const;
 
- private:
+ protected:
   PlannerParams calc_params_;
   DebugInfo debug_info_;
 };

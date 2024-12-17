@@ -182,14 +182,17 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
     ILOG_INFO << "parallel slot points in slm :";
     for (size_t i = 0; i < slot_points.size(); i++) {
       slot_pt_vec[i] << slot_points[i].x(), slot_points[i].y();
+      ILOG_INFO << slot_pt_vec[i].transpose();
       ego_slot_info.slot_center += slot_pt_vec[i];
     }
     ego_slot_info.slot_center *= 0.25;
 
     const Eigen::Vector2d v_10 = slot_pt_vec[0] - slot_pt_vec[1];
+    ILOG_INFO << "v_10 = " << v_10.transpose();
 
     Eigen::Vector2d n = v_10.normalized();
-    if (ego_slot_info.ego_heading_slot_vec.dot(v_10) < -1e-5) {
+
+    if (measures_ptr->GetHeadingVec().dot(v_10) < -1e-5) {
       n *= -1.0;
       slot_pt_vec[0].swap(slot_pt_vec[1]);
       slot_pt_vec[2].swap(slot_pt_vec[3]);
@@ -218,8 +221,8 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
     ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
     ego_slot_info.slot_origin_heading_vec = n;
 
-    ILOG_INFO << "ego_slot_info.slot_origin_heading = "
-              << ego_slot_info.slot_origin_heading;
+    ILOG_INFO << "ego_slot_info.slot_origin_heading deg = "
+              << ego_slot_info.slot_origin_heading * kRad2Deg;
     ILOG_INFO << "ego_slot_info.slot_origin_heading_vec = "
               << ego_slot_info.slot_origin_heading_vec;
 

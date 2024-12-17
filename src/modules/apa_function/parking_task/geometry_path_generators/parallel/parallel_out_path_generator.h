@@ -14,10 +14,6 @@ class ParallelOutPathGenerator : public ParallelPathGenerator {
 
  protected:
   virtual void Preprocess() override;
-
- private:
-  DebugInfo debug_info_;
-  PlannerParams calc_params_;
 };
 
 }  // namespace apa_planner
