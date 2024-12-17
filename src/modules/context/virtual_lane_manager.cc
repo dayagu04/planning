@@ -510,15 +510,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 #endif
 
   // 获取track_ego_lane的依赖
-  ego_lane_track_manager_->Update(
-      route_info_output_.is_ego_on_expressway, route_info_output_.is_on_ramp,
-      route_info_output_.dis_to_ramp, route_info_output_.is_leaving_ramp,
-      route_info_output_.first_split_dir_dis_info,
-      route_info_output_.distance_to_first_road_merge,
-      route_info_output_.distance_to_first_road_split,
-      route_info_output_.current_segment_passed_distance,
-      route_info_output_.split_dir_dis_info_list,
-      route_info_output_.sum_dis_to_last_split_point);
+  ego_lane_track_manager_->Update(route_info_output_);
 
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
   ego_lane_track_manager_->CalculateVirtualLaneAttributes(relative_id_lanes_);

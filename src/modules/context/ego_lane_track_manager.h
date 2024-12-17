@@ -21,16 +21,7 @@ class EgoLaneTrackManger {
   // EgoLaneTrackManger() = default;
   ~EgoLaneTrackManger(){};
 
-  void Update(
-      const bool is_ego_on_expressway, const bool is_on_ramp,
-      const double dis_to_ramp, const bool is_leaving_ramp,
-      const std::pair<SplitRelativeDirection, double> first_split_dir_dis_info,
-      const double distance_to_first_road_merge,
-      const double distance_to_first_road_split,
-      const double current_segment_passed_distance,
-      const std::vector<std::pair<SplitRelativeDirection, double>>
-          &split_dir_dis_info_list,
-      const double sum_dis_to_last_split_point);
+  void Update(const RouteInfoOutput& route_info_output);
 
   void Reset();
 
