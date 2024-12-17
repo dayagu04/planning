@@ -1241,8 +1241,8 @@ void LateralOffsetCalculatorV2::PostProcess(
 void LateralOffsetCalculatorV2::CalLaneWidth() {
   if (1) {
     double width = 0.0;
-    double preview_s = 20;
-    double start_s = 5;
+    double preview_s = 20 + ego_frenet_state_.s();
+    double start_s = 5+ ego_frenet_state_.s();
     double interval_s = 5;
     int point_num = (int)((preview_s - start_s) / interval_s) + 1;
     for (double s = start_s; s <= preview_s; s += interval_s) {
