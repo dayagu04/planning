@@ -134,6 +134,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
   planning::common::LongitudinalPlanningInput planning_input =
       BytesToProto<planning::common::LongitudinalPlanningInput>(
           planning_input_bytes);
+  planning_input.set_q_ref_pos(const_s);
   planning_input.set_q_acc(q_acc);
   planning_input.set_q_jerk(q_jerk);
   planning_input.set_q_hard_pos_bound(q_hard_pos_bound);
@@ -150,7 +151,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_acc, double q_jerk,
       MakeVWeight(default_v_weight, cruise_v_weight, target_type_vec);
 
   for (size_t i = 0; i < s_weights.size(); ++i) {
-    planning_input.mutable_s_weights()->Set(i, const_s);
+    // planning_input.mutable_s_weights()->Set(i, const_s);
     planning_input.mutable_v_weights()->Set(i, v_weights[i]);
   }
 

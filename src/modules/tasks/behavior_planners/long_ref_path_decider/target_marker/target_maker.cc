@@ -37,7 +37,7 @@ common::Status TargetMaker::Run() {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
     TargetValue follow_target_value = follow_target.target_value(relative_t);
-    TargetValue overtake_target_value = overtake_target.target_value(relative_t); 
+    TargetValue overtake_target_value = overtake_target.target_value(relative_t);
     //TargetValue neighbor_target_value = neighbor_target.target_value(relative_t);
     // TargetValue caution_target_value =
     // caution_target.target_value(relative_t);
@@ -118,6 +118,7 @@ common::Status TargetMaker::Run() {
         Target::TargetMin(final_lower_bound_value, upper_target_value);
     target_values_.push_back(std::move(final_target_value));
   }
+  RefineStarget();
   AddFinalTargetDataToProto();
   return common::Status::OK();
 }
@@ -141,6 +142,15 @@ const TargetValue& TargetMaker::target_value(const double t) const {
 void TargetMaker::Reset() {
   target_values_.clear();
   final_target_pb_.Clear();
+}
+
+void TargetMaker::RefineStarget() {
+  const int target_size = static_cast<int>(target_values_.size());
+  for (int i = target_size - 2; i >= 0; i--) {
+    const auto s_target_tmp = std::fmin(target_values_[i].s_target_val(),
+                                        target_values_[i + 1].s_target_val());
+    target_values_[i].set_s_target_val(s_target_tmp);
+  }
 }
 
 void TargetMaker::AddFinalTargetDataToProto() {
