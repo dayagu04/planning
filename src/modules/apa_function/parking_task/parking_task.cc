@@ -17,4 +17,6 @@ void ParkingTask::Execute() {
 
 void ParkingTask::Clear() { return; }
 
+void ParkingTask::TaskDebug() { return; }
+
 }  // namespace planning

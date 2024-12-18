@@ -18,6 +18,8 @@
 #include "parking_task/parking_task.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
+#include "speed/speed_data.h"
+#include "trajectory/trajectory.h"
 
 namespace planning {
 namespace apa_planner {
@@ -240,8 +242,11 @@ class ParkingScenario {
     double stuck_uss_time = 0.0;
     double pause_time = 0.0;
     double dynamic_plan_time = 0.0;
+    // path remain dist
     double remain_dist = 5.01;
+    // path remain dist by uss safe check
     double remain_dist_uss = 5.01;
+    // path remain dist by fusion occ check
     double remain_dist_col_det = 5.01;
     double car_already_move_dist = 0.0;
     pnc::mathlib::spline x_s_spline;
@@ -330,7 +335,10 @@ class ParkingScenario {
   virtual const bool CheckFinished() = 0;
   virtual const bool CheckReplan() = 0;
   virtual void Log() const = 0;
-  virtual void PlanCore() = 0;
+  virtual void ExcutePathPlanningTask() = 0;
+
+  virtual void ExcuteSpeedPlanningTask();
+
   virtual void GenTlane() = 0;
   virtual void GenObstacles() = 0;
   virtual const bool UpdateEgoSlotInfo() = 0;
@@ -369,6 +377,9 @@ class ParkingScenario {
   Frame frame_;
 
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
+
+  // todo: update speed data
+  trajectory::Trajectory trajectory_;
 };
 
 }  // namespace apa_planner

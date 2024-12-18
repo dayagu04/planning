@@ -66,7 +66,7 @@ void ParallelParkInScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-void ParallelParkInScenario::PlanCore() {
+void ParallelParkInScenario::ExcutePathPlanningTask() {
   // init simulation
   InitSimulation();
 

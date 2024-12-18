@@ -11,8 +11,8 @@
 
 #include "./../../modules/common/config/vehicle_param.h"
 #include "./../../modules/context/vehicle_config_context.h"
-#include "./../collision_detection/aabb2d.h"
-#include "./../collision_detection/gjk2d_interface.h"
+#include "./../convex_collision_detection/aabb2d.h"
+#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/euler_distance_transform.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "./../reeds_shepp/reeds_shepp_interface.h"
@@ -120,13 +120,13 @@ class HybridAStar {
 
   // search single gear path by gear reverse searching.
   // todo: gear drive searching.
-  void SingleShotPathAttempt(const MapBound& XYbounds,
-                             const ParkObstacleList& obstacles,
-                             const AstarRequest& request,
-                             const ObstacleClearZone* clear_zone,
-                             HybridAStarResult* result,
-                             EulerDistanceTransform* edt,
-                             ParkReferenceLine* ref_line);
+  void GearRerversePathAttempt(const MapBound& XYbounds,
+                               const ParkObstacleList& obstacles,
+                               const AstarRequest& request,
+                               const ObstacleClearZone* clear_zone,
+                               HybridAStarResult* result,
+                               EulerDistanceTransform* edt,
+                               ParkReferenceLine* ref_line);
 
   // for debug
   void DebugPathString(const HybridAStarResult* result) const;

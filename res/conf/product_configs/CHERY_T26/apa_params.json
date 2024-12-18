@@ -327,5 +327,10 @@
   "astar_parallel_finish_lon_err" : 0.25,
   "astar_parallel_finish_center_lat_err" : 0.1,
   "astar_parallel_finish_head_lat_err" : 0.25,
-  "astar_parallel_finish_heading_err" : 2.5
+  "astar_parallel_finish_heading_err" : 2.5,
+
+  "enable_apa_speed_plan" : false,
+  "default_cruise_speed" : 0.5,
+  "min_cruise_speed" : 0.3,
+  "obs_dist_for_speed_limit" : 0.4
 }

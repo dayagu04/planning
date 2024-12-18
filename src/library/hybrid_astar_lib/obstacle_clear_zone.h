@@ -1,6 +1,6 @@
 #pragma once
 
-#include "./../collision_detection/aabb2d.h"
+#include "./../convex_collision_detection/aabb2d.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "pose2d.h"
 

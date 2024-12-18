@@ -27,7 +27,13 @@ set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/parallel
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/optimizers/lateral_path_optimizer
-  ${CMAKE_CURRENT_LIST_DIR}/util)
+  ${CMAKE_CURRENT_LIST_DIR}/util
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/parking_stop_decider
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/virtual_wall_decider
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/narrow_space_decider
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/speed_limit_decider
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders/traj_stitcher
+  )
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 

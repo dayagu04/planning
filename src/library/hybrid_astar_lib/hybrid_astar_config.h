@@ -17,7 +17,6 @@ struct PlannerOpenSpaceConfig {
   bool enable_dp_cost_for_vertical_park = false;
   bool enable_ref_line_h_cost_for_vertical_park = false;
   bool enable_rs_path_h_cost_for_vertical_park = false;
-  bool enable_obs_dist_g_cost = false;
 
   // parallel parking
 

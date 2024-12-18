@@ -16,7 +16,7 @@
 #include "math_utils.h"
 #include "narrow_space_decider.h"
 #include "parking_scenario.h"
-#include "path_safe_checker.h"
+#include "collision_detection/path_safe_checker.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
@@ -225,7 +225,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   return parking_finish;
 }
 
-void NarrowSpaceScenario::PlanCore() {
+void NarrowSpaceScenario::ExcutePathPlanningTask() {
   // prepare simulation
   InitSimulation();
 
@@ -522,10 +522,8 @@ void NarrowSpaceScenario::ShrinkPathByFusionObj() {
   obstacle_generator.GenerateGlobalObstacle(obs, local_view, true);
 
   PathSafeChecker path_safe_checker;
-  path_safe_checker.Excute(
-      current_path_point_global_vec_,
-      static_cast<pnc::geometry_lib::PathSegGear>(frame_.gear_command), &obs,
-      ego_pose);
+  path_safe_checker.Excute(&obs, ego_pose, PathCheckRequest::COLLISION_CHECK,
+                           0.08, 0.08, current_path_point_global_vec_);
 
   frame_.remain_dist_col_det = frame_.remain_dist;
   if (path_safe_checker.IsPathCollision()) {
@@ -775,11 +773,16 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     if (response.first_seg_path.size() >= 5) {
       std::vector<pnc::geometry_lib::PathPoint> local_path;
       size_t i;
+      pnc::geometry_lib::PathPoint point;
+
       for (i = 0; i < response.first_seg_path.size(); i++) {
-        local_path.emplace_back(pnc::geometry_lib::PathPoint(
+        point = pnc::geometry_lib::PathPoint(
             Eigen::Vector2d(response.first_seg_path[i].x,
                             response.first_seg_path[i].y),
-            response.first_seg_path[i].phi, response.first_seg_path[i].kappa));
+            response.first_seg_path[i].phi, response.first_seg_path[i].kappa);
+        point.s = response.first_seg_path[i].accumulated_s;
+
+        local_path.emplace_back(point);
       }
 
       // todo:
@@ -990,6 +993,7 @@ const int NarrowSpaceScenario::LocalPathToGlobal(
 
     global_point.Set(Eigen::Vector2d(global.x, global.y), global.theta);
     global_point.kappa = path_point.kappa;
+    global_point.s = path_point.s;
 
     current_path_point_global_vec_.emplace_back(global_point);
   }
@@ -1323,7 +1327,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
                             ego_slot_info.ego_pos_slot[0]);
   double y_diff = std::fabs(ego_slot_info.target_ego_pos_slot[1] -
                             ego_slot_info.ego_pos_slot[1]);
-  if (x_diff > 1.5 || y_diff > 0.5) {
+  if (x_diff > 2.0 || y_diff > 2.0) {
     return;
   }
 

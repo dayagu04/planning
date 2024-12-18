@@ -18,7 +18,7 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   virtual std::string GetName() override { return typeid(this).name(); }
 
  private:
-  void PlanCore() override;
+  void ExcutePathPlanningTask() override;
   void GenTlane() override;
   void GenObstacles() override;
   virtual void Log() const override;

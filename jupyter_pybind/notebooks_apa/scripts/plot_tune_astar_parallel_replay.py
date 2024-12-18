@@ -188,7 +188,6 @@ class LocalViewSlider:
     self.lon_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lon_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.lat_pos_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "lat_pos_dif",min=-20.0, max=20.0, value=0.0, step=0.01)
     self.heading_dif_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='40%'), description= "heading_dif",min=-90.0, max=90.0, value=0.0, step=0.1)
-    self.car_move_mode_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="car_move_mode", min=0, max=1, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -204,13 +203,12 @@ class LocalViewSlider:
                         lon_pos_dif = self.lon_pos_dif_slider,
                         lat_pos_dif = self.lat_pos_dif_slider,
                         heading_dif = self.heading_dif_slider,
-                        car_move_mode=self.car_move_mode_slider,
                         )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
-                    lon_pos_dif, lat_pos_dif, heading_dif,car_move_mode):
+                    lon_pos_dif, lat_pos_dif, heading_dif):
 
   time0 = time.time()
 
@@ -523,10 +521,10 @@ def slider_callback(bag_time, select_id,search_sequence_num, force_plan, refresh
         sample_ds, target_managed_slot_x_vec,
         target_managed_slot_y_vec,
         target_managed_limiter_x_vec,
-        target_managed_limiter_y_vec, current_state)
+        target_managed_limiter_y_vec)
 
     print('end')
-  elif force_plan or car_move_mode==1:
+  elif force_plan:
       print('plan once by force')
 
       astar_parallel_replay_py.SetLocalization(loc_msg_bytes)

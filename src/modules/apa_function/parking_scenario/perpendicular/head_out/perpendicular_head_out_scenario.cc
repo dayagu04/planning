@@ -31,7 +31,7 @@ void PerpendicularHeadOutScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-void PerpendicularHeadOutScenario::PlanCore() {
+void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
   // prepare simulation
   InitSimulation();
 

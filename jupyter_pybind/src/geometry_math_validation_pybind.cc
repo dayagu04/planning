@@ -439,7 +439,8 @@ const std::vector<double> CalTwoArcBySameHeading(
     const uint8_t tmp_steer2 = CalArcSteer(arc2);
     if (tmp_gear1 == current_gear && tmp_gear2 == current_gear &&
         tmp_steer1 != tmp_steer2 &&
-        std::fabs(NormalizeAngle(arc1.headingA - arc1.headingB)) < 0.8 * 3.14) {
+        std::fabs(pnc::geometry_lib::NormalizeAngle(
+            arc1.headingA - arc1.headingB)) < 0.8 * 3.14) {
       circle_info.emplace_back(arc1.circle_info.center.x());
       circle_info.emplace_back(arc1.circle_info.center.y());
       circle_info.emplace_back(arc2.circle_info.center.x());

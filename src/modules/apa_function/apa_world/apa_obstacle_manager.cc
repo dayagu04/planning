@@ -37,7 +37,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       std::vector<Eigen::Vector2d> fusion_pt_clout_2d;
       fusion_pt_clout_2d.reserve(polygon_points_size);
       Polygon2D polygon;
-      cdl::AABB box;
+      cdl::AABB box = cdl::AABB();
       for (uint32 j = 0; j < polygon_points_size; ++j) {
         const Eigen::Vector2d fusion_pt(
             fusion_occupancy_object.polygon_points[j].x,
@@ -73,7 +73,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
       std::vector<Eigen::Vector2d> fusion_pt_clout_2d;
       fusion_pt_clout_2d.reserve(polygon_points_size);
       Polygon2D polygon;
-      cdl::AABB box;
+      cdl::AABB box = cdl::AABB();
       for (uint8 j = 0; j < polygon_points_size; ++j) {
         const Eigen::Vector2d fusion_pt(fusion_object.polygon_points[j].x,
                                         fusion_object.polygon_points[j].y);
@@ -109,7 +109,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     std::vector<Eigen::Vector2d> gl_pt_clout_2d;
     gl_pt_clout_2d.reserve(points_3d_size);
     Polygon2D polygon;
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
     for (uint8 j = 0; j < points_3d_size; ++j) {
       const Eigen::Vector2d gl_pt(gl.points_3d[j].x, gl.points_3d[j].y);
       box.MergePoint(cdl::Vector2r(gl_pt.x(), gl_pt.y()));
@@ -141,7 +141,7 @@ void ApaObstacleManager::Update(const LocalView* local_view) {
     std::vector<Eigen::Vector2d> uss_pt_clout_2d;
     uss_pt_clout_2d.reserve(pt_cloud_size);
     Polygon2D polygon;
-    cdl::AABB box;
+    cdl::AABB box = cdl::AABB();
     for (uint32 j = 0; j < pt_cloud_size; ++j) {
       const Eigen::Vector2d uss_pt(obj_info.obj_pt_global[j].x,
                                    obj_info.obj_pt_global[j].y);

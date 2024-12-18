@@ -2,6 +2,7 @@ import sys, os, copy
 sys.path.append("..")
 from io import BytesIO
 from lib.load_local_view_parking import *
+from lib.load_lon_plan import *
 from bokeh.events import Tap
 sys.path.append('../..')
 sys.path.append('../../../build')
@@ -12,6 +13,7 @@ sys.path.append('python_proto')
 from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization, ControlOutput
+
 # bag path and frame dt
 bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241211/20241211-00-26-18/park_in_data_collection_CHERY_E0Y_10034_ALL_FILTER_2024-12-11-00-26-18_no_camera.bag'
 
@@ -20,6 +22,7 @@ frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
 last_plan_pose_ = []
+plot_speed_graph = False
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -27,6 +30,10 @@ output_notebook()
 bag_loader = LoadCyberbag(bag_path, parking_flag)
 max_time = bag_loader.load_all_data()
 fig1, local_view_data = load_local_view_figure_parking()
+
+# plot speed
+velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig = load_lon_global_data_figure(bag_loader)
+pans, lon_plan_data = create_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig)
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
@@ -653,11 +660,19 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, use_slot_in_bag, use_
     'y_vec': car_box_y_vec,
   })
 
+  if plot_speed_graph == True:
 
+    speed_data = apa_simulation_py.GetApaSpeedLimit()
+    update_lon_plan_online_data(speed_data,lon_plan_data)
+    update_lon_plan_offline_data(bag_loader, bag_time, local_view_data, lon_plan_data)
 
   push_notebook()
 
-bkp.show(row(fig1), notebook_handle=True)
+if plot_speed_graph == False:
+  bkp.show(row(fig1), notebook_handle=True)
+else:
+  bkp.show(row(fig1, pans), notebook_handle=True)
+
 slider_class = LocalViewSlider(slider_callback)
 
 

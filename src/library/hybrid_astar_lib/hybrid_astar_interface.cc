@@ -226,9 +226,9 @@ int HybridAStarInterface::UpdateOutput() {
 
       // search single shot path.
       if (lat_buffer > 0.2 - 1e-4) {
-        hybrid_astar_->SingleShotPathAttempt(map_bounds_, obs_, request_,
-                                             &clear_zone_, &coarse_traj_, &edt_,
-                                             &ref_line_);
+        hybrid_astar_->GearRerversePathAttempt(map_bounds_, obs_, request_,
+                                               &clear_zone_, &coarse_traj_,
+                                               &edt_, &ref_line_);
 
         // check path
         if (coarse_traj_.x.size() > 2) {
@@ -431,9 +431,9 @@ int HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                                &edt_, &ref_line_);
   } else if (request.path_generate_method ==
              AstarPathGenerateType::GEAR_REVERSE_DYNAMIC_PROGRAMMING) {
-    hybrid_astar_->SingleShotPathAttempt(map_bounds_, obs_list, request,
-                                         &clear_zone_, &coarse_traj_, &edt_,
-                                         &ref_line_);
+    hybrid_astar_->GearRerversePathAttempt(map_bounds_, obs_list, request,
+                                           &clear_zone_, &coarse_traj_, &edt_,
+                                           &ref_line_);
 
   } else {
     Pose2D start_pose;

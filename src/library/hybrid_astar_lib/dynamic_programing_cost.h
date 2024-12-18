@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "./../collision_detection/gjk2d_interface.h"
+#include "./../convex_collision_detection/gjk2d_interface.h"
 #include "./../occupancy_grid_map/point_cloud_obstacle.h"
 #include "ad_common/math/line_segment2d.h"
 #include "hybrid_astar_config.h"

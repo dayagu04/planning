@@ -1,6 +1,7 @@
 #pragma once
 #include "Eigen/Core"
 #include "local_view.h"
+#include "pose2d.h"
 
 namespace planning {
 namespace apa_planner {
@@ -53,6 +54,8 @@ class ApaMeasureDataManager final {
   const double GetSteerWheelAngle() const { return steer_wheel_angle_; }
   const double GetFrontWheelAngle() const { return front_wheel_angle_; }
   const bool GetBrakeFlag() const { return brake_flag_; }
+
+  const Pose2D GetPose() { return Pose2D(pos_[0], pos_[1], heading_); }
 
  private:
   double vel_ = 0.0;

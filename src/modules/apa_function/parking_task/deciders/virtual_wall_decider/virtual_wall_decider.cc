@@ -4,30 +4,58 @@
 #include <cmath>
 
 #include "aabb2d.h"
+#include "apa_param_config.h"
 #include "collision_box2d.h"
 #include "collision_detect_types.h"
 #include "log_glog.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "utils_math.h"
-#include "apa_param_config.h"
 
 namespace planning {
 
 #define SLOT_VIRTUAL_WALL_Y_OFFSET (0.5)
 #define SLOT_VIRTUAL_WALL_X_OFFSET (3.0)
 
-void VirtualWallDecider::Process(std::vector<Position2D>& points,
-                                const double channel_length,
-                                const double channel_width,
-                                const double slot_width,
-                                const double slot_length,
-                                const Pose2D& ego_pose, const Pose2D& end,
-                                const ParkSpaceType slot_type,
-                                const SlotRelativePosition slot_side) {
+void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
+  Polygon2D ego_local_polygon;
+  double veh_x_buffer = 0.3;
+  double veh_y_buffer = 0.4;
+
+  GenerateUpLeftFrameBox(
+      &ego_local_polygon, -config.rear_overhanging - veh_x_buffer,
+      -config.max_car_width / 2 - veh_y_buffer,
+      config.car_length - config.rear_overhanging + veh_x_buffer,
+      config.max_car_width / 2 + veh_y_buffer);
+  ULFLocalPolygonToGlobal(&ego_polygon_in_slot_, &ego_local_polygon, ego);
+
+  return;
+}
+
+const bool VirtualWallDecider::IsVirtualWallPointCollision(
+    const Position2D& point) {
+  bool is_collision;
+
+  gjk_interface_.PolygonPointCollisionDetect(&is_collision,
+                                             &ego_polygon_in_slot_, point);
+
+  if (is_collision) {
+    return true;
+  }
+
+  return false;
+}
+
+void VirtualWallDecider::Process(
+    std::vector<Position2D>& points, const double channel_length,
+    const double channel_width, const double slot_width,
+    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
+    const ParkSpaceType slot_type, const SlotRelativePosition slot_side) {
   start_ = ego_pose;
   end_ = end;
 
+  GenerateVehPolygonInSlot(ego_pose);
   GenerateCarRelativePosition(ego_pose);
   points.clear();
 
@@ -52,9 +80,9 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
   return;
 }
 
-void VirtualWallDecider::SampleInLine(const Eigen::Vector2d& start,
-                                      const Eigen::Vector2d& end,
-                                      std::vector<Position2D>* points) {
+void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
+                                             const Eigen::Vector2d& end,
+                                             std::vector<Position2D>* points) {
   const Eigen::Vector2d line = end - start;
   const Eigen::Vector2d unit_line_vec = line.normalized();
   double len = line.norm();
@@ -65,13 +93,18 @@ void VirtualWallDecider::SampleInLine(const Eigen::Vector2d& start,
   Eigen::Vector2d point;
   while (s < len) {
     point = start + s * unit_line_vec;
+    s += ds;
+
+    if (IsVirtualWallPointCollision(Position2D(point.x(), point.y()))) {
+      continue;
+    }
 
     points->emplace_back(Position2D(point.x(), point.y()));
-
-    s += ds;
   }
 
-  points->emplace_back(Position2D(end.x(), end.y()));
+  if (!IsVirtualWallPointCollision(Position2D(point.x(), point.y()))) {
+    points->emplace_back(Position2D(end.x(), end.y()));
+  }
 
   return;
 }
@@ -194,21 +227,21 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
       lower_bound_x, slot_width / 2.0 + SLOT_VIRTUAL_WALL_Y_OFFSET);
 
   // add points
-  SampleInLine(right_wall_start, right_wall_end, &points);
+  SampleInLineSegment(right_wall_start, right_wall_end, &points);
 
-  SampleInLine(left_wall_start, left_wall_end, &points);
+  SampleInLineSegment(left_wall_start, left_wall_end, &points);
 
-  SampleInLine(right_wall_end, right_channel_end, &points);
+  SampleInLineSegment(right_wall_end, right_channel_end, &points);
 
-  SampleInLine(left_wall_end, left_channel_end, &points);
+  SampleInLineSegment(left_wall_end, left_channel_end, &points);
 
-  SampleInLine(upper_channel_left, upper_channel_right, &points);
+  SampleInLineSegment(upper_channel_left, upper_channel_right, &points);
 
-  SampleInLine(right_channel_lower, right_channel_upper, &points);
+  SampleInLineSegment(right_channel_lower, right_channel_upper, &points);
 
-  SampleInLine(left_channel_lower, left_channel_upper, &points);
+  SampleInLineSegment(left_channel_lower, left_channel_upper, &points);
 
-  SampleInLine(back_wall_left, back_wall_right, &points);
+  SampleInLineSegment(back_wall_left, back_wall_right, &points);
 
   return;
 }
@@ -313,20 +346,24 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
       Eigen::Vector2d(channel_bottom_bound_left[0], slot_bottom_wall_left[1]);
 
   // add points
-  SampleInLine(right_wall_upper, right_wall_lower, &points);
+  SampleInLineSegment(right_wall_upper, right_wall_lower, &points);
 
-  SampleInLine(slot_bottom_wall_left, slot_bottom_wall_right, &points);
+  SampleInLineSegment(slot_bottom_wall_left, slot_bottom_wall_right, &points);
 
-  SampleInLine(slot_top_wall_left, slot_top_wall_right, &points);
+  SampleInLineSegment(slot_top_wall_left, slot_top_wall_right, &points);
 
-  SampleInLine(channel_up_bound_left, channel_up_bound_right, &points);
+  SampleInLineSegment(channel_up_bound_left, channel_up_bound_right, &points);
 
-  SampleInLine(channel_bottom_bound_left, channel_bottom_bound_right, &points);
+  SampleInLineSegment(channel_bottom_bound_left, channel_bottom_bound_right,
+                      &points);
 
-  SampleInLine(channel_left_bound_upper, channel_left_bound_lower, &points);
+  SampleInLineSegment(channel_left_bound_upper, channel_left_bound_lower,
+                      &points);
 
-  SampleInLine(channel_right_bound_pt1, channel_right_bound_pt2, &points);
-  SampleInLine(channel_right_bound_pt3, channel_right_bound_pt4, &points);
+  SampleInLineSegment(channel_right_bound_pt1, channel_right_bound_pt2,
+                      &points);
+  SampleInLineSegment(channel_right_bound_pt3, channel_right_bound_pt4,
+                      &points);
 
   return;
 }
@@ -434,19 +471,21 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
       Eigen::Vector2d(channel_bottom_bound_left[0], slot_bottom_wall_right[1]);
 
   // add points
-  SampleInLine(slot_left_wall_upper, slot_left_wall_lower, &points);
+  SampleInLineSegment(slot_left_wall_upper, slot_left_wall_lower, &points);
 
-  SampleInLine(slot_bottom_wall_left, slot_bottom_wall_right, &points);
+  SampleInLineSegment(slot_bottom_wall_left, slot_bottom_wall_right, &points);
 
-  SampleInLine(slot_top_wall_left, slot_top_wall_right, &points);
+  SampleInLineSegment(slot_top_wall_left, slot_top_wall_right, &points);
 
-  SampleInLine(channel_up_bound_left, channel_up_bound_right, &points);
+  SampleInLineSegment(channel_up_bound_left, channel_up_bound_right, &points);
 
-  SampleInLine(channel_bottom_bound_left, channel_bottom_bound_right, &points);
+  SampleInLineSegment(channel_bottom_bound_left, channel_bottom_bound_right,
+                      &points);
 
-  SampleInLine(channel_right_bound_upper, channel_right_bound_lower, &points);
-  SampleInLine(channel_left_bound_pt1, channel_left_bound_pt2, &points);
-  SampleInLine(channel_left_bound_pt3, channel_left_bound_pt4, &points);
+  SampleInLineSegment(channel_right_bound_upper, channel_right_bound_lower,
+                      &points);
+  SampleInLineSegment(channel_left_bound_pt1, channel_left_bound_pt2, &points);
+  SampleInLineSegment(channel_left_bound_pt3, channel_left_bound_pt4, &points);
 
   return;
 }
