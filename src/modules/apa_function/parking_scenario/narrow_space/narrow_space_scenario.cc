@@ -638,7 +638,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   obstacle_generator.GenerateLocalObstacle(
       obs, local_view, ego_slot_info.slot_length, ego_slot_info.slot_width,
-      slot_base_pose, start);
+      slot_base_pose, start, false);
 
   double search_start_time = IflyTime::Now_ms();
   ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;

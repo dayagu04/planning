@@ -672,81 +672,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
   bool update_path = false;
 
   if (force_plan) {
-    planning::apa_planner::ParkingScenario::Frame frame;
-    planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info =
-        frame.ego_slot_info;
-
-    if (1) {
-      ego_slot_info = ego_slot_info_;
-    } else {
-      ego_slot_info.slot_origin_pos[0] = end_pose[0];
-      ego_slot_info.slot_origin_pos[1] = end_pose[1];
-      ego_slot_info.slot_origin_heading = end_pose[2];
-
-      ego_slot_info.slot_origin_heading_vec =
-          Eigen::Vector2d(std::cos(end_pose[2]), std::sin(end_pose[2]));
-
-      ego_slot_info.slot_length = 6;
-
-      ego_slot_info.slot_width = 2.3;
-
-      // base coordinate
-      ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
-                                ego_slot_info.slot_origin_heading);
-
-      ego_slot_info.l2g_tf.Init(ego_slot_info.slot_origin_pos,
-                                ego_slot_info.slot_origin_heading);
-
-      // update ego pose
-      Eigen::Vector2d ego_global_position(
-          local_view.localization.position.position_boot.x,
-          local_view.localization.position.position_boot.y);
-      double heading_ego = local_view.localization.orientation.euler_boot.yaw;
-
-      Pose2D ego_global_pose = {ego_global_position.x(),
-                                ego_global_position.y(), heading_ego};
-
-      ego_slot_info.ego_pos_slot =
-          ego_slot_info.g2l_tf.GetPos(ego_global_position);
-      ego_slot_info.ego_heading_slot =
-          ego_slot_info.g2l_tf.GetHeading(heading_ego);
-
-      // ILOG_INFO << "  ego_pos_slot = " << ego_slot_info.ego_pos_slot.x()
-      //           << ego_slot_info.ego_pos_slot.y() << "  ego_heading_slot = "
-      //           << ego_slot_info.ego_heading_slot * 57.3;
-
-      ego_slot_info.ego_heading_slot_vec =
-          Eigen::Vector2d(std::cos(ego_slot_info.ego_heading_slot),
-                          std::sin(ego_slot_info.ego_heading_slot));
-
-      // cal target pos
-      const planning::apa_planner::ApaParameters &parking_param =
-          apa_param.GetParam();
-
-      ego_slot_info.target_ego_pos_slot = Eigen::Vector2d(
-          parking_param.terminal_target_x, parking_param.terminal_target_y);
-
-      ego_slot_info.target_ego_heading_slot =
-          parking_param.terminal_target_heading;
-
-      // get global
-      const auto &target_ego_pos_global =
-          ego_slot_info.l2g_tf.GetPos(ego_slot_info.target_ego_pos_slot);
-      const auto &target_ego_heading_global = ego_slot_info.l2g_tf.GetHeading(
-          ego_slot_info.target_ego_heading_slot);
-
-      // ILOG_INFO << "target_ego_pos_slot = " <<
-      // ego_slot_info.target_ego_pos_slot[0]
-      //           << ", " << ego_slot_info.target_ego_pos_slot[1]
-      //           << "  target_ego_heading_slot = "
-      //           << ego_slot_info.target_ego_heading_slot * 57.3;
-
-      // cal terminal error
-      ego_slot_info.terminal_err.Set(
-          ego_slot_info.ego_pos_slot - ego_slot_info.target_ego_pos_slot,
-          ego_slot_info.ego_heading_slot -
-              ego_slot_info.target_ego_heading_slot);
-    }
+    planning::apa_planner::ParkingScenario::EgoSlotInfo ego_slot_info;
+    ego_slot_info = ego_slot_info_;
 
     hybrid_astar_obs_.Clear();
 
@@ -784,7 +711,7 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     obstacle_generator.GenerateLocalObstacle(
         hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start);
+        ego_slot_info.slot_width, slot_base_pose, start, false);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 
@@ -824,11 +751,13 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     base_pose_ = slot_base_pose;
     request.start_ = start;
+    ILOG_INFO << "start pose";
     request.start_.DebugString();
     request.goal_ = Pose2D(end[0], end[1], end[2]);
     request.real_goal = real_end;
     request.base_pose_ = base_pose_;
     request.space_type = ParkSpaceType::VERTICAL;
+    request.swap_start_goal = false;
 
     if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
         ApaStateMachine::ACTIVE_IN_CAR_FRONT) {

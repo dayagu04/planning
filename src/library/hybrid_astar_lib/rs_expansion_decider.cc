@@ -69,15 +69,19 @@ const bool RSExpansionDecider::IsSameEndPointForRsWithAstar() {
   return same_point_for_rs_with_astar_;
 }
 
-bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node) {
-  bool need_rs = false;
-  need_rs = NeedRsLinkByNodeHeading(node);
-  if (!need_rs) {
-    return false;
-  }
+bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
+                                           const AstarRequest *request) const {
+  if (request->space_type == ParkSpaceType::VERTICAL &&
+      request->direction_request == ParkingVehDirection::TAIL_IN) {
+    bool need_rs = false;
+    need_rs = NeedRsLinkByNodeHeading(node);
+    if (!need_rs) {
+      return false;
+    }
 
-  if (!NeedRsLinkByOffset(node)) {
-    return false;
+    if (!NeedRsLinkByOffset(node)) {
+      return false;
+    }
   }
 
   return true;
@@ -112,7 +116,8 @@ void RSExpansionDecider::UpdateRSPathRequest(
   return;
 }
 
-const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
+const bool RSExpansionDecider::NeedRsLinkByNodeHeading(
+    const Node3d *node) const {
   // use heuristic rule to do rs path expansion
   // use node heading and steering to check.
   // if heading > 150 degree, shrink some rs expansion.
@@ -144,7 +149,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeading(const Node3d *node) {
   return true;
 }
 
-const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) {
+const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) const {
   if (std::fabs(node->GetY()) > 10.0 || std::fabs(node->GetX()) > 15.0) {
     return false;
   }
