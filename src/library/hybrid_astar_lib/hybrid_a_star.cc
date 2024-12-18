@@ -2882,7 +2882,17 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
         }
       } else {
         // in close set and need update
-        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
+        if (new_node.GetGCost() < next_node_in_pool->GetGCost() + 1e-1) {
+          if (node_shrink_decider_.IsLoopBackNode(&new_node,
+                                                  next_node_in_pool)) {
+            continue;
+          }
+
+          if (!node_shrink_decider_.IsSameGridNodeContinuous(
+                  &new_node, next_node_in_pool)) {
+            continue;
+          }
+
           GetSingleShotNodeHeuCost(current_node, &new_node);
 
           h_cost_rs_path_num++;
@@ -3327,7 +3337,17 @@ bool HybridAStar::AstarSearch(
         }
       } else {
         // in close set and need update
-        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
+        if (new_node.GetGCost() < next_node_in_pool->GetGCost() + 1e-1) {
+          if (node_shrink_decider_.IsLoopBackNode(&new_node,
+                                                  next_node_in_pool)) {
+            continue;
+          }
+
+          if (!node_shrink_decider_.IsSameGridNodeContinuous(
+                  &new_node, next_node_in_pool)) {
+            continue;
+          }
+
           CalculateNodeHeuristicCost(current_node, &new_node);
 
           h_cost_rs_path_num++;

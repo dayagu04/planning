@@ -32,6 +32,14 @@ class NodeShrinkDecider : public AstarDecider {
 
   bool IsShrinkByGearSwitchNumber(Node3d *child);
 
+  const bool IsLoopBackNode(const Node3d *new_node,
+                            const Node3d *old_node) const;
+
+  // Even if two nodes in same grid, and their grid id is same. But if they are
+  // not continuous in pose, they are different node.
+  const bool IsSameGridNodeContinuous(const Node3d *new_node,
+                                      const Node3d *old_node) const;
+
  private:
   void ShrinkChildrenByHeading();
 
