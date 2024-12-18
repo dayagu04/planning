@@ -71,29 +71,36 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  double curv, road_radius;
-  ReferencePathPoint refpath_pt;
-  if (reference_path_ptr->get_reference_point_by_lon(
-          frenet_ego_state.s() + preview_x, refpath_pt)) {
-    double curv = std::fabs(refpath_pt.path_point.kappa);
-    double road_radius = 1 / std::max(curv, 0.0001);
-    if (road_radius < 750) {
-      acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+  std::vector<double> curv_window_vec;
+  for (int idx = -3; idx <= 3; ++idx) {
+    double curv;
+    ReferencePathPoint refpath_pt;
+    if (reference_path_ptr->get_reference_point_by_lon(
+          frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
+      curv = std::fabs(refpath_pt.path_point.kappa);
+    } else {
+      curv = 0.0001;
     }
-    double v_limit_road = std::sqrt(acc_lat_max * road_radius) * 0.9;
-    v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-    LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
-              acc_lat_max);
-    LOG_DEBUG(
-        "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
-        angle_steers, angle_steers_deg, v_limit_road);
-    JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
-    JSON_DEBUG_VALUE("road_radius", road_radius);
+    curv_window_vec.emplace_back(curv);
   }
-  else {
-    curv = 1 / 10000.0;
-    road_radius = 10000.0;
+  double curv_sum = 0.0;
+  for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
+    curv_sum = curv_sum + curv_window_vec[ind];
   }
+  double avg_curv = curv_sum / curv_window_vec.size();
+  double road_radius = 1 / std::max(avg_curv, 0.0001);
+  if (road_radius < 750) {
+    acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+  }
+  double v_limit_road = std::sqrt(acc_lat_max * road_radius) * 0.9;
+  v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
+  LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
+            acc_lat_max);
+  LOG_DEBUG(
+      "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
+      angle_steers, angle_steers_deg, v_limit_road);
+  JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
+  JSON_DEBUG_VALUE("road_radius", road_radius);
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
     v_target_type_ = SpeedLimitType::CURVATURE;
