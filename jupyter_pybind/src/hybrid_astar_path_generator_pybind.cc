@@ -886,6 +886,7 @@ std::vector<Eigen::Vector3d> Update(
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;
     request.history_gear = AstarPathGear::DRIVE;
+    request.swap_start_goal = false;
 
     hybrid_astar_interface_->GeneratePath(start, end, hybrid_astar_obs_,
                                           request);

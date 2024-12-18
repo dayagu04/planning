@@ -16,7 +16,14 @@ void DebugAstarRequestString(const AstarRequest &request) {
             << ", slot type=" << static_cast<int>(request.space_type);
 
   ILOG_INFO << " rs request: " << GetRSRequestType(request.rs_request)
-            << ",plan reason = " << PlanReasonDebugString(request.plan_reason);
+            << ",plan reason = " << PlanReasonDebugString(request.plan_reason)
+            << ",swap goal = " << request.swap_start_goal;
+
+  // ILOG_INFO << "start pose";
+  // request.start_.DebugString();
+
+  // ILOG_INFO << "goal pose";
+  // request.goal_.DebugString();
 
   return;
 }

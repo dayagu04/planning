@@ -485,7 +485,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
                                         const PathGearRequest gear_request_info,
                                         Node3d* rs_node_to_goal) {
   // check gear and steering wheel
-  if (!rs_expansion_decider_.IsNeedRsExpansion(current_node)) {
+  if (!rs_expansion_decider_.IsNeedRsExpansion(current_node, &request_)) {
     // ILOG_INFO << "no need rs path link";
     return false;
   }
@@ -549,13 +549,13 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   }
 
   // todo, need to get backward pass dist in all nodes.
-  double first_path_dist = current_node->GetNodePathDistance();
+  double parent_node_path_dist = current_node->GetNodePathDistance();
   if (current_node->GetGearType() != rs_path_.paths[0].gear) {
-    first_path_dist = 0;
+    parent_node_path_dist = 0;
   }
 
   // length check
-  if (!IsRsPathFirstSegmentLongEnough(&rs_path_, first_path_dist)) {
+  if (!IsRsPathFirstSegmentLongEnough(&rs_path_, parent_node_path_dist)) {
     // ILOG_INFO << "length is not expectation";
     return false;
   }
@@ -582,7 +582,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     }
   }
 
-    // interpolation
+  // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -1789,42 +1789,31 @@ void HybridAStar::CalculateNodeHeuristicCost(Node3d* father_node,
   double dp_path_dist = 0.0;
 
   double dp_path_cost = 0.0;
-  if (config_.enable_dp_cost_for_vertical_park) {
-    dp_path_dist = ObstacleHeuristicWithHolonomic(next_node);
-    dp_path_cost = dp_path_dist * config_.traj_forward_penalty;
-    cost.astar_dist = dp_path_cost;
-  }
+  dp_path_dist = ObstacleHeuristicWithHolonomic(next_node);
+  dp_path_cost = dp_path_dist * config_.traj_forward_penalty;
+  cost.astar_dist = dp_path_cost;
 
   double rs_path_cost = 0.0;
-  if (config_.enable_rs_path_h_cost_for_vertical_park) {
-    rs_path_cost = GenerateHeuristicCostByRsPath(next_node, &cost);
-  }
-
+  rs_path_cost = GenerateHeuristicCostByRsPath(next_node, &cost);
   optimal_path_cost = std::max(dp_path_cost, rs_path_cost);
 
   // heading cost
   double ref_line_heading_cost = 0.0;
-  if (config_.enable_ref_line_h_cost_for_vertical_park) {
-    ref_line_heading_cost =
-        GenerateRefLineHeuristicCost(next_node, dp_path_dist);
-    cost.ref_line_heading_cost = ref_line_heading_cost;
-  }
+  ref_line_heading_cost = GenerateRefLineHeuristicCost(next_node, dp_path_dist);
+  cost.ref_line_heading_cost = ref_line_heading_cost;
 
   optimal_path_cost = std::max(optimal_path_cost, ref_line_heading_cost);
   // optimal_path_cost += ref_line_heading_cost;
 
   // euler cost
   double euler_dist_cost = 0.0;
-  if (config_.enable_euler_cost_for_vertical_park) {
-    euler_dist_cost = next_node->GetEulerDist(astar_end_node_);
-
-    cost.euler_dist = euler_dist_cost;
-  }
+  euler_dist_cost = next_node->GetEulerDist(astar_end_node_);
+  cost.euler_dist = euler_dist_cost;
 
   optimal_path_cost = std::max(euler_dist_cost, optimal_path_cost);
 
   next_node->SetHeuCost(optimal_path_cost);
-  next_node->SetHeuCostDebug(cost);
+  // next_node->SetHeuCostDebug(cost);
 
 #if LOG_TIME_PROFILE
   const double end_time = IflyTime::Now_ms();
