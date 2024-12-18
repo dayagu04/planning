@@ -2496,13 +2496,11 @@ void HybridAStar::LinkRsToAstarEndPoint(HybridAStarResult* result,
   return;
 }
 
-void HybridAStar::GearRerversePathAttempt(const MapBound& XYbounds,
-                                          const ParkObstacleList& obstacles,
-                                          const AstarRequest& request,
-                                          const ObstacleClearZone* clear_zone,
-                                          HybridAStarResult* result,
-                                          EulerDistanceTransform* edt,
-                                          ParkReferenceLine* ref_line) {
+void HybridAStar::GearRerversePathAttempt(
+    const MapBound& XYbounds, const ParkObstacleList& obstacles,
+    const AstarRequest& request, const ObstacleClearZone* clear_zone,
+    const Pose2D& start, const Pose2D& target, HybridAStarResult* result,
+    EulerDistanceTransform* edt, ParkReferenceLine* ref_line) {
   result->Clear();
 
   if (request.history_gear == AstarPathGear::REVERSE) {
@@ -2512,13 +2510,6 @@ void HybridAStar::GearRerversePathAttempt(const MapBound& XYbounds,
 
   if (request.direction_request != ParkingVehDirection::TAIL_IN) {
     return;
-  }
-
-  const Pose2D start = request.start_;
-  Pose2D end = request.real_goal;
-
-  if (request.space_type == ParkSpaceType::VERTICAL) {
-    end.x += config_.single_shot_path_end_straight_dist;
   }
 
   if (start.GetX() < 1.0) {
@@ -2626,7 +2617,7 @@ void HybridAStar::GearRerversePathAttempt(const MapBound& XYbounds,
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return;
   }
-  astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
+  astar_end_node_->Set(NodePath(target), XYbounds_, config_, 0.0);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
@@ -2653,10 +2644,10 @@ void HybridAStar::GearRerversePathAttempt(const MapBound& XYbounds,
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, end, request_.direction_request);
+  node_shrink_decider_.Process(start, target, request_.direction_request);
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, end, vehicle_param_.width, request_.space_type,
+      start, target, vehicle_param_.width, request_.space_type,
       request_.direction_request);
 
   // load open set, pq
