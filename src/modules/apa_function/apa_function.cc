@@ -33,7 +33,8 @@ bool ApaFunction::Reset() {
 
 bool ApaFunction::Plan() {
   (void)apa_plan_interface_->Update(
-      &(session_->environmental_model().get_local_view()));
+      &(session_->environmental_model().get_local_view()),
+      &(session_->planning_context().last_planning_result()));
   // set planning output
   session_->mutable_planning_context()->mutable_planning_output() =
       apa_plan_interface_->GetPlaningOutput();

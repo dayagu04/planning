@@ -64,9 +64,20 @@ const bool ApaWorld::Update() {
   slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,
                             measure_data_ptr_, obstacle_manager_ptr_);
 
-  // 旧的车位管理 需要等其他模块适配新车位管理后尽快删除
-  // retired_slot_manager_ptr_->Update(local_view_ptr_, state_machine_ptr_,
-  //                           measure_data_ptr_, obstacle_manager_ptr_);
+  if (!is_slot_type_fixed_) {
+    slot_type_ = slot_manager_ptr_->GetEgoSlotInfo().slot_type;
+    slot_id_ = slot_manager_ptr_->GetEgoSlotInfo().select_slot_id;
+  }
+
+  if (state_machine_ptr_->IsSeachingStatus()) {
+    is_slot_type_fixed_ = false;
+  } else if (state_machine_ptr_->IsParkingStatus()) {
+    is_slot_type_fixed_ = true;
+  }
+
+  ILOG_INFO << "current slot type"
+            << static_cast<int>(slot_manager_ptr_->GetEgoSlotInfo().slot_type);
+  ILOG_INFO << "fixed slot type =" << static_cast<int>(slot_type_);
 
   return true;
 }

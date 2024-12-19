@@ -508,7 +508,8 @@ const bool PlanOnce(
 
   ILOG_INFO << "pybind select slot id " << select_id;
 
-  const bool result = apa_interface_ptr->Update(&local_view);
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
   apa_interface_ptr->UpdateDebugInfo();
 
   double plan_time = IflyTime::Now_us();

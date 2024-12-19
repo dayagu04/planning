@@ -13,6 +13,7 @@
 #include "plan_data.h"
 #include "planning_hmi_c.h"
 #include "session.h"
+#include "src/modules/common/config/basic_type.h"
 
 namespace planning {
 namespace apa_planner {
@@ -25,7 +26,10 @@ class ApaPlanInterface {
 
   void Reset();
 
-  const bool Update(const LocalView* local_view_ptr);
+  // local_view_ptr: input, upstream info;
+  // navigation_traj: input, navigation traj;
+  const bool Update(const LocalView* local_view_ptr,
+                    const PlanningResult* navigation_traj);
 
   // only for simulation
   void UpdateDebugInfo();
@@ -71,6 +75,10 @@ class ApaPlanInterface {
 
   // for simulation
   planning::common::PlanningDebugInfo planning_debug_info_;
+
+  // planning result by navigation. Need generate stitching traj for parking in
+  // hpp.
+  const PlanningResult *navigation_traj_;
 };
 
 }  // namespace apa_planner

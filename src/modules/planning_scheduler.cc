@@ -151,80 +151,20 @@ bool PlanningScheduler::RunOnce(
       planning_hmi_info);
 
   const auto &state_machine = local_view_->function_state_machine_info;
-  auto scene_type = DetermineSceneType(state_machine);
-  planning_result.scene_type = scene_type;
+  auto function_type = DetermineSceneType(state_machine);
+  planning_result.scene_type = function_type;
   planning_result.timestamp = start_timestamp;
 
   bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
-  if (scene_type == common::PARKING_APA || is_hpp_slot_searching) {
-    // 泊车规划部分
-    if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
-        state_machine.current_state !=
-            iflyauto::FunctionalState_PARK_GUIDANCE) {
-      apa_function_->Reset();
-      ILOG_INFO << "reset parking";
-
-      ResetGLogFile();
-    }
-    planning_success = apa_function_->Plan();
-    *planning_output = session_.planning_context().planning_output();
-
-    // If just in hpp searching stage, do not return, need to execute navigation
-    // planning.
-    if (!is_hpp_slot_searching) {
-      return planning_success;
-    }
+  if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
+    planning_success = ExcuteParkingFunction(function_type, planning_output);
   }
 
-  // 行车规划部分
-  // TODO(xjli32): 功能切换时，reset
-  // ClearParkingInfo(planning_output);
-
-  // sync parameters only if scene_type or dbw_status changes
-  const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
-  if ((scene_type != GENERAL_PLANNING_CONTEXT.GetStatemachine().scene_type ||
-       (dbw_status != GENERAL_PLANNING_CONTEXT.GetStatemachine().dbw_status))) {
-    SyncParameters(scene_type);
-  }
-  GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
-  GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = scene_type;
-
-  // update environment model
-  if (!environmental_model_manager_.Run()) {
-    session_.mutable_planning_context()->Clear();
-    return false;
+  if (function_type == common::HIGHWAY || function_type == common::HPP) {
+    planning_success = ExcuteNavigationFunction(
+        function_type, start_timestamp, planning_output, planning_hmi_info);
   }
 
-  if (scene_type == planning::common::SceneType::HIGHWAY) {
-    planning_success = scc_function_->Plan();
-  } else if (scene_type == planning::common::SceneType::HPP) {
-    planning_success = hpp_function_->Plan();
-  } else {
-    planning_success = scc_function_->Plan();
-  }
-  session_.mutable_planning_context()->mutable_planning_success() =
-      planning_success;
-  if (!planning_success) {
-    LOG_DEBUG("Planning failed !!!! \n");
-    if (!UpdateFailedPlanningResult()) {
-      LOG_DEBUG("RunOnce failed !!!! \n");
-      FillPlanningRequest(iflyauto::REQUEST_LEVEL_MIDDLE, planning_output);
-      return false;
-    }
-  } else {
-    UpdateSuccessfulPlanningResult();
-  }
-  std::cout << "The RunOnce is successed !!!!:" << std::endl;
-  session_.mutable_planning_context()->mutable_last_planning_success() =
-      session_.planning_context().planning_success();
-
-  const auto end_timestamp = IflyTime::Now_ms();
-  const double time_consumption = end_timestamp - start_timestamp;
-  LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
-  JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
-  FillPlanningTrajectory(start_timestamp, planning_output);
-  FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  ClearParkingInfo(planning_output);
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
   LOG_DEBUG("The time cost of RunOnce is: %d\n", (int)frame_duration);
 
@@ -672,6 +612,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
     hpp_info->hpp_state_switch =
         iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
   }
+
+  return;
 }
 
 void PlanningScheduler::FillPlanningRequest(
@@ -940,6 +882,87 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
   }
 
   return true;
+}
+
+const bool PlanningScheduler::ExcuteParkingFunction(
+    const common::SceneType function_type,
+    iflyauto::PlanningOutput *const planning_output) {
+  // 泊车规划部分
+  const auto &state_machine = local_view_->function_state_machine_info;
+  if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
+      state_machine.current_state != iflyauto::FunctionalState_PARK_GUIDANCE) {
+    apa_function_->Reset();
+    ILOG_INFO << "reset parking";
+
+    ResetGLogFile();
+  }
+
+  bool planning_success = apa_function_->Plan();
+
+  // todo: hpp 巡库阶段，不要填充轨迹, 不要覆盖行车轨迹.
+  if (function_type == common::SceneType::PARKING_APA) {
+    *planning_output = session_.planning_context().planning_output();
+  }
+
+  return planning_success;
+}
+
+const bool PlanningScheduler::ExcuteNavigationFunction(
+    const common::SceneType function_type, const double start_timestamp,
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  // 行车规划部分
+  // TODO(xjli32): 功能切换时，reset
+  // ClearParkingInfo(planning_output);
+
+  // sync parameters only if scene_type or dbw_status changes
+  const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
+  if ((function_type != GENERAL_PLANNING_CONTEXT.GetStatemachine().scene_type ||
+       (dbw_status != GENERAL_PLANNING_CONTEXT.GetStatemachine().dbw_status))) {
+    SyncParameters(function_type);
+  }
+  GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
+  GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = function_type;
+
+  // update environment model
+  if (!environmental_model_manager_.Run()) {
+    session_.mutable_planning_context()->Clear();
+    return false;
+  }
+
+  bool planning_success;
+  if (function_type == planning::common::SceneType::HIGHWAY) {
+    planning_success = scc_function_->Plan();
+  } else if (function_type == planning::common::SceneType::HPP) {
+    planning_success = hpp_function_->Plan();
+  } else {
+    planning_success = scc_function_->Plan();
+  }
+  session_.mutable_planning_context()->mutable_planning_success() =
+      planning_success;
+  if (!planning_success) {
+    LOG_DEBUG("Planning failed !!!! \n");
+    if (!UpdateFailedPlanningResult()) {
+      LOG_DEBUG("RunOnce failed !!!! \n");
+      FillPlanningRequest(iflyauto::REQUEST_LEVEL_MIDDLE, planning_output);
+      return false;
+    }
+  } else {
+    UpdateSuccessfulPlanningResult();
+  }
+  std::cout << "The RunOnce is successed !!!!:" << std::endl;
+  session_.mutable_planning_context()->mutable_last_planning_success() =
+      session_.planning_context().planning_success();
+
+  const auto end_timestamp = IflyTime::Now_ms();
+  const double time_consumption = end_timestamp - start_timestamp;
+  LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
+  JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
+  FillPlanningTrajectory(start_timestamp, planning_output);
+  FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  ClearParkingInfo(planning_output);
+
+  return planning_success;
 }
 
 }  // namespace planning

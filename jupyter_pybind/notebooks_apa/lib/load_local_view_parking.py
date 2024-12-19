@@ -1426,13 +1426,16 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     for i in range(len(slot_management_info.slot_info_vec)):
       maganed_slot_vec = slot_management_info.slot_info_vec[i]
       corner_point = maganed_slot_vec.corner_points.corner_point
-      # if maganed_slot_vec.id == select_slot_id:
-      #     target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
-      #     target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
-      #     local_view_data['data_target_managed_slot'].data.update({
-      #       'corner_point_x': target_managed_slot_x_vec,
-      #       'corner_point_y': target_managed_slot_y_vec,
-      #       })
+      if len(maganed_slot_vec.corner_points.corner_point) != 4:
+        continue
+
+      if maganed_slot_vec.id == select_slot_id:
+          target_managed_slot_x_vec = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
+          target_managed_slot_y_vec = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
+          local_view_data['data_target_managed_slot'].data.update({
+            'corner_point_x': target_managed_slot_x_vec,
+            'corner_point_y': target_managed_slot_y_vec,
+            })
           #break
       slot_x = [corner_point[0].x,corner_point[2].x,corner_point[3].x,corner_point[1].x]
       slot_y = [corner_point[0].y,corner_point[2].y,corner_point[3].y,corner_point[1].y]
@@ -2554,7 +2557,6 @@ def load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, d
       while bag_loader.ctrl_debug_msg['abs_t'][ctrl_debug_msg_idx] <= abs_t and ctrl_debug_msg_idx < (len(bag_loader.ctrl_debug_msg['abs_t'])-1):
           ctrl_debug_msg_idx = ctrl_debug_msg_idx + 1
       ctrl_debug_json = bag_loader.ctrl_debug_msg['json'][ctrl_debug_msg_idx]
-      t_debug.append(bag_time)
       controller_status.append(ctrl_debug_json['controller_status'])
       lon_enable.append(ctrl_debug_json['lon_enable'])
       lat_enable.append(ctrl_debug_json['lat_enable'])

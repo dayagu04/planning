@@ -16,6 +16,7 @@
 #include "Eigen/Core"
 
 #include "apa_param_config.h"
+#include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
 #include "camera_preception_groundline_c.h"
@@ -137,7 +138,7 @@ const bool SlotManager::ProcessRawSlot(
   slot_info.Clear();
 
   ILOG_INFO << "id= " << parking_fusion_slot.id
-            << ",release = " << parking_fusion_slot.allow_parking
+            << ",fusion release = " << parking_fusion_slot.allow_parking
             << ",type = " << parking_fusion_slot.resource_type;
 
   if (!SlotInfoTransfer(parking_fusion_slot, slot_info)) {
@@ -169,6 +170,7 @@ const bool SlotManager::ProcessRawSlot(
 
   // do not consider hpp map slot
   if (IsHPPMAPSlot(parking_fusion_slot)) {
+    ILOG_INFO << "hpp map slot ";
     return false;
   }
 
@@ -834,8 +836,6 @@ const double SlotManager::CalAngleSlot2Car(
 }
 
 bool SlotManager::UpdateSlotsInParking() {
-  ILOG_INFO << "apa state is in parking";
-
   size_t select_slot_id = frame_.parking_slot_ptr->select_slot_id;
 
   if (state_machine_ptr_->GetStateMachine() ==
@@ -1612,6 +1612,15 @@ const bool SlotManager::IsReleaseByRuleBased(const uint32_t select_slot_id) {
   }
 
   return false;
+}
+
+const bool SlotManager::IsReleaseByRuleBased() {
+  if (frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace apa_planner

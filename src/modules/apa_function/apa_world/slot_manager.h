@@ -479,6 +479,8 @@ class SlotManager {
 
   const bool IsReleaseByRuleBased(const uint32_t select_slot_id);
 
+  const bool IsReleaseByRuleBased();
+
  private:
   Frame frame_;
 
@@ -529,6 +531,9 @@ class SlotManager {
   const bool ProcessSlantSlot(
       common::SlotInfo& slot_info,
       const iflyauto::ParkingFusionSlot& parking_fusion_slot);
+
+  void Log();
+
 
   void CopySlotReleaseInfo();
 

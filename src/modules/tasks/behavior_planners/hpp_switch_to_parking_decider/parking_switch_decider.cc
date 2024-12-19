@@ -15,7 +15,7 @@ ParkingSwitchDecider::ParkingSwitchDecider(
 
 bool ParkingSwitchDecider::Execute() {
   Clear();
-  
+
   // get distance_to_target_slot
   const EnvironmentalModel &env = session_->environmental_model();
   const auto &current_reference_path =
@@ -63,6 +63,9 @@ bool ParkingSwitchDecider::Execute() {
       parking_switch_info_.is_memory_slot_occupied = true;
     }
   }
+
+  ILOG_INFO << "parking_switch_info_.is_memory_slot_allowed_to_park"
+            << parking_switch_info_.is_memory_slot_allowed_to_park;
 
   auto &parking_switch_decider_output =
       session_->mutable_planning_context()

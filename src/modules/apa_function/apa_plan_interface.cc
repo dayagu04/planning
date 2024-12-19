@@ -59,13 +59,15 @@ void ApaPlanInterface::Reset() {
   return;
 }
 
-const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
+const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
+                                     const PlanningResult *navigation_traj) {
   ILOG_INFO << "\n------------------------ apa_interface: Update() "
                "------------------------";
-  if (local_view_ptr == nullptr) {
+  if (local_view_ptr == nullptr || navigation_traj == nullptr) {
     ILOG_INFO << "\nlocal_view_ptr is nullptr, quit apa";
     return false;
   }
+  navigation_traj_ = navigation_traj;
 
   RecordNodeReceiveTime(local_view_ptr);
 
