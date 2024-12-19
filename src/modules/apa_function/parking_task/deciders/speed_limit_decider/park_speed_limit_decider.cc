@@ -1,6 +1,7 @@
 #include "park_speed_limit_decider.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 
 #include "apa_param_config.h"
@@ -174,6 +175,30 @@ void ParkSpeedLimitDecider::UpdateConfig() {
   obs_dist_for_speed_limit_ = speed_config.obs_dist_for_speed_limit;
 
   return;
+}
+
+const double ParkSpeedLimitDecider::CalcRefSpeedBySpeedLimitDecision(
+    const double ego_v, const double ego_s,
+    const SpeedLimitDecision* decision) {
+  double abs_ego_v = std::fabs(ego_v);
+  if (abs_ego_v < decision->advised_speed) {
+    return decision->advised_speed;
+  }
+
+  double delta_s  = decision->path_s - ego_s;
+
+  // obstacle is over, no need speed limit
+  if (delta_s < 0) {
+    return abs_ego_v;
+  }
+
+  double advised_acc = -0.2;
+  double ref_v = abs_ego_v + advised_acc * 0.1;
+  if (ref_v <= decision->advised_speed) {
+    return decision->advised_speed;
+  }
+
+  return ref_v;
 }
 
 }  // namespace planning

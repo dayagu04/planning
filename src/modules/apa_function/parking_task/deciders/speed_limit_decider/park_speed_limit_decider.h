@@ -21,9 +21,20 @@ class ParkSpeedLimitDecider : public ParkingTask {
                const std::vector<pnc::geometry_lib::PathPoint>& path,
                SpeedDecisions* speed_decisions);
 
+  // Get minimum speed limit decision
   const SpeedLimitDecision* GetSpeedLimitDecisionBySRange(
       const SpeedDecisions* speed_decisions, const double start_s,
       const double end_s) const;
+
+  /**
+   * [input] ego v: maybe negative
+   * todo: temporary strategy
+   * 直接给控制模块发送跳变的参考速度，控制难以处理.
+   * 所以将限速决策增加一个速度平滑.
+   */
+  const double CalcRefSpeedBySpeedLimitDecision(
+      const double ego_v, const double ego_s,
+      const SpeedLimitDecision* decision);
 
  private:
   void AddSpeedLimitDecisions(
