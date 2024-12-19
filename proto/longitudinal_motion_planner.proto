@@ -29,12 +29,12 @@ message LongitudinalPlanningInput {
 
   optional double s_stop = 14;
 
-  optional double q_ref_pos = 15;
-  optional double q_ref_vel = 16;
+  optional double q_ref_pos = 15;  // sref
+  optional double q_ref_vel = 16;  // v3废弃
   optional double q_acc = 17;
   optional double q_jerk = 18;
   optional double q_snap = 19;
-  optional double q_soft_pos_bound = 20;
+  optional double q_soft_pos_bound = 20;  // v3废弃
   optional double q_hard_pos_bound = 21;
   optional double q_vel_bound = 22;
   optional double q_acc_bound = 23;
@@ -54,6 +54,9 @@ message LongitudinalPlanningInput {
   repeated double sv_bound_v_3 = 36;
   repeated double sv_bound_v_4 = 37;
   repeated double sv_bound_v_5 = 38;
+
+  repeated double s_weights = 39;
+  repeated double v_weights = 40;
 }
 
 message LongitudinalPlanningOutput {
@@ -63,4 +66,24 @@ message LongitudinalPlanningOutput {
   repeated double acc_vec = 4;
   repeated double jerk_vec = 5;
   repeated double snap_vec = 6;
+  optional LonSolverInfo solver_info = 7;
+}
+
+message LonSolverIterationInfo {
+  optional bool linesearch_success = 1;
+  optional uint32 backward_pass_count = 2;
+  optional double lambda = 3;
+  optional double cost = 4;
+  optional double dcost = 5;
+  optional double expect = 6;
+  optional double du_norm = 7;
+}
+
+message LonSolverInfo {
+  optional uint32 solver_condition = 1;
+  optional uint32 cost_size = 2;
+  optional uint32 iter_count = 3;
+  optional double init_cost = 4;
+  repeated LonSolverIterationInfo iter_info = 5;
+  repeated double cost_vec = 6;
 }
