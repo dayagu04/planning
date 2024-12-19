@@ -263,7 +263,10 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 
     y_err_ratio = mathlib::Clamp(y_err_ratio, 0.0, 1.0);
   }
-  ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
+  ego_slot_info.slot_occupied_ratio =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoSlotInfo().slot_occupied_ratio;
+  ILOG_INFO << "ego_slot_info.slot_occupied_ratio in slm = "
+            << ego_slot_info.slot_occupied_ratio;
 
   ILOG_INFO << "obs size in UpdateEgoSlotInfo before UpdateObstacleLocal = "
             << ego_slot_info.obs_pt_vec_slot.size();
@@ -337,7 +340,7 @@ const bool ParallelParkOutScenario::CheckFinished() {
             << std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg);
 
   return frame_.ego_slot_info.slot_occupied_ratio < 0.1 &&
-         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 3.0;
+         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 10.0;
 }
 
 void ParallelParkOutScenario::GenTlane() {
