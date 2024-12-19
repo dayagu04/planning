@@ -938,24 +938,24 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
   if (avd_obstacles.size() == 2) {
     if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
       if (avd_obstacles_[0].track_id == avd_obstacles[0].track_id) {
-        avd_obstacles[0].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
+        avd_obstacles[0].first_s_to_ego = std::max(avd_obstacles[0].first_s_to_ego, avd_obstacles_[0].first_s_to_ego);
         avd_obstacles[0].is_passive = avd_obstacles_[0].is_passive;
         TempHack(session_, avd_obstacles_[0], avd_obstacles[0]);
         avd_obstacles_[0] = avd_obstacles[0];
       } else if (avd_obstacles_[0].track_id == avd_obstacles[1].track_id) {
-        avd_obstacles[1].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
+        avd_obstacles[1].first_s_to_ego = std::max(avd_obstacles[1].first_s_to_ego, avd_obstacles_[0].first_s_to_ego);
         avd_obstacles[1].is_passive = avd_obstacles_[0].is_passive;
         TempHack(session_, avd_obstacles_[0], avd_obstacles[1]);
         avd_obstacles_[0] = avd_obstacles[1];
       }
       if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
         if (avd_obstacles_[1].track_id == avd_obstacles[0].track_id) {
-          avd_obstacles[0].first_s_to_ego = avd_obstacles_[1].first_s_to_ego;
+          avd_obstacles[0].first_s_to_ego = std::max(avd_obstacles[0].first_s_to_ego, avd_obstacles_[1].first_s_to_ego);
           avd_obstacles[0].is_passive = avd_obstacles_[1].is_passive;
           TempHack(session_, avd_obstacles_[1], avd_obstacles[0]);
           avd_obstacles_[1] = avd_obstacles[0];
         } else if (avd_obstacles_[1].track_id == avd_obstacles[1].track_id) {
-          avd_obstacles[1].first_s_to_ego = avd_obstacles_[1].first_s_to_ego;
+          avd_obstacles[1].first_s_to_ego = std::max(avd_obstacles[1].first_s_to_ego, avd_obstacles_[1].first_s_to_ego);
           avd_obstacles[1].is_passive = avd_obstacles_[1].is_passive;
           TempHack(session_, avd_obstacles_[1], avd_obstacles[1]);
           avd_obstacles_[1] = avd_obstacles[1];
@@ -965,14 +965,14 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
   } else if (avd_obstacles.size() == 1) {
     if (avd_obstacles_[0].flag != AvoidObstacleFlag::INVALID) {
       if (avd_obstacles[0].track_id == avd_obstacles_[0].track_id) {
-        avd_obstacles[0].first_s_to_ego = avd_obstacles_[0].first_s_to_ego;
+        avd_obstacles[0].first_s_to_ego = std::max(avd_obstacles[0].first_s_to_ego, avd_obstacles_[0].first_s_to_ego);
         avd_obstacles[0].is_passive = avd_obstacles_[0].is_passive;
         TempHack(session_, avd_obstacles_[0], avd_obstacles[0]);
         avd_obstacles_[0] = avd_obstacles[0];
       } else {
         if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
           if (avd_obstacles[0].track_id == avd_obstacles_[1].track_id) {
-            avd_obstacles[0].first_s_to_ego = avd_obstacles_[1].first_s_to_ego;
+            avd_obstacles[0].first_s_to_ego = std::max(avd_obstacles[0].first_s_to_ego, avd_obstacles_[1].first_s_to_ego);
             avd_obstacles[0].is_passive = avd_obstacles_[1].is_passive;
             TempHack(session_, avd_obstacles_[1], avd_obstacles[0]);
             avd_obstacles_[1] = avd_obstacles[0];
