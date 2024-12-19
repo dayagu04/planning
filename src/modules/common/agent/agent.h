@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 
 #include "agent_decision.h"
 #include "math/box2d.h"
@@ -182,6 +183,12 @@ class Agent {
   const bool is_tfl_virtual_obs() const;
   void set_is_tfl_virtual_obs(bool is_tfl_virtual_obs);
 
+  const double d_path() const;
+  void set_d_path(double d_path);
+
+  const double d_rel() const;
+  void set_d_rel(double d_rel);
+
   ~Agent() = default;
 
  private:
@@ -202,6 +209,9 @@ class Agent {
   double speed_ = 0.0;
   double accel_ = 0.0;
   planning_math::Box2d box_;
+
+  double d_path_ = std::numeric_limits<double>::max();
+  double d_rel_ = std::numeric_limits<double>::max();
 
   std::vector<trajectory::Trajectory> trajectories_;
   // std::vector<trajectory::Trajectory> trajectories_used_by_st_graph_;
