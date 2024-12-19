@@ -117,4 +117,5 @@ message PlanningDebugInfo {
   optional TargetMaker lon_target_s_ref = 33;
   optional LaneBorrowDeciderInfo lane_borrow_decider_info = 34;
   optional ApaSpeedDebug apa_speed_debug = 35;
+  optional WeightMaker weight_maker = 36;
 }
