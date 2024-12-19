@@ -591,12 +591,28 @@ bool StGraphGenerator::CalcSpeedInfoWithTempLead(
         right_front_node->node_agent_id() == temp_lead_one.track_id() ? true
                                                                       : false;
   }
+  // Hack: if the cone bucket emergency lane change is triggered
+  // set lead_confidence_thrshld = 1;
+  bool is_in_cone_emergency_lc = false;
+  bool is_tlead_too_close = false;
+  const auto lc_request = session_->planning_context()
+                              .lane_change_decider_output()
+                              .lc_request_source;
+  if (lc_request == CONE_REQUEST &&
+      temp_lead_one.type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+    is_in_cone_emergency_lc = true;
+  }
+
+  double tlead_d_path =
+      temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3);
+  is_tlead_too_close =
+      is_in_cone_emergency_lc ? tlead_d_path < 1.2 : tlead_d_path < 1.0;
+
   // temp leadone
   if (temp_lead_one.track_id() != 0 && !lateral_outputs.close_to_accident() &&
-      (temp_lead_one.d_path_self() + std::min(temp_lead_one.v_lat(), 0.3)) <
-          1.0 &&
+      is_tlead_too_close &&
       !is_reverse_obs_in_large_curv && !is_far_obs_in_large_curv &&
-      is_left_right_front_agent &&
+      (is_left_right_front_agent || is_in_cone_emergency_lc) &&
       temp_lead_one.type() != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
               temp_lead_one.track_id(), temp_lead_one.d_rel(),

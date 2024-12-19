@@ -695,7 +695,7 @@ void TrackletMaintainer::calc(
       session_->environmental_model().highway_config_builder();
   PotentialAvoidDeciderConfig config =
       config_builder->cast<PotentialAvoidDeciderConfig>();
-  double expand_vel = 
+  double expand_vel =
       interp(ego_state_->ego_v(), config.expand_ego_vel,
              config.expand_obs_rel_vel);
   for (auto tr : tracked_objects) {
@@ -1644,6 +1644,15 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   std::array<double, 5> fp4{1, 1, 2, 5, 5};
   double lead_confidence_thrshld = 1.0;
   lead_confidence_thrshld = interp(item.d_rel, xp4, fp4);
+  // Hack: if the cone bucket emergency lane change is triggered
+  // set lead_confidence_thrshld = 1;
+  const auto lc_request = session_->planning_context()
+                              .lane_change_decider_output()
+                              .lc_request_source;
+  if (lc_request == CONE_REQUEST &&
+      item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+    lead_confidence_thrshld = 1.0;
+  }
   LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
   item.is_lead = item.leadone_confidence_cnt >=
                  lead_confidence_thrshld * planning_cycle_time;
@@ -1863,6 +1872,16 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     std::array<double, 5> xp4{0, 30, 60, 90, 120};
     std::array<double, 5> fp4{1, 1, 1, 10, 50};
     double lead_confidence_time = interp(item.d_rel, xp4, fp4);
+
+    // Hack: if the cone bucket emergency lane change is triggered
+    // set lead_confidence_thrshld = 1;
+    const auto lc_request = session_->planning_context()
+                                .lane_change_decider_output()
+                                .lc_request_source;
+    if (lc_request == CONE_REQUEST &&
+        item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      lead_confidence_time = 1.0;
+    }
 
     item.is_temp_lead = item.tleadone_confidence_cnt >=
                         lead_confidence_time * planning_cycle_time;
