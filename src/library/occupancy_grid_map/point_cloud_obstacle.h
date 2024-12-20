@@ -5,7 +5,7 @@
 #include "./../../modules/common/local_view.h"
 #include "./../convex_collision_detection/aabb2d.h"
 #include "./../convex_collision_detection/polygon_base.h"
-#include "library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
 #include "src/modules/apa_function/apa_world/apa_obstacle.h"

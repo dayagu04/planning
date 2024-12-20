@@ -661,11 +661,11 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().target_radius_err, double,
                   "target_radius_err");
 
-  JSON_READ_VALUE(apa_param.SetPram().perpendicular_park_out_max_target_heading, double,
-                  "target_heading_max");
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_park_out_max_target_heading,
+                  double, "target_heading_max");
 
-  JSON_READ_VALUE(apa_param.SetPram().perpendicular_park_out_min_target_heading, double,
-                  "target_heading_min");
+  JSON_READ_VALUE(apa_param.SetPram().perpendicular_park_out_min_target_heading,
+                  double, "target_heading_min");
 
   JSON_READ_VALUE(apa_param.SetPram().path_extend_distance, double,
                   "path_extend_distance");
@@ -747,6 +747,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(apa_param.SetPram().max_limiter_window_size, int,
                   "max_limiter_window_size");
+
+  JSON_READ_VALUE(apa_param.SetPram().slot_release_car_lat_buffer, double,
+                  "slot_release_car_lat_buffer");
 
   // slot update
   JSON_READ_VALUE(apa_param.SetPram().slot_update_in_or_out_occupied_ratio,
@@ -845,31 +848,27 @@ void SyncParkingParameters(const bool is_simulation) {
       apa_param.SetPram().astar_config.perpendicular_slot_auto_switch_to_astar,
       bool, "perpendicular_slot_auto_switch_to_astar");
   JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.parallel_slot_auto_switch_to_astar,
-      bool, "parallel_slot_auto_switch_to_astar");
+      apa_param.SetPram().astar_config.parallel_slot_auto_switch_to_astar, bool,
+      "parallel_slot_auto_switch_to_astar");
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.parallel_slot_end_straight_dist, double,
       "parallel_slot_end_straight_dist");
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.cubic_polynomial_pose_adjustment, bool,
       "cubic_polynomial_pose_adjustment");
-  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_finish_lon_err, double,
-                  "astar_parallel_finish_lon_err");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_finish_lon_err,
+                  double, "astar_parallel_finish_lon_err");
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.parallel_finish_center_lat_err, double,
       "astar_parallel_finish_center_lat_err");
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.parallel_finish_head_lat_err, double,
-      "astar_parallel_finish_head_lat_err");
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.parallel_finish_heading_err, double,
-      "astar_parallel_finish_heading_err");
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.enable_delete_occ_in_slot, bool,
-      "enable_delete_occ_in_slot");
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.enable_delete_occ_in_ego, bool,
-      "enable_delete_occ_in_ego");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_finish_head_lat_err,
+                  double, "astar_parallel_finish_head_lat_err");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.parallel_finish_heading_err,
+                  double, "astar_parallel_finish_heading_err");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.enable_delete_occ_in_slot,
+                  bool, "enable_delete_occ_in_slot");
+  JSON_READ_VALUE(apa_param.SetPram().astar_config.enable_delete_occ_in_ego,
+                  bool, "enable_delete_occ_in_ego");
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
       double, "deadend_uss_stuck_replan_wait_time");

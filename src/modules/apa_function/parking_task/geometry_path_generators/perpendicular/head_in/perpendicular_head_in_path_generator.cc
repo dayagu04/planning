@@ -1607,7 +1607,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiPlan() {
   }
 
   ILOG_INFO << "try multi plan to target point";
-  Output multi_output;
+  GeometryPathOutput multi_output;
   bool success = false;
   calc_params_.multi_plan = true;
   double turn_radius =
@@ -1782,7 +1782,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     return false;
   }
   // TODO: judge two arc if available
-  Output plan_output;
+  GeometryPathOutput plan_output;
   double reverse_line_length = 0.2;
   Eigen::Vector2d intersection;
   pnc::geometry_lib::LineSegment current_line_seg;

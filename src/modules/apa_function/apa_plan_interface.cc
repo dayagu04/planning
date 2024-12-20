@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "apa_data.h"
+
 #include "apa_param_config.h"
 #include "apa_world.h"
 #include "common/config_context.h"
@@ -70,7 +70,6 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
   const double start_timestamp_ms = IflyTime::Now_ms();
 
   // run apa world, always run when enter apa
-  ILOG_INFO << "---- apa_world: Update() ---";
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // run planner
@@ -96,8 +95,11 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr) {
 void ApaPlanInterface::AddReleasedSlotInfo(
     iflyauto::PlanningOutput &planning_output) {
   planning_output.successful_slot_info_list_size = 0;
-  const std::vector<int> &release_slot_id_vec =
-      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
+
+  apa_world_ptr_->GetNewSlotManagerPtr()->GenerateReleaseSlotIdVec();
+
+  const std::vector<size_t> &release_slot_id_vec =
+      apa_world_ptr_->GetNewSlotManagerPtr()->GetReleaseSlotIdVec();
 
   std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {

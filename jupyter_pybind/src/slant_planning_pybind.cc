@@ -10,32 +10,33 @@
 
 #include "Eigen/Core"
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
 #include "config_context.h"
+#include "geometry_path_generator.h"
 #include "math_lib.h"
 #include "perpendicular_tail_in_path_generator.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
 
 static planning::apa_planner::PerpendicularTailInPathGenerator *pBase = nullptr;
-static planning::apa_planner::ApaPlanInterface*pApaPlanInterface= nullptr;
+static planning::apa_planner::ApaPlanInterface *pApaPlanInterface = nullptr;
 
 int Init() {
   // const std::string flag_file_path =
   //     "/asw/planning/res/conf/planning_gflags.conf";
   // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
 
-  planning::FilePath::SetName("slant_simulation_pybind");
+  planning::FilePath::SetName("perpendicular_slant_simulation_pybind");
   planning::InitGlog(planning::FilePath::GetName().c_str());
   (void)planning::common::ConfigurationContext::Instance();
 
   pBase = new PerpendicularTailInPathGenerator();
   pBase->Reset();
 
-  pApaPlanInterface= new planning::apa_planner::ApaPlanInterface();
+  pApaPlanInterface = new planning::apa_planner::ApaPlanInterface();
 
   pApaPlanInterface->Init(true);
 
@@ -437,7 +438,6 @@ std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
     pt_inside = obj_pt_1;
   }
   slot_t_lane.pt_inside.x() = ego_slot_info.g2l_tf.GetPos(pt_inside).x();
-  input.is_simulation = is_astar;
   input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
   input.tlane = slot_t_lane;
   input.is_complete_path = is_complete_path;
@@ -453,11 +453,8 @@ std::vector<Eigen::Vector4d> Update(Eigen::Vector3d ego_pose,
   pt_inside_pose_ = ego_slot_info.l2g_tf.GetPos(slot_t_lane.pt_inside);
 
   bool success = false;
-  if (is_itervative_solu) {
-    success = pBase->ItervativeUpdatePb(input, collision_detector_ptr);
-  } else {
-    success = pBase->UpdatePb(input, collision_detector_ptr);
-  }
+  planning::apa_planner::GeometryPathInput ginput;
+  success = pBase->ItervativeUpdatePb(ginput, collision_detector_ptr);
 
   current_path_point_global_vec_.clear();
 

@@ -116,7 +116,7 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
     return false;
   }
 
-  if (input_.is_complete_path == true) {
+  if (input_.is_complete_path || ginput_.is_complete_path) {
     // for simulation
     output_.path_seg_index.first = 0;
     output_.path_seg_index.second = output_.gear_cmd_vec.size() - 1;
@@ -132,8 +132,8 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
     length += output_.path_segment_vec[i].Getlength();
     cur_gear_path_segment_vec.emplace_back(output_.path_segment_vec[i]);
   }
-  size_t N = std::ceil(length / input_.sample_ds);
-  double sample_ds = input_.sample_ds;
+  double sample_ds = std::max(input_.sample_ds, ginput_.sample_ds);
+  size_t N = std::ceil(length / sample_ds);
   const size_t max_seg_count = 7;
   if (N >= PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count) {
     N = PLANNING_TRAJ_POINTS_NUM - 26 - max_seg_count;
@@ -142,28 +142,19 @@ const bool GeometryPathGenerator::SampleCurrentPathSeg() {
   output_.actual_ds = sample_ds;
   output_.cur_gear_length = length;
 
-  // for (size_t i = output_.path_seg_index.first;
-  //      i <= output_.path_seg_index.second; ++i) {
-  //   const auto& current_seg = output_.path_segment_vec[i];
-
-  //   if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-  //     SampleLineSegment(current_seg.line_seg, sample_ds);
-  //   } else {
-  //     SampleArcSegment(current_seg.arc_seg, sample_ds);
-  //   }
-  //   if (i < output_.path_seg_index.second) {
-  //     output_.path_point_vec.pop_back();
-  //   }
-  // }
-
   output_.all_gear_path_point_vec =
       pnc::geometry_lib::SamplePathSegVec(output_.path_segment_vec, sample_ds);
 
-  for (size_t i = output_.path_seg_index.first;
-       i <= output_.path_seg_index.second; ++i) {
-  }
   output_.path_point_vec =
       pnc::geometry_lib::SamplePathSegVec(cur_gear_path_segment_vec, sample_ds);
+
+  for (size_t i = 0; i < output_.path_point_vec.size(); ++i) {
+    output_.path_point_vec[i].s = sample_ds * i;
+  }
+
+  for (size_t i = 0; i < output_.all_gear_path_point_vec.size(); ++i) {
+    output_.all_gear_path_point_vec[i].s = sample_ds * i;
+  }
 
   JSON_DEBUG_VALUE("current_gear_length", length);
   JSON_DEBUG_VALUE("current_gear_pt_size", output_.path_point_vec.size());

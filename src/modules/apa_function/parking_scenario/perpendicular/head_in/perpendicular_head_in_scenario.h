@@ -19,8 +19,8 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
 
  private:
   void ExcutePathPlanningTask() override;
-  void GenTlane() override;
-  void GenObstacles() override;
+  const bool GenTlane() override;
+  const bool GenObstacles() override;
   virtual void Log() const override;
   const bool UpdateEgoSlotInfo() override;
   const uint8_t PathPlanOnce() override;

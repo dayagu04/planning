@@ -15,6 +15,8 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
     return;
   }
 
+  ILOG_INFO << "Update ApaMeasureDataManager";
+
   const iflyauto::IFLYLocalization& localization_info =
       local_view_ptr->localization;
 

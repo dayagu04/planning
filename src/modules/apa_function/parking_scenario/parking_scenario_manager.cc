@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "apa_data.h"
+
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -25,6 +25,54 @@
 
 namespace planning {
 namespace apa_planner {
+
+void PrintApaScenarioType(const ParkingScenarioType scenario_type) {
+  ILOG_INFO << "scenario_type = " << GetApaScenarioTypeString(scenario_type);
+}
+
+const std::string GetApaScenarioTypeString(
+    const ParkingScenarioType scenario_type) {
+  std::string type;
+  switch (scenario_type) {
+    case ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN:
+      type = "SCENARIO_PERPENDICULAR_TAIL_IN";
+      break;
+    case ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_OUT:
+      type = "SCENARIO_PERPENDICULAR_TAIL_OUT";
+      break;
+    case ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN:
+      type = "SCENARIO_PERPENDICULAR_HEAD_IN";
+      break;
+    case ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT:
+      type = "SCENARIO_PERPENDICULAR_HEAD_OUT";
+      break;
+    case ParkingScenarioType::SCENARIO_SLANT_TAIL_IN:
+      type = "SCENARIO_SLANT_TAIL_IN";
+      break;
+    case ParkingScenarioType::SCENARIO_SLANT_TAIL_OUT:
+      type = "SCENARIO_SLANT_TAIL_OUT";
+      break;
+    case ParkingScenarioType::SCENARIO_SLANT_HEAD_IN:
+      type = "SCENARIO_SLANT_HEAD_IN";
+      break;
+    case ParkingScenarioType::SCENARIO_SLANT_HEAD_OUT:
+      type = "SCENARIO_SLANT_HEAD_OUT";
+      break;
+    case ParkingScenarioType::SCENARIO_PARALLEL_IN:
+      type = "SCENARIO_PARALLEL_IN";
+      break;
+    case ParkingScenarioType::SCENARIO_PARALLEL_OUT:
+      type = "SCENARIO_PARALLEL_OUT";
+      break;
+    case ParkingScenarioType::SCENARIO_NARROW_SPACE:
+      type = "SCENARIO_NARROW_SPACE";
+      break;
+    default:
+      type = "SCENARIO_UNKNOWN";
+      break;
+  }
+  return type;
+}
 
 bool ParkingScenarioManager::Init(
     const std::shared_ptr<apa_planner::ApaWorld> &apa_world) {
@@ -71,10 +119,12 @@ void ParkingScenarioManager::Excute() {
   const auto &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
+  const auto &ego_info_under_slot =
+      apa_world_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
-    if (apa_world_->GetApaDataPtr()->slot_type ==
-        Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
@@ -86,11 +136,9 @@ void ParkingScenarioManager::Excute() {
         // only use astar
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
-    } else if (apa_world_->GetApaDataPtr()->slot_type ==
-               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_SLANT_TAIL_IN;
-    } else if (apa_world_->GetApaDataPtr()->slot_type ==
-               Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_IN;
@@ -100,8 +148,7 @@ void ParkingScenarioManager::Excute() {
     }
   } else if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    if (apa_world_->GetApaDataPtr()->slot_type ==
-        Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
 
       if (apa_param.GetParam().path_generator_type ==
@@ -112,8 +159,7 @@ void ParkingScenarioManager::Excute() {
   } else if (cur_state == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
-    if (apa_world_->GetApaDataPtr()->slot_type ==
-        Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
     }
   }
@@ -125,6 +171,9 @@ void ParkingScenarioManager::Excute() {
   }
 
   current_scenario_ = GetScenarioByType(scenario_type_);
+
+  PrintApaScenarioType(scenario_type_);
+  PrintApaScenarioStatus(scenario_status_);
 }
 
 void ParkingScenarioManager::Process() {
@@ -182,10 +231,21 @@ void ParkingScenarioManager::ScenarioTry() {
   const auto &cur_state =
       apa_world_->GetStateMachineManagerPtr()->GetStateMachine();
 
+  const auto &ego_info_under_slot =
+      apa_world_->GetNewSlotManagerPtr()->ego_info_under_slot_;
+
+  ILOG_INFO << "GEOMETRY_PLANNING_RELEASE = "
+            << (ego_info_under_slot.slot.release_info_
+                    .release_state[GEOMETRY_PLANNING_RELEASE] ==
+                SlotReleaseState::RELEASE)
+            << "  ASTAR_PLANNING_RELEASE = "
+            << (ego_info_under_slot.slot.release_info_
+                    .release_state[ASTAR_PLANNING_RELEASE] ==
+                SlotReleaseState::RELEASE);
+
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     // 车尾泊入功能
-    if (apa_world_->GetApaDataPtr()->slot_type ==
-        Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       std::shared_ptr<ParkingScenario> temp_narrow_scenario =
           scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
 
@@ -197,9 +257,8 @@ void ParkingScenarioManager::ScenarioTry() {
         temp_geometry_scenario->ScenarioTry();
       }
 
-      if (apa_world_->GetSlotManagerPtr()
-              ->GetEgoSlotInfo()
-              .release_info.release_state[GEOMETRY_PLANNING_RELEASE] ==
+      if (ego_info_under_slot.slot.release_info_
+              .release_state[GEOMETRY_PLANNING_RELEASE] ==
           SlotReleaseState::RELEASE) {
         ILOG_INFO << "scenario geometry path try success, clear astar";
 
@@ -209,30 +268,39 @@ void ParkingScenarioManager::ScenarioTry() {
         ILOG_INFO << "scenario geometry path try fail, try astar";
         temp_narrow_scenario->ScenarioTry();
       }
-    } else if (apa_world_->GetApaDataPtr()->slot_type ==
-               Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
+    } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
       // todo: 看是否要A星介入
       current_scenario_->ScenarioTry();
     } else {
       // todo: 平行车位
+      current_scenario_->ScenarioTry();
     }
   } else {
     // todo: 其他功能
+    current_scenario_->ScenarioTry();
   }
 
+  ILOG_INFO << "GEOMETRY_PLANNING_RELEASE = "
+            << (ego_info_under_slot.slot.release_info_
+                    .release_state[GEOMETRY_PLANNING_RELEASE] ==
+                SlotReleaseState::RELEASE)
+            << "  ASTAR_PLANNING_RELEASE = "
+            << (ego_info_under_slot.slot.release_info_
+                    .release_state[ASTAR_PLANNING_RELEASE] ==
+                SlotReleaseState::RELEASE);
   return;
 }
 
 const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
   SlotReleaseState astar_path_release =
-      apa_world_->GetSlotManagerPtr()
-          ->GetEgoSlotInfo()
-          .release_info.release_state[ASTAR_PLANNING_RELEASE];
+      apa_world_->GetNewSlotManagerPtr()
+          ->ego_info_under_slot_.slot.release_info_
+          .release_state[ASTAR_PLANNING_RELEASE];
 
   SlotReleaseState geometry_path_release =
-      apa_world_->GetSlotManagerPtr()
-          ->GetEgoSlotInfo()
-          .release_info.release_state[GEOMETRY_PLANNING_RELEASE];
+      apa_world_->GetNewSlotManagerPtr()
+          ->ego_info_under_slot_.slot.release_info_
+          .release_state[GEOMETRY_PLANNING_RELEASE];
 
   if (planning_output_.planning_status.apa_planning_status ==
       iflyauto::APA_IN_PROGRESS) {
@@ -242,20 +310,11 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
 
   if (geometry_path_release == SlotReleaseState::NOT_RELEASE &&
       astar_path_release == SlotReleaseState::RELEASE) {
+    ILOG_INFO << "use astar plan";
     return true;
   }
+  ILOG_INFO << "use geometry plan";
   return false;
-
-  // switch (astar_path_release) {
-  //   case SlotReleaseState::RELEASE:
-  //     return true;
-  //   case SlotReleaseState::UNKOWN:
-  //   case SlotReleaseState::NOT_RELEASE:
-  //   default:
-  //     break;
-  // }
-
-  // return false;
 }
 
 }  // namespace apa_planner

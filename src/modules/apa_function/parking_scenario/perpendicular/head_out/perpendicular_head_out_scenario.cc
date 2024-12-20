@@ -36,10 +36,11 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
   InitSimulation();
 
   // check planning status
-  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan &&
-      CheckPlanSkip()) {
+  if (CheckPlanSkip()) {
     return;
   }
+
+  UpdateStuckTime();
 
   if (CheckPaused()) {
     SetParkingStatus(PARKING_PAUSED);
@@ -84,7 +85,7 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
   }
 
   // check replan
-  if (apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan || CheckReplan()) {
+  if (apa_world_ptr_->GetSimuParam().force_plan || CheckReplan()) {
     ILOG_INFO << "replan is required!";
 
     frame_.replan_flag = true;
@@ -175,14 +176,12 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     std::vector<Eigen::Vector2d> pt;
     pt.resize(4);
     for (size_t i = 0; i < 4; ++i) {
-      if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
-          apa_world_ptr_->GetApaDataPtr()
-                  ->simu_param.target_managed_slot_x_vec.size() == 4 &&
-          apa_world_ptr_->GetApaDataPtr()->simu_param.use_slot_in_bag) {
-        pt[i] << apa_world_ptr_->GetApaDataPtr()
-                     ->simu_param.target_managed_slot_x_vec[i],
-            apa_world_ptr_->GetApaDataPtr()
-                ->simu_param.target_managed_slot_y_vec[i];
+      if (apa_world_ptr_->GetSimuParam().is_simulation &&
+          apa_world_ptr_->GetSimuParam().target_managed_slot_x_vec.size() ==
+              4 &&
+          apa_world_ptr_->GetSimuParam().use_slot_in_bag) {
+        pt[i] << apa_world_ptr_->GetSimuParam().target_managed_slot_x_vec[i],
+            apa_world_ptr_->GetSimuParam().target_managed_slot_y_vec[i];
       } else {
         if (slot_points.size() > 0) {
           pt[i] << slot_points[i].x(), slot_points[i].y();
@@ -327,34 +326,6 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
     // ...
   }
 
-  // update stuck by uss time
-  if (frame_.plan_stm.planning_status == PARKING_RUNNING &&
-      measures_ptr->GetStaticFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
-    frame_.stuck_uss_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.stuck_uss_time = 0.0;
-  }
-
-  // update stuck time
-  if ((frame_.plan_stm.planning_status == PARKING_RUNNING ||
-       frame_.plan_stm.planning_status == PARKING_PLANNING) &&
-      measures_ptr->GetStaticFlag() &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ACTIVE_OUT_CAR_FRONT) {
-    frame_.stuck_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.stuck_time = 0.0;
-  }
-
-  // update pause time
-  if (frame_.plan_stm.planning_status == PARKING_PAUSED) {
-    frame_.pause_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.pause_time = 0.0;
-  }
-
   // fix slot
   if (ego_slot_info.slot_occupied_ratio >
           apa_param.GetParam().fix_slot_occupied_ratio &&
@@ -370,7 +341,7 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
   return true;
 }
 
-void PerpendicularHeadOutScenario::GenTlane() {
+const bool PerpendicularHeadOutScenario::GenTlane() {
   using namespace pnc::geometry_lib;
   EgoSlotInfo& ego_slot_info = frame_.ego_slot_info;
 
@@ -794,9 +765,11 @@ void PerpendicularHeadOutScenario::GenTlane() {
   JSON_DEBUG_VECTOR("col_det_path_x", x_vec, 2)
   JSON_DEBUG_VECTOR("col_det_path_y", y_vec, 2)
   JSON_DEBUG_VECTOR("col_det_path_phi", phi_vec, 2)
+
+  return true;
 }
 
-void PerpendicularHeadOutScenario::GenObstacles() {
+const bool PerpendicularHeadOutScenario::GenObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   // set obstacles
   double channel_width = frame_.ego_slot_info.channel_width;
@@ -898,19 +871,19 @@ void PerpendicularHeadOutScenario::GenObstacles() {
   ego_pose.Set(frame_.ego_slot_info.ego_pos_slot,
                frame_.ego_slot_info.ego_heading_slot);
 
-  // if (apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation &&
-  //     apa_world_ptr_->GetApaDataPtr()->simu_param.use_obs_in_bag &&
-  //     apa_world_ptr_->GetApaDataPtr()->simu_param.obs_x_vec.size() > 0) {
+  // if (apa_world_ptr_->GetSimuParam().is_simulation &&
+  //     apa_world_ptr_->GetSimuParam().use_obs_in_bag &&
+  //     apa_world_ptr_->GetSimuParam().obs_x_vec.size() > 0) {
   //   std::vector<Eigen::Vector2d> obs_vec;
   //   obs_vec.reserve(
-  //       apa_world_ptr_->GetApaDataPtr()->simu_param.obs_x_vec.size());
+  //       apa_world_ptr_->GetSimuParam().obs_x_vec.size());
   //   Eigen::Vector2d obs;
   //   for (size_t i = 0;
-  //        i < apa_world_ptr_->GetApaDataPtr()->simu_param.obs_x_vec.size();
+  //        i < apa_world_ptr_->GetSimuParam().obs_x_vec.size();
   //        ++i) {
   //     obs = ego_slot_info.g2l_tf.GetPos(Eigen::Vector2d(
-  //         apa_world_ptr_->GetApaDataPtr()->simu_param.obs_x_vec[i],
-  //         apa_world_ptr_->GetApaDataPtr()->simu_param.obs_y_vec[i]));
+  //         apa_world_ptr_->GetSimuParam().obs_x_vec[i],
+  //         apa_world_ptr_->GetSimuParam().obs_y_vec[i]));
   //     obs_vec.emplace_back(obs);
   //   }
   //   apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
@@ -1041,6 +1014,7 @@ void PerpendicularHeadOutScenario::GenObstacles() {
     apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(
         fus_obs_vec, CollisionDetector::FUSION_OBS);
   }
+  return true;
 }
 
 const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
@@ -1048,8 +1022,6 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   // construct input
   const auto& ego_slot_info = frame_.ego_slot_info;
   PerpendicularTailInPathGenerator::Input path_planner_input;
-  path_planner_input.is_simulation =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation;
   path_planner_input.pt_0 = ego_slot_info.pt_0;
   path_planner_input.pt_1 = ego_slot_info.pt_1;
   path_planner_input.sin_angle = ego_slot_info.sin_angle;
@@ -1057,9 +1029,8 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   // path_planner_input.slot_occupied_ratio = ego_slot_info.slot_occupied_ratio;
   path_planner_input.tlane = slot_t_lane_;
   path_planner_input.is_complete_path =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.is_complete_path;
-  path_planner_input.sample_ds =
-      apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
+      apa_world_ptr_->GetSimuParam().is_complete_path;
+  path_planner_input.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
   path_planner_input.ref_arc_steer = frame_.current_arc_steer;
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.is_replan_first = frame_.is_replan_first;
@@ -1076,8 +1047,7 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
           apa_world_ptr_->GetCollisionDetectorPtr());
 
   uint8_t plan_result = 0;
-  if (!path_plan_success &&
-      !apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
+  if (!path_plan_success && !apa_world_ptr_->GetSimuParam().is_simulation) {
     ILOG_INFO << "path plan fail";
     plan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = PATH_PLAN_FAILED;
@@ -1210,7 +1180,7 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
   bool cilqr_optimization_enable = true;
   bool perpendicular_optimization_enable = true;
 
-  if (!apa_world_ptr_->GetApaDataPtr()->simu_param.is_simulation) {
+  if (!apa_world_ptr_->GetSimuParam().is_simulation) {
     perpendicular_optimization_enable =
         apa_param.GetParam().perpendicular_lat_opt_enable;
 
@@ -1219,9 +1189,9 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
 
   } else {
     perpendicular_optimization_enable =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.is_path_optimization;
+        apa_world_ptr_->GetSimuParam().is_path_optimization;
     cilqr_optimization_enable =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.is_cilqr_optimization;
+        apa_world_ptr_->GetSimuParam().is_cilqr_optimization;
   }
 
   double lat_path_opt_cost_time_ms = 0.0;
@@ -1233,17 +1203,15 @@ const uint8_t PerpendicularHeadOutScenario::PathPlanOnce() {
     ILOG_INFO << "origin path size= " << planner_output.path_point_vec.size();
 
     LateralPathOptimizer::Parameter param;
-    param.sample_ds = apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
-    param.q_ref_xy = apa_world_ptr_->GetApaDataPtr()->simu_param.q_ref_xy;
-    param.q_ref_theta = apa_world_ptr_->GetApaDataPtr()->simu_param.q_ref_theta;
-    param.q_terminal_xy =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.q_terminal_xy;
-    param.q_terminal_theta =
-        apa_world_ptr_->GetApaDataPtr()->simu_param.q_terminal_theta;
-    param.q_k = apa_world_ptr_->GetApaDataPtr()->simu_param.q_k;
-    param.q_u = apa_world_ptr_->GetApaDataPtr()->simu_param.q_u;
-    param.q_k_bound = apa_world_ptr_->GetApaDataPtr()->simu_param.q_k_bound;
-    param.q_u_bound = apa_world_ptr_->GetApaDataPtr()->simu_param.q_u_bound;
+    param.sample_ds = apa_world_ptr_->GetSimuParam().sample_ds;
+    param.q_ref_xy = apa_world_ptr_->GetSimuParam().q_ref_xy;
+    param.q_ref_theta = apa_world_ptr_->GetSimuParam().q_ref_theta;
+    param.q_terminal_xy = apa_world_ptr_->GetSimuParam().q_terminal_xy;
+    param.q_terminal_theta = apa_world_ptr_->GetSimuParam().q_terminal_theta;
+    param.q_k = apa_world_ptr_->GetSimuParam().q_k;
+    param.q_u = apa_world_ptr_->GetSimuParam().q_u;
+    param.q_k_bound = apa_world_ptr_->GetSimuParam().q_k_bound;
+    param.q_u_bound = apa_world_ptr_->GetSimuParam().q_u_bound;
 
     apa_world_ptr_->GetLateralPathOptimizerPtr()->Init(
         cilqr_optimization_enable);
@@ -1396,7 +1364,7 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
     return true;
   }
 
-  // if (!apa_world_ptr_->GetApaDataPtr()->simu_param.sim_to_target &&
+  // if (!apa_world_ptr_->GetSimuParam().sim_to_target &&
   //     CheckDynamicUpdate()) {
   //   ILOG_INFO << "replan by dynamic!";
   //   frame_.replan_reason = DYNAMIC;
@@ -1450,97 +1418,6 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   }
 
   return parking_finish;
-}
-
-const bool PerpendicularHeadOutScenario::PostProcessPathAccordingObs(
-    const double car_remain_dist) {
-  size_t origin_traj_size = current_path_point_global_vec_.size();
-
-  if (origin_traj_size < 2) {
-    frame_.spline_success = false;
-    ILOG_INFO << "error: origin_traj_size = " << origin_traj_size;
-    return false;
-  }
-
-  std::vector<double> x_vec;
-  std::vector<double> y_vec;
-  std::vector<double> s_vec;
-  std::vector<double> heading_vec;
-  x_vec.clear();
-  y_vec.clear();
-  s_vec.clear();
-  heading_vec.clear();
-
-  x_vec.reserve(origin_traj_size);
-  y_vec.reserve(origin_traj_size);
-  s_vec.reserve(origin_traj_size);
-  heading_vec.reserve(origin_traj_size);
-
-  double ds = 0.0;
-  double s = 0.0;
-  for (size_t i = 0; i < origin_traj_size; ++i) {
-    if (i > 0) {
-      ds = std::hypot(current_path_point_global_vec_[i].pos.x() -
-                          current_path_point_global_vec_[i - 1].pos.x(),
-                      current_path_point_global_vec_[i].pos.y() -
-                          current_path_point_global_vec_[i - 1].pos.y());
-      s += std::max(ds, 1e-3);
-    }
-    if (s > car_remain_dist) {
-      ILOG_INFO << "path shoule be shorten because of obs";
-      if (car_remain_dist - s_vec.back() > 0.036 && frame_.spline_success) {
-        x_vec.emplace_back(frame_.x_s_spline(car_remain_dist));
-        y_vec.emplace_back(frame_.y_s_spline(car_remain_dist));
-        heading_vec.emplace_back(heading_vec.back());
-        s_vec.emplace_back(car_remain_dist);
-      }
-      break;
-    }
-    x_vec.emplace_back(current_path_point_global_vec_[i].pos.x());
-    y_vec.emplace_back(current_path_point_global_vec_[i].pos.y());
-    heading_vec.emplace_back(current_path_point_global_vec_[i].heading);
-    s_vec.emplace_back(s);
-  }
-
-  frame_.current_path_length = s_vec.back();
-  const size_t N = x_vec.size();
-  if (N < 2) {
-    frame_.spline_success = false;
-    ILOG_INFO << "error: no enough point = " << x_vec.size();
-    return false;
-  }
-  current_path_point_global_vec_.clear();
-  current_path_point_global_vec_.reserve(N);
-  pnc::geometry_lib::PathPoint path_point;
-  for (size_t i = 0; i < N; ++i) {
-    path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
-    current_path_point_global_vec_.emplace_back(path_point);
-  }
-
-  // need extend by cal proj point
-  Eigen::Vector2d extended_point;
-  bool success = pnc::geometry_lib::CalExtendedPointByTwoPoints(
-      Eigen::Vector2d(x_vec[N - 2], y_vec[N - 2]),
-      Eigen::Vector2d(x_vec[N - 1], y_vec[N - 1]), extended_point,
-      frame_.path_extended_dist);
-
-  if (!success) {
-    frame_.spline_success = false;
-    ILOG_INFO << "limit need extend fit line by spline error!";
-    return false;
-  }
-
-  x_vec.emplace_back(extended_point.x());
-  y_vec.emplace_back(extended_point.y());
-  heading_vec.emplace_back(heading_vec.back());
-  s_vec.emplace_back(frame_.current_path_length + frame_.path_extended_dist);
-
-  frame_.x_s_spline.set_points(s_vec, x_vec);
-  frame_.y_s_spline.set_points(s_vec, y_vec);
-
-  frame_.spline_success = true;
-
-  return true;
 }
 
 void PerpendicularHeadOutScenario::Log() const {

@@ -12,6 +12,7 @@
 #include "collision_detection/collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
+#include "geometry_path_generator.h"
 #include "log_glog.h"
 #include "perpendicular_path_generator.h"
 #include "planning_plan_c.h"
@@ -32,34 +33,23 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     COUNT,
   };
 
-  enum class PathColDetRes : uint8_t {
-    INVALID,
-    NORMAL,
-    SINGLE_PLAN_AGAIN,
-    COMPLETE_PLAN_AGAIN,
-    SHORTEN,
-    COUNT,
-  };
-
-  enum class PathPlanMethod {
-    INVALID,
-    ONE_ARC,
-    TWO_ARC,
-    LINE_ARC,
-    ONE_LINE,
-    COUNT,
-  };
-
-  enum class DubinsPlanResult {
+  enum class DubinsPlanResult : uint8_t {
     SUCCESS,
     PATH_COLLISION,
     NO_PATH,
   };
 
-  enum class PlanRequest {
+  enum class PlanRequest : uint8_t {
     ROUGH_PATH,
     ONE_STEP_PATH,
     OPTIMAL_PATH,
+  };
+
+  enum class PathColDetRes : uint8_t {
+    INVALID,
+    NORMAL,
+    SHORTEN,
+    COUNT,
   };
 
   struct PlannerParams {
@@ -172,60 +162,18 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
  public:
   virtual void Reset() override;
   virtual const bool Update() override;
-  virtual const bool UpdateByPrePlan() override;
   virtual const bool CheckCurrentGearLength() override;
 
-  void ExtendCurrentFollowLastPath(double extend_distance);
-  void InsertLineSegAfterCurrentFollowLastPath(double extend_distance);
-
-  const std::vector<double> GetMinSafeCircle() const;
-
   // for simulation
-  const bool UpdatePb(
-      const Input &input,
-      const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
-
   const bool ItervativeUpdatePb(
-      const Input &input,
+      const GeometryPathInput &ginput,
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr);
-
-  const bool PreparePlanPb();
-
-  const bool PreparePlanSecondPb();
-
-  const bool GenPathOutputByDubinsPb();
-
-  const bool MultiPlanPb();
-
-  const bool AdjustPlanPb();
-
-  const bool CheckReachTargetPosePb();
 
   const PlannerParams &GetCalcParams();
 
  private:
   // member function
   virtual void Preprocess() override;
-
-  // new prepare plan
-  const bool PreparePathPlan();
-
-  const bool PrepareSinglePathPlan(
-      const pnc::geometry_lib::PathPoint &cur_pose,
-      std::vector<geometry_lib::GeometryPath> &geometry_path_vec);
-
-  const bool PreparePathPlanSecond();
-
-  const bool UpdatePath();
-
-  const DubinsPlanResult DubinsPathPlan(
-      const pnc::geometry_lib::PathPoint &start_pose,
-      const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
-      const double min_length, const bool need_col_det,
-      geometry_lib::GeometryPath &geometry_path);
-
-  const bool IsPathSafe(const pnc::geometry_lib::PathSegment &path_seg,
-                        const double lat_inflation, const double lon_safe_dist);
 
   const bool IsGeometryPathSafe(pnc::geometry_lib::GeometryPath &geometry_path,
                                 const double lat_inflation,
@@ -236,24 +184,10 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                     const double lon_safe_dist,
                                     const bool enable_log = true);
 
-  // prepare plan start
-  const bool PreparePlan();
-  const bool PreparePlanOnce(const double x_offset, const double heading_offset,
-                             const double radius);
-
   const bool CalTurnAroundPose();
 
   const bool TurnAround();
 
-  const bool DubinsPlan(
-      const pnc::geometry_lib::PathPoint &start_pose,
-      const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
-      const double min_length, const bool need_col_det,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
-
-  const bool PreparePlanSecond();
-
-  const bool GenPathOutputByDubins();
   const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
   void CalMonoSafeCircle();
   const bool CheckMonoIsFeasible();
@@ -261,19 +195,17 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   bool CalMultiSafeCircle();
   // prepare plan end
 
-  const bool NewUpdatePathPlan();
+  const bool PreparePathPlan();
 
-  const bool NewPreparePathPlan();
+  const bool PreparePathSecondPlan();
 
-  const bool NewPreparePathSecondPlan();
-
-  const bool NewPrepareSinglePathPlan(
+  const bool PrepareSinglePathPlan(
       const pnc::geometry_lib::PathPoint &cur_pose,
       std::vector<
           std::pair<geometry_lib::GeometryPath, geometry_lib::GeometryPath>>
           &pair_geometry_path_vec);
 
-  const DubinsPlanResult NewDubinsPathPlan(
+  const DubinsPlanResult DubinsPathPlan(
       const pnc::geometry_lib::PathPoint &start_pose,
       const pnc::geometry_lib::PathPoint &target_pose, const double turn_radius,
       const double min_length, const uint8_t max_gear_change_count,
@@ -363,102 +295,6 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
                                           const double lon_buffer,
                                           const bool enable_log = true);
 
-  const bool OneArcPathPlan(
-      const pnc::geometry_lib::PathPoint &pose,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
-  //   const bool LineArcPathPlan();
-  const bool TwoArcPathPlan(
-      const pnc::geometry_lib::PathPoint &pose,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
-  //   const bool OneLinePathPlan();
-
-  // multi plan start
-  const bool CheckMultiPlanSuitable(
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const double &slot_occupied_ratio);
-
-  const bool MultiPlan();
-  const bool CalSinglePathInMulti(
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear, const uint8_t current_arc_steer,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const double turn_radius, size_t i);
-
-  const bool OneArcPlan(
-      pnc::geometry_lib::Arc &arc,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear, const uint8_t current_arc_steer);
-
-  const bool TwoArcPlan(
-      pnc::geometry_lib::Arc &arc,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear, const uint8_t current_arc_steer);
-
-  const bool LineArcPlan(
-      pnc::geometry_lib::Arc &arc,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear, const uint8_t current_arc_steer);
-
-  const bool OneLinePlan(
-      pnc::geometry_lib::LineSegment &line,
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const uint8_t current_gear);
-  // multi plan end
-
-  // adjust plan start
-  const bool CheckAdjustPlanSuitable(
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const double slot_occupied_ratio = 0.0);
-
-  const bool AdjustPlan();
-  const bool CalSinglePathInAdjust(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t &current_gear, const double &steer_change_ratio,
-      const double &steer_change_radius, const size_t &i);
-
-  const bool OneArcPlan(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear);
-
-  const bool LineArcPlan(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear, const double turn_radius);
-
-  const bool AlignBodyPlan(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear);
-
-  const bool STurnParallelPlan(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t current_gear, const double steer_change_ratio1,
-      const double steer_change_radius);
-  // adjust plan end
-
-  // collision detect start
-  const PathColDetRes TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg,
-      CollisionDetector::CollisionResult *pcol_res = nullptr);
-  const PathColDetRes TrimPathByCollisionDetection(
-      pnc::geometry_lib::PathSegment &path_seg, const double safe_dist,
-      CollisionDetector::CollisionResult *pcol_res = nullptr);
-  // collision detect end
-
-  const bool CheckArcOrLineAvailable(const pnc::geometry_lib::Arc &arc);
-  const bool CheckArcOrLineAvailable(
-      const pnc::geometry_lib::LineSegment &line);
-
-  const bool CheckPathIsNormal(const pnc::geometry_lib::PathSegment &path_seg);
-
-  const bool CheckReachTargetPose(
-      const pnc::geometry_lib::PathPoint &current_pose);
-
-  const bool CheckReachTargetPose();
-
   const double CalOccupiedRatio(
       const pnc::geometry_lib::PathPoint &current_pose);
 
@@ -474,6 +310,11 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   const bool IsRightCircle(const Eigen::Vector2d &ego_pos,
                            const double ego_heading,
                            const Eigen::Vector2d &center) const;
+
+  const bool CheckReachTargetPose(
+      const pnc::geometry_lib::PathPoint &current_pose);
+
+  const bool CheckReachTargetPose();
 
   PlannerParams calc_params_;
 };

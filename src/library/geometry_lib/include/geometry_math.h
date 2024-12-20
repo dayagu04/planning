@@ -193,6 +193,7 @@ struct PathPoint {
   Eigen::Vector2d pos = Eigen::Vector2d::Zero();
   double heading = 0.0;
   // todo: path point related codes is too much, unify them.
+  // left is positive, right is negative
   double kappa = 0.0;
   double s = 0.0;
   double lat_buffer = 0.0;
@@ -701,7 +702,8 @@ const bool SamplePointSetInLineSeg(std::vector<PathPoint> &point_set,
 
 const bool SamplePointSetInArc(std::vector<PathPoint> &point_set,
                                const Arc &arc, const double ds,
-                               const double lat_buffer = 0.0);
+                               const double lat_buffer = 0.0,
+                               const uint8_t steer = 0);
 
 const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
                                    const PathSegment &path_seg,

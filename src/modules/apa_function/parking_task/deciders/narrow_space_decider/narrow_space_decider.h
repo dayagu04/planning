@@ -1,6 +1,6 @@
 #pragma once
 
-#include "apa_data.h"
+#include "apa_slot.h"
 #include "hybrid_astar_common.h"
 #include "parking_task.h"
 
@@ -14,7 +14,7 @@ class NarrowScenarioDecider : public ParkingTask{
   NarrowScenarioDecider() = default;
   ~NarrowScenarioDecider() = default;
 
-  void Process(const uint8_t slot_type);
+  void Process(const apa_planner::SlotType slot_type);
 
   void Clear();
 

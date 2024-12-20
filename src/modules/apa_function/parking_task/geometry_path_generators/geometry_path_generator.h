@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "apa_slot_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "dubins_lib.h"
 #include "geometry_math.h"
@@ -15,8 +16,72 @@
 
 namespace planning {
 namespace apa_planner {
+
+// 如果某个模块有定制变量  放在这个Input里 不要放在EgoInfoUnderSlot里
+struct GeometryPathInput {
+  EgoInfoUnderSlot ego_info_under_slot;
+  bool is_complete_path = false;
+  bool is_replan_first = true;
+  bool is_replan_second = false;
+  bool is_replan_dynamic = false;
+  double sample_ds = 0.02;
+  uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+  uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+  bool is_searching_stage = false;
+
+  uint8_t path_planner_state = 0;
+
+  bool is_left_empty = false;
+  bool is_right_empty = false;
+};
+
+struct GeometryPathOutput {
+  bool path_available = false;
+  bool is_first_path = true;
+  bool is_last_path = false;
+  bool gear_shift = false;
+  bool multi_reach_target_pose = false;
+  bool linearc_reach_target_pose = false;
+  double length = 0.0;
+  uint8_t gear_change_count = 0;
+  uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+  uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+  std::pair<size_t, size_t> path_seg_index = std::make_pair(0, 0);
+  std::vector<uint8_t> gear_cmd_vec;
+  std::vector<uint8_t> steer_vec;
+  std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
+  std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
+  std::vector<pnc::geometry_lib::PathPoint> all_gear_path_point_vec;
+
+  double actual_ds = 0.0;
+  double cur_gear_length = 0.0;
+
+  void Reset() {
+    path_available = false;
+    is_first_path = true;
+    is_last_path = false;
+    gear_shift = false;
+    multi_reach_target_pose = false;
+    linearc_reach_target_pose = false;
+    length = 0.0;
+    gear_change_count = 0;
+    path_seg_index = std::make_pair(0, 0);
+    gear_cmd_vec.clear();
+    steer_vec.clear();
+    path_segment_vec.clear();
+    path_point_vec.clear();
+    all_gear_path_point_vec.clear();
+    current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
+
+    actual_ds = 0.0;
+    cur_gear_length = 0.0;
+  }
+};
+
 class GeometryPathGenerator : public ParkingTask {
  public:
+  // 后续等所有模块适配结束之后， 把下面的Tlane和Input删除
   struct Tlane {
     Eigen::Vector2d corner_outside_slot = Eigen::Vector2d::Zero();
     Eigen::Vector2d corner_inside_slot = Eigen::Vector2d::Zero();
@@ -77,7 +142,6 @@ class GeometryPathGenerator : public ParkingTask {
     double sin_angle = 1.0;
     Eigen::Vector2d pt_0 = Eigen::Vector2d::Zero();
     Eigen::Vector2d pt_1 = Eigen::Vector2d::Zero();
-    bool is_simulation = false;
     double channel_width = 0.0;
     bool is_left_empty = false;
     bool is_right_empty = false;
@@ -98,48 +162,6 @@ class GeometryPathGenerator : public ParkingTask {
     }
   };
 
-  struct Output {
-    bool path_available = false;
-    bool is_first_path = true;
-    bool is_last_path = false;
-    bool gear_shift = false;
-    bool multi_reach_target_pose = false;
-    bool linearc_reach_target_pose = false;
-    double length = 0.0;
-    uint8_t gear_change_count = 0;
-    uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-    uint8_t current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
-    std::pair<size_t, size_t> path_seg_index = std::make_pair(0, 0);
-    std::vector<uint8_t> gear_cmd_vec;
-    std::vector<uint8_t> steer_vec;
-    std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
-    std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
-    std::vector<pnc::geometry_lib::PathPoint> all_gear_path_point_vec;
-    double actual_ds = 0.02;
-    double cur_gear_length = 0.0;
-
-    void Reset() {
-      path_available = false;
-      is_first_path = true;
-      is_last_path = false;
-      gear_shift = false;
-      multi_reach_target_pose = false;
-      linearc_reach_target_pose = false;
-      length = 0.0;
-      gear_change_count = 0;
-      path_seg_index = std::make_pair(0, 0);
-      gear_cmd_vec.clear();
-      steer_vec.clear();
-      path_segment_vec.clear();
-      path_point_vec.clear();
-      all_gear_path_point_vec.clear();
-      current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-      current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
-      actual_ds = 0.02;
-      cur_gear_length = 0.0;
-    }
-  };
-
  public:
   virtual void Reset() = 0;
   virtual const bool Update() = 0;
@@ -153,19 +175,21 @@ class GeometryPathGenerator : public ParkingTask {
   virtual void PrintOutputSegmentsInfo() const;
 
   void SetInput(const Input &input) { input_ = input; }
+  void SetGInput(const GeometryPathInput &ginput) { ginput_ = ginput; }
   void SetColPtr(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr) {
     collision_detector_ptr_ = collision_detector_ptr;
   }
-  const Output &GetOutput() const { return output_; }
-  const Output *GetOutputPtr() const { return &output_; }
+  const GeometryPathOutput &GetOutput() const { return output_; }
+  const GeometryPathOutput *GetOutputPtr() const { return &output_; }
   const std::vector<double> GetPathEle(size_t index) const;
 
  protected:
   virtual void Preprocess() = 0;
 
   Input input_;
-  Output output_;
+  GeometryPathInput ginput_;
+  GeometryPathOutput output_;
   pnc::dubins_lib::DubinsLibrary dubins_planner_;
   std::shared_ptr<CollisionDetector> collision_detector_ptr_ = nullptr;
 };

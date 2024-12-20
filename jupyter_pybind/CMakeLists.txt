@@ -52,17 +52,6 @@ target_link_libraries(scc_lon_motion_planning_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
-pybind11_add_module(slot_management_py MODULE src/slot_management_pybind.cc)
-target_link_libraries(slot_management_py PRIVATE
-  ${catkin_LIBRARIES}
-  autoplt
-  modules
-  modules_common
-  modules_context
-  modules_tasks
-  legacy_c_interface
-  modules_apa_function)
-
 pybind11_add_module(dubins_lib_py MODULE src/dubins_lib_pybind.cc)
 target_link_libraries(dubins_lib_py PRIVATE
   autoplt
@@ -81,15 +70,6 @@ target_link_libraries(collision_detection_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
-pybind11_add_module(perpendicular_planning_py MODULE src/perpendicular_planning_pybind.cc)
-target_link_libraries(perpendicular_planning_py PRIVATE
-  autoplt
-  modules
-  modules_common
-  modules_context
-  modules_tasks
-  legacy_c_interface)
-
 pybind11_add_module(slant_planning_py MODULE src/slant_planning_pybind.cc)
 target_link_libraries(slant_planning_py PRIVATE
   autoplt
@@ -101,15 +81,6 @@ target_link_libraries(slant_planning_py PRIVATE
 
 pybind11_add_module(perpendicular_parking_out_py MODULE src/perpendicular_park_out_pybind.cc)
 target_link_libraries(perpendicular_parking_out_py PRIVATE
-  autoplt
-  modules
-  modules_common
-  modules_context
-  modules_tasks
-  legacy_c_interface)
-
-pybind11_add_module(vertical_planning_py MODULE src/vertical_planning_pybind.cc)
-target_link_libraries(vertical_planning_py PRIVATE
   autoplt
   modules
   modules_common
@@ -251,7 +222,7 @@ target_link_libraries(astar_parallel_replay_py PRIVATE
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
   )
-  
+
 pybind11_add_module(headin_planning_py MODULE src/headin_planning_pybind.cc)
   target_link_libraries(headin_planning_py PRIVATE
   autoplt
@@ -260,8 +231,8 @@ pybind11_add_module(headin_planning_py MODULE src/headin_planning_pybind.cc)
   modules_context
   modules_tasks)
 
-pybind11_add_module(prepareplan_py MODULE src/prepare_plan_pybind.cc)
-  target_link_libraries(prepareplan_py PRIVATE
+pybind11_add_module(perpendicular_slant_tail_in_py MODULE src/perpendicular_slant_tail_in_pybind.cc)
+  target_link_libraries(perpendicular_slant_tail_in_py PRIVATE
   autoplt
   modules
   modules_common

@@ -20,8 +20,9 @@ struct OccupancyGridBound {
       : min_x(x_min), min_y(y_min), max_x(x_max), max_y(y_max){};
 
   void PrintInfo(const bool enable_log = true) const {
-    ILOG_INFO_IF(enable_log) << "min_x = " << min_x << "  min_y = " << min_y
-                             << "  max_x = " << max_x << "  max_y = " << max_y;
+    ILOG_INFO_IF(enable_log)
+        << "OccupancyGridBound min_x = " << min_x << "  min_y = " << min_y
+        << "  max_x = " << max_x << "  max_y = " << max_y;
   }
 };
 

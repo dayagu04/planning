@@ -1,0 +1,179 @@
+#pragma once
+#include <cstddef>
+#include <unordered_map>
+#include <vector>
+
+#include "Eigen/Core"
+
+#include "apa_measure_data_manager.h"
+#include "apa_obstacle_manager.h"
+#include "apa_slot.h"
+#include "apa_state_machine_manager.h"
+#include "geometry_math.h"
+#include "local_view.h"
+
+namespace planning {
+namespace apa_planner {
+
+struct TLane {
+  Eigen::Vector2d A;
+  Eigen::Vector2d B;
+  Eigen::Vector2d C;
+  Eigen::Vector2d D;
+  Eigen::Vector2d E;
+  Eigen::Vector2d F;
+  Eigen::Vector2d G;
+  Eigen::Vector2d H;
+
+  double min_x = 0.0;
+  double min_y = 0.0;
+  double max_x = 0.0;
+  double max_y = 0.0;
+
+  void Reset() {
+    A.setZero();
+    B.setZero();
+    C.setZero();
+    D.setZero();
+    E.setZero();
+    F.setZero();
+    G.setZero();
+    H.setZero();
+  }
+
+  void CalcBound() {
+    min_x = std::min({A.x(), B.x(), C.x(), D.x(), E.x(), F.x(), G.x(), H.x()});
+    min_y = std::min({A.y(), B.y(), C.y(), D.y(), E.y(), F.y(), G.y(), H.y()});
+    max_x = std::max({A.x(), B.x(), C.x(), D.x(), E.x(), F.x(), G.x(), H.x()});
+    max_y = std::max({A.y(), B.y(), C.y(), D.y(), E.y(), F.y(), G.y(), H.y()});
+  }
+
+  void PrintInfo(const bool enable_print = true) {
+    ILOG_INFO_IF(enable_print)
+        << "A = " << A.transpose() << "  B = " << B.transpose()
+        << "  C = " << C.transpose() << "  D = " << D.transpose()
+        << "  E = " << E.transpose() << "  F = " << F.transpose()
+        << "  G = " << G.transpose() << "  H = " << H.transpose()
+        << "  min_x = " << min_x << "  min_x = " << min_y
+        << "  max_x = " << max_x << "  max_x = " << max_y;
+  }
+};
+
+struct EgoInfoUnderSlot {
+  size_t id = 0;
+  SlotType slot_type = SlotType::INVALID;
+  geometry_lib::SlotSide slot_side = geometry_lib::SLOT_SIDE_INVALID;
+
+  geometry_lib::PathPoint cur_pose;
+  geometry_lib::PathPoint target_pose;
+  geometry_lib::PathPoint terminal_err;
+
+  double slot_occupied_ratio = 0.0;
+
+  double channel_width = 0.0;
+
+  geometry_lib::PathPoint origin_pose_global;
+  geometry_lib::PathPoint origin_pose_local;
+
+  geometry_lib::GlobalToLocalTf g2l_tf;
+  geometry_lib::LocalToGlobalTf l2g_tf;
+
+  // 根据障碍物移动车位 对于垂直车位 向左为正
+  double move_slot_dist = 0.0;
+  double last_move_slot_dist = 0.0;
+
+  Eigen::Vector2d pt_inside;
+
+  ApaSlot slot;
+
+  bool fix_slot = false;
+
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> virtual_limiter;
+
+  TLane obs_tlane;
+
+  void Reset() {
+    id = 0;
+    slot_type = SlotType::INVALID;
+    slot_side = geometry_lib::SLOT_SIDE_INVALID;
+    cur_pose.Reset();
+    target_pose.Reset();
+    terminal_err.Reset();
+
+    slot_occupied_ratio = 0.0;
+    channel_width = 0.0;
+
+    origin_pose_global.Reset();
+    origin_pose_local.Reset();
+
+    g2l_tf.Reset();
+    l2g_tf.Reset();
+
+    move_slot_dist = 0.0;
+    last_move_slot_dist = 0.0;
+
+    pt_inside.setZero();
+
+    slot.Reset();
+
+    fix_slot = false;
+
+    obs_tlane.Reset();
+  }
+};
+
+class ApaSlotManager final {
+ public:
+  ApaSlotManager() {}
+  ~ApaSlotManager() {}
+
+  void Update(const LocalView* local_view,
+              const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
+              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
+
+  void Reset() {
+    ego_info_under_slot_.Reset();
+    dist_id_map_.clear();
+    slots_map_.clear();
+    slot_release_voter_.clear();
+    obs_list_.Clear();
+    release_slot_id_vec_.clear();
+  }
+
+  void GenerateReleaseSlotIdVec();
+
+  const std::vector<size_t>& GetReleaseSlotIdVec() const {
+    return release_slot_id_vec_;
+  }
+
+ public:
+  EgoInfoUnderSlot ego_info_under_slot_;
+
+ private:
+  void ParkingLotCruiseProcess();
+
+  void GenerateParkObstacleList();
+
+  const bool IsEgoCloseToObs();
+
+  const bool IsSlotCoarseRelease(const ApaSlot& slot);
+
+  const bool IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot);
+
+  const bool IsParallelSlotAndPassageAreaOccupied(const ApaSlot& slot);
+
+ private:
+  std::map<double, size_t> dist_id_map_;
+  std::unordered_map<size_t, ApaSlot> slots_map_;
+  std::unordered_map<size_t, uint8_t> slot_release_voter_;
+
+  std::vector<size_t> release_slot_id_vec_;
+
+  std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
+  std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
+  ParkObstacleList obs_list_;
+};
+}  // namespace apa_planner
+}  // namespace planning

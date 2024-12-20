@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "Eigen/Core"
-#include "apa_data.h"
+
 #include "apa_param_config.h"
 #include "apa_state_machine_manager.h"
 #include "basic_types.pb.h"
@@ -33,7 +33,6 @@
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "math_lib.h"
-#include "rule_based_slot_release.h"
 #include "slot_management_info.pb.h"
 #include "transform_lib.h"
 
@@ -45,34 +44,24 @@ constexpr double kPie = 3.141592653589793;
 }  // namespace
 
 bool SlotManager::Update(
-    const std::shared_ptr<ApaData> apa_data_ptr,
+    const LocalView *local_view,
     const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
     const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
     const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
-  ILOG_INFO << "---------- slot management --------------------";
+  ILOG_INFO << "Update old slot management, should use new slot manager, old "
+               "should delete as soon as possible";
   // set input
-  frame_.func_state_ptr = apa_data_ptr->func_state_ptr;
-  frame_.parking_slot_ptr = apa_data_ptr->parking_slot_ptr;
-  frame_.uss_percept_info_ptr = apa_data_ptr->uss_percept_info_ptr;
-  frame_.ground_line_perception_info_ptr =
-      apa_data_ptr->ground_line_perception_info_ptr;
-  frame_.fusion_objects_info_ptr = apa_data_ptr->fusion_objects_info_ptr;
-  frame_.fusion_occupancy_objects_info_ptr =
-      apa_data_ptr->fusion_occupancy_objects_info_ptr;
+  frame_.parking_slot_ptr = &local_view->parking_fusion_info;
 
   state_machine_ptr_ = state_machine_ptr;
   measure_data_ptr_ = measure_data_ptr;
   obstacle_manager_ptr_ = obstacle_manager_ptr;
 
-  // update obs
-  // todo: move to obstacle manager
-  AddObstacles();
-
   bool update_slot_in_searching_flag = false;
   bool update_slot_in_parking_flag = false;
   // update_slot_in_searching_flag is always false, only update slot
   if (state_machine_ptr_->IsSeachingStatus()) {
-    update_slot_in_searching_flag = UpdateSlotsInSearching(apa_data_ptr);
+    update_slot_in_searching_flag = UpdateSlotsInSearching();
   } else if (state_machine_ptr_->IsParkingStatus()) {
     update_slot_in_parking_flag = UpdateSlotsInParking();
   } else if (state_machine_ptr_->GetStateMachine() ==
@@ -83,179 +72,12 @@ bool SlotManager::Update(
 
   CopySlotReleaseInfo();
 
-  // Log();
-
   return update_slot_in_searching_flag || update_slot_in_parking_flag;
-}
-
-void SlotManager::AddObstacles() {
-  frame_.obs_pt_vec.clear();
-  AddFusionObjects();
-  AddGroundLineObstacles();
-  if (apa_param.GetParam().use_uss_pt_clound) {
-    AddUssPerceptObstacles();
-  }
-  frame_.fus_obj_valid_flag = true;
-}
-
-void SlotManager::AddFusionObjects() {
-  const bool use_fus_occ_obj = apa_param.GetParam().use_fus_occ_obj;
-  if (use_fus_occ_obj && frame_.fusion_occupancy_objects_info_ptr == nullptr) {
-    ILOG_INFO << "fusion_occ_objects_info_ptr is nullptr";
-    return;
-  }
-  if (!use_fus_occ_obj && frame_.fusion_objects_info_ptr == nullptr) {
-    ILOG_INFO << "fusion_objects_info_ptr is nullptr";
-    return;
-  }
-
-  uint8 fusion_object_num;
-  if (use_fus_occ_obj) {
-    fusion_object_num =
-        frame_.fusion_occupancy_objects_info_ptr->fusion_object_size;
-  } else {
-    fusion_object_num = frame_.fusion_objects_info_ptr->fusion_object_size;
-  }
-
-  if (fusion_object_num == 0) {
-    ILOG_INFO << "fusion objects is empty";
-    return;
-  }
-
-  // Assuming an object has a maximum of 20 obstacle points
-  frame_.obs_pt_vec.reserve(frame_.obs_pt_vec.size() + fusion_object_num * 20);
-  const size_t N_begin = frame_.obs_pt_vec.size();
-
-  Eigen::Vector2d fs_pt;
-  if (use_fus_occ_obj) {
-    iflyauto::FusionOccupancyAdditional fusion_occupancy_object;
-    for (uint8 i = 0;
-         i < std::min(fusion_object_num,
-                      static_cast<uint8>(FUSION_OCCUPANCY_OBJECT_MAX_NUM));
-         ++i) {
-      fusion_occupancy_object =
-          frame_.fusion_occupancy_objects_info_ptr->fusion_object[i]
-              .additional_occupancy_info;
-      for (uint32 j = 0;
-           j < std::min(fusion_occupancy_object.polygon_points_size,
-                        static_cast<uint32>(
-                            FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_NUM));
-           ++j) {
-        fs_pt << fusion_occupancy_object.polygon_points[j].x,
-            fusion_occupancy_object.polygon_points[j].y;
-        frame_.obs_pt_vec.emplace_back(fs_pt);
-      }
-    }
-  } else {
-    iflyauto::FusionObjectsAdditional fusion_object;
-    for (uint8 i = 0; i < std::min(fusion_object_num,
-                                   static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
-         ++i) {
-      fusion_object =
-          frame_.fusion_objects_info_ptr->fusion_object[i].additional_info;
-      for (uint32 j = 0;
-           j <
-           std::min(fusion_object.polygon_points_size,
-                    static_cast<uint8>(FUSION_OBJECTS_POLYGON_POINTS_SET_NUM));
-           ++j) {
-        fs_pt << fusion_object.polygon_points[j].x,
-            fusion_object.polygon_points[j].y;
-        frame_.obs_pt_vec.emplace_back(fs_pt);
-      }
-    }
-  }
-
-  const size_t N_end = frame_.obs_pt_vec.size();
-  if (N_end == N_begin) {
-    ILOG_INFO << "fusion objects is empty";
-    return;
-  } else {
-    ILOG_INFO << "fusion objects size = " << N_end - N_begin;
-  }
-}
-
-void SlotManager::AddGroundLineObstacles() {
-  if (frame_.ground_line_perception_info_ptr == nullptr) {
-    ILOG_INFO << "ground_line_perception_info_ptr is nullptr";
-    return;
-  }
-
-  const uint8_t ground_lines_size =
-      frame_.ground_line_perception_info_ptr->ground_lines_size;
-
-  if (ground_lines_size == 0) {
-    ILOG_INFO << "ground line is empty";
-    return;
-  }
-
-  // Assuming a ground line has a maximum of 20 obstacle points
-  frame_.obs_pt_vec.reserve(frame_.obs_pt_vec.size() + ground_lines_size * 20);
-  const size_t N_begin = frame_.obs_pt_vec.size();
-
-  Eigen::Vector2d gl_pt;
-  iflyauto::GroundLine gl;
-  for (uint8_t i = 0;
-       i < std::min(ground_lines_size, static_cast<uint8>(GROUND_LINES_NUM));
-       ++i) {
-    gl = frame_.ground_line_perception_info_ptr->ground_lines[i];
-    for (uint8 j = 0; j < std::min(gl.points_3d_size,
-                                   static_cast<uint8>(GROUND_LINE_POINTS_NUM));
-         ++j) {
-      gl_pt << gl.points_3d[j].x, gl.points_3d[j].y;
-      frame_.obs_pt_vec.emplace_back(gl_pt);
-    }
-  }
-
-  const size_t N_end = frame_.obs_pt_vec.size();
-  if (N_end == N_begin) {
-    ILOG_INFO << "ground line is empty";
-    return;
-  } else {
-    ILOG_INFO << "ground line size = " << N_end - N_begin;
-  }
-}
-
-void SlotManager::AddUssPerceptObstacles() {
-  if (frame_.uss_percept_info_ptr == nullptr) {
-    ILOG_INFO << "uss_percept_info_ptr is empty";
-    return;
-  }
-
-  const auto &obj_info_desample =
-      frame_.uss_percept_info_ptr
-          ->out_line_dataori[0];  // 0 means desample while 1 means raw model
-                                  // output
-
-  const uint32 uss_pt_num = obj_info_desample.obj_pt_cnt;
-
-  if (uss_pt_num == 0) {
-    ILOG_INFO << "uss obs is empty";
-    return;
-  }
-  const size_t N_begin = frame_.obs_pt_vec.size();
-  frame_.obs_pt_vec.reserve(frame_.obs_pt_vec.size() + uss_pt_num);
-  Eigen::Vector2d uss_pt;
-  for (uint32 i = 0;
-       i < std::min(uss_pt_num, static_cast<uint32>(NUM_OF_APA_SLOT_OBJ));
-       ++i) {
-    uss_pt << obj_info_desample.obj_pt_global[i].x,
-        obj_info_desample.obj_pt_global[i].y;
-    frame_.obs_pt_vec.emplace_back(uss_pt);
-  }
-
-  const size_t N_end = frame_.obs_pt_vec.size();
-  if (N_end == N_begin) {
-    ILOG_INFO << "ground line is empty";
-    return;
-  } else {
-    ILOG_INFO << "ground line size = " << N_end - N_begin;
-  }
 }
 
 void SlotManager::Reset() { frame_.Reset(); }
 
-bool SlotManager::UpdateSlotsInSearching(
-    std::shared_ptr<ApaData> apa_data_ptr) {
+bool SlotManager::UpdateSlotsInSearching() {
   ILOG_INFO << "apa state is in searching!";
   // Update slots
   std::unordered_map<size_t, iflyauto::ParkingFusionSlot> fusion_slot_map;
@@ -298,29 +120,11 @@ bool SlotManager::UpdateSlotsInSearching(
     frame_.slot_info_window_map.erase(id);
   }
 
-  // todo: move to task list.
-  // 没有选择的车位，根据规则决定是否释放.
-  RuleBasedSlotRelease rule_based_release_decider;
-  rule_based_release_decider.Process(apa_data_ptr->local_view_ptr_,
-                                     measure_data_ptr_, state_machine_ptr_, obstacle_manager_ptr_,
-                                     fusion_slot_map, frame_);
-
   // 点击了车位,更新车位基本信息
   if (!frame_.slot_info_window_map.empty() &&
       !frame_.slot_info_window_map[frame_.parking_slot_ptr->select_slot_id]
            .IsEmpty()) {
-    // 基于规则的方式，是否释放. 真正的释放任务由后续预规划决定.
-    bool update_slot = UpdateSlotsInParking();
-    bool is_release =
-        IsReleaseByRuleBased(frame_.parking_slot_ptr->select_slot_id);
-    if (update_slot && is_release) {
-      frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] =
-          SlotReleaseState::RELEASE;
-    } else {
-      frame_.ego_slot_info.release_info.release_state[RULE_BASED_RELEASE] =
-          SlotReleaseState::NOT_RELEASE;
-    }
-
+    UpdateSlotsInParking();
     ILOG_INFO << "try park planning";
   }
 
@@ -1113,8 +917,6 @@ bool SlotManager::UpdateSlotsInParking() {
           Common::ParkingSlotType::PARKING_SLOT_TYPE_VERTICAL ||
       select_slot.slot_type() ==
           Common::ParkingSlotType::PARKING_SLOT_TYPE_SLANTING) {
-    // only use the obs when searching
-    // AddUssPerceptObstacles(select_slot);
     if (!UpdateEgoSlotInfo(select_slot_id, select_slot, select_fusion_slot)) {
       return false;
     }
@@ -1125,7 +927,6 @@ bool SlotManager::UpdateSlotsInParking() {
 
   else if (select_slot.slot_type() ==
            Common::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
-    // AddUssPerceptObstacles(select_slot);
     if (!UpdateEgoParallelSlotInfo(select_slot_id, select_slot,
                                    select_fusion_slot)) {
       return false;
@@ -1734,93 +1535,6 @@ void SlotManager::UpdateReleaseSlotIdVec() {
       }
     }
   }
-}
-
-const bool SlotManager::GetSelectedSlot(common::SlotInfo &slot_info,
-                                        const int selected_id) {
-  if (frame_.slot_info_window_map.count(selected_id) == 0) {
-    return false;
-  } else {
-    slot_info = frame_.slot_info_window_map[selected_id].GetFusedInfo();
-    return true;
-  }
-}
-
-const bool SlotManager::GetSelectedSlot(common::SlotInfo &slot_info) {
-  const size_t selected_id = frame_.parking_slot_ptr->select_slot_id;
-  if (frame_.slot_info_window_map.count(selected_id) == 0) {
-    return false;
-  } else {
-    slot_info = frame_.slot_info_window_map[selected_id].GetFusedInfo();
-    return true;
-  }
-}
-
-const bool SlotManager::GetSelectedLimiter(
-    std::pair<Eigen::Vector2d, Eigen::Vector2d> &fused_limiter) const {
-  if (frame_.slot_management_info.limiter_points_size() > 0) {
-    fused_limiter.first << frame_.slot_management_info.limiter_points(0).x(),
-        frame_.slot_management_info.limiter_points(0).y();
-
-    fused_limiter.second << frame_.slot_management_info.limiter_points(1).x(),
-        frame_.slot_management_info.limiter_points(1).y();
-    return true;
-  }
-  return false;
-}
-
-const bool SlotManager::SetRealtime() {
-  ILOG_INFO << "use real time slot";
-  google::protobuf::uint32 select_slot_id = 0;
-  select_slot_id = frame_.parking_slot_ptr->select_slot_id;
-  common::SlotInfo select_slot;
-  iflyauto::ParkingFusionSlot select_fusion_slot;
-  for (const auto &fusion_slot :
-       frame_.parking_slot_ptr->parking_fusion_slot_lists) {
-    if (select_slot_id == fusion_slot.id) {
-      select_fusion_slot = fusion_slot;
-      break;
-    }
-  }
-  const bool is_valid_slot = ProcessRawSlot(select_fusion_slot, select_slot);
-  if (!is_valid_slot) {
-    return false;
-  }
-  // update slot
-  frame_.slot_info_window_map[select_slot_id].Reset();
-  frame_.slot_info_window_map[select_slot_id].Add(select_slot);
-
-  frame_.ego_slot_info.select_slot_filter =
-      frame_.slot_info_window_map[select_slot_id].GetFusedInfo();
-
-  return true;
-}
-
-const std::vector<Eigen::Vector2d> SlotManager::GetSelectedSlotObsVec() {
-  const size_t id = static_cast<size_t>(frame_.ego_slot_info.select_slot_id);
-  if (id != 0) {
-    return frame_.obs_pt_map[id];
-  } else {
-    return std::vector<Eigen::Vector2d>();
-  }
-}
-
-void SlotManager::Log() {
-  const auto select_slot_id =
-      static_cast<size_t>(frame_.ego_slot_info.select_slot_id);
-  std::vector<double> nearby_obs_x_vec;
-  std::vector<double> nearby_obs_y_vec;
-  if (frame_.obs_pt_map.count(select_slot_id) != 0) {
-    for (const auto &obs_pt : frame_.obs_pt_vec) {
-      nearby_obs_x_vec.emplace_back(obs_pt.x());
-      nearby_obs_y_vec.emplace_back(obs_pt.y());
-    }
-  } else {
-    nearby_obs_x_vec.emplace_back(0);
-    nearby_obs_y_vec.emplace_back(0);
-  }
-  JSON_DEBUG_VECTOR("slm_selected_obs_x", nearby_obs_x_vec, 2)
-  JSON_DEBUG_VECTOR("slm_selected_obs_y", nearby_obs_y_vec, 2)
 }
 
 void SlotManager::CopySlotReleaseInfo() {

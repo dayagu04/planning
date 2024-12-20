@@ -343,7 +343,6 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   pnc::geometry_lib::LocalToGlobalTf l2g_tf;
   std::vector<Eigen::Vector2d> car_polygon(car_line_local_vec_.size());
   bool col_flag = false;
-  double safe_dist = 0.0;
   size_t i = 0;
   for (i = 0; i < pt_vec.size() && !col_flag; ++i) {
     const auto &pt = pt_vec[i];

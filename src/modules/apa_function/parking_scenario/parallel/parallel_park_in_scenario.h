@@ -26,7 +26,7 @@ class ParallelParkInScenario : public ParkingScenario {
                                      const double slot_width,
                                      const bool is_right_side) const;
   virtual const bool UpdateEgoSlotInfo() override;
-  virtual void GenTlane() override;
+  virtual const bool GenTlane() override;
   void GenTBoundaryObstacles();
   virtual const uint8_t PathPlanOnce() override;
   const ParallelPathGenerator::Tlane& GetTlane() { return t_lane_; }
@@ -34,7 +34,7 @@ class ParallelParkInScenario : public ParkingScenario {
  private:
   // virtual func
 
-  virtual void GenObstacles() override;
+  virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
   virtual void Log() const override;
   virtual const bool CheckReplan() override;

@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-#include "apa_data.h"
+
 #include "apa_param_config.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"

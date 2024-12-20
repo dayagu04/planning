@@ -52,9 +52,9 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   virtual void Log() const override;
 
-  virtual void GenTlane() override;
+  virtual const bool GenTlane() override;
 
-  virtual void GenObstacles() override;
+  virtual const bool GenObstacles() override;
 
   virtual const uint8_t PathPlanOnce() override;
 

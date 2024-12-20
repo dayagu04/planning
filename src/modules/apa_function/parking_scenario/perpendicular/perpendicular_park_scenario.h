@@ -16,15 +16,14 @@ class PerpendicularParkScenario : public ParkingScenario {
   // virtual func
   virtual const uint8_t PathPlanOnce() override;
   virtual const bool UpdateEgoSlotInfo() override;
-  virtual void GenTlane() override;
-  virtual void GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
+  virtual const bool GenTlane() override;
+  virtual const bool GenObstacles() override;
   virtual void Log() const override;
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
   virtual const bool PostProcessPathAccordingLimiter();
-  virtual const bool PostProcessPathAccordingObs(const double car_remain_dist);
   virtual const bool CheckSegCompleted();
   virtual const bool CheckUssStucked();
   virtual const bool CheckColDetStucked();
