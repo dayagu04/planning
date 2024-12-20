@@ -20,6 +20,7 @@ class ParkingSwitchDecider : public Task {
   void Clear();
 
  private:
+  HppParkingSwitchConfig config_;
   HppParkingSwitchInfo parking_switch_info_;
 };
 

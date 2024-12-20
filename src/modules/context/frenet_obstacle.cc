@@ -17,6 +17,7 @@ FrenetObstacle::FrenetObstacle(
     const std::shared_ptr<EgoStateManager> ego_state_info,
     bool is_location_valid)
     : id_(obstacle_ptr->id()),
+      source_type_(obstacle_ptr->source_type()),
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid),
       is_static_(obstacle_ptr->is_static()) {

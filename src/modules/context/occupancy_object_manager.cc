@@ -18,7 +18,7 @@ OccupancyObjectManager::OccupancyObjectManager(planning::framework::Session *ses
 }
 
 bool OccupancyObjectManager::Init() {
-  points_.clear();
+  occupancy_object_.clear();
   ogm_.Clear();
   is_edt_valid_ = false;
   ogm_.Init();
@@ -32,7 +32,7 @@ bool OccupancyObjectManager::Init() {
 }
 
 bool OccupancyObjectManager::Update(const iflyauto::FusionOccupancyObjectsInfo &occupancy_objects_info) {
-  points_.clear();
+  occupancy_object_.clear();
   const bool local_point_valid = occupancy_objects_info.local_point_valid;
   if (!local_point_valid) {
     LOG_DEBUG("occupancy object points is invalid\n");
@@ -52,13 +52,13 @@ bool OccupancyObjectManager::Update(const iflyauto::FusionOccupancyObjectsInfo &
   Eigen::Vector3d v;
   std::vector<PointCloudObstacle> point_clouds;
   for (uint8 i = 0; i < occupancy_objects_size; i++) {
-    OccupancyObjectPoints object_points;
+    // std::vector<planning_math::Vec2d> object_points;
     PointCloudObstacle point_cloud;
     size_t polygon_points_size = occupancy_objects[i].additional_occupancy_info.polygon_points_size;
     auto polygon_points = occupancy_objects[i].additional_occupancy_info.polygon_points;
     for (uint j = 0; j < polygon_points_size; j++) {
-      object_points.emplace_back(
-          planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
+      // object_points.emplace_back(
+      //     planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
       v.x() = polygon_points[j].x;
       v.y() = polygon_points[j].y;
       v.z() = 0;
@@ -72,7 +72,7 @@ bool OccupancyObjectManager::Update(const iflyauto::FusionOccupancyObjectsInfo &
       // point_cloud.points.emplace_back(
       //     Position2D(local.x, local.y));
     }
-    points_.emplace_back(std::move(object_points));
+    // occupancy_object_.emplace(occupancy_objects[i].common_occupancy_info.type, std::move(object_points));
     point_clouds.emplace_back(std::move(point_cloud));
   }
   if (UpdateEDT(point_clouds)) {

@@ -6,6 +6,7 @@
 #include "fusion_parking_slot_c.h"
 #include "ehr.pb.h"
 #include "math/line_segment2d.h"
+#include "reference_path.h"
 #include "session.h"
 #include "vec2d.h"
 
@@ -22,6 +23,8 @@ class ParkingSlotManager {
   bool Update(const Map::StaticMap &static_map);
 
   bool Update(const iflyauto::ParkingFusionInfo &parking_fusion_info);
+
+  bool CalculateDistanceToTargetSlot(const std::shared_ptr<ReferencePath> &reference_path);
 
   const std::vector<ParkingSlotPoints>& GetPoints() const { return points_; };
 

@@ -14,10 +14,7 @@ bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20241207/20241
 
 # frame dt
 frame_dt = 0.1 # sec
-# global var
-global_var.set_value('g_is_display_enu', True)
-global_var.set_value('is_vis_sdmap', False)
-global_var.set_value('is_vis_hpp', True)
+
 # plot global figure?
 global_fig_plot = True
 
@@ -30,7 +27,7 @@ fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1, local_view_data)
-fig1.height = 1250
+fig1.height = 1300
 
 fig_lat_offset = load_lateral_offset(bag_loader)
 
@@ -77,7 +74,7 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=400)
+data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=600)
 
 def update_hmi_hpp_info(hmi_hpp_info):
   vars = ['is_avaliable', 'distance_to_parking_space', 'avoid_status', \

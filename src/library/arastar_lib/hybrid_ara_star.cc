@@ -151,8 +151,8 @@ bool HybridARAStar::GetResult(ara_star::HybridARAStarResult& result) const {
     return false;
   }
   auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  auto hybrid_ara_path_cost =
-      planning_debug_data->mutable_hybrid_ara_info()->mutable_hybrid_ara_path_cost();
+  auto hybrid_ara_path_cost = planning_debug_data->mutable_hybrid_ara_info()
+                                  ->mutable_hybrid_ara_path_cost();
   hybrid_ara_path_cost->Clear();
 
   while (current_node->GetPreNode() != nullptr) {
@@ -288,6 +288,20 @@ std::shared_ptr<Node3D> HybridARAStar::NextNodeGenerator(
   double one_shot_distance_update =
       std::max(one_shot_distance_, init_v_ * one_shot_distance_time);
 
+  constexpr double kBendRadius = 20.0;
+  // 以1m为间隔，判断前方10m的距离内，是否车道线半径小于特定值
+  for (int i = 0; i < 10; i++) {
+    double s = ego_s_ + i * 1;
+    ReferencePathPoint temp_ref_path_point;
+    if (reference_path_ptr_->get_reference_point_by_lon(s,
+                                                        temp_ref_path_point)) {
+      if (std::abs(temp_ref_path_point.path_point.kappa) > 1 / kBendRadius) {
+        one_shot_distance_update = 0.5;
+        break;
+      }
+    }
+  }
+
   // one_shot_distance_的取值要注意，apollo中该值是xy_grid_resolution_的根号2倍，这样保证了一个格子里，最多只有一个节点
   int num_steps = static_cast<int>(one_shot_distance_update / step_size_);
 
@@ -390,7 +404,8 @@ void HybridARAStar::RegisterCost(ara_star::CostManager& cost_manager) const {
   // 与agent的距离越近，cost越大
   auto agent_cost_ptr = std::make_shared<ara_star::AgentCost>(
       agent_cost_weight_, vehicle_param_.wheel_base, vehicle_param_.length,
-      ego_half_width_, bounding_box_vec_, fix_lane_, agent_box_tree_);
+      ego_half_width_, bounding_box_vec_, fix_lane_, agent_box_tree_,
+      reference_path_ptr_);
   cost_manager.AddCost(agent_cost_ptr);
 
   // 与道路边缘越近，cost越大
@@ -426,7 +441,8 @@ bool HybridARAStar::ImprovePath() {
   //           << std::endl;
 
   auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  auto hybrid_ara_expand = planning_debug_data->mutable_hybrid_ara_info()->mutable_hybrid_ara_expand();
+  auto hybrid_ara_expand = planning_debug_data->mutable_hybrid_ara_info()
+                               ->mutable_hybrid_ara_expand();
 
   while (true) {
     auto current_time = (uint64_t)IflyTime::Now_ms();
@@ -694,8 +710,10 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
           agent_box_tree_->GetNearestObject(front_axis_position);
       if (nearest_front_object != nullptr &&
           nearest_front_object->obstacle_ptr() != nullptr) {
-        if (nearest_front_object->obstacle_ptr()->type() ==
-                iflyauto::ObjectType::OBJECT_TYPE_OCC_EMPTY &&
+        if ((nearest_front_object->obstacle_ptr()->source_type() ==
+                 SourceType::OCC ||
+             nearest_front_object->obstacle_ptr()->source_type() ==
+                 SourceType::GroundLine) &&
             nearest_front_object->obstacle_ptr()
                     ->perception_polygon()
                     .num_points() >= 3) {
@@ -719,8 +737,10 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
       if (nearest_center_object != nearest_front_object &&
           nearest_center_object != nullptr &&
           nearest_center_object->obstacle_ptr() != nullptr) {
-        if (nearest_center_object->obstacle_ptr()->type() ==
-                iflyauto::ObjectType::OBJECT_TYPE_OCC_EMPTY &&
+        if ((nearest_center_object->obstacle_ptr()->source_type() ==
+                 SourceType::OCC ||
+             nearest_center_object->obstacle_ptr()->source_type() ==
+                 SourceType::GroundLine) &&
             nearest_center_object->obstacle_ptr()
                     ->perception_polygon()
                     .num_points() >= 3) {
@@ -745,8 +765,10 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3D> node) const {
           nearest_back_object != nearest_center_object &&
           nearest_back_object != nullptr &&
           nearest_back_object->obstacle_ptr() != nullptr) {
-        if (nearest_back_object->obstacle_ptr()->type() ==
-                iflyauto::ObjectType::OBJECT_TYPE_OCC_EMPTY &&
+        if ((nearest_back_object->obstacle_ptr()->source_type() ==
+                 SourceType::OCC ||
+             nearest_back_object->obstacle_ptr()->source_type() ==
+                 SourceType::GroundLine) &&
             nearest_back_object->obstacle_ptr()
                     ->perception_polygon()
                     .num_points() >= 3) {
@@ -933,10 +955,10 @@ bool HybridARAStar::SetStartAndEndPose(
                              phi_grid_resolution_));
 
   // 目前start_node_就是自车位置，并不是自车位置在参考线的投影
-  if (!ValidityCheck(start_node_)) {
-    std::cout << "Error!!! start_node in collision with obstacles" << std::endl;
-    return false;
-  }
+  // if (!ValidityCheck(start_node_)) {
+  //   std::cout << "Error!!! start_node in collision with obstacles" <<
+  //   std::endl; return false;
+  // }
 
   start_node_->SetS(start_s);
   start_node_->SetL(start_l);
@@ -1009,11 +1031,9 @@ bool HybridARAStar::ProcessStaticAgents() {
          (frenet_obstacle->obstacle()->is_VRU() &&
           std::fabs(frenet_obstacle->frenet_velocity_l()) < kVruVelocity))) {
       // 过滤近处的OD，使用OCC和GROUDING
-      if (frenet_obstacle->type() !=
-              iflyauto::ObjectType::OBJECT_TYPE_OCC_EMPTY &&
-          frenet_obstacle->type() !=
-              iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE &&
-          min_s > ego_s_ + -3 && min_s < ego_s_ + 12) {
+      if (frenet_obstacle->source_type() == SourceType::OD &&
+          min_s > ego_s_ + -3 &&
+          min_s < ego_s_ + hybrid_ara_star_conf_.use_occ_s_dist) {
         continue;
       }
       obs_max_s_ = std::max(obs_max_s_, frenet_obstacle->frenet_s());
@@ -1109,7 +1129,9 @@ bool HybridARAStar::ProcessStaticAgents() {
   }
 
   auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning_debug_data->mutable_hybrid_ara_info()->mutable_ara_obstacles()->Clear();
+  planning_debug_data->mutable_hybrid_ara_info()
+      ->mutable_ara_obstacles()
+      ->Clear();
   for (auto& obstacle_ptr : nudge_agents) {
     planning::common::HybridARAObstacle* obstacle =
         planning_debug_data->mutable_hybrid_ara_info()->add_ara_obstacles();
@@ -1150,7 +1172,9 @@ void HybridARAStar::Reset() {
   open_pq_ = decltype(open_pq_)();
   final_node_ = nullptr;
   auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning_debug_data->mutable_hybrid_ara_info()->mutable_hybrid_ara_expand()->Clear();
+  planning_debug_data->mutable_hybrid_ara_info()
+      ->mutable_hybrid_ara_expand()
+      ->Clear();
 }
 
 bool HybridARAStar::Init() {

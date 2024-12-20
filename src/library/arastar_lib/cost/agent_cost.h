@@ -1,5 +1,6 @@
 #pragma once
 #include "base_cost.h"
+#include "frenet_obstacle.h"
 #include "obstacle.h"
 #include "src/library/arastar_lib/hybrid_ara_data.h"
 #include "utils/kd_path.h"
@@ -11,25 +12,28 @@ class AgentCost : public BaseCost {
  public:
   AgentCost(
       const double weight, const double ego_wheel_base, const double ego_length,
-      const double ego_circle_radius,
-      const std::vector<SLBox2d>& obstacles,
+      const double ego_circle_radius, const std::vector<SLBox2d>& obstacles,
       const std::shared_ptr<KDPath>& ego_lane,
-      const std::shared_ptr<AABoxKDTree2d<GeometryObject>>& agent_box_tree);
+      const std::shared_ptr<AABoxKDTree2d<GeometryObject>>& agent_box_tree,
+      const std::shared_ptr<ReferencePath>& reference_path_ptr);
   ~AgentCost() = default;
 
   double MakeCost(Node3D& vertex) const;
 
  private:
   void NormalizeCost(double& cost) const;
-  bool GetAreaCost(const SLBox2d& box, const double ego_front_s,
-                   const double ego_front_l, const double ego_back_s,
-                   const double ego_back_l, double& area_cost) const;
+  bool GetAreaCost(
+      const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
+      const double ego_front_s, const double ego_front_l,
+      const double ego_back_s, const double ego_back_l,
+      double& area_cost) const;
 
  private:
   // agent list;
   const std::vector<SLBox2d> obstacles_;
   const std::shared_ptr<KDPath> ego_lane_;
   const std::shared_ptr<AABoxKDTree2d<GeometryObject>> agent_box_tree_;
+  const std::shared_ptr<ReferencePath> reference_path_ptr_;
 
   double ego_wheel_base_ = 0.0;
   double ego_length_ = 0.0;

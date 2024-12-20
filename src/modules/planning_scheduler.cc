@@ -106,6 +106,9 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   std::string config_file = common::util::ReadFile(path);
   auto config = mjson::Reader(config_file);
 
+  auto config_builder =
+      session_.environmental_model().config_builder(scene_type);
+  config_ = config_builder->cast<GeneralPlanningConfig>();
   environmental_model_manager_.SetConfig(scene_type);
   // all parameters can be changed here
   JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
@@ -612,7 +615,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
   hpp_info->distance_to_parking_space =
       route_info_output.distance_to_target_slot;
-  hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
+  // hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
+  hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
       route_info_output.is_reached_hpp_start_point;
   hpp_info->accumulated_driving_distance =
@@ -622,6 +626,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   hpp_info->is_approaching_turn = false;
   hpp_info->is_parking_space_occupied = false;
   hpp_info->is_new_parking_space_found = false;
+  hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_NONE;
   auto reference_path_manager =
       session_.environmental_model().get_reference_path_manager();
   auto current_reference_path =
@@ -654,34 +659,14 @@ void PlanningScheduler::FillPlanningHmiInfo(
   }
 
   // hpp状态切park_in状态
-  const auto &state_machine = local_view_->function_state_machine_info;
-  // const auto &apa_planning_status = session_.planning_context().planning_output().planning_status.apa_planning_status;
-  const size_t successful_slot_info_list_size = session_.planning_context().planning_output().successful_slot_info_list_size;
-  const auto &successful_slot_info_list = session_.planning_context().planning_output().successful_slot_info_list;
-  const double ego_v = ego_state_manager->ego_v();
-  const size_t target_slot_id = local_view_->parking_fusion_info.select_slot_id;
-  double distance_to_path_end = route_info_output.distance_to_target_slot;
-  if (distance_to_path_end < 5.0) {
-    distance_to_path_end = std::min(
-     std::fabs(points.back().path_point.s - ego_s),
-     distance_to_path_end);
-  }
-  if ((successful_slot_info_list_size > 0) &&
-      (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING)) {
+  const auto& parking_switch_info = session_.planning_context().parking_switch_decider_output().parking_switch_info;
+  if (parking_switch_info.is_memory_slot_allowed_to_park) {
+    hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+  } else if (parking_switch_info.is_memory_slot_occupied) {
+    hpp_info->is_parking_space_occupied = true;
+  } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
     hpp_info->is_new_parking_space_found = true;
     hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
-  } else if ((distance_to_path_end < config_.dist_to_parking_space_thr) &&
-             (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
-    if ((ego_v <= 1e-2) || distance_to_path_end <= 1e-2) {
-      hpp_info->is_parking_space_occupied = true;
-    }
-    for (const auto& slot_info : successful_slot_info_list) {
-      if (target_slot_id == slot_info.id) {
-        hpp_info->is_parking_space_occupied = false;
-        hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
-        break;
-      }
-    }
   }
 }
 
@@ -930,8 +915,8 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
 
   // check dist
   if (state_machine.current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
-    const double dist =
-        session_.environmental_model().get_route_info()->get_route_info_output().distance_to_target_slot;
+    double dist =
+        session_.environmental_model().get_parking_slot_manager()->GetDistanceToTargetSlot();
     const double kdistance_thresh = 10.0;
     if (dist > kdistance_thresh) {
       return false;

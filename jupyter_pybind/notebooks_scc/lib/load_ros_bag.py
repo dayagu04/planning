@@ -153,6 +153,7 @@ class LoadRosbag:
 
   def load_all_data(self, normal_print = True):
     print('load bag')
+    scene_type = 'HIGHWAY'
     start_time = time.time()
     max_time = 0.0
     t0 = 0
@@ -677,6 +678,8 @@ class LoadRosbag:
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['data'].append(msg)
         self.plan_debug_msg['timestamp'].append(msg.timestamp)
+        if msg.frame_info.scene_type != 'HIGHWAY':
+          scene_type = msg.frame_info.scene_type
         try:
           json_struct = json.loads(msg.data_json, strict = False)
           json_data = {}
@@ -1093,6 +1096,7 @@ class LoadRosbag:
     #   self.rdg_occ_objects_msg['enable'] = False
     #   print('missing /iflytek/camera_perception/3d_occupancy_objects topic !!!')
 
+    global_var.set_value_by_scene(scene_type)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print("load bag 耗时：", elapsed_time, "秒")

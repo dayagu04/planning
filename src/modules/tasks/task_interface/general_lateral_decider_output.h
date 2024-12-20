@@ -17,6 +17,10 @@ struct GeneralLateralDeciderOutput {
   std::vector<std::pair<double, double>> last_enu_ref_path;
   std::vector<std::pair<Point2D, Point2D>> soft_bounds_cart_point;
   std::vector<std::pair<Point2D, Point2D>> hard_bounds_cart_point;
+  std::vector<std::pair<double, double>> soft_bounds_frenet_point;
+  std::vector<std::pair<double, double>> hard_bounds_frenet_point;
+  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info;
+  std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
   std::vector<double> enu_ref_theta;
   std::vector<double> last_enu_ref_theta;
   bool complete_follow = true;
@@ -26,6 +30,10 @@ struct GeneralLateralDeciderOutput {
   bool ramp_scene = false;
   bool enable_ara_ref = false;
   void Clear() {
+    complete_follow = true;
+    lane_change_scene = false;
+    ramp_scene = false;
+    enable_ara_ref = false;
     init_state.Clear();
     enu_ref_path.clear();
     last_enu_ref_path.clear();
@@ -33,6 +41,10 @@ struct GeneralLateralDeciderOutput {
     hard_bounds.clear();
     soft_bounds_cart_point.clear();
     hard_bounds_cart_point.clear();
+    soft_bounds_frenet_point.clear();
+    hard_bounds_frenet_point.clear();
+    soft_bounds_info.clear();
+    hard_bounds_info.clear();
     enu_ref_theta.clear();
     last_enu_ref_theta.clear();
     lc_status.clear();

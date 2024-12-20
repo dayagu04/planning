@@ -1166,7 +1166,9 @@ def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_i
   local_point_valid = fus_occ_obj_msg.local_point_valid  # 障碍物中用到的绝对坐标是否有效
   # print("occ obj local_point_valid: ", local_point_valid)
   num = 0
+  plan_obs_id = 7000000
   for i in range(fusion_object_size):
+    plan_obs_id += 1
     common_info = obstacle_list[i].common_occupancy_info
     additional_info = obstacle_list[i].additional_occupancy_info
     source = additional_info.fusion_source
@@ -1202,7 +1204,8 @@ def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_i
       lat_decision = "None"
       is_static = ""
       for obstacle in environment_model_info.obstacle:
-        if obstacle.id == additional_info.track_id:
+        if obstacle.id == additional_info.track_id + 7000000:
+        # if obstacle.id == plan_obs_id:
           frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
           if (0 == obstacle.lat_decision):
             lat_decision = "LEFT"
@@ -1252,12 +1255,11 @@ def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_i
     obs_info_all[source]['obstacles_tid'].append(additional_info.track_id)
 
     if frenet_vs == 255 and  frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('v(' + str(additional_info.track_id) + ')=' \
-          + str(round(common_info.relative_velocity.x, 2))+','+ str(round(common_info.relative_velocity.y, 4))+','+ str(type))
+      obs_info_all[source]['obs_label'].append('v(' + str(additional_info.track_id + 7000000) + ')=' \
+          + ',' + str(type))
     else:
-      obs_info_all[source]['obs_label'].append('vs(' + str(additional_info.track_id) + ')=' \
-          + str(round(frenet_vs, 2))+','+ str(round(frenet_vl, 4))+','+str(type)+'\n'\
-          + str(round(common_info.relative_velocity.x, 2))+','+ str(round(common_info.relative_velocity.y, 4))+'\n'\
+      obs_info_all[source]['obs_label'].append('vs(' + str(additional_info.track_id + 7000000) + ')=' \
+          + ',' + str(type)+'\n'\
           + lat_decision + '\n' + is_static)
 
   if fusion_object_size == 0:
@@ -1748,11 +1750,18 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, g_is_display_enu
   road_mark_boxes_y = []
   road_obstacle_x_vec = []
   road_obstacle_y_vec = []
+  polygon_obstacle_x_vec = []
+  polygon_obstacle_y_vec = []
   try:
     parking_assist_info = ehr_static_map_msg.parking_assist_info
+    # print("parking_assist_info:", parking_assist_info)
     parking_spaces = parking_assist_info.parking_spaces
-    # print("parking_space size: ", len(parking_spaces))
     road_obstacles = parking_assist_info.road_obstacles
+    polygon_obstacles = []
+    try:
+      polygon_obstacles = parking_assist_info.polygon_obstacle
+    except:
+      pass
     # 车道级
     lanes = ehr_static_map_msg.road_map.lanes
     # print("lanes: ", lanes)
@@ -1793,6 +1802,17 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, g_is_display_enu
           road_obstacle_y.append(y)
         road_obstacle_x_vec.append(road_obstacle_x)
         road_obstacle_y_vec.append(road_obstacle_y)
+
+      for polygon_obstacle in polygon_obstacles:
+        polygon_obstacle_x = []
+        polygon_obstacle_y = []
+        for corners in polygon_obstacle.corners:
+          x = corners.boot.x
+          y = corners.boot.y
+          polygon_obstacle_x.append(x)
+          polygon_obstacle_y.append(y)
+        polygon_obstacle_x_vec.append(polygon_obstacle_x)
+        polygon_obstacle_y_vec.append(polygon_obstacle_y)
     else:
       coord_tf = coord_transformer()
       if loc_msg != None: # 长时轨迹
@@ -1836,14 +1856,30 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, g_is_display_enu
             road_obstacle_y.append(local_y)
           road_obstacle_x_vec.append(road_obstacle_x)
           road_obstacle_y_vec.append(road_obstacle_y)
+
+        for polygon_obstacle in polygon_obstacles:
+          polygon_obstacle_x = []
+          polygon_obstacle_y = []
+          for corners in polygon_obstacle.corners:
+            x = corners.boot.x
+            y = corners.boot.y
+            local_x, local_y = coord_tf.global_to_local([x], [y])
+            polygon_obstacle_x.append(local_x)
+            polygon_obstacle_y.append(local_y)
+          polygon_obstacle_x_vec.append(polygon_obstacle_x)
+          polygon_obstacle_y_vec.append(polygon_obstacle_y)
   except:
     print('generate_ehr_static_map error')
-  return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y, road_obstacle_x_vec, road_obstacle_y_vec
+  return parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y, \
+         road_obstacle_x_vec, road_obstacle_y_vec, polygon_obstacle_x_vec, polygon_obstacle_y_vec
 
-def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
+def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info = None, g_is_display_enu = False):
   groundline_x_vec = []
   groundline_y_vec = []
   groundline_id_vec = []
+  pos_x_vec = []
+  pos_y_vec = []
+  ground_line_label_vec = []
   try:
     groundline_size = ground_line_msg.groundline_size
     ground_lines = ground_line_msg.groundline
@@ -1851,6 +1887,8 @@ def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = Fal
     if g_is_display_enu:
       for j in range(groundline_size):
         groundline = ground_lines[j]
+        type = groundline.type
+        resource_type = groundline.resource_type
         single_groundline_x_vec = []
         single_groundline_y_vec = []
         groundline_point_size = groundline.groundline_point_size
@@ -1864,8 +1902,32 @@ def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = Fal
         if groundline_point_size >= 3:
           ground_line_id = ground_line_id + 1
           groundline_id_vec.append(ground_line_id)
+          try:
+            frenet_vs, frenet_vl = 255, 255
+            lat_decision = "None"
+            is_static = ""
+            for obstacle in environment_model_info.obstacle:
+              if obstacle.id == ground_line_id:
+                frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+                if (0 == obstacle.lat_decision):
+                  lat_decision = "LEFT"
+                elif (1 == obstacle.lat_decision):
+                  lat_decision = "RIGHT"
+                elif (2 == obstacle.lat_decision):
+                  lat_decision = "IGNORE"
+                if obstacle.is_static:
+                  is_static = "Static"
+                break
+          except:
+            pass
+          pos_x_vec.append(single_groundline_x_vec[0])
+          pos_y_vec.append(single_groundline_y_vec[0])
+          ground_line_label_vec.append('(id,type,resource)=' + '\n'\
+              + str(ground_line_id) + ',' + str(type) + ',' + str(resource_type) + '\n'\
+              + lat_decision + '\n' + is_static)
         else:
           groundline_id_vec.append(-1)
+
     else:
       coord_tf = coord_transformer()
       if loc_msg != None: # 长时轨迹
@@ -1889,11 +1951,34 @@ def generate_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = Fal
           if groundline_point_size >= 3:
             ground_line_id = ground_line_id + 1
             groundline_id_vec.append(ground_line_id)
+            try:
+              frenet_vs, frenet_vl = 255, 255
+              lat_decision = "None"
+              is_static = ""
+              for obstacle in environment_model_info.obstacle:
+                if obstacle.id == ground_line_id:
+                  frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+                  if (0 == obstacle.lat_decision):
+                    lat_decision = "LEFT"
+                  elif (1 == obstacle.lat_decision):
+                    lat_decision = "RIGHT"
+                  elif (2 == obstacle.lat_decision):
+                    lat_decision = "IGNORE"
+                  if obstacle.is_static:
+                    is_static = "Static"
+                  break
+            except:
+              pass
+            pos_x_vec.append(single_groundline_x_vec[0])
+            pos_y_vec.append(single_groundline_y_vec[0])
+            ground_line_label_vec.append('(id,type,resource)=' + '\n'\
+                + str(ground_line_id) + ',' + str(type) + ',' + str(resource_type) + '\n'\
+                + lat_decision + '\n' + is_static)
           else:
             groundline_id_vec.append(-1)
   except:
     print('groundline error')
-  return groundline_x_vec, groundline_y_vec, groundline_id_vec
+  return groundline_x_vec, groundline_y_vec, groundline_id_vec, pos_x_vec, pos_y_vec, ground_line_label_vec
 
 def generate_rdg_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
   groundline_x_vec = []
@@ -2276,6 +2361,7 @@ def generate_parking_slot(fus_parking_msg, loc_msg, release_slot_id_list):
   }
   try:
     select_slot_id = fus_parking_msg.select_slot_id
+    print("select_slot_id: ", select_slot_id)
     parking_fusion_slot_lists_size = fus_parking_msg.parking_fusion_slot_lists_size
     for j in range(parking_fusion_slot_lists_size):
       parking_fusion_slot_lists = fus_parking_msg.parking_fusion_slot_lists[j]
@@ -2324,7 +2410,7 @@ def generate_parking_slot(fus_parking_msg, loc_msg, release_slot_id_list):
         select_parking_slot_info['parking_slot_y'].append(parking_slot_y)
         select_parking_slot_info['pos_x'].append([pos_x])
         select_parking_slot_info['pos_y'].append([pos_y])
-        select_parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+        select_parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ',' +  str(allow_parking) +')'])
       elif is_release:
         plan_release_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
         plan_release_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)

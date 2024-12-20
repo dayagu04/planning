@@ -38,6 +38,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   is_enu_to_car = global_var.get_value('is_enu_to_car')
   is_vis_map = global_var.get_value('is_vis_map')
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
+  is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   # get msg
   # bag_time = 1.2
   ### step 1: 时间戳对齐
@@ -524,7 +525,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
 
     # 加载rdg车道线
-    if bag_loader.rdg_lane_lines_msg['enable'] == True:
+    if is_vis_rdg_line and bag_loader.rdg_lane_lines_msg['enable'] == True:
       rdg_lane_lines = load_rdg_lane_lines(rdg_lane_lines_msg, is_enu_to_car, loc_msg, g_is_display_enu)
       data_lane_dict2 = {
         0:local_view_data['rdg_data_lane_0'],
@@ -654,6 +655,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print("planning debug info:", int(plan_debug_msg.frame_info.frame_num) - bag_loader.plan_debug_msg['data'][0].frame_info.frame_num)
     except:
       pass
+    print("distance_to_target_slot: ", plan_debug_json_msg['distance_to_target_slot'])
     lat_behavior_common = plan_debug_msg.lat_behavior_common
     environment_model_info = plan_debug_msg.environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -684,42 +686,52 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       plan_traj_y = plan_debug_json["assembled_y"]
       plan_traj_theta = plan_debug_json["assembled_theta"]
       plan_traj_s = plan_debug_json["traj_s_vec"]
-      if min(plan_traj_x) != max(plan_traj_x) or min(plan_traj_y) != max(plan_traj_y):
-        if not g_is_display_enu:
-          plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_traj_x, plan_traj_y)
-          cur_yaw = loc_msg.orientation.euler_boot.yaw
-          plan_traj_theta_local = []
-          for i in range(len(plan_traj_theta)):
-            plan_traj_theta_local.append(plan_traj_theta[i] - cur_yaw)
-          plan_traj_theta = plan_traj_theta_local
+      local_view_data['data_planning_raw'].data.update({
+        'plan_traj_y' : [],
+        'plan_traj_x' : [],
+        'plan_traj_s': []
+      })
+      local_view_data['data_car_traj_raw'].data.update({
+        'car_yb_traj' : [],
+        'car_xb_traj' : [],
+      })
+      if (len(plan_traj_x) > 0):
+        if min(plan_traj_x) != max(plan_traj_x) or min(plan_traj_y) != max(plan_traj_y):
+          if not g_is_display_enu:
+            plan_traj_x, plan_traj_y = coord_tf.global_to_local(plan_traj_x, plan_traj_y)
+            cur_yaw = loc_msg.orientation.euler_boot.yaw
+            plan_traj_theta_local = []
+            for i in range(len(plan_traj_theta)):
+              plan_traj_theta_local.append(plan_traj_theta[i] - cur_yaw)
+            plan_traj_theta = plan_traj_theta_local
 
-        local_view_data['data_planning_raw'].data.update({
+          local_view_data['data_planning_raw'].data.update({
             'plan_traj_y' : plan_traj_y,
             'plan_traj_x' : plan_traj_x,
             'plan_traj_s': plan_traj_s
-        })
-
-        if len(plan_traj_x) == len(plan_traj_y) and len(plan_traj_x) == len(plan_traj_theta):
-          car_xb_traj = []
-          car_yb_traj = []
-          for i in range(len(plan_traj_x) - 1, -1, -1):
-            car_xb_traj_point = []
-            car_yb_traj_point = []
-            for j in range(len(car_xb)):
-              tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_traj_theta[i])
-              car_xb_traj_point.append(tmp_x)
-              car_yb_traj_point.append(tmp_y)
-            car_xb_traj.append(car_xb_traj_point)
-            car_yb_traj.append(car_yb_traj_point)
-          local_view_data['data_car_traj_raw'].data.update({
-            'car_yb_traj' : car_yb_traj,
-            'car_xb_traj' : car_xb_traj,
           })
-        else:
-          print("car_traj_raw error!")
-          print("raw_plan_traj_x size: ", len(plan_traj_x))
-          print("raw_plan_traj_y size: ", len(plan_traj_y))
-          print("raw_plan_traj_theta size: ", len(plan_traj_theta))
+
+          if len(plan_traj_x) == len(plan_traj_y) and len(plan_traj_x) == len(plan_traj_theta):
+            car_xb_traj = []
+            car_yb_traj = []
+            for i in range(len(plan_traj_x) - 1, -1, -1):
+              car_xb_traj_point = []
+              car_yb_traj_point = []
+              for j in range(len(car_xb)):
+                tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_traj_x[i], plan_traj_y[i], plan_traj_theta[i])
+                car_xb_traj_point.append(tmp_x)
+                car_yb_traj_point.append(tmp_y)
+              car_xb_traj.append(car_xb_traj_point)
+              car_yb_traj.append(car_yb_traj_point)
+            local_view_data['data_car_traj_raw'].data.update({
+              'car_yb_traj' : car_yb_traj,
+              'car_xb_traj' : car_xb_traj,
+            })
+          else:
+            print("car_traj_raw error!")
+            print("raw_plan_traj_x size: ", len(plan_traj_x))
+            print("raw_plan_traj_y size: ", len(plan_traj_y))
+            print("raw_plan_traj_theta size: ", len(plan_traj_theta))
       else:
         print("no car_traj_raw json debug info!")
 
@@ -919,7 +931,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     if bag_loader.plan_debug_msg['enable'] == False:
       environment_model_info = None
     obstacles_info_all = load_occupancy_obstacle(fus_occ_obj_msg, loc_msg, environment_model_info)
-    print("fusion occ objects size:", len(obstacles_info_all))
+    # print("fusion occ objects size:", len(obstacles_info_all))
     for key in obstacles_info_all:
       obstacles_info = obstacles_info_all[0]
       if g_is_display_enu:
@@ -1155,11 +1167,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = loc_msg.position.position_boot.y
     cur_yaw = loc_msg.orientation.euler_boot.yaw
 
-    if bag_loader.planning_hmi_msg['enable'] ==True:
-      noa_output_info_msg = planning_hmi_msg.noa_output_info
-      print("dis to ramp:",noa_output_info_msg.dis_to_ramp)
-      print("dis to split:",noa_output_info_msg.dis_to_split)
-      print("dis to merge:",noa_output_info_msg.dis_to_merge)
+    # if bag_loader.planning_hmi_msg['enable'] ==True:
+    #   noa_output_info_msg = planning_hmi_msg.noa_output_info
+    #   print("dis to ramp:",noa_output_info_msg.dis_to_ramp)
+    #   print("dis to split:",noa_output_info_msg.dis_to_split)
+    #   print("dis to merge:",noa_output_info_msg.dis_to_merge)
 
     print("ehr static map timestamp:",ehr_static_map_msg.header)
     print("road_map.lanes len:",len(ehr_static_map_msg.road_map.lanes))
@@ -1236,7 +1248,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # 加载ehr_static_map
   if bag_loader.ehr_static_map_msg['enable'] == True:
-    parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y, road_obstacle_x_vec, road_obstacle_y_vec = generate_ehr_static_map(ehr_static_map_msg, loc_msg, g_is_display_enu)
+    parking_space_boxes_x, parking_space_boxes_y, road_mark_boxes_x, road_mark_boxes_y, \
+    road_obstacle_x_vec, road_obstacle_y_vec, polygon_obstacle_x_vec, polygon_obstacle_y_vec = generate_ehr_static_map(ehr_static_map_msg, loc_msg, g_is_display_enu)
     local_view_data['data_parking_space'].data.update({
       'parking_space_x' : parking_space_boxes_x,
       'parking_space_y' : parking_space_boxes_y,
@@ -1248,6 +1261,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_road_obstacle'].data.update({
       'road_obstacle_x' : road_obstacle_x_vec,
       'road_obstacle_y' : road_obstacle_y_vec,
+    })
+    local_view_data['data_polygon_obstacle'].data.update({
+      'polygon_obstacle_x' : polygon_obstacle_x_vec,
+      'polygon_obstacle_y' : polygon_obstacle_y_vec,
     })
 
     parking_space_x_vec, parking_space_y_vec, parking_space_id_vec = hpp_generate_ehr_static_map(ehr_static_map_msg, loc_msg, g_is_display_enu)
@@ -1265,11 +1282,19 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # 加载fusion ground line
   if bag_loader.fus_ground_line_msg['enable'] == True:
-    groundline_x_vec, groundline_y_vec, ground_line_id_vec = generate_ground_line(ground_line_msg, loc_msg, g_is_display_enu)
+    if bag_loader.plan_debug_msg['enable'] == False:
+      environment_model_info = None
+    groundline_x_vec, groundline_y_vec, ground_line_id_vec, pos_x_vec, pos_y_vec, ground_line_label_vec = generate_ground_line(ground_line_msg, loc_msg, environment_model_info, g_is_display_enu)
     local_view_data['data_ground_line'].data.update({
       'ground_line_x' : groundline_x_vec,
       'ground_line_y' : groundline_y_vec,
       'ground_line_id' : ground_line_id_vec,
+    })
+
+    local_view_data['data_ground_line_label'].data.update({
+      'pos_x' : pos_x_vec,
+      'pos_y' : pos_y_vec,
+      'ground_line_label' : ground_line_label_vec,
     })
 
     ground_line_point_x_vec, ground_line_point_y_vec, groundline_x_vec, groundline_y_vec, groundline_id_vec = generate_ground_line_clusters(ground_line_msg, loc_msg, g_is_display_enu)
@@ -1423,8 +1448,7 @@ def load_local_view_figure():
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
   is_vis_hpp = global_var.get_value('is_vis_hpp')
   is_vis_radar = global_var.get_value('is_vis_radar')
-  is_vis_stop_line = global_var.get_value('is_vis_stop_line')
-  is_vis_zebra_crossing_line = global_var.get_value('is_vis_zebra_crossing_line')
+  is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   is_vis_rdg_obj = global_var.get_value('is_vis_rdg_obj')
   is_vis_me_obj = global_var.get_value('is_vis_me_obj')
   is_vis_lane_mark = global_var.get_value('is_vis_lane_mark')
@@ -1673,9 +1697,14 @@ def load_local_view_figure():
                                             'road_mark_x':[],})
   data_road_obstacle = ColumnDataSource(data = {'road_obstacle_y':[],
                                                 'road_obstacle_x':[],})
+  data_polygon_obstacle = ColumnDataSource(data = {'polygon_obstacle_y':[],
+                                                   'polygon_obstacle_x':[],})
   data_ground_line = ColumnDataSource(data = {'ground_line_y':[],
                                               'ground_line_x':[],
                                               'ground_line_id':[]})
+  data_ground_line_label = ColumnDataSource(data = {'pos_y':[],
+                                                    'pos_x':[],
+                                                    'ground_line_label':[]})
   data_ground_line_point = ColumnDataSource(data = {'ground_line_y':[],
                                                     'ground_line_x':[],})
   data_ground_line_clusters = ColumnDataSource(data = {'ground_line_y':[],
@@ -1842,7 +1871,9 @@ def load_local_view_figure():
                      'data_parking_space_text' : data_parking_space_text , \
                      'data_road_mark' : data_road_mark , \
                      'data_road_obstacle': data_road_obstacle, \
+                     'data_polygon_obstacle': data_polygon_obstacle, \
                      'data_ground_line' : data_ground_line, \
+                     'data_ground_line_label': data_ground_line_label, \
                      'data_ground_line_point' : data_ground_line_point, \
                      'data_ground_line_clusters' : data_ground_line_clusters, \
                      'data_rdg_ground_line': data_rdg_ground_line, \
@@ -2005,35 +2036,34 @@ def load_local_view_figure():
   fig1.line('line_topo_18_y', 'line_topo_18_x', source = data_lane_topo_18, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
   fig1.line('line_topo_19_y', 'line_topo_19_x', source = data_lane_topo_19, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False)
 
-  f41 = fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_2_y', 'rdg_line_2_x', source = rdg_data_lane_2, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_3_y', 'rdg_line_3_x', source = rdg_data_lane_3, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_4_y', 'rdg_line_4_x', source = rdg_data_lane_4, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_5_y', 'rdg_line_5_x', source = rdg_data_lane_5, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_6_y', 'rdg_line_6_x', source = rdg_data_lane_6, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_7_y', 'rdg_line_7_x', source = rdg_data_lane_7, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_8_y', 'rdg_line_8_x', source = rdg_data_lane_8, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_9_y', 'rdg_line_9_x', source = rdg_data_lane_9, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_10_y', 'rdg_line_10_x', source = rdg_data_lane_10, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_11_y', 'rdg_line_11_x', source = rdg_data_lane_11, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_12_y', 'rdg_line_12_x', source = rdg_data_lane_12, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_13_y', 'rdg_line_13_x', source = rdg_data_lane_13, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_14_y', 'rdg_line_14_x', source = rdg_data_lane_14, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_15_y', 'rdg_line_15_x', source = rdg_data_lane_15, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_16_y', 'rdg_line_16_x', source = rdg_data_lane_16, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_17_y', 'rdg_line_17_x', source = rdg_data_lane_17, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
-  fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+  if is_vis_rdg_line:
+    f41 = fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_2_y', 'rdg_line_2_x', source = rdg_data_lane_2, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_3_y', 'rdg_line_3_x', source = rdg_data_lane_3, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_4_y', 'rdg_line_4_x', source = rdg_data_lane_4, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_5_y', 'rdg_line_5_x', source = rdg_data_lane_5, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_6_y', 'rdg_line_6_x', source = rdg_data_lane_6, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_7_y', 'rdg_line_7_x', source = rdg_data_lane_7, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_8_y', 'rdg_line_8_x', source = rdg_data_lane_8, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_9_y', 'rdg_line_9_x', source = rdg_data_lane_9, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_10_y', 'rdg_line_10_x', source = rdg_data_lane_10, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_11_y', 'rdg_line_11_x', source = rdg_data_lane_11, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_12_y', 'rdg_line_12_x', source = rdg_data_lane_12, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_13_y', 'rdg_line_13_x', source = rdg_data_lane_13, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_14_y', 'rdg_line_14_x', source = rdg_data_lane_14, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_15_y', 'rdg_line_15_x', source = rdg_data_lane_15, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_16_y', 'rdg_line_16_x', source = rdg_data_lane_16, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_17_y', 'rdg_line_17_x', source = rdg_data_lane_17, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
+    fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane')
 
-  if is_vis_stop_line:
     f61 = fig1.line('stop_line_0_y', 'stop_line_0_x', source = stop_line_0, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
     fig1.line('stop_line_1_y', 'stop_line_1_x', source = stop_line_1, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
     fig1.line('stop_line_2_y', 'stop_line_2_x', source = stop_line_2, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
     fig1.line('stop_line_3_y', 'stop_line_3_x', source = stop_line_3, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
     fig1.line('stop_line_4_y', 'stop_line_4_x', source = stop_line_4, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
 
-  if is_vis_zebra_crossing_line:
     f66 = fig1.patch('zebra_crossing_line_0_y', 'zebra_crossing_line_0_x', source = zebra_crossing_line_0, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
     fig1.patch('zebra_crossing_line_1_y', 'zebra_crossing_line_1_x', source = zebra_crossing_line_1, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
     fig1.patch('zebra_crossing_line_2_y', 'zebra_crossing_line_2_x', source = zebra_crossing_line_2, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
@@ -2173,11 +2203,13 @@ def load_local_view_figure():
     fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
     fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_occ_obj, fill_color = "chocolate", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'occ obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info')
-    fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'road_mark')
+    fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
+    fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'ehr_road_mark')
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
     fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info')
     fig1.multi_line('road_obstacle_y', 'road_obstacle_x', source = data_road_obstacle, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'ehr_ground_line', visible = False)
     fig_ground_line = fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line, line_width = 2, line_color = 'green', line_dash = 'dotted', legend_label = 'ground_line')
+    fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ground_line_info', visible = False)
     fig1.circle('ground_line_y', 'ground_line_x', source = data_ground_line_point, radius = 0.01, line_width = 1,  line_color = 'green', line_alpha = 1, fill_color = "green", fill_alpha = 1.0, legend_label = 'ground_line')
     fig_ground_line_cluster = fig1.multi_line('ground_line_y', 'ground_line_x', source = data_ground_line_clusters, line_width = 2, line_color = 'red', line_dash = 'dotted', legend_label = 'ground_line_cluster', visible = False)
     fig1.multi_line('ground_line_y', 'ground_line_x', source = data_rdg_ground_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'rdg_ground_line', visible = False)
@@ -2210,10 +2242,10 @@ def load_local_view_figure():
   fig1.add_tools(hover1_9)
   fig1.add_tools(hover1_10)
   fig1.add_tools(hover1_11)
-  if is_vis_hpp:
-    hover1_12 = HoverTool(renderers=[fig_ground_line], tooltips=[('id', '@ground_line_id')])
+  # if is_vis_hpp:
+    # hover1_12 = HoverTool(renderers=[fig_ground_line], tooltips=[('id', '@ground_line_id')])
     # hover1_13 = HoverTool(renderers=[fig_ground_line_cluster], tooltips=[('id', '@ground_line_id')])
-    fig1.add_tools(hover1_12)
+    # fig1.add_tools(hover1_12)
     # fig1.add_tools(hover1_13)
 
   # tap1 = TapTool(renderers=[fig_virtual_line])

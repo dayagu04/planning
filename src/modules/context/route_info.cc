@@ -867,8 +867,7 @@ bool RouteInfo::GetCurrentNearestLane() {
 
 void RouteInfo::CalculateHPPInfo() {
   ConstructBox();
-  // if on hpp lane
-  if (nearest_lane_hpp_->IsOnLane(ego_box_hpp_)) {
+  if (IsOnHPPLane()) {    
     std::cout << "is on hpp lane!" << std::endl;
     route_info_output_.is_on_hpp_lane = true;
     const auto trace_start = local_view_.static_map_info.parking_assist_info().trace_start();
@@ -992,7 +991,22 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
     }
   }
 }
-
+bool RouteInfo::IsOnHPPLane() {
+  ad_common::math::Vec2d cur_point{current_pose_.x, current_pose_.y};
+  if (nearest_lane_hpp_->IsOnLane(cur_point)) {
+    double accumulate_s = 0.0;
+    double lateral = 0.0;
+    nearest_lane_hpp_->GetProjection(cur_point, &accumulate_s, &lateral);
+    const double hpp_lane_heading = nearest_lane_hpp_->GetHeading(accumulate_s);
+    const double ego_heading = current_pose_.theta;
+    const double heading_diff_threshold = 30;
+    const double angle_diff = AngleDiff(hpp_lane_heading , ego_heading);
+    if (std::abs(angle_diff) * 180 / M_PI < heading_diff_threshold) {
+      return true;
+    }
+  }
+  return false;
+}
 // bool RouteInfo::GetCurrentNearestLane(
 //     const planning::framework::Session& session) {
 //   if (session_->environmental_model().get_hdmap_valid()) {

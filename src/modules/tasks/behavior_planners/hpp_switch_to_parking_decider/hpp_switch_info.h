@@ -1,5 +1,6 @@
 #pragma once
 
+#include <climits>
 namespace planning {
 
 enum class HppTrajStitchStatus {
@@ -12,12 +13,14 @@ struct HppParkingSwitchInfo {
   double dist_to_memory_slot;
 
   // memory slot has a parking path.
+  bool is_memory_slot_occupied;
   bool is_memory_slot_allowed_to_park;
   bool is_selected_slot_allowed_to_park;
   HppTrajStitchStatus traj_status;
 
   void Clear() {
-    dist_to_memory_slot = 1000.0;
+    dist_to_memory_slot = NL_NMAX;
+    is_memory_slot_occupied = false;
     is_memory_slot_allowed_to_park = false;
     is_selected_slot_allowed_to_park = false;
     return;

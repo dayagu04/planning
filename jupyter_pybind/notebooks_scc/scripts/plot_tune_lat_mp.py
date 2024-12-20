@@ -18,9 +18,6 @@ bag_path = "/data_cold/abu_zone/cailiu2/0802/165_66a1bb682933546a92b11980_66a77f
 
 frame_dt = 0.1 # sec
 steer_ratio = 13.0 # e0y
-global_var.set_value('g_is_display_enu', True)
-global_var.set_value('is_vis_sdmap', False)
-global_var.set_value('is_vis_hpp', True)
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

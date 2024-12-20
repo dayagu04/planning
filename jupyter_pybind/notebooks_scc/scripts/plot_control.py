@@ -10,9 +10,6 @@ sys.path.append('../../../')
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240701/20240701-18-12-17/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-07-01-18-12-17_no_camera.bag"
 
 frame_dt = 0.02 # sec
-global_var.set_value('g_is_display_enu', True)
-global_var.set_value('is_vis_sdmap', False)
-global_var.set_value('is_vis_hpp', True)
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

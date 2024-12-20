@@ -146,7 +146,7 @@ bool Polygon2d::HasOverlap(const Box2d &box) const {
       return true;
     }
   }
-  return false;
+  return DistanceTo(box) <= kMathEpsilon;
 }
 
 bool Polygon2d::Contains(const LineSegment2d &line_segment) const {

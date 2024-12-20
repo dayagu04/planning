@@ -449,6 +449,8 @@ bool GeneralLongitudinalDecider::Execute() {
   if (session_->is_hpp_scene()) {
     // set destination bound
     double distance_to_destination = get_distance_to_destination();
+    // double distance_to_destination =
+    //   session_->environmental_model().get_parking_slot_manager()->GetDistanceToTargetSlot();
     const size_t successful_slot_info_list_size =
         session_->planning_context()
             .planning_output()
@@ -456,11 +458,12 @@ bool GeneralLongitudinalDecider::Execute() {
     const auto &current_state = session_->environmental_model()
                                     .get_local_view()
                                     .function_state_machine_info.current_state;
+    double stop_distance_to_destination = config_.stop_distance_to_destination;
     if ((current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) &&
         (successful_slot_info_list_size > 0)) {
       distance_to_destination = 0.0;
+      stop_distance_to_destination = 0.0;
     }
-    double stop_distance_to_destination = config_.stop_distance_to_destination;
     double destination_s = planning_init_point.frenet_state.s +
                            distance_to_destination -
                            stop_distance_to_destination;

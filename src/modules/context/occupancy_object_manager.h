@@ -10,34 +10,32 @@
 #include "vec2d.h"
 
 namespace planning {
-using OccupancyObjectPoints = std::vector<planning_math::Vec2d>;
+using OccupancyObject =
+    std::unordered_multimap<iflyauto::ObjectType, std::vector<planning_math::Vec2d>>;
 
 class OccupancyObjectManager {
  public:
-  OccupancyObjectManager(planning::framework::Session *session);
+  OccupancyObjectManager(planning::framework::Session* session);
   ~OccupancyObjectManager() = default;
 
-  bool Update(const iflyauto::FusionOccupancyObjectsInfo &occupancy_objects_info);
+  bool Update(
+      const iflyauto::FusionOccupancyObjectsInfo& occupancy_objects_info);
 
-  const std::vector<OccupancyObjectPoints>& GetPoints() const  {
-    return points_;
-  }
+  const OccupancyObject& occupancy_object() const { return occupancy_object_; }
 
   const EulerDistanceTransform* GetEulerDistanceTransform() const {
     return &edt_;
   }
 
-  const bool GetIsEulerDistanceTransformValid() const {
-    return is_edt_valid_;
-  }
+  const bool GetIsEulerDistanceTransformValid() const { return is_edt_valid_; }
 
  private:
   bool Init();
 
   bool UpdateEDT(const std::vector<PointCloudObstacle>& point_clouds);
 
-  planning::framework::Session *session_;
-  std::vector<OccupancyObjectPoints> points_;
+  planning::framework::Session* session_;
+  OccupancyObject occupancy_object_;
 
   OccupancyGridMap ogm_;
   EulerDistanceTransform edt_;

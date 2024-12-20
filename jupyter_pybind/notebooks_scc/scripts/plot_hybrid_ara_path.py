@@ -12,7 +12,7 @@ sys.path.append('../../../')
 bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18049/trigger/20241218/20241218-14-48-53/data_collection_CHERY_E0Y_18049_ALL_FILTER_2024-12-18-14-48-54_no_camera.bag.60-78.split.1734615075.close-loop.hpp.plan"
 
 frame_dt = 0.1 # sec
-global_var.set_value('g_is_display_enu', True)
+# global_var.set_value('g_is_display_enu', True)
 g_is_display_enu = global_var.get_value('g_is_display_enu')
 
 # plot global figure?

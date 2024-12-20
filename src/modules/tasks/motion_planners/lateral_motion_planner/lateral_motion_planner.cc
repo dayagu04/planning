@@ -333,7 +333,7 @@ bool LateralMotionPlanner::AssembleInput() {
     max_wheel_angle =
         540.0 / 13.0 / 57.3;  // 360 deg steering angle for hpp
     max_wheel_angle_rate =
-        240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for hpp
+        360.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for hpp
   }
   const double kv2 = config_.curv_factor * std::max(ego_v * ego_v, config_.min_ego_vel * config_.min_ego_vel);
   planning_weight_ptr_->SetMaxAcc(max_wheel_angle * kv2);

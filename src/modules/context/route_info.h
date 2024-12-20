@@ -106,5 +106,6 @@ class RouteInfo {
   void ResetHpp();
   void CalculateDistanceToTargetSlot();
   void CalculateDistanceToNextSpeedBump();
+  bool IsOnHPPLane();
 };
 }  // namespace planning

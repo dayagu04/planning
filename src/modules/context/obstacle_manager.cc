@@ -16,7 +16,8 @@ ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
   SetConfig(config_builder);
 }
 
-void ObstacleManager::SetConfig(const EgoPlanningConfigBuilder *config_builder) {
+void ObstacleManager::SetConfig(
+    const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
 }
 
@@ -143,17 +144,46 @@ void ObstacleManager::update() {
     }
 
     // occupancy objects
+    // static constexpr int kOccupancyObjectIdOffset = 7000000;
+    // const std::shared_ptr<OccupancyObjectManager> occupancy_object_manager =
+    //     session_->environmental_model().get_occupancy_object_manager();
+    // const auto &occupancy_objects_points =
+    //     occupancy_object_manager->occupancy_object();
+    // int occupancy_object_id = kOccupancyObjectIdOffset;
+    // for (auto &object_points : occupancy_objects_points) {
+    //   if (object_points.second.size() >= 3) {
+    //     // occupancy_object_id += 1;
+    //     Obstacle obstacle(occupancy_object_id +, object_points.second,
+    //                       object_points.first);
+    //     add_occupancy_obstacle(obstacle);
+    //   }
+    // }
+
     static constexpr int kOccupancyObjectIdOffset = 7000000;
-    const std::shared_ptr<OccupancyObjectManager> occupancy_object_manager =
-        session_->environmental_model().get_occupancy_object_manager();
-    const std::vector<OccupancyObjectPoints> &occupancy_objects_points =
-        occupancy_object_manager->GetPoints();
-    int occupancy_object_id = kOccupancyObjectIdOffset;
-    for (auto &object_points : occupancy_objects_points) {
-      if (object_points.size() >= 3) {
-        occupancy_object_id += 1;
-        Obstacle obstacle(occupancy_object_id, object_points);
-        add_occupancy_obstacle(obstacle);
+    const auto &local_view = session_->environmental_model().get_local_view();
+    if (local_view.fusion_occupancy_objects_info.local_point_valid) {
+      const size_t occupancy_objects_size =
+          local_view.fusion_occupancy_objects_info.fusion_object_size;
+      const auto occupancy_objects =
+          local_view.fusion_occupancy_objects_info.fusion_object;
+      for (uint8 i = 0; i < occupancy_objects_size; i++) {
+        std::vector<planning_math::Vec2d> object_points;
+        size_t polygon_points_size =
+            occupancy_objects[i].additional_occupancy_info.polygon_points_size;
+        if (polygon_points_size >= 3) {
+          auto polygon_points =
+              occupancy_objects[i].additional_occupancy_info.polygon_points;
+          for (uint j = 0; j < polygon_points_size; j++) {
+            object_points.emplace_back(
+                planning_math::Vec2d(polygon_points[j].x, polygon_points[j].y));
+          }
+          Obstacle obstacle(
+              kOccupancyObjectIdOffset +
+                  occupancy_objects[i].additional_occupancy_info.track_id,
+              std::move(object_points),
+              occupancy_objects[i].common_occupancy_info.type);
+          add_occupancy_obstacle(obstacle);
+        }
       }
     }
 
@@ -207,7 +237,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
                              groundline_obstacles_.Items().size());
     obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
-                                     groundline_obstacles_.Items().size());
+                                      groundline_obstacles_.Items().size());
     add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map, obstacles_ids_in_lane_map);
     add_frenet_obstacle(groundline_obstacles_, reference_path, frenet_obstacles,

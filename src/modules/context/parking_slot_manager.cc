@@ -1,6 +1,7 @@
 
 #include "parking_slot_manager.h"
 
+#include <climits>
 #include <cstddef>
 #include <limits>
 
@@ -22,6 +23,7 @@ ParkingSlotManager::ParkingSlotManager(planning::framework::Session *session)
 void ParkingSlotManager::Init() {
   limiters_.clear();
   points_.clear();
+  target_slot_.clear();
   target_slot_id_ = 0;
   distance_to_target_slot_ = NL_NMAX;
 }
@@ -89,7 +91,8 @@ bool ParkingSlotManager::Update(const iflyauto::ParkingFusionInfo &parking_fusio
     const auto& parking_slot = parking_slot_lists[i];
     bool is_exist_target_slot = false;
     size_t slot_id = parking_slot.id;
-    if (slot_id == target_slot_id_) {
+    auto resource_type = parking_slot.resource_type;
+    if ((slot_id == target_slot_id_) && (resource_type == 2)) {
       is_exist_target_slot = true;
     }
 
@@ -130,6 +133,42 @@ bool ParkingSlotManager::Update(const iflyauto::ParkingFusionInfo &parking_fusio
                              limiter.end_points[1].y));
       limiters_.emplace_back(std::move(limiter_axis));
     }
+  }
+  return true;
+}
+
+bool ParkingSlotManager::CalculateDistanceToTargetSlot(
+    const std::shared_ptr<ReferencePath> &reference_path) {
+  distance_to_target_slot_ = -1;
+  const double distance_to_target_slot =
+      session_->environmental_model()
+              .get_route_info()
+              ->get_route_info_output()
+              .distance_to_target_slot;
+  const double ego_s = reference_path->get_frenet_ego_state().s();
+  const auto& frenet_coord =
+      reference_path->get_frenet_coord();
+  if ((target_slot_.empty()) || (frenet_coord == nullptr)) {
+    distance_to_target_slot_ = distance_to_target_slot;
+    return false;
+  }
+  for (const auto& slot_point : target_slot_) {
+    Point2D cart_pt(slot_point.x(), slot_point.y());
+    Point2D frenet_pt{0.0, 0.0};
+    if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      distance_to_target_slot_ = std::max(std::fabs(frenet_pt.x - ego_s),
+                                          distance_to_target_slot_);
+    } else {
+      distance_to_target_slot_ = distance_to_target_slot;
+      break;
+    }
+  }
+
+  const auto& points = reference_path->get_points();
+  if (distance_to_target_slot_ < 10.0) {
+    distance_to_target_slot_ = std::min(
+     std::fabs(points.back().path_point.s - ego_s),
+     distance_to_target_slot_);
   }
   return true;
 }

@@ -270,10 +270,7 @@ struct GeneralPlanningConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "none_consider_slope_thr");
     failure_counter_thrshld =
         read_json_key<double>(json, "failure_counter_thrshld");
-    dist_to_parking_space_thr =
-        read_json_key<double>(json, "dist_to_parking_space_thr");
   }
-  double dist_to_parking_space_thr = 7.0;
   double lc_back_smooth_thr = 0.3;
   double lc_back_consider_smooth_dpoly_thr = 0.6;
   bool enable_none_smooth = true;
@@ -644,6 +641,10 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                             enable_hybrid_ara);
     hybrid_ara_s_range = read_json_key<double>(
         json, "hybrid_ara_s_range", hybrid_ara_s_range);
+    l_buffer_for_lat_decision = read_json_key<double>(
+        json, "l_buffer_for_lat_decision", l_buffer_for_lat_decision);
+    column_l_buffer_for_decision = read_json_key<double>(
+        json, "column_l_buffer_for_decision", column_l_buffer_for_decision);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -669,6 +670,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double column_static_buffer_for_search = 2;
   bool enable_hybrid_ara = false;
   double hybrid_ara_s_range = 20;
+  double l_buffer_for_lat_decision = 2;
+  double column_l_buffer_for_decision = 2;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -721,6 +724,8 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"hybrid_ara_star", "lateral_extend"});
     search_once = read_json_keys<bool>(
         json, std::vector<std::string>{"hybrid_ara_star", "search_once"});
+    use_occ_s_dist = read_json_keys<double>(
+        json, std::vector<std::string>{"hybrid_ara_star", "use_occ_s_dist"});
   }
   double x_grid_resolution = 0.3;
   double y_grid_resolution = 0.3;
@@ -745,6 +750,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
   double longitudinal_extend = 0.1;
   double lateral_extend = 0.1;
   bool search_once = true;
+  double use_occ_s_dist = 7;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
@@ -1168,9 +1174,17 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "truck_decrease_extra_buffer"},
         truck_decrease_extra_buffer);
+    ref_curvature_factor = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "ref_curvature_factor"},
+        ref_curvature_factor);
     enable_ara_ref =
         read_json_key<bool>(json, "enable_ara_ref",
                             enable_ara_ref);
+    enable_last_lat_path =
+        read_json_key<bool>(json, "enable_last_lat_path",
+                            enable_last_lat_path);
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -1232,6 +1246,8 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double truck_decrease_extra_buffer = 0.05;
   bool enable_ara_ref = false;
   double ref_length_thr = 0.01;
+  double ref_curvature_factor = 0.0;
+  bool enable_last_lat_path = false;
 };
 
 // struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -1276,6 +1292,16 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
 //   double care_area_s_start_buffer = 0.0;
 //   double max_avoid_edge = 2.0;
 // };
+
+struct HppParkingSwitchConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    dist_to_parking_space_thr = read_json_key<double>(
+        json, "dist_to_parking_space_thr", dist_to_parking_space_thr);
+  }
+  double dist_to_parking_space_thr = 4.0;
+};
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {

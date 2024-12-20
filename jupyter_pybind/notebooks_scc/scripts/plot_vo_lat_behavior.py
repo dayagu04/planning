@@ -11,13 +11,6 @@ from bokeh.models import TextInput
 # bag path and frame dt
 bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_14520/trigger/20250121/20250121-16-02-11/data_collection_CHERY_E0Y_14520_EVENT_FILTER_2025-01-21-16-02-11_no_camera.bag"
 frame_dt = 0.1 # sec
-global_var.set_value('g_is_display_enu', True)
-global_var.set_value('is_vis_sdmap', False)
-global_var.set_value('is_vis_hpp', True)
-global_var.set_value('is_vis_stop_line', True)
-global_var.set_value('is_vis_zebra_crossing_line', True)
-global_var.set_value('is_vis_merge_point', True)
-global_var.set_value('is_vis_lane_mark', True)
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

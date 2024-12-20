@@ -11,7 +11,6 @@ from lib.load_local_view import *
 bag_path = "/share/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240612/20240612-16-55-01/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-12-16-55-01_no_camera.bag.1718343840.close-loop.plan"
 
 frame_dt = 0.02 # sec
-global_var.set_value('g_is_display_enu', False)
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

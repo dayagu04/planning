@@ -106,7 +106,8 @@ class HppGeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-      std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
+      std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void GenerateObstaclePreliminaryDecision(
       double ego_l, double distance_to_right_lane_border,
