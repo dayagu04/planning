@@ -495,66 +495,6 @@ const std::string NarrowSpaceScenario::GetPlanReason(const uint8_t type) {
   return "none";
 }
 
-void NarrowSpaceScenario::ShrinkPathByFusionObj() {
-  double path_checker_start_time = IflyTime::Now_ms();
-  // init
-  is_ego_collision_ = false;
-  is_path_collision_ = false;
-  path_collision_id_ = 1000000;
-
-  // obs generate
-  ParkObstacleList obs;
-  PointCloudObstacleTransform obstacle_generator;
-  const LocalView* local_view = apa_world_ptr_->GetLocalViewPtr();
-  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
-  Pose2D ego_pose(measures_ptr->GetPos()[0], measures_ptr->GetPos()[1],
-                  measures_ptr->GetHeading());
-
-  ParkSpaceType slot_type;
-  if (apa_world_ptr_->GetNewSlotManagerPtr()
-          ->ego_info_under_slot_.slot.slot_type_ == SlotType::PARALLEL) {
-    slot_type = ParkSpaceType::PARALLEL;
-  } else if (apa_world_ptr_->GetNewSlotManagerPtr()
-                 ->ego_info_under_slot_.slot.slot_type_ == SlotType::SLANT) {
-    slot_type = ParkSpaceType::SLANTING;
-  } else {
-    slot_type = ParkSpaceType::VERTICAL;
-  }
-  obstacle_generator.GenerateGlobalObstacle(obs, local_view, true);
-
-  PathSafeChecker path_safe_checker;
-  path_safe_checker.Excute(&obs, ego_pose, PathCheckRequest::COLLISION_CHECK,
-                           0.08, 0.08, current_path_point_global_vec_);
-
-  frame_.remain_dist_col_det = frame_.remain_dist;
-  if (path_safe_checker.IsPathCollision()) {
-    path_safe_checker.UpdatePathValidDist(current_path_point_global_vec_,
-                                          ego_pose);
-
-    double valid_dist = path_safe_checker.GetPathValidDist();
-    // for stop safely, add a lon buffer
-    valid_dist -= 0.1;
-    valid_dist = std::max(0.0, valid_dist);
-
-    if (frame_.remain_dist_col_det > valid_dist) {
-      frame_.remain_dist_col_det = valid_dist;
-    }
-    is_path_collision_ = true;
-
-    // for debug
-    path_collision_id_ = path_safe_checker.GetPathCollisionID();
-
-    ILOG_INFO << "valid dist=" << valid_dist
-              << ",path_collision_id_=" << path_collision_id_;
-  }
-
-  double path_checker_end_time = IflyTime::Now_ms();
-  ILOG_INFO << "path checker time ms "
-            << path_checker_end_time - path_checker_start_time;
-
-  return;
-}
-
 void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
   // 1. calculate remain dist according to plan path
   frame_.remain_dist = CalRemainDistFromPath();
@@ -565,9 +505,6 @@ void NarrowSpaceScenario::UpdateRemainDist(const double uss_safe_dist) {
   ILOG_INFO << "remain s = " << frame_.remain_dist
             << ", uss s = " << frame_.remain_dist_uss
             << ", obs s = " << frame_.remain_dist_col_det;
-
-  return;
-  ShrinkPathByFusionObj();
 
   return;
 }
@@ -619,25 +556,24 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   end.x = real_end.x + end_straight_len;
 
   double astar_start_time = IflyTime::Now_ms();
-  // obs generate
-  ParkObstacleList obs;
-  PointCloudObstacleTransform obstacle_generator;
-
   Pose2D slot_base_pose = Pose2D(ego_slot_info.slot_origin_pos.x(),
                                  ego_slot_info.slot_origin_pos.y(),
                                  ego_slot_info.slot_origin_heading);
-  const LocalView* local_view = apa_world_ptr_->GetLocalViewPtr();
 
   // hack: delete obstacle around ego and slot. In the future, it will be
   // retired.
+  ParkObstacleList obs;
   VirtualWallDecider wall_decider;
   wall_decider.Process(obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
                        ego_slot_info.slot_length, start, real_end, slot_type,
                        slot_side_);
 
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      ego_slot_info.g2l_tf);
+
+  PointCloudObstacleTransform obstacle_generator;
   obstacle_generator.GenerateLocalObstacle(
-      obs, local_view, ego_slot_info.slot_length, ego_slot_info.slot_width,
-      slot_base_pose, start, false);
+      apa_world_ptr_->GetObstacleManagerPtr(), obs);
 
   double search_start_time = IflyTime::Now_ms();
   ILOG_INFO << "fusion obj time ms " << search_start_time - astar_start_time;

@@ -7,6 +7,7 @@
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "apa_obstacle_manager.h"
 
 namespace planning {
 
@@ -44,9 +45,9 @@ class PathSafeChecker {
  public:
   PathSafeChecker() = default;
 
-  void Excute(const ParkObstacleList* obs, const Pose2D& ego_pose,
-              const PathCheckRequest requst, const double lat_buffer,
-              const double lon_buffer,
+  void Excute(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+              const Pose2D& ego_pose, const PathCheckRequest requst,
+              const double lat_buffer, const double lon_buffer,
               std::vector<pnc::geometry_lib::PathPoint>& path);
 
   const bool IsPathCollision() const { return is_path_collision_; }
@@ -61,13 +62,15 @@ class PathSafeChecker {
 
   const size_t GetPathCollisionID() const { return path_collision_idx_; }
 
-  bool CalcEgoCollision(const ParkObstacleList* obs, const Pose2D& ego_pose,
-                        const double lat_buffer, const double lon_buffer);
+  bool CalcEgoCollision(
+      const std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+      const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer);
 
   const bool IsPolygonCollision(const Polygon2D* car);
 
-  void SetObstacle(const ParkObstacleList* obs) {
-    obs_ = obs;
+  void SetObstacle(
+      std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager) {
+    obs_manager_ = obs_manager;
 
     return;
   }
@@ -123,7 +126,7 @@ class PathSafeChecker {
                     const Pose2D& pose);
 
  private:
-  const ParkObstacleList* obs_;
+  std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager_;
 
   bool is_ego_collision_;
   bool is_path_collision_;

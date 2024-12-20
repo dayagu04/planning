@@ -677,4 +677,21 @@ int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
   return 0;
 }
 
+void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
+                             const Transform2d &tf, Polygon2D *poly_local) {
+  for (int i = 0; i < poly_local->vertex_num; i++) {
+    tf.GlobalPointToULFLocal(poly_global->vertexes[i],
+                             &poly_local->vertexes[i]);
+  }
+
+  poly_local->vertex_num = poly_global->vertex_num;
+  poly_local->radius = poly_global->radius;
+  poly_local->min_tangent_radius = poly_global->min_tangent_radius;
+  poly_local->shape = poly_global->shape;
+
+  tf.GlobalPointToULFLocal(poly_global->center_pt, &poly_local->center_pt);
+
+  return;
+}
+
 }  // namespace planning

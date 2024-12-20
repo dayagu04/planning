@@ -514,4 +514,39 @@ void GJK2DInterface::Raycast(RaycastCollisionInfo *info,
   return;
 }
 
+void GJK2DInterface::PolygonPointCollisionDetect(const Polygon2D *polygon,
+                                                 const Eigen::Vector2d &point,
+                                                 bool *is_collision) {
+  double d, delta_d;
+  d = polygon->center_pt.DistanceTo(point);
+  delta_d = d - polygon->radius;
+
+  if (!ifly_fless(delta_d, 0.01)) {
+    *is_collision = false;
+  } else if (d <= polygon->min_tangent_radius) {
+    *is_collision = true;
+  } else {
+    int32_t i;
+
+    shape_p_.size = polygon->vertex_num;
+    for (i = 0; i < polygon->vertex_num; ++i) {
+      shape_p_.vertices[i][0] = polygon->vertexes[i].x;
+      shape_p_.vertices[i][1] = polygon->vertexes[i].y;
+    }
+
+    shape_q_.size = 1;
+    shape_q_.vertices[0][0] = point[0];
+    shape_q_.vertices[0][1] = point[1];
+
+    bool result = gjk_solver_.Collision(shape_p_, shape_q_);
+    if (result) {
+      *is_collision = true;
+    } else {
+      *is_collision = false;
+    }
+  }
+
+  return;
+}
+
 }  // namespace planning

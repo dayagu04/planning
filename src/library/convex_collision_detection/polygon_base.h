@@ -113,4 +113,7 @@ int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
 int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
                             const Transform2d &tf);
 
+void GlobalPolygonToULFLocal(const Polygon2D *poly_global, const Transform2d &tf,
+                            Polygon2D *poly_local);
+
 }  // namespace planning

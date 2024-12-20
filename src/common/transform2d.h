@@ -76,6 +76,9 @@ class Transform2d {
 
   const double GetCosTheta() const { return cos_theta_; }
 
+  void GlobalPointToULFLocal(const Position2D &global_pos,
+                             Position2D *local_pos) const;
+
  private:
   Pose2D base_pose_;
   double sin_theta_;

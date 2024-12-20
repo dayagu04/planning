@@ -107,8 +107,6 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool CheckUssStucked();
 
-  void ShrinkPathByFusionObj();
-
   void PathShrinkBySlotLimiter();
 
   void PathExpansionBySlotLimiter();

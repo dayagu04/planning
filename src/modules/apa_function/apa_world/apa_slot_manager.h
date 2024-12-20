@@ -137,7 +137,6 @@ class ApaSlotManager final {
     dist_id_map_.clear();
     slots_map_.clear();
     slot_release_voter_.clear();
-    obs_list_.Clear();
     release_slot_id_vec_.clear();
   }
 
@@ -152,8 +151,6 @@ class ApaSlotManager final {
 
  private:
   void ParkingLotCruiseProcess();
-
-  void GenerateParkObstacleList();
 
   const bool IsEgoCloseToObs();
 
@@ -173,7 +170,6 @@ class ApaSlotManager final {
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
-  ParkObstacleList obs_list_;
 };
 }  // namespace apa_planner
 }  // namespace planning

@@ -11,12 +11,12 @@ namespace planning {
 #define DEBUG_PATH_CHECKER (0)
 #define NOT_CARE_SAFE_DIST (0.5)
 
-void PathSafeChecker::Excute(const ParkObstacleList* obs,
-                             const Pose2D& ego_pose,
-                             const PathCheckRequest requst,
-                             const double lat_buffer, const double lon_buffer,
-                             std::vector<pnc::geometry_lib::PathPoint>& path) {
-  obs_ = obs;
+void PathSafeChecker::Excute(
+    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+    const Pose2D& ego_pose, const PathCheckRequest requst,
+    const double lat_buffer, const double lon_buffer,
+    std::vector<pnc::geometry_lib::PathPoint>& path) {
+  obs_manager_ = obs_manager;
   lat_buffer_ = lat_buffer;
   lon_buffer_ = lon_buffer;
   ego_project_s_ = 0;
@@ -42,11 +42,11 @@ void PathSafeChecker::ExcuteDistanceCheck(
   }
 
   // check
-  if (obs_ == nullptr || path.size() <= 0) {
+  if (obs_manager_ == nullptr || path.size() <= 0) {
     return;
   }
 
-  if (obs_->point_cloud_list.empty()) {
+  if (obs_manager_->GetObstacles().size() == 0) {
     return;
   }
 
@@ -115,11 +115,11 @@ void PathSafeChecker::ExcuteCollisionCheck(
   is_path_collision_ = false;
   is_ego_collision_ = false;
 
-  if (obs_ == nullptr || path.size() <= 0) {
+  if (obs_manager_ == nullptr || path.size() <= 0) {
     return;
   }
 
-  if (obs_->point_cloud_list.empty()) {
+  if (obs_manager_->GetObstacles().size() == 0) {
     return;
   }
 
@@ -352,10 +352,14 @@ size_t PathSafeChecker::GetNearestPathPoint(
 
 const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
   bool is_collision = false;
-  for (const auto& obstacle : obs_->point_cloud_list) {
+  if (obs_manager_ == nullptr) {
+    return is_collision;
+  }
+
+  for (const auto& pair : obs_manager_->GetObstacles()) {
     // envelop box check
     gjk_interface_.PolygonCollisionByCircleCheck(
-        &is_collision, &obstacle.envelop_polygon, car, 0.01);
+        &is_collision, &pair.second.GetPolygon2DGlobal(), car, 0.01);
 
     if (!is_collision) {
       // ILOG_INFO << "size = " << obstacle.points.size() << " box no
@@ -364,9 +368,11 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
     }
 
     // internal points
-    for (size_t j = 0; j < obstacle.points.size(); j++) {
-      gjk_interface_.PolygonPointCollisionDetect(&is_collision, car,
-                                                 obstacle.points[j]);
+    const std::vector<Eigen::Vector2d>& points =
+        pair.second.GetPtClout2dGlobal();
+
+    for (size_t j = 0; j < points.size(); j++) {
+      gjk_interface_.PolygonPointCollisionDetect(car, points[j], &is_collision);
 
       if (is_collision) {
         // ILOG_INFO << "size = " << obstacle.points.size() << " j =" << j;
@@ -487,19 +493,18 @@ const bool PathSafeChecker::IsVehicleCollision(
   return false;
 }
 
-bool PathSafeChecker::CalcEgoCollision(const ParkObstacleList* obs,
-                                       const Pose2D& ego_pose,
-                                       const double lat_buffer,
-                                       const double lon_buffer) {
-  obs_ = obs;
+bool PathSafeChecker::CalcEgoCollision(
+    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+    const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer) {
+  obs_manager_ = obs_manager;
   is_path_collision_ = false;
   is_ego_collision_ = false;
 
-  if (obs_ == nullptr) {
+  if (obs_manager_ == nullptr) {
     return false;
   }
 
-  if (obs_->point_cloud_list.empty()) {
+  if (obs_manager_->GetObstacles().size() == 0) {
     return false;
   }
 
@@ -599,10 +604,10 @@ const bool PathSafeChecker::GetPolygonDistance(const Polygon2D* polygon,
   bool is_collision = false;
   double dist = 10;
 
-  for (const auto& obstacle : obs_->point_cloud_list) {
+  for (const auto& pair : obs_manager_->GetObstacles()) {
     // envelop box check
-    gjk_interface_.PolygonDistanceByThresh(&is_collision, &dist, polygon,
-                                           &obstacle.envelop_polygon, 1.0);
+    gjk_interface_.PolygonDistanceByThresh(
+        &is_collision, &dist, polygon, &pair.second.GetPolygon2DGlobal(), 1.0);
 
     // distance is big, no need accurate check.
     if (dist >= 1.0) {
@@ -611,12 +616,15 @@ const bool PathSafeChecker::GetPolygonDistance(const Polygon2D* polygon,
     }
 
     // internal points
-    for (size_t j = 0; j < obstacle.points.size(); j++) {
-      gjk_interface_.PolygonDistanceByThresh(polygon, obstacle.points[j], 1.0,
-                                             &is_collision, &dist);
+    const std::vector<Eigen::Vector2d>& points =
+        pair.second.GetPtClout2dGlobal();
+    for (size_t j = 0; j < points.size(); j++) {
+      gjk_interface_.PolygonDistanceByThresh(
+          polygon, Position2D(points[j][0], points[j][1]), 1.0, &is_collision,
+          &dist);
 
       if (is_collision) {
-        ILOG_INFO << "size = " << obstacle.points.size() << " j =" << j;
+        // ILOG_INFO << "size = " << points.size() << " j =" << j;
         return true;
       }
 

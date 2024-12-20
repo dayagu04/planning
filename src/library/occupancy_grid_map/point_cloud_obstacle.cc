@@ -13,7 +13,7 @@ namespace planning {
 
 #define DEBUG_POINT_CLOUD_OBS (0)
 
-const void PointCloudObstacleTransform::GenerateLocalObstacle(
+void PointCloudObstacleTransform::GenerateLocalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
     const double slot_length, const double slot_width,
     const Pose2D& slot_base_pose, const Pose2D& ego_start,
@@ -250,145 +250,6 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
   return;
 }
 
-void PointCloudObstacleTransform::GenerateGlobalObstacle(
-    ParkObstacleList& obs_list, const LocalView* local_view,
-    const bool enable_limiter_obs) {
-  // generate local obs
-  if (local_view == nullptr) {
-    ILOG_ERROR << "local view is null";
-
-    return;
-  }
-
-  ILOG_INFO
-      << "obs, size: " << obs_list.point_cloud_list.size()
-      << ", fusion_object_num: "
-      << (size_t)(local_view->fusion_objects_info.fusion_object_size)
-      << ", ground_lines_size: "
-      << static_cast<size_t>(
-             local_view->ground_line_perception.ground_lines_size)
-      << ", fusion_occupancy_objects_info size: "
-      << (size_t)(local_view->fusion_occupancy_objects_info.fusion_object_size);
-
-  size_t number =
-      static_cast<size_t>(
-          local_view->fusion_occupancy_objects_info.fusion_object_size) +
-      static_cast<size_t>(local_view->ground_line_perception.ground_lines_size);
-
-  obs_list.point_cloud_list.resize(number + 1);
-
-  Position2D global_point;
-  planning::PointCloudObstacle* obs;
-
-  // fusion obj
-  uint8 fusion_obj_number =
-      local_view->fusion_occupancy_objects_info.fusion_object_size;
-  for (uint8 i = 0; i < fusion_obj_number; i++) {
-    const iflyauto::FusionOccupancyAdditional& points =
-        local_view->fusion_occupancy_objects_info.fusion_object[i]
-            .additional_occupancy_info;
-
-    obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
-    obs->points.clear();
-    cdl::AABB box = cdl::AABB();
-
-    for (uint32 j = 0; j < points.polygon_points_size; j++) {
-      global_point.x = points.polygon_points[j].x;
-      global_point.y = points.polygon_points[j].y;
-
-      box.MergePoint(cdl::Vector2r(global_point.x, global_point.y));
-      obs->points.emplace_back(Position2D(global_point.x, global_point.y));
-    }
-
-    // use box to generate polygon for future safe check
-    if (obs->points.size() > 0) {
-      GeneratePolygonByAABB(&obs->envelop_polygon, box);
-      obs->box = box;
-    }
-
-#if DEBUG_POINT_CLOUD_OBS
-    PolygonDebugString(&obs->envelop_polygon);
-#endif
-  }
-
-  // ground line, todo: ground line is veh reference frame, so need transform.
-  uint8 ground_line_number =
-      local_view->ground_line_perception.ground_lines_size;
-  for (uint8 i = 0; i < ground_line_number; i++) {
-    const iflyauto::GroundLine& gl =
-        local_view->ground_line_perception.ground_lines[i];
-
-    obs = &obs_list.point_cloud_list[i + fusion_obj_number];
-    obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
-    obs->points.clear();
-    cdl::AABB box = cdl::AABB();
-
-    for (uint8 j = 0; j < gl.points_3d_size; j++) {
-      global_point.x = gl.points_3d[j].x;
-      global_point.y = gl.points_3d[j].y;
-
-      box.MergePoint(cdl::Vector2r(global_point.x, global_point.y));
-      obs->points.emplace_back(Position2D(global_point.x, global_point.y));
-    }
-
-    if (obs->points.size() > 0) {
-      GeneratePolygonByAABB(&obs->envelop_polygon, box);
-
-      obs->box = box;
-    }
-  }
-
-  // limiters
-  if (enable_limiter_obs) {
-    obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-    obs->obs_type = apa_planner::ApaObsAttributeType::SLOT_LIMITER;
-    obs->points.clear();
-    cdl::AABB box = cdl::AABB();
-    std::vector<Position2D> limiter_points;
-
-    const iflyauto::ParkingFusionInfo* slot_list =
-        &local_view->parking_fusion_info;
-    for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
-      const iflyauto::ParkingFusionSlot* slot =
-          &slot_list->parking_fusion_slot_lists[i];
-
-      if (slot_list->select_slot_id == slot->id) {
-        continue;
-      }
-
-      for (uint8 j = 0; j < slot->limiters_size; j++) {
-        const iflyauto::ParkingFusionLimiter* limiter = &slot->limiters[j];
-
-        SampleInLineSegment(
-            Eigen::Vector2d(limiter->end_points[0].x, limiter->end_points[0].y),
-            Eigen::Vector2d(limiter->end_points[1].x, limiter->end_points[1].y),
-            &limiter_points);
-
-        for (size_t point_id = 0; point_id < limiter_points.size();
-             point_id++) {
-          global_point.x = limiter_points[point_id].x;
-          global_point.y = limiter_points[point_id].y;
-
-          box.MergePoint(cdl::Vector2r(global_point.x, global_point.y));
-          obs->points.emplace_back(Position2D(global_point.x, global_point.y));
-        }
-      }
-    }
-
-    // use box to generate polygon for future safe check
-    if (obs->points.size() > 0) {
-      GeneratePolygonByAABB(&obs->envelop_polygon, box);
-      obs->box = box;
-    }
-  }
-
-  ILOG_INFO << "fusion obs, size= " << obs_list.point_cloud_list.size()
-            << " ,virtual obs size = " << obs_list.virtual_obs.size();
-
-  return;
-}
-
 void PointCloudObstacleTransform::SampleInLineSegment(
     const Eigen::Vector2d& start, const Eigen::Vector2d& end,
     std::vector<Position2D>* points) {
@@ -418,6 +279,37 @@ void PointCloudObstacleTransform::SampleInLineSegment(
   }
 
   points->emplace_back(Position2D(end.x(), end.y()));
+
+  return;
+}
+
+void PointCloudObstacleTransform::GenerateLocalObstacle(
+    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+    ParkObstacleList& obs_list) {
+  if (obs_manager == nullptr) {
+    return;
+  }
+
+  planning::PointCloudObstacle obs;
+  for (const auto& pair : obs_manager->GetObstacles()) {
+    if (!apa_param.GetParam().use_uss_pt_clound &&
+        pair.second.GetObsAttributeType() ==
+            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
+      continue;
+    }
+
+    obs.points.clear();
+    obs.points.reserve(pair.second.GetPtClout2dLocal().size());
+
+    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
+      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
+    }
+
+    obs.box = pair.second.GetBoxLocal();
+    obs.envelop_polygon = pair.second.GetPolygon2DLocal();
+    obs.obs_type = pair.second.GetObsAttributeType();
+    obs_list.point_cloud_list.emplace_back(obs);
+  }
 
   return;
 }

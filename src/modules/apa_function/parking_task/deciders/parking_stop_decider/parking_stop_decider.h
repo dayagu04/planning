@@ -20,7 +20,7 @@ class ParkingStopDecider : public ParkingTask {
    * [out]:path, fill path distance info;
    * [out]:speed_decisions,fill stop decision info;
    */
-  void Process(const ParkObstacleList& obstacles,
+  void Process(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
                const std::shared_ptr<apa_planner::ApaWorld> apa_world_ptr,
                const double tracking_path_collision_dist,
                std::vector<pnc::geometry_lib::PathPoint>& path,
