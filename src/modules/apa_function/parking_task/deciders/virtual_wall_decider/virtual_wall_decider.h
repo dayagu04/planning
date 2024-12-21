@@ -7,6 +7,21 @@
 
 namespace planning {
 
+struct VirtualWallBoundary {
+  double x_upper;
+  double x_lower;
+  double y_upper;
+  double y_lower;
+
+  VirtualWallBoundary() = default;
+  VirtualWallBoundary(const double x_upper_, const double x_lower_,
+                      const double y_upper_, const double y_lower_)
+      : x_upper(x_upper_),
+        x_lower(x_lower_),
+        y_upper(y_upper_),
+        y_lower(y_lower_){};
+};
+
 // generate virtual wall by ego pose and slot, used by astar, need refact.
 class VirtualWallDecider : public ParkingTask {
  public:
