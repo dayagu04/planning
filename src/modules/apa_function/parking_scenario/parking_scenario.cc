@@ -588,9 +588,13 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
   if (min_speed_decision != nullptr) {
-    frame_.vel_target =
-        std::min(min_speed_decision->advised_speed,
-                 uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
+    double ref_v;
+    ref_v = speed_limit_decider.CalcRefSpeedBySpeedLimitDecision(
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel(),
+        stop_decider.GetEgoPathProjectS(), min_speed_decision);
+
+    frame_.vel_target = std::min(
+        ref_v, uss_obstacle_avoider_ptr->GetRemainDistInfo().vel_target);
   } else {
     frame_.vel_target =
         std::min(apa_param.GetParam().speed_config.default_cruise_speed,
