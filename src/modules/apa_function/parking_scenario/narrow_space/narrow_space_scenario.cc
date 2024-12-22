@@ -560,13 +560,16 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
                                  ego_slot_info.slot_origin_pos.y(),
                                  ego_slot_info.slot_origin_heading);
 
-  // hack: delete obstacle around ego and slot. In the future, it will be
-  // retired.
   ParkObstacleList obs;
-  VirtualWallDecider wall_decider;
-  wall_decider.Process(obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
-                       ego_slot_info.slot_length, start, real_end, slot_type,
-                       slot_side_);
+
+  // If in searching, use ego init bound;
+  // If in parking, use ego position init bound by first plan;
+  if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
+    virtual_wall_decider_.Init(start);
+  }
+  virtual_wall_decider_.Process(obs.virtual_obs, ego_slot_info.slot_width,
+                        ego_slot_info.slot_length, start, real_end, slot_type,
+                        slot_side_);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_slot_info.g2l_tf);

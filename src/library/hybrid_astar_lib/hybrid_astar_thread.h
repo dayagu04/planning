@@ -103,6 +103,9 @@ class HybridAStarThreadSolver {
   // for debug
   void GetRefLine(ParkReferenceLine* ref_line);
 
+  // for debug
+  void GetVirtualWallPoints(std::vector<Position2D>* virtual_obs);
+
  private:
   // in
   std::mutex mutex_;

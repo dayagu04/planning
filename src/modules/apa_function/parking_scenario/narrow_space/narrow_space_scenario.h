@@ -39,6 +39,10 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void ScenarioTry() override;
 
+  VirtualWallDecider* MutableVirtualWallDecider() {
+    return &virtual_wall_decider_;
+  }
+
  private:
   virtual const bool CheckReplan() override;
 
@@ -139,6 +143,10 @@ class NarrowSpaceScenario : public ParkingScenario {
   bool is_path_single_shot_to_goal_;
 
   SlotRelativePosition slot_side_;
+
+  // 一个车位泊车中，通道虚拟墙只能增长，不能缩减.
+  // 如果根据车辆位置去缩减，导致2次规划之间路径差异太大.
+  VirtualWallDecider virtual_wall_decider_;
 
   NarrowScenarioDecider narrow_space_decider_;
 };

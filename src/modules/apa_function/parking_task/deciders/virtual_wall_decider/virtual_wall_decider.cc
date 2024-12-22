@@ -47,11 +47,12 @@ const bool VirtualWallDecider::IsVirtualWallPointCollision(
   return false;
 }
 
-void VirtualWallDecider::Process(
-    std::vector<Position2D>& points, const double channel_length,
-    const double channel_width, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
-    const ParkSpaceType slot_type, const SlotRelativePosition slot_side) {
+void VirtualWallDecider::Process(std::vector<Position2D>& points,
+                                 const double slot_width,
+                                 const double slot_length,
+                                 const Pose2D& ego_pose, const Pose2D& end,
+                                 const ParkSpaceType slot_type,
+                                 const SlotRelativePosition slot_side) {
   start_ = ego_pose;
   end_ = end;
 
@@ -61,8 +62,7 @@ void VirtualWallDecider::Process(
 
   if (slot_type == ParkSpaceType::VERTICAL ||
       slot_type == ParkSpaceType::SLANTING) {
-    CalcVerticalVirtualWall(points, channel_length, channel_width, slot_width,
-                            slot_length, ego_pose, end);
+    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end);
 
     ILOG_INFO << "vertical slot virtual wall";
   } else {
@@ -121,10 +121,10 @@ void VirtualWallDecider::GenerateCarRelativePosition(const Pose2D& ego_pose) {
 }
 
 void VirtualWallDecider::CalcVerticalVirtualWall(
-    std::vector<Position2D>& points, const double channel_length,
-    const double channel_width, const double slot_width,
+    std::vector<Position2D>& points,  const double slot_width,
     const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // width is the slot upper edge to a virtual wall
+  const double channel_length = 40;
   const double lower_channel_length = (channel_length - slot_width) * 0.5;
 
   // right slot wall
@@ -140,14 +140,14 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   slot_boundary.x_lower = lower_bound_x;
 
   // lower
-  VirtualWallBoundary channel_boundary;
-  channel_boundary.x_lower = slot_length - SLOT_VIRTUAL_WALL_X_OFFSET;
+  VirtualWallBoundary tmp_channel_boundary;
+  tmp_channel_boundary.x_lower = slot_length - SLOT_VIRTUAL_WALL_X_OFFSET;
 
   // channel up bound
   double channel_up_bound_x;
   double veh_up_x = ego_pose.x + 5.0 * std::fabs(std::cos(ego_pose.theta));
   channel_up_bound_x = veh_up_x + 8.0;
-  channel_boundary.x_upper = channel_up_bound_x;
+  tmp_channel_boundary.x_upper = channel_up_bound_x;
 
   // channel left/right bound
   double theta = IflyUnifyTheta(ego_pose.theta, M_PI);
@@ -186,8 +186,10 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
     channel_left_bound_y = slot_width / 2 + 12.0;
   }
 
-  channel_boundary.y_lower = channel_right_bound_y;
-  channel_boundary.y_upper = channel_left_bound_y;
+  tmp_channel_boundary.y_lower = channel_right_bound_y;
+  tmp_channel_boundary.y_upper = channel_left_bound_y;
+
+  channel_bound_.Combine(tmp_channel_boundary);
 
   // add points
   // slot right bound
@@ -203,31 +205,31 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   // channel lower right boundary
   SampleInLineSegment(
       Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_lower),
-      Eigen::Vector2d(channel_boundary.x_lower, channel_boundary.y_lower),
+      Eigen::Vector2d(channel_bound_.x_lower, channel_bound_.y_lower),
       &points);
 
   // channel lower left boundary
   SampleInLineSegment(
       Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
-      Eigen::Vector2d(channel_boundary.x_lower, channel_boundary.y_upper),
+      Eigen::Vector2d(channel_bound_.x_lower, channel_bound_.y_upper),
       &points);
 
   // upper boundary
   SampleInLineSegment(
-      Eigen::Vector2d(channel_boundary.x_upper, channel_boundary.y_upper),
-      Eigen::Vector2d(channel_boundary.x_upper, channel_boundary.y_lower),
+      Eigen::Vector2d(channel_bound_.x_upper, channel_bound_.y_upper),
+      Eigen::Vector2d(channel_bound_.x_upper, channel_bound_.y_lower),
       &points);
 
   // right boundary
   SampleInLineSegment(
-      Eigen::Vector2d(channel_boundary.x_upper, channel_boundary.y_lower),
-      Eigen::Vector2d(channel_boundary.x_lower, channel_boundary.y_lower),
+      Eigen::Vector2d(channel_bound_.x_upper, channel_bound_.y_lower),
+      Eigen::Vector2d(channel_bound_.x_lower, channel_bound_.y_lower),
       &points);
 
   // left boundary
   SampleInLineSegment(
-      Eigen::Vector2d(channel_boundary.x_upper, channel_boundary.y_upper),
-      Eigen::Vector2d(channel_boundary.x_lower, channel_boundary.y_upper),
+      Eigen::Vector2d(channel_bound_.x_upper, channel_bound_.y_upper),
+      Eigen::Vector2d(channel_bound_.x_lower, channel_bound_.y_upper),
       &points);
 
     // slot lower bound
