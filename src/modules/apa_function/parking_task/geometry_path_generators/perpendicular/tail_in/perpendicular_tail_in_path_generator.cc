@@ -198,6 +198,14 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
             }
           }
         }
+
+        // multiadjust起点的航向误差尽可能小一点 即车子屁股可以斜对着车位
+        if (rough_path.path_count > 0 &&
+            rough_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE) {
+          if (std::fabs(rough_path.start_pose.heading) * kRad2Deg > 66.68) {
+            cost += 48.0;
+          }
+        }
       }
 
       if (dubins_path.gear_change_count > 0 &&
@@ -1749,7 +1757,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // If the car in slot is already close to obstacle , try driving straight ahead for a distance
+    // If the car in slot is already close to obstacle , try driving straight
+    // ahead for a distance
     if (i == 0 && success_geometry_path_vec.empty() &&
         geometry_path_vec.empty() && CalOccupiedRatio(single_cur_pose) > 0.68 &&
         single_ref_gear == geometry_lib::SEG_GEAR_DRIVE &&
