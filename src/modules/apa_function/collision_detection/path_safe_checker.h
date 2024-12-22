@@ -11,20 +11,6 @@
 
 namespace planning {
 
-// in system, you can use polygon foot_print or circle foot print.
-struct PolygonFootPrint {
-  Polygon2D body;
-  Polygon2D mirror_left;
-  Polygon2D mirror_right;
-
-  // 这里引入了分层碰撞检测方案BVH. 二叉/八叉树的方案在游戏领域常用，这里不使用树，
-  // 而是最大polygon. 将来如果有时间，可以引入二叉树的方案.
-  // for collision check: 如果最外层的polygon不存在碰撞，那么不必检测内层；
-  // for distance check: 如果最外层polygon不存在碰撞,
-  // 那么内层的距离值不必检测，因为内层的距离往往较大，不用担心安全问题. 可以将距离值默认成2米.
-  Polygon2D max_polygon;
-};
-
 enum class VehCollisionPosition {
   NONE = 0,
   LEFT_MIRROR = 1,
@@ -90,14 +76,15 @@ class PathSafeChecker {
                                 VehCollisionPosition* collision_info);
 
   // bounding box car body for coarse safe check.
+  // bbox_lat_buffer: 车辆最外侧简化成bound box, 而不是非凸的多边形.
   void GenerateVehBox(const double lateral_safe_buffer,
                       const double lon_safe_buffer,
-                      const double lat_buffer_fast_check);
+                      const double max_bbox_lat_buffer);
 
   // Compact car body for accurate safe check.
   void GenerateVehCompactPolygon(const double lateral_safe_buffer,
                                  const double lon_safe_buffer,
-                                 const double lat_buffer_fast_check);
+                                 const double max_bbox_lat_buffer);
 
   void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
                                    const double lon_buffer);

@@ -25,7 +25,13 @@ void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
 
   // big circle, buffer is 0.35
   double big_circle_safe_buffer = 0.35;
-  double min_lon_buffer = 0.05;
+
+  // min_lon_buffer:
+  // 1. gear is reverse, car head buffer;
+  // 2. gear is drive, car tail buffer
+  // Perception object is invading, so this value is small, or else planning
+  // is often failed.
+  double min_lon_buffer = 0.01;
   local_circles_.max_circle.pos = Position2D(circle_x[0], circle_y[0]);
   local_circles_.max_circle.radius =
       (float)(circle_r[0] + big_circle_safe_buffer);

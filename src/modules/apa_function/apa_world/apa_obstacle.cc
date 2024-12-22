@@ -87,5 +87,15 @@ void ApaObstacle::TransformPolygonFromGlobalToLocal(
   return;
 }
 
+void ApaObstacle::GenerateLocalBoundingbox(cdl::AABB *box) const {
+  *box = cdl::AABB();
+
+  for (const auto& pt : pt_clout_2d_local_) {
+    box->MergePoint(pt);
+  }
+
+  return;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

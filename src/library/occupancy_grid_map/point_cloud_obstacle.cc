@@ -121,7 +121,6 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     }
   }
 
-  // ground line, todo: ground line is veh reference frame, so need transform.
   uint8 ground_line_number =
       local_view->ground_line_perception.ground_lines_size;
   for (uint8 i = 0; i < ground_line_number; i++) {
@@ -291,7 +290,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   }
 
   planning::PointCloudObstacle obs;
-  for (const auto& pair : obs_manager->GetObstacles()) {
+  for (auto& pair : obs_manager->GetObstacles()) {
     if (!apa_param.GetParam().use_uss_pt_clound &&
         pair.second.GetObsAttributeType() ==
             apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
@@ -305,7 +304,12 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
       obs.points.emplace_back(Position2D(pt.x(), pt.y()));
     }
 
-    obs.box = pair.second.GetBoxLocal();
+    pair.second.GenerateLocalBoundingbox(&obs.box);
+
+    if (pair.second.GetPtClout2dLocal().size() > 0) {
+      GeneratePolygonByAABB(&obs.envelop_polygon, obs.box);
+    }
+
     obs.envelop_polygon = pair.second.GetPolygon2DLocal();
     obs.obs_type = pair.second.GetObsAttributeType();
     obs_list.point_cloud_list.emplace_back(obs);

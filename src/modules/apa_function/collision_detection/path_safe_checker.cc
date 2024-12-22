@@ -176,7 +176,7 @@ void PathSafeChecker::ExcuteCollisionCheck(
 
 void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
                                      const double lon_safe_buffer,
-                                     const double lat_buffer_fast_check) {
+                                     const double max_bbox_lat_buffer) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   GetUpLeftCoordinatePolygonByParam(
@@ -202,19 +202,19 @@ void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
       &polygon_foot_print_.max_polygon,
       config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + lat_buffer_fast_check);
+      config.max_car_width / 2.0 + max_bbox_lat_buffer);
 
   return;
 }
 
 void PathSafeChecker::GenerateVehCompactPolygon(
     const double lateral_safe_buffer, const double lon_safe_buffer,
-    const double lat_buffer_fast_check) {
+    const double max_bbox_lat_buffer) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
   if (config.car_vertex_x_vec.size() != 20) {
     ILOG_ERROR << "config invalid";
-    GenerateVehBox(lateral_safe_buffer, lon_safe_buffer, lat_buffer_fast_check);
+    GenerateVehBox(lateral_safe_buffer, lon_safe_buffer, max_bbox_lat_buffer);
     return;
   }
 
@@ -239,7 +239,7 @@ void PathSafeChecker::GenerateVehCompactPolygon(
       &polygon_foot_print_.max_polygon,
       config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + lat_buffer_fast_check);
+      config.max_car_width / 2.0 + max_bbox_lat_buffer);
 
 #if DEBUG_PATH_CHECKER
   PolygonDebugString(&polygon_foot_print_.max_polygon);

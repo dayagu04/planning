@@ -890,7 +890,7 @@ bool HybridAStar::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
     return false;
   }
 
-    // collision check
+  // collision check
 #if LOG_TIME_PROFILE
   double check_start_time = IflyTime::Now_ms();
 #endif
@@ -1017,12 +1017,11 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
   }
 
   node->SetDistToObs(0.0f);
-
-  size_t node_step_size = node->GetStepSize();
   const NodePath& path = node->GetNodePath();
 
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
+  size_t node_step_size = node->GetStepSize();
   size_t check_start_index = 0;
   if (node_step_size == 1) {
     check_start_index = 0;
@@ -1032,11 +1031,9 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
 
   Polygon2D global_polygon;
   Pose2D global_pose;
-  // bool is_collision = false;
   cdl::AABB path_point_aabb;
   Transform2d tf;
   AstarPathGear gear = node->GetGearType();
-
   Polygon2D* veh_local_polygon = GetVehPolygon(gear);
 
   float dist = 100.0;
@@ -1092,10 +1089,6 @@ const bool HybridAStar::ValidityCheckByEDT(Node3d* node) {
 
     // ILOG_INFO << "path size " << node_step_size << " ,pt id " << i
     //           << " , no collision ";
-
-    // if (i == 0) {
-    //   break;
-    // }
   }
 
   node->SetDistToObs(min_dist);
@@ -2598,13 +2591,15 @@ void HybridAStar::GearRerversePathAttempt(
   // check start
   double check_start_time = IflyTime::Now_ms();
   if (!ValidityCheckByEDT(start_node_)) {
-    ILOG_ERROR << "start_node in collision with obstacles "
-               << static_cast<int>(start_node_->GetConstCollisionType());
+    // double check
+    if (IsFootPrintCollision(Transform2d(start_node_->GetPose()))) {
+      ILOG_ERROR << "start_node in collision with obstacles "
+                 << static_cast<int>(start_node_->GetConstCollisionType());
 
-    // start_node_->DebugString();
-
-    result->fail_type = AstarFailType::START_COLLISION;
-    return;
+      // start_node_->DebugString();
+      result->fail_type = AstarFailType::START_COLLISION;
+      return;
+    }
   }
   double check_end_time = IflyTime::Now_ms();
   collision_check_time_ms_ += check_end_time - check_start_time;
@@ -2766,7 +2761,7 @@ void HybridAStar::GearRerversePathAttempt(
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3036,13 +3031,16 @@ bool HybridAStar::AstarSearch(
   // check start
   double check_start_time = IflyTime::Now_ms();
   if (!ValidityCheckByEDT(start_node_)) {
-    ILOG_ERROR << "start_node in collision with obstacles "
-               << static_cast<int>(start_node_->GetConstCollisionType());
+    // double check
+    if (IsFootPrintCollision(Transform2d(start_node_->GetPose()))) {
+      ILOG_ERROR << "start_node in collision with obstacles "
+                 << static_cast<int>(start_node_->GetConstCollisionType());
 
-    // start_node_->DebugString();
+      // start_node_->DebugString();
 
-    result->fail_type = AstarFailType::START_COLLISION;
-    return false;
+      result->fail_type = AstarFailType::START_COLLISION;
+      return false;
+    }
   }
   double check_end_time = IflyTime::Now_ms();
   collision_check_time_ms_ += check_end_time - check_start_time;
@@ -3232,7 +3230,7 @@ bool HybridAStar::AstarSearch(
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -3653,12 +3651,12 @@ bool HybridAStar::NodeInSearchBound(const NodeGridIndex& id) {
 
 Polygon2D* HybridAStar::GetVehPolygon(const AstarPathGear& gear) {
   if (gear == AstarPathGear::DRIVE) {
-    return &veh_polygon_gear_drive_;
+    return &veh_box_gear_drive_;
   } else if (gear == AstarPathGear::REVERSE) {
-    return &veh_polygon_gear_reverse_;
+    return &veh_box_gear_reverse_;
   }
 
-  return &veh_polygon_gear_none_;
+  return &veh_box_gear_none_;
 }
 
 const std::vector<DebugAstarSearchPoint>& HybridAStar::GetChildNodeForDebug() {
@@ -3810,25 +3808,28 @@ void HybridAStar::UpdateCarBoxBySafeBuffer(const double lat_buffer,
       (vehicle_param_.width + config_.width_mirror * 2 + lat_buffer * 2) * 0.5;
 
   GetRightUpCoordinatePolygonByParam(
-      &veh_polygon_gear_drive_,
+      &veh_box_gear_drive_,
       config_.rear_overhanging + config_.lon_min_safe_buffer,
       vehicle_param_.wheel_base + config_.front_overhanging + lon_buffer,
       safe_half_width);
 
   // gear r
   GetRightUpCoordinatePolygonByParam(
-      &veh_polygon_gear_reverse_, config_.rear_overhanging + lon_buffer,
+      &veh_box_gear_reverse_, config_.rear_overhanging + lon_buffer,
       vehicle_param_.wheel_base + config_.front_overhanging +
           config_.lon_min_safe_buffer,
       safe_half_width);
 
   // gear none
   GetRightUpCoordinatePolygonByParam(
-      &veh_polygon_gear_none_,
+      &veh_box_gear_none_,
       config_.rear_overhanging + config_.lon_min_safe_buffer,
       vehicle_param_.wheel_base + config_.front_overhanging +
           config_.lon_min_safe_buffer,
       safe_half_width);
+
+  GenerateVehCompactPolygon(lat_buffer, config_.lon_min_safe_buffer,
+                            &cvx_hull_foot_print_);
 
   ILOG_INFO << "lat buffer = " << lat_buffer;
 
@@ -4408,6 +4409,79 @@ void HybridAStar::ReversePathBySwapStartGoal(HybridAStarResult* result) {
   }
 
   return;
+}
+
+const bool HybridAStar::IsPolygonCollision(const Polygon2D* polygon) {
+  bool is_collision = false;
+  for (const auto& obstacle : obstacles_->point_cloud_list) {
+    // envelop box check
+    gjk_interface_.PolygonCollisionByCircleCheck(
+        &is_collision, &obstacle.envelop_polygon, polygon, 0.001);
+
+    if (!is_collision) {
+      continue;
+    }
+
+    // internal points
+    for (size_t j = 0; j < obstacle.points.size(); j++) {
+      gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon,
+                                                 obstacle.points[j]);
+
+      if (is_collision) {
+        // ILOG_INFO << "size = " << obstacle.points.size() << " j =" << j;
+        return true;
+      }
+
+      // ILOG_INFO << "point no collision";
+    }
+  }
+
+  for (const auto& obstacle : obstacles_->virtual_obs) {
+    gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon,
+                                               obstacle);
+
+    if (is_collision) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool HybridAStar::IsFootPrintCollision(const Transform2d& tf) {
+  Polygon2D veh_global_polygon;
+  bool is_collision = false;
+  ULFLocalPolygonToGlobal(&veh_global_polygon,
+                          &cvx_hull_foot_print_.max_polygon, tf);
+
+  is_collision = IsPolygonCollision(&veh_global_polygon);
+  if (!is_collision) {
+    return false;
+  }
+
+  ULFLocalPolygonToGlobal(&veh_global_polygon, &cvx_hull_foot_print_.body, tf);
+  is_collision = IsPolygonCollision(&veh_global_polygon);
+  if (is_collision) {
+    return true;
+  }
+
+  ULFLocalPolygonToGlobal(&veh_global_polygon,
+                          &cvx_hull_foot_print_.mirror_left, tf);
+  // ILOG_INFO << "left mirror check";
+  is_collision = IsPolygonCollision(&veh_global_polygon);
+  if (is_collision) {
+    return true;
+  }
+
+  ULFLocalPolygonToGlobal(&veh_global_polygon,
+                          &cvx_hull_foot_print_.mirror_right, tf);
+
+  is_collision = IsPolygonCollision(&veh_global_polygon);
+  if (is_collision) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace planning

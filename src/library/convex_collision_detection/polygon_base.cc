@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "log_glog.h"
+#include "src/modules/apa_function/apa_param_config.h"
 #include "transform2d.h"
 
 namespace planning {
@@ -679,7 +680,7 @@ int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
 
 void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
                              const Transform2d &tf, Polygon2D *poly_local) {
-  for (int i = 0; i < poly_local->vertex_num; i++) {
+  for (int i = 0; i < poly_global->vertex_num; i++) {
     tf.GlobalPointToULFLocal(poly_global->vertexes[i],
                              &poly_local->vertexes[i]);
   }
@@ -690,6 +691,100 @@ void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
   poly_local->shape = poly_global->shape;
 
   tf.GlobalPointToULFLocal(poly_global->center_pt, &poly_local->center_pt);
+
+  return;
+}
+
+void GetCompactPolygonByParam(const double lat_buffer, const double lon_buffer,
+                              Polygon2D *polygon) {
+  const apa_planner::ApaParameters& config = apa_param.GetParam();
+  if (config.car_vertex_x_vec.size() != 20 ||
+      config.car_vertex_y_vec.size() != 20) {
+    polygon->vertex_num = 0;
+    return;
+  }
+
+  polygon->vertexes[0].x = config.car_vertex_x_vec[2] + lon_buffer;
+  polygon->vertexes[0].y = config.car_vertex_y_vec[2] + lat_buffer;
+
+  polygon->vertexes[1].x = config.car_vertex_x_vec[0] + lon_buffer;
+  polygon->vertexes[1].y = config.car_vertex_y_vec[0] + lat_buffer;
+
+  polygon->vertexes[2].x = config.car_vertex_x_vec[15] - lon_buffer;
+  polygon->vertexes[2].y = config.car_vertex_y_vec[15] + lat_buffer;
+
+  polygon->vertexes[3].x = config.car_vertex_x_vec[13] - lon_buffer;
+  polygon->vertexes[3].y = config.car_vertex_y_vec[13] + lat_buffer;
+
+  polygon->vertexes[4].x = config.car_vertex_x_vec[12] - lon_buffer;
+  polygon->vertexes[4].y = config.car_vertex_y_vec[12] - lat_buffer;
+
+  polygon->vertexes[5].x = config.car_vertex_x_vec[10] - lon_buffer;
+  polygon->vertexes[5].y = config.car_vertex_y_vec[10] - lat_buffer;
+
+  polygon->vertexes[6].x = config.car_vertex_x_vec[5] + lon_buffer;
+  polygon->vertexes[6].y = config.car_vertex_y_vec[5] - lat_buffer;
+
+  polygon->vertexes[7].x = config.car_vertex_x_vec[3] + lon_buffer;
+  polygon->vertexes[7].y = config.car_vertex_y_vec[3] - lat_buffer;
+
+  polygon->vertex_num = 8;
+
+  polygon->shape = PolygonShape::multi_edge;
+  UpdatePolygonValue(polygon, NULL, 0, false, POLYGON_MAX_RADIUS);
+
+  polygon->min_tangent_radius = config.car_width / 2 + lat_buffer;
+
+  return;
+}
+
+void GenerateVehCompactPolygon(const double lateral_safe_buffer,
+                               const double lon_safe_buffer,
+                               PolygonFootPrint *foot_print) {
+  GetCompactPolygonByParam(lateral_safe_buffer, lon_safe_buffer,
+                           &foot_print->body);
+
+  // left mirror
+  const apa_planner::ApaParameters &config = apa_param.GetParam();
+  Position2D center;
+  center.x = config.footprint_circle_x[6];
+  center.y = config.footprint_circle_y[6] + lateral_safe_buffer;
+  double radius = std::fabs(config.footprint_circle_r[6]);
+  GenerateMirrorPolygon(0.3, radius * 2, center, &foot_print->mirror_left);
+
+  // right mirror
+  center.x = config.footprint_circle_x[3];
+  center.y = config.footprint_circle_y[3] - lateral_safe_buffer;
+  GenerateMirrorPolygon(0.3, radius * 2, center, &foot_print->mirror_right);
+
+  GetUpLeftCoordinatePolygonByParam(
+      &foot_print->max_polygon, config.rear_overhanging + lon_safe_buffer,
+      config.wheel_base + config.front_overhanging + lon_safe_buffer,
+      config.max_car_width / 2.0 + lateral_safe_buffer);
+
+  return;
+}
+
+void GenerateMirrorPolygon(const double x_length, const double y_length,
+                           const Position2D &center, Polygon2D *box) {
+  box->vertexes[0].x = center.x + x_length / 2;
+  box->vertexes[0].y = center.y - y_length / 2;
+
+  box->vertexes[1].x = center.x + x_length / 2;
+  box->vertexes[1].y = center.y + y_length / 2;
+
+  box->vertexes[2].x = center.x - x_length / 2;
+  box->vertexes[2].y = center.y + y_length / 2;
+
+  box->vertexes[3].x = center.x - x_length / 2;
+  box->vertexes[3].y = center.y - y_length / 2;
+
+  box->vertex_num = 4;
+
+  box->shape = PolygonShape::box;
+  UpdatePolygonValue(box, NULL, 0, false, POLYGON_MAX_RADIUS);
+
+  box->min_tangent_radius = std::min(y_length / 2, x_length / 2);
 
   return;
 }
