@@ -7,22 +7,9 @@
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "apa_obstacle_manager.h"
 
 namespace planning {
-
-// in system, you can use polygon foot_print or circle foot print.
-struct PolygonFootPrint {
-  Polygon2D body;
-  Polygon2D mirror_left;
-  Polygon2D mirror_right;
-
-  // 这里引入了分层碰撞检测方案BVH. 二叉/八叉树的方案在游戏领域常用，这里不使用树，
-  // 而是最大polygon. 将来如果有时间，可以引入二叉树的方案.
-  // for collision check: 如果最外层的polygon不存在碰撞，那么不必检测内层；
-  // for distance check: 如果最外层polygon不存在碰撞,
-  // 那么内层的距离值不必检测，因为内层的距离往往较大，不用担心安全问题. 可以将距离值默认成2米.
-  Polygon2D max_polygon;
-};
 
 enum class VehCollisionPosition {
   NONE = 0,
@@ -44,9 +31,9 @@ class PathSafeChecker {
  public:
   PathSafeChecker() = default;
 
-  void Excute(const ParkObstacleList* obs, const Pose2D& ego_pose,
-              const PathCheckRequest requst, const double lat_buffer,
-              const double lon_buffer,
+  void Excute(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+              const Pose2D& ego_pose, const PathCheckRequest requst,
+              const double lat_buffer, const double lon_buffer,
               std::vector<pnc::geometry_lib::PathPoint>& path);
 
   const bool IsPathCollision() const { return is_path_collision_; }
@@ -61,13 +48,15 @@ class PathSafeChecker {
 
   const size_t GetPathCollisionID() const { return path_collision_idx_; }
 
-  bool CalcEgoCollision(const ParkObstacleList* obs, const Pose2D& ego_pose,
-                        const double lat_buffer, const double lon_buffer);
+  bool CalcEgoCollision(
+      const std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+      const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer);
 
   const bool IsPolygonCollision(const Polygon2D* car);
 
-  void SetObstacle(const ParkObstacleList* obs) {
-    obs_ = obs;
+  void SetObstacle(
+      std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager) {
+    obs_manager_ = obs_manager;
 
     return;
   }
@@ -87,14 +76,15 @@ class PathSafeChecker {
                                 VehCollisionPosition* collision_info);
 
   // bounding box car body for coarse safe check.
+  // bbox_lat_buffer: 车辆最外侧简化成bound box, 而不是非凸的多边形.
   void GenerateVehBox(const double lateral_safe_buffer,
                       const double lon_safe_buffer,
-                      const double lat_buffer_fast_check);
+                      const double max_bbox_lat_buffer);
 
   // Compact car body for accurate safe check.
   void GenerateVehCompactPolygon(const double lateral_safe_buffer,
                                  const double lon_safe_buffer,
-                                 const double lat_buffer_fast_check);
+                                 const double max_bbox_lat_buffer);
 
   void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
                                    const double lon_buffer);
@@ -123,7 +113,7 @@ class PathSafeChecker {
                     const Pose2D& pose);
 
  private:
-  const ParkObstacleList* obs_;
+  std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager_;
 
   bool is_ego_collision_;
   bool is_path_collision_;

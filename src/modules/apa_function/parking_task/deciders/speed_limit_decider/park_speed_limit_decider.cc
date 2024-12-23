@@ -16,12 +16,12 @@ namespace planning {
 ParkSpeedLimitDecider::ParkSpeedLimitDecider() {}
 
 void ParkSpeedLimitDecider::Process(
-    const ParkObstacleList& obstacles,
+    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
     const std::vector<pnc::geometry_lib::PathPoint>& path,
     SpeedDecisions* speed_decisions) {
   UpdateConfig();
 
-  AddSpeedLimitDecisions(obstacles, path, speed_decisions);
+  AddSpeedLimitDecisions(path, speed_decisions);
 
   PublishDebugInfo();
 
@@ -29,7 +29,6 @@ void ParkSpeedLimitDecider::Process(
 }
 
 void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
-    const ParkObstacleList& obstacles,
     const std::vector<pnc::geometry_lib::PathPoint>& path,
     SpeedDecisions* speed_decisions) {
   double speed_limit;

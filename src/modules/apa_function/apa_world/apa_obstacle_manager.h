@@ -10,7 +10,6 @@
 #include "apa_obstacle.h"
 #include "geometry_math.h"
 #include "local_view.h"
-#include "point_cloud_obstacle.h"
 #include "session.h"
 
 namespace planning {

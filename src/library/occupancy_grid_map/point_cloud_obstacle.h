@@ -8,7 +8,7 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
-#include "src/modules/apa_function/apa_world/apa_obstacle.h"
+#include "src/modules/apa_function/apa_world/apa_obstacle_manager.h"
 
 namespace planning {
 
@@ -31,7 +31,7 @@ struct PointCloudObstacle {
 struct ParkObstacleList {
   std::vector<Position2D> virtual_obs;
 
-  // fusion obj + ground line
+  // fusion occ + ground line + od
   std::vector<PointCloudObstacle> point_cloud_list;
 
   void Clear() {
@@ -52,17 +52,16 @@ class PointCloudObstacleTransform {
  public:
   PointCloudObstacleTransform() = default;
 
-  const void GenerateLocalObstacle(ParkObstacleList& obs_list,
-                                   const LocalView* local_view,
-                                   const double slot_length,
-                                   const double slot_width,
-                                   const Pose2D& slot_base_pose,
-                                   const Pose2D& ego_start,
-                                   const bool enable_limiter_obs);
+  void GenerateLocalObstacle(ParkObstacleList& obs_list,
+                             const LocalView* local_view,
+                             const double slot_length, const double slot_width,
+                             const Pose2D& slot_base_pose,
+                             const Pose2D& ego_start,
+                             const bool enable_limiter_obs);
 
-  void GenerateGlobalObstacle(ParkObstacleList& obs_list,
-                              const LocalView* local_view,
-                              const bool enable_limiter_obs);
+  void GenerateLocalObstacle(
+      std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+      ParkObstacleList& obs_list);
 
  private:
   void SampleInLineSegment(const Eigen::Vector2d& start,

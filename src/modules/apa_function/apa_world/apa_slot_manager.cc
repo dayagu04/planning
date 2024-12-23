@@ -58,8 +58,6 @@ void ApaSlotManager::Update(
     slots_map_[slot.GetId()] = slot;
   }
 
-  GenerateParkObstacleList();
-
   // 泊出
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
@@ -134,27 +132,6 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
   }
 }
 
-void ApaSlotManager::GenerateParkObstacleList() {
-  obs_list_.Clear();
-
-  for (const auto& pair : obstacle_manager_ptr_->GetObstacles()) {
-    if (!apa_param.GetParam().use_uss_pt_clound &&
-        pair.second.GetObsAttributeType() ==
-            ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-    planning::PointCloudObstacle obs;
-    obs.points.reserve(pair.second.GetPtClout2dGlobal().size());
-    for (const auto& pt : pair.second.GetPtClout2dGlobal()) {
-      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
-    }
-    obs.box = pair.second.GetBoxGlobal();
-    obs.envelop_polygon = pair.second.GetPolygon2DGlobal();
-    obs.obs_type = pair.second.GetObsAttributeType();
-    obs_list_.point_cloud_list.emplace_back(obs);
-  }
-}
-
 void ApaSlotManager::ParkingLotCruiseProcess() {
   // 在泊入寻库阶段通过简单的规则判断车位是否应该释放
   const double time_start = IflyTime::Now_ms();
@@ -218,7 +195,7 @@ const bool ApaSlotManager::IsEgoCloseToObs() {
   Pose2D ego =
       Pose2D(measure_data_ptr_->GetPos()[0], measure_data_ptr_->GetPos()[1],
              measure_data_ptr_->GetHeading());
-  return safe_check.CalcEgoCollision(&obs_list_, ego, 0.268, 0.1);
+  return safe_check.CalcEgoCollision(obstacle_manager_ptr_, ego, 0.268, 0.1);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
@@ -296,8 +273,8 @@ const bool ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(
           pM01 - n * (param.wheel_base + param.front_overhanging - up_dist);
       const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
       const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
-      if (safe_check.CalcEgoCollision(&obs_list_, target_pose, lat_buffer,
-                                      lon_buffer)) {
+      if (safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
+                                     lat_buffer, lon_buffer)) {
         col = true;
         break;
       }
@@ -344,7 +321,7 @@ const bool ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(
 
   polygon.min_tangent_radius = 0.6;
 
-  safe_check.SetObstacle(&obs_list_);
+  safe_check.SetObstacle(obstacle_manager_ptr_);
   if (safe_check.IsPolygonCollision(&polygon)) {
     ILOG_INFO << "passage is occupied";
     return true;
@@ -378,8 +355,8 @@ const bool ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   for (const double dist : move_slot_dist_vec) {
     const Eigen::Vector2d target_pos = origin_target_pos + dist * t;
     const Pose2D target_pose(target_pos.x(), target_pos.y(), heading);
-    if (!safe_check.CalcEgoCollision(&obs_list_, target_pose, lat_buffer,
-                                     lon_buffer)) {
+    if (!safe_check.CalcEgoCollision(obstacle_manager_ptr_, target_pose,
+                                     lat_buffer, lon_buffer)) {
       move_slot_dist = dist;
       ILOG_INFO << "move_slot_dist = " << move_slot_dist;
       is_slot_occupied = false;

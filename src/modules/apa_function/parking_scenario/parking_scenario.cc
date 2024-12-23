@@ -535,32 +535,6 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   SpeedDecisions speed_decisions;
 
-  // todo: use apa obstacle
-  ParkObstacleList obstacles;
-  const std::shared_ptr<ApaObstacleManager> obs_manager =
-      apa_world_ptr_->GetObstacleManagerPtr();
-  if (obs_manager == nullptr) {
-    return;
-  }
-
-  for (const auto& pair : obs_manager->GetObstacles()) {
-    if (!apa_param.GetParam().use_uss_pt_clound &&
-        pair.second.GetObsAttributeType() ==
-            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
-    planning::PointCloudObstacle obs;
-    obs.points.reserve(pair.second.GetPtClout2dGlobal().size());
-    for (const auto& pt : pair.second.GetPtClout2dGlobal()) {
-      obs.points.emplace_back(Position2D(pt.x(), pt.y()));
-    }
-    obs.box = pair.second.GetBoxGlobal();
-    obs.envelop_polygon = pair.second.GetPolygon2DGlobal();
-    obs.obs_type = pair.second.GetObsAttributeType();
-    obstacles.point_cloud_list.emplace_back(obs);
-  }
-
   double tracking_path_collision_dist = frame_.remain_dist_uss;
   tracking_path_collision_dist =
       std::min(tracking_path_collision_dist, frame_.remain_dist_col_det);
@@ -570,13 +544,14 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   // update stop decision
   ParkingStopDecider stop_decider = ParkingStopDecider();
-  stop_decider.Process(obstacles, apa_world_ptr_, tracking_path_collision_dist,
+  stop_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(), apa_world_ptr_,
+                       tracking_path_collision_dist,
                        current_path_point_global_vec_, &speed_decisions);
 
   // update speed limit decision
   ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider();
-  speed_limit_decider.Process(obstacles, current_path_point_global_vec_,
-                              &speed_decisions);
+  speed_limit_decider.Process(apa_world_ptr_->GetObstacleManagerPtr(),
+                              current_path_point_global_vec_, &speed_decisions);
 
   // get ego around speed limit decision
   const SpeedLimitDecision* min_speed_decision =

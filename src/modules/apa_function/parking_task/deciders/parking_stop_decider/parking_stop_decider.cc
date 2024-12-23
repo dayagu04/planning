@@ -9,7 +9,7 @@ namespace planning {
 #define DECIDER_DEBUG (0)
 
 void ParkingStopDecider::Process(
-    const ParkObstacleList& obstacles,
+    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
     const std::shared_ptr<apa_planner::ApaWorld> apa_world_ptr,
     const double tracking_path_collision_dist,
     std::vector<pnc::geometry_lib::PathPoint>& path,
@@ -18,7 +18,7 @@ void ParkingStopDecider::Process(
   const Pose2D pose = apa_world_ptr->GetMeasureDataManagerPtr()->GetPose();
 
   PathSafeChecker safe_checker;
-  safe_checker.Excute(&obstacles, pose, PathCheckRequest::DISTANCE_CHECK, 0.08,
+  safe_checker.Excute(obs_manager, pose, PathCheckRequest::DISTANCE_CHECK, 0.08,
                       0.08, path);
   ego_project_s_ = safe_checker.GetEgoPathProjectS();
 

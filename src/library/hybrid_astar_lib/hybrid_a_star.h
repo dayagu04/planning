@@ -306,6 +306,10 @@ class HybridAStar {
 
   void ReversePathBySwapStartGoal(HybridAStarResult* result);
 
+  const bool IsPolygonCollision(const Polygon2D* polygon);
+
+  const bool IsFootPrintCollision(const Transform2d& tf);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
@@ -313,10 +317,12 @@ class HybridAStar {
   double min_radius_;
   double inv_radius_;
 
-  // todo, width = vehicle width + mirror width + safe width
-  Polygon2D veh_polygon_gear_none_;
-  Polygon2D veh_polygon_gear_drive_;
-  Polygon2D veh_polygon_gear_reverse_;
+  // todo, width = vehicle width + mirror width + safe width, bounding box
+  Polygon2D veh_box_gear_none_;
+  Polygon2D veh_box_gear_drive_;
+  Polygon2D veh_box_gear_reverse_;
+  // convex hull for accurate car
+  PolygonFootPrint cvx_hull_foot_print_;
 
   size_t next_node_num_ = 0;
   // front wheel angle, [-pi, +pi]

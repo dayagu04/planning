@@ -52,7 +52,7 @@ struct PlannerOpenSpaceConfig {
 
   double lon_front_safe_buffer = 0.5;
   double lon_back_safe_buffer = 0.1;
-  double lon_min_safe_buffer = 0.1;
+  double lon_min_safe_buffer;
 
   double rs_path_seg_advised_dist = 0.35;
 

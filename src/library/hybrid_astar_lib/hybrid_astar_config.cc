@@ -40,7 +40,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   lon_hierarchy_safe_buffer.push_back(0.2);
   lon_front_safe_buffer = 0.4;
   lon_back_safe_buffer = 0.4;
-  lon_min_safe_buffer = 0.1;
+  lon_min_safe_buffer = 0.01;
 
   expect_gear_penalty = 50.0;
   expect_dist_penalty = 7.0;

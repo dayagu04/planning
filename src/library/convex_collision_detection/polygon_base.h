@@ -42,6 +42,20 @@ struct Polygon2D {
   }
 };
 
+// in system, you can use polygon foot_print or circle foot print.
+struct PolygonFootPrint {
+  Polygon2D body;
+  Polygon2D mirror_left;
+  Polygon2D mirror_right;
+
+  // 这里引入了分层碰撞检测方案BVH. 二叉/八叉树的方案在游戏领域常用，这里不使用树，
+  // 而是最大polygon. 将来如果有时间，可以引入二叉树的方案.
+  // for collision check: 如果最外层的polygon不存在碰撞，那么不必检测内层；
+  // for distance check: 如果最外层polygon不存在碰撞,
+  // 那么内层的距离值不必检测，因为内层的距离往往较大，不用担心安全问题. 可以将距离值默认成2米.
+  Polygon2D max_polygon;
+};
+
 int InitPolygon(Polygon2D *polygon);
 
 int PolygonCopy(Polygon2D *des_poly, const Polygon2D *src_poly);
@@ -112,5 +126,19 @@ int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
 
 int ULFLocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
                             const Transform2d &tf);
+
+void GlobalPolygonToULFLocal(const Polygon2D *poly_global, const Transform2d &tf,
+                            Polygon2D *poly_local);
+
+void GetCompactPolygonByParam(const double lat_buffer, const double lon_buffer,
+                              Polygon2D *polygon);
+
+// Compact car body for accurate safe check.
+void GenerateVehCompactPolygon(const double lateral_safe_buffer,
+                               const double lon_safe_buffer,
+                               PolygonFootPrint *foot_print);
+
+void GenerateMirrorPolygon(const double x_length, const double y_length,
+                           const Position2D &center, Polygon2D *box);
 
 }  // namespace planning

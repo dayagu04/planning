@@ -65,6 +65,35 @@ void ApaObstacle::TransformPtClout3dFromGlobalToLocal(
 
 void ApaObstacle::TransformPolygonFromGlobalToLocal(
     const pnc::geometry_lib::GlobalToLocalTf& g2l_tf) {
+  polygon_local_.vertex_num = polygon_global_.vertex_num;
+  polygon_local_.radius = polygon_global_.radius;
+  polygon_local_.min_tangent_radius = polygon_global_.min_tangent_radius;
+  polygon_local_.shape = polygon_global_.shape;
+
+  Eigen::Vector2d local;
+  for (int i = 0; i < polygon_local_.vertex_num; i++) {
+    local = g2l_tf.GetPos(Eigen::Vector2d(polygon_global_.vertexes[i].x,
+                                          polygon_global_.vertexes[i].y));
+
+    polygon_local_.vertexes[i].x = local[0];
+    polygon_local_.vertexes[i].y = local[1];
+  }
+
+  local = g2l_tf.GetPos(Eigen::Vector2d(polygon_global_.center_pt.x,
+                                        polygon_global_.center_pt.y));
+  polygon_local_.center_pt.x = local[0];
+  polygon_local_.center_pt.y = local[1];
+
+  return;
+}
+
+void ApaObstacle::GenerateLocalBoundingbox(cdl::AABB *box) const {
+  *box = cdl::AABB();
+
+  for (const auto& pt : pt_clout_2d_local_) {
+    box->MergePoint(pt);
+  }
+
   return;
 }
 

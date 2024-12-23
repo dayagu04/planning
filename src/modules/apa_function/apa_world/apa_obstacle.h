@@ -136,6 +136,8 @@ class ApaObstacle final {
 
   void Reset();
 
+  void GenerateLocalBoundingbox(cdl::AABB *box) const;
+
  private:
   ApaObsHeightType obs_height_type_{ApaObsHeightType::UNKNOWN};
   ApaObsAttributeType obs_attribute_type_{ApaObsAttributeType::UNKNOWN};

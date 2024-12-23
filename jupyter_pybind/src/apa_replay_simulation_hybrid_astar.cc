@@ -523,27 +523,7 @@ const bool PlanOnce(
     GetPathFromHybridAstar();
 
     ParkObstacleList virtual_wall_obs;
-    VirtualWallDecider wall_decider;
-
-    ParkSpaceType slot_type;
-    if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_HORIZONTAL) {
-      slot_type = ParkSpaceType::PARALLEL;
-    } else if (ego_slot_info.slot_type == Common::PARKING_SLOT_TYPE_SLANTING) {
-      slot_type = ParkSpaceType::SLANTING;
-    } else {
-      slot_type = ParkSpaceType::VERTICAL;
-    }
-
-    wall_decider.Process(
-        virtual_wall_obs.virtual_obs, 40.0, 15.0, ego_slot_info.slot_width,
-        ego_slot_info.slot_length,
-        Pose2D(ego_slot_info.ego_pos_slot[0], ego_slot_info.ego_pos_slot[1],
-               ego_slot_info.ego_heading_slot),
-        Pose2D(ego_slot_info.target_ego_pos_slot[0],
-               ego_slot_info.target_ego_pos_slot[1],
-               ego_slot_info.target_ego_heading_slot),
-        slot_type, SlotRelativePosition::NONE);
-
+    thread_solver_->GetVirtualWallPoints(&virtual_wall_obs.virtual_obs);
     CopyVirtualWallForPlot(virtual_wall_obs, ego_slot_info);
 
   } else {
@@ -622,8 +602,9 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
       slot_type = ParkSpaceType::VERTICAL;
     }
 
-    VirtualWallDecider wall_decider;
-    wall_decider.Process(hybrid_astar_obs_.virtual_obs, 40.0, 15.0,
+    VirtualWallDecider *wall_decider =
+        hybrid_astar_park_->MutableVirtualWallDecider();
+    wall_decider->Process(hybrid_astar_obs_.virtual_obs,
                          ego_slot_info.slot_width, ego_slot_info.slot_length,
                          start, real_end, slot_type,
                          SlotRelativePosition::NONE);

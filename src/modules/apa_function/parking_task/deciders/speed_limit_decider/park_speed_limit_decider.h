@@ -4,6 +4,7 @@
 #include "point_cloud_obstacle.h"
 #include "speed_limit_profile.h"
 #include "common/speed/apa_speed_decision.h"
+#include "apa_obstacle_manager.h"
 
 namespace planning {
 
@@ -17,7 +18,7 @@ class ParkSpeedLimitDecider : public ParkingTask {
 
   ~ParkSpeedLimitDecider() = default;
 
-  void Process(const ParkObstacleList& obstacles,
+  void Process(std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
                const std::vector<pnc::geometry_lib::PathPoint>& path,
                SpeedDecisions* speed_decisions);
 
@@ -38,7 +39,6 @@ class ParkSpeedLimitDecider : public ParkingTask {
 
  private:
   void AddSpeedLimitDecisions(
-      const ParkObstacleList& obstacles,
       const std::vector<pnc::geometry_lib::PathPoint>& path,
       SpeedDecisions* speed_decisions);
 
