@@ -317,6 +317,7 @@ message StartStopInfo {
   optional bool enable_stop = 3 [default = false];
   optional StateType state = 4 [default = CRUISE];
   optional double stop_distance_of_leadone = 5 [default = 0.0];
+  optional double cipv_relative_s_when_ego_stopped = 6 [default = 0.0];
 }
 
 message DrivingFunctionInfo {

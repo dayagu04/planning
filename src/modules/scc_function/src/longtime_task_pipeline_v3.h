@@ -36,6 +36,7 @@
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 
 namespace planning {
 
@@ -73,6 +74,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<AgentHeadwayDecider> agent_headway_decider_;
   std::unique_ptr<LongitudinalDecisionDecider> longitudinal_decision_decider_;
   std::unique_ptr<SpeedLimitDecider> speed_limit_decider_;
+  std::unique_ptr<StartStopDecider> start_stop_decider_;
   std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成

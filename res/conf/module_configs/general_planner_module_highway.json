@@ -576,6 +576,17 @@
       "vel_step" : 0.4
     },
 
+    "start_stop_decider" : {
+      "ego_vel_begin_stop_threshold" : 0.5,
+      "ego_vel_start_mode_threshold": 5.5,
+      "cipv_vel_begin_start_threshold": 0.5,
+      "cipv_relative_s_begin_start_threshold": 0.3,
+      "distance_stop_buffer_between_ego_and_cipv_threshold": 2.0,
+      "distance_start_between_ego_and_cipv_threshold": 0.3,
+      "distance_to_stop_line_ego_threshold": 7.5,
+      "desired_stopped_distance_between_ego_and_cipv_threshold": 3.5
+    },
+
     "cruise_target": {
       "lane_change_upper_speed_limit_kph" : 120.0,
       "comfort_kinematic_param": {

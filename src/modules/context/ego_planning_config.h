@@ -2765,6 +2765,67 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double traffic_light_min_follow_distance_gap = 2.0;
 };
 
+struct StartStopDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ego_vel_begin_stop_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "ego_vel_begin_stop_threshold"},
+        ego_vel_begin_stop_threshold);
+    ego_vel_start_mode_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "ego_vel_start_mode_threshold"},
+        ego_vel_start_mode_threshold);
+    cipv_vel_begin_start_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "cipv_vel_begin_start_threshold"},
+        cipv_vel_begin_start_threshold);
+    cipv_relative_s_begin_start_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "cipv_relative_s_begin_start_threshold"},
+        cipv_relative_s_begin_start_threshold);
+    distance_stop_buffer_between_ego_and_cipv_threshold =
+        read_json_keys<double>(
+            json,
+            std::vector<std::string>{
+                "speed_planning", "start_stop_decider",
+                "distance_stop_buffer_between_ego_and_cipv_threshold"},
+            distance_stop_buffer_between_ego_and_cipv_threshold);
+    distance_start_between_ego_and_cipv_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{
+            "speed_planning", "start_stop_decider",
+            "distance_start_between_ego_and_cipv_threshold"},
+        distance_start_between_ego_and_cipv_threshold);
+    distance_to_stop_line_ego_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "distance_to_stop_line_ego_threshold"},
+        distance_to_stop_line_ego_threshold);
+    desired_stopped_distance_between_ego_and_cipv_threshold =
+        read_json_keys<double>(
+            json,
+            std::vector<std::string>{
+                "speed_planning", "start_stop_decider",
+                "desired_stopped_distance_between_ego_and_cipv_threshold"},
+            desired_stopped_distance_between_ego_and_cipv_threshold);
+  }
+
+  double ego_vel_begin_stop_threshold = 0.5;
+  double ego_vel_start_mode_threshold = 5.5;
+  double cipv_vel_begin_start_threshold = 0.5;
+  double cipv_relative_s_begin_start_threshold = 3.5;
+  double distance_stop_buffer_between_ego_and_cipv_threshold = 2.0;
+  double distance_start_between_ego_and_cipv_threshold = 0.3;
+  double distance_to_stop_line_ego_threshold = 5.5;
+  double desired_stopped_distance_between_ego_and_cipv_threshold = 3.0;
+};
+
 struct SpeedPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

@@ -54,6 +54,8 @@ bool LongRefPathDecider::Execute() {
 
 void LongRefPathDecider::UpdateLonRefPath() {
   const auto st_graph_helper = session_->planning_context().st_graph_helper();
+  const auto &start_stop_decider_output =
+      session_->planning_context().start_stop_decider_output();
   if (st_graph_helper == nullptr) {
     return;
   }

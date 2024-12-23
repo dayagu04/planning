@@ -1,9 +1,10 @@
 #include "target_maker.h"
 
 #include "cruise_target.h"
+#include "debug_info_log.h"
 #include "follow_target.h"
 #include "overtake_target.h"
-#include "debug_info_log.h"
+#include "planning_context.h"
 
 namespace planning {
 
@@ -24,7 +25,8 @@ common::Status TargetMaker::Run() {
   FollowTarget follow_target(speed_planning_config_, session_);
 
   // 3. overtake target @国朋
-  OvertakeTarget overtake_target(speed_planning_config_, session_, follow_target);
+  OvertakeTarget overtake_target(speed_planning_config_, session_,
+                                 follow_target);
 
   // 4. neighbor target @建伟
   // NeighborTarget neighbor_target(config_, session_);
@@ -33,14 +35,20 @@ common::Status TargetMaker::Run() {
   // CautionTarget caution_target(config_, session_);
 
   // 6. decider final target values
+  const auto& start_stop_decider_output =
+      session_->planning_context().start_stop_decider_output();
+  const auto& stop_speed_decision_info =
+      start_stop_decider_output.stop_speed_decision_info();
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
     TargetValue follow_target_value = follow_target.target_value(relative_t);
-    TargetValue overtake_target_value = overtake_target.target_value(relative_t);
-    //TargetValue neighbor_target_value = neighbor_target.target_value(relative_t);
-    // TargetValue caution_target_value =
-    // caution_target.target_value(relative_t);
+    TargetValue overtake_target_value =
+        overtake_target.target_value(relative_t);
+    // TargetValue neighbor_target_value =
+    // neighbor_target.target_value(relative_t);
+    //  TargetValue caution_target_value =
+    //  caution_target.target_value(relative_t);
 
     TargetValue upper_target_value(0.0, false,
                                    std::numeric_limits<double>::max(), 0.0,
@@ -52,24 +60,31 @@ common::Status TargetMaker::Run() {
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
             upper_target_value.s_target_val()) {
-      //overtake
+      // overtake
       if (overtake_target_value.has_target()) {
-         if (overtake_target_value.s_target_val() >
-             follow_target_value.s_target_val()) {
-               //final_target_value = overtake_target_value;
-               target_values_.push_back(std::move(overtake_target_value));
-               continue;
-         } else {
-           upper_target_value = follow_target_value;
-           lower_target_value = overtake_target_value;
-         }
+        if (overtake_target_value.s_target_val() >
+            follow_target_value.s_target_val()) {
+          // final_target_value = overtake_target_value;
+          target_values_.push_back(std::move(overtake_target_value));
+          continue;
+        } else {
+          upper_target_value = follow_target_value;
+          lower_target_value = overtake_target_value;
+        }
       } else {
         upper_target_value = follow_target_value;
       }
     } else if (overtake_target_value.has_target() &&
-                overtake_target_value.s_target_val() >
-                    lower_target_value.s_target_val()) {
-       lower_target_value = overtake_target_value;
+               overtake_target_value.s_target_val() >
+                   lower_target_value.s_target_val()) {
+      lower_target_value = overtake_target_value;
+    }
+
+    if (stop_speed_decision_info.is_valid()) {
+      upper_target_value.set_s_target_val(stop_speed_decision_info.s());
+      upper_target_value.set_v_target_val(stop_speed_decision_info.v());
+      lower_target_value.set_s_target_val(stop_speed_decision_info.s());
+      lower_target_value.set_v_target_val(stop_speed_decision_info.v());
     }
 
     // TBD: 国朋合入caution
