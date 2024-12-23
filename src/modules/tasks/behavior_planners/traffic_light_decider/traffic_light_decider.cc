@@ -195,11 +195,23 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   virtual_agent.set_is_tfl_virtual_obs(true);
 
   // note stopline jump
-  virtual_agent.set_x(10.0);  //几何中心
-  virtual_agent.set_y(10.0);
+  double dis_to_stopline = session_->environmental_model().get_virtual_lane_manager()
+                               ->GetEgoDistanceToStopline();
+  double dis_to_crosswalk = session_->environmental_model().get_virtual_lane_manager()
+                                ->GetEgoDistanceToCrosswalk();
+  auto& car2enu =
+    session_->environmental_model().get_ego_state_manager()->get_car2enu();
+  Eigen::Vector3d car_point, enu_point;
+  car_point.x() = std::min(dis_to_stopline + 4.0, dis_to_crosswalk + 2.0);
+  car_point.y() = 0.0;
+  car_point.z() = 0.0;
+  enu_point = car2enu * car_point;
+  virtual_agent.set_x(enu_point.x());  //几何中心
+  virtual_agent.set_y(enu_point.y());
   virtual_agent.set_length(5.0);
   virtual_agent.set_width(2.0);
   virtual_agent.set_fusion_source(1);
+  virtual_agent.set_is_static(true);
 
   virtual_agent.set_speed(0.0);
   virtual_agent.set_theta(0.0);
