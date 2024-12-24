@@ -1,3 +1,4 @@
+import re
 import sys, os
 sys.path.append("..")
 # from lib.load_cyberbag import *
@@ -8,7 +9,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241217/20241217-12-22-38/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-17-12-22-39_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241218/20241218-15-05-03/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-18-15-05-03_no_camera.bag'
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
@@ -83,19 +84,43 @@ fig1.js_on_event(Tap, callback)
 if plot_ctrl_flag:
   fig2, fig3, fig4, fig5, fig6, fig7, data_ctrl_debug_table = load_local_view_figure_parking_ctrl(bag_loader, local_view_data, max_time, 0.02)
 
+def get_next_filename(folder):
+  # 获取文件夹中的所有文件
+  files = os.listdir(folder)
+  # 记录最高的编号
+  max_number = 0
+
+  # 遍历文件名，寻找以 data_ 开头且以 .json 结尾的文件
+  for file in files:
+    if file.startswith("data_") and file.endswith(".json"):
+      try:
+        # 从文件名中提取编号，并更新最大编号
+        number = int(file[len("data_"):-len(".json")])
+        if number > max_number:
+          max_number = number
+      except ValueError:
+        pass  # 如果转换失败，则跳过该文件
+
+  # 生成下一个文件名
+  next_number = max_number + 1
+  next_filename = f"data_{next_number}.json"
+  return next_filename
+
 ### sliders config
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
     self.vehicle_type = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=2, value=0, step=1)
     self.car_inflation = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='30%'), description= "car_inflation",min=0.0, max=0.15, value=0.0, step=0.01)
+    self.save_data = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "save_data",min=0, max=1, value=0, step=1)
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          vehicle_type = self.vehicle_type,
-                                         car_inflation = self.car_inflation)
+                                         car_inflation = self.car_inflation,
+                                         save_data = self.save_data)
 
 
 ### sliders callback
-def slider_callback(bag_time, vehicle_type, car_inflation):
+def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
   kwargs = locals()
 
   if vehicle_type == 0:
@@ -151,75 +176,74 @@ def slider_callback(bag_time, vehicle_type, car_inflation):
   if bag_loader.uss_percept_msg['enable'] == True:
     uss_percept_msg = bag_loader.uss_percept_msg['data'][index_map['uss_percept_msg_idx']]
   #print("fus_parking_msg",fus_parking_msg.parking_fusion_slot_lists)
-  # replan_time_list, correct_path_for_limiter_list = [],[]
-  # if planning_json['replan_flag'] == True:
-  #   replan_time_list.append(bag_time)
 
-  # if planning_json['correct_path_for_limiter'] == True:
-  #   replan_time_list.append(bag_time)
+  if bag_loader.fus_occupancy_objects_msg['enable'] == True:
+    fus_occupancy_objects_msg = bag_loader.fus_occupancy_objects_msg['data'][index_map['fus_occupancy_objects_msg_idx']]
 
-  # print("replan_time_list = ", replan_time_list)
-  # print("correct_path_for_limiter_list = ", correct_path_for_limiter_list)
+  if bag_loader.fus_ground_line_msg['enable'] == True:
+    fus_ground_line_msg = bag_loader.fus_ground_line_msg['data'][index_map['fus_ground_line_msg_idx']]
 
-  # print("path plan time =", planning_json['path_plan_time_ms'])
-  # print("tlane_p1 =", planning_json['tlane_p1_x'], ", ", planning_json['tlane_p1_y'])
-  # print("tlane_p0 =", planning_json['tlane_p0_x'], ", ", planning_json['tlane_p0_y'])
+  if bag_loader.fus_parking_msg['enable'] == True:
+    fus_parking_msg = bag_loader.fus_parking_msg['data'][index_map['fus_parking_msg_idx']]
 
-  # print("planning_json = ", planning_json)
+  if save_data:
+    print("save_data")
 
-  # planning_data = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx]
+    fusion_obs = []
+    for i in range(fus_occupancy_objects_msg.fusion_object_size):
+      single_fus_obs = []
+      origin_single_fus_obs = fus_occupancy_objects_msg.fusion_object[i].additional_occupancy_info
+      for j in range(origin_single_fus_obs.polygon_points_size):
+        single_fus_obs.append([origin_single_fus_obs.polygon_points[j].x, origin_single_fus_obs.polygon_points[j].y])
+      fusion_obs.append(single_fus_obs)
 
-  # print("is_replan_once = ", planning_json['is_replan_once'])
-  # print("replan_count = ", planning_json['replan_count'])
+    uss_obs = []
+    for i in range(4):
+      single_uss_obs = []
+      origin_single_uss_obs = uss_percept_msg.out_line_dataori[i]
+      for j in range(origin_single_uss_obs.obj_pt_cnt):
+        single_uss_obs.append([origin_single_uss_obs.obj_pt_global[j].x, origin_single_uss_obs.obj_pt_global[j].y])
+      uss_obs.append(single_uss_obs)
 
-  ## debug for detecting distance in uss perception
-  # if (len(uss_percept_msg.out_line_dataori) > 4):
-  #   print("---------------")
-  #   print(uss_percept_msg.out_line_dataori[4].dis_from_car_to_obj)
+    gl_obs = []
+    for i in range(fus_ground_line_msg.ground_lines_size):
+      single_gl_obs = []
+      origin_single_gl_obs = fus_ground_line_msg.ground_lines[i]
+      for j in range(origin_single_gl_obs.points_3d_size):
+        single_gl_obs.append([origin_single_gl_obs.points_3d[j].x, origin_single_gl_obs.points_3d[j].y])
+      gl_obs.append(single_gl_obs)
 
-  # print("obs filtered for selected slot by slm")
-  # data_obs_slm_filtered.data.update({
-  #     'y': [],
-  #     'x': []
-  # })
-  # slm_selected_obs_x = planning_json['slm_selected_obs_x']
-  # slm_selected_obs_y = planning_json['slm_selected_obs_y']
-  # print("slm_selected_obs_x size = ", len(slm_selected_obs_x))
+    fusion_slot = []
+    for i in range(fus_parking_msg.parking_fusion_slot_lists_size):
+      single_fusion_slot = []
+      origin_single_fusion_slot = fus_parking_msg.parking_fusion_slot_lists[i]
+      single_fusion_slot.append(origin_single_fusion_slot.id)
+      single_fusion_slot.append(origin_single_fusion_slot.type)
+      corner_points = origin_single_fusion_slot.corner_points
+      single_fusion_slot.append([[corner_points[0].x, corner_points[0].y], [corner_points[1].x, corner_points[1].y],
+                                 [corner_points[2].x, corner_points[2].y], [corner_points[3].x, corner_points[3].y]])
 
-  # if len(slm_selected_obs_x) > 1:
-  #   data_obs_slm_filtered.data.update({
-  #       'y': slm_selected_obs_x,
-  #       'x': slm_selected_obs_y
-  #   })
-  #   # for i in range(len(slm_selected_obs_x)):
-  #   #   print(slm_selected_obs_x[i], ", ", slm_selected_obs_y[i])
+      limiter = []
+      for j in range(origin_single_fusion_slot.limiters_size):
+        limiter.append([[origin_single_fusion_slot.limiters[j].end_points[0].x, origin_single_fusion_slot.limiters[j].end_points[0].y],
+                        [origin_single_fusion_slot.limiters[j].end_points[1].x, origin_single_fusion_slot.limiters[j].end_points[1].y]])
+      single_fusion_slot.append(limiter)
+      fusion_slot.append(single_fusion_slot)
 
-  #   print("para_tlane_side_sgn", planning_json['para_tlane_side_sgn'])
-  #   print("para_tlane_is_front_vacant",planning_json['para_tlane_is_front_vacant'])
-  #   print("para_tlane_is_rear_vacant",planning_json['para_tlane_is_rear_vacant'])
-  #   tlane = planning_json['para_tlane_obs_pt_before_uss']
-  #   print("para_tlane_obs_pt_before_uss = (", tlane[0], ", ", tlane[1], ")  (", tlane[2], ", ",tlane[3],")")
-  #   # tlane_after_uss = planning_json['para_tlane_obs_pt_after_uss']
-  #   # print("para_tlane_obs_pt_after_uss = (", tlane_after_uss[0], ", ", tlane_after_uss[1], ")  (", tlane_after_uss[2], ", ",tlane_after_uss[3],")")
-  #   print("slot length = ", planning_json['slot_length'])
-  #   print("slot width = ", planning_json['slot_width'])
-
-  #   print("------------front---------------")
-  #   print("para_tlane_front_min_x_before_clamp", planning_json['para_tlane_front_min_x_before_clamp'])
-  #   print("para_tlane_front_min_x_after_clamp", planning_json['para_tlane_front_min_x_after_clamp'])
-
-  #   print("tlane_front_que_x:-----------------------")
-  #   for i in range(len(planning_json['tlane_front_que_x'])):
-  #     print("( ", planning_json['tlane_front_que_x'][i], ", ", planning_json['tlane_front_que_y'][i], ")  ")
-
-  #   print("--------------rear-------------")
-  #   print("para_tlane_rear_max_x_before_clamp", planning_json['para_tlane_rear_max_x_before_clamp'])
-  #   print("para_tlane_rear_max_x_after_clamp", planning_json['para_tlane_rear_max_x_after_clamp'])
-
-  #   print("tlane_rear_que_x:-----------------------")
-  #   for i in range(len(planning_json['tlane_rear_que_x'])):
-  #     print("( ", planning_json['tlane_rear_que_x'][i], ", ", planning_json['tlane_rear_que_y'][i], ")  ")
-  # print("----------------------------------------------")
+    data = {"fusion_obs": fusion_obs,
+            "uss_obs": uss_obs,
+            "gl_obs": gl_obs,
+            "select_id": fus_parking_msg.select_slot_id,
+            "fusion_slot": fusion_slot,
+            "loc_pos": [loc_msg.position.position_boot.x, loc_msg.position.position_boot.y, loc_msg.orientation.euler_boot.yaw]}
+    folder_path  = "../scenario/geometry_tail_in/"
+    if not os.path.exists(folder_path):
+      os.makedirs(folder_path)
+    file_name = get_next_filename(folder_path)
+    print("file_name = ", file_name)
+    file_path =  os.path.join(folder_path, file_name)
+    with open(file_path, "w") as json_file:
+      json.dump(data, json_file)
 
   push_notebook()
 

@@ -35,7 +35,6 @@ void PerpendicularTailInScenario::Reset() {
   ParkingScenario::Reset();
 }
 
-
 void PerpendicularTailInScenario::ScenarioTry() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
     return;
@@ -992,8 +991,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
       planner_output.all_gear_path_point_vec.size() + 18);
 
   std::vector<pnc::geometry_lib::PathPoint> path_pt_vec;
-  // LateralPathOptimize(path_pt_vec);
-  if (false) {
+  if (LateralPathOptimize(path_pt_vec)) {
     JSON_DEBUG_VALUE("is_path_lateral_optimized", true);
   } else {
     path_pt_vec = planner_output.path_point_vec;
