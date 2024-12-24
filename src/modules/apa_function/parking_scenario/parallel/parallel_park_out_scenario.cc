@@ -68,7 +68,7 @@ void ParallelParkOutScenario::PlanCore() {
   const double safe_uss_remain_dist =
       (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
+          : 0.2;
 
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
@@ -340,7 +340,7 @@ const bool ParallelParkOutScenario::CheckFinished() {
             << std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg);
 
   return frame_.ego_slot_info.slot_occupied_ratio < 0.1 &&
-         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 10.0;
+         std::fabs(frame_.ego_slot_info.ego_heading_slot * kRad2Deg) < 8.0;
 }
 
 void ParallelParkOutScenario::GenTlane() {

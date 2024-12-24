@@ -1174,21 +1174,31 @@ const bool ParallelPathGenerator::GenAlignedPreparingLine(
 }
 
 const bool ParallelPathGenerator::GenParallelPreparingLineVec(
-    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec,
+    const bool is_ref_slot_line) {
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
 
   ILOG_INFO << " calc_params_.slot_side_sgn in GenParallelPreparingLineVec= "
             << calc_params_.slot_side_sgn;
 
-  const double tlane_outer_y =
+  double tlane_outer_y =
       std::fabs(input_.tlane.obs_pt_inside.y()) > half_slot_width
           ? input_.tlane.obs_pt_inside.y()
           : (half_slot_width + std::fabs(input_.tlane.obs_pt_inside.y())) *
                 0.5 * calc_params_.slot_side_sgn;
-
-  const double rac_tlane_bound =
+  double rac_tlane_bound =
       tlane_outer_y +
       calc_params_.slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+
+  if (is_ref_slot_line) {
+    tlane_outer_y =
+        std::max(input_.tlane.obs_pt_inside.y() * calc_params_.slot_side_sgn,
+                 half_slot_width) *
+        calc_params_.slot_side_sgn;
+    rac_tlane_bound =
+        tlane_outer_y + calc_params_.slot_side_sgn *
+                            (0.5 * apa_param.GetParam().car_width + 0.5);
+  }
 
   const double rac_channel_bound =
       input_.tlane.channel_y -

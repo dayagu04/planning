@@ -198,8 +198,6 @@ fig1.patch( 'car_xn', 'car_yn', source = data_start_car, fill_color = "red", fil
 fig1.circle('x', 'y', source = data_target_pos, size=8, color='black', legend_label = 'Target pose')
 fig1.patch( 'car_xn', 'car_yn', source = data_target_car, fill_color = "red", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'Target pose')
 
-
-
 fig1.scatter("x_vec", "y_vec", source=data_virtual_obs_pt, size=8, color='red', marker='star', legend_label = 'virtual obstacles', visible = False)
 fig1.circle(x = 'cx_vec', y = 'cy_vec', radius = 'radius_vec', source = data_debug_arc, line_alpha = 1, line_width = 2, line_color = "red", fill_alpha=0, legend_label = 'data_debug_arc', visible = False)
 

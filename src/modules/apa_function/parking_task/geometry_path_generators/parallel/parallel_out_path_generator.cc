@@ -99,12 +99,12 @@ const bool ParallelOutPathGenerator::Update() {
 
   success = false;
   std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
-  GenParallelPreparingLineVec(preparing_pose_vec);
+  GenParallelPreparingLineVec(preparing_pose_vec, true);
   ILOG_INFO << "preparing_pose_vec size = " << preparing_pose_vec.size();
 
   std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
-  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.05, false));
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
 
   for (const auto &prepare_pose : preparing_pose_vec) {
     const auto preparing_line = pnc::geometry_lib::BuildLineSegByPose(

@@ -84,15 +84,11 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  // const double safe_uss_remain_dist =
-  //     (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-  //         ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-  //         : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
-
   const double safe_uss_remain_dist =
       (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : 0.2;
+          : apa_param.GetParam().safe_uss_remain_dist_in_parallel_slot;
+
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
 

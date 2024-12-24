@@ -260,7 +260,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const pnc::geometry_lib::PathPoint &ego_pose);
 
   const bool GenParallelPreparingLineVec(
-      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec,
+      const bool is_ref_slot_line = false);
 
   const bool GenTiltedPreparingLine(
       std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
