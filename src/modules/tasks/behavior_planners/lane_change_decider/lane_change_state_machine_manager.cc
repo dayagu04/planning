@@ -1003,11 +1003,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   lc_back_cnt_ = 0;
   lc_invalid_track_.reset();
   lc_back_track_.reset();
-  near_cars_target_.clear();
-  near_cars_origin_.clear();
   must_change_lane_ = false;
-  behavior_suspend_ = false;
-  suspend_obs_.clear();
   propose_state_frame_nums_ = 0;
   execution_state_frame_nums_ = 0;
 }

@@ -28,11 +28,11 @@ class VisionLateralMotionPlanner : public Task {
   bool update_basic_path(const int &status);
 
   void update_premove_path(
-      int status, bool should_premove, bool should_suspend, bool accident_ahead,
+      int status, bool should_premove,
       const std::array<std::vector<double>, 2> &avd_car_past);
 
   bool update_avoidance_path(
-      int status, bool flag_avd, bool accident_ahead, bool should_premove,
+      int status, bool flag_avd, bool should_premove,
       double dist_rblane,
       const std::array<std::vector<double>, 2> &avd_car_past,
       const std::array<std::vector<double>, 2> &avd_sp_car_past);
@@ -46,8 +46,8 @@ class VisionLateralMotionPlanner : public Task {
                                  const std::vector<double> &right_poly,
                                  const double &dist_x);
 
-  bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead,
-              bool execute_premove, bool should_suspend, double dist_rblane,
+  bool update(int lane_status, bool flag_avoid,
+              bool execute_premove, double dist_rblane,
               const std::array<std::vector<double>, 2> &avoid_car_info,
               const std::array<std::vector<double>, 2> &avoid_sp_car_info);
 

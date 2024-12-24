@@ -10,21 +10,6 @@
 #include "virtual_lane.h"
 namespace planning {
 
-struct LaneChangeStateMachineInfo {
-  TrackInfo lc_invalid_track;
-  TrackInfo lc_back_track;
-  std::vector<TrackInfo> near_cars_target;
-  std::vector<TrackInfo> near_cars_origin;
-  int lc_back_cnt = 0;
-  int lc_valid_cnt = 0;
-
-  bool initialized = false;
-  bool behavior_suspend = false;
-  std::vector<int> suspend_obs;
-  double start_move_dist_lane = 0.;
-  bool not_accident = false;
-};
-
 struct LaneChangeDeciderOutput {
   int scenario;
   StateMachineLaneChangeStatus curr_state;
@@ -45,7 +30,6 @@ struct LaneChangeDeciderOutput {
   int lc_request_source;
   int lc_turn_light;
   std::string act_request_source;
-  double lat_premove_dist;
 
   TrackInfo lc_invalid_track;
   TrackInfo lc_back_track;

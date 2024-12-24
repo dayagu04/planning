@@ -1440,10 +1440,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
       path_points.emplace_back(ref_point.path_point);
     }
   }
-  // scenario, left_faster, right_is_faster
   lateral_output.scenario = lane_change_decider_output.scenario;
-  lateral_output.left_faster = false;
-  lateral_output.right_faster = false;
   // lc info
   int lc_request = lane_change_decider_output.lc_request;
 
@@ -1503,7 +1500,7 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
         virtual_lane_manager->get_right_lane() != nullptr &&
         virtual_lane_manager->get_right_lane()->get_lane_type() ==
             iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop && lateral_output.accident_ahead &&
+      ((!isRedLightStop &&
         lead_one != nullptr && lead_one->type == 20001))) {
     lateral_output.borrow_bicycle_lane = true;
   } else {
@@ -1549,17 +1546,6 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
     lateral_output.intersect_length = 1000;
   }
 
-  // isFasterStaticAvd, attention!
-  bool right_direct_exist = true;
-  bool curr_direct_has_right = false;
-  bool curr_direct_has_straight = true;
-  bool is_right_turn = false;
-  bool left_direct_has_straight = true;
-  lateral_output.isFasterStaticAvd =
-      (left_direct_exist && lateral_output.left_faster) ||
-      (right_direct_exist && lateral_output.right_faster) ||
-      (curr_direct_has_right && !curr_direct_has_straight) ||
-      (is_right_turn && left_direct_has_straight && lateral_output.left_faster);
   // is on highway
   lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 

@@ -159,12 +159,8 @@ class LaneChangeStateMachineManager {
   int lc_valid_cnt_ = 0;
   RequestType map_turn_signal_ = NO_CHANGE;
 
-  std::vector<TrackInfo> near_cars_target_;
-  std::vector<TrackInfo> near_cars_origin_;
   TrackInfo lc_invalid_track_;
   TrackInfo lc_back_track_;
-  bool behavior_suspend_ = false;  // lateral suspend
-  std::vector<int> suspend_obs_;   // lateral suspend obstacles
   bool must_change_lane_ = false;
   int scenario_ = SCENARIO_CRUISE;
   RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
