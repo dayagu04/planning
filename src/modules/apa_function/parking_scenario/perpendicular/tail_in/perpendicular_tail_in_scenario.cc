@@ -1071,6 +1071,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
                          apa_world_ptr_->GetNewSlotManagerPtr()
                              ->ego_info_under_slot_.cur_pose.heading_vec)
                         .y();
+  JSON_DEBUG_VALUE("terminal_error_y_front", y2)
 
   const bool lat_condition_1 =
       std::fabs(y1) <= apa_param.GetParam().finish_lat_err;

@@ -227,7 +227,7 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "slot_side",
-                         "terminal_error_x", "terminal_error_y", "terminal_error_heading", "car_real_time_col_lat_buffer",
+                         "terminal_error_x", "terminal_error_y", "terminal_error_y_front", "terminal_error_heading", "car_real_time_col_lat_buffer",
                          "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason", "plan_fail_reason",
                          "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_uss", "stuck_time", "replan_consume_time", "total_plan_consume_time",
                          "car_static_timer_by_pos_strict", "car_static_timer_by_pos_normal", "car_static_timer_by_vel_strict", "car_static_timer_by_vel_normal", "static_flag", "ego_heading_slot",
@@ -1753,6 +1753,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
 
       names.append("terminal_error_y")
       datas.append(str(plan_json['terminal_error_y']))
+
+      names.append("terminal_error_y_front")
+      datas.append(str(plan_json['terminal_error_y_front']))
 
       names.append("terminal_error_heading (deg)")
       datas.append(str(plan_json['terminal_error_heading'] * 57.3))
@@ -4141,6 +4144,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("terminal_error_y")
             datas.append(str(plan_json['terminal_error_y']))
+
+            names.append("terminal_error_y_front")
+            datas.append(str(plan_json['terminal_error_y_front']))
 
             names.append("terminal_error_heading (deg)")
             datas.append(str(plan_json['terminal_error_heading'] * 57.3))
