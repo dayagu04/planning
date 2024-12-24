@@ -1084,7 +1084,7 @@ bool SlotManager::UpdateEgoSlotInfo(
     frame_.is_fix_slot = true;
   }
 
-  ego_slot_info.fus_obj_valid_flag = frame_.fus_obj_valid_flag;
+  ego_slot_info.fus_obj_valid_flag = true;
   ego_slot_info.obs_pt_vec_slot.clear();
   if (!frame_.fus_obj_valid_flag) {
     // use uss obs
