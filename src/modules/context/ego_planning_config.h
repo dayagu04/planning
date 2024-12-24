@@ -352,21 +352,18 @@ struct LaneBorrowDeciderConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
 
     max_concern_obs_distance = read_json_keys<double>(
-    json, std::vector<std::string>{"lane_borrow",
-                                    "max_concern_obs_distance"});
+        json,
+        std::vector<std::string>{"lane_borrow", "max_concern_obs_distance"});
     obs_static_vel_thold = read_json_keys<double>(
-    json, std::vector<std::string>{"lane_borrow",
-                                    "obs_static_vel_thold"});
+        json, std::vector<std::string>{"lane_borrow", "obs_static_vel_thold"});
     observe_frames = read_json_keys<int>(
-    json, std::vector<std::string>{"lane_borrow",
-                                    "observe_frames"});
-    static_obs_buffer =read_json_key<double>
-    (json, "static_obs_buffer", static_obs_buffer);
-
+        json, std::vector<std::string>{"lane_borrow", "observe_frames"});
+    static_obs_buffer =
+        read_json_key<double>(json, "static_obs_buffer", static_obs_buffer);
   }
-  double max_concern_obs_distance =  40.0;
-  double obs_static_vel_thold =  0.1;
-  int observe_frames =  30;
+  double max_concern_obs_distance = 40.0;
+  double obs_static_vel_thold = 0.1;
+  int observe_frames = 30;
   double static_obs_buffer = 0.5;
 };
 
@@ -2814,6 +2811,11 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
                 "speed_planning", "start_stop_decider",
                 "desired_stopped_distance_between_ego_and_cipv_threshold"},
             desired_stopped_distance_between_ego_and_cipv_threshold);
+    distance_to_go_threshold = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "start_stop_decider",
+                                 "distance_to_go_threshold"},
+        distance_to_go_threshold);
   }
 
   double ego_vel_begin_stop_threshold = 0.5;
@@ -2824,6 +2826,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_cipv_threshold = 0.3;
   double distance_to_stop_line_ego_threshold = 5.5;
   double desired_stopped_distance_between_ego_and_cipv_threshold = 3.0;
+  double distance_to_go_threshold = 5.5;
 };
 
 struct SpeedPlannerConfig : public EgoPlanningConfig {
