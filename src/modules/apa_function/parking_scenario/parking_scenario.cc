@@ -248,7 +248,9 @@ void ParkingScenario::GenPlanningPath() {
 
   // send slot occupation ratio to control
   planning_output_.trajectory.trajectory_points[1].distance =
-      frame_.ego_slot_info.slot_occupied_ratio;
+      std::max(frame_.ego_slot_info.slot_occupied_ratio,
+               apa_world_ptr_->GetNewSlotManagerPtr()
+                   ->ego_info_under_slot_.slot_occupied_ratio);
 
   // send slot type to control
   planning_output_.trajectory.trajectory_points[2].distance =

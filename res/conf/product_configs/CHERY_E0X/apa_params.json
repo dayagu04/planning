@@ -73,7 +73,7 @@
 
   "comment_5": "check finish params",
   "finish_lat_err": 0.1,
-  "finish_lat_err_strict": 0.1,
+  "finish_lat_err_strict": 0.15,
   "finish_lon_err": 0.25,
   "finish_heading_err": 1.8,
   "finish_uss_slot_occupied_ratio": 0.798,
@@ -270,7 +270,7 @@
   "min_gear_path_length": 0.216,
   "parallel_lat_opt_enable": true,
   "cilqr_path_optimization_enable": true,
-  "perpendicular_lat_opt_enable": true,
+  "perpendicular_lat_opt_enable": false,
   "min_opt_path_length": 0.9,
   "parallel_multi_plan_radius_eps": 0.03,
   "parallel_search_out_heading": 0.0,

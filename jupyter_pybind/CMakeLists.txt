@@ -238,3 +238,11 @@ pybind11_add_module(perpendicular_slant_tail_in_py MODULE src/perpendicular_slan
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(perpendicular_slant_tail_in_with_json_py MODULE src/perpendicular_slant_tail_in_with_json_pybind.cc)
+  target_link_libraries(perpendicular_slant_tail_in_with_json_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)

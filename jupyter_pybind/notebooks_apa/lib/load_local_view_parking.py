@@ -68,6 +68,8 @@ read_fus_obj_msg = not load_fusion_object_from_occupancy
 corner_points_size = 4
 NUM_OF_OUTLINE_DATAORI = 2
 smallest_abs_t = 0.0
+ego_init_x = 0.0
+ego_init_y = 0.0
 class LoadCyberbag:
   def __init__(self, path, parking_flag = False) -> None:
     self.bag_path = path
@@ -156,6 +158,12 @@ class LoadCyberbag:
       self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
       max_time = max(max_time, self.loc_msg['t'][-1])
       print('loc_msg time:',self.loc_msg['t'][-1])
+      global ego_init_x
+      global ego_init_y
+      # ego pos in local and global coordinates
+      ego_init_x = self.loc_msg['data'][0].position.position_boot.x
+      ego_init_y =self.loc_msg['data'][0].position.position_boot.y
+
       if len(self.loc_msg['t']) > 0:
         self.loc_msg['enable'] = True
       else:
@@ -219,7 +227,7 @@ class LoadCyberbag:
     # load planning debug msg
     try:
       json_value_list = ["tlane_p0_x", "tlane_p0_y", "tlane_p1_x", "tlane_p1_y", "tlane_pt_x", "tlane_pt_y", "slot_side",
-                         "terminal_error_x", "terminal_error_y", "terminal_error_heading", "car_real_time_col_lat_buffer",
+                         "terminal_error_x", "terminal_error_y", "terminal_error_y_front", "terminal_error_heading", "car_real_time_col_lat_buffer",
                          "is_replan", "is_finished", "is_replan_first", "is_replan_by_uss", "current_path_length", "gear_change_count", "replan_reason", "plan_fail_reason",
                          "path_plan_success", "planning_status", "spline_success", "remain_dist", "remain_dist_col_det", "remain_dist_uss", "stuck_time", "replan_consume_time", "total_plan_consume_time",
                          "car_static_timer_by_pos_strict", "car_static_timer_by_pos_normal", "car_static_timer_by_vel_strict", "car_static_timer_by_vel_normal", "static_flag", "ego_heading_slot",
@@ -1746,6 +1754,9 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       names.append("terminal_error_y")
       datas.append(str(plan_json['terminal_error_y']))
 
+      names.append("terminal_error_y_front")
+      datas.append(str(plan_json['terminal_error_y_front']))
+
       names.append("terminal_error_heading (deg)")
       datas.append(str(plan_json['terminal_error_heading'] * 57.3))
 
@@ -2311,9 +2322,8 @@ def load_local_view_figure_parking():
                      'data_ground_line_obj' :data_ground_line_obj,\
                      }
   ### figures config
-
-  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=960, height=1250, match_aspect = True, aspect_scale=1)
-  fig1.x_range.flipped = True
+  fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1250, height=1250, match_aspect = False, aspect_scale=1, y_range=(ego_init_x - 20.0, ego_init_x + 20.0), x_range=(ego_init_y + 20.0, ego_init_y - 20.0))
+  #fig1.x_range.flipped = True
   # figure plot
   fig1.patch('car_yn', 'car_xn', source = data_car_target, fill_color = "pink", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target')
   fig1.patch('car_yn', 'car_xn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'car')
@@ -4134,6 +4144,9 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("terminal_error_y")
             datas.append(str(plan_json['terminal_error_y']))
+
+            names.append("terminal_error_y_front")
+            datas.append(str(plan_json['terminal_error_y_front']))
 
             names.append("terminal_error_heading (deg)")
             datas.append(str(plan_json['terminal_error_heading'] * 57.3))
