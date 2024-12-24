@@ -52,6 +52,11 @@ class VirtualWallDecider : public ParkingTask {
                const Pose2D& end, const ParkSpaceType slot_type,
                const SlotRelativePosition slot_side);
 
+  void Reset(const Pose2D& ego_pose) {
+    channel_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
+    return;
+  }
+
  private:
   void CalcVerticalVirtualWall(std::vector<Position2D>& points,
                                const double slot_width,

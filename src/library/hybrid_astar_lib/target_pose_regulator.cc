@@ -70,7 +70,9 @@ void TargetPoseRegulator::UpdatePoseBySafeChecker(EulerDistanceTransform *edt,
     return;
   }
 
-  std::vector<double> y_offset = {0.02, -0.02, 0.05, -0.05};
+  // 因为存在障碍物入侵情形，不管偏移范围设定多大，总会存在失败情况.
+  // 目前策略:不删除任何障碍物，失败就保持失败. 不要删除障碍物掩盖了上游问题.
+  std::vector<double> y_offset = {0.02, -0.02, 0.05, -0.05, 0.08, -0.08};
   for (size_t i = 0; i < y_offset.size(); i++) {
     global_pose.y = advised_safe_target_pose_.y + y_offset[i];
     tf.SetBasePose(global_pose);
@@ -83,6 +85,8 @@ void TargetPoseRegulator::UpdatePoseBySafeChecker(EulerDistanceTransform *edt,
       return;
     }
   }
+
+  ILOG_INFO << "regulator change pose fail";
 
   // Todo: adjust x offset
   return;

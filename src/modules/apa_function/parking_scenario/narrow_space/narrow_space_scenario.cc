@@ -64,6 +64,8 @@ void NarrowSpaceScenario::Reset() {
   ParkingScenario::Reset();
 
   narrow_space_decider_.Clear();
+  virtual_wall_decider_.Reset(Pose2D(frame_.ego_slot_info.ego_pos_slot[0],
+                                     frame_.ego_slot_info.ego_pos_slot[1], 0));
 
   return;
 }
