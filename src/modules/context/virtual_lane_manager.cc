@@ -53,11 +53,11 @@ constexpr double kEpsilon = 1.0e-4;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
-    planning::framework::Session* session) {
-  session_ = session;
+    planning::framework::Session* session)
+    : session_(session),
+      ego_lane_track_manager_(session) {
   config_ = config_builder->cast<EgoPlanningVirtualLaneManagerConfig>();
   is_select_split_nearing_ramp_ = config_.is_select_split_nearing_ramp;
-  ego_lane_track_manager_ = std::make_shared<EgoLaneTrackManger>(session);
 }
 
 std::vector<double> VirtualLaneManager::construct_reference_line_scc(void) {
@@ -510,10 +510,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 #endif
 
   // 获取track_ego_lane的依赖
-  ego_lane_track_manager_->Update(route_info_output_);
+  ego_lane_track_manager_.Update(route_info_output_);
 
   // 4.构建车道kd_path/计算自车相对于各车道的横向距离
-  ego_lane_track_manager_->CalculateVirtualLaneAttributes(relative_id_lanes_);
+  ego_lane_track_manager_.CalculateVirtualLaneAttributes(relative_id_lanes_);
 
   // 5.track自车道
   order_ids_of_same_zero_relative_id_.clear();
@@ -527,69 +527,69 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   const auto& location_valid = session_->environmental_model().location_valid();
   auto time_start = IflyTime::Now_ms();
   if (location_valid) {
-    ego_lane_track_manager_->TrackEgoLane(relative_id_lanes_,
+    ego_lane_track_manager_.TrackEgoLane(relative_id_lanes_,
                                           order_ids_of_same_zero_relative_id_,
                                           virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
-        ego_lane_track_manager_->is_select_ego_lane_without_plan();
+        ego_lane_track_manager_.is_select_ego_lane_without_plan();
     LOG_DEBUG("select_ego_lane_without_plan: %d \n",
               select_ego_lane_without_plan);
     JSON_DEBUG_VALUE("select_ego_lane_without_plan",
                      select_ego_lane_without_plan);
 
     const bool select_ego_lane_with_plan =
-        ego_lane_track_manager_->is_select_ego_lane_with_plan();
+        ego_lane_track_manager_.is_select_ego_lane_with_plan();
     LOG_DEBUG("select_ego_lane_with_plan: %d \n", select_ego_lane_with_plan);
     JSON_DEBUG_VALUE("select_ego_lane_with_plan", select_ego_lane_with_plan);
   }
   auto time_end = IflyTime::Now_ms();
   LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
 
-  ego_lane_track_manager_->SetLastZeroRelativeIdNums(
+  ego_lane_track_manager_.SetLastZeroRelativeIdNums(
       origin_relative_id_zero_nums_);
 
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
     LOG_ERROR("!!!current_lane is empty!!!");
-    ego_lane_track_manager_.reset();
+    ego_lane_track_manager_.Reset();
     return false;
   }
 
   // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
-  ego_lane_track_manager_->UpdateLaneVirtualId(
+  ego_lane_track_manager_.UpdateLaneVirtualId(
       relative_id_lanes_, virtual_id_mapped_lane_, &last_fix_lane_virtual_id_);
 
   // 对下游输出是否处于主路下匝道、匝道选分叉场景
-  set_is_exist_ramp_on_road(ego_lane_track_manager_->is_exist_ramp_on_road());
+  set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
   LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
-  set_is_exist_split_on_ramp(ego_lane_track_manager_->is_exist_split_on_ramp());
+  set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 
   set_is_exist_split_on_expressway(
-      ego_lane_track_manager_->is_exist_split_on_expressway());
+      ego_lane_track_manager_.is_exist_split_on_expressway());
   LOG_DEBUG("is_exist_split_on_expressway_: %d \n",
             is_exist_split_on_expressway_);
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
   set_is_exist_intersection_split(
-      ego_lane_track_manager_->is_exist_intersection_split());
+      ego_lane_track_manager_.is_exist_intersection_split());
   LOG_DEBUG("is_exist_intersection_split: %d \n", is_exist_intersection_split_);
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
   const bool is_in_ramp_select_split_situation =
-      ego_lane_track_manager_->is_in_ramp_select_split_situation();
+      ego_lane_track_manager_.is_in_ramp_select_split_situation();
   LOG_DEBUG("is_in_ramp_select_split_situation: %d \n",
             is_in_ramp_select_split_situation);
   JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
                    is_in_ramp_select_split_situation);
 
   const bool is_on_road_select_ramp_situation =
-      ego_lane_track_manager_->is_on_road_select_ramp_situation();
+      ego_lane_track_manager_.is_on_road_select_ramp_situation();
   LOG_DEBUG("is_on_road_select_ramp_situation: %d \n",
             is_on_road_select_ramp_situation);
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
