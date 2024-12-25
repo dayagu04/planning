@@ -95,22 +95,35 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "inversed search in slot failed!";
     return false;
   }
-  ILOG_INFO << "inversed search in slot success!";
+  ILOG_INFO << "inversed search in slot success! --------------------------";
+  pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
+  ILOG_INFO << "inversed search in slot success! end-----------------------";
 
   success = false;
   std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
   GenParallelPreparingLineVec(preparing_pose_vec, true);
   ILOG_INFO << "preparing_pose_vec size = " << preparing_pose_vec.size();
+  for (const auto &pt : preparing_pose_vec) {
+    ILOG_INFO << "preparing y = " << pt.pos.y();
+  }
 
   std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
+  pnc::geometry_lib::PrintPose("park_out_pose", park_out_pose);
+
+  calc_params_.valid_target_pt_vec.clear();
+  calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
 
   for (const auto &prepare_pose : preparing_pose_vec) {
     const auto preparing_line = pnc::geometry_lib::BuildLineSegByPose(
         prepare_pose.pos, prepare_pose.heading);
 
-    if (PlanToPreparingLine(park_out_path_vec, park_out_pose, preparing_line)) {
+    if (PlanFromTargetToLine(park_out_path_vec, prepare_pose)) {
+      ReversePathSegVec(park_out_path_vec);
+      ILOG_INFO << "park_out_path_vec ----------------------";
+      pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
+      ILOG_INFO << "park_out_path_vec end ----------------------";
       success = true;
       ILOG_INFO << "plan to preparing line success!";
       break;

@@ -68,7 +68,7 @@ void ParallelParkOutScenario::PlanCore() {
   const double safe_uss_remain_dist =
       (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
           ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : 0.2;
+          : 0.25;
 
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
@@ -907,10 +907,13 @@ const bool ParallelParkOutScenario::CheckReplan() {
 }
 
 const bool ParallelParkOutScenario::CheckSegCompleted() {
+  ILOG_INFO << "CheckSegCompleted -------------------------------";
   frame_.is_replan_by_uss = false;
 
   bool is_seg_complete = false;
   if (frame_.spline_success) {
+    ILOG_INFO << "frame_.remain_dist_uss = " << frame_.remain_dist_uss;
+
     const auto min_remain_dist =
         std::min(frame_.remain_dist_uss, frame_.remain_dist);
 

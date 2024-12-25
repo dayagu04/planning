@@ -219,6 +219,7 @@ const bool ParallelPathGenerator::Update() {
     if (success) {
       ILOG_INFO << "OutsideSlotPlan success!";
       if (calc_params_.park_out_path_in_slot.size() > 1) {
+        calc_params_.park_out_path_in_slot.pop_back();
         ReversePathSegVec(calc_params_.park_out_path_in_slot);
         AddPathSegToOutPut(calc_params_.park_out_path_in_slot);
       }
@@ -1884,7 +1885,7 @@ const bool ParallelPathGenerator::ReversePathSegVec(
   if (park_out_res.size() <= 1) {
     return false;
   }
-  park_out_res.pop_back();
+
   for (auto& path_seg : park_out_res) {
     pnc::geometry_lib::ReversePathSegInfo(path_seg);
   }
