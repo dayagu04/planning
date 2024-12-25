@@ -29,17 +29,17 @@ class LateralOffsetCalculatorV2 {
  private:
   void CalLaneWidth();
   bool UpdateBasicPath(const int& status);
-  bool UpdateAvoidPath(int status, bool flag_avd, bool accident_ahead,
+  bool UpdateAvoidPath(int status, bool flag_avd,
                        bool should_premove, double dist_rblane,
                        const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
                        const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle);
   bool UpdateLateralOffset(
-      int status, bool flag_avd, bool accident_ahead, bool should_premove,
+      int status, bool flag_avd, bool should_premove,
       double dist_rblane, const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
       const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle);
 
-  bool update(int lane_status, bool flag_avoid, bool exist_accident_ahead,
-              bool execute_premove, bool should_suspend, double dist_rblane,
+  bool update(int lane_status, bool flag_avoid,
+              bool execute_premove, double dist_rblane,
               const std::array<AvoidObstacleInfo, 2>& avoid_car_info,
               const std::array<AvoidObstacleInfo, 2>& avoid_sp_car_info);
 

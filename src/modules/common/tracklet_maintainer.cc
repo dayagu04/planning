@@ -152,9 +152,7 @@ void TrackletMaintainer::apply_update(
        lateral_output.enable_intersection_planner, lateral_output.dist_rblane,
        lateral_output.tleft_lane, lateral_output.rightest_lane,
        lateral_output.dist_intersect, lateral_output.intersect_length,
-       lateral_output.left_faster, lateral_output.right_faster, leadcars,
-       isRedLightStop, lateral_output.isFasterStaticAvd,
-       lateral_output.isOnHighway, lateral_output.d_poly,
+       leadcars, isRedLightStop, lateral_output.isOnHighway, lateral_output.d_poly,
        lateral_output.c_poly);
 
   set_default_value(objects);
@@ -614,8 +612,7 @@ void TrackletMaintainer::calc(
     double lane_width, double lat_offset, bool borrow_bicycle_lane,
     bool enable_intersection_planner, double dist_rblane, bool tleft_lane,
     bool rightest_lane, double dist_intersect, double intersect_length,
-    bool left_faster, bool right_faster, LeadCars &lead_cars,
-    bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway,
+    LeadCars &lead_cars, bool isRedLightStop, bool isOnHighway,
     const std::vector<double> &d_poly, const std::vector<double> &c_poly) {
   seq_state_.remove_clean();
   double v_ego = ego_state_->ego_v();
@@ -668,8 +665,7 @@ void TrackletMaintainer::calc(
 
   for (auto tr : tracked_objects) {
     check_accident_car(*tr, v_ego, scenario, dist_intersect, intersect_length,
-                       left_faster, right_faster, isRedLightStop,
-                       isFasterStaticAvd, isOnHighway);
+                       isRedLightStop, isOnHighway);
   }
 
   for (auto tr : tracked_objects) {
@@ -1460,8 +1456,8 @@ double TrackletMaintainer::calc_ignorance_threshold(
 
 void TrackletMaintainer::check_accident_car(
     TrackedObject &item, double v_ego, int scenario, double dist_intersect,
-    double intersect_length, bool left_faster, bool right_faster,
-    bool isRedLightStop, bool isFasterStaticAvd, bool isOnHighway) {
+    double intersect_length,
+    bool isRedLightStop, bool isOnHighway) {
   LOG_DEBUG("----check_accident_car-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp{0, 10, 15, 20, 30};
@@ -1480,7 +1476,7 @@ void TrackletMaintainer::check_accident_car(
   }
 
   if (item.type != 10001 && !isOnHighway) {
-    if (isFasterStaticAvd && item.d_rel < 40.0) {
+    if (item.d_rel < 40.0) {
       accident_discern_threshold = 50.0;
     }
     if (item.d_rel < 15.0) {
@@ -1504,8 +1500,7 @@ void TrackletMaintainer::check_accident_car(
   } else if (((!isRedLightStop && (item.is_lead || item.is_temp_lead)) ||
               item.is_accident_car) &&
              item.v_lead > -3 && item.v_lead < 0.5 &&
-             std::fabs(item.v_lat) < 0.2 &&
-             ((left_faster || right_faster) || scenario == LOCATION_INTER)) {
+             std::fabs(item.v_lat) < 0.2) {
     item.is_accident_cnt =
         std::min(item.is_accident_cnt + gap,
                  accident_discern_threshold * planning_cycle_time);

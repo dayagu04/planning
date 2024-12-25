@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/basic_type.h"
 #include "lane_change_request.h"
 
 namespace planning {
@@ -12,17 +13,14 @@ class MapRequest : public LaneChangeRequest {
              std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~MapRequest() = default;
-  void update(int lc_status, double lc_map_tfinish);
+  void Update(const int lc_status, const double lc_map_tfinish);
 
  private:
-  bool check_mlc_enable(double lc_map_tfinish);
-  void print_forbid_generating_reason(
-      const std::vector<std::string> forbid_generating_reason);
-  void check_lc_forbid_reason(
-      std::vector<std::string>& forbid_generating_left_reason,
-      std::vector<std::string>& forbid_generating_right_reason,
-      int left_int_freeze_cnt, int right_int_freeze_cnt);
-  bool must_change_before_curr_intersection();
+  bool CheckMLCEnable(const int lc_status);
+  bool IsTriggerMLCForRemainDistane();
+  void GenerateMLCRequest();
+  bool CheckTargetLaneLaneMarks(RequestType request_type);
+  bool CheckTargetLaneMergeDirection(RequestType request_type);
 };
 
 }  // namespace planning

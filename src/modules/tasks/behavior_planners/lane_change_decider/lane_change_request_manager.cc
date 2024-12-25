@@ -109,7 +109,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
-      map_request_.update(lc_status, map_request_.tfinish());
+      map_request_.Update(lc_status, map_request_.tfinish());
     }
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
         origin_relative_id_zero_nums == 1) {

@@ -67,9 +67,7 @@ bool LateralOffsetCalculatorV2::Process(
   const auto &lane_change_decider_output =
       planning_context.lane_change_decider_output();
   const auto &status = lane_change_decider_output.curr_state;
-  const auto &accident_ahead = lane_change_decider_output.accident_ahead;
   const auto &should_premove = lane_change_decider_output.should_premove;
-  const auto &should_suspend = lane_change_decider_output.should_suspend;
 
   // init info
   flane_ = session_->environmental_model()
@@ -89,7 +87,7 @@ bool LateralOffsetCalculatorV2::Process(
   enable_bound_ = !has_enough_speed_hysteresis_.IsValid();
 
   b_success =
-      update(status, flag_avd, accident_ahead, should_premove, should_suspend,
+      update(status, flag_avd, should_premove,
              dist_rblane, avd_obstacle, avd_sp_obstacle);
 
   if (!b_success) {
@@ -101,13 +99,13 @@ bool LateralOffsetCalculatorV2::Process(
 }
 
 bool LateralOffsetCalculatorV2::update(
-    int status, bool flag_avd, bool accident_ahead, bool should_premove,
-    bool should_suspend, double dist_rblane,
+    int status, bool flag_avd, bool should_premove,
+    double dist_rblane,
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
   last_avoid_info_ = avoid_info_;
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
-    UpdateAvoidPath(status, flag_avd, accident_ahead, should_premove,
+    UpdateAvoidPath(status, flag_avd, should_premove,
                     dist_rblane, avd_obstacle, avd_sp_obstacle);
   } else {
     Reset();
@@ -123,7 +121,7 @@ bool LateralOffsetCalculatorV2::update(
 }
 
 bool LateralOffsetCalculatorV2::UpdateAvoidPath(
-    int status, bool flag_avd, bool accident_ahead, bool should_premove,
+    int status, bool flag_avd, bool should_premove,
     double dist_rblane, const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
   Reset();

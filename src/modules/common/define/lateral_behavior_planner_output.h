@@ -160,12 +160,7 @@ struct ObjectSelectorContext {
   double d_lb_car_r = 0;
   double t_surpass_l = -1000;
   double t_surpass_r = -1000;
-  double premove_dist = 0.0;
 
-  bool premovel = false;
-  bool premover = false;
-  bool left_is_faster = false;
-  bool right_is_faster = false;
   int left_is_faster_cnt = 0;
   int right_is_faster_cnt = 0;
   int premoved_id = -1000;
@@ -173,11 +168,6 @@ struct ObjectSelectorContext {
 
   int l_accident_cnt = 0;
   int r_accident_cnt = 0;
-
-  std::vector<int> left_lb_car;
-  std::vector<int> left_alc_car;
-  std::vector<int> right_lb_car;
-  std::vector<int> right_alc_car;
 
   std::map<int, CarCount> left_lb_car_cnt;
   std::map<int, CarCount> left_alc_car_cnt;
@@ -252,9 +242,6 @@ struct LateralBehaviorPlannerContext {
   std::array<std::vector<double>, 2> avd_car_past;
   std::array<std::vector<double>, 2> avd_sp_car_past;
 
-  std::vector<int> left_lb_car;
-  std::vector<int> right_lb_car;
-
   std::vector<double> vel_sequence;
   std::set<int> ignore_change_false;
   std::set<int> ignore_change_true;
@@ -267,7 +254,6 @@ struct LateralBehaviorPlannerOutput {
   bool lane_borrow = false;
   int lane_borrow_range = -1000;
   std::string which_lane = "current_line";
-  std::string lb_request = "none";
   std::string lc_request = "none";
   std::string lc_status = "none";
   std::string lb_status = "none";
@@ -281,7 +267,6 @@ struct LateralBehaviorPlannerOutput {
   bool enable_intersection_planner = false;
   bool tleft_lane = false;
   bool rightest_lane = false;
-  bool isFasterStaticAvd = false;
   bool isOnHighway = false;
   bool isRedLightStop = false;
   double dist_intersect = 1000;
@@ -296,19 +281,12 @@ struct LateralBehaviorPlannerOutput {
   bool premoving = false;
   bool accident_ahead = false;
   bool accident_back = false;
-  int lc_pause_id = -1000;
-  bool lc_pause = false;
-  double tr_pause_l = 0.0;
-  double tr_pause_s = -100.0;
   bool must_change_lane = false;
-  bool left_faster = false;
-  bool right_faster = false;
   bool close_to_accident = false;
   bool premove = false;
   bool behavior_suspension = false;  // lateral suspend
   std::vector<int> suspension_obs;   // lateral suspend
   double angle_steers_limit = 0.0;
-  double premove_dist = 0.0;
   std::vector<double> c_poly;
   std::vector<double> d_poly;
   uint64_t planner_scene = 0;
@@ -342,12 +320,6 @@ struct LateralBehaviorPlannerOutput {
 
   std::array<double, 4> l_poly;
   std::array<double, 4> r_poly;
-
-  bool disable_l = false;
-  bool disable_r = false;
-  bool enable_l = false;
-  bool enable_r = false;
-  int enable_id = -1;
 
   bool lc_warning = false;
   bool avd_in_lane = false;
