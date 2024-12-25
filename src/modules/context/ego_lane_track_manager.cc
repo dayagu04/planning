@@ -407,32 +407,21 @@ void EgoLaneTrackManger::Reset() {
   is_on_road_select_ramp_situation_ = false;
 }
 
-void EgoLaneTrackManger::Update(
-    const bool is_ego_on_expressway, const bool is_on_ramp,
-    const double dis_to_ramp, const bool is_leaving_ramp,
-    const std::pair<planning::SplitRelativeDirection, double>
-        first_split_dir_dis_info,
-    const double distance_to_first_road_merge,
-    const double distance_to_first_road_split,
-    const double current_segment_passed_distance,
-    const std::vector<std::pair<SplitRelativeDirection, double>>&
-        split_dir_dis_info_list,
-    const double sum_dis_to_last_split_point) {
-  is_ego_on_expressway_ = is_ego_on_expressway;
-  is_on_ramp_ = is_on_ramp;
-  dis_to_ramp_ = dis_to_ramp;
+void EgoLaneTrackManger::Update(const RouteInfoOutput& route_info_output) {
+  is_ego_on_expressway_ = route_info_output.is_ego_on_expressway;
+  is_on_ramp_ = route_info_output.is_on_ramp;
+  dis_to_ramp_ = route_info_output.dis_to_ramp;
   is_leaving_ramp_ = false;
-  first_split_dir_dis_info_.first = first_split_dir_dis_info.first;
-  first_split_dir_dis_info_.second = first_split_dir_dis_info.second;
-  distance_to_first_road_merge_ = distance_to_first_road_merge;
-  distance_to_first_road_split_ = distance_to_first_road_split;
-  current_segment_passed_distance_ = current_segment_passed_distance;
-  sum_dis_to_last_split_point_ = sum_dis_to_last_split_point;
+  first_split_dir_dis_info_.first = route_info_output.first_split_dir_dis_info.first;
+  first_split_dir_dis_info_.second = route_info_output.first_split_dir_dis_info.second;
+  distance_to_first_road_merge_ = route_info_output.distance_to_first_road_merge;
+  distance_to_first_road_split_ = route_info_output.distance_to_first_road_split;
+  current_segment_passed_distance_ = route_info_output.current_segment_passed_distance;
+  sum_dis_to_last_split_point_ = route_info_output.sum_dis_to_last_split_point;
   split_direction_dis_info_list_.clear();
-  if (!split_dir_dis_info_list.empty()) {
-    for (int i = 0; i < split_dir_dis_info_list.size(); i++) {
-      split_direction_dis_info_list_.emplace_back(split_dir_dis_info_list[i]);
-    }
+
+  for (int i = 0; i < route_info_output.split_dir_dis_info_list.size(); i++) {
+    split_direction_dis_info_list_.emplace_back(route_info_output.split_dir_dis_info_list[i]);
   }
 }
 
