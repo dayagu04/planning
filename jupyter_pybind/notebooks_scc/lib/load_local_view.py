@@ -30,8 +30,6 @@ Road_boundary_max_line_size = 50
 Lane_boundary_max_line_size = 300
 Max_sdmap_segment_size = 100
 
-first_frame_num = 0
-
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # bag_time = 1.2
   ### step 1: 时间戳对齐
@@ -576,10 +574,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print("no intersection_state")
 
     try:
-      global first_frame_num
-      if bag_time <= 0.1:
-        first_frame_num = int(plan_debug_msg.frame_info.frame_num)
-      print("planning debug info:", int(plan_debug_msg.frame_info.frame_num) - first_frame_num)
+      print("planning debug info:", int(plan_debug_msg.frame_info.frame_num) - bag_loader.plan_debug_msg['data'][0].frame_info.frame_num)
     except:
       pass
     lat_behavior_common = plan_debug_msg.lat_behavior_common

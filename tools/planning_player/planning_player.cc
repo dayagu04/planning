@@ -23,6 +23,8 @@ namespace planning_player {
 static constexpr auto TOPIC_PLANNING_PLAN = "/iflytek/planning/plan";
 static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
     "/iflytek/planning/debug_info";
+static constexpr auto TOPIC_PLANNING_DEBUG_INFO_ORIGIN =
+    "/iflytek/planning/debug_info_origin";
 static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
 static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
 static constexpr auto TOPIC_FUSION_OCCUPANCY_OBJECTS =
@@ -596,6 +598,9 @@ void PlanningPlayer::StoreRosBag() {
       } else if (it_msg.first == TOPIC_CONTROL_DEBUG_INFO) {
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(
             it_msg.second, TOPIC_CONTROL_DEBUG_INFO, bag);
+      } else if (it_msg.first == TOPIC_PLANNING_DEBUG_INFO) {
+        write_ros_msg<sensor_interface::DebugInfo::Ptr>(
+            it_msg.second, TOPIC_PLANNING_DEBUG_INFO_ORIGIN, bag);
       } else {
         // std::cerr << "unsupported channel:" << msg.channel_name <<
         // std::endl;
