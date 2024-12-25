@@ -20,9 +20,11 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
                             ->get_ego_state_manager()
                             ->ego_blinker();
   const bool is_valid_ego_blinker = ego_blinker == 1 || ego_blinker == 2;
-  const bool is_cancel_mlc_for_ego_blinker = is_valid_ego_blinker && 
-                                       lc_status <= kLaneChangeExecution &&
-                                       request_type_ != NO_CHANGE;
+  const bool is_cancel_mlc_for_ego_blinker =
+      is_valid_ego_blinker && lc_status <= kLaneChangeExecution &&
+      request_type_ != NO_CHANGE &&
+      ((ego_blinker == 1 && request_type_ == RIGHT_CHANGE) ||
+       (ego_blinker == 2 && request_type_ == LEFT_CHANGE));
   //如果CheckMLCEnable检查没通过，根据当前状态判断是否可以取消已经生成了的request_type_
   const bool allow_cancel =
       (lc_status == kLaneChangePropose || lc_status == kLaneKeeping);
