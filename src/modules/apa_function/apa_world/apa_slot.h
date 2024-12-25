@@ -164,6 +164,7 @@ class ApaSlot final {
 
   void Reset() {
     id_ = 0;
+    confidence_ = 0;
     origin_corner_coord_global_.Reset();
     origin_corner_coord_local_.Reset();
     processed_corner_coord_global_.Reset();
@@ -226,6 +227,7 @@ class ApaSlot final {
 
  public:
   size_t id_ = 0;
+  uint32 confidence_ = 0;
 
   SlotCoord origin_corner_coord_global_;
   SlotCoord origin_corner_coord_local_;

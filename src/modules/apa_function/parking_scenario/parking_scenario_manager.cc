@@ -112,7 +112,7 @@ bool ParkingScenarioManager::Init(
 }
 
 void ParkingScenarioManager::Excute() {
-  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute";
+  ILOG_INFO << "-------------------- ParkingScenarioManager  Excute --------------------";
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 
@@ -125,10 +125,6 @@ void ParkingScenarioManager::Excute() {
 
   const auto &ego_info_under_slot =
       apa_world_->GetNewSlotManagerPtr()->ego_info_under_slot_;
-
-  ILOG_INFO << "cur_state = " << static_cast<int>(cur_state);
-  ILOG_INFO << "ego_info_under_slot.slot_type = "
-            << static_cast<int>(ego_info_under_slot.slot_type);
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
@@ -216,7 +212,6 @@ void ParkingScenarioManager::Reset() {
 
 std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
     const ParkingScenarioType type) {
-  ILOG_INFO << "GetScenarioByType type = " << static_cast<int>(type);
   auto it = scenario_list_.find(type);
   if (it != scenario_list_.end()) {
     return scenario_list_[type];

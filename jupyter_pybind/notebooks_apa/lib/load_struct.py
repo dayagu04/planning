@@ -62,7 +62,7 @@ def load_car_circle_coord():
 
   return circle_x, circle_y, circle_r
 
-def load_car_circle_coord_by_veh(vehicle_type = JAC_S811):
+def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X,  car_lat_inflation = 0.0):
 
   if vehicle_type == JAC_S811:
     circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]

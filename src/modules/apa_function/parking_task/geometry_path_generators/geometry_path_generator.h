@@ -24,6 +24,7 @@ struct GeometryPathInput {
   bool is_replan_first = true;
   bool is_replan_second = false;
   bool is_replan_dynamic = false;
+  int force_mid_process_plan = 0;
   double sample_ds = 0.02;
   uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
   uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
@@ -33,6 +34,8 @@ struct GeometryPathInput {
 
   bool is_left_empty = false;
   bool is_right_empty = false;
+
+  bool is_simulation = false;
 };
 
 struct GeometryPathOutput {
@@ -52,6 +55,9 @@ struct GeometryPathOutput {
   std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
   std::vector<pnc::geometry_lib::PathPoint> path_point_vec;
   std::vector<pnc::geometry_lib::PathPoint> all_gear_path_point_vec;
+
+  std::vector<geometry_lib::GeometryPath> perferred_geometry_path_vec;
+  geometry_lib::GeometryPath perferred_geometry_path;
 
   double actual_ds = 0.0;
   double cur_gear_length = 0.0;

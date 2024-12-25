@@ -55,11 +55,7 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   const bool IsCollisionForPoint(const pnc::geometry_lib::PathPoint &pose,
                                  const uint8_t gear);
 
-  const bool IsCollisionForPath(
-      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
-      const uint8_t gear);
-
-  const double CalPathSafeDist(
+  const double CalPathRemainDist(
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
       const double ds, const uint8_t gear);
 
@@ -67,11 +63,16 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
       const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
       const double ds, const uint8_t gear);
 
+  const bool IsCollisionForPath(
+      const std::vector<pnc::geometry_lib::PathPoint> &path_pt_vec,
+      const uint8_t gear);
+
   void Init(const float car_body_lat_safe_buffer, const float lon_safe_buffer,
             const float mirror_buffer);
 
   void UpdateSafeBuffer(const float car_body_lat_safe_buffer,
-                        const float lon_safe_buffer, const float mirror_buffer);
+                        const float lon_safe_buffer, const float mirror_buffer,
+                        const double big_circle_safe_buffer = 0.35);
 
   const EDTData &GetConstEDTData() const { return data_; }
 
@@ -84,9 +85,10 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   FootPrintCircleList global_circles_;
   FootPrintCircleModel footprint_model_;
-  float latetal_safe_buffer_;
-  float mirror_safe_buffer_;
-  float lon_safe_buffer_;
+  float latetal_safe_buffer_ = 0.1;
+  float mirror_safe_buffer_ = 0.1;
+  float lon_safe_buffer_ = 0.3;
+  double big_circle_safe_buffer_ = 0.35;
 };
 
 }  // namespace planning

@@ -41,6 +41,8 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const bool CheckReplan() override;
   virtual const bool CheckFinished() override;
 
+  const bool PostProcessPathAccordingRemainDist(const double remain_dist);
+  const bool CheckShouldStopWhenSlotJumpsMuch();
   const bool CheckDynamicPlanPathOptimal();
   const bool LateralPathOptimize(
       std::vector<geometry_lib::PathPoint>& optimal_path_vec);

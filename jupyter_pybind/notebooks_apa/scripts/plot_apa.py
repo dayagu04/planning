@@ -9,7 +9,9 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250104/20250104-13-05-36/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-04-13-05-37_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250102/20250102-19-24-00/park_in_data_collection_CHERY_E0Y_18047_ALL_FILTER_2025-01-02-19-24-00_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250107/20250107-21-24-10/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-07-21-24-10_no_camera.bag'
+
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
 cur_pos = [0.0, 0.0]
@@ -230,7 +232,19 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
       single_fusion_slot.append(limiter)
       fusion_slot.append(single_fusion_slot)
 
-    data = {"fusion_obs": fusion_obs,
+    plan_traj_x_vec = planning_json["plan_traj_x"]
+    plan_traj_y_vec = planning_json["plan_traj_y"]
+    plan_traj_heading_vec = planning_json["plan_traj_heading"]
+    plan_traj_lat_buffert_vec = planning_json["plan_traj_lat_buffer"]
+
+    # bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_20267/trigger/20241225/20241225-20-18-54/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-25-20-18-55_no_camera.bag'
+    # http://localhost:2799/view/chery_e0y_20267/trigger/20241225/20241225-20-10-36/park_in_data_collection_CHERY_E0Y_20267_ALL_FILTER_2024-12-25-20-10-36_no_camera.bag.apa.html
+    html_path = "http://localhost:2799/view/" + bag_path[30:] + ".apa.html"
+    print("html_path = ", html_path)
+    data = {"bag_path": bag_path,
+            "html_path": html_path,
+            "plan_traj":[plan_traj_x_vec, plan_traj_y_vec, plan_traj_heading_vec, plan_traj_lat_buffert_vec],
+            "fusion_obs": fusion_obs,
             "uss_obs": uss_obs,
             "gl_obs": gl_obs,
             "select_id": fus_parking_msg.select_slot_id,

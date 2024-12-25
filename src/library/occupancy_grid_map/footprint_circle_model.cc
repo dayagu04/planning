@@ -16,15 +16,12 @@ void FootPrintCircleModel::Init(const float lat_safe_buffer,
   return;
 }
 
-void FootPrintCircleModel::UpdateSafeBuffer(const float lat_safe_buffer,
-                                            const float lon_safe_buffer,
-                                            const float mirror_buffer) {
+void FootPrintCircleModel::UpdateSafeBuffer(
+    const float lat_safe_buffer, const float lon_safe_buffer,
+    const float mirror_buffer, const double big_circle_safe_buffer) {
   const std::vector<double> &circle_x = apa_param.GetParam().footprint_circle_x;
   const std::vector<double> &circle_y = apa_param.GetParam().footprint_circle_y;
   const std::vector<double> &circle_r = apa_param.GetParam().footprint_circle_r;
-
-  // big circle, buffer is 0.35
-  double big_circle_safe_buffer = 0.35;
 
   // min_lon_buffer:
   // 1. gear is reverse, car head buffer;

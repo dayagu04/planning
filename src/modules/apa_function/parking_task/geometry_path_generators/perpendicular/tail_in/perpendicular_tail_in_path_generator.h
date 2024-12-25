@@ -182,7 +182,9 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   const PathColDetRes TrimPathByObs(geometry_lib::PathSegment &path_seg,
                                     const double lat_inflation,
                                     const double lon_safe_dist,
-                                    const bool enable_log = true);
+                                    const bool enable_log = true,
+                                    const bool need_cal_obs_dist = false,
+                                    const bool use_edt_col = true);
 
   const bool CalTurnAroundPose();
 
@@ -225,7 +227,8 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
   const bool RoughMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
                                       const uint8_t ref_gear,
                                       geometry_lib::GeometryPath &ahead_path,
-                                      const bool enable_log = false);
+                                      const bool enable_log = false,
+                                      const bool ego_pose_flag = false);
 
   const bool OneStepMultiAdjustPathPlan(const geometry_lib::PathPoint &pose,
                                         const uint8_t ref_gear,

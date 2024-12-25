@@ -1038,7 +1038,7 @@ const bool PerpendicularHeadInScenario::GenObstacles() {
     CollisionDetector::ObsSlotType obs_slot_type;
     for (Eigen::Vector2d obs_pos : ego_slot_info.obs_pt_vec_slot) {
       obs_slot_type = apa_world_ptr_->GetCollisionDetectorPtr()->GetObsSlotType(
-          obs_pos, slot_pt, is_left_side, frame_.is_replan);
+          obs_pos, slot_pt, is_left_side, frame_.replan_flag);
 
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pos, ego_pose, safe_dist)) {
@@ -2134,12 +2134,9 @@ void PerpendicularHeadInScenario::Log() const {
   JSON_DEBUG_VALUE("terminal_error_heading",
                    frame_.ego_slot_info.terminal_err.heading)
 
-  JSON_DEBUG_VALUE("is_replan", frame_.is_replan)
-  JSON_DEBUG_VALUE("is_finished", frame_.is_finished)
   JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
   JSON_DEBUG_VALUE("is_replan_by_uss", frame_.is_replan_by_uss)
   JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
-  JSON_DEBUG_VALUE("gear_change_count", frame_.gear_change_count)
   JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
   JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
   JSON_DEBUG_VALUE("spline_success", frame_.spline_success)

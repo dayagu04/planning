@@ -1,6 +1,7 @@
 #ifndef __APA_WORLD_H__
 #define __APA_WORLD_H__
 
+#include <bits/stdint-uintn.h>
 #include <sys/types.h>
 
 #include <cstddef>
@@ -28,6 +29,7 @@ namespace planning {
 namespace apa_planner {
 
 struct SimulationParam {
+  int force_mid_process_plan = 0;
   bool is_simulation = false;
   int plan_type = 0;
   bool is_complete_path = false;

@@ -14,13 +14,13 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import apa_simulation_py
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo, UssWaveInfo, ParkingFusionInfo, VehicleServiceOutputInfo, FuncStateMachine, IFLYLocalization, ControlOutput
 
-# bag path and frame dt
 # e0y1:  10034
 # e0y2:  04228
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228//trigger/20250104/20250104-14-43-24/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-04-14-43-24_no_camera.bag'
+# bag path and frame dt
+bag_path = '/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250107/20250107-21-24-10/park_in_data_collection_CHERY_E0Y_04228_ALL_FILTER_2025-01-07-21-24-10_no_camera.bag'
 
 
 
@@ -537,7 +537,7 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, use_slot_i
           tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], plan_path_x[i], plan_path_y[i], plan_path_heading[i])
           car_xn_temp.append(tmp_x)
           car_yn_temp.append(tmp_y)
-        if i % 5 == 0 or  i == len(plan_path_x) - 1:
+        if i % 1 == 0 or  i == len(plan_path_x) - 1:
           car_box_x_vec.append(car_xn_temp)
           car_box_y_vec.append(car_yn_temp)
     else:

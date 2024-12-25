@@ -1,5 +1,7 @@
 #include "geometry_math.h"
 
+#include <Eigen/src/Core/Matrix.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -260,6 +262,30 @@ const LineSegment GetEgoHeadingLine(const Eigen::Vector2d &ego_pos,
   return pnc::geometry_lib::LineSegment(ego_pos, next_pos);
 }
 
+const bool CalcTwoLineSegIntersection(Eigen::Vector2d &intersection,
+                                      LineSegment &line_seg1,
+                                      LineSegment &line_seg2) {
+  const Eigen::Vector2d AB = line_seg1.pB - line_seg1.pA;
+  Eigen::Vector2d CD = line_seg2.pB - line_seg2.pA;
+
+  const double denominator = AB.x() * CD.y() - AB.y() * CD.x();
+
+  if (fabs(denominator) < 1e-10) {
+    return false;
+  }
+
+  const Eigen::Vector2d AC = line_seg2.pA - line_seg1.pA;
+
+  const double t = (AC.x() * CD.y() - AC.y() * CD.x()) / denominator;
+  const double s = (AC.x() * AB.y() - AC.y() * AB.x()) / denominator;
+
+  if (mathlib::IsInBound(t, 0.0, 1.0) && mathlib::IsInBound(s, 0.0, 1.0)) {
+    intersection = line_seg1.pA + t * AB;
+    return true;
+  }
+  return false;
+}
+
 const bool GetIntersectionFromTwoLineSeg(
     Eigen::Vector2d &intersection, pnc::geometry_lib::LineSegment &line_seg1,
     pnc::geometry_lib::LineSegment &line_seg2) {
@@ -378,23 +404,23 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
 
 const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
                                const Eigen::Vector2d &pC) {
-  const auto &pO = arc.circle_info.center;
-  const auto v_OA = arc.pA - pO;
-  const auto v_OB = arc.pB - pO;
-  const auto v_OC = pC - pO;
+  const Eigen::Vector2d &pO = arc.circle_info.center;
+  const Eigen::Vector2d v_OA = arc.pA - pO;
+  const Eigen::Vector2d v_OB = arc.pB - pO;
+  const Eigen::Vector2d v_OC = pC - pO;
 
-  const auto norm_v_OA = v_OA.norm();
-  const auto norm_v_OB = v_OB.norm();
-  const auto norm_v_OC = v_OC.norm();
+  const double norm_v_OA = v_OA.norm();
+  const double norm_v_OB = v_OB.norm();
+  const double norm_v_OC = v_OC.norm();
 
-  const auto cos_AOC = v_OA.dot(v_OC) / (norm_v_OA * norm_v_OC);
-  const auto cos_BOC = v_OB.dot(v_OC) / (norm_v_OB * norm_v_OC);
-  const auto cos_AOB = v_OA.dot(v_OB) / (norm_v_OA * norm_v_OB);
+  const double cos_AOC = v_OA.dot(v_OC) / (norm_v_OA * norm_v_OC);
+  const double cos_BOC = v_OB.dot(v_OC) / (norm_v_OB * norm_v_OC);
+  const double cos_AOB = v_OA.dot(v_OB) / (norm_v_OA * norm_v_OB);
 
   return (cos_AOC > cos_AOB && cos_BOC > cos_AOB);
 }
 
-const bool GetArcLineIntersection(
+const bool GetArcLineSegIntersection(
     Eigen::Vector2d &intersection, const pnc::geometry_lib::Arc &arc,
     const pnc::geometry_lib::LineSegment &line_seg) {
   const auto AB = line_seg.pB - line_seg.pA;
@@ -452,6 +478,53 @@ const bool GetArcLineIntersection(
 }
 
 const size_t GetArcLineIntersection(
+    std::pair<Eigen::Vector2d, Eigen::Vector2d> &intersections,
+    const pnc::geometry_lib::Arc &arc,
+    const pnc::geometry_lib::LineSegment &line_seg) {
+  const Eigen::Vector2d AB = line_seg.pB - line_seg.pA;
+  const Eigen::Vector2d OA = line_seg.pA - arc.circle_info.center;
+  // |OA + lambda * AB|^2 = r^2 means that line segment AB intersects at circle
+  // OA·OA + 2*OA·AB*lambda + AB·AB*lambda^2 = r^2
+  const double a = AB.dot(AB);
+  const double b = 2 * OA.dot(AB);
+  const double c = OA.dot(OA) - arc.circle_info.radius * arc.circle_info.radius;
+
+  double delta = b * b - 4.0 * a * c;
+
+  if (delta < 0.0) {
+    // line does not intersect with a circle
+    return 0;
+  }
+
+  if (mathlib::IsDoubleEqual(delta, 0.0)) {
+    const double lambda = -b / (2.0 * a);
+    // AC = lamdba * AB -> pC - pA = lamdba * (pB - pA)
+    // pC = lamdba * pB + (1 - lambda) * pA = pA + lambda * (pB - pA)
+    intersections.first = line_seg.pA + lambda * AB;
+    // determine whether the intersection point is on an arc
+    if (CheckPointLiesOnArc(arc, intersections.first)) {
+      return 1;
+    }
+    return 0;
+  }
+
+  delta = sqrt(std::max(0.0, delta));
+
+  const double lambda1 = (-b - delta) / (2 * a);
+  const double lambda2 = (-b + delta) / (2 * a);
+  size_t number = 0;
+  intersections.first = line_seg.pA + lambda1 * AB;
+  intersections.second = line_seg.pA + lambda2 * AB;
+  if (CheckPointLiesOnArc(arc, intersections.first)) {
+    number++;
+  }
+  if (CheckPointLiesOnArc(arc, intersections.second)) {
+    number++;
+  }
+  return number;
+}
+
+const size_t GetArcLineSegIntersection(
     std::pair<Eigen::Vector2d, Eigen::Vector2d> &intersections,
     const pnc::geometry_lib::Arc &arc,
     const pnc::geometry_lib::LineSegment &line_seg) {
@@ -668,6 +741,51 @@ const size_t CalcCrossPointsOfLineAndCircle(
       cross_points.emplace_back(foot_pt + dist_cross_to_foot * line_vec);
 
       cross_point_nums = 2;
+    }
+  }
+  return cross_point_nums;
+}
+
+const size_t CalcLineSegAndCircleIntersection(
+    const LineSegment &line, const Circle &circle,
+    std::vector<Eigen::Vector2d> &cross_points) {
+  size_t cross_point_nums = 0;
+  cross_points.clear();
+  const Eigen::Vector2d d = line.pB - line.pA;
+
+  const Eigen::Vector2d f = line.pA - circle.center;
+
+  // 二次方程的系数
+  const double a = d.dot(d);
+  const double b = 2 * f.dot(d);
+  const double c = f.dot(f) - circle.radius * circle.radius;
+
+  // 判别式
+  double discriminant = b * b - 4 * a * c;
+
+  if (discriminant < 0.0) {
+    // 无实数解，线段与圆无交点
+  } else {
+    discriminant = sqrt(discriminant);
+
+    // 计算 t 的值
+    const double t1 = (-b - discriminant) / (2 * a);
+    const double t2 = (-b + discriminant) / (2 * a);
+
+    Eigen::Vector2d intersection1, intersection2;
+
+    // 检查 t1 是否在线段范围内
+    if (t1 >= 0.0 && t1 <= 1.0) {
+      intersection1 = line.pA + t1 * d;
+      cross_point_nums++;
+      cross_points.emplace_back(intersection1);
+    }
+
+    // 检查 t2 是否在线段范围内
+    if (t2 >= 0 && t2 <= 1) {
+      intersection2 = line.pA + t2 * d;
+      cross_point_nums++;
+      cross_points.emplace_back(intersection2);
     }
   }
   return cross_point_nums;
@@ -2007,20 +2125,20 @@ const bool CompleteArcInfo(Arc &arc) {
   using namespace mathlib;
   // arc(A-B) known:pA, headingA, pB, pO(turn center)
   // unknown: headingB, radius, length, is_anti_clockwise
-  const auto OA = arc.pA - arc.circle_info.center;
-  const auto OB = arc.pB - arc.circle_info.center;
-  const auto OA_norm = OA.norm();
-  const auto OB_norm = OB.norm();
+  const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+  const Eigen::Vector2d OB = arc.pB - arc.circle_info.center;
+  const double OA_norm = OA.norm();
+  const double OB_norm = OB.norm();
   // const auto AB_norm = (arc.pB - arc.pA).norm();
   if (IsDoubleEqual(OA_norm, 0.0) || IsDoubleEqual(OB_norm, 0.0) ||
-      !IsDoubleEqual(OA_norm, OB_norm)) {
+      !IsTwoNumerEqual(OA_norm, OB_norm)) {
     ILOG_INFO << "OA_norm = " << OA_norm << "  OB_norm = " << OB_norm;
     return LogErr(__func__, 0);
   }
 
   arc.circle_info.radius = OA_norm;
 
-  const auto rot_angle = GetAngleFromTwoVec(OA, OB);
+  const double rot_angle = GetAngleFromTwoVec(OA, OB);
   if (rot_angle > 0.0) {
     arc.is_anti_clockwise = true;
   } else if (rot_angle < 0.0) {
@@ -2041,8 +2159,8 @@ const bool CompleteArcInfo(Arc &arc, const double rot_angle) {
   // arc(A->B  O:turn center)
   // known: pA, headingA, pO, rot_angle
   // unknown: pB, headingB, radius, length, is_anti_clockwise
-  const auto OA = arc.pA - arc.circle_info.center;
-  const auto OA_norm = OA.norm();
+  const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+  const double OA_norm = OA.norm();
   if (IsDoubleEqual(OA_norm, 0.0)) {
     return LogErr(__func__, 0);
   }
@@ -2050,8 +2168,8 @@ const bool CompleteArcInfo(Arc &arc, const double rot_angle) {
   arc.circle_info.radius = OA_norm;
 
   const double tmp_rot_angle = NormalizeAngle(rot_angle);
-  const auto rot_m = GetRotm2dFromTheta(tmp_rot_angle);
-  const auto OB = rot_m * OA;
+  const Eigen::Matrix2d rot_m = GetRotm2dFromTheta(tmp_rot_angle);
+  const Eigen::Vector2d OB = rot_m * OA;
   arc.pB = arc.circle_info.center + OB;
   return CompleteArcInfo(arc);
 }
@@ -2066,7 +2184,7 @@ const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer) {
       (arc_steer != SEG_STEER_LEFT && arc_steer != SEG_STEER_RIGHT)) {
     return LogErr(__func__, 0);
   }
-  const auto A_tang_vec = GetUnitTangVecByHeading(arc.headingA);
+  const Eigen::Vector2d A_tang_vec = GetUnitTangVecByHeading(arc.headingA);
   Eigen::Vector2d A_norm_vec;
   if (arc_steer == SEG_STEER_LEFT) {
     A_norm_vec << -A_tang_vec.y(), A_tang_vec.x();
@@ -2912,6 +3030,10 @@ const bool CalPtFromPathSeg(PathPoint &pose, const PathSegment &path_seg,
     pose.pos = path_seg.GetStartPos();
     pose.heading = path_seg.GetStartHeading();
     return true;
+  } else if (length > path_seg.Getlength() - 1e-3) {
+    pose.pos = path_seg.GetEndPos();
+    pose.heading = path_seg.GetEndHeading();
+    return true;
   }
   if (path_seg.seg_type == SEG_TYPE_LINE) {
     Eigen::Vector2d dir_vec = GenHeadingVec(path_seg.GetStartHeading());
@@ -3016,8 +3138,9 @@ void GeometryPath::PrintInfo(const bool enable_log) const {
                            << "  total_length = " << total_length
                            << "  cur_gear_length = " << cur_gear_length
                            << "  cur_gear = " << GetGearString(cur_gear)
-                           << "  cur_steer = " << GetGearString(cur_steer)
-                           << "  col_flag = " << collide_flag;
+                           << "  cur_steer = " << GetSteerString(cur_steer)
+                           << "  col_flag = " << collide_flag
+                           << "  dist_to_obs = " << dist_to_obs;
 
   for (size_t i = 0; i < path_segment_vec.size(); i++) {
     ILOG_INFO_IF(enable_log) << "Segment [" << i << "]";
@@ -3058,6 +3181,7 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
     for (int i = 0; i < path_count - 1; ++i) {
       if (gear_cmd_vec[i + 1] != gear_cmd_vec[i]) {
         gear_change_count++;
+        gear_change_pose.emplace_back(path_segment_vec[i].GetEndPose());
         continue;
       }
 
@@ -3073,9 +3197,8 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
            steer_cmd_vec[i + 1] == SEG_STEER_RIGHT) ||
           (steer_cmd_vec[i] == SEG_STEER_RIGHT &&
            steer_cmd_vec[i + 1] == SEG_STEER_LEFT)) {
-        steer_change_count +=
-            2 * static_cast<uint8_t>(
-                    5.5 / path_segment_vec[i].arc_seg.circle_info.radius);
+        steer_change_count += static_cast<uint8_t>(std::round(
+            4.0 * 5.5 / path_segment_vec[i].arc_seg.circle_info.radius));
       }
 
       // 转弯到直线  后续看是否可以不考虑 因为直线更容易跟踪
@@ -3091,9 +3214,9 @@ void GeometryPath::SetPath(const std::vector<PathSegment> &_path_segment_vec) {
 }
 
 void GeometryPath::CalcCost() {
-  gear_change_cost = 30.0 * gear_change_count;
+  gear_change_cost = 50.0 * gear_change_count;
   length_cost = 1.0 * total_length;
-  steer_change_cost = 3.0 * steer_change_count;
+  steer_change_cost = 8.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
 }
@@ -3208,6 +3331,39 @@ const std::string GetSlotSideString(const uint8_t slot_side) {
       break;
   }
   return slot_side_str;
+}
+
+const bool GetRectangle(const Eigen::Vector2d pos, const double heading,
+                        const double length, const double width,
+                        std::vector<Eigen::Vector2d> &rectangle) {
+  rectangle.clear();
+  rectangle.reserve(4);
+  if (length < 1e-3 || width < 1e-3) {
+    return false;
+  }
+
+  const double half_length = 0.5 * length;
+  const double half_width = 0.5 * width;
+  const Eigen::Vector2d unit_t = GenHeadingVec(heading);
+  const Eigen::Vector2d unit_n(-unit_t.y(), unit_t.x());
+  rectangle.emplace_back(pos + half_length * unit_t + half_width * unit_n);
+  rectangle.emplace_back(pos + half_length * unit_t - half_width * unit_n);
+  rectangle.emplace_back(pos - half_length * unit_t - half_width * unit_n);
+  rectangle.emplace_back(pos - half_length * unit_t + half_width * unit_n);
+
+  return true;
+}
+
+const bool GetPolygonBound(double *x_min, double *x_max, double *y_min,
+                           double *y_max,
+                           const std::vector<Eigen::Vector2d> &polygon) {
+  for (const Eigen::Vector2d &pt : polygon) {
+    *x_min = std::min(*x_min, pt.x());
+    *x_max = std::max(*x_max, pt.x());
+    *y_min = std::min(*y_min, pt.y());
+    *y_max = std::max(*y_max, pt.y());
+  }
+  return true;
 }
 
 }  // namespace geometry_lib

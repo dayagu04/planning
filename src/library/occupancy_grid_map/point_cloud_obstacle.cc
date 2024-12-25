@@ -291,12 +291,6 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
-    if (!apa_param.GetParam().use_uss_pt_clound &&
-        pair.second.GetObsAttributeType() ==
-            apa_planner::ApaObsAttributeType::USS_POINT_CLOUD) {
-      continue;
-    }
-
     obs.points.clear();
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
 

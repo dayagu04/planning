@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+
 #include "./../hybrid_astar_lib/hybrid_astar_common.h"
 #include "pose2d.h"
 #include "transform2d.h"
@@ -32,7 +33,8 @@ class FootPrintCircleModel {
             const float mirror_buffer);
 
   void UpdateSafeBuffer(const float lat_safe_buffer,
-                        const float lon_safe_buffer, const float mirror_buffer);
+                        const float lon_safe_buffer, const float mirror_buffer,
+                        const double big_circle_safe_buffer = 0.35);
 
   void LocalToGlobalFast(FootPrintCircleList *global_circle,
                          const Pose2D &veh_pose);
