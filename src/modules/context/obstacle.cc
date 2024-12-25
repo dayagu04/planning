@@ -137,13 +137,15 @@ namespace planning {
 
 Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
                    const bool is_static, double start_timestamp)
-    : id_(id),
-      perception_id_(prediction_object.id),
-      is_static_(is_static),
-      perception_bounding_box_(
-          {prediction_object.position_x, prediction_object.position_y},
-          prediction_object.yaw, prediction_object.length,
-          prediction_object.width) {
+  : id_ (id),
+    perception_id_ (prediction_object.id),
+    timestamp_ (prediction_object.timestamp_us / 1000000.0),
+    is_static_ (is_static),
+    perception_bounding_box_ (
+      {prediction_object.position_x, prediction_object.position_y},
+        prediction_object.yaw, prediction_object.length,
+        prediction_object.width) {
+
   x_center_ = prediction_object.position_x;
   y_center_ = prediction_object.position_y;
   x_relative_center_ = prediction_object.relative_position_x;
@@ -265,6 +267,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
 Obstacle::Obstacle(const Obstacle *obstacle) {
   id_ = obstacle->id();
   perception_id_ = obstacle->perception_id_;
+  timestamp_ = obstacle->timestamp_;
   is_static_ = obstacle->is_static();
   x_center_ = obstacle->x_center();
   y_center_ = obstacle->y_center();

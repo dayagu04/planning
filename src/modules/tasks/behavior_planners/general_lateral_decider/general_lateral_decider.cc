@@ -1079,9 +1079,9 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto &lat_obstacle_decision = session_->environmental_model()
-                                          .get_lateral_obstacle()
-                                          ->lat_obstacle_decision();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow_status =
@@ -1347,9 +1347,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto &lat_obstacle_decision = session_->environmental_model()
-                                          .get_lateral_obstacle()
-                                          ->lat_obstacle_decision();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
   bool in_intersection = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->GetIntersectionState() ==
@@ -1714,9 +1714,9 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
 
 bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     const std::shared_ptr<FrenetObstacle> &obstacle) {
-  const auto &lat_obstacle_decision = session_->environmental_model()
-                                          .get_lateral_obstacle()
-                                          ->lat_obstacle_decision();
+  const auto &lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
   if (lat_obstacle_decision.find(obstacle->id()) !=
       lat_obstacle_decision.end()) {
     if (lat_obstacle_decision.at(obstacle->id()) ==

@@ -26,10 +26,16 @@ class FrenetObstacle {
   double frenet_l() const { return frenet_l_; }
   double frenet_velocity_s() const { return frenet_velocity_s_; }
   double frenet_velocity_l() const { return frenet_velocity_l_; }
+  double frenet_velocity_lateral() const { return frenet_velocity_lateral_; };
+  double frenet_relative_velocity_s() const { return frenet_relative_velocity_s_; };
+  double frenet_relative_velocity_l() const { return frenet_relative_velocity_l_; };
   double frenet_relative_velocity_angle() const {
     return frenet_relative_velocity_angle_;
   }
   double rel_s() const { return rel_s_; }
+  double d_s_rel() const { return d_s_rel_; };
+  double d_min_cpath() const { return d_min_cpath_; };
+  double d_max_cpath() const { return d_max_cpath_; };
   Point2D s_min_l() const { return s_with_min_l_; }
   Point2D s_max_l() const { return s_with_max_l_; }
   double l_relative_to_ego() const { return l_relative_to_ego_; }
@@ -59,7 +65,9 @@ class FrenetObstacle {
       planning_math::Polygon2d& obstacle_polygon) const;
 
  private:
-  void compute_frenet_obstacle(const ReferencePath& reference_path);
+  void compute_frenet_obstacle(
+      const ReferencePath& reference_path,
+      const std::shared_ptr<EgoStateManager> ego_state_info);
   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path);
 
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
@@ -73,8 +81,14 @@ class FrenetObstacle {
   double frenet_l_;
   double frenet_velocity_s_;
   double frenet_velocity_l_;
+  double frenet_velocity_lateral_;
+  double frenet_relative_velocity_s_;
+  double frenet_relative_velocity_l_;
   double frenet_relative_velocity_angle_;
   double rel_s_;
+  double d_s_rel_;
+  double d_min_cpath_;
+  double d_max_cpath_;
 
   Point2D s_with_min_l_;  // x:l, y:s
   Point2D s_with_max_l_;

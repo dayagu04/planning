@@ -18,7 +18,7 @@ FrenetObstacle::FrenetObstacle(
     : id_(obstacle_ptr->id()),
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid) {
-  compute_frenet_obstacle(reference_path);
+  compute_frenet_obstacle(reference_path, ego_state_info);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
     compute_frenet_polygon_sequence(reference_path);
@@ -26,8 +26,10 @@ FrenetObstacle::FrenetObstacle(
 }
 
 void FrenetObstacle::compute_frenet_obstacle(
-    const ReferencePath &reference_path) {
+    const ReferencePath &reference_path,
+    const std::shared_ptr<EgoStateManager> ego_state_info) {
   FrenetEgoState frenet_ego_state = reference_path.get_frenet_ego_state();
+  double ego_s = frenet_ego_state.s();
   double ego_l = frenet_ego_state.l();
 
   const auto &frenet_coord = reference_path.get_frenet_coord();
@@ -121,14 +123,15 @@ void FrenetObstacle::compute_frenet_obstacle(
     s_with_min_l_.y = std::max(corners_s[index], 0.0);
   }
 
+  double min_s, max_s, min_l, max_l;
+  min_s = *std::min_element(corners_s.begin(), corners_s.end());
+  max_s = *std::max_element(corners_s.begin(), corners_s.end());
+  min_l = s_with_min_l_.x;
+  max_l = s_with_max_l_.x;
   if (frenet_s_ > frenet_ego_state.s()) {
-    double min_s = *std::min_element(corners_s.begin(), corners_s.end());
-    rel_s_ =
-        (min_s > frenet_ego_state.s()) ? (min_s - frenet_ego_state.s()) : 0;
+    rel_s_ = (min_s > frenet_ego_state.s()) ? (min_s - frenet_ego_state.s()) : 0;
   } else {
-    double max_s = *std::max_element(corners_s.begin(), corners_s.end());
-    rel_s_ =
-        (max_s < frenet_ego_state.s()) ? (max_s - frenet_ego_state.s()) : 0;
+    rel_s_ = (max_s < frenet_ego_state.s()) ? (max_s - frenet_ego_state.s()) : 0;
   }
 
   std::vector<double> corners_l_relative_ego = {
@@ -144,6 +147,84 @@ void FrenetObstacle::compute_frenet_obstacle(
   } else {
     l_relative_to_ego_ =
         min_corners_l_relative_ego < 0 ? min_corners_l_relative_ego : 0;
+  }
+
+  frenet_relative_velocity_s_ = frenet_velocity_s_ - frenet_ego_state.velocity_s();
+  frenet_relative_velocity_l_ = frenet_velocity_l_ - frenet_ego_state.velocity_l();
+  frenet_velocity_lateral_ = (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
+
+  const double front_edge_to_rear_axle = VehicleConfigurationContext::Instance()
+                                        ->get_vehicle_param().front_edge_to_rear_axle;
+  double ego_x = ego_state_info->ego_carte().x;
+  double ego_y = ego_state_info->ego_carte().y;
+  double ego_heading = frenet_ego_state.planning_init_point().heading_angle;
+  double ego_head_x = ego_x + front_edge_to_rear_axle * std::cos(ego_heading);
+  double ego_head_y = ego_y + front_edge_to_rear_axle * std::sin(ego_heading);
+  double ego_head_s = 0;
+  double ego_head_l = 0;
+  if (frenet_coord->XYToSL(Point2D(ego_head_x, ego_head_y), frenet_point)) {
+    ego_head_s = frenet_point.x;
+    ego_head_l = frenet_point.y;
+  }
+
+  double half_length = obs_length * 0.5;
+  double half_width = obs_width * 0.5;
+  // 对车辆障碍物half_width限定在1-2m以内
+  // 其余障碍物使用其默认的half_width
+  iflyauto::ObjectType type = obstacle_ptr_->type();
+  bool is_vehicle_type = type == iflyauto::OBJECT_TYPE_COUPE ||
+                         type == iflyauto::OBJECT_TYPE_MINIBUS ||
+                         type == iflyauto::OBJECT_TYPE_VAN ||
+                         type == iflyauto::OBJECT_TYPE_BUS ||
+                         type == iflyauto::OBJECT_TYPE_TRUCK ||
+                         type == iflyauto::OBJECT_TYPE_TRAILER;
+  if (is_vehicle_type) {
+    half_width = std::max(1.0, std::min(2.0, half_width));
+  }
+
+  // recalculate min_s, max_s, min_l, max_l
+  if(std::fabs(half_width - obs_width * 0.5) > 1e-6) {
+    std::array<int, 2> sgn_list{1, -1};
+    std::array<std::vector<double>, 2> obstacle_box;
+    enum box_corner {box_s, box_l};
+
+    for (int sgn_length : sgn_list) {
+      for (int sgn_width : sgn_list) {
+        double _s =
+                frenet_s_ + sgn_length * std::cos(obs_relative_heading) * half_length -
+                            sgn_width * std::sin(obs_relative_heading) * half_width;
+        if ((frenet_s_ - ego_head_s) * (_s - ego_head_s) <= 0) {
+          half_width = obs_width * 0.5;
+          break;
+        }
+      }
+    }
+    if(std::fabs(half_width - obs_width * 0.5) > 1e-6) {
+      for (int sgn_length : sgn_list) {
+        for (int sgn_width : sgn_list) {
+          double _s = frenet_s_ + sgn_length * std::cos(obs_relative_heading) * half_length -
+                                sgn_width * std::sin(obs_relative_heading) * half_width;
+          double _l = frenet_l_ + sgn_length * std::sin(obs_relative_heading) * half_length +
+                                sgn_width * std::cos(obs_relative_heading) * half_width;
+          obstacle_box[box_s].push_back(_s);
+          obstacle_box[box_l].push_back(_l);
+          // update min_s, max_s, min_l, max_l
+          if (obstacle_box[box_s].size() == 1 || _s < min_s) min_s = _s;
+          if (obstacle_box[box_s].size() == 1 || _s > max_s) max_s = _s;
+          if (obstacle_box[box_l].size() == 1 || _l < min_l) min_l = _l;
+          if (obstacle_box[box_l].size() == 1 || _l > max_l) max_l = _l;
+        }
+      }
+    }
+  }
+
+  d_min_cpath_ = min_l;
+  d_max_cpath_ = max_l;
+  d_s_rel_ = 0;
+  if (frenet_s_ > ego_head_s && min_s > ego_head_s) {
+    d_s_rel_ = min_s - ego_head_s; // obstacle in front of ego
+  } else if (frenet_s_ < ego_head_s && max_s < ego_head_s) {
+    d_s_rel_ = max_s - ego_head_s; // obstacle behind ego
   }
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
