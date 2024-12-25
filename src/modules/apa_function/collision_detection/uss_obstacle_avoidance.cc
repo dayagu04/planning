@@ -605,7 +605,7 @@ void UssObstacleAvoidance::Update(
     } else {
       ILOG_INFO << "obs2car_dist is safe, increase vel";
       vel_target = pnc::mathlib::Constrain(
-          std::fabs(measure_data_ptr_->GetVel()) + 0.68 * 0.1, 0.568, 1.168);
+          std::fabs(measure_data_ptr_->GetVel()) + 0.68 * 0.1, 0.768, 1.168);
     }
   }
   ILOG_INFO << "vel_target = " << vel_target;
