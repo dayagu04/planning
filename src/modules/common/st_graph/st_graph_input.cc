@@ -1,4 +1,5 @@
 #include "st_graph_input.h"
+
 #include <memory>
 
 #include "environmental_model.h"
@@ -158,6 +159,8 @@ void StGraphInput::GetAgentOfTargetLane(
                                lane_change_status == "left_lane_change_wait" ||
                                lane_change_status == "right_lane_change_wait";
   if (is_lane_keeping) {
+    front_agent_of_target_ = nullptr;
+    rear_agent_of_target_ = nullptr;
     return;
   }
 
@@ -814,7 +817,11 @@ StGraphInput::GenerateMaxAccelerationCurve(
                                                             state_limit);
 }
 
-void StGraphInput::Reset() { is_parallel_lane_map_.clear(); }
+void StGraphInput::Reset() {
+  is_parallel_lane_map_.clear();
+  front_agent_of_target_ = nullptr;
+  rear_agent_of_target_ = nullptr;
+}
 
 }  // namespace speed
 }  // namespace planning
