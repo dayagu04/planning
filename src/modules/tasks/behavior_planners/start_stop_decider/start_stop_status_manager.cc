@@ -43,7 +43,7 @@ void StartStopStatusManager::Update() {
              config_.ego_vel_begin_stop_threshold) ||
         (planning_init_state_velocity() <
              config_.ego_vel_begin_stop_threshold &&
-         cipv_nearby_intersection_exists &&
+         cipv_nearby_intersection_is_static &&
          std::fabs(
              cipv_relative_s() -
              config_.desired_stopped_distance_between_ego_and_cipv_threshold) <
@@ -126,6 +126,7 @@ void StartStopStatusManager::Update() {
       const bool ego_stop_condition =
           planning_init_state_velocity() <
               config_.ego_vel_begin_stop_threshold &&
+          is_cipv_static &&
           std::fabs(
               cipv_relative_s() -
               config_.desired_stopped_distance_between_ego_and_cipv_threshold) <

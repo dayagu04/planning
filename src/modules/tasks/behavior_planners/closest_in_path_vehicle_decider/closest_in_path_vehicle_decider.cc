@@ -1,6 +1,7 @@
 #include "closest_in_path_vehicle_decider.h"
 
 #include <cmath>
+#include <limits>
 
 #include "debug_info_log.h"
 #include "environmental_model_manager.h"
@@ -51,37 +52,49 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
   double cipv_ttc = kDefaultTTC;
   int32_t dangerous_level = -1;
   bool is_virtual = false;
-  for (const auto &item : st_boundaries) {
-    const auto *ptr_st_boundary = item.second.get();
-    if (nullptr == ptr_st_boundary) {
-      continue;
-    }
-    speed::STPoint lower_point;
-    speed::STPoint upper_point;
-    if (!ptr_st_boundary->GetBoundaryBounds(0.0, &lower_point, &upper_point)) {
-      continue;
-    }
-    double lower_s = lower_point.s();
-    if (lower_s < 0.0) {
-      continue;
-    }
-    if (lower_s < min_s) {
-      min_s = lower_s;
-      id = lower_point.agent_id();
-    }
-    auto &mutable_cipv_decider_output =
-        session_->mutable_planning_context()->mutable_cipv_decider_output();
-    if (kInvalidId == id) {
-      mutable_cipv_decider_output.Reset();
-    } else {
-      MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_ttc,
-                   &dangerous_level, &is_virtual);
-      mutable_cipv_decider_output.set_cipv_id(id);
-      mutable_cipv_decider_output.set_relative_s(releative_s);
-      mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
-      mutable_cipv_decider_output.set_ttc(cipv_ttc);
-      mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
-      mutable_cipv_decider_output.set_is_virtual(is_virtual);
+  auto &mutable_cipv_decider_output =
+      session_->mutable_planning_context()->mutable_cipv_decider_output();
+  if (st_boundaries.empty()) {
+    Reset(&id, &releative_s, &cipv_v_frenet, &cipv_ttc, &dangerous_level,
+          &is_virtual);
+    mutable_cipv_decider_output.set_cipv_id(id);
+    mutable_cipv_decider_output.set_relative_s(releative_s);
+    mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+    mutable_cipv_decider_output.set_ttc(cipv_ttc);
+    mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
+    mutable_cipv_decider_output.set_is_virtual(is_virtual);
+  } else {
+    for (const auto &item : st_boundaries) {
+      const auto *ptr_st_boundary = item.second.get();
+      if (nullptr == ptr_st_boundary) {
+        continue;
+      }
+      speed::STPoint lower_point;
+      speed::STPoint upper_point;
+      if (!ptr_st_boundary->GetBoundaryBounds(0.0, &lower_point,
+                                              &upper_point)) {
+        continue;
+      }
+      double lower_s = lower_point.s();
+      if (lower_s < 0.0) {
+        continue;
+      }
+      if (lower_s < min_s) {
+        min_s = lower_s;
+        id = lower_point.agent_id();
+      }
+      if (kInvalidId == id) {
+        mutable_cipv_decider_output.Reset();
+      } else {
+        MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_ttc,
+                     &dangerous_level, &is_virtual);
+        mutable_cipv_decider_output.set_cipv_id(id);
+        mutable_cipv_decider_output.set_relative_s(releative_s);
+        mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
+        mutable_cipv_decider_output.set_ttc(cipv_ttc);
+        mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
+        mutable_cipv_decider_output.set_is_virtual(is_virtual);
+      }
     }
   }
   return true;
@@ -176,4 +189,17 @@ bool ClosestInPathVehicleDecider::DetermineIfConeBucketCIPV() {
   return true;
 }
 
+void ClosestInPathVehicleDecider::Reset(int32_t *const cipv_id,
+                                        double *const relative_s,
+                                        double *const v_frenet,
+                                        double *const cipv_ttc,
+                                        int32_t *const dangerous_level,
+                                        bool *const is_virtual) {
+  *cipv_id = kInvalidId;
+  *relative_s = std::numeric_limits<double>::max();
+  *v_frenet = std::numeric_limits<double>::max();
+  *cipv_ttc = std::numeric_limits<double>::max();
+  *dangerous_level = -1;
+  *is_virtual = true;
+}
 }  // namespace planning
