@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "apa_data.h"
+#include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "collision_detection/collision_detection.h"
 #include "common_c.h"
@@ -400,38 +401,49 @@ const bool UssObstacleAvoidance::Preprocess() {
   // 添加障碍物 世界坐标即可  暂时只添加超声波点云障碍物,
   // 后续应该放在一个地方统一计算所有真实的障碍物，考虑高度
   col_det.ClearObstacles();
-  if (apa_data_ptr_->apa_obs_map.count(ObstacleType::USS) != 0) {
-    col_det.AddObstacles(apa_data_ptr_->apa_obs_map[ObstacleType::USS],
-                         CollisionDetector::ObsType::USS_OBS);
+  std::vector<ApaObstacle *> obs_vec;
+  // 获取超声波点云
+  if (obstacle_manager_ptr_->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                         obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const auto &obs : obs_vec) {
+      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                        obs->GetPtClout2dGlobal().end());
+    }
+    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::USS_OBS);
   }
-  if (apa_data_ptr_->apa_obs_map.count(ObstacleType::FUSION) != 0) {
-    col_det.AddObstacles(apa_data_ptr_->apa_obs_map[ObstacleType::FUSION],
-                         CollisionDetector::ObsType::FUSION_OBS);
+
+  // 获取OCC点云
+  if (obstacle_manager_ptr_->GetObstacle(
+          ApaObsAttributeType::FUSION_POINT_CLOUD, obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const auto &obs : obs_vec) {
+      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                        obs->GetPtClout2dGlobal().end());
+    }
+    col_det.AddObstacles(obs_pt_vec, CollisionDetector::ObsType::FUSION_OBS);
+  }
+
+  // 获取接地线点云
+  if (obstacle_manager_ptr_->GetObstacle(
+          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
+    std::vector<Eigen::Vector2d> obs_pt_vec;
+    for (const auto &obs : obs_vec) {
+      obs_pt_vec.insert(obs_pt_vec.end(), obs->GetPtClout2dGlobal().begin(),
+                        obs->GetPtClout2dGlobal().end());
+    }
+    col_det.AddObstacles(obs_pt_vec,
+                         CollisionDetector::ObsType::GROUND_LINE_OBS);
+  }
+
+  if (!pnc::geometry_lib::IsValidGear(predict_path_ptr_->GetPathGear())) {
+    return false;
   }
 
   car_motion_info_.steer_angle = measure_data_ptr_->GetSteerWheelAngle();
 
-  const bool trajectory_available =
-      planning_output_->trajectory.available &&
-      planning_output_->trajectory.trajectory_points_size > 1;
-
-  const bool gear_available =
-      planning_output_->gear_command.available &&
-      (planning_output_->gear_command.gear_command_value ==
-           iflyauto::GEAR_COMMAND_VALUE_DRIVE ||
-       planning_output_->gear_command.gear_command_value ==
-           iflyauto::GEAR_COMMAND_VALUE_REVERSE);
-
-  if (gear_available == false || trajectory_available == false) {
-    return false;
-  }
-
-  uint8_t gear_cmd = iflyauto::GEAR_COMMAND_VALUE_NONE;
-  if (planning_output_->gear_command.available) {
-    gear_cmd = planning_output_->gear_command.gear_command_value;
-  }
   car_motion_info_.reverse_flag =
-      (gear_cmd == iflyauto::GEAR_COMMAND_VALUE_REVERSE);
+      (predict_path_ptr_->GetPathGear() == pnc::geometry_lib::SEG_GEAR_REVERSE);
 
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
@@ -550,15 +562,20 @@ void UssObstacleAvoidance::CalRemainDist() {
 }
 
 void UssObstacleAvoidance::Update(
-    iflyauto::PlanningOutput *const planning_output,
     const std::shared_ptr<ApaData> apa_data_ptr,
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr) {
+    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+    const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
+    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
+  if (apa_data_ptr == nullptr || measure_data_ptr == nullptr ||
+      predict_path_ptr == nullptr || obstacle_manager_ptr == nullptr) {
+    ILOG_ERROR << "UssObstacleAvoidance UPDATE input_ptr is err";
+    return;
+  }
   // update local_view
   apa_data_ptr_ = apa_data_ptr;
   measure_data_ptr_ = measure_data_ptr;
-
-  // update planning output
-  planning_output_ = planning_output;
+  predict_path_ptr_ = predict_path_ptr;
+  obstacle_manager_ptr_ = obstacle_manager_ptr;
 
   // set some necessary info, if info is abnormal, quit directly
   if (!Preprocess()) {
@@ -632,9 +649,8 @@ void UssObstacleAvoidance::Update(
     remain_dist_info_.is_available = false;
   }
 
-  CollisionDetector::CollisionResult result =
-      col_det.UpdateByObsMap(apa_data_ptr_->car_predict_traj.car_predict_pt_vec,
-                             param_.lat_inflation, 0.0);
+  CollisionDetector::CollisionResult result = col_det.UpdateByObsMap(
+      predict_path_ptr->GetPredictPath(), param_.lat_inflation, 0.0);
 
   const double dist =
       col_det.CalClosestDistFromObsToCar(pnc::geometry_lib::PathPoint(
@@ -652,8 +668,7 @@ void UssObstacleAvoidance::Update(
   std::vector<double> car_predict_x_vec;
   std::vector<double> car_predict_y_vec;
   std::vector<double> car_predict_heading_vec;
-  const auto &car_predict_pt_vec =
-      apa_data_ptr_->car_predict_traj.car_predict_pt_vec;
+  const auto &car_predict_pt_vec = predict_path_ptr->GetPredictPath();
   car_predict_x_vec.reserve(car_predict_pt_vec.size());
   car_predict_y_vec.reserve(car_predict_pt_vec.size());
   car_predict_heading_vec.reserve(car_predict_pt_vec.size());

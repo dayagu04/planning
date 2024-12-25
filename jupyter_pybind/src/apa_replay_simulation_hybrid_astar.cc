@@ -46,7 +46,6 @@
 #include "struct_convert/common_c.h"
 #include "struct_convert/func_state_machine_c.h"
 #include "struct_convert/fusion_parking_slot_c.h"
-// #include "struct_convert/localization_c.h"
 #include "interface/src/c/func_state_machine_c.h"
 #include "struct_convert/ifly_localization_c.h"
 #include "struct_convert/planning_plan_c.h"
@@ -66,6 +65,7 @@
 #include "path_safe_checker.h"
 #include "narrow_space_scenario.h"
 #include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider.h"
+#include "apa_world/apa_world.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -783,9 +783,8 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
                          start, real_end, slot_type, SlotRelativePosition::NONE);
 
     obstacle_generator.GenerateLocalObstacle(
-        hybrid_astar_obs_, &local_view, true, ego_slot_info.slot_length,
-        ego_slot_info.slot_width, slot_base_pose, start, real_end, slot_type,
-        SlotRelativePosition::NONE);
+        hybrid_astar_obs_, &local_view, ego_slot_info.slot_length,
+        ego_slot_info.slot_width, slot_base_pose, start);
 
     CopyVirtualWallForPlot(hybrid_astar_obs_, ego_slot_info);
 
@@ -797,8 +796,19 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
 
     // end
     Eigen::Vector3d end;
-    end[0] = ego_slot_info.target_ego_pos_slot[0] +
-             park_param.astar_config.vertical_slot_end_straight_dist;
+    const std::shared_ptr<apa_planner::ApaWorld> world =
+        hybrid_astar_park_->GetApaWorldPtr();
+
+    double end_straight_dist = 0.0;
+    if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
+        ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+      end_straight_dist =
+          apa_param.GetParam().astar_config.vertical_slot_end_straight_dist;
+    } else {
+      end_straight_dist = 0.5;
+    }
+
+    end[0] = ego_slot_info.target_ego_pos_slot[0] + end_straight_dist;
     end[1] = ego_slot_info.target_ego_pos_slot[1];
     end[2] = ego_slot_info.target_ego_heading_slot;
 
@@ -815,14 +825,18 @@ const bool TriggerPlan(bool force_plan, bool is_path_optimization,
     base_pose_ = slot_base_pose;
     request.start_ = start;
     request.start_.DebugString();
-
     request.goal_ = Pose2D(end[0], end[1], end[2]);
-
     request.real_goal = real_end;
     request.base_pose_ = base_pose_;
-
     request.space_type = ParkSpaceType::VERTICAL;
-    request.direction_request = ParkingVehDirection::TAIL_IN;
+
+    if (world->GetStateMachineManagerPtr()->GetStateMachine() ==
+        ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+      request.direction_request = ParkingVehDirection::HEAD_IN;
+    } else {
+      request.direction_request = ParkingVehDirection::TAIL_IN;
+    }
+
     request.rs_request = RSPathRequestType::none;
     request.slot_width = ego_slot_info.slot_width;
     request.slot_length = ego_slot_info.slot_length;

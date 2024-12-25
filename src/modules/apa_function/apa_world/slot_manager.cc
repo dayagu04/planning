@@ -47,12 +47,12 @@ constexpr double kPie = 3.141592653589793;
 bool SlotManager::Update(
     const std::shared_ptr<ApaData> apa_data_ptr,
     const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr) {
+    const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+    const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
   ILOG_INFO << "---------- slot management --------------------";
   // set input
   frame_.func_state_ptr = apa_data_ptr->func_state_ptr;
   frame_.parking_slot_ptr = apa_data_ptr->parking_slot_ptr;
-  frame_.localization_ptr = apa_data_ptr->localization_ptr;
   frame_.uss_percept_info_ptr = apa_data_ptr->uss_percept_info_ptr;
   frame_.ground_line_perception_info_ptr =
       apa_data_ptr->ground_line_perception_info_ptr;
@@ -62,6 +62,7 @@ bool SlotManager::Update(
 
   state_machine_ptr_ = state_machine_ptr;
   measure_data_ptr_ = measure_data_ptr;
+  obstacle_manager_ptr_ = obstacle_manager_ptr;
 
   // update obs
   // todo: move to obstacle manager
@@ -301,7 +302,7 @@ bool SlotManager::UpdateSlotsInSearching(
   // 没有选择的车位，根据规则决定是否释放.
   RuleBasedSlotRelease rule_based_release_decider;
   rule_based_release_decider.Process(apa_data_ptr->local_view_ptr_,
-                                     measure_data_ptr_, state_machine_ptr_,
+                                     measure_data_ptr_, state_machine_ptr_, obstacle_manager_ptr_,
                                      fusion_slot_map, frame_);
 
   // 点击了车位,更新车位基本信息
@@ -1043,6 +1044,7 @@ bool SlotManager::UpdateSlotsInParking() {
           }
         }
       }
+      ILOG_INFO << "park_out_select_id " << frame_.park_out_select_id;
     }
     select_slot_id = frame_.park_out_select_id;
   }
@@ -1563,29 +1565,9 @@ void SlotManager::UpdateParallelSlotInfoInParking() {
   auto &select_slot_window =
       frame_.slot_info_window_map[ego_slot_info.select_slot_id];
 
-  if (ego_slot_info.slot_occupied_ratio < 1e-5 ||
-      !apa_param.GetParam().lock_parallel_slot) {
-    select_slot_window.Reset();
-    select_slot_window.Add(ego_slot_info.select_slot);
-    ego_slot_info.select_slot_filter = select_slot_window.GetFusedInfo();
-    return;
-  }
-
-  if (apa_param.GetParam().lock_parallel_slot) {
-    // update once in slot
-    if ((frame_.ego_slot_info.slot_occupied_ratio > 0.55) &&
-        (std::fabs(measure_data_ptr_->GetVel()) <
-         apa_param.GetParam().car_static_velocity_strict) &&
-        (!frame_.parallel_slot_reseted_once)) {
-      ILOG_INFO << "reset parallel slot once!";
-
-      select_slot_window.Reset();
-      select_slot_window.Add(ego_slot_info.select_slot);
-      ego_slot_info.select_slot_filter = select_slot_window.GetFusedInfo();
-
-      frame_.parallel_slot_reseted_once = true;
-    }
-  }
+  select_slot_window.Reset();
+  select_slot_window.Add(ego_slot_info.select_slot);
+  ego_slot_info.select_slot_filter = select_slot_window.GetFusedInfo();
 }
 
 void SlotManager::UpdateLimiterInfoInParking() {

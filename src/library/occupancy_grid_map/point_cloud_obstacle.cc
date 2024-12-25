@@ -4,6 +4,7 @@
 #include "src/modules/apa_function/apa_param_config.h"
 #include "./../collision_detection/gjk2d_interface.h"
 #include "log_glog.h"
+#include "modules/apa_function/apa_world/apa_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 
@@ -13,11 +14,8 @@ namespace planning {
 
 const void PointCloudObstacleTransform::GenerateLocalObstacle(
     ParkObstacleList& obs_list, const LocalView* local_view,
-    const bool delete_obs_around_ego, const double slot_length,
-    const double slot_width, const Pose2D& slot_base_pose,
-    const Pose2D& ego_start, const Pose2D& ego_final_goal,
-    const ParkSpaceType slot_type,
-    const SlotRelativePosition slot_side) {
+    const double slot_length, const double slot_width,
+    const Pose2D& slot_base_pose, const Pose2D& ego_start) {
   Transform2d slot_tf;
   slot_tf.SetBasePose(slot_base_pose);
 
@@ -42,12 +40,6 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
     return;
   }
-
-  ILOG_INFO << "fusion_object_num = "
-            << (size_t)(local_view->fusion_objects_info.fusion_object_size)
-            << ", ground_lines_size = "
-            << static_cast<size_t>(
-                   local_view->ground_line_perception.ground_lines_size);
 
   size_t number =
       static_cast<size_t>(
@@ -84,7 +76,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
             .additional_occupancy_info;
 
     obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = ParkObstacleType::FUSION_OBJECT_POINT_CLOUD;
+    obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -94,7 +86,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 
-      if (config.astar_config.enable_delete_fusion_obj_in_slot) {
+      if (config.astar_config.enable_delete_occ_in_slot) {
         is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
         if (is_collision) {
@@ -105,7 +97,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
       }
 
       // delete by ego
-      if (delete_obs_around_ego) {
+      if (config.astar_config.enable_delete_occ_in_ego) {
         gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                         Position2D(local.x, local.y));
 
@@ -135,7 +127,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         local_view->ground_line_perception.ground_lines[i];
 
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
-    obs->obs_type = ParkObstacleType::GROUND_LINE;
+    obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -145,7 +137,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
       slot_tf.GlobalPointToULFLocal(&local, global);
 
-      if (config.astar_config.enable_delete_fusion_obj_in_slot) {
+      if (config.astar_config.enable_delete_occ_in_slot) {
         is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
         if (is_collision) {
@@ -156,7 +148,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
       }
 
       // delete by ego
-      if (delete_obs_around_ego) {
+      if (config.astar_config.enable_delete_occ_in_ego) {
         gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                         Position2D(local.x, local.y));
 
@@ -180,7 +172,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
 
   // limiters
   obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-  obs->obs_type = ParkObstacleType::SLOT_LIMITER;
+  obs->obs_type = apa_planner::ApaObsAttributeType::SLOT_LIMITER;
   obs->points.clear();
   cdl::AABB box;
   std::vector<Position2D> limiter_points;
@@ -210,7 +202,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         global.y = limiter_points[point_id].y;
         slot_tf.GlobalPointToULFLocal(&local, global);
 
-        if (config.astar_config.enable_delete_fusion_obj_in_slot) {
+        if (config.astar_config.enable_delete_occ_in_slot) {
           is_collision = slot_box.contain(cdl::Vector2r(local.x, local.y));
 
           if (is_collision) {
@@ -221,7 +213,7 @@ const void PointCloudObstacleTransform::GenerateLocalObstacle(
         }
 
         // delete by ego
-        if (delete_obs_around_ego) {
+        if (config.astar_config.enable_delete_occ_in_ego) {
           gjk.PolygonPointCollisionDetect(&is_collision, &ego_global_polygon,
                                           Position2D(local.x, local.y));
 
@@ -292,7 +284,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
             .additional_occupancy_info;
 
     obs = &obs_list.point_cloud_list[i];
-    obs->obs_type = ParkObstacleType::FUSION_OBJECT_POINT_CLOUD;
+    obs->obs_type = apa_planner::ApaObsAttributeType::FUSION_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -323,7 +315,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
         local_view->ground_line_perception.ground_lines[i];
 
     obs = &obs_list.point_cloud_list[i + fusion_obj_number];
-    obs->obs_type = ParkObstacleType::GROUND_LINE;
+    obs->obs_type = apa_planner::ApaObsAttributeType::GROUND_LINE_POINT_CLOUD;
     obs->points.clear();
     cdl::AABB box;
 
@@ -345,7 +337,7 @@ void PointCloudObstacleTransform::GenerateGlobalObstacle(
   // limiters
   if (enable_limiter_obs) {
     obs = &obs_list.point_cloud_list[fusion_obj_number + ground_line_number];
-    obs->obs_type = ParkObstacleType::SLOT_LIMITER;
+    obs->obs_type = apa_planner::ApaObsAttributeType::SLOT_LIMITER;
     obs->points.clear();
     cdl::AABB box;
     std::vector<Position2D> limiter_points;

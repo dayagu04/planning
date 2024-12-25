@@ -9,7 +9,9 @@
 #include "Eigen/Core"
 #include "apa_data.h"
 #include "apa_measure_data_manager.h"
+#include "apa_obstacle_manager.h"
 #include "apa_param_config.h"
+#include "apa_predict_path_manager.h"
 #include "collision_detection/collision_detection.h"
 #include "geometry_math.h"
 #include "local_view.h"
@@ -86,9 +88,10 @@ class UssObstacleAvoidance {
 
   const RemainDistInfo& GetRemainDistInfo() const { return remain_dist_info_; }
 
-  void Update(iflyauto::PlanningOutput* const planning_output,
-              const std::shared_ptr<ApaData> apa_data_ptr,
-              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr);
+  void Update(const std::shared_ptr<ApaData> apa_data_ptr,
+              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+              const std::shared_ptr<ApaPredictPathManager> predict_path_ptr,
+              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
 
   void SetParam(const Paramters& param) {
     param_ = param;
@@ -150,9 +153,10 @@ class UssObstacleAvoidance {
   Paramters param_;
   CarMotionInfo car_motion_info_;
 
+  std::shared_ptr<ApaPredictPathManager> predict_path_ptr_ = nullptr;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_ = nullptr;
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_ = nullptr;
   std::shared_ptr<ApaData> apa_data_ptr_ = nullptr;
-  iflyauto::PlanningOutput* planning_output_;
 
   CollisionDetector col_det;
 };

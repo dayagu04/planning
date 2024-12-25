@@ -32,7 +32,7 @@ namespace planning {
 
 #define DEBUG_SEARCH_RESULT (0)
 #define DEBUG_CHILD_NODE (0)
-#define DEBUG_TARGET_HEADING_COST (0)
+#define DEBUG_REF_LINE_COST (0)
 #define DEBUG_EDT (0)
 
 #define DEBUG_NODE_MAX_NUM (10000)
@@ -43,7 +43,6 @@ namespace planning {
 #define DEBUG_ONE_SHOT_PATH (0)
 #define DEBUG_ONE_SHOT_PATH_MAX_NODE (10000)
 
-constexpr int backward_pass_max_point = 100000;
 // 控制可以执行的距离
 constexpr double rs_path_seg_advised_dist = 0.35;
 constexpr double max_search_time = 60.0;
@@ -845,6 +844,11 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
     if (gear == AstarPathGear::DRIVE) {
       // ILOG_INFO << " rs path last seg len is drive gear ";
 
+      return false;
+    }
+  } else if (request_.space_type == ParkSpaceType::VERTICAL &&
+             request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    if (gear == AstarPathGear::REVERSE) {
       return false;
     }
   }
@@ -2119,11 +2123,10 @@ double HybridAStar::GenerateRefLineHeuristicCost(Node3d* next_node,
   // double heading_cost = std::fabs(GetThetaDiff(theta1, theta2)) *
   //                       config_.ref_line_heading_penalty;
 
-#if DEBUG_TARGET_HEADING_COST
-
-  ILOG_INFO << "heading " << next_node->GetPhi() * 57.3 << " dist cost "
-            << dist_cost << " heading cost " << heading_cost;
-
+#if DEBUG_REF_LINE_COST
+  ILOG_INFO << "node heading = " << next_node->GetPhi() * 57.3 << " dist cost "
+            << dist_cost << " heading cost " << heading_cost
+            << ", ref line heading =" << theta2 * 57.3;
 #endif
 
   return std::max(dist_cost, heading_cost);
@@ -2506,6 +2509,10 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
     return;
   }
 
+  if (request.direction_request != ParkingVehDirection::TAIL_IN) {
+    return;
+  }
+
   const Pose2D start = request.start_;
   Pose2D end = request.real_goal;
 
@@ -2645,10 +2652,11 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, end);
+  node_shrink_decider_.Process(start, end, request_.direction_request);
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, end, vehicle_param_.width, request_.space_type);
+      start, end, vehicle_param_.width, request_.space_type,
+      request_.direction_request);
 
   // load open set, pq
   start_node_->SetMultiMapIter(
@@ -2664,7 +2672,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
   double astar_search_time;
   heuristic_time_ = 0.0;
   // 100 ms
-  constexpr double dp_max_search_time = 100.0;
+  constexpr double astar_max_search_time = 100.0;
 
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
@@ -2716,7 +2724,7 @@ void HybridAStar::SingleShotPathAttempt(const MapBound& XYbounds,
 
     // if bigger than 100 ms，break
     astar_search_time = current_time - astar_search_start_time;
-    if (astar_search_time > dp_max_search_time) {
+    if (astar_search_time > astar_max_search_time) {
       ILOG_INFO << "time out " << astar_search_time;
       break;
     }
@@ -3073,7 +3081,7 @@ bool HybridAStar::AstarSearch(
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, end);
+  node_shrink_decider_.Process(start, end, request_.direction_request);
 
   check_start_time = IflyTime::Now_ms();
   // ILOG_INFO << "time " << IflyTime::DateString();
@@ -3093,7 +3101,8 @@ bool HybridAStar::AstarSearch(
 
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, end, vehicle_param_.width, request_.space_type);
+      start, end, vehicle_param_.width, request_.space_type,
+      request_.direction_request);
 
   // load open set, pq
   start_node_->SetMultiMapIter(

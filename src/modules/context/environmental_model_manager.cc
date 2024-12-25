@@ -41,6 +41,8 @@
 #include "vehicle_status.pb.h"
 #include "virtual_lane_manager.h"
 
+#define TRAJ_POINT_NUM_USED 25
+
 namespace planning {
 namespace planner {
 
@@ -851,9 +853,10 @@ void EnvironmentalModelManager::truncate_prediction_info(
       trajectory_points.emplace_back(trajectory_point);
     }
 
-    for (traj_index = 0; traj_index < 41; traj_index++) {
-      auto trajectory_point =
-          GetPointAtTime(trajectory_points, 0.2 * traj_index);
+    for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED; traj_index++) {
+      //auto trajectory_point =
+      //    GetPointAtTime(trajectory_points, 0.2 * traj_index);
+      auto trajectory_point = trajectory_points[traj_index];
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }
 

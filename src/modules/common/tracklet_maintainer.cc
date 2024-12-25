@@ -691,6 +691,13 @@ void TrackletMaintainer::calc(
                                  .fix_lane_virtual_id;
 
   std::vector<double> avd_car_id;
+  auto config_builder =
+      session_->environmental_model().highway_config_builder();
+  PotentialAvoidDeciderConfig config =
+      config_builder->cast<PotentialAvoidDeciderConfig>();
+  double expand_vel = 
+      interp(ego_state_->ego_v(), config.expand_ego_vel,
+             config.expand_obs_rel_vel);
   for (auto tr : tracked_objects) {
     // ignore obj without camera source
     if ((!(tr->fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
@@ -701,6 +708,25 @@ void TrackletMaintainer::calc(
       tr->ncar_count_in = false;
       continue;
     }
+
+    // 判断车辆相对位置，前车，后车，旁车（从前方来的，从后方来的，不知道从哪来的）
+    double expend_length = 0.0;
+    if (tr->side_car && tr->rear_car && tr->v_rel < expand_vel) {
+      expend_length = 1.5;
+    }
+    if (tr->d_rel > expend_length) {
+      tr->front_car = true;
+      tr->side_car = false;
+      tr->rear_car = false;
+    } else if (tr->d_rel >= -vehicle_param.length &&
+               tr->d_rel <= expend_length) {
+      tr->side_car = true;
+    } else {
+      tr->front_car = false;
+      tr->side_car = false;
+      tr->rear_car = true;
+    }
+
     if (tr->d_rel <= 0) {
       tr->is_avd_car = false;
       if (tr->d_rel <= -1 * (tr->length + vehicle_param.length)) {
@@ -2044,20 +2070,31 @@ bool TrackletMaintainer::is_potential_avoiding_car(
             (borrow_bicycle_lane && item.d_max_cpath > 0 &&
              item.d_min_cpath < 0 && item.v_lead < 0.5);
 
+        double d_max_cpath_recursion = item.d_max_cpath;
+        double d_min_cpath_recursion = item.d_min_cpath;
+        std::array<double, 3> x_v_lat{-0.6, -0.4, -0.2};
+        std::array<double, 3> f_times{10, 5, 1};
+        double times = interp(item.v_lat, x_v_lat, f_times);
+        if (item.d_max_cpath < 0) {
+          d_max_cpath_recursion = item.d_max_cpath - item.v_lat * 0.1 * times;
+        } else if (item.d_min_cpath > 0) {
+          d_min_cpath_recursion = item.d_min_cpath + item.v_lat * 0.1 * times;
+        }
+
         bool can_avoid =
-            (item.d_min_cpath >
+            (d_min_cpath_recursion >
              std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
                       1.8)) ||
-            (item.d_max_cpath <
+            (d_max_cpath_recursion <
              std::max((lane_width / 2 - (ego_car_width + lat_safety_buffer)),
                       -1.8)) ||
             (dist_rblane > 0 &&
              //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
              //    borrow_bicycle_lane && item.v_lead < 0.2) ||
              item.is_static &&
-             ((item.d_min_cpath >
+             ((d_min_cpath_recursion >
                (ego_car_width + static_obs_buffer) - lane_width / 2) ||
-              (item.d_max_cpath <
+              (d_max_cpath_recursion <
                lane_width / 2 - (ego_car_width + static_obs_buffer))));
 
         if (is_need_avoid && !can_avoid) {
@@ -2204,11 +2241,12 @@ bool TrackletMaintainer::is_potential_avoiding_car(
         item.d_min_cpath - l_ego_ - ego_car_width / 2 < lat_dis_thr) ||
        (item.d_max_cpath < 0 &&
         l_ego_ - item.d_max_cpath - ego_car_width / 2 < lat_dis_thr));
-  bool in_lon_near_area =
-      (item.v_rel < 0 &&
-       ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_lower) ||
-        ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_upper &&
-          item.d_rel < emegency_cutin_front_area))));
+  // bool in_lon_near_area =
+  //     (item.v_rel < 0 &&
+  //      ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_lower) ||
+  //       ((item.d_rel / (-item.v_rel) < emegency_cutin_ttc_upper &&
+  //         item.d_rel < emegency_cutin_front_area))));
+  bool in_lon_near_area = (item.d_rel + item.v_lead * 5) < farthest_distance;
 
   // for lead one
   // if (lead_one != nullptr && item.track_id == lead_one->track_id &&
@@ -2244,8 +2282,8 @@ bool TrackletMaintainer::is_potential_avoiding_car(
   // }
 
   // cut in/out factor
-  std::array<double, 3> x_cut_factor{0.3, 0.6, 0.9};
-  std::array<double, 3> f_cut_factor{5, 10, 15};
+  std::array<double, 4> x_cut_factor{0.2, 0.4, 0.6, 0.8};
+  std::array<double, 4> f_cut_factor{10, 20, 30, 40};
   double cut_factor = interp(std::fabs(item.v_lat), x_cut_factor, f_cut_factor);
 
   if (item.is_ncar) {

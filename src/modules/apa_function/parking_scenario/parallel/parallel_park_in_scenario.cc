@@ -94,28 +94,28 @@ void ParallelParkInScenario::PlanCore() {
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
-    std::cout << "update ego slot info" << std::endl;
+    ILOG_INFO << "update ego slot info";
     SetParkingStatus(PARKING_FAILED);
     return;
   }
 
   // check finish
   if (CheckFinished()) {
-    std::cout << "check apa finished!" << std::endl;
+    ILOG_INFO << "check apa finished!";
     SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
   // check failed
   if (CheckStuckFailed()) {
-    std::cout << "check stuck failed!" << std::endl;
+    ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
     return;
   }
 
   // check replan
   if (CheckReplan() || apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
-    std::cout << "replan is required!" << std::endl;
+    ILOG_INFO << "replan is required!";
 
     // generate t-lane
     GenTlane();
@@ -131,34 +131,33 @@ void ParallelParkInScenario::PlanCore() {
     if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
       if (PostProcessPath()) {
         SetParkingStatus(PARKING_GEARCHANGE);
-        std::cout << "replan from PARKING_GEARCHANGE!" << std::endl;
+        ILOG_INFO << "replan from PARKING_GEARCHANGE!";
       } else {
         SetParkingStatus(PARKING_FAILED);
-        std::cout << "replan failed from PLAN_HOLD!" << std::endl;
+        ILOG_INFO << "replan failed from PLAN_HOLD!";
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
       if (PostProcessPath()) {
         SetParkingStatus(PARKING_PLANNING);
-        std::cout << "replan from PARKING_PLANNING!" << std::endl;
+        ILOG_INFO << "replan from PARKING_PLANNING!";
       } else {
         SetParkingStatus(PARKING_FAILED);
-        std::cout << "replan failed from PARKING_PLANNING!" << std::endl;
+        ILOG_INFO << "replan failed from PARKING_PLANNING!";
       }
     } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
       SetParkingStatus(PARKING_FAILED);
     }
 
-    std::cout << "pathplan_result = " << static_cast<int>(pathplan_result)
-              << std::endl;
+    ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
   } else {
-    std::cout << "replan is not required!" << std::endl;
+    ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
   }
 
   // print planning status
-  // std::cout << "parking status = "
+  // ILOG_INFO << "parking status = "
   //           << static_cast<int>(GetPlannerStates().planning_status)
-  //           << std::endl;
+  //           ;
 }
 
 const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
@@ -169,12 +168,12 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
       slot_manager_ptr->GetEgoSlotInfo().select_slot_filter;
 
   if (!select_slot_slm.has_corner_points()) {
-    DEBUG_PRINT("no selected corner pts in slm!");
+    ILOG_INFO << "no selected corner pts in slm!";
     return false;
   }
 
   if (select_slot_slm.corner_points().corner_point_size() != 4) {
-    DEBUG_PRINT("select slot in slm corner points size != 4!");
+    ILOG_INFO << "select slot in slm corner points size != 4!";
     return false;
   }
 
@@ -191,11 +190,11 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   pt.resize(slot_points.size());
   Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
 
-  std::cout << "parallel slot points in slm :" << std::endl;
+  ILOG_INFO << "parallel slot points in slm :";
   for (int i = 0; i < slot_points.size(); i++) {
     pt[i] << slot_points[i].x(), slot_points[i].y();
     slot_center += pt[i];
-    std::cout << pt[i].transpose() << std::endl;
+    ILOG_INFO << pt[i].transpose();
   }
   ego_slot_info.slot_corner = pt;
   slot_center *= 0.25;
@@ -213,7 +212,7 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
       t_lane_.slot_side_sgn = 0.0;
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
       frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-      std::cout << "calculate parallel slot side error " << std::endl;
+      ILOG_INFO << "calculate parallel slot side error ";
       return false;
     }
   }
@@ -243,19 +242,17 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
                                     0.5 * ego_slot_info.slot_width * t;
   }
 
-  std::cout << "slot width =" << ego_slot_info.slot_width << std::endl;
+  ILOG_INFO << "slot width =" << ego_slot_info.slot_width;
 
   ego_slot_info.slot_origin_heading = std::atan2(n.y(), n.x());
   ego_slot_info.slot_origin_heading_vec = n;
 
-  std::cout << "origin heading =" << ego_slot_info.slot_origin_heading * 57.3
-            << std::endl;
+  ILOG_INFO << "origin heading =" << ego_slot_info.slot_origin_heading * 57.3;
 
-  std::cout << "t_lane_.slot_side = " << static_cast<int>(t_lane_.slot_side)
-            << std::endl;
+  ILOG_INFO << "t_lane_.slot_side = " << static_cast<int>(t_lane_.slot_side);
 
-  std::cout << "frame_.current_arc_steer = "
-            << static_cast<int>(frame_.current_arc_steer) << std::endl;
+  ILOG_INFO << "frame_.current_arc_steer = "
+            << static_cast<int>(frame_.current_arc_steer);
 
   ego_slot_info.g2l_tf.Init(ego_slot_info.slot_origin_pos,
                             ego_slot_info.slot_origin_heading);
@@ -287,10 +284,9 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ego_slot_info.target_ego_pos_slot << terminal_x, terminal_y;
   ego_slot_info.target_ego_heading_slot = 0.0;
 
-  std::cout << "target ego pos in slot ="
+  ILOG_INFO << "target ego pos in slot ="
             << ego_slot_info.target_ego_pos_slot.transpose()
-            << " heading =" << ego_slot_info.target_ego_heading_slot * 57.3
-            << std::endl;
+            << " heading =" << ego_slot_info.target_ego_heading_slot * 57.3;
 
   // calc terminal error once
   ego_slot_info.terminal_err.Set(
@@ -298,15 +294,13 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
       pnc::geometry_lib::NormalizeAngle(ego_slot_info.ego_heading_slot -
                                         ego_slot_info.target_ego_heading_slot));
 
-  std::cout << "-- ego_slot:" << std::endl;
-  std::cout << "ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose()
-            << std::endl;
+  ILOG_INFO << "-- ego_slot:";
+  ILOG_INFO << "ego_pos_slot = " << ego_slot_info.ego_pos_slot.transpose();
 
-  std::cout << "ego_heading_slot (deg)= "
-            << ego_slot_info.ego_heading_slot * 57.3 << std::endl;
+  ILOG_INFO << "ego_heading_slot (deg)= "
+            << ego_slot_info.ego_heading_slot * 57.3;
 
-  std::cout << "slot_side = " << static_cast<int>(t_lane_.slot_side)
-            << std::endl;
+  ILOG_INFO << "slot_side = " << static_cast<int>(t_lane_.slot_side);
 
   // calc slot occupied ratio
 
@@ -323,29 +317,30 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   }
   ego_slot_info.slot_occupied_ratio = slot_occupied_ratio;
 
-  std::cout << "ego_slot_info.slot_occupied_ratio = "
-            << ego_slot_info.slot_occupied_ratio << std::endl;
+  ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
+            << ego_slot_info.slot_occupied_ratio;
 
-  ego_slot_info.obs_pt_vec_slot.clear();
   const pnc::geometry_lib::PathPoint ego_pose(ego_slot_info.ego_pos_slot,
                                               ego_slot_info.ego_heading_slot);
 
-  DEBUG_PRINT("parallel slot_manager_ptr->GetRealTimeObsPtVec() = "
-              << slot_manager_ptr->GetRealTimeObsPtVec().size())
   // size_t dist_fail_cnt = 0;
   // size_t total_box_x_fail_cnt = 0;
   // size_t total_box_y_fail_cnt = 0;
   // size_t front_box_fail_cnt = 0;
   // size_t rear_box_fail_cnt = 0;
   // size_t in_ego_cnt = 0;
+  UpdateObstacleLocal();
+  const std::vector<Eigen::Vector2d> temp_obs_vec =
+      ego_slot_info.obs_pt_vec_slot;
+  ego_slot_info.obs_pt_vec_slot.clear();
 
-  for (const auto& obs_pt_global : slot_manager_ptr->GetRealTimeObsPtVec()) {
-    if ((obs_pt_global - slot_center).norm() > 20.0) {
+  for (const auto& obs_pt_local : temp_obs_vec) {
+    if ((frame_.ego_slot_info.l2g_tf.GetPos(obs_pt_local) - slot_center)
+            .norm() > 20.0) {
       // dist_fail_cnt++;
       continue;
     }
 
-    const auto obs_pt_local = frame_.ego_slot_info.g2l_tf.GetPos(obs_pt_global);
     // outof total box range
     if (!pnc::mathlib::IsInBound(obs_pt_local.x(), -5.0,
                                  apa_param.GetParam().parallel_channel_x_mag)) {
@@ -384,13 +379,13 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
     ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_local));
   }
 
-  // DEBUG_PRINT("dist_fail_cnt = " << dist_fail_cnt);
-  // DEBUG_PRINT("total_box_x_fail_cnt = " << total_box_x_fail_cnt);
-  // DEBUG_PRINT("total_box_y_fail_cnt = " << total_box_y_fail_cnt);
-  // DEBUG_PRINT("front_box_fail_cnt = " << front_box_fail_cnt);
-  // DEBUG_PRINT("rear_box_fail_cnt = " << rear_box_fail_cnt);
-  // DEBUG_PRINT("in_ego_cnt = " << in_ego_cnt);
-  // DEBUG_PRINT("ego_slot_info.obs_pt_vec_slot size = "
+  // ILOG_INFO <<"dist_fail_cnt = " << dist_fail_cnt);
+  // ILOG_INFO <<"total_box_x_fail_cnt = " << total_box_x_fail_cnt);
+  // ILOG_INFO <<"total_box_y_fail_cnt = " << total_box_y_fail_cnt);
+  // ILOG_INFO <<"front_box_fail_cnt = " << front_box_fail_cnt);
+  // ILOG_INFO <<"rear_box_fail_cnt = " << rear_box_fail_cnt);
+  // ILOG_INFO <<"in_ego_cnt = " << in_ego_cnt);
+  // ILOG_INFO <<"ego_slot_info.obs_pt_vec_slot size = "
   //             << ego_slot_info.obs_pt_vec_slot.size());
 
   // update stuck time
@@ -452,8 +447,8 @@ void ParallelParkInScenario::GenTlane() {
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
 
-  DEBUG_PRINT("ego_slot_info.obs_pt_vec_slot size ="
-              << ego_slot_info.obs_pt_vec_slot.size());
+  ILOG_INFO << "ego_slot_info.obs_pt_vec_slot size ="
+            << ego_slot_info.obs_pt_vec_slot.size();
 
   // for json debug
   std::vector<double> front_que_x;
@@ -477,7 +472,7 @@ void ParallelParkInScenario::GenTlane() {
       front_que_y.emplace_back(obstacle_point_slot.y());
       front_min_x = std::min(front_min_x, obstacle_point_slot.x());
 
-      // DEBUG_PRINT("front_obs_condition!");
+      // ILOG_INFO <<"front_obs_condition!");
     }
 
     const bool rear_obs_condition =
@@ -493,26 +488,23 @@ void ParallelParkInScenario::GenTlane() {
       rear_que_x.emplace_back(obstacle_point_slot.x());
       rear_que_y.emplace_back(obstacle_point_slot.y());
       rear_max_x = std::max(rear_max_x, obstacle_point_slot.x());
-      // DEBUG_PRINT("rear_obs_condition!");
+      // ILOG_INFO <<"rear_obs_condition!");
     }
 
     const bool curb_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
-                                kRearDetaXMagWhenFrontVacant,
-                                slot_length - kRearDetaXMagWhenFrontVacant) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 1.0,
+                                slot_length - 1.0) &&
         (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
 
     if (curb_condition) {
       curb_count++;
       if (side_sgn > 0.0) {
         curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::min(curb_y_limit, -half_slot_width);
       } else {
         curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
-        curb_y_limit = std::max(curb_y_limit, half_slot_width);
       }
 
-      // DEBUG_PRINT("curb condition!");
+      // ILOG_INFO <<"curb condition!");
     }
 
     // Todo: select obs in ROI instead of using obs deciding channel y
@@ -527,7 +519,7 @@ void ParallelParkInScenario::GenTlane() {
     //       side_sgn > 0.0 ? std::min(channel_y_limit, obstacle_point_slot.y())
     //                      : std::max(channel_y_limit,
     //                      obstacle_point_slot.y());
-    //   // DEBUG_PRINT("channel_y_condition!");
+    //   // ILOG_INFO <<"channel_y_condition!");
     // }
 
     const bool front_parallel_line_condition =
@@ -540,7 +532,7 @@ void ParallelParkInScenario::GenTlane() {
           side_sgn > 0.0
               ? std::max(front_parallel_line_y_limit, obstacle_point_slot.y())
               : std::min(front_parallel_line_y_limit, obstacle_point_slot.y());
-      // DEBUG_PRINT("front_parallel_line_y_limit condition!");
+      // ILOG_INFO <<"front_parallel_line_y_limit condition!");
     }
 
     const bool rear_parallel_line_condition =
@@ -552,7 +544,7 @@ void ParallelParkInScenario::GenTlane() {
           side_sgn > 0.0
               ? std::max(rear_parallel_line_y_limit, obstacle_point_slot.y())
               : std::min(rear_parallel_line_y_limit, obstacle_point_slot.y());
-      // DEBUG_PRINT("rear_parallel_line_y_limit condition!");
+      // ILOG_INFO <<"rear_parallel_line_y_limit condition!");
     }
   }
   bool front_vacant = false;
@@ -560,12 +552,12 @@ void ParallelParkInScenario::GenTlane() {
 
   if (front_min_x >= slot_length + kFrontDetaXMagWhenFrontVacant - kEps) {
     front_vacant = true;
-    DEBUG_PRINT("front space empty!");
+    ILOG_INFO << "front space empty!";
   }
 
   if (rear_max_x <= -kRearDetaXMagWhenFrontOccupiedRearVacant + kEps) {
     rear_vacant = true;
-    DEBUG_PRINT("rear space empty!");
+    ILOG_INFO << "rear space empty!";
   }
 
   JSON_DEBUG_VALUE("para_tlane_is_front_vacant", front_vacant)
@@ -586,38 +578,34 @@ void ParallelParkInScenario::GenTlane() {
   } else {
   }
 
-  DEBUG_PRINT("para_tlane_front_min_x_before_clamp = " << front_min_x);
-  JSON_DEBUG_VALUE("para_tlane_front_min_x_before_clamp", front_min_x)
+  ILOG_INFO << "para_tlane_front_min_x_before_clamp = " << front_min_x;
 
   front_min_x = pnc::mathlib::Clamp(
       front_min_x, slot_length - kRearDetaXMagWhenFrontVacant,
       slot_length + kFrontDetaXMagWhenFrontVacant);
 
-  DEBUG_PRINT("para_tlane_front_min_x_after_clamp =" << front_min_x);
-  JSON_DEBUG_VALUE("para_tlane_front_min_x_after_clamp", front_min_x)
-
-  JSON_DEBUG_VECTOR("tlane_front_que_x", front_que_x, 2)
-  JSON_DEBUG_VECTOR("tlane_front_que_y", front_que_y, 2)
+  ILOG_INFO << "para_tlane_front_min_x_after_clamp =" << front_min_x;
 
   const double front_y_limit = front_parallel_line_y_limit;
-  DEBUG_PRINT("front parallel line y =" << front_y_limit);
-  JSON_DEBUG_VALUE("para_tlane_front_y", front_y_limit)
+  ILOG_INFO << "front parallel line y =" << front_y_limit;
 
-  DEBUG_PRINT("para_tlane_rear_max_x_before_clamp = " << rear_max_x);
-  JSON_DEBUG_VALUE("para_tlane_rear_max_x_before_clamp", rear_max_x)
-
+  ILOG_INFO << "para_tlane_rear_max_x_before_clamp = " << rear_max_x;
   rear_max_x =
       pnc::mathlib::Clamp(rear_max_x, -kRearDetaXMagWhenFrontOccupiedRearVacant,
                           kRearMaxDetaXMagWhenRearOccupied);
+  if (rear_vacant &&
+      ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
+    rear_max_x = std::min(rear_max_x, ego_slot_info.ego_pos_slot.x() - 1.4);
+  }
 
-  DEBUG_PRINT("para_tlane_rear_max_x_after_clamp = " << rear_max_x);
+  ILOG_INFO << "para_tlane_rear_max_x_after_clamp = " << rear_max_x;
   JSON_DEBUG_VALUE("para_tlane_rear_max_x_after_clamp", rear_max_x)
 
   JSON_DEBUG_VECTOR("tlane_rear_que_x", rear_que_x, 2)
   JSON_DEBUG_VECTOR("tlane_rear_que_y", rear_que_y, 2)
 
   const double rear_y_limit = rear_parallel_line_y_limit;
-  DEBUG_PRINT("rear parallel line y =" << rear_y_limit);
+  ILOG_INFO << "rear parallel line y =" << rear_y_limit;
   JSON_DEBUG_VALUE("para_tlane_rear_y", rear_y_limit)
 
   t_lane_.obs_pt_inside << front_min_x, front_y_limit;
@@ -625,7 +613,8 @@ void ParallelParkInScenario::GenTlane() {
 
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
-      -side_sgn * half_slot_width);
+      -side_sgn * (half_slot_width - kCurbInitialOffset));
+
   if (ego_slot_info.slot_occupied_ratio < 0.01) {
     curb_y_limit += side_sgn * apa_param.GetParam().mov_curb_out_dist;
   }
@@ -650,12 +639,13 @@ void ParallelParkInScenario::GenTlane() {
   tlane_obs_pt_vec.emplace_back(t_lane_.obs_pt_outside.x());
   JSON_DEBUG_VECTOR("para_tlane_obs_pt_before_uss", tlane_obs_pt_vec, 2)
 
-  // update tlane using USS dist
-  if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
-      (frame_.in_slot_plan_count == 0 ||
-       std::fabs(frame_.ego_slot_info.terminal_err.heading) <= 15.0 / 57.3)) {
-    UpdateTlaneOnceInSlot();
-  }
+  // // update tlane using USS dist
+  // if (frame_.ego_slot_info.slot_occupied_ratio >= kEnterMultiPlanSlotRatio &&
+  //     (frame_.in_slot_plan_count == 0 ||
+  //      std::fabs(frame_.ego_slot_info.terminal_err.heading) <= 15.0 / 57.3))
+  //      {
+  //   UpdateTlaneOnceInSlot();
+  // }
 
   // if curb exist, combine curb and slot center line to decide target y
   // if (curb_count > 1) {
@@ -694,28 +684,28 @@ void ParallelParkInScenario::GenTlane() {
           frame_.ego_slot_info.ego_heading_slot -
           frame_.ego_slot_info.target_ego_heading_slot));
 
-  DEBUG_PRINT("-- t_lane --------");
+  ILOG_INFO << "-- t_lane --------";
   if (pnc::mathlib::IsDoubleEqual(side_sgn, 1.0)) {
-    DEBUG_PRINT("right slot");
+    ILOG_INFO << "right slot";
   } else if (pnc::mathlib::IsDoubleEqual(side_sgn, -1.0)) {
-    DEBUG_PRINT("left slot!");
+    ILOG_INFO << "left slot!";
   }
-  DEBUG_PRINT("obs_pt_inside = " << t_lane_.obs_pt_inside.transpose());
-  DEBUG_PRINT("obs_pt_outside = " << t_lane_.obs_pt_outside.transpose());
-  DEBUG_PRINT(
-      "corner_inside_slot = " << t_lane_.corner_inside_slot.transpose());
-  DEBUG_PRINT(
-      "corner_outside_slot = " << t_lane_.corner_outside_slot.transpose());
+  ILOG_INFO << "obs_pt_inside = " << t_lane_.obs_pt_inside.transpose();
+  ILOG_INFO << "obs_pt_outside = " << t_lane_.obs_pt_outside.transpose();
+  ILOG_INFO << "corner_inside_slot = "
+            << t_lane_.corner_inside_slot.transpose();
+  ILOG_INFO << "corner_outside_slot = "
+            << t_lane_.corner_outside_slot.transpose();
 
-  DEBUG_PRINT("pt_outside = " << t_lane_.pt_outside.transpose());
-  DEBUG_PRINT("pt_inside = " << t_lane_.pt_inside.transpose());
-  DEBUG_PRINT("pt_terminal_pos = " << t_lane_.pt_terminal_pos.transpose());
-  DEBUG_PRINT("slot length =" << t_lane_.slot_length);
-  DEBUG_PRINT("half slot width =" << 0.5 * t_lane_.slot_width);
-  DEBUG_PRINT("curb y =" << t_lane_.curb_y);
-  DEBUG_PRINT("channel x =" << t_lane_.channel_x_limit);
-  DEBUG_PRINT("channel y =" << t_lane_.channel_y);
-  DEBUG_PRINT("------------------");
+  ILOG_INFO << "pt_outside = " << t_lane_.pt_outside.transpose();
+  ILOG_INFO << "pt_inside = " << t_lane_.pt_inside.transpose();
+  ILOG_INFO << "pt_terminal_pos = " << t_lane_.pt_terminal_pos.transpose();
+  ILOG_INFO << "slot length =" << t_lane_.slot_length;
+  ILOG_INFO << "half slot width =" << 0.5 * t_lane_.slot_width;
+  ILOG_INFO << "curb y =" << t_lane_.curb_y;
+  ILOG_INFO << "channel x =" << t_lane_.channel_x_limit;
+  ILOG_INFO << "channel y =" << t_lane_.channel_y;
+  ILOG_INFO << "------------------";
 
   JSON_DEBUG_VALUE("para_tlane_obs_in_x", t_lane_.obs_pt_inside.x())
   JSON_DEBUG_VALUE("para_tlane_obs_in_y", t_lane_.obs_pt_inside.y())
@@ -733,11 +723,11 @@ void ParallelParkInScenario::GenTlane() {
 
 void ParallelParkInScenario::UpdateTlaneOnceInSlot() {
   if (frame_.ego_slot_info.slot_occupied_ratio < kEnterMultiPlanSlotRatio) {
-    DEBUG_PRINT("ego not in slot!");
+    ILOG_INFO << "ego not in slot!";
     return;
   }
 
-  DEBUG_PRINT("UpdateTlaneOnceInSlot work now!");
+  ILOG_INFO << "UpdateTlaneOnceInSlot work now!";
 
   // update tlane via 12 uss dist
   const pnc::geometry_lib::PathPoint ego_pose(
@@ -748,7 +738,7 @@ void ParallelParkInScenario::UpdateTlaneOnceInSlot() {
       apa_world_ptr_->GetUssObstacleAvoidancePtr()->GetUssDistVec();
 
   if (uss_dist_vec.size() != 12) {
-    DEBUG_PRINT("uss dist size != 12");
+    ILOG_INFO << "uss dist size != 12";
     return;
   }
 
@@ -768,7 +758,7 @@ void ParallelParkInScenario::UpdateTlaneOnceInSlot() {
     const auto idx = upa_idx_vec[i];
     const double upa_dist = uss_dist_vec[idx];
 
-    DEBUG_PRINT("upa dist = " << upa_dist);
+    ILOG_INFO << "upa dist = " << upa_dist;
 
     const Eigen::Vector2d upa_pos_ego(
         apa_param.GetParam().uss_vertex_x_vec[idx],
@@ -781,16 +771,16 @@ void ParallelParkInScenario::UpdateTlaneOnceInSlot() {
     // front
     if (i < half_upa_size) {
       const double upa_obs_x = upa_pos_slot.x() + upa_dist;
-      DEBUG_PRINT("front upa_obs_x = " << upa_obs_x
-                                       << " upa_dist =" << upa_dist);
+      ILOG_INFO << "front upa_obs_x = " << upa_obs_x
+                << " upa_dist =" << upa_dist;
       if (upa_obs_x >= t_lane_.corner_inside_slot.x() - 0.5) {
         t_lane_.obs_pt_inside.x() =
             std::min(t_lane_.obs_pt_inside.x(), upa_obs_x);
       }
     } else {
       const double upa_obs_x = upa_pos_slot.x() - upa_dist;
-      DEBUG_PRINT("rear upa_obs_x = " << upa_obs_x
-                                      << " upa_dist =" << upa_dist);
+      ILOG_INFO << "rear upa_obs_x = " << upa_obs_x
+                << " upa_dist =" << upa_dist;
       // rear
       if (upa_obs_x <= t_lane_.obs_pt_inside.x() + 0.5) {
         t_lane_.obs_pt_outside.x() =
@@ -1030,8 +1020,8 @@ void ParallelParkInScenario::GenObstacles() {
   }
 
   double channel_obs_lim = channel_y;
-  DEBUG_PRINT("frame_.ego_slot_info.obs_pt_vec_slot size = "
-              << frame_.ego_slot_info.obs_pt_vec_slot.size());
+  ILOG_INFO << "frame_.ego_slot_info.obs_pt_vec_slot size = "
+            << frame_.ego_slot_info.obs_pt_vec_slot.size();
 
   for (const auto& obstacle_point_slot : frame_.ego_slot_info.obs_pt_vec_slot) {
     // Todo: select obs in ROI instead of using obs deciding channel y
@@ -1064,9 +1054,9 @@ void ParallelParkInScenario::GenObstacles() {
     }
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(channel_obstacle_vec);
-  DEBUG_PRINT("pre channel y = " << t_lane_.channel_y);
+  ILOG_INFO << "pre channel y = " << t_lane_.channel_y;
   t_lane_.channel_y = channel_obs_lim;
-  DEBUG_PRINT("channel_obs_lim = " << channel_obs_lim);
+  ILOG_INFO << "channel_obs_lim = " << channel_obs_lim;
 
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
@@ -1108,7 +1098,7 @@ void ParallelParkInScenario::GenObstacles() {
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs_pos, ego_pose, safe_dist)) {
       apa_world_ptr_->GetCollisionDetectorPtr()->AddObstacles(obs_pos);
-      // std::cout << "obs_pos = " << obs_pos.transpose() << std::endl;
+      // ILOG_INFO << "obs_pos = " << obs_pos.transpose() ;
     }
   }
 }
@@ -1162,9 +1152,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             : pnc::geometry_lib::SEG_STEER_LEFT;
   }
 
-  DEBUG_PRINT("frame_.ego_slot_info.slot_occupied_ratio = "
-              << frame_.ego_slot_info.slot_occupied_ratio);
-  DEBUG_PRINT("frame_.in_slot_plan_count = " << frame_.in_slot_plan_count);
+  ILOG_INFO << "frame_.ego_slot_info.slot_occupied_ratio = "
+            << frame_.ego_slot_info.slot_occupied_ratio;
+  ILOG_INFO << "frame_.in_slot_plan_count = " << frame_.in_slot_plan_count;
 
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.ref_arc_steer = frame_.current_arc_steer;
@@ -1172,10 +1162,10 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   JSON_DEBUG_VALUE("ref_gear", path_planner_input.ref_gear);
   JSON_DEBUG_VALUE("ref_arc_steer", path_planner_input.ref_arc_steer);
 
-  DEBUG_PRINT("ref gear to path planner input ="
-              << static_cast<int>(path_planner_input.ref_gear));
-  DEBUG_PRINT("ref steer to path planner input ="
-              << static_cast<int>(path_planner_input.ref_arc_steer));
+  ILOG_INFO << "ref gear to path planner input ="
+            << static_cast<int>(path_planner_input.ref_gear);
+  ILOG_INFO << "ref steer to path planner input ="
+            << static_cast<int>(path_planner_input.ref_arc_steer);
 
   parallel_path_planner_.SetInput(path_planner_input);
 
@@ -1184,8 +1174,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   const bool path_plan_success =
       parallel_path_planner_.Update(apa_world_ptr_->GetCollisionDetectorPtr());
 
-  DEBUG_PRINT("path planner cost time(ms) = " << IflyTime::Now_ms() -
-                                                     path_plan_start_time);
+  ILOG_INFO << "path planner cost time(ms) = "
+            << IflyTime::Now_ms() - path_plan_start_time;
   // const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
   frame_.total_plan_count++;
@@ -1196,10 +1186,10 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   uint8_t plan_result = 0;
   if (path_plan_success) {
     plan_result = PathPlannerResult::PLAN_UPDATE;
-    std::cout << "path plan success!" << std::endl;
+    ILOG_INFO << "path plan success!";
   } else {
     plan_result = PathPlannerResult::PLAN_FAILED;
-    std::cout << "path plan fail!" << std::endl;
+    ILOG_INFO << "path plan fail!";
     return PathPlannerResult::PLAN_FAILED;
   }
 
@@ -1215,6 +1205,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // }
 
   const auto path_planner_output = parallel_path_planner_.GetOutput();
+  ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
+  ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
 
   // enter slot
   if (ego_slot_info.slot_occupied_ratio > kEnterMultiPlanSlotRatio) {
@@ -1254,14 +1246,14 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     frame_.current_gear = pnc::geometry_lib::ReverseGear(
         parallel_path_planner_.GetOutput().gear_cmd_vec.front());
 
-    DEBUG_PRINT("next gear =" << static_cast<int>(frame_.current_gear));
+    ILOG_INFO << "next gear =" << static_cast<int>(frame_.current_gear);
   } else {
     // set current gear
     frame_.current_gear = pnc::geometry_lib::ReverseGear(frame_.current_gear);
-    DEBUG_PRINT("next gear =" << static_cast<int>(frame_.current_gear));
+    ILOG_INFO << "next gear =" << static_cast<int>(frame_.current_gear);
 
     if (!pnc::geometry_lib::IsValidGear(frame_.current_gear)) {
-      DEBUG_PRINT("frame_.current_gear == invalid gear!");
+      ILOG_INFO << "frame_.current_gear == invalid gear!";
       return PathPlannerResult::PLAN_FAILED;
     }
 
@@ -1271,7 +1263,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
           pnc::geometry_lib::ReverseSteer(frame_.current_arc_steer);
 
       if (!pnc::geometry_lib::IsValidArcSteer(frame_.current_arc_steer)) {
-        DEBUG_PRINT("frame_.current_arc == invalid arc!");
+        ILOG_INFO << "frame_.current_arc == invalid arc!";
         return PathPlannerResult::PLAN_FAILED;
       }
     }
@@ -1282,22 +1274,21 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   const auto& planner_output = parallel_path_planner_.GetOutput();
   frame_.gear_command = planner_output.current_gear;
 
-  std::cout << "start lat optimizer!" << std::endl;
+  ILOG_INFO << "start lat optimizer!";
 
   // lateral path optimization
   bool is_use_optimizer = true;
 
   // refuse optimizer
   if (planner_output.path_point_vec.size() < 3) {
-    std::cout << " input size is too small" << std::endl;
+    ILOG_INFO << " input size is too small";
     is_use_optimizer = false;
   } else {
     const auto path_length = (planner_output.path_point_vec.front().pos -
                               planner_output.path_point_vec.back().pos)
                                  .norm();
     if (path_length < apa_param.GetParam().min_opt_path_length) {
-      std::cout << "path length is too short, optimizer is closed "
-                << std::endl;
+      ILOG_INFO << "path length is too short, optimizer is closed ";
 
       is_use_optimizer = false;
     }
@@ -1319,15 +1310,13 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   double lat_path_opt_cost_time_ms = 0.0;
   if (parallel_optimization_enable && is_use_optimizer) {
-    std::cout << "------------------------ lateral path optimization "
-                 "------------------------"
-              << std::endl;
+    ILOG_INFO << "------------------------ lateral path optimization "
+                 "------------------------";
 
-    std::cout << "frame_.gear_command_= "
-              << static_cast<int>(frame_.gear_command) << std::endl;
+    ILOG_INFO << "frame_.gear_command_= "
+              << static_cast<int>(frame_.gear_command);
 
-    std::cout << "origin path size= " << planner_output.path_point_vec.size()
-              << std::endl;
+    ILOG_INFO << "origin path size= " << planner_output.path_point_vec.size();
 
     LateralPathOptimizer::Parameter param;
     param.sample_ds = apa_world_ptr_->GetApaDataPtr()->simu_param.sample_ds;
@@ -1371,14 +1360,13 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     const auto plan_debug_info =
         apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
 
-    std::cout << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms
-              << std::endl;
+    ILOG_INFO << "lat_path_opt_cost_time_ms = " << lat_path_opt_cost_time_ms;
 
-    std::cout << "terminal point error = "
-              << plan_debug_info.terminal_pos_error() << std::endl;
+    ILOG_INFO << "terminal point error = "
+              << plan_debug_info.terminal_pos_error();
 
-    std::cout << "terminal heading error = "
-              << plan_debug_info.terminal_heading_error() << std::endl;
+    ILOG_INFO << "terminal heading error = "
+              << plan_debug_info.terminal_heading_error();
   } else {
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_.reserve(
@@ -1401,8 +1389,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   JSON_DEBUG_VALUE("cilqr_optimization_enable", cilqr_optimization_enable);
   JSON_DEBUG_VALUE("lat_path_opt_cost_time_ms", lat_path_opt_cost_time_ms);
 
-  std::cout << "current_path_point_global_vec_.size() = "
-            << current_path_point_global_vec_.size() << std::endl;
+  ILOG_INFO << "current_path_point_global_vec_.size() = "
+            << current_path_point_global_vec_.size();
 
   return plan_result;
 }
@@ -1420,10 +1408,10 @@ const bool ParallelParkInScenario::CheckSegCompleted() {
       frame_.is_replan_by_uss = (frame_.remain_dist_uss < frame_.remain_dist);
 
       if (!frame_.is_replan_by_uss) {
-        std::cout << "close to target!\n";
+        ILOG_INFO << "close to target!\n";
         is_seg_complete = true;
       } else {
-        std::cout << "close to obstacle by uss!\n";
+        ILOG_INFO << "close to obstacle by uss!\n";
         // uss distance may not be accurate, so wait for a period of time
         if (frame_.stuck_time >
             apa_param.GetParam().uss_stuck_replan_wait_time) {
@@ -1439,13 +1427,13 @@ const bool ParallelParkInScenario::CheckSegCompleted() {
 const bool ParallelParkInScenario::CheckReplan() {
   if (frame_.is_replan_first == true ||
       apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
-    DEBUG_PRINT("first plan");
+    ILOG_INFO << "first plan";
     frame_.replan_reason = FIRST_PLAN;
     return true;
   }
 
   if (CheckSegCompleted()) {
-    DEBUG_PRINT("replan by current segment completed!");
+    ILOG_INFO << "replan by current segment completed!";
     frame_.replan_reason = SEG_COMPLETED_PATH;
     if (frame_.is_replan_by_uss) {
       frame_.replan_reason = SEG_COMPLETED_USS;
@@ -1454,7 +1442,7 @@ const bool ParallelParkInScenario::CheckReplan() {
   }
 
   if (frame_.stuck_time > apa_param.GetParam().stuck_replan_time) {
-    DEBUG_PRINT("replan by stuck!");
+    ILOG_INFO << "replan by stuck!";
     frame_.replan_reason = STUCKED;
     return true;
   }
@@ -1487,24 +1475,24 @@ const bool ParallelParkInScenario::CheckFinished() {
   //             apa_param.GetParam().finish_parallel_lon_overhaing_error;
   const bool lon_condition_2 = false;
 
-  DEBUG_PRINT("terminal x error = " << ego_slot_info.terminal_err.pos.x());
+  ILOG_INFO << "terminal x error = " << ego_slot_info.terminal_err.pos.x();
 
   const bool lon_condition = lon_condition_1 || lon_condition_2;
-  DEBUG_PRINT("lon_condition = " << lon_condition);
+  ILOG_INFO << "lon_condition = " << lon_condition;
   if (lon_condition) {
-    DEBUG_PRINT("lon rac condition = " << lon_condition_1);
-    DEBUG_PRINT("lon overhaing contidion =" << lon_condition_2);
+    ILOG_INFO << "lon rac condition = " << lon_condition_1;
+    ILOG_INFO << "lon overhaing contidion =" << lon_condition_2;
   }
 
   const bool heading_condition =
       std::fabs(ego_slot_info.terminal_err.heading) <=
       apa_param.GetParam().finish_parallel_heading_err / 57.3;
 
-  DEBUG_PRINT(
-      "terminal heading error = " << ego_slot_info.terminal_err.heading * 57.3);
-  DEBUG_PRINT("heading_condition = " << heading_condition);
+  ILOG_INFO << "terminal heading error = "
+            << ego_slot_info.terminal_err.heading * 57.3;
+  ILOG_INFO << "heading_condition = " << heading_condition;
 
-  DEBUG_PRINT("lat error = " << ego_slot_info.terminal_err.pos.y());
+  ILOG_INFO << "lat error = " << ego_slot_info.terminal_err.pos.y();
   const bool lat_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.y()) <=
                                apa_param.GetParam().finish_parallel_lat_rac_err;
 
@@ -1537,22 +1525,21 @@ const bool ParallelParkInScenario::CheckFinished() {
   }
   const bool lat_condition = lat_condition_1 || lat_condition_2;
 
-  DEBUG_PRINT("terminal y error = " << ego_slot_info.terminal_err.pos.y());
-  DEBUG_PRINT("lat condition  = " << lat_condition);
+  ILOG_INFO << "terminal y error = " << ego_slot_info.terminal_err.pos.y();
+  ILOG_INFO << "lat condition  = " << lat_condition;
   if (lat_condition) {
     if (lat_condition_1) {
-      DEBUG_PRINT("lat y err = "
-                  << ego_slot_info.terminal_err.pos.y() << " < "
-                  << apa_param.GetParam().finish_parallel_lat_rac_err);
+      ILOG_INFO << "lat y err = " << ego_slot_info.terminal_err.pos.y() << " < "
+                << apa_param.GetParam().finish_parallel_lat_rac_err;
     } else {
-      DEBUG_PRINT("ego outer wheel are both in slot!");
+      ILOG_INFO << "ego outer wheel are both in slot!";
     }
   }
 
   const bool static_condition =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
-  DEBUG_PRINT("static_condition = " << static_condition);
+  ILOG_INFO << "static_condition = " << static_condition;
 
   return lon_condition && lat_condition && heading_condition &&
          static_condition;
@@ -1580,7 +1567,7 @@ void ParallelParkInScenario::Log() const {
   const auto p1_g = l2g_tf.GetPos(t_lane_.obs_pt_inside);
   const auto pt_g = l2g_tf.GetPos(t_lane_.pt_terminal_pos);
 
-  std::cout << "p0_g = " << p0_g.transpose() << std::endl;
+  ILOG_INFO << "p0_g = " << p0_g.transpose();
 
   JSON_DEBUG_VALUE("tlane_p0_x", p0_g.x())
   JSON_DEBUG_VALUE("tlane_p0_y", p0_g.y())
@@ -1590,8 +1577,8 @@ void ParallelParkInScenario::Log() const {
   JSON_DEBUG_VALUE("tlane_pt_y", pt_g.y())
   JSON_DEBUG_VALUE("slot_side", t_lane_.slot_side)
 
-  DEBUG_PRINT("obs p out = " << p0_g.transpose());
-  DEBUG_PRINT("obs p in = " << p1_g.transpose());
+  ILOG_INFO << "obs p out = " << p0_g.transpose();
+  ILOG_INFO << "obs p in = " << p1_g.transpose();
 
   std::vector<double> obstaclesX;
   std::vector<double> obstaclesY;

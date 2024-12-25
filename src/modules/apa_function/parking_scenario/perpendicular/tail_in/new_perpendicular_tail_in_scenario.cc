@@ -110,8 +110,8 @@ void PerpendicularTailInScenario::UpdateEgoSlotInfo(ApaSlot& apa_slot) {
     }
   }
 
-  ego_car_info_slot.cur_pose = apa_slot.g2l_tf.GetPose(geometry_lib::PathPoint(
-      measures_data->GetPos(), measures_data->GetHeading()));
+  // ego_car_info_slot.cur_pose = apa_slot.g2l_tf.GetPose(geometry_lib::PathPoint(
+  //     measures_data->GetPos(), measures_data->GetHeading()));
 
   // 初步根据车位或限位器计算终点位置
   if (!apa_slot.limiter.valid) {
@@ -180,44 +180,44 @@ void PerpendicularTailInScenario::GenTLane(ApaSlot& apa_slot) {
   const double mir_x = ego_car_info_slot.target_pose.pos.x() +
                        param.lon_dist_mirror_to_rear_axle - 0.368;
 
-  // 获取融合障碍物 并转化到车位坐标系下
-  if (apa_world_ptr_->GetApaDataPtr()->apa_obs_map.count(
-          ObstacleType::FUSION) != 0) {
-    std::vector<Eigen::Vector2d> fusion_obs_slot_vec;
-    Eigen::Vector2d obs_slot;
-    for (const auto& obs :
-         apa_world_ptr_->GetApaDataPtr()->apa_obs_map[ObstacleType::FUSION]) {
-      obs_slot = apa_slot.g2l_tf.GetPos(obs);
-      fusion_obs_slot_vec.emplace_back(obs_slot);
-    }
-    ego_car_info_slot.obs_map[ObstacleType::FUSION] = fusion_obs_slot_vec;
-  }
+  // // 获取融合障碍物 并转化到车位坐标系下
+  // if (apa_world_ptr_->GetApaDataPtr()->apa_obs_map.count(
+  //         ObstacleType::FUSION) != 0) {
+  //   std::vector<Eigen::Vector2d> fusion_obs_slot_vec;
+  //   Eigen::Vector2d obs_slot;
+  //   for (const auto& obs :
+  //        apa_world_ptr_->GetApaDataPtr()->apa_obs_map[ObstacleType::FUSION]) {
+  //     obs_slot = apa_slot.g2l_tf.GetPos(obs);
+  //     fusion_obs_slot_vec.emplace_back(obs_slot);
+  //   }
+  //   ego_car_info_slot.obs_map[ObstacleType::FUSION] = fusion_obs_slot_vec;
+  // }
 
-  // 获取接地线障碍物 并转化到车位坐标系下
-  if (apa_world_ptr_->GetApaDataPtr()->apa_obs_map.count(
-          ObstacleType::GROUND_LINE) != 0) {
-    std::vector<Eigen::Vector2d> gl_obs_slot_vec;
-    Eigen::Vector2d obs_slot;
-    for (const auto& obs : apa_world_ptr_->GetApaDataPtr()
-                               ->apa_obs_map[ObstacleType::GROUND_LINE]) {
-      obs_slot = apa_slot.g2l_tf.GetPos(obs);
-      gl_obs_slot_vec.emplace_back(obs_slot);
-    }
-    ego_car_info_slot.obs_map[ObstacleType::GROUND_LINE] = gl_obs_slot_vec;
-  }
+  // // 获取接地线障碍物 并转化到车位坐标系下
+  // if (apa_world_ptr_->GetApaDataPtr()->apa_obs_map.count(
+  //         ObstacleType::GROUND_LINE) != 0) {
+  //   std::vector<Eigen::Vector2d> gl_obs_slot_vec;
+  //   Eigen::Vector2d obs_slot;
+  //   for (const auto& obs : apa_world_ptr_->GetApaDataPtr()
+  //                              ->apa_obs_map[ObstacleType::GROUND_LINE]) {
+  //     obs_slot = apa_slot.g2l_tf.GetPos(obs);
+  //     gl_obs_slot_vec.emplace_back(obs_slot);
+  //   }
+  //   ego_car_info_slot.obs_map[ObstacleType::GROUND_LINE] = gl_obs_slot_vec;
+  // }
 
-  // 获取uss点云障碍物 并转化到车位坐标系下
-  if (apa_world_ptr_->GetApaDataPtr()->apa_obs_map.count(ObstacleType::USS) !=
-      0) {
-    std::vector<Eigen::Vector2d> uss_obs_slot_vec;
-    Eigen::Vector2d obs_slot;
-    for (const auto& obs :
-         apa_world_ptr_->GetApaDataPtr()->apa_obs_map[ObstacleType::USS]) {
-      obs_slot = apa_slot.g2l_tf.GetPos(obs);
-      uss_obs_slot_vec.emplace_back(obs_slot);
-    }
-    ego_car_info_slot.obs_map[ObstacleType::USS] = uss_obs_slot_vec;
-  }
+  // // 获取uss点云障碍物 并转化到车位坐标系下
+  // if (apa_world_ptr_->GetApaDataPtr()->apa_obs_map.count(ObstacleType::USS) !=
+  //     0) {
+  //   std::vector<Eigen::Vector2d> uss_obs_slot_vec;
+  //   Eigen::Vector2d obs_slot;
+  //   for (const auto& obs :
+  //        apa_world_ptr_->GetApaDataPtr()->apa_obs_map[ObstacleType::USS]) {
+  //     obs_slot = apa_slot.g2l_tf.GetPos(obs);
+  //     uss_obs_slot_vec.emplace_back(obs_slot);
+  //   }
+  //   ego_car_info_slot.obs_map[ObstacleType::USS] = uss_obs_slot_vec;
+  // }
   size_t obs_count_in_slot = 0;
   for (auto pair : ego_car_info_slot.obs_map) {
     for (Eigen::Vector2d obs_pt_slot : pair.second) {

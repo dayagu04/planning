@@ -27,6 +27,7 @@ class CollisionDetector {
     TLANE_BOUNDARY_OBS,
     LINEARC_OBS,
     FUSION_OBS,
+    GROUND_LINE_OBS,
     RECORD_OBS,
     VIRTUAL_OBS,
     USS_OBS,
@@ -70,21 +71,10 @@ class CollisionDetector {
   struct Paramters {
     bool is_side_mirror_expand = true;
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
-    double left_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
-    double right_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     double bound_expand = 0.5;
     Paramters() = default;
     Paramters(const double lat_inf, bool set_side_mirror_expand = true) {
       lat_inflation = lat_inf;
-      left_lat_inflation = lat_inf;
-      right_lat_inflation = lat_inf;
-      is_side_mirror_expand = set_side_mirror_expand;
-    }
-
-    Paramters(const double left_lat_inf, const double right_lat_inf,
-              bool set_side_mirror_expand = true) {
-      left_lat_inflation = left_lat_inf;
-      right_lat_inflation = right_lat_inf;
       is_side_mirror_expand = set_side_mirror_expand;
     }
 
@@ -92,8 +82,6 @@ class CollisionDetector {
       is_side_mirror_expand = true;
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
       bound_expand = 0.5;
-      left_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
-      right_lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     }
   };
 

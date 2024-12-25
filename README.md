@@ -69,7 +69,9 @@ build/tools/planning_player/pp --play <bag的路径>
 ```
 运行时会打印众多信息，可以在最后加入 "> planning.log"，将所有打印信息导入一个文件中 
 以下为可选参数，放在上述命令之后
-- 可选参数，闭环仿真（车辆位置跟随规划轨迹运动，与原包中车辆位置不同，仅在长时有效），不加此参数默认开环仿真，车辆位置与原包中一致
+- 可选参数，闭环仿真，不加此参数默认开环仿真
+    - 开环：车辆位置与原包中一致，状态机与原包一致
+    - 闭环：车辆位置跟随规划轨迹改变，与原包中车辆位置不同；状态机为指定有效状态，与原包不同
 ```
 --close-loop
 ```
@@ -77,15 +79,15 @@ build/tools/planning_player/pp --play <bag的路径>
 ```
 --out-bag=xxx.bag[注意要有等号]
 ```
-- 可选参数，修改进自动帧数，默认1.5，单位为s
+- 可选参数，进自动时刻，默认1.5，单位为s。PP会自动识别原包中进自动时刻，并和此处指定的时刻对比，取一个小值
 ```
 --auto-time=1.5
 ```
-- 可选参数，程序会自动判断，如果自动判断失败，会使用手动指定的场景，默认scc，可选acc/scc/noa/hpp/apa。
+- 可选参数，程序会自动判断，如果自动判断失败，会使用此处指定的场景，默认scc，可选acc/scc/noa/hpp/apa
 ```
---scene-type=acc 或 apa
+--scene-type=acc
 ```
-- 可选参数，no-debug模式，不依赖planning/debug_info，适用于没起planning模块或planning模块崩溃的情况，默认关闭
+- 可选参数，no-debug模式，不依赖planning/debug_info这个topic，适用于没起planning模块或planning模块崩溃的情况，默认关闭
 ```
 --no-debug
 ```

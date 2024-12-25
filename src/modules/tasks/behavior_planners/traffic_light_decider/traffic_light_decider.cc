@@ -199,6 +199,7 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   virtual_agent.set_y(10.0);
   virtual_agent.set_length(5.0);
   virtual_agent.set_width(2.0);
+  virtual_agent.set_fusion_source(1);
 
   virtual_agent.set_speed(0.0);
   virtual_agent.set_theta(0.0);

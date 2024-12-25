@@ -60,7 +60,7 @@ correct_path_for_limiter = False
 replan_time_list = []
 correct_path_for_limiter_time_list = []
 enter_parking_time = 0.0
-load_uss_wave_from_uss_percept_msg = True
+load_uss_wave_from_uss_percept_msg = False
 read_uss_per_msg = load_uss_wave_from_uss_percept_msg
 load_fusion_object_from_occupancy = True
 version_245 = True
@@ -1674,135 +1674,19 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     datas = []
     # load planning data
     if bag_loader.plan_msg['enable'] == True:
+      plan_data = bag_loader.plan_debug_msg['data'][plan_msg_idx]
+      plan_json = bag_loader.plan_debug_msg['json'][plan_msg_idx]
+
+      # load func_state
+      if bag_loader.soc_state_msg['enable'] == True:
+        names.append("current_state")
+        datas.append(str(bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state))
+
       names.append("apa_planning_status")
       apa_planning_status = bag_loader.plan_msg['data'][plan_msg_idx].planning_status.apa_planning_status
       status_dict = {0: 'NONE', 1: 'IN_PROGRESS', 2: 'FINISHED', 3: 'FAILED'}
       status = status_dict.get(apa_planning_status, 'UNKNOWN')
       datas.append(str(apa_planning_status) + ": " + str(status))
-
-      names.append("apa_planning_method")
-      geometry_path_release =  bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['geometry_path_release']
-      if geometry_path_release:
-        datas.append(str("geometry_plan"))
-      else:
-        datas.append(str("astar_plan"))
-
-      names.append("planning_stm")
-      planning_status = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['planning_status']
-      planning_stm_dict = {0: 'PARKING_IDLE', 1: 'PARKING_RUNNING', 2: 'PARKING_GEARCHANGE', 3: 'PARKING_PLANNING', 4: 'PARKING_FINISHED', 5: 'PARKING_FAILED', 6: 'PARKING_PAUSED'}
-      planning_stm = planning_stm_dict.get(planning_status, 'UNKNOWN')
-      datas.append(str(planning_status) + ": " + str(planning_stm))
-
-      names.append("replan_reason")
-      replan_reason = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_reason']
-      replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET'}
-      reason = replan_reason_dict.get(replan_reason, 'UNKNOWN')
-      datas.append(str(replan_reason) + ": " + str(reason))
-
-      names.append("plan_fail_reason")
-      plan_fail_reason = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['plan_fail_reason']
-      plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT'}
-      fail_reason = plan_fail_reason_dict.get(plan_fail_reason, 'UNKNOWN')
-      datas.append(str(plan_fail_reason) + ": " + str(fail_reason))
-
-      names.append("path_plan_success")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['path_plan_success']))
-
-      names.append("path_plan_result")
-      pathplan_result = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['pathplan_result']
-      pathplan_result_dict = {0: 'PLAN_FAILED', 1: 'PLAN_HOLD', 2: 'PLAN_UPDATE'}
-      result = pathplan_result_dict.get(pathplan_result, 'UNKNOWN')
-      datas.append(str(pathplan_result) + ": " + str(result))
-
-      names.append("replan_flag")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_flag']))
-
-      names.append("replan_time_list")
-      datas.append(str(replan_time_list))
-
-      names.append("correct_path_for_limiter")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['correct_path_for_limiter']))
-
-      names.append("correct_path_for_limiter_list")
-      datas.append(str(correct_path_for_limiter_time_list))
-
-      names.append("current_gear_length")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['current_gear_length']))
-
-      names.append("current_gear_pt_size")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['current_gear_pt_size']))
-
-      names.append("sample_ds")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['sample_ds']))
-
-      names.append("move_slot_dist")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['move_slot_dist']))
-
-      names.append("replan_count")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_count']))
-
-      names.append("mono_plan")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['mono_plan']))
-
-      names.append("multi_plan")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['multi_plan']))
-
-      names.append("slot_replan_jump_dist")
-      datas.append(str(slot_replan_jump_dist))
-
-      names.append("slot_replan_jump_heading")
-      datas.append(str(slot_replan_jump_heading))
-
-      names.append("terminal_error_x")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_x']))
-
-      names.append("terminal_error_y")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_y']))
-
-      names.append("terminal_error_heading (deg)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['terminal_error_heading'] * 57.3))
-
-      names.append("stuck_time (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['stuck_time']))
-
-      names.append("replan_consume_time (ms)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['replan_consume_time']))
-
-      names.append("total_plan_consume_time (ms)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['total_plan_consume_time']))
-
-      names.append("slot_occupied_ratio")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_occupied_ratio']))
-
-      names.append("current_path_length")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['current_path_length']))
-
-      names.append("remain_dist")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist']))
-
-      names.append("remain_dist_uss")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_uss']))
-
-      names.append("remain_dist_col_det")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['remain_dist_col_det']))
-
-      names.append("car_static_timer_by_pos_strict (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos_strict']))
-
-      names.append("car_static_timer_by_pos_normal (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_pos_normal']))
-
-      names.append("car_static_timer_by_vel_strict (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel_strict']))
-
-      names.append("car_static_timer_by_vel_normal (s)")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['car_static_timer_by_vel_normal']))
-
-      names.append("static_flag")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['static_flag']))
-
-      names.append("slot_width")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['slot_width']))
 
       names.append("plan_release_slots_id")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
@@ -1819,45 +1703,165 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       names.append("plan_traj_available")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].trajectory.available))
 
+      names.append("apa_planning_method")
+      geometry_path_release = plan_json['geometry_path_release']
+      if geometry_path_release:
+        datas.append(str("geometry_plan"))
+      else:
+        datas.append(str("astar_plan"))
+
+      names.append("planning_stm")
+      planning_status = plan_json['planning_status']
+      planning_stm_dict = {0: 'PARKING_IDLE', 1: 'PARKING_RUNNING', 2: 'PARKING_GEARCHANGE', 3: 'PARKING_PLANNING', 4: 'PARKING_FINISHED', 5: 'PARKING_FAILED', 6: 'PARKING_PAUSED'}
+      planning_stm = planning_stm_dict.get(planning_status, 'UNKNOWN')
+      datas.append(str(planning_status) + ": " + str(planning_stm))
+
+      names.append("replan_reason")
+      replan_reason = plan_json['replan_reason']
+      replan_reason_dict = {0: 'NOT_REPLAN', 1: 'FIRST_PLAN', 2: 'SEG_COMPLETED_PATH', 3: 'SEG_COMPLETED_USS', 4: 'STUCKED', 5: 'DYNAMIC', 6: 'SEG_COMPLETED_COL_DET'}
+      reason = replan_reason_dict.get(replan_reason, 'UNKNOWN')
+      datas.append(str(replan_reason) + ": " + str(reason))
+
+      names.append("plan_fail_reason")
+      plan_fail_reason = plan_json['plan_fail_reason']
+      plan_fail_reason_dict = {0: 'NOT_FAILED', 1: 'PAUSE_FAILED_TIME', 2: 'STUCK_FAILED_TIME', 3: 'UPDATE_EGO_SLOT_INFO', 4: 'POST_PROCESS_PATH_POINT_SIZE', 5: 'POST_PROCESS_PATH_POINT_SAME', 6: 'SET_SEG_INDEX', 7: 'CHECK_GEAR_LENGTH', 8: 'PATH_PLAN_FAILED', 9: 'PLAN_COUNT_EXCEED_LIMIT'}
+      fail_reason = plan_fail_reason_dict.get(plan_fail_reason, 'UNKNOWN')
+      datas.append(str(plan_fail_reason) + ": " + str(fail_reason))
+
+      names.append("path_plan_success")
+      datas.append(str(plan_json['path_plan_success']))
+
+      names.append("path_plan_result")
+      pathplan_result = plan_json['pathplan_result']
+      pathplan_result_dict = {0: 'PLAN_FAILED', 1: 'PLAN_HOLD', 2: 'PLAN_UPDATE'}
+      result = pathplan_result_dict.get(pathplan_result, 'UNKNOWN')
+      datas.append(str(pathplan_result) + ": " + str(result))
+
+      names.append("terminal_error_x")
+      datas.append(str(plan_json['terminal_error_x']))
+
+      names.append("terminal_error_y")
+      datas.append(str(plan_json['terminal_error_y']))
+
+      names.append("terminal_error_heading (deg)")
+      datas.append(str(plan_json['terminal_error_heading'] * 57.3))
+
+      names.append("move_slot_dist")
+      datas.append(str(plan_json['move_slot_dist']))
+
+      names.append("replan_count")
+      datas.append(str(plan_json['replan_count']))
+
+      names.append("stuck_time (s)")
+      datas.append(str(plan_json['stuck_time']))
+
+      names.append("replan_consume_time (ms)")
+      datas.append(str(plan_json['replan_consume_time']))
+
+      names.append("total_plan_consume_time (ms)")
+      datas.append(str(plan_json['total_plan_consume_time']))
+
+      names.append("slot_occupied_ratio")
+      datas.append(str(plan_json['slot_occupied_ratio']))
+
+      names.append("remain_dist")
+      datas.append(str(plan_json['remain_dist']))
+
+      names.append("remain_dist_uss")
+      datas.append(str(plan_json['remain_dist_uss']))
+
+      names.append("remain_dist_col_det")
+      datas.append(str(plan_json['remain_dist_col_det']))
+
+      names.append("replan_flag")
+      datas.append(str(plan_json['replan_flag']))
+
+      names.append("replan_time_list")
+      datas.append(str(replan_time_list))
+
+      names.append("correct_path_for_limiter")
+      datas.append(str(plan_json['correct_path_for_limiter']))
+
+      names.append("correct_path_for_limiter_list")
+      datas.append(str(correct_path_for_limiter_time_list))
+
+      names.append("current_gear_length")
+      datas.append(str(plan_json['current_gear_length']))
+
+      names.append("current_gear_pt_size")
+      datas.append(str(plan_json['current_gear_pt_size']))
+
+      names.append("sample_ds")
+      datas.append(str(plan_json['sample_ds']))
+
+      names.append("mono_plan")
+      datas.append(str(plan_json['mono_plan']))
+
+      names.append("multi_plan")
+      datas.append(str(plan_json['multi_plan']))
+
+      names.append("slot_replan_jump_dist")
+      datas.append(str(slot_replan_jump_dist))
+
+      names.append("slot_replan_jump_heading")
+      datas.append(str(slot_replan_jump_heading))
+
+      names.append("current_path_length")
+      datas.append(str(plan_json['current_path_length']))
+
+      names.append("car_static_timer_by_pos_strict (s)")
+      datas.append(str(plan_json['car_static_timer_by_pos_strict']))
+
+      names.append("car_static_timer_by_pos_normal (s)")
+      datas.append(str(plan_json['car_static_timer_by_pos_normal']))
+
+      names.append("car_static_timer_by_vel_strict (s)")
+      datas.append(str(plan_json['car_static_timer_by_vel_strict']))
+
+      names.append("car_static_timer_by_vel_normal (s)")
+      datas.append(str(plan_json['car_static_timer_by_vel_normal']))
+
+      names.append("static_flag")
+      datas.append(str(plan_json['static_flag']))
+
+      names.append("slot_width")
+      datas.append(str(plan_json['slot_width']))
+
       names.append("optimization_terminal_pose_error")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['optimization_terminal_pose_error']))
+      datas.append(str(plan_json['optimization_terminal_pose_error']))
 
       names.append("optimization_terminal_heading_error")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['optimization_terminal_heading_error']))
+      datas.append(str(plan_json['optimization_terminal_heading_error']))
 
       names.append("lat_path_opt_cost_time_ms")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['lat_path_opt_cost_time_ms']))
+      datas.append(str(plan_json['lat_path_opt_cost_time_ms']))
 
       names.append("statemachine_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['statemachine_timestamp']))
+      datas.append(str(plan_json['statemachine_timestamp']))
 
       names.append("fusion_slot_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['fusion_slot_timestamp']))
+      datas.append(str(plan_json['fusion_slot_timestamp']))
 
       names.append("localiztion_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['localiztion_timestamp']))
+      datas.append(str(plan_json['localiztion_timestamp']))
 
       names.append("uss_wave_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_wave_timestamp']))
+      datas.append(str(plan_json['uss_wave_timestamp']))
 
       names.append("uss_per_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['uss_per_timestamp']))
+      datas.append(str(plan_json['uss_per_timestamp']))
 
       names.append("ground_line_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['ground_line_timestamp']))
+      datas.append(str(plan_json['ground_line_timestamp']))
 
       names.append("fusion_objects_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['fusion_objects_timestamp']))
+      datas.append(str(plan_json['fusion_objects_timestamp']))
 
       names.append("fusion_occupancy_objects_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['fusion_occupancy_objects_timestamp']))
+      datas.append(str(plan_json['fusion_occupancy_objects_timestamp']))
 
       names.append("control_output_timestamp")
-      datas.append(str(bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['control_output_timestamp']))
-    # load func_state
-    if bag_loader.soc_state_msg['enable'] == True:
-      names.append("current_state")
-      datas.append(str(bag_loader.soc_state_msg['data'][soc_state_msg_idx].current_state))
+      datas.append(str(plan_json['control_output_timestamp']))
 
     # load vsg
     if bag_loader.vs_msg['enable'] == True:
@@ -4038,14 +4042,52 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
           if not flag:
             print('find plan error')
           flag, plan_json = findt_json(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
+          flag, plan_data = findt(dataLoader.plan_debug_msg, plan_debug_timestamps[plan_i])
           if not flag:
             print('find plan_debug error')
           else:
+            if dataLoader.soc_state_msg['enable'] == True:
+              flag, soc_msg = findt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
+              if not flag:
+                print('find soc_msg error')
+              else:
+                names.append("current_state")
+                datas.append(str(soc_msg.current_state))
+            else:
+              print('find soc_msg error')
+
             names.append("apa_planning_status")
             apa_planning_status = plan_msg.planning_status.apa_planning_status
             status_dict = {0: 'NONE', 1: 'IN_PROGRESS', 2: 'FINISHED', 3: 'FAILED'}
             status = status_dict.get(apa_planning_status, 'UNKNOWN')
             datas.append(str(apa_planning_status) + ": " + str(status))
+
+            names.append("plan_release_slots_id")
+            datas.append(str(plan_msg.successful_slot_info_list))
+
+            if dataLoader.fus_parking_msg['enable'] == True:
+              flag, fusion_msg = findt(dataLoader.fus_parking_msg, fusion_slot_timestamps[plan_i])
+              if not flag:
+                print('find fusion_msg error')
+              else:
+                names.append("fusion_release_slots_id")
+                parking_fusion_slot_lists = fusion_msg.parking_fusion_slot_lists
+                release_id = []
+                for slot in parking_fusion_slot_lists:
+                  if slot.allow_parking == 1:
+                    release_id.append(slot.id)
+                datas.append(str(release_id))
+            else:
+              print('find fusion_msg error')
+
+            names.append("plan_gear_cmd")
+            gear_command = plan_msg.gear_command.gear_command_value
+            gear_command_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
+            gear = gear_command_dict.get(gear_command, 'UNKNOWN')
+            datas.append(str(gear_command) + ": " + str(gear))
+
+            names.append("plan_traj_available")
+            datas.append(str(plan_msg.trajectory.available))
 
             names.append("apa_planning_method")
             geometry_path_release = plan_json['geometry_path_release']
@@ -4081,6 +4123,33 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             result = pathplan_result_dict.get(pathplan_result, 'UNKNOWN')
             datas.append(str(pathplan_result) + ": " + str(result))
 
+            names.append("terminal_error_x")
+            datas.append(str(plan_json['terminal_error_x']))
+
+            names.append("terminal_error_y")
+            datas.append(str(plan_json['terminal_error_y']))
+
+            names.append("terminal_error_heading (deg)")
+            datas.append(str(plan_json['terminal_error_heading'] * 57.3))
+
+            names.append("move_slot_dist")
+            datas.append(str(plan_json['move_slot_dist']))
+
+            names.append("replan_count")
+            datas.append(str(plan_json['replan_count']))
+
+            names.append("stuck_time (s)")
+            datas.append(str(plan_json['stuck_time']))
+
+            names.append("replan_consume_time (ms)")
+            datas.append(str(plan_json['replan_consume_time']))
+
+            names.append("total_plan_consume_time (ms)")
+            datas.append(str(plan_json['total_plan_consume_time']))
+
+            names.append("slot_occupied_ratio")
+            datas.append(str(plan_json['slot_occupied_ratio']))
+
             names.append("replan_flag")
             datas.append(str(plan_json['replan_flag']))
 
@@ -4108,38 +4177,11 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             names.append("sample_ds")
             datas.append(str(plan_json['sample_ds']))
 
-            names.append("move_slot_dist")
-            datas.append(str(plan_json['move_slot_dist']))
-
-            names.append("replan_count")
-            datas.append(str(plan_json['replan_count']))
-
             names.append("mono_plan")
             datas.append(str(plan_json['mono_plan']))
 
             names.append("multi_plan")
             datas.append(str(plan_json['multi_plan']))
-
-            names.append("terminal_error_x")
-            datas.append(str(plan_json['terminal_error_x']))
-
-            names.append("terminal_error_y")
-            datas.append(str(plan_json['terminal_error_y']))
-
-            names.append("terminal_error_heading (deg)")
-            datas.append(str(plan_json['terminal_error_heading'] * 57.3))
-
-            names.append("stuck_time (s)")
-            datas.append(str(plan_json['stuck_time']))
-
-            names.append("replan_consume_time (ms)")
-            datas.append(str(plan_json['replan_consume_time']))
-
-            names.append("total_plan_consume_time (ms)")
-            datas.append(str(plan_json['total_plan_consume_time']))
-
-            names.append("slot_occupied_ratio")
-            datas.append(str(plan_json['slot_occupied_ratio']))
 
             names.append("current_path_length")
             datas.append(str(plan_json['current_path_length']))
@@ -4170,18 +4212,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("slot_width")
             datas.append(str(plan_json['slot_width']))
-
-            names.append("plan_release_slots_id")
-            datas.append(str(plan_msg.successful_slot_info_list))
-
-            names.append("plan_gear_cmd")
-            gear_command = plan_msg.gear_command.gear_command_value
-            gear_command_dict = {0: 'GEAR_COMMAND_VALUE_NONE', 1: 'GEAR_COMMAND_VALUE_PARKING', 2: 'GEAR_COMMAND_VALUE_REVERSE', 3: 'GEAR_COMMAND_VALUE_NEUTRAL', 4: 'GEAR_COMMAND_VALUE_DRIVE', 5: 'GEAR_COMMAND_VALUE_LOW'}
-            gear = gear_command_dict.get(gear_command, 'UNKNOWN')
-            datas.append(str(gear_command) + ": " + str(gear))
-
-            names.append("plan_traj_available")
-            datas.append(str(plan_msg.trajectory.available))
 
             names.append("optimization_terminal_pose_error")
             datas.append(str(plan_json['optimization_terminal_pose_error']))
@@ -4220,31 +4250,6 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
             datas.append(str(plan_json['control_output_timestamp']))
         else:
           print('find plan or plan_debug error')
-
-        if dataLoader.fus_parking_msg['enable'] == True:
-          flag, fusion_msg = findt(dataLoader.fus_parking_msg, fusion_slot_timestamps[plan_i])
-          if not flag:
-            print('find fusion_msg error')
-          else:
-            names.append("fusion_release_slots_id")
-            parking_fusion_slot_lists = fusion_msg.parking_fusion_slot_lists
-            release_id = []
-            for slot in parking_fusion_slot_lists:
-              if slot.allow_parking == 1:
-                release_id.append(slot.id)
-            datas.append(str(release_id))
-        else:
-          print('find fusion_msg error')
-
-        if dataLoader.soc_state_msg['enable'] == True:
-          flag, soc_msg = findt(dataLoader.soc_state_msg, soc_timestamps[plan_i])
-          if not flag:
-            print('find soc_msg error')
-          else:
-            names.append("current_state")
-            datas.append(str(soc_msg.current_state))
-        else:
-          print('find soc_msg error')
 
         if dataLoader.vs_msg['enable'] == True:
           flag, vs_msg = findt(dataLoader.vs_msg, vehicle_service_timestamps[plan_i])

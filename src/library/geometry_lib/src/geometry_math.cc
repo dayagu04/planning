@@ -1,5 +1,6 @@
 #include "geometry_math.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -39,13 +40,25 @@ const double NormalizeAnglePI(const double angle) {
   return std::fabs(a);
 }
 
+const double AngleSubtraction(const double angle1, const double angle2) {
+  return NormalizeAngle(angle1 - angle2);
+}
+
+const bool IsSTrunPath(const PathSegment &path_seg1,
+                       const PathSegment &path_seg2) {
+  if (path_seg1.seg_gear != path_seg2.seg_gear) {
+    return false;
+  }
+  return IsOppositeSteer(path_seg1.seg_steer, path_seg2.seg_steer);
+}
+
 const bool IsHeadingEqual(const double heading_1, const double heading_2) {
   const double heading_tmp = NormalizeAnglePI(heading_1 - heading_2);
   if (heading_tmp <= kEqualHeadingEps) {
     return true;
   }
-  // std::cout << "heading1 = " << heading_1 << " heading2 = " << heading_2
-  //           << " heading error = " << heading_tmp << std::endl;
+  // ILOG_INFO << "heading1 = " << heading_1 << " heading2 = " << heading_2
+  //           << " heading error = " << heading_tmp ;
   return false;
 }
 
@@ -137,15 +150,15 @@ const bool CalTangentPointsOfEqualCircles(TangentOutput &output,
   const auto d_O1O2 = v_O1O2.norm();
 
   if (!pnc::mathlib::IsDoubleEqual(c1.radius, c2.radius)) {
-    std::cout << "two inequal radius!" << std::endl;
+    ILOG_INFO << "two inequal radius!";
   }
 
   bool inner_tagent = true;
   if (d_O1O2 < c1.radius + c2.radius) {
-    // std::cout << "outter tangent!" << std::endl;
+    // ILOG_INFO << "outter tangent!" ;
     inner_tagent = false;
   } else {
-    // std::cout << "inner tangent!" << std::endl;
+    // ILOG_INFO << "inner tangent!" ;
     inner_tagent = true;
   }
 
@@ -332,8 +345,9 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
   }
 
   if (IsDoubleEqual(GetCrossFromTwoVec2d(AB, CD), 0.0)) {
-    // std::cout
-    //     << "two lines are parallel or overlapping, which must be ruled out\n";
+    // ILOG_INFO
+    //     << "two lines are parallel or overlapping, which must be ruled
+    //     out\n";
     return LogErr(__func__, 1);
   }
 
@@ -931,7 +945,7 @@ const bool OneStepArcTargetLineByGear(
     return false;
   }
   if (IsArcAdvance(tmp_arc) != is_advanve) {
-    std::cout << "gear different, cal failed!" << std::endl;
+    ILOG_INFO << "gear different, cal failed!";
     return false;
   }
   arc = tmp_arc;
@@ -947,8 +961,8 @@ const bool OneStepArcTargetLine(
     Arc tmp_arc;
     const bool res = OneStepArcTargetLine(tmp_arc, start_pos, start_heading,
                                           is_left, target_line);
-    // std::cout << "No." << i << " calc res: " << res << std::endl;
-    // std::cout << "tmp_arc.headingB =" << tmp_arc.headingB * kRad2Deg <<
+    // ILOG_INFO << "No." << i << " calc res: " << res ;
+    // ILOG_INFO << "tmp_arc.headingB =" << tmp_arc.headingB * kRad2Deg <<
     // std::endl;
     if (res &&
         std::fabs(NormalizeAngle(tmp_arc.headingB - target_line.heading)) <=
@@ -969,8 +983,7 @@ const bool OneStepArcTargetLine(
       CalPoint2LineDist(start_pos, target_line);
 
   if (mathlib::IsDoubleEqual(dist_start_to_target_line, 0.0)) {
-    std::cout << "point is on the target line, cal one arc failed!"
-              << std::endl;
+    ILOG_INFO << "point is on the target line, cal one arc failed!";
     return false;
   }
 
@@ -984,9 +997,8 @@ const bool OneStepArcTargetLine(
       GetCrossFromTwoVec2d(v_start_heading, v_target_heading);
 
   if (mathlib::IsDoubleEqual(sin_heading_diff, 0.0)) {
-    std::cout << "heading of start pos and target line are parallel, cal one "
-                 "arc failed!"
-              << std::endl;
+    ILOG_INFO << "heading of start pos and target line are parallel, cal one "
+                 "arc failed!";
     return false;
   }
 
@@ -1001,7 +1013,7 @@ const bool OneStepArcTargetLine(
   const bool cal_res = CalNormalVecOfLineTowardsGivenPt(v_target_n_to_start,
                                                         target_line, start_pos);
   if (!cal_res) {
-    std::cout << "cal normal vec of target line failed!" << std::endl;
+    ILOG_INFO << "cal normal vec of target line failed!";
     return false;
   }
 
@@ -1014,7 +1026,7 @@ const bool OneStepArcTargetLine(
       GetCrossFromTwoVec2d(v_target_to_start, v_target_heading) /
       GetCrossFromTwoVec2d(v_target_heading, v_n_start_to_target);
   if (radius < 0.0) {
-    std::cout << "cal radius failed" << std::endl;
+    ILOG_INFO << "cal radius failed";
     return false;
   }
 
@@ -1042,8 +1054,7 @@ const bool CalNormalVecOfLineTowardsGivenPt(Eigen::Vector2d &v_line_n,
   const double dist_pt_to_line = CalPoint2LineDist(pt, line);
 
   if (mathlib::IsDoubleEqual(dist_pt_to_line, 0.0)) {
-    std::cout << "point is on the target line, cal line normal vector failed!"
-              << std::endl;
+    ILOG_INFO << "point is on the target line, cal line normal vector failed!";
     return false;
   }
 
@@ -1092,12 +1103,12 @@ void OneStepArcTargetHeading(Arc &arc, const Eigen::Vector2d &start_pos,
   arc.is_anti_clockwise = (theta_diff > 0.0);
   arc.is_ignored = false;
 
-  // std::cout << "start_pos: " << arc.pA.transpose() << std::endl;
-  // std::cout << "start_heading: " << arc.headingA * kRad2Deg << std::endl;
-  // std::cout << "end_pos: " << arc.pB.transpose() << std::endl;
-  // std::cout << "end_heading: " << arc.headingB * kRad2Deg << std::endl;
-  // std::cout << "arc.length: " << arc.length << std::endl;
-  // std::cout << "is_anti_clockwise: " << arc.is_anti_clockwise << std::endl;
+  // ILOG_INFO << "start_pos: " << arc.pA.transpose() ;
+  // ILOG_INFO << "start_heading: " << arc.headingA * kRad2Deg ;
+  // ILOG_INFO << "end_pos: " << arc.pB.transpose() ;
+  // ILOG_INFO << "end_heading: " << arc.headingB * kRad2Deg ;
+  // ILOG_INFO << "arc.length: " << arc.length ;
+  // ILOG_INFO << "is_anti_clockwise: " << arc.is_anti_clockwise ;
 }
 
 const bool OneStepParallelShift(
@@ -1119,19 +1130,19 @@ const bool OneStepParallelShift(
   first_arc.circle_info.center = start_pos + v_start_n * radius;
   first_arc.circle_info.radius = radius;
 
-  // std::cout << "first_arc.circle_info.center = " <<
+  // ILOG_INFO << "first_arc.circle_info.center = " <<
   // first_arc.circle_info.center
-  //           << std::endl;
+  //           ;
 
   first_arc.pA = start_pos;
   first_arc.headingA = start_heading;
 
   const double lat_dist = CalPoint2LineDist(start_pos, target_line);
 
-  // std::cout << "lat_dist = " << lat_dist << std::endl;
-  // std::cout << "start_pos = " << start_pos.transpose() << std::endl;
-  // std::cout << "target_line_x = " << target_line.pA.transpose() << std::endl;
-  // std::cout << "target_line_y = " << target_line.pB.transpose() << std::endl;
+  // ILOG_INFO << "lat_dist = " << lat_dist ;
+  // ILOG_INFO << "start_pos = " << start_pos.transpose() ;
+  // ILOG_INFO << "target_line_x = " << target_line.pA.transpose() ;
+  // ILOG_INFO << "target_line_y = " << target_line.pB.transpose() ;
 
   const double cos_theta = 1.0 - lat_dist / (2.0 * radius);
 
@@ -1140,7 +1151,7 @@ const bool OneStepParallelShift(
 
   const double theta = std::atan2(sin_theta, cos_theta);
   const double start_to_tan_lon_dist = radius * sin_theta;
-  // std::cout << "start_to_tan_lon_dist = " << start_to_tan_lon_dist <<
+  // ILOG_INFO << "start_to_tan_lon_dist = " << start_to_tan_lon_dist <<
   // std::endl;
 
   const double advance_sgn = (is_advance ? 1.0 : -1.0);
@@ -1637,8 +1648,8 @@ const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
     return LogErr(__func__, 5);
   }
   if (!IsHeadingEqual(arc2.headingB, line.heading)) {
-    std::cout << "arc2.headingB = " << arc2.headingB * kRad2Deg
-              << "  line.heading = " << line.heading * kRad2Deg << std::endl;
+    ILOG_INFO << "arc2.headingB = " << arc2.headingB * kRad2Deg
+              << "  line.heading = " << line.heading * kRad2Deg;
     return LogErr(__func__, 6);
   }
   return true;
@@ -1669,11 +1680,11 @@ const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
   // arc1 must be intersected with the line
   const auto dist = CalPoint2LineDist(arc1.circle_info.center, line);
   if (dist > arc1.circle_info.radius - 1e-6) {
-    // std::cout << "dist = " << dist << std::endl;
-    // std::cout << "center = " << arc1.circle_info.center.transpose()
-    //           << std::endl;
-    // std::cout << "line pa = " << line.pA.transpose()
-    //           << ", pb = " << line.pB.transpose() << std::endl;
+    // ILOG_INFO << "dist = " << dist ;
+    // ILOG_INFO << "center = " << arc1.circle_info.center.transpose()
+    //           ;
+    // ILOG_INFO << "line pa = " << line.pA.transpose()
+    //           << ", pb = " << line.pB.transpose() ;
 
     return LogErr(__func__, 1);
   }
@@ -1751,16 +1762,16 @@ const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
   }
 
   const auto dist = CalPoint2LineDist(pose.pos, line);
-  // std::cout << "pos = " << pose.pos.transpose()
+  // ILOG_INFO << "pos = " << pose.pos.transpose()
   //           << "  heading = " << pose.heading << "  dist = " << dist
-  //           << "   line.heading = " << line.heading << std::endl;
+  //           << "   line.heading = " << line.heading ;
   if (dist < lat_err &&
       std::fabs(NormalizeAngle(pose.heading - line.heading)) < heading_err) {
     return true;
   }
-  // std::cout << "pos = " << pose.pos.transpose()
+  // ILOG_INFO << "pos = " << pose.pos.transpose()
   //           << "  heading = " << pose.heading << "  dist = " << dist
-  //           << "   line.heading = " << line.heading << std::endl;
+  //           << "   line.heading = " << line.heading ;
   return false;
 }
 
@@ -1829,7 +1840,8 @@ const bool CalCommonTangentCircleOfTwoLine(
       tangent_ptss.emplace_back(tang_pts);
     }
   } else {
-    // std::cout << "two lines have no intersection, no common tangent circle\n";
+    // ILOG_INFO << "two lines have no intersection, no common tangent
+    // circle\n";
     return LogErr(__func__, 1);
   }
 
@@ -1896,10 +1908,10 @@ const bool MinimumBoundingBox(
   const Eigen::Matrix2d eigen_vectors = eigen_solver.eigenvectors();
 
   // compute main direction(length, x)
-  // std::cout << "eigen_values:" << eigen_values(0) << "\n";
-  // std::cout << "eigen_values:" << eigen_values(1) << "\n";
-  // std::cout << "eigen_vectors:" << eigen_vectors.col(0).transpose() << "\n";
-  // std::cout << "eigen_vectors:" << eigen_vectors.col(1).transpose() << "\n";
+  // ILOG_INFO << "eigen_values:" << eigen_values(0) << "\n";
+  // ILOG_INFO << "eigen_values:" << eigen_values(1) << "\n";
+  // ILOG_INFO << "eigen_vectors:" << eigen_vectors.col(0).transpose() << "\n";
+  // ILOG_INFO << "eigen_vectors:" << eigen_vectors.col(1).transpose() << "\n";
   if (std::fabs(eigen_values(0)) < 1e-4) {
     return false;
   }
@@ -1915,9 +1927,9 @@ const bool MinimumBoundingBox(
       0.25 * ((original_vertices[1] - original_vertices[0]).norm() +
               (original_vertices[3] - original_vertices[2]).norm());
 
-  // std::cout << "direction:" << direction.transpose() << "\n";
-  // std::cout << "half_length:" << half_length << "\n";
-  // std::cout << "half_width:" << half_width << "\n";
+  // ILOG_INFO << "direction:" << direction.transpose() << "\n";
+  // ILOG_INFO << "half_length:" << half_length << "\n";
+  // ILOG_INFO << "half_width:" << half_width << "\n";
 
   target_boundingbox.emplace_back(center + direction * half_length -
                                   direction_t * half_width);
@@ -1953,7 +1965,7 @@ const bool CheckTwoVecCollinear(const Eigen::Vector2d &v1,
   if (std::fabs(sin_theta) < 0.015) {
     return true;
   }
-  std::cout << "sin_theta = " << sin_theta << std::endl;
+  ILOG_INFO << "sin_theta = " << sin_theta;
   return false;
 }
 
@@ -1967,7 +1979,7 @@ const bool CheckTwoVecVertical(const Eigen::Vector2d &v1,
   if (std::fabs(cos_theta) < 0.015) {
     return true;
   }
-  std::cout << "cos_theta = " << cos_theta << std::endl;
+  ILOG_INFO << "cos_theta = " << cos_theta;
   return false;
 }
 
@@ -1993,8 +2005,7 @@ const bool CompleteArcInfo(Arc &arc) {
   // const auto AB_norm = (arc.pB - arc.pA).norm();
   if (IsDoubleEqual(OA_norm, 0.0) || IsDoubleEqual(OB_norm, 0.0) ||
       !IsDoubleEqual(OA_norm, OB_norm)) {
-    std::cout << "OA_norm = " << OA_norm << "  OB_norm = " << OB_norm
-              << std::endl;
+    ILOG_INFO << "OA_norm = " << OA_norm << "  OB_norm = " << OB_norm;
     return LogErr(__func__, 0);
   }
 
@@ -2229,7 +2240,7 @@ const Eigen::Vector2d CalArcCenter(const Eigen::Vector2d &pos,
 const uint8_t CalArcGear(const Arc &arc) {
   const Eigen::Vector2d v_ab = arc.pB - arc.pA;
   if (mathlib::IsDoubleEqual(v_ab.norm(), 0.0)) {
-    std::cout << "arc input err, no gear\n";
+    ILOG_INFO << "arc input err, no gear\n";
     return SEG_GEAR_INVALID;
   }
 
@@ -2242,7 +2253,7 @@ const uint8_t CalArcGear(const Arc &arc) {
 const uint8_t CalArcSteer(const Arc &arc) {
   const Eigen::Vector2d v_oa = arc.pA - arc.circle_info.center;
   if (mathlib::IsDoubleEqual(v_oa.norm(), 0.0)) {
-    std::cout << "arc input err, no steer\n";
+    ILOG_INFO << "arc input err, no steer\n";
     return SEG_STEER_INVALID;
   }
   const Eigen::Vector2d v_heading_a(std::cos(arc.headingA),
@@ -2255,7 +2266,7 @@ const uint8_t CalArcSteer(const Arc &arc) {
 const uint8_t CalLineSegGear(const LineSegment &line_seg) {
   const auto &v1 = line_seg.pB - line_seg.pA;
   if (mathlib::IsDoubleEqual(v1.norm(), 0.0)) {
-    std::cout << "line input err, no gear\n";
+    ILOG_INFO << "line input err, no gear\n";
     return SEG_GEAR_INVALID;
   }
   const auto &v2 = GetUnitTangVecByHeading(line_seg.heading);
@@ -2293,13 +2304,13 @@ const bool CalcArcDirection(bool &is_anti_clockwise, const uint8_t gear,
                             const uint8_t steer) {
   if (gear != pnc::geometry_lib::SEG_GEAR_DRIVE &&
       gear != pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    std::cout << "arc fault gear type!" << std::endl;
+    ILOG_INFO << "arc fault gear type!";
     return false;
   }
 
   if (steer != pnc::geometry_lib::SEG_STEER_RIGHT &&
       steer != pnc::geometry_lib::SEG_STEER_LEFT) {
-    std::cout << "arc fault steer type!" << std::endl;
+    ILOG_INFO << "arc fault steer type!";
     return false;
   }
 
@@ -2335,13 +2346,13 @@ const bool ReversePathSegInfo(PathSegment &path_seg) {
 
 const bool ReverseArcSegInfo(PathSegment &path_seg) {
   if (path_seg.seg_type != SEG_TYPE_ARC) {
-    std::cout << "input is not arc!" << std::endl;
+    ILOG_INFO << "input is not arc!";
     return false;
   }
 
   if (path_seg.seg_steer != SEG_STEER_LEFT &&
       path_seg.seg_steer != SEG_STEER_RIGHT) {
-    std::cout << "arc input steer error!" << std::endl;
+    ILOG_INFO << "arc input steer error!";
     return false;
   }
   path_seg.seg_gear = ReverseGear(path_seg.seg_gear);
@@ -2355,17 +2366,32 @@ const bool ReverseArcSegInfo(PathSegment &path_seg) {
 
 const bool ReverseLineSegInfo(PathSegment &path_seg) {
   if (path_seg.seg_type != SEG_TYPE_LINE) {
-    std::cout << "input is not line!" << std::endl;
+    ILOG_INFO << "input is not line!";
     return false;
   }
 
   if (path_seg.seg_steer != SEG_STEER_STRAIGHT) {
-    std::cout << "line input steer error!" << std::endl;
+    ILOG_INFO << "line input steer error!";
     return false;
   }
   path_seg.seg_gear = ReverseGear(path_seg.seg_gear);
   path_seg.line_seg.pA.swap(path_seg.line_seg.pB);
   return true;
+}
+
+const bool ReversePathSegVecInfo(std::vector<PathSegment> &path_seg_vec) {
+  bool success = true;
+  for (auto &path_seg : path_seg_vec) {
+    if (!ReversePathSegInfo(path_seg)) {
+      success = false;
+      break;
+    }
+  }
+
+  if (success) {
+    std::reverse(path_seg_vec.begin(), path_seg_vec.end());
+  }
+  return success;
 }
 
 const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
@@ -2385,10 +2411,10 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
     // pos is on right side of the line
     line_norm_vec << -line_tang_vec.y(), line_tang_vec.x();
   } else {
-    std::cout << "pos = " << pos.transpose()
+    ILOG_INFO << "pos = " << pos.transpose()
               << "  line.pA = " << line.pA.transpose()
               << "  line.pB = " << line.pB.transpose()
-              << "  line.heading = " << line.heading * kRad2Deg << std::endl;
+              << "  line.heading = " << line.heading * kRad2Deg;
     return LogErr(__func__, 1, 1);
   }
   return true;
@@ -2448,8 +2474,8 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
     return LogErr(__func__, 1);
   }
   if (!IsHeadingEqual(arc.headingB, line.heading)) {
-    std::cout << "arc.headingB = " << arc.headingB * kRad2Deg
-              << "  line.heading = " << line.heading * kRad2Deg << std::endl;
+    ILOG_INFO << "arc.headingB = " << arc.headingB * kRad2Deg
+              << "  line.heading = " << line.heading * kRad2Deg;
     return LogErr(__func__, 2);
   }
   return true;
@@ -2464,8 +2490,8 @@ const bool LogErr(const std::string &func_name, uint8_t index,
     err_type = " fail ";
   }
 
-  // std::cout << func_name + err_type + " err " + std::to_string(index)
-  //           << std::endl;
+  // ILOG_INFO << func_name + err_type + " err " + std::to_string(index)
+  //           ;
 
   return false;
 }
@@ -2494,8 +2520,8 @@ const bool CalOneArcWithTargetHeadingAndGear(Arc &arc,
   }
 
   if (!mathlib::IsDoubleEqual(arc.headingB, target_heading, 1e-4)) {
-    std::cout << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
-              << "target_heading =" << target_heading * kRad2Deg << std::endl;
+    ILOG_INFO << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
+              << "target_heading =" << target_heading * kRad2Deg;
     return LogErr(__func__, 2);
   }
 
@@ -2532,8 +2558,8 @@ const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t current_seg_gear,
   }
 
   if (!IsHeadingEqual(arc.headingB, target_heading)) {
-    std::cout << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
-              << "target_heading =" << target_heading * kRad2Deg << std::endl;
+    ILOG_INFO << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
+              << "target_heading =" << target_heading * kRad2Deg;
     return LogErr(__func__, 2);
   }
 
@@ -2569,8 +2595,8 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
   const double lat_dist = CalPoint2LineDist(arc1.pA, line2);
   // if radius is too small, arc1 and arc2 cannot be tangent
   if (arc1.circle_info.radius * 4.0 < lat_dist + 1e-8 || lat_dist < 1e-5) {
-    std::cout << "radius = " << arc1.circle_info.radius
-              << "  lat_dist = " << lat_dist << std::endl;
+    ILOG_INFO << "radius = " << arc1.circle_info.radius
+              << "  lat_dist = " << lat_dist;
     return LogErr(__func__, 2);
   }
   // the C is the tangent of arc1 and arc2
@@ -2686,96 +2712,85 @@ std::vector<Eigen::Vector2d> LinSpace(const Eigen::Vector2d &start_pos,
 }
 
 void PrintPose(const pnc::geometry_lib::PathPoint &pose) {
-  std::cout << " " << pose.pos.x() << ", " << pose.pos.y()
-            << ", heading(deg): " << pose.heading * kRad2Deg << std::endl;
+  ILOG_INFO << " " << pose.pos.x() << ", " << pose.pos.y()
+            << ", heading(deg): " << pose.heading * kRad2Deg;
 }
 
 void PrintPose(const std::string &str,
                const pnc::geometry_lib::PathPoint &pose) {
-  std::cout << str << "= " << pose.pos.x() << ", " << pose.pos.y()
-            << ", heading(deg): " << pose.heading * kRad2Deg << std::endl;
+  ILOG_INFO << str << "= " << pose.pos.x() << ", " << pose.pos.y()
+            << ", heading(deg): " << pose.heading * kRad2Deg;
 }
 
 void PrintPose(const Eigen::Vector2d &pos, const double heading) {
-  std::cout << " " << pos.x() << ", " << pos.y()
-            << ", heading(deg): " << heading * kRad2Deg << std::endl;
+  ILOG_INFO << " " << pos.x() << ", " << pos.y()
+            << ", heading(deg): " << heading * kRad2Deg;
 }
 
 void PrintPose(const std::string &str, const Eigen::Vector2d &pos,
                const double heading) {
-  std::cout << str << "= " << pos.x() << ", " << pos.y()
-            << ", heading(deg): " << heading * kRad2Deg << std::endl;
+  ILOG_INFO << str << "= " << pos.x() << ", " << pos.y()
+            << ", heading(deg): " << heading * kRad2Deg;
 }
 
 void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {
-  std::cout << "----" << std::endl;
-  std::cout << "seg_gear: " << static_cast<int>(seg.seg_gear) << std::endl;
+  ILOG_INFO << "----";
+  ILOG_INFO << "seg_gear: " << static_cast<int>(seg.seg_gear);
 
-  std::cout << "seg_steer: " << static_cast<int>(seg.seg_steer) << std::endl;
-  std::cout << "seg_type: " << static_cast<int>(seg.seg_type) << std::endl;
-  std::cout << "length: " << seg.Getlength() << std::endl;
+  ILOG_INFO << "seg_steer: " << static_cast<int>(seg.seg_steer);
+  ILOG_INFO << "seg_type: " << static_cast<int>(seg.seg_type);
+  ILOG_INFO << "length: " << seg.Getlength();
 
   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-    std::cout << "start_pos: " << seg.GetLineSeg().pA.transpose() << std::endl;
-    std::cout << "start_heading deg: " << seg.GetLineSeg().heading * kRad2Deg
-              << std::endl;
-    std::cout << "end_pos: " << seg.GetLineSeg().pB.transpose() << std::endl;
-    std::cout << "end_heading deg: " << seg.GetLineSeg().heading * kRad2Deg
-              << std::endl;
+    ILOG_INFO << "start_pos: " << seg.GetLineSeg().pA.transpose();
+    ILOG_INFO << "start_heading deg: " << seg.GetLineSeg().heading * kRad2Deg;
+    ILOG_INFO << "end_pos: " << seg.GetLineSeg().pB.transpose();
+    ILOG_INFO << "end_heading deg: " << seg.GetLineSeg().heading * kRad2Deg;
   } else {
-    std::cout << "start_pos: " << seg.GetArcSeg().pA.transpose() << std::endl;
-    std::cout << "start_heading deg: " << seg.GetArcSeg().headingA * kRad2Deg
-              << std::endl;
-    std::cout << "end_pos: " << seg.GetArcSeg().pB.transpose() << std::endl;
-    std::cout << "end_heading deg: " << seg.GetArcSeg().headingB * kRad2Deg
-              << std::endl;
+    ILOG_INFO << "start_pos: " << seg.GetArcSeg().pA.transpose();
+    ILOG_INFO << "start_heading deg: " << seg.GetArcSeg().headingA * kRad2Deg;
+    ILOG_INFO << "end_pos: " << seg.GetArcSeg().pB.transpose();
+    ILOG_INFO << "end_heading deg: " << seg.GetArcSeg().headingB * kRad2Deg;
   }
 }
 
 void PrintSegmentsVecInfo(
     const std::vector<pnc::geometry_lib::PathSegment> &path_segment_vec) {
-  std::cout << "-------------- OutputSegmentsInfo --------------" << std::endl;
+  ILOG_INFO << "-------------- OutputSegmentsInfo --------------";
   for (size_t i = 0; i < path_segment_vec.size(); i++) {
     const auto &current_seg = path_segment_vec[i];
 
     if (current_seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
       const auto &line_seg = current_seg.line_seg;
 
-      std::cout << "Segment [" << i << "] "
+      ILOG_INFO << "Segment [" << i << "] "
                 << " LINE_SEGMENT "
-                << " length= " << line_seg.length << std::endl;
+                << " length= " << line_seg.length;
 
-      std::cout << "seg_gear: " << static_cast<int>(current_seg.seg_gear)
-                << std::endl;
+      ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-      std::cout << "seg_steer: " << static_cast<int>(current_seg.seg_steer)
-                << std::endl;
+      ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-      std::cout << "start_pos: " << line_seg.pA.transpose() << std::endl;
-      std::cout << "start_heading deg: " << line_seg.heading * kRad2Deg
-                << std::endl;
-      std::cout << "end_pos: " << line_seg.pB.transpose() << std::endl;
+      ILOG_INFO << "start_pos: " << line_seg.pA.transpose();
+      ILOG_INFO << "start_heading deg: " << line_seg.heading * kRad2Deg;
+      ILOG_INFO << "end_pos: " << line_seg.pB.transpose();
     } else {
       const auto &arc_seg = current_seg.arc_seg;
 
-      std::cout << "Segment [" << i << "] "
+      ILOG_INFO << "Segment [" << i << "] "
                 << "ARC_SEGMENT "
-                << "length= " << arc_seg.length << std::endl;
+                << "length= " << arc_seg.length;
 
-      std::cout << "seg_gear: " << static_cast<int>(current_seg.seg_gear)
-                << std::endl;
+      ILOG_INFO << "seg_gear: " << static_cast<int>(current_seg.seg_gear);
 
-      std::cout << "seg_steer: " << static_cast<int>(current_seg.seg_steer)
-                << std::endl;
+      ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-      std::cout << "start_pos: " << arc_seg.pA.transpose() << std::endl;
-      std::cout << "start_heading deg: " << arc_seg.headingA * kRad2Deg
-                << std::endl;
-      std::cout << "end_pos: " << arc_seg.pB.transpose() << std::endl;
-      std::cout << "end_heading deg: " << arc_seg.headingB * kRad2Deg
-                << std::endl;
-      std::cout << "center: " << arc_seg.circle_info.center.transpose()
-                << "radius = " << arc_seg.circle_info.radius << std::endl;
+      ILOG_INFO << "start_pos: " << arc_seg.pA.transpose();
+      ILOG_INFO << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
+      ILOG_INFO << "end_pos: " << arc_seg.pB.transpose();
+      ILOG_INFO << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
+      ILOG_INFO << "center: " << arc_seg.circle_info.center.transpose()
+                << "radius = " << arc_seg.circle_info.radius;
     }
   }
 }
@@ -3042,6 +3057,38 @@ void GeometryPath::CalcCost() {
   steer_change_cost = 3.0 * steer_change_count;
 
   cost = gear_change_cost + length_cost + steer_change_cost;
+}
+
+void GeometryPath::GlobalToLocal(const GlobalToLocalTf &g2l_tf) {
+  for (auto &path_seg : path_segment_vec) {
+    path_seg.GlobalToLocal(g2l_tf);
+  }
+  start_pose.GlobalToLocal(g2l_tf);
+  end_pose.GlobalToLocal(g2l_tf);
+  for (auto &pt : path_pt_vec) {
+    pt.GlobalToLocal(g2l_tf);
+  }
+}
+
+void GeometryPath::LocalToGlobal(const LocalToGlobalTf &l2g_tf) {
+  for (auto &path_seg : path_segment_vec) {
+    path_seg.LocalToGlobal(l2g_tf);
+  }
+  start_pose.LocalToGlobal(l2g_tf);
+  end_pose.LocalToGlobal(l2g_tf);
+  for (auto &pt : path_pt_vec) {
+    pt.LocalToGlobal(l2g_tf);
+  }
+}
+
+const bool GeometryPath::IsHasSTurnPath() const {
+  // 同挡位里有左转右转来回切换称为S弯路径
+  for (size_t i = 0; i < path_count - 1; ++i) {
+    if (IsSTrunPath(path_segment_vec[i], path_segment_vec[i + 1])) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void PathSegment::PrintInfo(const bool enable_log) const {

@@ -2,26 +2,10 @@
 
 #include <memory>
 
-#include "camera_preception_groundline_c.h"
-#include "camera_preception_tsr_c.h"
-#include "control_command_c.h"
+#include "planning_intf.h"
 #include "ehr.pb.h"
-#include "ehr_sdmap.pb.h"
-#include "func_state_machine_c.h"
-#include "fusion_objects_c.h"
-#include "fusion_occupancy_objects_c.h"
-#include "fusion_parking_slot_c.h"
-#include "fusion_road_c.h"
-#include "hmi_inner_c.h"
-#include "ifly_localization_c.h"
-#include "ifly_parking_map_c.h"
 #include "interface/src/legacy/interface2.4.5/hmi_mcu_inner_c.h"
 #include "interface/src/legacy/interface2.4.6/localization_c.h"
-#include "planning_plan_c.h"
-#include "prediction_c.h"
-#include "uss_perception_info_c.h"
-#include "uss_wave_info_c.h"
-#include "vehicle_service_c.h"
 
 namespace planning {
 /**

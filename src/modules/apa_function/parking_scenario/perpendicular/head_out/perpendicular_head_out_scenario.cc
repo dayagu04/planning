@@ -50,10 +50,13 @@ void PerpendicularHeadOutScenario::PlanCore() {
     return;
   }
 
+  // const double safe_uss_remain_dist =
+  //     (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
+  //         ? apa_param.GetParam().safe_uss_remain_dist_out_slot
+  //         : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+
   const double safe_uss_remain_dist =
-      (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
-          ? apa_param.GetParam().safe_uss_remain_dist_out_slot
-          : apa_param.GetParam().safe_uss_remain_dist_in_slot;
+      apa_param.GetParam().safe_uss_remain_dist_in_slot;
   // update remain dist
   UpdateRemainDist(safe_uss_remain_dist);
 
@@ -181,7 +184,12 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
             apa_world_ptr_->GetApaDataPtr()
                 ->simu_param.target_managed_slot_y_vec[i];
       } else {
-        pt[i] << slot_points[i].x(), slot_points[i].y();
+        if (slot_points.size() > 0) {
+          pt[i] << slot_points[i].x(), slot_points[i].y();
+        } else {
+          ILOG_INFO << "ego slot points size is 0";
+          return false;
+        }
       }
     }
     const Eigen::Vector2d pM01 = 0.5 * (pt[0] + pt[1]);
@@ -286,32 +294,8 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
 
   ego_slot_info.fus_obj_valid_flag =
       slot_manager_ptr_->GetEgoSlotInfo().fus_obj_valid_flag;
-  ego_slot_info.obs_pt_vec_slot.clear();
-  ego_slot_info.obs_pt_vec_slot.reserve(
-      slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot.size());
 
-  uint8_t obs_in_slot_count = 0;
-  const uint8_t max_obs_in_slot_count = 5;
-
-  for (const Eigen::Vector2d& obs_pt :
-       slot_manager_ptr_->GetEgoSlotInfo().obs_pt_vec_slot) {
-    const Eigen::Vector2d obs_pt_slot = ego_slot_info.g2l_tf.GetPos(obs_pt);
-    if (ego_slot_info.fus_obj_valid_flag) {
-      if (std::fabs(obs_pt_slot.y()) < 0.6 &&
-          obs_pt_slot.x() > ego_slot_info.pt_0.x() -
-                                apa_param.GetParam().car_length + 0.168 &&
-          obs_pt_slot.x() < ego_slot_info.pt_0.x() + 0.168) {
-        obs_in_slot_count++;
-      }
-    }
-
-    ego_slot_info.obs_pt_vec_slot.emplace_back(std::move(obs_pt_slot));
-  }
-
-  if (obs_in_slot_count > max_obs_in_slot_count) {
-    ILOG_INFO << "obs_in_slot_count > max_obs_in_slot_count";
-    return false;
-  }
+  UpdateObstacleLocal();
 
   //**************************
   // limiter,cal target pos,cal terminal error,cal slot occupied ratio
@@ -332,6 +316,10 @@ const bool PerpendicularHeadOutScenario::UpdateEgoSlotInfo() {
                    ->GetParkOutDirection() == ApaParkOutDirection::LEFT_FRONT) {
       frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_LEFT;
       slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+    } else if (apa_world_ptr_->GetStateMachineManagerPtr()
+                   ->GetParkOutDirection() == ApaParkOutDirection::FRONT) {
+      frame_.current_arc_steer = pnc::geometry_lib::SEG_STEER_STRAIGHT;
+      slot_t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
     }
 
     ILOG_INFO << "Now default to turn right at first";
@@ -1421,6 +1409,7 @@ const bool PerpendicularHeadOutScenario::CheckReplan() {
 }
 
 const bool PerpendicularHeadOutScenario::CheckFinished() {
+  bool parking_finish = false;
   const auto& ego_slot_info = frame_.ego_slot_info;
 
   const bool heading_condition_1 =
@@ -1437,7 +1426,11 @@ const bool PerpendicularHeadOutScenario::CheckFinished() {
   const bool remain_s_condition =
       frame_.remain_dist < apa_param.GetParam().max_replan_remain_dist;
 
-  bool parking_finish = lat_condition && static_condition && remain_s_condition;
+  if (frame_.current_arc_steer == pnc::geometry_lib::SEG_STEER_STRAIGHT) {
+    parking_finish = remain_s_condition;
+  } else {
+    parking_finish = lat_condition && static_condition && remain_s_condition;
+  }
 
   if (parking_finish) {
     return true;

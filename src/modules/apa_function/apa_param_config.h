@@ -32,7 +32,8 @@ struct AstarParkingConfig {
   // move target point in slot to another point for easy tracking
   double vertical_slot_end_straight_dist = 1.0;
   double parallel_slot_end_straight_dist = 0.0;
-  bool enable_delete_fusion_obj_in_slot = true;
+  bool enable_delete_occ_in_slot;
+  bool enable_delete_occ_in_ego;
   double deadend_uss_stuck_replan_wait_time;
 };
 

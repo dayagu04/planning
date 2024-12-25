@@ -1,5 +1,6 @@
 
 #include <memory>
+#include <unordered_map>
 
 #include "apa_state_machine_manager.h"
 #include "slot_manager.h"
@@ -16,13 +17,17 @@ namespace apa_planner {
 class RuleBasedSlotRelease {
  public:
   RuleBasedSlotRelease() = default;
+  ~RuleBasedSlotRelease() = default;
 
   void Process(
       const LocalView *local_view,
       const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
       const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
+      const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr,
       std::unordered_map<size_t, iflyauto::ParkingFusionSlot> &fusion_slot_map,
       apa_planner::SlotManager::Frame &frame);
+
+  void Reset();
 
  private:
   //  泊车巡航场景，更新车位释放决策
@@ -35,15 +40,20 @@ class RuleBasedSlotRelease {
 
   const bool IsEgoCloseToObs(const LocalView *local_view);
 
+  void GenerateParkObstacleList();
+
+  const bool IsEgoCloseToObs();
+
+  const bool IsPerpendicularSlotAndPassageAreaOccupied(
+      const common::SlotInfo *slot);
+
+  const bool IsParallelSlotAndPassageAreaOccupied(const common::SlotInfo *slot);
+
   bool IsPassageAreaEnough(const common::SlotInfo *slot);
 
   const bool IsSlotOccupied(const common::SlotInfo *slot);
 
-  const double CalLonDistSlot2Car(const common::SlotInfo &new_slot_info) const;
-
-  const bool UpdateEgoParallelSlotInfoInSearching(
-      apa_planner::SlotManager::EgoSlotInfo &ego_slot_info,
-      const common::SlotInfo *slot_info);
+  const bool IsSlotCoarseRelease(common::SlotInfo *slot);
 
   const bool IsPerpendicularSlotCoarseRelease(
       common::SlotInfo *slot, apa_planner::SlotInfoWindow *slot_history);
@@ -61,6 +71,8 @@ class RuleBasedSlotRelease {
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
 
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
+
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
 
   // todo: move to collision detection
   ParkObstacleList obs_list_;

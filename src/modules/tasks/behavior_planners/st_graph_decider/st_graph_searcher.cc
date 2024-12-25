@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "config/basic_type.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "log.h"
@@ -299,7 +300,7 @@ bool StGraphSearcher::SearchStPath(
   const double s_step = config_.s_step;
   const double t_step = config_.t_step;
   const double vel_step = config_.vel_step;
-  // const double max_search_time = config_.max_search_time_s;
+  const double max_search_time = config_.max_search_time_s;
 
   double planning_distance = planned_kd_path->Length();
   UpdateHeuristicTargetSInLaneChange(session_, planning_time_horizon,
@@ -324,7 +325,7 @@ bool StGraphSearcher::SearchStPath(
   bool is_goal_reached = false;
 
   // record time
-  // const double start_time = IflyTime::Now_ms();
+  const double start_time = IflyTime::Now_ms();
   int count = 0;
   auto current_node = start_node;
   auto best_node = current_node;
@@ -335,17 +336,17 @@ bool StGraphSearcher::SearchStPath(
   std::vector<double> history_cur_nodes_t_vec{};
   // start A* search loop
   while (!open_set.IsEmpty()) {
-    // const double current_time = IflyTime::Now_ms();
-    // const double time_used = current_time - start_time;
-    // const double max_search_time_ms = max_search_time * 1e3;
+    const double current_time = IflyTime::Now_ms();
+    const double time_used = current_time - start_time;
+    const double max_search_time_ms = max_search_time * 1e3;
     // max search time < 0.1s
-    // if (time_used > max_search_time_ms) {
-    //   LOG_DEBUG("time out, time used: %.4f", time_used);
-    //   break;
-    // }
-    if (count > 100) {
+    if (time_used > max_search_time_ms) {
+      LOG_DEBUG("time out, time used: %.4f", time_used);
       break;
     }
+    // if (count > 100) {
+    //   break;
+    // }
 
     count++;
     current_node = nodes.at(open_set.Top().first);
@@ -386,6 +387,8 @@ bool StGraphSearcher::SearchStPath(
           old_child.set_parent_id(current_node.id());
           open_set.Update(old_child.id(), old_child.TotalCost());
         }
+        expanded_nodes_s_vec.emplace_back(child_node.s());
+        expanded_nodes_t_vec.emplace_back(child_node.t());
       } else {
         child_node.set_g_cost(child_total_g_cost);
         child_node.set_parent_id(current_node.id());
@@ -400,6 +403,9 @@ bool StGraphSearcher::SearchStPath(
   JSON_DEBUG_VECTOR("expanded_nodes_t_vec", expanded_nodes_t_vec, 3)
   JSON_DEBUG_VECTOR("history_cur_nodes_s_vec", history_cur_nodes_s_vec, 3)
   JSON_DEBUG_VECTOR("history_cur_nodes_t_vec", history_cur_nodes_t_vec, 3)
+  JSON_DEBUG_VALUE("search_succeed", is_goal_reached)
+  JSON_DEBUG_VALUE("expanded_nodes_size", expanded_nodes_s_vec.size())
+  JSON_DEBUG_VALUE("history_cur_nodes_size", history_cur_nodes_s_vec.size())
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
     LOG_DEBUG("st search fail, goal not reached \n");
@@ -654,7 +660,7 @@ std::vector<StSearchNode> StGraphSearcher::GenerateSuccessorNodes(
     // generate succ node
     StSearchNode succ_node =
         StSearchNode(s_succ, t_succ, vel_succ, input_info.s_step(),
-                     input_info.t_step(), input_info.vel_step());
+                     input_info.t_step(), input_info.vel_step(), config_.enable_only_s_t_hash);
 
     succ_node.set_parent_id(current_node.id());
     succ_node.set_upper_bound(upper_bound);

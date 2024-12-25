@@ -317,48 +317,18 @@ struct UssDistance {
   }
 };
 
-struct ApaObstacle {
-  size_t id = 0;
-  double vel = 0.0;
-  Eigen::Vector2d center_2d = Eigen::Vector2d(0.0, 0.0);
-  Eigen::Vector3d center_3d = Eigen::Vector3d(0.0, 0.0, 0.0);
-  std::vector<Eigen::Vector2d> obs2d_pt_vec;
-  std::vector<Eigen::Vector3d> obs3d_pt_vec;
-  size_t obs2d_pt_size = 0;
-  size_t obs3d_pt_size = 0;
-  ObstacleType obs_type = ObstacleType::INVALID;
-};
-
-struct CarPredictTraj {
-  std::vector<pnc::geometry_lib::PathPoint> car_predict_pt_vec;
-
-  void Reset() { car_predict_pt_vec.clear(); }
-};
-
 struct ApaData {
   // 这些指针只准在apa_world里的preprocess使用 其他代码后续应当不能访问
   const iflyauto::FuncStateMachine* func_state_ptr;
   const iflyauto::ParkingFusionInfo* parking_slot_ptr;
-  const iflyauto::IFLYLocalization* localization_ptr;
-  const iflyauto::VehicleServiceOutputInfo* vehicle_service_info_ptr;
   const iflyauto::UssWaveInfo* uss_wave_info_ptr;
   const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
   const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
   const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
   const iflyauto::FusionOccupancyObjectsInfo* fusion_occupancy_objects_info_ptr;
-  const iflyauto::ControlOutput* control_output_ptr;
-  const iflyauto::PlanningOutput* plan_output_ptr;
-
-  CarPredictTraj car_predict_traj;
 
   ApaSlots apa_slots;
   UssDistance uss_dis;
-
-  // 暂时用这个 无需改变太多之前代码
-  std::unordered_map<ObstacleType, std::vector<Eigen::Vector2d>> apa_obs_map;
-
-  // 后面需要用这个
-  // std::unordered_map<ObstacleType, std::vector<ApaObstacle>> apa_obs_map;
 
   SimulationParam simu_param;
 
@@ -370,10 +340,8 @@ struct ApaData {
   const LocalView* local_view_ptr_ = nullptr;
 
   void Reset() {
-    car_predict_traj.Reset();
     apa_slots.Reset();
     uss_dis.Reset();
-    apa_obs_map.clear();
 
     slot_type = Common::PARKING_SLOT_TYPE_INVALID;
     slot_id = 0;

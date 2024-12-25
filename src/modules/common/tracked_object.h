@@ -159,6 +159,9 @@ struct TrackedObject {
   bool is_traffic_facilities = false;
   bool is_car = false;
   bool lane_borrow = false;
+  bool front_car = false;
+  bool side_car = false;
+  bool rear_car = false;
 
   // fisheye related for cutin
   Point2D points_3d_f = {DBL_MAX, DBL_MAX};

@@ -14,6 +14,7 @@
 #include "Eigen/Core"
 #include "apa_data.h"
 #include "apa_measure_data_manager.h"
+#include "apa_obstacle_manager.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -385,17 +386,13 @@ class SlotManager {
   struct Frame {
     const iflyauto::FuncStateMachine* func_state_ptr;
     const iflyauto::ParkingFusionInfo* parking_slot_ptr;
-    const iflyauto::IFLYLocalization* localization_ptr;
-    // slot state check by uss
-    const iflyauto::UssWaveInfo* uss_wave_info_ptr;
     const iflyauto::UssPerceptInfo* uss_percept_info_ptr;
     const iflyauto::GroundLinePerceptionInfo* ground_line_perception_info_ptr;
     const iflyauto::FusionObjectsInfo* fusion_objects_info_ptr;
     const iflyauto::FusionOccupancyObjectsInfo*
         fusion_occupancy_objects_info_ptr;
 
-    std::shared_ptr<CollisionDetector> collision_detector_ptr =
-        std::make_shared<CollisionDetector>();
+    std::unordered_map<uint8_t, uint8_t> slot_release_voter;
 
     // clear in per frame
     std::vector<int> release_slot_id_vec;
@@ -465,13 +462,14 @@ class SlotManager {
 
       park_out_select_id = 0;
 
-      collision_detector_ptr->Reset();
+      slot_release_voter.clear();
     }
   };
 
   bool Update(const std::shared_ptr<ApaData> apa_data_ptr,
               const std::shared_ptr<ApaStateMachineManager> state_machine_ptr,
-              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr);
+              const std::shared_ptr<ApaMeasureDataManager> measure_data_ptr,
+              const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr);
 
   void AddUssPerceptObstacles();
 
@@ -527,6 +525,7 @@ class SlotManager {
 
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
+  std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr_;
 
   void AddObstacles();
 

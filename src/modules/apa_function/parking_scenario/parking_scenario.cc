@@ -10,6 +10,7 @@
 #include "common.pb.h"
 #include "common_c.h"
 #include "debug_info_log.h"
+#include "geometry_math.h"
 #include "log_glog.h"
 #include "parking_task/deciders/narrow_space_decider.h"
 #include "parking_task/parking_task.h"
@@ -67,9 +68,9 @@ const bool ParkingScenario::CheckPlanSkip() const {
   if ((frame_.plan_stm.planning_status == PARKING_FINISHED ||
        frame_.plan_stm.planning_status == PARKING_FAILED) &&
       !apa_world_ptr_->GetApaDataPtr()->simu_param.force_plan) {
-    ILOG_INFO << "plan has been finished or failed, need reset";
+    ILOG_INFO << "plan has been finished or failed, should skip";
 
-    apa_world_ptr_->GetSlotManagerPtr()->Reset();
+    // apa_world_ptr_->GetSlotManagerPtr()->Reset();
 
     return true;
   } else {
@@ -174,6 +175,17 @@ void ParkingScenario::GenPlanningPath() {
   planning_output_.trajectory.target_reference.target_velocity =
       frame_.vel_target;
 
+  // reset obs remain dist when gear shift
+  if ((frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+       planning_output_.gear_command.gear_command_value ==
+           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE) ||
+      (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+       planning_output_.gear_command.gear_command_value ==
+           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE)) {
+    frame_.remain_dist_uss = 2.68;
+    frame_.remain_dist_col_det = 2.68;
+  }
+
   // send uss remain dist to control
   planning_output_.trajectory.trajectory_points[0].distance =
       frame_.remain_dist_uss;
@@ -194,7 +206,7 @@ void ParkingScenario::GenPlanningPath() {
                            iflyauto::PARKING_SLOT_TYPE_SLANTING)
                           ? 1.0
                           : 0.0;
-  planning_output_.trajectory.trajectory_points[3].distance = 0.0;
+  planning_output_.trajectory.trajectory_points[3].distance = flag;
 
   planning_output_.trajectory.trajectory_points[4].distance =
       frame_.remain_dist_col_det;
@@ -202,6 +214,17 @@ void ParkingScenario::GenPlanningPath() {
   // set plan gear cmd
   auto gear_command = &(planning_output_.gear_command);
   gear_command->available = true;
+
+  // reset obs remain dist when gear shift
+  if ((frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE &&
+       gear_command->gear_command_value ==
+           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_REVERSE) ||
+      (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE &&
+       gear_command->gear_command_value ==
+           iflyauto::GearCommandValue::GEAR_COMMAND_VALUE_DRIVE)) {
+    frame_.remain_dist_uss = 2.68;
+    frame_.remain_dist_col_det = 2.68;
+  }
 
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
@@ -214,6 +237,51 @@ void ParkingScenario::GenPlanningPath() {
 
 const bool ParkingScenario::CheckStuckFailed() {
   return frame_.stuck_time > apa_param.GetParam().stuck_failed_time;
+}
+
+const bool ParkingScenario::UpdateObstacleLocal() {
+  auto& ego_slot_info = frame_.ego_slot_info;
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      pnc::geometry_lib::PathPoint(ego_slot_info.slot_origin_pos,
+                                   ego_slot_info.slot_origin_heading));
+  const auto obstacle_manager_ptr = apa_world_ptr_->GetObstacleManagerPtr();
+  std::vector<ApaObstacle*> obs_vec;
+  std::vector<Eigen::Vector2d> obs_pt_vec;
+  ego_slot_info.obs_pt_vec_slot.clear();
+
+  if (apa_param.GetParam().use_uss_pt_clound) {
+    // 获取超声波点云
+    if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::USS_POINT_CLOUD,
+                                          obs_vec)) {
+      for (const auto& obs : obs_vec) {
+        ego_slot_info.obs_pt_vec_slot.insert(
+            ego_slot_info.obs_pt_vec_slot.end(),
+            obs->GetPtClout2dLocal().begin(), obs->GetPtClout2dLocal().end());
+      }
+    }
+  }
+
+  // 获取OCC点云
+  if (obstacle_manager_ptr->GetObstacle(ApaObsAttributeType::FUSION_POINT_CLOUD,
+                                        obs_vec)) {
+    for (const auto& obs : obs_vec) {
+      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
+                                           obs->GetPtClout2dLocal().begin(),
+                                           obs->GetPtClout2dLocal().end());
+    }
+  }
+
+  // 获取接地线点云
+  if (obstacle_manager_ptr->GetObstacle(
+          ApaObsAttributeType::GROUND_LINE_POINT_CLOUD, obs_vec)) {
+    for (const auto& obs : obs_vec) {
+      ego_slot_info.obs_pt_vec_slot.insert(ego_slot_info.obs_pt_vec_slot.end(),
+                                           obs->GetPtClout2dLocal().begin(),
+                                           obs->GetPtClout2dLocal().end());
+    }
+  }
+
+  return true;
 }
 
 void ParkingScenario::UpdateRemainDist(const double uss_safe_dist) {
@@ -261,9 +329,10 @@ const double ParkingScenario::CalRemainDistFromUss(const double safe_dist) {
   const auto& uss_obstacle_avoider_ptr =
       apa_world_ptr_->GetUssObstacleAvoidancePtr();
 
-  uss_obstacle_avoider_ptr->Update(&planning_output_,
-                                   apa_world_ptr_->GetApaDataPtr(),
-                                   apa_world_ptr_->GetMeasureDataManagerPtr());
+  uss_obstacle_avoider_ptr->Update(apa_world_ptr_->GetApaDataPtr(),
+                                   apa_world_ptr_->GetMeasureDataManagerPtr(),
+                                   apa_world_ptr_->GetPredictPathManagerPtr(),
+                                   apa_world_ptr_->GetObstacleManagerPtr());
 
   remain_dist =
       uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist - safe_dist;

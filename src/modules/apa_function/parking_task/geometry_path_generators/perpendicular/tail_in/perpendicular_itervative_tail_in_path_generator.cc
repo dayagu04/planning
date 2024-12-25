@@ -103,16 +103,36 @@ const bool PerpendicularTailInPathGenerator::NewPreparePathPlan() {
       complete_path.AddPath(rough_path);
 
       cost = 0.0;
-      if (dubins_path.path_count < 1 && rough_path.path_count > 1 &&
-          rough_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE) {
-        // 如果是自车位置规划，那么尽量避免直接倒挡且倒挡之后其轨迹点还在库外
-        // 或航向角误差或横向误差依然很大，因为这样很有可能导致后续前进挡可利用的空间太小
+      if (dubins_path.path_count < 1 && rough_path.path_count > 1) {
         const auto& pose = rough_path.path_segment_vec.front().GetEndPose();
-        if (CalOccupiedRatio(pose) < 0.16 || std::fabs(pose.pos.y()) > 0.968 ||
-            std::fabs(pose.heading) * kRad2Deg > 45.68) {
-          ILOG_INFO << "ego pose plan, should add some cost to use safe circle "
-                       "more possible";
-          cost += 168.0;
+        if (rough_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE) {
+          // 如果是自车位置规划，那么尽量避免直接倒挡且倒挡之后其轨迹点还在库外
+          // 或航向角误差或横向误差依然很大，因为这样很有可能导致后续前进挡可利用的空间太小
+          if (CalOccupiedRatio(pose) < 0.16 ||
+              std::fabs(pose.pos.y()) > 0.968 ||
+              std::fabs(pose.heading) * kRad2Deg > 45.68) {
+            ILOG_INFO
+                << "ego pose plan, should add some cost to use safe circle "
+                   "more possible";
+            cost += 168.0;
+          }
+        } else if (rough_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
+          if (rough_path.gear_change_count > 1) {
+            cost += 168.0;
+          } else if (std::fabs(pose.pos.y()) < 1.968 &&
+                     std::fabs(pose.heading) * kRad2Deg > 25.68) {
+            cost += 168.0;
+          } else {
+            cost += 16.8;
+          }
+        }
+      }
+
+      if (complete_path.path_count > 0) {
+        if (complete_path.path_segment_vec.back().seg_type !=
+                geometry_lib::SEG_TYPE_LINE ||
+            complete_path.path_segment_vec.back().Getlength() < 0.68) {
+          cost += 38.0;
         }
       }
 
@@ -1577,6 +1597,14 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       cost += 100.0;
     }
 
+    if (complete_path.path_count > 0) {
+      if (complete_path.path_segment_vec.back().seg_type !=
+              geometry_lib::SEG_TYPE_LINE ||
+          complete_path.path_segment_vec.back().Getlength() < 0.68) {
+        cost += 38.0;
+      }
+    }
+
     ILOG_INFO << "gear_change_count = "
               << static_cast<int>(
                      success_geometry_path_vec[k].gear_change_count)
@@ -1654,14 +1682,14 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
               temp_path_r.cost += 100.0;
             }
           }
-        }
+        } else {
+          if (geometry_path_r.cur_gear != ref_gear) {
+            temp_path_r.cost += 100.0;
+          }
 
-        if (geometry_path_r.cur_gear != ref_gear) {
-          temp_path_r.cost += 100.0;
-        }
-
-        if (geometry_path_d.cur_gear != ref_gear) {
-          temp_path_d.cost += 100.0;
+          if (geometry_path_d.cur_gear != ref_gear) {
+            temp_path_d.cost += 100.0;
+          }
         }
 
         if (temp_path_r.cost < temp_path_d.cost) {
@@ -1776,7 +1804,7 @@ const bool PerpendicularTailInPathGenerator::OneArcPathPlan(
       geometry_lib::IsSameGear(gear, ref_gear) &&
       arc.circle_info.radius >
           calc_params_.turn_radius - apa_param.GetParam().target_radius_err &&
-      arc.circle_info.radius < apa_param.GetParam().max_one_step_arc_radius;
+      arc.circle_info.radius < 15.68;
 
   success = geometry_lib::IsSameGear(gear, ref_gear);
 
@@ -2200,7 +2228,8 @@ const bool PerpendicularTailInPathGenerator::TwoArcPathPlan(
     }
   }
 
-  if (geometry_path.path_count > 0) {
+  if (geometry_path.path_count > 0 &&
+      geometry_path.end_pose.pos.x() > calc_params_.target_line.pA.x() + 0.68) {
     ILOG_INFO_IF(enable_log) << "two arc plan has path";
     geometry_path.PrintInfo(enable_log);
     return true;

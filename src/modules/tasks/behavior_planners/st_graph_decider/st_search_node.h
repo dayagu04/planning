@@ -11,7 +11,7 @@ class StSearchNode {
  public:
   StSearchNode() = default;
   StSearchNode(double s, double t, double vel, double s_step, double t_step,
-               double vel_step);
+               double vel_step, bool only_s_t_hash = false);
   ~StSearchNode() = default;
 
   int64_t id() const { return id_; }
@@ -81,7 +81,7 @@ class StSearchNode {
  private:
   // make a hash id by step
   int64_t ComputeId(double s, double t, double vel, double s_step,
-                    double t_step, double vel_step) const;
+                    double t_step, double vel_step, bool only_s_t_hash = false) const;
 
  private:
   int64_t id_ = -1;

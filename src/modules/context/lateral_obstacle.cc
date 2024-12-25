@@ -111,6 +111,9 @@ void LateralObstacle::LateralObstacleDecision(
   auto lane_width = lateral_output.flane_width;
   double ref_dis = 1;
   double avoid_front_buffer = 0.0;
+  double expand_vel =
+      interp(session_->environmental_model().get_ego_state_manager()->ego_v(),
+             config.expand_ego_vel, config.expand_obs_rel_vel);
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
@@ -120,6 +123,11 @@ void LateralObstacle::LateralObstacleDecision(
     if ((!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) ||
         !item.frenet_transform_valid) {
       continue;
+    }
+
+    double expend_length = 0.0;
+    if (item.side_car && item.rear_car && item.v_rel < expand_vel) {
+      expend_length = 1.5;
     }
 
     bool lat_overlap = fabs(ego_l - item.l) < (ego_car_width + item.width) / 2;
@@ -132,7 +140,7 @@ void LateralObstacle::LateralObstacleDecision(
       } else if (item.d_min_cpath > 0) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       }
-    } else if (item.d_rel > 0) {
+    } else if (item.d_rel > expend_length) {
       if (item.is_traffic_facilities) {
         avoid_front_buffer = config.traffic_cone_thr;
       }
@@ -145,8 +153,7 @@ void LateralObstacle::LateralObstacleDecision(
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::IGNORE;
       }
       // 平行车辆
-    } else if (item.d_rel <= 0 &&
-               item.d_rel > -(ego_car_length + item.length)) {
+    } else if (item.d_rel <= expend_length && item.d_rel > -ego_car_length) {
       if (ego_l < item.l) {
         lat_obstacle_decision_[item.track_id] = LatObstacleDecisionType::RIGHT;
       } else {

@@ -272,10 +272,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetPram().uss_stuck_replan_wait_time, double,
                   "uss_stuck_replan_wait_time");
 
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
-      double, "deadend_uss_stuck_replan_wait_time");
-
   JSON_READ_VALUE(apa_param.SetPram().uss_scan_angle_deg, double,
                   "uss_scan_angle_deg");
 
@@ -739,18 +735,6 @@ void SyncParkingParameters(const bool is_simulation) {
   ILOG_INFO << "path_generator_type "
             << static_cast<int>(apa_param.GetParam().path_generator_type);
 
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.vertical_slot_end_straight_dist, double,
-      "vertical_slot_end_straight_dist");
-  ILOG_INFO << "vertical_slot_end_straight_dist "
-            << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
-
-  JSON_READ_VALUE(
-      apa_param.SetPram().astar_config.enable_delete_fusion_obj_in_slot, bool,
-      "enable_delete_fusion_obj_in_slot");
-  ILOG_INFO << "enable_delete_fusion_obj_in_slot "
-            << apa_param.SetPram().astar_config.enable_delete_fusion_obj_in_slot;
-
   // slot managent params
   JSON_READ_VALUE(apa_param.SetPram().release_slot_by_prepare, bool,
                   "release_slot_by_prepare");
@@ -880,6 +864,20 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(
       apa_param.SetPram().astar_config.parallel_finish_heading_err, double,
       "astar_parallel_finish_heading_err");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.enable_delete_occ_in_slot, bool,
+      "enable_delete_occ_in_slot");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.enable_delete_occ_in_ego, bool,
+      "enable_delete_occ_in_ego");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.deadend_uss_stuck_replan_wait_time,
+      double, "deadend_uss_stuck_replan_wait_time");
+  JSON_READ_VALUE(
+      apa_param.SetPram().astar_config.vertical_slot_end_straight_dist, double,
+      "vertical_slot_end_straight_dist");
+  ILOG_INFO << "vertical_slot_end_straight_dist "
+            << apa_param.SetPram().astar_config.vertical_slot_end_straight_dist;
 
   return;
 }
