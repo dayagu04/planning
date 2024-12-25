@@ -1,6 +1,8 @@
 #include "follow_target.h"
+#include <cstdint>
 
 #include "config/basic_type.h"
+#include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "planning_context.h"
@@ -12,11 +14,11 @@ namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
 constexpr double min_follow_distance_gap_cut_in = 1.0;
-constexpr int32_t check_time_idx = 15;
+constexpr int32_t check_time_idx = 8;
 
 // stable jlt
 constexpr double stable_vehicle_max_acc = 0.3;
-constexpr double stable_vehicle_min_acc = 0.8;
+constexpr double stable_vehicle_min_acc = -0.8;
 constexpr double v_min = -0.1;
 constexpr double v_max = 40.0;
 constexpr double a_min = -1.0;
@@ -31,7 +33,7 @@ constexpr double kMinFarTimeGap = 1.8;
 constexpr double min_far_distance_threshold = 15.0;
 constexpr double kDefaultFollowMinDist = 3.0;
 constexpr double kPreviewTime = 0.5;
-constexpr double kSpeedBuffer = 1.0;
+constexpr double kSpeedBuffer = 5.0;
 constexpr double kFarDistFollowTimeGap = 1.8;
 constexpr double kNearDistFollowTimeGap = 1.2;
 constexpr double kFarDistanceThreshold = 20.0;
@@ -160,6 +162,11 @@ void FollowTarget::GenerateFollowTarget() {
       GenerateFarFollowSlowCurve(matched_desired_headway);
   bool has_far_slow_follow_target = (far_slow_follow_trajectory != nullptr);
 
+  // JSON DEBUG
+  JSON_DEBUG_VALUE("has_target_follow_curve", 0)
+  JSON_DEBUG_VALUE("has_stable_follow_target", 0)
+  JSON_DEBUG_VALUE("has_farslow_follow_target", 0)
+
   for (int32_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
     auto& target_value = target_values_[i];
@@ -185,7 +192,12 @@ void FollowTarget::GenerateFollowTarget() {
     double target_s_disatnce = std::max(
         vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
 
-    const double s_target_value = upper_bound_infos_[i].s - target_s_disatnce;
+    double upper_bound_s = std::max(
+        upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
+    double target_s =
+        std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
+    const double s_target_value = std::min(upper_bound_s, target_s);
+
     target_value.set_s_target_val(s_target_value);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
 
@@ -193,18 +205,21 @@ void FollowTarget::GenerateFollowTarget() {
     if (has_stable_follow_target) {
       target_value.set_s_target_val(stable_follow_trajectory->Evaluate(0, t));
       target_value.set_target_type(upper_bound_infos_[i].target_type);
+      JSON_DEBUG_VALUE("has_stable_follow_target", 1.0)
     }
 
     if (has_far_slow_follow_target) {
       s_value = std::fmin(far_slow_follow_trajectory->Evaluate(0, t), s_value);
       target_value.set_s_target_val(s_value);
       target_value.set_target_type(upper_bound_infos_[i].target_type);
+      JSON_DEBUG_VALUE("has_farslow_follow_target", 1.0)
     }
 
     if (MakeSValueWithTargetFollowCurve(i, true, &s_value)) {
       target_value.set_has_target(true);
       target_value.set_s_target_val(s_value);
       target_value.set_target_type(TargetType::kFollow);
+      JSON_DEBUG_VALUE("has_target_follow_curve", 1.0)
     }
   }
 }
@@ -361,7 +376,7 @@ FollowTarget::GenerateFarFollowSlowCurve(
   }
 
   // 3.check init_v
-  constexpr double kEgoSpeedThreshold = 35.0 / 3.6;
+  constexpr double kEgoSpeedThreshold = 50.0 / 3.6;
   if (init_lon_state_[1] < kEgoSpeedThreshold) {
     return nullptr;
   }
@@ -564,6 +579,7 @@ void FollowTarget::AddFollowTargetDataToProto() {
       auto* ptr = follow_target_pb_.add_follow_target_s_ref();
       ptr->set_s(value.s_target_val());
       ptr->set_t(value.relative_t());
+      ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
   mutable_follow_target_data->CopyFrom(follow_target_pb_);

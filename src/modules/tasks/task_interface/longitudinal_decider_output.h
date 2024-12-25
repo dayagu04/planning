@@ -13,6 +13,7 @@ struct LongitudinalDeciderOutput {
   std::vector<std::pair<double, double>> ds_refs;
 
   std::vector<WeightedBounds> hard_bounds;             // s hard bounds
+  WeightedBounds hard_bounds_v3;                       // s hard bounds for v3
   std::vector<WeightedBounds> soft_bounds;             // s soft bounds
   std::vector<WeightedLonLeadBounds> lon_lead_bounds;  // s lead bounds
   std::vector<LonLeadBounds> lead_bounds;

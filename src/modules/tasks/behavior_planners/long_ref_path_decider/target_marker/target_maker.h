@@ -17,6 +17,8 @@ class TargetMaker {
 
   void Reset();
 
+  void RefineStarget();
+
   void AddFinalTargetDataToProto();
 
   double s_target(const double t) const;

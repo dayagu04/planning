@@ -561,9 +561,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   } else {
     vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
         function_state_machine_info.pilot_req.acc_curise_real_spd);
-    vehicle_status.mutable_time_headway_level()
-        ->set_value_num(
-            function_state_machine_info.pilot_req.acc_curise_time_interval);
+    vehicle_status.mutable_time_headway_level()->set_value_num(
+        function_state_machine_info.pilot_req.acc_curise_time_interval);
   }
 
   if (vehicle_service_output_info.yaw_rate_available) {
@@ -705,14 +704,13 @@ void EnvironmentalModelManager::truncate_prediction_info(
   assert(session_ != nullptr);
   double current_time =
       session_->planning_context().planning_result().timestamp;
-  auto init_relative_time = session_->environmental_model()
-                                .get_ego_state_manager()
-                                ->planning_init_point()
-                                .relative_time;
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto init_relative_time =
+      ego_state->planning_init_point().relative_time;
   auto &prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
-  auto &ego_state = session_->environmental_model().get_ego_state_manager();
 
   for (int i = 0; i < prediction_result.prediction_obstacle_list_size; i++) {
     const auto &prediction_object =
@@ -723,6 +721,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
       // 非相机融合成功的不用
       continue;
     }
+
     PredictionObject cur_predicion_obj;
     cur_predicion_obj.id =
         prediction_object.fusion_obstacle.additional_info.track_id;
@@ -760,10 +759,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
                iflyauto::OBSTACLE_INTENT_CUT_IN) {
       cur_predicion_obj.intention = ObstacleIntentType::CUT_IN;
     }
-    // cur_predicion_obj.b_backup_freemove =
-    // prediction_object.b_backup_freemove(); todo: clren
-    // cur_predicion_obj.cutin_score = prediction_object.cutin_score();  todo:
-    // clren
+
+    // 绝对信息
     cur_predicion_obj.position_x =
         prediction_object.fusion_obstacle.common_info.center_position.x;
     cur_predicion_obj.position_y =
@@ -854,8 +851,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
     }
 
     for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED; traj_index++) {
-      //auto trajectory_point =
-      //    GetPointAtTime(trajectory_points, 0.2 * traj_index);
+      // auto trajectory_point =
+      //     GetPointAtTime(trajectory_points, 0.2 * traj_index);
       auto trajectory_point = trajectory_points[traj_index];
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }

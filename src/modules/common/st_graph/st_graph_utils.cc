@@ -14,7 +14,7 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kSearchBuffer = 5.0;
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kMpsToKph = 3.6;
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 constexpr double kCautionYieldSpeedThreshold = 25.0;
 constexpr double kDynamicBufferSpeedThresholdKph = 40.0;
 constexpr double kCautionYieldMaxWidth = 0.7;
@@ -23,7 +23,7 @@ constexpr double kCautioYieldSlowSpeedThreshold = 25.0;
 constexpr double kCautionYieldHeadingThres = 0.785;
 constexpr double kCutInHeadingthres = 4.0 / 180.0 * 3.14;
 constexpr double kLowSpeedIgnreAgentSpeedThrMps = 0.8;
-constexpr double kStaticAgentSpeedThrMps = 0.1;
+constexpr double kStaticAgentSpeedThrMps = 0.5;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {

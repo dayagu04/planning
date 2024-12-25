@@ -1399,19 +1399,19 @@ def load_prediction_objects(obstacle_list, localization_info, g_is_display_enu =
   p_x = []
   p_y = []
   obs_num = len(obstacle_list)
-  num = len(obstacle_list[0].trajectory[0].trajectory_point)
+  num = len(obstacle_list[0].trajectory.trajectory_point)
   # print("num",num)
   for i in range(obs_num):
     if (obstacle_list[i].fusion_obstacle.additional_info.fusion_source & 1) == 0:
       continue
-    if len(obstacle_list[i].trajectory[0].trajectory_point) == 0:
+    if len(obstacle_list[i].trajectory.trajectory_point) == 0:
       # print("No data")
       continue
     elif obstacle_list[i].fusion_obstacle.common_info.shape.width == 0 or obstacle_list[i].fusion_obstacle.common_info.shape.length == 0:
       continue
     else:
-      long_pos = obstacle_list[i].trajectory[0].trajectory_point[0].relative_position.x
-      lat_pos = obstacle_list[i].trajectory[0].trajectory_point[0].relative_position.y
+      long_pos = obstacle_list[i].trajectory.trajectory_point[0].relative_position.x
+      lat_pos = obstacle_list[i].trajectory.trajectory_point[0].relative_position.y
       theta = obstacle_list[i].fusion_obstacle.common_info.relative_heading_angle
       half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width /2
       length = obstacle_list[i].fusion_obstacle.common_info.shape.length
@@ -1440,11 +1440,11 @@ def load_prediction_objects(obstacle_list, localization_info, g_is_display_enu =
       obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
       obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
 
-      for j in range(len(obstacle_list[i].trajectory[0].trajectory_point)):
-        # local_x = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.x
-        # local_y = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.y
-        global_x = obstacle_list[i].trajectory[0].trajectory_point[j].position.x
-        global_y = obstacle_list[i].trajectory[0].trajectory_point[j].position.y
+      for j in range(len(obstacle_list[i].trajectory.trajectory_point)):
+        # local_x = obstacle_list[i].trajectory.trajectory_point[j].relative_position.x
+        # local_y = obstacle_list[i].trajectory.trajectory_point[j].relative_position.y
+        global_x = obstacle_list[i].trajectory.trajectory_point[j].position.x
+        global_y = obstacle_list[i].trajectory.trajectory_point[j].position.y
         # print(global_x, global_y)
         if g_is_display_enu:
           p_x.append(global_x)

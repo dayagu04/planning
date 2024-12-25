@@ -246,3 +246,11 @@ pybind11_add_module(perpendicular_slant_tail_in_with_json_py MODULE src/perpendi
   modules_common
   modules_context
   modules_tasks)
+
+pybind11_add_module(scc_lon_motion_planning_v3_py MODULE src/scc_lon_motion_planning_pybind_v3.cc)
+  target_link_libraries(scc_lon_motion_planning_v3_py PRIVATE
+  autoplt
+  modules
+  modules_common
+  modules_context
+  modules_tasks)

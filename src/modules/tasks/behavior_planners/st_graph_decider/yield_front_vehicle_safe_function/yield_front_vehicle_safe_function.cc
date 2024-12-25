@@ -29,7 +29,7 @@ constexpr double IsoJerkLimitSpeedLower = 5.0;
 
 // constexpr double kSpeedBoundFactor = 1.1;
 // constexpr double kPerSecondPlanLenth = 50.0;
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 constexpr double kLowerSpeedAccUpperBound = 1.8;
 constexpr double kHighSpeedAccUpperBound = 1.2;
 constexpr double kLowSpeedThresholdWithAccUpperBound = 5.5;

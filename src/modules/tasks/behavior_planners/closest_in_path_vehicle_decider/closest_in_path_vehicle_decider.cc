@@ -6,6 +6,7 @@
 #include "environmental_model_manager.h"
 #include "log.h"
 #include "st_graph/st_graph_helper.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 namespace {
@@ -68,7 +69,7 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
       min_s = lower_s;
       id = lower_point.agent_id();
     }
-    auto& mutable_cipv_decider_output =
+    auto &mutable_cipv_decider_output =
         session_->mutable_planning_context()->mutable_cipv_decider_output();
     if (kInvalidId == id) {
       mutable_cipv_decider_output.Reset();
@@ -94,6 +95,8 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(const int32_t cipv_id,
                                                bool *const is_virtual) {
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
+  const auto &ego_vehi_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   if (nullptr == agent_manager) {
     return;
   }
@@ -119,7 +122,8 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(const int32_t cipv_id,
   }
   // consider back bumper to center distance of ego
   constexpr double kEgoCenterToBackCenter = 1.1;
-  *relative_s = min_s - kEgoCenterToBackCenter;
+  // *relative_s = min_s - kEgoCenterToBackCenter;
+  *relative_s = min_s - ego_vehi_param.front_edge_to_rear_axle;
 
   double center_s = 0.0;
   double center_l = 0.0;

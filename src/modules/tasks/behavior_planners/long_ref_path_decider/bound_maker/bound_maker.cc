@@ -1,5 +1,7 @@
 #include "bound_maker.h"
 
+#include <cmath>
+
 namespace planning {
 namespace {
 constexpr double IsoAccLimitUpper = -3.5;
@@ -31,11 +33,17 @@ common::Status BoundMaker::Run() {
   LOG_DEBUG("=======LongRefPathDecider: BoundMaker======= \n");
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
+  const auto& lateral_behavior_planner_output =
+      session_->planning_context().lateral_behavior_planner_output();
   const auto& init_point = ego_state_manager->planning_init_point();
+  const auto& v_ego = ego_state_manager->ego_v();
+
   init_lon_state_ = {0, init_point.v, init_point.a};
+  GenerateUpperBoundInfo();
 
   // 1. acc bound
-  MakeAccBound();
+  // MakeAccBound();
+  MakeAccBound(v_ego, lateral_behavior_planner_output.lc_request);
 
   // 2. s bound
   MakeSBound();
@@ -89,7 +97,53 @@ void BoundMaker::MakeAccBound() {
       plan_points_num_,
       std::fmax(init_lon_state_[2], acc_upper_bound_with_speed_));
   acc_lower_bound_ = std::vector<double>(
-      plan_points_num_, std::fmin(init_lon_state_[2], config_acc_lower_bound));
+      plan_points_num_, std::fmin(init_lon_state_[2],
+      config_acc_lower_bound));
+}
+
+void BoundMaker::MakeAccBound(const double& v_ego,
+                              const std::string& lc_request) {
+  std::pair<double, double> acc_target;
+  acc_upper_bound_.resize(plan_points_num_);
+  acc_lower_bound_.resize(plan_points_num_);
+  // cruise acc target
+  acc_target.first = interp(v_ego, _A_CRUISE_MIN_BP, _A_CRUISE_MIN_V);
+  acc_target.second = interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+
+  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
+  const auto& agent_headway_decider_output =
+      session_->planning_context().agent_headway_decider_output();
+  const auto& agents_headway_map =
+      agent_headway_decider_output.agents_headway_Info();
+
+  for (size_t i = 0; i < plan_points_num_; i++) {
+    const double t = i * dt_;
+    if (upper_bound_infos_[i].agent_id == -1) {
+      acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
+      acc_upper_bound_[i] = std::fmax(init_lon_state_[2], acc_target.second);
+      continue;
+    }
+
+    double follow_time_gap = 1.0;
+    const auto upper_bound_info = upper_bound_infos_[i];
+    auto iter = agents_headway_map.find(upper_bound_info.agent_id);
+    if (iter != agents_headway_map.end()) {
+      follow_time_gap = iter->second.current_headway;
+    }
+    // const double desire_distance =
+    //     GetCalibratedDistance(upper_bound_info.v, v_ego, lc_request);
+    const double vel = virtual_acc_curve->Evaluate(1, t);
+    const double desire_distance = std::max(
+        vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
+    const double desire_velocity = CalcDesiredVelocity(
+        upper_bound_info.d_rel, desire_distance, upper_bound_info.v, v_ego);
+    const double upper_bound_a = std::fmin(upper_bound_info.a + 0.5, 0.0);
+    CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
+                  upper_bound_a, &acc_target);
+    acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
+    acc_upper_bound_[i] =
+        std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
+  }
 }
 
 void BoundMaker::MakeSBound() {
@@ -295,6 +349,157 @@ std::unique_ptr<Trajectory1d> BoundMaker::MakeVirtualZeroAccCurve() {
     virtual_zero_acc_curve->AppendSegment(a_next, dt_);
   }
   return virtual_zero_acc_curve;
+}
+
+void BoundMaker::GenerateUpperBoundInfo() {
+  upper_bound_infos_ =
+      std::vector<UpperBoundInfo>(plan_points_num_, UpperBoundInfo());
+  const auto* st_graph = session_->planning_context().st_graph_helper();
+  if (st_graph == nullptr) {
+    return;
+  }
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+  const auto current_lane = session_->environmental_model()
+                                .get_virtual_lane_manager()
+                                ->get_current_lane();
+  const auto current_frenet_coord = current_lane->get_lane_frenet_coord();
+
+  for (size_t i = 0; i < plan_points_num_; i++) {
+    const double t = i * dt_;
+    const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
+    const auto agent_id = upper_bound.agent_id();
+    if (agent_id != speed::kNoAgentId) {
+      upper_bound_infos_[i].s = upper_bound.s();
+      upper_bound_infos_[i].t = t;
+      upper_bound_infos_[i].v = upper_bound.velocity();
+      upper_bound_infos_[i].a = upper_bound.acceleration();
+      upper_bound_infos_[i].agent_id = agent_id;
+      const auto* agent = agent_manager->GetAgent(agent_id);
+      if (agent != nullptr) {
+        upper_bound_infos_[i].d_path = agent->d_path();
+        upper_bound_infos_[i].d_rel = agent->d_rel();
+      }
+    }
+  }
+}
+
+void BoundMaker::CalcAccLimits(const UpperBoundInfo& upper_bound_info,
+                               const double desired_distance,
+                               const double v_target, const double v_ego,
+                               const double lead_one_a_processed,
+                               std::pair<double, double>* acc_target) {
+  double agent_v_rel = v_ego - upper_bound_info.v;
+  double a_lead_contr =
+      lead_one_a_processed *
+      interp(upper_bound_info.v, _A_LEAD_LOW_SPEED_BP, _A_LEAD_LOW_SPEED_V) *
+      interp(desired_distance, _A_LEAD_DISTANCE_BP, _A_LEAD_DISTANCE_V) * 0.8;
+  acc_target->second =
+      CalcPositiveAccLimit(v_ego, agent_v_rel, acc_target->second);
+  // compute max decel
+  // assume the car is 1m/s slower
+  double v_offset =
+      1.2 * std::min(std::max(2.5 - upper_bound_info.d_path, 0.0) / 1.5, 1.0);
+  // assume the distance is 1m lower
+  double d_offset = 0.5 + 0.2 * v_ego;
+  if (v_target < v_ego) {
+    // add small value to avoid by zero divisions
+    // compute needed accel to get to 1m distance with -1m/s rel speed
+    double decel_offset =
+        interp(upper_bound_info.v, _DECEL_OFFSET_BP, _DECEL_OFFSET_V);
+
+    double critical_decel = CalcCriticalDecel(upper_bound_info.d_rel,
+                                              agent_v_rel, d_offset, v_offset);
+    acc_target->first = std::min(decel_offset + critical_decel + a_lead_contr,
+                                 acc_target->first);
+  }
+  // a_min can't be higher than a_max
+  acc_target->first = min(acc_target->first, acc_target->second);
+  // final check on limits
+  acc_target->first = clip(acc_target->first, _A_MAX, _A_MIN);
+  acc_target->second = clip(acc_target->second, _A_MAX, _A_MIN);
+}
+
+double BoundMaker::CalcPositiveAccLimit(const double v_ego, const double v_rel,
+                                        const double a_max_const) {
+  double a_max = a_max_const;
+  // same as cruise accel, plus add a small correction based on relative
+  // lead speed if the lead car is faster, we can accelerate more, if the
+  // car is slower, then we can reduce acceleration
+  a_max = a_max + interp(v_ego, _A_CORR_BY_SPEED_BP, _A_CORR_BY_SPEED_V) *
+                      clip(-v_rel / 4.0, 1.0, -0.5);
+  return a_max;
+}
+
+double BoundMaker::CalcCriticalDecel(const double d_lead, const double v_rel,
+                                     const double d_offset,
+                                     const double v_offset) {
+  // this function computes the required decel to avoid crashing, given safety
+  // offsets
+  double a_critical = -std::pow(std::max(0.0, v_rel + v_offset), 2) /
+                      std::max(2 * (d_lead - d_offset), 0.5);
+  return a_critical;
+}
+
+double BoundMaker::GetCalibratedDistance(const double v_lead,
+                                         const double v_ego,
+                                         const std::string& lc_request) {
+  double v_lead_clip = std::max(v_lead, 0.0);
+  double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
+  // Brake hysteresis
+  double v_relative = std::min(std::max(v_ego - v_lead_clip, 0.0), 5.0);
+  double distance_hysteresis = v_relative * 0.3;
+  // distance when at zero speed
+  return min_follow_distance_m_ + v_lead_clip * t_gap + distance_hysteresis;
+}
+
+double BoundMaker::CalcDesiredVelocity(const double d_rel, const double d_des,
+                                       const double v_lead,
+                                       const double v_ego) {
+  // *** compute desired speed ***
+  // the desired speed curve is divided in 4 portions:
+  // 1-constant
+  // 2-linear to regain distance
+  // 3-linear to shorten distance
+  // 4-parabolic (constant decel)
+  double v_lead_clip = std::max(v_lead, 0.0);
+  const double max_runaway_speed = -2.;  // no slower than 2m/s over the lead
+  //  interpolate the lookups to find the slopes for a give lead speed
+  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
+  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
+  // this is where parabola && linear curves are tangents
+  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
+  // parabola offset to have the parabola being tangent to the linear curve
+  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
+
+  double v_rel = v_ego - v_lead;
+  double v_rel_des = 0.0;
+  double soft_brake_distance = 0.0;
+  if (d_rel < d_des) {
+    // calculate v_rel_des on the line that connects 0m at max_runaway_speed
+    // to d_des
+    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
+    // calculate v_rel_des on one third of the linear slope
+    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
+    // take the min of the 2 above
+    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = d_rel;
+  } else if (d_rel < d_des + x_linear_to_parabola) {
+    v_rel_des = (d_rel - d_des) * l_slope;
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = v_rel / l_slope + d_des;
+  } else {
+    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
+    soft_brake_distance =
+        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
+  }
+  // compute desired speed
+  double v_target = v_rel_des + v_lead;
+  return v_target;
 }
 
 double BoundMaker::s_lower_bound(const double t) const {

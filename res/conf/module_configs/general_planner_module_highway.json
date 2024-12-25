@@ -500,6 +500,21 @@
     "acc_lower_bound_in_large_curv": -2.0,
     "jerk_lower_in_large_curv": -2.0
   },
+
+  "speed_limit_decider": {
+    "preview_x": 80.0,
+    "t_curv": 2.0,
+    "dis_curv": 30.0,
+    "v_limit_near_ramp_zone": 25.0,
+    "dis_near_ramp_zone": 1200.0,
+    "brake_dis_near_ramp_zone": 700.0,
+    "v_limit_ramp": 16.67,
+    "acc_to_ramp": -0.7,
+    "pre_accelerate_distance_for_merge": 150.0,
+    "straight_ramp_v_limit": 19.44,
+    "v_intersection_min_limit": 11.11
+  },
+
   "result_trajectory_generator": {
     "enable_lat_traj": false
   },
@@ -547,10 +562,6 @@
     "enable_speed_adjust": true
   },
   "speed_planning": {
-    "debug_switch" : {
-      "enable_always_cruise": false
-    },
-
     "st_graph_searcher" : {
       "enable_only_s_t_hash": true,
       "upper_collision_dist": 1.0,
@@ -565,68 +576,82 @@
       "vel_step" : 0.4
     },
 
-    "lane_change_upper_speed_limit_kph" : 120.0,
-    "comfort_kinematic_param": {
-      "acc_positive_upper": 3.9,
-      "acc_positive_speed_lower": 4.2,
-      "acc_positive_lower": 0.5,
-      "acc_positive_speed_upper": 12.0,
-      "acc_negative_lower": -2.5,
-      "acc_negative_speed_lower": 5.0,
-      "acc_negative_upper": -2.0,
-      "acc_negative_speed_upper": 20.0,
-      "jerk_positive_upper": 4.0,
-      "jerk_positive_speed_lower": 5.0,
-      "jerk_positive_lower": 2.0,
-      "jerk_positive_speed_upper": 25.0,
-      "jerk_negative_lower": -6.0,
-      "jerk_negative_speed_lower": 1.0,
-      "jerk_negative_upper": -5.0,
-      "jerk_negative_speed_upper": 25.0
+    "start_stop_decider" : {
+      "ego_vel_begin_stop_threshold" : 0.5,
+      "ego_vel_start_mode_threshold": 5.5,
+      "cipv_vel_begin_start_threshold": 0.5,
+      "cipv_relative_s_begin_start_threshold": 0.3,
+      "distance_stop_buffer_between_ego_and_cipv_threshold": 2.0,
+      "distance_start_between_ego_and_cipv_threshold": 0.3,
+      "distance_to_stop_line_ego_threshold": 7.5,
+      "desired_stopped_distance_between_ego_and_cipv_threshold": 3.5,
+      "distance_to_go_threshold": 5.7
     },
-    "kappa_kinematic_param": {
-      "acc_positive_upper": 1.35,
-      "acc_positive_speed_lower": 4.2,
-      "acc_positive_lower": 0.5,
-      "acc_positive_speed_upper": 12.0,
-      "acc_negative_lower": -3.0,
-      "acc_negative_speed_lower": 5.0,
-      "acc_negative_upper": -3.0,
-      "acc_negative_speed_upper": 20.0,
-      "jerk_positive_upper": 4.0,
-      "jerk_positive_speed_lower": 5.0,
-      "jerk_positive_lower": 2.0,
-      "jerk_positive_speed_upper": 25.0,
-      "jerk_negative_lower": -6.0,
-      "jerk_negative_speed_lower": 1.0,
-      "jerk_negative_upper": -5.0,
-      "jerk_negative_speed_upper": 25.0
-    },
-    "normal_kappa_speed_limit_table": {
-      "kappa_table": [
-        0.0005, 0.00074, 0.00142, 0.00167,
-        0.0018, 0.002, 0.0025, 0.0033,
-        0.005, 0.01, 0.02, 0.0333,
-        0.04, 0.069, 0.15, 0.2],
-      "speed_table": [
-        150.0, 130.0, 105.0, 95.0,
-        90.0, 85.0, 80.0, 70.0,
-        55.0, 47.0, 27.0, 23.0,
-        20.0, 15.0, 10.0, 7.0]
-    },
-    "lane_change_kappa_speed_limit_table": {
-       "kappa_table": [
-        0.0005, 0.00074, 0.00142, 0.00167,
-        0.0018, 0.002, 0.0025, 0.0033,
-        0.005, 0.01, 0.0167, 0.02,
-        0.0333, 0.04, 0.069, 0.15,
-        0.2],
-      "speed_table": [
-        150.0, 130.0, 110.0, 100.0,
-        95.0, 90.0, 85.0, 75.0,
-        55.0, 47.0, 35.0, 27.0,
-        23.0, 20.0, 15.0, 10.0,
-        7.0]
+
+    "cruise_target": {
+      "lane_change_upper_speed_limit_kph" : 120.0,
+      "comfort_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -2.5,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -2.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 4.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -6.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -5.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "kappa_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -3.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -3.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 4.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -6.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -5.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "normal_kappa_speed_limit_table": {
+        "kappa_table": [
+          0.0005, 0.00074, 0.00142, 0.00167,
+          0.0018, 0.002, 0.0025, 0.0033,
+          0.005, 0.01, 0.02, 0.0333,
+          0.04, 0.069, 0.15, 0.2],
+        "speed_table": [
+          150.0, 130.0, 105.0, 95.0,
+          90.0, 85.0, 80.0, 70.0,
+          55.0, 47.0, 27.0, 23.0,
+          20.0, 15.0, 10.0, 7.0]
+      },
+      "lane_change_kappa_speed_limit_table": {
+        "kappa_table": [
+          0.0005, 0.00074, 0.00142, 0.00167,
+          0.0018, 0.002, 0.0025, 0.0033,
+          0.005, 0.01, 0.0167, 0.02,
+          0.0333, 0.04, 0.069, 0.15,
+          0.2],
+        "speed_table": [
+          150.0, 130.0, 110.0, 100.0,
+          95.0, 90.0, 85.0, 75.0,
+          55.0, 47.0, 35.0, 27.0,
+          23.0, 20.0, 15.0, 10.0,
+          7.0]
+      }
     }
 },
 

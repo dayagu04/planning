@@ -34,8 +34,9 @@
 #include "tasks/behavior_planners/truck_longitudinal_avoid_decider/truck_longitudinal_avoid_decider.h"
 #include "tasks/behavior_planners/virtual_obstacle_decider/virtual_obstacle_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
-#include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
+#include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 
 namespace planning {
 
@@ -73,6 +74,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<AgentHeadwayDecider> agent_headway_decider_;
   std::unique_ptr<LongitudinalDecisionDecider> longitudinal_decision_decider_;
   std::unique_ptr<SpeedLimitDecider> speed_limit_decider_;
+  std::unique_ptr<StartStopDecider> start_stop_decider_;
   std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成
@@ -80,7 +82,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
 
   // Motion Planners
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
-  std::unique_ptr<SccLongitudinalMotionPlanner>
+  std::unique_ptr<SccLongitudinalMotionPlannerV3>
       scc_longitudinal_motion_planner_;
 
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;

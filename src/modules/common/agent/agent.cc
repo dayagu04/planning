@@ -12,7 +12,7 @@ namespace agent {
 namespace {
 
 constexpr double kLowSpeedAgentSpeedThrMps = 5.0;
-constexpr double kTimeResolution = 0.1;
+constexpr double kTimeResolution = 0.2;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kDecayJerkMps3 = -0.2;
 constexpr double kPredictionHorizon = 5.0;
@@ -273,6 +273,14 @@ const bool Agent::is_tfl_virtual_obs() const { return is_tfl_virtual_obs_; }
 void Agent::set_is_tfl_virtual_obs(bool is_tfl_virtual_obs) {
   is_tfl_virtual_obs_ = is_tfl_virtual_obs;
 }
+
+const double Agent::d_rel() const { return d_rel_; }
+
+void Agent::set_d_rel(double d_rel) { d_rel_ = d_rel; };
+
+const double Agent::d_path() const { return d_rel_; }
+
+void Agent::set_d_path(double d_rel) { d_rel_ = d_rel; };
 
 void Agent::RecalculateLowSpeedTrajectories() {
   const double init_accel = accel_;
