@@ -741,6 +741,16 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "extra_collision_lateral_buffer"},
         extra_collision_lateral_buffer);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "extra_buffer_for_lane_width_bp"},
+        extra_buffer_for_lane_width_bp);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "extra_lane_width_buffer"},
+        extra_lane_width_buffer);
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
                                                    "lateral_road_boader_v_bp"},
@@ -822,6 +832,13 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "extra_rear_lon_buffer2blockobstacle"},
         extra_rear_lon_buffer2blockobstacle);
+
+    extra_lane_type_decrease_buffer = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "extra_lane_type_decrease_buffer"},
+        extra_lane_type_decrease_buffer);
+
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -868,6 +885,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> lateral_road_boader_collision_ttc_bp{0, 1.5, 3, 4.5, 5};
   std::vector<double> extra_collision_lateral_buffer{0.1, 0.0, 0.0, 0.0, 0.0};
 
+  std::vector<double> extra_buffer_for_lane_width_bp{2.8, 3.1, 3.4, 3.7, 4.2};
+  std::vector<double> extra_lane_width_buffer{0.2, 0.15, 0.1, 0.05, 0.0};
+
   std::vector<double> lateral_road_boader_v_bp{10, 40, 60, 100, 130};
   std::vector<double> extra_lateral_buffer{0.0, 0.0, 0.0, 0.0, 0.0};
 
@@ -880,6 +900,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   std::vector<double> _relative_v_bp = {0, 1, 2, 3, 4, 5};
   std::vector<double> _relative_v_decrease_extra_buffer = {0,   0.02, 0.05,
                                                            0.1, 0.15, 0.23};
+  double extra_lane_type_decrease_buffer = 0.05;
   double truck_decrease_extra_buffer = 0.05;
   double care_exceed_distance_with_blocked_obstacle = 2.0;
   double extra_hard_buffer2blockobstacle = 2.0;
