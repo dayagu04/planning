@@ -143,6 +143,7 @@ class LaneChangeStateMachineManager {
   void PreProcess();
   bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
   void CalculateLatCloseValue();
+  void IsEgoOnSideLane();
 
  private:
   ScenarioStateMachineConfig config_;
@@ -172,5 +173,7 @@ class LaneChangeStateMachineManager {
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
   const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
   bool is_large_car_in_side_ = false;
+  bool is_ego_on_leftmost_lane_ = false;
+  bool is_ego_on_rightmost_lane_ = false;
 };
 }  // namespace planning

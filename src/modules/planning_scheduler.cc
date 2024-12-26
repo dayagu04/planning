@@ -710,9 +710,29 @@ void PlanningScheduler::FillPlanningHmiInfo(
   if (route_info_output.is_ego_on_expressway_hmi) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+    //update RampPassSts
+    if (planning_hmi_info->ad_info.distance_to_ramp < 200) {
+      if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_LEFT &&
+          !lane_change_decider_output.is_ego_on_leftmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_RIGHT &&
+          !lane_change_decider_output.is_ego_on_rightmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      }
+    }
   } else if (route_info_output.is_ego_on_city_expressway_hmi) {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+    //update RampPassSts
+    if (planning_hmi_info->ad_info.distance_to_ramp < 50) {
+      if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_LEFT &&
+          !lane_change_decider_output.is_ego_on_leftmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      } else if (planning_hmi_info->ad_info.ramp_direction == iflyauto::RAMP_RIGHT &&
+          !lane_change_decider_output.is_ego_on_rightmost_lane) {
+        planning_hmi_info->ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_READYTOMISS;
+      }
+    }
   } else {
     planning_hmi_info->ad_info.road_type =
         iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
